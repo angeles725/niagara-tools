@@ -7,6 +7,8 @@ bats_require_minimum_version 1.5.0
 # Hermetic: git is a fakebin and the resolver is a stub in a fixture toplevel (no research roots read).
 
 setup() {
+  # the client-identifier step of the hook: hermetic whatever this host has installed (no denylist → it skips)
+  export NIAGARA_CLIENT_DENYLIST="$BATS_TEST_TMPDIR/no-client-denylist"
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   HOOK="$REPO/.githooks/pre-push"
   TOP="$BATS_TEST_TMPDIR/top"; K="$TOP/build-n4-module-kit"

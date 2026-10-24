@@ -1,0 +1,13 @@
+-- args --
+@DIR@/b.bog
+--module
+ColdRoomPan
+-- want --
+exit 3
+-- stderr --
+bog-audit: @DIR@/b.bog:4:1: element <p> opened at 3:2 closed by </bajaObjectGraph>
+-- b.bog (zip) --
+<?xml version="1.0"?>
+<bajaObjectGraph>
+ <p n="a" h="1" m="CRP=ColdRoomPan" t="CRP:Y">
+</bajaObjectGraph>

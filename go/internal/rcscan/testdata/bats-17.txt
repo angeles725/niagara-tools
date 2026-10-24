@@ -1,0 +1,17 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/config.js:3  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+WARN  rc-scan  rc/index.html:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+-- stderr --
+-- rc/config.js --
+function lockForm() {
+  // the save button opens the login gate on click
+  saveBtn.disabled = true;
+}
+function requireLogin(ev) { if (!session.user) { openLogin(); ev.preventDefault(); } }
+-- rc/index.html --
+<!doctype html><html><body>
+<form id="cfg" data-auth="login"><button id="save" disabled>Guardar cambios</button></form>
+</body></html>

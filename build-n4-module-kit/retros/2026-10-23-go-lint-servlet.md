@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · go-lint-servlet
@@ -64,4 +64,4 @@ the port also differed on an empty root, a dot-named root and `*-worktrees`, as 
   lint does not read it at all: the T8 fix removes a false row but cannot report that guard.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-go-lint-servlet.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 `BUILD-LOOP.md` § 5 port rule (goldens from origin/main, re-recorded at the merge).

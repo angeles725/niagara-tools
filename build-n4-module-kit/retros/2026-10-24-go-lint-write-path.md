@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-write-path
@@ -46,3 +46,6 @@ RED-first commit each. The `--bog` part reads the bog through `go/internal/xmlsr
   a recorded edge tree (a heading-only matrix) caught what every bats fixture, each with a real table, could not.
 - The golden format holds files only, so an empty directory (WP9b's src-less profile) needs a placeholder file
   in the recorded tree, and a tree whose basename is printed needs a stable name.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — the Go port is noted on the `METHODOLOGY.md` § Kit maintenance lint-write-path line; Δ1, Δ2 and Δ3 not folded, needs code (an audit-receiver decision, moving structure's path helpers to `lint`, a `lint-arbitrary-ord.sh` comment outside this fold's surface), owed in `METHODOLOGY.md` § Kit maintenance (round-10 lint follow-ups) and `BUILD-STATE.md` open_issues. INDEX row generated from the header: `| 2026-10-24-go-lint-write-path.md | kit | 2026-10-24 | folded | 3 |`

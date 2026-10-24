@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-lint-license-gate
@@ -44,4 +44,4 @@ or argument contract, so nothing beyond the text was kept.
   run silently measures a usage error on both sides.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-license-gate.md | kit | 2026-10-24 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-a`) — Δ1 and Δ2 `BUILD-LOOP.md` § 5 kit tooling doctrine (truth case RED for its reason; golden cases from the replay).

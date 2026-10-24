@@ -1,0 +1,29 @@
+-- args --
+@DIR@/prune
+-- want --
+exit 0
+WARN  lint-uberjar-api-conflict  @DIR@/prune/.gradle.kts  g.x:lib-a is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/prune/build/x.gradle.kts  g.x:lib-a is both uberjar()d and api()d
+-- stderr --
+-- prune/.d/x.gradle.kts --
+dependencies {
+  api("g.x:lib-a:1.0")
+  uberjar("g.x:lib-a:1.0")
+}
+-- prune/.gradle.kts --
+dependencies {
+  api("g.x:lib-a:1.0")
+  uberjar("g.x:lib-a:1.0")
+}
+-- prune/build/x.gradle.kts --
+dependencies {
+  api("g.x:lib-a:1.0")
+  uberjar("g.x:lib-a:1.0")
+}
+-- prune/settings.gradle.kts --
+rootProject.name = "x"
+-- prune/x-worktrees/x.gradle.kts --
+dependencies {
+  api("g.x:lib-a:1.0")
+  uberjar("g.x:lib-a:1.0")
+}

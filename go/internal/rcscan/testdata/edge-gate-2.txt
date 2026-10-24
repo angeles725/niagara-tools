@@ -1,0 +1,85 @@
+-- args --
+@DIR@
+--strict
+-- want --
+exit 1
+FAIL  rc-scan  rc/a.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/a.js:5  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/a.js:7  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/a.js:8  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/a.js:9  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/a.js:10  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/a.js:12  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/d.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/e.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/g.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/h.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/i.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/j.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/k.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/l.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+FAIL  rc-scan  rc/m.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+-- stderr --
+-- rc/a.js --
+if (!loggedIn) showLogin();
+b.disabled = true;
+b.disabled = false;
+b.disabled=0;
+b.disabled = 0x1;
+b.disabled == true;
+b.disabled =
+b.disabled = falsey;
+b.setAttribute("disabled", "");
+b.setAttribute( 'disabled', 1);
+b.disabled = true; // rc-scan: allow disabled-gate
+b.disabled = !ok;
+-- rc/b.html --
+<p>Step up required</p>
+<button disabled>x</button>
+<input type="text" disabled="disabled">
+<select id="s" disabled/>
+<textarea
+ disabled></textarea>
+<button class="disabled">y</button>
+<buttonx disabled>
+-- rc/c.css --
+.b { } /* login */
+.x:disabled { }
+-- rc/d.js --
+// the login gate is mentioned only in a comment
+b.disabled = true;
+-- rc/e.js --
+const x = "AUTHORIZE";
+b.disabled = true;
+-- rc/f.js --
+const x = author + authority + Authorship;
+b.disabled = true;
+-- rc/g.js --
+const x = getAuth();
+b.disabled = true;
+-- rc/h.js --
+const x = authorization;
+b.disabled = true;
+-- rc/i.js --
+const x = coauthor + preauth;
+b.disabled = true;
+-- rc/j.js --
+const x = AUTHORS_authx;
+b.disabled = true;
+-- rc/k.js --
+const x = myAuthorAuth;
+b.disabled = true;
+-- rc/l.js --
+const x = "authauthor";
+b.disabled = true;
+-- rc/m.js --
+const x = "LOGIN"; const y = stepup;
+b.disabled = true;
+-- rc/n.js --
+const x = "AUTHORAuthor";
+b.disabled = true;
+-- rc/o.js --
+const x = 2auth;
+b.disabled = true;
+-- rc/p.js (noeol) --
+const x = auth;

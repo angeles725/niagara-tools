@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · go-lint-demand-scope
@@ -54,4 +54,4 @@ and the header was corrected where it claimed more than the code did.
   engine mode that names it keeps byte identity without per-rule argument code.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-go-lint-demand-scope.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 `BUILD-LOOP.md` § 5 port rule (the awk `\b` clause; the gawk fact itself was already folded from truth-audit Δ8).

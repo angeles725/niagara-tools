@@ -76,7 +76,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
 			f := javasrc.NewFile(p, lines)
 			for i, sp := range specs {
-				if stopped[i] || sp.Root != nil || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
+				if stopped[i] || sp.Root != nil || !sp.Select.keeps(root, p) {
 					continue
 				}
 				if sp.Tree != nil {
@@ -266,7 +266,7 @@ func union(specs []Spec) (u Selection, walks bool) {
 // bash lints count their file list).
 func selectsAny(sel Selection, root string, files []string) bool {
 	for _, p := range files {
-		if sel.selects(baseName(p)) && !prunedFor(sel, root, p) {
+		if sel.keeps(root, p) {
 			return true
 		}
 	}
@@ -277,14 +277,19 @@ func baseName(p string) string { return p[strings.LastIndexByte(p, '/')+1:] }
 
 // prunedFor reports whether a directory between root and file p is one sel prunes.
 func prunedFor(sel Selection, root, p string) bool {
-	if len(sel.Prune) == 0 {
+	if len(sel.Prune) == 0 && len(sel.PrunePaths) == 0 {
 		return false
 	}
-	dirs := strings.Split(strings.TrimPrefix(p, strings.TrimSuffix(root, "/")+"/"), "/")
+	base := strings.TrimSuffix(root, "/") + "/"
+	rel := strings.TrimPrefix(p, base)
+	dirs := strings.Split(rel, "/")
+	full := p[:len(p)-len(rel)]
 	for _, d := range dirs[:len(dirs)-1] {
-		if d != "" && sel.prunes(d) {
+		full += d
+		if d != "" && sel.prunes(d, full) {
 			return true
 		}
+		full += "/"
 	}
 	return false
 }
@@ -428,7 +433,7 @@ func intFlags(sp Spec, args []string) (map[string]int, []string, error) {
 func shortScanError(specs []Spec, root, p string) bool {
 	any := false
 	for _, sp := range specs {
-		if sp.Root != nil || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
+		if sp.Root != nil || !sp.Select.keeps(root, p) {
 			continue
 		}
 		if !sp.ShortScanError {
