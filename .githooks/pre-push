@@ -80,11 +80,11 @@ live_cite_check() {   # returns 0 to go on; refuses on findings or a tool failur
   rc=$?
   case $rc in
     0) return 0 ;;
-    1) awk -F'\t' 'NF >= 7 && $6 !~ /^(RESOLVED|HISTORICAL_DRIFT|UNVERIFIABLE_KIND|SKIPPED_TEMPLATE)$/' <<<"$out" \
-         | head -20 >&2
+    1) awk -F'\t' 'NF >= 7 && $6 !~ /^(RESOLVED|HISTORICAL_DRIFT|UNVERIFIABLE_KIND|SKIPPED_TEMPLATE)$/ && ++n <= 20' \
+         <<<"$out" >&2
        refuse "live doctrine has unresolved pointers (kit-cite-resolve --strict; rows above, first 20)" ;;
     3) # a research/modules/clients/memory root absent on this machine is the one named skip
-       absent=$(sed -nE 's/^kit-cite-resolve: cannot read (research|modules|clients|memory) root (.*): no such file or directory$/\1 \2/p' <<<"$out" | head -1)
+       absent=$(sed -nE '/^kit-cite-resolve: cannot read (research|modules|clients|memory) root (.*): no such file or directory$/{s//\1 \2/p;q}' <<<"$out")
        if [ -n "$absent" ]; then
          echo "pre-push: live cite check SKIPPED — roots absent ($absent)" >&2; return 0
        fi ;;

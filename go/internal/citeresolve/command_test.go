@@ -108,4 +108,26 @@ func TestFindKitWithoutAGeneratedIndex(t *testing.T) {
 	if got := findKit(filepath.Join(root, "types", "card.md")); got != want {
 		t.Errorf("findKit = %q, want %q", got, want)
 	}
+
+	// The nearest kit root wins: a kit with BUILD-STATE.src.md nested under a directory whose retros/INDEX.md
+	// sits further up is found first.
+	outer := t.TempDir()
+	inner := filepath.Join(outer, "nested", "kit")
+	for _, d := range []string{filepath.Join(outer, "retros"), filepath.Join(inner, "types")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for path, text := range map[string]string{
+		filepath.Join(outer, "retros", "INDEX.md"): "| Retro file |\n",
+		filepath.Join(inner, "BUILD-STATE.src.md"): "# source\n",
+	} {
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, _ = filepath.Abs(inner)
+	if got := findKit(filepath.Join(inner, "types", "card.md")); got != want {
+		t.Errorf("nearer BUILD-STATE.src.md: findKit = %q, want %q", got, want)
+	}
 }
