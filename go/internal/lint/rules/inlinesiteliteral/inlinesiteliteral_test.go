@@ -86,6 +86,10 @@ func TestSpecCases(t *testing.T) {
 		// station root (alarm database, root BQL) is the same on every station, not site data.
 		{"query ORDs with no slot path", map[string]string{logic: class("BRoomControl", "  String a = \"station:|alarm:|bql:select * where ackState != 'acked'\";\n  String b = \"station:|slot:/|bql:select * from schedule:NumericSchedule\";\n  String c = \"station:|slot:/\";\n  String d = \"station:|slot:/Drivers|bql:select *\";\n")}, nil,
 			warn(logic, 6, "ord", "station:|slot:/Drivers|bql:select *")},
+		// Decision 2026-10-24 (retro go-lint-inline-site-literal Δ2): a service ORD, any path under
+		// /Services, is module structure identical on every site, not site data.
+		{"service ORDs", map[string]string{logic: class("BRoomControl", "  String a = \"station:|slot:/Services/ChiDashboardService\";\n  String b = \"station:|slot:/Services/ChiDashboardService/\";\n  String c = \"slot:/Services/AlarmService/Console\";\n  String d = \"station:|slot:/Rooms/Room1\";\n  String e = \"station:|slot:/ServicesX/A\";\n")}, nil,
+			warn(logic, 6, "ord", "station:|slot:/Rooms/Room1") + warn(logic, 7, "ord", "station:|slot:/ServicesX/A")},
 		{"not ORDs: a time format, a slot word, a relative path", map[string]string{logic: class("BRoomControl", "  String a = \"h:mm a\";\n  String b = \"slot\";\n  String c = \"file:^data/x\";\n  String d = \"bql:select *\";\n")}, nil, ""},
 		{"IPv4 shapes", map[string]string{logic: class("BRoomControl", "  String a = \"http://10.0.0.5:8080/x\";\n  String b = \"999.1.1.1\";\n  String c = \"1.2.3\";\n  String d = \"1.2.3.4.5\";\n")}, nil,
 			warn(logic, 3, "ip", "http://10.0.0.5:8080/x")},

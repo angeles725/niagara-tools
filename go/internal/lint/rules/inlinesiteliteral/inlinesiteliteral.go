@@ -51,10 +51,9 @@ func (*rule) Severity() lint.Severity { return lint.Warn }
 var (
 	javaPart = regexp.MustCompile(`(^|/)[^/]+-(rt|ux)/src/`)
 	rcDir    = regexp.MustCompile(`(^|/)rc/`)
-	// slotPath is a slot ORD below the station root, alone or as one part of an ORD ("slot:/Rooms/Room1",
-	// "station:|slot:/Drivers|bql:..."). A query ORD that names no slot below the root ("station:|alarm:|bql:...",
-	// "station:|slot:/|bql:...") reads the same on every station: it is not site data (tuning 2026-10-24).
-	slotPath = regexp.MustCompile(`(^|\|)slot:/[^|]`)
+	// slotPath is each slot ORD part's path, alone or as one part of an ORD ("slot:/Rooms/Room1",
+	// "station:|slot:/Drivers|bql:..."); siteSlot decides which paths are site data.
+	slotPath = regexp.MustCompile(`(?:^|\|)slot:/([^|]*)`)
 	// handle is a handle ORD, alone or as one part of an ORD ("h:2e4f", "station:|h:2e4f"); "h:mm" is not.
 	handle = regexp.MustCompile(`(^|\|)h:[0-9a-fA-F]+($|\|)`)
 	ipv4   = regexp.MustCompile(`(^|[^0-9.])((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])($|[^0-9.])`)
@@ -140,7 +139,7 @@ func (r *rule) siteTable(f *javasrc.File) bool {
 // (matches a --site-pattern), or "" when it is none.
 func (r *rule) kind(s string) string {
 	switch {
-	case slotPath.MatchString(s) || handle.MatchString(s):
+	case siteSlot(s) || handle.MatchString(s):
 		return "ord"
 	case ipv4.MatchString(s):
 		return "ip"
@@ -151,6 +150,20 @@ func (r *rule) kind(s string) string {
 		}
 	}
 	return ""
+}
+
+// siteSlot reports a slot ORD part naming site data: a path below the station root that is not the Services
+// folder or under it. A query ORD that names no slot below the root ("station:|alarm:|bql:...",
+// "station:|slot:/|bql:...") reads the same on every station (tuning 2026-10-24), and so does a service ORD
+// ("station:|slot:/Services/ChiDashboardService", any path under /Services): module structure, not site data
+// (decision 2026-10-24, retro go-lint-inline-site-literal Δ2).
+func siteSlot(s string) bool {
+	for _, m := range slotPath.FindAllStringSubmatch(s, -1) {
+		if p := m[1]; p != "" && p != "Services" && !strings.HasPrefix(p, "Services/") {
+			return true
+		}
+	}
+	return false
 }
 
 // shown is the literal as a row prints it: at most maxShown bytes, then "...".
