@@ -29,14 +29,21 @@ func TestRecord(t *testing.T) {
 	must(t, err)
 	repo, err := filepath.Abs("../../..")
 	must(t, err)
+	// Read and root-check every recorded case before the first rewrite, so testdata is never left half re-recorded.
+	var paths []string
+	var all []golden.Case
 	for _, p := range cases(t, repo) {
 		if strings.HasPrefix(filepath.Base(p), "truth-") {
 			continue
 		}
 		c, err := golden.Read(p)
 		must(t, err)
-		c.Files["toolbelt/commissioning-verify.sh"] = string(bash)
 		unreadableAsRoot(t, c.Files)
+		paths, all = append(paths, p), append(all, c)
+	}
+	for i, p := range paths {
+		c := all[i]
+		c.Files["toolbelt/commissioning-verify.sh"] = string(bash)
 		dir := t.TempDir()
 		tb := materialize(t, dir, repo, c.Files)
 		sub := strings.NewReplacer("@DIR@", dir, "@REPO@", repo)

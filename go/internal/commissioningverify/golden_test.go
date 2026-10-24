@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -71,18 +72,35 @@ func materialize(t *testing.T, dir, repo string, files map[string]string) string
 // so the case would test nothing); without it such a run fails.
 const RootOptIn = "CV_GOLDEN_ALLOW_ROOT_SKIP"
 
-// unreadableAsRoot fails (or, with RootOptIn=1, skips) a case holding a "(mode 000)" file when the test runs as
-// root. It runs before anything of the case is written, so a case is never skipped half materialized.
+// rootVerdict decides a case holding "(mode 000)" files for a run as uid with RootOptIn set to optIn: "" runs it;
+// otherwise skip says whether to skip (optIn "1") or fail, and msg says why, naming the first such file in sorted
+// order so the message is deterministic.
+func rootVerdict(uid int, optIn string, files map[string]string) (skip bool, msg string) {
+	var locked []string
+	for name := range files {
+		if strings.HasSuffix(name, " (mode 000)") {
+			locked = append(locked, name)
+		}
+	}
+	if uid != 0 || len(locked) == 0 {
+		return false, ""
+	}
+	sort.Strings(locked)
+	if optIn == "1" {
+		return true, "running as root: chmod 000 does not block reads (" + RootOptIn + "=1)"
+	}
+	return false, fmt.Sprintf("running as root: %s cannot be made unreadable; run as a normal user or set %s=1 to skip", locked[0], RootOptIn)
+}
+
+// unreadableAsRoot applies rootVerdict to this process. Callers run it before anything of the case is written, so
+// a case is never skipped half materialized.
 func unreadableAsRoot(t *testing.T, files map[string]string) {
 	t.Helper()
-	for name := range files {
-		if !strings.HasSuffix(name, " (mode 000)") || os.Geteuid() != 0 {
-			continue
-		}
-		if os.Getenv(RootOptIn) == "1" {
-			t.Skip("running as root: chmod 000 does not block reads (" + RootOptIn + "=1)")
-		}
-		t.Fatalf("running as root: %s cannot be made unreadable; run as a normal user or set %s=1 to skip", name, RootOptIn)
+	switch skip, msg := rootVerdict(os.Geteuid(), os.Getenv(RootOptIn), files); {
+	case skip:
+		t.Skip(msg)
+	case msg != "":
+		t.Fatal(msg)
 	}
 }
 
@@ -107,6 +125,29 @@ func cases(t *testing.T, repo string) []string {
 		t.Fatalf("found %d recorded and %d truth-* cases, want %d and %d", len(paths)-truth, truth, recordedCases, truthCases)
 	}
 	return paths
+}
+
+func TestRootVerdict(t *testing.T) {
+	t.Parallel()
+	locked := map[string]string{"z (mode 000)": "", "a (mode 000)": "", "b": ""}
+	fail := "running as root: a (mode 000) cannot be made unreadable; run as a normal user or set " + RootOptIn + "=1 to skip"
+	for _, c := range []struct {
+		uid   int
+		optIn string
+		files map[string]string
+		skip  bool
+		msg   string
+	}{
+		{1000, "", locked, false, ""},
+		{0, "", map[string]string{"b": ""}, false, ""},
+		{0, "", locked, false, fail},
+		{0, "yes", locked, false, fail},
+		{0, "1", locked, true, "running as root: chmod 000 does not block reads (" + RootOptIn + "=1)"},
+	} {
+		if skip, msg := rootVerdict(c.uid, c.optIn, c.files); skip != c.skip || msg != c.msg {
+			t.Errorf("rootVerdict(%d, %q) = %v, %q; want %v, %q", c.uid, c.optIn, skip, msg, c.skip, c.msg)
+		}
+	}
 }
 
 // TestGolden replays every testdata case, recorded from the bash commissioning-verify.sh on the same tree and
