@@ -129,6 +129,9 @@ func (r *run) typeCount() bool {
 
 var rawFacetRe = rx(`BFacets\.make\(BFacets\.(MIN|MAX), *-?[0-9]`)
 
+// facets, ord-literal, transient-operator and compact3-import read each file as bytes: the bash grep
+// never printed a line with an encoding error or any line of a file holding a NUL byte, a silent PASS
+// (declared difference, truth-bytes-hits).
 func (r *run) facets() bool {
 	pd, ok := r.srcDirOrSkip("facets")
 	if !ok {
@@ -139,7 +142,7 @@ func (r *run) facets() bool {
 		if !ok {
 			return true
 		}
-		if h := t.numbered(rawFacetRe); len(h) > 0 {
+		if h := t.hits(rawFacetRe); len(h) > 0 {
 			r.row("FAIL", "facets", "raw-number MIN/MAX facet (wrap in BDouble.make): "+f+":"+h[0])
 			return false
 		}
@@ -167,7 +170,7 @@ func (r *run) ordLiteral() bool {
 		if strings.Contains(f, "/srcTest/") || (strings.Contains(basename(f, ".java"), "OrdConstants") && t.count(commentRe) > 0) {
 			continue
 		}
-		for _, hit := range t.numbered(ordLiteralRe) {
+		for _, hit := range t.hits(ordLiteralRe) {
 			if !strings.Contains(hit, "defaultValue") {
 				r.row("WARN", "ord-literal", f+":"+hit)
 				warned = true
@@ -180,7 +183,8 @@ func (r *run) ordLiteral() bool {
 	return true
 }
 
-// lineWarn is the shared body of the grep -n WARN checks: one row per printed hit, else the PASS row. With
+// lineWarn is the shared body of the grep -n WARN checks: one row per hit, read as bytes (grep -a, see
+// grepText.hits), else the PASS row. With
 // bare, re is matched on the javasrc bare view (comments and literal contents blanked) and the row quotes
 // the raw line.
 func (r *run) lineWarn(check string, re *regexp.Regexp, bare bool, pass string) bool {
@@ -199,8 +203,8 @@ func (r *run) lineWarn(check string, re *regexp.Regexp, bare bool, pass string) 
 			if bare {
 				match = v.bare[i]
 			}
-			if re.MatchString(match) && v.raw.shown(ln) {
-				r.row("WARN", check, f+":"+itoa(i+1)+":"+ln)
+			if re.MatchString(match) {
+				r.row("WARN", check, f+":"+itoa(i+1)+":"+display(ln))
 				warned = true
 			}
 		}

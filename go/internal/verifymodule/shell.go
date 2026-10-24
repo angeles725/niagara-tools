@@ -47,15 +47,22 @@ func newGrepText(s string) grepText {
 // discarded or shared with the row stream's caller).
 func (t grepText) shown(out string) bool { return !t.binary && utf8.ValidString(out) }
 
-// numbered is grep -n: "<line>:<text>" for every printed line re matches.
-func (t grepText) numbered(re *regexp.Regexp) []string {
+// hits is `grep -an`: "<line>:<text>" for every line re matches, read as bytes, so a line with an encoding
+// error or in a file holding a NUL byte is a hit too (grep under C.UTF-8 never printed one). The text is
+// display(line).
+func (t grepText) hits(re *regexp.Regexp) []string {
 	var out []string
 	for i, ln := range t.lines {
-		if re.MatchString(ln) && t.shown(ln) {
-			out = append(out, itoa(i+1)+":"+ln)
+		if re.MatchString(ln) {
+			out = append(out, itoa(i+1)+":"+display(ln))
 		}
 	}
 	return out
+}
+
+// display is a source line as a report row quotes it: a NUL byte as \0, an invalid UTF-8 byte as U+FFFD.
+func display(ln string) string {
+	return strings.ToValidUTF8(strings.ReplaceAll(ln, "\x00", `\0`), "\uFFFD")
 }
 
 // only is grep -o: every printed match, line by line.

@@ -1,3 +1,4 @@
+declared difference: ord-literal, transient-operator and compact3-import read each file as bytes: the hits on Latin.java's encoding-error lines and in the NUL-holding Nul.java are reported (shown with U+FFFD and \0), where the bash grep printed none
 declared difference: facets-req joins each @NiagaraProperty to its balancing ")" (javasrc.PropertyScan on the comment-blanked view): notype no longer borrows the next annotation's facets, longOne's OPERATOR past the bash's 40-line join now counts; transient-operator reads the bare view, so the string "TRANSIENT, then OPERATOR" is no hit
 -- args --
 --src
@@ -28,6 +29,9 @@ WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/BFacets.java:32:
 WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/BFacets.java:33:  String ord2 = "local:|foxs:"; // x
 WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/BareOrdConstants.java:1:String s = "slot:/x";
 WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Latin.java:1:a "station:|ok"
+WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Latin.java:2:b � "station:|latin"
+WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Nul.java:1:x "station:|before"
+WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Nul.java:3:y "station:|after" OPERATOR TRANSIENT
 SKIP  palette    @DIR@/Foo-ux.jar  no module.palette
 SKIP  wb-scaffold  @DIR@/Foo-ux.jar  not a -wb jar
 PASS  phantom-dep  @DIR@/Foo-ux.jar  all module.xml dependencies declared in gradle.kts
@@ -36,15 +40,18 @@ WARN  cross-module-type  @DIR@/Foo-ux.jar  foreign type in @NiagaraProperty: org
 WARN  cross-module-type  @DIR@/Foo-ux.jar  foreign type in @NiagaraProperty: org.foo.Ext
 WARN  cross-module-type  @DIR@/Foo-ux.jar  foreign type in @NiagaraProperty: org.lat.Valid
 WARN  transient-operator  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/BFacets.java:16:  flags = Flags.OPERATOR | Flags.TRANSIENT
+WARN  transient-operator  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Latin.java:3:c OPERATOR � TRANSIENT
+WARN  transient-operator  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Nul.java:3:y "station:|after" OPERATOR TRANSIENT
 WARN  compact3-import  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Imp.java:1:import java.awt.Color;
 WARN  compact3-import  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Imp.java:3:import javax.swing.JPanel;
 WARN  compact3-import  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Imp.java:4:  import java.sql.Connection;
+WARN  compact3-import  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Nul.java:4:import java.awt.X;
 WARN  subscription-leak  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Nul.java: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart
 WARN  subscription-leak  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Sub.java: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart
 WARN  subscription-leak  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/y/Sub3.java: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart
 WARN  slot-wall  @DIR@/Foo-ux.jar  16 properties in class Wall (@DIR@/mod/Foo-ux/src/com/x/Wall.java) — compose into child BComponents (logic.md L21)
 WARN  slot-wall  @DIR@/Foo-ux.jar  16 properties in class NoClass (@DIR@/mod/Foo-ux/src/com/x/inner/NoClass.java) — compose into child BComponents (logic.md L21)
-verify-module: 5 passed, 1 failed, 5 skipped, 28 warned -> FAILED
+verify-module: 5 passed, 1 failed, 5 skipped, 34 warned -> FAILED
 -- stderr --
 -- Foo-ux.jar (jar) --
 --- META-INF/ (stored) ---
