@@ -72,7 +72,10 @@ setup() {
   ROOT="$OUT/MinimalPan"; RT="$ROOT/MinimalPan/MinimalPan-rt"
   # scaffold -> the emitted module builds signed (build.sh runs slotomatic first, D3) + passes the gate + the timer lint.
   # build.sh usage: <module-root> <MOD> [niagara_home]; it runs slotomatic + jar + the verify gate itself.
-  run bash "$KIT/toolbelt/build.sh" "$ROOT" MinimalPan "$NIAGARA_HOME"
+  # build.sh refuses a real niagara_home (no .niagara-mirror): build into a throwaway mirror, never the install.
+  run bash "$KIT/toolbelt/mirror-niagara-home.sh" "$NIAGARA_HOME" "$BATS_TEST_TMPDIR/nh-mirror" MinimalPan-rt.jar
+  [ "$status" -eq 0 ]
+  run bash "$KIT/toolbelt/build.sh" "$ROOT" MinimalPan "$BATS_TEST_TMPDIR/nh-mirror"
   [ "$status" -eq 0 ]
   [[ "$output" == *"ALL PASS"* ]]
   run bash "$KIT/toolbelt/lint-timers.sh" "$RT/src"
