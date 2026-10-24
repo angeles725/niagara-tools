@@ -10,4 +10,4 @@ generate-wiring-map: cannot read @DIR@/src/BU.java: Permission denied
 truth: with --output, an unreadable source writes no file (the bash wrote the map without its slots, then "wrote <file>", exit 0)
 -- src/BA.java --
 @NiagaraProperty(name = "a", type = "double", defaultValue = "0", flags = Flags.OPERATOR)
--- src/BU.java (unreadable) --
+-- src/BU.java (mode 000) --

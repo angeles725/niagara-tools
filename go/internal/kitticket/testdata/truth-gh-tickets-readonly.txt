@@ -1,0 +1,24 @@
+-- args --
+fix the timer leak
+-- want --
+exit 3
+-- stderr --
+@DIR@/toolbelt/kit-ticket.sh: line 148: @DIR@/retros/tickets/.kit-ticket-tmp-4242-body.md: Permission denied
+@DIR@/toolbelt/kit-ticket.sh: line 157: @DIR@/retros/tickets/.kit-ticket-tmp-4242-gh.txt: Permission denied
+cat: @DIR@/retros/tickets/.kit-ticket-tmp-4242-gh.txt: No such file or directory
+grep: @DIR@/retros/tickets/.kit-ticket-tmp-4242-gh.txt: No such file or directory
+mv: cannot stat '@DIR@/retros/tickets/.kit-ticket-tmp-4242-body.md': No such file or directory
+kit-ticket: cannot write ticket file: @DIR@/retros/tickets/2026-01-02-fix-the-timer-leak.md
+kit-ticket: gh issue create failed
+-- @kind --
+truth: recorded from build-n4-module-kit/toolbelt/kit-ticket.sh at 5179bf23 with its temp-file pid ($$) replaced by 4242, the pid the Go test injects; the bash names its temp files by $$, so no recording repeats
+-- @env --
+PATH=@DIR@/ghbin:@DIR@/.tools
+-- ghbin/gh (mode 755) --
+#!/bin/sh
+printf 'gh'
+for a in "$@"; do case "$a" in *.kit-ticket-tmp-*) a=BODY ;; esac; printf ' [%s]' "$a"; done
+printf '\n'
+while [ $# -gt 0 ]; do if [ "$1" = --body-file ]; then cat "$2"; fi; shift; done
+exit 0
+-- retros/tickets (dir) (mode 555) --
