@@ -81,38 +81,15 @@ func (f File) Append(entry *pyjson.Object) error {
 	return err
 }
 
-// Entries is entries: every line that parses as a JSON object, in file order. A file that
-// cannot be opened is empty and a torn line is skipped; bytes that are not UTF-8 fail as
-// readlines() fails (a *pyjson.ValueError).
-func (f File) Entries() ([]*pyjson.Object, error) {
-	data, err := os.ReadFile(f.Path)
-	if err != nil {
-		return nil, nil
-	}
-	lines, err := pyjson.ReadLines(data)
-	if err != nil {
-		return nil, err
-	}
-	var out []*pyjson.Object
-	for _, line := range lines {
-		if v, err := pyjson.Loads([]byte(line)); err == nil {
-			if o, ok := v.(*pyjson.Object); ok {
-				out = append(out, o)
-			}
-		}
-	}
-	return out, nil
-}
-
 // line is one line of lines: its 1-based number and its JSON object, nil when it is not UTF-8.
 type line struct {
 	n     int
 	entry *pyjson.Object
 }
 
-// lines is the journal's _lines: the file split as bytes.splitlines splits it (LF, CRLF and CR,
+// lines is _JsonlFile._lines: the file split as bytes.splitlines splits it (LF, CRLF and CR,
 // the line ends readlines() honours) and decoded line by line, so one bad byte costs one line,
-// not the file (issue #448). A missing file or a torn line is skipped, as Entries skips them.
+// not the file (issues #448, #466). A missing file or a torn line is skipped.
 func (f File) lines() []line {
 	data, err := os.ReadFile(f.Path)
 	if err != nil {
@@ -146,3 +123,18 @@ type AuditLog struct{ File }
 
 // NewAuditLog is AuditLog(state_dir): <state_dir>/audit.jsonl.
 func NewAuditLog(stateDir string) *AuditLog { return &AuditLog{newFile(stateDir, "audit.jsonl")} }
+
+// Scan is AuditLog.scan: every JSON object line, and each line that is not UTF-8 as an
+// Unreadable (Reason "UnicodeDecodeError"), left out of the entries (issue #466).
+func (a *AuditLog) Scan() ([]*pyjson.Object, []Unreadable) {
+	var entries []*pyjson.Object
+	var bad []Unreadable
+	for _, l := range a.lines() {
+		if l.entry == nil {
+			bad = append(bad, Unreadable{Line: l.n, Reason: "UnicodeDecodeError"})
+			continue
+		}
+		entries = append(entries, l.entry)
+	}
+	return entries, bad
+}
