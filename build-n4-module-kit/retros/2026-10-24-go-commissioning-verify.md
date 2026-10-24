@@ -37,6 +37,13 @@ process through `go/internal/bogaudit` (Out and Err into one buffer, as `2>&1` d
 - A fold that lists statuses per check drops whatever status a check later starts emitting; relay a fixed status set.
 - A structural pin over a ported script goes vacuous at the switch: RM45 grepped commissioning-verify.sh for the bash
   `set -u` array idiom, so it now covers report-module.sh only (mutation RM-setu).
+- Review follow-ups applied in this unit: goldens re-record reproducibly from the pre-port bash (`TestRecord`,
+  `testdata/README.md`), declared-fix cases are named `truth-*` and counted exactly, a mode-644 stub is a real EACCES
+  case beside the ENOEXEC (no `#!`) case, a mode-000 case fails as root unless opted out, and the lints get an
+  injected PATH/HOME-only environment in tests.
+- Follow-up (pre-existing, not changed here): the golden cases run the real toolbelt wrappers, which rebuild
+  `go/bin/<tool>` on demand inside the live tree (`go/go-tool.sh` `go_tool_bin`); a test run can therefore write
+  `go/bin`. A hermetic option is a per-test GO_DIR/bin or a prebuilt binary handed to the wrappers.
 - Δ1-Δ4 are applied in this unit as code fixes; the retro stays pending until a fold review decides whether any of them
   becomes doctrine.
 
