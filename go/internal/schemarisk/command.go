@@ -49,21 +49,29 @@ func Main(args []string, s cli.Stdio) int {
 		}
 	}
 	var snaps [2][]Slot
+	var unknown []Change
 	for i, dir := range []string{before, after} {
 		files, err := lint.Walk(dir, lint.Selection{Names: []string{"*.java"}})
 		if err != nil {
 			fmt.Fprintf(s.Err, "error: cannot list every file under %s: %v\n", dir, err)
 			return ExitEnv
 		}
-		lns, err := javaLines(files)
-		if err != nil {
-			fmt.Fprintf(s.Err, "error: %v\n", err)
-			return ExitEnv
+		for _, f := range files {
+			b, err := os.ReadFile(f)
+			if err != nil {
+				// a partial read is never classified: the bash awk stopped here and judged the slots read before it
+				fmt.Fprintf(s.Err, "error: cannot read %s: %s\n", f, strerror.Text(err))
+				return ExitEnv
+			}
+			slots, bad := Parse(lines(string(b)))
+			snaps[i] = append(snaps[i], slots...)
+			for _, ln := range bad {
+				unknown = append(unknown, Change{"UNKNOWN", fmt.Sprintf("<unparsed>@%s:%d", f, ln)})
+			}
 		}
-		snaps[i] = Parse(lns)
 	}
 	worst, verdict := 0, "SAFE"
-	for _, c := range Diff(snaps[0], snaps[1]) {
+	for _, c := range append(Diff(snaps[0], snaps[1]), unknown...) {
 		r := lookup(c.Kind)
 		fmt.Fprintf(s.Out, "%s  %s  %s.%s: %s (%s)\n", r.Verdict, c.Kind, typeName, c.Label, r.Evidence, r.Note)
 		if sc := score(r.Verdict); sc > worst {
@@ -72,20 +80,6 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	fmt.Fprintf(s.Out, "verdict=%s\n", verdict)
 	return worst
-}
-
-// javaLines is the lines of files in order; a file it cannot read fails the snapshot closed (env), never a
-// verdict from the slots read before it (the bash awk stopped there and classified the partial read).
-func javaLines(files []string) ([]string, error) {
-	var out []string
-	for _, f := range files {
-		b, err := os.ReadFile(f)
-		if err != nil {
-			return nil, fmt.Errorf("cannot read %s: %s", f, strerror.Text(err))
-		}
-		out = append(out, lines(string(b))...)
-	}
-	return out, nil
 }
 
 // lines splits text into awk records: newline-terminated, a last unterminated line kept.

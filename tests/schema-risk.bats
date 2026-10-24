@@ -128,3 +128,15 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   [[ "$output" == *"error: cannot read $f: "* ]]
   [[ "$output" != *"verdict="* ]]
 }
+
+@test "SR-unbalanced an annotation whose parentheses never close is an UNKNOWN row (OUTAGE), never a silent skip (L3)" {
+  # Mutation: SR-unbalanced -- joining the open annotation to the end of input swallows the slot after it and reads SAFE
+  mkdir -p "$BATS_TEST_TMPDIR/after/p"
+  cp "$FX/add_slot/before/module-include.xml" "$BATS_TEST_TMPDIR/after/"
+  sed 's/@NiagaraProperty(name="setpoint", type="double", defaultValue="0.0", flags=Flags.SUMMARY|Flags.OPERATOR)/@NiagaraProperty(name="setpoint", type="double"/' \
+    "$FX/add_slot/before/com/angeles/MinimalPan/BMinimalPan.java" > "$BATS_TEST_TMPDIR/after/p/BMinimalPan.java"
+  run "$SR" "$FX/add_slot/before" "$BATS_TEST_TMPDIR/after"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"OUTAGE  UNKNOWN  MinimalPan.<unparsed>@$BATS_TEST_TMPDIR/after/p/BMinimalPan.java:"* ]]
+  [[ "$output" == *"verdict=OUTAGE"* ]]
+}

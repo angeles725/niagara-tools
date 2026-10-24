@@ -63,30 +63,33 @@ func attr(buf, a string) string {
 	return ""
 }
 
-// Parse harvests the slots of lines (every Java file's lines, in walk order, as one stream) in declaration
-// order. An annotation that starts a line is joined with the following lines, one space apart, until its
-// parentheses balance or the stream ends; one without a non-empty name is skipped.
-func Parse(lines []string) []Slot {
-	var slots []Slot
+// Parse harvests the slots of one Java file's lines in declaration order. An annotation that starts a line is
+// joined with the following lines, one space apart, until its parentheses balance. One that never balances in
+// the file (the lines after it are read again) or has no non-empty name is unparsed: its 1-based start line is
+// returned, never skipped (L3).
+func Parse(lines []string) (slots []Slot, unparsed []int) {
 	for i := 0; i < len(lines); i++ {
 		if !slotStart.MatchString(lines[i]) {
 			continue
 		}
-		buf, depth := lines[i], javasrc.ParenDepth(lines[i])
+		start, buf, depth := i+1, lines[i], javasrc.ParenDepth(lines[i])
 		for ; depth > 0 && i+1 < len(lines); depth += javasrc.ParenDepth(lines[i]) {
 			i++
 			buf += " " + lines[i]
 		}
 		name := attr(buf, "name")
 		switch {
+		case depth > 0: // read on from the line after it, so the slots it swallowed are still harvested
+			unparsed, i = append(unparsed, start), start-1
 		case name == "":
+			unparsed = append(unparsed, start)
 		case strings.HasPrefix(strings.TrimLeft(buf, " \t\n\v\f\r"), "@NiagaraProperty"):
 			slots = append(slots, Slot{"property", name, attr(buf, "type")})
 		default:
 			slots = append(slots, Slot{"action", name, "action"})
 		}
 	}
-	return slots
+	return slots, unparsed
 }
 
 // Change is one classified slot change: its change kind and the slot label ("<name>" or "<from>-><to>").

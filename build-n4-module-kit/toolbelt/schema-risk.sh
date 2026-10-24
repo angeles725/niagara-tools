@@ -14,9 +14,10 @@
 #   L2  remove_slot_complex (SAFE) and retype_complex (LOSSY) are unreachable by design:
 #       every unresolved removal -> remove_slot_unknown (LOSSY), every unresolved retype ->
 #       retype_unknown (OUTAGE). Never downgrade on uncertainty (B795 §795.2).
-#   L3  Unparseable/unbalanced annotations and slot-kind swaps (property<->action at same name)
-#       emit UNKNOWN -> OUTAGE. No silent skips.
-#   L4  @Range enum-tag changes (add/remove/rename tag on a BFrozenEnum @Range) are NOT auto-detected from snapshots; parse_slots harvests @NiagaraProperty only. Manually diff @Range declarations before deploy.
+#   L3  An annotation whose parentheses never balance in its file, or with no name, and a slot-kind
+#       swap (property<->action at same name) emit UNKNOWN -> OUTAGE (`<Type>.<unparsed>@<file>:<line>`
+#       for the annotation; the lines after an unbalanced one are still read). No silent skips.
+#   L4  @Range enum-tag changes (add/remove/rename tag on a BFrozenEnum @Range) are NOT auto-detected from snapshots; only slot annotations are harvested, never @Range. Manually diff @Range declarations before deploy.
 #
 # Exit: 0=SAFE  1=LOSSY  2=OUTAGE  3=usage  4=env (unreadable snapshot or *.java / missing tool / no Go toolchain or a failed build)
 # Exit-code justification: usage (3) and env (4) sit ABOVE the verdict domain (0-2) so that a

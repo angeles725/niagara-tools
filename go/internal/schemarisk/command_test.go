@@ -115,6 +115,29 @@ func TestMainEdges(t *testing.T) {
 	}
 }
 
+// TestUnparsedAnnotation: an annotation whose parentheses never balance in its file, or that has no name, is an
+// UNKNOWN row (OUTAGE) naming its file and line, never skipped, and the slots after an unbalanced one are still read
+// (L3; bash joined it to the end of input, swallowing them, and classified what it read).
+func TestUnparsedAnnotation(t *testing.T) {
+	t.Parallel()
+	const xml = "<type name=\"Pan\"/>\n"
+	before := snapshot(t, xml, "@NiagaraProperty(name=\"sp\", type=\"double\")\n")
+	open := snapshot(t, xml, "@NiagaraProperty(name=\"sp\", type=\"double\"\n@NiagaraProperty(name=\"hidden\", type=\"int\")\n")
+	code, out, _ := run(before, open)
+	want := "LOSSY  remove_slot_simple  Pan.sp: B754-754.6-r7 (value-dropped)\n" +
+		"SAFE  add_slot  Pan.hidden: B754-754.6-r1 (new-default)\n" +
+		"OUTAGE  UNKNOWN  Pan.<unparsed>@" + open + "/p/A.java:1: B795-795.2-failsafe (default-fail-safe)\nverdict=OUTAGE\n"
+	if code != 2 || out != want {
+		t.Errorf("unbalanced: exit %d out %q\nwant 2 %q", code, out, want)
+	}
+	noName := snapshot(t, xml, "@NiagaraProperty(name=\"sp\", type=\"double\")\n  @NiagaraAction(flags=1)\n")
+	code, out, _ = run(before, noName)
+	want = "OUTAGE  UNKNOWN  Pan.<unparsed>@" + noName + "/p/A.java:2: B795-795.2-failsafe (default-fail-safe)\nverdict=OUTAGE\n"
+	if code != 2 || out != want {
+		t.Errorf("no name: exit %d out %q\nwant 2 %q", code, out, want)
+	}
+}
+
 // TestUnreadableJava: an unreadable *.java is env (4) with no row, never a verdict from a partial read (T2).
 func TestUnreadableJava(t *testing.T) {
 	if os.Getuid() == 0 {
