@@ -1,8 +1,10 @@
+declared difference: T2: the STALE pass reads a last matrix line without a newline (bash while read dropped it, hiding ghostB)
 -- args --
 @DIR@/noeol
 -- want --
 exit 0
 STALE  lint-write-path  @DIR@/noeol/docs/write-path-matrix.md:2  slot ghostA: no source slot with that name
+STALE  lint-write-path  @DIR@/noeol/docs/write-path-matrix.md:3  slot ghostB: no source slot with that name
 -- stderr --
 -- .git/HEAD --
 x

@@ -25,7 +25,6 @@ const space = " \t\n\v\f\r"
 type matrix struct {
 	path  string
 	lines []string
-	eol   bool // the last line ends in "\n" (bash `while read` drops a last line without one)
 }
 
 // matrix resolves the matrix: the --matrix file as given, or the first <dir>/docs/write-path-matrix.md
@@ -66,7 +65,7 @@ func readMatrix(p string) (*matrix, error) {
 
 func newMatrix(p string, data []byte) *matrix {
 	ls, _ := javasrc.Lines(strings.NewReader(string(data))) // a strings.Reader never fails
-	return &matrix{path: p, lines: ls, eol: len(data) > 0 && data[len(data)-1] == '\n'}
+	return &matrix{path: p, lines: ls}
 }
 
 func (m *matrix) hasRow() bool {
@@ -116,7 +115,7 @@ func (m *matrix) slots() map[string]bool {
 func (m *matrix) stale(covered map[string]bool) []lint.Finding {
 	var out []lint.Finding
 	for i, ln := range m.lines {
-		if i == len(m.lines)-1 && !m.eol || !strings.HasPrefix(ln, "|") {
+		if !strings.HasPrefix(ln, "|") { // every line, a last one without "\n" too (truth fix T2)
 			continue
 		}
 		row := htmlComment.ReplaceAllString(ln, "")

@@ -456,3 +456,15 @@ MD
   [[ "$output" != *"FAIL"* ]]
   [ "$status" -eq 0 ]
 }
+
+# Truth fix T2: the per-row STALE pass read the matrix with `while read`, which drops a last line that
+# has no newline, so a stale last row was never reported.
+@test "WP-stale-noeol: a stale last matrix row without a trailing newline is still STALE" {
+  # Mutation: WP-stale-noeol -- skipping an unterminated last line hides its STALE row.
+  d="$BATS_TEST_TMPDIR/noeol"; mkdir -p "$d/src/com/x" "$d/docs"
+  printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\n' > "$d/src/com/x/B.java"
+  printf '| `setpoint` | D |\n| `ghostLast` | D |' > "$d/docs/write-path-matrix.md"
+  run "$LW" --strict "$d"
+  [[ "$output" == *"STALE"*"ghostLast"* ]]
+  [ "$status" -eq 1 ]
+}
