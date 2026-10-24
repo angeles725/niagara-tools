@@ -29,6 +29,7 @@ type station struct {
 	sent             []any
 	sendErr, loadErr error
 	failLoadsAfter   bool   // loads fail with loadErr only once something was sent
+	cleared          int    // ClearHandles calls
 	onSend           func() // runs after an op changed the model
 }
 
@@ -94,6 +95,10 @@ func (s *station) Sync(op any) (any, error) {
 	o := op.(*pyjson.Object)
 	n, _ := o.Get("n")
 	b, _ := o.Get("b")
+	if nm, _ := o.Get("nm"); nm == "v" { // a removal: the model keeps the node
+		s.applied()
+		return []any{}, nil
+	}
 	nodes := s.nodes[calc]
 	nodes.Set(n.(string), b)
 	kids, _ := b.(*pyjson.Object).Get("s")
@@ -105,7 +110,7 @@ func (s *station) Sync(op any) (any, error) {
 	return []any{}, nil
 }
 
-func (s *station) ClearHandles() {}
+func (s *station) ClearHandles() { s.cleared++ }
 func (s *station) Close()        {}
 
 // rig is a server with the write tools on st, connected and identity-verified.

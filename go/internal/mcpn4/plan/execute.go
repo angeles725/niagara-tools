@@ -29,6 +29,7 @@ func (e *Engine) execute(c Client, impl Impl, args *pyjson.Object, planned *Plan
 		replies = append(replies, reply)
 	}
 	out := obj("dry_run", false, "batch_id", batchID)
+	withKeys(out, planned, []string{"snapshot_truncated"}) // what a remove's snapshot could not keep
 	var accepted any
 	if len(replies) > 0 {
 		accepted = replies[0]
