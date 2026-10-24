@@ -7,7 +7,6 @@ package schemarisk
 import (
 	_ "embed"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
@@ -93,30 +92,31 @@ func Parse(lines []string) []Slot {
 // Change is one classified slot change: its change kind and the slot label ("<name>" or "<from>-><to>").
 type Change struct{ Kind, Label string }
 
-// side is one snapshot's slots: the last declaration of each name, and every name in declaration order.
+// side is one snapshot's slots: the last declaration of each name and its position, and every name in
+// declaration order.
 type side struct {
 	by    map[string]Slot
+	last  map[string]int
 	order []string
 }
 
 func index(slots []Slot) side {
-	s := side{by: map[string]Slot{}}
-	for _, sl := range slots {
-		s.by[sl.Name] = sl
+	s := side{by: map[string]Slot{}, last: map[string]int{}}
+	for i, sl := range slots {
+		s.by[sl.Name], s.last[sl.Name] = sl, i
 		s.order = append(s.order, sl.Name)
 	}
 	return s
 }
 
-// names is the names of s that keep holds, sorted.
+// names is the names of s that keep holds, in the order of their last declaration.
 func (s side) names(keep func(Slot) bool) []string {
 	var out []string
-	for nm, sl := range s.by {
-		if keep(sl) {
+	for i, nm := range s.order {
+		if s.last[nm] == i && keep(s.by[nm]) {
 			out = append(out, nm)
 		}
 	}
-	sort.Strings(out)
 	return out
 }
 
@@ -124,8 +124,9 @@ func simple(typ string) bool { return !strings.Contains(typ, ":") }
 
 // Diff classifies every slot change from before to after: one rename when exactly one slot was removed and one
 // added with the same kind and type (L1), else removals, additions, kind swaps (UNKNOWN, L3) and retypes; a
-// reorder of an otherwise unchanged set lists every before slot as reorder_slot. Each category is listed by name
-// (bash printed gawk for-in hash order, which no port can reproduce).
+// reorder of an otherwise unchanged set lists every before slot as reorder_slot. Each category is listed in declaration
+// order: the after snapshot's for additions, the before snapshot's for the others (bash printed gawk for-in
+// hash order).
 func Diff(before, after []Slot) []Change {
 	if len(before) == 0 {
 		// bash quirk kept: awk's NR==FNR read an empty first file's partner as the before snapshot.
@@ -134,8 +135,8 @@ func Diff(before, after []Slot) []Change {
 	b, a := index(before), index(after)
 	removed := b.names(func(s Slot) bool { _, ok := a.by[s.Name]; return !ok })
 	added := a.names(func(s Slot) bool { _, ok := b.by[s.Name]; return !ok })
-	swapped := a.names(func(s Slot) bool { o, ok := b.by[s.Name]; return ok && o.Kind != s.Kind })
-	retyped := a.names(func(s Slot) bool { o, ok := b.by[s.Name]; return ok && o.Kind == s.Kind && o.Type != s.Type })
+	swapped := b.names(func(s Slot) bool { o, ok := a.by[s.Name]; return ok && o.Kind != s.Kind })
+	retyped := b.names(func(s Slot) bool { o, ok := a.by[s.Name]; return ok && o.Kind == s.Kind && o.Type != s.Type })
 	var out []Change
 	if len(removed) == 1 && len(added) == 1 && b.by[removed[0]].Kind == a.by[added[0]].Kind && b.by[removed[0]].Type == a.by[added[0]].Type {
 		out = append(out, Change{"rename_slot", removed[0] + "->" + added[0]})

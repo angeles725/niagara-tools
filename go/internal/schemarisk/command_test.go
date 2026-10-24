@@ -41,12 +41,13 @@ func write(t *testing.T, path, text string) {
 }
 
 // TestGolden replays every fixture pair against the stdout schema-risk.sh printed for it (testdata/<pair>.golden);
-// the exit code is the golden's verdict line.
+// the exit code is the golden's verdict line. multi_row.golden is the declaration order the port prints where
+// bash printed gawk for-in hash order (several rows in one category).
 func TestGolden(t *testing.T) {
 	t.Parallel()
 	goldens, _ := filepath.Glob("testdata/*.golden")
-	if len(goldens) < 8 {
-		t.Fatalf("want the 8 recorded fixture goldens, found %d", len(goldens))
+	if len(goldens) < 9 {
+		t.Fatalf("want the 9 fixture goldens, found %d", len(goldens))
 	}
 	exits := map[string]int{"verdict=SAFE\n": 0, "verdict=LOSSY\n": 1, "verdict=OUTAGE\n": 2}
 	for _, g := range goldens {
