@@ -45,13 +45,21 @@ exit precedence).
   right; only the "no parsable row" wording is loose); triage-console rows keep no `(run)` prefix and its
   non-row lines are printed uncounted (RM5b reads them); the line-0 site-mode detail was not reproduced with a
   shipped rule. The bash < 4.4 empty-array hazard (:730) is gone with the bash body.
-- **Declared port differences** (no shipped member reaches them): artifacts sort in byte order whatever the
-  locale; member output past 64 MiB is dropped and named; NUL bytes drop without bash's warning; bash's own
-  "No such file or directory" line for a missing member is not in its output; a non-integer `pct` reads WARN
-  without bash's stderr diagnostic.
+- **Declared port differences** (no shipped member reaches them):
+  - Artifacts sort in byte order whatever the locale. The wrapper does not set LC_ALL, so the bash's `sort`
+    followed the caller's LC_COLLATE: under a UTF-8 locale such as en_US.UTF-8, glibc collation orders `a-rt`
+    before `B-rt` where byte order puts `B-rt` first, so the same module listed its artifacts in a
+    host-dependent order. The port fixes the order. (Not reproduced here: this host has only the C locales.)
+  - A member with no `#!` line (ENOEXEC) is exit 126; the bash ran it as a shell script.
+  - NUL bytes drop without bash's warning; bash's own "No such file or directory" line for a missing member is
+    not in its output; a non-integer `pct` reads WARN without bash's stderr diagnostic.
+- **Review follow-ups** (after an independent review of the port): a member whose output passes the 64 MiB
+  bound is an ERROR row and exit 3, not a stderr note over partial rows (W1); a toolbelt directory that does not
+  exist is refused with exit 3 before any member runs (W2); cleanups S1-S5; a golden pins the KIT_NODE/KIT_ACORN
+  passthrough to lint-vendor-floor.
 
 ## Evidence
-- `go test ./internal/reportmodule/` (119 golden cases: 113 recorded, 6 truth; `TestParseRows`, `TestFirstJar*`,
+- `go test ./internal/reportmodule/` (120 golden cases: 114 recorded, 6 truth; `TestParseRows`, `TestFirstJar*`,
   `TestEveryLintIsAMemberOrListed`) and `go test ./internal/lintindex/` (`TestScanAutoFromMemberTable`)
   green `[ev: go/internal/reportmodule/testdata]`
 - `tests/report-module.bats` 73/73 (RM31, RM33 skip: no acorn, no eslint installed) `[ev: tests/report-module.bats]`
