@@ -179,7 +179,7 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
 - **Read a code-built link back — the licence link capacity faults it silently:** inside a station, activating a link
   past the licence's `globalCapacity` link limit sets the link's `fatalFault` and logs only
   `Exceeded link limit for globalCapacity`; that link then propagates nothing (`BLink.java:373-378`, `:661`). After
-  adding links in code, check `link.isActive() && !link.isFatalFault()` (`BLink.java:348`, `:824`) and surface a
+  adding links in code, check `link.isActive() && !link.isFatalFault()` (`BLink.java:347`, `:824`) and surface a
   failure instead of assuming the link runs. [ev: retro devguide415-runtime-api-corrections Δ10]
 
 - **A value linked ACROSS two custom modules is a plain `double` (0/1/2), never a shared frozen-enum type:** an enum link requires the identical type on both ends, which forces module-B-rt to depend on module-A-rt, and the custom-module dependency DSL is non-trivial (`compileOnly(files(...))` does not reach the plugin classpath; the plugin auto-includes only Tridium modules). A `double` links with zero dependency; Workbench shows 0/1/2. The deleted `BHoaMode` was such an enum — a leftover reference surfaced live on the JACE as `Missing class ColdRoomPan:HoaMode`. [ev: bitácora 5cuartos §5]
@@ -190,7 +190,7 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
 
 - **One converter per link — no framework multi-hop:** `BConversionLink` holds exactly ONE `BConverter` slot. There is no framework facility for chaining converters across a single link. The `@Adapter(from, to)` registry auto-selects a converter by type pair.
 - **Three status patterns:** PROPAGATE (`Status → Status` copies the `BStatus` bitmask end-to-end), STRIP (`Status → plain`: converter unwraps the value; status bitmask is NOT forwarded), INJECT (`plain → Status`: wraps a raw value in a `BStatus`).
-- **STRIP gotcha — null/fault source holds last-good target, does NOT surface fault:** a `Status → plain` converter (e.g. `BStatusNumeric → double`) on a heterogeneous link fires inside `propagate`. When the source is `null` or faulted, the STRIP converter returns the **unchanged target value** (last-known-good) — NOT null and NOT NaN. The fault is silently absorbed at the conversion seam; the target slot never sees an invalid status. This is architecturally correct (preserves last-known-good across a type seam) but violates the "degrade honestly" rule if the author expects fault to propagate. **Rule:** always check `BStatus.isValid()` on the SOURCE side of a cross-type link before trusting the target value; do not assume a faulted source drives the target to null/fault. `[ev: corpus B871 §871.4]`
+- **STRIP gotcha — null/fault source holds last-good target, does NOT surface fault:** a `Status → plain` converter (e.g. `BStatusNumeric → double`) on a heterogeneous link fires inside `propagate`. When the source status is `null`, the STRIP converter returns the **unchanged target value** (last-known-good) — NOT null and NOT NaN (`converters-rt` vineflower 4.14.0.162 `BStatusNumericToBoolean.java:49`); a faulted, down or stale source still has its value converted and its status bits dropped. The fault is silently absorbed at the conversion seam; the target slot never sees an invalid status. This is architecturally correct (preserves last-known-good across a type seam) but violates the "degrade honestly" rule if the author expects fault to propagate. **Rule:** always check `BStatus.isValid()` on the SOURCE side of a cross-type link before trusting the target value; do not assume a faulted source drives the target to null/fault. `[ev: corpus B871 §871.4]`
 - **Enum → double bridge is ordinal-only (lossy):** an enum→double converter returns the enum's ordinal. The semantic tag is lost; a round-trip through a `double` destroys enum identity. `[ev: corpus B871 §871.2-3, B928]`
 - **`BConversionLink` stale-converter rule — delete and re-create the link after retyping a source slot:** the converter is persisted at link-creation and chosen ONCE by the `@Adapter(from, to)` registry; when the source slot's type later changes, `propagate()` applies the OLD converter with no try/catch — the result is either a SEVERE-abort (throwing converter) or a silently wrong value (coercing converter). The framework does NOT re-select the converter on retype. Fix: after retyping the source, delete the link and create a new one so the registry picks the correct converter. `[ev: retro module-hardening-failure-modes-deltas Δ8]`
 
@@ -222,7 +222,7 @@ Six changes that fix wire-sheet and property-sheet overload, ordered by impact �
 | 3 | **Units/precision facets on every temp / pressure / percent slot** | low · facet-only | Applies to all SUMMARY-flagged numeric pins; pairs with item 1. |
 | 4 | **Distinct icon per block type** | low · one SVG resource | See `types/logic-authoring.md §Adding a block icon`. Polish — do after items 1–3 are done. |
 | 5 | **Pre-wired palette assembly templates** | low · resource-only | A `module.palette` assembly covering the most common wiring (`types/structure.md` § Palette assembly templates; a palette entry is not a `.ntpl`). Discoverability improvement. `[ev: corpus B1325 §1325.2 C1]` |
-| 6 | **Semantic tag dictionary** | medium | See §Ship a tag dictionary above; enables NEQL queries and navigation. |
+| 6 | **Semantic tag dictionary** | medium | See §Ship a tag dictionary below; enables NEQL queries and navigation. |
 
 **Sequencing rule:** 1 + 3 are same-day flag/facet passes; 5 is a resource add; 2 is the structural one (plan carefully); 4 + 6 are polish and discoverability improvements.
 
@@ -270,14 +270,14 @@ Distilled from a docSource survey of control-rt/kitControl-rt (BControlPoint, BQ
   - **TRANSIENT trap:** never combine `TRANSIENT` with `OPERATOR` on the same slot — `TRANSIENT` means not persisted to the `.bog`; `OPERATOR` means operator-writable config. The operator sets a setpoint, the station restarts, the setpoint silently reverts to default. `verify-module.sh --src` WARN: `transient-operator`. `[ev: corpus B755 §755.5, B4 §4.1.2]`
 - **`getSlotFacets` projection** of a `facets` config slot onto outputs (units/precision once) + **range facets** on inputs, still clamp defensively in code.
 - **Pure-logic split for reusable formulas** (like `ColdRoomControl.decideCall`) — the only part that gets real unit tests; everyday logic stays inline.
-- **GOTCHA**: `catch(Throwable)+log` is NOT automatic — the framework only wraps `BControlPoint.executeExtensions`. In your OWN `changed()`/timer handlers you MUST self-guard or one exception corrupts engine state. (Our modules already do.)
-- **Wrap every callback body and re-arm timers in `finally`:** `changed()`, timer callbacks, and lifecycle overrides are BARE — a thrown exception aborts the invocation and silently drops any `Clock.schedule` re-arm that follows. Pattern: `try { /* logic */ } catch (Throwable t) { logError("tick", t); } finally { rearmTick(); }` — the `finally` block guarantees the re-arm even on exception. A self-rescheduling timer that throws before re-arm silently stops for the rest of the session with no log entry, causing the control to degrade to reactive-only. `[ev: retro module-hardening-reference-cards-deltas Δ8]`
+- **GOTCHA**: the framework's catch only logs — it does not keep your state consistent: an exception from `changed()` is caught and its stack trace printed (vineflower baja 4.14.0.162 `com/tridium/sys/schema/ComponentSlotMap.java:774`, `:822-823`), and a failed Clock-ticket action is logged SEVERE `Action failed` (`com/tridium/sys/engine/EngineUtil.java:23-31`); the rest of the handler never runs. In your OWN `changed()`/timer handlers you MUST self-guard or one exception leaves half-updated state. (Our modules already do.)
+- **Wrap every callback body and re-arm timers in `finally`:** `changed()`, timer callbacks, and lifecycle overrides are BARE — a thrown exception aborts the invocation and silently drops any `Clock.schedule` re-arm that follows. Pattern: `try { /* logic */ } catch (Throwable t) { logError("tick", t); } finally { rearmTick(); }` — the `finally` block guarantees the re-arm even on exception. A self-rescheduling timer that throws before re-arm stops for the rest of the session (the framework logs only the exception, GOTCHA above), causing the control to degrade to reactive-only. `[ev: retro module-hardening-reference-cards-deltas Δ8]`
 
 ### Wire-sheet live-view recipe `[ev: corpus B747 §747.2]`
 
 Three authoring choices determine the wire-sheet rendering and together produce a live, color-coded flow debugger at no extra cost:
 
-1. **`SUMMARY` flag on a slot → visible pin row** — `SlotBarGlyph` gates pin-row visibility on `Flags.isSummary()` (SUMMARY=8, `Flags.java:12`); a slot without SUMMARY is invisible on the wire sheet regardless of type. Curate SUMMARY on real I/O slots; do not set it on every internal state slot.
+1. **`SUMMARY` flag on a slot → visible pin row** — `SlotBarGlyph` gates pin-row visibility on `Flags.isSummary()` (SUMMARY=8, `Flags.java:186`); a slot without SUMMARY is invisible on the wire sheet regardless of type. Curate SUMMARY on real I/O slots; do not set it on every internal state slot.
 2. **Units + precision facets on that slot → formatted live value in the pin row** — `PropertyBarGlyph.updateValueString()` reads the slot's facets and renders the live value in the pin row with the configured units and decimal precision. Add units/precision facets to every numeric slot that appears as a pin (the `getSlotFacets` projection, covered in the Flags bullet above).
 3. **`BStatus` on the slot's value → pin row tinted by status color** — the same `PropertyBarGlyph` tints the row by the status color (fault=red, stale=yellow, override=magenta) via `getShowStatusColors()`. Refresh is push-on-change (`WsController.handleComponentEvent → glyph.changed(slot)`, `WsController.java:544-574`) — no poll.
 
@@ -315,24 +315,24 @@ Typed factory family (`BStatus.java:51-140`) — build from bits with `BStatus.m
 
 **Add a `propagateFlags` `BStatus` slot to custom control components** so operators choose which input status bits
 reach `out`. kitControl declares it with slot flags `0` and default `BStatus.ok` on logic/math blocks, `BStatus.nullStatus`
-on switches `[CERT]` `organized/kitControl/kitControl-rt/decompiled/com/tridium/kitControl/logic/BLogic.java:40`,
-`…/util/BSwitch.java:50`; a `SUMMARY|OPERATOR` slot is a kit choice that exposes it, not the framework's default.
+on switches `[CERT]` `organized/docSource/docSource-doc/extracted/kitControl-rt/com/tridium/kitControl/logic/BLogic.java:108`,
+`…/util/BSwitch.java:122`; a `SUMMARY|OPERATOR` slot is a kit choice that exposes it, not the framework's default.
 
 Recipe (`BStatus` has no `and()`): `out.setStatus(BStatus.make(agg.getBits() & getPropagateFlags().getBits()))` — OR the
-input bits into `agg`, then mask, exactly as `BLogic.java:72` and `BSwitch.java:156` do. A `BStatus.ok` mask blocks all
+input bits into `agg`, then mask, exactly as `BLogic.java:160` and `BSwitch.java:318` do. A `BStatus.ok` mask blocks all
 propagation; a mask with `FAULT` lets only the fault bit through. `tests/kit-api-pins.bats` KP2 keeps the old
 `.and(` recipe out of the kit. [ev: retro devguide415-runtime-api-corrections Δ5] `[ev: corpus B1314 §1314.2]`
 
 **kitControl status families** `[ev: corpus B1319 §1319.1]` [ev: retro devguide415-r2-runtime-contracts-formats Δ7]:
 switches (Select, MuxSwitch, Switch, NumericSwitch) COPY the selected value and mask its status; logic/math (Hysteresis,
 Limiter, math blocks) COMPUTE on the value and mask its status. Any null math input gives `nullStatus` + NaN; an
-invalid selector HOLDS the last `out` with an `invalidSelect` facet (`BSwitch.java:128`). With the default mask
+invalid selector HOLDS the last `out` with an `invalidSelect` facet (`BSwitch.java:284`). With the default mask
 (`nullStatus` or `ok`) a faulted, down or stale probe yields an **OK-status** output carrying the bad value — set
 `propagateFlags` to `fault,down,stale,disabled` on every block fed by a probe or proxy point (LC3/LC4 below).
 
 **`kitControl:Hysteresis` and `kitControl:Limiter` are 4.15+** `[ev: corpus B1319 §1319.3 D3]` [ev: retro devguide415-r2-runtime-contracts-formats Δ8]:
 both carry `@since Niagara 4.15` (`niagara-help/versions/4.15.6.20/source/kitControl-rt/…/logic/BHysteresis.java:35`, `…/math/BLimiter.java:36`).
-Per-install jar check: present in `kitControl-rt.jar` 4.15.3.28 and 4.15.6.20; absent from 4.3.58.18,
+Per-install jar check: present in `kitControl-rt.jar` 4.15.3.28 [deferred: unverifiable — no 4.15.3.28 install on this host; only the JACE runs it] and 4.15.6.20; absent from 4.3.58.18,
 4.13.2.18 and 4.14.0.162. For a module or `.bog` that must run on 4.14 or earlier, build the latch from a
 `boolean` field (§ Deadband latch-on-cross) or clamp in code. `clHVAC:Hysteresis` (Honeywell `cl.hvac`, in the
 4.14.0.162 Optimizer install) is a different type. Behaviour: swapped limits (`inHigh < inLow`, `inMax < inMin`) set `out`
