@@ -290,9 +290,37 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro truth-audit Δ3]` An awk regex never uses `\b`: in gawk and POSIX awk it is a backspace (0x08), the
     word boundary is `\y`, so `/\bclass\b/` never matches and the lint can never fire (lint-demand-scope, fixed by
     its Go port). Prefer the Go engine. `[ev: retro truth-audit Δ8]` `[ev: tests/awk-word-boundary.bats AWB1]`
+    A backward walk (the binding or guard "N lines up") stops at the enclosing method or class-level lambda body
+    (`javasrc.Scopes`, `Enclosing`), never at a line budget alone: lint-delays took an earlier method's floor and
+    lint-servlet an earlier method's `try {`. A change to the shared scanner re-runs every rule's goldens and
+    declares each changed row (#405 wrapped signatures: lint-size, lint-ws-placement).
+    `[ev: retro go-lint-delays-method-scope Δ1]` `[ev: retro go-lint-delays-method-scope Δ3]`
   - **Fix a lint false positive by modeling the framework, never by suppressing it.** Encode the framework behavior
     that makes the code correct, with a RED truth fixture (Baja's equal-value skip in `hotwrite.Hot`, #445); an
     allow-list or a suppression is a finding. `[ev: retro r10-close-process-meta-lessons Δ4]`
+  - **A truth case is RED on the old code for the reason it names** (METHODOLOGY.md § Kit maintenance, observed
+    flips): a case that only exercises the bug can pass before the fix (a brace in a literal where the body already
+    acts; a short zip payload stored, not deflated, so the old byte read found it). Pick the input that flips the
+    outcome and assert the test's own precondition. `[ev: retro go-lint-license-gate Δ1]` `[ev: retro go-lint-bformat-call Δ1]`
+  - **Golden cases come from the recorder or `golden.Run`'s replay, never a second tree builder:** a rebuilt tree
+    lost a final newline and moved an error position (3:1 vs 2:11). A shape the format cannot hold (an empty
+    directory replays as a missing root) gets a direct Go test (`rules/licensegate` `TestEmptyDir`).
+    `[ev: retro go-lint-agent-on-shape Δ2]` `[ev: retro go-lint-license-gate Δ2]`
+  - **An XML or `.bog` lint reads through `internal/xmlsrc`** (`go/README.md` § XML rules): a station `config.bog`
+    is zipped, so a text read sees compressed bytes and passes clean; a malformed file is one positioned error,
+    printed once. `[ev: retro go-lint-bformat-call Δ2]` `[ev: retro go-lint-agent-on-shape Δ1]`
+  - **A bash `while IFS= read -r x` loop drops an unterminated last line** (7 of the 13 Tridium lexicons end without
+    one): a byte-identical port keeps the drop and its truth fix removes it; a bash lint that stays reads
+    `while IFS= read -r x || [ -n "$x" ]`. `[ev: retro go-lint-lexicon-ascii Δ1]`
+  - Owed code from the round-10 lint ports (client findings, rule gaps, engine fields) stays an `open_issue:` in
+    the port's `ledger.d/2026-10-24-go-lint-<name>.md` fragment, not doctrine:
+    `[deferred: retro go-lint-delays-method-scope Δ2]` `[deferred: retro go-lint-duplicate-helper Δ2]`
+    `[deferred: retro go-lint-duplicate-helper Δ3]` `[deferred: retro go-lint-hot-write Δ1]`
+    `[deferred: retro go-lint-hot-write Δ2]` `[deferred: retro go-lint-hot-write Δ3]`
+    `[deferred: retro go-lint-inert-coordination Δ1]` `[deferred: retro go-lint-inert-coordination Δ2]`
+    `[deferred: retro go-lint-inert-coordination Δ3]` `[deferred: retro go-lint-inline-site-literal Δ3]`
+    `[deferred: retro go-lint-js-pair Δ1]` `[deferred: retro go-lint-js-pair Δ2]` `[deferred: retro go-lint-js-pair Δ3]`
+    `[deferred: retro go-lint-lexicon-ascii Δ2]`
   - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
     with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
     through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
