@@ -969,6 +969,80 @@ class TestRollbackParity(ParityTestCase):
         self.assertSameRun(scenario)
 
 
+def in_doubt_batches(side):
+    """One in-doubt batch per write tool, made by the server itself; returns their ids."""
+    side.connect()
+    status_numeric(side)
+    side.add("Sp", "control:NumericWritable")
+    side.add("Tgt")
+    calls = [("syncTo", "n4_set_slot", SET), ("invokeAction", "n4_invoke_action",
+                                               dict(ord=FOLDER + "/Sp", action="auto")),
+             ("syncTo", "n4_create_component", CREATE),
+             ("checkLinks", "n4_create_link", dict(source_ord=CALC, source_slot="out",
+                                                   target_ord=FOLDER + "/Tgt", target_slot="in10")),
+             ("syncTo", "n4_remove_component", dict(parent_ord=FOLDER, name="Tgt")),
+             ("invokeAction", "n4_save_station", {})]
+    bids = []
+    for key, tool, args in calls:
+        token = side.call(tool, **args)["confirmation_token"]
+        fail_after(side, None, key, (500, b"boom"))
+        side.call(tool, dry_run=False, confirmation_token=token, **args)
+        side.fake.hook = None
+        bids.append(json.loads(side.state("journal.jsonl").splitlines()[-1])["batch_id"])
+    # a result flagged in_doubt: the link was accepted without a name
+    orig = answering(side, "_check_link", {"v": True})
+    bids.append(side.write("n4_create_link", source_ord=CALC, source_slot="out",
+                           target_ord=FOLDER + "/Tgt", target_slot="in10")["batch_id"])
+    side.fake._check_link = orig
+    # a partial: op 2 of 3 of a rollback failed (its result is in_doubt; refused as a rollback)
+    craft(side, "ba" * 16, [{"nm": "a", "h": "3", "n": n, "b": {"nm": "p", "t": "baja:Folder"}}
+                            for n in ("P1", "P2", "P3")], {FOLDER: "3"})
+    token = side.call("n4_rollback", batch_id="ba" * 16)["confirmation_token"]
+    fail_nth(side, "syncTo", 2, (500, b"boom"))
+    side.call("n4_rollback", batch_id="ba" * 16, dry_run=False, confirmation_token=token)
+    side.fake.hook = None
+    bids.append(json.loads(side.state("journal.jsonl").splitlines()[-1])["batch_id"])
+    return bids
+
+
+class TestInDoubtRefusalParity(ParityTestCase):
+    """An in-doubt batch is never rolled back blindly: the refusal dumps its journaled intent."""
+
+    def test_each_tools_in_doubt_batch_is_refused_with_its_intent(self):
+        def scenario(side):
+            for bid in in_doubt_batches(side):
+                side.call("n4_rollback", batch_id=bid)
+            side.call("n4_list_batches")
+        for side in self.assertSameRun(scenario):
+            refusals = [json.loads(r)["result"]["content"][0]["text"] for r in side.replies[-9:-1]]
+            self.assertEqual(sum("is in-doubt (the station may or may not have applied it); "
+                                 "rolling it back blindly" in t for t in refusals), 7, refusals)
+
+    def test_an_in_doubt_batch_of_the_server_under_test_is_refused_by_python(self):
+        """The mirror of journal.TestAPythonInDoubtBatchIsRefused: Python reads the state dir
+        the server under test wrote and refuses each in-doubt batch with the same bytes."""
+        side = Side(self, None)
+        bids = in_doubt_batches(side)
+        if side.client is not None:
+            side.client.close()
+
+        def refusals():
+            for bid in bids:
+                side.call("n4_rollback", batch_id=bid)
+            return side.replies[-len(bids):]
+        theirs = refusals()
+        go_server.close_server(side.srv)
+        side.srv = go_server.make_server("python", **side.opts)
+        side.connect()
+        ours = refusals()
+        self.assertEqual(ours, theirs)
+        texts = [json.loads(r)["result"]["content"][0]["text"] for r in ours]
+        for bid, text in zip(bids[:7], texts):
+            self.assertTrue(text.startswith("batch %s is in-doubt (the station may or may not "
+                                            "have applied it)" % bid), text)
+            self.assertIn("Journaled intent: {", text)
+        self.assertIn("is itself a rollback", texts[7])
+
 def save_and(side, then):
     """The FakeStation's save, then `then()` (until the next restore)."""
     orig = side.fake._invoke
