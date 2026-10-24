@@ -19,8 +19,8 @@
 // In a *.js file under an rc/ directory (jssrc tokens, comments dropped), a string or a template literal with
 // no ${...} that is a const/let/var initializer (`const X = "..."`, at any depth: rc code lives in IIFE and
 // AMD wrappers, so a top-level-only rule would read nothing) or an object-literal property default
-// (`{ key: "..." }`). In a *.properties file (props.Read), every value; in a gradle.properties outside the
-// kit's template fixtures, a machine path under one of the buildKeys is an INFO row instead (R10-D5).
+// (`{ key: "..." }`). In a *.properties file (props.Read), every value, except that a gradle.properties
+// key in props.BuildLocationKeys gets no row: lint-structure L10 owns those (R10-D8), in kit fixtures too.
 package machinedefaultpath
 
 import (
@@ -66,16 +66,6 @@ var (
 
 const platformHome = "/home/niagara/"
 
-// buildKeys are the Gradle build-location keys the kit tells a client module to copy from a sibling into
-// its gradle.properties (BUILD-LOOP.md bring-up step 2; types/structure.md point 7): a machine path there is
-// prescribed, so the row is INFO. K16 still keeps dev-machine paths out of the kit's template fixtures.
-var buildKeys = map[string]bool{"niagara_home": true, "niagara_user_home": true, "nodeHome": true, "org.gradle.java.installations.paths": true}
-
-const (
-	buildKeyMsg = " is a prescribed build-location key (BUILD-LOOP.md bring-up step 2; types/structure.md point 7)"
-	kitFixtures = "/build-n4-module-kit/fixtures/" // the template fixtures K16 covers, matched on the absolute path
-)
-
 const lookBack = 3 // earlier lines the text before a literal may start on
 
 // Check reports the first machine path per line among the file's default values.
@@ -116,27 +106,17 @@ func (r *perLine) push(i int, fd lint.Finding) {
 	}
 }
 
-// properties is every value of a .properties file; a machine path under a buildKeys key of a module's
-// gradle.properties is an INFO row.
+// properties is every value of a .properties file but a gradle.properties build-location key, which is
+// lint-structure L10's (R10-D8: WARN to migrate it to the user-level file; FAIL in a kit fixture, K16).
 func properties(f *javasrc.File) []lint.Finding {
-	prescribed := filepath.Base(f.Path) == "gradle.properties" && !inKitFixture(f.Path)
+	gradle := filepath.Base(f.Path) == "gradle.properties"
 	var r perLine
 	for _, e := range props.Read(f.Raw) {
-		if p := path(e.Value); p != "" && prescribed && buildKeys[e.Key] {
-			r.push(e.Line, lint.Finding{Severity: lint.Info, Line: e.Line + 1, Msg: e.Key + buildKeyMsg})
-		} else {
-			r.add(e.Line, p, "a .properties value")
+		if !(gradle && props.BuildLocationKey(e.Key)) {
+			r.add(e.Line, path(e.Value), "a .properties value")
 		}
 	}
 	return r.out
-}
-
-// inKitFixture: p, made absolute so a relative root resolves too, lies under the kit's template fixtures.
-func inKitFixture(p string) bool {
-	if abs, err := filepath.Abs(p); err == nil {
-		p = abs
-	}
-	return strings.Contains(filepath.ToSlash(p), kitFixtures)
 }
 
 // script is the const/let/var initializers and object-literal property defaults of an rc JavaScript file.

@@ -1,0 +1,20 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BWeb.java:10  licensed class: doPost() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+-- stderr --
+-- Mod/src/com/x/BWeb.java --
+package com.x;
+public class BWeb extends BAbstractService {
+  @Override
+  public final Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("vendor", "feature");
+  }
+  public void doGet(WebOp op) {
+    render(op);
+  }
+  public void doPost(WebOp op) {
+    write(op);
+  }
+}

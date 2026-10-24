@@ -322,6 +322,11 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-go-lint-delays-method-scope.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-duplicate-helper.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-lexicon-ascii.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-24-go-lint-license-gate.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-machine-default-path.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-recovery-path.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-status-parity.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-24-go-lint-ws-placement.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-r10-path-keyed-gates-skip-data.md | kit | 2026-10-24 | folded | 2 |
+| 2026-10-24-r10-stale-kit-resolution.md | kit | 2026-10-24 | folded | 1 |
+| 2026-10-24-r10-user-level-gradle-keys.md | kit | 2026-10-24 | folded | 2 |

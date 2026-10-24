@@ -98,3 +98,22 @@ func unescape(s string) string {
 	}
 	return b.String()
 }
+
+// buildLocationKeys are the host build-location keys (R10-D8): where Niagara, its user home, Node and the
+// JDK live on the building machine. They belong in the user-level gradle.properties
+// ($GRADLE_USER_HOME/gradle.properties, ~/.gradle by default), never in a repository; lint-structure L10
+// owns them and lint-machine-default-path leaves them to it.
+var buildLocationKeys = []string{"niagara_home", "niagara_user_home", "nodeHome", "org.gradle.java.installations.paths"}
+
+// BuildLocationKey reports whether key is one of the host build-location keys.
+func BuildLocationKey(key string) bool {
+	for _, k := range buildLocationKeys {
+		if k == key {
+			return true
+		}
+	}
+	return false
+}
+
+// BuildLocationKeys returns a copy of the host build-location keys, in their documented order.
+func BuildLocationKeys() []string { return append([]string(nil), buildLocationKeys...) }
