@@ -65,7 +65,7 @@ func TestBuildSlots(t *testing.T) {
 		b.start(e)
 	}
 	room := b.nearest()
-	if want := []string{"sp", "mode"}; room == nil || !reflect.DeepEqual(room.slots.keys, want) {
+	if want := []string{"sp", "mode", "Box"}; room == nil || !reflect.DeepEqual(room.slots.keys, want) {
 		t.Fatalf("slots of %v, want %v", room, want)
 	}
 	if s, _ := room.slots.get("mode"); s.hasV || s.flags != "o" {

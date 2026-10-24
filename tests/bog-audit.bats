@@ -396,6 +396,25 @@ XML
   [[ "$output" == *"CHECK1  PASS  ColdRoomPan  components=4"* ]]
 }
 
+@test "BA18: a composite property (a StatusNumeric setpoint with a nested value) is a slot in the bog (no CHECK6 row)" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-composite-slot.txt): the python scanner recorded only empty-element
+  # value slots, so a stored StatusNumeric/StatusBoolean property read as "slot in source not in bog" (CHECK6) and an
+  # undeclared one was never a CHECK5 ghost. Mutation: BA18 -- dropping the composite slot in builder.start -> a
+  # CHECK6 row for setpoint.
+  local S="$T/ba18/src"; mkdir -p "$S"
+  printf '@NiagaraProperty(name="setpoint", type="BStatusNumeric", defaultValue="new BStatusNumeric()")\npublic class BColdRoom extends BComponent {}\n' > "$S/BColdRoom.java"
+  _mkbog ba18 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='setpoint' t='b:StatusNumeric'><p n="value" v="-18.0"/></p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba18.bog" --module ColdRoomPan --source-dir "$S"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"CHECK6"* ]] && [[ "$output" != *"CHECK5"* ]]
+}
+
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
   # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
   grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"

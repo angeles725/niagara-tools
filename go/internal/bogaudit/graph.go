@@ -199,7 +199,10 @@ func (b *builder) start(e xmlsrc.Element) {
 		if (hasV || f != "") && parent.kind == compFrame && !platformSlots[n] {
 			parent.c.slots.set(n, slot{typ: t, value: v, flags: f, hasV: hasV})
 		}
-	default:
+	default: // a composite property (a StatusNumeric setpoint, in8): a slot of the component, its value nested
+		if parent.kind == compFrame && !platformSlots[n] {
+			parent.c.slots.set(n, slot{typ: t, flags: f})
+		}
 		path := parent.path
 		if n != "" {
 			path = strings.TrimLeft(path+"/"+n, "/")
