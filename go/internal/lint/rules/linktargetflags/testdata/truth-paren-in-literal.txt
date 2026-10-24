@@ -1,0 +1,12 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/src/A.java:3  LTF1: link-in target "after" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- src/A.java --
+class A {
+// Commissioning link from the control
+@NiagaraProperty(name = "after", type = "baja:String", defaultValue = "BString.make(\":-(\")", flags = Flags.SUMMARY | Flags.READONLY)
+int x;
+}

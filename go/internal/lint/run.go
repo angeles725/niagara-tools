@@ -179,7 +179,7 @@ func (r *report) findings(i int, sp Spec, path string, fds []Finding) {
 		}
 		r.failed = r.failed || fd.Severity == Fail
 		r.rows = r.rows || fd.Severity == Warn || fd.Severity == Fail
-		r.emit(i, event{text: fd.row(sp.BarePathRow)})
+		r.emit(i, event{text: fd.row(sp.BarePathRow, sp.CheckFirst)})
 	}
 }
 
@@ -318,7 +318,12 @@ func Command(specs ...Spec) cli.Main {
 				selected = []Spec{sp}
 			}
 		}
-		a, err := Parse(mode, name, use, rest)
+		var vo ValueOptions
+		if len(selected) == 1 && args[0] != "--all" {
+			sp := selected[0]
+			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Strict: sp.ValuedStrict}
+		}
+		a, err := ParseValued(mode, name, use, vo, rest)
 		if err != nil {
 			var ue *UsageError
 			usageErr := errors.As(err, &ue)
@@ -331,6 +336,14 @@ func Command(specs ...Spec) cli.Main {
 				return usageExit
 			}
 			return 3
+		}
+		if len(selected) == 1 && args[0] != "--all" {
+			if c, ok := selected[0].rule().(Configurer); ok {
+				if err := c.Configure(a); err != nil {
+					fmt.Fprint(s.Err, err)
+					return 3
+				}
+			}
 		}
 		return Run(selected, name, a, s)
 	}

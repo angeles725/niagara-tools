@@ -1,0 +1,39 @@
+-- args --
+@DIR@/root1
+-- want --
+exit 0
+agent-breadth  WARN  @DIR@/root1/build/A.java:1  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+agent-breadth  WARN  @DIR@/root1/com/x/A.java:1  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+ui-thread-traversal  WARN  @DIR@/root1/com/x/T.java:2  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
+agent-breadth  WARN  @DIR@/root1/com/x/T.java:4  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+agent-breadth  WARN  @DIR@/root1/com/x/Z.java:1  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+agent-breadth  WARN  @DIR@/root1/com/x/m.java:1  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+agent-breadth  WARN  @DIR@/root1/com/x/sub/A.java:1  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+-- stderr --
+-- root1/.hidden/A.java --
+@AgentOn(types = "baja:Component")
+class A {}
+-- root1/build/A.java --
+@AgentOn(types = "baja:Component")
+class A {}
+-- root1/com/x/A.java --
+@AgentOn(types = "baja:Component")
+class A {}
+-- root1/com/x/T.java --
+class T {
+  public void doInvoke() { a.getNavChildren(); }
+}
+@AgentOn(types = "baja:Component")
+class T2 {}
+-- root1/com/x/Z.java --
+@AgentOn(types = "baja:Component")
+class Z {}
+-- root1/com/x/m.java --
+@AgentOn(types = "baja:Component")
+class m {}
+-- root1/com/x/sub/A.java --
+@AgentOn(types = "baja:Component")
+class A {}
+-- root1/w-worktrees/A.java --
+@AgentOn(types = "baja:Component")
+class A {}

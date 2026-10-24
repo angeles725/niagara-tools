@@ -11,10 +11,10 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   # copy build.sh next to a stub gate so the sibling lookup resolves to the stub
   mkdir -p "$TMPDIR_T/kit"; cp "$KIT/toolbelt/build.sh" "$TMPDIR_T/kit/build.sh"
-  # build.sh sources lib/fs-type.sh (Δ7/Δ2), lib/method-boundary.sh and lib/signing-block.sh relative to its own
-  # dir — copy the real libs alongside the copied build.sh so that sibling lookup resolves too.
+  # build.sh sources lib/fs-type.sh (Δ7/Δ2), lib/method-boundary.sh, lib/signing-block.sh and lib/slotomatic-skip.sh
+  # relative to its own dir — copy the real libs alongside the copied build.sh so that sibling lookup resolves too.
   mkdir -p "$TMPDIR_T/kit/lib"
-  cp "$KIT/toolbelt/lib/fs-type.sh" "$KIT/toolbelt/lib/method-boundary.sh" "$KIT/toolbelt/lib/signing-block.sh" "$TMPDIR_T/kit/lib/"
+  cp "$KIT"/toolbelt/lib/*.sh "$TMPDIR_T/kit/lib/"
   # shellcheck disable=SC2016
   # why: $* and ${FAKE_VERIFY_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/verify.args"\nexit "${FAKE_VERIFY_EXIT:-0}"\n' "$TMPDIR_T" > "$TMPDIR_T/kit/verify-module.sh"
@@ -917,7 +917,7 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   chmod +x "$ROOT/gradlew"
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 30 ]
-  [[ "$output" == *"slot-o-matic skipped"*"BLimiter.java"* ]]
+  [[ "$output" == *"FAIL slotomatic-skip /x/src/com/a/BLimiter.java"* ]]
   [[ "$output" == *"K15"* ]]
 }
 
@@ -926,7 +926,7 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   chmod +x "$ROOT/gradlew"
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 30 ]
-  [[ "$output" != *"slot-o-matic skipped"* ]]
+  [[ "$output" != *"slotomatic-skip"* ]]
   [[ "$output" != *"K15"* ]]
 }
 
@@ -935,7 +935,7 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   chmod +x "$ROOT/gradlew"
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 30 ]
-  [[ "$output" == *"slot-o-matic skipped C:"*"BLimiter.java"* ]]
+  [[ "$output" == *"FAIL slotomatic-skip C:"*"BLimiter.java"* ]]
 }
 
 @test "BS-slotomatic-hint-noskip: no 'Could not process' line -> generic rerun hint, no empty-marker advice" {
@@ -945,6 +945,46 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [ "$status" -eq 30 ]
   [[ "$output" == *"slotomatic --info"* ]]
   [[ "$output" != *"empty BEGIN/END"* ]]
+}
+
+# BS-slotomatic-skip-on-success: the same skip when compileJava still PASSES (a stale region with two stamps keeps the
+# old generated slots compiling) — gradle ends BUILD SUCCESSFUL with a jar built from stale generated code. build.sh
+# must not pass it: exit 34, every skipped file named once, the K15 recovery. [ev: retro r10-slotomatic-skip-fail-open Δ1]
+# Named mutation: delete the success-branch slotomatic_skip_scan call in build.sh -> BS-slotomatic-skip-on-success
+# exits 0 (the build passes the skip through).
+_mk_gradlew_skip_success() {
+  printf '#!/usr/bin/env bash\necho "WARNING: Could not process /x/src/com/a/BHmiStatus.java: Found multiple metadata blocks"\necho "WARNING: The following files failed to compile: "\necho "WARNING:   /x/src/com/a/BHmiStatus.java: Found multiple metadata blocks"\necho "BUILD SUCCESSFUL in 4s"\n%s\nexit 0\n' "${1:-}" > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+}
+
+@test "BS-slotomatic-skip-on-success: a skipped file in a passing gradle run -> exit 34 with the file and K15" {
+  _mk_gradlew_skip_success
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 34 ]
+  [ "$(grep -c 'FAIL slotomatic-skip /x/src/com/a/BHmiStatus.java' <<< "$output")" -eq 1 ]
+  [[ "$output" == *"K15"* ]]
+  [ ! -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-slotomatic-skip-clean: a passing gradle run with no skip is unchanged (exit 0, gate runs)" {
+  printf '#!/usr/bin/env bash\necho "> Task :Foo-rt:slotomatic"\necho "BUILD SUCCESSFUL in 4s"\nexit 0\n' > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"slotomatic-skip"* ]]
+  [ -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-slotomatic-skip-restore: exit 34 restores the pre-build modules/<jar> (retry-safe like the drift gate)" {
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  cp "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.1" "stale-generated"
+  _mk_gradlew_skip_success "cp -p $ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar $TMPDIR_T/nh/modules/Foo-rt.jar"
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 34 ]
+  [[ "$output" == *"Restored"* ]]
+  cmp -s "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
 }
 
 @test "BS-symroot: a symlinked repo root lists the gradle roots below it like find -H (issue #329)" {

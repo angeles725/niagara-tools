@@ -1,0 +1,15 @@
+-- args --
+@DIR@/Mod
+--site-pattern
+Room[0-9]+
+--strict
+--site-table
+@DIR@/Mod/Mod-rt/src/Site.java
+-- want --
+exit 1
+WARN  lint-inline-site-literal  @DIR@/Mod/Mod-ux/src/rc/app.js:1  site literal outside the site table: "Room2"
+-- stderr --
+-- Mod/Mod-rt/src/Site.java --
+class Site { static final String R = "Room1"; static final String O = "station:|slot:/Rooms/Room1"; }
+-- Mod/Mod-ux/src/rc/app.js --
+var r = "Room2";

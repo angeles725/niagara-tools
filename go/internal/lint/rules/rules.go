@@ -13,8 +13,10 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/duplicatehelper"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
@@ -32,6 +34,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wsplacement"
 )
 
@@ -61,6 +64,9 @@ func All() []lint.Spec {
 		statusparity.Spec(),
 		sessionstore.Spec(),
 		extwritable.Spec(),
+		inlinesiteliteral.Spec(),
+		wbthreading.Spec(),
+		linktargetflags.Spec(),
 		size.Spec(),
 		wsplacement.Spec(),
 		recoverypath.Spec(),
