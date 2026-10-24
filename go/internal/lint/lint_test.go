@@ -676,3 +676,18 @@ func TestShortScanError(t *testing.T) {
 		t.Errorf("exit %d out %q err %q", code, o, e)
 	}
 }
+
+func TestEmptyOK(t *testing.T) {
+	sp := javaSpec(fakeRule{"lint-e", "MARK", Fail}, Raw)
+	sp.EmptyOK = true
+	empty := tree(t, map[string]string{"README": "x\n"})
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-e", empty}, s); code != 0 || o.Len() != 0 || e.Len() != 0 {
+		t.Errorf("empty: exit %d out %q err %q, want 0 and nothing", code, o, e)
+	}
+	full := tree(t, map[string]string{"A.java": "MARK\n"})
+	s, o, _ = stdio()
+	if code := Command(sp)([]string{"lint-e", full}, s); code != 1 || o.String() != "FAIL  lint-e  "+full+"/A.java:1  saw: MARK\n" {
+		t.Errorf("full: exit %d out %q", code, o)
+	}
+}
