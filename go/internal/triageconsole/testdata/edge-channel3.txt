@@ -1,0 +1,42 @@
+-- args --
+--package
+com.angeles
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:05 01-Oct-26 CST -> 10:00:05 01-Oct-26 CST  WARNING severe xml is listed as WARNING @ [sys.xml]
+FAIL  triage-console  a.txt  1x 10:00:15 01-Oct-26 CST -> 10:00:15 01-Oct-26 CST  SEVERE IllegalStateException: own after all @ Own.m(Own.java:1)
+FAIL  triage-console  a.txt  1x 10:00:13 01-Oct-26 CST -> 10:00:13 01-Oct-26 CST  SEVERE Missing classfor"chihuahua:Glued" @ [sys.registry]
+FAIL  triage-console  a.txt  1x 10:00:07 01-Oct-26 CST -> 10:00:07 01-Oct-26 CST  SEVERE Missing class "chihuahua:Foo" @ [sys.registry]
+FAIL  triage-console  a.txt  1x 10:00:08 01-Oct-26 CST -> 10:00:08 01-Oct-26 CST  SEVERE Missing class for chihuahua:Bar @ [sys.registry]
+FAIL  triage-console  a.txt  1x 10:00:09 01-Oct-26 CST -> 10:00:09 01-Oct-26 CST  SEVERE Missing class   for	  "chihuahua:Baz" @ [sys.registry]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  SEVERE ClassCastException: javax.baja.sys.BRelTime cannot be cast to javax.baja.sys.BComplex @ [sys]
+FAIL  triage-console  a.txt  2x 10:00:03 01-Oct-26 CST -> 10:00:04 01-Oct-26 CST  WARNING Cannot set property RoomPanel.setpoint 12 @ [sys.xml]
+FAIL  triage-console  a.txt  1x 10:00:14 01-Oct-26 CST -> 10:00:14 01-Oct-26 CST  SEVERE Prefix Missing class "chihuahua:Mid" tail @ [sys.registry]
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/triage-console.sh at 79ca5a2c (sha256 c6c6a1526a4252bd8c6f078a6e23702e3f0ea628679e4e2c0903b6ccafae5920)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- a.txt --
+SEVERE [10:00:00 01-Oct-26 CST][sys] Cannot load station
+  java.lang.ClassCastException: javax.baja.sys.BRelTime cannot be cast to javax.baja.sys.BComplex
+  	at com.tridium.sys.station.Station.main(Station.java:1273)
+WARNING [10:00:01 01-Oct-26 CST][sys] warning sys is no fatal
+  java.lang.ClassCastException: x
+SEVERE [10:00:02 01-Oct-26 CST][sys] severe sys without class
+WARNING [10:00:03 01-Oct-26 CST][sys.xml] Cannot set property RoomPanel.setpoint 12
+WARNING [10:00:04 01-Oct-26 CST][sys.xml] Cannot set property RoomPanel.setpoint 13
+SEVERE [10:00:05 01-Oct-26 CST][sys.xml] severe xml is listed as WARNING
+INFO [10:00:06 01-Oct-26 CST][sys.xml] info xml is no row
+SEVERE [10:00:07 01-Oct-26 CST][sys.registry] Missing class "chihuahua:Foo"
+SEVERE [10:00:08 01-Oct-26 CST][sys.registry] Missing class for chihuahua:Bar
+SEVERE [10:00:09 01-Oct-26 CST][sys.registry] Missing class   for	  "chihuahua:Baz"
+SEVERE [10:00:10 01-Oct-26 CST][sys.registry] Missing class "other:Foo"
+SEVERE [10:00:11 01-Oct-26 CST][sys.registry] Missing class without colon
+WARNING [10:00:12 01-Oct-26 CST][sys.registry] Missing class "chihuahua:Warn"
+SEVERE [10:00:13 01-Oct-26 CST][sys.registry] Missing classfor"chihuahua:Glued"
+SEVERE [10:00:14 01-Oct-26 CST][sys.registry] Prefix Missing class "chihuahua:Mid" tail
+  	at com.angeles.Never.seen(Never.java:1)
+SEVERE [10:00:15 01-Oct-26 CST][sys] block after registry
+  java.lang.IllegalStateException: own after all
+  	at com.angeles.Own.m(Own.java:1)
