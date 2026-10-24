@@ -1,0 +1,21 @@
+-- args --
+per-slot
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+@DIR@/src
+-- want --
+exit 1
+pct=0.0 (per-slot)
+MISSING plain
+STALE fanMode
+-- stderr --
+-- module-include.xml --
+<types>
+<type name="Thing" class="com.x.BThing"/>
+</types>
+-- module.lexicon --
+fanMode=F
+-- src/BP.java --
+@NiagaraProperty(name = "plain", flags = Flags.OPERATOR)
+-- src/my dir/BS.java --
+@NiagaraProperty(name = "spaced", flags = Flags.OPERATOR)

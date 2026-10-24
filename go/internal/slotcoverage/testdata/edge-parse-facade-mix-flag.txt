@@ -1,0 +1,28 @@
+-- args --
+--facade
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 1
+slot-coverage: WARN ineffective type key: CPanel= (Workbench reads CPanel.displayName)
+pct=20.0 (type-set)
+missing=APanel,BFacade,Bare,Core
+extra=
+slot-coverage: FAIL facade type without lexicon: APanel
+slot-coverage: FAIL facade type without lexicon: BFacade
+slot-coverage: WARN facade type with only a bare key: Bare (add Bare.displayName)
+slot-coverage: FAIL facade type without lexicon: Core
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="APanel" class="a.BAPanel"/>
+  <type name="BFacade" class="a.BBFacade"/>
+  <type name="CPanel" class="a.BCPanel"/>
+  <type name="Core" class="a.BCore"/>
+  <type name="Bare" class="a.BBare"/>
+</types>
+-- module.lexicon --
+CPanel=bare only
+CPanel.displayName=ok
+Bare=x
+Core.slot=y

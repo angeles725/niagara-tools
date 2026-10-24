@@ -1,0 +1,19 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 0
+pct=50.0 (type-set)
+missing=CompressorPanel
+extra=
+slot-coverage: WARN facade type with only a bare key: CompressorPanel (add CompressorPanel.displayName)
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="RoomPanel" class="com.x.BRoomPanel"/>
+  <type name="CompressorPanel" class="com.x.BCompressorPanel"/>
+</types>
+-- module.lexicon --
+# facade-bare lexicon: CompressorPanel has only a bare type key (ineffective: Workbench reads <Type>.displayName)
+CompressorPanel=Compresor
+RoomPanel.displayName=Cuarto

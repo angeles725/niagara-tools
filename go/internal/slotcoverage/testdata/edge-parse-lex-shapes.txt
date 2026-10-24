@@ -1,0 +1,41 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 1
+slot-coverage: WARN ineffective type key: Delta= (Workbench reads Delta.displayName)
+slot-coverage: WARN ineffective type key: Eps= (Workbench reads Eps.displayName)
+slot-coverage: FAIL dup-keys: fan 
+pct=42.9 (type-set)
+missing=Beta,Commented,Eps,Zeta
+extra=  Beta,last
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="Alpha" class="a.BAlpha"/>
+  <type name="Beta" class="a.BBeta"/> <type name="Gamma" class="a.BGamma"/>
+  <type class="a.BDelta" name="Delta"/>
+  <type name="Alpha" class="a.BAlpha2"/>
+  <type
+      name="Split" class="a.BSplit"/>
+  <!-- <type name="Commented" class="a.BOld"/> -->
+  <type name="Eps" alias:name="Zeta" class="a.BEps"/>
+  <typeX name="NotAType"/>
+</types>
+-- module.lexicon (noeol) --
+# comment=ignored
+   # indented comment=x
+
+Alpha.displayName=A
+  Beta.displayName=B
+Gamma.displayName  =G
+Delta.displayName=D
+Delta=bare
+Eps=e
+noequals line
+!bang=x
+fan =1
+fan=2
+fan =3
+x=y=z
+last.displayName=L

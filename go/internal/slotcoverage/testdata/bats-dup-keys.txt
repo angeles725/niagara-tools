@@ -1,0 +1,21 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 1
+slot-coverage: WARN ineffective type key: FanMode= (Workbench reads FanMode.displayName)
+slot-coverage: FAIL dup-keys: fan
+pct=0.0 (type-set)
+missing=FanMode
+extra=
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="FanMode" class="com.example.BFanMode"/>
+</types>
+-- module.lexicon --
+# Fan mode lexicon
+FanMode=Fan Mode
+fan=Fan
+fan=Fan Speed
+FanMode.speed=Speed

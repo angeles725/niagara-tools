@@ -1,0 +1,29 @@
+-- args --
+per-slot
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+@DIR@/src
+-- want --
+exit 1
+pct=0.0 (per-slot)
+MISSING setpoint
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="BThing" class="com.x.BThing"/>
+</types>
+-- module.lexicon --
+BThing=Thing display
+fast=Fast
+-- src/com/x/BMode.java --
+package com.x;
+// Frozen enum with @Range tags — tags appear as lexicon keys (convention), not @NiagaraProperty slots
+@NiagaraEnum
+@Range("fast")
+@Range("slow")
+public final class BMode extends BFrozenEnum {}
+-- src/com/x/BThing.java --
+package com.x;
+// setpoint: OPERATOR, NO lexicon key -> MISSING (anchor for SP6)
+@NiagaraProperty(name = "setpoint", flags = Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

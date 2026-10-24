@@ -1,0 +1,12 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 1
+slot-coverage: FAIL missing lexicon with 2 declared type(s)
+-- stderr --
+-- module-include.xml --
+<types>
+<type name="A" class="x"/>
+<type name="A" class="y"/>
+</types>
