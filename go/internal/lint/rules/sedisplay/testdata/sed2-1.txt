@@ -1,0 +1,9 @@
+-- args --
+@DIR@/Mod-se
+-- want --
+exit 1
+FAIL  lint-se-display  @DIR@/Mod-se/src/com/x/S.java:1  display class: import javax.swing.JFrame;
+-- stderr --
+-- Mod-se/src/com/x/S.java --
+import javax.swing.JFrame;
+class S { }

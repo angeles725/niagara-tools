@@ -1,0 +1,7 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A { long f(long d){ return Math.max(0L, d); } }

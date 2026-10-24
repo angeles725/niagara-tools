@@ -1,0 +1,9 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  void s(){ BWbFieldEditor.dialog(this, BOrd.NULL); setFacets(BFacets.make("targetType=baja:Component")); }
+}

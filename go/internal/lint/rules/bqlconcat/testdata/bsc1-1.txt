@@ -1,0 +1,7 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/src/A.java --
+class A { void f(){ BOrd.make("station:|bql:select * from control:ControlPoint"); } }

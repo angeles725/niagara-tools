@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-bql-string-concat  @DIR@/M/src/A.java:1  bql concat: class A { void f(String u){ BOrd.make("alarm:|bql:select * where uuid = '" + u + "'"); } }
+-- stderr --
+-- M/src/A.java --
+class A { void f(String u){ BOrd.make("alarm:|bql:select * where uuid = '" + u + "'"); } }

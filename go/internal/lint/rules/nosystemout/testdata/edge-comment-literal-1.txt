@@ -1,0 +1,24 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-no-system-out  @DIR@/m/A.java:7  String u = "http://h"; System.out.println(u);
+FAIL  lint-no-system-out  @DIR@/m/A.java:9  System
+FAIL  lint-no-system-out  @DIR@/m/A.java:11  System.err.printf("%d", 1);
+FAIL  lint-no-system-out  @DIR@/m/A.java:12  java.lang.System.out.print(1);
+-- stderr --
+-- m/A.java --
+class A {
+  /* System.out.println("x"); */
+  /**
+   * System.out.println(x)
+   */
+  String s = "System.out.println(x)";
+  String u = "http://h"; System.out.println(u);
+  void f() {
+    System
+        .out.println(x);
+    System.err.printf("%d", 1);
+    java.lang.System.out.print(1);
+  }
+}

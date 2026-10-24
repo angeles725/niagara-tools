@@ -1,0 +1,11 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/a b/A.java:2  void started() { sub.subscribe(c); } ÿþ
+-- stderr --
+-- m/a b/A.java --
+class A {
+  void started() { sub.subscribe(c); } ÿþ
+  void more() { other.subscribe(d); }
+}

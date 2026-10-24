@@ -1,0 +1,7 @@
+-- args --
+@DIR@/Mod-se
+-- want --
+exit 0
+-- stderr --
+-- Mod-se/src/com/x/S.java --
+class S { } // import javax.swing.JFrame;
