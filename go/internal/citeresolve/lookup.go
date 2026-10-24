@@ -36,9 +36,11 @@ func (e *Engine) trees() []tree {
 		{e.roots.Repo, repoSkip, func(r []string) string { return "repo:" + strings.Join(r, "/") }},
 		{e.organized(), baseSkip, organizedKey},
 		{e.source(), baseSkip, func(r []string) string { return "src:" + strings.Join(r, "/") }},
-		{e.roots.Clients, clientSkip, clientKey},
+		e.clientTree(),
 	}
 }
+
+func (e *Engine) clientTree() tree { return tree{e.roots.Clients, clientSkip, clientKey} }
 
 func (e *Engine) source() string {
 	return filepath.Join(e.help(), "versions", e.roots.Version, "source")
@@ -98,31 +100,44 @@ func (e *Engine) lookup(target string, keep func(string) bool, extra ...string) 
 		d := d
 		all = append(all, tree{d, baseSkip, func(r []string) string { return "dir:" + filepath.Join(d, filepath.Join(r...)) }})
 	}
-	var out []group
-	at := map[string]int{}
+	g := grouper{at: map[string]int{}}
 	for _, t := range all {
 		idx, err := e.fs.index(t.root, t.skip, e.treeRoots())
 		if err != nil {
 			return nil, err
 		}
 		for _, p := range idx[filepath.Base(target)] {
-			if !strings.HasSuffix(p, "/"+target) || keep != nil && !keep(p) {
-				continue
+			if strings.HasSuffix(p, "/"+target) && (keep == nil || keep(p)) {
+				g.add(t, p)
 			}
-			rel, _ := filepath.Rel(t.root, p)
-			k := t.key(strings.Split(filepath.ToSlash(rel), "/"))
-			if i, ok := at[k]; ok {
-				out[i].copies = append(out[i].copies, p)
-				continue
-			}
-			at[k] = len(out)
-			out = append(out, group{k, []string{p}})
 		}
 	}
-	for _, g := range out {
-		sort.SliceStable(g.copies, func(a, b int) bool { return copyRank(g.copies[a]) < copyRank(g.copies[b]) })
+	return g.groups(), nil
+}
+
+// grouper collects files into groups by the logical key their tree gives them.
+type grouper struct {
+	out []group
+	at  map[string]int
+}
+
+func (g *grouper) add(t tree, p string) {
+	rel, _ := filepath.Rel(t.root, p)
+	k := t.key(strings.Split(filepath.ToSlash(rel), "/"))
+	if i, ok := g.at[k]; ok {
+		g.out[i].copies = append(g.out[i].copies, p)
+		return
 	}
-	return out, nil
+	g.at[k] = len(g.out)
+	g.out = append(g.out, group{k, []string{p}})
+}
+
+// groups returns the groups, each with its copies in copyRank order.
+func (g *grouper) groups() []group {
+	for _, x := range g.out {
+		sort.SliceStable(x.copies, func(a, b int) bool { return copyRank(x.copies[a]) < copyRank(x.copies[b]) })
+	}
+	return g.out
 }
 
 // treeRoots are the tree roots and the research root, which no other tree's walk enters (a fixture

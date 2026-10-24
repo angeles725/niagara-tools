@@ -20,6 +20,7 @@ func (e *Engine) registerFiles() {
 	e.by[citeparse.Mem] = memResolver{e}
 	e.by[citeparse.Vineflower] = vineResolver{e}
 	e.by[citeparse.Javap] = javapResolver{e}
+	e.registerKinds()
 }
 
 func (e *Engine) help() string      { return filepath.Join(e.roots.Research, "niagara-help") }

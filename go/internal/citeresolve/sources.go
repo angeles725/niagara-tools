@@ -110,9 +110,13 @@ func (r memResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 
 type vineResolver struct{ e *Engine }
 
-// Resolve finds File in the vineflower/ copy of module part Target; the copy's version is not checked.
+// Resolve finds File in the vineflower/ copy of module part Target (of any module when Target is empty);
+// the copy's version is not checked.
 func (r vineResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
-	in := r.e.inModule(p.Target, r.e.organizedDirs(p.Target))
+	in := func(string) bool { return true }
+	if p.Target != "" {
+		in = r.e.inModule(p.Target, r.e.organizedDirs(p.Target))
+	}
 	groups, err := r.e.lookup(p.File, func(f string) bool { return in(f) && strings.Contains(f, "/vineflower/") })
 	if err != nil {
 		return toolError(err)
