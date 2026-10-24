@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow | --default-allow on|off] <module-root>

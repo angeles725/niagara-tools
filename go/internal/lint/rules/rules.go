@@ -30,6 +30,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/privateapiimport"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
@@ -101,5 +102,6 @@ func All() []lint.Spec {
 		splitpackage.Spec(),
 		manuallabels.Spec(),
 		writepath.Spec(),
+		privateapiimport.Spec(),
 	}
 }
