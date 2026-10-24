@@ -320,6 +320,59 @@ _mkjar_ver() {
   [ -e "$TMPDIR_T/verify.args" ]
 }
 
+# ================= R10 two-part vendorVersion (chihuahua defaultModuleVersion("1.3")) =================
+# Niagara accepts an X.Y module vendorVersion; the gate used to read only X.Y.Z, so a valid two-part
+# module was reported "vendorVersion is unreadable" (exit 52). Versions compare numerically per
+# component with a missing component = 0, so 1.3 -> 1.3.0 is NOT a bump.
+# Mutation: BS-drift-two-part -- reverting _module_own_version's regex to X.Y.Z turns these red (52).
+@test "BS-drift-two-part-fail: two-part vendorVersion unchanged with changed bytes -> exit 51 (drift), not 52" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.3" "NEW-behavior-fix"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  [[ "$output" == *"vendorVersion is still 1.3."* ]]
+  [[ "$output" != *"cannot verify"* ]]
+}
+
+@test "BS-drift-two-part-pass: two-part vendorVersion bumped (1.3 -> 1.4, 1.3 -> 1.3.1) -> no drift FAIL" {
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  for nv in 1.4 1.3.1; do
+    _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"
+    rm -f "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "$TMPDIR_T/verify.args"
+    _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "$nv" "NEW-behavior-fix"
+    run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+    [ "$status" -eq 0 ]
+    [ -e "$TMPDIR_T/verify.args" ]
+    rm -f "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  done
+}
+
+@test "BS-drift-two-part-trailing-zero: 1.3 -> 1.3.0 is the same version (missing component = 0) -> exit 51" {
+  # Mutation: BS-drift-version-numeric -- a string comparison sees '1.3' != '1.3.0' as a bump (exit 0).
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.3.0" "NEW-behavior-fix"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+}
+
+@test "BS-drift-dependency-only: only a <dependency vendorVersion> floor, no module version -> exit 52 (fail closed)" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  d="$(mktemp -d)"; mkdir -p "$d/META-INF"
+  printf '<module name="X" vendor="Angeles"><dependencies><dependency name="baja" vendorVersion="4.13"/></dependencies></module>\n' \
+    > "$d/META-INF/module.xml"
+  printf 'NEW-behavior-fix' > "$d/payload.txt"
+  (cd "$d" && zip -q -r "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" .); rm -rf "$d"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 52 ]
+  [[ "$output" == *"new=''"* ]]
+}
+
 # ================= R4-drift-gate-not-retry-safe (RDD resilience correction) =================
 # The stock make_fake_gradlew stub above never touches modules/, so it cannot exercise the real
 # failure mode: gradle's :jar task installs the new jar into modules/ as its OWN last step (see

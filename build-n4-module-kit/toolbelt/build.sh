@@ -34,6 +34,7 @@
 #   snapshots what is CURRENTLY installed there; after the build, if the new jar's shipped bytes differ from
 #   that snapshot but the module's own vendorVersion did not change, the build FAILs (exit 51) — Software
 #   Manager compares versions, not bytes, and would silently report "Up to Date" and skip installing the fix.
+#   The version may be X.Y or X.Y.Z and compares numerically per component, missing = 0 (1.3 == 1.3.0).
 #   A jar the gate cannot list (unzip missing/failing) or a changed jar whose own vendorVersion cannot be
 #   read FAILs closed with exit 52 ("cannot verify"), never a silent pass.
 #   Retry-safe: gradle's :jar step already overwrote the deployed jar by the time this FAILs, so the gate
@@ -276,10 +277,24 @@ _module_own_version() {
   # The MODULE's own vendorVersion lives on the <module ...> root tag itself —
   # NOT the <dependency name="baja" vendorVersion="..."/> floor, a different
   # number entirely (METHODOLOGY.md "two version concepts").
+  # Two OR more numeric components: Niagara accepts an X.Y module version (chihuahua "1.3"), not only X.Y.Z.
   { unzip -p "$1" META-INF/module.xml 2>/dev/null \
-      | grep -oE '<module [^>]*vendorVersion="[0-9]+\.[0-9]+\.[0-9]+[^"]*"' \
+      | grep -oE '<module [^>]*vendorVersion="[0-9]+(\.[0-9]+)+[^"]*"' \
       | head -1 | sed -E 's/.*vendorVersion="([^"]*)".*/\1/'
   } || true
+}
+# _same_version <a> <b> — true when two vendorVersions are the SAME version: numeric per component with a
+# missing component = 0 (1.3 == 1.3.0, 1.03 == 1.3; 1.3 != 1.3.1 != 1.4); any non-numeric suffix after the
+# dotted number must match exactly.
+_same_version() {
+  awk -v a="$1" -v b="$2" 'BEGIN {
+    sa = a; sub(/^[0-9]+(\.[0-9]+)*/, "", sa); na = substr(a, 1, length(a) - length(sa))
+    sb = b; sub(/^[0-9]+(\.[0-9]+)*/, "", sb); nb = substr(b, 1, length(b) - length(sb))
+    if (sa != sb) exit 1
+    la = split(na, x, "."); lb = split(nb, y, "."); n = (la > lb) ? la : lb
+    for (i = 1; i <= n; i++) if ((x[i] + 0) != (y[i] + 0)) exit 1
+    exit 0
+  }'
 }
 # _restore_baseline <profile> <ok-suffix> — put the part-1 backup back into modules/ and say so. A failed copy
 # prints cp's own reason and what modules/<jar> really holds now (the pre-build jar, or something else such as
@@ -412,7 +427,7 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
       continue
     fi
     [ "$_new_hash" = "$_old_hash" ] && continue   # nothing shipped actually changed
-    if [ "$_new_ver" = "$_old_ver" ]; then
+    if _same_version "$_new_ver" "$_old_ver"; then
       echo "build.sh: FAIL — $MOD-$p shipped bytes changed but vendorVersion is still $_new_ver." >&2
       echo "  Software Manager compares versions, not bytes — it will report \"Up to Date\" and SKIP installing this jar." >&2
       echo "  Bump defaultModuleVersion(\"$_new_ver\") in $MOD-$p's build.gradle.kts (patch for a fix, minor for a feature), then rebuild." >&2
