@@ -1,19 +1,10 @@
+declared difference: T1: the calls are Kotlin tokens (ktssrc), and this script holds uberjar("g:mix:1') (mismatched quotes), which is not Kotlin: the scan fails closed, exit 3; truth-shapes holds the same shapes as valid Kotlin
 -- args --
 @DIR@/s
 -- want --
-exit 0
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  G_1.x-y:A.b_c-9 is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:blk is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:cmt is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:mix is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:nover is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:one is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:sq is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:str is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:tpl is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:two is both uberjar()d and api()d
-WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:xapi is both uberjar()d and api()d
+exit 3
 -- stderr --
+lint-uberjar-api-conflict: cannot scan @DIR@/s/a.gradle.kts: lint-uberjar-api-conflict: line 4: unterminated string
 -- s/a.gradle.kts --
 dependencies {
   uberjar('g:sq:1')

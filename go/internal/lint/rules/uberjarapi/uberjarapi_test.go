@@ -12,7 +12,7 @@ import (
 )
 
 // TestGolden: every tests/lint-uberjar-api-conflict.bats run and every edge tree, recorded from the bash lint.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 15) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 16) }
 
 // TestUnreadable is UAC-finderr plus an unreadable file: the walk error is awk_lint_list's env line and the
 // listed files are still scanned; an unreadable *.gradle.kts, which the bash grep 2>/dev/null skipped (a

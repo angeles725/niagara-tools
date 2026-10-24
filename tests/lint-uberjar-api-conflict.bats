@@ -33,3 +33,30 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"locked"* ]]
 }
+
+# Truth fix T1 (r10 Go port): the calls are read as Kotlin tokens (go/internal/ktssrc). The bash grep read
+# raw text: a commented-out api(...) or one inside a string literal made a conflict, a call split over
+# lines or written with blanks inside its parentheses was missed, and xapi( counted as api(.
+@test "UAC3: comments and strings are not dependencies; multi-line and spaced calls are" {
+  # Mutation: UAC3 -- matching raw text WARNs on the commented and string api() and misses the split call.
+  cat > "$TMPDIR_T/M/x-rt.gradle.kts" <<'KTS'
+dependencies {
+  // api("g:cmt:1")
+  uberjar("g:cmt:1")
+  /* implementation("g:blk:1") */ uberjar("g:blk:1")
+  val note = """api("g:str:1")"""
+  uberjar("g:str:1")
+  xapi("g:xapi:1"); uberjar("g:xapi:1")
+  api(
+    "g:ml:1"
+  )
+  uberjar("g:ml:1")
+  implementation( "g:sp:1" )
+  uberjar("g:sp:1")
+}
+KTS
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'is both')" -eq 2 ]
+  [[ "$output" == *"g:ml is both"* && "$output" == *"g:sp is both"* ]]
+}
