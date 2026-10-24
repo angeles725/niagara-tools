@@ -3,7 +3,7 @@
 # Fixture-driven (D1): copies the bundled fixtures/<Type> tree and substitutes
 # the fixture type name → <ModuleName> in paths and content (B790/B793 proven tree).
 #
-# Usage: scaffold-module.sh <ModuleName> <out-dir> [--vendor <v>] [--target-version <x.y>] [--plugin-version <v>] [--type <logic|dashboard>]
+# Usage: scaffold-module.sh <ModuleName> <out-dir> [--vendor <v>] [--target-version <x.y>] [--plugin-version <v>] [--type <logic|dashboard|driver>]
 #   ModuleName       Java identifier: uppercase-first, alphanumeric only (e.g. ColdRoomPan)
 #   out-dir          parent directory; emitted root is <out-dir>/<ModuleName>
 #   --vendor <v>     display vendor name (copyright, defaultVendor); default Angeles
@@ -12,6 +12,8 @@
 #   --type <logic|dashboard>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture)
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture)
+#                    driver    — NDriver -rt (UDP comm config subclass, codec, discovery) + -wb point manager
+#                                (MinimalDriver fixture; types/driver-authoring.md § 1.6-§ 1.11, § 5, § 12)
 #
 # The emitted tree is pre-slotomatic. Run build.sh to generate the AUTO region and build the jar.
 # The root build.gradle.kts carries the signing block (templates/signing-root.gradle.kts, issue #266):
@@ -32,7 +34,7 @@ _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # usage
 ################################################################
 usage() {
-  printf 'usage: scaffold-module.sh <ModuleName> <out-dir> [--vendor <v>] [--target-version <x.y>] [--plugin-version <v>] [--type <logic|dashboard>]\n' >&2
+  printf 'usage: scaffold-module.sh <ModuleName> <out-dir> [--vendor <v>] [--target-version <x.y>] [--plugin-version <v>] [--type <logic|dashboard|driver>]\n' >&2
 }
 
 ################################################################
@@ -71,9 +73,9 @@ done
 # Validate --type
 ################################################################
 case "$TYPE" in
-  logic | dashboard) ;;
+  logic | dashboard | driver) ;;
   *)
-    printf 'scaffold-module: unknown --type: %s (must be logic or dashboard)\n' "$TYPE" >&2
+    printf 'scaffold-module: unknown --type: %s (must be logic, dashboard or driver)\n' "$TYPE" >&2
     usage; exit 2 ;;
 esac
 
@@ -99,6 +101,7 @@ esac
 case "$TYPE" in
   logic)     FIXTURE_TYPE_NAME="MinimalPan" ;;
   dashboard) FIXTURE_TYPE_NAME="MinimalDash" ;;
+  driver)    FIXTURE_TYPE_NAME="MinimalDriver" ;;
 esac
 FIXTURE_ROOT="${_SCRIPT_DIR}/../fixtures/${FIXTURE_TYPE_NAME}"
 
@@ -143,10 +146,11 @@ while IFS= read -r -d '' src; do
   # Relative path from fixture root
   rel="${src#"${FIXTURE_ROOT}"/}"
 
-  # Transform path segments (more-specific first: -ux before -rt before bare name)
+  # Transform path segments (more-specific first: -ux/-wb before -rt before bare name)
   dst_rel="$(printf '%s' "$rel" \
     | sed \
         -e "s|${FIXTURE_TYPE_NAME}-ux|${MOD}-ux|g" \
+        -e "s|${FIXTURE_TYPE_NAME}-wb|${MOD}-wb|g" \
         -e "s|${FIXTURE_TYPE_NAME}-rt|${MOD}-rt|g" \
         -e "s|${FIXTURE_TYPE_NAME}|${MOD}|g" \
         -e "s|angeles|${VENDOR_LC}|g")"
@@ -162,6 +166,7 @@ while IFS= read -r -d '' src; do
       # Text files: all substitutions in one pass (ordered most-specific → less-specific)
       sed \
         -e "s|${FIXTURE_TYPE_NAME}-ux|${MOD}-ux|g" \
+        -e "s|${FIXTURE_TYPE_NAME}-wb|${MOD}-wb|g" \
         -e "s|${FIXTURE_TYPE_NAME}-rt|${MOD}-rt|g" \
         -e "s|${FIXTURE_TYPE_NAME_LC}|${MOD_LC}|g" \
         -e "s|${FIXTURE_TYPE_NAME}|${MOD}|g" \

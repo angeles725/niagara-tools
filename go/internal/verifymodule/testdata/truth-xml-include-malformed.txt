@@ -1,0 +1,26 @@
+declared difference: a malformed module-include.xml is an env error with its xmlsrc position, exit 3, never a typecount verdict on the tags a line grep found
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-ux.jar
+-- want --
+exit 3
+PASS  bytecode   @DIR@/Foo-ux.jar  1 classes, all major 52
+FAIL  signed     @DIR@/Foo-ux.jar  no META-INF/*.SF (jar not signed)
+PASS  types      @DIR@/Foo-ux.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-ux.jar  no --target-version
+SKIP  stored     @DIR@/Foo-ux.jar  no --stored
+-- stderr --
+verify-module: @DIR@/mod/Foo-ux/module-include.xml:3:1: element <type> opened at 2:1 closed by </types>
+-- Foo-ux.jar (jar) --
+--- META-INF/module.xml (stored) ---
+<module name="Foo">
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Foo-ux/module-include.xml --
+<types>
+<type name="A" class="com.x.A">
+</types>

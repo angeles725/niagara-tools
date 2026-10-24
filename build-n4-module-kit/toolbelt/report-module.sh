@@ -43,9 +43,10 @@
 # Go-ported members (issue #459): lint-persist-hot-write, lint-changed-hot-write, lint-inert-coordination,
 # lint-session-store-lazy-evict, lint-bformat-call (WARN), lint-service-types and lint-driver-scaffold (FAIL/WARN)
 # on <artifact>/src; lint-wb-external-ord-value on a -wb src/; lint-spa-poll-no-recovery on a -ux src/rc/; once
-# per run on <module-root>: lint-duplicate-helper, lint-machine-default-path, lint-inline-site-literal (a module
+# per run on <module-root>: lint-duplicate-helper, lint-machine-default-path, lint-inline-site-literal and the
+# driver lints lint-private-api-import, lint-ndriver-static-collection, lint-ndriver-tagless-correlation (a module
 # with no source they read is a SKIP row). lint-manual-labels is not a member: it needs an operator manual
-# path, which a module root does not name.
+# path, which a module root does not name; lint-bacnet-status-flags is not one either: it reads a station bog.
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
@@ -920,8 +921,10 @@ lint_rows "(module)" lint-bundled-jar-class-version "$_rc" "$_o" FAIL rows base
 
 # ----------------------------------------------------------------
 # 13. Go-ported (n4lint) module-root lints — once per run (WARN, run without --strict; issue #459):
-#     lint-duplicate-helper, lint-machine-default-path, lint-inline-site-literal take <module-root> (they read
-#     every part: a helper duplicated across -rt/-ux, a site literal in rc/). A module with no source they read
+#     lint-duplicate-helper, lint-machine-default-path, lint-inline-site-literal and the driver lints
+#     lint-private-api-import, lint-ndriver-static-collection, lint-ndriver-tagless-correlation take <module-root>
+#     (they read every part: a helper duplicated across -rt/-ux, a site literal in rc/, NDriver classes across
+#     files). A module with no source they read
 #     is their own "no ... sources" exit 3: a SKIP row naming it, not an env fault; any other exit 3 is ERROR.
 # ----------------------------------------------------------------
 # module_member <check> <exit> <output> <no-source text> — the module-root WARN member shape above.
@@ -938,6 +941,12 @@ _rc=0; _o=$("$TOOLBELT/lint-machine-default-path.sh" "$MODULE_ROOT" 2>&1) || _rc
 module_member lint-machine-default-path "$_rc" "$_o" "no *.java or *.js or *.properties sources found"
 _rc=0; _o=$("$TOOLBELT/lint-inline-site-literal.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
 module_member lint-inline-site-literal "$_rc" "$_o" "no *.java under a -rt or -ux part's src/ and no *.js under an rc/"
+_rc=0; _o=$("$TOOLBELT/lint-private-api-import.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+module_member lint-private-api-import "$_rc" "$_o" "no *.java under a -rt, -ux, -wb or -se part's src/"
+_rc=0; _o=$("$TOOLBELT/lint-ndriver-static-collection.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+module_member lint-ndriver-static-collection "$_rc" "$_o" "no *.java under a -rt part's src/"
+_rc=0; _o=$("$TOOLBELT/lint-ndriver-tagless-correlation.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+module_member lint-ndriver-tagless-correlation "$_rc" "$_o" "no *.java under a -rt part's src/"
 
 # ----------------------------------------------------------------
 # 7. triage-console.sh — once per run (Campaign 8 PR8; D9)

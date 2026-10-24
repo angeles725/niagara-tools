@@ -1,0 +1,14 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/src/com/example/drv/BAcmeDevice.java --
+package com.example.drv;
+public class BAcmeDevice extends BNDevice {}
+-- M/M-wb/src/com/example/drv/wb/BAcmeView.java --
+package com.example.drv.wb;
+public class BAcmeView extends BNDevice { static Set<String> s = new HashSet<>(); }
+-- M/M-rt/srcTest/com/example/drv/BAcmeTestDevice.java --
+package com.example.drv;
+public class BAcmeTestDevice extends BNDevice { static Set<String> s = new HashSet<>(); }

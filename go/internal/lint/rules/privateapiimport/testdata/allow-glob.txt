@@ -1,0 +1,16 @@
+-- args --
+--allow
+com.tridium.history.*
+--allow
+com.tridium.file.**
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-private-api-import  @DIR@/M/M-ux/src/com/example/drv/ux/BAcmeView.java:4  com.tridium.history.db.BLocalDb is private API (devguide apiInfo: no compatibility guaranteed)
+-- stderr --
+-- M/M-ux/src/com/example/drv/ux/BAcmeView.java --
+package com.example.drv.ux;
+import com.tridium.history.BHistoryX;
+import com.tridium.file.exporters.BITableToCsv;
+import com.tridium.history.db.BLocalDb;
+public class BAcmeView {}

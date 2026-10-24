@@ -1,0 +1,13 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-ndriver-static-collection  @DIR@/M/M-rt/src/com/example/drv/BAcmeNetwork.java:3  static Map<String, BObject> cache is shared by every instance -- keep it per instance
+WARN  lint-ndriver-static-collection  @DIR@/M/M-rt/src/com/example/drv/BAcmeNetwork.java:4  static java.util.concurrent.ConcurrentHashMap<String, Long> seen is shared by every instance -- keep it per instance
+-- stderr --
+-- M/M-rt/src/com/example/drv/BAcmeNetwork.java --
+package com.example.drv;
+public class BAcmeNetwork extends com.tridium.ndriver.BNNetwork {
+  static Map<String, BObject> cache;
+  static final java.util.concurrent.ConcurrentHashMap<String, Long> seen = new java.util.concurrent.ConcurrentHashMap<>();
+}

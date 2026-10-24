@@ -89,5 +89,6 @@ matters for the private-API lint proposed on 2026-10-15.
 
 ---
 **Status**: FOLDED 2026-10-23 (quality round 8 U5, branch `docs/r8-u5-c59-c62`) — Δ1-Δ4, Δ6 earlier (WU-P0-5,
-C83/C88/C89/C91); Δ5 `types/driver-authoring.md` § 2 (enum range step); Δ7 § 1.7 defect checklist, lint owed as G66;
-Δ8 (allow-list `com.tridium.ndriver.**` + `DrUtil`) deferred to owed lint G65 in `ledger.d/2026-10-23-r8-u5-c59-c62.md`.
+C83/C88/C89/C91); Δ5 `types/driver-authoring.md` § 2 (enum range step); Δ7 § 1.7 defect checklist, lint LANDED 2026-10-24 as G66;
+Δ8 (allow-list `com.tridium.ndriver.**` + `DrUtil`) LANDED 2026-10-24 as the default allow-list of lint G65,
+cited in `types/module-wiring.md` § 4.5 (retro r10-dr3-driver-lints).

@@ -1,0 +1,10 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 1
+WARN  lint-ndriver-static-collection  @DIR@/M/M-rt/src/com/example/drv/BAcmeDeviceNetwork.java:2  static Queue<Runnable> work is shared by every instance -- keep it per instance
+-- stderr --
+-- M/M-rt/src/com/example/drv/BAcmeDeviceNetwork.java --
+package com.example.drv;
+public class BAcmeDeviceNetwork extends BDeviceNetwork { static Queue<Runnable> work = new LinkedList<>(); }

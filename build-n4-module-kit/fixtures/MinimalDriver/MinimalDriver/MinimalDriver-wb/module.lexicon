@@ -1,0 +1,7 @@
+#
+# Lexicon for the MinimalDriver module (wb).
+# Format verified against control-rt.lexicon (Java properties: key=value).
+#
+
+# --- Type display names ---
+MinimalDriverPointManager=Minimal Driver Point Manager

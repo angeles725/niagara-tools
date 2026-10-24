@@ -1,0 +1,32 @@
+declared difference: a gradle.kts ktssrc cannot read (an unterminated string) is an env error naming its line, exit 3; the bash grepped it into a phantom-dep verdict
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-ux.jar
+-- want --
+exit 3
+PASS  bytecode   @DIR@/Foo-ux.jar  1 classes, all major 52
+FAIL  signed     @DIR@/Foo-ux.jar  no META-INF/*.SF (jar not signed)
+PASS  types      @DIR@/Foo-ux.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-ux.jar  no --target-version
+SKIP  stored     @DIR@/Foo-ux.jar  no --stored
+SKIP  typecount  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/module-include.xml
+SKIP  facets     @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  facets-req  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  ord-literal  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  palette    @DIR@/Foo-ux.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Foo-ux.jar  not a -wb jar
+-- stderr --
+verify-module: @DIR@/mod/Foo-ux/Foo-ux.gradle.kts: line 3: unterminated string
+-- Foo-ux.jar (jar) --
+--- META-INF/module.xml (stored) ---
+<module name="Foo-ux">
+<dependencies><dependency name="baja" vendorVersion="4.14"/></dependencies>
+<types><type name="A" class="com.x.A"/></types>
+</module>
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Foo-ux/Foo-ux.gradle.kts --
+dependencies {
+  api(":baja")
+  val s = "open
+}

@@ -1,0 +1,11 @@
+declared difference: a viewBox is read as SVG numbers: 0 0 1920.5 1080 agrees with IMG_W/IMG_H 3841/2160 (the ratios compare in float); bash arithmetic rejected 1920.5 and left the --plano block
+-- args --
+--plano
+@DIR@/p.html
+-- want --
+exit 0
+PASS  plano      @DIR@/p.html  Rc=3841/2160 Ri=3841/2160 Rv=1920.5/1080 — all agree
+-- stderr --
+-- p.html --
+<script>IMG_W=3841;IMG_H=2160</script><svg id="zonas" viewBox="0 0 1920.5 1080"></svg>
+<img id="planoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAADwEAAAhw">

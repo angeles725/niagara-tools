@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-ndriver-tagless-correlation  @DIR@/M  no *.java under a -rt part's src/ (wrong path: pass the module root)
+-- stderr --
+-- M/M-wb/src/com/example/drv/wb/A.java --
+class A extends NMessage {}

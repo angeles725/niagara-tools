@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-schema-risk
@@ -39,5 +39,11 @@ retype) print in declaration order; bash printed gawk `for (nm in …)` hash ord
 - A tool whose exit scale is a verdict belongs beside the lint engine as a `cli.Main` command, not inside it.
 - Δ1-Δ3 are applied in this unit as code fixes; the retro stays pending until a fold review decides whether any of them becomes doctrine.
 
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 Record the shell's silent input drops as edge goldens: awk `NR == FNR` on an empty first file.
+- Δ2 → `BUILD-LOOP.md` § 5 Fail-closed input listing (a per-file read fails closed): the schema-risk port exits on an unreadable input.
+- Δ3 → `BUILD-LOOP.md` § 5 XML and `.bog` lints port onto `go/internal/xmlsrc` only: the `<type>` element through xmlsrc, an unbalanced annotation is an UNKNOWN row.
+- Lessons: the `for (k in arr)` order is already the port rule's `rules/awkorder` clause; the verdict-exit misfit is added to the non-lint `go/cmd/<tool>` list (Reuse the engine before adding to it).
+
 ---
-**Status**: PENDING
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail`; log in `ledger.d/2026-10-24-r10-fold-tail.md`) — Δ1-Δ3 cited in `BUILD-LOOP.md` § 5.

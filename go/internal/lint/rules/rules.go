@@ -7,6 +7,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonincludesync"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/arbitraryord"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bacnetstatusflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/changedhotwrite"
@@ -26,10 +27,13 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/manuallabels"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndriverstaticcollection"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndrivertaglesscorrelation"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/privateapiimport"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
@@ -101,5 +105,9 @@ func All() []lint.Spec {
 		splitpackage.Spec(),
 		manuallabels.Spec(),
 		writepath.Spec(),
+		privateapiimport.Spec(),
+		ndriverstaticcollection.Spec(),
+		ndrivertaglesscorrelation.Spec(),
+		bacnetstatusflags.Spec(),
 	}
 }

@@ -1,0 +1,8 @@
+-- args --
+@DIR@/S
+-- want --
+exit 3
+ERROR  lint-bacnet-status-flags  @DIR@/S  no *.bog under the root (wrong path: pass a station directory)
+-- stderr --
+-- S/README.txt --
+notes
