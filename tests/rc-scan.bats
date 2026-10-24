@@ -400,3 +400,21 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [[ "$output" == *"rc/app.js:1  innerhtml-server"* ]]
   if [[ "$output" == *"rc/app.js:2  innerhtml-server"* || "$output" == *"rc/app.js:3  innerhtml-server"* ]]; then return 1; fi
 }
+
+# Issue #459 (a), part 2: a member of a const literal the page declares (Umbrella index.html:2987
+# units.map(u => ... + u.name)) is not server data; data from elsewhere, a let and a literal the page writes
+# into still WARN.
+@test "RC36: innerhtml-server — a member of a same-file const literal is no row; a non-literal, a let or a written literal still WARNs" {
+  # Mutation: RC36 -- dropping literal provenance WARNs the units.map(u => u.name) line (app.js:2)
+  local T="$BATS_TEST_TMPDIR/rc36"
+  mkdir -p "$T/rc"
+  printf '%s\n' 'const units = [{ id: "UP-01", name: "RH A" }];' \
+    "el.innerHTML = units.map(u => '<b>' + u.name).join('');" \
+    "el.innerHTML = data.map(u => '<b>' + u.name).join('');" \
+    "const live = [{ name: 'a' }]; live[0].name = srv; el.innerHTML = live.map(m => '<b>' + m.name).join('');" > "$T/rc/app.js"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/app.js:3  innerhtml-server"* ]]
+  [[ "$output" == *"rc/app.js:4  innerhtml-server"* ]]
+  if [[ "$output" == *"rc/app.js:2  innerhtml-server"* ]]; then return 1; fi
+}

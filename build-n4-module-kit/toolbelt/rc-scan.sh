@@ -41,6 +41,9 @@
 #                            Decided on the sink's own value (the `=`/`+=` right-hand side or the
 #                            insertAdjacentHTML arguments, as jssrc tokens): a member elsewhere on the line, a
 #                            `.length`, a `.toFixed(`/`.toPrecision(` number and a `Math.*` value are no row (#459).
+#                            Nor is a member of a const array/object literal the same file declares, read through
+#                            a lexically bound name (an iterator callback or for-of over it, .find(, [i], a const
+#                            arrow returning .find(); a field the page writes into, or push()es to, is not literal.
 #                            [ev: retro dashboard-frontend-standard Δ2]
 #   datauri-budget     FAIL  a data: URI over 20 KB (20480 chars); WARN with --legacy (a deployed
 #                            module not yet restructured). [ev: retro dashboard-frontend-standard Δ3]
@@ -80,6 +83,7 @@
 # Mutation: RC33 -- scanning rc/vendor/**/*.js again flags the vendored three.js rows (RC33 sees RenderPass.js)
 # Mutation: RC34 -- ignoring a stated non-gate title reason WARNs the wiring-disabled control (RC34 sees app.js:2)
 # Mutation: RC35 -- matching the member anywhere on the line again WARNs the spec.unit line (RC35 sees app.js:2)
+# Mutation: RC36 -- dropping literal provenance WARNs the units.map(u => u.name) line (RC36 sees app.js:2)
 # Mutation: RS-unreadable -- skipping a file the scan cannot read (the awk's fatal-and-continue) passes clean
 #
 # Go: the checks run in go/internal/rcscan (go/cmd/rc-scan), built on demand by go/go-tool.sh; this script is

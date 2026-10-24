@@ -9,10 +9,13 @@ import (
 // jsView is a file's JavaScript as jssrc tokens (a .js file, or the <script> elements of an .html file), built
 // on first use; a check that cannot find its shape in it keeps the line-heuristic verdict (fail closed).
 type jsView struct {
-	toks  []jssrc.Token
-	first []int // the first token index of each 0-based line (len(toks) past the last token)
-	match []int // jssrc.Match(toks)
-	binds []jssrc.Binding
+	toks   []jssrc.Token
+	first  []int // the first token index of each 0-based line (len(toks) past the last token)
+	match  []int // jssrc.Match(toks)
+	open   []int // the opener of each closing bracket
+	binds  []jssrc.Binding
+	shapes map[int]*shape // literalMember's resolved bindings, by name token index
+	marked bool           // markWrites ran
 }
 
 func (s *fileScan) js() *jsView {
@@ -25,7 +28,14 @@ func (s *fileScan) js() *jsView {
 	}
 	v := &jsView{toks: jssrc.Tokens(lines), first: make([]int, len(lines)+1)}
 	v.match = jssrc.Match(v.toks)
+	v.open = make([]int, len(v.toks))
+	for i, c := range v.match {
+		if c >= 0 && c < len(v.toks) {
+			v.open[c] = i
+		}
+	}
 	v.binds = jssrc.Bindings(v.toks, v.match)
+	v.shapes = map[int]*shape{}
 	k := 0
 	for n := range v.first {
 		for k < len(v.toks) && v.toks[k].Line < n {
@@ -35,6 +45,28 @@ func (s *fileScan) js() *jsView {
 	}
 	s.view = v
 	return v
+}
+
+// chainStart is where the member / call chain that ends before toks[end] starts (`a.b(x)[i].c`), so
+// toks[chainStart(end):end] is the receiver of a method called at end.
+func (v *jsView) chainStart(end int) int {
+	j := end
+	for j > 0 {
+		switch t := v.toks[j-1]; {
+		case t.Kind == jssrc.Punct && (t.Text == ")" || t.Text == "]"):
+			j = v.open[j-1]
+		case t.Kind == jssrc.Ident:
+			j--
+			if j > 0 && v.toks[j-1].Text == "." && v.toks[j-1].Kind == jssrc.Punct {
+				j--
+				continue
+			}
+			return j
+		default:
+			return j
+		}
+	}
+	return j
 }
 
 // line is the token range [from, to) of the tokens that start on 1-based line nr.

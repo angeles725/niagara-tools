@@ -70,8 +70,8 @@ func isMember(ts []jssrc.Token, j int) bool {
 }
 
 // safeMember reports a member read (ts[j] the base name) that holds no server text: a Math.* value, a
-// .length or a number formatted by .toFixed( / .toPrecision(.
-func (s *fileScan) safeMember(ts []jssrc.Token, j, _ int) bool {
+// .length, a number formatted by .toFixed( / .toPrecision(, or literal text of the page's own code.
+func (s *fileScan) safeMember(ts []jssrc.Token, j, pos int) bool {
 	base := ts[j].Text
 	var path []string
 	k := j + 1
@@ -80,5 +80,6 @@ func (s *fileScan) safeMember(ts []jssrc.Token, j, _ int) bool {
 	}
 	last := path[len(path)-1]
 	call := k < len(ts) && ts[k].Text == "("
-	return base == "Math" || last == "length" || call && (last == "toFixed" || last == "toPrecision")
+	return base == "Math" || last == "length" || call && (last == "toFixed" || last == "toPrecision") ||
+		s.literalMember(base, pos, path)
 }

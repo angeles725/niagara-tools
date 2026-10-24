@@ -1,0 +1,29 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:9  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:11  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:12  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:13  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:14  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:15  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+-- stderr --
+-- rc/a.js --
+const units = [{ id: "UP-01", name: "RH A", n: 1 }, { id: "UP-02", name: "Gerencia", n: -2 }];
+const events = [{ t: boot - 1, title: "Filtro", id: 'UP-01' }];
+const specs = { temperature: { unit: '°C' }, current: { unit: `A` } };
+const byId = id => units.find(u => u.id === id);
+el.innerHTML = units.map(u => '<b>' + u.name + '</b>').join('');
+for (const u of units) { el.innerHTML += '<i>' + u.id; }
+const f = mode ? events.filter(e => e.id) : []; el.innerHTML = f.map(e => '<p>' + e.title).join('');
+const spec = specs[metric]; el.innerHTML = '<span>' + spec.unit;
+el.innerHTML = events.map(e => '<p>' + e.t).join('');
+el.innerHTML = events.slice(0, 3).map((e, i) => `<p>${e.title}</p>`).join('');
+el.innerHTML = data.map(u => '<b>' + u.name).join('');
+el.innerHTML = units.map(u => data.map(u => '<b>' + u.name)).join('');
+let mut = [{ name: "a" }]; el.innerHTML = mut.map(m => '<b>' + m.name).join('');
+const live = [{ name: "a" }]; live[0].name = srv; el.innerHTML = live.map(m => '<b>' + m.name).join('');
+const rows = [{ name: "a" }]; rows.push(srv); el.innerHTML = rows.map(m => '<b>' + m.name).join('');
+const own = [{ name: "a" }]; own.forEach(o => { o.extra = srv; }); el.innerHTML = own.map(m => '<b>' + m.name).join('');
+function show(sel) { const u = byId(sel); el.innerHTML = '<b>' + u.name; }
