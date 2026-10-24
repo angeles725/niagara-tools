@@ -3,13 +3,18 @@ package verifymodule
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 )
+
+// TestGolden replays every run recorded from the bash verify-module.sh (testdata/*.txt).
+func TestGolden(t *testing.T) { golden.RunMain(t, Main, 170) }
 
 // write creates every file of tree under dir; a ".jar" key is a zip of its "|"-separated name=text entries.
 func write(t *testing.T, dir string, tree map[string]string) {
@@ -79,10 +84,15 @@ func TestUnreadableSource(t *testing.T) {
 }
 
 // TestArithmeticFallThrough pins what bash did when its arithmetic failed on an operand inside the
-// coverage block: it left the block and parsed the rest of the arguments as the gate's (a non-jar is then
-// exit 2). stdout and the exit are the bash's; declared difference: bash prefixed its error with
-// "<script path>: line <n>: ".
+// coverage or --plano block: it left the block and parsed the rest of the arguments as the gate's (a
+// non-jar is then exit 2); an unset-variable operand ends the run (set -u, exit 1). stdout and the exit
+// are the bash's; declared difference: bash prefixed its error with "<script path>: line <n>: ".
 func TestArithmeticFallThrough(t *testing.T) {
+	head := append([]byte("\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR"), 0, 0, 0, 2, 0, 0, 0, 3)
+	html := func(vb string) string {
+		return "<script>IMG_W=2;IMG_H=3</script><svg id=\"zonas\" viewBox=\"" + vb + "\"></svg>" +
+			"<img id=\"planoImg\" src=\"data:image/png;base64," + base64.StdEncoding.EncodeToString(head) + "\">\n"
+	}
 	for _, tc := range []struct {
 		name, html  string
 		args        []string
@@ -92,6 +102,13 @@ func TestArithmeticFallThrough(t *testing.T) {
 		{"cov-08", "", []string{"coverage", "08", "1", "0", "0"}, 2, "",
 			"verify-module: 08: value too great for base (error token is \"08\")\nverify-module: not a jar: 08\n"},
 		{"cov-09-unused", "", []string{"coverage", "1", "1", "0", "09"}, 0, "50.0\n", ""},
+		{"plano-08", html("0 0 08 3"), []string{"--plano", "@DIR@/p.html"}, 2, "",
+			"verify-module: 08: value too great for base (error token is \"08\")\nverify-module: not a jar: @DIR@/p.html\n"},
+		{"plano-2.5", html("0 0 2.5 3"), []string{"--plano", "@DIR@/p.html"}, 2, "",
+			"verify-module: 2.5: syntax error: invalid arithmetic operator (error token is \".5\")\nverify-module: not a jar: @DIR@/p.html\n"},
+		{"plano-unbound", html("0 0 abc 3"), []string{"--plano", "@DIR@/p.html"}, 1, "", "verify-module: abc: unbound variable\n"},
+		{"plano-negative", html("0 0 -2 -3"), []string{"--plano", "@DIR@/p.html"}, 0,
+			"PASS  plano      @DIR@/p.html  Rc=2/3 Ri=2/3 Rv=-2/-3 — all agree\n", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()

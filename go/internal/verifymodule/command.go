@@ -52,6 +52,11 @@ func Main(args []string, s cli.Stdio) int {
 			return code
 		}
 		args = args[1:]
+	} else if len(args) >= 1 && args[0] == "--plano" {
+		if code, ok := plano(args[1:], s); ok {
+			return code
+		}
+		args = args[1:]
 	}
 	return gate(args, s)
 }
