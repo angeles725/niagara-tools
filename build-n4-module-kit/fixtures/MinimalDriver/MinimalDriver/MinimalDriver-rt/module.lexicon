@@ -1,0 +1,24 @@
+#
+# Lexicon for the MinimalDriver module (rt).
+# Display names shown in Workbench. Key = type or slot name.
+#
+
+# --- Component type display names ---
+MinimalDriverNetwork=Minimal Driver Network
+MinimalDriverDevice=Minimal Driver Device
+MinimalDriverDeviceFolder=Minimal Driver Device Folder
+MinimalDriverPointDeviceExt=Minimal Driver Points
+MinimalDriverPointFolder=Minimal Driver Point Folder
+MinimalDriverProxyExt=Minimal Driver Proxy Ext
+MinimalDriverUdpCommConfig=Minimal Driver UDP Config
+
+# --- Slots ---
+udpConfig=UDP Config
+ipAddress=IP Address
+udpPort=UDP Port
+register=Register
+hosts=Hosts
+deviceId=Device Id
+
+# --- Permissions (module-permissions.xml purposeKey) ---
+networkComm.purpose=UDP requests to the devices configured under the MinimalDriver network

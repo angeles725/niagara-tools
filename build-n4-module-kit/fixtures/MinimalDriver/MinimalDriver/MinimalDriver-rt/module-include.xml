@@ -1,0 +1,14 @@
+<types>
+  <!--com.angeles.MinimalDriver-->
+  <type class="com.angeles.MinimalDriver.BMinimalDriverNetwork" name="MinimalDriverNetwork"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverDeviceFolder" name="MinimalDriverDeviceFolder"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverDevice" name="MinimalDriverDevice"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverPointDeviceExt" name="MinimalDriverPointDeviceExt"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverPointFolder" name="MinimalDriverPointFolder"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverProxyExt" name="MinimalDriverProxyExt"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverUdpCommConfig" name="MinimalDriverUdpCommConfig"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverDeviceDiscoveryPreferences" name="MinimalDriverDeviceDiscoveryPreferences"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverDeviceDiscoveryLeaf" name="MinimalDriverDeviceDiscoveryLeaf"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverPointDiscoveryPreferences" name="MinimalDriverPointDiscoveryPreferences"/>
+  <type class="com.angeles.MinimalDriver.BMinimalDriverPointDiscoveryLeaf" name="MinimalDriverPointDiscoveryLeaf"/>
+</types>

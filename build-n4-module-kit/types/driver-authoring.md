@@ -129,8 +129,11 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named.
   buffer; check a response's error flag before parsing its payload; log frames at FINE, not INFO; guard every
   proxy-ext cast with `instanceof` (`BNPollScheduler.doPoll` catches it and only calls `printStackTrace()`,
   `poll/BNPollScheduler.java:48-59`).
-- Owed advisory lints G66 `ndriver-static-collection` and G67 `ndriver-tagless-correlation`
-  (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ3]
+- Advisory lints (both also run by `report-module.sh` on the module root): `lint-ndriver-static-collection.sh`
+  (G66) WARNs a static collection field in a network, device or point-device-ext class, module-local subclasses
+  included `[ev: retro r10-dr3-driver-lints Δ2]`; `lint-ndriver-tagless-correlation.sh` (G67) WARNs a module whose
+  `NMessage` subclasses declare no `getTag()` while no comm config's `getMaxOutstandingTransactions()` returns 1
+  `[ev: retro r10-dr3-driver-lints Δ3]`. [ev: retro n4-course-drivers-bql-ords-files Δ3]
   [ev: retro n4-course-handson-ndriver Δ7]
 
 ### 1.8 · Which driver framework `[ev: corpus B877 §877.6]` [ev: retro r10-dr1-driver-doctrine Δ2]
@@ -262,7 +265,12 @@ Your `getDiscoveryObjects(prefs)`:
    and return `null` when finished (`discover/BNDiscoveryPreferences.java:104-108`).
 
 The framework's own `BNPointDeviceExt.doSubmitDiscoveryJob` submits with `job.submit(null)`
-(`point/BNPointDeviceExt.java:185`); override it with the `Context` form as in § 1.6 so the job runs as the user.
+(`point/BNPointDeviceExt.java:185`), and a subclass cannot change that: Baja binds an action to
+`do<Action>(param)` first and only falls back to `do<Action>(param, Context)` when the one-argument form is missing
+(`organized/baja/baja/vineflower/com/tridium/sys/schema/ComplexIntrospector.java:316-333`), so a Context overload
+next to the inherited one-argument method is never called. The Context form works only on an action you declare
+yourself, as the network's `submitDiscoveryJob` (§ 1.6); point discovery runs with the framework's null Context.
+`[ev: retro r10-dr2-driver-scaffold Δ2]`
 Course device and point discovery: `[ev: corpus B1239 §1239.11]`.
 
 ## 2 · `BProxyExt` point SPI
@@ -320,7 +328,8 @@ carry `statusFlags=true` (or the ext's own override); with the facet absent it i
 overridden in the controller reads `{ok}` in Niagara. With it, polled and COV proxies alike take ALARM, FAULT and
 OVERRIDDEN from the flags; the cost is one extra Status_Flags read per poll, or a metadata read when a COV
 notification omits the flags (corpus B1348 §1348.2 rows 4-7). A dashboard health read is only as good as this facet
-(`types/dashboard.md` § Facade contract). Owed Go lint G36 `bacnet-status-flags` (bog check).
+(`types/dashboard.md` § Facade contract). Check a station with `lint-bacnet-status-flags.sh <station-dir>` (G36): one
+WARN per device counting its Present_Value proxies without the facet `[ev: retro r10-dr3-driver-lints Δ4]`.
 
 **Gotcha:** a write to a DOWN, DISABLED or fatally faulted device is **silently dropped** — `Tuning.write()`
 calls `isOperational()` first and returns without queuing if false. The write is NOT retried unless
@@ -402,7 +411,9 @@ extensions on the SOURCE point, not on the proxy. `[ev: corpus B1337 §1337.1 ro
 The API is `public abstract void doPing() throws Exception`; `pingOk()` and `pingFail(String cause)` are void calls
 routed to the device's health `[CERT]` `organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/BDevice.java:552,570,580`.
 A device with no protocol of its own (reachability only) pings with a bounded socket connect (`getHost()`/`getPort()`
-are the device's own slots); the timeout bounds the
+stand for the device's own address slots; a real slot cannot be named `host`, because `BComponent` already has
+`BISpaceNode.getHost()` (`organized/docSource/docSource-doc/extracted/baja/javax/baja/space/BISpaceNode.java:44`) and the
+generated `String getHost()` does not compile, so name it e.g. `ipAddress` `[ev: retro r10-dr2-driver-scaffold Δ3]`); the timeout bounds the
 connect on the `Ping:` thread (not a DNS lookup, below), and the module needs the station-scoped `NETWORK_COMMUNICATION` permission:
 
 ```java
@@ -912,7 +923,11 @@ only driver test template is the video driver's,
   out-of-process mock for a manual check, not a test fixture `[ev: corpus B1239 §1239.4]`.
 - Each codec test must bite: drop a bounds check or the tag override and see a test go red before calling the
   suite done (`types/moduleTest.md` § What to test in a moduleTest vs pure JUnit).
-- Owed: the scaffold's `srcTest` (DR2) and a station-side loopback example built through the kit loop (DR5).
+- `toolbelt/scaffold-module.sh <Name> <out> --type driver` emits an NDriver module (fixture `fixtures/MinimalDriver`)
+  whose codec srcTest runs with `run-pure-test.sh`. Its `-rt` part needs `api(":alarm-rt")` (BDevice is an alarm
+  source, javac stops without it) and its `-wb` part `api(":bajaui-wb")` for the manager's widget base
+  `[ev: retro r10-dr2-driver-scaffold Δ1]`.
+- Owed: a station-side loopback example built through the kit loop (DR5).
 
 ---
 

@@ -223,8 +223,11 @@ Writing the handler (own `OrdQuery`, the two exceptions, `canRead()` on every re
   § File export, where `BHistoryToCsv` is the course's own private-API example, Lab Instructions p83).
 - When a `com.tridium.*` use is unavoidable (the NDriver framework, `com.tridium.ndriver.**`, is the sanctioned
   case), record each class in the module README and pin that dependency's `vendorVersion` floor to the 3-part
-  release you built and tested against (§ 1, L7). The WARN for other imports is owed Go lint G65
-  `private-api-import` (ledger.d/2026-10-23-r8-u5-c59-c62.md).
+  release you built and tested against (§ 1, L7). `lint-private-api-import.sh <module-root>` (G65, also run by
+  `report-module.sh`) WARNs every other `com.tridium.` import or qualified use; its default allow-list is the
+  NDriver framework (`com.tridium.ndriver.**`, `com.tridium.driver.util.DrUtil`), so a driver module is not
+  flooded, `--allow <glob>` adds an entry and `--no-default-allow` drops the list
+  `[ev: retro n4-course-handson-ndriver Δ8]` `[ev: retro r10-dr3-driver-lints Δ1]`.
 
 ---
 

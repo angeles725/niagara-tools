@@ -1,0 +1,10 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-se/src/com/example/drv/se/BAcmeSe.java --
+package com.example.drv.se;
+import javax.baja.sys.BComponent;
+public class BAcmeSe extends BComponent {}

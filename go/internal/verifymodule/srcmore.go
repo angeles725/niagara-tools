@@ -2,25 +2,46 @@ package verifymodule
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/ktssrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
-	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
-var (
-	gradleDepRe     = rx(`(api|nre|implementation)[[:space:]]*\([[:space:]]*":[^"]*"`)
-	gradleProjectRe = rx(`(api|nre|implementation)[[:space:]]*\([[:space:]]*project[[:space:]]*\([[:space:]]*":[^"]*"`)
-	quotedDepRe     = rx(`":[^"]*"`)
-	mxDependencyRe  = rx(`<dependency[[:space:]]+[^>]*\bname="[^"]*"`)
-	mxNameRe        = rx(`\bname="[^"]*"`)
-)
+// declaredDeps are the module names gradle.kts declares, read through ktssrc (comments and string
+// contents are no code): every api/nre/implementation call whose first argument is a ":X" string literal
+// or project(":X"). The bash grepped the text a line at a time, so a call in a comment or a string, or
+// one named xapi(), declared X too (declared difference, truth-kts-phantom).
+func declaredDeps(toks []ktssrc.Token) []string {
+	var out []string
+	at := func(i int, k ktssrc.Kind, text string) bool {
+		return i < len(toks) && toks[i].Kind == k && (text == "" || toks[i].Text == text)
+	}
+	dep := func(i int) (string, bool) {
+		if at(i, ktssrc.String, "") && strings.HasPrefix(toks[i].Value, ":") && !toks[i].Template {
+			return toks[i].Value[1:], true
+		}
+		return "", false
+	}
+	for i, t := range toks {
+		if t.Kind != ktssrc.Ident || (t.Text != "api" && t.Text != "nre" && t.Text != "implementation") ||
+			!at(i+1, ktssrc.Punct, "(") || (i > 0 && at(i-1, ktssrc.Punct, ".")) {
+			continue
+		}
+		if name, ok := dep(i + 2); ok {
+			out = append(out, name)
+		} else if at(i+2, ktssrc.Ident, "project") && at(i+3, ktssrc.Punct, "(") {
+			if name, ok := dep(i + 4); ok {
+				out = append(out, name)
+			}
+		}
+	}
+	return out
+}
 
 // firstGradleKts is `find <pd> -maxdepth 1 -name '*.gradle.kts' 2>/dev/null | sort | head -1`: any type of
 // entry, pd itself included, a symlinked pd not entered (find -P).
@@ -58,26 +79,22 @@ func (r *run) phantomDep() bool {
 		r.row("SKIP", "phantom-dep", "no META-INF/module.xml")
 		return true
 	}
-	data, err := os.ReadFile(gkt)
-	if err != nil { // both greps had no 2>/dev/null
-		msg := "grep: " + gkt + ": " + strerror.Text(err) + "\n"
-		fmt.Fprint(r.s.Err, msg+msg)
+	data, ok := r.readFile(gkt)
+	if !ok {
+		return true
 	}
-	var declared []string
-	for _, re := range []*regexp.Regexp{gradleDepRe, gradleProjectRe} {
-		for _, m := range newGrepText(string(data)).only(re) {
-			for _, q := range newGrepText(m).only(quotedDepRe) {
-				declared = append(declared, strings.TrimSuffix(strings.TrimPrefix(q, `":`), `"`))
-			}
-		}
+	toks, err := ktssrc.Tokens(string(data))
+	if err != nil { // an unreadable script declares nothing we can trust
+		r.envError(gkt + ": " + err.Error())
+		return true
 	}
+	declared := sortU(declaredDeps(toks))
 	var deps, phantom []string
-	for _, m := range newGrepText(r.jar.mx).only(mxDependencyRe) {
-		for _, n := range newGrepText(m).only(mxNameRe) {
-			deps = append(deps, strings.TrimSuffix(strings.TrimPrefix(n, `name="`), `"`))
+	for _, i := range r.jar.doc.Find("dependency") {
+		if name, ok := r.jar.doc.Elements()[i].Attr("name"); ok {
+			deps = append(deps, name)
 		}
 	}
-	declared = sortU(declared)
 	for _, dep := range sortU(deps) {
 		if dep != "" && !contains(declared, dep) {
 			phantom = append(phantom, dep)
@@ -91,20 +108,9 @@ func (r *run) phantomDep() bool {
 	return true
 }
 
-// hasEntryNamed is `find <dir> -name <name> 2>/dev/null | head -1` being non-empty: nothing pruned, no
-// symlink followed, unreadable directories skipped.
-func hasEntryNamed(dir, name string) bool {
-	found := false
-	_ = filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
-		if d != nil && d.Name() == name {
-			found = true
-			return fs.SkipAll
-		}
-		return nil
-	})
-	return found
-}
-
+// moduleTest looks for moduleTest-include.xml through the shared walk: a copy under a dot directory
+// (.deploy-baseline/) or a sibling *-worktrees checkout is not this module's. The bash's unpruned find took
+// one as present (declared difference, truth-moduletest-pruned).
 func (r *run) moduleTest() bool {
 	if !strings.HasSuffix(basename(r.jar.path, ".jar"), "-rt") {
 		r.row("SKIP", "moduletest", "not an -rt jar")
@@ -124,7 +130,7 @@ func (r *run) moduleTest() bool {
 	}
 	msg := "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"
 	switch {
-	case hasEntryNamed(pd, "moduleTest-include.xml"):
+	case len(r.walk(pd, "moduleTest-include.xml")) > 0:
 		r.row("PASS", "moduletest", "moduleTest-include.xml present")
 	case r.strict:
 		r.row("FAIL", "moduletest", msg)
@@ -137,6 +143,8 @@ func (r *run) moduleTest() bool {
 
 var typeValueRe = rx(`type[[:space:]]*=[[:space:]]*"[^"]*"`)
 
+// crossModuleType reads type = "..." from the javasrc code view: a commented-out one is no reference (the
+// bash grepped the raw text; declared difference, truth-java-view).
 func (r *run) crossModuleType() bool {
 	pd, ok := r.srcDirOrSkip("cross-module-type")
 	if !ok {
@@ -144,7 +152,11 @@ func (r *run) crossModuleType() bool {
 	}
 	var types []string
 	for _, f := range r.javaFiles(pd + "/src") {
-		for _, m := range r.text(f).only(typeValueRe) {
+		v, ok := r.java(f)
+		if !ok {
+			return true
+		}
+		for _, m := range newGrepText(strings.Join(v.code, "\n")).only(typeValueRe) {
 			types = append(types, typeAttrRe.FindStringSubmatch(m)[1])
 		}
 	}
@@ -188,7 +200,11 @@ func (r *run) subscriptionLeak() bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		if t := r.text(f); t.count(subscriberRe) > 0 && t.count(stoppedRe) == 0 {
+		t, ok := r.text(f)
+		if !ok {
+			return true
+		}
+		if t.count(subscriberRe) > 0 && t.count(stoppedRe) == 0 {
 			r.row("WARN", "subscription-leak", f+": TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart")
 			warned = true
 		}
@@ -204,6 +220,8 @@ var (
 	classDeclRe       = rx(`(public[[:space:]]+)?(class|interface)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*`)
 )
 
+// slotWall counts @NiagaraProperty and finds the class on the javasrc bare view: annotations in a comment
+// are no slots (the bash grepped the raw text; declared difference, truth-java-view).
 func (r *run) slotWall() bool {
 	pd, ok := r.srcDirOrSkip("slot-wall")
 	if !ok {
@@ -211,13 +229,17 @@ func (r *run) slotWall() bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		t := r.text(f)
-		count := t.count(niagaraPropertyRe)
+		v, ok := r.java(f)
+		if !ok {
+			return true
+		}
+		bare := newGrepText(strings.Join(v.bare, "\n"))
+		count := bare.count(niagaraPropertyRe)
 		if count <= 15 {
 			continue
 		}
 		class := basename(f, ".java")
-		if ms := t.only(classDeclRe); len(ms) > 0 {
+		if ms := bare.only(classDeclRe); len(ms) > 0 {
 			fields := awkFields(ms[0])
 			class = fields[len(fields)-1]
 		}

@@ -589,7 +589,7 @@ JAVA
 #   RM43  the chosen wiring map is named in the row detail (PASS row and the Table 2 FAIL reason), so a
 #         false FAIL from the parent-dir fallback can be traced. (R4-parent-map-discovery)
 #   RM44  the full summary string of a zero-ADVISORY run is pinned. (R3-summary-format-change)
-#   RM45  structural: the optional-argument arrays are expanded with ${A[@]+"${A[@]}"} (an empty
+#   RM45  structural: report-module's optional-argument array is expanded with ${A[@]+"${A[@]}"} (an empty
 #         "${A[@]}" is an unbound-variable error under set -u on bash < 4.4). (R3/R4-empty-array-set-u)
 # The member is replaced through a symlinked copy of the toolbelt (TOOLBELT resolves to the dir of the
 # invoked path), so no env override is added to the production script.
@@ -640,13 +640,12 @@ JAVA
 }
 
 @test "RM45: optional-argument arrays use the set -u safe \${A[@]+\"\${A[@]}\"} expansion" {
-  run grep -nE '[^+]"\$\{(LTF_ARGS|ltf_args|sp_args)\[@\]\}"' \
-    "$KIT/toolbelt/report-module.sh" "$KIT/toolbelt/commissioning-verify.sh"
+  # report-module.sh only: commissioning-verify.sh is a Go wrapper now and holds no optional-argument array.
+  # Mutation: RM-setu (unguard "${LTF_ARGS[@]}" in report-module.sh) -> RM45 flips.
+  run grep -nE '[^+]"\$\{LTF_ARGS\[@\]\}"' "$KIT/toolbelt/report-module.sh"
   [ "$status" -eq 1 ]
   # shellcheck disable=SC2016  # literal source text, not an expansion
   grep -qF '${LTF_ARGS[@]+"${LTF_ARGS[@]}"}' "$KIT/toolbelt/report-module.sh"
-  # shellcheck disable=SC2016  # literal source text, not an expansion
-  grep -qF '${ltf_args[@]+"${ltf_args[@]}"}' "$KIT/toolbelt/commissioning-verify.sh"
 }
 
 # polish-2026-10-02 P1c (#199, P1b review advisories): the map path is a literal in the substituted
@@ -899,13 +898,29 @@ JAVA
   local m fx
   for m in persist-hot-write:clean changed-hot-write:clean inert-coordination:clean session-store-lazy-evict:clean \
            bformat-call:clean service-types:clean driver-scaffold:clean duplicate-helper:clean \
-           machine-default-path:clean inline-site-literal:clean wb-external-ord-value:wb-file-chooser-warn \
+           machine-default-path:clean inline-site-literal:clean private-api-import:clean \
+           ndriver-static-collection:clean ndriver-tagless-correlation:clean wb-external-ord-value:wb-file-chooser-warn \
            spa-poll-no-recovery:rc-scan-fail; do
     fx="${m#*:}"; m="${m%%:*}"
     stub_toolbelt "$BATS_TEST_TMPDIR/tb-$m" "lint-$m.sh" "printf 'WARN  lint-$m  /x/A.java:7  seeded row\n'"
     run "$BATS_TEST_TMPDIR/tb-$m/report-module.sh" --lint-only "$FX/$fx"
     [[ "$output" == *"WARN  lint-$m  A.java:7  seeded row"* ]] || { echo "member $m not relayed: $output"; return 1; }
   done
+}
+
+@test "RM-driver-lints: a real NDriver module relays the driver lints' rows; a module with no -rt source SKIPs them" {
+  # Mutation: RM-driver-lints -- dropping the G66/G67 invocations from report-module.sh loses these rows
+  local drv="$BATS_TEST_TMPDIR/acmeDriver"
+  cp -r "$BATS_TEST_DIRNAME/fixtures/driver-lints/acmeDriver" "$drv"
+  run "$RM" --lint-only "$drv"
+  [[ "$output" == *"(module)  WARN  lint-ndriver-static-collection  BAcmeDevice.java:16  static Set<String> subscribed is shared"* ]]
+  [[ "$output" == *"(module)  WARN  lint-ndriver-tagless-correlation  AcmeReq.java:6  no getTag() override"* ]]
+  [[ "$output" != *"lint-private-api-import"* ]] # the NDriver framework imports are the default allow-list
+  rm -r "$drv/acmeDriver-rt"; mkdir -p "$drv/acmeDriver-ux/src"; printf 'class A {}\n' > "$drv/acmeDriver-ux/src/A.java"
+  run "$RM" --lint-only "$drv"
+  [[ "$output" == *"(module)  SKIP  lint-ndriver-static-collection  no *.java under a -rt part's src/"* ]]
+  [[ "$output" == *"(module)  SKIP  lint-ndriver-tagless-correlation  no *.java under a -rt part's src/"* ]]
+  [[ "$output" != *"ERROR  lint-private-api-import"* ]]
 }
 
 @test "RM-n4lint-skip: a module-root member with no source to read is a SKIP row, not an env fault" {

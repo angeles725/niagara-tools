@@ -1,0 +1,18 @@
+-- args --
+--strict
+@DIR@/S
+-- want --
+exit 1
+WARN  lint-bacnet-status-flags  @DIR@/S/sub/template.bog: (no BACnet device): 1 Present_Value proxy point(s) without facets statusFlags=true (first: /Folder/P) -- a field alarm, fault or override reads {ok}
+-- stderr --
+-- S/sub/template.bog --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version='4.0'>
+ <p m='b=baja' t='b:Folder'>
+  <p n='Folder' m='bac=bacnet' t='b:Folder'>
+   <p n='P' m='c=control' t='c:NumericWritable'>
+    <p n='proxyExt' t='bac:BacnetNumericProxyExt'/>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>

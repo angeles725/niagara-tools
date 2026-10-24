@@ -1,0 +1,4 @@
+<types>
+  <!--com.angeles.MinimalDriver.wb-->
+  <type class="com.angeles.MinimalDriver.wb.BMinimalDriverPointManager" name="MinimalDriverPointManager"/>
+</types>

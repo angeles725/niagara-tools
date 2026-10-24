@@ -1,0 +1,31 @@
+-- args --
+kit
+rl2slug
+-- want --
+exit 3
+-- stderr --
+new-retro: retro already exists: @DIR@/kit/retros/2026-01-02-rl2slug.md
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1; retros/INDEX.md written by the recording checkout's gen-retro-index (Go retroindex), so the index half is not bash parity
+-- @env --
+KIT=@DIR@/kit
+-- @expect kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- @expect kit/retros/2026-01-02-rl2slug.md --
+first run
+-- @expect kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
+-- kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- kit/retros/2026-01-02-rl2slug.md --
+first run
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|

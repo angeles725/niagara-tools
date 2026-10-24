@@ -1,8 +1,9 @@
+declared difference: bytecode reads the CAFEBABE magic and the full two-byte major (Hi.class, major 308, now fails; the first bad entry, Empty.class, is named "not a class file"), and od's stderr line for an entry shorter than 6 bytes is gone
 -- args --
 @DIR@/byte.jar
 -- want --
 exit 1
-FAIL  bytecode   @DIR@/byte.jar  4 of 7 classes not major 52 (expected Java 8); first: com/x/Empty.class major=; 1 multi-release classes ignored
+FAIL  bytecode   @DIR@/byte.jar  5 of 7 classes not major 52 (expected Java 8); first: com/x/Empty.class not a class file (no CAFEBABE header); 1 multi-release classes ignored
 PASS  signed     @DIR@/byte.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
 PASS  types      @DIR@/byte.jar  1 declared types resolve to classes
 SKIP  baja       @DIR@/byte.jar  no --target-version
@@ -22,8 +23,6 @@ SKIP  subscription-leak  @DIR@/byte.jar  no --src
 SKIP  slot-wall  @DIR@/byte.jar  no --src
 verify-module: 2 passed, 1 failed, 15 skipped, 0 warned -> FAILED
 -- stderr --
-od: cannot skip past end of combined input
-od: cannot skip past end of combined input
 -- byte.jar (jar) --
 --- META-INF/ (stored) ---
 --- META-INF/MANIFEST.MF (stored) ---

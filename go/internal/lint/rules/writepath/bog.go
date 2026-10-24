@@ -36,6 +36,10 @@ func (s *scan) bogSlots(path string) (map[string]bool, error) {
 	if err != nil {
 		return nil, s.errorRow("--bog: " + err.Error())
 	}
+	for _, w := range lint.XMLWarnings(doc) {
+		w.Path = path
+		s.bogWarns = append(s.bogWarns, w)
+	}
 	own := profileOf.ReplaceAllString(lint.Basename(strings.TrimRight(s.root, "/")), "")
 	if strings.Trim(s.root, "/") == "" { // python's basename of "" (a root of only slashes)
 		own = ""

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-24 · kit · ledger-generated-not-committed
@@ -61,3 +61,12 @@ so two PRs that each add a ledger fragment and a retro merge with a plain `git m
   and to regenerate it wherever it is read (install, pull hook, CI temp dir).
 - Before choosing where generated output lives, check how the reader gets the kit. Here the launcher reads the
   checkout, so condition 2's premise ("the installed copy ships the files") was false and changed the split.
+
+## Fold
+- Δ1 → already applied as code (`tests/kit-links.bats` L1 resolves the generated files through their committed sources, mutation L1-generated); cited on the `BUILD-LOOP.md` § 7 "The kit ledger is GENERATED" line.
+- Δ2 → deferred (no module-envelope collision yet; trigger-based): `BUILD-LOOP.md` § 7 same line; open issue in `ledger.d/2026-10-24-r10-fold-tail.md`.
+- Δ3 → already applied (`.github/workflows/ci.yml` shellcheck step lists `.githooks/*`); cited on the `BUILD-LOOP.md` § 7 ci-local line.
+- Δ4 → deferred (needs a decision and a `go/internal/buildstate` change, which requires the field today): `BUILD-LOOP.md` § 7 same line; open issue in `ledger.d/2026-10-24-r10-fold-tail.md`.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail`; log in `ledger.d/2026-10-24-r10-fold-tail.md`) — Δ1 and Δ3 cited, Δ2 and Δ4 deferred, all in `BUILD-LOOP.md` § 7.
