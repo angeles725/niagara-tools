@@ -1,0 +1,10 @@
+-- args --
+@DIR@/f.java
+-- want --
+exit 3
+-- stderr --
+generate-wiring-map: not a directory: @DIR@/f.java
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at fa1201e6
+-- f.java --
+@NiagaraProperty(name = "x", type = "double", defaultValue = "0", flags = Flags.OPERATOR)

@@ -1,0 +1,7 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: generate-wiring-map.sh <facade-src-dir> [--lexicon <module.lexicon>] [--output <file>]
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at fa1201e6

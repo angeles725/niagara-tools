@@ -1,0 +1,8 @@
+-- args --
+/nonexistent/__gwm_xyz__
+-- want --
+exit 3
+-- stderr --
+generate-wiring-map: not a directory: /nonexistent/__gwm_xyz__
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at fa1201e6

@@ -1,0 +1,8 @@
+-- args --
+
+-- want --
+exit 3
+-- stderr --
+generate-wiring-map: not a directory: 
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at fa1201e6
