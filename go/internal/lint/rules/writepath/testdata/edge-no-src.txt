@@ -1,0 +1,17 @@
+-- args --
+@DIR@/nosrc
+-- want --
+exit 3
+lint-write-path  ERROR  @DIR@/nosrc  no src found
+-- stderr --
+-- .git/HEAD --
+x
+-- nosrc/X/src/B.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+-- nosrc/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |

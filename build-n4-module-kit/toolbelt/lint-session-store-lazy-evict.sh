@@ -12,7 +12,7 @@
 # negligible heap). Rule: sweep-on-insert (or a scheduled/size-bounded eviction); question
 # `static`; bind auth to user+issue-time, not the bare container id; audit the write. See
 # types/issues-and-gotchas.md §F2. [ev: retro live-diagnosis-hardening-deltas Δ5]
-# [ev: corpus B1160; DashboardConfigSession.java:31-126]
+# [ev: corpus B1160; src/com/angeles/DashboardPan/ux/DashboardConfigSession.java:31-126]
 #
 # Implementation: go/internal/lint/rules/sessionstore on the Go lint engine (go/README.md); this wrapper execs
 # `n4lint lint-session-store-lazy-evict <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3

@@ -46,6 +46,9 @@ var refusals = []refusal{
 		"Record the PoC/probe outcome for this build and decide on --allow-tier-b/--allow-tier-c", "METHODOLOGY.md · section 5", "MEDIUM"},
 	{"unsupported", []string{safety.ReasonTypeSpec},
 		"Document the module:Type spec expected for component creation", "README.md · write tools", "LOW"},
+	{"journal", []string{safety.ReasonJournalUnreadable},
+		"Find what wrote the unreadable journal.jsonl line(s); repair or remove them by hand before deciding the rollback",
+		"METHODOLOGY.md · section 2 (L6)", "HIGH"},
 }
 
 // verdicts is _VERDICTS, in its order: a read-back verdict and its advice.

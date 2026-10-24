@@ -1,12 +1,14 @@
 package journal
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
 // fixtureDir is the state dir the Python server wrote (tests/fixtures/journal/generate.py).
@@ -86,14 +88,54 @@ func TestAPythonRollbackIsNotRolledBackAgain(t *testing.T) {
 
 func TestTheBatchIdIsCheckedFirst(t *testing.T) {
 	j := New(fixtureDir)
-	for _, bad := range []any{nil, 5, "", strings.ToUpper(pyCreate), pyCreate + "0", pyCreate + "\n\n", " " + pyCreate} {
+	for _, bad := range []any{nil, 5, "", strings.ToUpper(pyCreate), pyCreate + "0", pyCreate + "\n", pyCreate + "\n\n", " " + pyCreate} {
 		if _, err := j.RollbackTarget(bad); toolText(t, err) != "batch_id must be a 32-character hex batch id" {
 			t.Errorf("%v: %v", bad, err)
 		}
 	}
-	// re.match's "$" also matches before a final newline: the id passes, and is not journaled.
-	if _, err := j.RollbackTarget(pyCreate + "\n"); toolText(t, err) != "unknown batch "+pyCreate+"\n: it is not in the journal" {
-		t.Fatal(err)
+}
+
+// unreadableJournal is a journal of batches idA (completed) and idB with extra lines.
+func unreadableJournal(t *testing.T, extra string) *Journal {
+	dir := stateDir(t)
+	os.MkdirAll(dir, 0o700)
+	body := `{"batch_id": "` + idA + `", "phase": "intent", "station_name": "S"}` + "\n" +
+		`{"batch_id": "` + idA + `", "phase": "result", "verdict": "verified"}` + "\n" + extra +
+		`{"batch_id": "` + idB + `", "phase": "intent", "station_name": "S"}` + "\n" +
+		`{"batch_id": "` + idB + `", "phase": "result", "verdict": "verified"}` + "\n"
+	os.WriteFile(filepath.Join(dir, "journal.jsonl"), []byte(body), 0o600)
+	return New(dir)
+}
+
+// The journal check of test_tools_destructive.TestRollback.test_a_journal_line_whose_batch_is_unknown_refuses_every_rollback (that tool test runs under Go once n4_rollback is ported).
+func TestAJournalLineWhoseBatchIsUnknownRefusesEveryRollback(t *testing.T) {
+	j := unreadableJournal(t, "{\"batch_id\": \"\xff\"}\n{\"batch_id\": [1], \"phase\": \"intent\", \"rollback_of\": \""+idA+"\"}\n")
+	for _, id := range []string{idA, idB, idC} {
+		_, err := j.RollbackTarget(id)
+		if got := toolText(t, err); !strings.HasPrefix(got, safety.ReasonJournalUnreadable+": batch "+id+
+			" may be recorded on journal.jsonl line(s) 3 (UnicodeDecodeError)") {
+			t.Errorf("%s: %s", id, got)
+		}
+	}
+	_, err := j.RollbackTarget(idA)
+	if got := toolText(t, err); !strings.Contains(got, "line(s) 3 (UnicodeDecodeError), 4 (TypeError); ") {
+		t.Fatal(got)
+	}
+}
+
+// The journal check of test_tools_destructive.TestRollback.test_an_unreadable_line_of_another_batch_does_not_block_a_rollback (that tool test runs under Go once n4_rollback is ported).
+func TestAnUnreadableLineOfAnotherBatchDoesNotBlockARollback(t *testing.T) {
+	j := unreadableJournal(t, `{"batch_id": [1], "phase": "intent", "rollback_of": "`+idB+`"}`+"\n"+
+		`{"batch_id": "`+idC+`", "phase": "component-intent", "ops": 7}`+"\n")
+	if view, err := j.RollbackTarget(idA); err != nil || get(view, "state") != "completed" {
+		t.Fatalf("%v %v", view, err)
+	}
+	for id, line := range map[string]string{idB: "3", idC: "4"} {
+		_, err := j.RollbackTarget(id)
+		if got := toolText(t, err); !strings.HasPrefix(got, safety.ReasonJournalUnreadable+": batch "+id+
+			" may be recorded on journal.jsonl line(s) "+line+" (TypeError); ") {
+			t.Errorf("%s: %s", id, got)
+		}
 	}
 }
 

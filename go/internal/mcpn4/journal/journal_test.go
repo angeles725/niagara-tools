@@ -158,24 +158,28 @@ func TestBatchIdsAreKeyedAsPythonDictKeys(t *testing.T) {
 		`{"n": "none", "inverse": null, "accepted": null, "verdict": null, "batch_id": null, "result_ts": null, "state": "completed"}]` {
 		t.Fatal(got)
 	}
+	// A line whose batch id cannot key a batch (or whose ops cannot extend a list) is one
+	// unreadable line of a known batch, not a failed journal (issue #448).
 	for _, bad := range []string{`{"batch_id": [1], "phase": "intent"}`, `{"batch_id": {}, "phase": "result"}`,
-		`{"batch_id": "b", "phase": "component-intent", "ops": 5}`} {
+		`{"batch_id": "b", "phase": "component-intent", "ops": 5}`, `{"batch_id": "b", "phase": "result", "rollback_of": [1]}`} {
 		j := New(stateDir(t))
-		appendAll(t, j.File, bad)
-		if _, err := j.Views(); err == nil || err.(*pyjson.Exception).Type != "TypeError" {
-			t.Errorf("%s: %v", bad, err)
+		appendAll(t, j.File, `{"batch_id": "a", "phase": "intent"}`, bad)
+		views, bad2, err := j.Scan()
+		if err != nil || len(views) != 1 || len(bad2) != 1 || bad2[0].Line != 2 || bad2[0].Reason != "TypeError" || !bad2[0].Known {
+			t.Errorf("%s: %v %+v %v", bad, len(views), bad2, err)
 		}
 	}
 }
 
-func TestNonUtf8JournalFailsAsReadlines(t *testing.T) {
+func TestANonUtf8LineIsUnreadableNotAFailedJournal(t *testing.T) {
 	j := New(stateDir(t))
 	appendAll(t, j.File, `{"batch_id": "b1", "phase": "intent"}`)
 	fh, _ := os.OpenFile(j.Path, os.O_WRONLY|os.O_APPEND, 0)
-	fh.Write([]byte{0xff, '\n'})
+	fh.Write([]byte{0xff, '\r', '\n', '{'})
 	fh.Close()
-	_, err := j.Views()
-	if ve, ok := err.(*pyjson.ValueError); !ok || ve.Msg != "'utf-8' codec can't decode byte 0xff in position 38: invalid start byte" {
-		t.Fatalf("got %v", err)
+	appendAll(t, j.File, `{"batch_id": "b2", "phase": "intent"}`)
+	views, bad, err := j.Scan()
+	if err != nil || len(views) != 1 || len(bad) != 1 || bad[0] != (Unreadable{Line: 2, Reason: "UnicodeDecodeError"}) {
+		t.Fatalf("%d views, %+v, %v", len(views), bad, err)
 	}
 }

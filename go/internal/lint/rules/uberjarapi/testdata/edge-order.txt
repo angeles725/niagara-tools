@@ -1,0 +1,21 @@
+-- args --
+@DIR@/two
+-- want --
+exit 0
+WARN  lint-uberjar-api-conflict  @DIR@/two/x/a.gradle.kts  g.x:lib-a is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/two/x/b.gradle.kts  g.x:lib-a is both uberjar()d and api()d
+-- stderr --
+-- two/a.gradle.kts --
+uberjar("g:only:1")
+-- two/c.gradle.kts --
+api("g:only:1")
+-- two/x/a.gradle.kts --
+dependencies {
+  api("g.x:lib-a:1.0")
+  uberjar("g.x:lib-a:1.0")
+}
+-- two/x/b.gradle.kts --
+dependencies {
+  api("g.x:lib-a:1.0")
+  uberjar("g.x:lib-a:1.0")
+}

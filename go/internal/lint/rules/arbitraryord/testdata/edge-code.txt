@@ -1,0 +1,39 @@
+declared difference: T1: the call is matched in code (linescan.Code): the block-comment lines 13 and 15, the string at 17, the open block comment at 20 and the text block at 23 are no calls
+-- args --
+@DIR@/c
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:3  BOrd.make from a variable: BOrd.make( q );
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:7  BOrd.make from a variable: xBOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:8  BOrd.make from a variable: BOrd.make(q); BOrd.make(r);
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:9  BOrd.make from a variable: BOrd.make(q_1A);
+-- stderr --
+-- c/src/A.java --
+class A {
+  void f(String q) {
+    BOrd.make( q );
+    BOrd.make(q.x);
+    BOrd.make(q + "a");
+    BOrd .make(q);
+    xBOrd.make(q);
+    BOrd.make(q); BOrd.make(r);
+    BOrd.make(q_1A);
+    BOrd.make(Q);
+    BOrd.make(
+      q);
+    /* BOrd.make(q) */
+    /*
+     BOrd.make(q);
+    */
+    log("BOrd.make(q)");
+    char c = '"'; BOrd.make(q); // lint-arbitrary-ord: reviewed after char
+    char d = '\''; BOrd.make(q); // lint-arbitrary-ord: reviewed after escaped char
+    /* open BOrd.make(q); // lint-arbitrary-ord: reviewed in open block
+    */ BOrd.make(q); // lint-arbitrary-ord: reviewed after close
+    String s = """
+      BOrd.make(q) // x
+    """;
+    // BOrd.make(q);
+    BOrd.make(q) /* c */ ; // lint-arbitrary-ord: reviewed with block
+  }
+}

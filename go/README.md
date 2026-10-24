@@ -19,6 +19,7 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `internal/lint/rules/` | `All()`, the list of registered rules |
 | `internal/htmltext/` | Python's text layer for the HTML-text lints, byte for byte as CPython 3.15: `Decode` (an `errors="replace"` text read with universal newlines), `Unescape` (`html.unescape`), `DropMarkup` (a page's text with script/style/comments/tags, plus any named elements, dropped and its line numbers kept) and the `str` facts and folds generated from Python's `unicodedata` into `unicode.txt` (`IsSpace`, `IsAlnum`, `IsDecimal`, `IsWord`, `StripMarks`, `CaseFold`, `Strip`, `CollapseSpace`; `HTMLTEXT_PARITY=1` checks the table against a matching python3, `HTMLTEXT_REGEN=1` rewrites it) |
 | `internal/xmlsrc/` | the XML scanner the XML and `.bog` lints share: `Open` (a zipped `.bog` is read through the same call) and `Parse` return a well-formed `Doc` or a positioned `*Error`; `Doc.Elements`, `Find`, `Children`, `Text`, `Element.Attr` and `UnescapeName` (`.bog` slot names) |
+| `internal/ktssrc/` | the Kotlin scanner the `*.gradle.kts` lints share: `Tokens` (identifiers, `"..."` and `"""..."""` strings with their `$x`/`${...}` templates, chars, numbers, punctuation; `//` and nested `/* */` comments dropped) or a line-numbered `*Error`; `TestSweepRealFiles` (`KTSSRC_SWEEP_ROOTS`) reads real build scripts |
 | `internal/lint/rules/linescan/` | shared by the line-matching rules (ports of `awk_lint_each` / `awk_lint_strip_run` lints): `Code` (a file's lines with comments blanked and literal contents removed, the view a code token is matched in) and the row texts `Source` (leading space trimmed) and `Trimmed` (both ends) |
 | `internal/lint/rules/golden/` | test helper: `Run` checks a rule against its `testdata/*.txt` cases recorded from the bash lint, `Unreadable` its `awk_lint_run` failure contract |
 | `cmd/n4lint/` | `n4lint <rule>[,<rule>...] <args>...` or `n4lint --all [--strict] [--] <src-root>...` |
@@ -67,8 +68,10 @@ rule's rows stay contiguous.
    `Mode` `Valued` parses `[<option> <value>]... <root>` for a lint with one value option (`Spec.Option`,
    e.g. `--wiring-map`): the option and the root in any order, the last value wins, and a missing value, any
    other `-` argument or a second root prints the usage line alone. The rule reads the value by implementing
-   `lint.Configurer`: run alone, it gets the parsed `Args` after the root check and before the walk, and a
-   non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
+   `lint.Configurer`: run alone, it gets the parsed `Args` after the root check and before the walk and
+   returns a new rule value of its kind holding what it read, which runs instead (never mutate the
+   registered rule: a later run in the same process, or a rule list, would see the values); a non-nil error
+   is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
    value options go in `Spec.Options` (every value, in order, in `Args.Values[<option>]`) and `--strict` is a
    flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`).
    `Mode` `Anywhere` takes `--strict` before or after the root; another `-` argument prints
@@ -139,6 +142,15 @@ rule's rows stay contiguous.
    (`Msg` required) and exits 3 like any empty root; it reads files itself and returns a non-nil error, which
    fails closed like a `TreeRule` error, for anything it cannot read. `n4lint --all` (source roots) leaves it
    out; it runs by name or in a rule list.
+   `Spec.ValuedNamed` gives Mode `Valued` lint-write-path's named errors instead of the usage line alone
+   (`<lint>: unknown option: <arg>`, `<lint>: <option> requires a file argument`, `<lint>: unexpected
+   argument: <arg>`, all exit 3) and lets an empty argument leave the root unset; with `Spec.Options` and
+   `ValuedStrict` it parses `<root>` with `--strict` and several value options anywhere, and the rule reads
+   the last value of each (`Args.Values`) through `lint.Configurer` (reference port: `rules/writepath`). A `TreeRule`
+   or `RootRule` error that is a `*lint.RowError` prints its `Row` on stdout (after the findings returned
+   with it) instead of `<lint>: <error>` on stderr, still exit 3, for a bash lint whose env errors were
+   stdout rows. `Finding.Status` prints another first column (`STALE`, `DRIFT`) for a row that counts as
+   its `Severity`.
    A rule of another kind whose roots are module roots, not source roots (reference: `rules/duplicatehelper`),
    sets `Spec.ModuleRoot`: `n4lint --all` leaves it out too.
 2. Add the `Spec()` call to `rules.All()`.

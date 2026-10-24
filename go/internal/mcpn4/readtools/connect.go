@@ -54,6 +54,10 @@ type Tools struct {
 	Ctx           *session.Context
 	NewClient     Factory
 	ServerVersion string
+	// Audit is the write machinery's audit log (ctx.write.audit), nil in read-only mode.
+	Audit interface {
+		Append(entry *pyjson.Object) error
+	}
 }
 
 // Register serves the ported read tools on s, with t.Ctx as its session state.

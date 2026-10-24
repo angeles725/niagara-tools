@@ -1,0 +1,20 @@
+-- args --
+@DIR@/gitstop/R/M
+-- want --
+exit 3
+lint-write-path  ERROR  @DIR@/gitstop/R/M  no write-path-matrix.md found (looked in @DIR@/gitstop/R/M/docs/write-path-matrix.md, @DIR@/gitstop/R/docs/write-path-matrix.md)
+-- stderr --
+-- .git/HEAD --
+x
+-- gitstop/R/.git/.keep --
+-- gitstop/R/.git/HEAD --
+x
+-- gitstop/R/M/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+-- gitstop/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |

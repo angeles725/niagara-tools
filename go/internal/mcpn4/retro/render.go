@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/journal"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
@@ -86,7 +87,8 @@ func (t *tally) String() string {
 
 func newTally() *tally { return &tally{counts: map[string]int{}, index: map[string]int{}} }
 
-func summary(audit, views []*pyjson.Object, since string) (string, error) {
+// summary is _summary; each unreadable audit line is named after the counts (issue #466).
+func summary(audit, views []*pyjson.Object, since string, unreadable []journal.Unreadable) (string, error) {
 	outcomes, verdicts := newTally(), newTally()
 	for _, e := range audit {
 		if err := outcomes.add(get(e, "outcome")); err != nil {
@@ -106,12 +108,21 @@ func summary(audit, views []*pyjson.Object, since string) (string, error) {
 	if since != "" {
 		window = "since " + since
 	}
-	return fmt.Sprintf("- Window: %s\n- Audit entries: %d (%s)\n- Journaled batches: %d (%s)",
-		window, len(audit), outcomes, len(views), verdicts), nil
+	out := fmt.Sprintf("- Window: %s\n- Audit entries: %d (%s)\n- Journaled batches: %d (%s)",
+		window, len(audit), outcomes, len(views), verdicts)
+	if len(unreadable) > 0 {
+		out += fmt.Sprintf("\n- Incomplete: %d audit line(s) are unreadable and left out of this draft",
+			len(unreadable))
+		for _, u := range unreadable {
+			out += fmt.Sprintf("\n- unreadable audit line %d: %s", u.Line, u.Reason)
+		}
+	}
+	return out, nil
 }
 
 // render is retro.render on the shipped template; the honesty line replaces an empty table.
-func render(candidates []*pyjson.Object, station, date string, audit, views []*pyjson.Object, since string) (string, error) {
+func render(candidates []*pyjson.Object, station, date string, audit, views []*pyjson.Object, since string,
+	unreadable []journal.Unreadable) (string, error) {
 	deltas, verdict := Honesty, Honesty
 	covered := "- none recorded: no friction was found in the audit or the journal."
 	if len(candidates) > 0 {
@@ -122,7 +133,7 @@ func render(candidates []*pyjson.Object, station, date string, audit, views []*p
 			"clause).", len(candidates))
 		covered = "- (reviewer: list the guards that worked as designed and the rules the kit already encodes)"
 	}
-	sum, err := summary(audit, views, since)
+	sum, err := summary(audit, views, since, unreadable)
 	if err != nil {
 		return "", err
 	}

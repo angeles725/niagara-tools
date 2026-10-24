@@ -36,11 +36,21 @@ Content-Length, is a `transport failure`, never an internal error or a complete 
 v0.9.3: a non-UTF-8 credential is refused with a fixed message that no longer reveals a
 character position (R8-D19); the Go server serves `n4_navigate`, `n4_read_slots`,
 `n4_list_links` and `n4_find_dangling_outputs` (slice S5), after S4's `n4_connect` and
-`n4_describe_session`. Go port status, still at v0.9.3 (docs/go-port-plan.md section 3):
-S6 added `n4_bql_query` and `n4_inventory`, S7 `n4_read_file`, `n4_list_px_views` and
-`n4_px_summary`, so the Go server (`go/cmd/mcp-n4`) serves 11 of the 13 read tools;
-`n4_list_batches` (S8), `n4_session_retro_draft` (S9) and every write tool answer "is not
-implemented in this version of the Go server", and it refuses `--allow-writes` at start.
+`n4_describe_session`.
+v0.9.4 (issue #448): one unreadable `journal.jsonl` line (not UTF-8, or a batch id that cannot
+key a batch) no longer fails `n4_list_batches` and every rollback: the readable batches are
+listed, each bad line is an `unreadable journal line N: <error class>` row and the reply says
+the list is incomplete; `n4_rollback` refuses (`journal line unreadable`) only the batches such
+a line may belong to; a batch id with a trailing newline is malformed. Both servers.
+v0.9.5 (issue #466): one unreadable `audit.jsonl` line (not UTF-8) no longer fails
+`n4_session_retro_draft`: the audit log is split and decoded line by line like the journal, the
+bad line is left out, and the draft's session summary says it is incomplete and names each one
+(`unreadable audit line N: UnicodeDecodeError`; no byte of the line is echoed). Both servers.
+Go port status, at v0.9.5 (docs/go-port-plan.md section 3): S6 added `n4_bql_query` and
+`n4_inventory`, S7 `n4_read_file`, `n4_list_px_views` and `n4_px_summary`, S8
+`n4_list_batches` and S9 `n4_session_retro_draft`, so the Go server (`go/cmd/mcp-n4`) serves
+all 13 read tools; every write tool answers "is not implemented in this version of the Go
+server", and it refuses `--allow-writes` at start.
 It is opt-in until S16: the `.mcp.json` example below launches Python; to try Go, launch
 `go/bin/mcp-n4` with the same flags. `MCP_N4_IMPL=go` only selects the server the test suite
 drives (docs/go-port-plan.md section 5).

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-23 · kit · go-lint-structure
@@ -54,4 +54,4 @@ repositories; the check holds either way because build.sh passes host paths with
   engine's side and lists it as a declared difference instead of copying the fail-open.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-go-lint-structure.md | kit | 2026-10-23 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 `BUILD-LOOP.md` § 5 port rule (`lint.RootRule`); Δ2 `lib/scan-files.sh` already uses `-mindepth 1`, the Go `dotName` quirk is owed (fail-closed listing line); Δ3 already folded (truth-audit Δ3 row-site line), token added.

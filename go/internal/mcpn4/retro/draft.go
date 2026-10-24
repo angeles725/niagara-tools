@@ -47,10 +47,7 @@ func Draft(stateDir, station, since string, observations []*pyjson.Object) (*pyj
 func draft(stateDir, station, date, since string, observations []*pyjson.Object,
 	newFilter func(string) (keepFunc, error)) (*pyjson.Object, error) {
 	stateDir = safety.ExpandUser(stateDir)
-	audit, err := journal.NewAuditLog(stateDir).Entries()
-	if err != nil {
-		return nil, err
-	}
+	audit, unreadable := journal.NewAuditLog(stateDir).Scan()
 	views, err := journal.New(stateDir).Views()
 	if err != nil {
 		return nil, err
@@ -69,7 +66,7 @@ func draft(stateDir, station, date, since string, observations []*pyjson.Object,
 	if err != nil {
 		return nil, err
 	}
-	markdown, err := render(candidates, station, date, audit, windowed, since)
+	markdown, err := render(candidates, station, date, audit, windowed, since, unreadable)
 	if err != nil {
 		return nil, err
 	}

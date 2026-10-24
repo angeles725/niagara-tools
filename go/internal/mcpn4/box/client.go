@@ -160,7 +160,7 @@ func (c *Client) unwrap(reply any, channel, key string) (any, error) {
 	if !ok {
 		return nil, boxError("malformed reply: not an object", channel, key)
 	}
-	if n, ok := r.Get("n"); ok && !pyEqual(n, c.seq) {
+	if n, ok := r.Get("n"); ok && !PyEqual(n, c.seq) {
 		return nil, boxError(fmt.Sprintf("reply seq %s does not match request seq %d", pyjson.Repr(n), c.seq),
 			channel, key)
 	}
