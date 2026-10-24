@@ -20,7 +20,9 @@
 #     hand-written (fail closed: never shrink the count on an unparsed shape). A BEGIN inside an open region is a
 #     WARN `nested-region` (the earlier region counts as hand-written); an END with no open region is a WARN
 #     `stray-end`.
-#   - Pure class = a file with no `@NiagaraType` annotation and no `extends B<Upper>` declaration. Only pure classes
+#   - Pure class = a file with no `@NiagaraType` annotation and no `extends B<Upper>` declaration, both read in code
+#     with string literal contents blanked (truth fix T2 2026-10-24: a quoted "@NiagaraType" made the bash lint skip
+#     the method rule; the class name is read the same way). Only pure classes
 #     get the method rule (the BComponent shell is measured by the class rule). Methods come from javasrc.Methods (a
 #     signature whose `(...)` closes on the `{` line, or a `{` alone after it; a signature wrapped over several
 #     lines before `{` is not seen — a false negative, never a false WARN).
@@ -44,6 +46,7 @@
 # Mutation: LSZ5 -- dropping the unclosed-region row lets an unterminated BEGIN marker pass silently
 # Mutation: LSZ8 -- ignoring a nested BEGIN lets a stray END close an unterminated region and hide its lines
 # Mutation: LSZ10 -- matching the markers on the raw line lets a string literal hide the lines after it
+# Mutation: LSZ11 -- reading the Baja test in literal text skips the method rule of a pure class quoting @NiagaraType
 # Mutation: LSZ-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: LSZ-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u

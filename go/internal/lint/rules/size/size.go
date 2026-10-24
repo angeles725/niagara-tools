@@ -13,6 +13,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linescan"
 )
 
 // ID is the lint name printed in every row.
@@ -61,10 +62,12 @@ var (
 func (r rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	code := f.Stripped()
 	gen, out := regions(f.Raw, code)
+	blanked := linescan.Code(f)
 	hand, name, line, baja := 0, "", 0, false
 	for i, c := range code {
-		baja = baja || strings.Contains(c, "@NiagaraType") || extendsBaja.MatchString(c)
-		if m := classDecl.FindString(c); name == "" && m != "" {
+		k := blanked[i] // the Baja test and the class name are read in code, never in a literal's text
+		baja = baja || strings.Contains(k, "@NiagaraType") || extendsBaja.MatchString(k)
+		if m := classDecl.FindString(k); name == "" && m != "" {
 			name, line = m[len(classHead.FindString(m)):], i+1
 		}
 		if !gen[i] && strings.Trim(c, space) != "" {

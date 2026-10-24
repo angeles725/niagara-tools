@@ -1,3 +1,5 @@
+declared difference (truth fix T2, truth-literal-code-1): B2 and B3 only quote "@NiagaraType" and
+"extends BFoo" in string literals, so they are pure classes and their m() is measured.
 -- args --
 --max-class
 0
@@ -9,7 +11,9 @@ exit 0
 WARN  lint-size  @DIR@/B1.java:3  class B1 has 7 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/B1.java:4  method m() in pure class B1 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/B2.java:2  class B2 has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/B2.java:4  method m() in pure class B2 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/B3.java:2  class B3 has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/B3.java:4  method m() in pure class B3 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/B4.java:2  class B4 has 7 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/B4.java:3  method m() in pure class B4 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/B5.java:2  class B5 has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
