@@ -1,0 +1,70 @@
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-rt.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Foo-rt.jar  2 classes, all major 52
+PASS  signed     @DIR@/Foo-rt.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Foo-rt.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-rt.jar  no --target-version
+SKIP  stored     @DIR@/Foo-rt.jar  no --stored
+PASS  typecount  @DIR@/Foo-rt.jar  jar declares 1 types == module-include.xml
+PASS  facets     @DIR@/Foo-rt.jar  no raw-number MIN/MAX facet under @DIR@/mod/Foo-rt/src
+PASS  facets-req  @DIR@/Foo-rt.jar  no missing required facets under @DIR@/mod/Foo-rt/src
+PASS  ord-literal  @DIR@/Foo-rt.jar  no hardcoded ORD literals under @DIR@/mod/Foo-rt/src
+SKIP  palette    @DIR@/Foo-rt.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Foo-rt.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/Foo-rt.jar  no *.gradle.kts in @DIR@/mod/Foo-rt
+SKIP  moduletest  @DIR@/Foo-rt.jar  no production .java under src/
+PASS  cross-module-type  @DIR@/Foo-rt.jar  no cross-module type references in @DIR@/mod/Foo-rt/src
+PASS  transient-operator  @DIR@/Foo-rt.jar  no TRANSIENT+OPERATOR slot combination under @DIR@/mod/Foo-rt/src
+PASS  compact3-import  @DIR@/Foo-rt.jar  no Compact3 non-safe imports under @DIR@/mod/Foo-rt/src
+PASS  subscription-leak  @DIR@/Foo-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod/Foo-rt/src
+PASS  slot-wall  @DIR@/Foo-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Foo-rt/src
+verify-module: 12 passed, 0 failed, 6 skipped, 0 warned -> ALL PASS
+-- stderr --
+-- Foo-rt.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---
+-- d/META-INF/MANIFEST.MF --
+Manifest-Version: 1.0
+-- d/META-INF/NIAGARA4.RSA (noeol) --
+RSA
+-- d/META-INF/NIAGARA4.SF --
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+-- d/META-INF/module.xml --
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+-- d/com/x/A.class (class 52) --
+-- d/com/x/B.class (class 52) --
+-- mod/Foo-rt/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+-- mod/Foo-rt/src/.deploy-baseline/com/x/Stale.java --
+class Stale { Object f = BFacets.make(BFacets.MIN, -40); }

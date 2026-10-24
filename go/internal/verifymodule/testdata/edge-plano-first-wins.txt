@@ -1,0 +1,9 @@
+-- args --
+--plano
+@DIR@/first-wins.html
+-- want --
+exit 0
+PASS  plano      @DIR@/first-wins.html  Rc=2/3 Ri=8/12 Rv=2/3 — all agree
+-- stderr --
+-- first-wins.html --
+<script>IMG_W=2;IMG_H=3;IMG_W=9</script><svg id="zonas" viewBox="0 0 2 3"></svg><img id="planoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAMCAAAAAB69aNBAAAADUlEQVR4nGNoaGAAIwANiQMBNh/1KwAAAABJRU5ErkJggg==">

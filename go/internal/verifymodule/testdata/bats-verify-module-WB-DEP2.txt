@@ -1,0 +1,74 @@
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-ux.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Foo-ux.jar  1 classes, all major 52
+PASS  signed     @DIR@/Foo-ux.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Foo-ux.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-ux.jar  no --target-version
+SKIP  stored     @DIR@/Foo-ux.jar  no --stored
+PASS  typecount  @DIR@/Foo-ux.jar  jar declares 1 types == module-include.xml
+SKIP  facets     @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  facets-req  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  ord-literal  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  palette    @DIR@/Foo-ux.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Foo-ux.jar  not a -wb jar
+PASS  phantom-dep  @DIR@/Foo-ux.jar  all module.xml dependencies declared in gradle.kts
+SKIP  moduletest  @DIR@/Foo-ux.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  transient-operator  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  compact3-import  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  subscription-leak  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  slot-wall  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+verify-module: 5 passed, 0 failed, 13 skipped, 0 warned -> ALL PASS
+-- stderr --
+-- Foo-ux.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies>
+  <dependency name="baja" vendor="Tridium" vendorVersion="4.14"/>
+  <dependency name="Foo-rt" vendor="Angeles" vendorVersion="1.0"/>
+</dependencies>
+<types><type name="A" class="com.x.A"/></types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Foo-ux/Foo-ux.gradle.kts --
+dependencies {
+  nre(":nre")
+  api(":baja")
+  api(project(":Foo-rt"))   // project dep — must be recognised as declaring Foo-rt
+}
+-- mod/Foo-ux/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+-- proj/META-INF/MANIFEST.MF --
+Manifest-Version: 1.0
+-- proj/META-INF/NIAGARA4.RSA (noeol) --
+RSA
+-- proj/META-INF/NIAGARA4.SF --
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+-- proj/META-INF/module.xml --
+<module name="Foo" vendor="Angeles">
+<dependencies>
+  <dependency name="baja" vendor="Tridium" vendorVersion="4.14"/>
+  <dependency name="Foo-rt" vendor="Angeles" vendorVersion="1.0"/>
+</dependencies>
+<types><type name="A" class="com.x.A"/></types>
+</module>
+-- proj/com/x/A.class (class 52) --

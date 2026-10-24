@@ -1,0 +1,14 @@
+-- args --
+--plugin-version
+-- want --
+exit 2
+-- stderr --
+usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] [--sample] <niagara_home> <gradle-root>
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
+-- @env --
+PATH=@DIR@/fakebin:@DIR@/.tools
+N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts
+-- fakebin/ --
+-- mounts --
+ext4 / ext4 rw 0 0

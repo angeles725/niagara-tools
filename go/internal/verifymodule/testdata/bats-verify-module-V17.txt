@@ -1,0 +1,64 @@
+-- args --
+@DIR@/j.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/j.jar  2 classes, all major 52
+PASS  signed     @DIR@/j.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/j.jar  0 declared types resolve to classes
+SKIP  baja       @DIR@/j.jar  no --target-version
+SKIP  stored     @DIR@/j.jar  no --stored
+SKIP  typecount  @DIR@/j.jar  no --src
+SKIP  facets     @DIR@/j.jar  no --src
+SKIP  facets-req  @DIR@/j.jar  no --src
+SKIP  ord-literal  @DIR@/j.jar  no --src
+PASS  palette    @DIR@/j.jar  module.palette has 0 component entries
+SKIP  wb-scaffold  @DIR@/j.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/j.jar  no --src
+SKIP  moduletest  @DIR@/j.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/j.jar  no --src
+SKIP  transient-operator  @DIR@/j.jar  no --src
+SKIP  compact3-import  @DIR@/j.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/j.jar  no --src
+SKIP  slot-wall  @DIR@/j.jar  no --src
+verify-module: 4 passed, 0 failed, 14 skipped, 0 warned -> ALL PASS
+-- stderr --
+-- j.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- module.palette (stored) ---
+<p m="b=baja" t="b:UnrestrictedFolder"></p>
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---
+-- d/module.palette --
+<p m="b=baja" t="b:UnrestrictedFolder"></p>
+-- d/META-INF/MANIFEST.MF --
+Manifest-Version: 1.0
+-- d/META-INF/NIAGARA4.RSA (noeol) --
+RSA
+-- d/META-INF/NIAGARA4.SF --
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+-- d/META-INF/module.xml --
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+</types>
+</module>
+-- d/com/x/A.class (class 52) --
+-- d/com/x/B.class (class 52) --

@@ -1,0 +1,10 @@
+-- args --
+coverage
+2
+1
+0
+0
+-- want --
+exit 0
+66.7
+-- stderr --

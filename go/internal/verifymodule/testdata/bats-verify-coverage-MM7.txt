@@ -1,0 +1,9 @@
+-- args --
+coverage
+1
+2
+3
+-- want --
+exit 2
+-- stderr --
+usage: verify-module.sh coverage <npass> <nfail> <nwarn> <nskip>

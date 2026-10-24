@@ -1,0 +1,56 @@
+-- args --
+--src
+@DIR@/mod
+@DIR@/Qux-rt.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Qux-rt.jar  2 classes, all major 52
+PASS  signed     @DIR@/Qux-rt.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Qux-rt.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Qux-rt.jar  no --target-version
+SKIP  stored     @DIR@/Qux-rt.jar  no --stored
+PASS  typecount  @DIR@/Qux-rt.jar  jar declares 1 types == module-include.xml
+PASS  facets     @DIR@/Qux-rt.jar  no raw-number MIN/MAX facet under @DIR@/mod/Qux-rt/src
+PASS  facets-req  @DIR@/Qux-rt.jar  no missing required facets under @DIR@/mod/Qux-rt/src
+PASS  ord-literal  @DIR@/Qux-rt.jar  no hardcoded ORD literals under @DIR@/mod/Qux-rt/src
+SKIP  palette    @DIR@/Qux-rt.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Qux-rt.jar  not a -wb jar
+WARN  phantom-dep  @DIR@/Qux-rt.jar  module.xml dependency not declared in gradle.kts api()/nre(): baja
+WARN  moduletest  @DIR@/Qux-rt.jar  production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)
+PASS  cross-module-type  @DIR@/Qux-rt.jar  no cross-module type references in @DIR@/mod/Qux-rt/src
+PASS  transient-operator  @DIR@/Qux-rt.jar  no TRANSIENT+OPERATOR slot combination under @DIR@/mod/Qux-rt/src
+PASS  compact3-import  @DIR@/Qux-rt.jar  no Compact3 non-safe imports under @DIR@/mod/Qux-rt/src
+PASS  subscription-leak  @DIR@/Qux-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod/Qux-rt/src
+PASS  slot-wall  @DIR@/Qux-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Qux-rt/src
+verify-module: 12 passed, 0 failed, 4 skipped, 2 warned -> ALL PASS
+-- stderr --
+grep: @DIR@/mod/Qux-rt/x.gradle.kts: Is a directory
+grep: @DIR@/mod/Qux-rt/x.gradle.kts: Is a directory
+-- Qux-rt.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Qux-rt/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+-- mod/Qux-rt/src/com/x/Q.java --
+class Q {}
+-- mod/Qux-rt/x.gradle.kts (dir) --

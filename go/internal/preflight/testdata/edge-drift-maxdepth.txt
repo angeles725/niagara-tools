@@ -1,0 +1,49 @@
+-- args --
+--jvm-dir
+@DIR@/jvm
+@DIR@/nh
+@DIR@/w/p/me
+-- want --
+exit 0
+PASS  jdk8          JDK 8 found: @DIR@/jvm/java-8-openjdk-amd64/
+PASS  plugin-pin    plugin 7.6.17 found in niagara_home/etc/m2
+PASS  jar-lock      no locked jars under @DIR@/nh/modules/
+WARN  version-drift  @DIR@/w/p/me version 1.0.0 < sibling @DIR@/w/p/a version 5.0.0
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
+-- @env --
+PATH=@DIR@/fakebin:@DIR@/.tools
+N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts
+-- fakebin/lsof (exec) --
+#!/usr/bin/env bash
+printf "p1\nn/usr/bin/lsof\n"
+-- gr/settings.gradle.kts --
+// settings.gradle.kts — minimal fixture for preflight tests
+// Niagara plugin version
+val niagaraPluginVersion = "7.6.17"
+-- jvm/java-8-openjdk-amd64/release --
+IMPLEMENTOR="Adoptium"
+JAVA_VERSION="1.8.0_302"
+JAVA_VERSION_DATE="2021-10-19"
+-- jvmnr/java-8-openjdk-wsl/bin/java (exec) --
+#!/usr/bin/env bash
+# Fakebin: simulates WSL openjdk-8 that has no release file but reports 1.8 via -version.
+printf 'openjdk version "1.8.0_412" 2020-04-14\nOpenJDK Runtime Environment (build 1.8.0_412-8u412-b08-0ubuntu1~22.04-b08)\n' >&2
+exit 0
+-- mounts --
+ext4 / ext4 rw 0 0
+-- nh/etc/m2/repository/com/tridium/niagara-module/com.tridium.niagara-module.gradle.plugin/7.6.17/.gitkeep --
+-- nh/modules/demo-rt.jar --
+-- nhnp/etc/m2/.gitkeep --
+-- nhnp/modules/.gitkeep --
+-- w/p/a/d1/d2/d3.gradle.kts --
+defaultModuleVersion("5.0.0")
+-- w/p/b/d1/d2/d3/d4.gradle.kts --
+defaultModuleVersion("6.0.0")
+-- w/p/me/build.gradle.kts --
+defaultModuleVersion("1.0.0")
+-- w/p/me/settings.gradle.kts --
+// settings.gradle.kts — minimal fixture for preflight tests
+// Niagara plugin version
+val niagaraPluginVersion = "7.6.17"
