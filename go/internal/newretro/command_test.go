@@ -2,6 +2,7 @@ package newretro
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -81,5 +82,39 @@ func TestDeltasRefusedBeforeRender(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, "retros", "2026-01-02-slugabc.md")); err == nil {
 		t.Error("a stub was written for a refused --deltas")
+	}
+}
+
+// TestNoWriteOutsideRetros sandboxes the kit inside a parent dir and walks that whole parent after each run: a
+// slug or date that tries to climb out of retros/ changes nothing anywhere, and an accepted run changes only
+// its stub, retros/INDEX.md and BUILD-STATE.src.md.
+func TestNoWriteOutsideRetros(t *testing.T) {
+	root := fixture(t)
+	parent := filepath.Dir(root)
+	write(t, filepath.Join(parent, "canary.md"), "outside the kit\n")
+	for _, args := range [][]string{
+		{"kit", "abcdef/../../../x"}, {"kit", "abcdef/../x"}, {"kit", "../../xabcdef"},
+		{"kit", "slugabc", "--date", "../../x"}, {"kit", "slugabc", "--date", "2026-01-02/../../x"},
+		{"../../kit", "slugabc", "--date", "2026-01-03/.."},
+	} {
+		before := tree(t, parent)
+		if code, _, _ := runIn(root, args...); code != ExitUsage {
+			t.Errorf("%q: exit %d, want %d", args, code, ExitUsage)
+		}
+		if after := tree(t, parent); fmt.Sprint(after) != fmt.Sprint(before) {
+			t.Errorf("%q changed the sandbox:\n%q\nwant\n%q", args, after, before)
+		}
+	}
+	before := tree(t, parent)
+	if code, _, _ := runIn(root, "kit", "slugabc", "--date", "2026-03-04"); code != ExitOK {
+		t.Fatalf("valid run: exit %d", code)
+	}
+	after := tree(t, parent)
+	for _, f := range []string{"kit/retros/2026-03-04-slugabc.md", "kit/retros/INDEX.md", "kit/BUILD-STATE.src.md"} {
+		delete(before, f)
+		delete(after, f)
+	}
+	if fmt.Sprint(after) != fmt.Sprint(before) {
+		t.Errorf("a valid run changed files besides its own three:\n%q\nwant\n%q", after, before)
 	}
 }
