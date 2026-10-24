@@ -1,0 +1,15 @@
+-- args --
+@DIR@/b
+@DIR@/a
+-- want --
+exit 0
+-- stderr --
+-- a/H.java --
+class H {
+  private long staggerDelay = 5;
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}
+-- b/B.java --
+class B {}

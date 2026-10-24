@@ -76,20 +76,26 @@ func DecodeUTF8(b []byte, replace bool) (string, error) {
 			i += n
 			continue
 		}
-		reason := "invalid start byte"
-		switch {
-		case end:
-			reason = "unexpected end of data"
-		case n > 1 || b[i] >= 0xc2 && b[i] <= 0xf4:
-			reason = "invalid continuation byte"
-		}
-		where := fmt.Sprintf("byte 0x%02x in position %d", b[i], i)
-		if n > 1 {
-			where = fmt.Sprintf("bytes in position %d-%d", i, i+n-1)
-		}
-		return "", &ValueError{"'utf-8' codec can't decode " + where + ": " + reason}
+		return "", decodeError(b, i, n, end)
 	}
 	return out.String(), nil
+}
+
+// decodeError is the UnicodeDecodeError text of the n-byte invalid subpart at b[i] (end: it is
+// cut short by the end of b).
+func decodeError(b []byte, i, n int, end bool) *ValueError {
+	reason := "invalid start byte"
+	switch {
+	case end:
+		reason = "unexpected end of data"
+	case n > 1 || b[i] >= 0xc2 && b[i] <= 0xf4:
+		reason = "invalid continuation byte"
+	}
+	where := fmt.Sprintf("byte 0x%02x in position %d", b[i], i)
+	if n > 1 {
+		where = fmt.Sprintf("bytes in position %d-%d", i, i+n-1)
+	}
+	return &ValueError{"'utf-8' codec can't decode " + where + ": " + reason}
 }
 
 // badSequence returns the length of the maximal invalid subpart at b[i] (0 when a valid

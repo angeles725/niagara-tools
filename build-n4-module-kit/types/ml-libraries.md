@@ -36,7 +36,8 @@
 
 3. **Compact3 JDK 8 ceiling:** libraries that require Java 11+ (Tribuo) or that
    call `ClassLoader.defineClass` dynamically at runtime may fail on the JACE even
-   though they compile and pass the Supervisor build. `[ev: corpus B1023 §ND4]`
+   though they compile and pass the Supervisor build. `[ev: corpus B1023 §1023.3]` (the JACE runs the
+   `azul-zre-compact3` Java 8 ZRE); Tribuo's Java 11+ floor and the `defineClass` failure mode are [INFER].
 
 **Training is always OFFLINE** — historical data is exported from Niagara histories
 (oBIX or Haystack export) and a Python/Java data-science environment trains and
@@ -55,7 +56,7 @@ gate before reaching any actuator or control core. `[ev: corpus B821, B733 §733
 |---------|----------------|---------|------------|-------------------|-----------------|---------|------------|
 | **Weka 3.8.x** | `nz.ac.waikato.cms.weka:weka-stable:3.8.6` | ✓ | ✓ | Yes — core algos; shade to isolate (GUI packages are absent on Compact3; keep to core tabular path) | No (core; see license) | **GPL-3.0** ⚠ | Viable for internal / prototype use. **NOT safe for a distributed closed-source module** — GPL-3.0 contaminates the distribution. If Weka is used for training offline, it never ships in the module and GPL is confined to the dev environment. Bundle + shade under project package if used at runtime. |
 | **Smile 2.6.x** | `com.github.haifengl:smile-core:2.6.0` | ✓ | ✓ (tabular algos; avoid `smile-nlp` which has native deps) | Yes — core tabular algos (Random Forest, Logistic, k-means, SVM, LDA) are pure Java | No (tabular core) | Apache 2.0 | **Preferred tabular ML library** — Apache 2.0, Java 8 compat, rich algorithm set. **Pin to 2.x — Smile 3.x+ requires Java 11+.** Bundle + shade. Use on BWorker for any model heavier than logistic regression. |
-| **Tribuo (Oracle)** | `org.tribuo:tribuo-all:4.x` | **No — Java 11+** | ✓ | **No** | N/A | Apache 2.0 | **NOT viable** — requires Java 11+; both Supervisor and JACE are Java 8 only. `[ev: B1023 §ND4]` |
+| **Tribuo (Oracle)** | `org.tribuo:tribuo-all:4.x` | **No — Java 11+** | ✓ | **No** | N/A | Apache 2.0 | **NOT viable** — requires Java 11+; both Supervisor and JACE are Java 8 only. `[ev: corpus B1023 §1023.3]`; the Java 11+ floor is [INFER] |
 | **Java-ML** | Various (no Maven Central) | ✓ | ✓ | Technically yes | No | GPL-2.0 | **Avoid** — stale (last meaningful release ~2012), no Maven Central, GPL-2.0. Use Smile 2.x instead. |
 | **Deeplearning4j (DL4J) 1.0-M2.1+** | `org.deeplearning4j:deeplearning4j-core:*` | ✓ (API) | **No — JNI (ND4J native backend)** | **No — native** | **Supervisor-only** | Apache 2.0 | JNI-backed via ND4J native platform artifact; `UnsatisfiedLinkError` on JACE QNX7/ARM `[ev: B26]`. Supervisor use only for training or inference. Recommended by B67 §67.7.2 for a `BNeuralNetInferenceBlock`-style family; or prefer ONNX Runtime Java (lighter, license-risk-free). |
 | **ONNX Runtime Java** | `com.microsoft.onnxruntime:onnxruntime:1.x` | ✓ (API) | **No — JNI** | **No — native** | **Supervisor-only** | MIT | JNI-backed; `UnsatisfiedLinkError` on JACE QNX7/ARM `[ev: B26]`. **Preferred inference path for offline-trained Python models (sklearn/XGBoost/PyTorch → ONNX export → inference on Supervisor).** GPL training libraries (Weka/sklearn) never ship in the module — only the ONNX file and ONNX Runtime JAR. |

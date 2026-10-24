@@ -1,0 +1,12 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/repo/M/src/A.java:4  BOrd.make from a variable: BOrd.make(q);
+-- stderr --
+-- repo/M/src/A.java --
+class A { void f(String q){
+  // lint-arbitrary-ord: reviewed unrelated earlier call
+  int x = 1;
+  BOrd.make(q);
+} }

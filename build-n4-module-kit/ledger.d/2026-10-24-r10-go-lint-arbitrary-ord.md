@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: lint-arbitrary-ord ported to Go (rules/arbitraryord), truth fix T1; structure uses lint.Dirname/IsFile/IsDir -->
+log: 2026-10-24 · quality round 10 → `toolbelt/lint-arbitrary-ord.sh` is a thin wrapper over `n4lint lint-arbitrary-ord` (`go/internal/lint/rules/arbitraryord`, `javasrc.LineCommentAt`), byte-identical on 26 goldens, all of Cliente (20 rows, 1.05 s → 0.06 s) and the decompiled corpus (52 rows, 9.53 s → 0.25 s); `Spec.ShortScanError` cherry-picked from r10/agent-on-shape-go. Truth fix T1: BOrd.make is matched in code (linescan.Code), Cliente 20 → 18 (two chihuahua Javadoc lines), decompiled 52 → 52. `rules/structure` now uses the shared lint.Dirname/IsFile/IsDir (goldens unchanged). Retro: retros/2026-10-24-go-lint-arbitrary-ord.md.

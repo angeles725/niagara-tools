@@ -1,0 +1,11 @@
+-- args --
+@DIR@/repo
+-- want --
+exit 3
+lint-write-path  ERROR  @DIR@/repo  no write-path-matrix.md found (looked in @DIR@/repo/docs/write-path-matrix.md, @DIR@/docs/write-path-matrix.md)
+-- stderr --
+-- .git/HEAD --
+x
+-- repo/src/com/x/BT.java --
+@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)
+public class BT extends BComponent {}

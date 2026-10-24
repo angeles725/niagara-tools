@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: lint-uberjar-api-conflict ported to Go (rules/uberjarapi) on the new go/internal/ktssrc Kotlin scanner, truth fixes T1-T2 -->
+log: 2026-10-24 · quality round 10 → `toolbelt/lint-uberjar-api-conflict.sh` is a thin wrapper over `n4lint lint-uberjar-api-conflict` (`go/internal/lint/rules/uberjarapi`), byte-identical on 15 goldens, all of Cliente (39 *.gradle.kts, 0 rows, 0.12 s → 0.02 s) and modulos_niagara_n4 (0 rows); an unreadable *.gradle.kts is exit 3 (declared), an empty root stays exit 0 (ER5). New shared scanner `go/internal/ktssrc` (Kotlin tokens: templates, raw strings, nested comments; 60 real scripts swept clean). Truth fixes: T1 calls read as Kotlin tokens (comments/strings/xapi out, split and spaced calls in, non-Kotlin script exit 3), T2 a coordinate held in a val is resolved; 0 real-tree rows changed. Retro: retros/2026-10-24-go-lint-uberjar-api.md.

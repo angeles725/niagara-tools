@@ -16,7 +16,8 @@ var (
 	slugRe    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 	claimRe   = regexp.MustCompile(`^C\d+$`)
 	kindWords = map[string]bool{"retro": true, "corpus": true, "code": true, "devguide": true, "guide": true,
-		"mem": true, "memory": true, "niagara-help": true, "vineflower": true, "javap": true}
+		"mem": true, "memory": true, "niagara-help": true, "vineflower": true, "javap": true, "course": true,
+		"bitácora": true, "bitacora": true, "kit": true}
 )
 
 // Card returns every evidence pointer of a card, in line order. Lines inside ``` fences are skipped.
@@ -31,6 +32,9 @@ func Card(text string) []Pointer {
 		}
 		out = append(out, sc.tags(i)...)
 		out = append(out, sc.inline(i)...)
+	}
+	for i := range out {
+		refine(&out[i])
 	}
 	return out
 }
@@ -163,6 +167,19 @@ func clause(c string, aliases map[string]string) []Pointer {
 		return corpusClause(c, c)
 	case bareID.MatchString(c):
 		return []Pointer{{Kind: Bare, Target: c, Raw: c}}
+	case word == "course":
+		return courseClause(c, rest)
+	case word == "bitácora" || word == "bitacora":
+		return bitacoraClause(c, rest)
+	case word == "kit" && rest != "":
+		return kitClause(c, rest, aliases)
+	case word == "external" && firstWord(rest) == "retro":
+		return externalRetro(c, strings.TrimSpace(strings.TrimPrefix(rest, "retro")))
+	case strings.HasSuffix(c, " memory") && len(strings.Fields(c)) == 2:
+		return []Pointer{{Kind: Mem, Target: strings.TrimSuffix(word, ".md"), Raw: c}}
+	}
+	if ps, ok := moduleRef(c, word, rest, aliases); ok {
+		return ps
 	}
 	return sourceClause(c, word, rest, aliases)
 }

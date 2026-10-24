@@ -1,0 +1,17 @@
+declared difference (row text 2026-10-24): the row names every reset method the rule accepts
+(started/atSteadyState/changed/enable/start); the bash lint printed started/atSteadyState/enable.
+-- args --
+@DIR@/a
+@DIR@/nope
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/a/G.java:5  LRP: HeatOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+-- stderr --
+-- a/G.java --
+package com.x;
+public class G extends BComponent {
+  void execute() {
+    if (inDefrost) return;
+    setHeatOut(false);
+  }
+}

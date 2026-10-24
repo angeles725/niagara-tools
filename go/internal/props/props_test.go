@@ -35,3 +35,21 @@ func TestRead(t *testing.T) {
 		}
 	}
 }
+
+// TestBuildLocationKey (R10-D8): the four host build-location keys, read by lint-structure L10 and
+// lint-machine-default-path alike, and nothing else (user_home is an ordinary host path).
+func TestBuildLocationKey(t *testing.T) {
+	for _, k := range []string{"niagara_home", "niagara_user_home", "nodeHome", "org.gradle.java.installations.paths"} {
+		if !BuildLocationKey(k) {
+			t.Errorf("%s: not a build-location key", k)
+		}
+	}
+	for _, k := range []string{"user_home", "niagara_homeX", "org.gradle.java.installations.auto-detect", ""} {
+		if BuildLocationKey(k) {
+			t.Errorf("%s: a build-location key", k)
+		}
+	}
+	if n := len(BuildLocationKeys()); n != 4 {
+		t.Errorf("BuildLocationKeys: %d keys, want 4", n)
+	}
+}

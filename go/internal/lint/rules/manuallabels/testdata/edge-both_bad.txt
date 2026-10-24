@@ -1,0 +1,10 @@
+-- args --
+@DIR@/nope.md
+@DIR@/nodir
+-- want --
+exit 3
+-- stderr --
+lint-manual-labels: manual not found: @DIR@/nope.md
+-- ui/rc/index.html --
+<button>Guardar</button>
+<span>Rearranque 1</span>

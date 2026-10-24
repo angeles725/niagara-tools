@@ -1,0 +1,35 @@
+-- args --
+@DIR@/cells
+-- want --
+exit 1
+FAIL  lint-write-path  cells  slot Upper: no matrix row
+STALE  lint-write-path  @DIR@/cells/docs/write-path-matrix.md:11  slot ghost: no source slot with that name
+STALE  lint-write-path  @DIR@/cells/docs/write-path-matrix.md:14  slot ghost3: no source slot with that name
+DRIFT  lint-write-path  @DIR@/cells/docs/write-path-matrix.md:17  slot setpoint: concept marker but a source slot exists
+-- stderr --
+-- .git/HEAD --
+x
+-- cells/docs/write-path-matrix.md --
+| Slot | W |
+|---|---|
+| setpoint (x) | a |
+| fanMode/hoa | b |
+|`tick`x| c |
+| Upper | d |
+| `Upper2` | e |
+| `two words` | f |
+| `noclose | g |
+| ``dbl`` | h |
+| `ghost` <!-- [concept] --> | i |
+| `ghost2` <!-- a > b [concept] --> | j |
+| `ghost3` [concept] | k |
+| `ghost3` | l |
+|
+||
+| `setpoint` [concept] | dup |
+-- cells/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)
+@NiagaraProperty(name="fanMode", flags=Flags.OPERATOR)
+@NiagaraProperty(name="tick", flags=Flags.OPERATOR)
+@NiagaraProperty(name="Upper", flags=Flags.OPERATOR)

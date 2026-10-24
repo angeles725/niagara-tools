@@ -55,11 +55,6 @@ func (rule) Severity() lint.Severity { return lint.Warn }
 // part is a file under <part>-rt|-ux|-wb/src/.
 var part = regexp.MustCompile(`(^|/)[^/]+-(rt|ux|wb)/src/`)
 
-const (
-	regionBegin = "BEGIN BAJA AUTO GENERATED CODE"
-	regionEnd   = "END BAJA AUTO GENERATED CODE"
-)
-
 // site is where a definition is: its file and its 1-based name line.
 type site struct {
 	path string
@@ -139,12 +134,11 @@ func delegates(body []javasrc.Token, name string) bool {
 func generated(f *javasrc.File) map[int]bool {
 	gen := map[int]bool{}
 	in := false
-	for i, raw := range f.Raw {
-		inComment := func(m string) bool { return strings.Contains(raw, m) && !strings.Contains(f.Stripped()[i], m) }
+	for i := range f.Raw {
 		switch {
-		case inComment(regionBegin):
+		case f.Marker(i, javasrc.RegionBegin):
 			in = true
-		case inComment(regionEnd):
+		case f.Marker(i, javasrc.RegionEnd):
 			gen[i], in = true, false
 		}
 		if in {

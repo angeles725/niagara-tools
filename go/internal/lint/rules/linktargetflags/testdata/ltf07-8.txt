@@ -1,0 +1,32 @@
+-- args --
+--wiring-map
+@DIR@/map.md
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/BRoomPanel.java:4  LTF1: link-in target "evap2InDrip" (wiring-map Table 2) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- map.md --
+## Table 2 — SUMMARY display slots (control → facade)
+
+| Facade slot | Workbench display name | Source RT slot | Full ord | Physical instance / crossing notes |
+|-------------|------------------------|----------------|----------|-------------------------------------|
+| `evap2InDrip` | Evaporadora 2 en goteo | `inDrip` | _(fill)_ | |
+-- root/com/x/BRoomPanel.java --
+package com.x;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(
+  name = "evap2InDrip",
+  type = "boolean",
+  defaultValue = "false",
+  flags = Flags.SUMMARY | Flags.READONLY
+)
+@NiagaraProperty(
+  name = "temperatureSetpoint",
+  type = "double",
+  defaultValue = "-5.0",
+  flags = Flags.SUMMARY | Flags.OPERATOR
+)
+public final class BRoomPanel extends BComponent {
+}

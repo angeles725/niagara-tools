@@ -1,0 +1,12 @@
+-- args --
+@DIR@/docs/M.HTM
+@DIR@/ui
+-- want --
+exit 0
+SUMMARY  lint-manual-labels  checked=1 missing=0
+-- stderr --
+-- docs/M.HTM --
+<p title="Corte">&ldquo;Guardar&rdquo;</p>
+-- ui/rc/index.html --
+<button>Guardar</button>
+<span>Rearranque 1</span>

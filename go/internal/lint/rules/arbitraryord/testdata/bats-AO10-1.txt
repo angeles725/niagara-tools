@@ -1,0 +1,8 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+-- stderr --
+-- repo/M/src/A.java --
+class A { void f(String q){ BOrd.make(q); log("a//b"); // lint-arbitrary-ord: reviewed internal prefix only
+} }

@@ -1,6 +1,7 @@
 // Package readtools holds the read-only station tools of the mcp-n4 server
-// (mcp-n4-kit/mcp_n4/tools_read.py:198-688, 789-969): n4_connect, n4_describe_session, the
-// tree reads and the BQL bulk reads; every other read tool still answers jsonrpc.NotImplemented.
+// (mcp-n4-kit/mcp_n4/tools_read.py:198-822 and its TOOLS table): n4_connect,
+// n4_describe_session, the tree reads, the BQL bulk reads and the station file reads; every
+// other read tool still answers jsonrpc.NotImplemented.
 package readtools
 
 import (
@@ -24,6 +25,7 @@ type Client interface {
 	Open() (any, error)
 	LoadTree(ord string, depth int, opt box.LoadOptions) (*pyjson.Object, error)
 	GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error)
+	GetFile(urlPath string, timeout float64, maxBytes int) (*box.File, error)
 	BaseURL() string
 	Close()
 }
@@ -52,6 +54,10 @@ type Tools struct {
 	Ctx           *session.Context
 	NewClient     Factory
 	ServerVersion string
+	// Audit is the write machinery's audit log (ctx.write.audit), nil in read-only mode.
+	Audit interface {
+		Append(entry *pyjson.Object) error
+	}
 }
 
 // Register serves the ported read tools on s, with t.Ctx as its session state.
@@ -65,6 +71,11 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_find_dangling_outputs"] = t.FindDanglingOutputs
 	s.Handlers["n4_bql_query"] = t.BqlQuery
 	s.Handlers["n4_inventory"] = t.Inventory
+	s.Handlers["n4_read_file"] = t.ReadFile
+	s.Handlers["n4_list_px_views"] = t.ListPxViews
+	s.Handlers["n4_px_summary"] = t.PxSummary
+	s.Handlers["n4_list_batches"] = t.ListBatches
+	s.Handlers["n4_session_retro_draft"] = t.SessionRetroDraft
 }
 
 func toolError(format string, a ...any) error {

@@ -42,6 +42,7 @@ REASON_ACTION = "is not allowed in this version"
 REASON_VALUE_TYPE = "value_type must be one of"
 REASON_TYPE_SPEC = "type must look like"
 REASON_TIER = "version tier refuses writes"
+REASON_JOURNAL_UNREADABLE = "journal line unreadable"
 
 
 class SafetyError(Exception):
@@ -233,21 +234,31 @@ class _JsonlFile:
         finally:
             os.close(fd)
 
-    def entries(self):
-        """Every parseable JSON object line; a missing file or a torn line is skipped."""
+    def _lines(self):
+        """`(n, entry)` for every JSON object line, `(n, None)` for a line that is not UTF-8.
+
+        Lines are numbered as readlines() splits them (LF, CRLF and CR) and decoded
+        one by one, so one bad byte costs one line, not the file (issues #448, #466). A
+        missing file or a torn line (not a JSON object) is skipped.
+        """
         try:
-            with open(self.path) as fh:
-                lines = fh.readlines()
+            with open(self.path, "rb") as fh:
+                data = fh.read()
         except OSError:
             return []
         out = []
-        for line in lines:
+        for n, raw in enumerate(data.splitlines(), 1):
+            try:
+                line = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                out.append((n, None))
+                continue
             try:
                 entry = json.loads(line)
             except ValueError:
                 continue
             if isinstance(entry, dict):
-                out.append(entry)
+                out.append((n, entry))
         return out
 
 
@@ -276,24 +287,63 @@ class Journal(_JsonlFile):
         view["state"] = "in-doubt" if result is None or result.get("in_doubt") else "completed"
         return view
 
-    def _views(self):
-        intents, results, relinks, comps = {}, {}, {}, {}
-        for entry in self.entries():
-            bid = entry.get("batch_id")
-            if entry.get("phase") == "intent":
+    def _scan(self):
+        """`({batch_id: view}, unreadable)`: the merged views and the lines they could not use.
+
+        An unreadable line is left out of every view: one that is not UTF-8 (its batch is
+        unknown), or one of a batch phase whose `batch_id` or `rollback_of` cannot key a dict
+        or whose component ops cannot extend a list (`TypeError`; its batch is known).
+        """
+        intents, results, relinks, comps, bad = {}, {}, {}, {}, []
+        for n, entry in self._lines():
+            if entry is None:
+                bad.append({"line": n, "reason": "UnicodeDecodeError", "known": False})
+                continue
+            bid, phase = entry.get("batch_id"), entry.get("phase")
+            if phase not in ("intent", "relink-intent", "component-intent", "result"):
+                continue
+            try:
+                hash(bid)
+                if phase in ("intent", "result") and entry.get("rollback_of"):
+                    hash(entry["rollback_of"])  # n4_list_batches keys rolled_back_by by it
+                ops = list(entry.get("ops") or []) if phase == "component-intent" else None
+            except TypeError:
+                bad.append({"line": n, "reason": "TypeError", "known": True, "batch_id": bid,
+                            "rollback_of": entry.get("rollback_of")})
+                continue
+            if phase == "intent":
                 intents.setdefault(bid, entry)
-            elif entry.get("phase") == "relink-intent":
+            elif phase == "relink-intent":
                 relinks.setdefault(bid, entry.get("ops") or [])
-            elif entry.get("phase") == "component-intent":
-                comps.setdefault(bid, []).extend(entry.get("ops") or [])
-            elif entry.get("phase") == "result":
+            elif phase == "component-intent":
+                comps.setdefault(bid, []).extend(ops)
+            else:
                 results[bid] = entry
-        return {bid: self._merge(i, results.get(bid), relinks.get(bid), comps.get(bid))
-                for bid, i in intents.items()}
+        views = {bid: self._merge(i, results.get(bid), relinks.get(bid), comps.get(bid))
+                 for bid, i in intents.items()}
+        return views, bad
+
+    def _views(self):
+        return self._scan()[0]
+
+    def scan(self):
+        """`(views, unreadable)`: `views()` and the unreadable lines, from one read."""
+        views, bad = self._scan()
+        return list(views.values()), bad
 
     def views(self):
         """Merged views of every journaled batch, in journal order."""
         return list(self._views().values())
+
+    def unreadable_for(self, batch_id):
+        """The unreadable lines that may belong to `batch_id`: the rollback check (#448).
+
+        A line may belong to it when its batch is unknown (not UTF-8), when its `batch_id` is
+        `batch_id`, or when its `rollback_of` is: a lost rollback of a batch could let it be
+        rolled back twice. A line of another known batch blocks only that batch.
+        """
+        return [u for u in self._scan()[1] if not u["known"] or u["batch_id"] == batch_id
+                or u["rollback_of"] == batch_id]
 
     def read(self, batch_id):
         """Merged intent+result view of one batch, or None when it was never journaled."""
@@ -309,3 +359,14 @@ class AuditLog(_JsonlFile):
 
     def __init__(self, state_dir):
         super().__init__(state_dir, "audit.jsonl")
+
+    def scan(self):
+        """`(entries, unreadable)`: every JSON object line, and `{"line": n, "reason":
+        "UnicodeDecodeError"}` for each line that is not UTF-8 (left out; issue #466)."""
+        entries, bad = [], []
+        for n, entry in self._lines():
+            if entry is None:
+                bad.append({"line": n, "reason": "UnicodeDecodeError"})
+            else:
+                entries.append(entry)
+        return entries, bad

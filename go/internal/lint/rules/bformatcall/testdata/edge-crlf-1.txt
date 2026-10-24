@@ -1,0 +1,10 @@
+-- args --
+@DIR@/root
+-- want --
+exit 0
+WARN  lint-bformat-call  @DIR@/root/A.java:2  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+-- stderr --
+-- root/A.java --
+class A {
+  String a = "%user%";
+}

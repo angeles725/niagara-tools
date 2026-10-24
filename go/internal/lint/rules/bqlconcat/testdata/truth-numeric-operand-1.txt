@@ -1,0 +1,35 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-bql-string-concat  @DIR@/m/A.java:15  bql concat: String b = "station:|alarm:|bql:select * where uuid = '" + u + "'";
+WARN  lint-bql-string-concat  @DIR@/m/A.java:16  bql concat: String c = "station:|bql:select * where n = " + name;
+WARN  lint-bql-string-concat  @DIR@/m/A.java:17  bql concat: String d = "station:|bql:select * where n = " + stop() + " and m = " + limit;
+WARN  lint-bql-string-concat  @DIR@/m/A.java:18  bql concat: String e = "station:|bql:select * where n = " + w.length + " and m = " + (limit + 1);
+WARN  lint-bql-string-concat  @DIR@/m/A.java:22  bql concat: else { String start = read(); String s = "station:|bql:select * where n = " + start; }
+-- stderr --
+-- m/A.java --
+class A {
+  String name;
+  void f(String u, int limit, boolean on) {
+    long[] window = rangeToWindow(u);
+    long start = window[0];
+    final double ratio = 0.5;
+    String a = "station:|alarm:|bql:select * where timestamp.millis >= " + start
+        + " and timestamp.millis <= " + window[1];
+    String g = "station:|bql:select * where n = " + limit + " and on = " + on;
+    String h = "station:|bql:select * where r = " + ratio + " and k = " + 42 + " and c = " + 'x';
+    String i = start + " is the bql: start";
+    q = BqlQuery.make("select * where n=" + limit);
+  }
+  void g(String u, int limit) {
+    String b = "station:|alarm:|bql:select * where uuid = '" + u + "'";
+    String c = "station:|bql:select * where n = " + name;
+    String d = "station:|bql:select * where n = " + stop() + " and m = " + limit;
+    String e = "station:|bql:select * where n = " + w.length + " and m = " + (limit + 1);
+  }
+  void h(boolean x) {
+    if (x) { long start = 1L; }
+    else { String start = read(); String s = "station:|bql:select * where n = " + start; }
+  }
+}

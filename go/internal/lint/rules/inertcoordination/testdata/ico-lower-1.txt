@@ -1,0 +1,13 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-inert-coordination  @DIR@/Mod/src/com/x/C.java:3  units() returns a structurally singleton list while staggerDelay (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- Mod/src/com/x/C.java --
+public class C {
+  private double staggerDelay = 30;
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}

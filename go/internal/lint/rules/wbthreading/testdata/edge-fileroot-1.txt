@@ -1,0 +1,13 @@
+-- args --
+@DIR@/file.java
+-- want --
+exit 3
+-- stderr --
+lint-wb-threading: not a directory: @DIR@/file.java
+-- file.java --
+class A {
+  public CommandArtifact doInvoke() {
+    BComponent[] k = root.getNavChildren();
+    return null;
+  }
+}

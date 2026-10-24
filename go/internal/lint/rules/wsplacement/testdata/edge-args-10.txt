@@ -1,0 +1,20 @@
+-- args --
+@DIR@/a/
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/a/BP.java:4  add("n", new BFolder()) in seed() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- a/BP.java --
+package com.x;
+public class BP extends BComponent {
+  void seed() {
+    add("n", new BFolder());
+  }
+}
+-- b/BQ.java --
+package com.x;
+public class BQ extends BComponent {
+  void go() {
+    x.add("q", create(t));
+  }
+}

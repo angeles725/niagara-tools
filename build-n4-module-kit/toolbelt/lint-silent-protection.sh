@@ -15,6 +15,11 @@
 # Effect-slot exemption: writing the trip own forced output slot is NOT a surface.
 # Private-field exemption: a private boolean field is NEVER a surface.
 # Exactly ONE WARN per trip site (dedupe on <file>:<line>).
+# On condition: a trip action is guarded by an if( on its line or up to 10 lines above it in the method only
+# when the action lies inside that if statement (its condition, then or else branch, braced or not); a cap
+# below an if block that already closed is unconditional and no trip [ev: issue #459]. The surfaced-field
+# index is tree-wide, so a B-facade writing its *Alarm SUMMARY slot from the pure class's field
+# (getDischargeHighAlarm().setValue(ctl.dischargeHigh)) surfaces the pure class's if (dischargeHigh) trip.
 #
 # Console-only advisory: a trip whose ONLY surface is a console alarm (Pattern A BAlarmSourceExt /
 # BAlarmRecord, or Pattern B BIAlarmSource adapter) with no local status/reason slot write is not
@@ -33,6 +38,7 @@
 # Mutation: S23-pos -- removes Pattern-B alarm-adapter exemption, causing false-WARN on alarmed trips
 # Mutation: SP-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 # Mutation: S23-and -- removes the BIAlarmSource check, allowing bare newOffnormalAlarm to suppress WARN
+# Mutation: SP10 -- dropping the if-statement scope lets an if block closed above an unconditional cap guard it
 # Mutation: SP-console -- drops the console-only row, so an alarm-only trip loses its local-surface advisory
 #
 # Implementation: rule package go/internal/lint/rules/silentprotection (a lint.TreeRule: every file's check

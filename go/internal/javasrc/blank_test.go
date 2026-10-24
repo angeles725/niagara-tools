@@ -77,3 +77,43 @@ func TestBlankLine(t *testing.T) {
 		}
 	}
 }
+
+// TestMaskLiterals: the bytes BlankLiterals removes are blanked in place, so every line keeps its length.
+func TestMaskLiterals(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		in, want []string
+	}{
+		{"no literal", []string{`a(); { b; }`}, []string{`a(); { b; }`}},
+		{"string", []string{`a("x;{}") b`}, []string{`a("    ") b`}},
+		{"escapes", []string{`s = "a\"b" + 'c' + '\''; c();`}, []string{`s = "    " + ' ' + '  '; c();`}},
+		{"open at line end", []string{`foo("ab\`, `bar();`}, []string{`foo("   `, `bar();`}},
+		{"text block", []string{`s = """`, `  add(x);`, `  end""";`, `x();`},
+			[]string{`s = """`, `         `, `     """;`, `x();`}},
+	} {
+		got := MaskLiterals(tc.in)
+		if !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: got %q, want %q", tc.name, got, tc.want)
+		}
+		for i := range got {
+			if len(got[i]) != len(tc.in[i]) {
+				t.Errorf("%s: line %d length %d, want %d", tc.name, i, len(got[i]), len(tc.in[i]))
+			}
+		}
+	}
+}
+
+func TestMaskLine(t *testing.T) {
+	for in, want := range map[string]string{
+		`f("a,b", c)`:     `f("   ", c)`,
+		`x = 'q'; y`:      `x = ' '; y`,
+		`s = "a\"b(" + t`: `s = "     " + t`,
+		`open "abc`:       `open "   `,
+		"plain":           "plain",
+	} {
+		got := MaskLine(in)
+		if got != want || len(got) != len(in) {
+			t.Errorf("MaskLine(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

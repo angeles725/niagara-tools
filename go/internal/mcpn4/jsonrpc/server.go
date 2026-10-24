@@ -12,6 +12,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
 // JSON-RPC error codes (server.py:24).
@@ -27,7 +28,7 @@ const (
 const NotImplemented = "is not implemented in this version of the Go server"
 
 // ReasonNotConnected is safety.REASON_NOT_CONNECTED.
-const ReasonNotConnected = "not connected"
+const ReasonNotConnected = safety.ReasonNotConnected
 
 // Handler runs one tool on validated arguments. Its result becomes structuredContent and the
 // text content. A *ToolError, *box.Error or *pyjson.ValueError is shown to the model (an auth
@@ -79,6 +80,18 @@ func New(reg *registry.Registry) *Server {
 		s.writeNames[t.Name] = true
 	}
 	return s
+}
+
+// EnableWrites lists and serves the write tools after the read tools (--allow-writes), as
+// tools_read.TOOLS + tools_write.TOOLS; a write tool without a handler is not ported yet.
+func (s *Server) EnableWrites() {
+	if len(s.tools) > len(s.reg.Read) {
+		return
+	}
+	s.tools = append(append([]registry.Tool{}, s.reg.Read...), s.reg.Write...)
+	for i := range s.tools {
+		s.byName[s.tools[i].Name] = &s.tools[i]
+	}
 }
 
 // Serve is Server.serve: one reply line per answered input line, flushed at once, until EOF.
@@ -238,11 +251,11 @@ func (s *Server) call(params any) (any, error) {
 	if err := Validate(tool.Schema, args); err != nil {
 		return nil, err
 	}
-	if tool.NeedsSession { // a station call: refused while the auth latch holds (F4)
-		if s.Ctx == nil || !s.Ctx.Connected() {
-			return s.toolError(ReasonNotConnected + ": call n4_connect first"), nil
-		}
-		if block := s.Ctx.AuthBlock(); block != "" {
+	if tool.NeedsSession && (s.Ctx == nil || !s.Ctx.Connected()) {
+		return s.toolError(ReasonNotConnected + ": call n4_connect first"), nil
+	}
+	if tool.NeedsSession || s.writeNames[name] { // a station call: refused while the auth latch holds (F4)
+		if block := s.authBlock(); block != "" {
 			return s.toolError(block), nil
 		}
 	}
@@ -267,6 +280,13 @@ func (s *Server) call(params any) (any, error) {
 // errorText is the text of a failed tool: the words of a ToolError, BoxError (AuthError and
 // HttpStatusError included) or ValueError, else the Python type only, never the message (it
 // could hold a secret).
+func (s *Server) authBlock() string {
+	if s.Ctx == nil {
+		return ""
+	}
+	return s.Ctx.AuthBlock()
+}
+
 func errorText(err error) string {
 	var te *ToolError
 	var be *box.Error

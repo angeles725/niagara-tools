@@ -1,0 +1,23 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- .h/G.java --
+package com.x;
+public class G extends BComponent {
+  void execute() {
+    if (inDefrost) return;
+    setHeatOut(false);
+  }
+}
+-- ok/A.java --
+class A {}
+-- x-worktrees/G.java --
+package com.x;
+public class G extends BComponent {
+  void execute() {
+    if (inDefrost) return;
+    setHeatOut(false);
+  }
+}

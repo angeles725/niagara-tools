@@ -17,7 +17,7 @@ import (
 
 // TestGolden: every tests/lint-servlet.bats run and every edge tree, recorded from the bash lint. A case
 // whose text starts with a note before "-- args --" is a declared difference from the bash lint.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 45) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 51) }
 
 // TestUnreadable: the bash lint walked with scan_files_nonempty_or_exit, which stops at a sub-directory
 // find cannot enter (env line, no row, exit 3), so ContinueOnWalkError stays unset.

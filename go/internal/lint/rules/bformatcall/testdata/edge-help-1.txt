@@ -1,0 +1,7 @@
+-- args --
+-h
+-- want --
+exit 3
+-- stderr --
+lint-bformat-call: unknown flag: -h
+usage: lint-bformat-call.sh [--strict] <src-root>

@@ -3,6 +3,7 @@ package lint
 import (
 	"errors"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -11,19 +12,34 @@ import (
 type Mode int
 
 const (
-	One      Mode = iota // [--strict] [--] <root>: exactly one root
-	First                // [--strict] [--] <root>...: only the first root is checked and scanned
-	Each                 // [--strict] [--] <root>...: every root is checked first, then scanned in order
-	Raw                  // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
-	Exact                // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
-	Trailing             // <root> [--strict]...: the root as given first; only --strict may follow
-	Leading              // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
+	One       Mode = iota // [--strict] [--] <root>: exactly one root
+	First                 // [--strict] [--] <root>...: only the first root is checked and scanned
+	Each                  // [--strict] [--] <root>...: every root is checked first, then scanned in order
+	Raw                   // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
+	Exact                 // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
+	Trailing              // <root> [--strict]...: the root as given first; only --strict may follow
+	Leading               // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
+	Anywhere              // [--strict] <root> [--strict]: --strict anywhere; another "-" argument or a second root is an env error naming it (lint-wb-threading)
+	Valued                // [<option> <value>]... <root>: Spec.Option in any position, the last value wins; each Spec.Options option keeps every value; --strict only with Spec.ValuedStrict; any other "-" argument, a missing value or a second root is the usage line alone
+	FileFirst             // [--strict] <file> <root>...: only a first --strict is a flag; the file (Spec.Option names it in its error) must be a regular file, then every root is checked; Args.Option is the file
 )
 
 // Args is a parsed command line.
 type Args struct {
 	Strict bool
 	Roots  []string
+	Option string              // the value of Spec.Option (Mode Valued) or the file (Mode FileFirst), "" when absent
+	Values map[string][]string // every value of each repeatable option (Spec.Options), in order
+}
+
+// ValueOptions is the option contract of Mode Valued: Option takes one value (the last wins), each Repeat
+// option keeps every value, and Strict accepts --strict. Under Mode FileFirst, Option is the noun of the
+// file operand in its error ("<name>: <Option> not found: <file>"); Repeat and Strict do not apply.
+type ValueOptions struct {
+	Option string
+	Repeat []string
+	Strict bool
+	Named  bool // lint-write-path's named errors and empty-argument root (Spec.ValuedNamed)
 }
 
 // UsageError is a Parse error that prints the usage line (a wrong argument count or an unknown flag);
@@ -36,7 +52,58 @@ func (e *UsageError) Error() string { return e.Text }
 // 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, "<name>: unknown option: <arg>"
 // (Trailing), or "<name>: not a directory: <root>".
 func Parse(mode Mode, name, usage string, args []string) (Args, error) {
+	return ParseOption(mode, name, usage, "", args)
+}
+
+// ParseOption is Parse for a mode that takes a value option (Valued: option is its name, e.g. "--wiring-map")
+// or a file operand (FileFirst: option is its noun in "<name>: <option> not found: <file>", e.g. "manual").
+func ParseOption(mode Mode, name, usage, option string, args []string) (Args, error) {
+	return ParseValued(mode, name, usage, ValueOptions{Option: option}, args)
+}
+
+// ParseValued is Parse under the full Mode Valued contract (vo); Mode FileFirst reads vo.Option as its file
+// noun; every other mode ignores vo.
+func ParseValued(mode Mode, name, usage string, vo ValueOptions, args []string) (Args, error) {
 	var a Args
+	if mode == FileFirst {
+		return parseFileFirst(name, usage, vo.Option, args)
+	}
+	if mode == Valued {
+		// the bash `while [ $# -gt 0 ]; case "$1" in <option>) [ $# -ge 2 ] || usage; v=$2; shift 2 ;;
+		// -*) usage ;; *) [ -z "$root" ] || usage; root=$1 ;; esac`
+		var roots []string
+		for i := 0; i < len(args); i++ {
+			switch arg := args[i]; {
+			case arg != "" && (arg == vo.Option || slices.Contains(vo.Repeat, arg)):
+				if i+1 >= len(args) {
+					return Args{}, valuedError(vo, usage, name+": "+arg+" requires a file argument")
+				}
+				if arg == vo.Option {
+					a.Option = args[i+1]
+				} else {
+					if a.Values == nil {
+						a.Values = map[string][]string{}
+					}
+					a.Values[arg] = append(a.Values[arg], args[i+1])
+				}
+				i++
+			case arg == "--strict" && vo.Strict:
+				a.Strict = true
+			case strings.HasPrefix(arg, "-"):
+				return Args{}, valuedError(vo, usage, name+": unknown option: "+arg)
+			case vo.Named && len(roots) == 1 && roots[0] == "": // `[ -z "$ROOT" ]`: an empty root is unset
+				roots[0] = arg
+			case len(roots) == 1:
+				return Args{}, valuedError(vo, usage, name+": unexpected argument: "+arg)
+			default:
+				roots = append(roots, arg)
+			}
+		}
+		if vo.Named && len(roots) == 1 && roots[0] == "" {
+			roots = nil // the usage line below
+		}
+		args, mode = roots, Raw // the root check below
+	}
 	if mode == Trailing && len(args) > 0 {
 		for _, arg := range args[1:] {
 			if arg != "--strict" {
@@ -45,6 +112,27 @@ func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 			a.Strict = true
 		}
 		args = args[:1]
+	}
+	if mode == Anywhere {
+		// the bash `while [ $# -gt 0 ]; case "$1" in --strict) ;; -*) unknown option ;; *) [ -z "$SRC" ] ||
+		// unexpected argument ;; esac` after a `[ $# -lt 1 ]` usage check
+		if len(args) == 0 {
+			return Args{}, &UsageError{usage + "\n"}
+		}
+		var roots []string
+		for _, arg := range args {
+			switch {
+			case arg == "--strict":
+				a.Strict = true
+			case strings.HasPrefix(arg, "-"):
+				return Args{}, errors.New(name + ": unknown option: " + arg + "\n")
+			case len(roots) == 1:
+				return Args{}, errors.New(name + ": unexpected argument: " + arg + "\n")
+			default:
+				roots = append(roots, arg)
+			}
+		}
+		args, mode = roots, Raw // the usage and root checks below
 	}
 	if mode == Leading && len(args) > 0 && args[0] == "--strict" {
 		// the bash `[ "${1:-}" = "--strict" ] && { STRICT=1; shift; }`: one optional flag, then raw roots
@@ -72,10 +160,45 @@ flags:
 	if mode == Each {
 		a.Roots = args
 	}
-	for _, root := range a.Roots {
+	if err := checkRoots(name, a.Roots); err != nil {
+		return Args{}, err
+	}
+	return a, nil
+}
+
+// valuedError is a Mode Valued argument error: the usage line alone, or under vo.Named the named text.
+func valuedError(vo ValueOptions, usage, named string) error {
+	if vo.Named {
+		return &UsageError{named + "\n"}
+	}
+	return &UsageError{usage + "\n"}
+}
+
+func checkRoots(name string, roots []string) error {
+	for _, root := range roots {
 		if st, err := os.Stat(root); err != nil || !st.IsDir() {
-			return Args{}, errors.New(name + ": not a directory: " + root + "\n")
+			return errors.New(name + ": not a directory: " + root + "\n")
 		}
+	}
+	return nil
+}
+
+// parseFileFirst is the bash `case "${1:-}" in --strict) STRICT=1; shift ;; esac; [ $# -ge 2 ] || usage;
+// [ -f "$1" ] || <not found>; for d in "${@:2}"; do [ -d "$d" ] || <not a directory>; done`.
+func parseFileFirst(name, usage, noun string, args []string) (Args, error) {
+	var a Args
+	if len(args) > 0 && args[0] == "--strict" {
+		a.Strict, args = true, args[1:]
+	}
+	if len(args) < 2 {
+		return Args{}, &UsageError{usage + "\n"}
+	}
+	if st, err := os.Stat(args[0]); err != nil || !st.Mode().IsRegular() {
+		return Args{}, errors.New(name + ": " + noun + " not found: " + args[0] + "\n")
+	}
+	a.Option, a.Roots = args[0], args[1:]
+	if err := checkRoots(name, a.Roots); err != nil {
+		return Args{}, err
 	}
 	return a, nil
 }

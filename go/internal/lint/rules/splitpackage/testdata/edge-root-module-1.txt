@@ -1,0 +1,14 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  com.r  declared in 2 modules: @DIR@/proj (src/R.java), A/A-rt (A/A-rt/src/a/R.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/A/A-rt/build.gradle.kts --
+-- proj/A/A-rt/src/.keep --
+k
+-- proj/A/A-rt/src/a/R.java --
+package com.r;
+-- proj/build.gradle.kts --
+-- proj/src/R.java --
+package com.r;

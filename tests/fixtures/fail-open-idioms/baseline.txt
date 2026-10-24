@@ -1,0 +1,4 @@
+# Known fail-open idioms in scripts/, build-n4-module-kit/toolbelt/ and .githooks/ when the guard landed
+# (2026-10-24, origin/main 45ddb3b5): none. One row per `<kind> <file>:<line>` (FOI2 fails when the tree has
+# more rows than listed or fewer). Never add a row for new code: derive pass/fail from the producer's exit
+# status instead (retros/2026-10-24-fail-open-pipeline-checks.md Δ1).

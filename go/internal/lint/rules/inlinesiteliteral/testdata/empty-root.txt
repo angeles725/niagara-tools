@@ -1,0 +1,8 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 3
+ERROR  lint-inline-site-literal  @DIR@/Mod  no *.java under a -rt or -ux part's src/ and no *.js under an rc/ (wrong path: pass the module root)
+-- stderr --
+-- Mod/README.txt --
+notes

@@ -23,6 +23,7 @@ const (
 	Pass                     // a check that held (rows print PASS); never affects the exit code
 	Advisory                 // a note that is not a failure (rows print ADVISORY); never affects the exit code
 	Info                     // information only (rows print INFO); never affects the exit code
+	Summary                  // a run total (rows print SUMMARY); never affects the exit code
 )
 
 func (s Severity) String() string {
@@ -35,6 +36,8 @@ func (s Severity) String() string {
 		return "ADVISORY"
 	case Info:
 		return "INFO"
+	case Summary:
+		return "SUMMARY"
 	}
 	return "WARN"
 }
@@ -47,28 +50,41 @@ type Finding struct {
 	Rule     string
 	Check    string // the sub-check shown in the check column; empty shows Rule
 	Severity Severity
+	Status   string // the first column printed instead of the severity's name (lint-write-path's STALE, DRIFT); it still counts as Severity
 	Path     string
 	Line     int
 	Msg      string
 }
 
 // Row is the line the bash lints print: "WARN  <check>  <path>:<line>  <msg>", or "WARN  <check>  <path>: <msg>"
-// for a file-level finding (Line 0). The check column is Check, or Rule when Check is empty.
-func (f Finding) Row() string { return f.row(false) }
+// for a file-level finding (Line 0), or "SUMMARY  <check>  <msg>" for a finding about the whole run (Line 0 and
+// no Path, which only a TreeRule can leave empty). The check column is Check, or Rule when Check is empty.
+func (f Finding) Row() string { return f.row(false, false) }
 
-// row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow).
-func (f Finding) row(bare bool) string {
+// row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow) and the
+// check column before the severity when checkFirst is set (Spec.CheckFirst).
+func (f Finding) row(bare, checkFirst bool) string {
 	check := f.Check
 	if check == "" {
 		check = f.Rule
 	}
+	first, second := f.Severity.String(), check
+	if f.Status != "" {
+		first = f.Status
+	}
+	if checkFirst {
+		first, second = check, first
+	}
+	if f.Line == 0 && f.Path == "" {
+		return fmt.Sprintf("%s  %s  %s", first, second, f.Msg)
+	}
 	if f.Line == 0 && bare {
-		return fmt.Sprintf("%s  %s  %s  %s", f.Severity, check, f.Path, f.Msg)
+		return fmt.Sprintf("%s  %s  %s  %s", first, second, f.Path, f.Msg)
 	}
 	if f.Line == 0 {
-		return fmt.Sprintf("%s  %s  %s: %s", f.Severity, check, f.Path, f.Msg)
+		return fmt.Sprintf("%s  %s  %s: %s", first, second, f.Path, f.Msg)
 	}
-	return fmt.Sprintf("%s  %s  %s:%d  %s", f.Severity, check, f.Path, f.Line, f.Msg)
+	return fmt.Sprintf("%s  %s  %s:%d  %s", first, second, f.Path, f.Line, f.Msg)
 }
 
 // Rule is one lint check over one Java file. Check returns its findings in report order; a non-nil
@@ -108,6 +124,47 @@ type RootRule interface {
 	CheckRoot(root string) ([]Finding, error)
 }
 
+// RowError is a TreeRule or RootRule error printed as Row on stdout, after the findings returned with it,
+// instead of "<lint>: <error>" on stderr; it fails the scan closed like any error (exit 3). It is for a
+// bash lint whose env errors were stdout rows (lint-write-path's "lint-write-path  ERROR  <root>  <why>").
+type RowError struct{ Row string }
+
+func (e *RowError) Error() string { return e.Row }
+
+// Configurer is implemented by a rule that reads a value option (Spec.Option, Mode Valued) before it scans:
+// when the rule runs alone, Configure gets the parsed Args after the root check and before the walk and
+// returns a NEW rule value of the same kind (Rule, TreeRule or RootRule) holding what it read, which runs
+// instead; the registered rule is never changed, so in one process a later run (alone or in a rule list,
+// where Configure is not called) never sees an earlier run's values. A non-nil error is printed verbatim on
+// stderr (the rule writes the whole text) and exits 3 with no row.
+type Configurer interface {
+	Configure(a Args) (Configured, error)
+}
+
+// Configured is the rule value a Configurer returns: a Rule, a TreeRule or a RootRule, of its spec's kind.
+type Configured interface {
+	ID() string
+	Severity() Severity
+}
+
+// withRule is sp running r, the value its rule's Configure returned, in place of its registered rule; a
+// value of another kind is a registration bug (panic).
+func (sp Spec) withRule(r Configured) Spec {
+	var ok bool
+	switch {
+	case sp.Tree != nil:
+		sp.Tree, ok = r.(TreeRule)
+	case sp.Root != nil:
+		sp.Root, ok = r.(RootRule)
+	default:
+		sp.Rule, ok = r.(Rule)
+	}
+	if !ok {
+		panic("lint: rule " + sp.ID() + ": Configure returned a value of another kind")
+	}
+	return sp
+}
+
 // ErrEmptyRoot is what a RootRule or a TreeRule returns for a root that holds nothing it checks.
 var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
 
@@ -122,14 +179,40 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// ShortScanError words an unreadable file as awk_lint_each did ("<lint>: cannot scan <path>: <reason>")
+	// instead of awk_lint_run's awk error text (lint-agent-on-shape).
+	ShortScanError bool
+	// CheckFirst prints a finding's check column before its severity (`<check>  <SEV>  <path>:<line>  <msg>`),
+	// the row of lint-wb-threading; the empty-root ERROR row keeps the standard shape.
+	CheckFirst bool
+	// Joined gives a TreeRule the files of every root in one CheckTree call, after the last root, for a lint
+	// whose report spans its roots (lint-manual-labels: one UI haystack and one SUMMARY row over every <ui-dir>).
+	Joined bool
 	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
 	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
-	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.
+	// has nothing to check, and report-module runs it on every module); a walk error still exits 3. A RootRule
+	// that returns no ErrEmptyRoot for such a root (lint-jasmine-ux) sets it to record the same exception.
 	EmptyOK bool
+	// OptionalInAll makes a root where the rule selects no file clean for it under n4lint --all (no ERROR
+	// row), for a rule whose files belong to one profile only (lint-spa-poll-no-recovery reads the *.html/*.js
+	// of a -ux root, and --all also runs on -rt roots that have none). Run by name or in a rule list it keeps
+	// the empty-root error.
+	OptionalInAll bool
 	// ModuleRoot marks a rule whose roots are module roots, not source roots (lint-duplicate-helper reads
 	// every part's src/): n4lint --all, which runs on source roots, leaves it out as it leaves out a
 	// RootRule; it runs by name or in a rule list.
 	ModuleRoot bool
+	// Option is the value option Mode Valued parses (e.g. "--wiring-map"), or the noun of the file operand of
+	// Mode FileFirst ("manual"); the rule reads its value (Args.Option) by implementing Configurer.
+	Option string
+	// Options are further Mode Valued value options, each repeatable (every value in Args.Values), and
+	// ValuedStrict accepts --strict in Mode Valued.
+	Options      []string
+	ValuedStrict bool
+	// ValuedNamed gives Mode Valued lint-write-path's named errors instead of the usage line alone: "<name>:
+	// unknown option: <arg>", "<name>: <option> requires a file argument", "<name>: unexpected argument:
+	// <arg>"; and an empty argument leaves the root unset, so a later one takes its place (`[ -z "$ROOT" ]`).
+	ValuedNamed bool
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
@@ -156,6 +239,21 @@ type Spec struct {
 	// printed ${file#"$root/"} did (a root given with a trailing "/" keeps the whole path, as there). Env
 	// lines on stderr keep the walk path.
 	RelPaths bool
+	// IntFlags are the "<name> <n>" options (n a non-negative integer, e.g. "--max-class 800") the rule takes
+	// when it runs alone, as a bash lint's AL_FLAG_HOOK took them: among the leading flags, before "--" and
+	// the roots, any order with --strict, the last one given winning. A value that is missing or not all
+	// digits prints "<lint>: <name> needs a non-negative integer" and the usage line (exit 3); an unknown flag
+	// before it stays Parse's unknown-flag error. Configure (required with IntFlags) builds the rule from
+	// the values, every flag not given at its Default; in a rule list or under --all the rule runs as
+	// registered (its defaults).
+	IntFlags  []IntFlag
+	Configure func(vals map[string]int) Rule
+}
+
+// IntFlag is one Spec.IntFlags option: its name as typed ("--max-class") and its value when not given.
+type IntFlag struct {
+	Name    string
+	Default int
 }
 
 // EmptyRow is the ERROR row of Spec.EmptyError.
@@ -178,10 +276,7 @@ func (sp Spec) ID() string { return sp.rule().ID() }
 func (sp Spec) severity() Severity { return sp.rule().Severity() }
 
 // rule is the one rule value the spec sets.
-func (sp Spec) rule() interface {
-	ID() string
-	Severity() Severity
-} {
+func (sp Spec) rule() Configured {
 	switch {
 	case sp.Tree != nil:
 		return sp.Tree
@@ -209,6 +304,12 @@ func (sp Spec) validate() error {
 	_, isRoot := r.(RootRule)
 	if count(isRule, isTree, isRoot) != 1 {
 		return errors.New("lint: rule " + r.ID() + " implements more than one of Rule, TreeRule and RootRule")
+	}
+	if sp.Mode == FileFirst && sp.Option == "" {
+		return errors.New("lint: rule " + r.ID() + " has Mode FileFirst without an Option noun")
+	}
+	if len(sp.IntFlags) > 0 && (sp.Configure == nil || sp.Rule == nil) {
+		return errors.New("lint: rule " + r.ID() + " has IntFlags without a per-file Rule and Configure")
 	}
 	return nil
 }

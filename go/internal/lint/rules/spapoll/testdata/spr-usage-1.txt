@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-spa-poll-no-recovery.sh [--strict] <ux-src-root>

@@ -14,6 +14,10 @@
 # [ev: retro ledger-generated-not-committed]
 # BUILD-STATE.src.md, ledger.d/ and retros/ are not build-relevant (they need no retro of their own), but they are
 # exactly what sweep checks: a range that changes any of them runs sweep at every exit, even the trivial one.
+# Live-doctrine citation gate, before every exit: a range that changes a live card (scripts/lib/live-doctrine-set.sh)
+# or the resolver runs `kit-cite-resolve --strict` on the pushed live set. Findings (exit 1) or any tool failure
+# refuse; only exit 3 naming an absent research/modules/clients/memory root skips, with a named stderr line. It is
+# local-only: GitHub runners hold none of those roots, so ci.yml cannot run it.
 #
 # Every grep reads its input from a here-string, never `printf … | grep -q`: git runs this hook with SIGPIPE
 # ignored, so an early-exiting grep made printf report "write error: Broken pipe" (tests H29).
@@ -55,6 +59,40 @@ fi
 
 changed=$(git diff --name-only "$range") || refuse "git diff $range failed"
 log=$(git log --format=%B "$range") || refuse "git log $range failed"
+
+# The live-doctrine citation gate runs FIRST: the early exits below waive retro bookkeeping, never this.
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via the hook path
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/lib/live-doctrine-set.sh" \
+  || refuse "cannot load scripts/lib/live-doctrine-set.sh"
+live_cite_check() {   # returns 0 to go on; refuses on findings or a tool failure
+  grep -qE "$LIVE_DOCTRINE_RE|$LIVE_CITE_TOOL_RE" <<<"$changed" || return 0
+  local tree out rc absent
+  local -a cards
+  tree=$(git ls-tree -r --name-only "$lsha") || refuse "git ls-tree $lsha failed"
+  mapfile -t cards < <(live_doctrine_files <<<"$tree")
+  [ "${#cards[@]}" -ge 1 ] || return 0
+  # the resolver reads the working tree: it must hold the pushed bytes of every path it reads or runs
+  git diff --quiet "$lsha" -- "${cards[@]}" go/internal/citeparse go/internal/citeresolve go/cmd/kit-cite-resolve \
+      build-n4-module-kit/toolbelt/kit-cite-resolve.sh \
+    || refuse "the working tree differs from the pushed $lsha on the live doctrine set or the resolver (check out the pushed commit)"
+  out=$(cd "$toplevel" && bash build-n4-module-kit/toolbelt/kit-cite-resolve.sh --kit build-n4-module-kit \
+          --format tsv --strict "${cards[@]}" 2>&1)
+  rc=$?
+  case $rc in
+    0) return 0 ;;
+    1) awk -F'\t' 'NF >= 7 && $6 !~ /^(RESOLVED|HISTORICAL_DRIFT|UNVERIFIABLE_KIND|SKIPPED_TEMPLATE)$/' <<<"$out" \
+         | head -20 >&2
+       refuse "live doctrine has unresolved pointers (kit-cite-resolve --strict; rows above, first 20)" ;;
+    3) # a research/modules/clients/memory root absent on this machine is the one named skip
+       absent=$(sed -nE 's/^kit-cite-resolve: cannot read (research|modules|clients|memory) root (.*): no such file or directory$/\1 \2/p' <<<"$out" | head -1)
+       if [ -n "$absent" ]; then
+         echo "pre-push: live cite check SKIPPED — roots absent ($absent)" >&2; return 0
+       fi ;;
+  esac
+  tail -5 <<<"$out" >&2
+  refuse "kit-cite-resolve failed (exit $rc; above), a tool failure is not a zero result"
+}
+live_cite_check
 
 # build-relevant = kit files EXCEPT BUILD-STATE.src.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
 # go/** except the built go/bin/ (the toolbelt wrappers exec the Go tools, so a go/ change changes lint

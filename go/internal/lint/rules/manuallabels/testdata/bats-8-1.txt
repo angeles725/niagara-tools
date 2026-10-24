@@ -1,0 +1,20 @@
+-- args --
+@DIR@/docs/manual.md
+@DIR@/ui
+-- want --
+exit 0
+WARN  lint-manual-labels  @DIR@/docs/manual.md:1  label "Guard" not found in the UI source
+SUMMARY  lint-manual-labels  checked=3 missing=1
+-- stderr --
+-- docs/manual.md --
+Set "Límite succión baja" and "Rearranque". Do not press "Guard".
+-- rt/module.lexicon --
+pressure=Presi\u00f3n de succi\u00f3n
+-- ui/rc/app.js --
+var title = "Modo   manual";
+-- ui/rc/index.html --
+<button id="save">Guardar</button>
+<label>Temp. de corte</label>
+-- ui/rc/more.html --
+<span>Limite succion baja</span>
+<span>Rearranque 1</span>

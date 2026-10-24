@@ -1,0 +1,16 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-inert-coordination  @DIR@/Mod/src/com/x/D.java:6  units() returns a structurally singleton list while waitingQueue (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- Mod/src/com/x/D.java --
+public class D {
+  private Deque<BComponent> waitingQueue = new ArrayDeque<BComponent>();
+  int count() {
+    return units().size();
+  }
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}

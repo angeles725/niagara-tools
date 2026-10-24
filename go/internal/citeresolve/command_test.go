@@ -92,3 +92,20 @@ func TestDefaultKitFromCard(t *testing.T) {
 		t.Errorf("exit %d, stderr %q; want the kit found above the card", code, errs)
 	}
 }
+
+// TestFindKitWithoutAGeneratedIndex: the build-n4-module kit does not commit retros/INDEX.md (R10-D1), so
+// a clean clone is found by its committed BUILD-STATE.src.md.
+func TestFindKitWithoutAGeneratedIndex(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "types"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "BUILD-STATE.src.md"), []byte("# source\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want, _ := filepath.Abs(root)
+	if got := findKit(filepath.Join(root, "types", "card.md")); got != want {
+		t.Errorf("findKit = %q, want %q", got, want)
+	}
+}

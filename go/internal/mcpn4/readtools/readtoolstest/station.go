@@ -5,6 +5,7 @@ package readtoolstest
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -38,7 +39,12 @@ type Station struct {
 	OrdRoutes   []OrdRoute
 	OrdCap      int
 	OrdRequests []OrdRequest
-	next        int
+	// Files answer GET /file/<path> (FakeStation.files): a path's body and content type, or
+	// the HTTP status Code to answer instead; a missing path or a .bog is a 404 / 403.
+	// FileRequests is every decoded path read, in order.
+	Files        map[string]File
+	FileRequests []string
+	next         int
 }
 
 // NewStation is a tier A station named FakeStation.
@@ -142,6 +148,44 @@ func (c *client) GetOrd(ord string, timeout float64, maxBytes int) (string, bool
 		return r.Body, false, nil
 	}
 	return "", false, &box.Error{Kind: box.KindBox, Msg: "unexpected ORD " + ord, Channel: "ord", Key: "get"}
+}
+
+// File is one answer of GET /file/; NoType sends no Content-Type header.
+type File struct {
+	Body, ContentType string
+	NoType            bool
+	Code              int
+}
+
+// GetFile answers from the station's Files like box.Client.GetFile: a wrong password is an
+// AuthError, a 403/404 an HttpStatusError, a body longer than maxBytes cut and truncated.
+func (c *client) GetFile(urlPath string, timeout float64, maxBytes int) (*box.File, error) {
+	path, _ := url.PathUnescape(strings.TrimPrefix(urlPath, "/file/"))
+	c.st.FileRequests = append(c.st.FileRequests, path)
+	if c.cfg.Password != c.st.Password {
+		return nil, c.authError("file", "get")
+	}
+	f, ok := c.st.Files[path]
+	lower := strings.ToLower(path)
+	switch {
+	case strings.HasSuffix(lower, ".bog") || strings.HasSuffix(lower, ".bog.gz"):
+		f = File{Code: 403}
+	case !ok:
+		f = File{Code: 404}
+	}
+	if f.Code != 0 {
+		return nil, &box.Error{Kind: box.KindHTTPStatus, Msg: fmt.Sprintf("HTTP %d from station", f.Code),
+			Channel: "file", Key: "get", Code: f.Code}
+	}
+	body := []byte(f.Body)
+	out := &box.File{Body: body, Truncated: len(body) > maxBytes, ContentLength: pyjson.IntLiteral(fmt.Sprint(len(body)))}
+	if !f.NoType {
+		out.ContentType = &f.ContentType
+	}
+	if out.Truncated {
+		out.Body = body[:maxBytes]
+	}
+	return out, nil
 }
 
 func (c *client) BaseURL() string { return strings.TrimRight(c.cfg.BaseURL, "/") }

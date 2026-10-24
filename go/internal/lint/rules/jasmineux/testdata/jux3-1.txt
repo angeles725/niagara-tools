@@ -1,0 +1,9 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- src/rc/index.html --
+<html></html>
+-- srcTest/rc/spec/xSpec.js --
+describe("x",function(){});

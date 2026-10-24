@@ -1,0 +1,39 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- .h/A.java --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}
+-- ok/B.java --
+class B {}
+-- x-worktrees/A.java --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}

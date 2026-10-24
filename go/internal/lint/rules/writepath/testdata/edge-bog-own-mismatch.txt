@@ -1,0 +1,89 @@
+-- args --
+@DIR@/bog/Other
+--bog
+@DIR@/bog/config.bog
+--matrix
+@DIR@/bog/ColdRoomPan/docs/write-path-matrix.md
+-- want --
+exit 0
+STALE  lint-write-path  @DIR@/bog/ColdRoomPan/docs/write-path-matrix.md:2  slot bogSetpoint: no source slot with that name
+STALE  lint-write-path  @DIR@/bog/ColdRoomPan/docs/write-path-matrix.md:3  slot ghost: no source slot with that name
+STALE  lint-write-path  @DIR@/bog/ColdRoomPan/docs/write-path-matrix.md:4  slot innerSlot: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- bog/ColdRoomPan/ColdRoomPan-rt/src/B.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+-- bog/ColdRoomPan/ColdRoomPan-ux/src/U.java --
+class U {}
+-- bog/ColdRoomPan/ColdRoomPan-wb/src/W.java --
+@NiagaraProperty(name="wbKnob", flags=Flags.OPERATOR)
+-- bog/ColdRoomPan/docs/write-path-matrix.md --
+| `setpoint` | a |
+| `bogSetpoint` | b |
+| `ghost` | c |
+| `innerSlot` | d |
+-- bog/Other/src/B.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+-- bog/config.bog --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0">
+<p t="b:Station" m="b=baja">
+ <p n="Drivers" h="1" t="b:Folder">
+  <p n="Dash" h="10" t="DPCD:DashMain" m="DPCD=DashboardPan">
+   <p n="cfg" v="1"/>
+  </p>
+  <p n="Panel" h="11" t="RP:Panel" m="RP=myRoomPanelMod">
+   <p n="cfg" v="1"/>
+  </p>
+  <p n="Leaf" h="12" t="DPCD:DashLeaf"/>
+  <p n="Other" h="13" t="o:Other" m='o=otherMod'>
+   <p n="cfg" v="1"/>
+  </p>
+  <p n="Room" h="20" t="CRP:Room" m='CRP=ColdRoomPan'>
+   <p n="Link" t="b:Link">
+    <p n="sourceOrd" v="h:10"/>
+    <p n="sourceSlotName" v="out"/>
+    <p n="targetSlotName" v="bogSetpoint"/>
+   </p>
+   <p n="Link1" t="b:Link">
+    <p n="sourceOrd" v="h:11"/>
+    <p n="targetSlotName" v="panelSlot"/>
+   </p>
+   <p n="Link2" t="b:Link">
+    <p n="sourceOrd" v="h:12"/>
+    <p n="targetSlotName" v="leafSlot"/>
+   </p>
+   <p n="Link3" t="b:Link">
+    <p n="sourceOrd" v="h:13"/>
+    <p n="targetSlotName" v="otherSlot"/>
+   </p>
+   <p n="Link4" t="b:Link">
+    <p n="sourceOrd" v="station:|h:10"/>
+    <p n="targetSlotName" v="ordSlot"/>
+   </p>
+   <p n="Inner" t="b:Folder">
+    <p n="Link5" t="b:Link">
+     <p n="sourceOrd" v="h:10"/>
+     <p n="targetSlotName" v="innerSlot"/>
+    </p>
+   </p>
+   <a n="act" f="h"/>
+   <p n="Link6" t="b:Link">
+    <p n="sourceOrd" v="h:10"/>
+    <p n="targetSlotName" v=""/>
+   </p>
+  </p>
+  <p n="Comp" h="30" t="COMPAN:Rack" m='COMPAN=CompPan'>
+   <p n="Link" t="b:Link">
+    <p n="sourceOrd" v="h:10"/>
+    <p n="targetSlotName" v="compSlot"/>
+   </p>
+  </p>
+ </p>
+</p>
+</bajaObjectGraph>

@@ -1,0 +1,14 @@
+-- args --
+@DIR@/crlf
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/crlf/A.java:5  BOrd.make from a variable: BOrd.make(q);
+-- stderr --
+-- crlf/A.java (noeol) --
+class A {
+  void f(String q) {
+    // lint-arbitrary-ord: reviewed crlf above
+    BOrd.make(q);
+    BOrd.make(q);
+  }
+}

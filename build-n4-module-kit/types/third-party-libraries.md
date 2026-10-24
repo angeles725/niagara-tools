@@ -174,7 +174,7 @@ heavy library.
 
 ## Hard constraints
 
-### Compact3 gate — rt/ux JVM `[ev: corpus B1023 §1023.3, build-verify.md §"Profile constraints — rt/ux Compact 3"]`
+### Compact3 gate — rt/ux JVM `[ev: corpus B1023 §1023.3]` `[ev: build-verify.md §Profile constraints — rt/ux Compact 3]`
 
 The JACE JVM is Azul ZRE `azul-zre-compact3-qnx7-arm` v1.8.0 (Java 8,
 Compact3 profile). The following packages are **absent** on the station:
@@ -199,11 +199,11 @@ libraries still ship a Java 8–compatible artifact; look for a `-jre8` or
 **Multi-release jars are fine:** a library may ship Java 9+ classes under
 `META-INF/versions/<N>/` (Jackson 2.21.2 ships major-55 ones) — a Java 8 runtime
 never loads them, so the base classes decide. Path 0's `uberjar("com.fasterxml.jackson.core:jackson-databind:2.21.2")`
-embedded databind + core + annotations (1107 classes) and ran live; "pin to Java-8
+embedded databind and its transitive core + annotations (1107 classes, +2.5 MB) and ran live; "pin to Java-8
 builds" means a Java-8 BASE, not a jar without `META-INF/versions/`.
 `verify-module.sh`'s bytecode check and `lint-bundled-jar-class-version.sh` both
 skip `META-INF/versions/**` (the bytecode row counts them).
-`[ev: retro n4-course-signed-jars-gate-fix Δ3]`
+`[ev: retro n4-course-signed-jars-gate-fix Δ3]` `[ev: retro n4-course-handson-services-history-threading Δ5]`
 
 ### Native JNI caveat `[ev: corpus B26 §26.7, §26.4]`
 

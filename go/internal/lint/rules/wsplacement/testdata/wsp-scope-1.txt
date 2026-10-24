@@ -1,0 +1,16 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/Mod/src/com/x/BSvc.java:7  add("n", new BFolder()) in seed() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- Mod/src/com/x/BSvc.java --
+package com.x;
+public class BSvc extends BComponent {
+  void place(BComponent c) {
+    c.add("wsAnnotation", BWsAnnotation.make(1, 1, 8), Flags.READONLY);
+  }
+  void seed() {
+    add("n", new BFolder());
+  }
+}

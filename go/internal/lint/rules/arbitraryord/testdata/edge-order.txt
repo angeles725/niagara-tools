@@ -1,0 +1,17 @@
+-- args --
+@DIR@/two
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/two/A.java:1  BOrd.make from a variable: BOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/two/a/A.java:1  BOrd.make from a variable: BOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/two/b/C.java:1  BOrd.make from a variable: BOrd.make(q);
+-- stderr --
+-- two/A.java --
+BOrd.make(q);
+-- two/a/A.java --
+BOrd.make(q);
+-- two/b/B.java --
+x
+// lint-arbitrary-ord: reviewed not across files
+-- two/b/C.java --
+BOrd.make(q);

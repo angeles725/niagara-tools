@@ -1,0 +1,14 @@
+-- args --
+@DIR@/P.java
+-- want --
+exit 3
+-- stderr --
+lint-size: not a directory: @DIR@/P.java
+-- P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}

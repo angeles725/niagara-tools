@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-15 · kit · n4-course-as-exemplar-source
@@ -38,3 +38,14 @@ slotomatic` → fix errors → `gradlew jar`", run directly with `gradlew`, not 
 - A digested source that never reaches the kit index is invisible to the build loop; 29 blocks and 13 proposed deltas sat unused.
 - Tridium training outranks corpus inference for doctrine; where they disagree, the kit rule is the one to re-verify.
 - For course work, the user's reference and style are the specification; independent redesign is a deviation that must be named.
+
+## Fold record (2026-10-24, quality round 10)
+- Δ1 OWED #472: `SOURCES.md` § Exemplar source and the `corpus-index.md` n4-dev-course rows sit outside this fold's
+  edit surface; parked as `[deferred: retro n4-course-as-exemplar-source Δ1]` in `ledger.d/2026-10-23-r8-u11-leftovers.md`.
+  `BUILD-LOOP.md` § 0 already names the course a primary exemplar source (B1230-B1258, synthesis B1242).
+- Δ2 FOLDED: `BUILD-LOOP.md` § 0 Orient, the reference-first bullet. The `skill/SKILL.md` step 2 pointer is in #472.
+- Δ3 FOLDED: `METHODOLOGY.md` K33; the sweep and the report lint stay owed as Go lint G38 `absolute-claims`.
+- Δ4 FOLDED: `METHODOLOGY.md` K15 (reference sources are the no-marker case) and `build-verify.md` § Raw gradle.
+
+---
+**Status**: FOLDED 2026-10-24 — Δ2-Δ4 folded by quality round 8 (U4 C58, U11, process unit); Δ1 owed as #472 (outside the edit surface); INDEX row flipped to folded.

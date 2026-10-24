@@ -2,6 +2,7 @@ package readtools
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"os"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/bql"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/token"
 )
 
 // The bulk reads n4_bql_query and n4_inventory (tools_read.py:531-688, retro 2026-10-02 D1, D7,
@@ -25,15 +27,19 @@ var inventoryQueries = [][2]string{
 // inventory query selects them.
 var inventoryColumns = []string{"Slot Path", "Name", "Type"}
 
-// recordRead is _record_read: a session observation of a read (no audit log runs without
-// --allow-writes, which this version refuses).
-func (t *Tools) recordRead(tool string, args *pyjson.Object, rows int) {
+// recordRead is _record_read: a session observation of a read naming args[key] and, when the
+// write machinery runs (--allow-writes), a best-effort audit line with outcome "read".
+func (t *Tools) recordRead(tool, key string, args *pyjson.Object, rows int) {
 	ord := ""
-	if v, ok := args.Get("base"); ok {
+	if v, ok := args.Get(key); ok {
 		ord = pyjson.Str(v)
 	}
 	t.Ctx.Observations = append(t.Ctx.Observations, obj("ts", session.Now(), "tool", tool, "rows", rows,
 		"ord", t.Ctx.Scrub(ord)))
+	if t.Audit != nil {
+		t.Audit.Append(obj("ts", session.Now(), "tool", tool, "batch_id", nil, "dry_run", false,
+			"outcome", "read", "reason", fmt.Sprintf("rows=%d", rows), "args_redacted", token.Redact(args)))
+	}
 }
 
 // progress is _progress: one entry in log and, best effort, a line in the operator's file.
@@ -101,7 +107,7 @@ func (t *Tools) BqlQuery(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	t.recordRead("n4_bql_query", args, len(rows))
+	t.recordRead("n4_bql_query", "base", args, len(rows))
 	out := obj("base", base, "query", bql.Strip(q), "columns", strs(columns), "row_count", len(rows),
 		"truncated", truncated, "elapsed_ms", elapsed)
 	if path == "" {
@@ -142,7 +148,7 @@ func (t *Tools) Inventory(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, toolError("%s", err.Error())
 	}
-	t.recordRead("n4_inventory", args, rowCount)
+	t.recordRead("n4_inventory", "base", args, rowCount)
 	out.Set("base", base)
 	out.Set("truncated", truncated)
 	out.Set("progress", log)
