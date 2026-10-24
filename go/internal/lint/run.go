@@ -35,7 +35,8 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs)), strict: a.Strict}
 	defer r.out.Flush()
 	sel, walks := union(specs)
-	stopped := make([]bool, len(specs)) // rules a walk error has stopped (Spec.ContinueOnWalkError unset)
+	stopped := make([]bool, len(specs))           // rules a walk error has stopped (Spec.ContinueOnWalkError unset)
+	joined := make([][]*javasrc.File, len(specs)) // a Spec.Joined rule's files over every root
 	live := len(specs)
 	for _, root := range a.Roots {
 		var files []string
@@ -102,6 +103,10 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			if sp.Tree == nil || stopped[i] {
 				continue
 			}
+			if sp.Joined {
+				joined[i] = append(joined[i], trees[i]...)
+				continue
+			}
 			fds, err := sp.Tree.CheckTree(trees[i])
 			if errors.Is(err, ErrEmptyRoot) { // nothing it checks among the selected files: its ERROR row only
 				r.empty(i, sp, root)
@@ -123,6 +128,15 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				stopped[i], live = true, live-1
 				continue
 			}
+			r.findings(i, sp, "", fds)
+			if err != nil {
+				r.envError(i, err.Error())
+			}
+		}
+	}
+	for i, sp := range specs {
+		if sp.Joined && !stopped[i] {
+			fds, err := sp.Tree.CheckTree(joined[i])
 			r.findings(i, sp, "", fds)
 			if err != nil {
 				r.envError(i, err.Error())
@@ -298,7 +312,7 @@ func Command(specs ...Spec) cli.Main {
 		var selected []Spec
 		if args[0] == "--all" {
 			for _, sp := range specs {
-				if sp.Root == nil && !sp.ModuleRoot { // --all runs on source roots
+				if sp.Root == nil && !sp.ModuleRoot && sp.Mode != FileFirst { // --all runs on source roots
 					sp.EmptyOK = sp.EmptyOK || sp.OptionalInAll
 					selected = append(selected, sp)
 				}
@@ -311,6 +325,12 @@ func Command(specs ...Spec) cli.Main {
 					return 3
 				}
 				selected = append(selected, sp)
+			}
+			for _, sp := range selected {
+				if sp.Mode == FileFirst && len(selected) > 1 {
+					fmt.Fprintf(s.Err, "n4lint: %s runs only alone (it takes a %s operand)\n%s\n", sp.ID(), sp.Option, usage)
+					return 3
+				}
 			}
 		}
 		mode, name, use, usageExit, bare := Each, "n4lint", usage, 3, false

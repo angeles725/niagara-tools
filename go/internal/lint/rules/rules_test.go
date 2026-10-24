@@ -78,15 +78,23 @@ func TestAllWalkError(t *testing.T) {
 // selects no file, --all leaves it out, and its empty-root contract is its own (TestRootRulesOnAnEmptyRoot).
 func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
+	manual := filepath.Join(t.TempDir(), "manual.md")
+	if err := os.WriteFile(manual, []byte("Press \"Guardar\".\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	main := lint.Command(All()...)
 	var all string
 	for _, sp := range All() {
 		if sp.Root != nil {
 			continue
 		}
+		args := []string{sp.ID(), root}
+		if sp.Mode == lint.FileFirst { // lint-manual-labels: the manual comes before the roots
+			args = []string{sp.ID(), manual, root}
+		}
 		if sp.EmptyOK { // LA5 (pinned by tests/lint-empty-root.bats ER5): an empty root is clean, exit 0, no row in --all
 			var o, e bytes.Buffer
-			if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.Len() != 0 || e.Len() != 0 {
+			if code := main(args, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.Len() != 0 || e.Len() != 0 {
 				t.Errorf("%s (EmptyOK): exit %d out %q err %q, want 0 and nothing", sp.ID(), code, o.String(), e.String())
 			}
 			continue
@@ -100,11 +108,11 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 			msg = sp.EmptyError.Msg
 		}
 		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
-		if !sp.ModuleRoot && !sp.OptionalInAll { // --all runs on source roots: no module-root rule, and a one-profile rule may find nothing
+		if !sp.ModuleRoot && !sp.OptionalInAll && sp.Mode != lint.FileFirst { // --all runs on source roots: no module-root rule, a one-profile rule may find nothing, a FileFirst rule needs its file
 			all += row
 		}
 		var o, e bytes.Buffer
-		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {
+		if code := main(args, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), row)
 		}
 	}

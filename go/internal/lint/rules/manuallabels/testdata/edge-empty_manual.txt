@@ -1,0 +1,11 @@
+-- args --
+@DIR@/docs.md
+@DIR@/ui
+-- want --
+exit 0
+SUMMARY  lint-manual-labels  checked=0 missing=0
+-- stderr --
+-- docs.md --
+-- ui/rc/index.html --
+<button>Guardar</button>
+<span>Rearranque 1</span>

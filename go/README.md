@@ -17,6 +17,7 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `internal/lint/` | the lint engine: `Rule` (per file), `TreeRule` (all the files under a root at once), `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`, plus `Exact`: one argument, no flag parsed, and `Leading`: only a first `--strict` is a flag, as a bash lint's `[ "${1:-}" = "--strict" ] && shift`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`; dot and `*-worktrees` sub-directories are never entered), `Run` (exit 0 / 1 on a FAIL row or a WARN/FAIL row under `--strict` / 3 env, which wins over 1; PASS and ADVISORY rows never count) and `Command` (n4lint) |
 | `internal/lint/rules/<rule>/` | one lint rule: its `Check`, its `Spec()` and its table tests |
 | `internal/lint/rules/` | `All()`, the list of registered rules |
+| `internal/htmltext/` | Python's text layer for the HTML-text lints, byte for byte as CPython 3.15: `Decode` (an `errors="replace"` text read with universal newlines), `Unescape` (`html.unescape`), `DropMarkup` (a page's text with script/style/comments/tags, plus any named elements, dropped and its line numbers kept) and the `str` facts and folds generated from Python's `unicodedata` into `unicode.txt` (`IsSpace`, `IsAlnum`, `IsDecimal`, `IsWord`, `StripMarks`, `CaseFold`, `Strip`, `CollapseSpace`; `HTMLTEXT_PARITY=1` checks the table against a matching python3, `HTMLTEXT_REGEN=1` rewrites it) |
 | `internal/xmlsrc/` | the XML scanner the XML and `.bog` lints share: `Open` (a zipped `.bog` is read through the same call) and `Parse` return a well-formed `Doc` or a positioned `*Error`; `Doc.Elements`, `Find`, `Children`, `Text`, `Element.Attr` and `UnescapeName` (`.bog` slot names) |
 | `internal/lint/rules/linescan/` | shared by the line-matching rules (ports of `awk_lint_each` / `awk_lint_strip_run` lints): `Code` (a file's lines with comments blanked and literal contents removed, the view a code token is matched in) and the row texts `Source` (leading space trimmed) and `Trimmed` (both ends) |
 | `internal/lint/rules/golden/` | test helper: `Run` checks a rule against its `testdata/*.txt` cases recorded from the bash lint, `Unreadable` its `awk_lint_run` failure contract |
@@ -73,6 +74,14 @@ rule's rows stay contiguous.
    line), and no root the usage line (reference: `rules/wbthreading`). `Spec.CheckFirst` prints a finding as
    `<check>  <SEV>  <path>:<line>  <msg>` (the check before the severity), the row lint-wb-threading always
    printed; the empty-root ERROR row keeps the standard shape.
+   `Mode` `FileFirst` parses `[--strict] <file> <root>...` for a lint whose first operand is a file (only a
+   first `--strict` is a flag; the file must be a regular file, its error `<lint>: <Spec.Option> not found:
+   <file>` printed before any root is checked; every later operand is a root). `Spec.Option` is the file's
+   noun here, read by the same `ParseValued`/`ValueOptions.Option` as a `Valued` option; the rule reads the
+   file (`Args.Option`) in `Configure`; `n4lint --all` leaves it out and a rule list refuses it. `Spec.Joined` gives
+   a `TreeRule` the files of every root in one `CheckTree` call after the last root, and a finding with
+   `Line` 0 and no `Path` prints `<SEV>  <check>  <msg>`; severity `Summary` prints `SUMMARY` and never
+   affects the exit code (reference: `rules/manuallabels`, one UI haystack and one total over its roots).
    An empty root is an error, never a clean pass, for every rule (the K20 guard of
    `lint-silent-protection.sh`, made the engine default after the 2026-10-22 truth audit): a root where
    the rule selects no file prints `ERROR  <check>  <root>  <msg>` on stdout and stops the rule like a walk

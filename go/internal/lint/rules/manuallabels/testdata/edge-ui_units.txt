@@ -1,0 +1,32 @@
+-- args --
+@DIR@/docs/m.md
+@DIR@/ui
+-- want --
+exit 0
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "Uno" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "tres" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "Seis" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "Doce" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "Trece" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "Catorce" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "Dieciseis" not found in the UI source
+SUMMARY  lint-manual-labels  checked=18 missing=7
+-- stderr --
+-- docs/m.md --
+"esc \"Uno" "Uno" "Dos" "tres" "Cuatro cinco" "Seis" "Siete" "Ocho" "Nueve" "Diezá" "Once" "Doce" "Trece" "Catorce" "Quince" "Dieciseis" "Diecisiete=x" "Diecisiete"
+-- ui/a.js --
+var a = "esc \"Uno\" x"; var b = 'Dos "tres"'; var c = `Cuatro
+cinco`; var d = "unterminated Seis
+'Siete';
+"Ocho" // "Nueve"
+-- ui/b.java --
+String s = "Diez\u00e1"; /* "Once" */
+-- ui/c.properties --
+# k=Doce
+! k=Trece
+=k=Catorce
+  key = Quince 
+key:Dieciseis
+
+   
+  k2=Diecisiete=x

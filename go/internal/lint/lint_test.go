@@ -952,3 +952,95 @@ func TestCommandOptionalInAll(t *testing.T) {
 		}
 	}
 }
+
+func TestParseFileFirst(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "m.md")
+	if err := os.WriteFile(file, []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const use = "usage: lint-f.sh [--strict] <manual> <dir>..."
+	for _, tc := range []struct {
+		name   string
+		args   []string
+		strict bool
+		roots  []string
+		err    string
+	}{
+		{"file and roots", []string{file, dir, dir}, false, []string{dir, dir}, ""},
+		{"strict first", []string{"--strict", file, dir}, true, []string{dir}, ""},
+		{"a second --strict is the file", []string{"--strict", "--strict", file, dir}, false, nil, "lint-f: manual not found: --strict\n"},
+		{"-- is the file", []string{"--", file, dir}, false, nil, "lint-f: manual not found: --\n"},
+		{"a flag after the file is a root", []string{file, "--strict"}, false, nil, "lint-f: not a directory: --strict\n"},
+		{"no root", []string{file}, false, nil, use + "\n"},
+		{"strict and no root", []string{"--strict", file}, false, nil, use + "\n"},
+		{"none", nil, false, nil, use + "\n"},
+		{"a directory is not the file", []string{dir, dir}, false, nil, "lint-f: manual not found: " + dir + "\n"},
+		{"the file before the roots", []string{dir + "/nope", dir + "/nodir"}, false, nil, "lint-f: manual not found: " + dir + "/nope\n"},
+		{"every root checked", []string{file, dir, dir + "/nodir", dir + "/nodir2"}, false, nil, "lint-f: not a directory: " + dir + "/nodir\n"},
+	} {
+		a, err := ParseOption(FileFirst, "lint-f", use, "manual", tc.args)
+		got := ""
+		if err != nil {
+			got = err.Error()
+		}
+		if got != tc.err || (err == nil && (a.Option != file || a.Strict != tc.strict || !reflect.DeepEqual(a.Roots, tc.roots))) {
+			t.Errorf("%s: args %+v err %q, want strict %v roots %q err %q", tc.name, a, got, tc.strict, tc.roots, tc.err)
+		}
+	}
+}
+
+// joinedFake is a TreeRule that reports how many files it got per call and one SUMMARY row with no path.
+type joinedFake struct{ calls *[]int }
+
+func (joinedFake) ID() string         { return "lint-j" }
+func (joinedFake) Severity() Severity { return Warn }
+func (r joinedFake) CheckTree(files []*javasrc.File) ([]Finding, error) {
+	*r.calls = append(*r.calls, len(files))
+	return []Finding{{Path: files[0].Path, Line: 1, Msg: "first"}, {Severity: Summary, Msg: fmt.Sprintf("files=%d", len(files))}}, nil
+}
+
+// TestJoinedTreeRule: a Spec.Joined TreeRule gets the files of every root in one call after the last root;
+// a Summary row prints SUMMARY with no path column and never counts for the exit code, --strict included.
+func TestJoinedTreeRule(t *testing.T) {
+	a := tree(t, map[string]string{"A.java": "x\n"})
+	b := tree(t, map[string]string{"B.java": "x\n", "C.java": "x\n"})
+	var calls []int
+	sp := treeSpec(joinedFake{&calls})
+	sp.Joined = true
+	s, o, _ := stdio()
+	if code := Run([]Spec{sp}, "lint-j", Args{Roots: []string{a, b}}, s); code != 0 || !reflect.DeepEqual(calls, []int{3}) ||
+		o.String() != "WARN  lint-j  "+a+"/A.java:1  first\nSUMMARY  lint-j  files=3\n" {
+		t.Errorf("exit %d calls %v out %q", code, calls, o)
+	}
+	s, _, _ = stdio()
+	if code := Run([]Spec{sp}, "lint-j", Args{Strict: true, Roots: []string{a}}, s); code != 1 {
+		t.Errorf("--strict with a WARN row: exit %d, want 1", code)
+	}
+	f := Finding{Rule: "lint-j", Severity: Summary, Msg: "files=0"}
+	if got := f.Row(); got != "SUMMARY  lint-j  files=0" {
+		t.Errorf("Summary row %q", got)
+	}
+}
+
+// TestFileFirstRunsOnlyAlone: a FileFirst rule is left out of --all and refused in a rule list.
+func TestFileFirstRunsOnlyAlone(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	var calls []int
+	ff := treeSpec(joinedFake{&calls})
+	ff.Mode, ff.Option, ff.Joined = FileFirst, "manual", true
+	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, Each), ff)
+	s, o, _ := stdio()
+	if code := main([]string{"--all", root}, s); code != 0 || o.String() != "WARN  lint-a  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("--all: exit %d out %q, want the lint-a row only", code, o)
+	}
+	s, o, e := stdio()
+	if code := main([]string{"lint-a,lint-j", root}, s); code != 3 || o.Len() != 0 ||
+		e.String() != "n4lint: lint-j runs only alone (it takes a manual operand)\n"+usage+"\n" {
+		t.Errorf("rule list: exit %d out %q err %q", code, o, e)
+	}
+	s, o, _ = stdio()
+	if code := main([]string{"lint-j", root + "/A.java", root}, s); code != 0 || o.String() != "WARN  lint-j  "+root+"/A.java:1  first\nSUMMARY  lint-j  files=1\n" {
+		t.Errorf("alone: exit %d out %q", code, o)
+	}
+}
