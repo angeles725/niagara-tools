@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/obixlinkaudit"
 )
 
 // TestSlots pins the harvest the golden cases replay end to end: OPERATOR wins over SUMMARY, READONLY is a
@@ -63,5 +64,18 @@ func TestOutputWriteError(t *testing.T) {
 	code := Main([]string{t.TempDir(), "--output", "/dev/full"}, cli.Stdio{Out: &o, Err: &e})
 	if want := "generate-wiring-map: cannot write /dev/full: No space left on device\n"; code != 3 || o.Len() != 0 || e.String() != want {
 		t.Errorf("exit %d out %q err %q, want 3, nothing and %q", code, o.String(), e.String(), want)
+	}
+}
+
+// TestMapReadBack: the map is read back by obix-link-audit (obixlinkaudit.DeclaredRows); every slot row of a
+// fresh scaffold is an undeclared row of its table, the display name never taken for the RT slot.
+func TestMapReadBack(t *testing.T) {
+	var b bytes.Buffer
+	render(&b, "src", []row{{"sp", "Setpoint"}}, []row{{"temp", "Temperatura"}, {"door", "_(no lexicon key)_"}})
+	t1, t2 := obixlinkaudit.DeclaredRows(b.String(), "1"), obixlinkaudit.DeclaredRows(b.String(), "2")
+	want1 := []obixlinkaudit.Declared{{Want: "sp", Label: "sp"}}
+	want2 := []obixlinkaudit.Declared{{Slot: "temp", Label: "temp"}, {Slot: "door", Label: "door"}}
+	if !reflect.DeepEqual(t1, want1) || !reflect.DeepEqual(t2, want2) {
+		t.Errorf("read back %+v / %+v, want %+v / %+v", t1, t2, want1, want2)
 	}
 }

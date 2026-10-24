@@ -40,23 +40,32 @@ func component(s string) string {
 
 // DeclaredRows reads the rows of "## Table <table> " sections. Table 2: the audited slot is the facade
 // slot (column 1), fed by the RT slot (column 2); Table 1: the audited slot is the RT slot, fed by the
-// facade slot, compared by slot alone.
+// facade slot, compared by slot alone. The RT slot is the column whose header cell (the "Facade slot" row) ends
+// in "RT slot", else column 2: generate-wiring-map puts a Workbench display name column before it.
 func DeclaredRows(mapText, table string) []Declared {
 	var rows []Declared
-	in := false
+	in, rt := false, 2
 	for _, line := range strings.Split(mapText, "\n") {
 		if strings.HasPrefix(line, "## ") {
-			in = strings.HasPrefix(line, "## Table "+table+" ")
+			in, rt = strings.HasPrefix(line, "## Table "+table+" "), 2
 			continue
 		}
 		cells := strings.Split(line, "|")
 		if !in || len(cells) < 4 {
 			continue
 		}
-		f, r := trim(cells[1]), trim(cells[2])
-		if f == "" || strings.Trim(f, "-") == "" || f == "Facade slot" || strings.HasPrefix(f, "_(") {
+		f := trim(cells[1])
+		if f == "Facade slot" {
+			for i, c := range cells {
+				if strings.HasSuffix(trim(c), "RT slot") {
+					rt = i
+				}
+			}
+		}
+		if f == "" || strings.Trim(f, "-") == "" || f == "Facade slot" || strings.HasPrefix(f, "_(") || rt >= len(cells) {
 			continue
 		}
+		r := trim(cells[rt])
 		d := Declared{Label: f}
 		declared := r != "" && !strings.HasPrefix(r, "_(")
 		switch {

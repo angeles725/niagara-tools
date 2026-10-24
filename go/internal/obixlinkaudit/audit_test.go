@@ -76,3 +76,27 @@ func TestReport(t *testing.T) {
 		t.Errorf("clean Report = %d\n%s", code, out.String())
 	}
 }
+
+// TestDeclaredRowsDisplayColumn: the map generate-wiring-map writes carries a Workbench display name column
+// before the RT slot; the declared source is the cell under the "... RT slot" header, never the display name.
+func TestDeclaredRowsDisplayColumn(t *testing.T) {
+	t.Parallel()
+	m := "## Table 1 — OPERATOR config slots (facade → control)\n" +
+		"| Facade slot | Workbench display name | Target RT slot | Full ord | Physical instance / crossing notes |\n" +
+		"|---|---|---|---|---|\n| `setpoint` | Setpoint | _(fill)_ | _(fill)_ | |\n| `diff` | _(no lexicon key)_ | `Rack/diffUp` | | |\n" +
+		"## Table 2 — SUMMARY display slots (control → facade)\n" +
+		"| Facade slot | Workbench display name | Source RT slot | Full ord | Physical instance / crossing notes |\n" +
+		"|---|---|---|---|---|\n| `temp` | Temperatura | `Room/temp` | _(fill)_ | |\n| `door` | Puerta | _(fill)_ | _(fill)_ | |\n"
+	if got, want := DeclaredRows(m, "2"), []Declared{
+		{Slot: "temp", Want: "temp", Label: "temp", Comp: "Room"},
+		{Slot: "door", Label: "door"},
+	}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Table 2 rows\n got %+v\nwant %+v", got, want)
+	}
+	if got, want := DeclaredRows(m, "1"), []Declared{
+		{Want: "setpoint", Label: "setpoint"},
+		{Slot: "diffUp", Want: "diff", Label: "diff"},
+	}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Table 1 rows\n got %+v\nwant %+v", got, want)
+	}
+}
