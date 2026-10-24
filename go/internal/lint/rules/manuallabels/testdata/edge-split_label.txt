@@ -1,9 +1,10 @@
+declared difference: truth fix 2026-10-24, the label wrapped onto the next line ("Rearranque 1") is checked; the bash lint skipped it
 -- args --
 @DIR@/docs/m2.html
 @DIR@/ui
 -- want --
 exit 0
-SUMMARY  lint-manual-labels  checked=1 missing=0
+SUMMARY  lint-manual-labels  checked=2 missing=0
 -- stderr --
 -- docs/m.md --
 Press "Rearranque

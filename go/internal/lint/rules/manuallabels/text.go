@@ -22,24 +22,47 @@ var closers = map[rune]rune{'"': '"', '“': '”', '«': '»'}
 
 // labels are the quoted labels of each line, as re.finditer('"([^"\n]{2,60})"|“([^”\n]{2,60})”|«([^»\n]{2,60})»')
 // finds them (an opening quote whose content is too short or too long is skipped, and the scan goes on at
-// the next code point), stripped, keeping those with a letter ([^\W\d_]) and no "://".
+// the next code point), stripped, keeping those with a letter ([^\W\d_]) and no "://". A quote left open at
+// the end of a line closes on the next line when that line is not blank (truth fix 2026-10-24: prose wraps
+// a label as it wraps any words): the label is reported at its first line with the line break collapsed,
+// and the next line is scanned after its closing quote.
 func labels(text string) []label {
 	var out []label
-	for n, line := range strings.Split(text, "\n") {
-		for i := 0; i < len(line); {
+	lines := strings.Split(text, "\n")
+	from := 0 // where the scan of the current line starts: after a wrapped label's closing quote
+	for n, line := range lines {
+		i := from
+		from = 0
+		for i < len(line) {
 			r, w := utf8.DecodeRuneInString(line[i:])
-			if c, ok := closers[r]; ok {
-				if j := strings.IndexRune(line[i+w:], c); j >= 0 {
-					if k := utf8.RuneCountInString(line[i+w : i+w+j]); k >= 2 && k <= 60 {
-						if l := htmltext.Strip(line[i+w : i+w+j]); hasLetter(l) && !strings.Contains(l, "://") {
-							out = append(out, label{l, n + 1})
-						}
-						i += w + j + utf8.RuneLen(c)
-						continue
-					}
+			c, ok := closers[r]
+			if !ok {
+				i += w
+				continue
+			}
+			content, next, end := "", n, -1
+			if j := strings.IndexRune(line[i+w:], c); j >= 0 {
+				content, end = line[i+w:i+w+j], i+w+j+utf8.RuneLen(c)
+			} else if n+1 < len(lines) && htmltext.Strip(lines[n+1]) != "" {
+				if j := strings.IndexRune(lines[n+1], c); j >= 0 {
+					content, next, end = line[i+w:]+"\n"+lines[n+1][:j], n+1, j+utf8.RuneLen(c)
 				}
 			}
-			i += w
+			if next > n {
+				content = htmltext.CollapseSpace(content)
+			}
+			if k := utf8.RuneCountInString(content); end < 0 || k < 2 || k > 60 {
+				i += w
+				continue
+			}
+			if l := htmltext.Strip(content); hasLetter(l) && !strings.Contains(l, "://") {
+				out = append(out, label{l, n + 1})
+			}
+			if next > n {
+				from = end
+				break
+			}
+			i = end
 		}
 	}
 	return out

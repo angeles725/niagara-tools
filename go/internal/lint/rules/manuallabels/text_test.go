@@ -22,8 +22,9 @@ func TestUnits(t *testing.T) {
 
 func TestLabels(t *testing.T) {
 	for in, want := range map[string][]string{
-		`the "a" b "Guardar" and "c`:                 {"b", "and"},
-		`“x”y” «Modo» "123" " 1a " "http://x" "_ab"`: {"Modo", "1a", "_ab"},
+		`the "a" b "Guardar" and "c`:                                               {"b", "and"},
+		`“x”y” «Modo» "123" " 1a " "http://x" "_ab"`:                               {"Modo", "1a", "_ab"},
+		"Press \"Modo\n  manual\" and \"Guardar\"\nopen \"quote\n\nthen \"Corte\"": {"Modo manual", "Guardar", "Corte"},
 	} {
 		var got []string
 		for _, l := range labels(in) {

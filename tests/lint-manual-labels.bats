@@ -142,3 +142,13 @@ teardown() { rm -rf "$T"; }
   [[ "$output" != *'"value"'* ]]
   [[ "$output" == *"checked=2 missing=1"* ]]
 }
+
+@test "ML14: a label wrapped onto the next line is one label at its first line; a blank line ends it" {
+  printf 'Press "Modo\n  manual" and then "Guardar" now.\nAn open "quote\n\nthen "Corte" here.\n' > "$T/docs/manual.md"
+  run "$ML" "$T/docs/manual.md" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *'"and then"'* ]]
+  [[ "$output" == *'manual.md:5  label "Corte"'* ]]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
+  [[ "$output" == *"checked=3 missing=1"* ]]
+}
