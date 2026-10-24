@@ -23,7 +23,10 @@ func (r *report) verifyModule(a artifact) {
 	if r.o.targetVersion != "" {
 		args = append(args, "--target-version", r.o.targetVersion)
 	}
-	out, code := r.x.member("verify-module", append(args, "--src", r.o.root, jar)...)
+	out, code, ok := r.x.member("verify-module", append(args, "--src", r.o.root, jar)...)
+	if r.truncated(a.name, "verify-module", "verify-module.sh", ok) {
+		return
+	}
 	if code == 3 {
 		r.envFault(a.name, "verify-module", "env fault (exit 3)")
 		return
@@ -64,7 +67,10 @@ func (r *report) slotCoverage(a artifact) {
 	if !isFile(mixin) || !isFile(lex) {
 		return
 	}
-	out, code := r.x.member("slot-coverage", mixin, lex)
+	out, code, ok := r.x.member("slot-coverage", mixin, lex)
+	if r.truncated(a.name, "slot-coverage", "slot-coverage.sh", ok) {
+		return
+	}
 	if code == 3 {
 		r.envFault(a.name, "slot-coverage", "env fault (exit 3)")
 		return
@@ -131,7 +137,10 @@ func (r *report) lintTimers(a artifact) {
 	if !isDir(a.dir + "/src") {
 		return
 	}
-	out, code := r.x.member("lint-timers", a.dir+"/src")
+	out, code, ok := r.x.member("lint-timers", a.dir+"/src")
+	if r.truncated(a.name, "lint-timers", "lint-timers.sh", ok) {
+		return
+	}
 	if code == 3 {
 		r.envFault(a.name, "lint-timers", "env fault (exit 3)")
 		return
@@ -170,7 +179,10 @@ func (r *report) plano(a artifact) {
 	if !isFile(html) {
 		return
 	}
-	out, code := r.x.member("verify-module", "--plano", html)
+	out, code, ok := r.x.member("verify-module", "--plano", html)
+	if r.truncated(a.name, "plano", "verify-module.sh", ok) {
+		return
+	}
 	if code == 3 {
 		r.envFault(a.name, "plano", "env fault (exit 3)")
 		return
@@ -185,7 +197,10 @@ func (r *report) lexiconASCII(a artifact) {
 		r.emit(a.name, skip, "lint-lexicon-ascii", "no *.lexicon under "+a.name)
 		return
 	}
-	out, code := r.x.member("lint-lexicon-ascii", a.dir)
+	out, code, ok := r.x.member("lint-lexicon-ascii", a.dir)
+	if r.truncated(a.name, "lint-lexicon-ascii", "lint-lexicon-ascii.sh", ok) {
+		return
+	}
 	if code == 3 {
 		r.envFault(a.name, "lint-lexicon-ascii", "env fault (exit 3)")
 		return
@@ -243,7 +258,10 @@ func (r *report) linkTargetFlags(a artifact) {
 	if r.o.wiringMap != "" {
 		args = []string{"--wiring-map", r.o.wiringMap}
 	}
-	out, code := r.x.member(check, append(args, a.dir+"/src")...)
+	out, code, ok := r.x.member(check, append(args, a.dir+"/src")...)
+	if r.truncated(a.name, check, check+".sh", ok) {
+		return
+	}
 	if code == 3 {
 		r.envFault(a.name, check, "env fault (exit 3)")
 		return
@@ -270,7 +288,10 @@ func (r *report) servlet(a artifact) {
 	if !r.haveSrc(a, check) {
 		return
 	}
-	out, code := r.x.member(check, a.dir+"/src")
+	out, code, ok := r.x.member(check, a.dir+"/src")
+	if r.truncated(a.name, check, check+".sh", ok) {
+		return
+	}
 	if code == 3 {
 		r.envFault(a.name, check, "env fault (exit 3)")
 		return
@@ -297,7 +318,10 @@ func (r *report) rcScan(a artifact) {
 	if r.o.legacy {
 		args = append(args, "--legacy")
 	}
-	out, code := r.x.member("rc-scan", args...)
+	out, code, ok := r.x.member("rc-scan", args...)
+	if r.truncated(a.name, "rc-scan", "rc-scan.sh", ok) {
+		return
+	}
 	if code == 3 {
 		r.envFault(a.name, "rc-scan", "env fault (exit 3)")
 		return
@@ -312,7 +336,10 @@ func (r *report) vendorFloor(a artifact) {
 	if !isDir(rc + "/vendor") {
 		return
 	}
-	out, code := r.x.member("lint-vendor-floor", rc)
+	out, code, ok := r.x.member("lint-vendor-floor", rc)
+	if r.truncated(a.name, "vendor-floor", "lint-vendor-floor.sh", ok) {
+		return
+	}
 	switch code {
 	case 0, 1:
 		r.passAfterRelay(a.name, "vendor-floor", r.relayRows(a.name, out))
@@ -363,7 +390,10 @@ func (r *report) schemaRisk(a artifact) {
 // (a non-zero exit with none is a FAIL row).
 func (r *report) writePath(a artifact) {
 	const check = "lint-write-path"
-	out, code := r.x.member(check, a.dir)
+	out, code, ok := r.x.member(check, a.dir)
+	if r.truncated(a.name, check, check+".sh", ok) {
+		return
+	}
 	switch {
 	case code == 3 && strings.Contains(out, "no write-path-matrix.md found"):
 		r.emit(a.name, skip, check, "no write-path-matrix.md")
@@ -388,7 +418,10 @@ func (r *report) triageConsole() {
 		r.count(skip)
 		return
 	}
-	out, code := r.x.member("triage-console", "--console-dir", r.o.consoleDir)
+	out, code, ok := r.x.member("triage-console", "--console-dir", r.o.consoleDir)
+	if r.truncated("(run)", "triage-console", "triage-console.sh", ok) {
+		return
+	}
 	if code == 3 {
 		fmt.Fprint(r.out, "(run)  ERROR  triage-console  env fault (exit 3)\n")
 		r.hadEnv = true

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -13,34 +12,39 @@ import (
 	"syscall"
 )
 
-// maxOutput bounds what one member run may hand back (bash kept all of it): the rest is dropped and named on
-// stderr, so a runaway member cannot exhaust memory.
+// maxOutput bounds what one member run may hand back (bash kept all of it), so a runaway member cannot exhaust
+// memory; a run past it lost rows and is reported as an env fault.
 const maxOutput = 64 << 20
 
-// runner executes the toolbelt members: tb is the toolbelt directory, env the members' environment and errw
-// the report's stderr (for the truncation note).
+// runner executes the toolbelt members: tb is the toolbelt directory, env the members' environment.
 type runner struct {
-	tb   string
-	env  []string
-	errw io.Writer
+	tb  string
+	env []string
+	max int // output bound of one run (0: maxOutput); a test seam
+}
+
+// bound is the output bound of one run.
+func (x runner) bound() int {
+	if x.max > 0 {
+		return x.max
+	}
+	return maxOutput
 }
 
 // member runs <tb>/<script>.sh with args, like the shell's `out=$("$TOOLBELT/<script>.sh" args 2>&1)`.
-func (x runner) member(script string, args ...string) (string, int) {
+func (x runner) member(script string, args ...string) (string, int, bool) {
 	return x.run("", x.tb+"/"+script+".sh", args...)
 }
 
 // run executes path in dir ("" the cwd) and returns its stdout and stderr interleaved, like "$(cmd 2>&1)" (NUL
 // bytes and trailing newlines dropped), and its exit status: 127 not found, 126 not executable or not an
 // executable format, 128+n killed by signal n. Bash's own "No such file or directory" / "Permission denied"
-// line for those is not in the output, and a file with no #! line is never run as a shell script.
-func (x runner) run(dir, path string, args ...string) (string, int) {
-	w := &capWriter{max: maxOutput}
-	code := x.exec(dir, w, path, args...)
-	if w.dropped > 0 {
-		fmt.Fprintf(x.errw, "report-module: %s: output over %d bytes, %d bytes dropped\n", path, maxOutput, w.dropped)
-	}
-	return strings.TrimRight(strings.ReplaceAll(w.b.String(), "\x00", ""), "\n"), code
+// line for those is not in the output, and a file with no #! line is never run as a shell script (ENOEXEC is
+// 126). ok is false when the output passed the bound and its rest was dropped.
+func (x runner) run(dir, path string, args ...string) (out string, code int, ok bool) {
+	w := &capWriter{max: x.bound()}
+	code = x.exec(dir, w, path, args...)
+	return strings.TrimRight(strings.ReplaceAll(w.b.String(), "\x00", ""), "\n"), code, w.dropped == 0
 }
 
 // quiet runs path with its output discarded (`cmd >/dev/null 2>&1`) and returns its exit status.

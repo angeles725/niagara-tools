@@ -87,3 +87,19 @@ func TestStepGates(t *testing.T) {
 		t.Error("a member whose suffix the artifact lacks must print nothing")
 	}
 }
+
+// TestTruncatedMemberIsAnEnvFault (W1): a member whose output passes the bound lost its rows past it (a FAIL row
+// among them), so it is an ERROR row and an env fault, never PASS clean.
+func TestTruncatedMemberIsAnEnvFault(t *testing.T) {
+	t.Parallel()
+	root := tree(t, "A-rt/src/")
+	tb := t.TempDir()
+	script(t, tb, "lint-no-system-out.sh", "#!/bin/sh\nprintf 'scanning many files, a long line\\nFAIL  sysout  /x/A.java:3  System.out\\n'\n", 0o755)
+	var out, errw bytes.Buffer
+	r := &report{out: &out, errw: &errw, n: map[string]int{}, x: runner{tb: tb, env: []string{"PATH=/usr/bin:/bin"}, max: 16}}
+	r.step(artifact{"A-rt", root + "/A-rt"}, member{script: "lint-no-system-out", f: failOnly, v: rows})
+	want := "A-rt  ERROR  lint-no-system-out  env fault (output over 16 bytes, truncated) -- run lint-no-system-out.sh manually\n"
+	if out.String() != want || !r.hadEnv {
+		t.Errorf("W1: got %q (env %v), want %q", out.String(), r.hadEnv, want)
+	}
+}

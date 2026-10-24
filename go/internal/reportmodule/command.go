@@ -58,7 +58,7 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 		}
 	}
 	r := &report{out: s.Out, errw: s.Err, o: o, getenv: s.Env, n: map[string]int{},
-		x: runner{tb: toolbelt(s), env: env, errw: s.Err}}
+		x: runner{tb: toolbelt(s), env: env}}
 	for _, a := range artifacts {
 		for _, m := range perArtifact {
 			r.step(a, m)

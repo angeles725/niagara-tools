@@ -84,11 +84,13 @@ func (r *report) runESLint(a artifact, rc, bin string) {
 	if !strings.Contains(bin, "/") {
 		bin = commandV(r.getenv("PATH"), bin)
 	}
-	code := 127
-	out := ""
+	code, out, ok := 127, "", true
 	if bin != "" {
-		out, code = r.x.run(rc, bin, "--config", r.x.tb+"/eslint.config.mjs",
+		out, code, ok = r.x.run(rc, bin, "--config", r.x.tb+"/eslint.config.mjs",
 			"--format", r.x.tb+"/eslint/rows-formatter.cjs", "--no-warn-ignored", ".")
+	}
+	if r.truncated(a.name, "eslint", "eslint", ok) {
+		return
 	}
 	if code > 1 {
 		r.envFault(a.name, "eslint", fmt.Sprintf("env fault (exit %d)", code))

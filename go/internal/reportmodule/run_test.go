@@ -1,7 +1,6 @@
 package reportmodule
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,7 +16,7 @@ func script(t *testing.T, dir, name, body string, mode os.FileMode) string {
 func TestRunExitCodesAndOutput(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	x := runner{env: []string{"PATH=/usr/bin:/bin"}, errw: &bytes.Buffer{}}
+	x := runner{env: []string{"PATH=/usr/bin:/bin"}}
 	tests := []struct {
 		name, body string
 		mode       os.FileMode
@@ -31,14 +30,14 @@ func TestRunExitCodesAndOutput(t *testing.T) {
 	}
 	for _, tt := range tests {
 		p := script(t, dir, tt.name, tt.body, tt.mode)
-		if out, code := x.run("", p); out != tt.out || code != tt.code {
+		if out, code, _ := x.run("", p); out != tt.out || code != tt.code {
 			t.Errorf("%s: run = %q, %d; want %q, %d", tt.name, out, code, tt.out, tt.code)
 		}
 	}
-	if _, code := x.run("", filepath.Join(dir, "missing")); code != 127 {
+	if _, code, _ := x.run("", filepath.Join(dir, "missing")); code != 127 {
 		t.Errorf("a missing member is exit %d, want 127", code)
 	}
-	if out, _ := x.run(dir, script(t, dir, "pwd", "#!/bin/sh\npwd\n", 0o755)); out != dir {
+	if out, _, _ := x.run(dir, script(t, dir, "pwd", "#!/bin/sh\npwd\n", 0o755)); out != dir {
 		t.Errorf("run in %s printed %q", dir, out)
 	}
 }

@@ -150,7 +150,10 @@ func (r *report) step(a artifact, m member) {
 			return
 		}
 	}
-	out, code := r.x.member(m.script, dir)
+	out, code, ok := r.x.member(m.script, dir)
+	if r.truncated(a.name, m.script, m.script+".sh", ok) {
+		return
+	}
 	switch {
 	case m.advisory:
 		r.advisoryMember(a.name, m.script, code, out)
@@ -199,6 +202,15 @@ func (r *report) advisoryMember(label, check string, code int, out string) {
 		}
 	}
 	r.envFault(label, check, detail)
+}
+
+// truncated reports a run whose output passed the bound (ok false) as an ERROR row: the rows past the bound, a
+// FAIL among them, are lost, so the member is never judged on the rest.
+func (r *report) truncated(label, check, what string, ok bool) bool {
+	if !ok {
+		r.envFault(label, check, fmt.Sprintf("env fault (output over %d bytes, truncated) -- run %s manually", r.x.bound(), what))
+	}
+	return !ok
 }
 
 // haveSrc is true when <artifact>/src is a directory; otherwise it emits the `SKIP <check> no src/` row.
