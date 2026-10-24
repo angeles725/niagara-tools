@@ -63,7 +63,7 @@ type run struct {
 }
 
 // checks run in this order after the win-path rows; a check reading the paths returns early on r.win.
-var checks = []func(*run){}
+var checks = []func(*run){(*run).jdk8}
 
 // Command is preflight over the host h.
 func Command(h Host) cli.Main {
