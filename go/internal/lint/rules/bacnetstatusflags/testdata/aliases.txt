@@ -1,0 +1,29 @@
+-- args --
+@DIR@/S
+-- want --
+exit 0
+WARN  lint-bacnet-status-flags  @DIR@/S/config.bog: /Drivers/Net/Dev: 1 Present_Value proxy point(s) without facets statusFlags=true (first: /Drivers/Net/Dev/points/P1) -- a field alarm, fault or override reads {ok}
+-- stderr --
+-- S/config.bog --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version='4.0'>
+ <p h='1' m='b=baja' t='b:Station'>
+  <p n='Drivers' h='2' m='d=driver' t='d:DriverContainer'>
+   <p n='Net' h='3' m='x=bacnet' t='x:BacnetNetwork'>
+    <p n='Dev' h='4' t='x:BacnetDevice'>
+     <p n='points' h='5' t='x:BacnetPointDeviceExt'>
+      <p n='P1' h='6' m='c=control' t='c:NumericPoint'>
+       <p n="facets" t="b:Facets" v="statusFlags=b:false"/>
+       <p n='proxyExt' h='7' t='x:BacnetNumericProxyExt'/>
+      </p>
+     </p>
+    </p>
+   </p>
+   <p n='Other' h='8' m='bac=acmeDriver' t='bac:AcmeNetwork'>
+    <p n='P2' h='9' t='c:NumericPoint'>
+     <p n='proxyExt' h='a' t='bac:BacnetNumericProxyExt'/>
+    </p>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>

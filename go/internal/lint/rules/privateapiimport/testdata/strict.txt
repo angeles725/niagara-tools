@@ -1,0 +1,11 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 1
+WARN  lint-private-api-import  @DIR@/M/M-wb/src/com/example/drv/wb/BAcmeMgr.java:2  com.tridium.workbench.Foo is private API (devguide apiInfo: no compatibility guaranteed)
+-- stderr --
+-- M/M-wb/src/com/example/drv/wb/BAcmeMgr.java --
+package com.example.drv.wb;
+import com.tridium.workbench.Foo;
+public class BAcmeMgr {}

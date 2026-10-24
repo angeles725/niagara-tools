@@ -1,0 +1,8 @@
+-- args --
+@DIR@/S
+-- want --
+exit 3
+-- stderr --
+lint-bacnet-status-flags: @DIR@/S/config.bog:1:21: element <p> opened at 1:18 closed by </bajaObjectGraph>
+-- S/config.bog --
+<bajaObjectGraph><p></bajaObjectGraph>

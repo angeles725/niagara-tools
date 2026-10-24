@@ -1,0 +1,15 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-private-api-import  @DIR@/M/M-rt/src/com/example/drv/BAcmeExport.java:2  com.tridium.history.exporters.BHistoryToCsv is private API (devguide apiInfo: no compatibility guaranteed)
+WARN  lint-private-api-import  @DIR@/M/M-rt/src/com/example/drv/BAcmeExport.java:3  com.tridium.foo.Util.bar is private API (devguide apiInfo: no compatibility guaranteed)
+WARN  lint-private-api-import  @DIR@/M/M-rt/src/com/example/drv/BAcmeExport.java:5  com.tridium.file.exporters.BITableToCsv is private API (devguide apiInfo: no compatibility guaranteed)
+-- stderr --
+-- M/M-rt/src/com/example/drv/BAcmeExport.java --
+package com.example.drv;
+import com.tridium.history.exporters.BHistoryToCsv;
+import static com.tridium.foo.Util.bar;
+public class BAcmeExport {
+  Object t = new com.tridium.file.exporters.BITableToCsv();
+}

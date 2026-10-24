@@ -1,0 +1,14 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/src/com/example/drv/message/AcmeMessage.java --
+package com.example.drv.message;
+public abstract class AcmeMessage extends NMessage {
+  public Object getTag() { return tag; }
+}
+-- M/M-rt/src/com/example/drv/message/AcmeReq.java --
+package com.example.drv.message;
+public class AcmeReq extends AcmeMessage { }

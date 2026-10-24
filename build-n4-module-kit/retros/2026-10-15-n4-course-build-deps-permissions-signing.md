@@ -47,4 +47,4 @@ expression syntax.
 - Signing must fail closed: a default profile that silently self-signs hides a mistyped alias until the station refuses the module.
 
 ---
-**Status**: FOLDED 2026-10-23 (branch `docs/r8-pointer-lines`) — Δ3 doc half `types/module-wiring.md` § 4.5 (lint half owed as Go lint G65 `private-api-import`); Δ1, Δ2, Δ4-Δ6 were already cited on main.
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-pointer-lines`) — Δ3 doc half `types/module-wiring.md` § 4.5 (lint half LANDED 2026-10-24 as Go lint G65 `private-api-import`, retro r10-dr3-driver-lints); Δ1, Δ2, Δ4-Δ6 were already cited on main.

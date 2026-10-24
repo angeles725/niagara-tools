@@ -1,0 +1,26 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-private-api-import  @DIR@/M/M-se/src/com/example/drv/se/BAcmeSe.java:2  com.tridium.sys.Foo is private API (devguide apiInfo: no compatibility guaranteed)
+-- stderr --
+-- M/M-rt/srcTest/com/example/drv/BAcmeTest.java --
+package com.example.drv;
+import com.tridium.testng.BStationTestBase;
+public class BAcmeTest {}
+-- M/M-rt/test/com/example/drv/BAcmeTest2.java --
+package com.example.drv;
+import com.tridium.testng.BStationTestBase;
+public class BAcmeTest2 {}
+-- M/M-rt/build/gen/com/example/drv/BGen.java --
+package com.example.drv;
+import com.tridium.gen.Foo;
+public class BGen {}
+-- M/tools/src/com/example/Tool.java --
+package com.example;
+import com.tridium.tool.Foo;
+public class Tool {}
+-- M/M-se/src/com/example/drv/se/BAcmeSe.java --
+package com.example.drv.se;
+import com.tridium.sys.Foo;
+public class BAcmeSe {}

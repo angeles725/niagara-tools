@@ -1,0 +1,46 @@
+-- args --
+@DIR@/S
+-- want --
+exit 0
+WARN  lint-bacnet-status-flags  @DIR@/S/config.bog: /Drivers/BacnetNetwork/Acme Ahu 1: 2 Present_Value proxy point(s) without facets statusFlags=true (first: /Drivers/BacnetNetwork/Acme Ahu 1/points/SpaceTemp) -- a field alarm, fault or override reads {ok}
+WARN  lint-bacnet-status-flags  @DIR@/S/config.bog: /Drivers/BacnetNetwork/AcmeVav2: 1 Present_Value proxy point(s) without facets statusFlags=true (first: /Drivers/BacnetNetwork/AcmeVav2/points/Flow) -- a field alarm, fault or override reads {ok}
+-- stderr --
+-- S/config.bog --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version='4.0'>
+ <p h='1' m='b=baja' t='b:Station'>
+  <p n='Drivers' h='2' m='d=driver' t='d:DriverContainer'>
+   <p n='BacnetNetwork' h='3' m='bac=bacnet' t='bac:BacnetNetwork'>
+    <p n='Acme$20Ahu$201' h='4' t='bac:BacnetDevice'>
+     <p n='points' h='5' t='bac:BacnetPointDeviceExt'>
+      <p n='SpaceTemp' h='6' m='c=control' t='c:NumericPoint'>
+       <p n="facets" t="b:Facets" v="units=u:celsius;&#xb0;C;(K);+273.15;"/>
+       <p n='proxyExt' h='7' t='bac:BacnetNumericProxyExt'>
+        <p n="objectId" t="bac:BacnetObjectIdentifier" v="analogInput:1"/>
+       </p>
+      </p>
+      <p n='FanCmd' h='8' t='c:BooleanWritable'>
+       <p n='proxyExt' h='9' t='bac:BacnetBooleanProxyExt'>
+        <p n="objectId" t="bac:BacnetObjectIdentifier" v="binaryOutput:1"/>
+        <p n="propertyId" v="85"/>
+       </p>
+      </p>
+      <p n='Alarmed' h='a' t='c:NumericPoint'>
+       <p n="facets" t="b:Facets" v="units=u:null;;;;|statusFlags=b:true"/>
+       <p n='proxyExt' h='b' t='bac:BacnetNumericProxyExt'/>
+      </p>
+     </p>
+    </p>
+    <p n='AcmeVav2' h='c' t='bac:BacnetDevice'>
+     <p n='points' h='d' t='bac:BacnetPointDeviceExt'>
+      <p n='Flow' h='e' t='c:NumericPoint'>
+       <p n='proxyExt' h='f' t='bac:BacnetNumericProxyExt'>
+        <p n="propertyId" t="b:DynamicEnum" v="85@bacnet:BacnetPropertyIdentifier"/>
+       </p>
+      </p>
+     </p>
+    </p>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>
