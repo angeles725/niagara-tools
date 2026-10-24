@@ -1,0 +1,6 @@
+-- args --
+@DIR@/nope
+-- want --
+exit 3
+-- stderr --
+lint-inert-coordination: not a directory: @DIR@/nope

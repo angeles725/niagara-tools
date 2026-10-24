@@ -1,0 +1,80 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-inert-coordination  @DIR@/S2.java:3  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/S3.java:3  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/S4.java:3  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/S6.java:3  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/S7.java:3  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/S9.java:3  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- S1.java --
+class S1 {
+  int tokenCount;
+  List<B> units() {
+    return Arrays.asList(a, b);
+  }
+}
+-- S2.java --
+class S2 {
+  int tokenCount;
+  List<B> units() {
+    return Arrays.asList(
+        a, b);
+  }
+}
+-- S3.java --
+class S3 {
+  int tokenCount;
+  List<B> units() {
+    return Arrays.asList((B) getParent()); // one, two
+  }
+}
+-- S4.java --
+class S4 {
+  int tokenCount;
+  List<B> units() {
+    List<B> l = Collections.singletonList(a); // unrelated
+    return parent.units();
+  }
+}
+-- S5.java --
+class S5 {
+  int tokenCount;
+  List<B> units() {
+    // was: return Collections.singletonList(a);
+    return parent.units();
+  }
+}
+-- S6.java --
+class S6 {
+  int tokenCount;
+  List<B> units() {
+    /* return Collections.singletonList(a); */
+    return parent.units();
+  }
+}
+-- S7.java --
+class S7 {
+  int tokenCount;
+  List<B> units() {
+    String s = "Arrays.asList(x)";
+    return parent.units();
+  }
+}
+-- S8.java --
+class S8 {
+  int tokenCount;
+  List<B> units() {
+    return Arrays.asList(f(a, b));
+  }
+}
+-- S9.java --
+class S9 {
+  int tokenCount;
+  List<B> units() {
+    return Collections.singletonList(a);
+  }
+  void later() { Arrays.asList(x); }
+}
