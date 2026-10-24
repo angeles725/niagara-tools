@@ -52,10 +52,14 @@
 #   plugin cannot read the real ~/.tridium keystore. A mirror path, or a $HOME used for that maven.repo.local, with
 #   whitespace is refused (exit 33); a signing profile in the mirror user home (always plugin-created, so a throwaway
 #   dev key) is a WARN on every build. [ev: retro r8-mirror-userhome Δ1, retro r8-buildsh-316-308]
+# Slot-o-Matic skip (exit 34): Slot-o-Matic logs a file it could not process ("Could not process <file>.java: …")
+#   at WARNING level and gradle still ends BUILD SUCCESSFUL; the jar then carries stale generated code. A passing
+#   run whose log names a skipped file (lib/slotomatic-skip.sh) FAILs, the pre-build modules/ jar is restored
+#   like a drift FAIL, and the gate is not run (METHODOLOGY K15). [ev: retro r10-slotomatic-skip-fail-open Δ1]
 # Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) ·
 #   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 33 mirror path or $HOME has whitespace ·
-#   50 gate or report-module FAIL · 51 deployed-baseline drift (Δ2) · 52 drift gate cannot verify ·
-#   53 report-module INCOMPLETE (a floor check SKIPped)
+#   34 Slot-o-Matic skipped a file in a passing gradle run · 50 gate or report-module FAIL ·
+#   51 deployed-baseline drift (Δ2) · 52 drift gate cannot verify · 53 report-module INCOMPLETE (a floor check SKIPped)
 set -euo pipefail
 
 # usage: print the leading comment block (line 2 up to the first non-comment line), never code.
@@ -98,6 +102,8 @@ HERE="$(CDPATH='' cd -- "$(dirname "$0")" >/dev/null && pwd)"
 . "$HERE/lib/method-boundary.sh"
 # shellcheck disable=SC1091
 . "$HERE/lib/signing-block.sh"
+# shellcheck disable=SC1091
+. "$HERE/lib/slotomatic-skip.sh"
 
 [ -d "$ROOT" ] || { echo "build.sh: module root not found: $ROOT" >&2; exit 10; }
 # B7: gradlew may live at an ANCESTOR (client multi-project layout — the module dir is passed as ROOT). Walk up to find it.
@@ -312,6 +318,16 @@ GLOG="$(mktemp)"
 # Start-of-build marker: a build/libs jar NEWER than this was produced by this run (exit-32 report below).
 GSTAMP="$(mktemp)"
 if ( cd "$GRADLE_ROOT" && ./gradlew "${TASKS[@]}" "${GARGS[@]}" ) 2>&1 | tee "$GLOG"; then
+  # K15: a skipped file does not fail the gradle task, so check the log before anything trusts the jar.
+  if ! _SKIP_ROWS=$(slotomatic_skip_scan "$GLOG"); then
+    printf '%s\n' "$_SKIP_ROWS" >&2
+    echo "build.sh: Slot-o-Matic skipped the file(s) above, so the jar carries stale generated code (METHODOLOGY K15):" >&2
+    echo "  the generated region needs exactly one /*@ ... @*/ stamp — delete the BEGIN/END BAJA AUTO GENERATED region and re-run slotomatic." >&2
+    for p in "${SEL[@]}"; do
+      [ -n "$DRIFT_DIR" ] && [ -f "$DRIFT_DIR/$p.old.jar" ] && _restore_baseline "$p" "."
+    done
+    rm -f "$GLOG" "$GSTAMP"; exit 34
+  fi
   rm -f "$GLOG" "$GSTAMP"
   # A root without a signing block makes the plugin create a profile in the mirror user home and sign with a
   # throwaway Niagara4Modules dev key; the build still passes, so say it (WARN, exit unchanged). Every profile
@@ -359,9 +375,10 @@ else
   fi
   # slotomatic-authoring Δ1 (K15): slot-o-matic logs "Could not process <file>: …" as a WARNING and its task
   # succeeds, so the failure surfaces later in compileJava ("… have you run slot-o-matic?"). Name the skipped file.
-  # The capture ends at ".java" so a Windows drive letter (C:\...) does not cut the path short.
+  # lib/slotomatic-skip.sh names each skipped file once; its path ends at ".java" so a Windows drive letter
+  # (C:\...) does not cut it short.
   if grep -q 'have you run slot-o-matic' "$GLOG"; then
-    _SKIPPED=$(sed -n 's/.*Could not process \(.*\.java\): .*/  slot-o-matic skipped \1/p' "$GLOG" | sort -u)
+    _SKIPPED=$(slotomatic_skip_scan "$GLOG") || :
     echo "build.sh: compileJava found slots slot-o-matic never generated." >&2
     if [ -n "$_SKIPPED" ]; then
       printf '%s\n' "$_SKIPPED" >&2
