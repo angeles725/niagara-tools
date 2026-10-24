@@ -365,3 +365,45 @@ does the same for `parse_status`. The replay corpus (section 7) is unchanged: th
 
 **Known differences.** None found. `"out" in children(nodes, path)` is a direct `path/out` lookup
 in Go, the same answer without a scan per component.
+
+## 10. S6 `bql`, inventory and output files
+
+**Packages.** `bql` ports `bql.py`: `query.go` (`validate_query`, `base_slot`, `compose_ord`,
+`selected_slots`, `unique_columns`, `by_position`, `unescape_slot`, `complete_records`; `\s`, `\S`
+and `str.strip()` use `str.isspace()`'s set, lengths count code points), `csv.go` (`parse_csv` on a
+port of `_csv.c`'s reader state machine for the excel dialect over `StringIO(newline="")` lines,
+with the 131072-character field limit) and `inventory.go` (`summarize_inventory`). `readtools`
+serves `n4_bql_query` and `n4_inventory` (`bql.go`: `_bql`, `_record_read`, `_progress`) through
+`box.Client.GetOrd` (S3), and writes result files (`output.go`: `_output_path`, `_private_dirs`,
+`_write_output`; S7's `n4_read_file` reuses them). `safety` starts with what result files need:
+`check_state_dir` and `loose_file_reason` (`statedir.go`) and the `os.path` rules the shown paths
+follow (`pypath.go`: `join` and `dirname` without cleaning, `expanduser`); `cli` expands
+`--state-dir` and `--progress-file` into `session.Config` as `server.py` does. `pyjson` gains WTF-8
+walking (`Chr`, `DecodeRune`, `Len`): an escape such as `$ud800` decodes to a lone surrogate, as
+`chr()` gives one.
+
+**Files.** As in Python: the state dir and `bql/` are created 0700 (missing parents 0777 less the
+umask, like `os.makedirs`) and chmodded only when this call created them; the result file is
+opened `O_WRONLY|O_CREAT|O_EXCL` 0600 after an `lexists` check, so a dangling link is refused and
+never written through, and it is removed on any failure. A CSV row is `csv.writer`'s excel line (a
+cell holding `,` `"` `\r` or `\n` quoted with its quotes doubled, one empty cell as `""`, `\r\n`
+ends); JSON is `json.dump`'s bytes. A lone surrogate in a CSV row fails as its
+`UnicodeEncodeError` text (position, or position range, within that row); JSON escapes it.
+`--progress-file` lines are appended best effort (0666 less the umask when created).
+
+**Proof.** Under `MCP_N4_IMPL=go` `test_bql.TestNonCsvAnswers` runs black-box: no test skips on
+`n4_bql_query` or `n4_inventory` any more (622 tests, 461 skipped, from 465). The 35 marked
+`test_bql` tests have Go twins: the 15 unit ones in `bql/query_test.go`, `csv_test.go` and
+`inventory_test.go`, the 19 injection ones in `bql/tools_test.go` and `output_test.go` on
+`readtoolstest.Station.OrdRoutes` (test_bql's FakeOpener: an answer per needle, an HTTP code, a
+byte cap), and `cli.TestServerFlagSetsTheProgressFile`. `bql.TestHelpersDifferentialPython` runs
+every helper in `bql.py` on CPython 3.15 and in Go on one corpus (csv quirks, Unicode spaces,
+`re.I`'s long s, escapes to control characters and surrogates, the inventory walk);
+`readtools.TestBqlDifferentialPython` runs both tools in `tools_read.py` and in Go on the same
+answers and state dir and requires the same reply text and the same result file bytes and mode.
+Extra Go tests pin the permission rules: an existing result dir keeps its mode, a link is never
+followed, a group-writable state dir or a loose `audit.jsonl` is refused and left unchanged.
+
+**Known differences.** None found. `TestBqlAuditInWritesMode` (the `read` line in `audit.jsonl`)
+has a named Go twin that skips: the audit log runs only with `--allow-writes`, which the Go server
+refuses until S8/S10.
