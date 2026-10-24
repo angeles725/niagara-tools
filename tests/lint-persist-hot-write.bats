@@ -98,6 +98,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [[ "$output" == "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/V.java:5  setXHours(...)"* ]]
 }
 
+@test "PHW9: resetXHours( is not the setter setXHours(, and setXHours (x) with a blank is" {
+  # Mutation: PHW9 -- matching "setXHours(" as a substring FAILs resetXHours(1.0) as a write of xHours
+  # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-setter-name-1.txt
+  printf '%s\n' 'class X {' '  static final Property xHours = newProperty(0, 0.0, null);' '  public void changed(Property p, Context cx) {' \
+    '    resetXHours(1.0);' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/X.java"
+  run "$PHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "PHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: PHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"

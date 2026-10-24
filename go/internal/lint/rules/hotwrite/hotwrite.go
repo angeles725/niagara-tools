@@ -136,3 +136,9 @@ func Setter(name string) string {
 	}
 	return "set" + name
 }
+
+// SetterCall matches a call of property name's setter: Setter(name) at an identifier boundary, blanks allowed
+// before its "(" (`resetXHours(` is not the setter `setXHours(`, #151).
+func SetterCall(name string) *regexp.Regexp {
+	return rx(`(^|[^A-Za-z0-9_])` + regexp.QuoteMeta(Setter(name)) + `[[:space:]]*\(`)
+}

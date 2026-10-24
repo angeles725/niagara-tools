@@ -39,7 +39,11 @@
 # Truth fix T2 (2026-10-24): changed(), execute() and every callee body come from javasrc.Methods (a zero-arg
 # method's body is the one whose signature holds `name()`); the awk took the first `name()` not followed by ";"
 # as the declaration (`if (execute())`, `pending(tick())`, `this.device() + "..."`) and counted braces from there.
+# Truth fix T3 (2026-10-24): a setter call starts at an identifier boundary and may have blanks before "("
+# (hotwrite.SetterCall, shared with lint-changed-hot-write #151); the awk matched "set<X>(" as a substring, so
+# resetXHours( was a write of xHours and setXHours ( was missed.
 # VCS-free by design (kit-links L2).
+# Mutation: PHW9 -- matching "setXHours(" as a substring FAILs resetXHours(1.0) as a write of xHours
 # Mutation: PHW8 -- taking the first tick() not followed by ";" as the declaration reads pending(tick()) instead of tick()'s body
 # Mutation: PHW7 -- cutting each line at its first "//" hides a setter written after a URL string
 # Mutation: PHW2 -- drop the cadence-guard lookback so a guarded setter call still false-WARNs

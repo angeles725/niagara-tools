@@ -66,8 +66,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		exec = text(lines, b.Start, b.End)
 	}
 	for _, slot := range hotwrite.NonTransient(lines) {
-		// anchored at an identifier boundary: `resetXHours(` is not the setter `setXHours(` (#151)
-		setter := regexp.MustCompile(`(^|[^A-Za-z0-9_])` + regexp.QuoteMeta(hotwrite.Setter(slot)) + `[[:space:]]*\(`)
+		setter := hotwrite.SetterCall(slot)
 		if setter.MatchString(exec) || setter.MatchString(changed) {
 			return []lint.Finding{{Line: body.Start + 1, Msg: fmt.Sprintf("changed(%s) has %d '%s ==' branches guarding execute(),"+
 				" no Clock.millis()/schedule rate guard, writes non-transient slot '%s' -- debounce the callback"+

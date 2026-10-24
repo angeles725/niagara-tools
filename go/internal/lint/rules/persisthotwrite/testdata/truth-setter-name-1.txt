@@ -1,0 +1,21 @@
+declared difference (truth fix T3, setter name): lint-persist-hot-write matched "setXHours(" as a substring, so
+resetXHours(1.0) and presetXHours(2.0) FAILed as writes of xHours while setXHours (3.0), with a blank before its
+"(", was missed. A setter call now starts at an identifier boundary and may have blanks before "(", as
+lint-changed-hot-write already read it (#151); both share hotwrite.SetterCall.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/X.java:6  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/X.java:7  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- X.java --
+class X {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    resetXHours(1.0);
+    presetXHours(2.0);
+    setXHours (3.0);
+    this.setXHours(4.0);
+  }
+}
