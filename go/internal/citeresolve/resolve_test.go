@@ -66,6 +66,7 @@ func TestRetroAndCorpus(t *testing.T) {
 		{"valid retro delta", "[ev: retro go-ci-steps Δ2]", []want{{Resolved, "| Δ2 | **A generator fails closed"}}},
 		{"retro without delta shows its heading", "[ev: retro go-ci-steps]", []want{{Resolved, "# 2026-10-22 · kit · go-ci-steps"}}},
 		{"delta as a numbered row of a Δ table", "[ev: retro table-deltas Δ2]", []want{{Resolved, "| 2 | second"}}},
+		{"delta as a numbered row under a deltas heading", "[ev: retro table-deltas Δ3]", []want{{Resolved, "| 3 | third"}}},
 		{"a numbered row outside a Δ table is no delta", "[ev: retro table-deltas Δ7]", []want{{MissingDelta, ""}}},
 		{"retro lacking the delta", "[ev: retro go-ci-steps Δ9]", []want{{MissingDelta, "defines no Δ9"}}},
 		{"a delta cited inside the retro is not its own", "[ev: retro go-ci-steps Δ3]", []want{{MissingDelta, ""}}},

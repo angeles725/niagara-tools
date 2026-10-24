@@ -178,20 +178,26 @@ func firstHeading(lines []string) string {
 	return ""
 }
 
-var deltaHeader = regexp.MustCompile(`^\|\s*Δ\s*\|`)
+var (
+	deltaHeader = regexp.MustCompile(`^\|\s*Δ\s*\|`)
+	numHeader   = regexp.MustCompile(`^\|\s*#\s*\|`)
+)
 
 // deltaLine is the line that defines Δn: one opening with Δn (table row, heading, bullet), or row n
-// (`| n |`, `| Dn |`) of a table whose header cell is Δ; -1 when none.
+// (`| n |`, `| Dn |`) of a table whose header cell is Δ, or # under a section heading (## or deeper) that names deltas; -1 when none.
 func deltaLine(lines []string, n int) int {
 	def := regexp.MustCompile(fmt.Sprintf(`^\s*(?:#+\s*|\|\s*|[-*]\s+)?(?:\*\*)?Δ%d(?:[^0-9]|$)`, n))
 	row := tableRow(fmt.Sprint(n))
 	rowD := tableRow(fmt.Sprintf("D%d", n))
-	inTable := false
+	inTable, deltaHeading := false, false
 	for i, l := range lines {
+		if h, ok := headingText(l); ok {
+			deltaHeading = strings.HasPrefix(l, "##") && strings.Contains(strings.ToLower(h), "delta")
+		}
 		switch {
 		case def.MatchString(l):
 			return i
-		case deltaHeader.MatchString(l):
+		case deltaHeader.MatchString(l) || (deltaHeading && numHeader.MatchString(l)):
 			inTable = true
 		case !strings.HasPrefix(strings.TrimSpace(l), "|"):
 			inTable = false
