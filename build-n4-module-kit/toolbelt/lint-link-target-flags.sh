@@ -23,7 +23,9 @@
 #
 # Heuristic limits (documented, grep-level): a link-in target with neither a comment nor a wiring-map
 # row is invisible to LTF1 — keep the module comment convention or pass --wiring-map. Flags are
-# matched as the READONLY / TRANSIENT / OPERATOR tokens anywhere in the annotation.
+# matched as the READONLY / TRANSIENT / OPERATOR tokens anywhere in the annotation's code: a flag word in a
+# string (a defaultValue) or in a comment inside the annotation is not a flag, and a commented-out
+# @NiagaraProperty is not a property (truth fix 2026-10-24; real trees unchanged: Cliente 21, decompiled 0).
 #
 # Mutation: LTF-comment -- dropping the link-comment detection lets a commented READONLY link target pass
 # Mutation: LTF-map -- dropping the --wiring-map Table 2 harvest lets a mapped READONLY target pass
@@ -32,6 +34,7 @@
 # Mutation: LTF-backtick -- matching the sentinels on the raw cell FAILs a backticked `self` row
 # Mutation: LTF-header -- detecting the header on any row drops a data row whose display name starts with Source
 # Mutation: LTF-transient -- dropping the TRANSIENT operator-mode check lets a non-persisted HOA pass
+# Mutation: LTF-code -- reading the annotation's raw text FAILs a flag word in a defaultValue string or a commented-out annotation
 # Mutation: LTF-mapread -- going on with no Table 2 target passes a mapped READONLY slot clean on an unreadable map
 #
 # Implementation: rule package go/internal/lint/rules/linktargetflags on the shared engine go/internal/lint

@@ -9,7 +9,6 @@ FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:23  LTF1: link-in target "
 FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:24  LTF1: link-in target "nextNoComment" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
 FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:28  LTF1: link-in target "nameLast" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
 FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:30  LTF1: link-in target "tight" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
-FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:32  LTF1: link-in target "inDefault" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
 -- stderr --
 -- root/com/x/A.java --
 class A {

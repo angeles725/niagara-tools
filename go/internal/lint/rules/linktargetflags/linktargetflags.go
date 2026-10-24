@@ -3,7 +3,7 @@
 // awk run per file plus an awk harvest of the --wiring-map Table 2); the wrapper keeps the user-facing
 // contract and its header documents the rule and its mutation pins.
 //
-// It is a per-file lint.Rule that reads raw lines, as the awk did (no comment stripping), and a
+// It is a per-file lint.Rule (comment blocks on raw lines, annotations on code: see Check) and a
 // lint.Configurer that reads the --wiring-map file before the walk. The map contract is the layout of
 // toolbelt/generate-wiring-map.sh: a "## " section whose heading holds "Table 2", the section's first table
 // row as its header (the Source column is the header cell starting with "Source", else the third), and
@@ -18,6 +18,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linescan"
 )
 
 // ID is the lint name printed in every row.
@@ -120,16 +121,22 @@ func cell(c []string, k int) string {
 
 // Check is the awk's line loop: a run of comment lines heads the @NiagaraProperty annotations after it
 // (a blank line, code or another annotation ends it); an annotation is read until its parentheses close.
+// The comment block is read on the raw lines (its text is the point); the annotation is read on code
+// (linescan.Code: comments blanked, literal contents removed) for its marker, its parentheses and its flag
+// tokens, and on the stripped lines (literal text kept) for its name. Truth fix 2026-10-24: the awk read the
+// raw text, so a commented-out annotation, a flag word in a defaultValue string or in a comment inside the
+// annotation, and a parenthesis in a string all counted as code.
 func (r *rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
+	code, named := linescan.Code(f), f.Stripped()
 	inProp, prevCmt := false, false
-	buf, cmt, pline := "", "", 0
+	buf, nbuf, cmt, pline := "", "", "", 0
 	for i, ln := range f.Raw {
 		switch {
 		case inProp:
-			buf += " " + ln
-		case strings.Contains(ln, "@NiagaraProperty"):
-			inProp, buf, pline = true, ln, i+1
+			buf, nbuf = buf+" "+code[i], nbuf+" "+named[i]
+		case strings.Contains(code[i], "@NiagaraProperty"):
+			inProp, buf, nbuf, pline = true, code[i], named[i], i+1
 		case comment.MatchString(ln):
 			if prevCmt {
 				cmt += " " + ln
@@ -145,7 +152,7 @@ func (r *rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if strings.Count(buf, "(")-strings.Count(buf, ")") > 0 || !strings.Contains(buf, "(") {
 			continue
 		}
-		if m := nameAttr.FindStringSubmatch(buf); m != nil {
+		if m := nameAttr.FindStringSubmatch(nbuf); m != nil {
 			name := m[1]
 			linked, mapped := linkText.MatchString(lower(cmt)), r.targets[name]
 			if strings.Contains(buf, "READONLY") && (linked || mapped) {
@@ -160,7 +167,7 @@ func (r *rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 				out = append(out, lint.Finding{Line: pline, Msg: fmt.Sprintf(ltf2, name)})
 			}
 		}
-		inProp, buf, pline, prevCmt = false, "", 0, false // cmt kept: a block heads its run of properties
+		inProp, buf, nbuf, pline, prevCmt = false, "", "", 0, false // cmt kept: a block heads its run of properties
 	}
 	return out, nil
 }

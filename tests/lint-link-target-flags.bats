@@ -156,3 +156,14 @@ MD
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-link-target-flags: cannot read --wiring-map $m: "* ]]
 }
+
+@test "LTF-code: a flag word in a string or a comment, or a commented-out annotation, is not a flag (truth fix 2026-10-24)" {
+  # Mutation: LTF-code -- reading the annotation's raw text FAILs a flag word in a defaultValue string or a commented-out annotation
+  local d="$BATS_TEST_TMPDIR/code/src"; mkdir -p "$d"
+  printf 'class A {\n// Commissioning link from the control\n// @NiagaraProperty(name = "old", type = "double", flags = Flags.READONLY)\n' > "$d/A.java"
+  printf '// Commissioning link from the control\n@NiagaraProperty(name = "label", type = "baja:String", defaultValue = "BString.make(\\"READONLY\\")", flags = Flags.SUMMARY)\n' >> "$d/A.java"
+  printf '@NiagaraProperty(\n  name = "linked",\n  flags = Flags.SUMMARY // was: | Flags.READONLY\n)\n}\n' >> "$d/A.java"
+  run "$LTF" "$d"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
