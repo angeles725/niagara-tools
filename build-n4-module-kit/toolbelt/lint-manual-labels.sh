@@ -16,7 +16,8 @@
 #
 # Usage:  lint-manual-labels.sh [--strict] <manual.html|manual.md> <ui-dir> [<ui-dir>...]
 #   <ui-dir> is an rc/ tree, a -ux/-rt profile src dir or a lexicon dir (several allowed).
-# Exits:  0 clean or WARN-only · 1 any WARN under --strict · 3 usage/env (bad manual or ui-dir, unreadable file)
+# Exits:  0 clean or WARN-only · 1 any WARN under --strict · 3 usage/env (bad manual or ui-dir, unreadable file,
+#         a ui-dir with no UI source file: ERROR row, K20)
 #
 # Row format:
 #   WARN  lint-manual-labels  <manual>:<line>  label "<label>" not found in the UI source
@@ -27,6 +28,7 @@
 # Mutation: ML2 -- dropping the not-found check stops the WARN on a renamed label the manual still quotes
 # Mutation: ML4 -- dropping the \uNNNN decode makes an accented lexicon label look missing
 # Mutation: ML8 -- dropping the word-boundary test lets "Guard" match the unit "Guardar"
+# Mutation: ML11 -- opting out of the empty-root ERROR reports every label missing on a typo'd ui-dir (exit 0)
 #
 # Implementation: rule package go/internal/lint/rules/manuallabels on the shared engine go/internal/lint
 # (walker, Mode FileFirst parser, Joined TreeRule, row formatter; go/README.md) and go/internal/htmltext

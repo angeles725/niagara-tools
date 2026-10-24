@@ -39,13 +39,14 @@ func Spec() lint.Spec {
 		names[i] = b.String()
 	}
 	return lint.Spec{
-		Tree:    &rule{},
-		Mode:    lint.FileFirst,
-		Option:  "manual",
-		Joined:  true,
-		EmptyOK: true, // the bash lint scanned an empty ui-dir and reported every label missing
-		Usage:   "usage: lint-manual-labels.sh [--strict] <manual.html|manual.md> <ui-dir> [<ui-dir>...]",
-		Select:  lint.Selection{Names: names, Prune: []string{"node_modules"}},
+		Tree:   &rule{},
+		Mode:   lint.FileFirst,
+		Option: "manual",
+		Joined: true,
+		Usage:  "usage: lint-manual-labels.sh [--strict] <manual.html|manual.md> <ui-dir> [<ui-dir>...]",
+		Select: lint.Selection{Names: names, Prune: []string{"node_modules"}},
+		// a ui-dir with no UI file is a wrong path: every label reported missing (exit 0) hid it (truth fix 2026-10-24)
+		EmptyError: lint.EmptyRow{Msg: "no UI source files found (*." + strings.Join(exts, " *.") + "; wrong path or empty source tree)"},
 	}
 }
 

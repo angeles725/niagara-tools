@@ -104,3 +104,13 @@ teardown() { rm -rf "$T"; }
   grep -qF "#   $warn_prefix  <manual>:<line>" "$ML"
   grep -qF "#   $sum_prefix  checked=<n>" "$ML"
 }
+
+@test "ML11: a ui-dir with no UI source file is an ERROR row and exit 3, never every label missing" {
+  mkdir -p "$T/typo"; printf 'notes\n' > "$T/typo/README.txt"
+  printf 'Press "Guardar".\n' > "$T/docs/manual.md"
+  run "$ML" --strict "$T/docs/manual.md" "$T/ui" "$T/typo"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR  lint-manual-labels  $T/typo  no UI source files found"* ]]
+  [[ "$output" != *"WARN"* ]]
+  [[ "$output" != *"SUMMARY"* ]]
+}
