@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · r9-followups
@@ -38,10 +38,13 @@ after a write.
 |---|---|---|---|
 | Δ1 | List the new `no # Mutation: line in the header` row variant in the lint-guard-pins.sh header's row list | `toolbelt/lint-guard-pins.sh` header (row shapes) | `[ev: go/internal/guardpins/command_test.go TestMainOnlyStrayDeclarations]` |
 
+## Fold
+- Δ1 → already in code (`toolbelt/lint-guard-pins.sh` header row list); doctrine line `METHODOLOGY.md` K24 (7).
+
 ## Lessons
 - A pin needs a mutation that the old, looser assertion lets pass. Otherwise it only proves that the code runs.
 - Check what a generator copies through before you pin its comparison rule. BUILD-STATE.md is byte-exact, but
   its extra trailing newline still compares fresh.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-r9-followups.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-10-23-r9-followups.md | kit | 2026-10-23 | folded | 1 |`
