@@ -1,0 +1,13 @@
+declared difference: T5-F4 srcTest directories are pruned: the lint protects production session stores, and test sources never ship in the module jar (a root whose only Java sources are under srcTest is the K20 empty root)
+-- args --
+@DIR@/Mod
+-- want --
+exit 3
+ERROR  lint-session-store-lazy-evict  @DIR@/Mod  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- Mod/srcTest/test/com/x/DispatchTest.java --
+public class DispatchTest
+{
+  private static final Map<String, String> TOKENS = new HashMap<String, String>();
+  void issue(String id) { TOKENS.put(id, "t"); }
+}

@@ -1,0 +1,16 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/ConfigSession.java --
+class ConfigSession {
+  private final Map<String, Entry> map = new HashMap<String, Entry>();
+  synchronized String issue(String id, String user) {
+    map.put(id, new Entry(user, 0));
+    return user;
+  }
+  synchronized void revoke(String id) {
+    map.remove(id);
+  }
+}
