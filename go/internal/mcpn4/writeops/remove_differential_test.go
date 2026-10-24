@@ -157,6 +157,9 @@ func removeSubtrees() []string {
 	}
 	return []string{
 		`{"h": "g", "t": "baja:Folder"}`,
+		`{"h": "g", "n": "Grp", "t": "baja:Folder", "v": "root"}`,
+		grp(src, tgt(link("Link", `"h:s1"`, `"out"`, `"in10"`)), link("Link", `"h:s1"`, `"out"`, `"in10"`),
+			status("in10", "baja:StatusNumeric", `"8.5"`, `"0;g"`)),
 		`{"h": "g"}`,
 		`{"h": "g", "t": null, "v": null, "s": []}`,
 		grp(src, tgt(link("Link", `"h:s1"`, `"out"`, `"in10"`))),
@@ -165,6 +168,7 @@ func removeSubtrees() []string {
 		grp(src, tgt(link("Link", `null`, `null`, `null`), link("Link1", `""`, `1`, `2`))),
 		grp(src, tgt(link("Link", `"h:s1"`, `"out"`, `"out"`))),
 		grp(src, tgt(link("Link", `7`, `"out"`, `"in10"`))),
+		grp(src, tgt(link("Link", `"hxs1"`, `"out"`, `"in10"`), link("Link1", `"a|hxt1"`, `"out"`, `"inB"`))),
 		grp(src, tgt(link("Link", `["h:s1"]`, `"out"`, `"in10"`))),
 		grp(src, tgt(link("Link", `"h:s1"`, `"out"`, `["in10"]`))),
 		grp(src, tgt(link("Link", `"h:s1"`, `"out"`, `{"a": 1}`))),
@@ -209,6 +213,8 @@ func scanTrees() []string {
 		`{"h": "3", "s": [` + comp("A", `[1]`, link("L1", `"h:s1"`, `"x"`, `"in"`)) + `]}`,
 		`{"h": "3", "s": [` + comp("A", `"g"`, link("L1", `"h:s1"`, `"x"`, `"in"`)) + `, ` + comp("N", `null`, link("L1", `"h:t1"`, `"x"`, `"in"`)) + `]}`,
 		`{"h": "3", "s": [` + comp("A|B", `"x"`, link("L1", `"h:s1"`, `"x"`, `"in"`)) + `]}`,
+		`{"h": "3", "s": [` + comp("A", `"a"`, link("L1", `"hxs1"`, `"x"`, `"in"`), link("L2", `"h:t1"`, `"x"`, `"in"`),
+			link("L3", `"h:"`, `"x"`, `"in3"`)) + `]}`,
 		`{"h": "3", "s": [` + comp("..", `"x"`, link("L1", `"h:s1"`, `"x"`, `"in"`)) + `]}`,
 		`{"h": "3", "s": [{"n": "Deep", "s": [{"n": "D2", "s": [` + comp("Z", `"z"`, link("L1", `"h:s1"`, `"x"`, `"in"`), link("L0", `7`, `"x"`, `"in"`)) + `]}]}]}`,
 		`{"h": 3, "s": [` + comp("A", `"a"`, link("L1", `"h:s1"`, `"x"`, `["l"]`), link("L2", `"h:s1"`, `"x"`, `"in"`)) + `]}`,
@@ -252,9 +258,16 @@ func removeCases(t *testing.T) []string {
 	for _, a := range []string{`"parent_ord": "` + folder + `", "name": "../x"`, `"parent_ord": "` + folder + `", "name": ""`,
 		`"parent_ord": "` + folder + `", "name": "Grp\n"`, `"parent_ord": "` + folder + `", "name": "Nope"`,
 		`"parent_ord": "` + folder + `", "name": 7`, `"parent_ord": "station:|slot:/Missing", "name": "Grp"`,
-		base + `, "link_scan_ord": "station:|slot:/Missing"`, base + `, "link_scan_ord": "` + folder + `"`,
+		base + `, "link_scan_ord": "station:|slot:/Missing"`, base + `, "link_scan_ord": null`, base + `, "link_scan_ord": "` + folder + `"`,
 		`"parent_ord": "` + folder + `/", "name": "Grp"`, `"parent_ord": "` + folder + `//", "name": "Grp"`} {
 		add(a, plain, mustObj(t, scans[1]), `[]`, 1)
+	}
+	for _, parent := range []string{folder + "//", folder + "/"} { // loadable: ChildOrd decides
+		c := obj("args", obj("parent_ord", parent, "name", "Grp"), "before",
+			obj(parent, mustObj(t, `{"": {"h": "3"}, "Grp": {}}`), folder+"/Grp", flat(plain, 4)), "replies", []any{[]any{}},
+			"after", obj(parent, mustObj(t, `{"": {"h": "3"}}`)))
+		line, _ := pyjson.Marshal(c, pyjson.Options{})
+		out = append(out, string(line))
 	}
 	return out
 }

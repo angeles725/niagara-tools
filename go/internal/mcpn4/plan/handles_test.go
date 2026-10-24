@@ -23,6 +23,18 @@ func removing(r *rig, op *pyjson.Object) {
 	panicked(r, impl)
 }
 
+// n4_remove_component is served: its dry run and execution reach the station, and the sent
+// removal clears the cache (the model keeps the node: a mismatch).
+func TestRemoveComponentIsServedAndClearsTheHandles(t *testing.T) {
+	r := newRig(t)
+	r.st.nodes[folder] = node("", node("h", "3", "t", "baja:Folder"), "Calc", node("n", "Calc"))
+	args := node("parent_ord", folder, "name", "Calc")
+	text, isErr, out := r.execute(t, "n4_remove_component", args, r.dry(t, "n4_remove_component", args))
+	if isErr || get(out, "verdict") != "mismatch" || len(r.st.sent) != 1 || r.st.cleared != 1 {
+		t.Fatalf("%s %v %s sent %d cleared %d", text, isErr, pyjson.Repr(out), len(r.st.sent), r.st.cleared)
+	}
+}
+
 // _send: a removal sent and answered makes every cached handle stale (invalidate_handles());
 // any other op, or a removal the station call failed on, leaves the cache alone.
 func TestARemovalClearsEveryCachedHandle(t *testing.T) {
