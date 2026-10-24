@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-split-package-check
@@ -51,4 +51,4 @@ then two truth fixes with RED first.
   passing for the wrong reason.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-split-package-check.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 already folded in `go/README.md` § XML rules (lint-agent-on-shape is the first consumer), cited on the `BUILD-LOOP.md` § 5 XML line, open issue (1) marked DONE; Δ2 already in the script header (`split-package-check.sh:16`), cited on the `BUILD-LOOP.md` § 5 pre-gate line; Δ3 folded as the port rule's one allowed quirk (cosmetic, no real tree hits it).

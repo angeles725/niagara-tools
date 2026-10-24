@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-23 · kit · go-e2-tiny-lints
@@ -53,4 +53,4 @@ shared: the line was cut at its first `//` without string awareness (truth audit
 - Real client trees rarely exercise comment or string shapes; a decompiled-source sample did (17 + 3 rows).
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-go-e2-tiny-lints.md | kit | 2026-10-23 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 already folded in code (9ee06a58 `Spec.ShortScanError`, cited in the `BUILD-LOOP.md` § 5 port rule; the seven E2 ports do not set it yet, noted on its open issue); Δ2 rejected for now, needs code: NUL-separated `lib/scan-files.sh` and its `while read` callers (`[deferred:]` on the fail-closed listing line).
