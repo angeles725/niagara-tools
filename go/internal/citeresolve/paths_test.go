@@ -2,18 +2,33 @@ package citeresolve
 
 import "testing"
 
-func TestPathPointers(t *testing.T) {
+func TestFilePointers(t *testing.T) {
 	t.Parallel()
 	const vAlias = "Code: `V=organized/baja/baja/vineflower/com/tridium` (4.14).\n"
 	check(t, []struct {
 		name, text string
 		want       []want
 	}{
+		{"versioned devguide range", "[ev: devguide lex_lex.js.txt:441-455]", []want{{Resolved, "lex line 441"}}},
+		{"devguide range past EOF", "[ev: devguide lex_lex.js.txt:455-470]", []want{{LineOutOfRange, "file has 460"}}},
+		{"unversioned-only devguide notes the mismatch", "[ev: devguide only-old.txt:2]", []want{{Resolved, "version mismatch"}}},
+		{"missing devguide", "[ev: devguide nope.txt:1]", []want{{MissingFile, "nope.txt"}}},
+		{"guide", "[ev: guide Platform/aSoftwareManager.txt:18]", []want{{Resolved, "guide line 18"}}},
+		{"niagara-help with a version", "[ev: niagara-help 4.15.6.20 guides-clean/Platform/aSoftwareManager.txt:3]", []want{{Resolved, "guide line 3"}}},
 		{"alias in prose", vAlias + "FINE (`V/sys/Nre.java:730`).", []want{{Resolved, "// Nre line 730"}}},
 		{"ellipsis resolves against an earlier hit of the card",
-			"[ev: niagara-help/versions/4.15.6.20/guides-clean/Platform/aSoftwareManager.txt:1] [ev: …/Platform/aSoftwareManager.txt:2]",
+			"[ev: niagara-help 4.15.6.20 guides-clean/Platform/aSoftwareManager.txt:1] [ev: …/Platform/aSoftwareManager.txt:2]",
 			[]want{{Resolved, "guide line 1"}, {Resolved, "guide line 2"}}},
 		{"ellipsis with no earlier hit", "[ev: …/Platform/aSoftwareManager.txt:2]", []want{{MissingFile, "ellipsis"}}},
+		{"inline prose citation", "x (devguide `lex_lex.js.txt:3`) y", []want{{Resolved, "lex line 3"}}},
+		{"code in a module part", "[ev: code kitControl-rt BFoo.java:10]", []want{{Resolved, "// BFoo line 10"}}},
+		{"code path searched in the decompiles", "[ev: code javax/baja/sys/BA.java:150]", []want{{Resolved, "// BA line 150"}}},
+		{"code file missing from its module", "[ev: code kitControl-rt BNope.java]", []want{{MissingFile, "kitControl-rt"}}},
+		{"vineflower prose citation", "vineflower kitControl-rt 4.14.0.162 `com/tridium/kitControl/BFoo.java:2-3`", []want{{Resolved, "// BFoo line 2"}}},
+		{"javap jar found", "javap of `kitControl-rt.jar` 4.15.6.20", []want{{Resolved, "javap output not checked"}}},
+		{"javap jar missing", "javap of `nope-rt.jar` 4.15.6.20", []want{{MissingFile, "nope-rt.jar"}}},
+		{"memory by prefix", "[ev: mem shared-checkout]", []want{{Resolved, "shared-checkout-git-discipline.md"}}},
+		{"missing memory", "[ev: mem nope]", []want{{MissingFile, "nope"}}},
 		{"kit cross-reference by number", "`types/platform.md` § 2, so", []want{{Resolved, "## 2. Software Manager"}}},
 		{"kit cross-reference by title", "(`METHODOLOGY.md` § Domain correctness) does", []want{{Resolved, "## Domain correctness"}}},
 		{"kit cross-reference to a missing heading", "`types/platform.md` § 9, so", []want{{MissingSection, "§9"}}},

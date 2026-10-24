@@ -12,9 +12,16 @@ import (
 // copies are the sub-directories of an organized/<mod>/<part>/ module copy that hold source files.
 var copies = []string{"vineflower", "decompiled", "extracted", ""}
 
-// registerFiles adds the resolvers of the pointers that name a file in a tree (paths for now).
+// registerFiles adds the resolvers of the pointers that name a file in a tree.
 func (e *Engine) registerFiles() {
 	e.by[citeparse.Path] = pathResolver{e}
+	e.by[citeparse.Code] = codeResolver{e}
+	e.by[citeparse.Devguide] = guideResolver{e, "devguide-clean"}
+	e.by[citeparse.Guide] = guideResolver{e, "guides-clean"}
+	e.by[citeparse.Help] = helpResolver{e}
+	e.by[citeparse.Mem] = memResolver{e}
+	e.by[citeparse.Vineflower] = vineResolver{e}
+	e.by[citeparse.Javap] = javapResolver{e}
 }
 
 func (e *Engine) help() string      { return filepath.Join(e.roots.Research, "niagara-help") }
