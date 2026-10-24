@@ -25,11 +25,13 @@ func (k Kind) String() string {
 	return [...]string{"ident", "number", "string", "template", "regex", "punct"}[k]
 }
 
-// Token is one token; Line is the 0-based line it starts on.
+// Token is one token; Line is the 0-based line it starts on. A Template's Subs are the tokens of each of its
+// ${...} substitutions, in order (nested templates carry their own).
 type Token struct {
 	Kind Kind
 	Line int
 	Text string
+	Subs [][]Token
 }
 
 // operators are the multi-byte punctuators, longest first; every other punctuator is one byte.
@@ -104,9 +106,9 @@ func (s *scanner) run(sub bool) {
 			s.emit(String, line, s.src[start+1:end])
 		case c == '`':
 			s.i++
-			end := s.template()
+			end, subs := s.template()
 			s.blank = append(s.blank, [2]int{start + 1, end})
-			s.emit(Template, line, s.src[start+1:end])
+			s.out = append(s.out, Token{Template, line, s.src[start+1 : end], subs})
 		case c == '/' && s.regexOK():
 			s.regex()
 			text := s.src[start:s.i]
@@ -145,7 +147,9 @@ func (s *scanner) run(sub bool) {
 	}
 }
 
-func (s *scanner) emit(k Kind, line int, text string) { s.out = append(s.out, Token{k, line, text}) }
+func (s *scanner) emit(k Kind, line int, text string) {
+	s.out = append(s.out, Token{Kind: k, Line: line, Text: text})
+}
 
 // skip moves to end (clamped), counting the newlines passed.
 func (s *scanner) skip(end int) {
@@ -175,25 +179,27 @@ func (s *scanner) str(q byte) int {
 }
 
 // template reads a template literal body after its opening backtick, through its closing backtick, and
-// returns where its content ends.
-func (s *scanner) template() int {
+// returns where its content ends and the tokens of each substitution.
+func (s *scanner) template() (int, [][]Token) {
+	var subs [][]Token
 	for s.i < len(s.src) {
 		switch c := s.src[s.i]; {
 		case c == '\\':
 			s.skip(s.i + 2)
 		case c == '`':
 			s.i++
-			return s.i - 1
+			return s.i - 1, subs
 		case strings.HasPrefix(s.src[s.i:], "${"):
 			s.i += 2
-			outer := s.out
-			s.run(true) // the substitution's tokens belong to the template's text, not the stream
-			s.out = outer
+			n := len(s.out)
+			s.run(true) // the substitution's tokens belong to the template, not the stream
+			subs = append(subs, append([]Token(nil), s.out[n:]...))
+			s.out = s.out[:n]
 		default:
 			s.skip(s.i + 1)
 		}
 	}
-	return len(s.src)
+	return len(s.src), subs
 }
 
 // regex reads a regex literal from its opening slash: classes may hold a /, a line end stops it.
