@@ -1,0 +1,20 @@
+-- args --
+@DIR@/repo/Paccadia/ColdRoomPan
+-- want --
+exit 1
+FAIL  lint-write-path  ColdRoomPan  slot fanMode: no matrix row
+-- stderr --
+-- .git/HEAD --
+x
+-- repo/.git/.keep --
+-- repo/.git/HEAD --
+x
+-- repo/Paccadia/ColdRoomPan/src/com/x/BCrp.java --
+@NiagaraProperty(name="fanMode", flags=Flags.OPERATOR)
+@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)
+public class BCrp extends BComponent {}
+-- repo/docs/write-path-matrix.md --
+# Write-Path Matrix
+| Slot | Writer | Timing | Test |
+|---|---|---|---|
+| setpoint | Dashboard | mid-cycle | w1 |
