@@ -149,15 +149,23 @@ func isCount(v string) bool { _, ok := count(v); return ok }
 func alnum(c byte) bool { return c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' }
 
 // write lands the stub, then the regenerated index, then the flipped envelope (both through a temporary
-// file and a rename), and prints the three PASS rows. A failure at any step undoes the earlier ones: the
+// file and a rename), and prints the three PASS rows, all under the retros/ lock so concurrent runs serialise. A failure at any step undoes the earlier ones: the
 // stub is removed and INDEX.md restored (or removed when there was none), so nothing lands.
 func (r retro) write(root string, s cli.Stdio) int {
 	retros, state := root+"/retros", root+"/BUILD-STATE.src.md"
 	file := retros + "/" + r.date + "-" + r.slug + ".md"
-	switch {
-	case !gen.IsDir(retros):
+	if !gen.IsDir(retros) {
 		fmt.Fprintf(s.Err, "new-retro: retros dir not found: %s\n", retros)
 		return ExitUsage
+	}
+	// Mutation: NR-lock -- without the lock two concurrent runs both read the envelope and the later rename drops the other's flip
+	unlock, err := lock(retros)
+	if err != nil {
+		fmt.Fprintf(s.Err, "new-retro: cannot lock %s: %v\n", retros, err)
+		return ExitWrite
+	}
+	defer unlock()
+	switch {
 	case !gen.IsRegular(state):
 		fmt.Fprintf(s.Err, "new-retro: BUILD-STATE.src.md not found: %s\n", state)
 		return ExitUsage
@@ -170,6 +178,7 @@ func (r retro) write(root string, s cli.Stdio) int {
 		fmt.Fprint(s.Err, "new-retro: failed to stage BUILD-STATE.src.md\n")
 		return ExitWrite
 	}
+	afterRead()
 	// Mutation: NR-nosection -- printing the envelope PASS row when no section names the module reports a flip that never happened
 	flipped, outcome := Flip(string(src), r.module)
 	switch outcome {
@@ -231,6 +240,10 @@ func create(path, content string) error {
 	}
 	return err
 }
+
+// afterRead runs just after BUILD-STATE.src.md is read; a test makes it a barrier to force concurrent runs to
+// interleave.
+var afterRead = func() {}
 
 // render is the stub renderer; a test swaps it to prove a refused run never renders.
 var render = retro.stub
