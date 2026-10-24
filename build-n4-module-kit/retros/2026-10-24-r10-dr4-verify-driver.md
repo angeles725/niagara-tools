@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · r10-dr4-verify-driver
@@ -46,3 +46,10 @@ fixture itself passes clean (4 PASS, 1 SKIP: it has no TCP config).
   was outside this task's edit surface.
 - A source-side enum-range rule needs doctrine first (for example, a discovery leaf that proposes an
   `EnumPoint` setting a frozen-enum range in `updateTarget`).
+
+## Fold
+- Δ1 is code already shipped in the PR that wrote this retro (`go/internal/verifymodule/driver.go`); its doctrine landed in the same PR: `types/driver-authoring.md` § 12 "Verify gate, driver mode", `build-verify.md` `--src` driver rows paragraph, `skill/SKILL.md` driver row (§ 12 and the gate's `driver-*` rows). Nothing re-implemented.
+- Both lessons are already stated in § 12 (PD-01 bound to `BBasicNetwork`; the enum range is a commissioning facet). The owed header line and the source-side enum rule stay the open issue in `ledger.d/2026-10-24-r10-dr4-verify-driver.md`.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail2`; log in `ledger.d/2026-10-24-r10-fold-tail2.md`) — Δ1 shipped code, cited in `types/driver-authoring.md` § 12 and `build-verify.md`.

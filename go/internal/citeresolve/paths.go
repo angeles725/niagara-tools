@@ -156,10 +156,11 @@ func unwrapLeadingCode(s string) string {
 type pathResolver struct{ e *Engine }
 
 // Resolve looks for the path under the card's directory, the kit, the repository, the research tree,
-// niagara-help, organized/, the module trees, the course tree, then the guide and devguide trees (versioned
-// first), in that order; `~/rest` under the home root; `KIT/rest` under the kit; `…/rest` under an earlier
-// hit of the card, else in the trees and the course tree; `dir/…/rest` below dir. A path found under none
-// of them (a bare file name, a partial package path) is searched in the trees.
+// niagara-help (its versioned copy first, so `source/…` reads the cited version), organized/, the module
+// trees, the course tree, then the guide and devguide trees (versioned first), in that order; `~/rest`
+// under the home root; `KIT/rest` under the kit; `…/rest` under an earlier hit of the card, else in the
+// trees and the course tree; `dir/…/rest` below dir. A path found under none of them (a bare file name, a
+// partial package path) is searched in the trees.
 func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	if rest, ok := strings.CutPrefix(p.Target, "…/"); ok {
 		for i := len(c.files) - 1; i >= 0; i-- {
@@ -178,7 +179,7 @@ func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	}
 	ro := r.e.roots
 	ver := filepath.Join(r.e.help(), "versions", ro.Version)
-	target, bases := p.Target, []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), r.e.organized(), ro.Modules, r.e.course(),
+	target, bases := p.Target, []string{c.Dir, ro.Kit, ro.Repo, ro.Research, ver, r.e.help(), r.e.organized(), ro.Modules, r.e.course(),
 		filepath.Join(ver, "guides-clean"), filepath.Join(ver, "devguide-clean"),
 		filepath.Join(r.e.help(), "guides-clean"), filepath.Join(r.e.help(), "devguide-clean")}
 	target = r.e.homePath(target)

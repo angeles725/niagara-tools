@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · r10-xmlsrc-nul-per-niagara
@@ -38,3 +38,10 @@ refuses it.
 - The failing input was a character reference (`&#x0;`), not a NUL byte: grep the bytes before choosing the fix, a
   byte count of `\0` finds nothing.
 - A tolerance needs a home other than the error path: `Doc.Warnings` gives each consumer one line to print it.
+
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 XML/`.bog` xmlsrc bullet: Niagara's reader decides a `.bog` well-formedness rule; U+0000 in a `bajaObjectGraph` is one named WARN. The code (`go/internal/xmlsrc/nul.go`) shipped in the PR that wrote this retro.
+- Lesson 1 (grep the bytes and the character references before choosing a fix) and lesson 2 (`Doc.Warnings`) are folded into that sentence or are code; not separate doctrine.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail2`; log in `ledger.d/2026-10-24-r10-fold-tail2.md`) — Δ1 in the `BUILD-LOOP.md` § 5 xmlsrc bullet.
