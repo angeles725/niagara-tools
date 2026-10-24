@@ -62,6 +62,21 @@ the client module; proposing the fixture/doc deltas so the next servlet-in-rt bu
 > wb-agent registration bullet), and corpus B780 was corrected the same way in niagara-research PR #45
 > (ba52824). The row text and this retro's review-status are left as they were.
 
+> **Corrected (2026-10-24, quality round 10) — Δ6:** the row says "`lint-delays` only traces an inline floor and
+> FAILs a variable one". Reading A (this retro): any floor held in a variable FAILs, so the floor must be inline.
+> Reading B (the lint): for `BRelTime.make(v)` the lint traces the binding of `v` up to 50 lines back and accepts a
+> `Math.max(.., N)` floor with a literal N >= 1, a `BRelTime` literal or a known positive helper, and FAILs
+> `unfloored` only when no floor is found (`toolbelt/lint-delays.sh:18-19`; `go/internal/lint/rules/delays/scan.go:325`,
+> `:335`, `:340`). What does FAIL is a floor through a named constant (`Math.max(v, MIN_MS)`, reported `zero-floor`)
+> and a `BRelTime` variable passed straight to the schedule call (`unfloored`, `scan.go:373`). Winner: B. The
+> tracing is not newer than this retro: the bash lint already scanned 50 lines back for the binding in its first
+> commit (6f0e834, 2026-09-05) and in the version current on 2026-09-20 (232dd54), and that version, run on a
+> fixture, cleaned a reassigned literal floor and FAILed the named-constant floor, the `BRelTime` variable and an
+> unfloored control exactly as today's lint does. So the row overstated the rule even at the time. The T7 code it
+> cites was rewritten to the inline form and its variable shape is not recoverable, so which of the two FAIL shapes
+> it hit is not observed.
+> The row text and this retro's review-status are left as they were.
+
 ## Lessons
 - A BWebServlet in -rt is a first-class shape; the scaffold assumes -ux and silently drops the servlet API + palette hygiene there.
 - Root-cause servlet override errors with `javap` of the target-version's `BWebServlet`, never from memory — the overridable set is `service/doGet/doPost/doPut/doDelete(WebOp)`, not `doService(WebOp)`.
