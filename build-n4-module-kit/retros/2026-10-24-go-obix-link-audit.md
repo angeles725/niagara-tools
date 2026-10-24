@@ -21,6 +21,13 @@ from a broken file), and a link written as `&#8594;`, `-&gt;`, with single quote
 not seen at all (false MISSING). The port prints the `path:line:col` error (exit 3) and reads those spellings as
 links. An empty 200 body is now exit 3 instead of every row MISSING.
 
+An independent security review of the GET commit (55f82244) added five changes, each a declared difference
+from bash (which passed all of these to curl), all exit 3 and none hit by the goldens or the live parity runs:
+a base with `user[:password]@` is refused (its password would otherwise reach `GET failed: <url>` in CI logs);
+the base must be `http(s)://` with a host and no query or fragment; `--component` may hold no `..` segment, `?`,
+`#`, `%` or control character; a 3xx answer is `redirect not followed: HTTP <status>` instead of its body
+being audited; the body is capped at 32 MiB.
+
 ## Evidence
 - 38 bash goldens recorded from `tests/fixtures/obix-link-audit` (every bats scenario, usage edges, repeated
   flags, empty values, CRLF map, edge map/xml, no-table maps; `go/internal/obixlinkaudit/testdata/bash-goldens.json`):
@@ -29,7 +36,10 @@ links. An empty 200 body is now exit 3 instead of every row MISSING.
   curl-owned `curl: (22) ...` line of the 404 case `[ev: r10 obix-link-audit live parity harness]`
 - RED `undefined: DeclaredRows` / `undefined: get` / `undefined: Main` before each Go commit; OLA-malformed and
   OLA-entities not ok on the pre-switch bash script, ok through the wrapper `[ev: tests/obix-link-audit.bats OLA-malformed]`
-- Mutations OLA-http, OLA-malformed, OLA-insecure each turn a Go test red `[ev: go/internal/obixlinkaudit/fetch_test.go TestGetVerifiesTheCertificateUnlessInsecure]`
+- Review follow-ups RED first: `TestLiveArgumentGuards` (userinfo/query bases and `..`/`?`/`%` components were
+  fetched, one GET each) and `TestGetErrorsAndRedirects` / `TestGetCapsTheBody` (302/304 and a 32 MiB + 1 body
+  returned no error) `[ev: go/internal/obixlinkaudit/command_test.go TestLiveArgumentGuards]`
+- Mutations OLA-http, OLA-malformed, OLA-insecure, OLA-userinfo, OLA-component, OLA-redirect, OLA-bodycap each turn a Go test red `[ev: go/internal/obixlinkaudit/fetch_test.go TestGetVerifiesTheCertificateUnlessInsecure]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
