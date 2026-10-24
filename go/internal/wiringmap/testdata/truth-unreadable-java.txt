@@ -8,4 +8,4 @@ generate-wiring-map: cannot read @DIR@/src/BU.java: Permission denied
 truth: an unreadable source is an env error, never a shorter map (edge-unreadable-java at 15e792d1 printed gawk's fatal line, the map without its slots and exit 0)
 -- src/BA.java --
 @NiagaraProperty(name = "a", type = "double", defaultValue = "0", flags = Flags.OPERATOR)
--- src/BU.java (unreadable) --
+-- src/BU.java (mode 000) --

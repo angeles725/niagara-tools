@@ -40,7 +40,7 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `cmd/rc-scan/` | `rc-scan <artifact-dir> [--strict] [--profile hmi\|lan\|both\|unknown] [--legacy]` |
 | `internal/obixlinkaudit/` | `Main` of `obix-link-audit` (`toolbelt/obix-link-audit.sh`): `DeclaredRows` (the selected wiring-map table), `Links` (each `display="Indirect\|Direct: <src> -> <tgt>"` of an `internal/xmlsrc` document; a malformed response is exit 3), `Report` (MATCH/MISMATCH/MISSING/SKIP rows) and the live mode's one read-only `net/http` GET (credentials from `OBIX_USER`/`OBIX_PASS` only) |
 | `cmd/obix-link-audit/` | `obix-link-audit --map <wiring-map.md> (--xml <component.xml> \| --obix <base-url> --component <path>) [--table 1\|2] [--insecure]` |
-| `internal/wiringmap/` | `Main` of `generate-wiring-map` (`toolbelt/generate-wiring-map.sh`): `Slots` (the OPERATOR and SUMMARY/READONLY `@NiagaraProperty` slots of one source, read through `javasrc.NiagaraProperties`), the bare-key lexicon display names and the three-section render whose tables `internal/obixlinkaudit` reads back; `testdata/*.txt` are golden runs recorded from the bash script by `testdata/record/record.sh` (an `@expect <file>` section is a file the run leaves) |
+| `internal/wiringmap/` | `Main` of `generate-wiring-map` (`toolbelt/generate-wiring-map.sh`): `Slots` (the OPERATOR and SUMMARY/READONLY `@NiagaraProperty` slots of one source, read through `javasrc.NiagaraProperties`), the bare-key lexicon display names and the three-section render whose tables `internal/obixlinkaudit` reads back; `testdata/*.txt` are golden runs recorded from the bash script by `rules/golden/record/record.sh` and replayed by `golden.Runner` in the case tree as cwd (`CHDIR=1`) |
 | `cmd/generate-wiring-map/` | `generate-wiring-map <facade-src-dir> [--lexicon <module.lexicon>] [--output <file>]` |
 
 The engine walks each root once and reads and scans each file once for every selected rule. Every row is
@@ -185,9 +185,9 @@ rule's rows stay contiguous.
    A new rule with no bash lint behind it (reference: `rules/machinedefaultpath`) writes its golden cases by
    hand from the doctrine (usage, empty root, pruned directories, several roots) and its table tests from the
    doctrine's positive and negative shapes, RED first.
-   A command that writes files records each one as an `@expect <file>` section of its case, and runs
-   every case with the case tree as its working directory, so relative `--output` paths replay too
-   (reference: `internal/wiringmap`, `testdata/record/record.sh`). `[ev: retro r10-generate-wiring-map-go Δ1]`
+   A command that writes files records each one as an `@after <file>` section of its case, and runs
+   every case with the case tree as its working directory (`CHDIR=1` in `record.env`), so relative
+   `--output` paths replay too (reference: `internal/wiringmap`). `[ev: retro r10-generate-wiring-map-go Δ1]`
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every
