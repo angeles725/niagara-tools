@@ -325,7 +325,7 @@ not have the re-mount survival problem — `static` is the load-bearing distinct
 **Lint check:** `lint-session-store-lazy-evict.sh` WARN — a `static Map<...>` field with a
 `.put(` call whose enclosing method has no same-method `.remove(` (sweep-on-insert) and no
 `Clock.schedule`-driven purge anywhere in the file.
-[ev: corpus B1160; DashboardConfigSession.java:31-126] — **Kit coverage:
+[ev: corpus B1160; src/com/angeles/DashboardPan/ux/DashboardConfigSession.java:31-126] — **Kit coverage:
 lint-session-store-lazy-evict.sh (FOLDED)**
 
 ---
