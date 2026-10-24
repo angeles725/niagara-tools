@@ -31,24 +31,29 @@ func (r *report) verifyModule(a artifact) {
 	r.memberRows(a.name, out, filter{sel: "PASS|FAIL|SKIP|WARN", mode: ws})
 }
 
-// firstJar is `find <libs> -maxdepth 1 -name '*.jar' | head -1`: the first entry, in directory order, whose
-// name ends in .jar (of any type) in libs, a directory that is not a symlink; "" when there is none.
+// firstJar is the jar verify-module checks: among the entries of libs (a directory that is not a symlink, as
+// `find <libs> -maxdepth 1 -name '*.jar'` reads it) named *.jar, the first in byte order that is not a
+// -sources or -javadoc jar, else the first one; "" when there is none. (The bash took `| head -1` in directory
+// order, so a -sources jar beside the module jar could be the one verified.)
 func firstJar(libs string) string {
 	if !isRealDir(libs) {
 		return ""
 	}
-	d, err := os.Open(libs)
-	if err != nil {
-		return ""
-	}
-	defer d.Close()
-	names, _ := d.Readdirnames(-1) // directory order, as find reads it
-	for _, n := range names {
-		if strings.HasSuffix(n, ".jar") {
+	entries, _ := os.ReadDir(libs) // byte order
+	first := ""
+	for _, e := range entries {
+		n := e.Name()
+		if !strings.HasSuffix(n, ".jar") {
+			continue
+		}
+		if !strings.HasSuffix(n, "-sources.jar") && !strings.HasSuffix(n, "-javadoc.jar") {
 			return libs + "/" + n
 		}
+		if first == "" {
+			first = libs + "/" + n
+		}
 	}
-	return ""
+	return first
 }
 
 // slotCoverage is §2: slot-coverage on module-include.xml and module.lexicon when both are files: the dup-keys

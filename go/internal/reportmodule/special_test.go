@@ -96,3 +96,30 @@ func TestHasOwnJS(t *testing.T) {
 		t.Error("a nested js file is own js")
 	}
 }
+
+// TestFirstJarSkipsSourcesAndJavadoc: the built module jar is chosen over its -sources/-javadoc siblings,
+// whatever the directory order, and the choice is the same on every run (byte order).
+func TestFirstJarSkipsSourcesAndJavadoc(t *testing.T) {
+	t.Parallel()
+	for _, order := range [][]string{
+		{"X-rt-javadoc.jar", "X-rt-sources.jar", "X-rt.jar"},
+		{"X-rt.jar", "X-rt-sources.jar", "X-rt-javadoc.jar"},
+		{"X-rt-sources.jar", "X-rt.jar", "X-rt-javadoc.jar"},
+	} {
+		files := make([]string, len(order))
+		for i, n := range order {
+			files[i] = "libs/" + n
+		}
+		root := tree(t, files...)
+		if got := firstJar(root + "/libs"); got != root+"/libs/X-rt.jar" {
+			t.Errorf("created %q: firstJar = %q, want X-rt.jar", order, filepath.Base(got))
+		}
+	}
+	root := tree(t, "libs/b.jar", "libs/a.jar", "only/X-sources.jar")
+	if got := firstJar(root + "/libs"); filepath.Base(got) != "a.jar" {
+		t.Errorf("two module jars: firstJar = %q, want the first in byte order", got)
+	}
+	if got := firstJar(root + "/only"); filepath.Base(got) != "X-sources.jar" {
+		t.Errorf("only a sources jar: firstJar = %q, want it (verify-module then reports it)", got)
+	}
+}
