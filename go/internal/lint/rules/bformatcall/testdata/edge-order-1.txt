@@ -1,0 +1,24 @@
+-- args --
+@DIR@/root
+-- want --
+exit 0
+WARN  lint-bformat-call  @DIR@/root/M.lexicon:1  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/Z.lexicon:1  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/a/M.lexicon:1  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/build/M.lexicon:1  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/z/M.lexicon:1  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+-- stderr --
+-- root/.dot/M.lexicon --
+k=%user%
+-- root/M.lexicon --
+k=%user%
+-- root/Z.lexicon --
+k=%user%
+-- root/a/M.lexicon --
+k=%user%
+-- root/build/M.lexicon --
+k=%user%
+-- root/w-worktrees/M.lexicon --
+k=%user%
+-- root/z/M.lexicon --
+k=%user%

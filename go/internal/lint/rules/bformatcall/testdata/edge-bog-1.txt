@@ -1,0 +1,20 @@
+-- args --
+@DIR@/root
+-- want --
+exit 0
+WARN  lint-bformat-call  @DIR@/root/s/config.bog:4  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/s/config.bog:5  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/s/config.bog:6  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+-- stderr --
+-- root/s/config.bog --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0">
+<p n="a" t="b:Folder">
+<p n="lbl" f="r" t="baja:String" v="Time: %time(HH:mm)%"/>
+<p n="u" t="baja:String" v="%user%"/>
+<!-- <p v="%user%"/> -->
+<p n="ent" v="&#37;user&#37;"/>
+<p n="ent2" v="%time&#40;x)%"/>
+<p n="ok" v="%time()%"/>
+</p>
+</bajaObjectGraph>

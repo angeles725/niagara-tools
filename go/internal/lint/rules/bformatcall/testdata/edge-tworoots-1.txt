@@ -1,0 +1,11 @@
+-- args --
+@DIR@/root
+@DIR@/root
+-- want --
+exit 3
+-- stderr --
+usage: lint-bformat-call.sh [--strict] <src-root>
+-- root/A.java --
+class A { String f = "%time(HH:mm)%"; }
+-- root/src/A.java --
+class A { String f = "%time(HH:mm)%"; }
