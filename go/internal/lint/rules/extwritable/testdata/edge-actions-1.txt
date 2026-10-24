@@ -1,0 +1,98 @@
+-- args --
+@DIR@/ac
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/ac/BA.java:5  run: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../run/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/ac/BA.java:6  other: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../other/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/ac/BB.java:4  c: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../c/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/ac/BB.java:6  e: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../e/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/ac/BB.java:7  f: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../f/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- ac/BA.java --
+package ac;
+@NiagaraProperty(name="sp", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="lim", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="mode", type="BStatusEnum", flags=Flags.OPERATOR)
+@NiagaraProperty(name="run", type="BStatusBoolean", flags=Flags.OPERATOR)
+@NiagaraProperty(name="other", type="BStatusBoolean", flags=Flags.OPERATOR)
+@NiagaraAction(name="setSp", parameterType="BDouble", defaultValue="BDouble.make(0)", flags=Flags.OPERATOR)
+@NiagaraAction(name="applyLim")
+@NiagaraAction(name="modeCmd")
+@NiagaraAction(name="SetRun")
+public class BA extends BComponent {}
+-- ac/BB.java --
+package ac;
+@NiagaraProperty(name="a", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="b", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="c", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="d", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="e", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="f", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="g", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="value", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(
+  name = "push",
+  flags = Flags.OPERATOR
+)
+@NiagaraAction(name = "poke", flags = Flags.OPERATOR) @NiagaraAction(name = "jab")
+@NiagaraAction
+@NiagaraAction(flags=Flags.OPERATOR)
+@NiagaraAction(name="tick", parameterType="BDouble", defaultValue="BDouble.make(f(1))")
+public class BB extends BComponent
+{
+  public void doPush()
+  {
+    setA(BDouble.make(1));
+    getB().setValue(2);
+    set(c, x, null);
+    this.set(d, x);
+  }
+  public void doPoke() { resetE(); }
+  public void doJab(BValue v) { getF().setValue(3); }
+  public void doTick(BDouble v)
+  {
+    if (v != null) {
+      setG(v);
+    }
+  }
+  public void execute() { setH(1); }
+  public void doUnknown() { setG(1); }
+}
+-- ac/BC.java --
+package ac;
+@NiagaraProperty(name="x", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="y", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(name="kick")
+public class BC extends BComponent
+{
+  @Override
+  public void doKick()
+  {
+    setX(1);
+  }
+  public BStatusNumeric getY() { return y; }
+  public void setY(BStatusNumeric v) { set(y, v, null); }
+  class Inner {
+    void doKick() { setY(1); }
+  }
+}
+-- ac/BD.java --
+package ac;
+@NiagaraProperty(name="q", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(name="go")
+public class BD extends BComponent
+{
+  public void doGo() { if (x) { setQ(1); } }
+}
+-- ac/BE.java --
+package ac;
+@NiagaraProperty(name="q", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(name="go")
+public class BE extends BComponent
+{
+  public void doGo()
+    throws Exception
+  {
+    setQ(1);
+  }
+}
