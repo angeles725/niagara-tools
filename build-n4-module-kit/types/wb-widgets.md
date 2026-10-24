@@ -364,6 +364,8 @@ override `doInvoke()` to do the work. Owed advisory: Go lint G91 `command-lexico
 
 PX files are XML authored in the Workbench PxEditor, shipped as module resources, and rendered in the browser via the Hx/HTML5 profile. The corpus contains 270+ `.px` files; the binding patterns below are the recurring skeleton. [ev: corpus B752 §752.3]
 
+When PX is the right recipe and how a Px page is laid out: `types/dashboard.md` § ux "Px rules".
+
 **Core binding types:**
 
 | Intent | Binding type | Key attributes |

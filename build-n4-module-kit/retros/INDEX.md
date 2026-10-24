@@ -212,7 +212,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-02-retro-fold-campaign-close.md | kit | 2026-10-02 | folded | 4 |
 | 2026-10-03-deferred-lints-2026-10-03-close.md | kit | 2026-10-03 | folded | 5 |
 | 2026-10-14-ws-placement.md | kit | 2026-10-14 | folded | 4 |
-| 2026-10-15-devguide415-horizons-authoring-security.md | kit | 2026-10-15 | pending | 10 |
+| 2026-10-15-devguide415-horizons-authoring-security.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-lexicons-ux-i18n.md | kit | 2026-10-15 | folded | 5 |
 | 2026-10-15-devguide415-nav-subscriptions-tags-ords.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-r2-control-alarms-schedules.md | kit | 2026-10-15 | folded | 10 |
@@ -228,7 +228,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-15-devguide415-runtime-api-corrections.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-n4-course-as-exemplar-source.md | kit | 2026-10-15 | pending | 4 |
 | 2026-10-15-n4-course-authoring-files-and-libraries.md | kit | 2026-10-15 | folded | 5 |
-| 2026-10-15-n4-course-build-deps-permissions-signing.md | kit | 2026-10-15 | pending | 6 |
+| 2026-10-15-n4-course-build-deps-permissions-signing.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-15-n4-course-drivers-bql-ords-files.md | kit | 2026-10-15 | folded | 5 |
 | 2026-10-15-n4-course-lexicon-logging-testing.md | kit | 2026-10-15 | folded | 5 |
 | 2026-10-15-n4-course-parity-observability-horizons.md | kit | 2026-10-15 | folded | 6 |
@@ -257,9 +257,9 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-go-lint-driver-scaffold.md | kit | 2026-10-22 | folded | 1 |
 | 2026-10-22-go-lint-engine.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-go-lint-guard-pins.md | kit | 2026-10-22 | folded | 1 |
-| 2026-10-22-go-lint-ord-ports.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-go-lint-ord-ports.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-go-lint-service-types.md | kit | 2026-10-22 | folded | 1 |
-| 2026-10-22-go-lint-timers.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-go-lint-timers.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-go-sweep-build-state.md | kit | 2026-10-22 | folded | 1 |
 | 2026-10-22-go-sweep-fold-audit.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-ledger-fragments.md | kit | 2026-10-22 | folded | 2 |
@@ -273,7 +273,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-r8-t22-retro-deltas.md | kit | 2026-10-22 | folded | 9 |
 | 2026-10-22-r8-t23-parked-advisories.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t41-host-safety.md | kit | 2026-10-22 | folded | 7 |
-| 2026-10-22-r8-t47-host-budget.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-r8-t47-host-budget.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9e-drivers.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9e-status-links.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9g-actions.md | kit | 2026-10-22 | folded | 2 |
@@ -282,7 +282,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-symlink-root-walk.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-t9c-reference-gaps.md | kit | 2026-10-22 | folded | 7 |
 | 2026-10-22-truth-audit.md | kit | 2026-10-22 | folded | 10 |
-| 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |
+| 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | folded | 1 |
 | 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-23-go-lint-config-sanity.md | kit | 2026-10-23 | pending | 3 |
 | 2026-10-23-go-lint-delays.md | kit | 2026-10-23 | pending | 2 |

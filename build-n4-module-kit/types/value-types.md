@@ -57,7 +57,7 @@ The tag itself is the wire value; the lexicon key produces the translated label.
 
 **Cross-module link rule (from `types/logic.md`):** a `BFrozenEnum` value linked ACROSS two custom modules forces
 a compile-time module dependency that the build system does not resolve easily. Use a plain `double` for
-cross-module links; `BFrozenEnum` stays for INTERNAL slots only. [ev: retro coldroompan-fan-mode-defrost L19]
+cross-module links; `BFrozenEnum` stays for INTERNAL slots only. [ev: retro coldroompan-fan-mode-defrost item 2]
 
 ---
 
@@ -76,14 +76,15 @@ BEnumRange rangeAuto = BEnumRange.make(new String[]{ "Off", "Low", "Med", "High"
 
 // Instantiate a value
 BDynamicEnum val = BDynamicEnum.make(1, range);      // explicit range
-BDynamicEnum val2 = BDynamicEnum.make(1);            // range from the slot's facets at runtime
+BDynamicEnum val2 = BDynamicEnum.make(1);            // carries BEnumRange.NULL
 
 // Attach as a facet so Workbench renders a dropdown
 BFacets f = BFacets.makeEnum(range);
 ```
 
-**BDynamicEnum.make(ordinal)** (no range arg) resolves the range from the slot's facets at read time —
-suitable for a proxy-ext slot whose range is set as a facet on the parent point. [ev: code BBacnetActionCommand.java]
+**BDynamicEnum.make(ordinal)** (no range arg) is `make(ordinal, BEnumRange.NULL)` — the value carries no range
+(docSource `baja/javax/baja/sys/BDynamicEnum.java:51-54`); the label then has to come from a `range` facet on the
+slot, e.g. a proxy-ext slot whose range is set as a facet on the parent point [INFER].
 
 **At discovery**, set the facet on the proxy-ext point property:
 ```java
@@ -199,7 +200,7 @@ public class BMyConfig extends BStruct {
 and driven by the declared slots. [ev: code BAlarmTimestamps.java; BExtensionName.java]
 
 **Only frozen `@NiagaraProperty` slots** — NO `add()`, NO actions, NO topics, NO children.
-If you need lifecycle or children, use `BComponent`. [ev: corpus B4 §4.3]
+If you need lifecycle or children, use `BComponent`. [ev: corpus B4 §4.2.3]
 
 **BStruct vs BComponent:**
 
@@ -213,7 +214,7 @@ If you need lifecycle or children, use `BComponent`. [ev: corpus B4 §4.3]
 | Use as discovery entry | ✓ | — |
 
 A `BStruct` used as a `@NiagaraAction` parameter renders in Workbench as a multi-field argument dialog
-automatically. [ev: corpus B4; code BAaPhpLearnDeviceEntry.java]
+automatically [INFER]. [ev: code alarm-rt `BAlarmRecord` (a BStruct) is the `ackAlarm` parameter]
 
 ---
 
@@ -249,7 +250,8 @@ BFacets.DEFAULT
 ```
 
 **Standard keys** (constants on `BFacets`): `UNITS`, `PRECISION`, `MIN`, `MAX`, `RANGE`,
-`FIELD_EDITOR`, `trueText`, `falseText`. [ev: code BAaPhpLearnDeviceEntry.java; BAaPhpDevice.java; AaPhpAttributeConversion.java]
+`FIELD_EDITOR`, `TRUE_TEXT` (`"trueText"`), `FALSE_TEXT` (`"falseText"`). [CERT] docSource
+`baja/javax/baja/sys/BFacets.java:65-129`; [ev: code AaPhpAttributeConversion.java (`BFacets.makeEnum` uses)]
 
 **Projection pattern** — declare facets once on a `facets` config slot and project onto outputs:
 ```java
@@ -275,11 +277,12 @@ BUnit custom = BUnit.make("custom_unit_name", "abbrev", dimension, …);
 ```
 
 Units come from `units.xml` bundled with the Niagara installation. Use `BUnit.NULL` for
-dimensionless quantities (counts, booleans-as-doubles, stage numbers). [ev: corpus B4 §4.2]
+dimensionless quantities (counts, booleans-as-doubles, stage numbers). [CERT] docSource
+`baja/javax/baja/units/UnitDatabase.java:134` (`/defaults/units.xml`); `BUnit.java:543` (`NULL`)
 
-**Gotcha:** `BUnit.getUnit(String)` returns null if the key is not in units.xml — guard the result
-before passing it to `BFacets.makeNumeric`. A null unit causes a NullPointerException at facet
-construction time.
+**Gotcha:** `BUnit.getUnit(String)` throws `UnitException("Unknown unit: …")` when the name is not in
+units.xml — it never returns null; use a known name or catch the exception. [CERT] docSource
+`baja/javax/baja/units/BUnit.java:79-98`
 
 ---
 
@@ -301,8 +304,9 @@ construction time.
 copied (exported, imported, cloned in Workbench). Use for runtime-populated results (learn entries,
 transient state bags) that must not survive into a copy. [ev: `types/logic.md` §Flags]
 
-**Slots added dynamically** at runtime are NOT persisted unless `PERSISTENT` flag is set. Transient
-discovery result slots should carry `TRANSIENT|REMOVE_ON_CLONE`. [ev: corpus B4]
+**Slots added dynamically** at runtime ARE persisted to the BOG unless they carry `TRANSIENT` (there is no
+`PERSISTENT` flag: vineflower baja 4.14.0.162 `javax/baja/sys/Flags.java:9-29`). Transient
+discovery result slots should carry `TRANSIENT|REMOVE_ON_CLONE`. [ev: corpus B4 §4.3.3]
 
 ---
 

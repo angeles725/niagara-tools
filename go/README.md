@@ -86,7 +86,12 @@ rule's rows stay contiguous.
 3. Write the tests first and watch them fail: record every bats run of the old script as a golden case
    (point the suite's lint variable at a wrapper that runs the old script and writes args, exit, stdout,
    stderr and the tree in the `golden` format; reference: `rules/setnullord`), add edge trees, and call
-   `golden.Run(t, Spec(), <cases>)`.
+   `golden.Run(t, Spec(), <min cases>)`. The format is in the `rules/golden` package comment (a
+   `-- <path> (noeol) --` section is a file whose last line has no newline). A port of an `awk_lint_run`
+   lint also calls `golden.Unreadable(t, Spec(), <src>)` for its walk-error contract. Recorded rows catch
+   what hand-written expectations miss (row order, gawk hash order, read and grep quirks); a port whose
+   tests restate the bats assertions as substrings, or that copies the golden parser into its own
+   package, is a review finding. `[ev: retro go-lint-timers Δ1]` `[ev: retro go-lint-ord-ports Δ2]`
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every
