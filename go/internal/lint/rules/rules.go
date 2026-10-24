@@ -24,6 +24,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wsplacement"
 )
 
 // All returns every registered rule, in the order --all runs them (--all leaves out a RootRule).
@@ -49,5 +50,6 @@ func All() []lint.Spec {
 		structure.Spec(),
 		demandscope.Spec(),
 		extwritable.Spec(),
+		wsplacement.Spec(),
 	}
 }
