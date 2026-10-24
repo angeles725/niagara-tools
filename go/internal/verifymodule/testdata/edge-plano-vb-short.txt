@@ -1,0 +1,9 @@
+-- args --
+--plano
+@DIR@/vb-short.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/vb-short.html  Rv: no id="zonas" viewBox found
+-- stderr --
+-- vb-short.html --
+<script>IMG_W=2;IMG_H=3</script><svg id="zonas" viewBox="0 0 2"></svg><img id="planoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAMCAAAAAB69aNBAAAADUlEQVR4nGNoaGAAIwANiQMBNh/1KwAAAABJRU5ErkJggg==">

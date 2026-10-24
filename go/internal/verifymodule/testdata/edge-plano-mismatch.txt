@@ -1,0 +1,10 @@
+-- args --
+--plano
+@DIR@/mismatch.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/mismatch.html  Rc(4/3) != Ri(8/12): IMG_W/IMG_H vs intrinsic PNG
+FAIL  plano      @DIR@/mismatch.html  Rv(2/3) != Rc(4/3): viewBox vs IMG_W/IMG_H
+-- stderr --
+-- mismatch.html --
+<script>IMG_W = 4 ; IMG_H = 3</script><svg id="zonas" viewBox="0 0 2 3"></svg><img id="planoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAMCAAAAAB69aNBAAAADUlEQVR4nGNoaGAAIwANiQMBNh/1KwAAAABJRU5ErkJggg==">

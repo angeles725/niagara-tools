@@ -1,0 +1,11 @@
+-- args --
+--plano
+@DIR@/noindex.jar
+-- want --
+exit 3
+-- stderr --
+verify-module: no rc/index.html in: @DIR@/noindex.jar
+-- noindex.jar (jar) --
+--- rc/ (stored) ---
+--- rc/other.html (stored) ---
+x

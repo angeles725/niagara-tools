@@ -1,0 +1,7 @@
+-- args --
+--plano
+@DIR@/none.jar
+-- want --
+exit 3
+-- stderr --
+verify-module: file not readable: @DIR@/none.jar

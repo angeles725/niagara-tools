@@ -1,0 +1,6 @@
+-- args --
+--plano
+-- want --
+exit 2
+-- stderr --
+usage: verify-module.sh --plano <index.html|jar>
