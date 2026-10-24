@@ -85,24 +85,46 @@ func merge(intent, result *pyjson.Object, relinks any, hasRelinks bool, comps []
 	return view
 }
 
-// views is _views: the merged view of every batch with an intent, keyed as Python keys them,
-// in the order of the batches' first intents.
-func (j *Journal) views() ([]string, map[string]*pyjson.Object, error) {
-	entries, err := j.Entries()
-	if err != nil {
-		return nil, nil, err
-	}
+// Unreadable is one journal line the views leave out (issue #448): not UTF-8 (Reason
+// "UnicodeDecodeError", its batch unknown), or a line of a batch phase whose batch_id or
+// rollback_of cannot key a dict or whose component ops cannot extend a list ("TypeError", its
+// batch known: BatchID and RollbackOf are the line's values).
+type Unreadable struct {
+	Line                int
+	Reason              string
+	Known               bool
+	BatchID, RollbackOf any
+}
+
+// views is _scan: the merged view of every batch with an intent, keyed as Python keys them, in
+// the order of the batches' first intents, and the unreadable lines.
+func (j *Journal) views() ([]string, map[string]*pyjson.Object, []Unreadable) {
 	var order []string
+	var bad []Unreadable
 	intents, results := map[string]*pyjson.Object{}, map[string]*pyjson.Object{}
 	relinks, comps := map[string]any{}, map[string][]any{}
-	for _, e := range entries {
+	for _, l := range j.lines() {
+		e := l.entry
+		if e == nil {
+			bad = append(bad, Unreadable{Line: l.n, Reason: "UnicodeDecodeError"})
+			continue
+		}
 		phase, _ := get(e, "phase").(string)
 		if phase != "intent" && phase != "relink-intent" && phase != "component-intent" && phase != "result" {
 			continue
 		}
 		key, err := pyjson.DictKey(get(e, "batch_id"))
+		if of := get(e, "rollback_of"); err == nil && (phase == "intent" || phase == "result") && pyjson.Truthy(of) {
+			_, err = pyjson.DictKey(of) // n4_list_batches keys rolled_back_by by it
+		}
+		var ops []any
+		if err == nil && phase == "component-intent" {
+			ops, err = extend(nil, orEmpty(get(e, "ops")))
+		}
 		if err != nil {
-			return nil, nil, err
+			bad = append(bad, Unreadable{Line: l.n, Reason: "TypeError", Known: true,
+				BatchID: get(e, "batch_id"), RollbackOf: get(e, "rollback_of")})
+			continue
 		}
 		switch phase {
 		case "intent":
@@ -115,8 +137,9 @@ func (j *Journal) views() ([]string, map[string]*pyjson.Object, error) {
 				relinks[key] = orEmpty(get(e, "ops"))
 			}
 		case "component-intent":
-			if comps[key], err = extend(comps[key], orEmpty(get(e, "ops"))); err != nil {
-				return nil, nil, err
+			comps[key] = append(comps[key], ops...)
+			if comps[key] == nil {
+				comps[key] = []any{}
 			}
 		case "result":
 			results[key] = e
@@ -128,28 +151,45 @@ func (j *Journal) views() ([]string, map[string]*pyjson.Object, error) {
 		c, hasComps := comps[key]
 		out[key] = merge(intents[key], results[key], r, hasRelinks, c, hasComps)
 	}
-	return order, out, nil
+	return order, out, bad
 }
 
-// Views is views(): the merged views of every journaled batch, in journal order.
-func (j *Journal) Views() ([]*pyjson.Object, error) {
-	order, byKey, err := j.views()
-	if err != nil {
-		return nil, err
-	}
+// Scan is scan(): Views and the unreadable lines, from one read of the file.
+func (j *Journal) Scan() ([]*pyjson.Object, []Unreadable, error) {
+	order, byKey, bad := j.views()
 	out := make([]*pyjson.Object, len(order))
 	for i, k := range order {
 		out[i] = byKey[k]
 	}
-	return out, nil
+	return out, bad, nil
+}
+
+// UnreadableFor is unreadable_for(batch_id), the rollback check of issue #448: the unreadable
+// lines that may belong to batchID. That is every line whose batch is unknown (not UTF-8), and a
+// line whose batch_id or rollback_of is batchID (a lost rollback of a batch could let it be
+// rolled back twice). A line of another known batch blocks only that batch.
+func (j *Journal) UnreadableFor(batchID string) []Unreadable {
+	_, _, bad := j.views()
+	var out []Unreadable
+	for _, u := range bad {
+		id, _ := u.BatchID.(string)
+		of, _ := u.RollbackOf.(string)
+		if !u.Known || u.BatchID != nil && id == batchID || u.RollbackOf != nil && of == batchID {
+			out = append(out, u)
+		}
+	}
+	return out
+}
+
+// Views is views(): the merged views of every journaled batch, in journal order.
+func (j *Journal) Views() ([]*pyjson.Object, error) {
+	views, _, err := j.Scan()
+	return views, err
 }
 
 // Read is read(batch_id): the merged view of one batch, nil when it was never journaled.
 func (j *Journal) Read(batchID string) (*pyjson.Object, error) {
-	_, byKey, err := j.views()
-	if err != nil {
-		return nil, err
-	}
+	_, byKey, _ := j.views()
 	return byKey["s"+batchID], nil
 }
 

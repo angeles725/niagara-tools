@@ -830,7 +830,8 @@ def n4_list_batches(ctx, args):
     Audit 2026-10-03 F14: before this, finding a `batch_id` for `n4_rollback` meant reading
     `journal.jsonl` by hand.
     """
-    views = safety.Journal(ctx.state_dir or os.path.expanduser(safety.DEFAULT_STATE_DIR)).views()
+    journal = safety.Journal(ctx.state_dir or os.path.expanduser(safety.DEFAULT_STATE_DIR))
+    views, bad = journal.scan()
     rolled = {}
     for view in views:
         if view.get("rollback_of"):
@@ -842,7 +843,14 @@ def n4_list_batches(ctx, args):
                 "verdict": v.get("verdict"), "rollback_of": v.get("rollback_of"),
                 "rolled_back_by": rolled.get(v.get("batch_id"), [])}
                for v in reversed(views)]
-    return {"total": len(batches), "batches": batches[:limit]}
+    out = {"total": len(batches), "batches": batches[:limit]}
+    if bad:  # issue #448: list what is readable and say exactly what is not
+        out["incomplete"] = ("this list is incomplete: %d journal line(s) are unreadable; a batch "
+                             "recorded on one is missing or partial here, and n4_rollback "
+                             "refuses every batch such a line may belong to" % len(bad))
+        out["unreadable"] = ["unreadable journal line %d: %s" % (u["line"], u["reason"])
+                             for u in bad]
+    return out
 
 
 def n4_session_retro_draft(ctx, args):
@@ -993,8 +1001,9 @@ TOOLS = [
     Tool("n4_list_batches",
          "List the write batches in this server's journal, newest first: batch_id, tool, "
          "station_name, ts, state (completed / in-doubt), verdict, rollback_of and "
-         "rolled_back_by. Use it to find the batch_id for n4_rollback. Reads the journal "
-         "only; works without a session.",
+         "rolled_back_by. Use it to find the batch_id for n4_rollback. A journal line that "
+         "cannot be read is listed in unreadable and the reply says the list is incomplete. "
+         "Reads the journal only; works without a session.",
          _schema({"limit": _int("Most recent batches to return", 1, 1000, 50)}),
          n4_list_batches, needs_session=False),
     Tool("n4_session_retro_draft",
