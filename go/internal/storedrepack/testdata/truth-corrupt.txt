@@ -1,0 +1,12 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 1
+-- stderr --
+stored-repack: in.jar: zip: not a valid zip file
+stored-repack: cannot unzip in.jar
+-- @kind --
+truth: a file that is not a zip; Go prints one reason line where the bash relayed unzip's multi-line report (the last line is the same)
+-- in.jar --
+garbage

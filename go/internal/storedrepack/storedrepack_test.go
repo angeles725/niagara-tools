@@ -16,7 +16,7 @@ import (
 )
 
 // signedSpec is a deflated jar whose "everything else" entries are not in name order, with directory entries,
-// two signature aliases (one with two blocks), an orphan block and a nested .SF.
+// two signature aliases (one with all three blocks), an orphan block and a nested .SF.
 const signedSpec = `--- META-INF/ ---
 --- z/last.txt ---
 zzz
@@ -41,6 +41,8 @@ a sig
 mmm
 --- META-INF/A.DSA ---
 a dsa
+--- META-INF/A.RSA ---
+a rsa
 `
 
 // run builds the spec as dir/in.jar and runs Main on it with out (relative to dir).
@@ -96,7 +98,7 @@ func TestEntryOrder(t *testing.T) {
 	_, got, _ := entries(t, filepath.Join(dir, "out.jar"))
 	want := []string{
 		"META-INF/MANIFEST.MF",
-		"META-INF/A.SF", "META-INF/A.DSA", "META-INF/A.EC",
+		"META-INF/A.SF", "META-INF/A.RSA", "META-INF/A.DSA", "META-INF/A.EC",
 		"META-INF/B.SF", "META-INF/B.RSA",
 		"z/last.txt", "a/first.txt", "META-INF/C.RSA", "META-INF/sub/N.SF", "m/mid.txt",
 	}
@@ -147,8 +149,8 @@ func TestContentIdentity(t *testing.T) {
 // TestSuccessLine pins the stdout line and that nothing else is written.
 func TestSuccessLine(t *testing.T) {
 	dir, code, stdout, stderr := run(t, signedSpec, "out.jar")
-	want := "stored-repack: " + filepath.Join(dir, "out.jar") + "  (11 entries, all STORED, signature entries kept: " +
-		"META-INF/A.SF META-INF/A.DSA META-INF/A.EC META-INF/B.SF META-INF/B.RSA)\n"
+	want := "stored-repack: " + filepath.Join(dir, "out.jar") + "  (12 entries, all STORED, signature entries kept: " +
+		"META-INF/A.SF META-INF/A.RSA META-INF/A.DSA META-INF/A.EC META-INF/B.SF META-INF/B.RSA)\n"
 	if code != 0 || stdout != want || stderr != "" {
 		t.Errorf("exit %d\nstdout %q\nwant   %q\nstderr %q", code, stdout, want, stderr)
 	}

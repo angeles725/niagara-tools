@@ -14,7 +14,7 @@ import (
 )
 
 // goldenCases is the exact number of testdata cases: a lost or an extra case fails the run.
-const goldenCases = 22
+const goldenCases = 27
 
 // TestGolden replays every testdata case (recorded from the bash stored-repack.sh by golden/record/record.sh
 // with the testdata/setup.sh hooks, or a truth-* case) through golden.Runner. buildJars and listOut are the

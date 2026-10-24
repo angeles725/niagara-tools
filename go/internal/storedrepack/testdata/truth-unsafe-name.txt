@@ -1,0 +1,15 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 1
+-- stderr --
+stored-repack: in.jar: unsafe entry name "../evil.txt"
+stored-repack: cannot unzip in.jar
+-- @kind --
+truth: an entry name with a ".." component; the bash failed the same way (unzip warns and exits 1) with unzip's warning as the reason
+-- in.jar.spec --
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- ../evil.txt ---
+e
