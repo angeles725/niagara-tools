@@ -1,0 +1,26 @@
+declared difference (truth fix T2, method bodies): execute()'s declaration was the first `execute()` not
+followed by ";", so `if (execute())` in ok() was taken for it and the real body's write was never read. Bodies now
+come from javasrc.Methods.
+(Tree values made fresh, setX(N) -> setX(getX() + N), after truth fix T5: a constant written to a simple
+slot is not a per-cycle write; the rows are unchanged.)
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-changed-hot-write  @DIR@/W.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+-- stderr --
+-- W.java --
+class W {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  boolean ok() { if (execute()) return true; return false; }
+  void execute() { setXHours(getXHours() + 1.0); }
+}
