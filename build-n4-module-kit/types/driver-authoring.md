@@ -628,7 +628,7 @@ niagara-research `organized/`; `C=opcUaClient/opcUaClient-rt/vineflower/com/trid
 
 - **Two stacks.** OPC DA = module `opc` (COM/DCOM, Windows only, licence `tridium:opc`; § 9.6). OPC UA =
   `opcUaCore` + `opcUaClient` + `opcUaServer` (`opc.tcp`, JACE and Windows). [CERT]
-  `opc/opc-rt/vineflower/com/tridium/opc/client/BOpcNetwork.java:323-324`; `[ev: corpus B1222]`
+  `opc/opc-rt/vineflower/com/tridium/opc/client/BOpcNetwork.java:323-324`; `docs/opc-n4-guide.md` §7; `[ev: corpus B1222]`
 - **Client** is an ndriver stack: `BOpcUaNetwork extends BNNetwork` (licence `tridium:opcUaClient`),
   `BOpcUaDevice`, `BOpcUaClientPointDeviceExt`, `BOpcUaClientProxyExt`. Reads are subscriptions only
   (`publishInterval`), no poll. [CERT] `C/BOpcUaNetwork.java:42,70-71`; `docs/opc-n4-guide.md` §3, §7
@@ -636,7 +636,7 @@ niagara-research `organized/`; `C=opcUaClient/opcUaClient-rt/vineflower/com/trid
   `tridium:opcUaServer`) → `BOpcUaNamespace extends BNDevice` → server proxy exts. It exposes ONLY the points
   you add; each is Export (links the source `out`, read-only node) or Import (links into an `inN`, offered
   only for writable sources). [CERT] `S/BOpcUaServer.java:175,344-345`; `S/BOpcUaNamespace.java:121`;
-  `S/point/BOpcUaServerProxyExt.java:148-152`
+  `S/point/BOpcUaServerProxyExt.java:148-152`; `S/point/BOpcUaServerLearnPointEntry.java:121-128`
 - **Namespace-index drift is handled for discovered points:** on subscribe the client rewrites `ns=` from
   the stored `nameSpaceUri`; a hand-made point with an empty `nameSpaceUri` is not remapped. [CERT]
   `C/point/PointSubscribeCmd.java:34-40`
@@ -672,7 +672,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   § Authoring a driver) and list the levels left to remote writers in the module README.
 - **Remote writes run as the station user `BACnet`,** which has no permissions until granted: give it Operator
   write on the category that holds the exported points and a non-blank password
-  (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:15-45`).
+  (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:7-29`).
 - **Exported enums need ordinals 1..n with no gaps.** An `EnumPoint`/`EnumWritable` whose range starts at 0 or
   has gaps "does not export to BACnet", with no error (`Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`).
   Import-side non-contiguous ranges: `types/logic-authoring.md` § Non-contiguous-ordinal gotcha. Gotcha H5.
@@ -680,7 +680,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   relinquishes the old level (vineflower bacnet-rt 4.14.0.162 `javax/baja/bacnet/point/BBacnetProxyExt.java:528-547`;
   corpus B544 §544.5), so a device program writing at priority 1-7 beats our `in8` in the device's own array.
   A Px virtual-point write goes out at priority 16 unless the ORD carries `;priority=N`
-  (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29`). `[ev: corpus B1327 rows 4-7]`
+  (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29`, `Bacnet/VirtualComponentsBACnet-53942D00.txt:59-60`). `[ev: corpus B1327 rows 4-7]`
 - Owed Go lints G85 `bacnet-export-inN-contention` and G86 `bacnet-export-enum-range` (ledger).
 
 ### 11.2 · MS/TP and COV `[ev: retro devguide415-r2-drivers-protocols Δ6]`
@@ -698,7 +698,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 ### 11.3 · Modbus data `[ev: retro devguide415-r2-drivers-protocols Δ6]`
 
 - Integer is unsigned 16-bit; Long/Float take two registers; Double and Long 64-bit take four (new in 4.15)
-  (`Modbus/ModbusData-5FD097AE.txt:18,28,34,37`).
+  (`Modbus/ModbusData-5FD097AE.txt:18,23,28,34,37`).
 - Byte order for 32/64-bit values is set on the network or the device, default `Order3210` (big-endian)
   (`Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28`). Modbus carries no type metadata, so a wrong order still
   reads `{ok}` with a zero or absurd value `[INFER]` — check one known value at commissioning. Gotcha H4.
@@ -707,7 +707,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 - Wire addresses are zero-based: holding register 108 in a vendor sheet is address 107
   (`Modbus/ModbusRegisters-5E427D5B.txt:33`).
 - Modbus has no priority array: the 16 N4 levels resolve to one value before the wire (corpus B544 §544.5).
-  `[ev: corpus B1327 rows 8-10]`
+  `[ev: corpus B1327 row 10]`
 
 ### 11.4 · Weak peers — capability overrides and queue depth `[ev: retro devguide415-r2-drivers-protocols Δ10]`
 
