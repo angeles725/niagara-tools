@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · r9-permissions-root
@@ -28,9 +28,12 @@ modules inherit it (the scaffold copies the fixture tree).
 |---|---|---|---|
 | Δ1 | A fixture file the scaffold copies must use the element names the NRE reads; pin every shipped/scaffolded module-permissions.xml root (G98) | `tests/permissions-root.bats` PR1/PR2 | `[ev: tests/permissions-root.bats PR1]` |
 
+## Fold
+- Δ1 → already folded in `types/structure.md` § module-permissions.xml root (`tests/permissions-root.bats` PR1, PR2); token added.
+
 ## Lessons
 - A fixture is a template in disguise: a wrong root there reaches every scaffolded module.
 - Checking the scaffold's OUTPUT (PR2), not only the fixture files, keeps the pin valid if the scaffold changes source.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-r9-permissions-root.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-10-23-r9-permissions-root.md | kit | 2026-10-23 | folded | 1 |`

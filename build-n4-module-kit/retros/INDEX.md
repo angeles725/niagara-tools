@@ -146,7 +146,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-09-19-ci-green.md | kit | 2026-09-19 | folded | 5 | <!-- green the CI: .shellcheckrc + 2 bats error fixes + Mutation-pin headers (10 lints) + BUILD-LOOP lint-listing + dangling-ref fixes -->
 | 2026-09-19-cloud-connector.md | kit | 2026-09-19 | folded | 4 | <!-- new types/cloud-connector.md: BCloudConnectionService SPI maps + transport dual model + KeyRing auth + backend plugin chain -->
 | 2026-09-19-commissioning-verify.md | kit | 2026-09-19 | folded | 2 | <!-- issue #114: new commissioning-verify.sh (orchestrates config-sanity/status-parity/recovery-path + bog-audit CHECK11/13-19/20 + MANUAL footer) closes BUILD-LOOP §6.b -->
-| 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | pending | 0 | <!-- disposition: tracked-by-issue #122 — BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas; awaits a build trigger, not retro debt (sweep --age skips it) -->
+| 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | folded | 0 | <!-- disposition: tracked-by-issue #122 — BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas; awaits a build trigger, not retro debt (sweep --age skips it) -->
 | 2026-09-19-dashboard-scaffold.md | kit | 2026-09-19 | folded | 3 | <!-- issue #115: fixtures/MinimalDash (-rt+-ux) + scaffold-module.sh --type dashboard + CI scaffold-diff step + TC-DASH1/2 -->
 | 2026-09-19-distribution.md | kit | 2026-09-19 | folded | 9 | <!-- new types/distribution.md: .dist/dist.xml, OEM overlay+trust certs, BOG schema-safety, version floor, .ntpl, AX->N4 -->
 | 2026-09-19-driver-authoring.md | kit | 2026-09-19 | folded | 9 | <!-- new types/driver-authoring.md: network/device/BProxyExt SPI + tuning/ping/poll + KNX/Z-Wave twists -->
@@ -279,7 +279,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-r8-t9g-actions.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9g-lifecycle.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9g-nav.md | kit | 2026-10-22 | folded | 2 |
-| 2026-10-22-symlink-root-walk.md | kit | 2026-10-22 | pending | 1 |
+| 2026-10-22-symlink-root-walk.md | kit | 2026-10-22 | folded | 1 |
 | 2026-10-22-t9c-reference-gaps.md | kit | 2026-10-22 | folded | 7 |
 | 2026-10-22-truth-audit.md | kit | 2026-10-22 | folded | 10 |
 | 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | folded | 1 |
@@ -296,7 +296,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-go-xmlsrc.md | kit | 2026-10-23 | folded | 3 |
 | 2026-10-23-r10-dedupe-pins-measured-cuts.md | kit | 2026-10-23 | folded | 3 |
-| 2026-10-23-r8-buildsh-316-308.md | kit | 2026-10-23 | pending | 3 |
+| 2026-10-23-r8-buildsh-316-308.md | kit | 2026-10-23 | folded | 3 |
 | 2026-10-23-r8-mirror-userhome.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-control.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-drivers.md | kit | 2026-10-23 | folded | 1 |
@@ -310,15 +310,15 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r8-t9i-libs.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-packaging.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | folded | 1 |
-| 2026-10-23-r9-followups.md | kit | 2026-10-23 | pending | 1 |
-| 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | pending | 1 |
-| 2026-10-23-r9-lintindex-header.md | kit | 2026-10-23 | pending | 1 |
-| 2026-10-23-r9-m1-walkers.md | kit | 2026-10-23 | pending | 4 |
-| 2026-10-23-r9-m2-gen.md | kit | 2026-10-23 | pending | 1 |
-| 2026-10-23-r9-m3-report.md | kit | 2026-10-23 | pending | 1 |
-| 2026-10-23-r9-permissions-root.md | kit | 2026-10-23 | pending | 1 |
-| 2026-10-23-truth-ported-rules.md | kit | 2026-10-23 | pending | 3 |
-| 2026-10-24-fail-open-pipeline-checks.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-23-r9-followups.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r9-lintindex-header.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r9-m1-walkers.md | kit | 2026-10-23 | folded | 4 |
+| 2026-10-23-r9-m2-gen.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r9-m3-report.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r9-permissions-root.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-truth-ported-rules.md | kit | 2026-10-23 | folded | 3 |
+| 2026-10-24-fail-open-pipeline-checks.md | kit | 2026-10-24 | folded | 2 |
 | 2026-10-24-go-bog-audit.md | kit | 2026-10-24 | pending | 9 |
 | 2026-10-24-go-kit-cite-resolve.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-go-lint-agent-on-shape.md | kit | 2026-10-24 | folded | 2 |
@@ -347,14 +347,14 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-go-rc-scan.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-slot-coverage.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-split-package-check.md | kit | 2026-10-24 | folded | 3 |
-| 2026-10-24-issue-459-truth.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-24-issue-459-truth.md | kit | 2026-10-24 | folded | 2 |
 | 2026-10-24-r10-buildsh-mirror-guard.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-r10-close-process-meta-lessons.md | kit | 2026-10-24 | folded | 6 |
 | 2026-10-24-r10-fork-per-line-again.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-g99-agent-on-include-sync.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-installed-line-guard.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-ktssrc-gradle-lints.md | kit | 2026-10-24 | pending | 2 |
-| 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | pending | 1 |
+| 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-path-keyed-gates-skip-data.md | kit | 2026-10-24 | folded | 2 |
 | 2026-10-24-r10-slotomatic-skip-fail-open.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-slotomatic-skip-srctest.md | kit | 2026-10-24 | folded | 1 |
