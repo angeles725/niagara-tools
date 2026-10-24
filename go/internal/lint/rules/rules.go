@@ -17,14 +17,16 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servlet"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 )
 
-// All returns every registered rule, in the order --all runs them.
+// All returns every registered rule, in the order --all runs them (--all leaves out a RootRule).
 func All() []lint.Spec {
 	return []lint.Spec{
 		nullcontext.Spec(),
@@ -33,6 +35,7 @@ func All() []lint.Spec {
 		setnullord.Spec(),
 		extordvalue.Spec(),
 		servicetypes.Spec(),
+		servlet.Spec(),
 		silentprotection.Spec(),
 		nosystemout.Spec(),
 		sedisplay.Spec(),
@@ -43,6 +46,7 @@ func All() []lint.Spec {
 		nomd5credential.Spec(),
 		configsanity.Spec(),
 		delays.Spec(),
+		structure.Spec(),
 		demandscope.Spec(),
 		extwritable.Spec(),
 	}

@@ -131,7 +131,7 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
 }
 
 @test "LSV-symroot: a symlinked <src-dir> is walked like find -H, same rows as the directory (issue #329)" {
-  # Mutation: LSV-symroot -- dropping -H from the find in _scan_files lists no file under a symlinked root.
+  # Mutation: LSV-symroot -- os.Lstat instead of os.Stat on the root in go/internal/lint/walk.go Walk lists no file under a symlinked root.
   only NoAuth.java
   assert_symroot_same "$ONE" "$LS" "$ONE"
   [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"NoAuth"* ]]
@@ -156,4 +156,49 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   run "$LS" "$ONE"
   [ "$status" -eq 1 ]
   [ "$(printf '%s\n' "$output" | grep -c 'FAIL  auth')" -eq 1 ]
+}
+
+@test "LSV-empty: a <src-dir> with no *.java is an env error (exit 3, ERROR row), never a clean pass" {
+  # The K20 row of lib/scan-files.sh scan_files_nonempty_or_exit, kept by the Go port (Spec.EmptyError).
+  rm -rf "$ONE"; mkdir -p "$ONE"; echo x > "$ONE/a.txt"
+  run "$LS" "$ONE"
+  [ "$status" -eq 3 ]
+  [ "$output" = "ERROR  lint-servlet  $ONE  no files to scan (K20: wrong path or empty scaffold)" ]
+}
+
+@test "LSV-dotroot: a <src-dir> whose name starts with a dot is scanned, not pruned with it" {
+  # The walk prunes dot sub-directories only (find -mindepth 1); a private find -name '.*' -prune once
+  # matched the start point too and read no file under such a root.
+  mkdir -p "$BATS_TEST_TMPDIR/.src"; cp "$FX/NoAuth.java" "$BATS_TEST_TMPDIR/.src/"
+  run "$LS" "$BATS_TEST_TMPDIR/.src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  auth  NoAuth.java:4  "* ]]
+}
+
+@test "LSV4b: an X-Requested-With named only in a Javadoc is no guard, so no csrf-xrw-only row (truth audit T8)" {
+  # The chihuahua BChiServlet.java:41 row anchored on a Javadoc line; the guard lives in another file.
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf '%s\n' '/**' ' * Security: /api/* requires X-Requested-With: XMLHttpRequest' ' */' \
+    'public class Doc extends BWebServlet {' '  void x() { }' '}' > "$ONE/Doc.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"csrf-xrw-only"* ]]
+}
+
+@test "LSV2c: a parse call in a comment or a string literal is no input-400 FAIL (code only)" {
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf '%s\n' 'public class C extends BWebServlet {' '  // double v = Double.parseDouble(raw);' \
+    '  /* Integer.parseInt(raw) */' '  String hint = "use Integer.parseInt(";' '}' > "$ONE/C.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"input-400"* ]]
+}
+
+@test "LSV2d: a \"} catch\" on the try's closing line around a parse with a silent default WARNs (catch-no-400)" {
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf '%s\n' 'public class S extends BWebServlet {' '  void x(String s) {' '    try {' \
+    '      v = Double.parseDouble(s);' '    } catch (NumberFormatException e) {' '      v = 0;' '    }' '  }' '}' > "$ONE/S.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  catch-no-400  S.java:5  "* ]]
 }

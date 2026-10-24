@@ -1,0 +1,8 @@
+-- args --
+@DIR@/missing
+-- want --
+exit 3
+-- stderr --
+lint-servlet: not a directory: @DIR@/missing
+-- m/A.java --
+class A {}

@@ -1,0 +1,34 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  auth  N.java:2  handler writes without getRemoteUser()/getUser() auth gate
+FAIL  auth  R.java:2  handler writes without getRemoteUser()/getUser() auth gate
+WARN  catch-no-400  R.java:9  catch around parse without 400 response (silent default may write bad value)
+FAIL  auth  U.java:2  handler writes without getRemoteUser()/getUser() auth gate
+WARN  unbounded-set  U.java:2  typed set* in handler without MIN/MAX facet enforcement
+FAIL  auth  U.java:3  handler writes without getRemoteUser()/getUser() auth gate
+-- stderr --
+-- m/Empty.java --
+-- m/N.java (noeol) --
+class N extends BWebServlet {
+  void doGet(WebOp op) { c.set("a", 1); }
+}
+-- m/R.java --
+class R extends BWebServlet {
+  void doPost(WebOp op) {
+    c.set("a", 1);
+  }
+  void x() {
+    try {
+      Double.parseDouble(s);
+    }
+    catch (Exception e) {
+    }
+  }
+}
+-- m/U.java --
+class U extends BWebServlet {
+  void doGet(WebOp op) { String s = "Ã©"; Ã©set(1); c.setInt("â‚¬", 1); }
+  void doPost(WebOp op) { x = "ÿ"; ÿset(1); }
+}

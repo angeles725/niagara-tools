@@ -1,0 +1,24 @@
+Declared difference (truth fix T2): comments and literal contents are not code. The LOG.info(,
+parse and Cache-Control comments give no row; the "http://x/" literal no longer hides the setDouble after it,
+so unbounded-set WARNs at C.java:3.
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  auth  C.java:3  handler writes without getRemoteUser()/getUser() auth gate
+WARN  unbounded-set  C.java:3  typed set* in handler without MIN/MAX facet enforcement
+-- stderr --
+-- m/C.java --
+class C extends BWebServlet {
+  /* c.setDouble("a", 1); getRemoteUser() */
+  void doPost(WebOp op) {
+    String u = "http://x/"; c.setDouble("a", 1); // getRemoteUser()
+    /* LOG.info( */
+    String b = "}"; c.set("y", 2);
+  }
+  // Double.parseDouble(x)
+  /* Integer.parseInt(y) */
+  String s = "Integer.parseInt(";
+  // setHeader("Cache-Control", "max-age=10")
+  /* setHeader("Cache-Control", "max-age=20") */
+}

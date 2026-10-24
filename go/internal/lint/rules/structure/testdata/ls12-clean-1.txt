@@ -1,0 +1,16 @@
+-- args --
+@DIR@/tree
+-- want --
+exit 1
+FAIL  lint-structure  Foo-rt/module.lexicon  L4: lexicon empty (1 type(s) declared, zero key=value entries)
+FAIL  lint-structure  Foo-rt/module.palette  L5: module.palette has no named component entries (empty palette — see B788)
+-- stderr --
+-- tree/Foo-rt/module-include.xml --
+<module><type name="Foo"/></module>
+-- tree/Foo-rt/module.lexicon --
+test
+-- tree/Foo-rt/module.palette --
+test
+-- tree/gradle.properties --
+org.gradle.java.installations.paths=/usr/lib/jvm/java-8
+org.gradle.java.installations.auto-detect=false
