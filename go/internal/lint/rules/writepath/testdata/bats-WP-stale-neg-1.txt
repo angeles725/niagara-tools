@@ -1,0 +1,18 @@
+-- args --
+@DIR@/12/staleneg
+-- want --
+exit 0
+STALE  lint-write-path  @DIR@/12/staleneg/docs/write-path-matrix.md:5  slot ghostSlot: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- 12/staleneg/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| `ghostSlot` | D | mid | wX |
+-- 12/staleneg/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

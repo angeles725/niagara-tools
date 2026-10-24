@@ -1,0 +1,50 @@
+-- args --
+@DIR@/scan
+-- want --
+exit 1
+FAIL  lint-write-path  scan  slot commentedOut: no matrix row
+FAIL  lint-write-path  scan  slot displayFirst: no matrix row
+FAIL  lint-write-path  scan  slot multiLine: no matrix row
+FAIL  lint-write-path  scan  slot oFlag: no matrix row
+FAIL  lint-write-path  scan  slot opInComment: no matrix row
+FAIL  lint-write-path  scan  slot secondOfBlock: no matrix row
+STALE  lint-write-path  @DIR@/scan/docs/write-path-matrix.md:1  slot setpoint: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- scan/.d/C.java --
+@NiagaraProperty(name="inDot")
+-- scan/build/C.java --
+@NiagaraProperty(name="inBuild")
+-- scan/docs/write-path-matrix.md --
+| `setpoint` | a |
+-- scan/src/A.java --
+class A {
+  @NiagaraProperty(
+    name = "multiLine",
+    type = "int",
+    flags = Flags.OPERATOR
+  )
+  @NiagaraProperty(name="oFlag", flags="o")
+  @NiagaraProperty(name="opInComment", flags=Flags.SUMMARY /* not OPERATOR */)
+  // @NiagaraProperty(name="commentedOut", flags=Flags.OPERATOR)
+  @NiagaraProperty(name="", flags=Flags.OPERATOR)
+  @NiagaraProperty(name="readOnly", flags=Flags.READONLY)
+  @NiagaraProperties({
+    @NiagaraProperty(name="firstOfBlock", flags=Flags.SUMMARY),
+    @NiagaraProperty(name="secondOfBlock", flags=Flags.OPERATOR)
+  })
+  @NiagaraProperty(displayName = "x", name="displayFirst", flags=Flags.OPERATOR)
+  @NiagaraProperty(name="paren(", flags=Flags.OPERATOR)
+  @NiagaraProperty(name="afterParen", flags=Flags.OPERATOR)
+  @NiagaraAction(name="act")
+  @NiagaraProperty(name="carry", flags=Flags.OPERATOR
+-- scan/src/B.java --
+class B { int x = foo(1); }
+@NiagaraProperty(name="inB", flags=Flags.OPERATOR)
+-- scan/src/build/D.java --
+@NiagaraProperty(name="srcBuild", flags=Flags.OPERATOR)
+-- scan/src/notjava.txt --
+@NiagaraProperty(name="txt", flags=Flags.OPERATOR)
+-- scan/x-worktrees/C.java --
+@NiagaraProperty(name="inWt")

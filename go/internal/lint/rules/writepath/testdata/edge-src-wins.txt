@@ -1,0 +1,18 @@
+-- args --
+@DIR@/both
+-- want --
+exit 0
+-- stderr --
+-- .git/HEAD --
+x
+-- both/X-rt/src/B.java --
+@NiagaraProperty(name="inProfile", flags=Flags.OPERATOR)
+-- both/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+-- both/src/B.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

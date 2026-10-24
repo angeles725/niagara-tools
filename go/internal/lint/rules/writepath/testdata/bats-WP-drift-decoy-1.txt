@@ -1,0 +1,17 @@
+-- args --
+--strict
+@DIR@/34/driftdecoy
+-- want --
+exit 0
+-- stderr --
+-- .git/HEAD --
+x
+-- 34/driftdecoy/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid <!-- [concept] --> | w1 |
+-- 34/driftdecoy/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

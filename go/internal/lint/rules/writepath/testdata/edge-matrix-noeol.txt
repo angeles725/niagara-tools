@@ -1,0 +1,16 @@
+-- args --
+@DIR@/noeol
+-- want --
+exit 0
+STALE  lint-write-path  @DIR@/noeol/docs/write-path-matrix.md:2  slot ghostA: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- noeol/docs/write-path-matrix.md (noeol) --
+| `setpoint` | a |
+| `ghostA` | b |
+| `ghostB` | c |
+-- noeol/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
