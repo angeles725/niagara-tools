@@ -2,6 +2,7 @@ package jssrc
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -36,6 +37,33 @@ func TestTokens(t *testing.T) {
 	} {
 		if got := show(Tokens(strings.Split(tc.src, "\n"))); got != tc.want {
 			t.Errorf("%s:\n got %s\nwant %s", tc.name, got, tc.want)
+		}
+	}
+}
+
+// TestCode: comments and literal contents become blanks, every line keeps its length, code stays as written.
+func TestCode(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		in, want []string
+	}{
+		{"line comment", []string{`a(); // b();`}, []string{"a();" + strings.Repeat(" ", 8)}},
+		{"block comment over lines", []string{`a(); /* b`, `c */ d();`}, []string{"a();" + strings.Repeat(" ", 5), `     d();`}},
+		{"strings keep their quotes", []string{`x("location.reload()", 'y')`}, []string{`x("` + strings.Repeat(" ", 17) + `", ' ')`}},
+		{"a // inside a string", []string{`u = "http://x"; a().catch(e => 0);`}, []string{`u = "        "; a().catch(e => 0);`}},
+		{"template", []string{"t = `setInterval(poll, 1)`;"}, []string{"t = `                    `;"}},
+		{"regex", []string{`r = /a}b/g; x();`}, []string{`r = /   /g; x();`}},
+		{"division stays", []string{`a = b / c / d;`}, []string{`a = b / c / d;`}},
+		{"code untouched", []string{`function poll() {`, `  go();`, `}`}, []string{`function poll() {`, `  go();`, `}`}},
+	} {
+		got := Code(tc.in)
+		if !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: got %q, want %q", tc.name, got, tc.want)
+		}
+		for i := range got {
+			if i < len(tc.in) && len(got[i]) != len(tc.in[i]) {
+				t.Errorf("%s: line %d is %d bytes, want %d", tc.name, i, len(got[i]), len(tc.in[i]))
+			}
 		}
 	}
 }
