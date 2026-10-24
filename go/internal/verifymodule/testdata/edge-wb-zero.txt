@@ -1,0 +1,31 @@
+-- args --
+--strict
+@DIR@/Z-wb.jar
+-- want --
+exit 1
+FAIL  bytecode   @DIR@/Z-wb.jar  no .class entries
+FAIL  signed     @DIR@/Z-wb.jar  no META-INF/*.SF (jar not signed)
+FAIL  types      @DIR@/Z-wb.jar  META-INF/module.xml missing (not an N4 module jar)
+SKIP  baja       @DIR@/Z-wb.jar  no --target-version
+SKIP  stored     @DIR@/Z-wb.jar  no --stored
+SKIP  typecount  @DIR@/Z-wb.jar  no --src
+SKIP  facets     @DIR@/Z-wb.jar  no --src
+SKIP  facets-req  @DIR@/Z-wb.jar  no --src
+SKIP  ord-literal  @DIR@/Z-wb.jar  no --src
+PASS  palette    @DIR@/Z-wb.jar  module.palette has 0 component entries
+FAIL  wb-scaffold  @DIR@/Z-wb.jar  empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)
+SKIP  phantom-dep  @DIR@/Z-wb.jar  no --src
+SKIP  moduletest  @DIR@/Z-wb.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/Z-wb.jar  no --src
+SKIP  transient-operator  @DIR@/Z-wb.jar  no --src
+SKIP  compact3-import  @DIR@/Z-wb.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/Z-wb.jar  no --src
+SKIP  slot-wall  @DIR@/Z-wb.jar  no --src
+verify-module: 1 passed, 4 failed, 13 skipped, 0 warned -> FAILED
+-- stderr --
+-- Z-wb.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- module.palette (stored) ---
+<p/>

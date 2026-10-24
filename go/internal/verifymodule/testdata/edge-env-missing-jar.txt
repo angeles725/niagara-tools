@@ -1,0 +1,6 @@
+-- args --
+@DIR@/missing.jar
+-- want --
+exit 3
+-- stderr --
+verify-module: jar not readable: @DIR@/missing.jar

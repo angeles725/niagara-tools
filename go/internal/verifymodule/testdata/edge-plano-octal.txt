@@ -1,0 +1,10 @@
+-- args --
+--plano
+@DIR@/octal.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/octal.html  Rc(010/012) != Ri(8/12): IMG_W/IMG_H vs intrinsic PNG
+FAIL  plano      @DIR@/octal.html  Rv(8/12) != Rc(010/012): viewBox vs IMG_W/IMG_H
+-- stderr --
+-- octal.html --
+<script>IMG_W = 010; IMG_H = 012;</script><svg id="zonas" viewBox="0 0 8 12"></svg><img id="planoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAMCAAAAAB69aNBAAAADUlEQVR4nGNoaGAAIwANiQMBNh/1KwAAAABJRU5ErkJggg==">

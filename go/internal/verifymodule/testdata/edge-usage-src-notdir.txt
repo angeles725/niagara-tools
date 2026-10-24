@@ -1,0 +1,8 @@
+-- args --
+--src
+@DIR@/nope
+@DIR@/a.jar
+-- want --
+exit 2
+-- stderr --
+verify-module: --src is not a directory: @DIR@/nope

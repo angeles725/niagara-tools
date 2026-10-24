@@ -1,0 +1,53 @@
+-- args --
+--src
+@DIR@/mod with space
+@DIR@/Spc-rt.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Spc-rt.jar  2 classes, all major 52
+PASS  signed     @DIR@/Spc-rt.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Spc-rt.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Spc-rt.jar  no --target-version
+SKIP  stored     @DIR@/Spc-rt.jar  no --stored
+PASS  typecount  @DIR@/Spc-rt.jar  jar declares 1 types == module-include.xml
+PASS  facets     @DIR@/Spc-rt.jar  no raw-number MIN/MAX facet under @DIR@/mod with space/Spc-rt/src
+PASS  facets-req  @DIR@/Spc-rt.jar  no missing required facets under @DIR@/mod with space/Spc-rt/src
+WARN  ord-literal  @DIR@/Spc-rt.jar  @DIR@/mod with space/Spc-rt/src/com/x/S.java:1:String s = "local:|x";
+SKIP  palette    @DIR@/Spc-rt.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Spc-rt.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/Spc-rt.jar  no *.gradle.kts in @DIR@/mod with space/Spc-rt
+WARN  moduletest  @DIR@/Spc-rt.jar  production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)
+PASS  cross-module-type  @DIR@/Spc-rt.jar  no cross-module type references in @DIR@/mod with space/Spc-rt/src
+PASS  transient-operator  @DIR@/Spc-rt.jar  no TRANSIENT+OPERATOR slot combination under @DIR@/mod with space/Spc-rt/src
+PASS  compact3-import  @DIR@/Spc-rt.jar  no Compact3 non-safe imports under @DIR@/mod with space/Spc-rt/src
+PASS  subscription-leak  @DIR@/Spc-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod with space/Spc-rt/src
+PASS  slot-wall  @DIR@/Spc-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod with space/Spc-rt/src
+verify-module: 11 passed, 0 failed, 5 skipped, 2 warned -> ALL PASS
+-- stderr --
+-- Spc-rt.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---
+-- mod with space/Spc-rt/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+-- mod with space/Spc-rt/src/com/x/S.java --
+String s = "local:|x";

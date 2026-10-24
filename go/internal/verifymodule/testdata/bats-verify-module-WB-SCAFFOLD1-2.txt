@@ -1,0 +1,61 @@
+-- args --
+--strict
+@DIR@/Scaffold-wb.jar
+-- want --
+exit 1
+FAIL  bytecode   @DIR@/Scaffold-wb.jar  no .class entries
+PASS  signed     @DIR@/Scaffold-wb.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Scaffold-wb.jar  0 declared types resolve to classes
+SKIP  baja       @DIR@/Scaffold-wb.jar  no --target-version
+SKIP  stored     @DIR@/Scaffold-wb.jar  no --stored
+SKIP  typecount  @DIR@/Scaffold-wb.jar  no --src
+SKIP  facets     @DIR@/Scaffold-wb.jar  no --src
+SKIP  facets-req  @DIR@/Scaffold-wb.jar  no --src
+SKIP  ord-literal  @DIR@/Scaffold-wb.jar  no --src
+PASS  palette    @DIR@/Scaffold-wb.jar  module.palette has 0 component entries
+FAIL  wb-scaffold  @DIR@/Scaffold-wb.jar  empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)
+SKIP  phantom-dep  @DIR@/Scaffold-wb.jar  no --src
+SKIP  moduletest  @DIR@/Scaffold-wb.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/Scaffold-wb.jar  no --src
+SKIP  transient-operator  @DIR@/Scaffold-wb.jar  no --src
+SKIP  compact3-import  @DIR@/Scaffold-wb.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/Scaffold-wb.jar  no --src
+SKIP  slot-wall  @DIR@/Scaffold-wb.jar  no --src
+verify-module: 3 passed, 2 failed, 13 skipped, 0 warned -> FAILED
+-- stderr --
+-- Scaffold-wb.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- module.palette (deflated) ---
+<?xml version="1.0"?>
+<bajaObjectGraph version="4.0"/>
+-- wbd/module.palette --
+<?xml version="1.0"?>
+<bajaObjectGraph version="4.0"/>
+-- wbd/META-INF/MANIFEST.MF --
+Manifest-Version: 1.0
+-- wbd/META-INF/NIAGARA4.RSA (noeol) --
+RSA
+-- wbd/META-INF/NIAGARA4.SF --
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+-- wbd/META-INF/module.xml --
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+</types>
+</module>

@@ -1,0 +1,7 @@
+-- args --
+@DIR@/empty.jar
+-- want --
+exit 3
+-- stderr --
+verify-module: not a zip: @DIR@/empty.jar
+-- empty.jar (jar) --

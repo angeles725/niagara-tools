@@ -1,0 +1,9 @@
+-- args --
+--plano
+@DIR@/short-png.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/short-png.html  Ri: #planoImg PNG header invalid or unreadable
+-- stderr --
+-- short-png.html --
+<script>IMG_W=2;IMG_H=3</script><svg id="zonas" viewBox="0 0 2 3"></svg><img id="planoImg" src="data:image/png;base64,iVBORw0KGgo=">

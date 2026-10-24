@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-arbitrary-ord
@@ -43,6 +43,15 @@ dropped its private `dirname`/`isFile`/`isDir` for the shared `lint.Dirname`/`Is
 | Δ2 | `golden.Unreadable` asserts awk_lint_run's text only; a `ShortScanError` rule writes its own unreadable test (agent-on-shape, arbitrary-ord). Give `Unreadable` the short form | `go/internal/lint/rules/golden` | `[ev: go/internal/lint/rules/arbitraryord/arbitraryord_test.go]` |
 | Δ3 | Review the 16 live Cliente rows and mark the sanitized ones `// lint-arbitrary-ord: reviewed <reason>` | client trees (chihuahua, Umbrella, panccadia-leon) | `[ev: retro go-lint-arbitrary-ord]` |
 
+## Fold
+- Δ1 → deferred (no real split call yet, code): `BUILD-LOOP.md` § 5 owed-code line; open issue in `ledger.d/2026-10-24-r10-fold-late.md`. The whole-statement match rule already lives in § 5 Literal-aware scanning.
+- Row citation: the § 5 Literal-aware scanning line now names lint-arbitrary-ord among the `linescan.Code` readers (truth fix T1).
+- Δ2 → deferred (`rules/golden` `Unreadable` short form, code): same owed-code line and open issue.
+- Δ3 → deferred (client trees, outside the kit): same owed-code line and open issue.
+
 ## Lessons
 - A Javadoc line starts with ` * `, not `//`, so a "before the // comment" code view still reads it as code; only a
   stateful stripper (block comments across lines) removes it.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-late`) — INDEX row: `| 2026-10-24-go-lint-arbitrary-ord.md | kit | 2026-10-24 | folded | 3 |`

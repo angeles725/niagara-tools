@@ -30,6 +30,22 @@ setup() {
   TEST_HOME="$BATS_TEST_TMPDIR/home"
   mkdir -p "$TEST_HOME"
   TARGET="$TEST_HOME/.claude/skills/build-n4-module/SKILL.md"
+  # A build-n4-module install materializes the kit state of the kit it resolves; by default point it at
+  # a stub kit with no kit-state.sh (a warning, no write), so no test writes into the real checkout.
+  BUILD_N4_KIT="$BATS_TEST_TMPDIR/stubkit"; export BUILD_N4_KIT
+  mkdir -p "$BUILD_N4_KIT"; : > "$BUILD_N4_KIT/METHODOLOGY.md"
+}
+
+# copy_kit — a temp kit checkout with the real sources and kit-state, for the materialize tests.
+copy_kit() {
+  KTOP="$BATS_TEST_TMPDIR/ktop"; BUILD_N4_KIT="$KTOP/build-n4-module-kit"; export BUILD_N4_KIT
+  mkdir -p "$BUILD_N4_KIT/toolbelt" "$BUILD_N4_KIT/retros"
+  ln -s "$REPO_ROOT/go" "$KTOP/go"
+  cp "$REPO_ROOT/build-n4-module-kit/METHODOLOGY.md" "$REPO_ROOT/build-n4-module-kit/BUILD-STATE.src.md" "$BUILD_N4_KIT/"
+  cp -R "$REPO_ROOT/build-n4-module-kit/ledger.d" "$BUILD_N4_KIT/"
+  cp "$REPO_ROOT"/build-n4-module-kit/retros/*.md "$BUILD_N4_KIT/retros/"
+  rm -f "$BUILD_N4_KIT/retros/INDEX.md"
+  cp "$REPO_ROOT/build-n4-module-kit/toolbelt/kit-state.sh" "$BUILD_N4_KIT/toolbelt/"
 }
 
 # ---------------------------------------------------------------------------
@@ -206,6 +222,54 @@ make_tree() {
   [ "$status" -eq 0 ]
   cmp -s "$REAL" "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
   grep -q '^name: mcp-n4$' "$REAL"
+}
+
+# ---------------------------------------------------------------------------
+# IS6-IS9 — the generated kit state (R10-D1): BUILD-STATE.md and retros/INDEX.md are not committed, so
+# a build-n4-module install leaves both in the kit checkout the launcher reads, and the launcher tells
+# the reader to run kit-state. [ev: retro ledger-generated-not-committed]
+# Mutation: IS6 -- dropping the materialize call installs the launcher over a kit with no BUILD-STATE.md.
+# ---------------------------------------------------------------------------
+@test "IS6: install leaves both generated files in the kit checkout it resolves; a rerun regenerates them" {
+  copy_kit
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"kit-state: wrote $BUILD_N4_KIT/BUILD-STATE.md"* ]]
+  [[ "$output" == *"kit-state: wrote $BUILD_N4_KIT/retros/INDEX.md"* ]]
+  [ "$(grep -c '^module: ' "$BUILD_N4_KIT/BUILD-STATE.md")" -ge 2 ]   # module envelopes + the kit block
+  grep -qF '| Retro file | Module | Date | review-status | deltas |' "$BUILD_N4_KIT/retros/INDEX.md"
+  printf '<!-- ledger: kit -->\n<!-- date: 2099-01-01 -->\nlog: 2099-01-01 · after install\n' > "$BUILD_N4_KIT/ledger.d/2099-01-01-later.md"
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"already current"* ]]
+  grep -qF '2099-01-01 · after install' "$BUILD_N4_KIT/BUILD-STATE.md"
+}
+
+@test "IS7: the tracked and the installed launcher point the reader at kit-state, not at a committed file" {
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME"
+  [ "$status" -eq 0 ]
+  # shellcheck disable=SC2016  # literal backticks and $KIT, as the launcher spells them
+  for f in "$TRACKED" "$TEST_HOME/.claude/skills/build-n4-module/SKILL.md"; do
+    grep -qF 'Orient from `$KIT/toolbelt/kit-state.sh build-state`' "$f"
+    if grep -qF 'Orient from `$KIT/BUILD-STATE.md`' "$f"; then false; fi
+  done
+}
+
+@test "IS8: --skill mcp-n4 never touches the build kit state" {
+  copy_kit
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  [ ! -e "$BUILD_N4_KIT/BUILD-STATE.md" ] && [ ! -e "$BUILD_N4_KIT/retros/INDEX.md" ]
+}
+
+@test "IS9: a kit-state failure is exit 3 naming the kit; the launcher is still installed" {
+  copy_kit
+  printf '<!-- ledger: kit -->\n  - hand item\n' > "$BUILD_N4_KIT/ledger.d/2099-01-01-bad.md"
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"kit-state --write failed in $BUILD_N4_KIT"* ]]
+  cmp -s "$TRACKED" "$TEST_HOME/.claude/skills/build-n4-module/SKILL.md"
+  [ ! -e "$BUILD_N4_KIT/BUILD-STATE.md" ]
 }
 
 # ---------------------------------------------------------------------------

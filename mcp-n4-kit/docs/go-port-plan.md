@@ -100,17 +100,18 @@ with it and serves the write tools ported so far (section 14).
 | S15 | #304 in-doubt matrix | See below |
 | S16 | Switch the default launcher to Go | Python kept one release as fallback |
 
-**Status (server v0.9.5).** S0-S10 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
-#462, #475; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
+**Status (server v0.9.5).** S0-S11 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
+#462, #475, #489; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
 section 13) then changed both servers together.
 `readtools.Register` (`go/internal/mcpn4/readtools/connect.go`) serves all 13 read tools:
 `n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
 `n4_find_dangling_outputs`, `n4_bql_query`, `n4_inventory`, `n4_read_file`, `n4_list_px_views`,
 `n4_px_summary`, `n4_list_batches`, `n4_session_retro_draft`. S10 (section 14) adds the plan
 engine with `n4_set_slot` and `n4_invoke_action`: `--allow-writes` starts the Go server. S11
-(section 15) adds `n4_create_component` and `n4_create_link`; the other three write tools answer
-the "not implemented" text (section 6) until S12-S14. Under the Go binary the suite runs 660
-tests with 380 skipped (section 15).
+(section 15) adds `n4_create_component` and `n4_create_link`, S12 (section 16)
+`n4_remove_component`; `n4_rollback` and `n4_save_station` answer the "not implemented" text
+(section 6) until S13-S14. Under the Go binary the suite runs 662 tests with 365 skipped
+(section 16).
 
 **S15 in-doubt matrix.** Each branch gets an explicit Go test plus the black-box Python test,
 driven by `hook` faults and an unwritable state dir:
@@ -219,10 +220,10 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
-| `test_tools_destructive.py` | 101 | 4 | 24 | 29 | 2 | 59 | 42 |
+| `test_tools_destructive.py` | 101 | 4 | 22 | 28 | 2 | 56 | 45 |
 | `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
-| `test_write_parity.py` | 18 | 0 | 0 | 0 | 0 | 0 | 18 |
-| **Total** | **660** | **166** | **51** | **106** | **18** | **341** | **319** |
+| `test_write_parity.py` | 20 | 0 | 0 | 0 | 0 | 0 | 20 |
+| **Total** | **662** | **166** | **49** | **105** | **18** | **338** | **324** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -739,3 +740,66 @@ where Python keeps it sorted; nothing shows it. Left to S12-S15: the multi-op pa
 record (`_in_doubt_partial`; both S11 tools send one op), `_scrub_gap_errors`,
 `planned.data["write"]` of the save and the relink and component runs of a rollback. A Go panic is
 reported as `Exception`, whatever Python class the same bug would raise. Python bugs: none found.
+
+## 16. S12 `n4_remove_component`: snapshot, relinks, truncation and the outgoing scan
+
+**Packages.** `writeops/snapshot.go` is `_snapshot` over `_prune` (`kidsOf` cuts the loaded tree
+at depth 3 instead of copying it): type, value and children as data, no handles; `"t"` omitted
+for typeless frozen children; the runtime output `out` of a Status* slot dropped unless a link
+drives it; a `baja:Status` value, or a `status` child of a Status* parent, cut to the bits before
+`;` (of Python's `str()` of any value). Links are recorded apart with the holder's path, and an
+input a link drives inside the subtree stays out of the body and rides on its link as `prior`.
+Handles map to paths through `pyjson.DictKey` (1, 1.0 and True collide; a list or dict is
+Python's TypeError, a set element's for a driven slot name). `writeops/remove.go` is
+`_remove_plan` and `_remove_readback`: the scope covers `parent_ord` and, when given,
+`link_scan_ord`; the child is loaded one level deeper than the snapshot keeps; the inverse is the
+re-add, one `relink` per link whose source handle (after the last `|`, only behind `h:`) is in the
+subtree and one `unlinked_input` per other link, with their notes; `snapshot_truncated` keeps
+the first 20 sorted paths below the cut. `writeops/scan.go` is `_has_outputs`, `_outgoing_links`
+and `_scan_outgoing` (depth 6, `outgoing_links_broken`), and `writeops/pysort.go` is `sorted()`
+for decoded values: CPython's list sort for fewer than 64 items (`count_run`, then binary
+insertion), with tuple, string, number (NaN and infinity equality as json.loads values) and list
+ordering and its TypeError naming the operands CPython compares. The engine echoes a truthy
+`snapshot_truncated` on the execution, as `_execute` does, and `_send`'s cache clear after a sent
+removal (`ClearHandles`) is now reached and tested.
+
+**Proof.** With the handler stubbed, 20 runnable tests failed under Go (RED): `TestRemoveComponent`,
+`TestOutgoingLinks`, `TestSnapshotTruncation` and the rollback tests that remove first; with the
+port they pass (the rollback ones then skip, unported). Three remove tests that were go_twin only
+to read the journal through `srv.ctx` or patch the FakeStation
+(`test_execute_removes_verifies_and_journals_the_snapshot_as_the_inverse`,
+`test_read_back_reports_a_child_that_is_still_there`,
+`test_a_link_driven_value_that_changes_after_the_dry_run_keeps_the_token_valid`) now run black-box
+on both servers. `test_write_parity` gains two scenarios (20 in all): every refusal, scans that
+find none or some links, relinks, unlinked and link-driven inputs, a prior that moves after the dry
+run, truncation at 1, 20 and 21 paths, token reuse, read-back mismatch, in-doubt sends (HTTP 500
+and a station error frame) and a failed read-back load. Go differentials on CPython 3.15:
+`writeops.TestRemovePlanAndReadbackDifferentialPython` runs 461 cases (32 subtrees with odd
+handles, types, values, links, driven inputs, runtime outputs and depths below the cut, each
+without a scan and against 13 scan roots, plus refusals and unjoinable parents) through the real
+`_IMPLS` plan as `_process` hashes it and the read-back, and requires the hashed plan with its
+keys, its `plan_hash`, the `link_input_values` preview, the full journaled inverse, the targets
+and the read-back, or Python's error class and message, byte for byte (5 refusals, 165 internal
+errors: 86 TypeError, 54 AttributeError, 21 ValueError, 4 BoxError; 100 verified, 98 mismatch, 93
+read-back errors; 56 with relinks, 66 with unlinked inputs, 69 with priors, 78 truncated, 55 with
+outgoing links); `writeops.TestPySortDifferentialPython` compares 5,324 key lists with `sorted()`
+(2,805 TypeErrors). Go twins: `writeops.TestSnapshotOmitsTForTypelessNodesAndRecognizesStatusByName`;
+`plan.TestARemovalClearsEveryCachedHandle` (a sent removal clears, a failed one or any other op
+does not) and `plan.TestRemoveComponentIsServedAndClearsTheHandles`. 65 hand mutants of the
+refusals, scope binding, snapshot, prior, relink and unlinked classification, truncation, scan,
+sort, read-back, the execution echo, the cache clear and the registration all go RED, none
+through a build failure (61 in the Go tests, 4 only in the black-box suite under the binary).
+The first run left six survivors, each closed: a source ORD `hxs1`, a scan link from `h:`, a root
+node with its own `n`, a holder-level link beside a nested one to an input of the same name and
+parent ORDs that load but cannot be joined (corpus cases), and the registration itself (a plan
+test: without it every black-box test only skipped as unported); a source path set after the
+relink entry was equivalent and four mutants that failed to build became value changes. Under
+`MCP_N4_IMPL=go`: 662 tests, 365 skipped (660 / 380 before; the two new tests run under both).
+
+**Known differences.** No byte difference was found. `pySort` follows CPython's comparisons for
+fewer than 64 links; a scan finding 64 or more outgoing links whose keys cannot all be ordered (or
+hold NaN) may raise with other operands or order them otherwise, as it inserts where CPython
+merges. Left to S13-S15: the rollback's relink and component runs (`_run_relinks`,
+`_run_components`, `relinks_skipped`, `frozen_children_not_restored`), `_scrub_gap_errors`
+(only a rollback read-back has gaps), the multi-op partial in-doubt record (`_in_doubt_partial`;
+a remove sends one op) and `planned.data["write"]` of the save. Python bugs: none found.

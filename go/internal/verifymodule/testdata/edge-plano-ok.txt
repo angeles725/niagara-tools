@@ -1,0 +1,11 @@
+-- args --
+--plano
+@DIR@/ok.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/ok.html  unparseable aspect-ratio: 2/3
+auto
+-- stderr --
+-- ok.html --
+<script>const IMG_W = 2, IMG_H=3;</script><svg id="zonas" viewBox="0 0 2 3"></svg><img id="planoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAMCAAAAAB69aNBAAAADUlEQVR4nGNoaGAAIwANiQMBNh/1KwAAAABJRU5ErkJggg==">
+<style>.a{aspect-ratio: 2 / 3;} .b{aspect-ratio:auto}</style>

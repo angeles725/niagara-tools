@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: R10-D1: toolbelt/INDEX.md generated, not committed -->
+log: 2026-10-24 · R10-D1 scope addition → toolbelt/INDEX.md (the lint index, fully generated from the lint-*.sh headers by go/internal/lintindex) joins BUILD-STATE.md and retros/INDEX.md in the not-committed model: `kit-state lint-index` prints it, `kit-state --write` (install-skill.sh, the .githooks) materializes all three, .gitignore holds it, `gen-lint-index --check` only validates the headers (CI, and pre-push through kit-state). gen.File lost its now-unused compare half (every write is atomic). kit-links L1 resolves toolbelt/INDEX.md from its generator, L5 reads the kit-state output, L11 pins `kit-state.sh lint-index`; tests/ledger-merge.bats LM3: two branches that each add a lint merge with plain git merge (RED before: CONFLICT in build-n4-module-kit/toolbelt/INDEX.md).

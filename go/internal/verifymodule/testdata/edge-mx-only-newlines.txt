@@ -1,0 +1,43 @@
+-- args --
+--target-version
+4.14
+@DIR@/emx.jar
+-- want --
+exit 1
+PASS  bytecode   @DIR@/emx.jar  2 classes, all major 52
+PASS  signed     @DIR@/emx.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+FAIL  types      @DIR@/emx.jar  META-INF/module.xml missing (not an N4 module jar)
+FAIL  baja       @DIR@/emx.jar  META-INF/module.xml missing
+SKIP  stored     @DIR@/emx.jar  no --stored
+SKIP  typecount  @DIR@/emx.jar  no --src
+SKIP  facets     @DIR@/emx.jar  no --src
+SKIP  facets-req  @DIR@/emx.jar  no --src
+SKIP  ord-literal  @DIR@/emx.jar  no --src
+SKIP  palette    @DIR@/emx.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/emx.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/emx.jar  no --src
+SKIP  moduletest  @DIR@/emx.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/emx.jar  no --src
+SKIP  transient-operator  @DIR@/emx.jar  no --src
+SKIP  compact3-import  @DIR@/emx.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/emx.jar  no --src
+SKIP  slot-wall  @DIR@/emx.jar  no --src
+verify-module: 2 passed, 2 failed, 14 skipped, 0 warned -> FAILED
+-- stderr --
+-- emx.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (stored) ---
+
+
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---

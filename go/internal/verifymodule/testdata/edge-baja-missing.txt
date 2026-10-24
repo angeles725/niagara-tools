@@ -1,0 +1,47 @@
+-- args --
+--target-version
+4.14
+@DIR@/nb.jar
+-- want --
+exit 1
+PASS  bytecode   @DIR@/nb.jar  2 classes, all major 52
+PASS  signed     @DIR@/nb.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/nb.jar  1 declared types resolve to classes
+FAIL  baja       @DIR@/nb.jar  no baja dependency in module.xml
+SKIP  stored     @DIR@/nb.jar  no --stored
+SKIP  typecount  @DIR@/nb.jar  no --src
+SKIP  facets     @DIR@/nb.jar  no --src
+SKIP  facets-req  @DIR@/nb.jar  no --src
+SKIP  ord-literal  @DIR@/nb.jar  no --src
+SKIP  palette    @DIR@/nb.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/nb.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/nb.jar  no --src
+SKIP  moduletest  @DIR@/nb.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/nb.jar  no --src
+SKIP  transient-operator  @DIR@/nb.jar  no --src
+SKIP  compact3-import  @DIR@/nb.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/nb.jar  no --src
+SKIP  slot-wall  @DIR@/nb.jar  no --src
+verify-module: 3 passed, 1 failed, 14 skipped, 0 warned -> FAILED
+-- stderr --
+-- nb.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="bajax" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---

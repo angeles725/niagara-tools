@@ -10,6 +10,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/buildstate"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/gen"
 	"github.com/angeles725/niagara-tools/go/internal/retroindex"
 )
 
@@ -178,33 +179,46 @@ func TestMainGeneratedIndex(t *testing.T) {
 	// Mutation: GRI-sweep -- skipping the freshness call lets a deltas header drift pass
 	writeFile(t, filepath.Join(f.retros, "2026-09-01-alpha.md"), "<!-- review-status: pending -->\n<!-- module: kit -->\n<!-- deltas: 2 -->\n# alpha\n")
 	code, out, errs := f.sweep()
-	stale := "gen-retro-index: " + f.root + "/retros/INDEX.md is stale; run gen-retro-index.sh and commit the result\n"
-	if code != ExitFail || out != "" || !strings.HasPrefix(errs, stale) ||
-		!strings.HasSuffix(errs, "sweep: retros/INDEX.md is stale vs the retro headers; run toolbelt/gen-retro-index.sh\n") {
+	if code != ExitFail || out != "" || errs != "sweep: "+f.index+" is stale vs the retro headers; regenerate it with toolbelt/kit-state.sh retro-index\n" {
 		t.Errorf("GRI-sweep stale: got (%d, %q, %q)", code, out, errs)
+	}
+	writeFile(t, filepath.Join(f.retros, "2026-09-01-alpha.md"), "<!-- review-status: pending -->\n# alpha\n")
+	code, _, errs = f.sweep()
+	if code != ExitFail || !strings.HasSuffix(errs, "sweep: the retro headers under "+f.retros+" do not generate an INDEX\n") {
+		t.Errorf("GRI-sweep malformed header: got (%d, %q)", code, errs)
 	}
 }
 
-func TestMainGeneratedIndexElsewhere(t *testing.T) {
+// TestMainGeneratedIndexFromATempDir: the index is not committed, so CI and the pre-push hook pass
+// fresh kit-state output from a temp dir; a generated INDEX is compared wherever it lives.
+func TestMainGeneratedIndexFromATempDir(t *testing.T) {
 	t.Parallel()
 	f := genKit(t)
-	other := filepath.Join(f.root, "other")
-	mustMkdir(t, other)
+	other := filepath.Join(t.TempDir(), "INDEX.md")
 	b, err := os.ReadFile(f.index)
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(other, "INDEX.md"), string(b))
-	code, _, errs := run(f.state, f.retros, filepath.Join(other, "INDEX.md"))
-	if code != ExitFail || errs != "sweep: generated INDEX must be <retros-dir>/INDEX.md: "+filepath.Join(other, "INDEX.md")+"\n" {
-		t.Errorf("got (%d, %q)", code, errs)
+	writeFile(t, other, string(b))
+	if err := os.Remove(f.index); err != nil {
+		t.Fatal(err)
+	}
+	if code, out, errs := run(f.state, f.retros, other); code != ExitOK || out != "" || errs != "" {
+		t.Errorf("fresh temp index: got (%d, %q, %q)", code, out, errs)
+	}
+	writeFile(t, other, string(b)+"| 2026-09-02-ghost.md | kit | 2026-09-02 | pending | 1 |\n")
+	if code, _, errs := run(f.state, f.retros, other); code != ExitFail || errs != "sweep: INDEX row points at a missing retro: 2026-09-02-ghost.md\n" {
+		t.Errorf("stale temp index: got (%d, %q)", code, errs)
 	}
 }
 
-// ledgerKit adds ledger.d/ beside BUILD-STATE.md with a kit block generated from it.
+const ledgerSource = "<!-- build-state.v1 -->\nmodule: kit\nlast_change: generated\nopen_issues:\nretro_required: true\nretro_pending: true\nlast_session: below\n<!-- /build-state.v1 -->\n"
+
+// ledgerKit is a kit with BUILD-STATE.src.md + ledger.d/ and the BUILD-STATE.md generated from them.
 func ledgerKit(t *testing.T) fixture {
 	t.Helper()
-	f := newKit(t, "<!-- build-state.v1 -->\nmodule: kit\nlast_change: x\nopen_issues:\nretro_required: true\nretro_pending: true\nlast_session: 2026-09-04 · demo\n<!-- /build-state.v1 -->\n", hand, nil)
+	f := newKit(t, "", hand, nil)
+	writeFile(t, filepath.Join(f.root, buildstate.SourceName), strings.Replace(ledgerSource, "last_change: generated", buildstate.LastChange(nil), 1))
 	mustMkdir(t, filepath.Join(f.root, "ledger.d"))
 	writeFile(t, filepath.Join(f.root, "ledger.d", "0000-archive-pre-2026-10-23.md"), "<!-- ledger: kit -->\n<!-- date: 2026-09-04 -->\nlog: 2026-09-04 · archived line\n")
 	writeFile(t, filepath.Join(f.root, "ledger.d", "2026-09-05-demo.md"), "<!-- ledger: kit -->\n<!-- date: 2026-09-05 -->\nlog: 2026-09-05 · demo change\nopen_issue: OWED demo half\n")
@@ -212,7 +226,23 @@ func ledgerKit(t *testing.T) fixture {
 	if buildstate.Main([]string{f.root}, cli.Stdio{Out: &o, Err: &e}) != 0 {
 		t.Fatalf("gen-build-state: %s", e.String())
 	}
+	if retroindex.Main([]string{f.root}, cli.Stdio{Out: &o, Err: &e}) != 0 {
+		t.Fatalf("gen-retro-index: %s", e.String())
+	}
 	return f
+}
+
+// TestMainLedgerKitRefusesHandIndex: in the generated model a hand-written INDEX would skip the
+// freshness check unseen, so a ledger.d/ kit refuses it as it refuses a hand-written BUILD-STATE file.
+func TestMainLedgerKitRefusesHandIndex(t *testing.T) {
+	t.Parallel()
+	f := ledgerKit(t)
+	writeFile(t, f.index, hand)
+	code, out, errs := f.sweep()
+	if code != ExitFail || out != "" ||
+		errs != "sweep: a ledger.d/ kit takes the GENERATED INDEX (toolbelt/kit-state.sh retro-index), not "+f.index+"\n" {
+		t.Errorf("hand-written INDEX: got (%d, %q, %q)", code, out, errs)
+	}
 }
 
 func TestMainLedger(t *testing.T) {
@@ -225,28 +255,54 @@ func TestMainLedger(t *testing.T) {
 	writeFile(t, filepath.Join(f.root, "ledger.d", "2026-09-06-late.md"), "<!-- ledger: kit -->\n<!-- date: 2026-09-06 -->\nlog: 2026-09-06 · late\n")
 	code, out, errs := f.sweep()
 	if code != ExitFail || out != "" ||
-		!strings.HasPrefix(errs, "gen-build-state: "+f.root+"/BUILD-STATE.md is stale vs ledger.d/; run gen-build-state.sh and commit the result\n") ||
-		!strings.HasSuffix(errs, "sweep: BUILD-STATE.md is stale vs ledger.d/ (or a fragment is malformed); run toolbelt/gen-build-state.sh\n") {
+		errs != "sweep: "+f.state+" is stale vs ledger.d/ and BUILD-STATE.src.md; regenerate it with toolbelt/kit-state.sh build-state\n" {
 		t.Errorf("GBS-sweep stale: got (%d, %q, %q)", code, out, errs)
 	}
-
-	g := ledgerKit(t)
-	renamed := filepath.Join(g.root, "STATE.md")
-	b, err := os.ReadFile(g.state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	writeFile(t, renamed, string(b))
-	if code, _, errs := run(renamed, g.retros, g.index); code != ExitFail || errs != "sweep: a ledger.d/ kit needs the state file named BUILD-STATE.md: "+renamed+"\n" {
-		t.Errorf("renamed state: got (%d, %q)", code, errs)
+	writeFile(t, filepath.Join(f.root, "ledger.d", "2026-09-06-late.md"), "<!-- ledger: kit -->\n")
+	code, _, errs = f.sweep()
+	if code != ExitFail || !strings.HasPrefix(errs, "gen-build-state: 2026-09-06-late.md: ") ||
+		!strings.HasSuffix(errs, "sweep: ledger.d/ and BUILD-STATE.src.md under "+f.root+" do not generate a BUILD-STATE.md\n") {
+		t.Errorf("GBS-sweep malformed fragment: got (%d, %q)", code, errs)
 	}
 }
 
-// TestMainRealKit is M5: the sweep on the real kit tree exits 0, in the CI argument shape.
+// TestMainLedgerStateFromATempDir: a generated BUILD-STATE file is compared wherever it lives, but a
+// kit with a ledger.d/ never takes a hand-written one (it would skip the ledger check).
+func TestMainLedgerStateFromATempDir(t *testing.T) {
+	t.Parallel()
+	f := ledgerKit(t)
+	moved := filepath.Join(t.TempDir(), "STATE.md")
+	b, err := os.ReadFile(f.state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, moved, string(b))
+	if code, out, errs := run(moved, f.retros, f.index); code != ExitOK || out != "" || errs != "" {
+		t.Errorf("temp state: got (%d, %q, %q)", code, out, errs)
+	}
+	handState := strings.TrimPrefix(string(b), gen.GeneratedLine+"\n")
+	writeFile(t, moved, handState)
+	if code, _, errs := run(moved, f.retros, f.index); code != ExitFail ||
+		errs != "sweep: a ledger.d/ kit takes the GENERATED BUILD-STATE.md (toolbelt/kit-state.sh build-state), not "+moved+"\n" {
+		t.Errorf("hand-written state: got (%d, %q)", code, errs)
+	}
+}
+
+// TestMainRealKit is M5: the sweep on the real kit tree exits 0, in the CI argument shape (fresh
+// kit-state output in a temp dir; the generated files are not committed).
 func TestMainRealKit(t *testing.T) {
 	t.Parallel()
 	k := filepath.Join("..", "..", "..", "build-n4-module-kit")
-	code, out, errs := run(filepath.Join(k, "BUILD-STATE.md"), filepath.Join(k, "retros"), filepath.Join(k, "retros", "INDEX.md"))
+	tmp := t.TempDir()
+	var diag bytes.Buffer
+	state, c1 := buildstate.Generate(k, &diag)
+	index, c2 := retroindex.Generate(k, &diag)
+	if c1 != 0 || c2 != 0 {
+		t.Fatalf("generate: %s", diag.String())
+	}
+	writeFile(t, filepath.Join(tmp, "BUILD-STATE.md"), state)
+	writeFile(t, filepath.Join(tmp, "INDEX.md"), index)
+	code, out, errs := run(filepath.Join(tmp, "BUILD-STATE.md"), filepath.Join(k, "retros"), filepath.Join(tmp, "INDEX.md"))
 	if code != ExitOK || out != "" || errs != "" {
 		t.Errorf("got (%d, %q, %q)", code, out, errs)
 	}

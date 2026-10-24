@@ -1,0 +1,9 @@
+-- args --
+--plano
+@DIR@/no-rc-spa.html
+-- want --
+exit 0
+SKIP  plano      @DIR@/no-rc-spa.html  not a plano dashboard (3D/self-contained SPA) — IMG_W/IMG_H and overlay markers absent
+-- stderr --
+-- no-rc-spa.html --
+<div>3d</div>

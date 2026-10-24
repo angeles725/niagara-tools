@@ -1,0 +1,56 @@
+-- args --
+--src
+@DIR@/mod
+@DIR@/Two-rt.jar
+-- want --
+exit 1
+PASS  bytecode   @DIR@/Two-rt.jar  2 classes, all major 52
+PASS  signed     @DIR@/Two-rt.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Two-rt.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Two-rt.jar  no --target-version
+SKIP  stored     @DIR@/Two-rt.jar  no --stored
+FAIL  typecount  @DIR@/Two-rt.jar  jar declares 1 types, @DIR@/mod/Two-rt/module-include.xml declares 2 (stale build or missing slotomatic)
+FAIL  facets     @DIR@/Two-rt.jar  raw-number MIN/MAX facet (wrap in BDouble.make): @DIR@/mod/Two-rt/src/com/x/A.java:1:Object a = BFacets.make(BFacets.MIN, 1);
+PASS  facets-req  @DIR@/Two-rt.jar  no missing required facets under @DIR@/mod/Two-rt/src
+PASS  ord-literal  @DIR@/Two-rt.jar  no hardcoded ORD literals under @DIR@/mod/Two-rt/src
+SKIP  palette    @DIR@/Two-rt.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Two-rt.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/Two-rt.jar  no *.gradle.kts in @DIR@/mod/Two-rt
+WARN  moduletest  @DIR@/Two-rt.jar  production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)
+PASS  cross-module-type  @DIR@/Two-rt.jar  no cross-module type references in @DIR@/mod/Two-rt/src
+PASS  transient-operator  @DIR@/Two-rt.jar  no TRANSIENT+OPERATOR slot combination under @DIR@/mod/Two-rt/src
+PASS  compact3-import  @DIR@/Two-rt.jar  no Compact3 non-safe imports under @DIR@/mod/Two-rt/src
+PASS  subscription-leak  @DIR@/Two-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod/Two-rt/src
+PASS  slot-wall  @DIR@/Two-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Two-rt/src
+verify-module: 10 passed, 2 failed, 5 skipped, 1 warned -> FAILED
+-- stderr --
+-- Two-rt.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Two-rt/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/>
+<type name="B" class="com.x.B"/>
+</types>
+-- mod/Two-rt/src/com/x/A.java --
+Object a = BFacets.make(BFacets.MIN, 1);
+-- mod/Two-rt/src/com/x/B.java --
+Object b = BFacets.make(BFacets.MAX,2);

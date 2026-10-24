@@ -7,6 +7,12 @@
 #   --skill mcp-n4:                    mcp-n4-kit/skill/SKILL.md
 # (the SKILLS table below is the single source of these names and paths)
 #
+# --skill build-n4-module also MATERIALIZES the kit's generated state in the kit checkout the launcher
+# reads: BUILD-STATE.md, retros/INDEX.md and toolbelt/INDEX.md are generated and not committed (R10-D1), so a fresh install
+# runs `<kit>/toolbelt/kit-state.sh --write` (on every run, also when the launcher is already current).
+# The kit is $BUILD_N4_KIT when it holds METHODOLOGY.md (the launcher's own first rule), else this
+# repository's build-n4-module-kit/. [ev: retro ledger-generated-not-committed]
+#
 # This script is VCS-free by design — version control is never invoked here.
 # The source of truth lives in the repository; this script only installs it.
 #
@@ -21,10 +27,12 @@
 #   --force        Overwrite a diverged installed copy without exiting 1.
 #
 # Exit codes:
-#   0   Installed or already current (or --dry-run).
+#   0   Installed or already current (or --dry-run); for build-n4-module, kit state materialized
+#       (a kit without toolbelt/kit-state.sh is a warning, not an error).
 #   1   Installed copy exists and diverges from the tracked copy; --force absent.
 #   2   Usage error (including an unknown --skill name).
-#   3   Environment error (tracked source missing, no sha256 tool, target directory not creatable).
+#   3   Environment error (tracked source missing, no sha256 tool, target directory not creatable,
+#       kit-state failed: the launcher is installed but the kit state is not).
 #
 # shellcheck disable=SC2006  # not used; POSIX $() throughout
 set -u
@@ -107,6 +115,26 @@ if [ ! -f "$TRACKED" ]; then
   exit 3
 fi
 
+# The kit checkout whose generated state a build-n4-module install materializes.
+KIT_DIR=""
+if [ "$SKILL" = build-n4-module ]; then
+  if [ -n "${BUILD_N4_KIT:-}" ] && [ -f "$BUILD_N4_KIT/METHODOLOGY.md" ]; then KIT_DIR="$BUILD_N4_KIT"
+  else KIT_DIR="$REPO_ROOT/build-n4-module-kit"; fi
+fi
+
+# materialize: run the kit's kit-state --write (it prints each path written); exit 3 when it fails.
+materialize() {
+  [ -n "$KIT_DIR" ] || return 0
+  if [ ! -f "$KIT_DIR/toolbelt/kit-state.sh" ]; then
+    printf 'install-skill: no toolbelt/kit-state.sh in %s; generated kit state not materialized\n' "$KIT_DIR" >&2
+    return 0
+  fi
+  bash "$KIT_DIR/toolbelt/kit-state.sh" --write "$KIT_DIR" || {
+    printf 'install-skill: kit-state --write failed in %s; the launcher is installed, the kit state is not\n' "$KIT_DIR" >&2
+    exit 3
+  }
+}
+
 TARGET_DIR="$HOME_DIR/.claude/skills/$SKILL"
 TARGET="$TARGET_DIR/SKILL.md"
 
@@ -129,6 +157,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   else
     printf 'install-skill: [dry-run] would install to: %s\n' "$TARGET"
   fi
+  [ -z "$KIT_DIR" ] || printf 'install-skill: [dry-run] would run kit-state --write in: %s\n' "$KIT_DIR"
   exit 0
 fi
 
@@ -139,6 +168,7 @@ if [ -f "$TARGET" ]; then
   target_sha=$(sha256_of "$TARGET")
   if [ "$tracked_sha" = "$target_sha" ]; then
     printf 'install-skill: already current: %s\n' "$TARGET"
+    materialize
     exit 0
   fi
   # Diverged
@@ -167,4 +197,5 @@ fi
 # ---------------------------------------------------------------------------
 cp "$TRACKED" "$TARGET"
 printf 'install-skill: installed %s\n' "$TARGET"
+materialize
 exit 0

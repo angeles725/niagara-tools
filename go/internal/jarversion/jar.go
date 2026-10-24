@@ -29,27 +29,14 @@ const flagEncrypted = 0x1
 // The sample goes on past an unreadable class, so a finding and an error can both be returned.
 // The bash tool ran `unzip -Z1` and `unzip -p` with 2>/dev/null and counted all of these as clean.
 func CheckJar(path string) (found Finding, hit bool, err error) {
-	r, err := zip.OpenReader(path)
-	// ErrInsecurePath (a "../" or absolute entry name, under GODEBUG zipinsecurepath=0) still returns a
-	// usable reader; unzip -Z1 listed such names, so they are sampled too.
-	if err != nil && !(errors.Is(err, zip.ErrInsecurePath) && r != nil) {
+	r, err := Open(path)
+	if err != nil {
 		return Finding{}, false, err
 	}
-	err = nil
 	defer r.Close()
-	r.RegisterDecompressor(methodBzip2, func(rd io.Reader) io.ReadCloser { return io.NopCloser(bzip2.NewReader(rd)) })
-
-	// unzip -p <name> reads the first record of a duplicated name, so index the first one only.
-	first := make(map[string]*zip.File, len(r.File))
-	names := make([]string, len(r.File))
-	for i, f := range r.File {
-		names[i] = f.Name
-		if _, seen := first[f.Name]; !seen {
-			first[f.Name] = f
-		}
-	}
+	names, first := Index(r)
 	for _, name := range Sample(names) {
-		h, herr := head(first[name])
+		h, herr := Head(first[name])
 		if herr != nil {
 			if err == nil {
 				err = &entryError{name, herr}
@@ -63,11 +50,37 @@ func CheckJar(path string) (found Finding, hit bool, err error) {
 	return Finding{}, false, err
 }
 
+// Open opens the jar at path as unzip reads it: entries compressed with bzip2 are readable, and an entry
+// name archive/zip calls insecure ("../", absolute, under GODEBUG zipinsecurepath=0) is kept, since
+// unzip -Z1 lists such names.
+func Open(path string) (*zip.ReadCloser, error) {
+	r, err := zip.OpenReader(path)
+	if err != nil && !(errors.Is(err, zip.ErrInsecurePath) && r != nil) {
+		return nil, err
+	}
+	r.RegisterDecompressor(methodBzip2, func(rd io.Reader) io.ReadCloser { return io.NopCloser(bzip2.NewReader(rd)) })
+	return r, nil
+}
+
+// Index is the entry names of r in archive order (what unzip -Z1 lists) and, per name, the record
+// unzip -p <name> reads: the first one of a duplicated name.
+func Index(r *zip.ReadCloser) (names []string, first map[string]*zip.File) {
+	first = make(map[string]*zip.File, len(r.File))
+	names = make([]string, len(r.File))
+	for i, f := range r.File {
+		names[i] = f.Name
+		if _, seen := first[f.Name]; !seen {
+			first[f.Name] = f
+		}
+	}
+	return names, first
+}
+
 // errEncrypted is an entry unzip cannot read without a password.
 var errEncrypted = errors.New("encrypted entry")
 
-// head returns the first 8 bytes of entry f, or all of it when it is shorter.
-func head(f *zip.File) ([]byte, error) {
+// Head returns the first 8 bytes of entry f, or all of it when it is shorter.
+func Head(f *zip.File) ([]byte, error) {
 	if f.Flags&flagEncrypted != 0 {
 		return nil, errEncrypted
 	}
@@ -86,6 +99,19 @@ func head(f *zip.File) ([]byte, error) {
 		return nil, err
 	}
 	return buf, nil
+}
+
+// Read returns all of entry f, as unzip -p prints it.
+func Read(f *zip.File) ([]byte, error) {
+	if f.Flags&flagEncrypted != 0 {
+		return nil, errEncrypted
+	}
+	rc, err := f.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+	return io.ReadAll(rc)
 }
 
 // entryError is a sampled class entry that could not be read.

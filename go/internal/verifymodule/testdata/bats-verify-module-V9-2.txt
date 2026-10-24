@@ -1,0 +1,6 @@
+-- args --
+@DIR@/notajar.txt
+-- want --
+exit 2
+-- stderr --
+verify-module: not a jar: @DIR@/notajar.txt

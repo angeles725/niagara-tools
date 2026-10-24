@@ -28,14 +28,13 @@
 #   - the open_issues: multi-line list is tolerated (list items are not fields);
 #   - INDEX integrity: every retro file has a row, every row points at a real retro, and every
 #     row's review-status is pending or folded;
-#   - freshness: when INDEX.md is the GENERATED index (line 1 names toolbelt/gen-retro-index.sh),
-#     it must equal what `gen-retro-index --check <kit-root>` regenerates from the retro headers
-#     (kit root = the retros dir's parent); a hand-written index (test fixtures) skips this check;
-#   - ledger freshness: when a ledger.d/ directory sits beside <BUILD-STATE.md>, the kit block's
-#     generated parts (last_change, open_issues items, session log) must equal what
-#     `gen-build-state --check <kit-root>` regenerates from ledger.d/; no ledger.d/ skips it.
-#   Both freshness checks run in-process (go/internal/retroindex, go/internal/buildstate) with the
-#   generators' own messages on stderr; a failing check is exit 1.
+#   - freshness: BUILD-STATE.md and retros/INDEX.md are generated and not committed, so callers
+#     (CI, .githooks/pre-push) pass fresh `toolbelt/kit-state.sh build-state|retro-index` output from
+#     a temp dir. A GENERATED file (line 1 = the kit-state GENERATED comment) must equal what the kit
+#     at <retros-dir>/.. generates now (BUILD-STATE.src.md + ledger.d/, the retro headers); a
+#     hand-written file (test fixtures) skips its check, but a kit with a ledger.d/ takes only the
+#     generated BUILD-STATE.md. Both run in-process (go/internal/retroindex, go/internal/buildstate)
+#     with the generators' own messages on stderr; a failing check is exit 1.
 #
 # Implementation: the Go module at <repo>/go (go/internal/buildstatefields). This wrapper is the stable
 # entry point: go/go-tool.sh `go_tool_bin` builds go/bin/sweep-build-state when the binary is missing or
