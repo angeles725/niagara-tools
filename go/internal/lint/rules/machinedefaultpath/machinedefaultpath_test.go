@@ -57,7 +57,7 @@ func TestFindings(t *testing.T) {
 		{"ledger static final field", "class A {\n  private static final String PW_FILE = \"/home/dev/.n4/pw\";\n}\n", row(2, "/home/dev/.n4/pw", field)},
 		// The spec's prefixes are case-insensitive.
 		{"case-insensitive prefix", "class A {\n  String d = \"/TMP/x\";\n  String e = \"/Home/me\";\n}\n", row(2, "/TMP/x", field) + row(3, "/Home/me", field)},
-		{"static final field", "class A {\n  static final String DIR = \"/home/cristian/x\";\n}\n", row(2, "/home/cristian/x", field)},
+		{"static final field", "class A {\n  static final String DIR = \"/home/someuser/x\";\n}\n", row(2, "/home/someuser/x", field)},
 		{"instance field", "class A {\n  private String d = \"/Users/me/x\";\n}\n", row(2, "/Users/me/x", field)},
 		{"field on the next line", "class A {\n  static final String D =\n      \"/tmp/run\";\n}\n", row(3, "/tmp/run", field)},
 		{"another niagara-prefixed home", "class A {\n  String d = \"/home/niagara2/x\";\n}\n", row(2, "/home/niagara2/x", field)},

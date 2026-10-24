@@ -1,0 +1,12 @@
+-- args --
+--tag
+plant
+x=1.txt
+-- want --
+exit 1
+FAIL  triage-console  x=1.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING a warning @ [plant]
+-- stderr --
+-- @kind --
+truth: hand-written, the bash recorded at 79ca5a2c passed the console to awk, which reads an operand shaped NAME=value as a variable assignment: the file was never read (with no other operand awk read standard input); the port reads every listed console
+-- x=1.txt --
+WARNING [10:00:00 01-Oct-26 CST][plant] a warning
