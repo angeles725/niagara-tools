@@ -1,0 +1,37 @@
+-- args --
+@DIR@/nocls.jar
+-- want --
+exit 1
+FAIL  bytecode   @DIR@/nocls.jar  no .class entries
+FAIL  signed     @DIR@/nocls.jar  no META-INF/*.SF (jar not signed)
+PASS  types      @DIR@/nocls.jar  0 declared types resolve to classes
+SKIP  baja       @DIR@/nocls.jar  no --target-version
+SKIP  stored     @DIR@/nocls.jar  no --stored
+SKIP  typecount  @DIR@/nocls.jar  no --src
+SKIP  facets     @DIR@/nocls.jar  no --src
+SKIP  facets-req  @DIR@/nocls.jar  no --src
+SKIP  ord-literal  @DIR@/nocls.jar  no --src
+SKIP  palette    @DIR@/nocls.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/nocls.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/nocls.jar  no --src
+SKIP  moduletest  @DIR@/nocls.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/nocls.jar  no --src
+SKIP  transient-operator  @DIR@/nocls.jar  no --src
+SKIP  compact3-import  @DIR@/nocls.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/nocls.jar  no --src
+SKIP  slot-wall  @DIR@/nocls.jar  no --src
+verify-module: 1 passed, 2 failed, 15 skipped, 0 warned -> FAILED
+-- stderr --
+-- nocls.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+</types>
+</module>
+--- rc/ (stored) ---
+--- rc/a.txt (stored) ---
+x
