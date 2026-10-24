@@ -523,3 +523,50 @@ partial line, and an `OSError` from opening the file is Go's error text; no S8 c
 are Python-only paths. Observed in Python and kept: one non-UTF-8 byte or one unhashable batch id
 anywhere in `journal.jsonl` makes `n4_list_batches` (and a rollback) fail for every batch, and
 `_BATCH_ID.match` accepts an id with one trailing newline (then refused as unknown).
+
+## 13. S9 `retro` and `n4_session_retro_draft`
+
+**Packages.** `retro` ports `retro.py`: `refusals.go` (`_REFUSALS` and `_VERDICTS` in their
+order, `_safe`; `RefusalClass` is the class lookup the derive loop and the tier twin share),
+`derive.go` (`_derive`: refusal groups keyed by class in first-seen order with their first row's
+advice, verdict and in-doubt evidence, BOX errors by op from the unfiltered journal, dangling
+observations), `draft.go` (`_since_filter`, `_window`, `draft`) and `render.go` (`_summary`,
+`_delta_table`, `cell`, `render`). `isodate.go` and `isotime.go` are `datetime.fromisoformat` as
+CPython 3.15's `_datetimemodule.c` runs it on the UTF-8 bytes (the NUL past the end and an
+embedded NUL stop a parse alike; every date form, the separator rules, a surrogate separator,
+fractions, offsets, hour 24 rolling over, `0000-12-31T24:00` becoming year 1), behind
+`_parse_ts`'s `strip()` and `Z` replacement; the `Z` branch of the C parser is left out, since no
+`Z` reaches it. The template is embedded: `retro/retro.template.md` must equal
+`mcp_n4/templates/retro.template.md` byte for byte. `journal.dictKey` moved to `pyjson.DictKey`:
+the summary counts outcomes and verdicts as dict keys (`1`, `true` and `1.0` are one key, the
+first one kept and sorted by its `str()`), and an audit `batch_id` is looked up the same way, so
+a list or dict is the `TypeError` Python raises. `session.Context.StartedAt` is `ctx.started_at`
+(`session.Now()` at start), and `readtools` serves `n4_session_retro_draft` (no session, the
+server's state dir, `since` or the server start, `ctx.observations`). Nothing in this slice
+writes.
+
+**Proof.** `test_retro.TestServerTool` now runs black-box through `make_server` (its
+`--allow-writes` case still skips under Go), and the new `TestTheDraftIsPythonsDraft` (9) and
+`TestDanglingReadsReachTheDraft` (1) run black-box under both implementations: the reply text
+must be the one `tools_read.n4_session_retro_draft` computes in-process on the same state dir
+(every refusal class with the tier refusal, verdicts, in-doubt and BOX errors with odd ops, the
+S8 Python-written state dir, odd timestamps and windows, bad `since` values, odd and unhashable
+summary values, the secret canary). With a stub handler 13 of them failed. Under
+`MCP_N4_IMPL=go`: 637 tests, 445 skipped (627 / 448 before; 345 of them carry `@go_twin`). The
+21 `retro` markers have Go twins in `retro/refusals_test.go`, `derive_test.go` and
+`render_test.go` (`count_deltas` is tooling-only, so its twin counts rows with a test helper),
+and `tiers.TestTheRetroClassifiesTierRefusals` is in `tiers/retro_test.go`;
+`readtools.TestTheRetroDraftCoversThisSession` drives the tool through the dispatcher.
+Differentials on CPython 3.15: `retro.TestParseTimestampDifferentialPython` (112 seeds and 40,000
+mutants; 1,000,000 mutants were run once) requires `_parse_ts`'s instant or refusal for each, and
+`retro.TestDraftDifferentialPython` requires `retro.draft`'s JSON, byte for byte, or its error,
+for 25 session states (the Python-written fixture, a missing dir, every refusal class including
+both tier refusals, all verdicts, in-doubt and BOX errors, dangling and BQL observations, windows,
+`+N more` evidence, 64- and 65-character names, template placeholders in the station name, a
+non-UTF-8 audit line, unhashable and non-iterable values). 42 hand mutants of the classification,
+window, summary, render, parse and tool-wiring branches all go RED, none through a panic or a
+build failure.
+
+**Known differences.** None found. `since=""` is `None` for the Go `retro.Draft` API (the tool
+maps an empty `since` to the server start, as Python's `or` does). An observation's `count` is
+printed with `str()`, where Python calls `int()`: the server only records whole counts.
