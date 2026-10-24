@@ -32,6 +32,7 @@ a component (WSP-array). go/README.md also gained the retro go-lint-status-parit
 - T1: Cliente 10 → 10, decompiled 411 → 411 `[ev: go/internal/lint/rules/wsplacement/testdata/truth-literals-1.txt]`; `TestMaskLiterals` pins the length-keeping mask `[ev: go/internal/javasrc/blank_test.go TestMaskLiterals]`
 - T2: Cliente 10 → 4 (the six Apillm `buttons.add(null, new BButton(...))` rows go), decompiled 411 → 123 `[ev: go/internal/lint/rules/wsplacement/testdata/truth-widgets-1.txt]`
 - T3: Cliente 4 → 4, decompiled 123 → 123 `[ev: go/internal/lint/rules/wsplacement/testdata/truth-array-1.txt]`
+- After merging origin/main (#405, javasrc.Methods reads a signature wrapped before its brace): edge-guard-1 gains one row, BNested.java:20 `add("e", new BFolder()) in wrapped()`, the unplaced add of the wrapped method the bash mb_parse never saw; declared in the golden. Real trees after the merge: Cliente 4 → 4, decompiled 123 → 125 (lonworks-rt BDeviceEntryTable.java:58 and BRouterEntryTable.java:71, `add(entryName, new B…Entry())` in wrapped addEntry() methods) `[ev: go/internal/lint/rules/wsplacement/testdata/edge-guard-1.txt]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
