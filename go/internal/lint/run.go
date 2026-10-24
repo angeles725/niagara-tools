@@ -306,7 +306,11 @@ func Command(specs ...Spec) cli.Main {
 			sp := selected[0]
 			mode, name, use, usageExit, bare = sp.Mode, sp.ID(), sp.Usage, sp.usageExit(), sp.BareUsage
 		}
-		a, err := Parse(mode, name, use, args[1:])
+		option := ""
+		if len(selected) == 1 && args[0] != "--all" {
+			option = selected[0].Option
+		}
+		a, err := ParseOption(mode, name, use, option, args[1:])
 		if err != nil {
 			var ue *UsageError
 			usageErr := errors.As(err, &ue)
@@ -319,6 +323,14 @@ func Command(specs ...Spec) cli.Main {
 				return usageExit
 			}
 			return 3
+		}
+		if len(selected) == 1 && args[0] != "--all" {
+			if c, ok := selected[0].rule().(Configurer); ok {
+				if err := c.Configure(a); err != nil {
+					fmt.Fprint(s.Err, err)
+					return 3
+				}
+			}
 		}
 		return Run(selected, name, a, s)
 	}
