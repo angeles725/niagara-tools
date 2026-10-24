@@ -29,8 +29,9 @@ type matrix struct {
 }
 
 // matrix resolves the matrix: the --matrix file as given, or the first <dir>/docs/write-path-matrix.md
-// that exists and is not empty, walking up from the root to the first directory holding a .git (or the
-// filesystem root); the bash `grep -q '^\|'` matched any line, so a non-empty file is found.
+// that holds a table row (a line starting with "|"), walking up from the root to the first directory
+// holding a .git (or the filesystem root). A file without one (a heading, a stub) is skipped: the bash
+// `grep -q '^\|'` matched any line, so it stopped the walk there (truth fix T1).
 func (s *scan) matrix(override string) (*matrix, error) {
 	if override != "" {
 		if !lint.IsFile(override) {
@@ -42,8 +43,10 @@ func (s *scan) matrix(override string) (*matrix, error) {
 	for dir := s.root; ; {
 		p := dir + "/docs/write-path-matrix.md"
 		looked = append(looked, p)
-		if data, err := os.ReadFile(p); err == nil && len(data) > 0 && lint.IsFile(p) {
-			return newMatrix(p, data), nil
+		if data, err := os.ReadFile(p); err == nil && lint.IsFile(p) {
+			if m := newMatrix(p, data); m.hasRow() {
+				return m, nil
+			}
 		}
 		up := lint.Dirname(dir)
 		if lint.IsDir(dir+"/.git") || up == dir {
@@ -64,6 +67,15 @@ func readMatrix(p string) (*matrix, error) {
 func newMatrix(p string, data []byte) *matrix {
 	ls, _ := javasrc.Lines(strings.NewReader(string(data))) // a strings.Reader never fails
 	return &matrix{path: p, lines: ls, eol: len(data) > 0 && data[len(data)-1] == '\n'}
+}
+
+func (m *matrix) hasRow() bool {
+	for _, ln := range m.lines {
+		if strings.HasPrefix(ln, "|") {
+			return true
+		}
+	}
+	return false
 }
 
 // cell is awk -F'|' $2 trimmed: the text between a row's first and second "|".

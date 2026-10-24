@@ -442,3 +442,17 @@ MD
   assert_symroot_same "$repo/ColdRoomPan" "$LW" "$repo/ColdRoomPan"
   [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"fanMode"* ]]
 }
+
+# Truth fix T1 (r10 Go port): a matrix is "found" only when it has a table row. The bash walk-up used
+# `grep -q '^\|'`, which in GNU BRE is "^ or empty" and matches ANY line, so a heading-only
+# docs/write-path-matrix.md in the module stopped the walk and every OPERATOR slot FAILed against it.
+@test "WP-matrix-table: a module matrix with no table row is skipped and the walk reaches the real one" {
+  # Mutation: WP-matrix-anyline -- accepting any non-empty file stops at the heading-only matrix (FAIL setpoint).
+  r="$BATS_TEST_TMPDIR/mt"; mkdir -p "$r/.git" "$r/docs" "$r/M/docs" "$r/M/src/com/x"
+  printf '# M\n| Slot | W |\n|--|--|\n| `setpoint` | D |\n' > "$r/docs/write-path-matrix.md"
+  printf '# Write-path matrix\nSee the repository matrix.\n' > "$r/M/docs/write-path-matrix.md"
+  printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\n' > "$r/M/src/com/x/B.java"
+  run "$LW" --strict "$r/M"
+  [[ "$output" != *"FAIL"* ]]
+  [ "$status" -eq 0 ]
+}

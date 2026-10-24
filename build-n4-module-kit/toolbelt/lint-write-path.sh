@@ -51,6 +51,7 @@
 # Mutation: WP-audit-str-ok -- strips comments without tracking string literals, so "*/*" hides the audit call
 # Mutation: WP-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports the slot covered
 # Mutation: WP-finderr-matrix -- ignoring the matrix-root find status drops names from the covered set
+# Mutation: WP-matrix-anyline -- accepting any non-empty matrix file stops the walk at a heading-only matrix
 set -u
 
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

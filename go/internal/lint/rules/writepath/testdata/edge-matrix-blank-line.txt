@@ -1,8 +1,9 @@
+declared difference: T1: a matrix file with no table row (a heading, a stub, a blank line) no longer stops the walk-up; the bash grep -q '^\|' matched any line
 -- args --
 @DIR@/blank/M
 -- want --
-exit 1
-FAIL  lint-write-path  M  slot setpoint: no matrix row
+exit 3
+lint-write-path  ERROR  @DIR@/blank/M  no write-path-matrix.md found (looked in @DIR@/blank/M/docs/write-path-matrix.md, @DIR@/blank/docs/write-path-matrix.md, @DIR@/docs/write-path-matrix.md)
 -- stderr --
 -- .git/HEAD --
 x
