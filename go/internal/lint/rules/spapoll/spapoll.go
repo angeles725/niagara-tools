@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/jssrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
@@ -65,10 +66,11 @@ const (
 // Check WARNs once at the first poll call when its function has a catch path and the file's recovery is
 // missing or not keyed on the last success.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	lines := make([]string, len(f.Raw)) // each line cut at its first "//", as the awk's sub(/\/\/.*$/, "")
-	for i, ln := range f.Raw {
-		lines[i], _, _ = strings.Cut(ln, "//")
+	src := f.Raw
+	if strings.HasSuffix(f.Path, ".html") {
+		src = jssrc.HTMLScripts(src) // a page's JavaScript is its <script> contents
 	}
+	lines := jssrc.Code(src) // code only: comments and literal contents blanked, line lengths kept
 	call, fn := -1, ""
 	for i, ln := range lines {
 		if m := pollCall.FindString(ln); m != "" {

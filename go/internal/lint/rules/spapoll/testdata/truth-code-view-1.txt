@@ -1,0 +1,40 @@
+declared difference (truth fix T1, code view): the awk cut each line at its first "//" (inside a string too) and read
+block comments, strings and template literals as code, so a commented or quoted location.reload() counted as recovery
+(A, B), a commented catch made a poll the flagged shape (C), a catch after "http://" was hidden (D), and a template
+quoting setInterval(poll, ...) was taken for the poll call (E). The lint reads code only now (jssrc.Code; for .html,
+the <script> contents only, jssrc.HTMLScripts).
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/A.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/B.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/D.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/F.html:4  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+-- stderr --
+-- A.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+/* location.reload(); */
+-- B.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+log("location.reload()");
+-- C.js --
+function poll() {
+  /* a().catch(e => 0); */
+  b();
+}
+setInterval(poll, 1);
+-- D.js --
+function poll() { const u = "http://x"; a().catch(e => 0); }
+setInterval(poll, 1);
+-- E.js --
+const t = `setInterval(poll, 1)`;
+function poll() { a().catch(e => 0); }
+-- F.html --
+<p>don't</p>
+<script>
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+</script>

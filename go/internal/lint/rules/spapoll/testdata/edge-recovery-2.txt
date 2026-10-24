@@ -1,18 +1,20 @@
+declared difference (truth fix T1, truth-code-view-1): r8's reload is in a block comment and r9's in a
+string (no recovery), r11's catch is in a block comment (not the shape), r12's catch follows "http://" in code (now
+seen), and r13's setInterval(poll, 1) is a template literal (not a call).
 -- args --
 --strict
 @DIR@
 -- want --
 exit 1
-WARN  lint-spa-poll-no-recovery  @DIR@/r11.js:5  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
-WARN  lint-spa-poll-no-recovery  @DIR@/r13.js:1  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/r12.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
 WARN  lint-spa-poll-no-recovery  @DIR@/r14.html:3  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
 WARN  lint-spa-poll-no-recovery  @DIR@/r2.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
 WARN  lint-spa-poll-no-recovery  @DIR@/r3.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
 WARN  lint-spa-poll-no-recovery  @DIR@/r5.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
 WARN  lint-spa-poll-no-recovery  @DIR@/r6.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
 WARN  lint-spa-poll-no-recovery  @DIR@/r7.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
-WARN  lint-spa-poll-no-recovery  @DIR@/r8.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
-WARN  lint-spa-poll-no-recovery  @DIR@/r9.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+WARN  lint-spa-poll-no-recovery  @DIR@/r8.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/r9.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
 -- stderr --
 -- r1.js --
 let lastOkAt = 0;
