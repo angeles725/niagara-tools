@@ -369,8 +369,8 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   if [[ "$output" == *"RenderPass.js"* ]]; then return 1; fi
 }
 
-# Issue #459 (b): a control disabled with a stated non-gate reason on the same element and line (PANCCADIA
-# index.html:1482 `b.disabled = true; b.title = "Sin salida cableada";`) is meant to be inert, not gated.
+# Issue #459 (b): a control disabled with a stated non-gate reason on the same element and line (a client page line,
+# `b.disabled = true; b.title = "Sin salida cableada";`) is meant to be inert, not gated.
 @test "RC34: disabled-gate — a literal non-gate title on the disabled element is a stated reason; a gate title or none still WARNs" {
   # Mutation: RC34 -- ignoring the stated title reason WARNs the wiring-disabled control again
   local T="$BATS_TEST_TMPDIR/rc34"
@@ -387,7 +387,7 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
 }
 
 # Issue #459 (a), part 1: innerhtml-server reads the sink's own value — a member elsewhere on a minified line,
-# a .length, a .toFixed( number or a Math.* value is not server text (Umbrella index.html:2995, :3023).
+# a .length, a .toFixed( number or a Math.* value is not server text (client-D page lines).
 @test "RC35: innerhtml-server — only a raw member in the sink's own value WARNs; .toFixed(, .length, Math.* and a member beside it do not" {
   # Mutation: RC35 -- matching the member anywhere on the line again WARNs the spec.unit line (app.js:2)
   local T="$BATS_TEST_TMPDIR/rc35"
@@ -401,7 +401,7 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   if [[ "$output" == *"rc/app.js:2  innerhtml-server"* || "$output" == *"rc/app.js:3  innerhtml-server"* ]]; then return 1; fi
 }
 
-# Issue #459 (a), part 2: a member of a const literal the page declares (Umbrella index.html:2987
+# Issue #459 (a), part 2: a member of a const literal the page declares (a client-D page line,
 # units.map(u => ... + u.name)) is not server data; data from elsewhere, a let and a literal the page writes
 # into still WARN.
 @test "RC36: innerhtml-server — a member of a same-file const literal is no row; a non-literal, a let or a written literal still WARNs" {

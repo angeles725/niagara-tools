@@ -37,8 +37,8 @@ var iterators = map[string]bool{"map": true, "forEach": true, "filter": true, "f
 // literalMember reports that base.path, read at stream index pos, is literal text of the page's own code:
 // base is bound (jssrc.Bindings, lexical scope) to a const literal collection, to an element of one (a
 // callback parameter of units.map(u => ...), a for (const u of units) name, units.find(...), units[i], a
-// const arrow that returns units.find(...)), and every such literal holds path (issue #459 (a): Umbrella
-// index.html renders its own `const units = [{id, name, ...}]`).
+// const arrow that returns units.find(...)), and every such literal holds path (issue #459 (a): a client-D
+// page renders its own `const units = [{id, name, ...}]`).
 func (s *fileScan) literalMember(base string, pos int, path []string) bool {
 	s.markWrites()
 	sh := s.resolve(base, pos)
