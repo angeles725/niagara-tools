@@ -106,6 +106,11 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - [ ] **The non-skippable floor ran** (`BUILD-LOOP.md` §5) — even under an explicit speed request — and any OTHER skipped check is listed with its reason under `## Checks skipped` in the feature doc.
 - [ ] **The 4-layer assurance stack ran** for any decision/safety logic: pure JUnit (`toolbelt/run-pure-test.sh`) → the verify gate → a live cold-boot smoke **on a station of the TARGET distribution and version** (same vendor overlay or stock distribution, same Niagara release as the production station; a smoke on a different overlay or release does not count, and it runs BEFORE any production deploy — BUILD-LOOP §6 pre-deploy gates) → an adversarial pure-logic review. Pure tests are mandatory for decision/safety logic; `niagaraTest` is documentation, not a WSL gate. Detail in `build-verify.md`. [ev: retro qa-stack-pure-tests-and-defrost-untested-gap · T1] `[ev: retro panccadia-commissioning-lessons Δ10]`
 - [ ] **If this module requires station rewiring: a commissioning-verify pass must run BEFORE hand-off** — confirm facade↔rt links wired, config values sane, per-instance status surfaces match control arity, and `triage-console.sh` + `bog-audit.sh CHECK11` are clean after a hot reload. The verify gate is code-level and BLIND to commissioning correctness (no facade, no live station, no config values). `[ev: retro live-commissioning-verification-gaps Δ7]` See BUILD-LOOP §6.b for the full commissioning-verify checklist.
+- **A tool that overwrites user data is opt-in:** its default target is a marked throwaway copy, writing the real
+  thing takes an explicit flag, and the refusal names both routes (`build.sh` and `--install-into-home`,
+  `build-verify.md` § Building against a running station). A backup an EXIT trap deletes protects only the FAIL
+  path: keep the copy past a pass or refuse the overwrite by default. `[ev: retro r10-buildsh-mirror-guard Δ1]`
+  `[ev: retro r10-buildsh-mirror-guard Δ2]`
 - **What to test, where — by module type** [ev: corpus B743/B12]:
 
   | Module type | Pure JUnit (WSL) | Verify gate | Live smoke |
