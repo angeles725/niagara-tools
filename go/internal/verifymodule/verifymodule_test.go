@@ -79,11 +79,12 @@ func TestUnreadableSource(t *testing.T) {
 	}
 }
 
-// TestArithmeticFallThrough pins what bash did when its arithmetic failed on an operand inside the
-// coverage or --plano block: it left the block and parsed the rest of the arguments as the gate's (a
-// non-jar is then exit 2); an unset-variable operand ends the run (set -u, exit 1). stdout and the exit
-// are the bash's; declared difference: bash prefixed its error with "<script path>: line <n>: ".
-func TestArithmeticFallThrough(t *testing.T) {
+// TestIntegerOperands: the coverage counts and the --plano ratio operands are decimal integers. A
+// leading zero is decimal (08 is 8), and an operand that is no integer (2.5, abc, one past int64) is a
+// usage error, exit 2, naming it. Declared difference: bash arithmetic read 010 as octal 8, and on 08 or
+// 2.5 left the coverage or --plano block and parsed the rest of the arguments as the gate's (a non-jar,
+// exit 2 "not a jar"); an operand naming an unset variable (abc) ended the run under set -u, exit 1.
+func TestIntegerOperands(t *testing.T) {
 	head := append([]byte("\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR"), 0, 0, 0, 2, 0, 0, 0, 3)
 	html := func(vb string) string {
 		return "<script>IMG_W=2;IMG_H=3</script><svg id=\"zonas\" viewBox=\"" + vb + "\"></svg>" +
@@ -95,14 +96,17 @@ func TestArithmeticFallThrough(t *testing.T) {
 		code        int
 		out, stderr string
 	}{
-		{"cov-08", "", []string{"coverage", "08", "1", "0", "0"}, 2, "",
-			"verify-module: 08: value too great for base (error token is \"08\")\nverify-module: not a jar: 08\n"},
+		{"cov-08", "", []string{"coverage", "08", "1", "0", "0"}, 0, "88.9\n", ""},
+		{"cov-010", "", []string{"coverage", "010", "1", "0", "0"}, 0, "90.9\n", ""},
 		{"cov-09-unused", "", []string{"coverage", "1", "1", "0", "09"}, 0, "50.0\n", ""},
-		{"plano-08", html("0 0 08 3"), []string{"--plano", "@DIR@/p.html"}, 2, "",
-			"verify-module: 08: value too great for base (error token is \"08\")\nverify-module: not a jar: @DIR@/p.html\n"},
+		{"cov-overflow", "", []string{"coverage", "99999999999999999999", "1", "0", "0"}, 2, "",
+			"verify-module: coverage: not an integer: 99999999999999999999\n" + usageCoverage},
+		{"plano-08", html("0 0 02 03"), []string{"--plano", "@DIR@/p.html"}, 0,
+			"PASS  plano      @DIR@/p.html  Rc=2/3 Ri=2/3 Rv=02/03 — all agree\n", ""},
 		{"plano-2.5", html("0 0 2.5 3"), []string{"--plano", "@DIR@/p.html"}, 2, "",
-			"verify-module: 2.5: syntax error: invalid arithmetic operator (error token is \".5\")\nverify-module: not a jar: @DIR@/p.html\n"},
-		{"plano-unbound", html("0 0 abc 3"), []string{"--plano", "@DIR@/p.html"}, 1, "", "verify-module: abc: unbound variable\n"},
+			"verify-module: --plano: @DIR@/p.html: not an integer: 2.5\n"},
+		{"plano-abc", html("0 0 abc 3"), []string{"--plano", "@DIR@/p.html"}, 2, "",
+			"verify-module: --plano: @DIR@/p.html: not an integer: abc\n"},
 		{"plano-negative", html("0 0 -2 -3"), []string{"--plano", "@DIR@/p.html"}, 0,
 			"PASS  plano      @DIR@/p.html  Rc=2/3 Ri=2/3 Rv=-2/-3 — all agree\n", ""},
 	} {
