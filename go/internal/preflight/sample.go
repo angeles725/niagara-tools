@@ -53,6 +53,8 @@ func (r *run) sampleRows() {
 	default:
 		r.row("PASS", "sample-user", "niagara_user_home has no <…> placeholder")
 	}
+	r.sampleSign()
+	r.sampleBuild()
 }
 
 const propSpace = " \t\n\v\f\r"
