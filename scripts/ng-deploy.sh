@@ -22,6 +22,9 @@ SCRIPT_VERSION="$(cat "${VERSION_FILE}" 2>/dev/null || echo "unknown")"
 # shared Slot-o-Matic skip detector (METHODOLOGY K15) — the same fragment build.sh sources, never a copy
 # shellcheck disable=SC1091  # sibling kit lib, resolved at runtime via SCRIPT_DIR
 . "${SCRIPT_DIR}/../build-n4-module-kit/toolbelt/lib/slotomatic-skip.sh"
+# shared module vendorVersion reader + numeric comparator — the same fragment build.sh's drift gate sources
+# shellcheck disable=SC1091  # sibling kit lib, resolved at runtime via SCRIPT_DIR
+. "${SCRIPT_DIR}/../build-n4-module-kit/toolbelt/lib/vendor-version.sh"
 readonly SCRIPT_VERSION
 
 # ---------------------------------------------------------------------------
@@ -105,8 +108,10 @@ Exit codes:
   12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
   50  verify failed: type count mismatch, BUILD_ID not found, or verify-module gate failed/missing
   51  version-bump precheck: the built jar's bytes differ from the deployed jar but its vendorVersion did not change
-  52  version-bump precheck cannot verify (a vendorVersion is unreadable)
+      (numeric per component, a missing component = 0: 1.3 -> 1.3.0 is NOT a bump)
+  52  version-bump precheck cannot verify (a vendorVersion is unreadable, or the two differ in a non-numeric suffix)
   53  schema-risk precheck: verdict OUTAGE, LOSSY without --accept-lossy, or a schema-risk env fault
+  54  version-bump precheck: the built jar's vendorVersion is LOWER than the deployed jar's (a downgrade)
 EOF
 }
 
@@ -564,19 +569,12 @@ write_last_deploy_sha() {
 }
 
 # ---------------------------------------------------------------------------
-# module_version <jar> — the module's own vendorVersion (the <module ...> root tag, not a dependency floor)
-# ---------------------------------------------------------------------------
-module_version() {
-    { unzip -p "$1" META-INF/module.xml 2>/dev/null || true; } \
-        | grep -oE '<module [^>]*vendorVersion="[^"]+"' | head -1 \
-        | sed -E 's/.*vendorVersion="([^"]*)".*/\1/' || true   # no version -> empty, never a set -e abort
-}
-
-# ---------------------------------------------------------------------------
 # precheck_version <jar...> — a built jar whose bytes differ from the jar already deployed in
-# STATION_MODULES_DIR must carry a NEW vendorVersion (Software Manager / module cache key on it):
-# same version -> die 51; unreadable version -> die 52. Mirrors toolbelt/build.sh's drift gate,
-# which ng-deploy (calling gradlew directly) would otherwise bypass. [ev: audit-2026-10-03 A2]
+# STATION_MODULES_DIR must carry a HIGHER vendorVersion (Software Manager / module cache key on it),
+# compared by lib/vendor-version.sh vv_cmp (numeric per component, missing = 0: 1.3 == 1.3.0):
+# same version -> die 51; unreadable, or a differing non-numeric suffix (incomparable) -> die 52;
+# lower version -> die 54 (a bump must go up). Mirrors toolbelt/build.sh's drift gate, which
+# ng-deploy (calling gradlew directly) would otherwise bypass. [ev: audit-2026-10-03 A2]
 # ---------------------------------------------------------------------------
 precheck_version() {
     local new old nv ov
@@ -584,13 +582,16 @@ precheck_version() {
         old="${STATION_MODULES_DIR}/$(basename "$new")"
         [[ -f "$new" && -f "$old" ]] || continue
         cmp -s "$new" "$old" && continue
-        nv="$(module_version "$new")"; ov="$(module_version "$old")"
+        nv="$(vv_module_version "$new")"; ov="$(vv_module_version "$old")"
         if [[ -z "$nv" || -z "$ov" ]]; then
             die 52 "version-bump precheck cannot verify $(basename "$new"): vendorVersion unreadable (built='$nv' deployed='$ov')"
         fi
-        if [[ "$nv" == "$ov" ]]; then
-            die 51 "version-bump precheck: $(basename "$new") bytes changed but vendorVersion is still $nv — bump defaultModuleVersion and rebuild"
-        fi
+        case "$(vv_cmp "$nv" "$ov")" in
+            1) ;;
+            0) die 51 "version-bump precheck: $(basename "$new") bytes changed but vendorVersion is still $nv — bump defaultModuleVersion and rebuild" ;;
+            -1) die 54 "version-bump precheck: $(basename "$new") vendorVersion went down ($ov -> $nv) — a deploy must raise it; bump defaultModuleVersion above $ov and rebuild" ;;
+            *) die 52 "version-bump precheck cannot verify $(basename "$new"): vendorVersions are not comparable (built='$nv' deployed='$ov': their non-numeric suffixes differ)" ;;
+        esac
         printf '[ng-deploy] version-bump ok (%s: %s -> %s)\n' "$(basename "$new")" "$ov" "$nv"
     done
 }
