@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
@@ -63,6 +64,29 @@ func (r *run) text(path string) (grepText, bool) {
 	t := newGrepText(string(data))
 	r.texts[path] = t
 	return t, true
+}
+
+// javaView is one .java as the javasrc-based checks read it: raw (as grep reads it), code (javasrc.Strip:
+// comments blanked, literal text kept, line numbers kept) and bare (code with literal contents masked, so
+// only code is left).
+type javaView struct {
+	raw        grepText
+	code, bare []string
+}
+
+// java is the view of path, built once per run; false (and the run ends, exit 3) when it cannot be read.
+func (r *run) java(path string) (*javaView, bool) {
+	if v, ok := r.views[path]; ok {
+		return v, true
+	}
+	t, ok := r.text(path)
+	if !ok {
+		return nil, false
+	}
+	code, _ := javasrc.Strip(t.lines)
+	v := &javaView{raw: t, code: code, bare: javasrc.MaskLiterals(code)}
+	r.views[path] = v
+	return v, true
 }
 
 // readFile is path's bytes; false (and the run ends, exit 3) when it cannot be read.
@@ -156,21 +180,29 @@ func (r *run) ordLiteral() bool {
 	return true
 }
 
-// lineWarn is the shared body of the grep -n WARN checks: one row per printed hit, else the PASS row.
-func (r *run) lineWarn(check string, re *regexp.Regexp, pass string) bool {
+// lineWarn is the shared body of the grep -n WARN checks: one row per printed hit, else the PASS row. With
+// bare, re is matched on the javasrc bare view (comments and literal contents blanked) and the row quotes
+// the raw line.
+func (r *run) lineWarn(check string, re *regexp.Regexp, bare bool, pass string) bool {
 	pd, ok := r.srcDirOrSkip(check)
 	if !ok {
 		return true
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		t, ok := r.text(f)
+		v, ok := r.java(f)
 		if !ok {
 			return true
 		}
-		for _, hit := range t.numbered(re) {
-			r.row("WARN", check, f+":"+hit)
-			warned = true
+		for i, ln := range v.raw.lines {
+			match := ln
+			if bare {
+				match = v.bare[i]
+			}
+			if re.MatchString(match) && v.raw.shown(ln) {
+				r.row("WARN", check, f+":"+itoa(i+1)+":"+ln)
+				warned = true
+			}
 		}
 	}
 	if !warned {
@@ -184,8 +216,10 @@ var (
 	compact3Re    = rx(`import (java\.awt|javax\.swing|java\.sql)\.`)
 )
 
+// transientOperator matches the bare view: a TRANSIENT and OPERATOR in a comment or a string are no
+// flags (the bash grepped the raw text; declared difference, truth-java-view).
 func (r *run) transientOperator() bool {
-	return r.lineWarn("transient-operator", transientOpRe, "no TRANSIENT+OPERATOR slot combination under %s/src")
+	return r.lineWarn("transient-operator", transientOpRe, true, "no TRANSIENT+OPERATOR slot combination under %s/src")
 }
 
 func (r *run) compact3Imports() bool {
@@ -193,5 +227,5 @@ func (r *run) compact3Imports() bool {
 		r.row("SKIP", "compact3-import", "not an -rt or -ux jar")
 		return true
 	}
-	return r.lineWarn("compact3-import", compact3Re, "no Compact3 non-safe imports under %s/src")
+	return r.lineWarn("compact3-import", compact3Re, false, "no Compact3 non-safe imports under %s/src")
 }

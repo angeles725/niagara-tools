@@ -143,6 +143,8 @@ func (r *run) moduleTest() bool {
 
 var typeValueRe = rx(`type[[:space:]]*=[[:space:]]*"[^"]*"`)
 
+// crossModuleType reads type = "..." from the javasrc code view: a commented-out one is no reference (the
+// bash grepped the raw text; declared difference, truth-java-view).
 func (r *run) crossModuleType() bool {
 	pd, ok := r.srcDirOrSkip("cross-module-type")
 	if !ok {
@@ -150,11 +152,11 @@ func (r *run) crossModuleType() bool {
 	}
 	var types []string
 	for _, f := range r.javaFiles(pd + "/src") {
-		t, ok := r.text(f)
+		v, ok := r.java(f)
 		if !ok {
 			return true
 		}
-		for _, m := range t.only(typeValueRe) {
+		for _, m := range newGrepText(strings.Join(v.code, "\n")).only(typeValueRe) {
 			types = append(types, typeAttrRe.FindStringSubmatch(m)[1])
 		}
 	}
@@ -218,6 +220,8 @@ var (
 	classDeclRe       = rx(`(public[[:space:]]+)?(class|interface)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*`)
 )
 
+// slotWall counts @NiagaraProperty and finds the class on the javasrc bare view: annotations in a comment
+// are no slots (the bash grepped the raw text; declared difference, truth-java-view).
 func (r *run) slotWall() bool {
 	pd, ok := r.srcDirOrSkip("slot-wall")
 	if !ok {
@@ -225,16 +229,17 @@ func (r *run) slotWall() bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		t, ok := r.text(f)
+		v, ok := r.java(f)
 		if !ok {
 			return true
 		}
-		count := t.count(niagaraPropertyRe)
+		bare := newGrepText(strings.Join(v.bare, "\n"))
+		count := bare.count(niagaraPropertyRe)
 		if count <= 15 {
 			continue
 		}
 		class := basename(f, ".java")
-		if ms := t.only(classDeclRe); len(ms) > 0 {
+		if ms := bare.only(classDeclRe); len(ms) > 0 {
 			fields := awkFields(ms[0])
 			class = fields[len(fields)-1]
 		}

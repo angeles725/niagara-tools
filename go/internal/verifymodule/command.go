@@ -31,6 +31,7 @@ type run struct {
 	walkErrs                   []string // the walk error of every "cannot list every file" line printed
 	unread                     string   // the "cannot read" line of an input no check may give a verdict on
 	texts                      map[string]grepText
+	views                      map[string]*javaView
 }
 
 // check is one check_* function: false is its `return 1` (a FAIL that fails the run).
@@ -64,7 +65,7 @@ func Main(args []string, s cli.Stdio) int {
 
 // gate is the jar loop: flags, argument checks, every check on every jar, then the summary line.
 func gate(args []string, s cli.Stdio) int {
-	r := &run{s: s, texts: map[string]grepText{}}
+	r := &run{s: s, texts: map[string]grepText{}, views: map[string]*javaView{}}
 	var jars []string
 	for len(args) > 0 {
 		switch a := args[0]; {

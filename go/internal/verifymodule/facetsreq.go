@@ -3,22 +3,23 @@ package verifymodule
 import (
 	"regexp"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 )
 
 var (
-	closeParenLineRe = regexp.MustCompile(`^[[:space:]]*\)[[:space:]]*$`)
-	nameAttrRe       = regexp.MustCompile(`name[[:space:]]*=[[:space:]]*"([^"]*)"`)
-	typeAttrRe       = regexp.MustCompile(`type[[:space:]]*=[[:space:]]*"([^"]*)"`)
-	facetsKeyRe      = regexp.MustCompile(`[[:space:],]facets[[:space:]]*=`)
-	numericTypeRe    = regexp.MustCompile(`^(double|float|BDouble|BFloat|BInteger|BLong|BRelTime|BStatusNumeric)$`)
-	setpointNameRe   = regexp.MustCompile(`[Ss]etpoint|Temp|[Ll]imit|[Bb]and|[Pp]si`)
-	countNameRe      = regexp.MustCompile(`demand|[Cc]ount|stages`)
-	unitArgRe        = regexp.MustCompile(`[Uu]nit|UNIT`)
-	nullFacetsRe     = regexp.MustCompile(`, *null *[);]`)
-	upToPropertyRe   = rx(`.*Property[[:space:]]+`)
-	fromEqualsRe     = rx(`[[:space:]]*=.*`)
-	spaceRe          = regexp.MustCompile(`[[:space:]]`)
-	slotNameRe       = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+	nameAttrRe     = regexp.MustCompile(`name[[:space:]]*=[[:space:]]*"([^"]*)"`)
+	typeAttrRe     = regexp.MustCompile(`type[[:space:]]*=[[:space:]]*"([^"]*)"`)
+	facetsKeyRe    = regexp.MustCompile(`[[:space:],]facets[[:space:]]*=`)
+	numericTypeRe  = regexp.MustCompile(`^(double|float|BDouble|BFloat|BInteger|BLong|BRelTime|BStatusNumeric)$`)
+	setpointNameRe = regexp.MustCompile(`[Ss]etpoint|Temp|[Ll]imit|[Bb]and|[Pp]si`)
+	countNameRe    = regexp.MustCompile(`demand|[Cc]ount|stages`)
+	unitArgRe      = regexp.MustCompile(`[Uu]nit|UNIT`)
+	nullFacetsRe   = regexp.MustCompile(`, *null *[);]`)
+	upToPropertyRe = rx(`.*Property[[:space:]]+`)
+	fromEqualsRe   = rx(`[[:space:]]*=.*`)
+	spaceRe        = regexp.MustCompile(`[[:space:]]`)
+	slotNameRe     = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 )
 
 func (r *run) facetPresence() bool {
@@ -28,11 +29,11 @@ func (r *run) facetPresence() bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		t, ok := r.text(f)
+		v, ok := r.java(f)
 		if !ok {
 			return true
 		}
-		for _, hit := range facetHits(f, t.lines) {
+		for _, hit := range facetHits(f, v.code) {
 			r.row("WARN", "facets-req", hit)
 			warned = true
 		}
@@ -43,26 +44,22 @@ func (r *run) facetPresence() bool {
 	return true
 }
 
-// facetHits is the facets-req awk over one file's lines: pass 1 reads every @NiagaraProperty (joined with
-// the next lines, at most 40, up to a line that is only ")", when its own line has no ")"), pass 2 every
-// old-style newProperty(... OPERATOR ..., null) slot no annotation declared. Each hit is "<file>:<line>
-// <reason>".
+// facetHits is the facets-req scan over one file's javasrc code lines (comments blanked): pass 1 reads
+// every @NiagaraProperty joined to its balancing ")" (javasrc.PropertyScan), pass 2 every old-style
+// newProperty(... OPERATOR ..., null) slot no annotation declared. Each hit is "<file>:<line> <reason>".
+// The bash awk read the raw text and joined an annotation only when its own line held no ")", up to a
+// line that is only ")" (declared difference, truth-java-view).
 func facetHits(file string, lines []string) []string {
 	var out []string
 	seen := map[string]bool{}
-	for l, ln := range lines {
-		if !strings.Contains(ln, "@NiagaraProperty") {
-			continue
-		}
-		s := ln
-		if !strings.Contains(ln, ")") {
-			for j := l + 1; j < len(lines) && j <= l+40; j++ {
-				s += " " + lines[j]
-				if closeParenLineRe.MatchString(lines[j]) {
-					break
-				}
-			}
-		}
+	type prop struct {
+		s string
+		l int
+	}
+	var props []prop
+	javasrc.NiagaraProperties(lines, func(text string, line int) { props = append(props, prop{text, line - 1}) })
+	for _, p := range props {
+		s, l := p.s, p.l
 		nm := submatch(nameAttrRe, s)
 		if nm == "" || seen[nm] {
 			continue
