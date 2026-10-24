@@ -8,10 +8,11 @@
 #   auth          FAIL  a doGet/doPost/service handler body contains a write (.setDouble/.setFloat/
 #                       .setInt/.setLong/.setRelTime/.setString( or a set( not preceded by an identifier character) with no
 #                       getRemoteUser()/.getUser() gate in the same method body.
-#   input-400     FAIL  Double.parseDouble( or Integer.parseInt( on a line no 'try {' block encloses: the try
-#                       must open on that line or above it in the same method or class-level lambda body
-#                       (go/internal/javasrc Scopes) and still be open there (fixed 2026-10-24: the 5-line
-#                       look-back took a try of another handler, or one already closed, as the guard).
+#   input-400     FAIL  Double.parseDouble( or Integer.parseInt( that no try statement encloses (its block or a
+#                       try-with-resources specification, go/internal/javasrc TryBlocks) whose try keyword is in
+#                       the same method or class-level lambda body (javasrc Scopes) (fixed 2026-10-24: the 5-line
+#                       look-back took a try of another handler, or one already closed, as the guard, and the
+#                       `try {` regex missed try-with-resources).
 #   unbounded-set WARN  .setDouble/.setFloat/.setInt/.setLong/.setRelTime( in a handler body with no
 #                       getMin()/getMax()/getFacets()/MIN/MAX/clamp in the same body.
 #   catch-no-400  WARN  the catch that answers a Double.parseDouble(/Integer.parseInt(/Long.parseLong(/
@@ -69,6 +70,7 @@
 # Mutation: LSV2d -- starting the catch search after the try's closing line passes "} catch (E e) { v = 0; }"
 # Mutation: LSV2e -- a 5-line look-back for "try {" lets doGet's try guard doPost's Integer.parseInt(
 # Mutation: LSV2f -- taking the first catch within 4 lines of the try's end judges a multi-catch by its IOException clause
+# Mutation: LSV2g -- finding the try by the "try {" regex FAILs a parse inside try (Reader r = open()) { ... }
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

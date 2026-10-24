@@ -95,6 +95,17 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$output" = "WARN  catch-no-400  BCat.java:6  catch around parse without 400 response (silent default may write bad value)" ]
 }
 
+@test "LSV2g: a parse inside a try-with-resources is in a try (no input-400)" {
+  # Mutation: LSV2g -- finding the try by the "try {" regex FAILs a parse inside try (Reader r = open()) { ... }
+  # Go golden: go/internal/lint/rules/servlet/testdata/truth-try-resources-1.txt
+  printf '%s\n' 'package com.x;' 'public class BRes extends BWebServlet {' '  void body(WebOp op) {' '    try (Reader r = open()) {' \
+    '      int a = Integer.parseInt(op.get("a"));' '    } catch (NumberFormatException e) { op.getResponse().sendError(400); }' \
+    '  }' '}' > "$ONE/BRes.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "LSV-usage: no <src> argument -> exit 3" {
   run "$LS"
   [ "$status" -eq 3 ]

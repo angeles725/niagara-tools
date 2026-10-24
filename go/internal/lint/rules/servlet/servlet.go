@@ -46,7 +46,6 @@ var (
 	typedSet    = regexp.MustCompile(`\.(setDouble|setFloat|setInt|setLong|setRelTime)\(`)
 	clamp       = regexp.MustCompile(`getMin\(\)|getMax\(\)|getFacets\(\)|MIN|MAX|clamp`)
 	respWrite   = regexp.MustCompile(`getWriter\(\)|getOutputStream\(\)`)
-	tryOpen     = regexp.MustCompile(`(^|[[:space:]])try[[:space:]]*\{`)
 	anyParse    = regexp.MustCompile(`Double\.parseDouble\(|Integer\.parseInt\(|Long\.parseLong\(|Double\.valueOf\(`)
 	badRequest  = regexp.MustCompile(`[^0-9]400[^0-9]|SC_BAD_REQUEST|sendError\(|setStatus\(|jsonError\(|sendJson\(`)
 	parse       = regexp.MustCompile(`Double\.parseDouble\(|Integer\.parseInt\(`)
@@ -154,20 +153,19 @@ func catches(c javasrc.Catch) bool {
 	return false
 }
 
-// inTry reports whether line i (0-based) lies inside a "try {" block opened on it or above it within the
-// same method or class-level lambda body (javasrc.Scopes): a try of another method, or one that closed
-// before line i, guards nothing; one that never closes (an unbalanced file) still counts. A line in no
-// body has no try.
-func inTry(lines []string, scopes []javasrc.Method, i int) bool {
-	m, ok := javasrc.Enclosing(scopes, i+1)
+// inTry reports whether offset off (in t.Text) lies inside a try statement, its resource specification or its
+// block (javasrc.TryBlocks), whose try keyword is in the same method or class-level lambda body as off
+// (javasrc.Scopes, 1-based line): a try of another method, or one that closed before off, guards nothing; one
+// that never closes (an unbalanced file) still counts. A line in no body has no try.
+func inTry(t javasrc.Tries, scopes []javasrc.Method, line, off int) bool {
+	m, ok := javasrc.Enclosing(scopes, line)
 	if !ok {
 		return false
 	}
-	for k := i; k >= m.Start-1; k-- {
-		if tryOpen.MatchString(lines[k]) {
-			if _, end, closed := block(lines, k, false); end >= i || !closed {
-				return true // it encloses line i, or stays open to the end of the file
-			}
+	start := t.Offset(m.Start)
+	for _, tr := range t.List {
+		if tr.At >= start && tr.At < off && off < tr.Body.Close {
+			return true
 		}
 	}
 	return false
@@ -231,7 +229,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 
 	scopes := f.Scopes()
 	for i, ln := range lines {
-		if parse.MatchString(ln) && !inTry(lines, scopes, i) {
+		if loc := parse.FindStringIndex(ln); loc != nil && !inTry(tries, scopes, i+1, tries.Offset(i+1)+loc[0]) {
 			add(lint.Fail, "input-400", i+1, msgInput)
 		}
 	}
