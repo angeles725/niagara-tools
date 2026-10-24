@@ -1,0 +1,78 @@
+-- args --
+@DIR@/f1/src.bog
+--module
+ColdRoomPan
+--source-dir
+/tmp/tmp.lqKaimwsFT/nope
+-- want --
+exit 1
+CHECK9  FAIL  h:x  link sourceOrd references an unknown handle (orphan)
+CHECK1  PASS  ColdRoomPan  components=4
+CHECK5  FAIL  ColdRoom_1/differentialUp  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/delay  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/tiny  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/huge  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/big  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/bad  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/live  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/live2  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/live3  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/ghost  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/frozenGhost  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/hexy  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/DefrostController/frozenD  slot in bog not in source BDefrostController (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/DefrostController/nextLine  slot in bog not in source BDefrostController (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/EvaporatorUnit_1/crlf  slot in bog not in source BEvaporatorUnit (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/EvaporatorUnit_1/frozenX  slot in bog not in source BEvaporatorUnit (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/EvaporatorUnit_1/dynX  slot in bog not in source BEvaporatorUnit (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/Plain/anything  slot in bog not in source BUnknown (ghost/orphan)
+CHECK7  FAIL  ColdRoom_1  link targetSlotName "ghostIn" not in source BColdRoom (dangling)
+CHECK7  FAIL  ColdRoom_1  link targetSlotName "differentialUp" not in source BColdRoom (dangling)
+CHECK7  FAIL  ColdRoom_1/EvaporatorUnit_1  link targetSlotName "in10" not in source BEvaporatorUnit (dangling)
+CHECK16  FAIL  ColdRoom_1/DefrostController  DefrostController without hasDefrost=true unit sibling under 'ColdRoom_1'
+# bog-audit: parse time 0.004s
+-- stderr --
+-- f1/src.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n="differentialUp" t="b:double" v="-1.5"/>
+  <p n="delay" t="b:RelTime" v="1000"/>
+  <p n="tiny" v=" -1e-3 "/>
+  <p n="huge" v="1_000"/>
+  <p n="big" v="-inf"/>
+  <p n="bad" v="-5"/>
+  <p n="live" v="true"/>
+  <p n="live2" v="1"/>
+  <p n="live3" v="null"/>
+  <p n="wsAnnotation" t="b:String" v="1,1,8"/>
+  <p n="ghost" t="b:int" v="1"/>
+  <p n="frozenGhost" v="1"/>
+  <p n="roGhost" t="b:int" v="1" f="r"/>
+  <p n="hexy" v="0x10"/>
+  <a n="reset" f="h"/>
+  <a n="kick" f="o"/>
+  <a n="pulse" f="h"/>
+  <a n="peek" f=""/>
+  <a n="unknown" f="h"/>
+  <p n='L' t='b:Link'><p n="sourceOrd" v="h:e1"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="ghostIn"/></p>
+  <p n='L2' t='b:Link'><p n="sourceOrd" v="h:e1"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="differentialUp"/></p>
+  <p n='EvaporatorUnit_1' h='e1' t='CRP:EvaporatorUnit'>
+   <p n="crlf" v="1"/>
+   <p n="frozenX" v="2"/>
+   <p n="dynX" t="b:int" v="2"/>
+   <p n='L' t='b:Link'><p n="sourceOrd" v="h:c1"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="in10"/></p>
+  </p>
+  <p n='DefrostController' h='d1' t='CRP:DefrostController'>
+   <a n="intervalExpired" f="o"/>
+   <p n="frozenD" v="2"/>
+   <p n="nextLine" v="2"/>
+  </p>
+  <p n='Plain' h='pl' t='CRP:Unknown'>
+   <p n="anything" v="2"/>
+  </p>
+ </p>
+ <p n='w' h='w1' m='c=control' t='c:NumericWritable'>
+  <p n='L' t='b:Link'><p n="sourceOrd" v="h:x"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="tempSetpoint"/></p>
+ </p>
+</bajaObjectGraph>

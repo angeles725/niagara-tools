@@ -1,0 +1,129 @@
+-- args --
+@DIR@/f1/src.bog
+--module
+ColdRoomPan
+--source-dir
+@DIR@/s5
+-- want --
+exit 1
+CHECK9  FAIL  h:x  link sourceOrd references an unknown handle (orphan)
+CHECK1  PASS  ColdRoomPan  components=4
+CHECK12  WARN  ColdRoom_1/differentialUp  servlet-written slot is also a link target (servlet write is ephemeral — link wins)
+CHECK12  WARN  ColdRoom_1/EvaporatorUnit_1/in10  servlet-written slot is also a link target (servlet write is ephemeral — link wins)
+CHECK12  WARN  w/tempSetpoint  servlet-written slot is also a link target (servlet write is ephemeral — link wins)
+CHECK2  WARN  ColdRoom_1/reset  flag-drift: bog f='h' source expects f='o'
+CHECK2  WARN  ColdRoom_1/pulse  flag-drift: bog f='h' source expects f='a'
+CHECK2  WARN  ColdRoom_1/peek  flag-drift: bog f='' source expects f='s'
+CHECK3  WARN  ColdRoom_1/delay  value 1000 below source MIN 30000.0
+CHECK3  WARN  ColdRoom_1/tiny  value  -1e-3  below source MIN 1e-05
+CHECK3  WARN  ColdRoom_1/big  value -inf below source MIN 1.2345678901234567e+19
+CHECK4  WARN  ColdRoom_1/live  TRANSIENT slot has persisted value in bog
+CHECK5  FAIL  ColdRoom_1/ghost  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/frozenGhost  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/hexy  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK6  WARN  ColdRoom_1/commented  slot in source BColdRoom not in bog
+CHECK6  WARN  ColdRoom_1/later  slot in source BColdRoom not in bog
+CHECK2  WARN  ColdRoom_1/DefrostController/intervalExpired  flag-drift: bog f='o' source expects f='h'
+CHECK5  WARN  ColdRoom_1/DefrostController/frozenD  frozen slot not in source BDefrostController — possibly inherited from BDefrostBase (not statically decidable; add @NiagaraProperty override to suppress)
+CHECK5  WARN  ColdRoom_1/DefrostController/nextLine  frozen slot not in source BDefrostController — possibly inherited from BDefrostBase (not statically decidable; add @NiagaraProperty override to suppress)
+CHECK6  WARN  ColdRoom_1/DefrostController/unterminated  slot in source BDefrostController not in bog
+CHECK5  WARN  ColdRoom_1/EvaporatorUnit_1/frozenX  frozen slot not in source BEvaporatorUnit — possibly inherited from BPointExt (not statically decidable; add @NiagaraProperty override to suppress)
+CHECK5  FAIL  ColdRoom_1/EvaporatorUnit_1/dynX  slot in bog not in source BEvaporatorUnit (ghost/orphan)
+CHECK5  FAIL  ColdRoom_1/Plain/anything  slot in bog not in source BUnknown (ghost/orphan)
+CHECK7  FAIL  ColdRoom_1  link targetSlotName "ghostIn" not in source BColdRoom (dangling)
+CHECK7  FAIL  ColdRoom_1/EvaporatorUnit_1  link targetSlotName "in10" not in source BEvaporatorUnit (dangling)
+CHECK16  FAIL  ColdRoom_1/DefrostController  DefrostController without hasDefrost=true unit sibling under 'ColdRoom_1'
+# bog-audit: parse time 0.010s
+-- stderr --
+-- f1/src.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n="differentialUp" t="b:double" v="-1.5"/>
+  <p n="delay" t="b:RelTime" v="1000"/>
+  <p n="tiny" v=" -1e-3 "/>
+  <p n="huge" v="1_000"/>
+  <p n="big" v="-inf"/>
+  <p n="bad" v="-5"/>
+  <p n="live" v="true"/>
+  <p n="live2" v="1"/>
+  <p n="live3" v="null"/>
+  <p n="wsAnnotation" t="b:String" v="1,1,8"/>
+  <p n="ghost" t="b:int" v="1"/>
+  <p n="frozenGhost" v="1"/>
+  <p n="roGhost" t="b:int" v="1" f="r"/>
+  <p n="hexy" v="0x10"/>
+  <a n="reset" f="h"/>
+  <a n="kick" f="o"/>
+  <a n="pulse" f="h"/>
+  <a n="peek" f=""/>
+  <a n="unknown" f="h"/>
+  <p n='L' t='b:Link'><p n="sourceOrd" v="h:e1"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="ghostIn"/></p>
+  <p n='L2' t='b:Link'><p n="sourceOrd" v="h:e1"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="differentialUp"/></p>
+  <p n='EvaporatorUnit_1' h='e1' t='CRP:EvaporatorUnit'>
+   <p n="crlf" v="1"/>
+   <p n="frozenX" v="2"/>
+   <p n="dynX" t="b:int" v="2"/>
+   <p n='L' t='b:Link'><p n="sourceOrd" v="h:c1"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="in10"/></p>
+  </p>
+  <p n='DefrostController' h='d1' t='CRP:DefrostController'>
+   <a n="intervalExpired" f="o"/>
+   <p n="frozenD" v="2"/>
+   <p n="nextLine" v="2"/>
+  </p>
+  <p n='Plain' h='pl' t='CRP:Unknown'>
+   <p n="anything" v="2"/>
+  </p>
+ </p>
+ <p n='w' h='w1' m='c=control' t='c:NumericWritable'>
+  <p n='L' t='b:Link'><p n="sourceOrd" v="h:x"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="tempSetpoint"/></p>
+ </p>
+</bajaObjectGraph>
+-- s5/.hidden/BDefrostController.java --
+@NiagaraProperty(name="hiddenSlot", type="int", defaultValue="0")
+class BDefrostController {}
+-- s5/a/BColdRoom.java --
+package x;
+@NiagaraProperty(name="differentialUp", type="double", defaultValue="1.5",
+  facets=@Facet("BFacets.make(BFacets.MIN, BDouble.make(5d))"))
+@NiagaraProperty(
+  name = "delay",
+  type = "BRelTime",
+  defaultValue = "BRelTime.makeSeconds(10)",
+  facets = @Facet("BFacets.make(BFacets.MIN, BRelTime.makeSeconds(30L))")
+)
+@NiagaraProperty(name="tiny", type="double", defaultValue="0", facets=@Facet("BFacets.make(BFacets.MIN, BDouble.make(0.00001))"))
+@NiagaraProperty(name="huge", type="double", defaultValue="0", facets=@Facet("BFacets.make(BFacets.MIN, BDouble.make(1e20))"))
+@NiagaraProperty(name="big", type="double", defaultValue="0", facets=@Facet("BFacets.make(BFacets.MIN, BDouble.make(12345678901234567890))"))
+@NiagaraProperty(name="bad", type="double", defaultValue="0", facets=@Facet("BFacets.make(BFacets.MIN, BDouble.make(1.2.3))"))
+@NiagaraProperty(name="live", type="BStatusBoolean", defaultValue="new BStatusBoolean()", flags=Flags.TRANSIENT|Flags.READONLY)
+@NiagaraProperty(name="live2", type="BStatusBoolean", defaultValue="x", flags = Flags.SUMMARY | Flags.TRANSIENT)
+@NiagaraProperty(name="live3", type="boolean", defaultValue="false", flags=TRANSIENT)
+@NiagaraAction(name="reset")
+@NiagaraAction(name="kick", flags=Flags.OPERATOR)
+@NiagaraAction(name="pulse", flags=Flags.ASYNC)
+@NiagaraAction(name="peek",
+  flags = Flags.SUMMARY)
+// @NiagaraProperty(name="commented", type="int", defaultValue="0")
+public class BColdRoom extends BComponent {
+  void w(X x) { x.set( "differentialUp" , 1); /* x.set("live", 2) */ }
+}
+-- s5/a/b/BColdRoom.java --
+@NiagaraProperty(name="differentialUp", type="double", defaultValue="1.5", facets=@Facet("BFacets.make(BFacets.MIN, BDouble.make(-10))"))
+@NiagaraProperty(name="later", type="int", defaultValue="0")
+class BColdRoom extends BAbstractService {}
+-- s5/a/z/BEvaporatorUnit.java --
+@NiagaraProperty(name="crlf", type="int",
+  defaultValue="0")
+class BEvaporatorUnit extends BPointExt {}
+-- s5/c/BDefrostBase.java --
+@NiagaraProperty
+(name="nextLine", type="int")
+class BDefrostBase {}
+-- s5/c/BDefrostController.java --
+@NiagaraAction(name="intervalExpired", flags=Flags.HIDDEN)
+@NiagaraProperty(name="unterminated", type="int", defaultValue="0"
+class BDefrostController extends BDefrostBase {
+-- s5/c/Servlet.java --
+class S { void w(C c) { c.set("in10", v); c.set("tempSetpoint",
+  v); c.set("in10", w); c.set("nope"); } }
