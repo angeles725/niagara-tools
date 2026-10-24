@@ -332,7 +332,7 @@ invalid selector HOLDS the last `out` with an `invalidSelect` facet (`BSwitch.ja
 
 **`kitControl:Hysteresis` and `kitControl:Limiter` are 4.15+** `[ev: corpus B1319 §1319.3 D3]` [ev: retro devguide415-r2-runtime-contracts-formats Δ8]:
 both carry `@since Niagara 4.15` (`niagara-help/versions/4.15.6.20/source/kitControl-rt/…/logic/BHysteresis.java:35`, `…/math/BLimiter.java:36`).
-Per-install jar check: present in `kitControl-rt.jar` 4.15.3.28 [deferred: unverifiable — no 4.15.3.28 install on this host; only the JACE runs it] and 4.15.6.20; absent from 4.3.58.18,
+Per-install jar check: present in `kitControl-rt.jar` 4.15.3.28 [deferred: unverifiable — no 4.15.3.28 install on this host, only the JACE runs it] and 4.15.6.20; absent from 4.3.58.18,
 4.13.2.18 and 4.14.0.162. For a module or `.bog` that must run on 4.14 or earlier, build the latch from a
 `boolean` field (§ Deadband latch-on-cross) or clamp in code. `clHVAC:Hysteresis` (Honeywell `cl.hvac`, in the
 4.14.0.162 Optimizer install) is a different type. Behaviour: swapped limits (`inHigh < inLow`, `inMax < inMin`) set `out`

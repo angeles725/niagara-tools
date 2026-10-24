@@ -108,7 +108,7 @@ public class BMyService extends BComponent {
 
 `Sys.loadType(BX.class)` is called once at class-init. The resulting `Type` object is the
 canonical identity token used everywhere — type comparisons, agent lookup, and ORD resolution
-all go through `BX.TYPE` [INFER]. `[ev: docSource baja/javax/baja/sys/Sys.java:443-446]`
+all go through `BX.TYPE` [INFER]. `[ev: organized/docSource/docSource-doc/extracted/baja/javax/baja/sys/Sys.java:443-446]`
 
 ---
 
@@ -165,7 +165,7 @@ Type t = Sys.getType("nmodsreflow:ReflowService");
 ```
 
 The 2-part colon form is the storable, version-stable ORD for types.
-The `moduleName` comes from `niagara-module.xml`, not the jar name. `[ev: devguide build.txt:455-458,508; docSource baja/javax/baja/sys/Sys.java:421]`
+The `moduleName` comes from `niagara-module.xml`, not the jar name. `[ev: devguide build.txt:455-458,508; organized/docSource/docSource-doc/extracted/baja/javax/baja/sys/Sys.java:421]`
 
 ### 4.2 Service lookup — same call, cross-module transparent
 

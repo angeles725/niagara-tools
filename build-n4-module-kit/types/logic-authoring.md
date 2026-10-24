@@ -134,8 +134,8 @@ Custom schemes register via `@NiagaraType(ordScheme="id")` — see §Author-side
 
 **Analytics schemes** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: `analyticValue:` and `analyticRollup:` give a
 `BStatusValue`, `analyticTrend:` and `alerts:` a `BITable` (4.15.6.20 `DeveloperAnalytics/ordSchemes.txt:14-36`).
-There is no `analytic:` scheme: `BAnalyticOrdScheme` is registered without an `ordScheme` id (analytics-rt 4.15.6.20
-`META-INF/module.xml:106`). Analytic values cannot be subscribed like points; the bindings poll them
+There is no `analytic:` scheme: `BAnalyticOrdScheme` is registered without an `ordScheme` id (analytics-rt
+`organized/analytics/analytics-rt/extracted/META-INF/module.xml:106`, the 4.14.0.162 copy; no 4.15.6.20 jar on this host). Analytic values cannot be subscribed like points; the bindings poll them
 (`ordSchemes.txt:24`), so do not hang a fast control loop on one. No kit lint flags `analytic:` yet: owed G82
 `analytic-ord-scheme` (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`).
 `[deferred: retro devguide415-r2-security-tags-analytics Δ9]`
@@ -667,7 +667,7 @@ corpus B1353 §1353.2 row 8), not on N4 drivers in general. The rule itself is a
 So logic reads and writes `double`, never `BDouble`: the 4.15.6.20 course exam's `BLimiter` (`type = "BDouble"`,
 `defaultValue = "BDouble.DEFAULT"`) generated `newProperty(0, BDouble.DEFAULT.as(BDouble.class).getDouble(), null)`,
 `public double getMax() { return getDouble(max); }` and `public void setMax(double v) { setDouble(max, v, null); }`
-(`CertificationExam/…/BLimiter.java:99-111`). `[ev: retro n4-course-handson-slotomatic-authoring Δ2]`
+(`sources/n4-dev-course/solutions/cert-exam/Cristian_Angeles_Cert/Cristian_Angeles_Cert-rt/src/com/certexam/Cristian_Angeles_Cert/BLimiter.java:99-111`). `[ev: retro n4-course-handson-slotomatic-authoring Δ2]`
 
 **Declare paired bounds low before high.** Slot-o-Matic writes the `Property` fields in annotation order (`BLimiter`:
 annotations `out`, `in`, `max`, `min` at `:17-38`, fields at `:53`, `:76`, `:99`, `:122`), and the Type's slot list
@@ -1009,7 +1009,7 @@ public final class BLocalAlarmResolver extends BSingleton
 Rules:
 - **`extends BSingleton`** — `BIAgent` implementors that have no state extend `BSingleton`; stateful agents that need a lifecycle extend `BComponent` or `BAbstractService` instead.
 - **`@NiagaraSingleton`** — tells Slot-o-Matic to emit a `public static final INSTANCE` field next to `TYPE` (devguide `slot-o-matic.txt:427`).
-- **`@AgentOn(types = {"module:TypeName"})`** — the target type the framework looks up; multiple targets are an array. Agents are registered on their target types in the module manifest and queried through the Registry (`getAgents(cx).filter(AgentFilter.is(T.TYPE))`, devguide `registry.txt:36-40`); `module.xml` carries `<agent><on type="baja:LocalHost"/></agent>` (alarm-rt `META-INF/module.xml:91-95`).
+- **`@AgentOn(types = {"module:TypeName"})`** — the target type the framework looks up; multiple targets are an array. Agents are registered on their target types in the module manifest and queried through the Registry (`getAgents(cx).filter(AgentFilter.is(T.TYPE))`, devguide `registry.txt:36-40`); `module.xml` carries `<agent><on type="baja:LocalHost"/></agent>` (alarm-rt `organized/alarm/alarm-rt/extracted/META-INF/module.xml:91-95`).
 - **Private constructor + static `INSTANCE`** — enforces single-instance contract; the framework calls `INSTANCE` directly, never `new`.
 - **Does NOT appear in a palette** — a `BSingleton` cannot be dropped by the operator; it is registered in `module.xml` only. `[ev: code BLocalAlarmResolver.java]`
 
