@@ -85,7 +85,9 @@ type Rule interface {
 // is ordered by check rather than by file. CheckTree gets the files in walk order (each read once and
 // shared with the per-file rules) and sets Path on each finding. A non-nil error fails the scan closed:
 // the runner prints the findings returned with it, then "<lint>: <error>" on stderr (the rule writes
-// the whole text, e.g. "cannot scan <path>: <reason>"), and exits 3.
+// the whole text, e.g. "cannot scan <path>: <reason>"), and exits 3. A TreeRule whose selected files hold
+// nothing it checks (lint-duplicate-helper: no -rt/-ux/-wb src/ file) returns ErrEmptyRoot, as a RootRule
+// does: the Spec.EmptyError row instead of its findings, the rule stops and the exit is 3.
 type TreeRule interface {
 	ID() string
 	Severity() Severity
@@ -106,7 +108,7 @@ type RootRule interface {
 	CheckRoot(root string) ([]Finding, error)
 }
 
-// ErrEmptyRoot is what a RootRule returns for a root that holds nothing it checks (see RootRule).
+// ErrEmptyRoot is what a RootRule or a TreeRule returns for a root that holds nothing it checks.
 var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
 
 // Spec registers a rule with the command-line contract of the toolbelt wrapper that runs it alone.
@@ -130,7 +132,8 @@ type Spec struct {
 	// bash lints made it: the rule prints "ERROR  <check>  <root>  <msg>" on stdout and stops (no later
 	// root, exit 3). It is decided per root after the walk, so a walk error wins and prints no ERROR row.
 	// There is no opt-out: every registered rule reads source files, and none has a meaning on a root
-	// without them. A RootRule decides emptiness itself and returns ErrEmptyRoot; its spec sets Msg.
+	// without them. A RootRule decides emptiness itself and returns ErrEmptyRoot; its spec sets Msg. A TreeRule may
+	// return ErrEmptyRoot too, when the files it selects hold nothing it checks.
 	EmptyError EmptyRow
 	// BarePathRow prints a file-level finding (Line 0) as "<path>  <msg>", two spaces and no colon, as
 	// lint-structure printed its file and directory rows; a line finding keeps "<path>:<line>  <msg>".

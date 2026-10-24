@@ -75,7 +75,9 @@ rule's rows stay contiguous.
    `CheckTree(files []*javasrc.File)` gets every selected file under the root in walk order, and sets
    `Path` on each finding; a non-nil error prints the findings returned with it, then `<lint>: <error>`
    (the rule writes the whole text) and exits 3. A spec sets exactly one of `Rule` and `Tree`, and its
-   value implements only that interface (`Command` panics otherwise):
+   value implements only that interface (`Command` panics otherwise). A `TreeRule` whose selected files hold
+   nothing it checks (reference: `rules/duplicatehelper`, no `-rt`/`-ux`/`-wb` `src/` file under the root)
+   returns `lint.ErrEmptyRoot`: the `Spec.EmptyError` row, the rule stops and the exit is 3:
 
    ```go
    type rule struct{}

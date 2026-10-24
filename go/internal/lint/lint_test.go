@@ -56,9 +56,9 @@ func (mixedRule) Check(f *javasrc.File) ([]Finding, error) {
 // treeFake is a TreeRule: it records the paths it is given, reports a file-level finding (sub-check
 // "sub") for each file holding MARK and a PASS row for the others, and fails when broken is set.
 type treeFake struct {
-	id     string
-	seen   *[]string
-	broken bool
+	id            string
+	seen          *[]string
+	broken, empty bool
 }
 
 func (r treeFake) ID() string         { return r.id }
@@ -75,7 +75,10 @@ func (r treeFake) CheckTree(files []*javasrc.File) ([]Finding, error) {
 			out = append(out, Finding{Check: "sub", Severity: Pass, Path: f.Path, Msg: "clean"})
 		}
 	}
-	if r.broken {
+	switch {
+	case r.empty:
+		return out, ErrEmptyRoot
+	case r.broken:
 		return out, errors.New("cannot scan " + files[0].Path + ": broken")
 	}
 	return out, nil
@@ -620,5 +623,20 @@ func TestParseExactUsageError(t *testing.T) {
 	s, _, e = stdio()
 	if code := main([]string{"lint-e", "-h"}, s); code != 3 || e.String() != "lint-e: not a directory: -h\n" {
 		t.Errorf("Exact -h: exit %d %q, want 3 (a root, not a flag)", code, e)
+	}
+}
+
+// TestTreeRuleEmptyRoot: a TreeRule whose selected files hold nothing it checks (lint-duplicate-helper: no
+// -rt/-ux/-wb src/ under the root) returns ErrEmptyRoot: the EmptyError row instead of its findings, the
+// rule stops (no later root) and the exit is 3, as for a RootRule.
+func TestTreeRuleEmptyRoot(t *testing.T) {
+	a := tree(t, map[string]string{"A.java": "MARK\n"})
+	b := tree(t, map[string]string{"B.java": "MARK\n"})
+	sp := treeSpec(treeFake{id: "lint-t", empty: true})
+	sp.Mode = Each
+	sp.EmptyError = EmptyRow{Msg: "nothing to compare"}
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-t", a, b}, s); code != 3 || o.String() != "ERROR  lint-t  "+a+"  nothing to compare\n" || e.Len() != 0 {
+		t.Errorf("exit %d out %q err %q, want 3 and one ERROR row", code, o, e)
 	}
 }
