@@ -71,6 +71,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_list_px_views"] = t.ListPxViews
 	s.Handlers["n4_px_summary"] = t.PxSummary
 	s.Handlers["n4_list_batches"] = t.ListBatches
+	s.Handlers["n4_session_retro_draft"] = t.SessionRetroDraft
 }
 
 func toolError(format string, a ...any) error {
