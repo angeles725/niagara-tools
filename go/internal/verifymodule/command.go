@@ -36,7 +36,9 @@ type run struct {
 type check func(*run) bool
 
 // checks is the bash loop's order.
-var checks []check
+var checks = []check{
+	(*run).bytecode, (*run).signed, (*run).types, (*run).baja, (*run).storedCheck, (*run).rcBackup,
+}
 
 // Main is verify-module.sh. `coverage` and `--plano` are read before any flag. When bash arithmetic
 // failed inside either block (an operand such as 08 or 2.5), bash abandoned that block and went on to
