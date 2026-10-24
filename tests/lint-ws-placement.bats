@@ -98,6 +98,15 @@ wrap() {
   [[ "$output" == *"BSvc.java:5  add(\"n\", new BFolder())"* ]]
 }
 
+@test "WSP-literal: an add( or an assignment quoted inside a string literal is not code" {
+  # Mutation: WSP-literal -- matching the unmasked Strip view WARNs log("add(x, new BFolder())")
+  # Go golden: go/internal/lint/rules/wsplacement/testdata/truth-literals-1.txt
+  wrap 'log("add(x, new BFolder())");' 'log("f = new BFolder()");' 'add("f", f);' > "$SRC/BSvc.java"
+  run "$WSP" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "WSP-roots: every src root given is scanned" {
   run "$WSP" "$FX/annotated" "$FX/positive"
   [ "$status" -eq 0 ]
