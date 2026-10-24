@@ -318,11 +318,12 @@ func Command(specs ...Spec) cli.Main {
 				selected = []Spec{sp}
 			}
 		}
-		option := ""
+		var vo ValueOptions
 		if len(selected) == 1 && args[0] != "--all" {
-			option = selected[0].Option
+			sp := selected[0]
+			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Strict: sp.ValuedStrict}
 		}
-		a, err := ParseOption(mode, name, use, option, rest)
+		a, err := ParseValued(mode, name, use, vo, rest)
 		if err != nil {
 			var ue *UsageError
 			usageErr := errors.As(err, &ue)

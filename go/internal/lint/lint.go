@@ -137,9 +137,6 @@ type Spec struct {
 	// CheckFirst prints a finding's check column before its severity (`<check>  <SEV>  <path>:<line>  <msg>`),
 	// the row of lint-wb-threading; the empty-root ERROR row keeps the standard shape.
 	CheckFirst bool
-	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
-	// implementing Configurer.
-	Option string
 	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
 	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
 	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.
@@ -148,6 +145,13 @@ type Spec struct {
 	// every part's src/): n4lint --all, which runs on source roots, leaves it out as it leaves out a
 	// RootRule; it runs by name or in a rule list.
 	ModuleRoot bool
+	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
+	// implementing Configurer.
+	Option string
+	// Options are further Mode Valued value options, each repeatable (every value in Args.Values), and
+	// ValuedStrict accepts --strict in Mode Valued.
+	Options      []string
+	ValuedStrict bool
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a

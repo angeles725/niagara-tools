@@ -1,0 +1,28 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  p.q  declared in 3 modules: A/A-wb (A/A-wb/src/a/X.java), M/M-ux (M/M-ux/src/m/Y.java), Z/Z-rt (Z/Z-rt/src/z/a.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+WARN  split-package-check  p.r  declared in 2 modules: A/A-wb (A/A-wb/src/a/Q.java), M/M-ux (M/M-ux/src/m/Z.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/A/A-wb/build.gradle.kts --
+-- proj/A/A-wb/src/.keep --
+k
+-- proj/A/A-wb/src/a/Q.java --
+package p.r;
+-- proj/A/A-wb/src/a/X.java --
+package p.q;
+-- proj/M/M-ux/build.gradle.kts --
+-- proj/M/M-ux/src/.keep --
+k
+-- proj/M/M-ux/src/m/Y.java --
+package p.q;
+-- proj/M/M-ux/src/m/Z.java --
+package p.r;
+-- proj/Z/Z-rt/build.gradle.kts --
+-- proj/Z/Z-rt/src/.keep --
+k
+-- proj/Z/Z-rt/src/z/a.java --
+package p.q;
+-- proj/Z/Z-rt/src/z/b.java --
+package p.q;
