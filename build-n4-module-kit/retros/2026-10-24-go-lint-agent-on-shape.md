@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-lint-agent-on-shape
@@ -45,4 +45,4 @@ xmlsrc, RED first, with every difference declared.
   awk reading it anyway.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-agent-on-shape.md | kit | 2026-10-24 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-a`) — Δ1 already landed (the engine prints an `*xmlsrc.Error` once, `go/README.md` § XML rules), cited in `BUILD-LOOP.md` § 5 kit tooling doctrine (XML lints); Δ2 `BUILD-LOOP.md` § 5 kit tooling doctrine (golden cases from the replay).

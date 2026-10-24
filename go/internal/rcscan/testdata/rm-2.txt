@@ -1,0 +1,22 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  rc-scan  src/rc/index.html:2  ord-literal: hardcoded ORD literal
+-- stderr --
+-- module-include.xml --
+<types/>
+-- module.lexicon --
+# lexicon
+-- src/com/x/BHelper.java --
+package com.x;
+import javax.baja.sys.*;
+public final class BHelper extends BObject {
+    public static final BHelper INSTANCE = new BHelper();
+    public Type getType() { return TYPE; }
+    public static final Type TYPE = Sys.loadType(BHelper.class);
+}
+-- src/rc/index.html --
+<!DOCTYPE html><html><body>
+<div id="app" ord="station:|slot:/Fridge/level"></div>
+</body></html>

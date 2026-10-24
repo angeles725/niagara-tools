@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · go-javasrc-scanner
@@ -47,4 +47,4 @@ inputs and requires a byte-identical dump, so equivalence is proven, not claimed
 - Keep quirks of the original as pinned tests during a port; fix them later in both sides at once.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-go-javasrc-scanner.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 already folded in code (61a2f53d, `.githooks/pre-push:88`; its open issue in `ledger.d/2026-10-22-go-lint-engine.md` marked DONE); Δ2 rejected for now, needs code: change the `mb_parse` quirk cases in `toolbelt/lib/method-boundary.sh` and `go/internal/javasrc` together (both still pinned as kept quirks, `javasrc_test.go:170-180`); its open issue in `ledger.d/2026-10-22-go-lint-engine.md` stays.

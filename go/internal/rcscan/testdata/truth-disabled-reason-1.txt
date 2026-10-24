@@ -1,0 +1,31 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/app.js:4  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+WARN  rc-scan  rc/app.js:5  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+WARN  rc-scan  rc/app.js:6  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+WARN  rc-scan  rc/app.js:7  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+WARN  rc-scan  rc/app.js:8  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+WARN  rc-scan  rc/app.js:9  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+WARN  rc-scan  rc/app.js:10  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+WARN  rc-scan  rc/index.html:4  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+-- stderr --
+-- rc/app.js --
+if (!session.loggedIn) showLogin();
+    if (unwired) { b.disabled = true; b.title = "Sin salida cableada"; }
+    else if (opts.blocked) { b.disabled = true; b.title = opts.blockedMsg || "bloqueada por interlock"; }
+saveBtn.disabled = true; setStt("Guardando");
+b.disabled = true; b.title = "Inicia sesión (login) para escribir";
+b.disabled = true; c.title = "Sin salida";
+b.disabled = true; b.title = msg;
+$('x').disabled = true; $('x').title = "Fase 2";
+b.disabled = true; b.title = "Fase 2"; c.disabled = true;
+b.disabled = true; b.setAttribute("disabled", ""); b.title = "Fase 2";
+this.btn.disabled = true; this.btn.title = 'Reconocimiento en Fase 2';
+b.disabled = false; c.disabled = true; c.title = `Fase ${n}`;
+-- rc/index.html --
+<p>Login required</p>
+<script>
+  btn.disabled = true; btn.title = "Reconocimiento en Fase 2";
+</script><button disabled title="Fase 2">x</button>

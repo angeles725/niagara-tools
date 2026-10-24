@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-ws-placement
@@ -46,4 +46,4 @@ a component (WSP-array). go/README.md also gained the retro go-lint-status-parit
 - A real-tree diff of the port's rows (6 of 10 Cliente rows were bajaui buttons) found the largest truth defect; the synthetic edge trees found the rest.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-ws-placement.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1 and Δ2 not folded, needs code (a guard-token decision, a type-hierarchy widget check), owed in `METHODOLOGY.md` § Kit maintenance (round-10 lint follow-ups) and `BUILD-STATE.md` open_issues; Δ3 cross-cutting Go-port lesson, cited by the lints-a fold. INDEX row generated from the header: `| 2026-10-24-go-lint-ws-placement.md | kit | 2026-10-24 | folded | 3 |`

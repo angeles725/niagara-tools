@@ -1,0 +1,93 @@
+-- args --
+@DIR@
+--profile
+hmi
+--profile
+lan
+-- want --
+exit 0
+WARN  rc-scan  rc/a.css:1  browser-floor: inset above the Chromium 83 panel floor
+WARN  rc-scan  rc/a.css:4  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/a.css:7  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/a.css:10  browser-floor: min() max() clamp() above the Chromium 83 panel floor
+WARN  rc-scan  rc/a.css:12  browser-floor: aspect-ratio backdrop-filter above the Chromium 83 panel floor
+WARN  rc-scan  rc/a.css:14  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/a.css:16  browser-floor: inset above the Chromium 83 panel floor
+WARN  rc-scan  rc/a.css:17  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/a.css:19  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/b.js:1  browser-floor: ??= above the Chromium 83 panel floor
+WARN  rc-scan  rc/b.js:2  browser-floor: ||= &&= above the Chromium 83 panel floor
+WARN  rc-scan  rc/b.js:3  browser-floor: .replaceAll() .at() structuredClone() above the Chromium 83 panel floor
+WARN  rc-scan  rc/b.js:4  browser-floor: top-level-await above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html:3  browser-floor: inset above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html:4  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/c.html:6  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/c.html:8  browser-floor: ??= above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html:12  browser-floor: ||= above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html:13  browser-floor: inset gap above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html:15  browser-floor: aspect-ratio above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html:16  browser-floor: gap above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html:17  browser-floor: min() above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html:20  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/c.html:22  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+WARN  rc-scan  rc/c.html:27  browser-floor: .at() above the Chromium 83 panel floor
+-- stderr --
+-- rc/a.css (noeol) --
+.a { inset: 0; }
+.b {
+  display: flex;
+  gap: 4px;
+}
+.c { display: grid; gap: 2px }
+.d { gap: 1px; } .e { display:inline-grid; row-gap: 3px }
+.f { column-gap: 2px;
+ display : grid ;}
+.g{width:min(1px,2px);height:max(1px, 2px);margin:clamp(1px,2px,3px)}
+.h{width:minmax(1px,2px)} @media (min-width: 3px) {}
+.i { backdrop-filter: blur(2px); aspect-ratio: 1/1; }
+.j { gap: 1px; } /* rc-scan: allow browser-floor */
+.k { gap: 2px;
+}
+.l { box-shadow: inset 0 0 1px; inset:0 }
+.m { gap: 1px }
+.n { flex-gap:1px; xgap: 1px; }
+.o { gap: 3px
+-- rc/b.js --
+a ??= 1;
+b ||= 2; c &&= 3;
+s.replaceAll("a","b"); arr.at(-1); structuredClone(o);
+await load();
+  await x();
+x?.y ?? z;
+// a ??= 1
+s.at(1) // rc-scan: allow browser-floor
+-- rc/c.html --
+<html><head>
+<style>
+.a { inset: 0 }
+.b { display: flex; gap: 2px }
+</style>
+<style>.c{gap:1px}</style>
+<script>
+x ??= 1;
+await y();
+</script>
+<script src="a.js">x ??= 2;</script>
+<script>z ||= 1;</script>
+<div style="gap: 2px; inset: 0" class="x"></div>
+<div style="display:grid; gap: 2px"></div>
+<div style='aspect-ratio: 1' data-x="1"></div>
+<div style="gap:1px"></div><p style="gap:2px"></p>
+<div style="width:min(1px,2px)"></div> <!-- x -->
+<p>inset: 0; gap: 1px</p>
+<style type="text/css">
+.d { gap: 1px }
+.e {
+ gap: 2px;
+}
+</style>
+<script type="module">
+await z();
+q.at(0);
+</script>
+</head></html>

@@ -1,0 +1,16 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- rc/index.html --
+<!doctype html><html><body><script>
+function write(v, ord) {
+  fetchT(ord, { method: "POST", body: JSON.stringify(v) }, 8000)
+    .catch(err => console.error("write failed", err));
+}
+function render(p, dt) {
+  const elap = (p.dElapsedMs == null) ? p.dElapsedMs : p.dElapsedMs + dt;
+  return elap;
+}
+</script></body></html>

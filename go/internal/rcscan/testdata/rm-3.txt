@@ -1,0 +1,21 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  src/rc/index.html:2  browser-floor: inset above the Chromium 83 panel floor
+-- stderr --
+-- module-include.xml --
+<types>
+  <type class="com.x.BFoo" name="Foo"/>
+</types>
+-- module.lexicon --
+# lexicon
+Foo.displayName=Foo
+-- src/com/x/BFoo.java --
+package com.x;
+import javax.baja.sys.*;
+public final class BFoo extends BComponent { private int n; }
+-- src/rc/index.html --
+<!DOCTYPE html><html><head><style>
+.bg { inset: 0; }
+</style></head><body></body></html>

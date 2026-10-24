@@ -1,0 +1,10 @@
+-- args --
+@DIR@/f1/binary.bog
+--module
+ColdRoomPan
+-- want --
+exit 3
+-- stderr --
+bog-audit: cannot extract file.xml from @DIR@/f1/binary.bog
+-- f1/binary.bog (b64) --
+AAFiaW5hcnn//g==

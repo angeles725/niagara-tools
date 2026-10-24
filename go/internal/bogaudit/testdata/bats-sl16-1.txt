@@ -1,0 +1,24 @@
+-- args --
+@DIR@/f1/c16sl.bog
+--module
+ColdRoomPan
+-- want --
+exit 1
+CHECK1  PASS  ColdRoomPan  components=2
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK16  FAIL  ColdRoom_2/Evap  hasDefrost=true but no DefrostController sibling under 'ColdRoom_2'
+# bog-audit: parse time 0.006s
+-- stderr --
+-- f1/c16sl.bog (zip) --
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_2' h='cr2' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='Evap' h='ev2' t='CRP:EvaporatorUnit'>
+   <p n="hasDefrost" t="b:boolean" v="true"/>
+  </p>
+ </p>
+</bajaObjectGraph>

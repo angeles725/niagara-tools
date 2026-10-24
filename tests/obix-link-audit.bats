@@ -4,12 +4,70 @@
 # bog-audit cannot see it; only a diff against the declared source closes that gap.
 # Rows: MATCH | MISMATCH | MISSING | SKIP  obix-link-audit  <slot>  <detail>
 # Exit: 0 no MISMATCH/MISSING · 1 any · 3 usage/env.
+# Live-mode tests talk only to a python stand-in station on 127.0.0.1 (_station), never a real host.
 # [ev: retro panccadia-commissioning-lessons Δ4]
 
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   OLA="$KIT/toolbelt/obix-link-audit.sh"
   FX="$BATS_TEST_DIRNAME/fixtures/obix-link-audit"
+  STATION_PID=""
+}
+
+teardown() { [ -z "$STATION_PID" ] || kill "$STATION_PID" 2>/dev/null || true; }
+
+# _station [status] [tls]: start a local oBIX stand-in on 127.0.0.1 (never a real host) that answers every
+# GET with status (default 200) and facade.xml, logging "METHOD path user:pass" per request to
+# $BATS_TEST_TMPDIR/requests; with tls it serves https from a throwaway self-signed certificate. Sets PORT;
+# skips without python3 (or openssl for tls).
+_station() {
+  local status="${1:-200}" tls="${2:-}" pf="$BATS_TEST_TMPDIR/port" cert="" _
+  command -v python3 >/dev/null 2>&1 || skip "python3 required"
+  if [ -n "$tls" ]; then
+    command -v openssl >/dev/null 2>&1 || skip "openssl required"
+    cert="$BATS_TEST_TMPDIR/station.pem"
+    openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
+      -keyout "$cert" -out "$cert.crt" >/dev/null 2>&1 || skip "openssl could not make a certificate"
+    cat "$cert.crt" >> "$cert"
+  fi
+  : > "$BATS_TEST_TMPDIR/requests"
+  python3 - "$pf" "$BATS_TEST_TMPDIR/requests" "$FX/facade.xml" "$status" "$cert" >/dev/null 2>&1 3>&- <<'PY' &
+import base64, http.server, os, ssl, sys
+pf, log, body, status, cert = sys.argv[1:6]
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        auth = self.headers.get("Authorization", "").split()
+        cred = base64.b64decode(auth[1]).decode() if len(auth) == 2 else "-"
+        with open(log, "a") as f:
+            f.write(f"{self.command} {self.path} {cred}\n")
+        data = open(body, "rb").read() if status == "200" else b""
+        self.send_response(int(status))
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+    def log_message(self, *a):
+        pass
+s = http.server.HTTPServer(("127.0.0.1", 0), H)
+if cert:
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(cert)
+    s.socket = ctx.wrap_socket(s.socket, server_side=True)
+with open(pf + ".tmp", "w") as f:
+    f.write(str(s.server_port))
+os.rename(pf + ".tmp", pf)
+s.serve_forever()
+PY
+  STATION_PID=$!
+  for _ in $(seq 1 100); do [ -s "$pf" ] && break; sleep 0.1; done
+  [ -s "$pf" ] || skip "local station did not start"
+  PORT=$(cat "$pf")
+}
+
+# _live <scheme> [args...]: run the tool in live mode against the local station, proxies off.
+_live() {
+  local scheme="$1"; shift
+  run env -u http_proxy -u HTTP_PROXY -u https_proxy -u HTTPS_PROXY -u all_proxy -u ALL_PROXY NO_PROXY='*' \
+    "$OLA" --map "$FX/wiring-map.md" --obix "$scheme://127.0.0.1:$PORT/obix" --component /Plant/Facade "$@"
 }
 
 @test "OLA1: Table 2 vs a saved component dump -> MATCH / MISMATCH (actual source named) / MISSING / SKIP, exit 1" {
@@ -48,34 +106,21 @@ setup() {
   [ "$status" -eq 3 ]
 }
 
-@test "OLA5: live mode -> ONE read-only GET of <base>/config/<component>/, credentials via stdin config (never argv)" {
-  bin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$bin"
-  cat > "$bin/curl" <<STUB
-#!/usr/bin/env bash
-printf '%s\n' "\$@" > "$BATS_TEST_TMPDIR/curl.args"
-cat > "$BATS_TEST_TMPDIR/curl.stdin"
-out=""
-while [ \$# -gt 0 ]; do [ "\$1" = "-o" ] && out="\$2"; shift; done
-cp "$FX/facade.xml" "\$out"
-STUB
-  chmod +x "$bin/curl"
-  OBIX_USER=reader OBIX_PASS=secret PATH="$bin:$PATH" run "$OLA" --map "$FX/wiring-map.md" \
-    --obix https://station.example/obix --component /Plant/Facade
+@test "OLA5: live mode -> ONE read-only GET of <base>/config/<component>/, credentials only in the auth header" {
+  _station
+  OBIX_USER=reader OBIX_PASS=secret _live http
   [ "$status" -eq 1 ]
   [[ "$output" == *"MISMATCH  obix-link-audit  comp1State"* ]]
-  grep -qx 'https://station.example/obix/config/Plant/Facade/' "$BATS_TEST_TMPDIR/curl.args"
-  [ "$(grep -cE '^(-X|--request|-d|--data.*|-T|--upload-file)$' "$BATS_TEST_TMPDIR/curl.args")" -eq 0 ]
-  [ "$(grep -c 'secret' "$BATS_TEST_TMPDIR/curl.args")" -eq 0 ]
-  grep -q 'reader:secret' "$BATS_TEST_TMPDIR/curl.stdin"
+  [ "$(cat "$BATS_TEST_TMPDIR/requests")" = "GET /obix/config/Plant/Facade/ reader:secret" ]
+  [[ "$output" != *"secret"* ]]
 }
 
 @test "OLA6: live mode without OBIX_USER/OBIX_PASS -> exit 3, no request made" {
-  bin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$bin"
-  printf '#!/usr/bin/env bash\ntouch "%s/called"\n' "$BATS_TEST_TMPDIR" > "$bin/curl"; chmod +x "$bin/curl"
-  OBIX_USER='' OBIX_PASS='' PATH="$bin:$PATH" run "$OLA" --map "$FX/wiring-map.md" \
-    --obix https://station.example/obix --component /Plant/Facade
+  _station
+  OBIX_USER='' OBIX_PASS='' _live http
   [ "$status" -eq 3 ]
-  [ ! -e "$BATS_TEST_TMPDIR/called" ]
+  [[ "$output" == *"live mode needs OBIX_USER and OBIX_PASS"* ]]
+  [ ! -s "$BATS_TEST_TMPDIR/requests" ]
 }
 
 @test "OLA7: a component with NO links -> every declared row MISSING (empty link set never reads the map as links)" {
@@ -85,62 +130,15 @@ STUB
   [[ "$output" == *"0 MATCH · 0 MISMATCH · 4 MISSING · 1 SKIP  ->  ISSUES"* ]]
 }
 
-# polish-2026-10-02 P3 (#199 WU9): stub curl that records argv and stdin, copies a fixture to -o, and
-# exits with $CURL_RC (default 0).
-_stub_curl() {
-  bin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$bin"
-  cat > "$bin/curl" <<STUB
-#!/usr/bin/env bash
-printf '%s\n' "\$@" > "$BATS_TEST_TMPDIR/curl.args"
-cat > "$BATS_TEST_TMPDIR/curl.stdin"
-[ "\${CURL_RC:-0}" -eq 0 ] || exit "\$CURL_RC"
-out=""
-while [ \$# -gt 0 ]; do [ "\$1" = "-o" ] && out="\$2"; shift; done
-cp "$FX/facade.xml" "\$out"
-STUB
-  chmod +x "$bin/curl"
-}
-
-# The credentials reach curl's config parser intact: `"` and `\` are backslash-escaped inside the
-# quoted value (curl config quoting rules), so a password with `"`, `\`, a space and `#` is the one the
-# station receives. Proven end to end against a one-shot local HTTP listener with the REAL curl (the
-# Authorization header is decoded). Fake credentials only.
-# Named mutation OLA-esc (interpolate the raw values again) -> OLA-esc flips.
-@test "OLA-esc: a password with a quote, backslash, space and # reaches the station intact (real curl)" {
-  command -v python3 >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 || skip "python3 and curl required"
-  local pf="$BATS_TEST_TMPDIR/port" af="$BATS_TEST_TMPDIR/auth" port="" _
-  python3 - "$pf" "$af" "$FX/facade.xml" >/dev/null 2>&1 3>&- <<'PY' &
-import http.server, os, sys
-pf, af, body = sys.argv[1:4]
-class H(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        with open(af, "w") as f:
-            f.write(self.headers.get("Authorization", ""))
-        data = open(body, "rb").read()
-        self.send_response(200)
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-    def log_message(self, *a):
-        pass
-s = http.server.HTTPServer(("127.0.0.1", 0), H)
-s.timeout = 20
-with open(pf + ".tmp", "w") as f:
-    f.write(str(s.server_port))
-os.rename(pf + ".tmp", pf)
-s.handle_request()
-PY
-  for _ in $(seq 1 100); do [ -s "$pf" ] && break; sleep 0.1; done
-  [ -s "$pf" ] || skip "local listener did not start"
-  port=$(cat "$pf")
-  run env -u http_proxy -u HTTP_PROXY -u all_proxy -u ALL_PROXY NO_PROXY='*' \
-    OBIX_USER=reader OBIX_PASS='p"a\ss #1 x' "$OLA" --map "$FX/wiring-map.md" \
-    --obix "http://127.0.0.1:$port/obix" --component /Plant/Facade
+# The credentials reach the station intact: a password with `"`, `\`, a space and `#` is the one the
+# station receives (the bash tool needed curl config quoting for this; the Go port sets the basic-auth
+# header itself). Fake credentials only.
+@test "OLA-esc: a password with a quote, backslash, space and # reaches the station intact" {
+  _station
+  OBIX_USER=reader OBIX_PASS='p"a\ss #1 x' _live http
   [ "$status" -eq 1 ] || { echo "$output"; return 1; }
   [[ "$output" == *"MISMATCH  obix-link-audit  comp1State"* ]]
-  local got
-  got=$(python3 -c 'import base64,sys; print(base64.b64decode(open(sys.argv[1]).read().split()[1]).decode())' "$af")
-  [ "$got" = 'reader:p"a\ss #1 x' ] || { echo "station received: $got"; return 1; }
+  [ "$(cat "$BATS_TEST_TMPDIR/requests")" = 'GET /obix/config/Plant/Facade/ reader:p"a\ss #1 x' ]
 }
 
 # MATCH compares the source COMPONENT too when the map declares one: on a per-instance facade a link
@@ -164,33 +162,54 @@ PY
 # An http:// base sends the oBIX credentials in clear text: warn on stderr (the GET still runs).
 # Named mutation OLA-http (drop the warning) -> OLA-http flips.
 @test "OLA-http: an http:// base -> clear-text credential warning; https:// -> none" {
-  _stub_curl
-  OBIX_USER=reader OBIX_PASS=fake PATH="$bin:$PATH" run "$OLA" --map "$FX/wiring-map.md" \
-    --obix http://station.example/obix --component /Plant/Facade
+  _station
+  OBIX_USER=reader OBIX_PASS=fake _live http
   [ "$status" -eq 1 ]
   [[ "$output" == *"obix-link-audit: WARNING: http:// base sends the oBIX credentials in clear text"* ]]
-  OBIX_USER=reader OBIX_PASS=fake PATH="$bin:$PATH" run "$OLA" --map "$FX/wiring-map.md" \
-    --obix https://station.example/obix --component /Plant/Facade
+  # https:// to the plain-http station: the handshake fails (exit 3) and nothing warns
+  OBIX_USER=reader OBIX_PASS=fake _live https
+  [ "$status" -eq 3 ]
   [[ "$output" != *"WARNING"* ]]
 }
 
-@test "OLA-curlfail: curl failure (non-zero exit) -> GET failed, exit 3, no audit rows" {
-  _stub_curl
-  CURL_RC=22 OBIX_USER=reader OBIX_PASS=fake PATH="$bin:$PATH" run "$OLA" --map "$FX/wiring-map.md" \
-    --obix https://station.example/obix --component /Plant/Facade
+@test "OLA-getfail: the station answers 404 -> GET failed, exit 3, no audit rows" {
+  _station 404
+  OBIX_USER=reader OBIX_PASS=fake _live http
   [ "$status" -eq 3 ]
-  [[ "$output" == *"obix-link-audit: GET failed: https://station.example/obix/config/Plant/Facade/"* ]]
+  [[ "$output" == *"obix-link-audit: GET failed: http://127.0.0.1:$PORT/obix/config/Plant/Facade/"* ]]
   [[ "$output" != *"MATCH"* ]]
 }
 
-@test "OLA-insecure: --insecure forwards -k to curl; without it no -k" {
-  _stub_curl
-  OBIX_USER=reader OBIX_PASS=fake PATH="$bin:$PATH" run "$OLA" --map "$FX/wiring-map.md" \
-    --obix https://station.example/obix --component /Plant/Facade --insecure
-  grep -qx -- '-k' "$BATS_TEST_TMPDIR/curl.args"
-  OBIX_USER=reader OBIX_PASS=fake PATH="$bin:$PATH" run "$OLA" --map "$FX/wiring-map.md" \
-    --obix https://station.example/obix --component /Plant/Facade
-  if grep -qx -- '-k' "$BATS_TEST_TMPDIR/curl.args"; then echo "-k sent without --insecure"; return 1; fi
+# Named mutation OLA-insecure (verify the certificate always, or never) -> OLA-insecure flips.
+@test "OLA-insecure: a self-signed station is refused without --insecure and audited with it" {
+  _station 200 tls
+  OBIX_USER=reader OBIX_PASS=fake _live https
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"certificate"*"GET failed"* ]]
+  [ ! -s "$BATS_TEST_TMPDIR/requests" ]
+  OBIX_USER=reader OBIX_PASS=fake _live https --insecure
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"MISMATCH  obix-link-audit  comp1State"* ]]
+}
+
+# A malformed response is exit 3 with its position, never a partial link set: the bash tool grepped the
+# raw text and audited what it found (a truncated dump gave MISSING rows, a mis-nested one even a MATCH).
+# Named mutation OLA-malformed (read a parse error as no links) -> OLA-malformed flips.
+@test "OLA-malformed: a truncated or mis-nested component dump -> exit 3 path:line:col, no rows" {
+  run "$OLA" --map "$FX/wiring-map.md" --xml "$FX/truncated.xml"
+  [ "$status" -eq 3 ]
+  [ "$output" = "obix-link-audit: $FX/truncated.xml:5:51: unexpected EOF" ]
+  run "$OLA" --map "$FX/wiring-map.md" --xml "$FX/bad-close.xml"
+  [ "$status" -eq 3 ]
+  [ "$output" = "obix-link-audit: $FX/bad-close.xml:1:84: element <obj> opened at 1:1 closed by </obk>" ]
+}
+
+# The links are read from the XML: &#8594;, -&gt;, single quotes and spaces around = spell the same
+# links (the bash grep read each of them as no link, so every row was a false MISSING).
+@test "OLA-entities: link displays in any well-formed XML spelling are links" {
+  run "$OLA" --map "$FX/wiring-map.md" --xml "$FX/entities.xml"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"4 MATCH · 0 MISMATCH · 0 MISSING · 1 SKIP  ->  CLEAN"* ]]
 }
 
 @test "OLA-notable: a map with no rows in the selected table -> exit 3" {

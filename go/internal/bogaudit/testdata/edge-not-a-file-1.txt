@@ -1,0 +1,8 @@
+-- args --
+missing.bog
+--module
+ColdRoomPan
+-- want --
+exit 3
+-- stderr --
+bog-audit: not a file: missing.bog

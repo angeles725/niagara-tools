@@ -1,0 +1,36 @@
+-- args --
+@DIR@
+--profile
+both
+-- want --
+exit 1
+FAIL  rc-scan  rc/app.js:1  browser-floor: ??= above the Chromium 83 panel floor
+FAIL  rc-scan  rc/app.js:2  browser-floor: .replaceAll() above the Chromium 83 panel floor
+FAIL  rc-scan  rc/index.html:5  browser-floor: inset above the Chromium 83 panel floor
+FAIL  rc-scan  rc/index.html:9  browser-floor: gap above the Chromium 83 panel floor
+FAIL  rc-scan  rc/style.css:1  browser-floor: inset above the Chromium 83 panel floor
+FAIL  rc-scan  rc/style.css:2  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
+FAIL  rc-scan  rc/style.css:3  browser-floor: aspect-ratio above the Chromium 83 panel floor
+FAIL  rc-scan  rc/style.css:4  browser-floor: min() above the Chromium 83 panel floor
+FAIL  rc-scan  rc/style.css:5  browser-floor: backdrop-filter above the Chromium 83 panel floor
+-- stderr --
+-- rc/app.js --
+cfg.timeoutMs ??= 8000;
+const label = raw.replaceAll("_", " ");
+-- rc/index.html --
+<!doctype html><html><head>
+<style>
+.login-bg {
+  position: absolute;
+  inset: 0;
+}
+</style>
+</head><body>
+<div style="display:flex;gap:4px">x</div>
+</body></html>
+-- rc/style.css --
+.modal { position: fixed; inset: 0; }
+.row { display: flex; gap: 8px; }
+.thumb { aspect-ratio: 16 / 9; }
+.w { width: min(100%, 600px); }
+.glass { backdrop-filter: blur(4px); }

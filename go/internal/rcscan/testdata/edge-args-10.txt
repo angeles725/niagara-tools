@@ -1,0 +1,12 @@
+-- args --
+@DIR@
+--strict
+--strict
+--legacy
+--profile
+both
+-- want --
+exit 0
+-- stderr --
+-- README --
+nothing

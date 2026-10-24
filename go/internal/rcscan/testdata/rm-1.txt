@@ -1,0 +1,18 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- module-include.xml --
+<types>
+  <type class="com.x.BFoo" name="Foo"/>
+</types>
+-- module.lexicon --
+# lexicon
+Foo.displayName=Foo
+-- src/com/x/BFoo.java --
+package com.x;
+import javax.baja.sys.*;
+public final class BFoo extends BComponent { private int n; }
+-- src/rc/index.html --
+<!DOCTYPE html><html><body>hello</body></html>

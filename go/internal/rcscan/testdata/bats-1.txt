@@ -1,0 +1,10 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  rc-scan  rc/app.js:2  ord-literal: hardcoded ORD literal
+-- stderr --
+-- rc/app.js --
+// hardcoded ORD literal — should be resolved from a config/servlet, not baked in
+const SERVICE = "station:|slot:/Services/DashboardService";
+export function boot() { return SERVICE; }

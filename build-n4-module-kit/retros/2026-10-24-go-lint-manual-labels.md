@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-24 · kit · go-lint-manual-labels
@@ -55,4 +55,4 @@ each RED first.
   in a diagram ("Enfriando", 7 → 6 checked), visible only in the SUMMARY count.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-manual-labels.md | kit | 2026-10-24 | pending | 4 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1, Δ2 and Δ3 not folded, needs code (comment blanking, `props.Read` for lexicons, a placeholder-family decision), owed in `METHODOLOGY.md` § Kit maintenance (round-10 lint follow-ups) and `BUILD-STATE.md` open_issues; Δ4 cross-cutting Go-port lesson, cited by the lints-a fold. INDEX row generated from the header: `| 2026-10-24-go-lint-manual-labels.md | kit | 2026-10-24 | folded | 4 |`

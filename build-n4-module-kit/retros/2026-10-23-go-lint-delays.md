@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-23 · kit · go-lint-delays
@@ -64,4 +64,4 @@ Byte identity first (commit ba3b78e), then three truth fixes, each with a RED se
 - The golden format cannot express an empty directory; an empty-root case needs a non-Java file in the tree.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-go-lint-delays.md | kit | 2026-10-23 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 `BUILD-LOOP.md` § 5 (no source text in a regexp; the three bash lints left have none); Δ2 on the literal-aware scanning line (lint-write-path ported onto `linescan.Code`; lint-arbitrary-ord when it is ported).
