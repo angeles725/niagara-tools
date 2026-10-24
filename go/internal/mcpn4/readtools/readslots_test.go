@@ -18,10 +18,9 @@ func serve(t *testing.T, ord, tree string) *readtoolstest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st := readtoolstest.NewStation()
-	st.Trees = map[string]*pyjson.Object{ord: nodes.(*pyjson.Object)}
-	s := readtoolstest.NewServer(st, session.Config{})
+	s := readtoolstest.NewServer(readtoolstest.NewStation(), session.Config{})
 	s.Connect(t)
+	s.Station.Trees = map[string]*pyjson.Object{ord: nodes.(*pyjson.Object)}
 	return s
 }
 
