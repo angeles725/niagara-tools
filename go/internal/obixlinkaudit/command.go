@@ -1,7 +1,9 @@
 package obixlinkaudit
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -44,21 +46,23 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	var body []byte
 	if live {
+		target, err := liveURL(o.base, o.comp)
+		if err != nil {
+			return fail("%v", err)
+		}
 		user, pass := s.Env("OBIX_USER"), s.Env("OBIX_PASS")
 		if user == "" || pass == "" {
 			return fail("live mode needs OBIX_USER and OBIX_PASS (a read-only oBIX user)")
 		}
-		url := strings.TrimSuffix(o.base, "/") + "/config/" + strings.TrimSuffix(strings.TrimPrefix(o.comp, "/"), "/") + "/"
 		// Mutation: OLA-http -- dropping this warning hides clear-text credentials.
 		if len(o.base) >= 7 && strings.EqualFold(o.base[:7], "http://") {
 			say("WARNING: http:// base sends the oBIX credentials in clear text; use https:// (--insecure for a self-signed certificate)")
 		}
-		var err error
-		if body, err = get(url, user, pass, insecure); err != nil {
+		if body, err = get(target, user, pass, insecure); err != nil {
 			say("%v", err)
-			return fail("GET failed: %s", url)
+			return fail("GET failed: %s", target)
 		}
-		o.xml = url
+		o.xml = target
 	}
 	mapText, err := os.ReadFile(o.mapPath)
 	if err != nil {
@@ -84,6 +88,25 @@ func Main(args []string, s cli.Stdio) int {
 func usageExit(s cli.Stdio) int {
 	fmt.Fprint(s.Err, usage)
 	return ExitEnv
+}
+
+// liveURL is <base>/config/<component>/ (one leading and one trailing slash of the component trimmed, as
+// the bash tool did), or why the arguments cannot name one station GET. The base must be an http(s) URL
+// with a host and without credentials, query or fragment, so no URL echoed later carries a password.
+func liveURL(base, comp string) (string, error) {
+	u, err := url.Parse(base)
+	switch {
+	case err != nil:
+		return "", errors.New("--obix is not a URL") // the parse error would echo the raw base
+	// Mutation: OLA-userinfo -- accepting user:password@ lets "GET failed: <url>" print the password.
+	case u.User != nil:
+		return "", errors.New("--obix must not carry credentials (user:password@); pass them in OBIX_USER / OBIX_PASS")
+	case (u.Scheme != "http" && u.Scheme != "https") || u.Host == "":
+		return "", fmt.Errorf("--obix needs an http:// or https:// base with a host: %s", base)
+	case u.RawQuery != "" || u.ForceQuery || u.Fragment != "":
+		return "", fmt.Errorf("--obix must not carry a query or fragment: %s", base)
+	}
+	return strings.TrimSuffix(base, "/") + "/config/" + strings.TrimSuffix(strings.TrimPrefix(comp, "/"), "/") + "/", nil
 }
 
 // parseArgs reads the flags as the bash loop did (a later flag wins); ok is false on an unknown

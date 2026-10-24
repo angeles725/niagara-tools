@@ -124,3 +124,38 @@ func TestLive(t *testing.T) {
 		}
 	}
 }
+
+// TestLiveArgumentGuards: a base or component that cannot name one station GET is exit 3 before any
+// request, and no password given in the URL reaches the output.
+func TestLiveArgumentGuards(t *testing.T) {
+	t.Parallel()
+	creds := map[string]string{"OBIX_USER": "reader", "OBIX_PASS": "secret"}
+	wiring := filepath.Join("..", "..", "..", "tests", "fixtures", "obix-link-audit", "wiring-map.md")
+	s := newStation(t, false, 200, "<obj/>")
+	host := strings.TrimPrefix(s.URL, "http://")
+	for _, tc := range []struct{ name, base, comp, stderr string }{
+		{"userinfo in the base", "http://admin:Pa55@" + host + "/obix", "/Plant/Facade",
+			"obix-link-audit: --obix must not carry credentials (user:password@); pass them in OBIX_USER / OBIX_PASS\n"},
+		{"user only in the base", "http://admin@" + host + "/obix", "/Plant/Facade",
+			"obix-link-audit: --obix must not carry credentials (user:password@); pass them in OBIX_USER / OBIX_PASS\n"},
+		{"no scheme", "station.example/obix", "/Plant/Facade",
+			"obix-link-audit: --obix needs an http:// or https:// base with a host: station.example/obix\n"},
+		{"ftp scheme", "ftp://" + host + "/obix", "/Plant/Facade",
+			"obix-link-audit: --obix needs an http:// or https:// base with a host: ftp://" + host + "/obix\n"},
+		{"no host", "https:///obix", "/Plant/Facade", "obix-link-audit: --obix needs an http:// or https:// base with a host: https:///obix\n"},
+		{"query in the base", s.URL + "/obix?x=1", "/Plant/Facade",
+			"obix-link-audit: --obix must not carry a query or fragment: " + s.URL + "/obix?x=1\n"},
+		{"unparseable base", "http://[::1/obix", "/Plant/Facade", "obix-link-audit: --obix is not a URL\n"},
+	} {
+		code, out, errs := run(creds, "--map", wiring, "--obix", tc.base, "--component", tc.comp)
+		if code != ExitEnv || out != "" || errs != tc.stderr {
+			t.Errorf("%s: exit %d stdout %q stderr %q, want 3 %q", tc.name, code, out, errs, tc.stderr)
+		}
+		if strings.Contains(errs, "Pa55") {
+			t.Errorf("%s: the URL password reached stderr", tc.name)
+		}
+	}
+	if got := s.requests(); len(got) != 0 {
+		t.Errorf("requests %q, want none", got)
+	}
+}
