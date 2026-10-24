@@ -1,0 +1,7 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- src/a.js --
+station:|x

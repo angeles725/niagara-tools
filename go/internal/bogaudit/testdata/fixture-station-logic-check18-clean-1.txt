@@ -1,0 +1,24 @@
+-- args --
+@DIR@/f1/station-logic-CHECK18-clean.bog
+--module
+ColdRoomPan
+-- want --
+exit 0
+CHECK1  PASS  ColdRoomPan  components=2
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+# bog-audit: parse time 0.004s
+-- stderr --
+-- f1/station-logic-CHECK18-clean.bog (zip) --
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='cr1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='EvaporatorUnit_1' h='eu1' t='CRP:EvaporatorUnit'>
+   <p n='hoaL'    t='b:Link'><p n="sourceOrd" v="h:cr1"/><p n="sourceSlotName" v="hoa"/><p n="targetSlotName" v="evap1Hoa"/></p>
+   <p n='freezeL' t='b:Link'><p n="sourceOrd" v="h:cr1"/><p n="sourceSlotName" v="frz"/><p n="targetSlotName" v="evap1Freeze"/></p>
+  </p>
+ </p>
+</bajaObjectGraph>

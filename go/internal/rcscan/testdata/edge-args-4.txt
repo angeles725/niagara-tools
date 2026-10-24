@@ -1,0 +1,9 @@
+-- args --
+@DIR@
+--bogus
+-- want --
+exit 3
+-- stderr --
+rc-scan: unknown option: --bogus
+-- README --
+nothing

@@ -1,0 +1,8 @@
+-- args --
+@DIR@/README
+-- want --
+exit 3
+-- stderr --
+rc-scan: not a directory: @DIR@/README
+-- README --
+nothing

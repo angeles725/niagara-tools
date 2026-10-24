@@ -112,7 +112,8 @@ setup() {
 #   Per-artifact src scanners: lint-no-system-out (FAIL), lint-clock-zero-floor (WARN),
 #     lint-null-context-write (WARN), lint-bql-string-concat (WARN), lint-arbitrary-ord (WARN).
 #   Profile-conditional: lint-se-display (FAIL, -se only), lint-jasmine-ux (WARN, -ux only).
-#   Module-root once-per-run: lint-agent-on-shape (FAIL), lint-uberjar-api-conflict (WARN).
+#   Module-root once-per-run: lint-agent-on-shape (FAIL), lint-uberjar-api-conflict (WARN);
+#     lint-agent-on-include-sync (FAIL, RM9b, quality round 10).
 # Fixtures: system-out, se-display, agent-on, bql-warn, ux-no-specs (see tests/fixtures/report-module/).
 # Named mutations (post-green):
 #   - drop System.out check → RM7 no longer exits 1.
@@ -156,6 +157,20 @@ setup() {
   run "$RM" --lint-only "$FX/agent-on"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-agent-on-shape"* ]] && [[ "$output" == *"module-include.xml"* ]]
+}
+
+@test "RM9b: an @AgentOn type missing from its module-include.xml line surfaces lint-agent-on-include-sync FAIL" {
+  # Mutation: RM9b -- dropping step 8b loses the FAIL row and the report reads the stale line clean
+  local t="$BATS_TEST_TMPDIR/rm9b"
+  mkdir -p "$t/DemoPan-wb/src/com/x"
+  printf '<types>\n  <type class="com.x.BMgr" name="Mgr"/>\n</types>\n' > "$t/DemoPan-wb/module-include.xml"
+  printf 'package com.x;\n@NiagaraType(agent = @AgentOn(types = "demoPan:Ext"))\npublic class BMgr {}\n' > "$t/DemoPan-wb/src/com/x/BMgr.java"
+  run "$RM" --lint-only "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"(module)  FAIL  lint-agent-on-include-sync  "*"BMgr.java:3  com.x.BMgr: module-include.xml <type> line lacks <on type> for: demoPan:Ext"* ]]
+  printf '<types><type class="com.x.BMgr" name="Mgr"><agent><on type="demoPan:Ext"/></agent></type></types>\n' > "$t/DemoPan-wb/module-include.xml"
+  run "$RM" --lint-only "$t"
+  [[ "$output" == *"(module)  PASS  lint-agent-on-include-sync  clean"* ]]
 }
 
 @test "RM10: BQL string-concat produces lint-bql-string-concat WARN row but exit stays 0 (WARN does not block)" {

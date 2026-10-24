@@ -1,0 +1,18 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/index.html:3  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+WARN  rc-scan  rc/index.html:3  bare-catch: bare .catch(()=>{}) swallows errors
+WARN  rc-scan  rc/index.html:6  null-branch: ? null : branch may blank UI on null field
+-- stderr --
+-- rc/index.html --
+<!doctype html><html><body><script>
+function write(v) {
+  fetch("/api/write", { method: "POST", body: JSON.stringify(v) }).catch(() => {});
+}
+function render(p, dt) {
+  const elap = (p.dElapsedMs == null) ? null : p.dElapsedMs + dt;  // blanks the display on fault
+  return elap;
+}
+</script></body></html>

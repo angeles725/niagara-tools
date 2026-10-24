@@ -1,0 +1,12 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/alarms.js:2  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/alarms.js:3  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+-- stderr --
+-- rc/alarms.js --
+function renderAlarm(row, a, list) {
+  row.innerHTML = "<td>" + a.message + "</td>";
+  list.insertAdjacentHTML("beforeend", `<li>${a.sourceLabel}</li>`);
+}

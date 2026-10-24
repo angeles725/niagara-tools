@@ -81,3 +81,41 @@ func TestTokensErrors(t *testing.T) {
 		}
 	}
 }
+
+// TestCode: the code view keeps every token on its line, drops comments, reduces literals to their quotes and
+// keeps one blank per gap.
+func TestCode(t *testing.T) {
+	for in, want := range map[string]string{
+		"a.set(false)":                "a.set(false)",
+		"  x   =  \"v\" // c\ny":      "x = \"\"\ny",
+		"a /* x\ny */ b":              "a\nb",
+		"a/* x */b":                   "a b",
+		"/* a /* b */ c */ d":         "d",
+		"v = \"\"\"r\nr2\nr3\"\"\" w": "v = \"\"\"\n\n\"\"\" w",
+		`v = "${"in"}" 'c'`:           `v = "" ''`,
+		"`my name` x":                 "my name x",
+		"a\n\n\nb":                    "a\n\n\nb",
+		"":                            "",
+	} {
+		toks, err := Tokens(in)
+		if got := strings.Join(Code(toks), "\n"); err != nil || got != want {
+			t.Errorf("Code(%q) = %q, %v; want %q", in, got, err, want)
+		}
+	}
+}
+
+// TestOffsets: Off and End bound each token's source bytes, a `name`'s backquotes included.
+func TestOffsets(t *testing.T) {
+	src := "val `a b` = \"\"\"x\n\"\"\" // c"
+	toks, err := Tokens(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, tok := range toks {
+		got = append(got, src[tok.Off:tok.End])
+	}
+	if want := "val|`a b`|=|\"\"\"x\n\"\"\""; strings.Join(got, "|") != want {
+		t.Errorf("spans %q, want %q", strings.Join(got, "|"), want)
+	}
+}

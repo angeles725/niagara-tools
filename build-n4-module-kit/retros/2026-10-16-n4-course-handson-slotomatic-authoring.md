@@ -81,9 +81,10 @@ course jars also showed the palette check miscounting palettes saved by Workbenc
 - Δ4 FOLDED: `types/logic.md` § Operator-entered bounds (quality round 8 U11).
 - Δ5 FOLDED (doc): `types/module-wiring.md` § 2. Refined: the processor does rewrite a line whose existing `<agent>`
   differs; only a line with no `<agent>` (or a subset that still matches) stays stale (`ModuleInclude.entryMatches`).
-  Lint half owed as Go lint G99 `agent-on-include-sync`, #473.
+  Lint half LANDED 2026-10-24 as `toolbelt/lint-agent-on-include-sync.sh` (Go lint G99, #473; retro
+  r10-g99-agent-on-include-sync).
 - Δ6 FOLDED: `toolbelt/verify-module.sh` `check_palette` counts `<p` entries with `n=` in any position;
   `types/structure.md` § Palette assembly templates; pinned in `tests/verify-module.bats`.
 
 ---
-**Status**: FOLDED 2026-10-24 — Δ5 doc half by this commit, Δ1-Δ4 and Δ6 by earlier rounds; lint halves owed as G96 and G99 (#473); INDEX row flipped to folded.
+**Status**: FOLDED 2026-10-24 — Δ5 doc half by this commit, Δ1-Δ4 and Δ6 by earlier rounds; lint half owed as G96; G99 landed 2026-10-24 (#473); INDEX row flipped to folded.

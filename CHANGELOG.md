@@ -8,6 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+### Added — client-identifier guard in `.githooks/pre-push`
+
+- The pre-push hook now runs niagara-go's `client-guard` first, with the hook arguments and the whole stdin:
+  a push whose added lines or commit messages match the private client denylist is refused (report:
+  `file:line: rule #N`, never the matched text). Without `client-guard` installed the hook refuses when a
+  denylist exists and warns otherwise. `tests/pre-push-client-guard.bats`; the existing hook suites pin
+  `NIAGARA_CLIENT_DENYLIST` to an absent path to stay hermetic.
+
 ### Fixed — build-n4 and mcp-n4 kits (retro deltas from the 2026-10-06 CompPan HMI support session)
 
 - `toolbelt/build.sh` resolves ROOT to an absolute path before the gradlew walk-up (a relative `.` looped forever) and

@@ -1,0 +1,20 @@
+-- args --
+--
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 1
+pct=50.0 (type-set)
+missing=CompressorPanel
+extra=
+slot-coverage: FAIL facade type without lexicon: CompressorPanel
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="RoomPanel" class="com.x.BRoomPanel"/>
+  <type name="CompressorPanel" class="com.x.BCompressorPanel"/>
+</types>
+-- module.lexicon --
+# facade lexicon: CompressorPanel has NO keys (renders raw camelCase in Workbench)
+RoomPanel.displayName=Cuarto
+RoomPanel.temperatureSetpoint=Setpoint de temperatura

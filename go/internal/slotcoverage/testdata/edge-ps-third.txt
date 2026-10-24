@@ -1,0 +1,22 @@
+-- args --
+per-slot
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+@DIR@/src
+-- want --
+exit 1
+pct=33.3 (per-slot)
+MISSING b
+MISSING c
+-- stderr --
+-- module-include.xml --
+<types>
+<type name="Thing" class="com.x.BThing"/>
+</types>
+-- module.lexicon --
+a=A
+-- src/BX.java --
+@NiagaraProperty(name = "a", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "b", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "c", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "b", flags = Flags.OPERATOR)

@@ -1,0 +1,7 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- README --
+nothing

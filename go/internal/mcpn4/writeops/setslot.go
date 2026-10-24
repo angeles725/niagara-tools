@@ -106,7 +106,7 @@ func setOp(h any, slot string, b *pyjson.Object) *pyjson.Object {
 // nested too (audit F3).
 func slotDepth(slot string) int { return len(strings.Split(slot, "/")) + 1 }
 
-func setSlotReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies []any) (any, any, any, string, error) {
+func setSlotReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, _ []any) (any, any, any, string, error) {
 	slot, valueType := str(args, "slot"), str(args, "value_type")
 	_, nodes, err := plan.Handle(c, str(args, "ord"), slotDepth(slot))
 	if err != nil {

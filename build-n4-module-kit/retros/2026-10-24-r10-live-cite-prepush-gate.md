@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · r10-live-cite-prepush-gate
@@ -35,6 +35,12 @@ any other non-zero refuse.
 |---|---|---|---|
 | 1 | **A local-only gate skips only on a named, matched absence.** When a check cannot run on CI because its inputs live only on a developer machine, it runs in the local hook. Its single skip matches the tool's exact message for an absent input and prints a named stderr line; every other non-zero exit, including the same exit code for another cause, refuses. A tool failure is never a zero result. | BUILD-LOOP.md §7 | `local-only-gate-named-skip` |
 
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 7, under Machine enforcement (the code is `.githooks/pre-push` `live_cite_check`).
+
 ## Lessons
 - An exit code shared by several causes needs the message to tell them apart before a hook may skip on it.
 - A hook check that must not be waived goes before the first early exit, and a test pins it under the waiver.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | folded | 1 |`

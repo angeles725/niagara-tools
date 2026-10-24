@@ -1,0 +1,21 @@
+-- args --
+--strict
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 1
+slot-coverage: WARN ineffective type key: Room= (Workbench reads Room.displayName)
+pct=0.0 (type-set)
+missing=Core,Room
+extra=
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="Room" class="com.x.BRoom"/>
+  <type name="Core" class="com.x.BCore"/>
+</types>
+-- module.lexicon --
+# Room= is ineffective: the type display name is read from Room.displayName (NTypeInfo.java:178)
+Room=Cuarto
+# Core.mode names a slot, not the type: Core has no display-name key
+Core.mode=Modo

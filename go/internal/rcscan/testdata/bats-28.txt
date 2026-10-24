@@ -1,0 +1,13 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/index.html:2  orphan-page: nav entry data-page="ghost" has no section#page-ghost
+WARN  rc-scan  rc/index.html:4  orphan-page: section#page-graficas has no nav entry data-page="graficas"
+-- stderr --
+-- rc/index.html --
+<!doctype html><html><body>
+<nav><a class="nav-item" data-page="rooms">Rooms</a><a class="nav-item" data-page="ghost">Ghost</a></nav>
+<section id="page-rooms"></section>
+<section class="page" id="page-graficas"></section>
+</body></html>

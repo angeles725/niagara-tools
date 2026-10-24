@@ -29,6 +29,8 @@ bats_require_minimum_version 1.5.0
 # no real build — git is a fakebin (ng-deploy.bats pattern), fixtures are tiny (sub-second).
 
 setup() {
+  # the client-identifier step of the hook: hermetic whatever this host has installed (no denylist → it skips)
+  export NIAGARA_CLIENT_DENYLIST="$BATS_TEST_TMPDIR/no-client-denylist"
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   KIT="$REPO/build-n4-module-kit"
   SWEEP="$KIT/toolbelt/sweep-build-state.sh"

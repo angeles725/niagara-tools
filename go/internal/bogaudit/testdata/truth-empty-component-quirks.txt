@@ -1,0 +1,35 @@
+-- args --
+@DIR@/f1/quirks.bog
+--module
+ColdRoomPan
+-- want --
+exit 1
+CHECK1  PASS  ColdRoomPan  components=5
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK16  FAIL  Root2  DefrostController without hasDefrost=true unit sibling under (root)
+CHECK16  FAIL  ColdRoom_2/Box/Inner  hasDefrost=true but no DefrostController sibling under 'ColdRoom_2/Box'
+CHECK16  FAIL  ColdRoom_2/Self  DefrostController without hasDefrost=true unit sibling under 'ColdRoom_2'
+# bog-audit: parse time 0.000s
+-- stderr --
+-- f1/quirks.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_2' h='c2' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n="hasDefrost" v="true"></p>
+  <p n='Box' t='b:Folder'>
+   <p n='Inner' h='i1' t='CRP:EvaporatorUnit'>
+    <p n="hasDefrost" v="TRUE"/>
+   </p>
+  </p>
+  <p n='Self' h='s1' t='CRP:DefrostController'/>
+  <a n="act" f="s"></a>
+  <p n='After' h='a1' t='CRP:Thing'><p n="x" v="1"/></p>
+ </p>
+ <p n='Root2' h='q2' t='CRP:DefrostController'>
+ </p>
+</bajaObjectGraph>
