@@ -1231,7 +1231,7 @@ class TestListBatches(DestructiveCase):
                          back["batch_id"])
         self.assertEqual(out["total"], 3)
 
-    @go_server.go_twin("journal", "internals")
+    @go_server.go_twin("readtools", "internals")
     def test_it_is_read_only_and_works_without_a_session(self):
         self.srv.ctx.close()
         self.assertEqual(self.ok("n4_list_batches")["batches"], [])

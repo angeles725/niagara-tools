@@ -306,7 +306,7 @@ class TestExistingStateFiles(StateFileCase):
         safety.check_state_dir(self.state_dir)
 
 
-@go_server.go_twin("audit", "unit")
+@go_server.go_twin("journal", "unit")
 class TestStateDirCheck(StateFileCase):
     def test_missing_dir_is_fine(self):
         safety.check_state_dir(self.state_dir)
@@ -345,8 +345,8 @@ class TestStateDirCheck(StateFileCase):
         self.assertFalse(os.path.exists(self.state_dir))
 
 
-@go_server.go_twin("audit", "unit")
 class TestAuditLog(StateFileCase):
+    @go_server.go_twin("journal", "unit")
     def test_append_and_modes(self):
         audit = safety.AuditLog(self.state_dir)
         audit.append({"tool": "n4_set_slot", "outcome": "planned"})
@@ -354,6 +354,7 @@ class TestAuditLog(StateFileCase):
         self.assertEqual(self.mode(self.state_dir), 0o700)
         self.assertEqual(self.mode(os.path.join(self.state_dir, "audit.jsonl")), 0o600)
 
+    @go_server.go_twin("token", "unit")
     def test_redaction_masks_secret_looking_keys_at_any_depth(self):
         args = {"ord": "station:|slot:/A", "Password": "p1", "api_secret": "s1",
                 "confirmation_token": "t1", "my_Credential": "c1",
@@ -366,6 +367,7 @@ class TestAuditLog(StateFileCase):
         for secret in ("p1", "s1", "t1", "c1", "p2", "t2"):
             self.assertNotIn('"%s"' % secret, text)
 
+    @go_server.go_twin("token", "unit")
     def test_redaction_does_not_mutate_the_input(self):
         args = {"password": "p1"}
         safety.redact_args(args)

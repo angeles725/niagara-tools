@@ -24,7 +24,7 @@ that is slice S0.
 | `bql` | `bql.py:1-221`, `tools_read.py:500-654` (output files, private dirs) |
 | `files` / `px` / `pyxml` | `files.py:1-233` (Windows alias refusals at `station_path` 38-86), `tools_read.py:689-822`; `pyxml` is the expat parser `ET.fromstring` uses |
 | `token` | `safety.py:47-113` (canonical, `bound_args`, redact, `ConfirmationTokens`) |
-| `audit` / `journal` | `safety.py:156-311` (state-dir checks, `_JsonlFile`, `Journal` views, `AuditLog`) |
+| `journal` | `safety.py:156-311` (`_JsonlFile`, `Journal` views, `AuditLog`; the state-dir checks are `safety`'s since S6) |
 | `retro` | `retro.py:1-289` and `templates/retro.template.md` |
 | `plan` | `tools_write.py:76-216, 1260-1500` (coerce, to-BSON, `_process`, `_execute`, `_send_all`, `_record`) |
 | `writeops` | `tools_write.py:217-1240` (create, set, invoke, link, remove/snapshot/relink, rollback/frozen, save) |
@@ -196,6 +196,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
 | `test_go_harness.py` | 25 | 0 | 0 | 0 | 0 | 0 | 25 |
+| `test_list_batches.py` | 5 | 0 | 0 | 0 | 0 | 0 | 5 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
@@ -206,7 +207,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **622** | **166** | **56** | **105** | **22** | **349** | **273** |
+| **Total** | **627** | **166** | **56** | **105** | **22** | **349** | **278** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
