@@ -15,6 +15,7 @@ func TestFilePointers(t *testing.T) {
 		{"missing devguide", "[ev: devguide nope.txt:1]", []want{{MissingFile, "nope.txt"}}},
 		{"guide", "[ev: guide Platform/aSoftwareManager.txt:18]", []want{{Resolved, "guide line 18"}}},
 		{"niagara-help with a version", "[ev: niagara-help 4.15.6.20 guides-clean/Platform/aSoftwareManager.txt:3]", []want{{Resolved, "guide line 3"}}},
+		{"source path reads the versioned copy first", "[ev: source/baja/javax/baja/util/BWorker.java:12]", []want{{Resolved, "source BWorker line 12"}}},
 		{"alias in prose", vAlias + "FINE (`V/sys/Nre.java:730`).", []want{{Resolved, "// Nre line 730"}}},
 		{"ellipsis resolves against an earlier hit of the card",
 			"[ev: niagara-help 4.15.6.20 guides-clean/Platform/aSoftwareManager.txt:1] [ev: …/Platform/aSoftwareManager.txt:2]",
