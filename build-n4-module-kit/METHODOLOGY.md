@@ -63,6 +63,8 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   name outside the table is a finding. Facade side: `types/dashboard.md` § Facade contract; advisory lint
   `toolbelt/lint-inline-site-literal.sh` (G42; mark the table with a first-line `// site-table` or pass `--site-table`).
   `[ev: retro modular-line-efficient-quality Δ2]`
+  A query ORD (`station:|alarm:|bql:…`) or a service ORD (at or under `/Services`) is module structure, the same on
+  every site, not site data. `[ev: retro go-lint-inline-site-literal Δ1]` `[ev: retro go-lint-inline-site-literal Δ2]`
 
 ## Schema / upgrade safety
 - **Templates (`.ntpl`) and template modules:** what breaks when a deployed template or its module is upgraded: `types/logic-authoring.md` § What breaks on a module or template upgrade.
