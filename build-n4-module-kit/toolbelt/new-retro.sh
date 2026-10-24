@@ -10,7 +10,8 @@
 # with a retros/ dir → this script's ../ (unresolved: a symlinked toolbelt copy names its own parent) → cwd.
 # This seam lets the test harness inject the kit root via KIT=<tmpdir> without passing a positional kit-root arg.
 #
-# Writes (all three in one atomic sequence — none if any step fails):
+# Writes (all three in one atomic sequence — none if any step fails — under an exclusive flock on retros/,
+# so concurrent runs serialise and none drops another's flip; the kernel releases it if a run dies):
 #   retros/<date>-<slug>.md    stub from template, header block on lines 1-3
 #                              (review-status / module / deltas); refuses to overwrite (exit 3)
 #   retros/INDEX.md            REGENERATED (go/internal/retroindex, as gen-retro-index.sh) from the retro headers — never

@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: kit-cite-resolve false positives round 2 — elided placeholders, javap tag, versioned niagara-help paths, zip entries -->
+log: 2026-10-24 · quality round 10 → `kit-cite-resolve` reads an elided word in an unparsed clause (`retro … Δk`, `…Δ1`, `corpus B…`) as SKIPPED_TEMPLATE, the `javap x.jar[!entry] [<ver>]` tag clause like the prose `javap of <jar>` form, a niagara-help-relative path (`source/…`) from `versions/<ver>/` first, and `code|course <path>.zip!<entry>` as an `archive` pointer (zip resolved, entry unchecked). Kit-wide over 585 cards: strict LIVE 1 → 0, HISTORY 167 → 160, no new failing row. G4 (`§ a / b` lists) and G8 (line-less spaced paths) were not fixed: no kit instance, or the behaviour is pinned as intended. Retro retros/2026-10-24-r10-kcr-false-positives-round2.md (pending).
