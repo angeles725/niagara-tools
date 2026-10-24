@@ -375,6 +375,27 @@ XML
   [[ "$output" == *"CHECK11  FAIL  ro1  own-module h:u1.fanOut -> writable with no explicit fallback"* ]]
 }
 
+@test "BA17: a component written as an empty-element tag is a component (no orphan, a DefrostController sibling counts)" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-empty-component.txt): the python scanner registered a handle only
+  # on a non-empty <p h=...>, so a link from a defaulted component read as a CHECK9 orphan and a defaulted
+  # DefrostController as no sibling (CHECK16). Mutation: BA17 -- registering only non-empty components -> exit 1.
+  _mkbog ba17 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='EvaporatorUnit_1' h='u1' t='CRP:EvaporatorUnit'><p n="hasDefrost" v="true"/></p>
+  <p n='DefrostController' h='d1' t='CRP:DefrostController'/>
+  <p n='Clock' h='k1' t='CRP:RoomClock'/>
+  <p n='Display' h='x1' t='kitControl:NumericConst'>
+   <p n='L' t='b:Link'><p n="sourceOrd" v="h:k1"/><p n="sourceSlotName" v="minutes"/><p n="targetSlotName" v="in"/></p>
+  </p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba17.bog" --module ColdRoomPan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CHECK1  PASS  ColdRoomPan  components=4"* ]]
+}
+
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
   # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
   grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"

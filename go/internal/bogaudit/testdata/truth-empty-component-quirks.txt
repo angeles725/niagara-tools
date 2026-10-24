@@ -4,7 +4,7 @@
 ColdRoomPan
 -- want --
 exit 1
-CHECK1  PASS  ColdRoomPan  components=4
+CHECK1  PASS  ColdRoomPan  components=5
 CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
@@ -13,7 +13,8 @@ CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK16  FAIL  Root2  DefrostController without hasDefrost=true unit sibling under (root)
 CHECK16  FAIL  ColdRoom_2/Box/Inner  hasDefrost=true but no DefrostController sibling under 'ColdRoom_2/Box'
-# bog-audit: parse time 0.003s
+CHECK16  FAIL  ColdRoom_2/Self  DefrostController without hasDefrost=true unit sibling under 'ColdRoom_2'
+# bog-audit: parse time 0.000s
 -- stderr --
 -- f1/quirks.bog (zip) --
 <?xml version='1.0' encoding='UTF-8'?>

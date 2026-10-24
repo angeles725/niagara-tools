@@ -6,17 +6,18 @@ ColdRoomPan
 exit 1
 CHECK10  FAIL  ColdRoom_1/Dup2  handle h:r1 appears 3 times (duplicate)
 CHECK9  FAIL  h:x9  link sourceOrd references an unknown handle (orphan)
-CHECK9  FAIL  h:e1  link sourceOrd references an unknown handle (orphan)
 CHECK9  FAIL  h:zz  link sourceOrd references an unknown handle (orphan)
-CHECK1  PASS  ColdRoomPan  components=3
+CHECK1  PASS  ColdRoomPan  components=4
 CHECK8  WARN  Drivers/Net/ro2/in7  HOA override active (value='12.5')
+CHECK11  FAIL  Drivers/Net/ro3  own-module h:e1.evapOut -> writable with no explicit fallback (relay holds last state on stop/reload)
 CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
-# bog-audit: parse time 0.004s
+CHECK14  WARN  ColdRoom_1/Dup2  output slot 'evapOut' has no outgoing relay link (own-output-unlinked)
+# bog-audit: parse time 0.000s
 -- stderr --
 -- f1/alone.bog (zip) --
 <?xml version='1.0' encoding='UTF-8'?>

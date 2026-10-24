@@ -4,7 +4,7 @@
 ColdRoomPan
 -- want --
 exit 1
-CHECK1  PASS  ColdRoomPan  components=8
+CHECK1  PASS  ColdRoomPan  components=10
 CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
 CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
@@ -25,7 +25,7 @@ CHECK18  FAIL  ColdRoom_1/EvaporatorUnit_3  link tile numbers 2, 3, 4 disagree a
 CHECK19  WARN  Panel  control 'ColdRoom_1/EvaporatorUnit_1' writes config slot 'fanMode' into panel container (reverse direction)
 CHECK20  FAIL  NotGate  numeric/enum slot 'valveCmd' links directly into boolean gate 'CRP:BNotLogic' with no Equal(x,N) intermediate (!=0-as-true trap)
 CHECK20  FAIL  Gate2  numeric/enum slot "it'sMode" links directly into boolean gate 'CRP:BAndLogic' with no Equal(x,N) intermediate (!=0-as-true trap)
-# bog-audit: parse time 0.007s
+# bog-audit: parse time 0.001s
 -- stderr --
 -- f1/logic.bog (zip) --
 <?xml version='1.0' encoding='UTF-8'?>

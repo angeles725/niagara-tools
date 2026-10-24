@@ -36,7 +36,7 @@ func TestBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := build(doc)
-	if want := []string{"1", "c1", "u1", "w1"}; !reflect.DeepEqual(g.comps.keys, want) {
+	if want := []string{"1", "c1", "u1", "w1", "s1"}; !reflect.DeepEqual(g.comps.keys, want) {
 		t.Fatalf("handles = %v, want %v", g.comps.keys, want)
 	}
 	if n, _ := g.counts.get("c1"); n != 2 || g.comp("c1").path != "c1dup" {

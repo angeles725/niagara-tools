@@ -32,7 +32,8 @@ type slot struct {
 	hasV              bool
 }
 
-// comp is a component: a <p> start tag with an h= attribute that is not an empty-element tag.
+// comp is a component: a <p> start tag with an h= attribute (the python scanner skipped one written as
+// an empty-element tag, so a link from it read as an orphan and a defaulted sibling as absent).
 type comp struct {
 	name, handle, typ, module, path string
 	slots                           omap[slot]
@@ -174,7 +175,7 @@ func (b *builder) start(e xmlsrc.Element) {
 		}
 		b.inLink = true
 		b.stack = append(b.stack, frame{kind: linkFrame, path: parent.path})
-	case hasH && !e.Empty:
+	case hasH: // an empty-element tag is a component too, every slot at its default
 		pfx := ""
 		if i := strings.IndexByte(t, ':'); i >= 0 {
 			pfx = t[:i]
@@ -184,7 +185,9 @@ func (b *builder) start(e xmlsrc.Element) {
 		cnt, _ := b.g.counts.get(h)
 		b.g.counts.set(h, cnt+1)
 		b.g.comps.set(h, c)
-		b.stack = append(b.stack, frame{kind: compFrame, path: c.path, c: c})
+		if !e.Empty {
+			b.stack = append(b.stack, frame{kind: compFrame, path: c.path, c: c})
+		}
 	case n == "fallback":
 		if c := b.nearest(); c != nil {
 			c.hasFallback = true
