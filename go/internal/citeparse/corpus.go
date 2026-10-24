@@ -1,6 +1,11 @@
 package citeparse
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
+
+var sectionSpan = regexp.MustCompile(`^(\d+(?:\.\d+)*)[–-]§?(\d+(?:\.\d+)*)$`)
 
 // corpusClause reads `B<a>[/B<b>…][ locator][, B<c>[ locator]…]`; a part that opens with § C row rule
 // adds to the last block named.
@@ -32,7 +37,7 @@ func corpusLocator(p *Pointer, s string) {
 		w := f[i]
 		switch {
 		case strings.HasPrefix(w, "§") && len(w) > len("§"):
-			p.Sections = append(p.Sections, strings.TrimRight(strings.TrimPrefix(w, "§"), ".:)"))
+			p.Sections = append(p.Sections, sectionRange(strings.TrimRight(strings.TrimPrefix(w, "§"), ".:)"))...)
 		case claimRe.MatchString(w):
 			p.Claims = append(p.Claims, w)
 		case (w == "row" || w == "rows") && i+1 < len(f):
@@ -50,4 +55,18 @@ func corpusLocator(p *Pointer, s string) {
 			p.Notes = append(p.Notes, w)
 		}
 	}
+}
+
+// sectionRange expands `958.3–958.4`, `867.2-3` and `12.3-§12.5` to both ends (a short end keeps the
+// leading numbers of the first); anything else is one section.
+func sectionRange(s string) []string {
+	m := sectionSpan.FindStringSubmatch(s)
+	if m == nil {
+		return []string{s}
+	}
+	from, to := strings.Split(m[1], "."), strings.Split(m[2], ".")
+	if len(to) < len(from) {
+		to = append(append([]string(nil), from[:len(from)-len(to)]...), to...)
+	}
+	return []string{m[1], strings.Join(to, ".")}
 }

@@ -8,6 +8,8 @@ import (
 var (
 	fileExt    = regexp.MustCompile(`\.[A-Za-z][A-Za-z0-9]{0,9}$`)
 	identRe    = regexp.MustCompile(`^[A-Za-z][\w.-]*$`)
+	className  = regexp.MustCompile(`^[A-Z][A-Za-z0-9_$]*$`)
+	versionSeg = regexp.MustCompile(`^[\d.]+$`)
 	sectionNum = regexp.MustCompile(`^\d+(?:\.\d+)*[a-z]?(?:-\d+)?`)
 	aliasEq    = regexp.MustCompile("`([A-Z]{1,3})=([\\w./-]+)`")
 	aliasDir   = regexp.MustCompile("`([A-Z]{1,3})/` = `([\\w./-]+)`")
@@ -71,6 +73,8 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 			return unparsed(c, "no file named")
 		case strings.Contains(f[0], "!"):
 			return unparsed(c, "jar entry")
+		case len(f) >= 2 && !strings.ContainsAny(f[0], "/.:") && className.MatchString(f[1]):
+			return []Pointer{{Kind: Code, Target: f[0], File: f[1] + ".java", Notes: f[2:], Raw: c}}
 		case len(f) >= 2 && !strings.ContainsAny(f[0], "/.:") && looksPath(f[1]):
 			p := pathPointer(Code, strings.Join(f[1:], " "), aliases, c)
 			p.Target, p.File = f[0], p.Target
@@ -98,6 +102,9 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 		return []Pointer{{Kind: Mem, Target: strings.TrimSuffix(f[0], ".md"), Notes: f[1:], Raw: c}}
 	}
 	if looksPath(word) {
+		if why := notAPath(word); why != "" {
+			return unparsed(c, why)
+		}
 		return []Pointer{pathPointer(Path, c, aliases, c)}
 	}
 	return unparsed(c, "kind not covered")
@@ -111,7 +118,7 @@ func pathPointer(k Kind, text string, aliases map[string]string, raw string) Poi
 	extra := f[1:]
 	if len(extra) > 0 && strings.HasPrefix(extra[0], "§") {
 		h := strings.TrimSpace(strings.TrimPrefix(strings.Join(extra, " "), "§"))
-		p.Sections = []string{heading(h)}
+		p.Sections = sectionRange(heading(h))
 		return p
 	}
 	for _, w := range extra {
@@ -130,4 +137,17 @@ func heading(h string) string {
 		return n
 	}
 	return strings.TrimSpace(strings.Trim(h, "\"`"))
+}
+
+// notAPath says why a path-like word is not one file: a glob, or a list of version numbers.
+func notAPath(w string) string {
+	if strings.ContainsAny(w, "*?") {
+		return "glob, not one file"
+	}
+	for _, seg := range strings.Split(w, "/") {
+		if !versionSeg.MatchString(seg) {
+			return ""
+		}
+	}
+	return "version list, not a path"
 }

@@ -28,6 +28,7 @@ func TestCardSources(t *testing.T) {
 		want       []full
 	}{
 		{"code in a module part", "[ev: code kitControl-rt BFoo.java:10-12]", []full{{1, Code, "kitControl-rt", "BFoo.java", "", ":10-12"}}},
+		{"code class name in a module part", "[ev: code cloudLink-rt BAmqpTransport]", []full{{1, Code, "cloudLink-rt", "BAmqpTransport.java", "", ""}}},
 		{"code path with no module", "[ev: code javax/baja/sys/BA.java:87-90,148]", []full{{1, Code, "", "javax/baja/sys/BA.java", "", ":87-90,148"}}},
 		{"code jar entry is unparsed", "[ev: code devkit-wb.jar!gradle/b.vm:18]", []full{{1, Unparsed, "code devkit-wb.jar!gradle/b.vm:18", "", "", ""}}},
 		{"devguide", "[ev: devguide lex_lex.js.txt:441-455]", []full{{1, Devguide, "lex_lex.js.txt", "", "", ":441-455"}}},
@@ -35,6 +36,8 @@ func TestCardSources(t *testing.T) {
 		{"niagara-help with a version", "[ev: niagara-help 4.15.6.20 guides-clean/T/U.txt:25]", []full{{1, Help, "guides-clean/T/U.txt", "", "4.15.6.20", ":25"}}},
 		{"mem and memory", "[ev: mem shared-checkout] [ev: memory a-b.md]", []full{{1, Mem, "shared-checkout", "", "", ""}, {1, Mem, "a-b", "", "", ""}}},
 		{"repo path with a test name", "[ev: tests/awk.bats AWB1]", []full{{1, Path, "tests/awk.bats", "", "", "AWB1"}}},
+		{"a glob is unparsed", "[ev: tests/lint-*.bats]", []full{{1, Unparsed, "tests/lint-*.bats", "", "", ""}}},
+		{"a version list is unparsed", "[ev: 4.14/4.15.3/4.13.2 divergence]", []full{{1, Unparsed, "4.14/4.15.3/4.13.2 divergence", "", "", ""}}},
 		{"kit file with lines", "[ev: BUILD-LOOP.md:131,171]", []full{{1, Path, "BUILD-LOOP.md", "", "", ":131,171"}}},
 		{"kit cross-reference in a tag", "[ev: types/platform.md § 1]", []full{{1, Path, "types/platform.md", "", "", "§1"}}},
 		{"ellipsis prefix", "[ev: …/Templates/D.txt:33]", []full{{1, Path, "…/Templates/D.txt", "", "", ":33"}}},

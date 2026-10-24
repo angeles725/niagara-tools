@@ -43,8 +43,7 @@ func (r retroResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 		res.Detail += fmt.Sprintf(" [%d retros match, used %s]", len(hit), hit[0])
 	}
 	if p.Delta > 0 {
-		def := regexp.MustCompile(fmt.Sprintf(`^\s*(?:#+\s*|\|\s*|[-*]\s+)?(?:\*\*)?Δ%d(?:[^0-9]|$)`, p.Delta))
-		i := find(lines, def.MatchString)
+		i := deltaLine(lines, p.Delta)
 		if i < 0 {
 			return Result{Status: MissingDelta, File: file, Detail: fmt.Sprintf("%s defines no Δ%d", hit[0], p.Delta)}
 		}
@@ -177,4 +176,28 @@ func firstHeading(lines []string) string {
 		return excerpt(lines[i])
 	}
 	return ""
+}
+
+var deltaHeader = regexp.MustCompile(`^\|\s*Δ\s*\|`)
+
+// deltaLine is the line that defines Δn: one opening with Δn (table row, heading, bullet), or row n
+// (`| n |`, `| Dn |`) of a table whose header cell is Δ; -1 when none.
+func deltaLine(lines []string, n int) int {
+	def := regexp.MustCompile(fmt.Sprintf(`^\s*(?:#+\s*|\|\s*|[-*]\s+)?(?:\*\*)?Δ%d(?:[^0-9]|$)`, n))
+	row := tableRow(fmt.Sprint(n))
+	rowD := tableRow(fmt.Sprintf("D%d", n))
+	inTable := false
+	for i, l := range lines {
+		switch {
+		case def.MatchString(l):
+			return i
+		case deltaHeader.MatchString(l):
+			inTable = true
+		case !strings.HasPrefix(strings.TrimSpace(l), "|"):
+			inTable = false
+		case inTable && (row(l) || rowD(l)):
+			return i
+		}
+	}
+	return -1
 }

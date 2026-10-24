@@ -68,7 +68,7 @@ func (sc *scan) inline(i int) []Pointer {
 			h, _, _ = strings.Cut(h, ". ")
 			h = strings.TrimRight(strings.TrimSpace(h), ".:")
 		}
-		return Pointer{Kind: Path, Target: m[1], Sections: []string{heading(h)}}, heading(h) != ""
+		return Pointer{Kind: Path, Target: m[1], Sections: sectionRange(heading(h))}, heading(h) != ""
 	})
 	take(tickedPath, func(m []string) (Pointer, bool) {
 		return pathPointer(Path, m[1]+":"+m[2], sc.aliases, ""), true

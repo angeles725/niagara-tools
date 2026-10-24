@@ -38,6 +38,8 @@ func TestCardTags(t *testing.T) {
 			[]brief{{1, Corpus, "B776", ""}, {1, Corpus, "B789", ""}, {1, Corpus, "B867", "§867.2"}}},
 		{"corpus rows, claim and rule", "[ev: corpus B1335 rows 1-4; corpus B1349 C1; corpus B9 rule 2]",
 			[]brief{{1, Corpus, "B1335", "rows 1-4"}, {1, Corpus, "B1349", "C1"}, {1, Corpus, "B9", "rule 2"}}},
+		{"section ranges are both ends", "[ev: corpus B958 §958.3–958.4; corpus B867 §867.2-3; corpus B12 §12.3-§12.5]",
+			[]brief{{1, Corpus, "B958", "§958.3 §958.4"}, {1, Corpus, "B867", "§867.2 §867.3"}, {1, Corpus, "B12", "§12.3 §12.5"}}},
 		{"bare block", "[ev: B1023 §ND4]", []brief{{1, Corpus, "B1023", "§ND4"}}},
 		{"bare IDs", "[ev: corpus OBS-2] [ev: WIR-G3] [ev: Δ11 BLD2]",
 			[]brief{{1, Bare, "OBS-2", ""}, {1, Bare, "WIR-G3", ""}, {1, Bare, "Δ11 BLD2", ""}}},

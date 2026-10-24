@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/citeparse"
@@ -84,9 +85,11 @@ func (e *Engine) hit(p citeparse.Pointer, path string) Result {
 	return Result{Status: Resolved, File: path, Detail: strings.Join(ex, " | ")}
 }
 
-// headingMatcher matches a kit heading by number (`## 2. Software`, `### 2.2 Go`) or by title text.
+// headingMatcher matches a kit heading by number (`## 2. Software`, `### 2.2 Go`, `## 1 · How`) or by
+// title: the title's words and the heading's words (each cut at its first `—`, `(`, `[`, `:` or backtick,
+// numbering dropped) agree until one of them ends, so a title that runs on into prose still matches.
 func headingMatcher(s string) func(string) bool {
-	low := strings.ToLower(s)
+	tw := titleWords(s)
 	return func(l string) bool {
 		h, ok := headingText(l)
 		if !ok {
@@ -95,15 +98,37 @@ func headingMatcher(s string) func(string) bool {
 		if numeric.MatchString(s) {
 			return numbered(h, s)
 		}
-		core := strings.ToLower(strings.TrimLeft(h, "0123456789.) "))
-		return strings.Contains(strings.ToLower(h), low) || (len(core) >= 4 && strings.HasPrefix(low, core))
+		hw := titleWords(h)
+		n := 0
+		for n < len(tw) && n < len(hw) && tw[n] == hw[n] {
+			n++
+		}
+		return n > 0 && (n == len(tw) || n == len(hw))
 	}
+}
+
+var titleCut = regexp.MustCompile("\\s[—–]\\s|\\(|\\[|:\\s|`")
+
+// titleWords lowercases the words of a title up to its first cut, numbering and punctuation dropped.
+func titleWords(s string) []string {
+	if loc := titleCut.FindStringIndex(s); loc != nil {
+		s = s[:loc[0]]
+	}
+	var out []string
+	for _, w := range strings.Fields(strings.ToLower(s)) {
+		if w = strings.Trim(w, "\"'*,.;:·"); w != "" && !(len(out) == 0 && numeric.MatchString(w)) {
+			out = append(out, w)
+		}
+	}
+	return out
 }
 
 type pathResolver struct{ e *Engine }
 
 // Resolve looks for the path under the card's directory, the kit, the repository, the research tree,
-// niagara-help and the module trees, in that order; `…/rest` under an earlier hit of the card.
+// niagara-help, organized/, the module trees, then the guide and devguide trees (versioned first), in that order;
+// `…/rest` under an earlier hit of the card, `dir/…/rest` below dir, and a .java path not found there in
+// the decompile copies.
 func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	if rest, ok := strings.CutPrefix(p.Target, "…/"); ok {
 		for i := len(c.files) - 1; i >= 0; i-- {
@@ -117,8 +142,18 @@ func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 		}
 		return Result{Status: MissingFile, Detail: "ellipsis prefix: no earlier hit on this card holds " + rest}
 	}
+	if strings.Contains(p.Target, "/…/") {
+		return r.e.infix(p, c)
+	}
 	ro := r.e.roots
-	f, err := first(p.Target, c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), ro.Modules)
+	ver := filepath.Join(r.e.help(), "versions", ro.Version)
+	bases := []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), r.e.organized(), ro.Modules}
+	if filepath.IsAbs(p.Target) {
+		bases = []string{"/"}
+	}
+	f, err := first(p.Target, append(bases,
+		filepath.Join(ver, "guides-clean"), filepath.Join(ver, "devguide-clean"),
+		filepath.Join(r.e.help(), "guides-clean"), filepath.Join(r.e.help(), "devguide-clean"))...)
 	switch {
 	case err != nil:
 		return toolError(err)
@@ -126,6 +161,8 @@ func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 		return r.e.hit(p, f)
 	case !strings.Contains(p.Target, "/"):
 		return Result{Status: Unparsed, Detail: "bare file name: not in the card directory or a root, no tree named to search"}
+	case strings.HasSuffix(p.Target, ".java"):
+		return r.e.decompiled(p)
 	}
 	return Result{Status: MissingFile, Detail: p.Target + " not under the card, kit, repo, research or modules roots"}
 }

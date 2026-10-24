@@ -9,8 +9,7 @@ import (
 
 type codeResolver struct{ e *Engine }
 
-// Resolve finds File in the copies of module part Target; with no part, as a root-relative path and
-// then in every decompile copy and versioned source tree.
+// Resolve finds File in the copies of module part Target; with no part, as a path pointer.
 func (r codeResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	q := p
 	q.Target = p.File
@@ -24,22 +23,51 @@ func (r codeResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 		}
 		return r.e.hit(q, f)
 	}
-	res := pathResolver{r.e}.Resolve(q, c)
-	if res.Status != MissingFile || strings.HasPrefix(p.File, "…/") {
-		return res
-	}
-	dirs, err := r.e.sourceDirs()
+	return pathResolver{r.e}.Resolve(q, c)
+}
+
+// decompiled finds a package path (javax/baja/…/X.java) in every organized/ copy and versioned source tree.
+func (e *Engine) decompiled(p citeparse.Pointer) Result {
+	dirs, err := e.sourceDirs()
 	if err != nil {
 		return toolError(err)
 	}
-	f, err := r.e.inTrees(p.File, dirs, copies)
+	f, err := e.inTrees(p.Target, dirs, copies)
 	switch {
 	case err != nil:
 		return toolError(err)
 	case f == "":
-		return Result{Status: MissingFile, Detail: p.File + " not under a root, organized/ copy or " + r.e.roots.Version + " source"}
+		return Result{Status: MissingFile, Detail: p.Target + " not under a root, organized/ copy or " + e.roots.Version + " source"}
 	}
-	return r.e.hit(q, f)
+	return e.hit(p, f)
+}
+
+// infix resolves `<dir or part>/…/<suffix>`: a file below that directory (or module part's copies)
+// whose path ends in /<suffix>.
+func (e *Engine) infix(p citeparse.Pointer, c *Card) Result {
+	prefix, suffix, _ := strings.Cut(p.Target, "/…/")
+	ro := e.roots
+	var dirs []string
+	if !strings.Contains(prefix, "/") {
+		dirs = e.moduleDirs(prefix)
+	}
+	if d, err := first(prefix, c.Dir, ro.Kit, ro.Repo, ro.Research, e.help(), ro.Modules); err != nil {
+		return toolError(err)
+	} else if d != "" {
+		dirs = append(dirs, d)
+	}
+	for _, d := range dirs {
+		idx, err := e.fs.index(d)
+		if err != nil {
+			return toolError(err)
+		}
+		for _, h := range idx[filepath.Base(suffix)] {
+			if strings.HasSuffix(h, "/"+suffix) {
+				return e.hit(p, h)
+			}
+		}
+	}
+	return Result{Status: MissingFile, Detail: "no " + suffix + " below " + prefix}
 }
 
 // sourceDirs lists every organized/<mod>/<part>/ and niagara-help/versions/<version>/source/<part>/.

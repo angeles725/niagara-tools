@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/angeles725/niagara-tools/go/internal/citeparse"
 )
@@ -146,11 +147,9 @@ func kind(path string) (string, error) {
 	switch {
 	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, os.ErrInvalid):
 		return "", nil
+	case errors.Is(err, syscall.ENOTDIR):
+		return "", nil
 	case err != nil:
-		var pe *fs.PathError
-		if errors.As(err, &pe) && strings.Contains(pe.Err.Error(), "not a directory") {
-			return "", nil
-		}
 		return "", err
 	case st.IsDir():
 		return "dir", nil
@@ -164,7 +163,7 @@ func (f *files) names(dir string) ([]string, error) {
 		return n, nil
 	}
 	ents, err := os.ReadDir(dir)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR) {
 		return nil, err
 	}
 	var n []string
