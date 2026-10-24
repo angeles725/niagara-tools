@@ -49,11 +49,11 @@ func buildJars(t *testing.T, dir string, _ map[string]string) []string {
 		if err != nil {
 			t.Fatal(err)
 		}
-		jar, err := jarlist.Build(spec)
+		jar, err := golden.BuildJar(string(spec))
 		if err != nil {
 			t.Fatalf("%s: %v", p, err)
 		}
-		if err := os.WriteFile(strings.TrimSuffix(p, ".spec"), jar, 0o644); err != nil {
+		if err := os.WriteFile(strings.TrimSuffix(p, ".spec"), []byte(jar), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		rel, _ := filepath.Rel(dir, strings.TrimSuffix(p, ".spec"))

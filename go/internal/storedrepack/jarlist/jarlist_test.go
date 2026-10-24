@@ -4,19 +4,21 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 )
 
 // TestListParts pins the head/rest split: the manifest and the signature entries the bash put first stay in
 // archive order, an orphan block or a nested .SF ends the head, and the rest is sorted by name.
 func TestListParts(t *testing.T) {
-	jar, err := Build([]byte("--- META-INF/MANIFEST.MF (stored) ---\nM\n--- META-INF/A.SF (stored) ---\ns\n" +
+	jar, err := golden.BuildJar("--- META-INF/MANIFEST.MF (stored) ---\nM\n--- META-INF/A.SF (stored) ---\ns\n" +
 		"--- META-INF/A.RSA (stored) ---\nr\n--- META-INF/C.RSA (stored) ---\no\n--- META-INF/B.SF (stored) ---\ns\n" +
-		"--- z (stored) ---\nz\n--- d/ (stored) ---\n--- a (noeol) ---\na\n--- b (base64) ---\nAAE=\n"))
+		"--- z (stored) ---\nz\n--- d/ (stored) ---\n--- a (noeol) ---\na\n--- b (base64) ---\nAAE=\n")
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := filepath.Join(t.TempDir(), "x.jar")
-	if err := os.WriteFile(p, jar, 0o644); err != nil {
+	if err := os.WriteFile(p, []byte(jar), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	got, err := List(p)
@@ -36,12 +38,5 @@ rest z stored size=2 sha256=c865f6c5ab8d1b0b +descriptor
 `
 	if got != want {
 		t.Errorf("got\n%swant\n%s", got, want)
-	}
-}
-
-// TestBuildRejectsBadBase64 pins that a broken spec fails instead of building a different jar.
-func TestBuildRejectsBadBase64(t *testing.T) {
-	if _, err := Build([]byte("--- x (base64) ---\n!!\n")); err == nil {
-		t.Error("Build accepted a bad base64 body")
 	}
 }

@@ -1,7 +1,7 @@
 // Command jartool is the recorder's side of the stored-repack goldens (../setup.sh builds it): the Go test
 // calls the same jarlist functions, so both sides build the input jars and list the output alike.
 //
-//	jartool build <spec> <jar>   write the jar a jarlist spec spells
+//	jartool build <spec> <jar>   write the jar a spec spells (golden.BuildJar)
 //	jartool list <jar>           print the jarlist listing of a jar
 package main
 
@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 	"github.com/angeles725/niagara-tools/go/internal/storedrepack/jarlist"
 )
 
@@ -26,11 +27,11 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		jar, err := jarlist.Build(spec)
+		jar, err := golden.BuildJar(string(spec))
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(args[2], jar, 0o644)
+		return os.WriteFile(args[2], []byte(jar), 0o644)
 	case len(args) == 2 && args[0] == "list":
 		l, err := jarlist.List(args[1])
 		if err != nil {

@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
-	"github.com/angeles725/niagara-tools/go/internal/storedrepack/jarlist"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 )
 
 // signedSpec is a deflated jar whose "everything else" entries are not in name order, with directory entries,
@@ -49,11 +49,11 @@ a rsa
 func run(t *testing.T, spec, out string) (dir string, code int, stdout, stderr string) {
 	t.Helper()
 	dir = t.TempDir()
-	jar, err := jarlist.Build([]byte(spec))
+	jar, err := golden.BuildJar(spec)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "in.jar"), jar, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "in.jar"), []byte(jar), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	var o, e bytes.Buffer
@@ -197,9 +197,9 @@ func TestExits(t *testing.T) {
 // TestRefuseExisting pins that an existing output is never touched.
 func TestRefuseExisting(t *testing.T) {
 	dir := t.TempDir()
-	jar, _ := jarlist.Build([]byte("--- META-INF/MANIFEST.MF ---\nM\n--- a ---\na\n"))
+	jar, _ := golden.BuildJar("--- META-INF/MANIFEST.MF ---\nM\n--- a ---\na\n")
 	in, out := filepath.Join(dir, "in.jar"), filepath.Join(dir, "out.jar")
-	if err := os.WriteFile(in, jar, 0o644); err != nil {
+	if err := os.WriteFile(in, []byte(jar), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(out, []byte("keep"), 0o644); err != nil {
@@ -216,10 +216,11 @@ func TestRefuseExisting(t *testing.T) {
 // fails the run with exit 1, and neither the output nor a temporary file is left beside it.
 func TestBadEntryLeavesNoOutput(t *testing.T) {
 	dir := t.TempDir()
-	jar, err := jarlist.Build([]byte("--- META-INF/MANIFEST.MF (stored) ---\nManifest-Version: 1.0\n--- a.txt (stored) ---\nhello\n"))
+	spelled, err := golden.BuildJar("--- META-INF/MANIFEST.MF (stored) ---\nManifest-Version: 1.0\n--- a.txt (stored) ---\nhello\n")
 	if err != nil {
 		t.Fatal(err)
 	}
+	jar := []byte(spelled)
 	i := bytes.LastIndex(jar, []byte("hello"))
 	jar[i] = 'j' // the local data changes, the CRC in both headers does not
 	in, out := filepath.Join(dir, "in.jar"), filepath.Join(dir, "out.jar")

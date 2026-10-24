@@ -1,5 +1,6 @@
-// Package jarlist is the test side of the stored-repack goldens: Build spells an input jar from a text spec,
-// and List prints what a repacked jar must keep, in a form the bash recording and the Go replay both produce.
+// Package jarlist is the test side of the stored-repack goldens: List prints what a repacked jar must keep, in a
+// form the bash recording and the Go replay both produce. The input jars are spelled in the "(jar)" sub-section
+// format of the shared golden cases and built by golden.BuildJar.
 //
 // The golden contract is semantic, not byte identity: zip(1) and archive/zip write different timestamps,
 // attributes and header layouts, so a listing holds what a consumer of the jar observes: the entry names,
@@ -9,74 +10,13 @@ package jarlist
 
 import (
 	"archive/zip"
-	"bytes"
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"path"
 	"sort"
 	"strings"
 )
-
-// Build is the zip a spec spells: one "--- <entry> (stored|deflated)[ (noeol)|(base64)] ---" header line per
-// entry, in archive order, its body the entry's bytes (the "(jar)" sub-section spelling of the shared golden
-// format). An entry without a method marker is deflated; a name ending in "/" is a directory entry.
-func Build(spec []byte) ([]byte, error) {
-	var buf bytes.Buffer
-	zw := zip.NewWriter(&buf)
-	var name, body string
-	open := false
-	flush := func() error {
-		if !open {
-			return nil
-		}
-		method, entry := uint16(zip.Deflate), name
-		data := body
-		for {
-			switch {
-			case strings.HasSuffix(entry, " (stored)"):
-				method, entry = zip.Store, strings.TrimSuffix(entry, " (stored)")
-				continue
-			case strings.HasSuffix(entry, " (deflated)"):
-				method, entry = zip.Deflate, strings.TrimSuffix(entry, " (deflated)")
-				continue
-			case strings.HasSuffix(entry, " (noeol)"):
-				entry, data = strings.TrimSuffix(entry, " (noeol)"), strings.TrimSuffix(data, "\n")
-				continue
-			case strings.HasSuffix(entry, " (base64)"):
-				entry = strings.TrimSuffix(entry, " (base64)")
-				b, err := base64.StdEncoding.DecodeString(strings.TrimSpace(data))
-				if err != nil {
-					return fmt.Errorf("%s: %w", entry, err)
-				}
-				data = string(b)
-				continue
-			}
-			break
-		}
-		w, err := zw.CreateHeader(&zip.FileHeader{Name: entry, Method: method})
-		if err == nil {
-			_, err = io.WriteString(w, data)
-		}
-		return err
-	}
-	for _, ln := range strings.SplitAfter(string(spec), "\n") {
-		if strings.HasPrefix(ln, "--- ") && strings.HasSuffix(ln, " ---\n") {
-			if err := flush(); err != nil {
-				return nil, err
-			}
-			name, body, open = strings.TrimSuffix(strings.TrimPrefix(ln, "--- "), " ---\n"), "", true
-		} else if open {
-			body += ln
-		}
-	}
-	if err := flush(); err != nil {
-		return nil, err
-	}
-	err := zw.Close()
-	return buf.Bytes(), err
-}
 
 // List describes the zip at path: an "entries <n>" line, then one line per entry,
 // "<part> <name> <method> size=<n> sha256=<16 hex>[ +descriptor]". The "head" part is the leading run of
