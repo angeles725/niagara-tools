@@ -16,7 +16,7 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 | Point folder | `BPointDeviceExt` | `getProxyExtType()` |
 | Proxy ext | `BProxyExt` | `getMode()`, `readSubscribed(cx)`, `readUnsubscribed(cx)`, `write(cx)` |
 
-`BProxyExt` is a point extension (`implements BAbstractProxyExt`) — it sits as a child of a
+`BProxyExt` is a point extension (`extends BAbstractProxyExt`) — it sits as a child of a
 `BControlPoint`, not as a standalone component. [ev: code BProxyExt.java:120; corpus B810 §810.1]
 
 ### 1.2 · Which network base?
@@ -33,15 +33,15 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 
 ### 1.3 · WB device-manager presence rule and plugin-extensible SPI [ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]
 
-**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1057]`
+**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1061 PD-01; CCN example B1057]`
 
 **Driver modules with NO Hx/UX intent MUST state that explicitly (PD-13):** when a driver module deliberately ships no `-ux` profile and relies entirely on the base Niagara hx-wb for its browser view, add a comment in the module's `SKILL.md` / README: `# UX: none — relies on base hx-wb`. This prevents a future developer from adding a redundant `-ux` scaffold when the driver's intent is station-side only. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ13]` `[ev: corpus B1061]`
 
 ### 1.4 · Plugin-extensible manager SPI — multi-device-family alternative [ev: retro honeywell-wb-rt-wb-deltas Δ1]
 
-When multiple device families share one `BAbstractManager` container (wb side), avoid subclassing the manager once per family. Instead, implement a **plugin SPI** (`BIHonDeviceModel` or equivalent `BIHonBacnetDeviceModel`) per family module; the shared framework discovers all registered implementations via `NiagaraRegistryUtil.getImplementersOfTypeSpec()`.
+When multiple device families share one `BAbstractManager` container (wb side), avoid subclassing the manager once per family. Instead, implement a **plugin SPI** (`BIHonDeviceModel` or equivalent `BIHonBacnetDeviceModel`) per family module; the shared framework discovers all registered implementations via Honeywell's own helper `NiagaraRegistryUtil.instance().getImplementersOfTypeSpec(String)`.
 
-- Each SPI implementer declares `getSupportedModelSpecs()`, `createColumns()`, and `createCommands()`.
+- Each SPI implementer declares `getSupportedModels()`, `getSupportedColumns()`, `getSupportedDiscoveryColumns()`, `getSupportedCommands(BWidget)`, and `getDeviceType()`.
 - Register via a plain `<type>` in `module.xml` — no `@AgentOn`.
 - Prefer this over a Manager subclass when the manager framework already exists and you are contributing a new device-family module on top of it.
 
@@ -57,7 +57,7 @@ are under niagara-research `organized/`; `W=webEditors/webEditors-ux/extracted/r
 
 - **AMD ids:** `nmodule/webEditors/rc/wb/mgr/Manager`, `.../mgr/model/MgrModel`, `.../mgr/model/MgrColumn`,
   `nmodule/driver/rc/wb/mgr/DeviceMgr`, `DeviceMgrModel`, `PointMgr`, `PointMgrModel`. [CERT-doc]
-  `niagara-help/devguide-clean/jsdoc/driver-ux/module-nmodule_driver_rc_wb_mgr_DeviceMgrModel.txt:34`
+  `niagara-help/versions/4.15.6.20/devguide-clean/jsdoc/driver-ux/module-nmodule_driver_rc_wb_mgr_DeviceMgrModel.txt:34`
 - **Extend `DeviceMgr`/`PointMgr` and `DeviceMgrModel`/`PointMgrModel`, never `Manager`/`MgrModel`** — Tridium
   marks the base framework incubating. [CERT] `W/Manager.js:72-75`, `W/model/MgrModel.js:44-48`
 - **View contract:** constructor `{moduleName, keyName}` (lexicon + saved state); `makeModel(value)` returns
@@ -94,7 +94,7 @@ to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
 - **Manager columns and discovery** (verified live on the course driver): a device column comes from a property facet
   `SfUtil.incl(SfUtil.MGR_EDIT)` (or `MGR_EDIT_READONLY`) (`ndriver-rt/…/util/SfUtil.java:15,28`, vineflower); a point
   manager is `@NiagaraType(agent = @AgentOn(types = {"<mod>:<X>PointDeviceExt", "<mod>:<X>PointFolder"}))` extending
-  `BNPointManager` with `NPointModel`/`NPointController` (`ndriver-wb/…/ui/point/BNPointManager.java:24-41`); a
+  `BNPointManager` with `NPointModel`/`NPointController` (`ndriver-wb/…/ui/point/BNPointManager.java:36-41,70,98`, docSource); a
   proxy-ext column is `new MgrColumn.PropPath(new Property[] {BControlPoint.proxyExt, B<X>ProxyExt.<slot>}, MgrColumn.EDITABLE)`
   (`workbench-wb/…/mgr/MgrColumn.java:730`); `getNewTypes()` restricts the New menu. `doSubmitDiscoveryJob(prefs, cx)`
   submits with `job.submit(cx)` — the wizard's `job.submit(null)` runs the job with no user (`lint-driver-scaffold.sh`
@@ -104,7 +104,7 @@ to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
 
 ### 1.7 · NDriver — layers, threads and request/response correlation `[ev: corpus B1239 §1239.12-§1239.13]`
 
-Paths are `ndriver-rt/com/tridium/ndriver/…` (vineflower, docSource) unless named.
+Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named.
 
 - **Layers** (course Lab 11 `[CERT]`): the network owns the comm stack (a `BCommConfig` subclass such as
   `BTcpCommConfig`, driving `NComm`); one `NMessage` subclass per message type; one `LinkMessage` subclass frames
@@ -125,7 +125,7 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (vineflower, docSource) unless na
   1 s, no retry. Set both per message (`setResponseTimeOut`, `setRetryCount`) from the device's real latency.
 - **Defect checklist** — the course reference driver ships each one (B1239 §1239.12): keep subscription bookkeeping
   per instance (the reference holds `private static final Set<String> subscribedPoints`,
-  `BTrafficLightDriverDevice.java:414`, shared by every device); bounds-check `LinkMessage.receive` against the
+  course `…/Lab11 NDriver/4 Reading and Writing Points/BTrafficLightDriverDevice.java:317`, shared by every device); bounds-check `LinkMessage.receive` against the
   buffer; check a response's error flag before parsing its payload; log frames at FINE, not INFO; guard every
   proxy-ext cast with `instanceof` (`BNPollScheduler.doPoll` catches it and only calls `printStackTrace()`,
   `poll/BNPollScheduler.java:48-59`).
@@ -138,7 +138,8 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (vineflower, docSource) unless na
 Three overrides — the framework calls them, never call them yourself. Neither read callback may block: do the
 I/O on another thread and report each result with `readOk(value)` / `readFail(cause)` `[CERT]`
 `organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/point/BProxyExt.java:851-869`.
-`getPollScheduler()` stands for your network's own accessor; `BPollScheduler.subscribe(p)` / `unsubscribe(p)` are
+`getPollScheduler()` and `postWrite(...)` stand for your network's own accessors (`getNetwork()` returns `BDeviceNetwork`,
+which has neither; cast to your network type, e.g. a `BBasicNetwork`); `BPollScheduler.subscribe(p)` / `unsubscribe(p)` are
 `util/BPollScheduler.java:1130,1154`. [ev: retro devguide415-nav-subscriptions-tags-ords Δ1] `[ev: corpus B1306 §1306.2 C1]`
 
 ```java
@@ -165,12 +166,12 @@ public boolean write(Context cx) throws Exception {
 ```
 
 Callback pair: `readOk(value)` / `readFail(cause)` and `writeOk()` / `writeFail(cause)` — call
-these from your comm thread to update the point's `out` slot. [ev: code BProxyExt.java:859,883,895;
+these from your comm thread to update the point's `out` slot. [ev: code BProxyExt.java:895,923,937,970;
 corpus B810 §810.3]
 
 **`write()` returns whether a write is pending.** `true` = enqueued, the driver later calls `writeOk()` or
 `writeFail()`; `false` = cancelled at once, and `Tuning` clears the pending flag (`driver-rt/…/point/BProxyExt.java:872-883`,
-`Tuning.java:346-351`, vineflower). An async driver that returns `false` reports "not pending" for a write it
+`Tuning.java:346-351`, docSource). An async driver that returns `false` reports "not pending" for a write it
 still sends. NDriver threading: § 1.7. [ev: retro n4-course-drivers-bql-ords-files Δ3]
 
 **Enum proxy points show state names only with a frozen-enum range.** Set the point's `range` facet through
@@ -189,9 +190,9 @@ OVERRIDDEN from the flags; the cost is one extra Status_Flags read per poll, or 
 notification omits the flags (corpus B1348 §1348.2 rows 4-7). A dashboard health read is only as good as this facet
 (`types/dashboard.md` § Facade contract). Owed Go lint G36 `bacnet-status-flags` (bog check).
 
-**Gotcha:** a write to a DOWN/FAULT/DISABLED device is **silently dropped** — `Tuning.write()`
+**Gotcha:** a write to a DOWN, DISABLED or fatally faulted device is **silently dropped** — `Tuning.write()`
 calls `isOperational()` first and returns without queuing if false. The write is NOT retried unless
-`BTuningPolicy.writeOnUp=true` (default true). [ev: code Tuning.java:332-333; corpus B810 §810.4]
+`BTuningPolicy.writeOnUp=true` (default true). [ev: code Tuning.java:332-333, :549-552, :629; corpus B810 §810.4]
 
 ---
 
