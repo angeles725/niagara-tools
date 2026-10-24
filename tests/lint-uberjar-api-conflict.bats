@@ -60,3 +60,24 @@ KTS
   [ "$(printf '%s\n' "$output" | grep -c 'is both')" -eq 2 ]
   [[ "$output" == *"g:ml is both"* && "$output" == *"g:sp is both"* ]]
 }
+
+# Truth fix T2: a coordinate held in a val (`val jackson = "g:a:1"`, then `api(jackson)`) is the same
+# dependency as the literal; the bash grep saw only string arguments, so the conflict passed.
+@test "UAC4: a coordinate in a val is resolved (uberjar(lib) + api(\"g:a\"))" {
+  # Mutation: UAC4 -- not resolving a val argument misses the conflict of a coordinate held in a variable.
+  cat > "$TMPDIR_T/M/x-rt.gradle.kts" <<'KTS'
+val jackson = "com.fasterxml.jackson.core:jackson-core:2.13.1"
+val csv: String = "com.opencsv:opencsv:5.7.1"
+dependencies {
+  uberjar(jackson)
+  api("com.fasterxml.jackson.core:jackson-core:2.13.1")
+  uberjar(csv)
+  uberjar(unknown)
+  api(unknown)
+}
+KTS
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'is both')" -eq 1 ]
+  [[ "$output" == *"com.fasterxml.jackson.core:jackson-core is both"* ]]
+}

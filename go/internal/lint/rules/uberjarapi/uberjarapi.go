@@ -43,22 +43,57 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Warn }
 
+// stringVals are the vals and vars of the script initialised with a string literal (`val x = "..."` or
+// `val x: String = "..."`), by name; a name declared twice with different values is left out (unknown).
+func stringVals(toks []ktssrc.Token) map[string]string {
+	vals, twice := map[string]string{}, map[string]bool{}
+	for k := 0; k+3 < len(toks); k++ {
+		kw, name := toks[k], toks[k+1]
+		if kw.Kind != ktssrc.Ident || (kw.Text != "val" && kw.Text != "var") || name.Kind != ktssrc.Ident {
+			continue
+		}
+		j := k + 2
+		if toks[j].Text == ":" && j+2 < len(toks) && toks[j+1].Text == "String" {
+			j += 2
+		}
+		if j+1 >= len(toks) || toks[j].Text != "=" || toks[j+1].Kind != ktssrc.String {
+			continue
+		}
+		if v, seen := vals[name.Text]; seen && v != toks[j+1].Value {
+			twice[name.Text] = true
+		}
+		vals[name.Text] = toks[j+1].Value
+	}
+	for n := range twice {
+		delete(vals, n)
+	}
+	return vals
+}
+
 // Check reports, in byte order, every group:artifact the file both uberjar()s and api()s or
 // implementation()s. The calls are read as Kotlin tokens (truth fix T1; the bash grep read raw text): a
-// configuration name, "(", one string literal, ")", with any layout between them; comments and strings
+// configuration name, "(", one string literal or a val initialised with one, ")", with any layout between them; comments and strings
 // hold no call. A script ktssrc cannot read is a scan error (exit 3).
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	toks, err := ktssrc.Tokens(strings.Join(f.Raw, "\n"))
 	if err != nil {
 		return nil, err
 	}
+	vals := stringVals(toks)
 	bundled, declared := map[string]bool{}, map[string]bool{}
 	for k := 0; k+3 < len(toks); k++ {
 		name, open, dep, shut := toks[k], toks[k+1], toks[k+2], toks[k+3]
-		if name.Kind != ktssrc.Ident || open.Text != "(" || dep.Kind != ktssrc.String || shut.Text != ")" {
+		if name.Kind != ktssrc.Ident || open.Text != "(" || shut.Text != ")" {
 			continue
 		}
-		m := coordinate.FindStringSubmatch(dep.Value)
+		value, ok := dep.Value, dep.Kind == ktssrc.String
+		if dep.Kind == ktssrc.Ident { // a val holding the coordinate (truth fix T2)
+			value, ok = vals[dep.Text]
+		}
+		if !ok {
+			continue
+		}
+		m := coordinate.FindStringSubmatch(value)
 		switch {
 		case m == nil:
 		case name.Text == "uberjar":

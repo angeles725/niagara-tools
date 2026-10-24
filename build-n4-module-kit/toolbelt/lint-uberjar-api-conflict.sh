@@ -21,6 +21,7 @@
 # Mutation: UAC2 -- skip the intersection and UAC2 stops warning on a lib both uberjar'd and api'd
 # Mutation: UAC-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 # Mutation: UAC3 -- matching raw text makes a commented or string api() a conflict and misses a split call
+# Mutation: UAC4 -- not resolving a val argument misses a conflict whose coordinate is held in a variable
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
