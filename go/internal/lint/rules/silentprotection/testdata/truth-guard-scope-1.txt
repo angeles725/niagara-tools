@@ -1,0 +1,49 @@
+declared difference (truth fix, issue #459 silent-protection): a trip was "on condition" when any if( stood within
+10 lines above it in the method, even an if whose statement had already ended: PANCCADIA CompressorControl.java:963
+(17c80d3) `target = Math.min(target, available);` is an unconditional capacity cap below a closed
+`if (c.minStagesOn > 0) { ... }` block (line 10 here). An if( now guards a trip only when the trip's line lies in
+that if statement (its condition, its then or else branch, braced or not). The facade pairing the issue names is
+already in place and pinned here: BCompressorControl writes its dischargeHighAlarm SUMMARY slot from
+ctl.dischargeHigh, so the pure class's `if (dischargeHigh)` cap (line 11) is surfaced. The compound LP shed
+(line 12), a trip inside an open block (15), in an else branch (17) and under a braceless if on the line above
+(19) still WARN.
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/src/com/x/CompressorControl.java:12  step forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/src/com/x/CompressorControl.java:15  step forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/src/com/x/CompressorControl.java:17  step forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/src/com/x/CompressorControl.java:19  step forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- src/com/x/CompressorControl.java --
+package com.x;
+public class CompressorControl {
+  boolean dischargeHigh;
+  int step(int target, int available, int autoOn, boolean suctionValid, boolean low, boolean x, boolean y, Cfg c) {
+    if (c.minStagesOn > 0)
+    {
+      int handCount = 0;
+      target = Math.max(target, c.minStagesOn - handCount);
+    }
+    target = Math.min(target, available);
+    if (dischargeHigh) target = Math.min(target, autoOn);
+    if (suctionValid && low) target = Math.min(target, autoOn - 1);
+    if (x) {
+      a();
+      target = Math.min(target, 1);
+    }
+    if (x) a(); else target = Math.min(target, 2);
+    if (y)
+      target = Math.min(target, 3);
+    return target;
+  }
+}
+-- src/com/x/BCompressorControl.java --
+package com.x;
+@NiagaraProperty(name = "dischargeHighAlarm", type = "BStatusBoolean", defaultValue = "new BStatusBoolean(false)", flags = Flags.SUMMARY | Flags.READONLY)
+public class BCompressorControl extends BComponent {
+  void publish(CompressorControl ctl) {
+    getDischargeHighAlarm().setValue(ctl.dischargeHigh);
+  }
+}

@@ -1,0 +1,48 @@
+declared difference (truth fix, issue #459 catch-no-400): a catch whose only statement returns a call that
+receives the parse's own input (`return range.get(tag);`, PANCCADIA BDashboardServlet.java:623, Umbrella
+BUmbrellaServlet.java:385) reads the value a second way; it substitutes no default, so it is no row (lines 5, 30).
+A constant or unrelated return (lines 10, 14), a conditional over the input (line 18), a side effect instead of
+a return (line 22) and a call that never receives the input (line 26) still WARN.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  catch-no-400  BCat.java:10  catch around parse without 400 response (silent default may write bad value)
+WARN  catch-no-400  BCat.java:14  catch around parse without 400 response (silent default may write bad value)
+WARN  catch-no-400  BCat.java:18  catch around parse without 400 response (silent default may write bad value)
+WARN  catch-no-400  BCat.java:22  catch around parse without 400 response (silent default may write bad value)
+WARN  catch-no-400  BCat.java:26  catch around parse without 400 response (silent default may write bad value)
+-- stderr --
+-- m/BCat.java --
+package com.x;
+public class BCat extends BWebServlet {
+  BValue enumValue(BEnum e, String tag) {
+    try { return e.getRange().get((int) Double.parseDouble(tag), false); }
+    catch (NumberFormatException nfe) { return e.getRange().get(tag); }
+  }
+  double zero(String s) {
+    if (s == null) return 0.0;
+    try { return Double.parseDouble(s.trim()); }
+    catch (NumberFormatException e) { return 0.0; }
+  }
+  double fallback(String s) {
+    try { return Double.parseDouble(s.trim()); }
+    catch (NumberFormatException e) { return fallback; }
+  }
+  int conditional(String s) {
+    try { return Integer.parseInt(s); }
+    catch (NumberFormatException e) { return s.isEmpty() ? 0 : 1; }
+  }
+  void sideEffect(String tag) {
+    try { v = Integer.parseInt(tag); }
+    catch (NumberFormatException e) { v = lookup(tag); }
+  }
+  int other(String s, String d) {
+    try { return Integer.parseInt(s); }
+    catch (NumberFormatException e) { return lookup(d); }
+  }
+  double reread(String s) {
+    try { return Double.parseDouble(s); }
+    catch (NumberFormatException e) { return lookup(s.replace(',', '.')); }
+  }
+}

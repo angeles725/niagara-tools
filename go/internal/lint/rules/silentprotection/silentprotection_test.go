@@ -15,7 +15,7 @@ import (
 
 // TestGolden: every tests/lint-silent-protection.bats run on a tree and every edge tree, recorded from the
 // bash lint (the empty-root, unreadable and literal cases are table tests below).
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 39) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 40) }
 
 // run runs the rule alone, as its wrapper does, and returns the exit code, stdout and stderr with dir
 // spelled @DIR@.

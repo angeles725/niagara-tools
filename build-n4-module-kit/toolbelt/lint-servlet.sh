@@ -24,7 +24,12 @@
 #                       try without one and past a clause that throws; when none catches it, the first clause
 #                       of the innermost try that has one (fixed 2026-10-24: the bash/awk took the first catch
 #                       within 4 lines after the try's end, unrelated or of an outer try, and missed
-#                       try-with-resources and the right multi-catch clause).
+#                       try-with-resources and the right multi-catch clause). A catch whose only statement
+#                       is `return <expr>;` (no ?:) where expr passes to a call a name the try's parse call
+#                       received (`catch (NumberFormatException e) { return range.get(tag); }`) re-reads the
+#                       input a second way and is no row: it proves the fallback is a function of the input,
+#                       not that the second read rejects a bad value (BEnumRange.get(String) throws on an
+#                       unknown tag; a lookup mapping any text to a value would pass too) [ev: issue #459].
 #   cache-nofinger WARN Cache-Control max-age>0 in the file without a fingerprinted resource
 #                       (static detection: Cache-Control and max-age=[1-9] on one line).
 #   log-in-handler WARN LOG.info( inside a doGet/doPost/service handler body.
@@ -71,6 +76,7 @@
 # Mutation: LSV2e -- a 5-line look-back for "try {" lets doGet's try guard doPost's Integer.parseInt(
 # Mutation: LSV2f -- taking the first catch within 4 lines of the try's end judges a multi-catch by its IOException clause
 # Mutation: LSV2g -- finding the try by the "try {" regex FAILs a parse inside try (Reader r = open()) { ... }
+# Mutation: LSV2h -- dropping the re-read check WARNs `catch (NumberFormatException e) { return range.get(tag); }`
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

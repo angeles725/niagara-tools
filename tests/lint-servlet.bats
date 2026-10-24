@@ -235,3 +235,18 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN  catch-no-400  S.java:5  "* ]]
 }
+
+@test "LSV2h: a catch that re-reads the parse input (enum ordinal-or-tag) is no catch-no-400 row; a constant return still WARNs" {
+  # Mutation: LSV2h -- dropping the re-read check WARNs the enum tag fallback again (PANCCADIA BDashboardServlet.java:623).
+  # [ev: issue #459 catch-no-400]
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf '%s\n' 'public class S extends BWebServlet {' '  BValue e(BEnum e, String tag) {' \
+    '    try { return e.getRange().get((int) Double.parseDouble(tag), false); }' \
+    '    catch (NumberFormatException nfe) { return e.getRange().get(tag); }' '  }' \
+    '  double d(String s) {' '    try { return Double.parseDouble(s.trim()); }' \
+    '    catch (NumberFormatException x) { return 0.0; }' '  }' '}' > "$ONE/S.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"S.java:4  "* ]]
+  [[ "$output" == *"WARN  catch-no-400  S.java:8  "* ]]
+}

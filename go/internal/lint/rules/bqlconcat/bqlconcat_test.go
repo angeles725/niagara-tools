@@ -8,7 +8,7 @@ import (
 
 // TestGolden: every tests/lint-bql-string-concat.bats run and every edge tree, recorded from the bash lint, plus
 // the hand-written truth-* cases of the comment- and string-aware match.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 18) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 19) }
 
 // TestUnreadable: an unreadable sub-directory and file keep the awk_lint_list contract (ContinueOnWalkError):
 // both env lines, the rows of the files that were read, exit 3.

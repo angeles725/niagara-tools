@@ -139,6 +139,18 @@ func decidingCatches(t javasrc.Tries) []javasrc.Catch {
 	return out
 }
 
+// owner is the try statement clause c is attached to.
+func owner(t javasrc.Tries, c javasrc.Catch) javasrc.Try {
+	for _, tr := range t.List {
+		for _, x := range tr.Catches {
+			if x.At == c.At {
+				return tr
+			}
+		}
+	}
+	return javasrc.Try{}
+}
+
 // catches reports whether clause c catches a parse failure.
 func catches(c javasrc.Catch) bool {
 	for _, ty := range c.Types {
@@ -218,7 +230,8 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 
 	tries := javasrc.TryBlocks(code)
 	for _, c := range decidingCatches(tries) {
-		if !badRequest.MatchString(tries.Text[c.Body.Open:min(c.Body.Close+1, len(tries.Text))]) {
+		if !badRequest.MatchString(tries.Text[c.Body.Open:min(c.Body.Close+1, len(tries.Text))]) &&
+			!rereads(tries.Text, owner(tries, c), c) {
 			add(lint.Unset, "catch-no-400", tries.Line(c.At), msgCatch)
 		}
 	}

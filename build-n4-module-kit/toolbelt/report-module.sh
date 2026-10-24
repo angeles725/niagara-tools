@@ -17,7 +17,7 @@
 # node/acorn as in lint-vendor-floor.sh (KIT_NODE, KIT_ACORN). Install once:
 # npm install --prefix build-n4-module-kit/toolbelt/eslint   (exact-pinned direct deps; no lockfile
 # is committed — see toolbelt/eslint/.gitignore). A frontend member with WARN rows and no FAIL reports
-# PASS "no FAIL (N WARN row(s) above)", never "clean".
+# PASS "no failing row (N WARN row(s) above)", never "clean".
 # [ev: retro dashboard-frontend-standard Δ10] [ev: retro dashboard-frontend-standard Δ16]
 # Link endpoints (polish-2026-10-02 P1): lint-link-target-flags.sh <artifact>/src per artifact, with
 # --wiring-map <file> when given, else <module-root>/docs/wiring-map.md, else <module-root>/../docs/
@@ -38,6 +38,12 @@
 # of an advisory member is an ERROR row carrying the member's first non-row output line (exit 3), never PASS.
 # lint-slotomatic-markers.sh <artifact>/src (FAIL; a WARN unclosed-region row relayed): a generated region
 # whose stamp count is not 1 is skipped by Slot-o-Matic while the build stays green (METHODOLOGY.md K15).
+# Go-ported members (issue #459): lint-persist-hot-write, lint-changed-hot-write, lint-inert-coordination,
+# lint-session-store-lazy-evict, lint-bformat-call (WARN), lint-service-types and lint-driver-scaffold (FAIL/WARN)
+# on <artifact>/src; lint-wb-external-ord-value on a -wb src/; lint-spa-poll-no-recovery on a -ux src/rc/; once
+# per run on <module-root>: lint-duplicate-helper, lint-machine-default-path, lint-inline-site-literal (a module
+# with no source they read is a SKIP row). lint-manual-labels is not a member: it needs an operator manual
+# path, which a module root does not name.
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
@@ -49,6 +55,7 @@
 # (no jar expected); floor SKIPs stay rows and are named on stderr. [ev: retro change-tier-time-budgets Δ3]
 # Mutation: RM-floor -- dropping the floor-SKIP verdict reads a run that checked neither floor member as CLEAN
 # Mutation: RM-floor-schema -- --first-deploy ignored keeps a never-deployed module INCOMPLETE forever
+# Mutation: RM-n4lint -- dropping a Go-ported member's invocation loses its rows from the report
 # Mutation: RM-wp-env -- mapping every exit 3 to SKIP no write-path-matrix.md hides a broken write-path scan
 # Exit: 0 clean (zero FAIL) · 1 any FAIL · 2 usage · 3 env (member env fault) · 4 INCOMPLETE (a floor check — verify-module, schema-risk — SKIPped; --first-deploy / --lint-only, see below)
 # This script is VCS-free by design. version control is never invoked.
@@ -200,8 +207,9 @@ relay_rows() {
 }
 
 # pass_after_relay <artifact> <check> — the member verdict row after relay_rows: nothing when a FAIL row
-# was relayed (the FAIL speaks), PASS "clean" only when no row was relayed, else PASS "no FAIL (N WARN
-# row(s) above)" — a member with WARN rows is never reported "clean".
+# was relayed (the FAIL speaks), PASS "clean" only when no row was relayed, else PASS "no failing row (N WARN
+# row(s) above)" — a member with WARN rows is never reported "clean". The detail never spells FAIL, so a
+# grep for FAIL counts FAIL rows only (issue #459).
 pass_after_relay() {
   local _n=$((RELAY_WARN + RELAY_ADV)) _what
   [ "$RELAY_FAIL" -eq 0 ] || return 0
@@ -209,7 +217,7 @@ pass_after_relay() {
   _what="$RELAY_WARN WARN"
   [ "$RELAY_ADV" -gt 0 ] && _what="$_what, $RELAY_ADV ADVISORY"
   if [ "$_n" -eq 1 ]; then _what="$_what row above"; else _what="$_what rows above"; fi
-  emit "$1" PASS "$2" "no FAIL ($_what)"
+  emit "$1" PASS "$2" "no failing row ($_what)"
 }
 
 # advisory_member <artifact> <check> <exit> <output> — an advisory (WARN-only, run without --strict) lint:
@@ -542,6 +550,41 @@ for ADIR in "${ARTIFACTS[@]}"; do
   fi
 
   # ----------------------------------------------------------------
+  # 5.11b. Go-ported (n4lint) src lints on <artifact>/src (issue #459; SKIP if no src/):
+  #    WARN-only (run without --strict): persist-hot-write, changed-hot-write, inert-coordination,
+  #    session-store-lazy-evict, bformat-call; FAIL rows block: service-types (FAIL/WARN), driver-scaffold
+  #    (FAIL/WARN). No verdict row: a clean member adds no row, its rows speak (as 5.9-5.11).
+  # ----------------------------------------------------------------
+  if have_src lint-persist-hot-write; then
+    _rc=0; _o=$("$TOOLBELT/lint-persist-hot-write.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-persist-hot-write "$_rc" "$_o" WARN -
+  fi
+  if have_src lint-changed-hot-write; then
+    _rc=0; _o=$("$TOOLBELT/lint-changed-hot-write.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-changed-hot-write "$_rc" "$_o" WARN -
+  fi
+  if have_src lint-inert-coordination; then
+    _rc=0; _o=$("$TOOLBELT/lint-inert-coordination.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-inert-coordination "$_rc" "$_o" WARN -
+  fi
+  if have_src lint-session-store-lazy-evict; then
+    _rc=0; _o=$("$TOOLBELT/lint-session-store-lazy-evict.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-session-store-lazy-evict "$_rc" "$_o" WARN -
+  fi
+  if have_src lint-bformat-call; then
+    _rc=0; _o=$("$TOOLBELT/lint-bformat-call.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-bformat-call "$_rc" "$_o" WARN -
+  fi
+  if have_src lint-service-types; then
+    _rc=0; _o=$("$TOOLBELT/lint-service-types.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-service-types "$_rc" "$_o" 'FAIL|WARN' -
+  fi
+  if have_src lint-driver-scaffold; then
+    _rc=0; _o=$("$TOOLBELT/lint-driver-scaffold.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-driver-scaffold "$_rc" "$_o" 'FAIL|WARN' -
+  fi
+
+  # ----------------------------------------------------------------
   # 5.12. lint-se-display.sh <artifact>/src (FAIL; only -se artifacts; SKIP if no src/)
   # ----------------------------------------------------------------
   case "$ANAME" in
@@ -560,6 +603,27 @@ for ADIR in "${ARTIFACTS[@]}"; do
     *-ux)
       _rc=0; _o=$("$TOOLBELT/lint-jasmine-ux.sh" "$ADIR" 2>&1) || _rc=$?
       lint_rows "$ANAME" lint-jasmine-ux "$_rc" "$_o" WARN - nosite
+    ;;
+  esac
+
+  # ----------------------------------------------------------------
+  # 5.13b. lint-wb-external-ord-value.sh <artifact>/src (WARN; only -wb artifacts; SKIP if no src/)
+  #        lint-spa-poll-no-recovery.sh <artifact>/src/rc (WARN; only -ux artifacts; SKIP if no src/rc/)
+  # ----------------------------------------------------------------
+  case "$ANAME" in
+    *-wb)
+      if have_src lint-wb-external-ord-value; then
+        _rc=0; _o=$("$TOOLBELT/lint-wb-external-ord-value.sh" "$ADIR/src" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-wb-external-ord-value "$_rc" "$_o" WARN -
+      fi
+    ;;
+    *-ux)
+      if [ -d "$ADIR/src/rc" ]; then
+        _rc=0; _o=$("$TOOLBELT/lint-spa-poll-no-recovery.sh" "$ADIR/src/rc" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-spa-poll-no-recovery "$_rc" "$_o" WARN -
+      else
+        emit "$ANAME" SKIP lint-spa-poll-no-recovery "no src/rc/"
+      fi
     ;;
   esac
 
@@ -844,6 +908,27 @@ fi
 # ----------------------------------------------------------------
 _rc=0; _o=$("$TOOLBELT/lint-bundled-jar-class-version.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
 lint_rows "(module)" lint-bundled-jar-class-version "$_rc" "$_o" FAIL rows base
+
+# ----------------------------------------------------------------
+# 13. Go-ported (n4lint) module-root lints — once per run (WARN, run without --strict; issue #459):
+#     lint-duplicate-helper, lint-machine-default-path, lint-inline-site-literal take <module-root> (they read
+#     every part: a helper duplicated across -rt/-ux, a site literal in rc/). A module with no source they read
+#     is their own "no ... sources" exit 3: a SKIP row naming it, not an env fault; any other exit 3 is ERROR.
+# ----------------------------------------------------------------
+# module_member <check> <exit> <output> <no-source text> — the module-root WARN member shape above.
+module_member() {
+  if [ "$2" -eq 3 ] && [[ "$3" == *"$4"* ]]; then
+    emit "(module)" SKIP "$1" "$4"
+  else
+    lint_rows "(module)" "$1" "$2" "$3" WARN -
+  fi
+}
+_rc=0; _o=$("$TOOLBELT/lint-duplicate-helper.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+module_member lint-duplicate-helper "$_rc" "$_o" "no *.java under a -rt, -ux or -wb part's src/"
+_rc=0; _o=$("$TOOLBELT/lint-machine-default-path.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+module_member lint-machine-default-path "$_rc" "$_o" "no *.java or *.js or *.properties sources found"
+_rc=0; _o=$("$TOOLBELT/lint-inline-site-literal.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+module_member lint-inline-site-literal "$_rc" "$_o" "no *.java under a -rt or -ux part's src/ and no *.js under an rc/"
 
 # ----------------------------------------------------------------
 # 7. triage-console.sh — once per run (Campaign 8 PR8; D9)

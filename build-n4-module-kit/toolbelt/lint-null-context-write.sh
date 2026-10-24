@@ -10,6 +10,16 @@
 # `.invoke(` is read to its balanced `)` across lines, and the row WARNs when it has two or more arguments and
 # the last one is `null` or a null cast to Context (`(Context) null`, `(javax.baja.sys.Context)null`). The row
 # line is the line of the call (where `.set(` is), and one line gives one row however many writes it holds.
+# Station-internal seed (issue #459): a null-Context write is no row when the code provably seeds a component
+# it owns with no caller-supplied value: the file serves no request (no BWebServlet, HttpServletRequest/
+# Response, WebOp, @NiagaraRpc or doGet/doPost/service), the write is in a method or constructor, its receiver
+# is `this` or a local name every assignment of which in the method is `(Cast) get(...)`/`this.get(...)` (an own
+# child), `new X(...)` or `X.TYPE.getInstance()`, never a parameter, and no value argument names a parameter.
+# Doctrine reading: types/security.md §1.1 is the servlet/user-write hazard (audit attribution + RBAC of the
+# invoking user); a station-internal write has no user to attribute, and a null Context is the documented norm
+# there (types/actions.md `fire(..., null)` for autonomous events, Slot-o-Matic setters `set(x, v, null)`). It
+# cannot prove a receiver that is a parameter, a field, a field access or a call result, or a value that flows
+# from a caller: those stay rows (chihuahua writeBool(comp, slot, v) does).
 #
 # A bql: ORD resolved with no caller Context — `BOrd.make("…bql:…").get(base)`, `.resolve(base)`, a bare
 # `.get()`/`.resolve()` or a `null` Context — runs the query with no user, so it sees every component regardless
@@ -48,6 +58,7 @@
 # Mutation: NCW-literal -- matching the unblanked Strip text WARNs on a write quoted inside a string literal
 # Mutation: NCW-wb-write -- skipping -wb files for both rules drops the -wb null-Context write row
 # Mutation: NCW-stmt -- matching the write on one line misses c.set(p,\n v,\n null) and (Context) null
+# Mutation: NCW-seed -- dropping the station-internal seed check WARNs an rt own-child seed from constants again
 # Mutation: NCW-bql-unrelated -- matching a one-argument get( anywhere in the window flags params.get("x") beside a clean get(base, cx)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

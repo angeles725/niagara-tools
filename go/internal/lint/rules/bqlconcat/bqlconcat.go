@@ -39,12 +39,22 @@ func (rule) Severity() lint.Severity { return lint.Warn }
 // Check reports every line that builds a query by concatenation: a bql: ORD text (inside a literal, read
 // from the comment-blanked line) or a BqlQuery.make( call (in the code), and a concatenation operator next
 // to a quote in the code. Code is linescan.Code (no comment, Javadoc or literal text), so a "//" inside a
-// string never hides the rest of a line and a commented or quoted BqlQuery.make( never matches.
+// string never hides the rest of a line and a commented or quoted BqlQuery.make( never matches. A line whose
+// every concatenated operand is provably a number or a boolean (numericOnly) is not an injection and is clean.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
+	var toks []javasrc.Token
+	var decls []javasrc.Decl
 	text := f.Stripped()
 	for i, code := range linescan.Code(f) {
 		if (strings.Contains(text[i], "bql:") || strings.Contains(code, "BqlQuery.make(")) && concat.MatchString(code) {
+			if toks == nil {
+				toks = javasrc.Tokens(text)
+				decls = javasrc.Decls(toks)
+			}
+			if numericOnly(toks, decls, i) {
+				continue
+			}
 			out = append(out, lint.Finding{Line: i + 1, Msg: "bql concat: " + linescan.Source(f.Raw[i])})
 		}
 	}

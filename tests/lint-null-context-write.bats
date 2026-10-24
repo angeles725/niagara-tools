@@ -118,3 +118,19 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"*"lint-null-context-write"*"$TMPDIR_T/link/src/A.java:1"* ]]
 }
+
+@test "NCW-seed: rt code seeding its own child from constants is clean; the same write from a parameter or in a servlet WARNs" {
+  # Mutation: NCW-seed -- dropping the station-internal seed check WARNs child.set(p, BString.make(LABELS[n]), null) again.
+  # [ev: issue #459 null-context-write; chihuahua BChiDashboardService.java:274]
+  printf '%s\n' 'class B extends BComponent {' '  void started() {' '    for (int n = 0; n < 6; n++) {' \
+    '      BComponent child = (BComponent) get("P" + n);' '      child.set(child.getProperty("label"), BString.make(LABELS[n]), null);' \
+    '    }' '  }' '  void put(String v) {' '    BComponent child = (BComponent) get("a");' \
+    '    child.set(child.getProperty("label"), BString.make(v), null);' '  }' '}' > "$TMPDIR_T/M/src/B.java"
+  printf '%s\n' 'class S extends BWebServlet {' '  void doPost(WebOp op) {' '    BComponent child = (BComponent) get("a");' \
+    '    child.set(child.getProperty("label"), BString.make("k"), null);' '  }' '}' > "$TMPDIR_T/M/src/S.java"
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"B.java:5 "* ]]
+  [[ "$output" == *"B.java:10  null-Context write"* ]]
+  [[ "$output" == *"S.java:4  null-Context write"* ]]
+}
