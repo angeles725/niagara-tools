@@ -198,3 +198,24 @@ func (e *Engine) short(path string) string {
 	}
 	return path
 }
+
+// inModule keeps the files below dirs, and the client files below a directory named module or module-<x>.
+func (e *Engine) inModule(module string, dirs []string) func(string) bool {
+	return func(p string) bool {
+		for _, d := range dirs {
+			if strings.HasPrefix(p, d+"/") {
+				return true
+			}
+		}
+		rel, err := filepath.Rel(e.roots.Clients, p)
+		if err != nil || strings.HasPrefix(rel, "..") {
+			return false
+		}
+		for _, seg := range strings.Split(filepath.Dir(rel), "/") {
+			if seg == module || strings.HasPrefix(seg, module+"-") {
+				return true
+			}
+		}
+		return false
+	}
+}

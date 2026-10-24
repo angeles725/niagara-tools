@@ -10,9 +10,6 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/citeparse"
 )
 
-// copies are the sub-directories of an organized/<mod>/<part>/ module copy that hold source files.
-var copies = []string{"vineflower", "decompiled", "extracted", ""}
-
 // registerFiles adds the resolvers of the pointers that name a file in a tree.
 func (e *Engine) registerFiles() {
 	e.by[citeparse.Path] = pathResolver{e}
@@ -86,17 +83,19 @@ func (e *Engine) hit(p citeparse.Pointer, path string) Result {
 }
 
 // headingMatcher matches a kit heading by number (`## 2. Software`, `### 2.2 Go`, `## 1 · How`) or by
-// title: the title's words and the heading's words (each cut at its first `—`, `(`, `[`, `:` or backtick,
+// title (a heading or the bold lead of a bullet): the title's words and the heading's words (each cut at its first `—`, `(`, `[`, `:` or backtick,
 // numbering dropped) agree until one of them ends, so a title that runs on into prose still matches.
 func headingMatcher(s string) func(string) bool {
 	tw := titleWords(s)
 	return func(l string) bool {
 		h, ok := headingText(l)
-		if !ok {
-			return false
-		}
 		if numeric.MatchString(s) {
-			return numbered(h, s)
+			return ok && numbered(h, s)
+		}
+		if !ok {
+			if h, ok = boldBullet(l); !ok {
+				return false
+			}
 		}
 		hw := titleWords(h)
 		n := 0
@@ -105,6 +104,17 @@ func headingMatcher(s string) func(string) bool {
 		}
 		return n > 0 && (n == len(tw) || n == len(hw))
 	}
+}
+
+var boldLead = regexp.MustCompile(`^\s*[-*]\s+\*\*([^*]+)\*\*`)
+
+// boldBullet is the bold lead of a `- **Title:** text` bullet, which kit cards cite like a heading.
+func boldBullet(l string) (string, bool) {
+	m := boldLead.FindStringSubmatch(l)
+	if m == nil {
+		return "", false
+	}
+	return m[1], true
 }
 
 var titleCut = regexp.MustCompile("\\s[—–]\\s|\\(|\\[|:\\s|`")
@@ -127,7 +137,7 @@ type pathResolver struct{ e *Engine }
 
 // Resolve looks for the path under the card's directory, the kit, the repository, the research tree,
 // niagara-help, organized/, the module trees, then the guide and devguide trees (versioned first), in that
-// order; `…/rest` under an earlier hit of the card; `dir/…/rest` below dir. A path
+// order; `KIT/rest` under the kit; `…/rest` under an earlier hit of the card; `dir/…/rest` below dir. A path
 // found under none of them (a bare file name, a partial package path, an ellipsis) is searched in the trees.
 func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	if rest, ok := strings.CutPrefix(p.Target, "…/"); ok {
@@ -150,6 +160,9 @@ func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	target, bases := p.Target, []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), r.e.organized(), ro.Modules,
 		filepath.Join(ver, "guides-clean"), filepath.Join(ver, "devguide-clean"),
 		filepath.Join(r.e.help(), "guides-clean"), filepath.Join(r.e.help(), "devguide-clean")}
+	if rest, ok := strings.CutPrefix(strings.TrimPrefix(target, "$"), "KIT/"); ok {
+		target, bases = rest, []string{ro.Kit}
+	}
 	if filepath.IsAbs(target) {
 		bases = []string{"/"}
 	}
@@ -175,29 +188,27 @@ func (e *Engine) search(p citeparse.Pointer, target, missing string) Result {
 	return e.pick(p, groups, target, Result{Status: MissingFile, Detail: missing})
 }
 
-// moduleDirs are the copies of a module part: organized/<mod>/<part>/ (also organized/<part>/<part>/)
-// and niagara-help/versions/<version>/source/<part>/.
-func (e *Engine) moduleDirs(part string) []string {
-	mod := part
-	if i := strings.LastIndexByte(part, '-'); i > 0 {
-		mod = part[:i]
+// organizedDirs are the organized/ copies of a module part, organized/<mod>/<part>/ (also
+// organized/<part>/<part>/), and organized/<name>/ for a module named without its part.
+func (e *Engine) organizedDirs(name string) []string {
+	mod := name
+	if i := strings.LastIndexByte(name, '-'); i > 0 {
+		mod = name[:i]
 	}
-	return []string{filepath.Join(e.organized(), mod, part), filepath.Join(e.organized(), part, part),
-		filepath.Join(e.help(), "versions", e.roots.Version, "source", part)}
+	return []string{filepath.Join(e.organized(), mod, name), filepath.Join(e.organized(), name, name),
+		filepath.Join(e.organized(), name)}
 }
 
-// inTrees finds file under dirs: joined to each dir's copies when it has a directory, else by base name
-// anywhere below the dirs.
-func (e *Engine) inTrees(file string, dirs []string, subs []string) (string, error) {
+// moduleDirs are the organized/ copies of a module part and niagara-help/versions/<version>/source/<part>/.
+func (e *Engine) moduleDirs(name string) []string {
+	return append(e.organizedDirs(name), filepath.Join(e.source(), name))
+}
+
+// inTrees finds file under dirs: joined to each dir when it has a directory, else by base name anywhere
+// below the dirs.
+func (e *Engine) inTrees(file string, dirs []string) (string, error) {
 	if strings.Contains(file, "/") {
-		for _, d := range dirs {
-			for _, s := range subs {
-				if f, err := first(file, filepath.Join(d, s)); err != nil || f != "" {
-					return f, err
-				}
-			}
-		}
-		return "", nil
+		return first(file, dirs...)
 	}
 	for _, d := range dirs {
 		idx, err := e.fs.index(d, baseSkip, nil)
