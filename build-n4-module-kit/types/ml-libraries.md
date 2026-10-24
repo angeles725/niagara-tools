@@ -17,21 +17,22 @@
 | Tier | JVM | ML inference allowed? | Training allowed? |
 |------|-----|-----------------------|-------------------|
 | **Supervisor** (Linux x64 / Win x64) | Full JDK 8 SE + native | **Yes** — pure-Java AND JNI-backed libraries | Never on Supervisor at runtime — always OFFLINE |
-| **JACE-rt** (QNX7 ARMv7, Compact3 JDK 8) | Compact3; no native | Pure-Java only; ≤ linear/logistic regression; must run on a BWorker | Never |
+| **JACE-rt** (QNX7 ARMv7, Compact3 JDK 8) | Compact3; no third-party native [INFER] | Pure-Java only; ≤ linear/logistic regression; must run on a BWorker | Never |
 
 **Three hard constraints** that determine JACE viability:
 
-1. **No native JNI on QNX7/ARM:** a Maven artifact bundling Linux x64 `.so`, Windows
+1. **No QNX7/ARM build of these JNI libraries:** JNI itself loads on the JACE when built for it (Honeywell's
+   ARM `libciper.so`, B26 §26.7), but a Maven artifact bundling Linux x64 `.so`, Windows
    `.dll`, or macOS `.dylib` has NO QNX7/ARM binary. Libraries with JNI (ND4J,
    DL4J, ONNX Runtime Java, XGBoost4J) throw `UnsatisfiedLinkError` at runtime on
    the JACE — this is a binary incompatibility, not a configuration issue.
-   `[ev: corpus B26 §26.7, §26.4]`
+   `[ev: corpus B26 §26.7]`; that these artifacts ship no QNX7/ARM binary is [INFER].
 
 2. **Engine-thread budget < 10 ms:** even a pure-Java ML inference that allocates
    large intermediate arrays amplifies GC pause risk (ParallelGC Full GC:
-   500 ms–2 s on heap pressure). Any model heavier than a simple linear/logistic
+   100–500 ms on a 1 GB heap, 500 ms–2 s on 4 GB). Any model heavier than a simple linear/logistic
    regression must run on a `BWorker`, not inline in `execute()`.
-   `[ev: corpus B31 §31.1, §31.3.8]`
+   `[ev: corpus B31 §31.1, §31.3.1, §31.3.8]`
 
 3. **Compact3 JDK 8 ceiling:** libraries that require Java 11+ (Tribuo) or that
    call `ClassLoader.defineClass` dynamically at runtime may fail on the JACE even
@@ -40,7 +41,7 @@
 **Training is always OFFLINE** — historical data is exported from Niagara histories
 (oBIX or Haystack export) and a Python/Java data-science environment trains and
 exports the model. Only the deployed artifact (ONNX file + inference JAR) ships in
-the module. `[ev: corpus B67 §67.7.2]`
+the module. [INFER — kit doctrine; B67 §67.7.2 only names DL4J and ONNX Runtime Java as candidate libraries]
 
 **The JACE gets only validated proposals:** the Supervisor (or a BWorker thread on
 the Supervisor) runs inference, then the result passes through the PROPOSE-VALIDATE

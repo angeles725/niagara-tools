@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · n4-course-parity-observability-horizons
@@ -54,3 +54,6 @@ lacks (Resource Manager engine statistics, FINE not reaching LogHistory, the per
 - Our production modules already beat the course on testability and timer discipline, and trail it on lexicon keys, palette roots and logger naming; parity reads cut both ways.
 - Display formatting is locale-dependent; persistence encoding must never go through it, especially on Spanish-locale stations.
 - The engine, the console, the Fox dispatchers and the bootstrap thread all touch the same component; a thread map belongs next to the callback list.
+
+---
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u10-platform-templates`) — Δ1 `types/logic.md`; Δ2 `types/value-types.md`; Δ3 `types/observability.md`; Δ4 `types/diagnostics.md` (lint owed in ledger.d `2026-10-23-r8-u6-c54-c57.md`); Δ5 `types/logic-authoring.md`; Δ6 new `types/horizons.md` § 1 (landed there, not in `corpus-index.md` / `toolbelt/kit-ticket.sh`, which are outside the unit's surface; row group and tickets owed).

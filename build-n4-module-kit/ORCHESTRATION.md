@@ -41,6 +41,7 @@ authoring session. `[ev: CLAUDE.md Model Assignments; team practice campaign-8]`
 Rule of thumb: **research-sdd finds the WHY, gentle SDD fixes the WHAT/contract, BUILD-LOOP produces the
 artifact.** A one-line mechanical edit skips straight to BUILD-LOOP; a novel framework behavior starts in
 research-sdd; a multi-file change with real ambiguity earns a gentle-SDD proposal first.
+On a laptop running Workbench or a station, defer or cap heavy delegated batches: `METHODOLOGY.md` § Hands-on work.
 
 ### 3.a The blast-radius tier picks the topology
 Classify the change with the tier table in `BUILD-LOOP.md` §0.c BEFORE the first write — file count alone never
