@@ -110,17 +110,19 @@ section 13) then changed both servers together.
 engine with `n4_set_slot` and `n4_invoke_action`: `--allow-writes` starts the Go server. S11
 (section 15) adds `n4_create_component` and `n4_create_link`, S12 (section 16)
 `n4_remove_component`, S13 (section 17) `n4_rollback` and S14 (section 18) `n4_save_station`:
-every tool is served and none answers the "not implemented" text (section 6). Under the Go
-binary the suite runs 669 tests with 308 skipped, all of them `go_twin` markers (section 18).
+every tool is served and none answers the "not implemented" text (section 6). S15 (section
+19) proves the #304 in-doubt matrix. Under the Go binary the suite runs 679 tests with 308
+skipped, all of them `go_twin` markers, each resolved to a real Go test or listed debt.
 
-**S15 in-doubt matrix.** Each branch gets an explicit Go test plus the black-box Python test,
-driven by `hook` faults and an unwritable state dir:
-- `_in_doubt` (1075),
-- `_in_doubt_partial`, including the "could not be journaled" suffix (1346-1375),
-- `_in_doubt_with_created` at 797, 812, 818, 1025, 1046, 1056,
-- the relink intent unwritable path, so no link is sent (`test_tools_destructive` 1270, 1287),
-- the batch id kept after an unexpected failure (1354),
-- refusal of an in-doubt batch or in-doubt rollback (626-642).
+**S15 in-doubt matrix** (section 19). Each branch gets an explicit Go test plus the black-box
+Python test, driven by `hook` faults and an unwritable state dir (lines of `tools_write.py` at
+S15):
+- `_in_doubt` (1082),
+- `_in_doubt_partial`, including the "could not be journaled" suffix (1353-1384),
+- `_in_doubt_with_created` at 804, 819, 825, 1032, 1053, 1063,
+- the relink intent unwritable path, so no link is sent (`test_tools_destructive` 1352, 1371),
+- the batch id kept after an unexpected failure (1339),
+- refusal of an in-doubt batch or in-doubt rollback (633-650).
 
 Then hand-mutate each Go branch: it must go RED, and GREEN after restore.
 
@@ -938,3 +940,106 @@ reads config.bog as unreadable; a command-line argument cannot hold one. A home 
 valid UTF-8 is not in the differential. `Monotonic` counts from the process start, not
 `time.monotonic`'s origin; only differences are used and none is written. Left to S15: the rest
 of the #304 in-doubt matrix. Python bugs: none found.
+
+## 19. S15 the #304 in-doubt matrix
+
+S15 changes no server code: every in-doubt branch was already ported (sections 14-17). It proves
+them, on both servers and by mutation.
+
+**Twin resolution.** The skip inventory checked a twin's name by regex only, and 106 of the 308
+markers named no Go test. `go_server.unresolved_twins` now resolves each marker to a
+`func TestX(t *testing.T)` in its package's `*_test.go` files, or, for `box` only, to a replay
+scenario (`go_box.SCENARIOS`) whose `ports` names the Python test; `go_twin(..., twin="pkg.TestX")`
+names a Go test that capitalises differently or lives in another package (one test, never a
+class). `TestSkipInventory.test_every_go_twin_resolves_to_a_go_test_or_is_listed_debt` fails
+closed: a marker that resolves to nothing fails unless it is in `go_server.TWIN_DEBT`, a listed
+marker that resolves or disappears fails too, and the list never grows past
+`TWIN_DEBT_CEILING`. RED before the fixes: the 17 unresolved markers of `test_tools_destructive`
+and `test_tools_write`. Fourteen now name their existing twin (the rollback journal order and
+budget, today's scope, `_frozen_check`, an unread frozen child, the component and relink
+intents, the partial record and the batch id kept); three got new `writeops` twins: a skipped
+relink beside an unread frozen child is a mismatch, component and created lists of different
+lengths are a mismatch, and the result records the server-assigned name.
+
+**Follow-up: the twin debt (49 markers).** These markers name no Go test and live in files
+outside S15's scope; each needs its Go test, or an explicit `twin=` naming the test that covers
+it, and then leaves the list:
+- `test_box.TestErrorLabelsAndRedirectClose` (2):
+  `test_malformed_reply_keys_use_session_component_key`,
+  `test_redirect_handler_closes_response_before_raising`.
+- `test_box.TestHandleCache` (4): `test_remove_component_invalidates_child_and_descendants`,
+  `test_remove_component_with_unknown_parent_clears_cache`,
+  `test_split_returns_the_other_load_flag_instead_of_keeping_it_on_the_client`,
+  `test_the_station_model_rejects_an_add_nesting_a_baja_folder`.
+- `test_box.TestLockoutSafeOpen` (2): `test_interrupt_after_make_still_closes_the_server_session`,
+  `test_non_auth_failure_still_cleans_up`.
+- `test_box.TestPureHelpers` (8): `test_children_lists_direct_children_only`,
+  `test_driver_address_structs_are_values_not_components`, `test_encoders`,
+  `test_is_component_type_is_the_shared_station_add_rule`, `test_parse_status`,
+  `test_status_value_applies_type_defaults`, `test_status_value_reads_present_children`,
+  `test_the_type_table_wins_over_the_naming_heuristic`.
+- `test_box.TestReadWrite` (8): `test_add_component_malformed_reply_is_boxerror`,
+  `test_add_component_name_collision_yields_distinct_nn`,
+  `test_add_component_visible_with_handle_and_annotation`,
+  `test_check_links_returns_link_name_and_creates_link`, `test_pending_events_is_read_only_view`,
+  `test_remove_component`, `test_save_station_increments_counter`,
+  `test_set_slot_rejects_partial_status_by_default`.
+- `test_box.TestReplyShapes` (5): `test_a_load_tree_of_the_wrong_shape_is_refused`,
+  `test_a_reply_nested_past_the_limit_is_refused`, `test_a_well_formed_tree_still_loads`,
+  `test_an_early_event_whose_ops_are_no_list_is_kept_not_walked`,
+  `test_pollchgs_must_answer_a_list_of_events`.
+- `test_box.TestSecurity` (4): `test_http_refused_without_allow_http`,
+  `test_https_accepted_without_flag`, `test_import_has_no_side_effects_in_fresh_process`,
+  `test_import_makes_no_network_call`.
+- `test_box.TestSession` (1): `test_with_block_does_not_leak_on_open_failure`.
+- `test_box.TestTransportErrors` (4): `test_close_swallows_any_exception`,
+  `test_connection_refused_for_real`, `test_http_403_says_permission_and_no_retry`,
+  `test_timeout_and_refused_and_oserror_are_boxerror`.
+- `test_box.TestTransportTruth` (4): `test_a_body_longer_than_the_cap_is_still_only_truncated`,
+  `test_a_body_shorter_than_its_content_length_is_never_returned`,
+  `test_a_cut_chunked_body_is_a_transport_failure`, `test_a_non_http_answer_is_a_transport_failure`.
+- `test_server.TestProtocol` (2):
+  `test_doc_contract_states_the_supported_set_and_the_naming_heuristic`, `test_flags_record_mode`.
+- `test_server.TestRobustness` (4):
+  `test_close_clears_the_session_even_when_the_client_close_raises`,
+  `test_connect_survives_a_failing_close_of_the_old_session`,
+  `test_serve_exits_cleanly_on_keyboard_interrupt_and_closes`, `test_set_secret_scrubs_outputs`.
+- `test_server.TestStdioEndToEnd` (1): `test_import_prints_nothing`.
+
+**Parity.** `test_write_parity` gains four scenarios (31 in all), byte-compared on both servers:
+- journal faults in rollback runs: `journal.jsonl` becomes a directory once a chosen add was
+  applied, before a nested component intent, before the relink intent and before the in-doubt
+  result of a three-add batch whose op 2 failed ("could not be journaled"); `n4_list_batches`
+  then lists each in-doubt and a second rollback is refused;
+- transport faults and the unexpected-failure wrap: FakeStation hooks can now answer `DROP`
+  (close with no answer) or `Raw(bytes)` (a non-HTTP answer), applied to a one-op send, the
+  read-back, op 2 of three and the relink; then a nested add answered with a name that is no
+  slot name reaches the wrap after the sends as `ValueError`. Every error reply names its batch
+  and its audit line carries the same id;
+- each tool's in-doubt batch (a failed send of set, invoke, create, link, remove and save, and a
+  link accepted without a name, whose result is flagged `in_doubt`) is refused by `n4_rollback`
+  with its journaled intent;
+- the mirror of `journal.TestAPythonInDoubtBatchIsRefused`: the server under test writes those
+  batches, then a Python server on the same state dir refuses each with the same bytes.
+
+Python's `box` turns every transport failure into a `BoxError` (`OSError`, `URLError`,
+`HTTPException`), so the `except Exception` arms of the top send (`_send_all`) and of the relink
+send are not reachable black-box: Go twins cover them
+(`plan.TestAPanickingSendLeavesAnInDoubtBatch`,
+`writeops.TestARelinkSendThatFailsUnexpectedlyIsInDoubtListingTheComponents`, new in S15).
+
+**Mutation.** 61 hand mutants of the engine's in-doubt record, wrap and batch id
+(`engine.go`), `_in_doubt` and its own-words rule (`errors.go`), the follow-up runs, the
+unverified inverse, the result's `in_doubt`, the partial record and its text (`execute.go`),
+every `_in_doubt_with_created` site, the intents, write counts and the ambiguous relink rule
+(`rollback_run.go`), the journal view's state (`journal.go`) and the in-doubt refusals
+(`batches.go`). The first run left two survivors and two that did not build. Closed: the
+unexpected relink send by its new twin, the two build failures by value changes. One stays
+equivalent and kept (S15 changes no server code): `inDoubtPartial`'s reset of the inverse after
+an error, since every `Impl.Inverse` returns a nil list with its error and a recovered panic
+returns none, which `list` already turns into `[]`. The other 60 all go RED, none through a
+build failure (seven only in the black-box suite under the binary). Under `MCP_N4_IMPL=go`: 679
+tests, 308 skipped (669 / 308 before; the six harness and four parity tests run under both).
+
+**Known differences.** No byte difference was found. Python bugs: none found. Left to S16: the
+switch of the default launcher, and the twin debt above.
