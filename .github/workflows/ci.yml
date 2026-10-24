@@ -86,6 +86,9 @@ jobs:
       - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
         run: shellcheck scripts/*.sh scripts/lib/*.sh go/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/toolbelt/lib/*.sh build-n4-module-kit/templates/client-pre-push tests/*.bats tests/helpers/*.bash
 
+      - name: kit-state --write (materialize the generated BUILD-STATE.md + retros/INDEX.md, as install-skill.sh and the .githooks do)
+        run: bash build-n4-module-kit/toolbelt/kit-state.sh --write
+
       - name: bats (all unit tests)
         run: bats tests/*.bats
 
@@ -100,17 +103,17 @@ jobs:
             exit 1
           fi
 
-      - name: sweep-build-state (BUILD-STATE ↔ retros/INDEX coherence)
+      - name: sweep-build-state + sweep-fold-audit over fresh kit-state output (BUILD-STATE ↔ retros/INDEX coherence; folded retros cited)
         run: |
           K=build-n4-module-kit
-          bash "$K/toolbelt/sweep-build-state.sh" "$K/BUILD-STATE.md" "$K/retros" "$K/retros/INDEX.md"
-
-      - name: sweep-fold-audit (folded retros citation coverage — strict, all folded must be cited)
-        run: |
-          K=build-n4-module-kit
+          # BUILD-STATE.md and retros/INDEX.md are generated, not committed: sweep the kit-state output.
+          T="$(mktemp -d "${RUNNER_TEMP:-/tmp}/kit-state.XXXXXX")"
+          bash "$K/toolbelt/kit-state.sh" build-state > "$T/BUILD-STATE.md"
+          bash "$K/toolbelt/kit-state.sh" retro-index > "$T/INDEX.md"
+          bash "$K/toolbelt/sweep-build-state.sh" "$T/BUILD-STATE.md" "$K/retros" "$T/INDEX.md"
           # --deltas-since: rows from the 2026-09-24 Δ-citation convention on must cite (or defer)
           # every Δ1..Δn, not just their stem.
-          bash "$K/toolbelt/sweep-fold-audit.sh" --strict --deltas-since 2026-09-24 "$K/retros/INDEX.md" "$K"
+          bash "$K/toolbelt/sweep-fold-audit.sh" --strict --deltas-since 2026-09-24 "$T/INDEX.md" "$K"
 
       - name: lint-guard-pins (every kit lint carries a resolvable "# Mutation:" guard-pin — strict)
         run: bash build-n4-module-kit/toolbelt/lint-guard-pins.sh --strict .
@@ -118,10 +121,10 @@ jobs:
       - name: gen-lint-index --check (generated toolbelt/INDEX.md is fresh vs the lint headers)
         run: bash build-n4-module-kit/toolbelt/gen-lint-index.sh --check
 
-      - name: gen-retro-index --check (generated retros/INDEX.md is fresh vs the retro headers)
+      - name: gen-retro-index --check (every retro header generates its INDEX row — fails closed)
         run: bash build-n4-module-kit/toolbelt/gen-retro-index.sh --check
 
-      - name: gen-build-state --check (generated kit ledger in BUILD-STATE.md is fresh vs ledger.d/)
+      - name: gen-build-state --check (every ledger.d/ fragment + BUILD-STATE.src.md generates BUILD-STATE.md — fails closed)
         run: bash build-n4-module-kit/toolbelt/gen-build-state.sh --check
 
       - name: lint-timers (timer-ticket conformance over committed fixtures — Campaign 6 PR8)
@@ -131,7 +134,9 @@ jobs:
       - name: sweep-retro-debt (aging report — non-strict, Campaign 6 PR8)
         run: |
           K=build-n4-module-kit
-          bash "$K/toolbelt/sweep-build-state.sh" --age --today "$(date -u +%F)" "$K/retros" "$K/retros/INDEX.md"
+          T="$(mktemp -d "${RUNNER_TEMP:-/tmp}/kit-state.XXXXXX")"
+          bash "$K/toolbelt/kit-state.sh" retro-index > "$T/INDEX.md"
+          bash "$K/toolbelt/sweep-build-state.sh" --age --today "$(date -u +%F)" "$K/retros" "$T/INDEX.md"
 
       - name: scaffold-diff (scaffold MinimalPan → diff -r vs fixture — Campaign 7 PR4)
         run: |
