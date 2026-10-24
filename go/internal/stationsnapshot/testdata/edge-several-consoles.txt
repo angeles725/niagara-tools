@@ -1,0 +1,65 @@
+-- args --
+demo
+out
+-- want --
+exit 0
+PASS  station-snap    config.bog  sha256=4795c60e2b422c87f84c0f0c58b1eb315ab780b201e72e5be306825e981b391e bytes=4
+PASS  station-snap    console.txt  sha256=dacf36547c7774a0a170806363b5d412991fbc0d6260b2c00b1d3a80a816c23f bytes=6
+PASS  station-snap    console10.txt  sha256=6db0f6e1133a0debabee7bf20a2ad413d0279f891fcf74c05da928eb34863c6b bytes=4
+PASS  station-snap    consoleA.txt  sha256=e83189db38554920ea572093f9ad32facf682f28ccecdac085c1511735a2b492 bytes=6
+PASS  station-snap    console_1.txt  sha256=2c8b08da5ce60398e1f19af0e5dccc744df274b826abe585eaba68c525434806 bytes=4
+PASS  station-snap    console_2.txt  sha256=27dd8ed44a83ff94d557f9fd0412ed5a8cbca69ea04922d88c01184a07300a5a bytes=4
+station-snapshot: 6 file(s) copied; manifest.json written to out
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/station-snapshot.sh at 4d602a9b (sha256 31610a29d4a92fd3b1ecebeb390eef2c9f936e4cc773614628c3fd068326cf68)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- @env --
+PATH=@DIR@/.tools
+-- demo/.console_0.txt --
+hidden
+-- demo/config.bog --
+bog
+-- demo/console-x.log --
+not a console
+-- demo/console.txt --
+plain
+-- demo/console10.txt --
+ten
+-- demo/consoleA.txt --
+upper
+-- demo/console_1.txt --
+one
+-- demo/console_2.txt --
+two
+-- demo/console_d.txt (dir) --
+-- demo/sub/console_3.txt --
+nested
+-- demo/xconsole.txt --
+prefixed
+-- @after out/config.bog --
+bog
+-- @after out/console.txt --
+plain
+-- @after out/console10.txt --
+ten
+-- @after out/consoleA.txt --
+upper
+-- @after out/console_1.txt --
+one
+-- @after out/console_2.txt --
+two
+-- @after out/manifest.json --
+{
+  "station": "demo",
+  "ts": "20260102T030405Z",
+  "files": [
+    {"relpath": "config.bog", "sha256": "4795c60e2b422c87f84c0f0c58b1eb315ab780b201e72e5be306825e981b391e", "bytes": 4},
+    {"relpath": "console.txt", "sha256": "dacf36547c7774a0a170806363b5d412991fbc0d6260b2c00b1d3a80a816c23f", "bytes": 6},
+    {"relpath": "console10.txt", "sha256": "6db0f6e1133a0debabee7bf20a2ad413d0279f891fcf74c05da928eb34863c6b", "bytes": 4},
+    {"relpath": "consoleA.txt", "sha256": "e83189db38554920ea572093f9ad32facf682f28ccecdac085c1511735a2b492", "bytes": 6},
+    {"relpath": "console_1.txt", "sha256": "2c8b08da5ce60398e1f19af0e5dccc744df274b826abe585eaba68c525434806", "bytes": 4},
+    {"relpath": "console_2.txt", "sha256": "27dd8ed44a83ff94d557f9fd0412ed5a8cbca69ea04922d88c01184a07300a5a", "bytes": 4}
+  ],
+  "pointers": [  ]
+}
