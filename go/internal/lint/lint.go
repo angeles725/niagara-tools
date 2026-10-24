@@ -120,6 +120,10 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
+	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
+	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.
+	EmptyOK bool
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
