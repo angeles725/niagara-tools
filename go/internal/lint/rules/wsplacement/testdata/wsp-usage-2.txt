@@ -1,0 +1,8 @@
+-- args --
+--bogus
+@DIR@/Mod
+-- want --
+exit 3
+-- stderr --
+lint-ws-placement: unknown flag: --bogus
+usage: lint-ws-placement.sh [--strict] <src-root>...

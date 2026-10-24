@@ -42,6 +42,17 @@ Wave-3 surveyed 11 vendor/OEM/platform `-wb` archetypes, extending the cross-ven
 | Δ13 | SECURITY (actionable) — add to security best-practices: when storing credentials inside a Niagara module, prefer SHA-256 or stronger over MD5; flag MD5 in credential storage as a security lint candidate | `types/security.md` / `lint/` (new lint: `no-md5-credential-digest`) | `[ev: corpus B1104]` |
 | Δ14 | LINT (actionable) — add a precision-consistency lint for import-learn flows: flag when a history record's `facet precision` differs from the proxy point's `exponent` facet (B1100 mbus: precision-4 history vs point `-exponent` mismatch) | `lint/` (new lint: `precision-facet-learn-mismatch`) | `[ev: corpus B1100]` |
 
+> **Corrected (2026-10-24, quality round 10) — Δ2:** the row says LON needs "XIF/LNML typing, changeable-NV
+> discovery, and service-pin commissioning each require a distinct manager pattern". Reading A (this retro): three
+> managers, one of them a discovery manager for changeable NVs. Reading B (corpus B1095, the code): changeable NVs are
+> a type-editing panel, `BChangeableNvManager extends BWbComponentView` (lonworks-wb vineflower
+> `ui/changeable/BChangeableNvManager.java:68`), not a discovery manager; the NV table is learned when a device is
+> added (`dd.learnNv()`, `device/BLonDeviceManager.java:431`), and the service pin is handled inside the device
+> manager (`BLonNetmgmt.servicePinReceived`, `:245`; B1095 lines 19-20, 25). Winner: B. It was wrong when
+> written: B1095 (only commit 2026-09-20) already titles the panel "changeable-NV type editing". `types/driver-authoring.md`
+> § 9.2 carries reading B since citation audit batch 9. The row text and this retro's review-status are left as
+> they were.
+
 ## Lessons
 - Wave-3 confirms the vendor-WB bar is entirely about platform extensions and driver-specific archetypes; our own modules stay at rung 0–1 (palette + FieldEditor). All PD-WV3-* except Δ13 and Δ14 are reference-only.
 - Two deltas ARE genuinely actionable for our codebase: the MD5 → stronger-digest security recommendation (Δ13) and the import-learn precision-consistency lint (Δ14). These should be prioritised in the next lint campaign.

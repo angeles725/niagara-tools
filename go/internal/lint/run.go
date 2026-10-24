@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -49,7 +51,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			}
 		} else { // a walk error wins: scan_files_or_exit exits before the K20 check
 			for i, sp := range specs {
-				if sp.Root == nil && !stopped[i] && !selectsAny(sp.Select, root, files) {
+				if sp.Root == nil && !stopped[i] && !sp.EmptyOK && !selectsAny(sp.Select, root, files) {
 					r.empty(i, sp, root)
 					stopped[i], live = true, live-1
 				}
@@ -302,15 +304,25 @@ func Command(specs ...Spec) cli.Main {
 			}
 		}
 		mode, name, use, usageExit, bare := Each, "n4lint", usage, 3, false
+		rest := args[1:]
 		if len(selected) == 1 && args[0] != "--all" {
 			sp := selected[0]
 			mode, name, use, usageExit, bare = sp.Mode, sp.ID(), sp.Usage, sp.usageExit(), sp.BareUsage
+			if len(sp.IntFlags) > 0 {
+				vals, left, err := intFlags(sp, rest)
+				if err != nil {
+					fmt.Fprint(s.Err, err)
+					return 3
+				}
+				sp.Rule, rest = sp.Configure(vals), left
+				selected = []Spec{sp}
+			}
 		}
 		option := ""
 		if len(selected) == 1 && args[0] != "--all" {
 			option = selected[0].Option
 		}
-		a, err := ParseOption(mode, name, use, option, args[1:])
+		a, err := ParseOption(mode, name, use, option, rest)
 		if err != nil {
 			var ue *UsageError
 			usageErr := errors.As(err, &ue)
@@ -334,4 +346,34 @@ func Command(specs ...Spec) cli.Main {
 		}
 		return Run(selected, name, a, s)
 	}
+}
+
+// intFlags takes sp's IntFlags out of the leading flags of args (see Spec.IntFlags) and returns their
+// values and the arguments left for Parse. It stops at "--", the first root and the first unknown flag.
+func intFlags(sp Spec, args []string) (map[string]int, []string, error) {
+	vals := map[string]int{}
+	for _, fl := range sp.IntFlags {
+		vals[fl.Name] = fl.Default
+	}
+	var rest []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if _, ok := vals[arg]; !ok {
+			if arg != "--strict" {
+				return vals, append(rest, args[i:]...), nil
+			}
+			rest = append(rest, arg)
+			continue
+		}
+		if i+1 == len(args) || strings.Trim(args[i+1], "0123456789") != "" || args[i+1] == "" {
+			return nil, nil, fmt.Errorf("%s: %s needs a non-negative integer\n%s\n", sp.ID(), arg, sp.Usage)
+		}
+		n, err := strconv.Atoi(args[i+1])
+		if err != nil {
+			n = math.MaxInt // all digits but past int: awk compared it as a huge number
+		}
+		vals[arg] = n
+		i++
+	}
+	return vals, rest, nil
 }

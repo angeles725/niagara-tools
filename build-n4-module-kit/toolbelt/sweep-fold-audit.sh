@@ -6,8 +6,8 @@
 # retro's lesson was never folded into a kit file — this audit makes that
 # visible so it becomes a PR7 follow-up item, not a silent gap.
 #
-# Usage: sweep-fold-audit.sh [--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>
-# exit:  0 clean or WARN-only · 1 uncited rows (or uncited Δ) AND --strict · 3 usage/env
+# Usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>
+# exit:  0 clean or WARN-only · 1 uncited rows (or uncited Δ, or --exact-stems alias FAIL) AND --strict · 3 usage/env
 #
 # --deltas-since <date>: Δ-granular reconcile check. Every folded row whose filename date is on or
 # after <date> must account for EACH of its Δ1..Δn (n = the deltas cell after review-status): cited
@@ -22,6 +22,14 @@
 # Stem: filename minus leading YYYY-MM-DD- and trailing .md. A stem token T (6-char floor) credits
 # a row when "-T-" is a hyphen-segment-aligned part of "-<stem>-".
 #
+# Retro aliases (#419): a tag must name the exact stem (CONTRIBUTING.md:261). Every [ev:|deferred: retro T]
+# whose T is not the stem of a dated INDEX row (any status) but is a segment-aligned part of one is a row
+#   fold-audit: WARN <file>:<line> retro alias "<T>" — use the exact stem "<stem>" (CONTRIBUTING.md:261)
+# or, matching several stems, `... is ambiguous — use one exact stem of "<a>" "<b>" ...`, then a summary
+# `fold-audit: aliases: N tokens are not an exact stem (M ambiguous)`. By default the rows are advisory
+# (they never change the exit code) and aliases still credit. --exact-stems makes them FAIL rows that fail
+# --strict and lets only an exact stem credit a fold. A T matching no stem is not reported.
+#
 # A deltas cell is decimal (a leading zero is not octal); an unterminated last INDEX row is audited;
 # an unreadable INDEX exits 3. (The former bash tool passed all three silently.)
 #
@@ -29,7 +37,7 @@
 # former bash tool under C.UTF-8 except those fail-open cases. This wrapper is the stable entry
 # point: go/go-tool.sh `go_tool_bin` builds go/bin/sweep-fold-audit when the binary is missing or
 # older than a Go source, then this script execs it. Needs `go` on PATH to build (a missing toolchain or failed build exits 3).
-# Mutation pins (F3, F4, F6, F9, F11, F12, F13, R2-unreadable) are exercised by tests/sweep-fold-audit.bats and the Go tests.
+# Mutation pins (F3, F4, F6, F9, F11, F12, F13, F19, F20, F21, R2-unreadable) are exercised by tests/sweep-fold-audit.bats and the Go tests.
 # This script is VCS-free by design — version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u
