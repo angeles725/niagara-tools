@@ -62,8 +62,11 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 		for _, p := range files {
 			data, err := os.ReadFile(p)
 			if err != nil {
-				// awk_lint_run printed the first line of awk's own error.
-				r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror.Text(err)))
+				if shortScanError(specs, root, p) { // awk_lint_each printed the shell's reason only
+					r.envError(0, fmt.Sprintf("cannot scan %s: %s", p, strerror.Text(err)))
+				} else { // awk_lint_run printed the first line of awk's own error
+					r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror.Text(err)))
+				}
 				continue
 			}
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
@@ -322,4 +325,19 @@ func Command(specs ...Spec) cli.Main {
 		}
 		return Run(selected, name, a, s)
 	}
+}
+
+// shortScanError reports that every walking spec selecting file p words its read error as awk_lint_each did.
+func shortScanError(specs []Spec, root, p string) bool {
+	any := false
+	for _, sp := range specs {
+		if sp.Root != nil || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
+			continue
+		}
+		if !sp.ShortScanError {
+			return false
+		}
+		any = true
+	}
+	return any
 }

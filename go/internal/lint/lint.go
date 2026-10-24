@@ -122,6 +122,9 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// ShortScanError words an unreadable file as awk_lint_each did ("<lint>: cannot scan <path>: <reason>")
+	// instead of awk_lint_run's awk error text (lint-agent-on-shape).
+	ShortScanError bool
 	// ModuleRoot marks a rule whose roots are module roots, not source roots (lint-duplicate-helper reads
 	// every part's src/): n4lint --all, which runs on source roots, leaves it out as it leaves out a
 	// RootRule; it runs by name or in a rule list.

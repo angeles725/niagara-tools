@@ -657,3 +657,22 @@ func TestModuleRootLeftOutOfAll(t *testing.T) {
 		t.Errorf("by name: exit %d out\n%s\nwant the lint-m row", code, o)
 	}
 }
+
+// TestShortScanError: Spec.ShortScanError words an unreadable file as awk_lint_each did ("<lint>: cannot scan
+// <path>: <reason>"), not as awk_lint_run's awk error; the other files are still scanned and the exit is 3.
+func TestShortScanError(t *testing.T) {
+	skipIfRoot(t)
+	root := tree(t, map[string]string{"A.java": "MARK\n", "U.java": "x\n"})
+	u := filepath.Join(root, "U.java")
+	if err := os.Chmod(u, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(u, 0o644) })
+	sp := javaSpec(fakeRule{"lint-s", "MARK", Fail}, Raw)
+	sp.ShortScanError = true
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-s", root}, s); code != 3 || o.String() != "FAIL  lint-s  "+root+"/A.java:1  saw: MARK\n" ||
+		e.String() != "lint-s: cannot scan "+u+": Permission denied\n" {
+		t.Errorf("exit %d out %q err %q", code, o, e)
+	}
+}
