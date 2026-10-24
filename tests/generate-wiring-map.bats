@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+# shellcheck disable=SC2016  # the backticks in the expected rows are literal Markdown, not command substitution
 # Tests for generate-wiring-map.sh (Δ6, retro live-commissioning-verification-gaps).
 #
 # Verifies that the script:
