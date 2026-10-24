@@ -40,7 +40,10 @@ const ID = "lint-machine-default-path"
 // node_modules/ (third-party), and the engine's empty-root ERROR.
 func Spec() lint.Spec {
 	return lint.Spec{Rule: rule{}, Mode: lint.Each, Usage: "usage: lint-machine-default-path.sh [--strict] <module-root>...",
-		Select: lint.Selection{Names: []string{"*.java", "*.js", "*.properties"}, Prune: []string{"srcTest", "build", "node_modules"}}}
+		Select: lint.Selection{Names: []string{"*.java", "*.js", "*.properties"}, Prune: []string{"srcTest", "build", "node_modules"}},
+		// The engine's default text for these Names, stated so a reader (and rules_test, which assumes the
+		// *.java default for a rule without EmptyError) sees the three file kinds.
+		EmptyError: lint.EmptyRow{Msg: "no *.java or *.js or *.properties sources found (wrong path or empty source tree)"}}
 }
 
 type rule struct{}
