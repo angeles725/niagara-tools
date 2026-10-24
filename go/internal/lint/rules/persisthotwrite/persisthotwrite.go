@@ -39,6 +39,9 @@ func (rule) Severity() lint.Severity { return lint.Warn }
 var (
 	setterDecl = regexp.MustCompile(`(void|public|private|protected|static)[[:space:]]+[A-Za-z_<>\[\],. ]*set[A-Z]`)
 	modulo     = regexp.MustCompile(`%[[:space:]]*[A-Za-z0-9_]+[[:space:]]*(==|!=)`)
+	clockLocal = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(\([A-Za-z]+\)[[:space:]]*)?Clock\.millis\(`)
+	comparison = regexp.MustCompile(`<=|>=|==|!=|[^-]>|<`)
+	ifHead     = regexp.MustCompile(`(^|[^A-Za-z0-9_])(if|while)[[:space:]]*\(`)
 )
 
 // CheckTree reads every file under the root once for the fields it accumulates (hotwrite.Accumulators), then
@@ -76,7 +79,8 @@ func check(f *javasrc.File, acc map[string]bool) []lint.Finding {
 		setter := hotwrite.Setter(prop.Name) + "("
 		for _, b := range bodies {
 			for _, i := range hotwrite.HotCalls(lines, b, prop, acc) {
-				if setterDecl.MatchString(lines[i]) || guarded(lines, b.Start, i) {
+				at := hotwrite.SetterCall(prop.Name).FindStringIndex(lines[i])[0]
+				if setterDecl.MatchString(lines[i]) || guarded(lines, b.Start, i, at) {
 					continue
 				}
 				out = append(out, lint.Finding{Path: f.Path, Line: i + 1, Msg: setter + "...) writes non-transient slot '" +
@@ -88,10 +92,39 @@ func check(f *javasrc.File, acc map[string]bool) []lint.Finding {
 	return out
 }
 
-// guarded reports a cadence guard on line i or the 5 above it, not above the body's first line.
-func guarded(lines []string, start, i int) bool {
+// guarded reports a cadence guard for the setter call at lines[i], byte at, within the 5 lines above it (not
+// above the body's first line, start): a `% n ==/!=` counter test, or a Clock.millis() read in a condition
+// that gates the write (a comparison or an if, reading Clock.millis() itself or a local assigned from it).
+// On the call's own line only the text before the call counts and it must be an if, so a clock read inside
+// the written value (`setX((double) Clock.millis())`) never guards it.
+func guarded(lines []string, start, i, at int) bool {
+	var locals []string
+	for j := start; j <= i; j++ {
+		for _, m := range clockLocal.FindAllStringSubmatch(lines[j], -1) {
+			locals = append(locals, m[1])
+		}
+	}
+	reads := func(t string) bool {
+		if strings.Contains(t, "Clock.millis(") {
+			return true
+		}
+		for _, v := range locals {
+			if regexp.MustCompile(`(^|[^A-Za-z0-9_])` + v + `([^A-Za-z0-9_]|$)`).MatchString(t) {
+				return true
+			}
+		}
+		return false
+	}
 	for j := i; j >= start && j >= i-5; j-- {
-		if strings.Contains(lines[j], "Clock.millis(") || modulo.MatchString(lines[j]) {
+		t := lines[j]
+		if j == i {
+			t = t[:at]
+			if modulo.MatchString(t) || ifHead.MatchString(t) && reads(t) {
+				return true
+			}
+			continue
+		}
+		if modulo.MatchString(t) || reads(t) && (comparison.MatchString(t) || ifHead.MatchString(t)) {
 			return true
 		}
 	}

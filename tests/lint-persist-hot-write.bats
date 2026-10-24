@@ -131,6 +131,17 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$output" = "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/A.java:6  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start" ]
 }
 
+@test "PHW12: a Clock.millis() read in the written value is not a cadence guard; one in a gating comparison is" {
+  # Mutation: PHW12 -- counting any Clock.millis( within 5 lines suppresses setLastRunMs((double) Clock.millis())
+  # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-clock-guard-1.txt
+  printf '%s\n' 'class C {' '  static final Property lastRunMs = newProperty(0, 0d, null);' '  static final Property idleHours = newProperty(0, 0d, null);' \
+    '  public void changed(Property p, Context cx) { execute(); }' '  void execute() {' '    setLastRunMs((double) Clock.millis());' \
+    '    if (Clock.millis() - lastIdle < 60000) return;' '    setIdleHours(getIdleHours() + dt);' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/C.java"
+  run "$PHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/C.java:6  setLastRunMs(...) writes non-transient slot 'lastRunMs' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start" ]
+}
+
 @test "PHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: PHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"

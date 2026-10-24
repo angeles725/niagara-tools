@@ -42,6 +42,10 @@
 # Truth fix T3 (2026-10-24): a setter call starts at an identifier boundary and may have blanks before "("
 # (hotwrite.SetterCall, shared with lint-changed-hot-write #151); the awk matched "set<X>(" as a substring, so
 # resetXHours( was a write of xHours and setXHours ( was missed.
+# Truth fix T6 (2026-10-24): a Clock.millis() read is a cadence guard only in a condition that gates the write --
+# a comparison or if on one of the 5 lines above (reading Clock.millis() or a local assigned from it), or an if
+# before the setter on its own line; the awk counted any `Clock.millis(` on the write's line or above, so
+# `setX((double) Clock.millis())` and a write after a bare `long now = Clock.millis();` were suppressed.
 # Truth fix T5 (2026-10-24, equal-value skip): Baja's ComplexSlotMap skips a write whose new value equals the
 # current one for a simple value -- setDouble `!BDouble.equals(old, new)`, setBoolean `old != new`,
 # set(Property, BValue) `!old.isSimple() || !old.equals(new)` (niagara-research organized/baja/baja/vineflower/
@@ -58,6 +62,7 @@
 # "newProperty(" to the first "," (across lines when the call wraps); the awk read one declaration per line and its
 # flags after the line's last "newProperty(", on that line only.
 # VCS-free by design (kit-links L2).
+# Mutation: PHW12 -- counting any Clock.millis( within 5 lines suppresses setLastRunMs((double) Clock.millis())
 # Mutation: PHW11 -- ignoring Baja's equal-value skip WARNs setXAutoLocked(ctl.autoLocked[0]) every cycle
 # Mutation: PHW10 -- reading the flags on the declaration line only takes a wrapped Flags.TRANSIENT slot as persisted
 # Mutation: PHW9 -- matching "setXHours(" as a substring FAILs resetXHours(1.0) as a write of xHours
