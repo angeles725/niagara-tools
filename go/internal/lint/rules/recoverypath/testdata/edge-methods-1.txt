@@ -1,0 +1,114 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/Far.java:13  LRP: BOut has guarded-only safe-off in method "setAOut" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Far.java:16  LRP: COut has guarded-only safe-off in method "setBOut" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Far.java:10  LRP: AOut has guarded-only safe-off in method "unknown" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/M.java:28  LRP: GOut has guarded-only safe-off in method "doRun" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/M.java:24  LRP: FOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Split1.java:4  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/W.java:10  LRP: BOut has guarded-only safe-off in method "stopped" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/W.java:29  LRP: GOut has guarded-only safe-off in method "go" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/W.java:13  LRP: COut has guarded-only safe-off in method "setBOut" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/W.java:17  LRP: DOut has guarded-only safe-off in method "unnable" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/W.java:22  LRP: EOut has guarded-only safe-off in method "setDOut" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/W.java:4  LRP: AOut has guarded-only safe-off in method "unknown" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/W.java:25  LRP: FOut has guarded-only safe-off in method "unknown" -- no unconditional reset in started/atSteadyState/enable
+-- stderr --
+-- Far.java --
+package com.x;
+public class Far extends BComponent {
+  void longSignatureName(
+      int a,
+      int b,
+      int c,
+      int d,
+      int e)
+  {
+    setAOut(false);
+  }
+  void If() {
+    setBOut(false);
+  }
+  void a() {
+    setCOut(false);
+  }
+}
+-- M.java --
+package com.x;
+public class M extends BComponent {
+  void started() {
+    setAOut(false);
+  }
+   void atSteadyState() {
+    setBOut(false);
+  }
+   void changed() {
+    setCOut(false);
+  }
+   void enable() {
+    setDOut(false);
+  }
+   void start() {
+    setEOut(false);
+  }
+   void execute() {
+    setAOut(false);
+    setBOut(false);
+    setCOut(false);
+    setDOut(false);
+    setEOut(false);
+    setFOut(false);
+  }
+   void doRun() {
+    setFOut(false);
+    setGOut(false);
+  }
+}
+-- Split1.java --
+package com.x;
+public class Split1 extends BComponent {
+  void execute() {
+    setAOut(false);
+  }
+}
+-- Split2.java --
+package com.x;
+public class Split2 extends BComponent {
+  void started() {
+    setAOut(false);
+  }
+}
+-- W.java --
+package com.x;
+public class W extends BComponent {
+  public W(int a) {
+    setAOut(false);
+  }
+  @Override
+  public void stopped()
+      throws Exception
+  {
+    setBOut(false);
+  }
+  void x() { if (a) {
+    setCOut(false);
+  } }
+  Runnable r = new Runnable() {
+    public void run() {
+      setDOut(false);
+    }
+  };
+  static class Inner {
+    void started() {
+      setEOut(false);
+    }
+  }
+  int f = 1; { setFOut(false); }
+}
+class Second {
+  void go() {
+    setGOut(false);
+  }
+}

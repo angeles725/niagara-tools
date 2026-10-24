@@ -1,0 +1,38 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/S.java:8  LRP: CoilResistance has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:14  LRP: DoorOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:19  LRP: Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:6  LRP: Heat has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:5  LRP: PumpOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:17  LRP: E_Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:7  LRP: Resistencia has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:15  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:12  LRP: BoilerHeat has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:13  LRP: FanHeat has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:4  LRP: FanOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+-- stderr --
+-- S.java --
+package com.x;
+public class S extends BComponent {
+  void execute() {
+    getFanOut().setValue(false);
+    getPumpOut().setValue( false );
+    setHeat(false);
+    setResistencia(  false);
+    setCoilResistance(false);
+    setOutput(false);
+    setValveOut(true);
+    getLampOut().setValue(true);
+    resetBoilerHeat(false);
+    x = targetFanHeat().setValue(false);
+    this.setDoorOut(false);
+    a.getAOut().setValue(false); setBOut(false);
+    getC().setValue(false); setDOut(false);
+    setE_Out(false);
+    set1Out(false);
+    setOut(false);
+  }
+}

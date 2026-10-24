@@ -1,0 +1,37 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/Crlf.java:4  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Noeol.java:4  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Tabs.java:4  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Top.java:3  LRP: BOut has guarded-only safe-off in method "unknown" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Top.java:1  LRP: AOut has guarded-only safe-off in method "unknown" -- no unconditional reset in started/atSteadyState/enable
+-- stderr --
+-- Crlf.java --
+package com.x;
+public class Crlf extends BComponent {
+  void execute() {
+    setAOut(false);
+  }
+}
+-- Empty.java --
+-- Noeol.java (noeol) --
+package com.x;
+public class Noeol extends BComponent {
+  void execute() {
+    setAOut(false);
+  }
+}
+-- Tabs.java --
+package com.x;
+public class Tabs extends BComponent {
+	void	execute()	{
+		setAOut(	false	);
+	}
+}
+-- Top.java --
+setAOut(false);
+class Top {
+  { setBOut(false); }
+}

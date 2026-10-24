@@ -1,0 +1,32 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/C.java:8  LRP: DOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/C.java:17  LRP: EOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/C.java:4  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/C.java:20  LRP: FOut has guarded-only safe-off in method "lit" -- no unconditional reset in started/atSteadyState/enable
+-- stderr --
+-- C.java --
+package com.x;
+public class C extends BComponent {
+  void execute() {
+    /* setAOut(false); */
+    // setBOut(false);
+    String u = "http://x"; setCOut(false);
+    String b = "{"; 
+    setDOut(false);
+  }
+   void started() {
+    setDOut(false);
+  }
+   void other() {
+    /*
+      }
+    */
+    setEOut(false);
+  }
+   void lit() {
+    log("setFOut(false)");
+  }
+}
