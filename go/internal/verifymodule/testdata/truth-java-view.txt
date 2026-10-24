@@ -1,0 +1,76 @@
+declared difference: facets-req, cross-module-type, transient-operator and slot-wall read the javasrc view of each .java (comments blanked; transient-operator and slot-wall also blank string contents) and facets-req joins each @NiagaraProperty with javasrc.PropertyScan (to its balancing ")"); the bash read the raw text, so a commented-out property, type or flag combination and a string holding TRANSIENT OPERATOR were findings, and an annotation whose first line held a ")" was cut there (roomTemp lost its facets)
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-ux.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Foo-ux.jar  1 classes, all major 52
+PASS  signed     @DIR@/Foo-ux.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Foo-ux.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-ux.jar  no --target-version
+SKIP  stored     @DIR@/Foo-ux.jar  no --stored
+SKIP  typecount  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/module-include.xml
+PASS  facets     @DIR@/Foo-ux.jar  no raw-number MIN/MAX facet under @DIR@/mod/Foo-ux/src
+PASS  facets-req  @DIR@/Foo-ux.jar  no missing required facets under @DIR@/mod/Foo-ux/src
+PASS  ord-literal  @DIR@/Foo-ux.jar  no hardcoded ORD literals under @DIR@/mod/Foo-ux/src
+SKIP  palette    @DIR@/Foo-ux.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Foo-ux.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/Foo-ux.jar  no *.gradle.kts in @DIR@/mod/Foo-ux
+SKIP  moduletest  @DIR@/Foo-ux.jar  not an -rt jar
+PASS  cross-module-type  @DIR@/Foo-ux.jar  no cross-module type references in @DIR@/mod/Foo-ux/src
+PASS  transient-operator  @DIR@/Foo-ux.jar  no TRANSIENT+OPERATOR slot combination under @DIR@/mod/Foo-ux/src
+PASS  compact3-import  @DIR@/Foo-ux.jar  no Compact3 non-safe imports under @DIR@/mod/Foo-ux/src
+PASS  subscription-leak  @DIR@/Foo-ux.jar  no TypeSubscriber without stopped() under @DIR@/mod/Foo-ux/src
+PASS  slot-wall  @DIR@/Foo-ux.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Foo-ux/src
+verify-module: 11 passed, 0 failed, 7 skipped, 0 warned -> ALL PASS
+-- stderr --
+-- Foo-ux.jar (jar) --
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (stored) ---
+<module name="Foo-ux" vendor="Angeles">
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Foo-ux/src/com/x/BRoom.java --
+package com.x;
+
+// @NiagaraProperty(name = "ghostTemp", type = "double", flags = Flags.OPERATOR)
+// type = "com.other.BForeign"
+// int f = Flags.TRANSIENT | Flags.OPERATOR;
+public class BRoom {
+  @NiagaraProperty(name = "roomTemp", type = "double", defaultValue = "BDouble.make(0)",
+    flags = Flags.OPERATOR,
+    facets = @Facet("BFacets.makeNumeric(BUnit.getUnit(\"fahrenheit\"), 1)")
+  )
+  String note = "TRANSIENT OPERATOR";
+}
+-- mod/Foo-ux/src/com/x/BWall.java --
+package com.x;
+
+/*
+    @NiagaraProperty(name = "p0", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p1", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p2", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p3", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p4", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p5", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p6", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p7", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p8", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p9", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p10", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p11", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p12", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p13", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p14", type = "int", defaultValue = "0")
+    @NiagaraProperty(name = "p15", type = "int", defaultValue = "0")
+*/
+public class BWall {}

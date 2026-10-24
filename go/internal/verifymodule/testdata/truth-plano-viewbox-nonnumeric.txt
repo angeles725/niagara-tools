@@ -1,0 +1,11 @@
+declared difference: a viewBox width or height that is no finite number > 0 (abc) is a FAIL row, exit 1; under set -u bash ended the run on the unbound variable abc, exit 1, with no row
+-- args --
+--plano
+@DIR@/p.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/p.html  Rv: viewBox width/height is not a finite number > 0: abc 3
+-- stderr --
+-- p.html --
+<script>IMG_W=2;IMG_H=3</script><svg id="zonas" viewBox="0 0 abc 3"></svg>
+<img id="planoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAAD">

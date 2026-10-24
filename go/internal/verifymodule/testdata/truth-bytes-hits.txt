@@ -1,0 +1,46 @@
+declared difference: ord-literal, transient-operator, compact3-import and facets read each .java as bytes: a hit on a line with an encoding error, or in a file holding a NUL byte, is reported (the bash's grep under C.UTF-8 never printed such a line, so it was a silent PASS); the row shows a NUL as \0 and an invalid byte as U+FFFD
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-ux.jar
+-- want --
+exit 1
+PASS  bytecode   @DIR@/Foo-ux.jar  1 classes, all major 52
+PASS  signed     @DIR@/Foo-ux.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Foo-ux.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-ux.jar  no --target-version
+SKIP  stored     @DIR@/Foo-ux.jar  no --stored
+SKIP  typecount  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/module-include.xml
+FAIL  facets     @DIR@/Foo-ux.jar  raw-number MIN/MAX facet (wrap in BDouble.make): @DIR@/mod/Foo-ux/src/com/x/A.java:4:  Object o = BFacets.make(BFacets.MIN, 0); // �
+PASS  facets-req  @DIR@/Foo-ux.jar  no missing required facets under @DIR@/mod/Foo-ux/src
+WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/A.java:3:  String s = "station:x"; // caf�
+WARN  ord-literal  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/B.java:3:class B { int f = Flags.TRANSIENT | Flags.OPERATOR; String o = "local:y"; }
+SKIP  palette    @DIR@/Foo-ux.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Foo-ux.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/Foo-ux.jar  no *.gradle.kts in @DIR@/mod/Foo-ux
+SKIP  moduletest  @DIR@/Foo-ux.jar  not an -rt jar
+PASS  cross-module-type  @DIR@/Foo-ux.jar  no cross-module type references in @DIR@/mod/Foo-ux/src
+WARN  transient-operator  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/B.java:3:class B { int f = Flags.TRANSIENT | Flags.OPERATOR; String o = "local:y"; }
+WARN  compact3-import  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/B.java:2:import java.awt.Color;
+PASS  subscription-leak  @DIR@/Foo-ux.jar  no TypeSubscriber without stopped() under @DIR@/mod/Foo-ux/src
+PASS  slot-wall  @DIR@/Foo-ux.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Foo-ux/src
+verify-module: 7 passed, 1 failed, 7 skipped, 4 warned -> FAILED
+-- stderr --
+-- Foo-ux.jar (jar) --
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (stored) ---
+<module name="Foo-ux" vendor="Angeles">
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Foo-ux/src/com/x/A.java (base64) --
+cGFja2FnZSBjb20ueDsKY2xhc3MgQSB7CiAgU3RyaW5nIHMgPSAic3RhdGlvbjp4IjsgLy8gY2Fm6QogIE9iamVjdCBvID0gQkZhY2V0cy5tYWtlKEJGYWNldHMuTUlOLCAwKTsgLy8g6Qp9Cg==
+-- mod/Foo-ux/src/com/x/B.java (base64) --
+AAppbXBvcnQgamF2YS5hd3QuQ29sb3I7CmNsYXNzIEIgeyBpbnQgZiA9IEZsYWdzLlRSQU5TSUVOVCB8IEZsYWdzLk9QRVJBVE9SOyBTdHJpbmcgbyA9ICJsb2NhbDp5IjsgfQo=
