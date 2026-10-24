@@ -1,0 +1,34 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  k  declared in 2 modules: A/A-rt (A/A-rt/src/K.java), x-worktrees/W-rt (x-worktrees/W-rt/src/K.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/.hidden/H-rt/build.gradle.kts --
+-- proj/.hidden/H-rt/src/.keep --
+k
+-- proj/.hidden/H-rt/src/K.java --
+package k;
+-- proj/A/A-rt/build.gradle.kts --
+-- proj/A/A-rt/src/.keep --
+k
+-- proj/A/A-rt/src/K.java --
+package k;
+-- proj/A/A-rt/srcTest/T-rt/build.gradle.kts --
+-- proj/A/A-rt/srcTest/T-rt/src/.keep --
+k
+-- proj/build/B-rt/build.gradle.kts --
+-- proj/build/B-rt/src/.keep --
+k
+-- proj/build/B-rt/src/K.java --
+package k;
+-- proj/node_modules/N-rt/build.gradle.kts --
+-- proj/node_modules/N-rt/src/.keep --
+k
+-- proj/node_modules/N-rt/src/K.java --
+package k;
+-- proj/x-worktrees/W-rt/build.gradle.kts --
+-- proj/x-worktrees/W-rt/src/.keep --
+k
+-- proj/x-worktrees/W-rt/src/K.java --
+package k;

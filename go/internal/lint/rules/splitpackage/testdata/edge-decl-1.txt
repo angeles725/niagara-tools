@@ -1,0 +1,38 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  (default)  declared in 2 modules: A/A-rt (A/A-rt/src/a/E.java), B/B-rt (B/B-rt/src/b/E.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+WARN  split-package-check  com.inblock  declared in 2 modules: A/A-rt (A/A-rt/src/a/N.java), B/B-rt (B/B-rt/src/b/N.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+WARN  split-package-check  com.late  declared in 2 modules: A/A-rt (A/A-rt/src/a/T.java), B/B-rt (B/B-rt/src/b/T.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+WARN  split-package-check  com.url  declared in 2 modules: A/A-rt (A/A-rt/src/a/U.java), B/B-rt (B/B-rt/src/b/U.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/A/A-rt/build.gradle.kts --
+-- proj/A/A-rt/src/.keep --
+k
+-- proj/A/A-rt/src/a/E.java --
+package 1bad;
+-- proj/A/A-rt/src/a/N.java --
+/*
+package com.inblock;
+*/
+-- proj/A/A-rt/src/a/S.java --
+// package fake;
+  /* x */ package  com.sp . x ;
+-- proj/A/A-rt/src/a/T.java --
+class T { String s = "package com.sp;"; }
+package com.late;
+-- proj/A/A-rt/src/a/U.java --
+package com.url; // http://x
+-- proj/B/B-rt/build.gradle.kts --
+-- proj/B/B-rt/src/.keep --
+k
+-- proj/B/B-rt/src/b/E.java --
+-- proj/B/B-rt/src/b/N.java --
+package com.inblock;
+-- proj/B/B-rt/src/b/S.java --
+	package com.sp;  // trailing
+-- proj/B/B-rt/src/b/T.java --
+ package com.late;
+-- proj/B/B-rt/src/b/U.java --
+package com.url;
