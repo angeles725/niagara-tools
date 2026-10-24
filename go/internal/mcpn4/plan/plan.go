@@ -10,20 +10,25 @@ import (
 )
 
 // Planned is what a tool's plan returns (tools_write.Planned): the exact ops and inverse, both
-// hashed into the token, human notes, the ORD -> handle targets the intent records, and the
-// private data its read-back needs.
+// hashed into the token (the inverse without its `prior` values), human notes, the ORD ->
+// handle targets the intent records, the PlanKeys and IntentKeys the token and the intent carry
+// (Python keeps them in the plan's data), and the private data its read-back needs.
 type Planned struct {
 	Ops, Inverse, Notes []any
-	Targets             *pyjson.Object
+	Targets, Keys       *pyjson.Object
 	Data                any
 }
 
-// Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only) and
-// its read-back. The inverse it journals is the planned one.
+// Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only), the
+// inverse it journals (nil: the planned one; else built from the station's replies, where an
+// error means the reply cannot be trusted), the recover hook of such a reply (nil: none) and
+// its read-back.
 type Impl struct {
 	ScopeOrds func(args *pyjson.Object) []any
 	Plan      func(c Client, args *pyjson.Object) (*Planned, error)
-	Readback  func(c Client, args *pyjson.Object, p *Planned, replies []any) (requested, accepted, observed any, verdict string, err error)
+	Inverse   func(p *Planned, replies []any) ([]any, error)
+	Recover   func(c Client, args *pyjson.Object, p *Planned, replies []any) (observed any, inverse []any, err error)
+	Readback  func(c Client, args *pyjson.Object, p *Planned, replies, inverse []any) (requested, accepted, observed any, verdict string, err error)
 }
 
 // Engine runs the write tools of one server process.
@@ -36,8 +41,9 @@ type Engine struct {
 // canonical JSON. It names the station session (audit F1): a token cannot execute after a
 // reconnect or on another station.
 func Hashed(name string, p *Planned, sess *session.Session) (*pyjson.Object, string, error) {
-	plan := obj("tool", name, "ops", list(p.Ops), "inverse", list(p.Inverse), "notes", list(p.Notes),
+	plan := obj("tool", name, "ops", list(p.Ops), "inverse", HashedInverse(list(p.Inverse)), "notes", list(p.Notes),
 		"station", obj("name", sess.StationName, "base_url", sess.BaseURL, "session_id", sess.SessionID))
+	withKeys(plan, p, PlanKeys)
 	canon, err := pyjson.Marshal(plan, pyjson.Canonical)
 	if err != nil {
 		return nil, "", err
@@ -46,12 +52,19 @@ func Hashed(name string, p *Planned, sess *session.Session) (*pyjson.Object, str
 	return plan, hex.EncodeToString(sum[:]), nil
 }
 
-func (e *Engine) dryRun(name string, args, plan *pyjson.Object, planHash, tierBlock string) (*pyjson.Object, string, error) {
+func (e *Engine) dryRun(name string, args, plan *pyjson.Object, planHash, tierBlock string, inverse []any) (*pyjson.Object, string, error) {
 	tok, expires, err := e.State.Tokens.Issue(name, args, planHash)
 	if err != nil {
 		return nil, "", err
 	}
 	out := obj("dry_run", true, "plan", plan, "plan_hash", planHash, "confirmation_token", tok, "expires_at", expires)
+	preview, err := LinkInputValues(inverse)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(preview) > 0 { // volatile: shown to the operator, outside what the token authorizes
+		out.Set("link_input_values", preview)
+	}
 	if tierBlock != "" { // outside the plan hash: the gate is policy, not part of the plan
 		sess := e.Ctx.Session
 		var version any

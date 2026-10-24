@@ -263,7 +263,7 @@ func (s *Server) call(params any) (any, error) {
 	if h == nil { // never scrubbed: the harness skips on this exact text
 		return toolError(name + " " + NotImplemented), nil
 	}
-	out, err := h(args)
+	out, err := Recover(func() (*pyjson.Object, error) { return h(args) })
 	var be *box.Error
 	if errors.As(err, &be) && be.IsAuth() && s.Ctx != nil {
 		// Always (re)latch: a client without the hook still latches here, and a held latch

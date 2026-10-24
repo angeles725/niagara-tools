@@ -13,7 +13,12 @@ import (
 // Handler is _make_handler(name): the tool's pipeline plus its audit line.
 func (e *Engine) Handler(name string, impl Impl) jsonrpc.Handler {
 	return func(args *pyjson.Object) (*pyjson.Object, error) {
-		out, batchID, err := e.process(name, impl, args)
+		batchID := ""
+		out, err := jsonrpc.Recover(func() (*pyjson.Object, error) { // a panic is audited as an error
+			out, id, err := e.process(name, impl, args)
+			batchID = id
+			return out, err
+		})
 		var te *jsonrpc.ToolError
 		var se *safety.Error
 		var doubt *InDoubt
@@ -91,7 +96,7 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 		return nil, "", err
 	}
 	if dry {
-		return e.dryRun(name, args, plan, planHash, tierBlock)
+		return e.dryRun(name, args, plan, planHash, tierBlock, list(planned.Inverse))
 	}
 	if err := w.checkStateFiles(); err != nil { // a loose file fails before the token and any send
 		return nil, "", err
@@ -107,12 +112,18 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	}
 	intent := obj("batch_id", batchID, "ts", session.Now(), "tool", name, "ops", list(planned.Ops),
 		"inverse_plan", list(planned.Inverse), "station_name", sess.StationName, "phase", "intent", "targets", targets)
+	withKeys(intent, planned, IntentKeys)
 	if w.Journal.Append(intent) != nil { // write-ahead: no intent on disk, no op on the wire
 		return nil, "", ToolError("nothing was sent: the journal intent could not be written (batch " + batchID +
 			"); the confirmation token is spent, run the dry run again")
 	}
 	w.WritesExecuted++ // counted once sent, whatever the station answers
-	// From here on the batch exists: execute's only error is its in-doubt one.
-	out, err = e.execute(client, impl, args, planned, batchID)
+	// From here on the batch exists: execute's only error is its in-doubt one, and a panic
+	// (Python's unexpected exception) leaves the batch in-doubt too.
+	out, err = jsonrpc.Recover(func() (*pyjson.Object, error) { return e.execute(client, impl, args, planned, batchID) })
+	var p *jsonrpc.Panic
+	if errors.As(err, &p) {
+		err = inDoubt(batchID, err)
+	}
 	return out, batchID, err
 }

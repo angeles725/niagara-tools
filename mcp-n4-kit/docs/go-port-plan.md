@@ -100,16 +100,17 @@ with it and serves the write tools ported so far (section 14).
 | S15 | #304 in-doubt matrix | See below |
 | S16 | Switch the default launcher to Go | Python kept one release as fallback |
 
-**Status (server v0.9.5).** S0-S9 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
-#462; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
+**Status (server v0.9.5).** S0-S10 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
+#462, #475; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
 section 13) then changed both servers together.
 `readtools.Register` (`go/internal/mcpn4/readtools/connect.go`) serves all 13 read tools:
 `n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
 `n4_find_dangling_outputs`, `n4_bql_query`, `n4_inventory`, `n4_read_file`, `n4_list_px_views`,
 `n4_px_summary`, `n4_list_batches`, `n4_session_retro_draft`. S10 (section 14) adds the plan
-engine with `n4_set_slot` and `n4_invoke_action`: `--allow-writes` starts the Go server, and the
-other five write tools answer the "not implemented" text (section 6) until S11-S14. Under the Go
-binary the suite runs 656 tests with 420 skipped (section 14).
+engine with `n4_set_slot` and `n4_invoke_action`: `--allow-writes` starts the Go server. S11
+(section 15) adds `n4_create_component` and `n4_create_link`; the other three write tools answer
+the "not implemented" text (section 6) until S12-S14. Under the Go binary the suite runs 660
+tests with 380 skipped (section 15).
 
 **S15 in-doubt matrix.** Each branch gets an explicit Go test plus the black-box Python test,
 driven by `hook` faults and an unwritable state dir:
@@ -218,10 +219,10 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
-| `test_tools_destructive.py` | 101 | 4 | 24 | 28 | 2 | 58 | 43 |
-| `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| `test_write_parity.py` | 14 | 0 | 0 | 0 | 0 | 0 | 14 |
-| **Total** | **656** | **166** | **56** | **105** | **18** | **345** | **311** |
+| `test_tools_destructive.py` | 101 | 4 | 24 | 29 | 2 | 59 | 42 |
+| `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
+| `test_write_parity.py` | 18 | 0 | 0 | 0 | 0 | 0 | 18 |
+| **Total** | **660** | **166** | **51** | **106** | **18** | **341** | **319** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -625,7 +626,7 @@ The box client gains `Sync` (`BoxClient.sync`), and `float()` moves to `pyjson.P
 (`WriteState`'s start checks in Python's order; a refusal is `mcp_n4.server: <text>`, exit 2),
 lists the seven write tools after the read tools (`jsonrpc.Server.EnableWrites`), checks the auth
 latch before every write tool as Python's `_call` does, and serves `n4_set_slot` and
-`n4_invoke_action`; the other five answer the "not implemented" text. `readtools.Tools.Audit` is
+`n4_invoke_action`; the other five answered the "not implemented" text until S11 (section 15). `readtools.Tools.Audit` is
 `ctx.write.audit`: BQL reads now leave their `read` audit line under `--allow-writes`.
 
 **Proof.** With the two handlers stubbed, the 18 runnable tests of `TestSetSlot`,
@@ -676,7 +677,65 @@ record of a multi-op batch (`_in_doubt_partial`), an inverse that cannot be buil
 `recover` hook, `_scrub_gap_errors`, `planned.data["write"]` of the save, and the in-doubt wrap of
 an unexpected failure after the sends (S15's "batch id kept"). A Python exception the port does
 not model (a `RecursionError`, a `MemoryError`) has no Go counterpart, and a Go panic in a plan
-or read-back ends the process where Python's `except Exception` would record it; no input reaches
-either. `box.PyEqual` still treats two infinities as unequal, which no verdict can observe (a
+or read-back ended the process where Python's `except Exception` would record it (closed in S11,
+section 15); no input reaches either. `box.PyEqual` still treats two infinities as unequal, which no verdict can observe (a
 request is always finite). An `OSError` from appending a state file keeps Go's text, which no
 reply shows. Expiry tests stay Go-only. Python bugs: none found.
+
+## 15. S11 `n4_create_component`, `n4_create_link` and the engine's later branches
+
+**Packages.** `writeops/create.go` is `_create_component_plan`, `_wire_sheet` (Python ints of any
+size; a bool or float is refused; `w` defaults to 8), `_create_component_inverse` (the station's
+`nn`, else the requested name) and `_create_component_readback` (Python's errors for an odd reply:
+`KeyError: 0`, "object is not subscriptable", an unhashable name, the first code point of a
+string). `writeops/link.go` is `_link_plan`, `_link_result`, `_link_inverse`, `_link_recover` and
+`_link_readback` (only the part after the last `|` of a source ORD is compared). `plan.Impl` gains
+`Inverse` (nil: the planned one) and `Recover`, and `Readback` receives the inverse. `execute`
+ports the inverse that cannot be built (verdict `unverified`, `in_doubt` on the reply and the
+result record, the station's words or the class name), the recover hook, and Python's `except
+Exception` around inverse, recover and read-back: a failure there discards whatever the tool
+returned with it. `plan/prior.go` ports `_hashed_inverse`, the `link_input_values` preview of a dry
+run and the plan keys: `Planned.Keys` holds what Python keeps in the plan's data, its truthy
+`relinks`, `unlinked_inputs`, `components`, `outgoing_links_broken` and `snapshot_truncated` join
+the hashed plan and its `rollback_of`, `relinks` and `components` the intent, in Python's order; no
+S11 tool sets them, S12-S13 will. `jsonrpc.Recover` turns a handler panic into `internal error
+(Exception)` as Python's catch-all answers an unexpected exception, and the engine recovers too: a
+panic before the intent is an audited error, a panicking send leaves the batch in-doubt, a panic in
+inverse, recover or read-back is a result. `tiers.ReasonTier` is now the only copy of `REASON_TIER`
+(the `safety` duplicate is gone).
+
+**Proof.** With both handlers stubbed, 45 runnable tests failed under Go (RED):
+`TestCreateComponent`, `TestCreateLink`, `TestCreateLinkRejected`, `TestLinkReplies`, `TestScope`,
+`TestTokenLayers`, `TestTokenStationBinding`, `TestBudget`, `TestJournalAndAudit`, the tier write
+tests, the rollback tests that first create a component and the new parity tests; with the port
+they pass. `TestCreateLinkRejected` and `TestLinkReplies` were `go_twin` internals only to read the
+journal through `srv.ctx`: they now read the state file the server wrote (`safety.Journal`) and run
+black-box on both servers; `TestPlannedDataGuards` patches the Python table and became
+`go_twin("plan", "injection")` with `plan.TestAPlanWhoseDataIsNotADictStillExecutes`.
+`test_write_parity` gains four scenarios (18 in all): every create and link refusal, renames, token
+reuse, read-back mismatch, 18 odd `syncTo` replies, 14 refused, ambiguous and malformed
+`checkLinks` replies, a lying or prefixed station, recover finding one, none or two links or
+failing to load, failed read-back loads and failed sends. Go differentials on CPython 3.15:
+`writeops.TestInverseRecoverAndReadbackDifferentialPython` runs 1,648 cases through the real
+`_IMPLS` plan, inverse, recover and read-back and requires the plan, its `plan_hash`, the targets,
+the inverse and the read-back or recovery, or Python's error class and message, byte for byte (49
+refusals, 7 internal errors, 87 verified, 377 mismatch, 96 failed, 600 read-back errors, 27
+recovered, 153 recovered none, 252 recover errors);
+`plan.TestHashedInverseAndLinkInputValuesDifferentialPython` covers `_hashed_inverse` and
+`_link_input_values` on odd inverses;
+`jsonrpc.TestAPanickingToolAnswersAsPythonsCatchAllAndTheServerLivesOn` compares a panicking
+handler with a Python tool that raises. Engine twins cover the plan and intent keys, a `prior` that
+moves between dry run and execution (the token still executes, the journal keeps the new value), an
+unbuildable preview and every panic branch. 61 hand mutants of the create and link refusals,
+inverse, recover and read-back branches, the scope binding, the engine's in-doubt and recover
+branches, the preview, hashed inverse and keys, the panic recovers and the tier reason all go RED,
+none through a build failure. The first run left four survivors, each closed: a source ORD with two
+`|` and a non-link child with matching slots (corpus cases), an inverse or recover error that
+returned values (a twin), and an equivalent `list()` that was removed. Under `MCP_N4_IMPL=go`: 660
+tests, 380 skipped (656 / 420 before).
+
+**Known differences.** No byte difference was found. The plan's private link list is a Go set,
+where Python keeps it sorted; nothing shows it. Left to S12-S15: the multi-op partial in-doubt
+record (`_in_doubt_partial`; both S11 tools send one op), `_scrub_gap_errors`,
+`planned.data["write"]` of the save and the relink and component runs of a rollback. A Go panic is
+reported as `Exception`, whatever Python class the same bug would raise. Python bugs: none found.
