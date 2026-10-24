@@ -25,6 +25,17 @@ Surveyed 6 Honeywell WB module families and classified them into 3 tiers (manage
 | Δ7 | Redact `Authorization`/credential headers in structured logging (even at FINEST) — cloud/http connector hardening | `types/security.md` / `types/observability.md` | `[ev: corpus B1082]` |
 | Δ8 | `static State extends DeviceState` (class-scoped) to survive a manager view close/reopen without losing subscription/discovery state | `types/wb-widgets.md` | `[ev: corpus B1078]` |
 
+> **Corrected (2026-10-24, quality round 10) — Δ1:** the row names the SPI lookup as
+> "`NiagaraRegistryUtil.getImplementersOfTypeSpec()`", a static call with no argument. Reading A (this retro, copied
+> from corpus B1077 lines 127, 189, 218): a static helper. Reading B (the code): `NiagaraRegistryUtil` is a singleton,
+> `public static NiagaraRegistryUtil instance()`, and the lookup is the instance method
+> `public Optional<TypeInfo[]> getImplementersOfTypeSpec(String TYPE_SPEC)`, called as
+> `NiagaraRegistryUtil.instance().getImplementersOfTypeSpec(typeSpec)` (honeywellDeviceManager-wb vineflower
+> `util/NiagaraRegistryUtil.java:19`, `:23`; `util/HonDeviceCache.java:120`; Honeywell module, no docSource tree).
+> Winner: B. It was wrong when written: B1077 has carried the static form since its only commit (2026-09-20), and the
+> retro copied it. `types/driver-authoring.md` carries reading B since citation audit batch 9. The row text and this
+> retro's review-status are left as they were.
+
 ## Lessons
 - Honeywell's WB is Tridium's base + a thin extension layer; the reusable wins are the SPI-extensible manager (Δ1), fail-closed auth (Δ3), and per-user prefs (Δ2).
 - **Anti-patterns to AVOID (B1083 §4):** static class-level widget singletons (not thread-safe across two open managers); unconditional `(BBacnetDevice)` cast (ClassCastException on a Modbus device); dual-namespace in one module; Modbus inner-class manager without justification; mixed pre-annotation + `@AgentOn` registration eras. Candidate lints.

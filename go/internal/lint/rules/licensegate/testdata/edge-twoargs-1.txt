@@ -1,0 +1,17 @@
+-- args --
+@DIR@/Mod
+@DIR@/Mod
+-- want --
+exit 3
+-- stderr --
+usage: lint-license-isoperational-gate.sh [--strict] <src-root>
+-- Mod/src/com/x/BS.java --
+package com.x;
+public class BS extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void doPoll() {
+    poll();
+  }
+}

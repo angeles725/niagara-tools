@@ -1,0 +1,4 @@
+# Methodology
+
+## Domain correctness
+text

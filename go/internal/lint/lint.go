@@ -90,7 +90,9 @@ type Rule interface {
 // is ordered by check rather than by file. CheckTree gets the files in walk order (each read once and
 // shared with the per-file rules) and sets Path on each finding. A non-nil error fails the scan closed:
 // the runner prints the findings returned with it, then "<lint>: <error>" on stderr (the rule writes
-// the whole text, e.g. "cannot scan <path>: <reason>"), and exits 3.
+// the whole text, e.g. "cannot scan <path>: <reason>"), and exits 3. A TreeRule whose selected files hold
+// nothing it checks (lint-duplicate-helper: no -rt/-ux/-wb src/ file) returns ErrEmptyRoot, as a RootRule
+// does: the Spec.EmptyError row instead of its findings, the rule stops and the exit is 3.
 type TreeRule interface {
 	ID() string
 	Severity() Severity
@@ -111,7 +113,14 @@ type RootRule interface {
 	CheckRoot(root string) ([]Finding, error)
 }
 
-// ErrEmptyRoot is what a RootRule returns for a root that holds nothing it checks (see RootRule).
+// Configurer is implemented by a rule that reads a value option (Spec.Option, Mode Valued) before it scans:
+// when the rule runs alone, Configure gets the parsed Args after the root check and before the walk. A
+// non-nil error is printed verbatim on stderr (the rule writes the whole text) and exits 3 with no row.
+type Configurer interface {
+	Configure(a Args) error
+}
+
+// ErrEmptyRoot is what a RootRule or a TreeRule returns for a root that holds nothing it checks.
 var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
 
 // Spec registers a rule with the command-line contract of the toolbelt wrapper that runs it alone.
@@ -128,6 +137,17 @@ type Spec struct {
 	// CheckFirst prints a finding's check column before its severity (`<check>  <SEV>  <path>:<line>  <msg>`),
 	// the row of lint-wb-threading; the empty-root ERROR row keeps the standard shape.
 	CheckFirst bool
+	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
+	// implementing Configurer.
+	Option string
+	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
+	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
+	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.
+	EmptyOK bool
+	// ModuleRoot marks a rule whose roots are module roots, not source roots (lint-duplicate-helper reads
+	// every part's src/): n4lint --all, which runs on source roots, leaves it out as it leaves out a
+	// RootRule; it runs by name or in a rule list.
+	ModuleRoot bool
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
@@ -138,7 +158,8 @@ type Spec struct {
 	// bash lints made it: the rule prints "ERROR  <check>  <root>  <msg>" on stdout and stops (no later
 	// root, exit 3). It is decided per root after the walk, so a walk error wins and prints no ERROR row.
 	// There is no opt-out: every registered rule reads source files, and none has a meaning on a root
-	// without them. A RootRule decides emptiness itself and returns ErrEmptyRoot; its spec sets Msg.
+	// without them. A RootRule decides emptiness itself and returns ErrEmptyRoot; its spec sets Msg. A TreeRule may
+	// return ErrEmptyRoot too, when the files it selects hold nothing it checks.
 	EmptyError EmptyRow
 	// BarePathRow prints a file-level finding (Line 0) as "<path>  <msg>", two spaces and no colon, as
 	// lint-structure printed its file and directory rows; a line finding keeps "<path>:<line>  <msg>".
@@ -153,6 +174,21 @@ type Spec struct {
 	// printed ${file#"$root/"} did (a root given with a trailing "/" keeps the whole path, as there). Env
 	// lines on stderr keep the walk path.
 	RelPaths bool
+	// IntFlags are the "<name> <n>" options (n a non-negative integer, e.g. "--max-class 800") the rule takes
+	// when it runs alone, as a bash lint's AL_FLAG_HOOK took them: among the leading flags, before "--" and
+	// the roots, any order with --strict, the last one given winning. A value that is missing or not all
+	// digits prints "<lint>: <name> needs a non-negative integer" and the usage line (exit 3); an unknown flag
+	// before it stays Parse's unknown-flag error. Configure (required with IntFlags) builds the rule from
+	// the values, every flag not given at its Default; in a rule list or under --all the rule runs as
+	// registered (its defaults).
+	IntFlags  []IntFlag
+	Configure func(vals map[string]int) Rule
+}
+
+// IntFlag is one Spec.IntFlags option: its name as typed ("--max-class") and its value when not given.
+type IntFlag struct {
+	Name    string
+	Default int
 }
 
 // EmptyRow is the ERROR row of Spec.EmptyError.
@@ -206,6 +242,9 @@ func (sp Spec) validate() error {
 	_, isRoot := r.(RootRule)
 	if count(isRule, isTree, isRoot) != 1 {
 		return errors.New("lint: rule " + r.ID() + " implements more than one of Rule, TreeRule and RootRule")
+	}
+	if len(sp.IntFlags) > 0 && (sp.Configure == nil || sp.Rule == nil) {
+		return errors.New("lint: rule " + r.ID() + " has IntFlags without a per-file Rule and Configure")
 	}
 	return nil
 }

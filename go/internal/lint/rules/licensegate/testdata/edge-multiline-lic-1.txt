@@ -1,0 +1,28 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BS.java --
+class BS {
+  public Feature
+      getLicenseFeature()
+  {
+    return f;
+  }
+  public void doA() { a(); }
+  public Feature getLicenseFeature2() { return null; }
+}
+-- Mod/src/com/x/BT.java --
+class BT {
+  public Feature getLicenseFeature()
+  {
+    return null;
+  }
+  public void doA() { a(); }
+}
+-- Mod/src/com/x/BU.java --
+class BU {
+  public Feature getLicenseFeature() { return  null ; }
+  public void doA() { a(); }
+}

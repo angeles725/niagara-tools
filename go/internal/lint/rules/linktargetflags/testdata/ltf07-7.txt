@@ -1,0 +1,31 @@
+-- args --
+--wiring-map
+@DIR@/map.md
+@DIR@/root
+-- want --
+exit 0
+-- stderr --
+-- map.md --
+## Table 2 — SUMMARY display slots (control → facade)
+
+| Facade slot | Workbench display name | Source RT slot | Full ord | Physical instance / crossing notes |
+|-------------|------------------------|----------------|----------|-------------------------------------|
+| `evap2InDrip` | Evaporadora 2 en goteo |  | _(fill)_ | |
+-- root/com/x/BRoomPanel.java --
+package com.x;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(
+  name = "evap2InDrip",
+  type = "boolean",
+  defaultValue = "false",
+  flags = Flags.SUMMARY | Flags.READONLY
+)
+@NiagaraProperty(
+  name = "temperatureSetpoint",
+  type = "double",
+  defaultValue = "-5.0",
+  flags = Flags.SUMMARY | Flags.OPERATOR
+)
+public final class BRoomPanel extends BComponent {
+}

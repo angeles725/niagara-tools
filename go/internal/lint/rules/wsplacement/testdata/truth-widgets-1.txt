@@ -1,0 +1,38 @@
+declared difference (truth fix T2): a bajaui widget added to a pane is a Workbench view child, never a
+wire-sheet node, but the bash lint WARNed every `buttons.add(null, new BButton(...))` (6 of its 10 Cliente
+rows). A `new B<Type>` whose type the file imports by name from javax.baja.ui or javax.baja.workbench (or a
+sub-package) is not flagged now; a wildcard import, another package and a component added beside the
+widgets still are.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BMgr.java:15  add("e", new BExport()) in build() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BWild.java:5  add(null, new BButton()) in build() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BMgr.java --
+package com.x;
+import javax.baja.sys.BComponent;
+import javax.baja.ui.BButton;
+import javax.baja.ui.pane.BGridPane;
+import javax.baja.workbench.view.BWbView;
+import com.x.BExport;
+public class BMgr extends BWbView {
+  void build(BComponent parent) {
+    BGridPane buttons = new BGridPane(4);
+    buttons.add(null, new BButton(new AddCmd()));
+    buttons.add(null, new BButton(new RemoveCmd()));
+    add(null, buttons);
+    BWbView v = new BWbView();
+    add("v", v);
+    parent.add("e", new BExport());
+  }
+}
+-- BWild.java --
+package com.x;
+import javax.baja.ui.*;
+public class BWild extends BWidget {
+  void build() {
+    add(null, new BButton());
+  }
+}

@@ -23,6 +23,8 @@ setup() {
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "${TMPDIR_T}/gradlew.args"
 printf '%s\n' "$*" >> "${TMPDIR_T}/gradlew.calls.log"
+# FAKE_GRADLEW_STDOUT: text a slotomatic invocation prints (a Slot-o-Matic skip report, K15)
+if [[ -n "${FAKE_GRADLEW_STDOUT:-}" && "$*" == *slotomatic* ]]; then printf '%s\n' "$FAKE_GRADLEW_STDOUT"; fi
 exit "${FAKE_GRADLEW_EXIT:-0}"
 STUB
     chmod +x "$TMPDIR_T/fakebin/gradlew"
@@ -392,6 +394,25 @@ ENVEOF
     [ -f "$TMPDIR_T/gradlew.calls.log" ]
     [ "$(wc -l < "$TMPDIR_T/gradlew.calls.log")" -eq 1 ]
     [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"slotomatic"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# T19b: slotomatic exits 0 but skipped a file (K15) → exit 15, file named, sin build
+# The shared detector (toolbelt/lib/slotomatic-skip.sh) reads the captured slotomatic output.
+# [ev: retro r10-slotomatic-skip-fail-open Δ1]
+# Named mutation: drop the slotomatic_skip_scan call in run_slotomatic -> T19b exits 0 and builds.
+# ---------------------------------------------------------------------------
+@test "T19b: slotomatic that skipped a file exits 15, names it, and does not build" {
+    export FAKE_GRADLEW_STDOUT="WARNING: Could not process /x/src/BHmiStatus.java: Found multiple metadata blocks"
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --mode A \
+        --with-slotomatic
+    [ "$status" -eq 15 ]
+    [[ "$output" == *"FAIL slotomatic-skip /x/src/BHmiStatus.java"* ]]
+    [[ "$output" == *"K15"* ]]
+    [ "$(wc -l < "$TMPDIR_T/gradlew.calls.log")" -eq 1 ]
 }
 
 # ---------------------------------------------------------------------------

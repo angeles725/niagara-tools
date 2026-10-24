@@ -24,6 +24,9 @@
 #     `const|let|var X = ...` initializer (any depth: rc code lives in IIFE/AMD wrappers) or an object-literal
 #     property default (`{ key: ... }`); an assignment, a call argument or a ternary branch is not.
 #   *.properties (go/internal/props, java.util.Properties.load rules: continuations, # ! comments, escapes): every value.
+#     Build-location keys (R10-D8): in a gradle.properties, niagara_home, niagara_user_home, nodeHome and
+#     org.gradle.java.installations.paths (go/internal/props BuildLocationKeys) print no row, kit fixtures included:
+#     lint-structure L10 owns them (WARN to migrate to the user-level gradle.properties; FAIL in a kit fixture, K16).
 # Machine path: the value (\\ \" \' \` read, after an optional file: scheme), case-insensitive, starts with /home/,
 # /Users/, /tmp (/ or end), /var/tmp (/ or end), /mnt/<drive>/Users/ or <drive>:\Users\ / <drive>:/Users/, or contains
 # "scratchpad". Not rows: install roots (/opt/Niagara, C:\Niagara\Niagara-4.x), relative paths, and /home/niagara/
@@ -45,7 +48,9 @@
 # Mutation: MDP2 -- reading comment text flags a /home/ path quoted in a Javadoc
 # Mutation: MDP3 -- dropping the method-body check flags a local variable in a method
 # Mutation: MDP4 -- dropping the rc JavaScript pass passes const DIR = "/home/me/x" in src/rc clean
-# Mutation: MDP5 -- dropping the .properties pass passes niagara_user_home=C:\\Users\\... clean
+# Mutation: MDP5 -- dropping the .properties pass passes export_dir=C:\\Users\\... clean
+# Mutation: MDP6 -- dropping the build-location-key check WARNs niagara_user_home=C:\\Users\\... and exits 1 under --strict
+# Mutation: MDP7 -- restoring a kit-fixture exception reports a fixture's niagara_user_home as a WARN row
 # Mutation: MDP-strict -- giving the rule a non-WARN severity exits 0 under --strict with a row
 # Mutation: MDP-K20 -- dropping the engine empty-root guard reports an empty root as a clean exit 0
 set -u

@@ -1,0 +1,7 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-rt/notes.txt --
+xé

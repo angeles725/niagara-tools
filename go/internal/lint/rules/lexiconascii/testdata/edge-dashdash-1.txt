@@ -1,0 +1,10 @@
+-- args --
+--
+@DIR@/Mod
+-- want --
+exit 3
+-- stderr --
+lint-lexicon-ascii: not a directory: --
+-- Mod/Mod-rt/module.lexicon --
+a=b
+bad=café

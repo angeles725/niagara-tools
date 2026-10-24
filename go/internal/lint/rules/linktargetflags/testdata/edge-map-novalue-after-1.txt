@@ -1,0 +1,12 @@
+-- args --
+@DIR@/root
+--wiring-map
+-- want --
+exit 3
+-- stderr --
+usage: lint-link-target-flags.sh [--wiring-map <docs/wiring-map.md>] <java-src-dir>
+-- root/com/x/A.java --
+class A {
+// Commissioning link from control
+@NiagaraProperty(name = "sl", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}

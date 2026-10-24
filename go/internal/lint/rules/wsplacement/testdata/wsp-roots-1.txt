@@ -1,0 +1,73 @@
+-- args --
+@DIR@/annotated
+@DIR@/positive
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/positive/com/x/BSyncService.java:12  add(op.name, create(...)) in doSyncInventory() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- annotated/com/x/BUpMonitor.java --
+package com.x;
+
+// Shape of chihuahua BChiUpMonitor.ensureUps: creates each child into a local and places it on a grid.
+public class BUpMonitor extends BComponent
+{
+  private void ensureUps()
+  {
+    int seq = 0;
+    for (int i = 0; i < UP_DATA.length; i++)
+    {
+      String slotName = (String) UP_DATA[i][0];
+      if (get(slotName) != null) { seq++; continue; }
+      BUp up = new BUp();
+      add(slotName, up);
+      BComponent child = (BComponent) get(slotName);
+      child.add("wsAnnotation", BWsAnnotation.make(3 + seq % 8 * 14, 3 + seq / 8 * 10, 8), Flags.READONLY);
+      seq++;
+    }
+  }
+}
+-- list/com/x/Plan.java --
+package com.x;
+
+// Not slot adds of a new component: collection adds, value-typed properties, addAll.
+// One shape per method, and no method mentions the placement slot, so none is silenced by the guard.
+public class Plan
+{
+  void collect(List<BComponent> out)
+  {
+    out.add(new BFolder());
+    out.add(0, new BFolder());
+  }
+
+  void values(BComponent c)
+  {
+    c.add("status", new BStatusNumeric());
+    c.add("since", new BAbsTime());
+  }
+
+  void bulk(BComponent c)
+  {
+    c.addAll(items, new BFolder());
+  }
+}
+-- positive/com/x/BSyncService.java --
+package com.x;
+
+// Shape of DashboardFord BFordDashboardService.doSyncInventory: creates every missing node, places none.
+public class BSyncService extends BAbstractService
+{
+  public void doSyncInventory()
+  {
+    for (Op op : plan.ops)
+    {
+      BComponent parent = resolve(op.parent);
+      if (parent == null) continue;
+      parent.add(op.name, create(op.type));
+    }
+  }
+
+  private static BComponent create(String type)
+  {
+    return (BComponent) Sys.getType(type).getInstance();
+  }
+}
