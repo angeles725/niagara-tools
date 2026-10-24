@@ -1,0 +1,7 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: rc-scan.sh <artifact-dir> [--strict] [--profile hmi|lan|both|unknown] [--legacy]
+-- README --
+nothing
