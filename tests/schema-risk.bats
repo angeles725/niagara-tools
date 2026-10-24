@@ -76,12 +76,16 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   [[ "$output" == *"add_slot"* ]]
 }
 
-@test "SR-CSV embedded CSV_TABLE heredoc byte-equals tests/fixtures/schema-risk/b795-795.4.csv" {
-  local script="$SR"
-  local oracle="$FX/b795-795.4.csv"
-  local extracted
-  extracted=$(awk '/^CSV_TABLE=\$\(cat <</{f=1;next} f&&/^CSV$/{exit} f{print}' "$script")
-  [ "$extracted" = "$(cat "$oracle")" ]
+@test "SR-CSV the embedded Go classifier table byte-equals tests/fixtures/schema-risk/b795-795.4.csv" {
+  # The table moved from the bash CSV_TABLE heredoc to go/internal/schemarisk/b795-795.4.csv (go:embed).
+  cmp "$KIT/../go/internal/schemarisk/b795-795.4.csv" "$FX/b795-795.4.csv"
+}
+
+@test "SR-multi several rows of one category list in declaration order (after for add_slot, before for the rest)" {
+  # Mutation: SR-multi -- listing a category by name (or map order) puts alpha before zeta and fails here
+  pair multi_row
+  [ "$status" -eq 2 ]
+  [ "$output" = "$(cat "$BATS_TEST_DIRNAME/../go/internal/schemarisk/testdata/multi_row.golden")" ]
 }
 
 @test "SR-locked: an unreadable sub-directory is an env error (exit 4), never a clean pass" {
@@ -98,4 +102,54 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   chmod 755 "$BATS_TEST_TMPDIR/after/locked"
   [ "$status" -eq 4 ]
   [[ "$output" == *"error: cannot list every file under $BATS_TEST_TMPDIR/after: "* ]]
+}
+
+@test "SR-empty-before a before snapshot with no slot adds every after slot (SAFE), never removes them" {
+  # Mutation: SR-empty-before -- reading the after slots as the before side (awk NR==FNR on an empty first file) prints remove_slot rows, LOSSY
+  mkdir -p "$BATS_TEST_TMPDIR/before"
+  cp "$FX/add_slot/before/module-include.xml" "$BATS_TEST_TMPDIR/before/"
+  run "$SR" "$BATS_TEST_TMPDIR/before" "$FX/add_slot/after"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"add_slot  MinimalPan.setpoint"* ]]
+  [[ "$output" != *"remove_"* ]]
+  [[ "$output" == *"verdict=SAFE"* ]]
+}
+
+@test "SR-unreadable-java an unreadable *.java is an env error (exit 4, no verdict), never a partial-read verdict" {
+  # Mutation: SR-unreadable-java -- skipping the unreadable file (the bash awk fatal) computes LOSSY removals from a partial read
+  mkdir -p "$BATS_TEST_TMPDIR/after"
+  cp -r "$FX/add_slot/after/." "$BATS_TEST_TMPDIR/after/"
+  local f="$BATS_TEST_TMPDIR/after/com/angeles/MinimalPan/BMinimalPan.java"
+  chmod 000 "$f"
+  if [ -r "$f" ]; then chmod 644 "$f"; skip "running as root"; fi
+  run "$SR" "$FX/add_slot/before" "$BATS_TEST_TMPDIR/after"
+  chmod 644 "$f"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"error: cannot read $f: "* ]]
+  [[ "$output" != *"verdict="* ]]
+}
+
+@test "SR-unbalanced an annotation whose parentheses never close is an UNKNOWN row (OUTAGE), never a silent skip (L3)" {
+  # Mutation: SR-unbalanced -- joining the open annotation to the end of input swallows the slot after it and reads SAFE
+  mkdir -p "$BATS_TEST_TMPDIR/after/p"
+  cp "$FX/add_slot/before/module-include.xml" "$BATS_TEST_TMPDIR/after/"
+  sed 's/@NiagaraProperty(name="setpoint", type="double", defaultValue="0.0", flags=Flags.SUMMARY|Flags.OPERATOR)/@NiagaraProperty(name="setpoint", type="double"/' \
+    "$FX/add_slot/before/com/angeles/MinimalPan/BMinimalPan.java" > "$BATS_TEST_TMPDIR/after/p/BMinimalPan.java"
+  run "$SR" "$FX/add_slot/before" "$BATS_TEST_TMPDIR/after"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"OUTAGE  UNKNOWN  MinimalPan.<unparsed>@$BATS_TEST_TMPDIR/after/p/BMinimalPan.java:"* ]]
+  [[ "$output" == *"verdict=OUTAGE"* ]]
+}
+
+@test "SR-type-name the row names the <type> element, not a <dependency> listed before it" {
+  # Mutation: SR-type-name -- taking the first name="..." of module-include.xml prints baja.setpoint
+  for d in before after; do
+    mkdir -p "$BATS_TEST_TMPDIR/$d"
+    cp -r "$FX/remove_slot/$d/." "$BATS_TEST_TMPDIR/$d/"
+    printf '<module>\n  <dependency name="baja" vendor="Tridium"/>\n  <types>\n    <type class="com.angeles.MinimalPan.BMinimalPan" name="MinimalPan"/>\n  </types>\n</module>\n' \
+      > "$BATS_TEST_TMPDIR/$d/module-include.xml"
+  done
+  run "$SR" "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"remove_slot_simple  MinimalPan.setpoint:"* ]]
 }
