@@ -115,9 +115,11 @@ def _since_filter(since):
 
 
 def load(state_dir):
-    """`(audit entries, merged journal batch views)`; a missing dir yields two empty lists."""
+    """`(audit entries, merged journal batch views, unreadable audit lines)`; a missing dir
+    yields three empty lists. An unreadable audit line is left out of the entries (#466)."""
     state_dir = os.path.expanduser(state_dir)
-    return safety.AuditLog(state_dir).entries(), safety.Journal(state_dir).views()
+    audit, unreadable = safety.AuditLog(state_dir).scan()
+    return audit, safety.Journal(state_dir).views(), unreadable
 
 
 def _safe(value):
@@ -234,7 +236,7 @@ def _delta_table(candidates):
     return "\n".join(rows)
 
 
-def _summary(audit, journal, since):
+def _summary(audit, journal, since, unreadable=()):
     outcomes = {}
     for e in audit:
         outcomes[e.get("outcome")] = outcomes.get(e.get("outcome"), 0) + 1
@@ -247,10 +249,16 @@ def _summary(audit, journal, since):
     lines = ["- Window: %s" % ("since %s" % since if since else "whole state directory"),
              "- Audit entries: %d (%s)" % (len(audit), fmt(outcomes)),
              "- Journaled batches: %d (%s)" % (len(journal), fmt(verdicts))]
+    if unreadable:  # issue #466: say the draft is incomplete and exactly where
+        lines.append("- Incomplete: %d audit line(s) are unreadable and left out of this draft"
+                     % len(unreadable))
+        lines.extend("- unreadable audit line %d: %s" % (u["line"], u["reason"])
+                     for u in unreadable)
     return "\n".join(lines)
 
 
-def render(candidates, station, date, audit=(), journal=(), since=None, template=None):
+def render(candidates, station, date, audit=(), journal=(), since=None, template=None,
+           unreadable=()):
     """Retro markdown from the template; the honesty line replaces an empty table."""
     with open(template or TEMPLATE, encoding="utf-8") as fh:
         text = fh.read()
@@ -267,7 +275,8 @@ def render(candidates, station, date, audit=(), journal=(), since=None, template
         verdict = HONESTY
         covered = "- none recorded: no friction was found in the audit or the journal."
     values = {"STATION": station, "DATE": date, "DELTAS": deltas, "VERDICT": verdict,
-              "COVERED": covered, "SUMMARY": _summary(list(audit), list(journal), since)}
+              "COVERED": covered, "SUMMARY": _summary(list(audit), list(journal), since,
+                                                         unreadable)}
     for key, value in values.items():
         text = text.replace("{{%s}}" % key, value)
     return text
@@ -276,11 +285,11 @@ def render(candidates, station, date, audit=(), journal=(), since=None, template
 def draft(state_dir, station="unknown", date=None, since=None, observations=(),
           template=None):
     """`{"markdown", "candidates", "station", "date"}` for the entries in `state_dir`."""
-    audit, journal = load(state_dir)
+    audit, journal, unreadable = load(state_dir)
     windowed, views, seen, by_batch = _window(audit, journal, since, observations)
     candidates = _derive(windowed, views, seen, by_batch)
     date = date or datetime.datetime.now(datetime.timezone.utc).date().isoformat()
-    markdown = render(candidates, station, date, windowed, views, since, template)
+    markdown = render(candidates, station, date, windowed, views, since, template, unreadable)
     return {"markdown": markdown, "candidates": candidates, "station": station, "date": date}
 
 

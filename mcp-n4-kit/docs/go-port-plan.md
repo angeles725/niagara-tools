@@ -99,14 +99,15 @@ refuses `--allow-writes` with the existing "not in this version" refusal.
 | S15 | #304 in-doubt matrix | See below |
 | S16 | Switch the default launcher to Go | Python kept one release as fallback |
 
-**Status (server v0.9.4).** S0-S9 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
-#462; issue #448 (unreadable journal lines) then changed both servers together (section 12).
+**Status (server v0.9.5).** S0-S9 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
+#462; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
+section 13) then changed both servers together.
 `readtools.Register` (`go/internal/mcpn4/readtools/connect.go`) serves all 13 read tools:
 `n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
 `n4_find_dangling_outputs`, `n4_bql_query`, `n4_inventory`, `n4_read_file`, `n4_list_px_views`,
 `n4_px_summary`, `n4_list_batches`, `n4_session_retro_draft`. S10-S16 are not started: the seven
 write tools answer the "not implemented" text (section 6), and `--allow-writes` is refused at
-start. Under the Go binary the suite runs 641 tests with 448 skipped (sections 12 and 13).
+start. Under the Go binary the suite runs 642 tests with 448 skipped (sections 12 and 13).
 
 **S15 in-doubt matrix.** Each branch gets an explicit Go test plus the black-box Python test,
 driven by `hook` faults and an unwritable state dir:
@@ -211,13 +212,13 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
-| `test_retro.py` | 35 | 20 | 0 | 1 | 0 | 21 | 14 |
+| `test_retro.py` | 36 | 20 | 0 | 1 | 0 | 21 | 15 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 101 | 4 | 24 | 28 | 2 | 58 | 43 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **641** | **166** | **56** | **105** | **18** | **345** | **296** |
+| **Total** | **642** | **166** | **56** | **105** | **18** | **345** | **297** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -477,7 +478,7 @@ caller's argument may be one). `journal` ports `_JsonlFile`, `Journal` and `Audi
 `REASON_*` texts verbatim and the create-then-chmod rule (`PrivateDir`, `MakeDirs`, `IsDir`, moved
 from `readtools`). `journal.Batches` is `n4_list_batches`' list and `RollbackTarget` /
 `EarlierRollbacks` are the journal checks `_rollback_plan` makes before and after its station
-check (S13 composes them). `pyjson.ReadLines` is `open(path).readlines()` in UTF-8 mode.
+check (S13 composes them).
 `readtools` serves `n4_list_batches` (no session, journal only). The server still refuses
 `--allow-writes` with the existing text: nothing in this slice writes.
 
@@ -493,9 +494,10 @@ list or dict id cannot key a batch only in a phase that keys it; `component-inte
 
 **Unreadable lines (issue #448, v0.9.4, both servers).** The journal is read as bytes, split as
 `bytes.splitlines` splits (the line ends `readlines()` honours) and decoded line by line, so the
-`TextIOWrapper` chunk quirk no longer applies to it (`pyjson.ReadLines` keeps it for the audit
-log). A line is *unreadable* when it is not UTF-8 (`UnicodeDecodeError`: its batch is unknown) or
-when, in a batch phase, its `batch_id` (or, in an `intent` or `result`, a truthy `rollback_of`)
+`TextIOWrapper` chunk quirk no longer applies to it. Since #466 (v0.9.5) the audit log uses the
+same splitter (`_JsonlFile._lines`, Go `File.lines`; section 13), and the `readlines()` readers
+(`entries()`, `File.Entries`, `pyjson.ReadLines`) are gone. A line is *unreadable* when it is not
+UTF-8 (`UnicodeDecodeError`: its batch is unknown) or when, in a batch phase, its `batch_id` (or, in an `intent` or `result`, a truthy `rollback_of`)
 cannot key a dict, or its component ops cannot extend a list (`TypeError`: its batch is known).
 An unreadable line is left out of every view. `n4_list_batches` lists the readable batches as
 before and, only when a line is unreadable, adds `incomplete` (a sentence saying the list is
@@ -523,7 +525,7 @@ adds one list test and three rollback tests of `test_tools_destructive`, which s
 `ConfirmationTokens` instance, never by patching the package: mac, bound args, redaction,
 consume verdict, pending set, issue expiry), `ord.TestScopeAndJoinDifferentialPython` (16
 scopes × 36 ORDs, 13 parents × 15 names), `pyjson.TestReadLinesDifferentialPython` (144 files
-around the chunk boundaries) and `journal.TestJournalDifferentialPython` (the Python-written
+around the chunk boundaries; retired with `pyjson.ReadLines` by #466) and `journal.TestJournalDifferentialPython` (the Python-written
 dir and 18 edge journals, two with a bad line between two batches: views, `read`, `rollbacks_of`, `n4_list_batches` at three limits and
 the journal verdict of the real `_rollback_plan`, every branch reached). Both in-doubt batches
 the Python server wrote are refused by `RollbackTarget` with Python's text
@@ -539,9 +541,7 @@ partial line, and an `OSError` from opening the file is Go's error text; no S8 c
 (the write tools of S10 will). `ChildOrd` and `JoinOrd` take strings: their non-string refusals
 are Python-only paths. Observed in Python 0.9.3 and fixed in both servers by issue #448 (v0.9.4): one non-UTF-8 byte
 or one unhashable batch id anywhere in `journal.jsonl` made `n4_list_batches` and every rollback
-fail, and `_BATCH_ID.match` accepted an id with one trailing newline. The audit log
-(`AuditLog.entries`, read by the session retro in S9) still reads as `readlines()` reads: one
-non-UTF-8 byte there still fails the retro draft.
+fail, and `_BATCH_ID.match` accepted an id with one trailing newline.
 
 ## 13. S9 `retro` and `n4_session_retro_draft`
 
@@ -579,13 +579,25 @@ and `tiers.TestTheRetroClassifiesTierRefusals` is in `tiers/retro_test.go`;
 Differentials on CPython 3.15: `retro.TestParseTimestampDifferentialPython` (112 seeds and 40,000
 mutants; 1,000,000 mutants were run once) requires `_parse_ts`'s instant or refusal for each, and
 `retro.TestDraftDifferentialPython` requires `retro.draft`'s JSON, byte for byte, or its error,
-for 25 session states (the Python-written fixture, a missing dir, every refusal class including
+for 27 session states (the Python-written fixture, a missing dir, every refusal class including
 both tier refusals, all verdicts, in-doubt and BOX errors, dangling and BQL observations, windows,
 `+N more` evidence, 64- and 65-character names, template placeholders in the station name, a
-non-UTF-8 audit line, unhashable and non-iterable values). 42 hand mutants of the classification,
+non-UTF-8 audit lines across CRLF, CR, end of file and the 8192-byte chunk boundary, unhashable
+and non-iterable values). 42 hand mutants of the classification,
 window, summary, render, parse and tool-wiring branches all go RED, none through a panic or a
 build failure.
 
 **Known differences.** None found. `since=""` is `None` for the Go `retro.Draft` API (the tool
 maps an empty `since` to the server start, as Python's `or` does). An observation's `count` is
 printed with `str()`, where Python calls `int()`: the server only records whole counts.
+
+**Unreadable audit lines (issue #466, v0.9.5, both servers).** `audit.jsonl` is read as the
+journal is since #448: bytes, split as `bytes.splitlines` splits, decoded line by line
+(`AuditLog.scan`, Go `AuditLog.Scan`). A line that is not UTF-8 is left out of the draft; the
+session summary then adds `- Incomplete: N audit line(s) are unreadable and left out of this
+draft` and one `- unreadable audit line N: UnicodeDecodeError` row per line (numbered as
+`readlines()` numbers; no byte of the line is echoed; never filtered by `since`, having no
+timestamp). Before, one such byte anywhere failed the whole draft in both servers. Proof:
+`test_retro.TestTheDraftIsPythonsDraft.test_an_unreadable_audit_line_costs_that_line_only`
+(black-box), its Go twin `retro.TestAnUnreadableAuditLineCostsThatLineOnly`, and two new
+differential states. Under `MCP_N4_IMPL=go`: 642 tests, 448 skipped (the black-box test runs).

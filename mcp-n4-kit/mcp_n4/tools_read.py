@@ -1010,7 +1010,8 @@ TOOLS = [
          "Draft the session retro: reads this server's audit and journal and returns markdown "
          "plus evidence-backed CANDIDATE kit deltas (refusals, bad read-back verdicts, in-doubt "
          "batches, BOX errors, dangling outputs). Proposes only; never applies or stages "
-         "anything. The window starts at the server start; pass since (ISO-8601, e.g. "
+         "anything. An audit line that cannot be read is named in the summary, which says the "
+         "draft is incomplete. The window starts at the server start; pass since (ISO-8601, e.g. "
          "1970-01-01T00:00:00Z for the whole history) to change it.",
          _schema({"since": _str("ISO-8601 timestamp; only newer entries are considered "
                                 "(default: when this server started)")}),

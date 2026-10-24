@@ -42,7 +42,11 @@ key a batch) no longer fails `n4_list_batches` and every rollback: the readable 
 listed, each bad line is an `unreadable journal line N: <error class>` row and the reply says
 the list is incomplete; `n4_rollback` refuses (`journal line unreadable`) only the batches such
 a line may belong to; a batch id with a trailing newline is malformed. Both servers.
-Go port status, at v0.9.4 (docs/go-port-plan.md section 3): S6 added `n4_bql_query` and
+v0.9.5 (issue #466): one unreadable `audit.jsonl` line (not UTF-8) no longer fails
+`n4_session_retro_draft`: the audit log is split and decoded line by line like the journal, the
+bad line is left out, and the draft's session summary says it is incomplete and names each one
+(`unreadable audit line N: UnicodeDecodeError`; no byte of the line is echoed). Both servers.
+Go port status, at v0.9.5 (docs/go-port-plan.md section 3): S6 added `n4_bql_query` and
 `n4_inventory`, S7 `n4_read_file`, `n4_list_px_views` and `n4_px_summary`, S8
 `n4_list_batches` and S9 `n4_session_retro_draft`, so the Go server (`go/cmd/mcp-n4`) serves
 all 13 read tools; every write tool answers "is not implemented in this version of the Go

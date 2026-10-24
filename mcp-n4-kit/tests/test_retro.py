@@ -494,6 +494,28 @@ class TestTheDraftIsPythonsDraft(Fixture):
                                       "x"), batch_id={"a": 1}))
         self.assertSameError(since=self.WHOLE)
 
+    def test_an_unreadable_audit_line_costs_that_line_only(self):
+        """Issue #466: a line that is not UTF-8 is left out and named; the rest is drafted.
+
+        Bad lines end in CRLF and in CR, and one is cut at the 8192-byte read chunk boundary
+        (a lead byte at 8191, an ASCII byte at 8192), where `readlines()` failed the file."""
+        row = lambda i: json.dumps(audit_row("2026-10-01T10:%02d:00+00:00" % i, "n4_set_slot",
+                                             "refused", "write budget exhausted: %d" % i))
+        head = (row(0) + "\r\n").encode() + b"\xff bad\r\n" + (row(1) + "\r").encode() + b"\xfe\r"
+        cut = b'{"x": "' + b"a" * (8191 - len(head) - 7) + b"\xc3(" + b'"}\n'
+        self.assertEqual(len(head) + cut.index(b"\xc3"), 8191)
+        self.add_audit(audit_row(self.WHOLE, "t", "refused", "x"))  # creates it private
+        with open(os.path.join(self.dir, "audit.jsonl"), "wb") as fh:
+            fh.write(head + cut + (row(2) + "\n").encode())
+        out = self.assertSameDraft(since=self.WHOLE)
+        self.assertIn("- Audit entries: 3 (refused 3)", out["markdown"])
+        self.assertEqual([c["count"] for c in out["candidates"]], [3])
+        for n in (2, 4, 5):
+            self.assertIn("\n- unreadable audit line %d: UnicodeDecodeError" % n, out["markdown"])
+        self.assertIn("- Incomplete: 3 audit line(s) are unreadable and left out of this draft",
+                      out["markdown"])
+        self.assertNotIn("unreadable audit line 1:", out["markdown"])
+
     def test_no_secret_reaches_the_reply(self):
         self.add_audit(audit_row("2026-10-01T10:00:00+00:00", "n4_connect", "error",
                                  "BoxError: login failed for %s" % CANARY,
