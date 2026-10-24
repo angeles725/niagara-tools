@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-lint-link-target-flags
@@ -58,4 +58,4 @@ commissioning-verify.sh match.
   the annotation it heads must be read as code.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-link-target-flags.md | kit | 2026-10-24 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1 `BUILD-LOOP.md` § 5 (a client-tree FAIL count is current only over live roots); Δ2 cross-cutting Go-port lesson, cited by the lints-a fold. INDEX row generated from the header: `| 2026-10-24-go-lint-link-target-flags.md | kit | 2026-10-24 | folded | 2 |`
