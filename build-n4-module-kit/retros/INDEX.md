@@ -352,9 +352,8 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-r10-close-process-meta-lessons.md | kit | 2026-10-24 | folded | 6 |
 | 2026-10-24-r10-fork-per-line-again.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-installed-line-guard.md | kit | 2026-10-24 | folded | 1 |
-| 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-ktssrc-gradle-lints.md | kit | 2026-10-24 | pending | 2 |
-| 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | pending | 1 |
+| 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-path-keyed-gates-skip-data.md | kit | 2026-10-24 | folded | 2 |
 | 2026-10-24-r10-slotomatic-skip-fail-open.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-slotomatic-skip-srctest.md | kit | 2026-10-24 | folded | 1 |
