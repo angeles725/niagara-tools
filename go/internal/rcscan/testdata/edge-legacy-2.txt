@@ -1,0 +1,77 @@
+-- args --
+@DIR@
+--strict
+-- want --
+exit 1
+FAIL  rc-scan  rc/a.js:5  ord-literal: hardcoded ORD literal
+FAIL  rc-scan  rc/a.js:6  host-literal: http://evil.example/p
+FAIL  rc-scan  rc/a.js:7  host-literal: bare IPv4 literal
+FAIL  rc-scan  rc/a.js:9  bare-catch: bare .catch(()=>{}) swallows errors
+FAIL  rc-scan  rc/a.js:11  null-branch: ? null : branch may blank UI on null field
+FAIL  rc-scan  rc/a.js:12  bare-catch: bare .catch(()=>{}) swallows errors
+FAIL  rc-scan  rc/a.js:13  ord-literal: hardcoded ORD literal
+FAIL  rc-scan  rc/crlf.js:1  null-branch: ? null : branch may blank UI on null field
+FAIL  rc-scan  rc/crlf.js:3  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+FAIL  rc-scan  rc/noeol.js:1  ord-literal: hardcoded ORD literal
+FAIL  rc-scan  rc/s.css:2  host-literal: http://cdn.example/x.png
+FAIL  rc-scan  rc/utf.js:1  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+FAIL  rc-scan  rc/utf.js:1  host-literal: http://hÃ©.example/Ã±
+FAIL  rc-scan  rc/utf.js:2  host-literal: http://aÿb/c
+FAIL  rc-scan  rc/x/ext/e.js:1  ord-literal: hardcoded ORD literal
+-- stderr --
+-- .git/rc/h.js --
+station:|x
+-- deep/rc/rc/ext/z.js --
+station:|x
+-- o-worktrees/rc/g.js --
+station:|x
+-- other.js --
+station:|x
+-- rc/a.js --
+// station:|slot:/x in a comment
+  /* http://1.2.3.4 */
+ * h:12
+<!-- local:|x -->
+var o = "station:|slot:/a"; var h = "http://10.0.0.1/x";
+var u = "http://www.w3.org/2000/svg", v = "http://evil.example/p;q";
+var ip = "192.168.1.1";
+var w = "http://www.w3.org/1999/xlink" + "10.0.0.2";
+p.catch(() => {});
+p.catch( ( )=>{ } )
+x = a ? null : b;
+x = a ? null : b; p.catch(() => {});
+s = |h:1f; t="h:zz"; u=`h:A0`;
+http://
+width:100px;h:9
+-- rc/b.HTML --
+station:|x
+-- rc/blank.js --
+
+
+-- rc/c.min.js --
+station:|x
+-- rc/crlf.js --
+a = b ? null : c;
+// station:|x
+fetch(u)
+-- rc/empty.js --
+-- rc/ext/d.js --
+station:|x
+-- rc/noeol.js (noeol) --
+var a = "local:|x";
+-- rc/s.css --
+.a { width: 100px; }
+.b { background: url(http://cdn.example/x.png); }
+/* 10.0.0.1 */
+.c{color:red} /* h:1 */
+-- rc/utf.js --
+var s = "Ã© http://hÃ©.example/Ã± x"; fetch("Ã¼")
+ÿþ http://aÿb/c
+-- rc/x/ext/e.js --
+station:|x
+-- rcx/y.js --
+station:|x
+-- src/Foo.java --
+String s = "station:|slot:/x";
+-- srcTest/rc/f.js --
+station:|x

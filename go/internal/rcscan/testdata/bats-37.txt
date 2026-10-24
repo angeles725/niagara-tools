@@ -1,0 +1,9 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/app.js:2  disabled-gate: control disabled in a login-gated file -- a disabled control fires no click, so the gate never opens; mark it (class / aria-disabled) and route the click to the gate
+-- stderr --
+-- rc/app.js --
+const client = oauth2Client();
+saveBtn.disabled = true;

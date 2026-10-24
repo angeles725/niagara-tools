@@ -1,0 +1,38 @@
+-- args --
+@DIR@
+--strict
+-- want --
+exit 1
+FAIL  rc-scan  rc/a.js:8  setinterval-async: setInterval(poll) where poll is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+FAIL  rc-scan  rc/a.js:9  setinterval-async: setInterval(gen) where gen is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+FAIL  rc-scan  rc/a.js:10  setinterval-async: setInterval(load) where load is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+FAIL  rc-scan  rc/a.js:11  setinterval-async: setInterval(tick) where tick is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+FAIL  rc-scan  rc/a.js:12  setinterval-async: setInterval(t2) where t2 is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+FAIL  rc-scan  rc/a.js:15  setinterval-async: setInterval over an async function -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+FAIL  rc-scan  rc/a.js:16  setinterval-async: setInterval over an async function -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+FAIL  rc-scan  rc/a.js:19  setinterval-async: setInterval(later) where later is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+FAIL  rc-scan  rc/a.js:21  setinterval-async: setInterval(poll) where poll is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+-- stderr --
+-- rc/a.js --
+async function poll() {}
+async  function * gen() {}
+const load = async () => {};
+let tick = async function () {};
+var t2=async(x)=>x;
+const notAsync = asyncThing();
+function sync() {}
+setInterval(poll, 1000);
+setInterval( gen , 5);
+setInterval(load);
+setInterval(tick,1);
+setInterval(t2, 1);
+setInterval(notAsync, 1);
+setInterval(sync, 1);
+setInterval(async () => {}, 1);
+setInterval(async function() {}, 1);
+setInterval(asyncX, 1);
+setInterval(poll, 1); // rc-scan: allow setinterval-async
+setInterval(later, 1);
+// async function later() {}
+setInterval(  poll  )
+setInterval(obj.poll, 1)
