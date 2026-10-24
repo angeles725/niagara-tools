@@ -48,3 +48,19 @@ setup() {
   run "$LINT"
   [ "$status" -eq 3 ]
 }
+
+@test "BF-xml: a .bog is read as XML: a comment is not read, an entity-encoded %user% is (truth fix 2026-10-24)" {
+  # Mutation: BF-xml -- reading a .bog as text counts a commented-out pattern and misses an entity-encoded %user%
+  printf '<bajaObjectGraph>\n<!-- <p v="%%time(x)%%"/> -->\n<p v="&#37;user&#37;"/>\n</bajaObjectGraph>\n' > "$SRC/config.bog"
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-bformat-call  $SRC/config.bog:3  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)" ]
+}
+
+@test "BF-lexicon: a .lexicon is read as properties: a comment is not read, a continued value is its entry (truth fix 2026-10-24)" {
+  # Mutation: BF-lexicon -- reading a .lexicon as text reports a pattern quoted in a # comment
+  printf '# was %%user%%\nk=Hi \\\n    %%user%%\n' > "$SRC/module.lexicon"
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-bformat-call  $SRC/module.lexicon:2  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)" ]
+}

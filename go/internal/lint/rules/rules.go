@@ -5,6 +5,7 @@ package rules
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
@@ -30,6 +31,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/size"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/slotomaticmarkers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/splitpackage"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
@@ -75,7 +77,9 @@ func All() []lint.Spec {
 		licensegate.Spec(),
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
+		slotomaticmarkers.Spec(),
 		agentonshape.Spec(),
+		bformatcall.Spec(),
 		splitpackage.Spec(),
 	}
 }

@@ -43,8 +43,8 @@ func (rule) Severity() lint.Severity { return lint.Fail }
 var shape = regexp.MustCompile(`^[A-Za-z0-9_.-]+:[A-Za-z0-9_$]+$`)
 
 // Check reads the file through the shared XML scanner (R8-D12): every <on> element's type attribute, decoded, at the
-// element's own line. A malformed module-include.xml is an error naming path:line:col (exit 3, the other files still
-// scanned), never a guess. Truth fix 2026-10-24 over the awk, which read text line by line: it took only the last
+// element's own line. A malformed module-include.xml is an error naming path:line:col, printed once by the runner (exit
+// 3, the other files still scanned), never a guess. Truth fix 2026-10-24 over the awk, which read text line by line: it took only the last
 // <on per line, never a single-quoted value, counted an <on> inside a comment or CDATA, reported entity text undecoded
 // and an empty type="" as clean, and read a malformed file as if it were well-formed.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {

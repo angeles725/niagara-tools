@@ -359,6 +359,37 @@ _mkjar_ver() {
   [ "$status" -eq 51 ]
 }
 
+# R10 shared compare (lib/vendor-version.sh vv_cmp): a LOWER vendorVersion than the deployed jar is a WARN row,
+# not a FAIL — a deliberate rollback is legitimate — and the build still passes. A differing non-numeric suffix
+# is "incomparable" and keeps the gate's earlier reading: a changed version, no FAIL and no WARN.
+# Mutation: BS-drift-downgrade -- dropping the vv_cmp -1 branch loses the WARN row (the run still exits 0).
+@test "BS-drift-downgrade: changed bytes with a LOWER vendorVersion (1.4 -> 1.3, 1.10 -> 1.9) -> WARN 'vendorVersion went down', exit 0" {
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  for pair in 1.4:1.3 1.10:1.9; do
+    _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "${pair%%:*}" "old-behavior"
+    rm -f "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "$TMPDIR_T/verify.args"
+    _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "${pair##*:}" "NEW-behavior-fix"
+    run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"WARN"*"Foo-rt vendorVersion went down (${pair%%:*} -> ${pair##*:})"* ]]
+    [ -e "$TMPDIR_T/verify.args" ]
+    rm -f "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  done
+}
+
+@test "BS-drift-up-no-warn: a raised (1.9 -> 1.10) or incomparable-suffix (1.3 -> 1.3-rc) version passes with no downgrade WARN" {
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  for pair in 1.9:1.10 1.3:1.3-rc; do
+    _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "${pair%%:*}" "old-behavior"
+    rm -f "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar"
+    _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "${pair##*:}" "NEW-behavior-fix"
+    run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"went down"* ]]
+    rm -f "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  done
+}
+
 @test "BS-drift-dependency-only: only a <dependency vendorVersion> floor, no module version -> exit 52 (fail closed)" {
   mkdir -p "$TMPDIR_T/nh/modules"
   _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"

@@ -3,7 +3,7 @@
 -- want --
 exit 3
 -- stderr --
-lint-agent-on-shape: cannot scan @DIR@/M/Mod-rt/module-include.xml: lint-agent-on-shape: @DIR@/M/Mod-rt/module-include.xml:2:1: junk after document element
+lint-agent-on-shape: @DIR@/M/Mod-rt/module-include.xml:2:1: junk after document element
 -- M/Mod-rt/module-include.xml --
 <agent><on type="First"/><on type="Second"/></agent>
 <agent><on type="Bad3"/><on type="ok:Last"/></agent>

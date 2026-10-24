@@ -1,0 +1,22 @@
+-- args --
+@DIR@/A-rt/src
+@DIR@/A-ux/src
+-- want --
+exit 1
+FAIL  lint-slotomatic-markers  @DIR@/A-rt/src/com/a/BRt.java:3  generated region holds 0 /*@ $...$ @*/ stamp lines, Slot-o-Matic needs exactly 1: it logs "Could not process <file>: Found multiple metadata blocks", skips the file and the build stays green -- delete the BEGIN/END markers and rerun :<part>:slotomatic
+FAIL  lint-slotomatic-markers  @DIR@/A-ux/src/com/a/BUx.java:3  generated region holds 2 /*@ $...$ @*/ stamp lines, Slot-o-Matic needs exactly 1: it logs "Could not process <file>: Found multiple metadata blocks", skips the file and the build stays green -- delete the BEGIN/END markers and rerun :<part>:slotomatic
+-- stderr --
+-- A-rt/src/com/a/BRt.java --
+class BRt
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}
+-- A-ux/src/com/a/BUx.java --
+class BUx
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.x.BLimiter(2047217791)1.0$ @*/
+  /*@ $com.x.BLimiter(2047217791)1.0$ @*/
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}

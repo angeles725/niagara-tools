@@ -853,3 +853,44 @@ STUB
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
     [ "$status" -eq 52 ]
 }
+
+# R10 shared compare (build-n4-module-kit/toolbelt/lib/vendor-version.sh vv_cmp, the same helper build.sh's drift
+# gate uses): the built version must be numerically HIGHER than the deployed one. 1.3 -> 1.3.0 is the same version
+# (exit 51), a lower version is a downgrade (exit 54), and a differing non-numeric suffix cannot be ordered (exit 52).
+@test "NG-version-trailing-zero: 1.3 -> 1.3.0 with changed bytes is not a bump (exit 51)" {
+    # Mutation: NG-version-numeric -- a string compare reads '1.3' != '1.3.0' as a bump and deploys (exit 0).
+    _gate_env; _fake_gate 0
+    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    export FAKE_OLD_VERSION=1.3 FAKE_NEW_VERSION=1.3.0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 51 ]
+    [ "$(cat "$TMPDIR_T/modules/test-rt.jar")" = "old" ]
+}
+
+@test "NG-version-downgrade: a LOWER vendorVersion (1.4 -> 1.3, 1.10 -> 1.9) is refused as a downgrade (exit 54); 1.3 -> 1.4 deploys" {
+    # Mutation: NG-version-downgrade -- dropping the vv_cmp -1 branch counts a downgrade as a bump (exit 0).
+    _gate_env; _fake_gate 0
+    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    local pair
+    for pair in 1.4:1.3 1.10:1.9; do
+        export FAKE_OLD_VERSION="${pair%%:*}" FAKE_NEW_VERSION="${pair##*:}"
+        run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+        [ "$status" -eq 54 ]
+        [[ "$output" == *"vendorVersion went down (${pair%%:*} -> ${pair##*:})"* ]]
+        [ "$(cat "$TMPDIR_T/modules/test-rt.jar")" = "old" ]
+    done
+    export FAKE_OLD_VERSION=1.3 FAKE_NEW_VERSION=1.4
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"version-bump ok (test-rt.jar: 1.3 -> 1.4)"* ]]
+}
+
+@test "NG-version-incomparable: a differing non-numeric suffix (1.3 -> 1.3-rc) cannot be ordered (exit 52), never a bump" {
+    # Mutation: NG-version-incomparable -- treating an incomparable pair as 'different' deploys an unordered version.
+    _gate_env; _fake_gate 0
+    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    export FAKE_OLD_VERSION=1.3 FAKE_NEW_VERSION=1.3-rc
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 52 ]
+    [[ "$output" == *"not comparable"* ]]
+}

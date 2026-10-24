@@ -77,7 +77,7 @@ thread, never in an `ASYNC` handler. [ev: devguide `execution.txt`; code `flags=
 
 **`CONFIRM_REQUIRED`** is the right guard for destructive / irreversible actions — a
 `faultReset`, `resetStatistics`, `clearLastTimestamp`, `changeDeviceUuid`. Zero-cost safety
-against a fat-finger invoke. [ev: code `Flags.java` CONFIRM_REQUIRED=0x80; real uses resetStatistics/changeDeviceUuid]
+against a fat-finger invoke. [ev: code `Flags.java` CONFIRM_REQUIRED=0x80; code driver-rt javax/baja/driver/util/BPollScheduler.java:136 resetStatistics; code bacnet-rt javax/baja/bacnet/export/BLocalBacnetDevice.java:609 changeDeviceUuid]
 
 **`NO_AUDIT`** belongs on internal callback actions (a `HIDDEN|ASYNC` timer tick that fires
 every cycle). Without it, a per-minute callback **floods the audit trail**. Tridium's own code
