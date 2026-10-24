@@ -134,6 +134,9 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// ShortScanError words an unreadable file as awk_lint_each did ("<lint>: cannot scan <path>: <reason>")
+	// instead of awk_lint_run's awk error text (lint-agent-on-shape).
+	ShortScanError bool
 	// CheckFirst prints a finding's check column before its severity (`<check>  <SEV>  <path>:<line>  <msg>`),
 	// the row of lint-wb-threading; the empty-root ERROR row keeps the standard shape.
 	CheckFirst bool
