@@ -31,7 +31,7 @@ T3, a write starts at an identifier boundary and every write on a line counts (L
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | The row text says "no unconditional reset in started/atSteadyState/enable" while the classification also accepts changed() and start(); either name all five or drop changed(), whose writes are usually gated on the changed property | `build-n4-module-kit/toolbelt/lint-recovery-path.sh` | `[ev: go/internal/lint/rules/recoverypath/recoverypath.go resetter]` |
+| Δ1 | The row text says "no unconditional reset in started/atSteadyState/enable" while the classification also accepts changed() and start(); either name all five or drop changed(), whose writes are usually gated on the changed property. DONE 2026-10-24: the code wins, the row now names started/atSteadyState/changed/enable/start (one `resets` list feeds the matcher and the text; RED 12/22 goldens, TestUnreadableFile and bats LRP-text) | `build-n4-module-kit/toolbelt/lint-recovery-path.sh` | `[ev: go/internal/lint/rules/recoverypath/recoverypath.go resetter]` |
 | Δ2 | The real trees give no row before or after any fix (Cliente, decompiled), so the truth fixes rest on synthetic trees only; seed a commissioning fixture from the PANCCADIA stranded-heater shape with a nested class and a wrapped signature | `tests/fixtures/lint-recovery-path/` | `[ev: go/internal/lint/rules/recoverypath/testdata/truth-method-scope-1.txt]` |
 
 ## Lessons

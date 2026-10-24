@@ -1,3 +1,5 @@
+declared difference (row text 2026-10-24): the row names every reset method the rule accepts
+(started/atSteadyState/changed/enable/start); the bash lint printed started/atSteadyState/enable.
 declared difference (truth fix T2): the bash awk named the method by scanning up to 5 lines above a "{" for
 the first lower-case call, so a one-letter or upper-case method name (a(), If()) took the call on the line
 above it (the previous body's setAOut / setBOut), a signature wrapped over more than 5 lines was "unknown",
@@ -7,9 +9,9 @@ and a nested class's started() took the name of a call above its class line, so 
 @DIR@
 -- want --
 exit 1
-FAIL  lint-recovery-path  @DIR@/Far.java:13  LRP: BOut has guarded-only safe-off in method "If" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/Far.java:16  LRP: COut has guarded-only safe-off in method "a" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/Far.java:10  LRP: AOut has guarded-only safe-off in method "longSignatureName" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Far.java:13  LRP: BOut has guarded-only safe-off in method "If" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/Far.java:16  LRP: COut has guarded-only safe-off in method "a" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/Far.java:10  LRP: AOut has guarded-only safe-off in method "longSignatureName" -- no unconditional reset in started/atSteadyState/changed/enable/start
 -- stderr --
 -- Far.java --
 package com.x;

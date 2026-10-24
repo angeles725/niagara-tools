@@ -9,6 +9,7 @@ package recoverypath
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
@@ -43,8 +44,11 @@ var (
 	// a safe-off write at an identifier boundary: getX().setValue(false) (group 2) or setX(false) (group 3)
 	offWrite = rx(`(^|[^A-Za-z0-9_$])(?:get([A-Za-z][A-Za-z0-9_]*)\(\)\.setValue|set([A-Za-z][A-Za-z0-9_]*))\([[:space:]]*false[[:space:]]*\)`)
 	outSlot  = rx(`(Out|Resistance|Heat|Resistencia)$`)
-	resetter = rx(`^(started|atSteadyState|changed|enable|start)$`)
+	resetter = rx(`^(` + strings.Join(resets, "|") + `)$`)
 )
+
+// resets are the methods whose safe-off write counts as the unconditional reset, in the order the row names them.
+var resets = []string{"started", "atSteadyState", "changed", "enable", "start"}
 
 // guard is the first write of a slot outside a reset method.
 type guard struct {
@@ -82,7 +86,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	for _, slot := range awkorder.Order(order) {
 		if g := guards[slot]; !reset[slot] {
 			out = append(out, lint.Finding{Line: g.line, Msg: "LRP: " + slot + " has guarded-only safe-off in method \"" +
-				g.method + "\" -- no unconditional reset in started/atSteadyState/enable"})
+				g.method + "\" -- no unconditional reset in " + strings.Join(resets, "/")})
 		}
 	}
 	return out, nil

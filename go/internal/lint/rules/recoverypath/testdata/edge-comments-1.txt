@@ -1,3 +1,5 @@
+declared difference (row text 2026-10-24): the row names every reset method the rule accepts
+(started/atSteadyState/changed/enable/start); the bash lint printed started/atSteadyState/enable.
 declared difference (truth fix T1, truth-comment-literal-1): AOut is in a block comment and FOut in a string,
 COut follows "http://" in code, the "{" in a string no longer shifts the depth (DOut is reset in started()) and
 the "}" in a block comment no longer ends execute() early (EOut is in other()).
@@ -5,8 +7,8 @@ the "}" in a block comment no longer ends execute() early (EOut is in other()).
 @DIR@
 -- want --
 exit 1
-FAIL  lint-recovery-path  @DIR@/C.java:6  LRP: COut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/C.java:17  LRP: EOut has guarded-only safe-off in method "other" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/C.java:6  LRP: COut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/C.java:17  LRP: EOut has guarded-only safe-off in method "other" -- no unconditional reset in started/atSteadyState/changed/enable/start
 -- stderr --
 -- C.java --
 package com.x;

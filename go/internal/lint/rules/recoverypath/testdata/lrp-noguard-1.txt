@@ -1,8 +1,10 @@
+declared difference (row text 2026-10-24): the row names every reset method the rule accepts
+(started/atSteadyState/changed/enable/start); the bash lint printed started/atSteadyState/enable.
 -- args --
 @DIR@
 -- want --
 exit 1
-FAIL  lint-recovery-path  @DIR@/GuardedOnly.java:15  LRP: ResistanceOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/GuardedOnly.java:15  LRP: ResistanceOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
 -- stderr --
 -- GuardedOnly.java --
 package demo;

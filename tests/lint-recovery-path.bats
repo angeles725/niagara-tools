@@ -1,7 +1,8 @@
 #!/usr/bin/env bats
 # RED-FIRST pins for lint-recovery-path.sh (Wave 3, LR1).
 # Detects the "stranded-heater" shape: a protection/heat output slot (*Out/*Resistance/*Heat/*Resistencia)
-# is written OFF only inside a mode-gated method with no unconditional reset in started()/atSteadyState()/enable().
+# is written OFF only inside a mode-gated method with no unconditional reset in started()/atSteadyState()/changed()/
+# enable()/start().
 #
 # Real commissioning defect (PANCCADIA 2026-09): resistanceOut was turned off inside execute() guarded
 # by `if (inDefrost) return;` but started() never reset it unconditionally — when the mode cleared,
@@ -64,6 +65,14 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   run "$LRP" "$ONE"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+@test "LRP-text: the row names every method the rule accepts as a reset" {
+  # Mutation: LRP-text -- a row naming fewer reset methods than the rule accepts sends the fix to the wrong method
+  only GuardedOnly.java
+  run "$LRP" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-recovery-path  $ONE/GuardedOnly.java:"*"  LRP: ResistanceOut has guarded-only safe-off in method \"execute\" -- no unconditional reset in started/atSteadyState/changed/enable/start" ]]
 }
 
 @test "LRP-usage: no argument -> exit 3 (usage)" {

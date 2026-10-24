@@ -1,20 +1,22 @@
+declared difference (row text 2026-10-24): the row names every reset method the rule accepts
+(started/atSteadyState/changed/enable/start); the bash lint printed started/atSteadyState/enable.
 declared difference (truth fix T3, truth-slot-names-1): resetBoilerHeat(false) and targetFanHeat().setValue(false)
 write no slot, and the second writes on lines 15 (setBOut) and 16 (setDOut) count.
 -- args --
 @DIR@
 -- want --
 exit 1
-FAIL  lint-recovery-path  @DIR@/S.java:15  LRP: BOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:8  LRP: CoilResistance has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:14  LRP: DoorOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:19  LRP: Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:6  LRP: Heat has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:5  LRP: PumpOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:16  LRP: DOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:17  LRP: E_Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:7  LRP: Resistencia has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:15  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/S.java:4  LRP: FanOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:15  LRP: BOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:8  LRP: CoilResistance has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:14  LRP: DoorOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:19  LRP: Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:6  LRP: Heat has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:5  LRP: PumpOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:16  LRP: DOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:17  LRP: E_Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:7  LRP: Resistencia has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:15  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/S.java:4  LRP: FanOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
 -- stderr --
 -- S.java --
 package com.x;

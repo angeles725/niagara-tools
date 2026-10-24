@@ -15,7 +15,9 @@
 #   Scans all *.java recursively under <java-src-dir>.
 #   Emits FAIL rows; exits 1 on any FAIL, 0 clean, 3 usage/env.
 #
-# Row format:  FAIL  lint-recovery-path  <file>:<line>  LRP: <slot> guarded-only in <method> -- no reset in started/atSteadyState/enable
+# Row format:  FAIL  lint-recovery-path  <file>:<line>  LRP: <slot> has guarded-only safe-off in method "<method>" -- no
+#              unconditional reset in started/atSteadyState/changed/enable/start (every reset method the rule accepts;
+#              the bash lint named only started/atSteadyState/enable, changed 2026-10-24)
 # Exits:       0 no FAIL · 1 any FAIL · 3 usage/env, an unscannable file, an unreadable sub-directory or no *.java (K20)
 #
 # Dot-directories excluded (D9b). VCS-free by design. kit-links.bats L2 enforces
@@ -24,7 +26,7 @@
 #
 # Documented limitation (grep-level heuristic):
 #   False negatives are possible when the unconditional reset occurs in a helper method
-#   that is called from started() but not itself named started/atSteadyState/enable/start.
+#   that is called from started() but not itself named started/atSteadyState/changed/enable/start.
 #   Cross-method call chains cannot be followed at this level of analysis. Default posture
 #   is FAIL (hard-safety): an undetected reset produces a false FAIL; an undetected missing
 #   reset is a silent production defect. Accept the false FAIL and add the unconditional
@@ -56,6 +58,7 @@
 # Mutation: LRP-noguard -- removes the guarded-only classification so mode-gated-only safe-offs pass instead of FAIL
 # Mutation: LRP-comment -- matching the raw line cut at "//" FAILs a commented-out write and misreads started()
 # Mutation: LRP-scope -- naming methods by a 5-line back-scan gives Inner.started() the name of the call above it
+# Mutation: LRP-text -- a row naming fewer reset methods than the rule accepts sends the fix to the wrong method
 # Mutation: LRP-word -- matching set/get inside an identifier FAILs resetBoilerHeat(false) as slot BoilerHeat
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

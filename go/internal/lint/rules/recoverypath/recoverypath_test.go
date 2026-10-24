@@ -58,7 +58,7 @@ func TestUnreadableFile(t *testing.T) {
 	var o, e bytes.Buffer
 	code := lint.Command(Spec())([]string{ID, dir}, cli.Stdio{Out: &o, Err: &e})
 	wantOut := "FAIL  lint-recovery-path  " + filepath.Join(dir, "Z.java") + ":3  LRP: HeatOut has guarded-only safe-off in" +
-		" method \"execute\" -- no unconditional reset in started/atSteadyState/enable\n"
+		" method \"execute\" -- no unconditional reset in started/atSteadyState/changed/enable/start\n"
 	wantErr := ID + ": cannot scan " + u + ": awk: fatal: cannot open file `" + u + "' for reading: Permission denied\n"
 	if code != 3 || o.String() != wantOut || e.String() != wantErr {
 		t.Errorf("exit %d out %q err %q, want 3, %q and %q", code, o.String(), e.String(), wantOut, wantErr)
