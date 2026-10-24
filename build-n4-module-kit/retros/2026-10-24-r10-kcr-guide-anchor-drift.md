@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · r10-kcr-guide-anchor-drift
@@ -65,3 +65,11 @@ RESOLVED while the line held other text. Issue #511 asked for a content anchor a
 - Two kit citations were not swept because their lines name a client: a register line citing
   `Obix/LicenseRequirement-OBIXDriver-9F25675C.txt:19` (now line 9) and a `types/dashboard.md` line citing the
   dashboard pane guide page at `:7,22` (still correct, no anchor yet).
+
+## Fold
+- Δ1 is code and doctrine already shipped in the PR that wrote this retro (`go/internal/citeresolve/anchor.go`); its rule is cited in the `BUILD-LOOP.md` § 5 "Citation pre-filter" bullet. Not re-implemented.
+- Lesson 1 (an ignored, regenerated tree keeps no history; anchor at citation time) → one sentence in the same bullet. Lesson 2 (limit a new reading of old syntax to the tree where it holds; a kit-wide before/after row diff) is the rule this Δ1 already states, plus the kit-wide diff sentence folded from retro r10-kcr-false-positives.
+- Owed: the `toolbelt/kit-cite-resolve.sh` header missing DRIFT, and the 2 unswept kit citations, are open issues in `ledger.d/2026-10-24-r10-fold-anchor-drift.md`. The research-corpus drift (about 360 citations) belongs to the research repository, not the kit; no kit issue.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail2`; log in `ledger.d/2026-10-24-r10-fold-anchor-drift.md`) — Δ1 shipped, cited in the `BUILD-LOOP.md` § 5 Citation pre-filter bullet; lesson 1 in the same bullet; two owed items are open issues.
