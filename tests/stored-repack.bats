@@ -118,3 +118,13 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$output" = "stored-repack: cannot write nodir/out.jar: No such file or directory" ]
   [ ! -e nodir ]
 }
+
+# The bash's last `zip -r . -x <manifest> <signatures>` had nothing to add for a manifest-only jar: "zip error:
+# Nothing to do!", exit 12 under set -e, a partial out.jar left behind.
+@test "S9: a jar holding only META-INF/MANIFEST.MF repacks to that one STORED entry (exit 0)" {
+  mkdir -p "$TMPDIR_T/m"; add_manifest "$TMPDIR_T/m"; make_jar "$TMPDIR_T/m.jar" "$TMPDIR_T/m"
+  run "$R" "$TMPDIR_T/m.jar" "$TMPDIR_T/out.jar"
+  [ "$status" -eq 0 ]
+  [ "$output" = "stored-repack: $TMPDIR_T/out.jar  (1 entries, all STORED, signature entries kept: none)" ]
+  [ "$(unzip -Z1 "$TMPDIR_T/out.jar")" = "META-INF/MANIFEST.MF" ]
+}
