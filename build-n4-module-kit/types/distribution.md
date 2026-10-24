@@ -408,8 +408,8 @@ policy (by age or by number of runs) on the job prototype, or the Supervisor dis
 **Fleet install of a module jar.** A provisioning Install Software step installs a jar the Supervisor's
 software database holds; when it holds several versions the step asks which one, and modules the jar depends on
 that the database also holds are added for each host automatically. Platform fit stays the operator's job, and the
-Supervisor needs the `provisioningNiagara` licence (guide `Provisioning/InstallingSoftwareByDraggingFromThe.txt:16-26`,
-`Provisioning/ProvisioningTroubleshooting.txt:14`). `[ev: corpus B1325 §1325.1 rows 8-9]`
+Supervisor needs the `provisioningNiagara` licence (guide `Provisioning/InstallingSoftwareByDraggingFromThe.txt:16-26` "The JobService automatically checks to see if the",
+`Provisioning/ProvisioningTroubleshooting.txt:15` "A license for the provisioningNiagara feature is missing"). `[ev: corpus B1325 §1325.1 rows 8-9]`
 `[ev: retro devguide415-r2-packaging-platform-signing Δ4]` (line cites re-read on 4.15.6.20; the block's `:36-46` is
 past the end of the file) `[ev: retro r8-t9i-packaging Δ1]`
 

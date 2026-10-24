@@ -369,7 +369,7 @@ func Command(specs ...Spec) cli.Main {
 		var vo ValueOptions
 		if len(selected) == 1 && args[0] != "--all" {
 			sp := selected[0]
-			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Strict: sp.ValuedStrict, Named: sp.ValuedNamed}
+			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Flags: sp.Flags, Strict: sp.ValuedStrict, Named: sp.ValuedNamed}
 		}
 		a, err := ParseValued(mode, name, use, vo, rest)
 		if err != nil {

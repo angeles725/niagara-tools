@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-24 · kit · go-new-retro
@@ -62,5 +62,10 @@ path for `go/` (GWS3).
 - Inject the clock into the command (`Command(today)`), not the environment: the recorder fakes `date`, the Go test passes the same date, and a wrapper check maps the real date once.
 - Keep a wrapper's DEFAULT root on the path the old script used (unresolved), even when `here=` must resolve for `go/`; they answer different questions.
 
+## Fold
+- Δ1, Δ2, Δ4, Δ5, Δ6 are code already shipped in the PR that wrote this retro (`go/internal/newretro`, pinned by `tests/new-retro-truth.bats` NRT1-NRT3 and `command_test.go`); not re-implemented. Their rules → `BUILD-LOOP.md` § 5 Kit tooling doctrine, new bullet "A write-side tool validates every operand before its first write and lands all or nothing" (Δ6 with the dropped-Atoi-error lesson).
+- Δ3 → `BUILD-LOOP.md` § 5 golden-case bullet (whole tree after the run; the clock injected through `Command(today)`), not `go/README.md`, whose citations the fold audit does not count.
+- Lesson 4 (a wrapper's default root stays the unresolved path) is GWS3 practice already in the wrapper; not doctrine. Follow-up W4 (two concurrent runs lose a flip) needs code: open issue in `ledger.d/2026-10-24-r10-fold-tail2.md`. S6 (backslash in a module name) and S7 (the INDEX half of the goldens is Go, not bash parity) are recorded limits with no real case; no issue.
+
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-new-retro.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail2`; log in `ledger.d/2026-10-24-r10-fold-tail2.md`) — Δ1, Δ2, Δ4-Δ6 shipped code, rules in `BUILD-LOOP.md` § 5 write-side bullet; Δ3 in the § 5 golden-case bullet.

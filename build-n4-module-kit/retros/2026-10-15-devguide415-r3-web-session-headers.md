@@ -11,7 +11,7 @@
 
 ## Evidence
 - Idle timer `[ev: code organized/baja/baja/vineflower/com/tridium/session/NiagaraSuperSession.java:184-198,217-244]` `[ev: code organized/web/web-rt/vineflower/com/tridium/web/servlets/SessionTimeoutServlet.java:25-38]` `[ev: code organized/web/web-rt/vineflower/WEB-INF/web.xml:59-68]` `[ev: corpus B1344 §1344.1-1344.2]`
-- Absolute logoff `[ev: javap /mnt/c/Niagara/Niagara-4.15.6.20/modules/baja.jar!com/tridium/session/NiagaraSuperSession scheduleAbsoluteTimeout]` `[ev: niagara-help 4.15.6.20 guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:30-41]` `[ev: corpus B1344 §1344.3]`
+- Absolute logoff `[ev: javap /mnt/c/Niagara/Niagara-4.15.6.20/modules/baja.jar!com/tridium/session/NiagaraSuperSession scheduleAbsoluteTimeout]` `[ev: niagara-help 4.15.6.20 guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:15-23 "As of Niagara 4.15, the Absolute Logoff"]` `[ev: corpus B1344 §1344.3]`
 - Headers `[ev: code organized/jetty/jetty-rt/vineflower/com/tridium/jetty/BJettyWebServer.java:1178-1180,1462-1468]` `[ev: code organized/web/web-rt/vineflower/com/tridium/web/filters/TridiumSecurityFilter.java:22-27]` vs `[ev: code types/security.md:366-377]` `[ev: corpus B1349 C1]`
 - Themes `[ev: code organized/bajaux/bajaux-rt/vineflower/com/tridium/ux/WbWebWidgetServlet.java:143-149]` `[ev: corpus B1349 §1349.2]`; oBIX `[ev: code organized/obixDriver/obixDriver-rt/vineflower/javax/baja/obix/io/ObixEncoder.java:234-236,588-589]` `[ev: corpus B1347]`
 

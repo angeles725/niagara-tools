@@ -10,7 +10,8 @@
 # with a retros/ dir → this script's ../ (unresolved: a symlinked toolbelt copy names its own parent) → cwd.
 # This seam lets the test harness inject the kit root via KIT=<tmpdir> without passing a positional kit-root arg.
 #
-# Writes (all three in one atomic sequence — none if any step fails):
+# Writes (all three in one atomic sequence — none if any step fails — under an exclusive flock on retros/,
+# so concurrent runs serialise and none drops another's flip; the kernel releases it if a run dies):
 #   retros/<date>-<slug>.md    stub from template, header block on lines 1-3
 #                              (review-status / module / deltas); refuses to overwrite (exit 3)
 #   retros/INDEX.md            REGENERATED (go/internal/retroindex, as gen-retro-index.sh) from the retro headers — never
@@ -30,8 +31,9 @@
 # Exit codes: 0 ok · 1 index regeneration failed (nothing landed) · 3 usage/env/file-already-exists (K20),
 #   including no Go toolchain or a failed build
 #
-# Implementation: go/internal/newretro (goldens recorded from the bash script at 15e792d1 by
-# go/internal/newretro/testdata/record/record.sh). go/go-tool.sh `go_tool_bin` builds go/bin/new-retro when
+# Implementation: go/internal/newretro (goldens recorded from the bash script at 15e792d1 by the shared
+# go/internal/lint/rules/golden/record/record.sh, pinned by go/internal/newretro/testdata/record.env with the
+# testdata/setup.sh hooks). go/go-tool.sh `go_tool_bin` builds go/bin/new-retro when
 # it is missing or older than a Go source, then this script execs it with NEW_RETRO_DEFAULT_ROOT = its ../.
 # VCS-free by design; kit-links.bats L2 enforces.
 # [ev: retro campaign8-retro-loop] [ev: retro go-new-retro]

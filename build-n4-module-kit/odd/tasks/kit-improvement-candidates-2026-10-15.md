@@ -77,7 +77,7 @@ Appendix B, outside the 168 count):
 | r3-report#R2 | `types/logic-authoring.md:646` — `pingEnabled` is already ON by default (`<network>/monitor`) | `BPingMonitor.java:128`, corpus B1348 C1 | yes, r3di Δ2 |
 | r3-report#R3 | shl Δ7(b): the non-driver-client gate is CLOSED by default (`HttpClientService.enableNonDriverClients=false`) | `BHttpClientService.java:231-252,270`, corpus B1346 §1346.2 | yes, r3di Δ4 |
 | r3-report#R4 | shl Δ9: the jsonToolkit type-override hook is `overrideValueEncoding(BValue)`; `doOverride` is `final` in the 4.15 jar | `javap jsonToolkit-rt.jar!…/BTypeOverride`, corpus B1350 | yes, r3pec Δ2 |
-| r3-report#R5 | sta Δ10: the `forceUpdate` flag reset applies only to R2 oBIX proxy points ("Niagara R2 to AX via oBIX") | `niagara-help/versions/4.15.6.20/guides-clean/EngNotes/aForceUpdateAction.txt:2,7,13-15`, corpus B1353 §1353.2 row 8 | **no — only here** |
+| r3-report#R5 | sta Δ10: the `forceUpdate` flag reset applies only to R2 oBIX proxy points ("Niagara R2 to AX via oBIX") | `niagara-help/versions/4.15.6.20/guides-clean/EngNotes/aForceUpdateAction.txt:2,7,13-15` "By default, every Obix proxy point has an", corpus B1353 §1353.2 row 8 | **no — only here** |
 | r3-report#R6 | pps Δ1: `noRunningApp`/`noStation`=true stops ALL apps incl. Sedona; Workbench aborts on decline; a missing attribute means false | `DistributionManifest.java:87`, `PlatformInstallManager.java:353-356`, `CommitCommand.java:74-86`, corpus B1345 | yes, r3pec Δ1 |
 
 ---
@@ -292,7 +292,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C16 — Tuning facts: `staleTime=0` is not "off"; `pollEnabled` lives on the poll service
 - **Sources:** drp#Δ3 (primary, staleTime) · drp#Δ8 (primary, pollEnabled; extends with ≤75 % busy, Slow/Normal/Fast policies, no exts on proxy points)
-- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Bacnet/bacnet-BacnetTuningPolicy.txt:20`; `driver-rt/…/util/BAbstractPollService.java:64`; corpus B1327 §1327.2 C1, B1337 §1337.2 C1-C2.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Bacnet/bacnet-BacnetTuningPolicy.txt:20` "hours minutes seconds (defaults to zero)"; `driver-rt/…/util/BAbstractPollService.java:64`; corpus B1327 §1327.2 C1, B1337 §1337.2 C1-C2.
 - **Target:** `types/driver-authoring.md:121-132,205-213`.
 - **Lint-able:** yes for `:213`; partial otherwise. **Fold type:** doc fix.
 - **Fold status:** FOLDED (WU-P0-5, 2026-10-22; drp Δ3, Δ8; KD3 pins `:213`). The staleTime half is CORRECTED, not
@@ -335,7 +335,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C21 — Tag-dictionary recipe names APIs that do not exist; `hierarchy:` is client-only; dictionaries are licensed
 - **Sources:** nsto#Δ9 (primary, recipe rewrite) · nsto#Δ10 extends (tags-in-code card, `hierarchy:` client-only) · sta#Δ5 extends (licence: 2 dictionaries, `n` takes one) · sta#Δ7 reinforces (ScopedTagRule, implied index off, heap-only caches)
-- **Evidence:** `BSmartTagDictionary.java:71`, `BTagDictionary.java:144,200`, `BNamespace.java:19` (`@Deprecated`), devguide `neql.txt:18,28-46`, `hierarchy.txt:63-66`, `niagara-help/versions/4.15.6.20/guides-clean/Tagging/LicenseRequirements-474FC1B4.txt:7`, corpus B1311 §1311.2, B1329.
+- **Evidence:** `BSmartTagDictionary.java:71`, `BTagDictionary.java:144,200`, `BNamespace.java:19` (`@Deprecated`), devguide `neql.txt:18,28-46`, `hierarchy.txt:63-66`, `niagara-help/versions/4.15.6.20/guides-clean/Tagging/LicenseRequirements-474FC1B4.txt:7` "The tags license is required to use the", corpus B1311 §1311.2, B1329.
 - **Target:** `types/logic.md:359-376`, `types/logic-authoring.md:148-154,181`, `types/security.md:220`, `types/cloud-connector.md:206-217`.
 - **Lint-able:** yes — doc grep FAIL `getRules()`, `SmartTagRule`, `tag::`, `tagInfoList.add`; grep `BOrd.make("hierarchy:` in `-rt`. **Fold type:** doc rewrite + lint.
 - **Fold status:** FOLDED doc + doc grep (WU-P0-6, 2026-10-22; nsto Δ9, Δ10, sta Δ5, Δ7): `types/logic.md` § Ship a tag
@@ -364,7 +364,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C24 — `-se` means "depends on Java SE APIs" and runs on the Windows Supervisor only
 - **Sources:** has#Δ8 (primary, meaning + part dependency matrix) · pps#Δ8 extends (JACE never loads `-se`)
-- **Evidence:** devguide `modules.txt:72-76`, `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:49-51`, corpus B1313 §1313.3 C3, B1341 §1341.2 C1.
+- **Evidence:** devguide `modules.txt:72-76`, `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:30` "Java 8 Standard Edition (SE) platform API. Currently,", corpus B1313 §1313.3 C3, B1341 §1341.2 C1.
 - **Target:** `types/structure.md:300` + § Layout.
 - **Lint-able:** yes — parse cross-part `api(...)`; WARN `runtimeProfile=se` on a JACE module. **Fold type:** doc fix + lint.
 - **Fold status:** FOLDED (WU-P0-7, 2026-10-23; has Δ8, pps Δ8): `types/structure.md` § Layout (profile meanings, part
@@ -422,7 +422,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C29 — A palette entry is not a `.ntpl`; the `§Templates` link dangles
 - **Sources:** pps#Δ4 (primary; provisioning half rides along)
-- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Templates/DeployingTemplates-054F175F.txt:7-11`, corpus B1325 C1-C2; reinforces afl Δ3.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Templates/DeployingTemplates-054F175F.txt:7-11` "Template deployment is a multi-step copy operation. Once", corpus B1325 C1-C2; reinforces afl Δ3.
 - **Target:** `types/distribution.md`, `types/logic.md:185`, `types/structure.md:133`.
 - **Lint-able:** yes — dangling `§` link check. **Fold type:** doc fix + lint.
 - **Fold status:** FOLDED (WU-P0-7, 2026-10-23; pps Δ4): `types/logic.md` UX row 5 link fixed, palette ≠ `.ntpl` note
@@ -656,14 +656,14 @@ cursor recipe stays owed (WU-P0-6).
 - **Lint-able:** partial. **Fold type:** doc section.
 - **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; r3di Δ1, drp Δ7): `types/driver-authoring.md` § 5 (a failed
   poll is not a failed ping; the BACnet `ping()` + `maxPollTimeouts` pattern; ping-monitor rules). **Premise checked:**
-  the 4.15.6.20 guide's "in most drivers a poll with no response notes a ping fail" (`niagara-help/versions/4.15.6.20/guides-clean/Drivers/driver-PingMonitor.txt:13`)
+  the 4.15.6.20 guide's "in most drivers a poll with no response notes a ping fail" (`niagara-help/versions/4.15.6.20/guides-clean/Drivers/driver-PingMonitor.txt:13` "A successful ping response updates an object’s Health")
   vs code — code wins for behaviour: `BProxyExt.readFail` makes no device call (vineflower driver-rt 4.14.0.162
   `BProxyExt.java:463-469`); BACnet does it in its own poll path (vineflower bacnet-rt 4.14.0.162
   `BBacnetDevice.java:1093-1101`). 4.13/4.15 code not verified. No lint (policy in the module's own comm code).
 
 ### C45 — BACnet `statusFlags` facet or field alarm/fault never reaches Niagara status
 - **Sources:** drp#Δ4 (primary) · r3di#Δ3 corrects scope (COV and polled alike; cost note)
-- **Evidence:** `BBacnetProxyExt.java:1404-1409`, `CovHandler.java:266-270`, `niagara-help/versions/4.15.6.20/guides-clean/Bacnet/TroubleshootingBACnet-4FF09FBA.txt:47-49`, corpus B1327 row 3, B1348 §1348.2.
+- **Evidence:** `BBacnetProxyExt.java:1404-1409`, `CovHandler.java:266-270`, `niagara-help/versions/4.15.6.20/guides-clean/Bacnet/TroubleshootingBACnet-4FF09FBA.txt:47-49` "To get this native status, you do not", corpus B1327 row 3, B1348 §1348.2.
 - **Target:** `types/driver-authoring.md:129`, `types/dashboard.md` health read.
 - **Lint-able:** yes — bog check. **Fold type:** doc section + bog lint.
 - **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; drp Δ4, r3di Δ3): `types/driver-authoring.md` § 2 BACnet
@@ -698,7 +698,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
-- **Evidence:** corpus B1234 §1234.3/§1234.6, B1332; `niagara-help/versions/4.15.6.20/guides-clean/ModuleSign/VerificationModesModuleSigning-182D0E86.txt:7-19`.
+- **Evidence:** corpus B1234 §1234.3/§1234.6, B1332; `niagara-help/versions/4.15.6.20/guides-clean/ModuleSign/VerificationModesModuleSigning-182D0E86.txt:7-19` "Niagara supports three different verification modes for third".
 - **Target:** `build-verify.md` § signing, `types/distribution.md:100`, `types/logic-authoring.md:917`, `toolbelt/lint-structure.sh`.
 - **Lint-able:** yes — WARN signing plugin without `allowDefaultProfile.set(false)`. **Fold type:** doc section + lint.
 - **Fold status:** FOLDED (`docs/r8-p1-sign`, 2026-10-23; bdps Δ4, pps Δ6, Δ7, rsb Δ1, Δ2, Δ3): `build-verify.md`
@@ -711,7 +711,7 @@ cursor recipe stays owed (WU-P0-6).
   the kit's existing JACE/supervisor line was already right. **Premise corrected (kit text):** "an unsigned
   `BRobotCode` blob is rejected at instantiation" — code wins: `BCode` verifies only when a signature is present or
   `program.requireSigning` is true, else logs `program.notSigned` (vineflower program-rt 4.14.0.162 `BCode.java:202-215`);
-  the guide agrees enforcement is off (`User/ProgramObjectSigning-10F25D1D.txt:16`). The allowDefaultProfile WARN is
+  the guide agrees enforcement is off (`User/ProgramObjectSigning-10F25D1D.txt:16` "By default, program object signing is not currently"). The allowDefaultProfile WARN is
   L15 (C85). Owed Go lints G22 `signer-identity` (rsb Δ1, replaces the verify-module `--expect-signer` flag) and G23
   `signing-secrets` (rsb Δ2). rsb Δ3's `--info` proof lines not folded (no source line located). Pin KPS1.
 
@@ -727,11 +727,11 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C50 — Staging comparisons need an explicit NaN/null fallback
 - **Sources:** rcf#Δ9 (primary)
-- **Evidence:** corpus B1336 §1336.1 row 5, **B1353 §1353.2** (`EngNotes/aHandlingNull_ExprComponent.txt:23-27`, `[CERT-doc]`).
+- **Evidence:** corpus B1336 §1336.1 row 5, **B1353 §1353.2** (`EngNotes/aHandlingNull_ExprComponent.txt:13-15` "In a math expression, if a Double or", `[CERT-doc]`).
 - **Target:** `types/logic-authoring.md` (staging).
 - **Lint-able:** partial. **Fold type:** doc section.
 - **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; rcf Δ9): `types/logic.md` § Zero-demand (every staging
-  comparison names its fallback; Expr null handling per the 4.15.6.20 guide `EngNotes/aHandlingNull_ExprComponent.txt:13-17`,
+  comparison names its fallback; Expr null handling per the 4.15.6.20 guide `EngNotes/aHandlingNull_ExprComponent.txt:13-17` "In a math expression, if a Double or",
   `[CERT-doc]`, not verified in code). No lint: a NaN guard near a comparison has no deterministic signal.
 
 ### C51 — Kit process: register the course, reference-first, sweep absolute claims
@@ -825,13 +825,13 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C53 — Templates: shipping a template module, what breaks on upgrade
 - **Sources:** pps#Δ2 (primary) · pps#Δ3 extends
-- **Evidence:** `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:25`, corpus B1325.
+- **Evidence:** `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:12` "CAUTION: Upgrading deployed templates wipes out any local", corpus B1325.
 - **Target:** `types/logic-authoring.md:208-211`, `METHODOLOGY.md:44-52`. **Lint-able:** partial. **Fold type:** new doc section.
 - **Fold status:** FOLDED (U10, `docs/r8-u10-platform-templates`, 2026-10-23; pps Δ2, Δ3): `types/logic-authoring.md` § Templates (palette entry ≠ `.ntpl`, Shipping a template module, What breaks on a module or template upgrade). Landed in logic-authoring only; the `METHODOLOGY.md:44-52` pointer is owed (outside the unit's surface). Owed Go lint G92 `ntpl-manifest-deps`. The `BConfigBinding` slot-rename breakage stays `[INFER]` (B1325-G1).
 
 ### C54 — Lexicon resolution chain and lexicon-only modules
 - **Sources:** lux#Δ2 (primary) · pps#Δ5 extends
-- **Evidence:** `Lexicon.java:313-334`, devguide `localization.txt:59-70,189-214`, `Lexicon/devkit-LexiconModuleBuilder.txt:14-43`, corpus B1305, B1330.
+- **Evidence:** `Lexicon.java:313-334`, devguide `localization.txt:59-70,189-214`, `Lexicon/devkit-LexiconModuleBuilder.txt:9-27` "The lexicons available for use are those lexicon", corpus B1305, B1330.
 - **Target:** `types/structure.md` L4, `types/dashboard.md` i18n. **Lint-able:** partial. **Fold type:** new doc section.
 - **Fold status:** FOLDED (U6, 2026-10-23; lux Δ2, pps Δ5): `types/lexicon.md` § 1-2 (lookup chain, locale order, lexicon-only modules, `!lexicon` overrides). Landed in a new card, not `types/structure.md` L4 (outside the unit's surface; a pointer line there is owed). Owed Go lint G71 `lexicon-manifest`.
 
@@ -911,7 +911,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C65 — Security hardening: FIPS, least privilege, platform TLS stores
 - **Sources:** sta#Δ1 (primary, FIPS) · sta#Δ2 (least privilege) · sta#Δ4 (TLS stores)
-- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Fips/DevelopersNotes-51FBF6BE.txt:9-24`, `StationSecurity/role_*`, corpus B1326.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Fips/DevelopersNotes-51FBF6BE.txt:9-24` "When developing code intended for use in a", `StationSecurity/role_*`, corpus B1326.
 - **Target:** `types/security.md` (new §, §2, §10). **Lint-able:** yes — WARN two-arg `getInstance(…, "<provider>")`, `KeyStore.getInstance`. **Fold type:** doc sections + lint.
 - **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ1, Δ2, Δ4): `types/security.md` § 9.1 FIPS, § 2.6 least privilege, § 10.1
   TLS stores. Δ1 "RC4/DES" dropped (not in the guide). Lints owed G80 `jca-named-provider`, G81 `embedded-keystore`
@@ -927,7 +927,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C67 — Analytics framework facts
 - **Sources:** sta#Δ9 (primary)
-- **Evidence:** `DeveloperAnalytics/buildingAlgorithmBlocks.txt:9,23`, `ordSchemes.txt:15,25`, corpus B1338.
+- **Evidence:** `DeveloperAnalytics/buildingAlgorithmBlocks.txt:8,22` "Developer guide on how to develop algorithmic blocks.", `ordSchemes.txt:15,25`, corpus B1338.
 - **Target:** `types/logic-authoring.md:31,101`. **Lint-able:** yes — grep `analytic:`. **Fold type:** doc section + lint.
 - **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ9): `types/logic-authoring.md` analytics bullet + § ORD scheme typology
   (no `analytic:` id, analytics-rt 4.15.6.20 `module.xml:106`). "Data definition per tag" not folded. Lint owed G82
@@ -947,7 +947,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C70 — RDBMS: supported databases and export from code
 - **Sources:** shl#Δ8 (primary) · r3di#Δ6 extends (`histories.getExportDescriptorType()`, licence on the database)
-- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:13-35`, `BHistoryExport.java:19-32`, `BRdbms.java:256-301`, corpus B1340, B1352.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:13-35` "Using Workbench, you install, configure and test an", `BHistoryExport.java:19-32`, `BRdbms.java:256-301`, corpus B1340, B1352.
 - **Target:** `types/third-party-libraries.md:176-177`, `types/utility-lib.md:8`, `types/cloud-connector.md`. **Lint-able:** partial. **Fold type:** doc section.
 - **Fold status:** FOLDED (U9, 2026-10-23; shl Δ8, r3di Δ6): `types/cloud-connector.md` § 11. Landed there, not at `types/third-party-libraries.md:176-177` / `types/utility-lib.md:8` (outside the unit's surface; pointer lines owed). Owed Go lint G88 `rdbms-dialect-descriptor`.
 
@@ -1023,7 +1023,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C77 — Preserve author-set slot flags on rebuild (scope corrected)
 - **Sources:** sta#Δ10 (primary, accepted-corrected) · r3-report#R5
 - **Winning text:** keep as a design note only; its evidence (`forceUpdate` resets flags) applies to R2 oBIX proxy points, not to N4 drivers in general.
-- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/EngNotes/aForceUpdateAction.txt:2,7,13-15`, corpus B1353 §1353.2 row 8.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/EngNotes/aForceUpdateAction.txt:2,7,13-15` "By default, every Obix proxy point has an", corpus B1353 §1353.2 row 8.
 - **Target:** `types/value-types.md` or `types/logic-authoring.md`. **Lint-able:** no. **Fold type:** doc note.
 - **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ10, r3-report R5): `types/logic-authoring.md` § Programmatic slot-name
   rules, design note [INFER] with the R2-oBIX-only scope.
@@ -1034,7 +1034,7 @@ cursor recipe stays owed (WU-P0-6).
   was outside the unit's edit surface; its one-line pointer landed with the pointer unit (`docs/r8-pointer-lines`).
 
 ### C79 — Coexisting with the Tridium DashboardService
-- **Sources:** wuh#Δ10 (primary). **Evidence:** `EngNotes/dashboard-DashboardService.txt:14`. **Target:** `types/dashboard.md`. **Lint-able:** partial. **Fold type:** doc note.
+- **Sources:** wuh#Δ10 (primary). **Evidence:** `EngNotes/dashboard-DashboardService.txt:7` "to db*.json files stored in the dashboards directory". **Target:** `types/dashboard.md`. **Lint-able:** partial. **Fold type:** doc note.
 - **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; wuh Δ10): `types/dashboard.md` § Deploy on a JACE
   (clean-text anchor `dashboard-DashboardService.txt:7`). The lint half stays human review: the state lives in the
   station home, not the module tree.

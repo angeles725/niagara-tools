@@ -24,7 +24,7 @@ const usage = "usage: kit-cite-resolve [--kit <dir>] [--research <dir>] [--modul
 	" [--clients <dir>] [--version <ver>] [--format tsv|json] [--strict] <card.md>...\n"
 
 // order is the status order of the summary line.
-var order = []Status{Resolved, MissingFile, MissingSection, MissingDelta, LineOutOfRange, BareID, Unparsed, Ambiguous, ToolError,
+var order = []Status{Resolved, MissingFile, MissingSection, MissingDelta, LineOutOfRange, Drift, BareID, Unparsed, Ambiguous, ToolError,
 	HistoricalDrift, UnverifiableKind, SkippedTemplate}
 
 // Row is one output row.

@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+# shellcheck disable=SC2016  # the backticks in the expected rows are literal Markdown, not command substitution
 # Tests for generate-wiring-map.sh (Δ6, retro live-commissioning-verification-gaps).
 #
 # Verifies that the script:
@@ -155,4 +156,53 @@ setup() {
   chmod 755 "$BATS_TEST_TMPDIR/src/locked"
   [ "$status" -eq 3 ]
   [[ "$output" == *"generate-wiring-map: cannot list every file under $BATS_TEST_TMPDIR/src: "* ]]
+}
+
+@test "GWM-comments: an annotation in a comment is no slot, and a \"(\" in a javadoc does not swallow the next annotations" {
+  # Mutation: GWM-comments -- scanning the raw lines lists the commented-out slot and drops the slots under the javadoc
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf '%s\n' '// @NiagaraProperty(name = "oldSlot", flags = Flags.OPERATOR)' '/**' ' * see {@code @NiagaraProperty(} below' ' */' \
+    '@NiagaraProperty(name = "setpoint", type = "double", flags = Flags.OPERATOR)' \
+    '@NiagaraProperty(name = "reading", type = "double", flags = Flags.SUMMARY)' > "$BATS_TEST_TMPDIR/src/BA.java"
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"oldSlot"* ]]
+  [[ "$output" == *'| `setpoint` |'* ]]
+  [[ "${output#*Table 2}" == *'| `reading` |'* ]]
+}
+
+@test "GWM-literal-paren: a \"(\" inside a string literal does not hold the annotation open" {
+  # Mutation: GWM-literal-paren -- counting parentheses inside literals swallows this slot and the next one
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf '%s\n' '@NiagaraProperty(name = "label", type = "String", defaultValue = "BString.make(\"(\")", flags = Flags.OPERATOR)' \
+    '@NiagaraProperty(name = "reading", type = "double", flags = Flags.SUMMARY)' > "$BATS_TEST_TMPDIR/src/BA.java"
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'| `label` |'* ]]
+  [[ "${output#*Table 2}" == *'| `reading` |'* ]]
+}
+
+@test "GWM-unreadable: an unreadable source or lexicon is an env error (exit 3, no map), never a shorter map" {
+  # Mutation: GWM-unreadable -- skipping an unreadable file prints the map without its slots (or names) and exits 0
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf '%s\n' '@NiagaraProperty(name = "setpoint", type = "double", flags = Flags.OPERATOR)' > "$BATS_TEST_TMPDIR/src/BA.java"
+  printf 'setpoint=Setpoint\n' > "$BATS_TEST_TMPDIR/src/module.lexicon"
+  cp "$BATS_TEST_TMPDIR/src/BA.java" "$BATS_TEST_TMPDIR/src/BU.java"
+  chmod 000 "$BATS_TEST_TMPDIR/src/BU.java"
+  if [ -r "$BATS_TEST_TMPDIR/src/BU.java" ]; then skip "running as root"; fi
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  [ "$status" -eq 3 ]
+  [ "$output" = "generate-wiring-map: cannot read $BATS_TEST_TMPDIR/src/BU.java: Permission denied" ]
+  rm -f "$BATS_TEST_TMPDIR/src/BU.java"
+  chmod 000 "$BATS_TEST_TMPDIR/src/module.lexicon"
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  [ "$status" -eq 3 ]
+  [ "$output" = "generate-wiring-map: cannot read $BATS_TEST_TMPDIR/src/module.lexicon: Permission denied" ]
+}
+
+@test "GWM-output-unwritable: an --output file that cannot be written is exit 3, never \"wrote\"" {
+  # Mutation: GWM-output-unwritable -- ignoring the create error prints "wrote <file>" and exits 0 with no file
+  run "$SCRIPT" "$FX" --output "$BATS_TEST_TMPDIR/no/such/dir/wiring-map.md"
+  [ "$status" -eq 3 ]
+  [ "$output" = "generate-wiring-map: cannot write $BATS_TEST_TMPDIR/no/such/dir/wiring-map.md: No such file or directory" ]
 }

@@ -16,7 +16,7 @@ names: the load table, the headless AWT trap, the `-wb` dependency trap, the JAC
 
 ## Evidence
 - `niagara-help/versions/4.15.6.20/guides-clean/Templates/DeployingTemplates-054F175F.txt` (21 lines), `…/Provisioning/InstallingSoftwareByDraggingFromThe.txt` (32 lines) `[ev: corpus B1325 §1325.1 rows 5, 8]`
-- `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:24,30` (compact3 JACE, `se` "Windows-based hosts only") `[ev: corpus B1341 §1341.2 C1]`
+- `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:24,30` "The following table lists the types of software" (compact3 JACE, `se` "Windows-based hosts only") `[ev: corpus B1341 §1341.2 C1]`
 - RED 6/6 then GREEN 6/6: `tests/kit-packaging-pins.bats` `[ev: tests/kit-packaging-pins.bats]`
 
 ## Proposed kit deltas (propose-never-apply)

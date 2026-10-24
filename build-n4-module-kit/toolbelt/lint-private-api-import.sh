@@ -15,10 +15,10 @@
 #
 # Implementation: rule package go/internal/lint/rules/privateapiimport on the shared engine go/internal/lint
 # (go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/n4lint when
-# it is missing or older than a Go source, then this script execs `n4lint lint-private-api-import <args>`, with
-# --no-default-allow passed as the engine's `--default-allow off`. Needs `go` on PATH to build (exit 3 otherwise).
+# it is missing or older than a Go source, then this script execs `n4lint lint-private-api-import <args>`.
+# Needs `go` on PATH to build (exit 3 otherwise).
 #
-# Usage:  lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow | --default-allow on|off] <module-root>
+# Usage:  lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow] <module-root>
 #   Row:  WARN  lint-private-api-import  <file>:<line>  <qualified name> is private API (devguide apiInfo: no compatibility guaranteed)
 #   Exit: 0  clean or WARN-only · 1  any WARN under --strict · 3  usage/env, a root with no part src/ *.java
 # Mutation: PAI1 -- dropping the default allow-list WARNs every import of the NDriver fixture module
@@ -32,14 +32,4 @@ GO_DIR="$(cd "$here/../.." && pwd)/go"
 # shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
 . "$GO_DIR/go-tool.sh"
 BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
-args=() prev=
-for a in "$@"; do
-  # an option value (--allow <glob>) is passed as given, even one spelled --no-default-allow
-  if [ "$a" = "--no-default-allow" ] && [ "$prev" != "--allow" ] && [ "$prev" != "--default-allow" ]; then
-    args+=(--default-allow off)
-  else
-    args+=("$a")
-  fi
-  prev=$a
-done
-exec "$BIN" lint-private-api-import ${args[@]+"${args[@]}"}
+exec "$BIN" lint-private-api-import "$@"

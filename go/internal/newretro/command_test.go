@@ -3,6 +3,7 @@ package newretro
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -117,4 +118,23 @@ func TestNoWriteOutsideRetros(t *testing.T) {
 	if fmt.Sprint(after) != fmt.Sprint(before) {
 		t.Errorf("a valid run changed files besides its own three:\n%q\nwant\n%q", after, before)
 	}
+}
+
+// tree is every regular file under dir by its slash path relative to dir.
+func tree(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	files := map[string]string{}
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(p)
+		rel, _ := filepath.Rel(dir, p)
+		files[filepath.ToSlash(rel)] = string(b)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
 }

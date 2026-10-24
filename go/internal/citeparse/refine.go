@@ -9,6 +9,10 @@ import (
 // or a lone ellipsis.
 var placeholder = regexp.MustCompile(`<[A-Za-z][\w-]*>|^(?:…|\.\.\.)$`)
 
+// elidedWord is a word an unparsed clause elides: one ending in an ellipsis (`…`, `B…`, `YYYY-MM-DD-…`), an
+// elided delta (`…Δ1`) or a letter delta (`Δk`). An ellipsis inside a word (`a1b…c2d`) elides nothing.
+var elidedWord = regexp.MustCompile(`^(?:[\w-]*…|…Δ\d+|Δ[a-z])$`)
+
 // The classes of unverifiable evidence: each names a kind of evidence no source tree holds, so the tool
 // can only report it, never check it.
 const (
@@ -45,10 +49,11 @@ var (
 	webURL       = regexp.MustCompile(`^https?://`)
 )
 
-// refine marks a placeholder pointer Template, and a web URL or an unparsed clause of an unverifiable kind
-// Unverifiable: a URL names a page no source tree holds, so it is never looked up as a file.
+// refine marks a placeholder pointer, or an unparsed clause with an elided word, Template; and a web URL or
+// an unparsed clause of an unverifiable kind Unverifiable: a URL names a page no source tree holds, so it is
+// never looked up as a file.
 func refine(p *Pointer) {
-	if placeholder.MatchString(p.Target) || placeholder.MatchString(p.File) {
+	if placeholder.MatchString(p.Target) || placeholder.MatchString(p.File) || p.Kind == Unparsed && elided(p.Target) {
 		p.Kind, p.Notes = Template, nil
 		return
 	}
@@ -62,6 +67,16 @@ func refine(p *Pointer) {
 	if class := unverifiableClass(firstWord(p.Target)); class != "" {
 		p.Kind, p.Notes = Unverifiable, []string{class}
 	}
+}
+
+// elided reports whether a word of an unparsed clause is an elision, so the clause is template text.
+func elided(clause string) bool {
+	for _, w := range strings.Fields(clause) {
+		if elidedWord.MatchString(w) {
+			return true
+		}
+	}
+	return false
 }
 
 func unverifiableClass(word string) string {

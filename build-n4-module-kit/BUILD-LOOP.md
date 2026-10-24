@@ -258,6 +258,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro go-lint-silent-protection Δ1]` `[ev: retro go-lint-servlet Δ1]` `[ev: retro go-lint-config-sanity Δ3]`
     `[ev: retro go-lint-session-store Δ1]` `[ev: retro go-split-package-check Δ3]` `[ev: retro go-lint-config-sanity Δ1]`
     `[ev: retro go-lint-structure Δ1]` `[ev: retro go-e2-tiny-lints Δ1]` `[ev: retro go-lint-demand-scope Δ1]`
+    A truth fix that tightens an operand checks the format's own grammar first: verify-module's first cut made a
+    decimal SVG viewBox (`1920.5`, legal SVG) a usage error, which would have left real dashboards uncheckable
+    `[ev: retro r10-verify-module-truth Δ1]`. A bash comparison that carried no tolerance (exact integer
+    cross-products) gets a tolerance chosen and named when it moves to floats (`verifymodule` `ratioTolerance`,
+    float rounding only) and pinned by a golden, never inherited `[ev: retro r10-verify-module-truth Δ2]`.
   - **An orchestrator port keeps its tests' stubs and its structural pins.** A Go port of a script that calls toolbelt
     members receives the invoked (unresolved) toolbelt directory from its wrapper (`COMMISSIONING_VERIFY_TOOLBELT`),
     because resolving it like `here=` silently runs the real lints instead of a test's stubbed toolbelt copy. At the
@@ -388,6 +393,23 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     or deflated), fixture class headers as `(class N)`, any other binary as `(base64)` and an empty directory as
     `(dir)`; record only the paths an argument names, so a jar's source tree does not double the golden.
     `[ev: retro go-verify-module Δ1]`
+    A write-side tool's case pins every file the run leaves (the whole tree after the run, never a chosen file
+    list), so a stub left behind or a write outside the target directory fails it; new-retro's out-of-dir write
+    showed up only as an extra `@expect` file. Inject the clock into the command (`Command(today)`) and fake `date`
+    in the recorder, never read the real clock in a case `[ev: retro go-new-retro Δ3]`. The golden harness has no
+    update flag: a `declared difference` golden is copied from the `go test` "got" block, so the commit that
+    declares it is reviewed line by line `[ev: retro r10-verify-module-truth Δ3]`.
+  - **A write-side tool validates every operand before its first write and lands all or nothing**
+    (`go/internal/newretro`, the Go port of `toolbelt/new-retro.sh`). The whole slug is checked, not a prefix
+    (the bash glob read 6 characters, so `abcdef/../../x` reached `cp`) `[ev: retro go-new-retro Δ1]`; `--date`
+    must be a calendar date and `--deltas` a count, both before the stub is written (exit 3), because `--date ../x`
+    wrote outside retros/ yet flipped the envelope `[ev: retro go-new-retro Δ2]`; a section that is missing or has
+    no `retro_pending` exits 3 before anything is written, and an already-true envelope is reported as such, never as
+    a flip `[ev: retro go-new-retro Δ5]`. A shared file is rewritten through a temporary file and a rename, and a
+    later failure removes the stub and restores the index `[ev: retro go-new-retro Δ4]`. Never size a loop, slice or
+    builder from an input whose parse error was dropped: `strconv.Atoi` on an overflow returns the clamped maximum
+    with its error, and one such golden (`--deltas 99999999999999999999`) took the host to 37 GB RSS; bound the value
+    (0-99) and check the error in the parser `[ev: retro go-new-retro Δ6]`.
   - **Reuse the engine before adding to it:** a per-file rule may set `Finding.Path` to any subject (the runner fills
     only an empty one); a rule that needs literal text and code positions together reads `javasrc.MaskLiterals` (same
     line lengths) instead of mapping `BlankLiterals` columns back. An engine option a port does need (`Spec.IntFlags`)
@@ -401,6 +423,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   - **An XML or `.bog` lint reads through `internal/xmlsrc`** (`go/README.md` § XML rules): a station `config.bog`
     is zipped, so a text read sees compressed bytes and passes clean; a malformed file is one positioned error,
     printed once. `[ev: retro go-lint-bformat-call Δ2]` `[ev: retro go-lint-agent-on-shape Δ1]`
+    A well-formedness rule the kit enforces on a `.bog` is checked against Niagara's reader first: where XML 1.0
+    and `javax.baja.xml.XParser` disagree, the station's reader is the truth. `XWriter.safe` saves a NUL in a String
+    slot as `&#x0;` and `XParser` reads it back, so `xmlsrc` reads U+0000 in a `bajaObjectGraph` with one named
+    WARN (`Doc.Warnings`, `XML  WARN  <bog>:<line>:<col>  U+0000 in N places`) and keeps refusing it in any other
+    document; never exit 3 for the whole file, never a silent pass. `[ev: retro r10-xmlsrc-nul-per-niagara Δ1]`
   - **A bash `while IFS= read -r x` loop drops an unterminated last line** (7 of the 13 Tridium lexicons end without
     one): a byte-identical port keeps the drop and its truth fix removes it; a bash lint that stays reads
     `while IFS= read -r x || [ -n "$x" ]`. `[ev: retro go-lint-lexicon-ascii Δ1]`
@@ -463,7 +490,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro r10-path-keyed-gates-skip-data Δ2]`
   - **Citation pre-filter.** `toolbelt/kit-cite-resolve.sh [--strict] <card>...` (`go/cmd/kit-cite-resolve`)
     resolves every evidence pointer of the given cards and prints one row per pointer with its status
-    (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, BARE_ID, UNPARSED, AMBIGUOUS, TOOL_ERROR)
+    (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, DRIFT, BARE_ID, UNPARSED, AMBIGUOUS, TOOL_ERROR)
     and an excerpt of the cited line; a bare or partial path is searched in the repo, organized/, the versioned source
     and the client checkouts (`--clients`), every copy checked, and AMBIGUOUS lists the candidates, never a guess. RESOLVED means the cited place exists, never that it says the claim: a reviewer
     still reads the excerpt. Not findings: HISTORICAL_DRIFT (a moved target on a history card: retros/, ledger.d/,
@@ -471,10 +498,24 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     SKIPPED_TEMPLATE (`<stem>` placeholders); the summary counts LIVE and HISTORY apart. Exit 0 / 1 on a finding
     under `--strict` / 3 usage or an unreadable root. `[ev: retro go-kit-cite-resolve]` `[ev: ledger.d/2026-10-24-r10-kcr-status-split.md]`
     `[ev: ledger.d/2026-10-24-r10-kcr-paths-kinds.md]`
+    A `guides-clean` line pointer carries a quoted anchor right after its lines (`` `G/<page>.txt:12` "a phrase of line 12" ``
+    or the same after a tag's `guide <page>.txt:12`): the rendered guide copies shift on every re-render, so a bare line number
+    drifts while still resolving. The phrase must sit on a cited line, give or take 2 lines; otherwise the pointer is
+    DRIFT, naming the lines that hold it now (HISTORICAL_DRIFT on a history card). An anchor outside guides-clean is
+    shown, not checked. `[ev: retro r10-kcr-guide-anchor-drift Δ1]` An ignored, regenerated tree (`versions/*/`) keeps
+    no history, so a re-render erases what an old pointer read; write the anchor at citation time (the #511 sweep had to
+    rebuild the old rendering with the renderer from git to recover it). `[ev: retro r10-kcr-guide-anchor-drift]`
     A pointer grammar matches every character a real file name uses: a pattern that rejects one (the dot inside
     `BUILD-STATE.src.md`) does not fail, its leftmost match silently reads a shorter, wrong name. Each such grammar
     pins a case per legal name shape (`go/internal/citeparse` `TestCardSources`), and a pointer that resolves only
     after a rewording is a parser bug, not a doctrine edit. `[ev: retro r10-citeparse-dotted-section-path Δ1]`
+    The parser (`go/internal/citeparse`) reads `x.jar!entry` as a `jar` pointer (the jar resolved, the entry noted
+    unchecked), `§ 11.1-11.3` as its two ends, every number of `§ 3, § 5.2` and `§§ 3, 5`, a backticked path with
+    spaces (the course tree is a path base), and an unclosed `[ev:` inside a code span that closes on its line as
+    literal code. Measure a parser fix with a kit-wide before/after diff of row keys, not only on the card that
+    exposed it, and give each shape a wider pattern admits a negative test for the prose it must still reject
+    (the first GREEN run added 4 MISSING_FILE rows and read backticked `code x-rt …` labels as paths).
+    `[ev: retro r10-kcr-false-positives Δ1]`
 - Provenance of the former inline lint enumeration (frozen; new lints cite in their own header, which the index carries): [ev: retro umbrelladashboard-module-creation] [ev: retro dashboard-status-state-modeling Δ3] [ev: retro apillm-headless-servlet-rt-4.14-deltas Δ8] [ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ3] [ev: retro campaign8-lint-delays] [ev: retro campaign8-lint-servlet] [ev: retro campaign8-structure] [ev: retro campaign8-wb-audit] [ev: retro campaign9-demand-scope] [ev: retro campaign9-ext-writable-shape] [ev: retro campaign9-silent-protection] [ev: retro live-diagnosis-hardening-deltas Δ1] [ev: retro live-diagnosis-hardening-deltas Δ3] [ev: retro live-diagnosis-hardening-deltas Δ5] [ev: retro module-hardening-failure-modes-deltas Δ11 BLD2] [ev: retro module-hardening-failure-modes-deltas] [ev: retro new-lints] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ5] [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas].
 - Every lint that ships in a campaign carries a REAL-TREE smoke on the four client module roots: exact COUNT + SUBJECT of each finding + one ABSENCE pin (a slot that must NOT be flagged) — a bats fixture alone is not acceptance (METHODOLOGY K22). `[ev: retro campaign8-close-process-meta-lessons §lesson 11]` Any new checker runs once on the real tree before its first push, and each false-finding class it shows becomes a pinned case before release (kit-cite-resolve: green fixtures, then 2046 non-RESOLVED rows on its first real run, 9 classes false). `[ev: retro go-kit-cite-resolve Δ1]`
 - **Before releasing a new ADVISORY lint, smoke it read-only on one real client checkout and on decompiled vendor
@@ -540,7 +581,7 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
 6. **Persisted operator state survives the first restart:** HOA modes, setpoints, run hours and any new backup/persistence slot are SEEDED from the live values (or saved) BEFORE the first restart after the feature ships, and re-read after it. A brand-new backup starts empty on its first boot by construction — the first restart after a new hours backup reset a wear counter to ~0 — so either seed it or record the one-time reset as accepted in the feature doc. Mechanism: `types/logic.md` § Restart & persistence. `[ev: retro panccadia-commissioning-lessons Δ5]` `[ev: retro station-backup-before-deploy Δ3]`
 7. **Alarm routing is proven end-to-end:** every alarm source has an alarm class and at least one recipient, and a test alarm per class reaches the console and is acknowledged there. Which faults are console alarms and which are flags: `types/logic.md` § Flag vs console alarm. `[ev: retro alarm-console-design Δ2]`
    Size the store at the same time: the file alarm DB keeps 500 records by default and overwrites the oldest
-   (4.15.6.20 guide `Alarms/Alarm-FileAlarmDbConfig-92D9119A.txt:10`); every module history ext is enabled, named by
+   (4.15.6.20 guide `Alarms/Alarm-FileAlarmDbConfig-92D9119A.txt:10` "1–250,000 records (defaults to 500)"); every module history ext is enabled, named by
    script and sized (`types/logic-authoring.md` § Logging a point to history). `[ev: retro devguide415-r2-control-alarms-schedules Δ4]`
 8. **Consumer impact notified:** every point whose MEANING changed (proof threshold, predicate, mode semantics, default, reset by a first boot — see `METHODOLOGY.md` § Schema / upgrade safety, Consumer impact) was notified to its downstream consumers (web viewers, oBIX/cloud readers, other stations), with the date it takes effect. `schema-risk.sh` SAFE proves decode survival, not semantic stability. `[ev: retro panccadia-commissioning-lessons Δ8]`
 9. **Values owed by the field — a table that stays open until filled:** every slot shipped at a "disabled / no value yet" default because the field has not supplied the real value (a nameplate current limit, a low-pressure cutout) gets a row in `docs/values-owed.md` (`| Slot | Owed by | Unit | Safe default | Status |`; Status `owed` until `filled <date>`/`provided`). `commissioning-verify.sh` prints a `MANUAL values-owed` row per still-owed slot, so the debt cannot age out when the feature doc is archived. Where the client keeps a version ledger, its `Open items` appendix aggregates these rows across features (together with pending manual links and open behavior assumptions) — cross-reference the module table, do not restate it. `[ev: retro panccadia-commissioning-lessons Δ11]` `[ev: retro panccadia-version-defect-ledger Δ4]`
