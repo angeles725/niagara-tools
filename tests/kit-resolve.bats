@@ -227,3 +227,32 @@ _resolve() { HOME="$H" run "$KR" "$@"; }
   [[ "$output" == *"kit-resolve: REFUSED stale"*"1 commit(s) behind origin/main"* ]]
   [[ "$output" != *"refreshed"* ]]
 }
+
+@test "KR19: kit-main ahead of origin/main (one local commit on top) -> exit 2 REFUSED ahead, HEAD unchanged" {
+  _clone "$KM"
+  git -C "$KM" checkout -q --detach
+  git -C "$KM" commit -q --allow-empty -m local
+  before=$(git -C "$KM" rev-parse HEAD)
+  _resolve
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$KM" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED ahead"* ]]
+  [[ "$output" != *"KIT="* ]]
+}
+
+@test "KR20: \$BUILD_N4_KIT or default checkout ahead of origin/main -> exit 2 REFUSED ahead, HEAD unchanged" {
+  _clone "$TMPDIR_T/dev"
+  git -C "$TMPDIR_T/dev" commit -q --allow-empty -m local
+  before=$(git -C "$TMPDIR_T/dev" rev-parse HEAD)
+  BUILD_N4_KIT="$TMPDIR_T/dev/build-n4-module-kit" HOME="$H" run "$KR"
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$TMPDIR_T/dev" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED ahead"* ]]
+  _clone "$DEF"
+  git -C "$DEF" commit -q --allow-empty -m local
+  before=$(git -C "$DEF" rev-parse HEAD)
+  _resolve
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$DEF" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED ahead"* ]]
+}

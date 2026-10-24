@@ -25,7 +25,7 @@ Improve the kit and the modules as an "Excavador Técnico" (R&D engineer + syste
 - Exit 0: its first line `KIT=<path> SHA=<sha> (origin/main, clean)` is your first output; use that `KIT`.
 - Then materialize the generated ledger on that resolved checkout: `kit-state build-state --write` and `kit-state retro-index --write` (BUILD-STATE.md and retros/INDEX.md are generated, not tracked).
 - A clean kit-main strictly behind origin/main is fast-forwarded automatically (stderr `kit-resolve: refreshed <old>→<new>`, then exit 0); `--refresh` is no longer needed.
-- Exit 2 (stale `$BUILD_N4_KIT` or default checkout, dirty, diverged kit-main, origin unreachable): do not build. Run the command it prints, or `--offline-ok` when offline is known and accepted (never auto-refreshes). Exit 3: no kit or a bad `$BUILD_N4_KIT`; ask. `[ev: retro r10-stale-kit-resolution Δ1]`
+- Exit 2 (stale `$BUILD_N4_KIT` or default checkout, dirty, ahead of or diverged from origin/main, origin unreachable): do not build. Run the command it prints, or `--offline-ok` when offline is known and accepted (never auto-refreshes). Exit 3: no kit or a bad `$BUILD_N4_KIT`; ask. `[ev: retro r10-stale-kit-resolution Δ1]`
 
 Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run the loop.
 

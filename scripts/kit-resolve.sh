@@ -23,9 +23,10 @@
 # message goes to stderr. Refused when HEAD is behind origin/main or the work tree is dirty.
 # Auto-refresh: when the winner is the kit-main worktree, its tree is clean, origin was fetched and HEAD
 # is a strict ancestor of origin/main, it is checked out (detached) at origin/main and stderr says
-# `kit-resolve: refreshed <old>→<new>`. A diverged kit-main is refused; $BUILD_N4_KIT and the default
-# checkout are never touched.
-# Exit: 0 resolved · 2 refused (stale, dirty, diverged, not a git work tree, origin unreachable) ·
+# `kit-resolve: refreshed <old>→<new>`. $BUILD_N4_KIT and the default checkout are never touched.
+# Any candidate whose HEAD is not an ancestor of origin/main is refused: `ahead` (behind = 0) or
+# `diverged` (behind > 0) — the kit is origin/main, never unmerged commits.
+# Exit: 0 resolved · 2 refused (stale, dirty, ahead, diverged, not a git work tree, origin unreachable) ·
 #       3 usage or no candidate
 set -u
 
@@ -84,14 +85,13 @@ dirty() { [ -n "$(git -C "$TOP" status --porcelain)" ]; }
 behind() { git -C "$TOP" rev-list --count HEAD..origin/main; }
 
 short() { git -C "$TOP" rev-parse --short=7 "$1"; }
+ancestor() { git -C "$TOP" merge-base --is-ancestor HEAD origin/main; }
 
 if [ "$REFRESH" -eq 1 ] && [ "$SOURCE" != kit-main ]; then
   say "--refresh applies only to the kit-main worktree; not refreshing $TOP"
 fi
 # auto-refresh: kit-main only, only after a successful fetch, only clean, only a strict fast-forward
-if [ "$SOURCE" = kit-main ] && [ "$FRESH" = origin/main ] && ! dirty && [ "$(behind)" -gt 0 ]; then
-  git -C "$TOP" merge-base --is-ancestor HEAD origin/main \
-    || refuse "diverged: $TOP HEAD $(short HEAD) has commits not on origin/main ($(short origin/main)); not fast-forwarding — inspect, then $REMEDY"
+if [ "$SOURCE" = kit-main ] && [ "$FRESH" = origin/main ] && ! dirty && [ "$(behind)" -gt 0 ] && ancestor; then
   old="$(short HEAD)"
   git -C "$TOP" checkout -q --detach origin/main || refuse "refresh failed in $TOP"
   say "refreshed $old→$(short HEAD)"
@@ -101,6 +101,11 @@ if dirty; then
   refuse "dirty: $TOP has uncommitted changes ($(git -C "$TOP" status --porcelain | wc -l | tr -d ' ') path(s)); clean it first — $REMEDY"
 fi
 n="$(behind)"
+# any candidate: HEAD must be origin/main or behind it — unmerged commits are never served as the kit
+if ! ancestor; then
+  [ "$n" -eq 0 ] && refuse "ahead: $TOP HEAD $(short HEAD) has commits not on origin/main ($(short origin/main)) — $REMEDY"
+  refuse "diverged: $TOP HEAD $(short HEAD) has commits not on origin/main ($(short origin/main)) and is $n commit(s) behind — $REMEDY"
+fi
 [ "$n" -eq 0 ] || refuse "stale: $TOP is $n commit(s) behind origin/main — $REMEDY"
 
 printf 'KIT=%s SHA=%s (%s, clean)\n' "$KIT" "$(git -C "$TOP" rev-parse --short HEAD)" "$FRESH"
