@@ -1,0 +1,14 @@
+-- args --
+kit
+slugabc
+-- want --
+exit 3
+-- stderr --
+new-retro: no build-state.v1 section for module kit in @DIR@/kit/BUILD-STATE.src.md
+-- @kind --
+truth: hand-edited want of the case edge-empty-retros-and-state recorded at 15e792d1: no build-state.v1 section names the module, so nothing is written and the run exits 3 (the bash wrote the stub and printed the envelope PASS row for a flip that never happened)
+-- @env --
+KIT=@DIR@/kit
+-- @expect kit/BUILD-STATE.src.md --
+-- kit/BUILD-STATE.src.md --
+-- kit/retros/ --

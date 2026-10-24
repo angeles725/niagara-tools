@@ -43,3 +43,16 @@ nothing_landed() { [ -z "$(ls -A "$TK/retros")" ] && cmp -s "$BATS_TEST_TMPDIR/s
 --deltas x a non-negative integer
 ROWS
 }
+
+@test "NRT3: an envelope that does not flip is no PASS: no section for the module exits 3, already true says so" {
+  # Mutation: NR-nosection -- printing the envelope PASS row without a matching section exits 0 here
+  # (goldens truth-no-envelope-section, truth-no-retro-pending-line, truth-flip-already-true).
+  nr Typo slugabc
+  [ "$status" -eq 3 ]
+  [ "$output" = "new-retro: no build-state.v1 section for module Typo in $TK/BUILD-STATE.src.md" ]
+  nothing_landed
+  printf '<!-- build-state.v1 -->\n## kit\nretro_pending: true\n' > "$TK/BUILD-STATE.src.md"
+  nr kit slugabc
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"envelope  PASS  BUILD-STATE.src.md  retro_pending: already true" ]]
+}

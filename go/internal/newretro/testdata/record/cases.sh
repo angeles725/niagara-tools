@@ -30,7 +30,7 @@ new; rec edge-root-default-no-retros kit slugabc
 new; kit kit; rm "$D/kit/BUILD-STATE.src.md"; ENVV=(KIT="$D/kit"); rec edge-no-build-state kit slugabc
 new; kit kit; rm "$D/kit/BUILD-STATE.src.md"; mkdir "$D/kit/BUILD-STATE.src.md"; ENVV=(KIT="$D/kit")
 rec edge-build-state-is-a-dir kit slugabc
-new; mkdir -p "$D/kit/retros"; put kit/BUILD-STATE.src.md ''; ENVV=(KIT="$D/kit"); rec edge-empty-retros-and-state kit slugabc
+# edge-empty-retros-and-state (an empty BUILD-STATE.src.md) is now the hand-edited truth-no-envelope-section.
 
 # --- arguments ---
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-usage-none
@@ -47,9 +47,8 @@ new; kit kit; ENVV=(KIT="$D/kit"); rec edge-deltas-leading-zeros kit slugabc --d
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-slug-bad-first-char kit _abcdef
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-slug-charset kit A0.b_c-d
 # edge-slug-space-after-six (kit 'abcdef ghi', exit 0 in the bash) is now the hand-edited truth-slug-space-after-six.
-new; kit kit; ENVV=(KIT="$D/kit")
-# shellcheck disable=SC2016  # the module name is literal on purpose
-rec edge-module-with-specials 'Mod $x `y`' slugabc
+# edge-module-with-specials (module 'Mod $x `y`' with no section of its own) is now the hand-edited
+# truth-module-with-specials: an envelope that does not flip is no PASS.
 
 # --- the BUILD-STATE.src.md flip ---
 new; kit kit; ENVV=(KIT="$D/kit")
@@ -61,6 +60,4 @@ rec edge-flip-heading-then-module-noeol kit slugabc
 new; kit kit; ENVV=(KIT="$D/kit")
 put kit/BUILD-STATE.src.md '<!-- build-state.v1 -->\r\nmodule: kit\r\nretro_pending: false\r\n<!-- build-state.v1 -->\nmodule: other\n## kit\nretro_pending: false\n<!-- build-state.v1 -->\nmodule:kit\t\n\nretro_pending:\tfalse\n'
 rec edge-flip-crlf-and-module-wins kit slugabc
-new; kit kit; ENVV=(KIT="$D/kit")
-put kit/BUILD-STATE.src.md '<!-- build-state.v1 -->\n## kit\nretro_pending: true\n<!-- /build-state.v1 -->\n## kit\nretro_pending: false\n'
-rec edge-flip-already-true-and-outside kit slugabc
+# edge-flip-already-true-and-outside (the kit section already true) is now the hand-edited truth-flip-already-true.

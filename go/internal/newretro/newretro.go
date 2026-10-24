@@ -150,6 +150,16 @@ func (r retro) write(root string, s cli.Stdio) int {
 		fmt.Fprint(s.Err, "new-retro: failed to stage BUILD-STATE.src.md\n")
 		return ExitWrite
 	}
+	// Mutation: NR-nosection -- printing the envelope PASS row when no section names the module reports a flip that never happened
+	flipped, outcome := Flip(string(src), r.module)
+	switch outcome {
+	case NoSection:
+		fmt.Fprintf(s.Err, "new-retro: no build-state.v1 section for module %s in %s\n", r.module, state)
+		return ExitUsage
+	case NoPending:
+		fmt.Fprintf(s.Err, "new-retro: the build-state.v1 section of %s in %s has no retro_pending line\n", r.module, state)
+		return ExitUsage
+	}
 	index := retros + "/INDEX.md"
 	oldIndex, indexErr := os.ReadFile(index)
 	if err := create(file, r.stub()); err != nil {
@@ -167,7 +177,10 @@ func (r retro) write(root string, s cli.Stdio) int {
 		return ExitWrite
 	}
 	// Mutation: NR-rollback -- keeping the stub and the new INDEX.md when the envelope write fails lands half a run
-	if (gen.File{Tool: "new-retro", Path: state, Content: Flip(string(src), r.module)}).Write(quiet) != gen.ExitOK {
+	envelope := "retro_pending: true"
+	if outcome == AlreadyTrue {
+		envelope = "retro_pending: already true"
+	} else if (gen.File{Tool: "new-retro", Path: state, Content: flipped}).Write(quiet) != gen.ExitOK {
 		_ = os.Remove(file)
 		if indexErr == nil {
 			_ = (gen.File{Tool: "new-retro", Path: index, Content: string(oldIndex)}).Write(quiet)
@@ -179,7 +192,7 @@ func (r retro) write(root string, s cli.Stdio) int {
 	}
 	fmt.Fprintf(s.Out, "retro    PASS  %s  written\n", file)
 	fmt.Fprintf(s.Out, "index    PASS  %s  regenerated\n", retros+"/INDEX.md")
-	fmt.Fprint(s.Out, "envelope  PASS  BUILD-STATE.src.md  retro_pending: true\n")
+	fmt.Fprintf(s.Out, "envelope  PASS  BUILD-STATE.src.md  %s\n", envelope)
 	return ExitOK
 }
 

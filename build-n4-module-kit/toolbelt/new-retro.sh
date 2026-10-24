@@ -24,7 +24,8 @@
 # Output rows:
 #   retro    PASS  <file>  written
 #   index    PASS  <file>  regenerated
-#   envelope  PASS  BUILD-STATE.src.md  retro_pending: true
+#   envelope  PASS  BUILD-STATE.src.md  retro_pending: true      (or "retro_pending: already true", file untouched)
+# No build-state.v1 section for the module, or one without a retro_pending line, is exit 3 before anything is written.
 #
 # Exit codes: 0 ok · 1 index regeneration failed (nothing landed) · 3 usage/env/file-already-exists (K20),
 #   including no Go toolchain or a failed build

@@ -14,7 +14,7 @@ import (
 )
 
 // goldenCases is the exact number of testdata cases: a lost or an extra case fails the run.
-const goldenCases = 42
+const goldenCases = 43
 
 // recordedKind is the @kind of a case testdata/record/record.sh wrote; any other @kind must be a truth-* case.
 const recordedKind = "recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1\n"

@@ -8,14 +8,13 @@ index    PASS  @DIR@/kit/retros/INDEX.md  regenerated
 envelope  PASS  BUILD-STATE.src.md  retro_pending: true
 -- stderr --
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1
+truth: hand-edited from the case edge-module-with-specials recorded at 15e792d1: its BUILD-STATE.src.md gets a section for the module (the recorded one had none, and the bash printed a flip that never happened); stub and index bytes as recorded
 -- @env --
 KIT=@DIR@/kit
 -- @expect kit/BUILD-STATE.src.md --
 <!-- build-state.v1 -->
-## kit
-retro_required: true
-retro_pending: false
+module: Mod $x `y`
+retro_pending: true
 -- @expect kit/retros/2026-01-02-slugabc.md --
 <!-- review-status: pending -->
 <!-- module: Mod $x `y` -->
@@ -58,8 +57,7 @@ retro header; this file is not committed (.gitignore): toolbelt/kit-state.sh reg
 | 2026-01-02-slugabc.md | Mod $x `y` | 2026-01-02 | pending | 0 |
 -- kit/BUILD-STATE.src.md --
 <!-- build-state.v1 -->
-## kit
-retro_required: true
+module: Mod $x `y`
 retro_pending: false
 -- kit/retros/INDEX.md --
 | Retro file | Module | Date | review-status | deltas |

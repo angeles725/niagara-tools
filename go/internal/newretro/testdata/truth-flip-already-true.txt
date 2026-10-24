@@ -5,13 +5,19 @@ slugabc
 exit 0
 retro    PASS  @DIR@/kit/retros/2026-01-02-slugabc.md  written
 index    PASS  @DIR@/kit/retros/INDEX.md  regenerated
-envelope  PASS  BUILD-STATE.src.md  retro_pending: true
+envelope  PASS  BUILD-STATE.src.md  retro_pending: already true
 -- stderr --
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1
+truth: hand-edited want of the case edge-flip-already-true-and-outside recorded at 15e792d1: the section is already true, so the envelope row says so (the bash printed retro_pending: true as if it had flipped it)
 -- @env --
 KIT=@DIR@/kit
 -- @expect kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_pending: true
+<!-- /build-state.v1 -->
+## kit
+retro_pending: false
 -- @expect kit/retros/2026-01-02-slugabc.md --
 <!-- review-status: pending -->
 <!-- module: kit -->
@@ -53,4 +59,12 @@ retro header; this file is not committed (.gitignore): toolbelt/kit-state.sh reg
 |---|---|---|---|---|
 | 2026-01-02-slugabc.md | kit | 2026-01-02 | pending | 0 |
 -- kit/BUILD-STATE.src.md --
--- kit/retros/ --
+<!-- build-state.v1 -->
+## kit
+retro_pending: true
+<!-- /build-state.v1 -->
+## kit
+retro_pending: false
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
