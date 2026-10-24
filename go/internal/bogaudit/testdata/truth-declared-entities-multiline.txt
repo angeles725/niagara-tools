@@ -1,0 +1,31 @@
+-- args --
+@DIR@/b.bog
+--module
+ColdRoomPan
+-- want --
+exit 0
+CHECK1  PASS  ColdRoomPan  components=2
+CHECK8  WARN  ro1/in1  HOA override active (value="'on' & <up>")
+CHECK8  WARN  ro1/in2  HOA override active (value='multi-line')
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+# bog-audit: parse time 0.000s
+-- stderr --
+-- b.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+ </p>
+ <p n='ro1' h='r1' m='c=control' t='c:BooleanWritable'>
+  <p n="in1" v="&apos;on&apos; &amp; &lt;up&gt;"/>
+  <p n="in2"
+     v="multi-line"/>
+ </p>
+ <p n='Split'
+    h='s1' t='CRP:ColdRoom'>
+ </p>
+</bajaObjectGraph>

@@ -1,0 +1,75 @@
+-- args --
+--strict
+@DIR@/f2/synthetic.bog
+--module
+ColdRoomPan
+--source-dir
+@DIR@/s6
+-- want --
+exit 1
+CHECK1  PASS  ColdRoomPan  components=3
+CHECK11  FAIL  NrioNetwork/io/ro1  own-module h:44b84.resistanceOut -> writable with no explicit fallback (relay holds last state on stop/reload)
+CHECK3  WARN  ColdRoom_3/differentialUp  value -1.5 below source MIN 0.0
+CHECK5  FAIL  ColdRoom_3/ghostSlot  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK2  FAIL  ColdRoom_3/DefrostController/intervalExpired  flag-drift: bog f='o' source expects f='h'
+CHECK6  WARN  ColdRoom_3/Evap1/hasDefrost  slot in source BEvaporatorUnit not in bog
+CHECK7  FAIL  ColdRoom_3/Evap1  link targetSlotName "ghostTarget" not in source BEvaporatorUnit (dangling)
+CHECK16  FAIL  ColdRoom_3/DefrostController  DefrostController without hasDefrost=true unit sibling under 'ColdRoom_3'
+# bog-audit: parse time 0.003s
+-- stderr --
+-- f2/synthetic.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_3' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n="differentialUp" t="b:double" v="-1.5"/>
+  <p n="ghostSlot" t="b:double" v="0"/>
+  <p n='DefrostController' h='44b84' t='CRP:DefrostController'>
+   <a n="intervalExpired" f="o"/>
+   <p n="interval" t="b:RelTime" v="1800000"/>
+   <p n="resistanceOut" t="b:StatusBoolean" v="false"/>
+  </p>
+  <p n='Evap1' h='e1' t='CRP:EvaporatorUnit'>
+   <p n="evapOut" t="b:StatusBoolean" v="false"/>
+   <p n='DangLink' t='b:Link'>
+    <p n="sourceOrd" v="h:44b84"/>
+    <p n="sourceSlotName" v="evapOut"/>
+    <p n="targetSlotName" v="ghostTarget"/>
+   </p>
+  </p>
+ </p>
+ <p n='NrioNetwork' h='n1' m='nrio=nrio' t='nrio:NrioNetwork'>
+  <p n='io' h='n2' t='nrio:Nrio34Module'>
+   <p n='ro1' h='r1' t='c:BooleanWritable'>
+    <p n='InLink' t='b:Link'>
+     <p n="sourceOrd" v="h:44b84"/>
+     <p n="sourceSlotName" v="resistanceOut"/>
+     <p n="targetSlotName" v="in10"/>
+    </p>
+   </p>
+   <p n='ro2' h='r2' t='c:BooleanWritable'>
+    <p n='fallback' t='b:StatusBoolean'><p n="value" v="false"/></p>
+    <p n='InLink' t='b:Link'>
+     <p n="sourceOrd" v="h:e1"/>
+     <p n="sourceSlotName" v="evapOut"/>
+     <p n="targetSlotName" v="in10"/>
+    </p>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>
+-- s6/com/angeles/ColdRoomPan/BColdRoom.java --
+package com.angeles.ColdRoomPan;
+@NiagaraProperty(name="differentialUp", type="double", defaultValue="1.5",
+  facets=@Facet("BFacets.make(BFacets.MIN, BDouble.make(0d))"))
+public class BColdRoom {}
+-- s6/com/angeles/ColdRoomPan/BDefrostController.java --
+package com.angeles.ColdRoomPan;
+@NiagaraProperty(name="interval", type="BRelTime", defaultValue="BRelTime.make(1800000)")
+@NiagaraProperty(name="resistanceOut", type="BStatusBoolean", defaultValue="new BStatusBoolean()")
+@NiagaraAction(name="intervalExpired", flags=Flags.HIDDEN)
+public class BDefrostController {}
+-- s6/com/angeles/ColdRoomPan/BEvaporatorUnit.java --
+package com.angeles.ColdRoomPan;
+@NiagaraProperty(name="evapOut", type="BStatusBoolean", defaultValue="new BStatusBoolean()")
+@NiagaraProperty(name="hasDefrost", type="boolean", defaultValue="false")
+public class BEvaporatorUnit {}

@@ -1,0 +1,9 @@
+-- args --
+@DIR@/f1/empty.xml
+--module
+ColdRoomPan
+-- want --
+exit 3
+-- stderr --
+bog-audit: empty file.xml in @DIR@/f1/empty.xml
+-- f1/empty.xml --
