@@ -1,8 +1,8 @@
 // Package size is the lint-size rule: an advisory size smell. A file whose hand-written lines (non-blank
 // after comments are blanked, outside every slotomatic region) exceed --max-class WARNs once, named after
-// its first `class` declaration, and every method of a pure class (no @NiagaraType, no `extends B<Upper>`)
-// spanning more than --max-method lines WARNs; a slotomatic region that is unclosed, nested or a stray END
-// is its own WARN. Port of the awk in toolbelt/lint-size.sh (the wrapper keeps the user-facing contract
+// its first class, interface or enum declaration, and every method of a pure class (no @NiagaraType, no
+// `extends B<Upper>`) spanning more than --max-method lines WARNs; a slotomatic region that is unclosed,
+// nested or a stray END is its own WARN. Port of the awk in toolbelt/lint-size.sh (the wrapper keeps the user-facing contract
 // and its header documents the rules and their mutation pins).
 package size
 
@@ -54,8 +54,8 @@ func rx(s string) *regexp.Regexp { re := regexp.MustCompile(s); re.Longest(); re
 
 var (
 	extendsBaja = rx(`extends[[:space:]]+B[A-Z][A-Za-z0-9_]*`)
-	classDecl   = rx(`(^|[[:space:]])class[[:space:]]+[A-Za-z_][A-Za-z0-9_]*`)
-	classHead   = rx(`^[[:space:]]*class[[:space:]]+`)
+	classDecl   = rx(`(^|[[:space:]])(class|interface|enum)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*`)
+	classHead   = rx(`^[[:space:]]*(class|interface|enum)[[:space:]]+`)
 )
 
 // Check prints the region rows, then the class row, then the method rows of a pure class.

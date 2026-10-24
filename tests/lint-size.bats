@@ -119,6 +119,15 @@ END_M='//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- 
   [[ "$output" == *"Quote.java:4  method step() in pure class Quote spans 82 lines (> 80)"* ]]
 }
 
+@test "LSZ12: an interface or enum names its row (never \"class ?\" or a nested class)" {
+  # Mutation: LSZ12 -- matching only `class` names an enum after its nested class
+  # Go golden: go/internal/lint/rules/size/testdata/truth-type-name-1.txt
+  printf 'package com.x;\npublic enum E {\n  A, B;\n  static class Inner {}\n}\n' > "$SRC/E.java"
+  run "$LSZ" --max-class 0 "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"E.java:2  class E has 5 hand-written lines (> 0"* ]]
+}
+
 @test "LSZ-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: LSZ-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
   printf 'x\n' > "$SRC/U.java"

@@ -26,7 +26,9 @@
 #     get the method rule (the BComponent shell is measured by the class rule). Methods come from javasrc.Methods (a
 #     signature whose `(...)` closes on the `{` line, or a `{` alone after it; a signature wrapped over several
 #     lines before `{` is not seen — a false negative, never a false WARN).
-#   - One row per file for the class rule, named after the first top-level `class` declaration.
+#   - One row per file for the class rule, named after the first `class`, `interface` or `enum` declaration (truth
+#     fix T3 2026-10-24: the bash lint matched `class` only, so an interface printed `class ?` and an enum took its
+#     nested class's name).
 #
 # Usage:  lint-size.sh [--strict] [--max-class <n>] [--max-method <n>] <src-root>
 #   Defaults: --max-class 800, --max-method 80 (strictly greater than the limit WARNs).
@@ -47,6 +49,7 @@
 # Mutation: LSZ8 -- ignoring a nested BEGIN lets a stray END close an unterminated region and hide its lines
 # Mutation: LSZ10 -- matching the markers on the raw line lets a string literal hide the lines after it
 # Mutation: LSZ11 -- reading the Baja test in literal text skips the method rule of a pure class quoting @NiagaraType
+# Mutation: LSZ12 -- matching only `class` names an enum after its nested class
 # Mutation: LSZ-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: LSZ-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u

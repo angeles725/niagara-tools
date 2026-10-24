@@ -1,5 +1,6 @@
 declared difference (truth fix T2, truth-literal-code-1): B2 and B3 only quote "@NiagaraType" and
-"extends BFoo" in string literals, so they are pure classes and their m() is measured.
+"extends BFoo" in string literals, so they are pure classes and their m() is measured;
+(truth fix T3, truth-type-name-1) the interface N2 and the enum N6 name their rows (the bash lint printed "class ?" at line 1 and "class Inner").
 -- args --
 --max-class
 0
@@ -20,11 +21,11 @@ WARN  lint-size  @DIR@/B5.java:2  class B5 has 8 hand-written lines (> 0, slotom
 WARN  lint-size  @DIR@/B6.java:2  class B6 has 7 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/B6.java:3  method m() in pure class B6 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/N1.java:1  class ? has 2 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
-WARN  lint-size  @DIR@/N2.java:1  class ? has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/N2.java:2  class N2 has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/N3.java:4  class N3 has 3 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/N4.java:2  class N4 has 5 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/N5.java:2  class Tabbed has 5 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
-WARN  lint-size  @DIR@/N6.java:4  class Inner has 5 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/N6.java:2  class N6 has 5 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/N7.java:1  class ? has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 -- stderr --
 -- B1.java --
