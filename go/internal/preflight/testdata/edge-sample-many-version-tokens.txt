@@ -1,0 +1,66 @@
+-- args --
+--sample
+--jvm-dir
+@DIR@/jvm
+@DIR@/niagara-4.15.6.20
+@DIR@/tls
+-- want --
+exit 1
+PASS  jdk8          JDK 8 found: @DIR@/jvm/java-8-openjdk-amd64/
+PASS  plugin-pin    plugin 7.6.17 found in niagara_home/etc/m2
+PASS  jar-lock      no locked jars under @DIR@/niagara-4.15.6.20/modules/
+FAIL  sample-home   gradle.properties niagara_home is 1.2.3, the target install is 4.15.6.20 — retarget it to @DIR@/niagara-4.15.6.20
+PASS  sample-user   niagara_user_home has no <…> placeholder
+PASS  sample-sign   root build.gradle.kts has allowDefaultProfile.set(false) + niagaraSigning { aliases; signingProfileFile }
+PASS  sample-build  no shipped build/ directory
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
+-- @env --
+PATH=@DIR@/fakebin:@DIR@/.tools
+N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts
+-- fakebin/lsof (exec) --
+#!/usr/bin/env bash
+printf "p1\nn/usr/bin/lsof\n"
+-- gr/settings.gradle.kts --
+// settings.gradle.kts — minimal fixture for preflight tests
+// Niagara plugin version
+val niagaraPluginVersion = "7.6.17"
+-- jvm/java-8-openjdk-amd64/release --
+IMPLEMENTOR="Adoptium"
+JAVA_VERSION="1.8.0_302"
+JAVA_VERSION_DATE="2021-10-19"
+-- jvmnr/java-8-openjdk-wsl/bin/java (exec) --
+#!/usr/bin/env bash
+# Fakebin: simulates WSL openjdk-8 that has no release file but reports 1.8 via -version.
+printf 'openjdk version "1.8.0_412" 2020-04-14\nOpenJDK Runtime Environment (build 1.8.0_412-8u412-b08-0ubuntu1~22.04-b08)\n' >&2
+exit 0
+-- mounts --
+ext4 / ext4 rw 0 0
+-- nh/etc/m2/repository/com/tridium/niagara-module/com.tridium.niagara-module.gradle.plugin/7.6.17/.gitkeep --
+-- nh/modules/demo-rt.jar --
+-- nhnp/etc/m2/.gitkeep --
+-- nhnp/modules/.gitkeep --
+-- niagara-4.15.6.20.1.2.3/ --
+-- niagara-4.15.6.20/etc/m2/repository/com/tridium/niagara-module/com.tridium.niagara-module.gradle.plugin/7.6.17/.gitkeep --
+-- niagara-4.15.6.20/modules/demo-rt.jar --
+-- tls/build.gradle.kts --
+plugins {
+  id("com.tridium.niagara-signing")
+}
+signingServices {
+  signingProfileFactory {
+    allowDefaultProfile.set(false)
+  }
+}
+niagaraSigning {
+  aliases.set(listOf("CodeSigning"))
+  signingProfileFile.set(file("p.xml"))
+}
+-- tls/gradle.properties --
+niagara_home=@DIR@/niagara-4.15.6.20.1.2.3
+niagara_user_home=/home/u/Niagara4.15/tridium
+-- tls/settings.gradle.kts --
+// settings.gradle.kts — minimal fixture for preflight tests
+// Niagara plugin version
+val niagaraPluginVersion = "7.6.17"

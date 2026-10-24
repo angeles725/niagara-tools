@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/gen"
 )
 
 const usageLine = "usage: gen-retro-index.sh [--check] [<kit-root>]\n"
@@ -62,31 +63,25 @@ func TestMainNoRetrosDir(t *testing.T) {
 	}
 }
 
-func TestMainWriteThenCheck(t *testing.T) {
+func TestMainCheckThenWrite(t *testing.T) {
 	t.Parallel()
 	root := kit(t, map[string]string{"2026-09-01-a.md": okRetro})
 	index := root + "/retros/INDEX.md"
+	// --check validates the headers only: the index is not committed, so a missing one is fine
 	code, out, errs := run("", "--check", root)
-	if code != ExitStale || errs != "gen-retro-index: "+index+" is missing; run gen-retro-index.sh\n" {
-		t.Errorf("--check before write: got (%d, %q)", code, errs)
+	if code != ExitOK || out != "gen-retro-index: the retro headers under "+root+"/retros are valid\n" || errs != "" {
+		t.Errorf("--check: got (%d, %q, %q)", code, out, errs)
+	}
+	if _, err := os.Stat(index); !os.IsNotExist(err) {
+		t.Errorf("--check wrote INDEX.md (stat err %v)", err)
 	}
 	// The default kit root comes from the wrapper's environment when no <kit-root> is given.
 	code, out, errs = run(root)
 	if code != ExitOK || out != "gen-retro-index: wrote "+index+"\n" || errs != "" {
 		t.Errorf("write: got (%d, %q, %q)", code, out, errs)
 	}
-	code, out, _ = run("", root, "--check")
-	if code != ExitOK || out != "gen-retro-index: "+index+" is fresh\n" {
-		t.Errorf("--check fresh: got (%d, %q)", code, out)
-	}
-	// Mutation: GRI-stale -- dropping the generated-vs-committed compare makes --check vacuously clean
-	if err := os.WriteFile(filepath.Join(root, "retros", "2026-09-01-a.md"), []byte(strings.Replace(okRetro, "pending", "folded", 1)), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	code, out, errs = run("", "--check", root)
-	want := "gen-retro-index: " + index + " is stale; run gen-retro-index.sh and commit the result\n"
-	if code != ExitStale || out != "" || !strings.HasPrefix(errs, want) || !strings.Contains(errs, "> | 2026-09-01-a.md | kit | 2026-09-01 | pending | 1 |") {
-		t.Errorf("--check stale: got (%d, %q, %q)", code, out, errs)
+	if b, _ := os.ReadFile(index); !strings.HasSuffix(string(b), "| 2026-09-01-a.md | kit | 2026-09-01 | pending | 1 |\n") {
+		t.Errorf("written index:\n%s", b)
 	}
 }
 
@@ -97,7 +92,7 @@ func TestMainViolationWritesNothing(t *testing.T) {
 	code, out, errs := run("", root)
 	want := "gen-retro-index: 2026-09-02-b.md: " + errModule + "\n" +
 		"gen-retro-index: plan.md: " + errDate + "\n" +
-		"gen-retro-index: retro-header violation; index not written\n"
+		"gen-retro-index: retro-header violation; index not generated\n"
 	if code != ExitStale || out != "" || errs != want {
 		t.Errorf("got (%d, %q, %q)", code, out, errs)
 	}
@@ -119,58 +114,40 @@ func TestMainUnlistableRetrosDirExits3(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
 	code, out, errs := run("", root)
 	if code != ExitEnv || out != "" || !strings.HasPrefix(errs, "gen-retro-index: cannot list "+dir+": ") ||
-		!strings.HasSuffix(errs, "; index not written\n") {
+		!strings.HasSuffix(errs, "; index not generated\n") {
 		t.Errorf("got (%d, %q, %q)", code, out, errs)
 	}
 }
 
-func TestCheck(t *testing.T) {
+func TestGenerate(t *testing.T) {
 	t.Parallel()
 	root := kit(t, map[string]string{"2026-10-01-a.md": okRetro})
 	var diag bytes.Buffer
-	if Check(root, &diag) || diag.String() != "gen-retro-index: "+root+"/retros/INDEX.md is missing; run gen-retro-index.sh\n" {
-		t.Errorf("no index: Check = true or diagnostics %q", diag.String())
+	got, code := Generate(root, &diag)
+	if code != ExitOK || !strings.HasPrefix(got, gen.GeneratedLine+"\n") ||
+		!strings.HasSuffix(got, "| 2026-10-01-a.md | kit | 2026-10-01 | pending | 1 |\n") || diag.String() != "" {
+		t.Errorf("Generate = (%q, %d, %q)", got, code, diag.String())
 	}
-	if code, _, _ := run("", root); code != ExitOK {
-		t.Fatalf("write: exit %d", code)
-	}
-	diag.Reset()
-	if !Check(root, &diag) || diag.String() != "" {
-		t.Errorf("fresh index: Check = false or diagnostics %q", diag.String())
+	if _, err := os.Stat(root + "/retros/INDEX.md"); !os.IsNotExist(err) {
+		t.Errorf("Generate wrote INDEX.md (stat err %v)", err)
 	}
 }
 
-// TestMainCommittedBytes ports the key cases of the gen.File parity matrix (#344): the written
-// index ends in exactly one newline; --check ignores any trailing newlines on the committed file
-// (as the bash $(...) compare did); a read-only index is exit 3 and left untouched.
-func TestMainCommittedBytes(t *testing.T) {
+// TestMainWriteReadOnlyTarget: the written index ends in exactly one newline, and a read-only index
+// left by an earlier run is replaced atomically (its directory is writable) and keeps its mode.
+func TestMainWriteReadOnlyTarget(t *testing.T) {
 	t.Parallel()
 	root := kit(t, map[string]string{"2026-09-01-a.md": okRetro})
 	index := root + "/retros/INDEX.md"
-	if code, _, _ := run("", root); code != ExitOK {
-		t.Fatalf("write: exit %d", code)
-	}
-	written, err := os.ReadFile(index)
-	if err != nil || !strings.HasSuffix(string(written), "|\n") {
-		t.Fatalf("written index does not end in exactly one newline: %q", written)
-	}
-	body := strings.TrimSuffix(string(written), "\n")
-	for _, committed := range []string{body, body + "\n\n\n"} {
-		if err := os.WriteFile(index, []byte(committed), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		if code, out, _ := run("", "--check", root); code != ExitOK || out != "gen-retro-index: "+index+" is fresh\n" {
-			t.Errorf("committed %q: --check = (%d, %q), want fresh", committed[len(committed)-3:], code, out)
-		}
-	}
-	if os.Geteuid() == 0 {
-		t.Skip("root writes into a mode-444 file")
-	}
-	if err := os.Chmod(index, 0o444); err != nil {
+	if err := os.WriteFile(index, []byte("stale\n"), 0o444); err != nil {
 		t.Fatal(err)
 	}
-	code, out, errs := run("", root)
-	if b, _ := os.ReadFile(index); code != ExitEnv || out != "" || !strings.HasPrefix(errs, "gen-retro-index: cannot write "+index+": ") || string(b) != body+"\n\n\n" {
-		t.Errorf("read-only index: got (%d, %q, %q), target %q", code, out, errs, b)
+	if code, out, errs := run("", root); code != ExitOK || out != "gen-retro-index: wrote "+index+"\n" || errs != "" {
+		t.Errorf("read-only write: got (%d, %q, %q)", code, out, errs)
+	}
+	st, err := os.Stat(index)
+	b, _ := os.ReadFile(index)
+	if err != nil || !strings.HasSuffix(string(b), "|\n") || strings.HasSuffix(string(b), "\n\n") || st.Mode().Perm() != 0o444 {
+		t.Errorf("read-only write: target %q, want one final newline and mode 0444", b)
 	}
 }

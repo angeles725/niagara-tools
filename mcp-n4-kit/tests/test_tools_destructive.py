@@ -75,13 +75,12 @@ class TestRemoveComponent(DestructiveCase):
         self.assertEqual(len([e for e in plan["plan"]["inverse"] if "relink" in e]), 1)
         self.assertTrue(any("outside" in n and "not restored" in n for n in plan["plan"]["notes"]))
 
-    @go_server.go_twin("writeops", "internals")
     def test_execute_removes_verifies_and_journals_the_snapshot_as_the_inverse(self):
         nn, gh = self.group()
         out = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
         self.assertEqual(out["verdict"], "verified")
         self.assertNotIn(nn, self.children())
-        view = self.journal().read(out["batch_id"])
+        view = self.batch(out["batch_id"])
         self.assertEqual(view["inverse"][0]["nm"], "a")
         self.assertEqual(view["state"], "completed")
 
@@ -96,7 +95,6 @@ class TestRemoveComponent(DestructiveCase):
         self.assertIn("outside the write scope", self.err(
             "n4_remove_component", parent_ord="station:|slot:/", name="Folder"))
 
-    @go_server.go_twin("writeops", "injection")
     def test_read_back_reports_a_child_that_is_still_there(self):
         self.add("Keep")
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name="Keep")
@@ -831,7 +829,6 @@ class TestRollback(DestructiveCase):
         self.assertEqual({c["n"]: c["v"] for c in seen["value"]["s"]},
                          {"value": "4.5", "status": "0"})  # facets dropped, bits kept
 
-    @go_server.go_twin("writeops", "internals")
     def test_a_link_driven_value_that_changes_after_the_dry_run_keeps_the_token_valid(self):
         """The link source keeps propagating between dry run and confirm.
 
@@ -842,7 +839,7 @@ class TestRollback(DestructiveCase):
         removed = self.ok("n4_remove_component", parent_ord=FOLDER, name=nn, dry_run=False,
                           confirmation_token=plan["confirmation_token"])
         self.assertNotIn(nn, self.children())
-        (relink,) = [e["relink"] for e in self.journal().read(removed["batch_id"])["inverse"]
+        (relink,) = [e["relink"] for e in self.batch(removed["batch_id"])["inverse"]
                      if "relink" in e]
         self.assertEqual({c["n"]: c["v"] for c in relink["prior"]["s"]},
                          {"value": "7.25", "status": "0"})  # the value seen at execution

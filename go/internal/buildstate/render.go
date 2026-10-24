@@ -11,14 +11,17 @@ const (
 	openMarker  = "<!-- build-state.v1 -->"
 	closeMarker = "<!-- /build-state.v1 -->"
 
-	errNoKit   = "BUILD-STATE.md needs exactly one closed build-state.v1 envelope with `module: kit`"
+	errNoKit   = "needs exactly one closed build-state.v1 envelope with `module: kit`"
 	errFields  = "the kit envelope needs one `last_change:` line, then one `open_issues:` line, then one `last_session:` line"
 	errLogTail = "not a session-log line; the generated session log runs from `last_session:` to the closing marker, so a hand-kept field belongs above `last_session:`"
 )
 
+// sourceLastChange is the kit `last_change:` line with no fragment: the form BUILD-STATE.src.md keeps.
+var sourceLastChange = fmt.Sprintf("%-37s# %s", "last_change: generated", "from ledger.d/; run toolbelt/kit-state.sh build-state")
+
 // LastChange renders the kit `last_change:` line from the newest fragment: the latest date header,
 // a tie going to the later filename. The note, when present, is the `# comment` at column 38, the
-// alignment of every field comment in the envelope.
+// alignment of every field comment in the envelope. With no fragment it is the source placeholder.
 func LastChange(frags []Fragment) string {
 	var best *Fragment
 	for i := range frags {
@@ -29,7 +32,7 @@ func LastChange(frags []Fragment) string {
 		}
 	}
 	if best == nil {
-		return "last_change: unknown"
+		return sourceLastChange
 	}
 	line := "last_change: " + best.Date
 	if best.Note != "" {
@@ -78,7 +81,7 @@ func Render(state string, frags []Fragment) (string, error) {
 	// Mutation: GBS-tail -- a hand-added field after last_session would be dropped silently on regeneration
 	for i := ls + 1; i < end; i++ {
 		if !logPattern.MatchString(lines[i]) {
-			return "", fmt.Errorf("BUILD-STATE.md line %d (`%s`): %s", i+1, lines[i], errLogTail)
+			return "", fmt.Errorf("line %d (`%s`): %s", i+1, lines[i], errLogTail)
 		}
 	}
 

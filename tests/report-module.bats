@@ -112,7 +112,8 @@ setup() {
 #   Per-artifact src scanners: lint-no-system-out (FAIL), lint-clock-zero-floor (WARN),
 #     lint-null-context-write (WARN), lint-bql-string-concat (WARN), lint-arbitrary-ord (WARN).
 #   Profile-conditional: lint-se-display (FAIL, -se only), lint-jasmine-ux (WARN, -ux only).
-#   Module-root once-per-run: lint-agent-on-shape (FAIL), lint-uberjar-api-conflict (WARN).
+#   Module-root once-per-run: lint-agent-on-shape (FAIL), lint-uberjar-api-conflict (WARN);
+#     lint-agent-on-include-sync (FAIL, RM9b, quality round 10).
 # Fixtures: system-out, se-display, agent-on, bql-warn, ux-no-specs (see tests/fixtures/report-module/).
 # Named mutations (post-green):
 #   - drop System.out check → RM7 no longer exits 1.
@@ -156,6 +157,20 @@ setup() {
   run "$RM" --lint-only "$FX/agent-on"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-agent-on-shape"* ]] && [[ "$output" == *"module-include.xml"* ]]
+}
+
+@test "RM9b: an @AgentOn type missing from its module-include.xml line surfaces lint-agent-on-include-sync FAIL" {
+  # Mutation: RM9b -- dropping step 8b loses the FAIL row and the report reads the stale line clean
+  local t="$BATS_TEST_TMPDIR/rm9b"
+  mkdir -p "$t/DemoPan-wb/src/com/x"
+  printf '<types>\n  <type class="com.x.BMgr" name="Mgr"/>\n</types>\n' > "$t/DemoPan-wb/module-include.xml"
+  printf 'package com.x;\n@NiagaraType(agent = @AgentOn(types = "demoPan:Ext"))\npublic class BMgr {}\n' > "$t/DemoPan-wb/src/com/x/BMgr.java"
+  run "$RM" --lint-only "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"(module)  FAIL  lint-agent-on-include-sync  "*"BMgr.java:3  com.x.BMgr: module-include.xml <type> line lacks <on type> for: demoPan:Ext"* ]]
+  printf '<types><type class="com.x.BMgr" name="Mgr"><agent><on type="demoPan:Ext"/></agent></type></types>\n' > "$t/DemoPan-wb/module-include.xml"
+  run "$RM" --lint-only "$t"
+  [[ "$output" == *"(module)  PASS  lint-agent-on-include-sync  clean"* ]]
 }
 
 @test "RM10: BQL string-concat produces lint-bql-string-concat WARN row but exit stays 0 (WARN does not block)" {
@@ -574,7 +589,7 @@ JAVA
 #   RM43  the chosen wiring map is named in the row detail (PASS row and the Table 2 FAIL reason), so a
 #         false FAIL from the parent-dir fallback can be traced. (R4-parent-map-discovery)
 #   RM44  the full summary string of a zero-ADVISORY run is pinned. (R3-summary-format-change)
-#   RM45  structural: the optional-argument arrays are expanded with ${A[@]+"${A[@]}"} (an empty
+#   RM45  structural: report-module's optional-argument array is expanded with ${A[@]+"${A[@]}"} (an empty
 #         "${A[@]}" is an unbound-variable error under set -u on bash < 4.4). (R3/R4-empty-array-set-u)
 # The member is replaced through a symlinked copy of the toolbelt (TOOLBELT resolves to the dir of the
 # invoked path), so no env override is added to the production script.
@@ -625,13 +640,12 @@ JAVA
 }
 
 @test "RM45: optional-argument arrays use the set -u safe \${A[@]+\"\${A[@]}\"} expansion" {
-  run grep -nE '[^+]"\$\{(LTF_ARGS|ltf_args|sp_args)\[@\]\}"' \
-    "$KIT/toolbelt/report-module.sh" "$KIT/toolbelt/commissioning-verify.sh"
+  # report-module.sh only: commissioning-verify.sh is a Go wrapper now and holds no optional-argument array.
+  # Mutation: RM-setu (unguard "${LTF_ARGS[@]}" in report-module.sh) -> RM45 flips.
+  run grep -nE '[^+]"\$\{LTF_ARGS\[@\]\}"' "$KIT/toolbelt/report-module.sh"
   [ "$status" -eq 1 ]
   # shellcheck disable=SC2016  # literal source text, not an expansion
   grep -qF '${LTF_ARGS[@]+"${LTF_ARGS[@]}"}' "$KIT/toolbelt/report-module.sh"
-  # shellcheck disable=SC2016  # literal source text, not an expansion
-  grep -qF '${ltf_args[@]+"${ltf_args[@]}"}' "$KIT/toolbelt/commissioning-verify.sh"
 }
 
 # polish-2026-10-02 P1c (#199, P1b review advisories): the map path is a literal in the substituted

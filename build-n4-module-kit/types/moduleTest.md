@@ -117,6 +117,8 @@ station needs UI services (common in practice) `[INFER]`; the example declares i
 | Timer scheduling (use `Sched` DI) | ✅ preferred | rarely |
 | Alarm routing (`BAlarmSourceExt`) | ❌ needs station | ✅ |
 | oBIX read/write round-trip | ❌ | ✅ |
+| Driver frame codec (encode/decode, bounds, tag) | ✅ preferred (Baja-free codec) | rarely |
+| Driver comm stack vs a loopback mock (ping/read/write/timeout) | ❌ needs NRE | ✅ — `types/driver-authoring.md` § 12 |
 | Slot-o-matic / type hash | check at build | rarely needed |
 
 `[ev: corpus B958 §958.3]` (the link-validation row); the other rows `[INFER]`.

@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: round-10 fold sweep (meta group): lint-header, generator and lint-row retros folded -->
+log: 2026-10-24 · round-10 fold sweep, meta group 2/3 → seven retros folded (r9-followups, r9-guardpins-header, r9-lintindex-header, r9-m2-gen, r9-m3-report, truth-ported-rules, issue-459-truth): `BUILD-LOOP.md` § 5 One layered Go lint stack (one lint-header reader `internal/lintheader` `Lines`, one generator check-or-write flow `internal/gen` `File.Run`), Literal-aware scanning (`Line` 0 only for a whole-file finding), Pre-gate (regenerate `toolbelt/INDEX.md` in the same commit), the fixer side of "a lint row is a lead"; `METHODOLOGY.md` K24 (7) row for a declaration below the header; truth-ported-rules Δ3 (tags past header line 60) is superseded by lintheader's uncapped header.

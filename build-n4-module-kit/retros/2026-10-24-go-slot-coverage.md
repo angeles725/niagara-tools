@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-slot-coverage
@@ -43,3 +43,11 @@ and a new `golden.RunMain` (`golden.Run` for a `cli.Main`).
 - `xargs awk ... 2>/dev/null` over a file list can drop files without any error: one unreadable file can turn a tree into a clean `N/A` verdict.
 - A grep-based XML reader is wrong both ways: it misses tags written over several lines and counts commented-out ones.
 - Generalize the shared helper (`PropertyScan`, `RunMain`) when a port needs a variant. Never copy it.
+
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 Reuse the engine before adding to it: a non-lint tool replays through `golden.RunMain`, extended rather than copied. The `go/README.md` § Layout rows (`slotcoverage`, `verifymodule`, `javasrc.PropertyScan`, `golden.RunMain`) are outside this fold's edit surface: open issue in `ledger.d/2026-10-24-r10-fold-tail.md`.
+- Δ2 → `BUILD-LOOP.md` § 5 A test that needs files outside the repository never runs in CI: client-tree parity runs locally, reported as counts naming no client.
+- Δ3 → `BUILD-LOOP.md` § 5 Record the shell's silent input drops as edge goldens: xargs blank split, gawk fatal open, a construct carried across files.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail`; log in `ledger.d/2026-10-24-r10-fold-tail.md`) — Δ1-Δ3 cited in `BUILD-LOOP.md` § 5; Δ1's `go/README.md` layout rows are an open issue.

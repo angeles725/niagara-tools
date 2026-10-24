@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · r10-buildsh-mirror-guard
@@ -35,7 +35,14 @@ before.
 | Δ1 | **A build tool that writes into an install must be opt-in.** The default target is a marked throwaway copy (a mirror); writing the real install takes an explicit flag, and the refusal names both routes. | `METHODOLOGY.md` (fail-closed rules); `build-verify.md` § Building against a running station | `[ev: tests/build-sh.bats BS-home-guard]` |
 | Δ2 | **A backup deleted on success is not a backup.** A temp copy that an EXIT trap removes protects only the FAIL path; a tool that overwrites user data either keeps the copy past a pass or refuses the overwrite by default. | `METHODOLOGY.md`; `toolbelt/build.sh` drift-gate header | `[ev: retro r10-buildsh-mirror-guard]` |
 
+## Fold
+- Δ1 → `METHODOLOGY.md` § Build, a tool that overwrites user data is opt-in; the instance is the existing `build-verify.md` § Building against a running station line, now cited by Δ.
+- Δ2 → the same `METHODOLOGY.md` § Build line (a backup an EXIT trap deletes protects only the FAIL path) and the `build-verify.md` line; the `toolbelt/build.sh` drift-gate header is code, left as is.
+
 ## Lessons
 - A marker the tool already reads for one purpose is the cheapest guard for another: no new state was needed.
 - A test fixture that stands for a real install should say so with the opt-in flag rather than borrow the
   mirror marker, which would switch on unrelated mirror behavior.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-late`) — INDEX row: `| 2026-10-24-r10-buildsh-mirror-guard.md | kit | 2026-10-24 | folded | 2 |`

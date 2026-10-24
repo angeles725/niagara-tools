@@ -25,6 +25,15 @@ load helpers/n4-fixtures
 
 load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
 
+# preflight.sh execs go/bin/preflight (go/internal/preflight): build it once with the full PATH, so the cases
+# that run the wrapper under a restricted PATH (no go) find a current binary.
+setup_file() {
+  ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via ROOT
+  . "$ROOT/go/go-tool.sh"
+  go_tool_bin "$ROOT/go" preflight >/dev/null
+}
+
 setup() {
   TMPDIR_T="$(mktemp -d)"
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
@@ -83,7 +92,7 @@ teardown() {
   FAKEBIN="$TMPDIR_T/fakebin"
   mkdir -p "$FAKEBIN"
   # Symlink every tool the preflight script needs — but NOT lsof
-  for t in bash sh env grep sed awk cut find paste sort uniq wc tr comm; do
+  for t in bash sh env grep sed awk cut find paste sort uniq wc tr comm dirname readlink; do
     p=$(command -v "$t" 2>/dev/null) && ln -sf "$p" "$FAKEBIN/$t" || true
   done
   # Run with a PATH that has our fakebin first and then only dirs without lsof
@@ -159,7 +168,7 @@ _pf_fakebin() {
   # jar-lock WARN row and other checks need) into $1, WITHOUT lsof — tests place their
   # own fake lsof at $1/lsof afterward.
   mkdir -p "$1"
-  for t in bash sh env grep sed awk cut find paste sort uniq wc tr comm basename dirname head; do
+  for t in bash sh env grep sed awk cut find paste sort uniq wc tr comm basename dirname head readlink; do
     p=$(command -v "$t" 2>/dev/null || true)
     [ -z "$p" ] || ln -sf "$p" "$1/$t"
   done
@@ -522,4 +531,26 @@ sample_kts_prepend() {
   sample_tree "$TMPDIR_T/tls" "c:\\\\niagara\\\\niagara-4.15.4.24" "C:\\\\Users\\\\<username>\\\\Niagara4.15\\\\<brand>" 0 1
   assert_symroot_same "$TMPDIR_T/tls" "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
   printf "%s\n" "$output" | grep -E "^WARN  sample-build " | grep -qF "trafficLightServer-rt/build"
+}
+
+# ================= Go port truth fixes [ev: retro r10-preflight-go Δ3] [ev: retro r10-preflight-go Δ4] =================
+@test "PF-plugin-substring: a niagara_home whose path holds the settings version but whose etc/m2 lacks it FAILs plugin-pin" {
+  # Mutation: PF-plugin-substring -- matching the settings version anywhere in the etc/m2 path (the bash
+  # `find <nh>/etc/m2 -path "*V*"`) PASSes this home, whose own name carries 7.6.17.
+  mkdir -p "$TMPDIR_T/n4-7.6.17/etc/m2/repository/x/7.6.170" "$TMPDIR_T/n4-7.6.17/modules"
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$TMPDIR_T/n4-7.6.17" "$GR"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  plugin-pin    plugin 7.6.17 missing from $TMPDIR_T/n4-7.6.17/etc/m2"* ]]
+}
+
+@test "PF-drift-sorted: an ancestor's version is its first defaultModuleVersion in sorted order, the same on every host" {
+  # Mutation: PF-drift-sorted -- reading each tree in readdir order (ext4 hash order) adds a row for the ancestor
+  # whenever a b?? tree is listed before a-me (30 of the 31 positions a-me can take).
+  P="$TMPDIR_T/d/parent"; mkdir -p "$P/a-me"; cp "$GR/settings.gradle.kts" "$P/a-me/"
+  printf 'defaultModuleVersion("1.0.0")\n' > "$P/a-me/build.gradle.kts"
+  for i in $(seq -w 1 30); do mkdir -p "$P/b$i"; printf 'defaultModuleVersion("2.0.0")\n' > "$P/b$i/build.gradle.kts"; done
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$P/a-me"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'version-drift')" -eq 30 ]
+  [[ "$output" != *"sibling $TMPDIR_T/d version"* && "$output" != *"sibling $P version"* ]]
 }

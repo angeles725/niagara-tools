@@ -22,6 +22,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import go_server  # noqa: E402
+import fake_station  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
 from mcp_n4 import box, safety  # noqa: E402
 
@@ -549,5 +550,106 @@ class TestCreateLinkParity(ParityTestCase):
             fail_after(side, None, "checkLinks", (500, b"boom"))
             side.write("n4_create_link", **args)
             side.fake.hook = None
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+
+def remove_group(side, name="Grp"):
+    """A Folder with a wsAnnotation, Src -> Tgt.in10 inside, Other.out -> Tgt.in11 from
+    outside, Src.out -> Out.in10 to outside, and a link-driven Status input in12 on Tgt."""
+    nn = side.box.add_component("3", name, "baja:Folder", ws=box.ws_annotation(1, 2, 3))["nn"]
+    grp = FOLDER + "/" + nn
+    gh = side.box.load_tree(grp, depth=1, **NO_SLEEP)[""]["h"]
+    side.box.add_component(gh, "Src", "kitControl:NumericConst")
+    side.box.add_component(gh, "Tgt", "kitControl:NumericConst")
+    nodes = side.box.load_tree(grp, depth=2, **NO_SLEEP)
+    src_h, tgt_h = nodes["Src"]["h"], nodes["Tgt"]["h"]
+    side.box.set_slot(src_h, "out", box.bson_status_numeric(4.5, "0;activeLevel=e_in16"))
+    side.box.set_slot(src_h, "fallback", box.bson_status_numeric(7.0, "40;activeLevel=e_def"))
+    side.box.check_links(src_h, "out", tgt_h, "in10")
+    other_h = side.add("Other" + nn, out=box.bson_status_numeric(1.0))
+    side.box.check_links(other_h, "out", tgt_h, "in11")
+    out_h = side.add("Out" + nn)
+    side.box.check_links(src_h, "out", out_h, "in10")
+    tgt = side.fake.by_handle[tgt_h]
+    for slot in ("in12", "in10"):  # as the live station loads it: frozen children, no type
+        node = fake_station._Node(slot, "baja:StatusNumeric")
+        node.children = [fake_station._Node("value", None, "2.5"),
+                         fake_station._Node("status", None, "0;activeLevel=e:17")]
+        tgt.children.append(node)
+    side.box.check_links(src_h, "out", tgt_h, "in12")
+    return nn
+
+
+def deep_group(side, name="Deep", leaves=1):
+    """Folder/L1/L2/C with `leaves` components under C: level 4, below the snapshot cut."""
+    nn = side.box.add_component("3", name, "baja:Folder")["nn"]
+    path, h = FOLDER + "/" + nn, None
+    for child, type_ in (("L1", "baja:Folder"), ("L2", "baja:Folder"), ("C", "baja:Folder")):
+        h = side.box.load_tree(path, depth=1, **NO_SLEEP)[""]["h"]
+        side.box.add_component(h, child, type_)
+        path += "/" + child
+    h = side.box.load_tree(path, depth=1, **NO_SLEEP)[""]["h"]
+    for i in range(leaves):
+        side.box.add_component(h, "K%02d" % i, "kitControl:NumericConst")
+    return nn
+
+
+class TestRemoveComponentParity(ParityTestCase):
+    def test_removes_and_every_refusal(self):
+        def scenario(side):
+            side.call("n4_remove_component", parent_ord=FOLDER, name="Grp")  # not connected
+            side.connect()
+            nn = remove_group(side)
+            for kw in ({"name": "../x"}, {"name": ""}, {"name": "Grp\n"}, {"name": "a b"},
+                       {"name": 7}, {"name": "Nope"}, {"parent_ord": FOLDER + "/Missing"},
+                       {"parent_ord": "station:|slot:/"}, {"parent_ord": FOLDER + "|h:3"},
+                       {"link_scan_ord": "station:|slot:/"},
+                       {"link_scan_ord": FOLDER + "|h:3"}, {"link_scan_ord": FOLDER + "/Missing"}):
+                side.call("n4_remove_component", **dict({"parent_ord": FOLDER, "name": nn}, **kw))
+            side.call("n4_remove_component", parent_ord=FOLDER, name=nn)
+            side.call("n4_remove_component", parent_ord=FOLDER, name=nn, link_scan_ord=FOLDER)
+            side.call("n4_remove_component", parent_ord=FOLDER, name=nn,
+                      link_scan_ord=FOLDER + "/" + nn)  # every link starts inside: none found
+            side.write("n4_remove_component", parent_ord=FOLDER, name=nn, link_scan_ord=FOLDER)
+            side.call("n4_remove_component", parent_ord=FOLDER, name=nn)  # gone now
+            side.write("n4_remove_component", parent_ord=FOLDER, name="Other" + nn)  # has outputs
+            side.write("n4_remove_component", parent_ord=FOLDER, name="Out" + nn)
+            plain = side.box.add_component("3", "Plain", "baja:Folder")["nn"]
+            token = side.call("n4_remove_component", parent_ord=FOLDER,
+                              name=plain)["confirmation_token"]
+            for _ in range(2):  # reused
+                side.call("n4_remove_component", parent_ord=FOLDER, name=plain, dry_run=False,
+                          confirmation_token=token)
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_truncation_read_back_and_in_doubt(self):
+        def scenario(side):
+            side.connect()
+            for name, leaves in (("D1", 1), ("D20", 20), ("D21", 21)):
+                side.write("n4_remove_component", parent_ord=FOLDER, name=deep_group(side, name, leaves))
+            nn = remove_group(side, "Moving")
+            token = side.call("n4_remove_component", parent_ord=FOLDER,
+                              name=nn)["confirmation_token"]
+            tgt = side.fake.folder.child(nn).child("Tgt")
+            tgt.child("in12").child("value").value = "9.75"  # the link keeps propagating
+            side.call("n4_remove_component", parent_ord=FOLDER, name=nn, dry_run=False,
+                      confirmation_token=token)
+            side.add("Keep")
+            orig = side.fake._sync
+            side.fake._sync = lambda op: [] if op["nm"] == "v" else orig(op)
+            side.write("n4_remove_component", parent_ord=FOLDER, name="Keep")  # still there
+            side.fake._sync = orig
+            for first, key, reply in ((None, "syncTo", (500, b"boom")),
+                                      (None, "syncTo", (200, ERROR_FRAME)),
+                                      ("syncTo", "loadSlots", (500, b"boom"))):
+                name = side.box.add_component("3", "Gone", "kitControl:NumericConst")["nn"]
+                token = side.call("n4_remove_component", parent_ord=FOLDER,
+                                  name=name)["confirmation_token"]
+                fail_after(side, first, key, reply)
+                side.call("n4_remove_component", parent_ord=FOLDER, name=name, dry_run=False,
+                          confirmation_token=token)
+                side.fake.hook = None
             side.call("n4_list_batches")
         self.assertSameRun(scenario)

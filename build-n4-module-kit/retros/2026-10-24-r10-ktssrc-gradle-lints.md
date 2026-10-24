@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · r10-ktssrc-gradle-lints
@@ -30,3 +30,10 @@ nothing to move.
 
 ## Proposed kit deltas (propose-never-apply)
 - None beyond the deltas above.
+
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 One layered Go lint stack: L15 matches on the `ktssrc` `Code` view; this closes the "move onto it when next touched" clause of go-lint-uberjar-api Δ2.
+- Δ2 → same line: L14 matches the settings script's `Code` lines; split-package-check reads no gradle content, so it had nothing to move.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail`; log in `ledger.d/2026-10-24-r10-fold-tail.md`) — Δ1-Δ2 cited in `BUILD-LOOP.md` § 5.

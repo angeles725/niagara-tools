@@ -14,6 +14,7 @@ package foldaudit
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -97,8 +98,10 @@ func (h *harvest) sortedTokens() []string {
 	return out
 }
 
-// harvestCorpus scans every *.md under root except INDEX.md and anything under a retros/ directory,
-// reproducing `find "$root" -name '*.md' ! -path '*/retros/*' ! -name INDEX.md`: symlinks are not
+// harvestCorpus scans every *.md under root except INDEX.md, anything under a retros/ directory and a
+// generated BUILD-STATE.md (one with a BUILD-STATE.src.md beside it: not committed, so a local copy may be
+// stale, and its content is that source plus ledger.d/, both scanned), otherwise reproducing
+// `find "$root" -name '*.md' ! -path '*/retros/*' ! -name INDEX.md`: symlinks are not
 // descended (a symlinked root without a trailing slash yields nothing), symlinked files are read
 // through, and unreadable entries are skipped silently.
 func harvestCorpus(root string, withDeltas bool) *harvest {
@@ -125,6 +128,12 @@ func walk(dir string, slashed bool, h *harvest) {
 		name := e.Name()
 		if !strings.HasSuffix(name, ".md") || name == "INDEX.md" || strings.Contains(p, "/retros/") {
 			continue
+		}
+		// Mutation: F16 -- scanning the generated BUILD-STATE.md lets a stale local copy supply a citation
+		if name == "BUILD-STATE.md" {
+			if _, err := os.Stat(filepath.Join(filepath.Dir(p), "BUILD-STATE.src.md")); err == nil {
+				continue
+			}
 		}
 		if b, err := os.ReadFile(p); err == nil {
 			h.add(p, b)

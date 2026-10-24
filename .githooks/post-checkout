@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# post-checkout — regenerate the kit's generated state (BUILD-STATE.md, retros/INDEX.md, toolbelt/INDEX.md) after a
+# checkout or switch. The logic lives in .githooks/post-merge; like it, this never blocks git
+# (exit 0 always). [ev: retro ledger-generated-not-committed]
+# $3 (1 = branch checkout, 0 = file checkout) is ignored on purpose: a file checkout can restore a
+# ledger.d/ fragment, a retro, a lint or BUILD-STATE.src.md, which changes the generated files as much as a
+# branch switch does, and a full regeneration takes well under a second.
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || exit 0
+[ -f "$here/post-merge" ] || exit 0
+bash "$here/post-merge" </dev/null
+exit 0

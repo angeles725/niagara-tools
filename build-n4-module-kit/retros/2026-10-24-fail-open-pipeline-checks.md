@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · fail-open-pipeline-checks
@@ -46,8 +46,15 @@ whose status is used with `&& … exit|fail|return`, quoted text blanked; FMT-ST
 | Δ1 | A check derives pass/fail from the exit status of the producer, never from grepping a pipeline whose producer may not run, and captures a formatter's stderr with its list (`2>&1`); `tests/fail-open-idioms.bats` is the ratchet | `METHODOLOGY.md` (new K rule beside K20) | `[ev: tests/fail-open-idioms.bats]` |
 | Δ2 | A keep-both conflict resolution applies only to hunks where both sides add whole lines; a test file or an edited line needs a human merge, then a compile and test run before the commit | `ORCHESTRATION.md` § merge rules (beside the fragment-merge rule) | `[ev: retro fail-open-pipeline-checks]` |
 
+## Fold
+- Δ1 → `METHODOLOGY.md` K20 sub-rule (producer exit); `tests/fail-open-idioms.bats` landed with this retro.
+- Δ2 → `ORCHESTRATION.md`, beside the fragment-merge rule (keep-both only for whole-line additions).
+
 ## Lessons
 - A gate is proven only by watching it fail on the input it exists for: neither lander line was ever run against a
   broken build before PR #409 went out.
 - grep's status answers "was the text printed", not "did the step succeed"; the two coincide only when the
   producer is guaranteed to run and to print on failure.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-10-24-fail-open-pipeline-checks.md | kit | 2026-10-24 | folded | 2 |`
