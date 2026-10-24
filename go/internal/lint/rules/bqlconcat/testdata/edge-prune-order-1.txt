@@ -1,0 +1,39 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-bql-string-concat  @DIR@/m/B.java:2  bql concat: q = BqlQuery.make("select * where n=" + u);
+WARN  lint-bql-string-concat  @DIR@/m/Z/A.java:2  bql concat: q = BqlQuery.make("select * where n=" + u);
+WARN  lint-bql-string-concat  @DIR@/m/a/A.java:2  bql concat: q = BqlQuery.make("select * where n=" + u);
+WARN  lint-bql-string-concat  @DIR@/m/b/c/A.java:2  bql concat: q = BqlQuery.make("select * where n=" + u);
+-- stderr --
+-- m/.git/A.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}
+-- m/B.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}
+-- m/Z/A.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}
+-- m/a/A.JAVA --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}
+-- m/a/A.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}
+-- m/a/notes.txt --
+  q = BqlQuery.make("select * where n=" + u);
+-- m/b/c/A.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}
+-- m/x-worktrees/A.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}

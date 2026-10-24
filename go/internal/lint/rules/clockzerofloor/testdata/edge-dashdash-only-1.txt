@@ -1,0 +1,14 @@
+-- args --
+--
+-- want --
+exit 3
+-- stderr --
+lint-clock-zero-floor: not a directory: --
+-- m/A.java --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}
+-- n/A.java --
+class A {
+  long e = Math.max( 0 , x);
+}

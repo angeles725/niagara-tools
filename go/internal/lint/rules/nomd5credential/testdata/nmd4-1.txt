@@ -1,0 +1,11 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BAuth.java --
+class BAuth {
+  BPassword pwd;
+  // java.security.MessageDigest.getInstance("MD5")
+  void f(){}
+}

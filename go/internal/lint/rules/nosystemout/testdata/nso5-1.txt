@@ -1,0 +1,9 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/.git/J.java --
+class J { void f(){ System.out.println("x"); } }
+-- Mod/A.java --
+class A { void f(){ } }

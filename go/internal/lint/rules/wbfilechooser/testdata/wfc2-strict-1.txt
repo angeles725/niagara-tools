@@ -1,0 +1,11 @@
+-- args --
+--strict
+@DIR@/Mod
+-- want --
+exit 1
+WARN  lint-wb-file-chooser  @DIR@/Mod/src/com/x/A.java:2  void s(){ BWbFieldEditor.dialog(this, BOrd.NULL); }
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  void s(){ BWbFieldEditor.dialog(this, BOrd.NULL); }
+}

@@ -1,0 +1,10 @@
+-- args --
+@DIR@/m/
+-- want --
+exit 1
+FAIL  lint-se-display  @DIR@/m/A.java:2  display class: import javax.swing.JFrame;
+-- stderr --
+-- m/A.java --
+class A {
+import javax.swing.JFrame;
+}

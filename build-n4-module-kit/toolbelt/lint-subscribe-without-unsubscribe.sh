@@ -10,10 +10,16 @@
 # subscription. See types/logic-authoring.md §Subscribe / unsubscribe symmetry rule.
 # [ev: retro module-hardening-failure-modes-deltas Δ3] [ev: corpus B1122]
 #
+# Implementation: go/internal/lint/rules/subscribeleak on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-subscribe-without-unsubscribe <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise). An
+# unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_strip_run did).
+#
 # Usage:  lint-subscribe-without-unsubscribe.sh [--strict] <src-root>
-#   Scans *.java under <src-root>, dot-dirs pruned. Line // comments are stripped before
-#   matching, so commented-out code does not trigger. Per FILE: a `.subscribe(` call with no
-#   `unsubscribe` / `unsubscribeAll` anywhere in the same file is the leak shape.
+#   Scans *.java under <src-root>, dot-dirs pruned. Matches the code only: comments, Javadoc and
+#   literal text never count (a commented-out subscribe never WARNs, a commented or quoted
+#   unsubscribe never pairs a leak) and a `//` inside a string never hides the rest of a line.
+#   Per FILE: a `.subscribe(` call with no `unsubscribe` / `unsubscribeAll` anywhere in the same
+#   file is the leak shape.
 #   Row:   WARN  lint-subscribe-without-unsubscribe  <file>:<line>  <trimmed source>
 #   Exit:  0  no WARN (clean) or WARN-only · 1  any WARN under --strict · 3  usage/env
 #
@@ -21,21 +27,14 @@
 # assumed paired; a file that only subscribes is the leak candidate a reviewer must confirm.
 # `.subscribe(` (leading dot) is matched so it never collides with `.unsubscribe(`.
 # VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
+# Mutation: SWU5 -- matching the raw line (no comment/literal blanking) lets a commented unsubscribe pair a leak
 # Mutation: SWU2 -- drop the unsubscribe-absent guard so a file WITH unsubscribe still WARNs
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-subscribe-without-unsubscribe first 'usage: lint-subscribe-without-unsubscribe.sh [--strict] <src-root>' "$@"
-
-# check <file>: the line of the first subscribe when the file never unsubscribes.
-check() {
-  # Only files that actually subscribe are candidates.
-  printf '%s\n' "$AL_TEXT" | grep -q '\.subscribe(' || return 0
-  # Paired if the file unsubscribes anywhere (unsubscribe / unsubscribeAll).
-  printf '%s\n' "$AL_TEXT" | grep -q 'unsubscribe' && return 0
-  # Report the first subscribe line (1-indexed, against the stripped view = same line numbers).
-  printf '%s\n' "$AL_TEXT" | grep -n '\.subscribe(' | head -1 | cut -d: -f1
-}
-
-# The lib strips // comments into AL_TEXT, walks fail closed, prints the WARN row and the exit code.
-awk_lint_strip_run check -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-subscribe-without-unsubscribe: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-subscribe-without-unsubscribe "$@"

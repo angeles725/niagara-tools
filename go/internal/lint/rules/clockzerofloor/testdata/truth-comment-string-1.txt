@@ -1,0 +1,18 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-clock-zero-floor  @DIR@/m/B.java:4  zero-floor: String u = "http://h"; long b = Math.max(0L, d);
+-- stderr --
+-- m/A.java --
+class A {
+  /* the delay goes to Clock.schedule(this, t, a, null) elsewhere */
+  long a = Math.max(0, d);
+}
+-- m/B.java --
+class B {
+  void f() { Clock.schedule(this, t, a, null); }
+  /* long a = Math.max(0, d); */
+  String u = "http://h"; long b = Math.max(0L, d);
+  String s = "Math.max(0, d)";
+}

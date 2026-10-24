@@ -1,0 +1,16 @@
+-- args --
+-x
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-subscribe-without-unsubscribe: unknown flag: -x
+usage: lint-subscribe-without-unsubscribe.sh [--strict] <src-root>
+-- m/A.java --
+class A {
+  void started() { sub.subscribe(c); }
+}
+-- n/A.java --
+class A {
+  void more() { other.subscribe(d); }
+}

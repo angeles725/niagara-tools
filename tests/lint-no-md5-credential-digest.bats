@@ -76,3 +76,14 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-no-md5-credential-digest: cannot list every file under $TMPDIR_T/Mod: "* ]]
 }
+
+@test "NMD5: a commented MD5 call or a comment-only credential context is clean; an MD5 call after a // inside a string is WARNed" {
+  # Mutation: NMD5 -- matching the raw line (no comment blanking) WARNs A.java and C.java.
+  # [ev: truth audit 2026-10-22 T3]
+  printf 'class A {\n  /* MessageDigest.getInstance("MD5") */\n  BPassword p;\n}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf 'class B {\n  String u = "http://h"; MessageDigest m = MessageDigest.getInstance("MD5");\n  String password;\n}\n' > "$TMPDIR_T/Mod/src/com/x/B.java"
+  printf 'class C {\n  MessageDigest m = MessageDigest.getInstance("MD5");\n  /* hash the password */\n}\n' > "$TMPDIR_T/Mod/src/com/x/C.java"
+  run "$NMD" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-no-md5-credential-digest  $TMPDIR_T/Mod/src/com/x/B.java:2  String u = \"http://h\"; MessageDigest m = MessageDigest.getInstance(\"MD5\");" ]
+}
