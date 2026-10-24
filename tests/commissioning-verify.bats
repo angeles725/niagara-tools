@@ -296,3 +296,15 @@ _cv_map_tree() {  # $1 = module root; one Map-rt artifact holding the Table 2 RE
   [[ "$output" == *"SKIP  commissioning  station-checks  bog-audit exit 3 (unreadable or malformed bog, or no component of the module) — run bog-audit.sh manually"* ]]
   [[ "$output" != *"python3"* ]]
 }
+
+# Go port truth fix T2 (retro go-commissioning-verify Δ2): bog-audit reports CHECK15 (sensor-crossed) and CHECK19
+# (link-direction) as WARN only; the bash fold relayed FAIL/PASS for them, so neither check ever reached the
+# punch-list. Every folded check now relays FAIL, WARN and PASS. Named mutation CV-warndrop (relay FAIL/PASS only
+# for CHECK15/CHECK19 again) -> CV-bog-warn flips.
+@test "CV-bog-warn: CHECK15 and CHECK19 WARN rows reach the punch-list as WARN rows" {
+  # station-warn.xml: one generic own module holding the CHECK15 and CHECK19 shapes of the station-logic bog fixtures
+  run "$CV" "$MINIMAL" --bog "$BATS_TEST_DIRNAME/fixtures/commissioning-verify/station-warn.xml" --module DemoPan
+  [[ "$output" == *"WARN  commissioning  station-logic:sensor-crossed  Station/EvaporatorUnit_3  slot 'C1_temperature'"* ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  commissioning  station-logic:link-direction  DashPanel_1  control 'Ctrl_1'"* ]]
+}

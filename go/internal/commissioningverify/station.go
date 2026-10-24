@@ -8,23 +8,21 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
 
-// stationCheck is one bog-audit check folded into the punch-list: its CHECK id, its row check name and the
-// statuses relayed (bog-audit's other rows of that id are dropped).
-type stationCheck struct {
-	id, check string
-	statuses  []string
-}
+// stationCheck is one bog-audit check folded into the punch-list: its CHECK id and its row check name. Its FAIL,
+// WARN and PASS rows are relayed (the bash fold dropped the WARN rows of CHECK13 and CHECK15-20, so the WARN-only
+// CHECK15 and CHECK19 never reached the punch-list).
+type stationCheck struct{ id, check string }
 
 var stationChecks = []stationCheck{
-	{"CHECK11", "proxy-link-safety", []string{failed, pass, warn}},
-	{"CHECK13", "station-logic:relay-double-source", []string{failed, pass}},
-	{"CHECK14", "station-logic:own-output-unlinked", []string{failed, warn, pass}},
-	{"CHECK15", "station-logic:sensor-crossed", []string{failed, pass}},
-	{"CHECK16", "station-logic:defrost-sibling", []string{failed, pass}},
-	{"CHECK17", "station-logic:room-index-mismatch", []string{failed, pass}},
-	{"CHECK18", "station-logic:tile-number", []string{failed, pass}},
-	{"CHECK19", "station-logic:link-direction", []string{failed, pass}},
-	{"CHECK20", "numeric-to-bool-direct", []string{failed, pass}},
+	{"CHECK11", "proxy-link-safety"},
+	{"CHECK13", "station-logic:relay-double-source"},
+	{"CHECK14", "station-logic:own-output-unlinked"},
+	{"CHECK15", "station-logic:sensor-crossed"},
+	{"CHECK16", "station-logic:defrost-sibling"},
+	{"CHECK17", "station-logic:room-index-mismatch"},
+	{"CHECK18", "station-logic:tile-number"},
+	{"CHECK19", "station-logic:link-direction"},
+	{"CHECK20", "numeric-to-bool-direct"},
 }
 
 // stationChecks runs bog-audit in process on the bog and relays its CHECK11 and CHECK13-20 rows, check by check
@@ -42,7 +40,7 @@ func (r *report) stationChecks(o options) {
 	lines := strings.Split(b.String(), "\n")
 	for _, c := range stationChecks {
 		for _, ln := range lines {
-			for _, st := range c.statuses {
+			for _, st := range []string{failed, warn, pass} {
 				if p := c.id + "  " + st; strings.HasPrefix(ln, p) {
 					r.emit(st, c.check, strings.TrimPrefix(ln, p+"  "))
 				}

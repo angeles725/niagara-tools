@@ -28,6 +28,8 @@
 #   station-logic:*          bog-audit.sh CHECK13-19
 #   numeric-to-bool-direct   bog-audit.sh CHECK20
 #   (SKIP rows emitted when --bog is absent)
+#   Each folded check relays its FAIL, WARN and PASS rows (the bash fold dropped WARN for CHECK13/15-20, so the
+#   WARN-only CHECK15 sensor-crossed and CHECK19 link-direction never surfaced). [ev: retro go-commissioning-verify]
 #
 # Facade slot inventory note (PASS informational row):
 #   wiring-map  generate-wiring-map.sh scaffolds docs/wiring-map.md
