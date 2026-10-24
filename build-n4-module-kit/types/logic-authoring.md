@@ -234,7 +234,7 @@ BITable<?> t = (BITable<?>) BOrd.make("station:|slot:/|bql:select * from <module
     .get(Sys.getStation(), cx);                 // the CALLER's Context, never get(base) / get()
 try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
   while (c.next()) {
-    BObject cell = (BObject) c.cell(columnIndex);
+    BObject cell = (BObject) c.cell(t.getColumns().get(columnIndex));  // cell(Column), no int overload
     // … process cell; history/alarm record kept past next(): record.newCopy()
   }
 }
@@ -246,7 +246,8 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
   WARNs on a `bql:` ORD resolved that way. `[ev: retro n4-course-drivers-bql-ords-files Δ1]`
 - `from <module:Type>` finds every mounted instance of `module:Type` in the station space.
 - Case rules (`LIKE` and slot names are case-sensitive, keywords are not; NEQL `(?i)` for a case-insensitive match): `types/dashboard.md` § BQL case rules `[ev: corpus B1418 §1418.3]`.
-- **Close with try-with-resources** (a leaked cursor holds a read lock on the space). The cursor is iterable
+- **Close with try-with-resources** (an unclosed cursor "may result in a resource leak and degraded system
+  performance", devguide `collections.txt:101`). The cursor is iterable
   (`for`, `stream()`); `Tables.slurp(t)` gives a `BIRandomAccessTable` when random access is needed
   (`javax/baja/collection/Tables.java:51`, docSource). N4 has no `BICollection`/`BIList`.
   `[ev: retro devguide415-runtime-api-corrections Δ9]` `[ev: corpus B1310 §1310.2 rows 10-11]`
@@ -313,8 +314,9 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
 - **Dependencies:** the `.ntpl` carries `template-manifest.xml` (the guide spells it `template.manifest.xml`;
   shipped `.ntpl` files use the hyphen) whose `<dependencies>` holds one `<dependency name vendor vendorVersion rel>`
   per module (`template-rt` `ManifestXMLWriter.java:129-140`). List every module the component tree AND the Px
-  need, both `-rt` and `-ux`: install hard-fails on a missing one (guide `ExampleTemplate.manifest.xmlFileTem-9BAE5349.txt:11`,
-  corpus B578). Its `signature` attribute detects a modified template (`:13`).
+  need, both `-rt` and `-ux` (guide `ExampleTemplate.manifest.xmlFileTem-9BAE5349.txt:11`): an application-template
+  install hard-fails on a missing module and only warns on a missing Px module (`template-rt`
+  `ApplicationTemplateInstaller.java:81-85`, corpus B578). Its `signature` attribute detects a modified template (`:13`).
 - **Version pinning:** set **Use Minor Version On Deployment** on purpose: `true` pins the minor version; `false`
   pins only the major, so a template built on a later minor deploys to stations on an earlier one
   (guide `Templates/TemplateOptions-49093F67.txt:9-11`).
@@ -353,7 +355,7 @@ There is no `BJobs` class. `job.submit(cx)` invokes the JobService's HIDDEN `sub
 - **Log through the job log.** `log().message(<module>, <lexKey>, <args>)` with the key present in that module's `module.lexicon` (`log().message(String)` for a non-localized line).
 - **Snapshot inputs in the constructor.** Copy the service properties the job needs when it is built; Tridium's Lab 10 job reads them live from the job thread, so an edit in the middle of an export changes the later files. [ev: corpus B1242 §1242.4]
 - **Unit test without a station:** `job.setJobState(BJobState.running); job.run(null);` then assert on `job.log().getItems()`.
-- **Worked example:** the course Lab 10 `BHistoriesToCsvJob.java:105-112` (`isAlive()` → `JobCancelException`, `progress()`, `log().message(...)` per history), run live on 4.15.6.20. [ev: retro n4-course-handson-services-history-threading Δ6]
+- **Worked example:** the course Lab 10 `BHistoriesToCsvJob.java:90-96,108` (`isAlive()` → `JobCancelException`, `progress()`, `log().message(...)` per history), run live on 4.15.6.20. [ev: retro n4-course-handson-services-history-threading Δ6]
 
 **Pattern:**
 ```java
@@ -385,25 +387,27 @@ When an RT component changes state in a way the WB view needs to reflect live (e
 
 **Pattern:**
 ```java
-// RT side — declare a topic slot on the rt component
+// RT side — declare the topic; Slot-o-Matic generates `public static final Topic stateChanged`
 @NiagaraType
-@NiagaraProperty(name="stateChanged", type="baja:TopicFunction",
-                 flags=Flags.HIDDEN|Flags.TRANSIENT)
+@NiagaraTopic(name = "stateChanged", flags = Flags.HIDDEN)
 public class BMyNetwork extends BBasicNetwork {
     // Fire a typed snapshot whenever relevant state changes
-    private void notifyStateChange(MyStateSummary snapshot) {
-        BMyStateSummary bSnapshot = BMyStateSummary.make(snapshot);
-        getStruct().get(stateChangedProp).fire(bSnapshot);   // fires the topic
+    private void notifyStateChange(BMyStateSummary snapshot) {
+        fire(stateChanged, snapshot, null);   // BComponent.fire(Topic, BValue, Context)
     }
 }
 
-// WB side — subscribe to the topic in doLoadValue() and update the UI
-component.getStruct().get(BMyNetwork.stateChangedProp).subscribe(topicListener, cx);
+// WB side (a BWbComponentView) — register in doLoadValue(), filter in handleComponentEvent()
+registerForComponentEvents(network);
+// handleComponentEvent(BComponentEvent e): e.getId() == BComponentEvent.TOPIC_FIRED
+//   && "stateChanged".equals(e.getSlotName()) → (BMyStateSummary) e.getValue()
 ```
 
 **Rules:**
 - The topic payload type (`BMyStateSummary`) must be a `BStruct` or `BSimple` serializable as Baja — no Java-only types.
-- Unsubscribe in `doUnloadValue()` — see `types/logic-authoring.md §Subscribe / unsubscribe symmetry rule`.
+- Unregister when the view unloads: there is no `doUnloadValue()`; `deactivated()` runs when the view is unloaded
+  from the shell (`javax/baja/workbench/view/BWbView.java:129-133`, docSource), so call `unregisterForAllComponentEvents()`
+  there (`BWbComponentView.java:151`) — see `types/logic-authoring.md §Subscribe / unsubscribe symmetry rule`.
 - This is the correct alternative to a WB-side polling timer when the RT component already has the state; see `types/observability.md` for the observability angle.
 
 `[ev: corpus B1058]`
