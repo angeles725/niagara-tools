@@ -46,11 +46,12 @@ var (
 	statusEnd  = []string{"Status", "Active", "Start", "Since"}
 )
 
-// Check counts the file's config and status slot names and WARNs once when N > 1 and M < N. It never
-// fails: a file it cannot read is the runner's "cannot scan" error.
+// Check counts the config and status slot names of the file's @NiagaraProperty annotations (as
+// javasrc.NiagaraProperties joins them, each read to its balanced ")") and WARNs once when N > 1 and
+// M < N. It never fails: a file it cannot read is the runner's "cannot scan" error.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	n, m := 0, 0
-	properties(f.Raw, func(text string) {
+	javasrc.NiagaraProperties(f.Raw, func(text string, _ int) {
 		sub := nameAttr.FindStringSubmatch(text)
 		if sub == nil {
 			return
@@ -67,26 +68,6 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	}
 	return []lint.Finding{{Path: class(f.Path),
 		Msg: fmt.Sprintf("N=%d per-instance config slots but %d status slots", n, m)}}, nil
-}
-
-// properties calls fn with the text of every @NiagaraProperty annotation as the bash awk joined it: the
-// opening line and the next ones, joined by " ", closed from the second line on once a "(" was seen and
-// the parentheses balance. An annotation still open at the end of the file is dropped.
-func properties(raw []string, fn func(text string)) {
-	open, buf := false, ""
-	for _, ln := range raw {
-		if !open {
-			if strings.Contains(ln, "@NiagaraProperty") {
-				open, buf = true, ln
-			}
-			continue
-		}
-		buf += " " + ln
-		if strings.Count(buf, "(")-strings.Count(buf, ")") <= 0 && strings.Contains(buf, "(") {
-			fn(buf)
-			open, buf = false, ""
-		}
-	}
 }
 
 // hasAny reports whether match(s, w) holds for a word w of words.

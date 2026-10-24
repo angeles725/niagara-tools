@@ -40,8 +40,12 @@
 # `lint-status-parity: cannot scan <path>: ...` on stderr and exit 3 (gawk printed its fatal and the lint
 # exited 0), and a file name holding a blank keeps its whole class name (the bash `read` split it into the
 # N and M columns).
+# Truth fix T1 (2026-10-24): a one-line @NiagaraProperty closes on its own line (javasrc.NiagaraProperties,
+# shared with lint-config-sanity); the bash awk always took the next line too, so every other annotation of
+# a run of one-line ones went uncounted.
 #
 # Mutation: LSP-asymmetric -- removes N>M asymmetry detection so all facades pass regardless of parity
+# Mutation: LSP-oneline -- closing an annotation only from its second line drops every other one-line slot
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

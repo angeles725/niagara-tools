@@ -1,10 +1,12 @@
+declared difference (truth fix T1, truth-one-line-1): OneLine counts its four one-line Interval slots
+(the bash lint printed N=2).
 -- args --
 @DIR@
 -- want --
 exit 0
 WARN  lint-status-parity  Bare  N=2 per-instance config slots but 0 status slots
 WARN  lint-status-parity  Nested  N=2 per-instance config slots but 1 status slots
-WARN  lint-status-parity  OneLine  N=2 per-instance config slots but 1 status slots
+WARN  lint-status-parity  OneLine  N=4 per-instance config slots but 1 status slots
 WARN  lint-status-parity  OneLineField  N=2 per-instance config slots but 0 status slots
 WARN  lint-status-parity  Parens  N=3 per-instance config slots but 0 status slots
 WARN  lint-status-parity  Two  N=2 per-instance config slots but 0 status slots
