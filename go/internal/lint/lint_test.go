@@ -622,3 +622,72 @@ func TestParseExactUsageError(t *testing.T) {
 		t.Errorf("Exact -h: exit %d %q, want 3 (a root, not a flag)", code, e)
 	}
 }
+
+// TestParseValued: Mode Valued is `[<option> <value>]... <root>` (lint-link-target-flags): the option and the
+// root in any order, the last value wins, a missing value, any other "-" argument, a second root or no root is
+// the usage line alone, and the root must be a directory.
+func TestParseValued(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-v.sh [--map <file>] <src>"
+	for _, tc := range []struct {
+		name string
+		args []string
+		opt  string
+		err  string
+	}{
+		{"option first", []string{"--map", "m.md", dir}, "m.md", ""},
+		{"option after the root", []string{dir, "--map", "m.md"}, "m.md", ""},
+		{"last value wins", []string{"--map", "a", "--map", "b", dir}, "b", ""},
+		{"no option", []string{dir}, "", ""},
+		{"missing value", []string{dir, "--map"}, "", use + "\n"},
+		{"another flag", []string{"--strict", dir}, "", use + "\n"},
+		{"-h", []string{"-h"}, "", use + "\n"},
+		{"two roots", []string{dir, dir}, "", use + "\n"},
+		{"no root", []string{"--map", "m"}, "", use + "\n"},
+		{"not a directory", []string{"--map", "m", dir + "/nope"}, "", "lint-v: not a directory: " + dir + "/nope\n"},
+	} {
+		a, err := ParseOption(Valued, "lint-v", use, "--map", tc.args)
+		got := ""
+		if err != nil {
+			got = err.Error()
+		}
+		if got != tc.err || (err == nil && (a.Option != tc.opt || len(a.Roots) != 1 || a.Roots[0] != dir)) {
+			t.Errorf("%s: args %+v err %q, want option %q root %q err %q", tc.name, a, got, tc.opt, dir, tc.err)
+		}
+	}
+}
+
+// configFake is a Rule that is also a Configurer: it fails Configure when the option names "bad".
+type configFake struct {
+	fakeRule
+	seen *string
+}
+
+func (r configFake) Configure(a Args) error {
+	*r.seen = a.Option
+	if a.Option == "bad" {
+		return errors.New("lint-c: --map file not found: bad\n")
+	}
+	return nil
+}
+
+// TestConfigure: a rule run alone that implements Configurer gets the parsed Args after the root check
+// and before the walk; its error is printed verbatim on stderr and exits 3 with no row.
+func TestConfigure(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	var seen string
+	sp := Spec{Rule: configFake{fakeRule{"lint-c", "MARK", Fail}, &seen}, Mode: Valued, Option: "--map",
+		Usage: "usage: lint-c.sh [--map <file>] <src>", Select: Selection{Names: []string{"*.java"}}}
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "good", root}, s); code != 1 || seen != "good" || o.String() != "FAIL  lint-c  "+root+"/A.java:1  saw: MARK\n" || e.Len() != 0 {
+		t.Errorf("good: exit %d seen %q out %q err %q", code, seen, o, e)
+	}
+	s, o, e = stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "bad", root}, s); code != 3 || o.Len() != 0 || e.String() != "lint-c: --map file not found: bad\n" {
+		t.Errorf("bad: exit %d out %q err %q", code, o, e)
+	}
+	s, _, e = stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "bad", root + "/nope"}, s); code != 3 || e.String() != "lint-c: not a directory: "+root+"/nope\n" {
+		t.Errorf("root first: exit %d err %q, want the root error before Configure", code, e)
+	}
+}

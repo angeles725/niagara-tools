@@ -106,6 +106,13 @@ type RootRule interface {
 	CheckRoot(root string) ([]Finding, error)
 }
 
+// Configurer is implemented by a rule that reads a value option (Spec.Option, Mode Valued) before it scans:
+// when the rule runs alone, Configure gets the parsed Args after the root check and before the walk. A
+// non-nil error is printed verbatim on stderr (the rule writes the whole text) and exits 3 with no row.
+type Configurer interface {
+	Configure(a Args) error
+}
+
 // ErrEmptyRoot is what a RootRule returns for a root that holds nothing it checks (see RootRule).
 var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
 
@@ -120,6 +127,9 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
+	// implementing Configurer.
+	Option string
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
