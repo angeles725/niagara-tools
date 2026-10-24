@@ -13,7 +13,9 @@
 #
 # slotomatic_skip_scan <gradle-log>  — prints one row per skipped file, in log order, each file once:
 #   FAIL slotomatic-skip <path> (<reason>)
-# A file named by both forms is one row. Returns 0 when no file was skipped, 1 when any was, 2 (with a
+# A file named by both forms is one row. A file under srcTest/ is ignored: Slot-o-Matic walks test sources
+# too (a plain B*Test.java has no metadata block), but they never reach the module jar
+# [ev: retro r10-slotomatic-skip-srctest Δ1]. Returns 0 when no file was skipped, 1 when any was, 2 (with a
 # FAIL row naming the log) when the log cannot be read — fail closed, never a silent pass.
 # One awk over the whole log, no per-line process fork (tests/lint-fork-per-line.bats doctrine).
 # [ev: retro r10-slotomatic-skip-fail-open Δ1]
@@ -32,7 +34,7 @@ slotomatic_skip_scan() {
       return 0
     }
     function add(p, r) {
-      if (p in seen) return
+      if (p in seen || p ~ /[\/\\]srcTest[\/\\]/) return   # srcTest/ is never packaged: not a stale-jar FAIL
       seen[p] = 1; n++
       printf "FAIL slotomatic-skip %s (%s)\n", p, (r == "" ? "skipped by Slot-o-Matic" : r)
     }
