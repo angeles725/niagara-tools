@@ -672,7 +672,8 @@ class TestRemoveComponentParity(ParityTestCase):
 
 
 def fail_nth(side, key, nth, reply):
-    """A hook: the nth callssc `key` from now on answers `reply` (code, body)."""
+    """A hook: the nth callssc `key` from now on answers `reply`: (code, body), or a
+    transport fault (fake_station.DROP or fake_station.Raw)."""
     seen = []
 
     def hook(frame):
@@ -680,6 +681,8 @@ def fail_nth(side, key, nth, reply):
         if key in sck:
             seen.append(True)
             if len(seen) == nth:
+                if reply is fake_station.DROP or isinstance(reply, fake_station.Raw):
+                    return reply
                 return reply[0], reply[1], {}
         return None
     side.fake.hook = hook
@@ -885,6 +888,49 @@ class TestRollbackParity(ParityTestCase):
                 side.call("n4_rollback", batch_id=bid)  # its rollback is in-doubt now
             side.call("n4_list_batches")
         self.assertSameRun(scenario)
+
+    def test_transport_faults_and_unexpected_failures_keep_the_batch_id(self):
+        """A dropped connection or a non-HTTP answer (BoxError) on a send, op 2 of 3, the
+        relink and the read-back; then a nested add answered with a name that is no slot
+        name (ValueError, the unexpected-failure wrap after the sends)."""
+        faults = (fake_station.DROP, fake_station.Raw(b"garbage\r\n\r\n"))
+
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+
+            def faulted(tool, key, fault, nth=1, **args):
+                token = side.call(tool, **args)["confirmation_token"]
+                fail_nth(side, key, nth, fault)
+                side.call(tool, dry_run=False, confirmation_token=token, **args)
+                side.fake.hook = None
+            for i, fault in enumerate(faults):
+                faulted("n4_set_slot", "syncTo", fault, **SET)
+                faulted("n4_set_slot", "loadSlots", fault, nth=2, **SET)  # the read-back
+                bid = "a%d" % i * 16
+                craft(side, bid, [{"nm": "a", "h": "3", "n": "T%d%s" % (i, n),
+                                   "b": {"nm": "p", "t": "baja:Folder"}} for n in "ABC"],
+                      {FOLDER: "3"})
+                faulted("n4_rollback", "syncTo", fault, nth=2, batch_id=bid)
+                bid = removed(side, remove_group(side, "Tl%d" % i))
+                faulted("n4_rollback", "checkLinks", fault, batch_id=bid)
+            orig = side.fake._sync
+            for i, name in enumerate((["l"], "a/b", "")):
+                bid = removed(side, remove_group(side, "Tn%d" % i))
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+                side.fake._sync = lambda op, name=name: (orig(op), [{"id": "a", "nn": name}])[1] \
+                    if op["nm"] == "a" and op["n"] == "Src" else orig(op)
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+                side.fake._sync = orig
+            side.call("n4_list_batches")
+        for side in self.assertSameRun(scenario):  # every error names its batch, in the audit too
+            errors = [json.loads(line) for line in side.state("audit.jsonl").splitlines()]
+            errors = [a for a in errors if a["outcome"] == "error" and a["tool"] != "n4_connect"]
+            texts = [json.loads(r)["result"]["content"][0]["text"] for r in side.replies]
+            self.assertTrue(errors)
+            for audit in errors:
+                self.assertTrue(any(audit["batch_id"] in t and "in-doubt" in t for t in texts),
+                                audit)
 
     def test_journal_faults_in_rollback_runs(self):
         """The journal turns unwritable mid-run: before a component intent, before the relink
