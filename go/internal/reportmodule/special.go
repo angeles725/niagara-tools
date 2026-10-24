@@ -114,7 +114,7 @@ func bashInt(s string) (int64, bool) {
 	return n, err == nil
 }
 
-// lintTimers is §3: lint-timers on src/ (no row when there is none), relaying only its PASS* and FAIL* lines
+// lintTimers is §3: lint-timers on src/ (no row when there is none), relaying its PASS*, FAIL* and WARN* lines
 // with its own split: status, check, then `<path>:<line>  <message>` as `<basename>:<line>  <message>`.
 func (r *report) lintTimers(a artifact) {
 	if !isDir(a.dir + "/src") {
@@ -126,7 +126,7 @@ func (r *report) lintTimers(a artifact) {
 		return
 	}
 	for _, ln := range strings.Split(out, "\n") {
-		if !strings.HasPrefix(ln, "PASS") && !strings.HasPrefix(ln, "FAIL") {
+		if !hasPrefixIn(ln, "PASS|FAIL|WARN") { // the rule's WARN rows too (job-cancel, jdk-thread, ...)
 			continue
 		}
 		rest := cutAfter(ln, "  ")
