@@ -1,6 +1,8 @@
 // Package htmltext is the Python text layer of the kit's HTML-text lints, byte for byte as CPython 3.15
-// produces it: a file as open(path, encoding="utf-8", errors="replace").read() returns it (Decode) and
-// html.unescape (Unescape).
+// produces it: a file as open(path, encoding="utf-8", errors="replace").read() returns it (Decode),
+// html.unescape (Unescape), an HTML page's text with its markup dropped and its line numbers kept
+// (DropMarkup), and the str facts and folds those need (unicode.go). Its first consumer is
+// lint-manual-labels (rules/manuallabels).
 package htmltext
 
 import (
