@@ -399,7 +399,7 @@ CREATE = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
 
 
 def answering(side, name, reply):
-    """Make the fake's `name` handler (_sync, _check_link) do its work and answer `reply`."""
+    """Make the fake's `name` handler (such as _sync) do its work and answer `reply`."""
     orig = getattr(side.fake, name)
     setattr(side.fake, name, lambda arg: (orig(arg), reply)[1])
     return orig
@@ -464,3 +464,90 @@ class TestCreateComponentParity(ParityTestCase):
             side.call("n4_list_batches")
         self.assertSameRun(scenario)
 
+
+class TestCreateLinkParity(ParityTestCase):
+    def link_args(self, side):
+        side.add("Src", out=box.bson_status_numeric(1.0))
+        side.add("Tgt")
+        return dict(source_ord=FOLDER + "/Src", source_slot="out", target_ord=FOLDER + "/Tgt",
+                    target_slot="in10")
+
+    def test_links_and_every_refusal(self):
+        def scenario(side):
+            args = self.link_args(side)
+            side.call("n4_create_link", **args)  # not connected
+            side.connect()
+            for kw in ({"source_slot": "a b"}, {"target_slot": ""}, {"target_slot": "in10\n"},
+                       {"source_slot": "1x", "target_slot": "a b"}, {"source_ord": FOLDER + "/Missing"},
+                       {"target_ord": FOLDER + "/Missing"}, {"source_ord": "station:|slot:/Other"},
+                       {"target_ord": "station:|slot:/Other"}, {"target_ord": FOLDER + "/Tgt|h:x"}):
+                side.call("n4_create_link", **dict(args, **kw))
+            side.write("n4_create_link", **args)
+            side.write("n4_create_link", **args)  # a second link: Link1
+            side.write("n4_create_link", **dict(args, target_slot="in11"))
+            orig = side.fake._check_link
+
+            def lying(arg):
+                res = orig(arg)
+                side.fake.by_handle[arg["t"]].child(res[0]["s"]).child("sourceSlotName").value = "x"
+                return res
+            side.fake._check_link = lying
+            side.write("n4_create_link", **args)
+
+            def prefixed(arg):  # the station may prefix the handle ORD: still verified
+                res = orig(arg)
+                link = side.fake.by_handle[arg["t"]].child(res[0]["s"])
+                link.child("sourceOrd").value = "station:|" + link.child("sourceOrd").value
+                return res
+            side.fake._check_link = prefixed
+            side.write("n4_create_link", **args)
+            side.fake._check_link = orig
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_refused_ambiguous_and_malformed_replies(self):
+        def scenario(side):
+            args = self.link_args(side)
+            side.connect()
+            orig = side.fake._check_link
+            for reply in ([{"v": False, "r": "type mismatch", "s": None}], [{"v": 0}],
+                          [{"v": True, "r": None, "s": ""}], [{"v": True}], [{"r": 1}], "junk", [],
+                          [None], [[]], [[{"v": True}]], [{"v": 1, "s": 5}], [{"v": "yes", "s": ["l"]}],
+                          [{"v": True, "s": "Ghost"}], [{"v": True, "s": {"a": 1}}]):
+                side.fake._check_link = lambda arg, r=reply: r
+                side.write("n4_create_link", **args)
+            # accepted but not named: the recover hook finds the new link by its slots
+            side.fake._check_link = lambda arg: [dict(orig(arg)[0], s=None)]
+            side.write("n4_create_link", **args)
+
+            def prefixed(arg):  # ... also behind a station-prefixed source ORD
+                res = orig(arg)
+                link = side.fake.by_handle[arg["t"]].child(res[0]["s"])
+                link.child("sourceOrd").value = "station:|" + link.child("sourceOrd").value
+                return [dict(res[0], s=None)]
+            side.fake._check_link = prefixed
+            side.write("n4_create_link", **args)
+            def twice(arg):
+                orig(arg)
+                return [dict(orig(arg)[0], s=None)]
+            side.fake._check_link = twice
+            side.write("n4_create_link", **args)  # two new matching links: none is chosen
+
+            def other_slot(arg):
+                res = orig(arg)
+                side.fake.by_handle[arg["t"]].child(res[0]["s"]).child("targetSlotName").value = "x"
+                return [dict(res[0], s=None)]
+            side.fake._check_link = other_slot
+            side.write("n4_create_link", **args)
+            side.fake._check_link = lambda arg: [dict(orig(arg)[0], s=None)]
+            fail_after(side, "checkLinks", "loadSlots", (500, b"boom"))
+            side.write("n4_create_link", **args)  # the recover load fails
+            side.fake.hook = None
+            side.fake._check_link = orig
+            fail_after(side, "checkLinks", "loadSlots", (500, b"boom"))
+            side.write("n4_create_link", **args)  # the read-back load fails
+            fail_after(side, None, "checkLinks", (500, b"boom"))
+            side.write("n4_create_link", **args)
+            side.fake.hook = None
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
