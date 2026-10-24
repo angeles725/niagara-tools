@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -86,5 +87,28 @@ func TestFailClosed(t *testing.T) {
 	}
 	if code, out, err := run(); code != 3 || out != "" || err != "rc-scan: cannot scan "+u+": Permission denied\n" {
 		t.Errorf("unreadable file: exit %d out %q err %q", code, out, err)
+	}
+}
+
+// TestHandMatchers: ordLiteral, ipv4 and the login test are the awk EREs matched by hand (perf); they must
+// agree with the regexp on every shape, including line starts, segment quotes and broken dot runs.
+func TestHandMatchers(t *testing.T) {
+	t.Parallel()
+	ord := regexp.MustCompile("(station:|local:|slot:/)|(^|[|\"'`])h:[0-9a-fA-F]+")
+	ip := regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+`)
+	login := regexp.MustCompile(`login|step-?up`)
+	for _, s := range []string{"", "h:1", "xh:1", "|h:f", "\"h:G", "'h:a0", "`h:", "width:100px;h:9", "a|h:z h:1 'h:F",
+		"station:", "local:|", "slot:x", "slot:/", "1.2.3.4", "1.2.3", "1..2.3.4", "1.2.3.4.5", ".1.2.3.4", "a1.2.3.4b",
+		"1.2.3.x.4", "12.34.56.78", "1.2. 3.4", "v1.2.3", "1.2.3.4.", "x.1.2..3.4.5.6", "LOGIN", "step-up", "stepup",
+		"step up", "Step-Up", "logi n"} {
+		if got, want := ordLiteral(s), ord.MatchString(s); got != want {
+			t.Errorf("ordLiteral(%q) = %v, the ERE says %v", s, got, want)
+		}
+		if got, want := ipv4(s), ip.MatchString(s); got != want {
+			t.Errorf("ipv4(%q) = %v, the ERE says %v", s, got, want)
+		}
+		if got, want := mentionsGate(s) && !strings.Contains(asciiLower(s), "auth"), login.MatchString(asciiLower(s)); got != want {
+			t.Errorf("mentionsGate(%q) login half = %v, the ERE says %v", s, got, want)
+		}
 	}
 }
