@@ -16,8 +16,8 @@ import (
 // BACnet Present_Value proxy (propertyId absent, 85 or 85@...) whose point facets lack statusFlags=true WARNs, one
 // row per device with its count; statusFlags=b:true, a non-Present_Value propertyId or a useStatusFlags slot are
 // clean; the module alias of a type is resolved (x=bacnet counts, a BacnetNumericProxyExt of another module does
-// not); a vendor device type above the point device ext; a proxy outside a device; --strict; a malformed bog, no bog and usage exit 3. TestZipped: a zipped bog.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 8) }
+// not); a vendor device type above the point device ext; a proxy outside a device; --strict; a malformed bog, no bog and usage exit 3; a bog holding U+0000 (Niagara reads it) is one WARN row. TestZipped: a zipped bog.
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 9) }
 
 // TestZipped: a saved station config.bog (file.xml zipped) is read through its member like a plain one.
 func TestZipped(t *testing.T) {

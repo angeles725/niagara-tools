@@ -109,7 +109,7 @@ func unreadableAsRoot(t *testing.T, files map[string]string) {
 // declared fix. Exact, so a lost or stray case file fails.
 const (
 	recordedCases = 77
-	truthCases    = 10
+	truthCases    = 11
 )
 
 // cases lists the testdata case files (absolute: the cases run with their tree as cwd) and checks the counts.

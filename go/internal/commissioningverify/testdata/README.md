@@ -38,6 +38,7 @@ the fix and checked by hand.
 | `truth-edge-stub-cs-exit127`, `truth-edge-stub-sp-exit2`, `truth-edge-stub-rp-exit1`, `truth-edge-stub-cs-noexec` (mode 644: EACCES) | T3: a non-zero lint exit with no row is a FAIL row | PASS |
 | `truth-edge-stub-cs-noshebang` | a stub with no `#!` line is ENOEXEC, exit 126, FAIL row (every real wrapper starts with `#!/usr/bin/env bash`) | ran it as a shell script (exit 0, PASS) |
 | `truth-owed-unreadable` | T4: an unreadable values-owed table is exit 3 | PASS beside an awk error |
+| `truth-edge-bog-nul-char` | a bog holding `&#x0;` (Niagara reads it) relays bog-audit's one `XML  WARN` row as `bog-xml` | SKIP (bog-audit exit 3) |
 
 `golden_test.go` pins both counts exactly (`recordedCases`, `truthCases`). A case holding a `(mode 000)` file fails
 when the tests run as root (root reads it, so the case would prove nothing) unless `CV_GOLDEN_ALLOW_ROOT_SKIP=1`

@@ -1,0 +1,35 @@
+-- args --
+kit
+rl10slug
+-- want --
+exit 1
+-- stderr --
+gen-retro-index: 2026-01-01-legacy.md: needs exactly one <!-- module: <Module|kit> --> header in lines 1-10
+gen-retro-index: retro-header violation; index not generated
+new-retro: gen-retro-index.sh failed; retro removed, INDEX.md and BUILD-STATE.src.md unchanged
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1; retros/INDEX.md written by the recording checkout's gen-retro-index (Go retroindex), so the index half is not bash parity
+-- @env --
+KIT=@DIR@/kit
+-- @expect kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- @expect kit/retros/2026-01-01-legacy.md --
+<!-- review-status: pending -->
+# legacy
+-- @expect kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
+-- kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- kit/retros/2026-01-01-legacy.md --
+<!-- review-status: pending -->
+# legacy
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
