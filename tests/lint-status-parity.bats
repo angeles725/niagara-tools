@@ -59,3 +59,18 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-status-parity: cannot list every file under $ONE: "* ]]
 }
+
+@test "LSP-oneline: a run of one-line @NiagaraProperty annotations is counted in full" {
+  # Mutation: LSP-oneline -- closing an annotation only from its second line drops every other one-line slot (N=2, not 4)
+  # Go golden: go/internal/lint/rules/statusparity/testdata/truth-one-line-1.txt
+  {
+    printf 'class OneLine {\n'
+    for s in aInterval bInterval cInterval dInterval xActive; do
+      printf '  @NiagaraProperty(name = "%s", type = "int", defaultValue = "1")\n' "$s"
+    done
+    printf '}\n'
+  } > "$ONE/OneLine.java"
+  run "$LSP" "$ONE"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-status-parity  OneLine  N=4 per-instance config slots but 1 status slots" ]
+}

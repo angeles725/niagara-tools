@@ -13,7 +13,7 @@ import (
 
 // TestGolden: every tests/lint-status-parity.bats run (LSP-locked aside: its locked directory is not a
 // golden tree; TestLocked pins it) and every edge tree, recorded from the bash lint-status-parity.sh.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 29) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 30) }
 
 // TestLocked is LSP-locked: an unreadable sub-directory stops the scan with exit 3 and no rows, as
 // scan_files_nonempty_or_exit did, even beside a file that WARNs.
