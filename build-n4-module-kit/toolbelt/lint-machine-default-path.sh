@@ -24,6 +24,10 @@
 #     `const|let|var X = ...` initializer (any depth: rc code lives in IIFE/AMD wrappers) or an object-literal
 #     property default (`{ key: ... }`); an assignment, a call argument or a ternary branch is not.
 #   *.properties (go/internal/props, java.util.Properties.load rules: continuations, # ! comments, escapes): every value.
+#     Prescribed (R10-D5): in a gradle.properties, a machine path under niagara_home, niagara_user_home, nodeHome or
+#     org.gradle.java.installations.paths is an INFO row (exit 0, also under --strict): the kit tells a module to copy these
+#     from a sibling (BUILD-LOOP.md bring-up step 2, types/structure.md point 7). In a kit template fixture
+#     (absolute path under build-n4-module-kit/fixtures/) the same line stays WARN (METHODOLOGY.md K16).
 # Machine path: the value (\\ \" \' \` read, after an optional file: scheme), case-insensitive, starts with /home/,
 # /Users/, /tmp (/ or end), /var/tmp (/ or end), /mnt/<drive>/Users/ or <drive>:\Users\ / <drive>:/Users/, or contains
 # "scratchpad". Not rows: install roots (/opt/Niagara, C:\Niagara\Niagara-4.x), relative paths, and /home/niagara/
@@ -38,6 +42,7 @@
 #
 # Usage:  lint-machine-default-path.sh [--strict] <module-root>...
 #   Row:  WARN  lint-machine-default-path  <file>:<line>  machine-specific default "<path>" in <where> -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+#   Row:  INFO  lint-machine-default-path  <file>:<line>  <key> is a prescribed build-location key (BUILD-LOOP.md bring-up step 2; types/structure.md point 7)
 #   Exit: 0  no row, or WARN rows without --strict · 1  a WARN row under --strict · 3  usage/env, an empty root, an unscannable source file or a sub-directory find cannot enter
 # Empty root: a root with no *.java, *.js or *.properties under it is an env error (exit 3), never a clean pass;
 # stdout gets `ERROR  lint-machine-default-path  <root>  no *.java or *.js or *.properties sources found (wrong path or empty source tree)`.
@@ -45,7 +50,9 @@
 # Mutation: MDP2 -- reading comment text flags a /home/ path quoted in a Javadoc
 # Mutation: MDP3 -- dropping the method-body check flags a local variable in a method
 # Mutation: MDP4 -- dropping the rc JavaScript pass passes const DIR = "/home/me/x" in src/rc clean
-# Mutation: MDP5 -- dropping the .properties pass passes niagara_user_home=C:\\Users\\... clean
+# Mutation: MDP5 -- dropping the .properties pass passes export_dir=C:\\Users\\... clean
+# Mutation: MDP6 -- dropping the prescribed-key check WARNs niagara_user_home=C:\\Users\\... and exits 1 under --strict
+# Mutation: MDP7 -- dropping the kit-fixture check reports a fixture's niagara_user_home as INFO
 # Mutation: MDP-strict -- giving the rule a non-WARN severity exits 0 under --strict with a row
 # Mutation: MDP-K20 -- dropping the engine empty-root guard reports an empty root as a clean exit 0
 set -u
