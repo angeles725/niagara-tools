@@ -14,8 +14,7 @@ Each facade slot must be **linked facade→control** (the facade is the SOURCE, 
 
 | Facade slot | Workbench display name | Target RT slot | Full ord | Physical instance / crossing notes |
 |-------------|------------------------|----------------|----------|-------------------------------------|
-| `old` | _(no lexicon key)_ | _(fill)_ | _(fill)_ | |
-| `kept` | _(no lexicon key)_ | _(fill)_ | _(fill)_ | |
+| `a` | _(no lexicon key)_ | _(fill)_ | _(fill)_ | |
 
 ## Table 2 — SUMMARY display slots (control → facade)
 
@@ -26,7 +25,7 @@ Source RT slot cell. lint-link-target-flags.sh treats a row as a link-in target 
 
 | Facade slot | Workbench display name | Source RT slot | Full ord | Physical instance / crossing notes |
 |-------------|------------------------|----------------|----------|-------------------------------------|
-| `gone` | _(no lexicon key)_ | _(fill)_ | _(fill)_ | |
+| `b` | _(no lexicon key)_ | _(fill)_ | _(fill)_ | |
 
 ## Per-instance commissioning checklist (BUILD-LOOP §6.b)
 
@@ -41,8 +40,10 @@ Run after wiring, before operator hand-off:
 - [ ] obix-nav.py facade<->rt link batch audit: all expected links present and values in range
 -- stderr --
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at fa1201e6
+truth: a "(" in a javadoc after @NiagaraProperty no longer swallows the annotations below it (edge-javadoc-open-paren at fa1201e6 listed none)
 -- src/BA.java --
-// @NiagaraProperty(name = "old", flags = Flags.OPERATOR)
-/* @NiagaraProperty(name = "gone", flags = Flags.SUMMARY) */
-@NiagaraProperty(name = "kept", type = "double", defaultValue = "0", flags = Flags.OPERATOR)
+/**
+ * see {@code @NiagaraProperty(} below
+ */
+@NiagaraProperty(name = "a", type = "double", defaultValue = "0", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "b", type = "double", defaultValue = "0", flags = Flags.SUMMARY)

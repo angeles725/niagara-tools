@@ -14,7 +14,7 @@ Each facade slot must be **linked facade→control** (the facade is the SOURCE, 
 
 | Facade slot | Workbench display name | Target RT slot | Full ord | Physical instance / crossing notes |
 |-------------|------------------------|----------------|----------|-------------------------------------|
-| _(no OPERATOR slots found — check src dir or slot flags)_ | | | | |
+| `kept` | _(no lexicon key)_ | _(fill)_ | _(fill)_ | |
 
 ## Table 2 — SUMMARY display slots (control → facade)
 
@@ -40,10 +40,8 @@ Run after wiring, before operator hand-off:
 - [ ] obix-nav.py facade<->rt link batch audit: all expected links present and values in range
 -- stderr --
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at fa1201e6
+truth: an annotation inside a // or /* */ comment is no slot (edge-commented-out at fa1201e6 listed old and gone)
 -- src/BA.java --
-/**
- * see {@code @NiagaraProperty(} below
- */
-@NiagaraProperty(name = "a", type = "double", defaultValue = "0", flags = Flags.OPERATOR)
-@NiagaraProperty(name = "b", type = "double", defaultValue = "0", flags = Flags.SUMMARY)
+// @NiagaraProperty(name = "old", flags = Flags.OPERATOR)
+/* @NiagaraProperty(name = "gone", flags = Flags.SUMMARY) */
+@NiagaraProperty(name = "kept", type = "double", defaultValue = "0", flags = Flags.OPERATOR)

@@ -75,10 +75,8 @@ new; put src/BA.java '@NiagaraProperty(name = "lit", defaultValue = "BString.mak
 rec edge-paren-in-literal "$D/src"
 new; put src/BA.java '// a note on @NiagaraProperty usage\n'"$(op real)$(op next SUMMARY)"
 rec edge-comment-no-paren "$D/src"
-new; put src/BA.java '// @NiagaraProperty(name = "old", flags = Flags.OPERATOR)\n/* @NiagaraProperty(name = "gone", flags = Flags.SUMMARY) */\n'"$(op kept)"
-rec edge-commented-out "$D/src"
-new; put src/BA.java '/**\n * see {@code @NiagaraProperty(} below\n */\n'"$(op a)$(op b SUMMARY)"
-rec edge-javadoc-open-paren "$D/src"
+# edge-commented-out and edge-javadoc-open-paren became truth-commented-out and truth-javadoc-open-paren
+# (the scan reads code, not comments); they are not re-recorded.
 new; put src/BA.java '@NiagaraProperty\n(name = "nextline", flags = Flags.OPERATOR)\n'; rec edge-paren-next-line "$D/src"
 new; put src/BA.java '@NiagaraProperty(name = "crlf", flags = Flags.OPERATOR)\r\n'; rec edge-crlf "$D/src"
 new; put src/BA.java '@NiagaraProperty(name = "noeol", flags = Flags.OPERATOR)'; rec edge-java-noeol "$D/src"

@@ -156,3 +156,16 @@ setup() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"generate-wiring-map: cannot list every file under $BATS_TEST_TMPDIR/src: "* ]]
 }
+
+@test "GWM-comments: an annotation in a comment is no slot, and a \"(\" in a javadoc does not swallow the next annotations" {
+  # Mutation: GWM-comments -- scanning the raw lines lists the commented-out slot and drops the slots under the javadoc
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf '%s\n' '// @NiagaraProperty(name = "oldSlot", flags = Flags.OPERATOR)' '/**' ' * see {@code @NiagaraProperty(} below' ' */' \
+    '@NiagaraProperty(name = "setpoint", type = "double", flags = Flags.OPERATOR)' \
+    '@NiagaraProperty(name = "reading", type = "double", flags = Flags.SUMMARY)' > "$BATS_TEST_TMPDIR/src/BA.java"
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"oldSlot"* ]]
+  [[ "$output" == *'| `setpoint` |'* ]]
+  [[ "${output#*Table 2}" == *'| `reading` |'* ]]
+}
