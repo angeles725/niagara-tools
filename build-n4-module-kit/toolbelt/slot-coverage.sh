@@ -36,7 +36,8 @@
 #   exit 0   no MISSING slots
 #   exit 1   any MISSING slot
 #   exit 2   bad arity + "usage: slot-coverage.sh per-slot ..." on stderr
-#   exit 3   file/dir not found, or a <src-dir> sub-directory the walk could not enter
+#   exit 3   file/dir not found, a <src-dir> sub-directory the walk could not enter, or an input (the xml, the
+#            lexicon or a *.java) it cannot read: "slot-coverage: cannot read <path>: <reason>", nothing on stdout
 #
 # Usage (parse subcommand — reads module files, calls the same pure function):
 #   slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>
@@ -60,7 +61,7 @@
 #   --strict   -> exit 1 when missing is non-empty or WARN was emitted
 #   exit 0   clean (no FAIL, no WARN in strict); exit 1 dup-keys FAIL, empty-lexicon FAIL, facade FAIL or strict WARN
 #   exit 2   wrong argc
-#   exit 3   env (file missing / unreadable)
+#   exit 3   env (file missing, or the xml or lexicon unreadable: "slot-coverage: cannot read <path>: <reason>")
 #
 # Integer-tenths rounding: t=(1000*present+R/2)/R; print "$((t/10)).$((t%10))"
 # (verbatim from verify-module.sh coverage — no awk/printf %.1f; no locale dependency)

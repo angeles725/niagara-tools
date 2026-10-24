@@ -37,9 +37,9 @@ func unreadableTree(t *testing.T) string {
 	return dir
 }
 
-// TestUnreadable pins what the bash printed (recorded by hand from origin/main) for an input it cannot
-// read: a grep error line per grep and a verdict on what was read; an unreadable source ends the awk scan
-// (BZ's fanMode slot is never read, so its key is STALE) while the @Range grep reads on.
+// TestUnreadable pins the fail-closed read: a module-include.xml, lexicon or source that cannot be read is
+// exit 3, its path and the reason on stderr, nothing on stdout. Declared difference: the bash printed
+// grep's error and a verdict on the rest (an unreadable source even ended the slot scan: pct=N/A, exit 0).
 func TestUnreadable(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("running as root: chmod 000 does not block reads")
@@ -50,16 +50,11 @@ func TestUnreadable(t *testing.T) {
 		code         int
 		out, err     string
 	}{
-		{"parse-xml", "module-include.xml", false, 0, "pct=N/A (type-set)\nmissing=\nextra=\n",
-			"grep: @DIR@/module-include.xml: Permission denied\n"},
-		{"perslot-xml", "module-include.xml", true, 1, "pct=33.3 (per-slot)\nMISSING aSlot\nMISSING setpoint\n",
-			"grep: @DIR@/module-include.xml: Permission denied\n"},
-		{"parse-lex", "module.lexicon", false, 1,
-			"slot-coverage: FAIL empty lexicon with 1 declared type(s)\npct=0.0 (type-set)\nmissing=Thing\nextra=\n",
-			"grep: @DIR@/module.lexicon: Permission denied\ngrep: @DIR@/module.lexicon: Permission denied\n"},
-		{"perslot-lex", "module.lexicon", true, 1, "pct=0.0 (per-slot)\nMISSING aSlot\nMISSING fanMode\nMISSING setpoint\n",
-			"grep: @DIR@/module.lexicon: Permission denied\n"},
-		{"perslot-java", "src/com/x/BThing.java", true, 1, "pct=0.0 (per-slot)\nMISSING aSlot\nSTALE fanMode\n", ""},
+		{"parse-xml", "module-include.xml", false, 3, "", "slot-coverage: cannot read @DIR@/module-include.xml: Permission denied\n"},
+		{"perslot-xml", "module-include.xml", true, 3, "", "slot-coverage: cannot read @DIR@/module-include.xml: Permission denied\n"},
+		{"parse-lex", "module.lexicon", false, 3, "", "slot-coverage: cannot read @DIR@/module.lexicon: Permission denied\n"},
+		{"perslot-lex", "module.lexicon", true, 3, "", "slot-coverage: cannot read @DIR@/module.lexicon: Permission denied\n"},
+		{"perslot-java", "src/com/x/BThing.java", true, 3, "", "slot-coverage: cannot read @DIR@/src/com/x/BThing.java: Permission denied\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := unreadableTree(t)

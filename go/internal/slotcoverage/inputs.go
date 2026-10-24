@@ -45,17 +45,15 @@ func grepO(re *regexp.Regexp, data []byte) []string {
 func isFile(p string) bool { st, err := os.Stat(p); return err == nil && st.Mode().IsRegular() }
 func isDir(p string) bool  { st, err := os.Stat(p); return err == nil && st.IsDir() }
 
-// grepRead reads path for a grep that reports an unreadable file on stderr: it prints that line once per
-// grep the bash runs on it (times) and returns nil, which every grep then reads as no line.
-func grepRead(path string, times int, s cli.Stdio) []byte {
+// readInput reads one input file. A file it cannot read prints "cannot read" and returns false: an env
+// error (exit 3), never a verdict on the rest.
+func readInput(path string, s cli.Stdio) ([]byte, bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		for i := 0; i < times; i++ {
-			fmt.Fprintf(s.Err, "grep: %s: %s\n", path, strerror.Text(err))
-		}
-		return nil
+		fmt.Fprintf(s.Err, "slot-coverage: cannot read %s: %s\n", path, strerror.Text(err))
+		return nil, false
 	}
-	return data
+	return data, true
 }
 
 // typeNames are the name="X" values of every <type ...> tag that grep -o finds on one line, in file order.
@@ -91,10 +89,4 @@ func trimKeys(keys []string) []string {
 		out[i] = strings.TrimRight(k, trailBlank)
 	}
 	return out
-}
-
-// readQuiet reads path for a grep whose errors go to /dev/null: an unreadable file is no line.
-func readQuiet(path string) []byte {
-	data, _ := os.ReadFile(path)
-	return data
 }

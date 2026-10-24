@@ -38,17 +38,24 @@ func dupKeys(keys []string) []string {
 
 // parseMode is the type-set mode: module-include.xml <type> names against "<Type>.displayName" keys.
 func parseMode(xmlPath, lexPath string, strict, facade bool, s cli.Stdio) int {
+	xml, ok := readInput(xmlPath, s)
+	if !ok {
+		return 3
+	}
 	if !isFile(lexPath) {
 		// WB-LEX1: a missing lexicon with >=1 declared type is a FAIL, not an env fault.
-		if n := len(grepO(typeTag, readQuiet(xmlPath))); n >= 1 {
+		if n := len(grepO(typeTag, xml)); n >= 1 {
 			fmt.Fprintf(s.Out, "slot-coverage: FAIL missing lexicon with %d declared type(s)\n", n)
 			return 1
 		}
 		fmt.Fprintf(s.Err, "slot-coverage: not found: %s\n", lexPath)
 		return 3
 	}
-	requiredCSV := strings.Join(sortU(typeNames(grepRead(xmlPath, 1, s))), ",")
-	lex := grepRead(lexPath, 2, s)
+	lex, ok := readInput(lexPath, s)
+	if !ok {
+		return 3
+	}
+	requiredCSV := strings.Join(sortU(typeNames(xml)), ",")
 	raw := lexiconKeys(lex)
 	keys := here(subst(trimKeys(raw)))
 	var declared []string

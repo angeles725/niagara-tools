@@ -338,3 +338,16 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
   [ "$status" -eq 1 ]
   [[ "$output" == *"MISSING spacedSlot"* ]]
 }
+
+@test "SP-unreadable: per-slot on a src/ holding a *.java it cannot read is an env error (exit 3), no verdict" {
+  # Mutation: SP-unreadable -- skipping an unreadable source (the bash awk stopped there) reports pct=N/A, exit 0.
+  local src="$BATS_TEST_TMPDIR/src"
+  cp -r "$FX_PS/src" "$src"
+  cp "$src/com/x/BThing.java" "$src/com/x/BA.java"; chmod 000 "$src/com/x/BA.java"
+  if [ -r "$src/com/x/BA.java" ]; then chmod 644 "$src/com/x/BA.java"; skip "running as root"; fi
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  chmod 644 "$src/com/x/BA.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"slot-coverage: cannot read $src/com/x/BA.java: Permission denied"* ]]
+  [[ "$output" != *"pct="* ]]
+}

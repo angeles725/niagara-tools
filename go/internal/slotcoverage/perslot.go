@@ -2,7 +2,6 @@ package slotcoverage
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -16,16 +15,24 @@ var (
 	rangeTag = grepLongest(`@Range\("[^"]+"\)`)
 )
 
-// slots runs the awk scan of the per-slot mode over files, one awk over all of them: an annotation open at
-// the end of one file carries into the next, and the first file awk cannot open ends the scan (gawk's
-// fatal "cannot open file"). all holds every named annotation, op the OPERATOR ones.
-func slots(files []string) (all, op []string) {
-	scan := javasrc.PropertyScan{}
+// readSources reads every listed source; the first one it cannot read is an env error.
+func readSources(files []string, s cli.Stdio) ([][]byte, bool) {
+	var out [][]byte
 	for _, f := range files {
-		data, err := os.ReadFile(f)
-		if err != nil {
-			break
+		data, ok := readInput(f, s)
+		if !ok {
+			return nil, false
 		}
+		out = append(out, data)
+	}
+	return out, true
+}
+
+// slots runs the awk scan of the per-slot mode over the sources, one awk over all of them: an annotation
+// open at the end of one file carries into the next. all holds every named annotation, op the OPERATOR ones.
+func slots(sources [][]byte) (all, op []string) {
+	scan := javasrc.PropertyScan{}
+	for _, data := range sources {
 		for i, ln := range lines(data) {
 			text, _, ok := scan.Line(ln, i+1)
 			if !ok {
@@ -44,11 +51,11 @@ func slots(files []string) (all, op []string) {
 	return all, op
 }
 
-// rangeTags are the @Range("tag") values grep -oh finds in files; a file grep cannot read is skipped.
-func rangeTags(files []string) []string {
+// rangeTags are the @Range("tag") values grep -oh finds in the sources.
+func rangeTags(sources [][]byte) []string {
 	var out []string
-	for _, f := range files {
-		for _, m := range grepO(rangeTag, readQuiet(f)) {
+	for _, data := range sources {
+		for _, m := range grepO(rangeTag, data) {
 			out = append(out, strings.TrimSuffix(strings.TrimPrefix(m, `@Range("`), `")`))
 		}
 	}
@@ -83,11 +90,22 @@ func perSlot(xmlPath, lexPath, src string, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "slot-coverage: cannot list every file under %s: %s\n", src, err)
 		return 3
 	}
-	allSlots, opSlots := slots(files)
-	lexKeys := subst(sortU(trimKeys(lexiconKeys(grepRead(lexPath, 1, s)))))
+	sources, ok := readSources(files, s)
+	if !ok {
+		return 3
+	}
+	lex, ok := readInput(lexPath, s)
+	if !ok {
+		return 3
+	}
+	xml, ok := readInput(xmlPath, s)
+	if !ok {
+		return 3
+	}
+	allSlots, opSlots := slots(sources)
+	lexKeys := subst(sortU(trimKeys(lexiconKeys(lex))))
 	lexSlots, lexDotted := filterDot(lexKeys, false), filterDot(lexKeys, true)
-	types := typeNames(grepRead(xmlPath, 1, s))
-	known := sortU(nonEmpty(append(append(append([]string(nil), allSlots...), types...), rangeTags(files)...)))
+	known := sortU(nonEmpty(append(append(append([]string(nil), allSlots...), typeNames(xml)...), rangeTags(sources)...)))
 	opSorted := sortU(opSlots)
 	var missing, stale []string
 	if lexSlots != "" {
