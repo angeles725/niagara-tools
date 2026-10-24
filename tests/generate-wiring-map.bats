@@ -180,3 +180,21 @@ setup() {
   [[ "$output" == *'| `label` |'* ]]
   [[ "${output#*Table 2}" == *'| `reading` |'* ]]
 }
+
+@test "GWM-unreadable: an unreadable source or lexicon is an env error (exit 3, no map), never a shorter map" {
+  # Mutation: GWM-unreadable -- skipping an unreadable file prints the map without its slots (or names) and exits 0
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf '%s\n' '@NiagaraProperty(name = "setpoint", type = "double", flags = Flags.OPERATOR)' > "$BATS_TEST_TMPDIR/src/BA.java"
+  printf 'setpoint=Setpoint\n' > "$BATS_TEST_TMPDIR/src/module.lexicon"
+  cp "$BATS_TEST_TMPDIR/src/BA.java" "$BATS_TEST_TMPDIR/src/BU.java"
+  chmod 000 "$BATS_TEST_TMPDIR/src/BU.java"
+  if [ -r "$BATS_TEST_TMPDIR/src/BU.java" ]; then skip "running as root"; fi
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  [ "$status" -eq 3 ]
+  [ "$output" = "generate-wiring-map: cannot read $BATS_TEST_TMPDIR/src/BU.java: Permission denied" ]
+  rm -f "$BATS_TEST_TMPDIR/src/BU.java"
+  chmod 000 "$BATS_TEST_TMPDIR/src/module.lexicon"
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  [ "$status" -eq 3 ]
+  [ "$output" = "generate-wiring-map: cannot read $BATS_TEST_TMPDIR/src/module.lexicon: Permission denied" ]
+}

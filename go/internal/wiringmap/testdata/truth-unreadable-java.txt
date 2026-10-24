@@ -1,0 +1,11 @@
+-- args --
+@DIR@/src
+-- want --
+exit 3
+-- stderr --
+generate-wiring-map: cannot read @DIR@/src/BU.java: Permission denied
+-- @kind --
+truth: an unreadable source is an env error, never a shorter map (edge-unreadable-java at fa1201e6 printed gawk's fatal line, the map without its slots and exit 0)
+-- src/BA.java --
+@NiagaraProperty(name = "a", type = "double", defaultValue = "0", flags = Flags.OPERATOR)
+-- src/BU.java (unreadable) --

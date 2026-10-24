@@ -13,7 +13,8 @@ import (
 const usage = "usage: generate-wiring-map.sh <facade-src-dir> [--lexicon <module.lexicon>] [--output <file>]\n"
 
 // Main parses `<facade-src-dir> [--lexicon <file>] [--output <file>]` (options after the directory, the last
-// of each wins) and prints the map, or writes it to the --output file. Exits 0, or 3 for usage and env errors.
+// of each wins) and prints the map, or writes it to the --output file. Exits 0, or 3 for usage and env errors:
+// a directory the walk cannot list or a source or lexicon it cannot read prints no map.
 func Main(args []string, s cli.Stdio) int {
 	fail := func(format string, a ...any) int {
 		fmt.Fprintf(s.Err, "generate-wiring-map: "+format+"\n", a...)
@@ -53,13 +54,15 @@ func Main(args []string, s cli.Stdio) int {
 	for _, f := range files {
 		data, err := os.ReadFile(f)
 		if err != nil {
-			fmt.Fprintf(s.Err, "awk: cmd. line:2: fatal: cannot open file `%s' for reading: %s\n", f, strerror.Text(err))
-			continue
+			return fail("cannot read %s: %s", f, strerror.Text(err))
 		}
 		o, m := Slots(string(data))
 		op, sum = append(op, o...), append(sum, m...)
 	}
-	names := readLexicon(lexicon)
+	names, err := readLexicon(lexicon)
+	if err != nil {
+		return fail("cannot read %s: %s", lexicon, strerror.Text(err))
+	}
 	if out == "-" {
 		render(s.Out, src, rows(op, names), rows(sum, names))
 		return 0

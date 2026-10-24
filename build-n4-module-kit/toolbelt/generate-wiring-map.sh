@@ -33,6 +33,8 @@
 #   --output <file>    Write to <file> instead of stdout.
 #
 # Exits: 0 ok · 3 usage/env (K20)
+#   An unreadable *.java or lexicon is env (3, `generate-wiring-map: cannot read <file>: <reason>`, no map): the
+#   bash body skipped it and printed a map short of its slots or display names, exit 0.
 #
 # [ev: retro live-commissioning-verification-gaps Δ6]
 # Dot-directories excluded (D9b). VCS-free by design.

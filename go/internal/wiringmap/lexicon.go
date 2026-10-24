@@ -11,13 +11,16 @@ const awkSpace = " \t\n\v\f\r"
 // readLexicon reads the display names of a module lexicon (none for ""): each line that is not a comment
 // ("#" after optional blanks) and holds a "=" is a key (the text before the first "=") and a value (the
 // rest), both trimmed of blanks; the first line of a key wins and a "|" in a value is escaped as `\|` for the
-// table cell. An unreadable lexicon reads as empty.
-func readLexicon(path string) map[string]string {
+// table cell. An unreadable lexicon is an error: a map of placeholders would hide every display name.
+func readLexicon(path string) (map[string]string, error) {
 	names := map[string]string{}
 	if path == "" {
-		return names
+		return names, nil
 	}
-	data, _ := os.ReadFile(path)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
 	for _, ln := range strings.Split(strings.TrimSuffix(string(data), "\n"), "\n") {
 		k, v, ok := strings.Cut(ln, "=")
 		if !ok || strings.HasPrefix(strings.TrimLeft(ln, awkSpace), "#") {
@@ -28,7 +31,7 @@ func readLexicon(path string) map[string]string {
 			names[k] = strings.ReplaceAll(v, "|", `\|`)
 		}
 	}
-	return names
+	return names, nil
 }
 
 // row is one table row: the slot and its Workbench display name.

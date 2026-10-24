@@ -86,6 +86,7 @@ rec edge-tab-in-name "$D/src"
 new; put src/BA.java '@NiagaraProperty(name = "OPERATORish", flags = Flags.SUMMARY)\n'; rec edge-operator-in-name "$D/src"
 
 # --- walk ---
+# edge-unreadable-java and edge-unreadable-lexicon became truth-* cases (exit 3); not re-recorded.
 new; put src/b/BZ.java "$(op z)"; put src/BA.java "$(op a)"; put src/a.java "$(op lower)"; put src/B_.java "$(op under)"
 rec edge-order "$D/src"
 new; put src/BA.java "$(op a)"; put src/.hidden/BH.java "$(op hidden)"; put src/x-worktrees/BW.java "$(op wt)"
@@ -95,8 +96,6 @@ new; put src/BA.java "$(op a)"; put other/BO.java "$(op linked)"; ln -s ../other
 rec edge-symlinks-below "$D/src"
 new; put src/x/BA.java "$(op a)"; put src/y/BA.java "$(op a SUMMARY)"; put src/module.lexicon 'a=Same\n'
 rec edge-duplicate-slot "$D/src"
-new; put src/BA.java "$(op a)"; put src/BU.java "$(op u)"; chmod 000 "$D/src/BU.java"; rec edge-unreadable-java "$D/src"
-new; put src/BA.java "$(op a)"; put src/module.lexicon 'a=X\n'; chmod 000 "$D/src/module.lexicon"; rec edge-unreadable-lexicon "$D/src"
 new; put src/A.java 'class A {}\n'; mkdir -p "$D/src/z/locked" "$D/src/a/locked"; chmod 000 "$D/src/z/locked" "$D/src/a/locked"
 rec edge-two-locked "$D/src"
 new; put src/BRoom.java "$(op a)"; put src/Bx.java "$(op b)"; put src/B.java "$(op c)"; rec edge-type-names "$D/src"

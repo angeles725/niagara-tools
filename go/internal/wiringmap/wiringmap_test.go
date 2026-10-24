@@ -30,7 +30,11 @@ func TestDisplayNames(t *testing.T) {
 	if err := os.WriteFile(lex, []byte("# sp=comment\nnoequals\n sp = Set|point \nsp=second\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got := rows([]string{"sp", "temp"}, readLexicon(lex))
+	names, err := readLexicon(lex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := rows([]string{"sp", "temp"}, names)
 	want := []row{{"sp", `Set\|point`}, {"temp", "_(no lexicon key)_"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("rows = %q, want %q", got, want)
