@@ -71,8 +71,7 @@ new; put src/BA.java '@NiagaraProperty(name = "nested", defaultValue = "BDouble.
 rec edge-nested-parens "$D/src"
 new; put src/BA.java '@NiagaraProperty(name = "open", flags = Flags.OPERATOR,\n  defaultValue = "x"\n'
 rec edge-unbalanced-eof "$D/src"
-new; put src/BA.java '@NiagaraProperty(name = "lit", defaultValue = "BString.make(\\"(\\")", flags = Flags.OPERATOR)\n'"$(op after SUMMARY)"
-rec edge-paren-in-literal "$D/src"
+# edge-paren-in-literal became truth-paren-in-literal (parentheses are counted outside literals); not re-recorded.
 new; put src/BA.java '// a note on @NiagaraProperty usage\n'"$(op real)$(op next SUMMARY)"
 rec edge-comment-no-paren "$D/src"
 # edge-commented-out and edge-javadoc-open-paren became truth-commented-out and truth-javadoc-open-paren

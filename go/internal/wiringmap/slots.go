@@ -15,15 +15,22 @@ import (
 var slotName = regexp.MustCompile(`name[ \t\n\v\f\r]*=[ \t\n\v\f\r]*"([^"]+)"`)
 
 // Slots returns the slot names of the @NiagaraProperty annotations of one Java source, in source order:
-// op those whose annotation text holds "OPERATOR", sum the others that hold "SUMMARY" or "READONLY". An
-// annotation is joined from its "@NiagaraProperty" line until a "(" was seen and the parentheses balance,
-// counted as text (javasrc.NiagaraProperties); one with no name is skipped. Comments are blanked first
-// (javasrc.Strip): a commented-out annotation is no slot, and a "(" in a comment that names @NiagaraProperty
-// cannot hold the scan open over the annotations below it.
+// op those whose annotation text holds "OPERATOR", sum the others that hold "SUMMARY" or "READONLY". Comments
+// are blanked first (javasrc.Strip): a commented-out annotation is no slot, and a "(" in a comment that names
+// @NiagaraProperty cannot hold the scan open over the annotations below it. An annotation is joined from its
+// "@NiagaraProperty" line until a "(" was seen and the parentheses outside literals balance
+// (javasrc.PropertyScan over javasrc.MaskLiterals lines); its name and flags are read from the joined code
+// with literals kept. One with no name is skipped.
 func Slots(src string) (op, sum []string) {
 	lines, _ := javasrc.Lines(strings.NewReader(src))
 	code, _ := javasrc.Strip(lines)
-	javasrc.NiagaraProperties(code, func(text string, _ int) {
+	scan := javasrc.PropertyScan{NeedParen: true}
+	for i, ln := range javasrc.MaskLiterals(code) {
+		_, first, ok := scan.Line(ln, i+1)
+		if !ok {
+			continue
+		}
+		text := " " + strings.Join(code[first-1:i+1], " ")
 		m := slotName.FindStringSubmatch(text)
 		switch {
 		case m == nil:
@@ -32,6 +39,6 @@ func Slots(src string) (op, sum []string) {
 		case strings.Contains(text, "SUMMARY") || strings.Contains(text, "READONLY"):
 			sum = append(sum, m[1])
 		}
-	})
+	}
 	return op, sum
 }

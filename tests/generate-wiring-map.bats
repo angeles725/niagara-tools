@@ -169,3 +169,14 @@ setup() {
   [[ "$output" == *'| `setpoint` |'* ]]
   [[ "${output#*Table 2}" == *'| `reading` |'* ]]
 }
+
+@test "GWM-literal-paren: a \"(\" inside a string literal does not hold the annotation open" {
+  # Mutation: GWM-literal-paren -- counting parentheses inside literals swallows this slot and the next one
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf '%s\n' '@NiagaraProperty(name = "label", type = "String", defaultValue = "BString.make(\"(\")", flags = Flags.OPERATOR)' \
+    '@NiagaraProperty(name = "reading", type = "double", flags = Flags.SUMMARY)' > "$BATS_TEST_TMPDIR/src/BA.java"
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'| `label` |'* ]]
+  [[ "${output#*Table 2}" == *'| `reading` |'* ]]
+}
