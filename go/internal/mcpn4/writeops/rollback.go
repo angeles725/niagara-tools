@@ -15,7 +15,8 @@ import (
 // Rollback is n4_rollback: the recorded inverse of a journaled batch, run as a new batch linked
 // to it. A re-created subtree gets one add per nested component and its links back as ops of
 // the same batch (Run); the read-back reports what the snapshot could not bring back.
-var Rollback = plan.Impl{ScopeOrds: func(*pyjson.Object) []any { return nil }, PlanWith: rollbackPlan}
+var Rollback = plan.Impl{ScopeOrds: func(*pyjson.Object) []any { return nil }, PlanWith: rollbackPlan,
+	Run: rollbackRuns}
 
 // batchJournal is what the rollback reads of the journal (journal.Journal).
 type batchJournal interface {
