@@ -176,6 +176,9 @@ rule's rows stay contiguous.
    A new rule with no bash lint behind it (reference: `rules/machinedefaultpath`) writes its golden cases by
    hand from the doctrine (usage, empty root, pruned directories, several roots) and its table tests from the
    doctrine's positive and negative shapes, RED first.
+   A command that writes files records each one as an `@expect <file>` section of its case, and runs
+   every case with the case tree as its working directory, so relative `--output` paths replay too
+   (reference: `internal/wiringmap`, `testdata/record/record.sh`). `[ev: retro r10-generate-wiring-map-go Δ1]`
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every
@@ -184,9 +187,17 @@ rule's rows stay contiguous.
    hand-written `testdata/truth-*.txt` case (same format) plus a bats test whose `# Mutation:` pin names it.
    A line-matching rule reads `linescan.Code(f)` (or `f.Stripped()` when the token lives in a literal),
    never the raw line cut at its first `//` (string-unaware: a `//` in "http://h" hid the rest of the line).
+   An annotation harvest joins `@NiagaraProperty` lines with `javasrc.PropertyScan` over the
+   `javasrc.MaskLiterals` view of the `javasrc.Strip` lines and reads the name and flags from the
+   stripped text: on raw lines a `(` in a javadoc or a string literal held the scan open and dropped every
+   annotation after it, and a flag word in a comment changed the table. `[ev: retro r10-generate-wiring-map-go Δ3]`
 
 Do not copy the walker, the formatter, the argument parser or the comment stripper into a rule package;
 change the shared code instead.
+A tool that writes a file another tool reads (generate-wiring-map writes the map obix-link-audit reads)
+tests its output through the reader's parser (`wiringmap.TestMapReadBack` calls `obixlinkaudit.DeclaredRows`),
+and the reader finds a column by its header cell, never by a fixed index: a column added to the generator
+shifted the audited RT slot onto the display name. `[ev: retro r10-generate-wiring-map-go Δ2]`
 
 ## XML rules
 
