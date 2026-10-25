@@ -225,12 +225,12 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
 | `test_retro.py` | 36 | 20 | 0 | 1 | 0 | 21 | 15 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
-| `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
+| `test_server.py` | 105 | 4 | 14 | 5 | 7 | 30 | 75 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 101 | 4 | 7 | 13 | 2 | 26 | 75 |
 | `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
 | `test_write_parity.py` | 31 | 0 | 0 | 0 | 0 | 0 | 31 |
-| **Total** | **688** | **166** | **34** | **90** | **18** | **308** | **380** |
+| **Total** | **692** | **166** | **34** | **90** | **18** | **308** | **384** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -1150,3 +1150,47 @@ session open on the station until it times out. Its two markers stay `TWIN_DEBT`
 `test_server.TestRobustness.test_serve_exits_cleanly_on_keyboard_interrupt_and_closes` and
 `test_box.TestLockoutSafeOpen.test_interrupt_after_make_still_closes_the_server_session`.
 Under Go: 688 tests, 308 skipped (the two harness tests are new).
+
+## 22. S16d shutdown parity
+
+The section 21 difference, fixed. Measured first against FakeStation with a session open (`n4_connect`):
+
+| Stop | Python | Go before | Go after |
+|---|---|---|---|
+| SIGINT, idle or mid-request | session deleted, exit 0, no output | killed (-2), session left | as Python |
+| SIGINT after `make`, before the open completes | open's cleanup deletes it, exit 0 | killed (-2), session left | as Python |
+| SIGTERM | no handler: killed (-15), session left | killed (-15), session left | as SIGINT |
+| stdin EOF | session deleted, exit 0 | the same | unchanged |
+| client gone mid-reply (EPIPE) | session deleted, traceback, exit 120 | killed by SIGPIPE (-13), session left | session deleted, one stderr line, exit 1 |
+
+**Fix.** `cli.Main` turns the first SIGINT or SIGTERM into the cancellation of one context
+(`watchSignals`). `box.Config.Interrupt` cancels every station request in flight or to come;
+`jsonrpc.ServeContext` returns nil at once, even while a stdin read blocks, and writes no reply for
+a request the interrupt cut short; the deferred `Context.Close` then deletes the session. All of it
+runs on the serving goroutine: no client state is shared with the signal handler. `Client.Close`'s
+del ignores the interrupt and has its own whole-request deadline of the client timeout
+(`--http-timeout`, 20 s by default), so a dead or dripping station cannot hang the shutdown; a
+failure after `make` (the interrupt cancelling `makessc` or `loadRoot`) still sends that del. A
+second signal during the shutdown exits at once with 128+signo; the journal and audit append each
+line in one write, so nothing is left half-written. SIGPIPE is ignored, as Python ignores it.
+
+**Declared differences.** Go handles SIGTERM like SIGINT (Python dies by it and leaves the
+session); MCP hosts stop servers with SIGTERM. On EPIPE Go exits 1 with `mcp_n4.server: write ...:
+broken pipe`, Python 120 with a traceback: both close the session. A write tool cut short sees the
+cancelled station call as a transport failure and may record it like one, where Python's
+KeyboardInterrupt unwinds past those records (not measured).
+
+**Tests.** `test_server.TestShutdown` drives the real process (the Go binary; `python -m
+mcp_n4.server` under `MCP_N4_IMPL=python`) with real signals sent only to its own child: SIGINT,
+SIGINT after `make`, SIGTERM (Go only) and a client gone mid-reply. On the Go binary before the fix
+all four failed (`-2`, `-2`, `-15`, `-13`, the session left). Go twins resolve the two markers:
+`jsonrpc.TestServeContextStopsOnInterruptAndClosesTheSession` and
+`box.TestInterruptAfterMakeStillClosesTheServerSession`; `TWIN_DEBT` is empty (ceiling 0). Unit
+tests pin the forced second signal, the interrupted run's exit 0 with no output and the dripping
+del cut at the timeout. Under Go: 692 tests, 308 skipped.
+
+**Mutation.** 10 hand mutants, all RED, none survive: del on the interrupt context, no cleanup
+close in `Open`, a reply written after the interrupt, no interrupt case in the serve select (the
+blocked read hangs), SIGPIPE not ignored (black-box exit -13), no del deadline, the second signal
+ignored, the first signal exiting, the interrupt reported as a loop error, `Close` keeping the sid
+(a double del).
