@@ -232,7 +232,7 @@ One command runs the module's station tests on a throwaway copy of the install a
 toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-root <client gradle root> \
   --part ModuleA-rt --module ModuleA [--timeout 30m] [--keep-home] [--scratch '<dir under %TEMP%>'] \
   [--jdk8 /usr/lib/jvm/java-8-openjdk-amd64] [--gradle-user-home ~/.gradle] [--module-verification low] \
-  [--exclude-jar '<glob>']... [--restore-gradle-root] [--log-dir <dir>]
+  [--exclude-jar '<glob>']... [--restore-gradle-root] [--log-dir <dir>] [--reuse-home '<kept dir>']
 ```
 
 - It copies the install into a new dir under `%TEMP%` (robocopy: `bin etc jre lib security defaults`, then the
@@ -323,6 +323,18 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   `(truncated: ...)` row, so a cut never splits a path the redactor must see whole. A missing or unreadable results
   file is a `testng-results.xml unavailable: <why>` row in the log's `kept evidence` section; a green run keeps
   neither file `[ev: retro r10-rnt-fail-evidence Δ1]`.
+- **`--reuse-home '<kept dir>'` boots a second time on a home a `--keep-home` run kept**, so a test can prove what
+  survives a station restart (data written in boot 1, read back in boot 2). It is the one flag that points the
+  runner at an existing dir, so it is guarded: the dir must lie under the scratch parent, must not be, hold or sit
+  in a real `%USERPROFILE%\Niagara4.*\<brand>` or have `registry\`/`security\` at its top (D3; a copied marker
+  changes nothing), and must carry the `run-niagara-test.marker` every run writes in its dir (run id, install,
+  sha256 of the install's `defaults\system.properties`, and the run log a `--keep-home` run wrote). The marker's
+  run id must be the one that log, in `--log-dir`, records, and its install and sha256 this run's; each mismatch
+  is exit 2 naming the field. Nothing is copied again: the home copy, its registry and the scratch
+  `niagara_user_home` (station data) stay; `:jar`/`:moduleTestJar` rebuild the module jars into it and `out\`
+  starts empty. `--exclude-jar` and `--module-verification` are exit 2 with it (the kept copy keeps boot 1's).
+  The dir is deleted at the end (`cleanup: deleted <dir>`) unless `--keep-home` is given again. Proven on the fake
+  runner only; a live two-boot reload on a client root is owed `[ev: retro r10-rnt-reuse-home Δ1]`.
 - **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13) and 7.6.22 (observed), `:<part>:compileModuleTestJava` appends every
   `@NiagaraType` test class to the PRODUCTION `<part>/module-include.xml`** (never to `moduleTest-include.xml`), and
   it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types (a
