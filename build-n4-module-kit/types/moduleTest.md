@@ -635,8 +635,14 @@ the main Gradle section above).
   `@Test(enabled = false)` a type of `<part>/moduleTest-include.xml` declares, or inherits from a `srcTest/`
   superclass, is `<SimpleName>.<method>`; their count must equal the root `ignored`, and `--allow-ignored
   <Class.method>` (repeatable, with `--allow-ignored-reason`) waives exactly that set, a new or a stale name FAIL. A
-  class-level disable, a non-literal `enabled` or an unreadable registered source is exit 3 before the build; the
-  count pair stays the fallback that skips the source `[ev: retro r10-rnt-ignored-names Δ1]`.
+  class-level disable, a non-literal `enabled` or an unreadable registered source is exit 3 before the build
+  `[ev: retro r10-rnt-ignored-names Δ1]`.
+- **The count fallback can hide the same swap:** a count that skips the source passes a swapped disable again. `run`
+  scans the source under `--allow-ignored-count` too and prints the scanned names; the count is accepted only when
+  the scan refused (case (i): a NOTE row, not exit 3) or the source count differs from the root `ignored` (case
+  (ii): a group exclusion, a base outside `srcTest/`), and the row names the case. When the scan names every
+  ignored method the count FAILs ("use --allow-ignored names"); the reason is a printed note and never overrides
+  that. `verdict --testng` has no source and keeps the count pair `[ev: retro r10-rnt-fallback-strict Δ1]`.
 - **A green run proves nothing for a test that cannot fail or never runs:** an `assertTrue(true)` placeholder, a
   test with no assertion, and a JUnit `assumeTrue(false)` (or a first-statement `throw new SkipException`) all
   pass or skip silently. `lint-vacuous-tests.sh <gradle-root>` FAILs each `@Test` method under `srcTest/` of these

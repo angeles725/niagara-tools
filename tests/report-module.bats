@@ -37,7 +37,9 @@ setup() {
 @test "RM2: a timer-leak class surfaces the lint-timers FAIL row and exits 1" {
   run "$RM" --lint-only "$FX/leak"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"timer-ticket"* ]] && [[ "$output" == *"BLeak"* ]]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"timer-ticket"* ]]
+  [[ "$output" == *"BLeak"* ]]
   # the relayed row keeps the line lint-timers points at: "timer-ticket  BLeak.java:<n>  <msg>"
   [[ "$output" =~ timer-ticket\ \ BLeak\.java:[0-9]+\ \ [a-z] ]]
 }
@@ -102,7 +104,8 @@ setup() {
   # retypes it to baja:String -> schema-risk exit 2 (OUTAGE). No flag: the baseline is discovered.
   run "$RM" --lint-only "$FX/schema-outage"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"schema-risk"* ]]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"schema-risk"* ]]
   [[ "$output" == *"verdict=OUTAGE"* ]] || [[ "$output" == *"OUTAGE"* ]]
   [[ "$output" != *"ERROR"* ]]     # exit 2 (OUTAGE) is a finding, not an env fault
 }
@@ -204,7 +207,9 @@ setup() {
   # bql-warn/DemoPan-rt/src/com/x/BQuery.java concatenates into a bql: string
   run "$RM" --lint-only "$FX/bql-warn"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-bql-string-concat"* ]] && [[ "$output" == *"BQuery.java"* ]]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"lint-bql-string-concat"* ]]
+  [[ "$output" == *"BQuery.java"* ]]
   [[ "$output" == *"CLEAN"* ]]
 }
 
@@ -212,7 +217,8 @@ setup() {
   # ux-no-specs/DemoPan-ux/src/rc/index.html exists but srcTest/rc/spec/ is absent
   run "$RM" --lint-only "$FX/ux-no-specs"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-jasmine-ux"* ]]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"lint-jasmine-ux"* ]]
   [[ "$output" == *"CLEAN"* ]]
 }
 
@@ -340,7 +346,9 @@ setup() {
   # md5-cred-warn/DemoPan-rt/src/com/x/BAuth.java uses MessageDigest.getInstance("MD5") + BPassword
   run "$RM" --lint-only "$FX/md5-cred-warn"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-no-md5-credential-digest"* ]] && [[ "$output" == *"BAuth.java"* ]]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"lint-no-md5-credential-digest"* ]]
+  [[ "$output" == *"BAuth.java"* ]]
   [[ "$output" == *"CLEAN"* ]]
 }
 

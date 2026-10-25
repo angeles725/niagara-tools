@@ -277,16 +277,34 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	return p, -1
 }
 
+// scanIgnored names the disabled test-methods of the part's registered types from the source before the build,
+// under every allowance, and prints them. A refusal stops the run (exit 3) unless the count fallback is given:
+// then it is a NOTE row and the count is judged as case (i). -1 goes on.
+func scanIgnored(p *plan, s cli.Stdio) int {
+	src, err := disabledInSource(filepath.Join(p.gradleRoot, filepath.FromSlash(strings.ReplaceAll(p.part, ":", "/"))))
+	switch {
+	case err != nil && p.allow.Count == 0:
+		row(s, "FAIL", "source: "+err.Error())
+		return exitEnv
+	case err != nil:
+		row(s, "NOTE", "source: "+err.Error()+"; the count fallback applies (case (i): the source scan refused)")
+		p.allow.Refused = err.Error()
+	default:
+		names := ""
+		if len(src) > 0 {
+			names = ": " + named(src)
+		}
+		row(s, "PASS", "source: the registered types disable "+plural(len(src), "test-method", "test-methods")+names)
+		p.allow.Source, p.allow.Scanned = src, true
+	}
+	return -1
+}
+
 // execute snapshots the gradle root, the install and the real user homes, creates the scratch dir, then copies,
 // builds, runs and judges; cleanup runs on every path out, a panic included (the panic goes on after it).
 func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
-	if p.allow.Count == 0 { // names, or no allowance: the ignored methods are named from the source before the build
-		src, err := disabledInSource(filepath.Join(p.gradleRoot, filepath.FromSlash(strings.ReplaceAll(p.part, ":", "/"))))
-		if err != nil {
-			row(s, "FAIL", "source: "+err.Error())
-			return exitEnv
-		}
-		p.allow.Source, p.allow.Scanned = src, true
+	if code := scanIgnored(p, s); code >= 0 {
+		return code
 	}
 	var ok bool
 	if p.rootTop, ok = h.rootTop(ctx, p.gradleRoot); !ok {

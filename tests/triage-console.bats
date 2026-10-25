@@ -28,7 +28,9 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"IllegalArgumentException: time <= 0"* ]]
   [[ "$output" == *"BDefrostController.java:431"* ]]
-  [[ "$output" == *"2"* ]] && [[ "$output" == *"16:20:10"* ]] && [[ "$output" == *"18:58:19"* ]]
+  [[ "$output" == *"2"* ]]
+  [[ "$output" == *"16:20:10"* ]]
+  [[ "$output" == *"18:58:19"* ]]
   [[ "$output" != *"NullPointerException"* ]]   # jetty-only trace has no own frame -> ignored
 }
 
@@ -95,7 +97,8 @@ setup() {
   run "$TC" --package com.angeles "$FX/console-load-fail.txt"
   [ "$status" -eq 1 ]
   [[ "$output" == *"ClassCastException"* ]]             # the previously-invisible fatal is now surfaced
-  [[ "$output" == *"BRelTime"* ]] && [[ "$output" == *"BComplex"* ]]
+  [[ "$output" == *"BRelTime"* ]]
+  [[ "$output" == *"BComplex"* ]]
   [[ "$output" == *"RoomPanel"* ]] || [[ "$output" == *"differentialUp"* ]]   # a sys.xml drift row grouped in
   [[ "$output" != *"com.tridium.sys.station.Station"* ]]  # the tridium boot frame is noise, not a row
 }
@@ -126,7 +129,8 @@ setup() {
 @test "TR10: a mixed console (bacnet/auth/recovery foreign + one own time<=0) -> exactly the own row, NO foreign rows" {
   run "$TC" --package com.angeles "$FX/console-foreign.txt"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"time <= 0"* ]] && [[ "$output" == *"BDefrostController"* ]]   # the own row is present
+  [[ "$output" == *"time <= 0"* ]]
+  [[ "$output" == *"BDefrostController"* ]]   # the own row is present
   [[ "$output" != *"Transaction Timed out"* ]]     # bacnet SEVERE, com.tridium-only stack -> excluded
   [[ "$output" != *"authenticate"* ]]              # [authentication] -> excluded
   [[ "$output" != *"Recovery data"* ]]             # [platDataRecovery.service] -> excluded
@@ -137,7 +141,8 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"time <= 0"* ]]
   [[ "$output" == *"2"* ]]                         # cross-file count = 2 (one row, not one-per-file)
-  [[ "$output" == *"16:20:10"* ]] && [[ "$output" == *"18:58:19"* ]]   # first ts from a.txt, last from b.txt
+  [[ "$output" == *"16:20:10"* ]]
+  [[ "$output" == *"18:58:19"* ]]   # first ts from a.txt, last from b.txt
   [[ "$output" == *"console-multi"* ]]             # subject is the directory basename when a dir is passed
 }
 
