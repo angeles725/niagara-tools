@@ -467,10 +467,13 @@ the main Gradle section above).
 
 - **`niagaraTest` from a WSL-side Gradle (plugin 7.6.17) discovers 0 `moduleTest` tests.** Run it on Windows
   (§ Running from WSL); a 0-test `BUILD SUCCESSFUL` is a failure, never a pass. `[ev: corpus B807 §807.1]`
-- **`niagaraTest` can report BUILD SUCCESSFUL with zero tests or a rejected test jar.** Until the owed runner exists
-  (Go tool G33 `run-niagara-test`: scratch copy, `:clean` first, PASS only when every `Total tests run: N` has N > 0
-  and 0 failures, FAIL on `invalid test target(s)` or `failed signature validation`, back up and restore
-  `modules/<part>.jar`), read those lines in the output yourself (§ Running from WSL). `[ev: retro testing-parity-btestng Δ2]`
+- **`niagaraTest` can report BUILD SUCCESSFUL with zero tests or a rejected test jar.** Save the run's output
+  (`test.exe <module> -v:2` or the gradle log) and judge it with `toolbelt/run-niagara-test.sh verdict <log>` (or
+  `-` for stdin): PASS (exit 0) only when every `Total tests run: N` has N > 0 and 0 failures; FAIL (exit 1) on
+  `invalid test target(s)`, `failed signature validation`, a stray failure count or no summary; never the run's
+  exit code. Phase 1 is the verdict only: run the test yourself (§ Running from WSL; `:clean` first, back up and
+  restore `modules/<part>.jar`) until the runner half of G33 lands. `[ev: retro testing-parity-btestng Δ2]`
+  `[ev: retro r10-run-niagara-test-go]`
 - **No test depends on the network or Wi-Fi:** a test that needs a reachable host fails for reasons the code does
   not control. Pure seams (`run-pure-test.sh`) or a station-local fixture replace it. `[ev: corpus B1418 §1418.5 g]` `[ev: retro course-recordings Δ7]`
 - **Do not run `gradle -t` with IDE autosave:** continuous build compiles half-written files and reports

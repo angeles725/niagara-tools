@@ -1,0 +1,20 @@
+-- args --
+verdict
+@DIR@/run.log
+-- want --
+exit 1
+FAIL  run-niagara-test  line 2: run 6, failures 2, skips -; 2 failures
+PASS  run-niagara-test  line 4: run 3, failures 0, skips 0
+FAIL  run-niagara-test  line 1: 5 failures (a Failures line outside a test summary)
+FAIL  run-niagara-test  line 3: invalid test target(s): the test NRE rejected the test module
+FAIL  run-niagara-test  line 5: malformed test summary
+FAIL  run-niagara-test  verdict: 4 FAIL reasons
+-- @kind --
+truth: hand-written from the C40 contract (testdata/README.md); there is no bash tool to record from
+-- run.log --
+Failures: 5
+Total tests run: 6, Failures: 2
+invalid test target(s)
+Total tests run: 3, Failures: 0, Skips: 0
+Total tests run: many
+BUILD SUCCESSFUL
