@@ -33,6 +33,12 @@
 #   L15 WARN  the ROOT build.gradle.kts beside that settings.gradle.kts applies com.tridium.niagara-signing
 #             without the signing block (uncommented allowDefaultProfile.set(false) or = false, niagaraSigning {,
 #             aliases, signingProfileFile) — a missing profile then signs with the self-signed default key (#266)
+#   L16 FAIL  the gradle.properties beside that settings.gradle.kts names (niagaraSigningProfile) a
+#             LocalSigningProfile whose niagara.signing.validity - niagara.signing.refresh is below 32 days: the
+#             signing plugin re-mints its key at every signing and the jars carry a signature block no JVM verifies.
+#             One predicate with run-niagara-test (go/internal/signingprofile). A named profile that does not exist
+#             WARNs (margin unchecked); one that is not a properties XML file or holds a non-integer day count is
+#             exit 3 [ev: retro r10-signing-margin-lint Δ1]
 #   (L8 signed-jar check is in verify-module.sh)
 #
 # Usage:  lint-structure.sh <module-root>
@@ -68,6 +74,7 @@
 # Mutation: LS7 -- removes 3-part version floor check, allowing :baja:4.14 (2-part) to pass instead of FAIL
 # Mutation: LS14 -- drops the L14 hardcoded-gradlePluginVersion check, letting a literal pin pass instead of FAIL
 # Mutation: LS15 -- drops the L15 root signing-block check, so the wizard root (LS15) no longer WARNs
+# Mutation: LS16-margin -- lowering signingprofile.MinMargin to 31 passes a 214/183 LocalSigningProfile
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
