@@ -10,7 +10,7 @@
 #        run-niagara-test.sh run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
 #                                [--timeout <dur, default 30m>] [--keep-home] [--scratch <dir>]
 #                                [--jdk8 <WSL JDK 8 dir, default /usr/lib/jvm/java-8-openjdk-amd64>]
-#                                [--gradle-user-home <dir, default ~/.gradle>]
+#                                [--gradle-user-home <dir, default ~/.gradle>] [--module-verification low]
 # Contract: PASS only when the log holds at least one `Total tests run: N` line and every one has N > 0 and
 # `Failures: 0`. FAIL on a summary with 0 tests, failures or no Failures count; a `Failures:` key outside a
 # summary with a count above 0 or a value that is no count; `invalid test target(s)`; `failed signature
@@ -39,6 +39,13 @@
 # cmd.exe `set "…"` does not reach it, as WSL re-quotes its inner quotes. Exits: 0 PASS; 1 FAIL; 2 usage or refused;
 # 3 environment (cmd.exe, robocopy, gradle, cleanup); 4 --timeout reached, the run killed. The tool opens no
 # port: a test that needs Fox on loopback only turns Fox off (types/driver-authoring.md § 12.1).
+# --module-verification low (TEST ONLY, off by default, `low` its only value): after robocopy, append
+# niagara.moduleVerificationMode=low (the file's own line ending) to the COPY's defaults\system.properties, never the
+# install's: 4.15 leaves the line commented out, so the code default medium rejects a self-signed test jar ("failed
+# signature validation", then "invalid test target(s)", exit 0); 4.14 ships low. A copy whose file resolves inside
+# --install or outside the run's scratch dir is refused (exit 2); the install's file is hashed before and after (a
+# change is FAIL). low still rejects a module requesting a signature-required permission group. Never use it on a
+# commissioning or production home.
 #
 # Implementation: go/internal/niagaratest (goldens in its testdata/, hand-written: no bash tool to record from).
 # go/go-tool.sh `go_tool_bin` builds go/bin/run-niagara-test when it is missing or older than a Go source, then

@@ -213,7 +213,7 @@ One command runs the module's station tests on a throwaway copy of the install a
 ```bash
 toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-root <client gradle root> \
   --part ModuleA-rt --module ModuleA [--timeout 30m] [--keep-home] [--scratch '<dir under %TEMP%>'] \
-  [--jdk8 /usr/lib/jvm/java-8-openjdk-amd64] [--gradle-user-home ~/.gradle]
+  [--jdk8 /usr/lib/jvm/java-8-openjdk-amd64] [--gradle-user-home ~/.gradle] [--module-verification low]
 ```
 
 - It copies the install into a new dir under `%TEMP%` (robocopy: `bin etc jre lib security defaults`, then the
@@ -241,6 +241,17 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   none is left, and deletes only the dir it created (kept with `--keep-home`). Exits: 0 PASS, 1 FAIL, 2 usage or
   refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout (the run is killed).
 - The first boot of a copy takes about 4.5 min (registry rebuild); later boots 26-80 s.
+- **`--module-verification low` is TEST-ONLY, for the disposable copy; never use it on a commissioning or
+  production `niagara_home`.** Off by default, `low` its only value (anything else is exit 2). 4.14 ships
+  `niagara.moduleVerificationMode=low` in `defaults/system.properties` (warn only); 4.15 ships the line commented
+  out, so the code default `medium` applies and a test jar whose cert chain cannot be validated fails `failed
+  signature validation`, then `invalid test target(s)` with exit 0 (no `testng-results.xml`: FAIL). After robocopy
+  the runner appends that one line, in the file's own line ending, to the copy's `defaults\system.properties`
+  only (`PASS … module verification: low (copy only)`); a copy whose file resolves inside `--install` or outside
+  the run's scratch dir is refused (exit 2). The install's file is hashed before the copy and after cleanup (`install
+  defaults/system.properties unchanged (sha256 <8hex>)`; a change is FAIL). `low` still rejects a module that
+  requests one of the six signature-required permission groups. Without the flag, a rejected signature adds a
+  `hint:` row naming it `[ev: retro r10-rnt-module-verification Δ1]`.
 
 Fallback, by hand (the route the runner automates):
 
