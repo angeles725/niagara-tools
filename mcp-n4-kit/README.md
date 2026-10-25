@@ -46,14 +46,12 @@ v0.9.5 (issue #466): one unreadable `audit.jsonl` line (not UTF-8) no longer fai
 `n4_session_retro_draft`: the audit log is split and decoded line by line like the journal, the
 bad line is left out, and the draft's session summary says it is incomplete and names each one
 (`unreadable audit line N: UnicodeDecodeError`; no byte of the line is echoed). Both servers.
-Go port status, at v0.9.5 (docs/go-port-plan.md section 3): S6 added `n4_bql_query` and
-`n4_inventory`, S7 `n4_read_file`, `n4_list_px_views` and `n4_px_summary`, S8
-`n4_list_batches` and S9 `n4_session_retro_draft`, so the Go server (`go/cmd/mcp-n4`) serves
-all 13 read tools; every write tool answers "is not implemented in this version of the Go
-server", and it refuses `--allow-writes` at start.
-It is opt-in until S16: the `.mcp.json` example below launches Python; to try Go, launch
-`go/bin/mcp-n4` with the same flags. `MCP_N4_IMPL=go` only selects the server the test suite
-drives (docs/go-port-plan.md section 5).
+Go port status, at v0.9.5 (docs/go-port-plan.md sections 3 and 20): the Go server
+(`go/cmd/mcp-n4`, built to `go/bin/mcp-n4`) serves every read and write tool with the same
+flags, `--allow-writes` included (S0-S14), and the #304 in-doubt matrix is proven on both
+servers (S15). Since S16 it is the default: the `.mcp.json` example below launches it, the
+test suite and `tools/live_smoke.py` drive it unless `MCP_N4_IMPL=python`. The Python server
+(`python3 -m mcp_n4.server`) stays one release as the fallback, then is removed (S17).
 
 ## Methodology and skill
 
@@ -73,7 +71,8 @@ scripts/install-skill.sh --skill mcp-n4
 - `METHODOLOGY.md`, `skill/SKILL.md`: see above.
 - `mcp_n4/box.py`: BOX frame, session, `syncTo`, `checkLinks`, `invokeAction`,
   `pollchgs`, tree loading and status helpers. No side effects at import.
-- `mcp_n4/server.py`: stdio JSON-RPC 2.0 protocol layer and `main()`.
+- `mcp_n4/server.py`: stdio JSON-RPC 2.0 protocol layer and `main()` (the Python fallback;
+  the default server is the Go port in `../go/cmd/mcp-n4`).
 - `mcp_n4/tools_read.py`: the read tool implementations and the session state.
 - `mcp_n4/files.py`: pure station-file helpers (path guard, `/file/` URL, text detection,
   Px summary parser).
@@ -93,7 +92,7 @@ scripts/install-skill.sh --skill mcp-n4
 - `tests/fake_station.py`: fake BOX station on `127.0.0.1` (plain HTTP, tests only).
 - `tests/test_box.py`: unit tests.
 - `tests/go_server.py`, `tests/go_registry.py`, `tests/go_box.py`: the Go-port parity harness
-  (`MCP_N4_IMPL=go`; docs/go-port-plan.md sections 5-7).
+  (Go by default, `MCP_N4_IMPL=python` for the fallback; docs/go-port-plan.md sections 5-7).
 
 Security defaults: `http://` is refused unless `allow_http=True` (tests only),
 the password is never in `repr`, and HTTP 401/403 raises `AuthError` with no
@@ -107,12 +106,16 @@ the reason and the seconds left; `n4_describe_session` shows `auth_paused`. Only
 
 ## Running the server
 
-From `mcp-n4-kit/`:
+Build the Go server once (from the repository root: `cd go && go build -o bin/ ./cmd/mcp-n4`),
+then:
 
 ```
 MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
-  python3 -m mcp_n4.server --station MyStation=https://10.0.0.5
+  go/bin/mcp-n4 --station MyStation=https://10.0.0.5
 ```
+
+Fallback, removed after one release: the Python server takes the same flags, from
+`mcp-n4-kit/`: `python3 -m mcp_n4.server --station MyStation=https://10.0.0.5`.
 
 The server speaks newline-delimited JSON-RPC 2.0 on stdin/stdout. Credentials are
 read from the environment only (`<prefix>_USER` / `<prefix>_PASSWORD`) and never
@@ -183,10 +186,24 @@ export MCP_N4_KIT=/path/to/niagara-tools-main/mcp-n4-kit
 ```
 
 Register the server once per project, in that project's `.mcp.json` (Claude Code reads it from
-the project root). Use an absolute `cwd` to the kit, and keep the credentials in the
+the project root). Use an absolute path to the Go binary, and keep the credentials in the
 environment that launches the client: never commit them in `.mcp.json`.
 
 Example MCP client entry (Claude Code `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "n4": {
+      "command": "/path/to/niagara-tools/go/bin/mcp-n4",
+      "args": ["--station", "MyStation=https://10.0.0.5", "--insecure-tls", "MyStation"],
+      "env": {"MCP_N4_USER": "<user>", "MCP_N4_PASSWORD": "<secret>"}
+    }
+  }
+}
+```
+
+Python fallback (fallback, removed after one release): same flags, launched from the kit.
 
 ```json
 {
@@ -264,7 +281,7 @@ and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_set_slot`,
 `n4_save_station`. Example:
 
 ```
-python3 -m mcp_n4.server --allow-writes --write-scope 'station:|slot:/Sandbox'
+go/bin/mcp-n4 --allow-writes --write-scope 'station:|slot:/Sandbox'
 ```
 
 Every write call goes through these layers:
@@ -379,7 +396,9 @@ public tool interface: every write is dry run, token, execute, verdict. It runs 
 kitControl thermostat of B1199 inside a scratch folder `McpSmoke`, saves, removes the
 folder, rolls the removal back (probe-only: its verdict is recorded but does not gate
 the exit code), removes it again, saves and checks the folder is gone. Without
-`--apply` it only prints the scenario and contacts nothing.
+`--apply` it only prints the scenario and contacts nothing. It launches the Go server
+(`--go-bin PATH`, else `MCP_N4_GO_BIN`, else `go/bin/mcp-n4`; missing is exit 2);
+`--impl python` or `MCP_N4_IMPL=python` launches the Python fallback instead.
 
 ```
 MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
@@ -407,10 +426,15 @@ overwrite without `--force`. Nothing is staged as a GitHub issue automatically.
 ## Run the tests
 
 ```
+(cd go && go build -o bin/ ./cmd/mcp-n4)
 python3 -m unittest discover -s mcp-n4-kit/tests -v
+MCP_N4_IMPL=python python3 -m unittest discover -s mcp-n4-kit/tests -v
 ```
 
-Python 3.10+, stdlib only (no pytest, no MCP SDK).
+Python 3.10+, stdlib only (no pytest, no MCP SDK). The first run drives the Go binary (the
+default; a missing binary errors, never falls back), the second the Python fallback in-process;
+CI runs both. The mutation check and the untested-branch audit below measure the Python
+modules, so run them with `MCP_N4_IMPL=python`.
 
 Test isolation rules:
 
@@ -440,7 +464,8 @@ EOF
   removes every `__pycache__` under the kit and sets `PYTHONDONTWRITEBYTECODE=1`:
 
 ```
-python3 mcp-n4-kit/tools/mutation_check.py -- python3 -m unittest discover -s mcp-n4-kit/tests
+MCP_N4_IMPL=python python3 mcp-n4-kit/tools/mutation_check.py -- \
+  python3 -m unittest discover -s mcp-n4-kit/tests
 ```
 
   Exit codes: the command's own code; 2 on usage errors; 3 when the command cannot be
@@ -459,7 +484,7 @@ lines the suite never runs, with the stdlib `trace` module (no `coverage` depend
 none). From the repo root, about one minute:
 
 ```
-PYTHONDONTWRITEBYTECODE=1 python3 -m trace --count --missing --summary \
+MCP_N4_IMPL=python PYTHONDONTWRITEBYTECODE=1 python3 -m trace --count --missing --summary \
   --coverdir="$(mktemp -d)" --module unittest discover -s mcp-n4-kit/tests
 ```
 

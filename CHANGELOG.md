@@ -8,6 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+### Changed — mcp-n4 defaults to the Go server
+
+- `go/bin/mcp-n4` is now the default mcp-n4 server: every read and write tool is ported, and the in-doubt matrix is
+  proven on both servers. The Python server stays selectable for one release as a fallback (`MCP_N4_IMPL=python`,
+  `live_smoke.py --impl python`, and the README `.mcp.json` fallback example); it will be removed after that release.
+  CI gains a bounded `mcp-n4-go` job (15 min) that runs the black-box suite against the Go server; the Python run
+  stays as the fallback check. See `mcp-n4-kit/docs/go-port-plan.md` section 20.
+
 ### Added — client-identifier guard in `.githooks/pre-push`
 
 - The pre-push hook now runs niagara-go's `client-guard` first, with the hook arguments and the whole stdin:
