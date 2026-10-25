@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+---
+
+## [v0.32.1] - 2026-10-25
+
 ### Fixed — mcp-n4 Go server closes the station session on Ctrl-C/SIGTERM
 
 - The Go `mcp-n4` server (the default) died by SIGINT, SIGTERM or SIGPIPE and left its BOX session open on the
