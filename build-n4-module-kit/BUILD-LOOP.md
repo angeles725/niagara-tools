@@ -223,7 +223,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   SHA and at the tip it merges from (`git show <sha>:<path> | wc -l`), both SHAs stated, next to that output proof.
   An estimate is not a measurement: one `report-module.sh` refactor was reported as "~900", 882 and 885 lines
   (1610 → 885 at merge 9213b39). Review check: the counts reproduce from the stated SHAs.
-  `[ev: retro r10-dedupe-pins-measured-cuts Δ3]`
+  `[ev: retro r10-dedupe-pins-measured-cuts Δ3]` A port's test code is budgeted the same way, against the code it
+  replaces, reusing `golden.Runner` before any test-only package (the rule: `go/README.md` § Adding a lint rule,
+  step 3). `[ev: retro r10-stored-repack-go Δ3]`
 - **Pre-gate (run before `verify-module.sh`) — the lint list is GENERATED, not enumerated here:** `toolbelt/kit-state.sh lint-index` prints the generated lint index, which lists every `toolbelt/lint-*.sh` with what it checks, its usage, its exit contract, its evidence and whether `report-module.sh` already runs it (**Auto** column). `toolbelt/build.sh` → `report-module.sh` runs the Auto=`yes` lints per profile; run each Auto=`no` lint by hand on every profile its usage names (e.g. a `<wb-src-root>` lint on each -wb profile with Java sources, an `<ux-src-root>` lint on each -ux profile with an rc/ SPA). A new or changed lint updates its own header (line 2 `# <name> — <what it checks>`, a `# Usage:` line, an `# Exit:`/`# Exits:` line, its evidence tags), and commit the lint alone: the index is generated and not committed (`toolbelt/kit-state.sh --write` materializes it), so two PRs that each add a lint never conflict on it, and a new `report-module.sh` member (it flips the lint's Auto cell) needs no index commit either `[ev: retro issue-459-truth Δ2]`; `toolbelt/gen-lint-index.sh --check` (CI, pre-push) exits 1 on a broken header. `[ev: retro ledger-generated-not-committed]` Never enumerate or count lints in this file — that inline list was a merge-conflict hotspot that drifted. `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]`
 - **Non-lint pre-gate tools (not in the lint index):** `toolbelt/split-package-check.sh [--strict] <project-root>` (PROJECT-level, run on ONE project checkout before a release, never on a folder of several checkouts, which reports every package as split (`split-package-check.sh:16`) `[ev: retro go-split-package-check Δ2]`, not per module: a Java package declared under the `src/` of two or more modules is a WARN row — N4 class loading is first-dependency-wins, so one copy is silently shadowed; `--strict` exit 1 is the client-repository gate, issue #142: install it per client clone with `scripts/install-client-hooks.sh [--force] <client-repo>` — copies `templates/client-pre-push` to `<client-repo>/.githooks/pre-push` (commit it), sets that clone's `core.hooksPath` and its local `n4kit.toolbelt`, and refuses (exit 3, nothing changed) when that would silently stop other hooks — an active hook in `.git/hooks`, or a global/system hooksPath — until they are moved into `.githooks/` and it is re-run with `--force`; the hook checks every pushed COMMIT and blocks on a split package (exit 1) and on any check it cannot run (exit 3, no toolbelt) — never a silent pass; a client repo with GitHub CI copies `templates/split-package-check.yml` instead, which pins the kit to a release tag) [ev: retro module-hardening-failure-modes-deltas Δ12]; `toolbelt/slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>` (type-set lexicon coverage; empty or missing lexicon with declared types exits 1; a missing `*Panel`/`*Facade` type — every missing type under `--facade` — FAILs by default) [ev: retro panccadia-commissioning-lessons Δ9]; `toolbelt/schema-risk.sh <before-dir> <after-dir>` (two-snapshot slot diff before deploy; verdict SAFE/LOSSY/OUTAGE, exits 0/1/2/3/4 — exit 2 means the slot change would break saved data) [ev: retro campaign7-tool-integration] [ev: retro campaign7-plano]; `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present); `toolbelt/rc-scan.sh <ux-artifact-dir> [--strict] [--profile <ui_profile>] [--legacy]` (browser-resource lint over rc/ assets: hardcoded ORD/host literals, bare .catch(()=>{}), null display branches, plus the frontend-standard checks browser-floor (FAIL under --profile hmi|both), disabled-gate, fetch-no-signal, setinterval-async, innerhtml-server, datauri-budget, orphan-page, inline-block-size — check ids and severities in its header; exit 1 = FAIL) [ev: retro campaign8-rc-scan] [ev: retro dashboard-frontend-reliability-rules Δ5]; `toolbelt/generate-wiring-map.sh <facade-src-dir> [--lexicon <module.lexicon>]` (scaffolds `docs/wiring-map.md` from the facade @NiagaraProperty OPERATOR-config + SUMMARY-display slots, each row with the Workbench display name from the lexicon and a full-ord column, for §6.b commissioning verification) [ev: retro live-commissioning-verification-gaps]; `toolbelt/lib/method-boundary.sh` (shared method-boundary awk library — sourced, not invoked; fragment rule: edit the shared fragment, never overwrite a consumer lint's parser block separately) [ev: retro campaign11-shared-method-boundary]; `toolbelt/eslint.config.mjs` (the kit ESLint flat config for `-ux` rc js — ecmaVersion 2020 = the panel floor, `max-lines-per-function` 60, `no-unused-vars`, `eqeqeq`, `no-console` except error; run by report-module.sh; pinned install `npm install --prefix toolbelt/eslint`, which also provides acorn for `lint-vendor-floor.sh`) [ev: retro dashboard-frontend-standard Δ10]; `node toolbelt/hmi-sweep.js --url <preview-url> [--scenario name=query] [--subtab <sel>] [--target <sel>]` (HMI no-scroll + target-visibility sweep over every nav view at 1280×800; puppeteer-core + Chrome, exit 4 when unavailable) [ev: retro comppan-fase2-amps-alarms Δ3].
 - **Lint doctrine the index rows do not carry (rules, not an index — do not append new lints here):** run `toolbelt/lint-guard-pins.sh --strict` as the LAST pre-gate step; every lint declares a `# Mutation: <fixture-id> -- <what it flips>` guard-pin resolved against a bats `@test` [ev: retro campaign11-lint-guard-pins]. `lint-timers.sh` splits usage (exit 2) from env (exit 3) — the K20 per-lint contract, `lint-timers.sh:49/:72/:77` [ev: retro campaign10-lint-timers-scope]. `lint-timers.sh`, `lint-silent-protection.sh` and `lint-ext-writable-shape.sh` share the PEAK-depth parser in `lib/method-boundary.sh` [ev: retro campaign11-shared-method-boundary]. `lint-ext-writable-shape.sh` exempts PER SLOT: a `do<Action>()` body must write THAT slot (S22 contract change; a newly reported slot is a fixed false negative, not a regression) [ev: retro campaign10-ext-writable-per-slot]. `lint-write-path.sh` semantics: uncovered OPERATOR slot FAIL always exits 1; STALE (matrix row naming a slot absent from all source names, per-row, `[concept]` exempts only the marked row) and DRIFT (a `[concept]` row whose slot IS in the covered set) are advisory, promoted to exit 1 by `--strict`; `--bog` adds link-traced dashboard slots [ev: retro campaign8-write-path] [ev: retro campaign10-write-path-stale] [ev: retro campaign11-concept-row-drift].
@@ -240,13 +242,20 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     bash version on the real `Cliente/` trees, records before/after timing, and keeps the existing bats suite as
     its black-box test. `[ev: retro r8-t22-retro-deltas Δ8]` `toolbelt/preflight.sh` was counted as glue until its
     checks proved to parse (settings scripts, the signing block, an `lsof` listing) and two truth bugs surfaced; it
-    is `go/cmd/preflight` now. `[ev: retro r10-preflight-go Δ1]`
+    is `go/cmd/preflight` now. `[ev: retro r10-preflight-go Δ1]` A bats test that runs a Go-wrapped script under a
+    restricted PATH builds the binary in `setup_file` with the full PATH and links `find` and `readlink` into the
+    restricted one: the wrapper's staleness check is fail-closed and stays so (`tests/retro-loop.bats` RL4).
+    `[ev: retro go-kit-ticket Δ1]` Retiring a recorder or a private loop greps every header that names it
+    (`toolbelt/new-retro.sh` still named the deleted newretro recorder). `[ev: retro r10-wiringmap-runner Δ2]`
   - **Port byte-identical first, then fix** (steps: `go/README.md` § Adding a lint rule). Record the goldens from
     the bash lint on the current origin/main and re-record at the merge (main moved lint-servlet's walk under its
     port). Keep the bash quirks until old and new agree byte for byte on fixtures and real trees; a difference the
     shared code forces is declared in the port commit and pinned by its own case, never emulated: a raw-text
     emulation of what `xmlsrc` reads is the second tokenizer R8-D12 forbids (bog-audit's malformed bog,
     obix-link-audit's entity-spelled links). `[ev: retro go-bog-audit Δ8]` `[ev: retro go-obix-link-audit Δ1]`
+    A bash defect the port cannot reproduce (station-snapshot lost every manifest entry on an unwritable TMPDIR and
+    still exited 0; the port keeps no temp files) is a `truth-*` case whose `@kind` states the bash behaviour, so
+    the fix is visible, not just the new output. `[ev: retro go-station-snapshot Δ3]`
     Byte identity proves the port faithful, not right: where a sibling parser reads the same input, diff the
     port's parsed graph against it once (bog-audit's env-gated dump against niagara-go `bog-nav` found three
     blind spots the python shared). `[ev: retro go-bog-audit Δ9]` Then fix each truth bug in its own RED-first commit, a known
@@ -273,7 +282,13 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `JAVASRC_DIFF_ROOTS`): the landing PR states that it ran them, with the counts. `[ev: retro go-xmlsrc Δ3]`
     Byte parity on client trees is such a test: the repository is public, so goldens, fixtures and test data come
     from kit fixtures and hand-built edge trees only, and the PR reports the parity as run counts that name no
-    client. `[ev: retro go-slot-coverage Δ2]`
+    client. `[ev: retro go-slot-coverage Δ2]` A port of a tool whose defaults name clients keeps those default
+    lines unchanged in its wrapper and passes them in the environment (`TRIAGE_CONSOLE_DEFAULT_*`); the Go test
+    reads them from the wrapper, so a drift fails and the Go code gets no client string.
+    `[ev: retro go-triage-console Δ4]` A kit default that names a place on disk is derived from `$HOME` (or an env
+    override), never spelled with one user's home directory, and an empty `HOME` fails closed (exit 3) instead of
+    collapsing the path to `/` (`toolbelt/orient-guard.sh`, `tests/orient-guard.bats` OG10).
+    `[ev: retro r10-home-paths Δ1]`
   - **Record the shell's silent input drops as edge goldens before porting** (each is a fail-open the identity
     port keeps and a truth fix removes): `xargs` splits a path on a blank; one unreadable file makes gawk's fatal
     open skip every later file (clean under `2>/dev/null`); an open construct at a file end carries into the next
@@ -286,7 +301,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `x/`) `[ev: retro r10-preflight-go Δ2]`; `find -path "*V*"` matches V anywhere in the path, the start point
     included, so a version is matched as an exact directory name `[ev: retro r10-preflight-go Δ3]`; the first hit
     of a `find` is readdir order (host-dependent on ext4), so a Go walk reads in bytewise order
-    `[ev: retro r10-preflight-go Δ4]`.
+    `[ev: retro r10-preflight-go Δ4]`; a `grep` stage outside the awk's `LC_ALL=C` runs in the caller's locale, so
+    under UTF-8 a row holding a Latin-1 byte prints `binary file matches` instead of the row, exit 0
+    `[ev: retro go-triage-console Δ2]`.
   - **A network tool's bats run against a local `127.0.0.1` stand-in** (plain http and a throwaway self-signed
     https), never a stub of the client binary: curl stubs pinned argv/stdin plumbing the port no longer has, while
     the stand-in cases passed on the bash script and the port alike (`tests/obix-link-audit.bats` `_station`).
@@ -364,7 +381,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     string (lint-delays, lint-timers, lint-no-system-out) and miss a call split over lines
     (lint-null-context-write). A finding row carries `file:line` with a real line number, never an empty line
     or a rule ID in that position (lint-timers file-level rows, lint-structure L10/L14); `Line` 0 is only for a
-    finding about the whole file (`go/README.md` § Adding a lint rule). `[ev: retro truth-ported-rules Δ2]` Owed engine item G51. `[ev: retro go-lint-structure Δ3]`
+    finding about the whole file (`go/README.md` § Adding a lint rule). `[ev: retro truth-ported-rules Δ2]` A flag
+    test over joined `@NiagaraProperty` text reads comment-stripped code too: lint-config-sanity CS2 and the
+    slot-coverage OPERATOR set read raw text, so a READONLY slot whose annotation comment says "not OPERATOR" was
+    flagged; both read stripped text now, as statusparity and facets-req already did. A golden recorded from the bash
+    can pin such a false positive: the truth fix updates that want and names the difference.
+    `[ev: retro r10-lint-fp-459-rcscan-slotcov Δ1]` Owed engine item G51. `[ev: retro go-lint-structure Δ3]`
     `[ev: retro truth-audit Δ3]` An awk regex never uses `\b`: in gawk and POSIX awk it is a backspace (0x08), the
     word boundary is `\y`, so `/\bclass\b/` never matches and the lint can never fire (lint-demand-scope, fixed by
     its Go port). Prefer the Go engine. `[ev: retro truth-audit Δ8]` `[ev: tests/awk-word-boundary.bats AWB1]`
@@ -376,7 +398,13 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro go-lint-delays-method-scope Δ1]` `[ev: retro go-lint-delays-method-scope Δ3]` `[ev: retro go-lint-servlet-try-scope Δ2]`
   - **Fix a lint false positive by modeling the framework, never by suppressing it.** Encode the framework behavior
     that makes the code correct, with a RED truth fixture (Baja's equal-value skip in `hotwrite.Hot`, #445); an
-    allow-list or a suppression is a finding. `[ev: retro r10-close-process-meta-lessons Δ4]`
+    allow-list or a suppression is a finding. `[ev: retro r10-close-process-meta-lessons Δ4]` lint-servlet
+    cache-nofinger models the request contract: a `max-age` that only a `?v=`-fingerprinted request receives (the
+    then-branch of a fingerprint-test ternary, or a private helper's boolean parameter that every caller passes such a
+    test) is no row, while a build-time token the servlet cannot see stays one
+    (`go/internal/lint/rules/servlet/fingerprint.go`). Before the RED test for an issue checklist, run
+    `git log origin/main --grep '#<issue>'`: eight of the nine #459 bullets were already fixed.
+    `[ev: retro r10-lint-fp-459 Δ1]`
   - **A truth case is RED on the old code for the reason it names** (METHODOLOGY.md § Kit maintenance, observed
     flips): a case that only exercises the bug can pass before the fix (a brace in a literal where the body already
     acts; a short zip payload stored, not deflated, so the old byte read found it). Pick the input that flips the
@@ -399,6 +427,29 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     in the recorder, never read the real clock in a case `[ev: retro go-new-retro Δ3]`. The golden harness has no
     update flag: a `declared difference` golden is copied from the `go test` "got" block, so the commit that
     declares it is reviewed line by line `[ev: retro r10-verify-module-truth Δ3]`.
+    A Go port's goldens replay through `golden.Runner` and record through `golden/record/record.sh`
+    (`go/internal/lint/rules/golden/record/README.md`): hermetic environment, the whole post-run tree (`@after`,
+    `@gone`), modes, symlinks, directories, the exact case count and `@kind` pinned to `record.env`; no package keeps
+    a private loop or recorder. `[ev: retro r10-golden-runner Δ1]` `record.env` `EXTRA` pins every file the script
+    sources, not only the script (a preflight recording ran without `lib/signing-block.sh`).
+    `[ev: retro r10-golden-runner Δ3]` A case's environment is only what it declares (`PATH`, `HOME` and `LC_ALL`
+    defaulted), and the wrappers' Go binaries are built once before the cases, never under the case PATH.
+    `[ev: retro r10-golden-runner Δ4]` A clock or a pid the bash exposes is faked in the case tree and injected in Go:
+    a fake `date` prints the stamp `Host.Now` returns, so the manifest stays a plain recorded golden
+    `[ev: retro go-station-snapshot Δ1]`; a recording that leaks `$$` becomes a `truth-*` case with the pid replaced
+    by the injected `Host.Pid`, stated in its `@kind`, never dropped `[ev: retro go-kit-ticket Δ3]`. An external
+    command is pinned with a fake in the case tree that echoes its argv and the files it is handed, never the host
+    binary on the case PATH (the host gh sat in `/usr/bin`). `[ev: retro go-kit-ticket Δ2]` A golden that mirrors a
+    bats run reads the bats fixture in place (`@REPO@/tests/fixtures/...`), never a copy that can drift or carry a
+    client string. `[ev: retro go-triage-console Δ5]` A file name holding a tab cannot be a recorded entry: the
+    recorder's snapshot index is tab-separated and loses it. `[ev: retro go-station-snapshot Δ2]` A new Go tool with
+    no bash source still replays through `golden.Runner`: hand-written cases, no `record.env`, each `@kind` a
+    `truth:` line, and a `testdata/README.md` naming where the fixtures' shapes come from
+    (`go/internal/niagaratest`). `[ev: retro r10-run-niagara-test-go Δ1]` A golden-format conversion is proved by
+    re-recording from the pinned bash and `diff -r`, not by re-reading: a converter bug that changes an input changes
+    the bash output too `[ev: retro r10-golden-runner Δ2]`; the converter reads bytes, not text (Python text mode
+    turned CRLF into LF, and a UTF-8 decode failed on a non-UTF-8 case): binary mode or latin-1, split on `\n`
+    only. `[ev: retro r10-wiringmap-runner Δ1]`
   - **A write-side tool validates every operand before its first write and lands all or nothing**
     (`go/internal/newretro`, the Go port of `toolbelt/new-retro.sh`). The whole slug is checked, not a prefix
     (the bash glob read 6 characters, so `abcdef/../../x` reached `cp`) `[ev: retro go-new-retro Δ1]`; `--date`
@@ -409,7 +460,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     later failure removes the stub and restores the index `[ev: retro go-new-retro Δ4]`. Never size a loop, slice or
     builder from an input whose parse error was dropped: `strconv.Atoi` on an overflow returns the clamped maximum
     with its error, and one such golden (`--deltas 99999999999999999999`) took the host to 37 GB RSS; bound the value
-    (0-99) and check the error in the parser `[ev: retro go-new-retro Δ6]`.
+    (0-99) and check the error in the parser `[ev: retro go-new-retro Δ6]`. A tool that read-modify-writes a
+    committed file holds one exclusive `flock` on a directory that is never replaced, from its first read through
+    its last rename (generators included): new-retro locks `retros/` itself, because a lock on BUILD-STATE.src.md
+    or INDEX.md, which it replaces by rename, can land on a stale inode, and the kernel drops the lock when the
+    process dies. Its race test forces the interleaving with a barrier after the read, never a sleep
+    (`go/internal/newretro/concurrent_test.go`). `[ev: retro r10-new-retro-flip-lock Δ1]`
   - **Reuse the engine before adding to it:** a per-file rule may set `Finding.Path` to any subject (the runner fills
     only an empty one); a rule that needs literal text and code positions together reads `javasrc.MaskLiterals` (same
     line lengths) instead of mapping `BlankLiterals` columns back. An engine option a port does need (`Spec.IntFlags`)
@@ -466,7 +522,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `grep … "$f" 2>/dev/null || true` reads an unreadable file as no hit and `xargs awk` splits a path on
     whitespace: the slot-coverage and schema-risk ports exit on an unreadable input now `[ev: retro go-schema-risk Δ2]`;
     verify-module's `--src` reads stay owed (phase B). `[deferred: retro r9-m1-walkers Δ2]` Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
-    `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
+    `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]` A tool that judges a log
+    fails closed on a cut read: a line past `bufio.Scanner`'s cap (`bufio.ErrTooLong`) is a FAIL reason at its line
+    number, never a silent end of input, because a failure after it would go unseen (`go/internal/niagaratest`).
+    `[ev: retro r10-run-niagara-test-go Δ2]`
   - **A path filter in a gate skips only paths no check applies to.** A gate that picks its checks from the
     changed or staged paths (a hook, a CI step, a wrapper) states, for each class of path it can see (code, tool,
     doc, data, generated), which check runs or why none applies. An early exit is proven by a test that changes
@@ -515,7 +574,13 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     literal code. Measure a parser fix with a kit-wide before/after diff of row keys, not only on the card that
     exposed it, and give each shape a wider pattern admits a negative test for the prose it must still reject
     (the first GREEN run added 4 MISSING_FILE rows and read backticked `code x-rt …` labels as paths).
-    `[ev: retro r10-kcr-false-positives Δ1]`
+    `[ev: retro r10-kcr-false-positives Δ1]` Round 2 reads elided placeholders (`…Δk`, `retro YYYY-MM-DD-…`) as
+    SKIPPED_TEMPLATE, the `javap x.jar[!entry]` tag clause like the prose `javap of <jar>` form, a niagara-help
+    relative path from `versions/<ver>/` first, and `x.zip!entry` after `code` or `course` as an `archive` pointer
+    (the zip resolved, the entry unchecked). A triage class is a hypothesis until a kit card shows it: grep the kit
+    and the pinned tests before writing code (two of six classes had no instance, or a test pinning the behaviour as
+    intended), and diff the excerpt column with the status, because the version-first read changed excerpts but no
+    status. `[ev: retro r10-kcr-false-positives-round2 Δ1]`
 - Provenance of the former inline lint enumeration (frozen; new lints cite in their own header, which the index carries): [ev: retro umbrelladashboard-module-creation] [ev: retro dashboard-status-state-modeling Δ3] [ev: retro apillm-headless-servlet-rt-4.14-deltas Δ8] [ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ3] [ev: retro campaign8-lint-delays] [ev: retro campaign8-lint-servlet] [ev: retro campaign8-structure] [ev: retro campaign8-wb-audit] [ev: retro campaign9-demand-scope] [ev: retro campaign9-ext-writable-shape] [ev: retro campaign9-silent-protection] [ev: retro live-diagnosis-hardening-deltas Δ1] [ev: retro live-diagnosis-hardening-deltas Δ3] [ev: retro live-diagnosis-hardening-deltas Δ5] [ev: retro module-hardening-failure-modes-deltas Δ11 BLD2] [ev: retro module-hardening-failure-modes-deltas] [ev: retro new-lints] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ5] [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas].
 - Every lint that ships in a campaign carries a REAL-TREE smoke on the four client module roots: exact COUNT + SUBJECT of each finding + one ABSENCE pin (a slot that must NOT be flagged) — a bats fixture alone is not acceptance (METHODOLOGY K22). `[ev: retro campaign8-close-process-meta-lessons §lesson 11]` Any new checker runs once on the real tree before its first push, and each false-finding class it shows becomes a pinned case before release (kit-cite-resolve: green fixtures, then 2046 non-RESOLVED rows on its first real run, 9 classes false). `[ev: retro go-kit-cite-resolve Δ1]`
 - **Before releasing a new ADVISORY lint, smoke it read-only on one real client checkout and on decompiled vendor

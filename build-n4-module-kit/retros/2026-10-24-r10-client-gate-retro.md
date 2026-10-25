@@ -75,6 +75,10 @@ Running that gate on every head exposed five things the kit does not say yet:
 - Stale tests and code regressions look the same in a failing run. `git blame` on the assertion plus the
   naming in the repository's own docs and seed tables tells them apart, without a station.
 
+## Fold (partial, 2026-10-25, branch `docs/r10-fold-tail3`)
+- Δ2 → `build-verify.md` § Mirror (a reused mirror is not a deploy baseline); Δ3 → `types/moduleTest.md` § What to test (a discovering WSL runner with a checked exclude list); Δ5 → `build-verify.md` § Client repository CI (local exact-head gate, PR comment as the record).
+- Δ4 landed on main in #539; Δ1 (lint) is in flight. The header stays `pending` until Δ1 merges.
+
 ## Owed
 - Δ1's lint rule and Δ4's summary change are code changes in `toolbelt/lint-structure.sh` /
   `go/internal/lint` and `go/internal/reportmodule`; they need their own RED-first PRs.

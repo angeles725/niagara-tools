@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · r10-new-retro-flip-lock
@@ -34,3 +34,10 @@ directory itself from the existence checks through the stub, the INDEX.md regene
   short timeout so the serialised (fixed) code still finishes.
 - flock is per open file description, so goroutines that each open the path exclude each other in one process; the
   test exercises the real lock without subprocesses.
+
+## Fold
+- Δ1 is code already shipped in the PR that wrote this retro (niagara-tools #519, `go/internal/newretro/lock.go`); not re-implemented. Its rule and the barrier lesson → `BUILD-LOOP.md` § 5 write-side bullet, not `go/README.md`, whose citations the fold audit does not count.
+- It closes follow-up W4 of retro go-new-retro and the open issue in `ledger.d/2026-10-24-r10-fold-tail2.md` (both marked DONE).
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1 shipped code (#519), rule in the `BUILD-LOOP.md` § 5 write-side bullet.
