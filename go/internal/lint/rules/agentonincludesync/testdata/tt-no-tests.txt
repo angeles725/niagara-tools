@@ -1,0 +1,13 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 0
+-- stderr --
+-- ModuleA/ModuleA-rt/module-include.xml --
+<types>
+  <type name="Pan" class="com.x.BPan"/>
+</types>
+-- ModuleA/ModuleA-rt/src/com/x/BPan.java --
+package com.x;
+@NiagaraType
+public class BPan {}

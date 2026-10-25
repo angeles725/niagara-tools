@@ -1,0 +1,19 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 1
+FAIL  test-type-in-prod  @DIR@/ModuleA/ModuleA-rt/module-include.xml:3  com.x.test.BModuleATest: test type in the production module-include.xml (also listed in @DIR@/ModuleA/ModuleA-rt/moduleTest-include.xml) -- move the <type> line to moduleTest-include.xml; compileModuleTestJava appends it here (types/moduleTest.md)
+-- stderr --
+-- ModuleA/ModuleA-rt/module-include.xml --
+<types>
+  <type name="Pan" class="com.x.BPan"/>
+  <type name="ModuleATest" class="com.x.test.BModuleATest"/>
+</types>
+-- ModuleA/ModuleA-rt/moduleTest-include.xml --
+<types>
+  <type name="ModuleATest" class="com.x.test.BModuleATest"/>
+</types>
+-- ModuleA/ModuleA-rt/src/com/x/BPan.java --
+package com.x;
+@NiagaraType
+public class BPan {}

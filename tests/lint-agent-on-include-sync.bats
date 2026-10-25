@@ -94,3 +94,34 @@ java() { mkdir -p "$(dirname "$1")"; printf 'package p;\n%s\npublic class B {}\n
   [ "$status" -eq 3 ]
   [[ "$output" == *"locked"* ]]
 }
+
+@test "AOIS3: a production module-include.xml registering a srcTest/ type or a moduleTest-include.xml type FAILs (test-type-in-prod)" {
+  # Mutation: AOIS3 -- dropping the test-type-in-prod sub-check (testLeakRows) turns this case green (exit 0, no row)
+  local p="$BATS_TEST_TMPDIR/ModuleA/ModuleA-rt"
+  java "$p/src/p/B.java" '@NiagaraType'
+  mkdir -p "$p/srcTest/p/test"
+  printf 'package p.test;\n@NiagaraType\npublic class BModuleATest extends BTestNg {}\n' > "$p/srcTest/p/test/BModuleATest.java"
+  printf '<types>\n<type name="B" class="p.B"/>\n</types>\n' > "$p/module-include.xml"
+  printf '<types>\n<type name="ModuleATest" class="p.test.BModuleATest"/>\n</types>\n' > "$p/moduleTest-include.xml"
+  run "$L" "$BATS_TEST_TMPDIR/ModuleA"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  # compileModuleTestJava (gradle plugin 7.3.40) appended the test type to the production file
+  printf '<types>\n<type name="B" class="p.B"/>\n<type name="ModuleATest" class="p.test.BModuleATest"/>\n<type name="X" class="p.test.BX"/>\n</types>\n' > "$p/module-include.xml"
+  printf '<types>\n<type name="X" class="p.test.BX"/>\n</types>\n' > "$p/moduleTest-include.xml"
+  run "$L" "$BATS_TEST_TMPDIR/ModuleA"
+  [ "$status" -eq 1 ]
+  [ "${lines[0]}" = "FAIL  test-type-in-prod  $p/module-include.xml:3  p.test.BModuleATest: test type in the production module-include.xml (source $p/srcTest/p/test/BModuleATest.java) -- move the <type> line to moduleTest-include.xml; compileModuleTestJava appends it here (types/moduleTest.md)" ]
+  [[ "${lines[1]}" == "FAIL  test-type-in-prod  $p/module-include.xml:4  p.test.BX: test type in the production module-include.xml (also listed in $p/moduleTest-include.xml) -- "* ]]
+  [ "${#lines[@]}" -eq 2 ]
+}
+
+@test "AOIS3-env: a malformed moduleTest-include.xml exits 3 naming its position" {
+  local p="$BATS_TEST_TMPDIR/ModuleA/ModuleA-rt"
+  mkdir -p "$p"
+  printf '<types/>\n' > "$p/module-include.xml"
+  printf '<types>\n' > "$p/moduleTest-include.xml"
+  run "$L" "$BATS_TEST_TMPDIR/ModuleA"
+  [ "$status" -eq 3 ]
+  [[ "$output" == "lint-agent-on-include-sync: $p/moduleTest-include.xml:2:1: "* ]]
+}
