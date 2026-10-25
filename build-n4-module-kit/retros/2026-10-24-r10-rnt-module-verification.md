@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · r10-rnt-module-verification
@@ -46,3 +46,11 @@ first; no Windows boot was run:
 ## Lessons
 - A guard that a stronger sibling guard subsumes is unpinned until each refusal asserts its own reason.
 - A snapshot that skips a directory needs its own check for any file the run touches in that directory's copy.
+
+## Fold
+- The flag is code already shipped in the PR that wrote this retro (`go/internal/niagaratest/verification.go`, `run_verification_test.go`); not re-implemented.
+- Δ1 was cited at merge in `types/moduleTest.md` § Running from WSL (the TEST-ONLY bullet); Δ2 in `types/driver-authoring.md` § 12.1 (the 4.15 rejection bullet). No doctrine text added.
+- Lesson 1 (a subsumed guard is unpinned until each refusal asserts its own reason) is the existing `BUILD-LOOP.md` § 5 rule "A truth case is RED on the old code for the reason it names"; lesson 2 is in the Δ1 bullet (the install file's sha256). Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-4`; log in `ledger.d/2026-10-25-r10-fold-tail4.md`) — Δ1 in `types/moduleTest.md` § Running from WSL; Δ2 in `types/driver-authoring.md` § 12.1.
