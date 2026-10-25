@@ -643,6 +643,13 @@ the main Gradle section above).
   (ii): a group exclusion, a base outside `srcTest/`), and the row names the case. When the scan names every
   ignored method the count FAILs ("use --allow-ignored names"); the reason is a printed note and never overrides
   that. `verdict --testng` has no source and keeps the count pair `[ev: retro r10-rnt-fallback-strict Δ1]`.
+- **A green run proves nothing for a test that cannot fail or never runs:** an `assertTrue(true)` placeholder, a
+  test with no assertion, and a JUnit `assumeTrue(false)` (or a first-statement `throw new SkipException`) all
+  pass or skip silently. `lint-vacuous-tests.sh <gradle-root>` FAILs each `@Test` method under `srcTest/` of these
+  shapes; `expectedExceptions` / `expected =` and an assertion made through a helper of the same class, an
+  enclosing class, a `srcTest/` superclass or a statically imported `srcTest/` class (one level deep) keep a test
+  clean. Waive one only by name:
+  `--allow <Class.method> --allow-reason <why>` (a stale name FAILs) `[ev: retro r10-lint-vacuous-tests Δ1]`.
 - **`niagaraTest` is `bin/test`:** the task only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
   (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so `test.exe <module>` on a scratch COPY of the home (not a
   symlink mirror: Windows sees its links as dangling junctions) runs the same tests without gradle; set

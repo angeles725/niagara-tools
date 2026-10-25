@@ -1,0 +1,17 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 0
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BEpsTest.java --
+package com.x.test;
+import org.testng.annotations.Test;
+public class BEpsTest {
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void throwsIt() { new BEpsTest().boom(); }
+  @org.junit.Test(expected = IllegalStateException.class)
+  public void throwsJunit() { boom(); }
+  @Test(groups = "ci", expectedExceptions = {IllegalStateException.class}, expectedExceptionsMessageRegExp = "x")
+  public void throwsArray() { boom(); }
+  void boom() { throw new IllegalStateException(); }
+}

@@ -1,0 +1,38 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 1
+FAIL  always-skipped  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BGammaTest.java:8  BGammaTest.a: its first statement always skips it (assumeTrue(false)), so it never runs
+FAIL  always-skipped  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BGammaTest.java:10  BGammaTest.b: its first statement always skips it (Assume.assumeTrue(false)), so it never runs
+FAIL  always-skipped  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BGammaTest.java:12  BGammaTest.c: its first statement always skips it (assumeFalse(true)), so it never runs
+FAIL  always-skipped  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BGammaTest.java:14  BGammaTest.d: its first statement always skips it (throw new SkipException), so it never runs
+FAIL  always-skipped  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BGammaTest.java:18  BGammaTest.e: its first statement always skips it (assumeTrue(false)), so it never runs
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BGammaTest.java --
+package com.x.test;
+import org.junit.Assume;
+import org.junit.Test;
+import org.testng.SkipException;
+import static org.junit.Assume.assumeTrue;
+public class BGammaTest {
+  @Test
+  public void a() { assumeTrue(false); assertEquals(1, compute()); }
+  @Test
+  public void b() { Assume.assumeTrue(false); }
+  @Test
+  public void c() { assumeFalse(true); }
+  @Test
+  public void d() {
+    throw new org.testng.SkipException("not yet");
+  }
+  @Test
+  public void e() { assumeTrue("why", false); }
+  @Test
+  public void late() { assertEquals(1, compute()); assumeTrue(false); }
+  @Test
+  public void guarded() { assumeTrue(isWindows()); assertEquals(1, compute()); }
+  @Test
+  public void conditional() { if (isWindows()) { throw new SkipException("win"); } assertEquals(1, compute()); }
+  private int compute() { return 1; }
+  private boolean isWindows() { return false; }
+}
