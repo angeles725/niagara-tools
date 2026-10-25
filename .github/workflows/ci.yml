@@ -137,17 +137,19 @@ jobs:
 
       - name: bats (all unit tests)
         run: |
-          # -j 4: one bats job per ubuntu-latest vCPU. Fail closed: the run must report one result per test
-          # the suite holds (`bats --count`), so a silent zero or partial parallel run cannot pass.
+          # -j 4: four test files at a time, one per ubuntu-latest vCPU. --no-parallelize-within-files: bats'
+          # in-file parallelism waits for a free slot by polling with `sleep 1`, which made -j slower than a
+          # serial run; GNU parallel schedules whole files without it. Fail closed: the run must report one
+          # result per test in its TAP plan (bats counts the suite up front), so a silent zero or partial
+          # parallel run cannot pass.
           set -o pipefail
           TAP="$RUNNER_TEMP/bats.tap"
-          want="$(bats --count tests/*.bats)"
-          bats -j 4 --formatter tap tests/*.bats | tee "$TAP"
+          bats -j 4 --no-parallelize-within-files --formatter tap tests/*.bats | tee "$TAP"
           plan="$(grep -m 1 -E '^1\.\.[0-9]+$' "$TAP" || true)"; plan="${plan#1..}"
           got="$(grep -cE '^(not )?ok ' "$TAP" || true)"
-          printf 'bats: the suite holds %s tests; TAP plan %s; %s results\n' "$want" "${plan:-missing}" "$got"
-          if ! { [ "$want" -gt 0 ] && [ "$plan" = "$want" ] && [ "$got" -eq "$want" ]; }; then
-            printf 'ERROR: bats reported %s results (plan %s) for a suite of %s tests\n' "$got" "${plan:-missing}" "$want" >&2
+          printf 'bats: TAP plan %s; %s results\n' "${plan:-missing}" "$got"
+          if ! { [ "$plan" -gt 0 ] && [ "$got" -eq "$plan" ]; }; then
+            printf 'ERROR: bats reported %s results for a TAP plan of %s tests\n' "$got" "${plan:-missing}" >&2
             exit 1
           fi
 

@@ -13,8 +13,9 @@
 #   - a step it can neither run nor skip on purpose (sudo/apt-get, an unknown `uses:` action, a step-level
 #     env:/shell:/if:) is UNCOVERED: --list and the run both stop with exit 2 instead of skipping it silently.
 # --list prints RUN/SKIP per step; --only runs the steps whose name contains <substring>; -j N (default 3)
-# turns `bats tests/*.bats` into `bats -j N tests/*.bats`, and CI's `bats -j 4 ` (one job per runner vCPU)
-# into `bats -j N `, when GNU parallel is on PATH; without parallel `bats -j 4 ` runs as plain `bats `.
+# turns `bats tests/*.bats` into `bats -j N tests/*.bats`, and CI's `bats -j 4 --no-parallelize-within-files `
+# (four files at a time) into `bats -j N --no-parallelize-within-files `, when GNU parallel is on PATH; without
+# parallel it runs as plain `bats ` (bats refuses --no-parallelize-within-files without -j).
 # The shellcheck tarball is cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/
 # and its sha256 is checked on every use; never installed system-wide, never sudo.
 #
@@ -172,9 +173,9 @@ for i in "${selected[@]}"; do
   if grep -q shellcheck <<< "${BODIES[$i]}"; then provision_shellcheck; break; fi
 done
 
-BATS_ALL='bats tests/*.bats' BATS_CI_J='bats -j 4 '
+BATS_ALL='bats tests/*.bats' BATS_CI_J='bats -j 4 --no-parallelize-within-files '
 BATS_J="$BATS_ALL" BATS_LOCAL_J='bats '
-if command -v parallel >/dev/null 2>&1; then BATS_J="bats -j $JOBS tests/*.bats" BATS_LOCAL_J="bats -j $JOBS "; fi
+if command -v parallel >/dev/null 2>&1; then BATS_J="bats -j $JOBS tests/*.bats" BATS_LOCAL_J="bats -j $JOBS --no-parallelize-within-files "; fi
 mkdir -p "$WORK/runner-temp"
 passed=0 failed=0
 cd "$ROOT"
