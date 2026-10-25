@@ -51,7 +51,8 @@ class TestProtocol(unittest.TestCase):
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "2025-11-25"}))
         self.assertEqual(res["result"]["protocolVersion"], "2025-06-18")
 
-    @go_server.go_twin("jsonrpc", "in-process")
+    @go_server.go_twin("jsonrpc", "in-process",
+                       twin="cli.TestHelpStatesTheSupportedProtocolSetContract")
     def test_doc_contract_states_the_supported_set_and_the_naming_heuristic(self):
         """The one place that pins documentation wording (the operator-facing contract)."""
         self.assertIn("Only add a newer", server.__doc__)
@@ -142,7 +143,7 @@ class TestProtocol(unittest.TestCase):
             self.assertTrue(res["isError"])
             self.assertIn("clear reason", res["content"][0]["text"])
 
-    @go_server.go_twin("jsonrpc", "internals")
+    @go_server.go_twin("jsonrpc", "internals", twin="session.TestModeAndStationNames")
     def test_flags_record_mode(self):
         self.assertEqual(server.Server().ctx.mode, "read-only")
         self.assertEqual(server.Server(allow_writes=True).ctx.mode, "writes-allowed")
@@ -267,7 +268,8 @@ class TestRobustness(unittest.TestCase):
         srv.serve(lines(), io.StringIO())  # no exception
         self.assertEqual(closed, [1])
 
-    @go_server.go_twin("jsonrpc", "unit")
+    @go_server.go_twin("jsonrpc", "unit",
+                       twin="session.TestCloseClearsTheSessionAndClosesItsClient")
     def test_close_clears_the_session_even_when_the_client_close_raises(self):
         class Boom:
             def close(self):
@@ -278,13 +280,14 @@ class TestRobustness(unittest.TestCase):
             ctx.close()
         self.assertIsNone(ctx.session)
 
-    @go_server.go_twin("jsonrpc", "unit")
+    @go_server.go_twin("jsonrpc", "unit", twin="session.TestScrubHidesTheSecretOnlyOnceOneIsSet")
     def test_set_secret_scrubs_outputs(self):
         ctx = tools_read.Context()
         ctx.set_secret("hunter2-value")
         self.assertEqual(ctx.scrub("pw=hunter2-value!"), "pw=***!")
 
-    @go_server.go_twin("jsonrpc", "internals")
+    @go_server.go_twin("jsonrpc", "internals",
+                       twin="session.TestFailedConnectOnMissingCredentialsClosesTheOldSession")
     def test_connect_survives_a_failing_close_of_the_old_session(self):
         class Boom:
             def close(self):
@@ -873,7 +876,8 @@ class TestStdioEndToEnd(unittest.TestCase):
             go_server.skip_if_unported(reply)
         return proc, replies
 
-    @go_server.go_twin("cli", "in-process")
+    @go_server.go_twin("cli", "in-process", python_only="a Python import side effect; a Go "
+                       "binary has no import, and its start is pinned by cli.TestEofEndsTheServerWithExitZero")
     def test_import_prints_nothing(self):
         proc = subprocess.run([sys.executable, "-c", "import mcp_n4.server"], cwd=KIT_DIR,
                               capture_output=True, text=True, timeout=60)

@@ -60,6 +60,8 @@ CATEGORIES = {
 
 #: (test module, class name, test name, Go twin, category) of every @go_twin test.
 REGISTRY = set()
+#: `module.Class.test` -> reason of every @go_twin(..., python_only=...) test: no Go twin.
+PYTHON_ONLY = {}
 
 
 class GoBinaryMissing(RuntimeError):
@@ -278,17 +280,21 @@ def twin_name(package, test_name):
     return "%s.Test%s" % (package, "".join(w[:1].upper() + w[1:] for w in words))
 
 
-def go_twin(package, category, twin=None):
+def go_twin(package, category, twin=None, python_only=None):
     """Skip a test (or every test of a class) under Go, naming the Go twin that replaces it.
 
     The twin is `package.Test<CamelCase test name>` unless `twin` names it explicitly as
     `package.TestX` (a Go name that capitalises differently or lives in another package);
-    `twin` is for one test only, never a class.
+    `twin` is for one test only, never a class. `python_only` instead says, in words, why the
+    test pins Python-only behaviour no Go test can have (docs/go-port-plan.md section 21).
     """
     if category not in CATEGORIES:
         raise ValueError("unknown go_twin category %r" % category)
     if twin is not None and not re.match(r"^[a-z]+\.Test[A-Za-z0-9]+$", twin):
         raise ValueError("go_twin twin %r is not package.TestName" % twin)
+    if python_only is not None and (twin is not None or not isinstance(python_only, str)
+                                    or not python_only.strip()):
+        raise ValueError("go_twin python_only needs a reason and no twin")
 
     def mark(obj):
         if isinstance(obj, type):
@@ -299,11 +305,17 @@ def go_twin(package, category, twin=None):
             for name in names:
                 REGISTRY.add((obj.__module__, obj.__name__, name, twin_name(package, name),
                               category))
+                if python_only:
+                    PYTHON_ONLY["%s.%s.%s" % (obj.__module__, obj.__name__, name)] = python_only
         else:
             cls_name = obj.__qualname__.rpartition(".")[0]
             name = twin or twin_name(package, obj.__name__)
             reason = "Go twin %s (%s)" % (name, category)
             REGISTRY.add((obj.__module__, cls_name, obj.__name__, name, category))
+            if python_only:
+                PYTHON_ONLY["%s.%s.%s" % (obj.__module__, cls_name, obj.__name__)] = python_only
+        if python_only:
+            reason = "Python only (%s): %s" % (category, python_only)
         return unittest.skipIf(GO, reason)(obj)
     return mark
 
@@ -335,17 +347,19 @@ def twin_resolves(entry, tests, box_ports):
 
 
 def unresolved_twins():
-    """`module.Class.test` of every @go_twin marker whose twin resolves to nothing."""
+    """`module.Class.test` of every @go_twin marker whose twin resolves to nothing (a
+    python_only marker names no twin, so it never counts)."""
     import go_box
     ports = {s.get("ports", "test_" + s["name"]) for s in go_box.SCENARIOS}
     tests = go_tests()
-    return sorted("%s.%s.%s" % e[:3] for e in REGISTRY if not twin_resolves(e, tests, ports))
+    return sorted("%s.%s.%s" % e[:3] for e in REGISTRY
+                  if "%s.%s.%s" % e[:3] not in PYTHON_ONLY and not twin_resolves(e, tests, ports))
 
 
-#: Markers whose twin resolves to nothing, in files outside the S15 slice: follow-up work
-#: (docs/go-port-plan.md section 19). Frozen and checked both ways: an entry that starts to
-#: resolve or disappears must be deleted, and the list never grows past TWIN_DEBT_CEILING.
-TWIN_DEBT_CEILING = 49
+#: Markers whose twin resolves to nothing (docs/go-port-plan.md sections 19 and 21). Frozen and
+#: checked both ways: an entry that starts to resolve or disappears must be deleted, and the
+#: list never grows past TWIN_DEBT_CEILING.
+TWIN_DEBT_CEILING = 43
 TWIN_DEBT = frozenset([
     "test_box.TestErrorLabelsAndRedirectClose.test_malformed_reply_keys_use_session_component_key",
     "test_box.TestErrorLabelsAndRedirectClose.test_redirect_handler_closes_response_before_raising",
@@ -389,13 +403,7 @@ TWIN_DEBT = frozenset([
     "test_box.TestTransportTruth.test_a_body_shorter_than_its_content_length_is_never_returned",
     "test_box.TestTransportTruth.test_a_cut_chunked_body_is_a_transport_failure",
     "test_box.TestTransportTruth.test_a_non_http_answer_is_a_transport_failure",
-    "test_server.TestProtocol.test_doc_contract_states_the_supported_set_and_the_naming_heuristic",
-    "test_server.TestProtocol.test_flags_record_mode",
-    "test_server.TestRobustness.test_close_clears_the_session_even_when_the_client_close_raises",
-    "test_server.TestRobustness.test_connect_survives_a_failing_close_of_the_old_session",
     "test_server.TestRobustness.test_serve_exits_cleanly_on_keyboard_interrupt_and_closes",
-    "test_server.TestRobustness.test_set_secret_scrubs_outputs",
-    "test_server.TestStdioEndToEnd.test_import_prints_nothing",
 ])
 
 
