@@ -68,17 +68,37 @@ var months = map[string]int{
 	"ene": 1, "abr": 4, "ago": 8, "set": 9, "dic": 12,
 }
 
-// isLevel: INFORMACIÓN, the Spanish java.util.logging name of INFO, is a level in UTF-8 and in Latin-1 (Ó is
-// 0xD3), so its header closes the open block. Truth difference (truth-informacion-level): the bash compared
-// substr(s, 1, 8) with the 9-byte "INFORMACI", which never matched, so its frames joined the previous block.
-// Matching is exact, as for every other level: INFORMACIONAL and the unaccented INFORMACION stay no level.
+// isLevel: the station console is the JDK 8 java.util.logging.SimpleFormatter with the format "%4$s [...][%3$s]
+// %5$s%6$s%n" (baja com/tridium/logging/LogSettings.java:91-92, vineflower), and %4$s is
+// Level.getLocalizedLevelName() (rt.jar java/util/logging/SimpleFormatter.format, vineflower :36), which for the
+// default bundle returns the localized name upper-cased in the bundle's locale (Level.computeLocalizedLevelName,
+// vineflower :73-74). Under es the bundle (sun/util/logging/resources/logging_es) gives Grave, Advertencia,
+// Información, Configurar, Detallado, Muy Detallado and Más Detallado, so the console prints GRAVE, ADVERTENCIA,
+// INFORMACIÓN, CONFIGURAR, DETALLADO, MUY DETALLADO and MÁS DETALLADO. Each is a level in UTF-8 and in Latin-1 (Ó is
+// 0xD3, Á is 0xC1), so its header closes the open block. Truth differences: the bash compared substr(s, 1, 8) with
+// the 9-byte "INFORMACI", which never matched (truth-informacion-level), and knew none of CONFIGURAR, DETALLADO,
+// MUY DETALLADO and MÁS DETALLADO (truth-es-levels), so their frames joined the previous block. Matching is exact,
+// as for every other level: INFORMACIONAL, the unaccented INFORMACION, DETALLADOS, MUY and MÁS stay no level.
 func isLevel(s string) bool {
 	switch s {
 	case "SEVERE", "WARNING", "INFO", "CONFIG", "FINE", "FINER", "FINEST", "GRAVE", "ADVERTENCIA",
-		"INFORMACI\u00d3N", "INFORMACI\xd3N":
+		"INFORMACI\u00d3N", "INFORMACI\xd3N", "CONFIGURAR", "DETALLADO", "MUY DETALLADO",
+		"M\u00c1S DETALLADO", "M\xc1S DETALLADO":
 		return true
 	}
 	return false
+}
+
+// levelField splits a console line into its level token and the field after it, awk's $1 and $2, except that
+// MUY or MÁS followed by DETALLADO across exactly one blank (the formatter prints the bundle name with its single
+// space) is one two-word token, MUY DETALLADO or MÁS DETALLADO, and the field after it is $3.
+func levelField(line string) (lv, next string) {
+	f1, f2, f3 := fields123(line)
+	if (f1 == "MUY" || f1 == "M\u00c1S" || f1 == "M\xc1S") && f2 == "DETALLADO" &&
+		strings.HasPrefix(strings.TrimLeft(line, " \t"), f1+" "+f2) {
+		return f1 + " " + f2, f3
+	}
+	return f1, f2
 }
 
 func normLevel(lv string) string {
@@ -94,7 +114,7 @@ func normLevel(lv string) string {
 func severe(lv string) bool { return lv == "WARNING" || lv == "SEVERE" }
 
 func (s *scanner) line(line string) {
-	f1, f2 := fields12(line)
+	f1, f2 := levelField(line)
 	if isLevel(f1) && strings.HasPrefix(f2, "[") {
 		s.flush()
 		lvn := normLevel(f1)

@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: triage-console knows the remaining JDK 8 Spanish levels (follow-up of retro triage-informacion-level) -->
+log: 2026-10-25 · quality round 10 → `go/internal/triageconsole` `isLevel` matches `CONFIGURAR`, `DETALLADO`, `MUY DETALLADO` and `MÁS DETALLADO` (UTF-8 and Latin-1) exactly, and `levelField` reads the two-word names as one header token, so their headers close the open WARNING/SEVERE block and their frames no longer attach to the previous row. The console prints `Level.getLocalizedLevelName()`, which upper-cases the es bundle names (baja `LogSettings.java:91-92`, JDK 8 `Level.computeLocalizedLevelName`). Declared truth difference `truth-es-levels`; `MUY`, `MÁS`, `DETALLADOS` and `MUY DETALLADOS` stay no level, every recorded golden unchanged [ev: retro triage-informacion-level] [ev: retro triage-es-levels]

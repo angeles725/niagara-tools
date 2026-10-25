@@ -72,8 +72,9 @@ func lower(s string) string {
 	return string(b)
 }
 
-// fields12 is awk's $1 and $2 under the default FS: blank-separated (space, tab, newline), leading blanks skipped.
-func fields12(line string) (f1, f2 string) {
+// fields123 is awk's $1, $2 and $3 under the default FS: blank-separated (space, tab, newline), leading blanks
+// skipped.
+func fields123(line string) (f1, f2, f3 string) {
 	f := strings.FieldsFunc(line, func(r rune) bool { return r == ' ' || r == '\t' || r == '\n' })
 	if len(f) > 0 {
 		f1 = f[0]
@@ -81,7 +82,10 @@ func fields12(line string) (f1, f2 string) {
 	if len(f) > 1 {
 		f2 = f[1]
 	}
-	return f1, f2
+	if len(f) > 2 {
+		f3 = f[2]
+	}
+	return f1, f2, f3
 }
 
 // escaper processes `awk -v name=value` values as gawk 5 does: C escapes, up to 3 octal digits, up to 2 hex

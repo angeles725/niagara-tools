@@ -40,7 +40,7 @@ func TestGolden(t *testing.T) {
 	}
 	defaults := shimDefaults(t, repo)
 	golden.Runner{
-		Cases: 77,
+		Cases: 78,
 		Subst: map[string]string{"@REPO@": repo},
 		Setup: func(_ *testing.T, _ string, env map[string]string) []string {
 			for k, v := range defaults {
