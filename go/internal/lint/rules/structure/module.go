@@ -1,6 +1,8 @@
 package structure
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,6 +12,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/props"
 	"github.com/angeles725/niagara-tools/go/internal/signblock"
+	"github.com/angeles725/niagara-tools/go/internal/signingprofile"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
@@ -142,10 +145,11 @@ func (s *scan) siblingHomes() {
 	}
 }
 
-// pluginPin is L14 and L15 over the gradle root: the root's own settings.gradle.kts, else the nearest
+// pluginPin is L14, L15 and L16 over the gradle root: the root's own settings.gradle.kts, else the nearest
 // ancestor's (the walk stops at a directory holding .git). L14: it may not pin gradlePluginVersion to a
 // literal, matched on the script's code lines (comments and literal contents out). L15: the build.gradle.kts
-// beside it, when it applies the signing plugin, carries the block.
+// beside it, when it applies the signing plugin, carries the block. L16: the signing profile its gradle.properties
+// names keeps a safe validity/refresh margin.
 func (s *scan) pluginPin() {
 	settings := ""
 	for dir := s.root; ; {
@@ -166,8 +170,51 @@ func (s *scan) pluginPin() {
 		return
 	}
 	s.lineRows(settings, s.kotlinLines(settings), pluginLit, `L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)`)
-	if build := strings.TrimSuffix(settings, "/settings.gradle.kts") + "/build.gradle.kts"; lint.IsFile(build) {
+	gradleRoot := strings.TrimSuffix(settings, "/settings.gradle.kts")
+	if build := gradleRoot + "/build.gradle.kts"; lint.IsFile(build) {
 		s.signing(build)
+	}
+	s.signingMargin(gradleRoot)
+}
+
+// signingMargin is L16 on the gradle root: its gradle.properties names, through niagaraSigningProfile, a
+// LocalSigningProfile whose validity - refresh is below signingprofile.MinMargin, so the signing plugin re-mints the
+// key at every signing (the rule run-niagara-test enforces too, go/internal/signingprofile). A relative path
+// resolves against the gradle root, as layout.projectDirectory.file does; the user-level gradle.properties is out of
+// a source lint's scope. No property is no row; a named profile that does not exist is a WARN (margin unchecked);
+// one the lint cannot read or parse fails the run (exit 3), never a pass.
+func (s *scan) signingMargin(gradleRoot string) {
+	props := gradleRoot + "/gradle.properties"
+	data, err := os.ReadFile(props)
+	if errors.Is(err, fs.ErrNotExist) {
+		return
+	} else if err != nil {
+		s.fail(errors.New("cannot scan " + props + ": " + strerror.Text(err)))
+		return
+	}
+	name, ok := signingprofile.GradleProperty(data, signingprofile.Property)
+	if !ok || name == "" {
+		return
+	}
+	profile := name
+	if !filepath.IsAbs(profile) {
+		profile = gradleRoot + "/" + profile
+	}
+	b, err := os.ReadFile(profile)
+	if errors.Is(err, fs.ErrNotExist) {
+		s.row(lint.Warn, props, "L16: "+signingprofile.Property+" names "+profile+", which does not exist — signing-profile validity/refresh margin unchecked")
+		return
+	} else if err != nil {
+		s.fail(errors.New("cannot scan " + profile + ": " + strerror.Text(err)))
+		return
+	}
+	p, err := signingprofile.Parse(b)
+	if err != nil {
+		s.fail(errors.New("cannot scan " + profile + ": " + err.Error()))
+		return
+	}
+	if why := p.Refusal(); why != "" {
+		s.row(lint.Unset, props, "L16: "+signingprofile.Property+" names the "+signingprofile.LocalType+" "+profile+" with "+why)
 	}
 }
 
