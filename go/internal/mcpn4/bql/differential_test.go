@@ -3,14 +3,12 @@ package bql_test
 import (
 	"encoding/json"
 	"errors"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/bql"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // diffScript runs each case on bql.py and prints one line per case: the JSON of the result, or
@@ -102,8 +100,7 @@ func goCall(fn string, args []any) string {
 // inside quotes, the field size limit), str.strip()'s and \s's Unicode spaces, re.I's long s,
 // escapes that decode to a control character or a lone surrogate, and the inventory walk.
 func TestHelpersDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "bql-helpers")
 	long := strings.Repeat("x", bql.FieldLimit)
 	csvs := []string{"A,B\nx,y\n", "A,B\r\nx,\"y\"z\r\n", "A,B\rx,y\r", "A\n\n\nx\n", "A,B\nx,\"a\nb\"\n", "A,B\nx,\"open",
 		"A,B\nx\"q,y\n", "A,B\nx,\"\"\n", "\"\"\n", "A,A,A#2\n1,2,3\n", " A ,\x1fB\u0085\nx,y\n", "A\n" + long + "\n", "A\n" + long + "x\n",
@@ -148,14 +145,7 @@ func TestHelpersDifferentialPython(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, diffScript)
-	cmd.Stdin = strings.NewReader(string(in))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
-	}
+	out := g.Run(diffScript, in)
 	var want []string
 	if err := json.Unmarshal(out, &want); err != nil {
 		t.Fatal(err)

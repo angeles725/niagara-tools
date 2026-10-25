@@ -78,6 +78,8 @@ func TestReplay(t *testing.T) {
 			g.t.Errorf("replayed %q", got)
 		}
 	}
+	bigIn := []byte(strings.Repeat("a", maxInline+1))
+	big := `{"script":"043a718774c572bd","stdin_sha256":"` + sha256Hex(bigIn) + `","stdout":"o"}` + "\n"
 	for _, tc := range []struct {
 		name, recorded, want string
 		calls                func(g *Golden)
@@ -92,6 +94,9 @@ func TestReplay(t *testing.T) {
 			func(g *Golden) { both(g); g.Run("s", []byte("in3")) }},
 		{"a left-over record is stale", rec, "fail: golden testdata/x.golden.jsonl is stale: 2 recorded calls, the test made 1",
 			func(g *Golden) { g.Run("s", []byte("in1")) }},
+		{"large cases replay by digest", big, "pass", func(g *Golden) { g.Run("s", bigIn) }},
+		{"changed large cases are stale", big, "fail: golden testdata/x.golden.jsonl is stale: call 1 sends other cases (SHA-256 differs)",
+			func(g *Golden) { g.Run("s", append([]byte("x"), bigIn[1:]...)) }},
 		{"a corrupt golden fails", "{", "fail: golden testdata/x.golden.jsonl: record 1: unexpected EOF", both},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

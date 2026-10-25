@@ -1,13 +1,11 @@
 package files
 
 import (
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // refusalBodies are the paths of the refusal table: every rule of station_path, the Windows
@@ -51,8 +49,7 @@ print(json.dumps(out))`
 // (on every path with every content type) in files.py on the target CPython and in Go, and
 // requires the same results and the same refusal words.
 func TestHelpersDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	gold := golden.Open(t, "files-helpers")
 	var paths []any
 	for _, b := range refusalBodies {
 		paths = append(paths, b, "file:^"+b, "station:|file:^"+b)
@@ -64,14 +61,7 @@ func TestHelpersDifferentialPython(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, helperScript)
-	cmd.Stdin = strings.NewReader(string(data))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
-	}
+	out := gold.Run(helperScript, data)
 	var got []any
 	for _, p := range paths {
 		given := p.(string)

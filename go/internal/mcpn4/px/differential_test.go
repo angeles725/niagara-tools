@@ -3,13 +3,10 @@ package px
 import (
 	"encoding/json"
 	"math/rand"
-	"os/exec"
-	"path/filepath"
-	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // edgeDocs exercise every branch of parse_px: list caps (max_items 2), repeated values,
@@ -54,8 +51,7 @@ print(json.dumps(out))`
 // synthetic view, the edge documents (max_items 2 and 200) and 1,500 random edits of the view,
 // and bound_component on ORD shapes, and requires the same JSON text or the same refusal.
 func TestParseDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "px-parse")
 	type pxCase struct {
 		Text  string `json:"text"`
 		Max   int    `json:"max"`
@@ -86,14 +82,7 @@ func TestParseDifferentialPython(t *testing.T) {
 		cases = append(cases, pxCase{Bound: b})
 	}
 	in, _ := json.Marshal(cases)
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, pxScript)
-	cmd.Stdin = strings.NewReader(string(in))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
-	}
+	out := g.Run(pxScript, in)
 	var want []string
 	if err := json.Unmarshal(out, &want); err != nil {
 		t.Fatal(err)

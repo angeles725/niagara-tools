@@ -25,11 +25,16 @@ import (
 )
 
 // record is one recorded call: the script's digest, the cases sent and what Python printed.
+// Cases over maxInline bytes are kept as their SHA-256 alone: the test regenerates them
+// deterministically, and inlining them would make the golden several times larger.
 type record struct {
-	Script string `json:"script"`
-	Stdin  string `json:"stdin"`
-	Stdout string `json:"stdout"`
+	Script      string `json:"script"`
+	Stdin       string `json:"stdin,omitempty"`
+	StdinSHA256 string `json:"stdin_sha256,omitempty"`
+	Stdout      string `json:"stdout"`
 }
+
+const maxInline = 64 << 10
 
 // Golden is the recorded Python of one differential.
 type Golden struct {
@@ -101,7 +106,11 @@ func (g *Golden) Run(script string, stdin []byte) []byte {
 		if !utf8.Valid(stdin) || !utf8.Valid(out) {
 			g.t.Fatalf("golden %s: call %d is not UTF-8, a JSON golden cannot hold it byte for byte", g.path, len(g.recs)+1)
 		}
-		g.recs = append(g.recs, record{digest, string(stdin), string(out)})
+		r := record{Script: digest, Stdin: string(stdin), Stdout: string(out)}
+		if len(stdin) > maxInline {
+			r.Stdin, r.StdinSHA256 = "", sha256Hex(stdin)
+		}
+		g.recs = append(g.recs, r)
 		return out
 	}
 	i := g.next
@@ -113,7 +122,11 @@ func (g *Golden) Run(script string, stdin []byte) []byte {
 	if r.Script != digest {
 		g.t.Fatalf("golden %s is stale: call %d runs a changed script; %s", g.path, i+1, g.hint)
 	}
-	if r.Stdin != string(stdin) {
+	if r.StdinSHA256 != "" {
+		if r.StdinSHA256 != sha256Hex(stdin) {
+			g.t.Fatalf("golden %s is stale: call %d sends other cases (SHA-256 differs); %s", g.path, i+1, g.hint)
+		}
+	} else if r.Stdin != string(stdin) {
 		g.t.Fatalf("golden %s is stale: call %d sends other cases (first difference at byte %d); %s",
 			g.path, i+1, firstDiff(r.Stdin, string(stdin)), g.hint)
 	}
@@ -139,6 +152,11 @@ func (g *Golden) write() {
 	if err := os.WriteFile(g.path, buf.Bytes(), 0o644); err != nil {
 		g.t.Fatal(err)
 	}
+}
+
+func sha256Hex(b []byte) string {
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
 }
 
 func firstDiff(a, b string) int {
