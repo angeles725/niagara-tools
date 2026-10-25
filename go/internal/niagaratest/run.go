@@ -45,7 +45,7 @@ type runConfig struct {
 	install, gradleRoot, part, module, scratch string
 	jdk8, gradleUserHome                       string
 	timeout                                    time.Duration
-	keepHome, verifyLow                        bool
+	keepHome, verifyLow, restoreRoot           bool
 	excludeJars                                []string // --exclude-jar globs, in flag order
 }
 
@@ -57,6 +57,8 @@ type plan struct {
 	windows                             bool   // a Windows-side step started: cleanup must look for its processes
 	sysPropsSum                         string // --module-verification low: sha256 of the install's system.properties
 	excluded                            []jarExclusion
+	root                                rootSnapshot // --gradle-root's git status before the copy
+	rootTop                             string       // its worktree top, where the status paths start
 }
 
 func (p *plan) home() winDir        { return winDir{p.dir.wsl + "/home", p.dir.win + `\home`} }
@@ -108,6 +110,7 @@ func parseRun(args []string) (runConfig, error) {
 	fs.StringVar(&c.gradleUserHome, "gradle-user-home", "", "")
 	fs.DurationVar(&c.timeout, "timeout", defaultTimeout, "")
 	fs.BoolVar(&c.keepHome, "keep-home", false, "")
+	fs.BoolVar(&c.restoreRoot, "restore-gradle-root", false, "")
 	fs.Var(verificationFlag{&c.verifyLow}, "module-verification", "")
 	fs.Var(excludeFlag{&c.excludeJars}, "exclude-jar", "")
 	if err := fs.Parse(args); err != nil {
@@ -151,6 +154,10 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	}
 	if info, err := os.Stat(filepath.Join(cfg.gradleRoot, "gradlew")); err != nil || !info.Mode().IsRegular() {
 		return refuse("--gradle-root %s has no gradlew", cfg.gradleRoot)
+	}
+	// The gradle-root gate runs git -C on it: an absolute path, never one resolved against a later cwd.
+	if p.gradleRoot, err = filepath.Abs(cfg.gradleRoot); err != nil {
+		return refuse("--gradle-root %s: %v", cfg.gradleRoot, err)
 	}
 	if info, err := os.Stat(filepath.Join(cfg.jdk8, "bin", "javac")); err != nil || !info.Mode().IsRegular() {
 		return refuse("--jdk8 %s has no bin/javac (a WSL JDK 8)", cfg.jdk8)
@@ -228,9 +235,20 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	return p, -1
 }
 
-// execute creates the scratch dir, then copies, builds, runs and judges; cleanup runs on every path out,
-// a panic included (the panic goes on after it).
+// execute snapshots the gradle root, the install and the real user homes, creates the scratch dir, then copies,
+// builds, runs and judges; cleanup runs on every path out, a panic included (the panic goes on after it).
 func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
+	var ok bool
+	if p.rootTop, ok = h.rootTop(ctx, p.gradleRoot); !ok {
+		row(s, "FAIL", "gradle root is not a git worktree: cannot verify it")
+		return exitEnv
+	}
+	root, err := h.rootStatus(ctx, p.gradleRoot, p.rootTop)
+	if err != nil {
+		row(s, "FAIL", "gradle root: cannot snapshot it: "+err.Error())
+		return exitEnv
+	}
+	p.root = root
 	snap, err := takeSnapshot(p.install.wsl)
 	if err != nil {
 		fmt.Fprintf(s.Err, "%s: run: cannot snapshot the install: %v\n", name, err)
@@ -451,8 +469,8 @@ func (h host) testExe(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 }
 
 // cleanup kills the Windows processes of this run, compares the install with its snapshot, deletes the
-// scratch dir the run created (only that dir, unless --keep-home), then compares the real user homes with
-// theirs. It can only make code worse.
+// scratch dir the run created (only that dir, unless --keep-home), compares the real user homes with theirs,
+// then the gradle root's git status with its own (gradleroot.go). It can only make code worse.
 func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int {
 	worse := func(c int) {
 		if code == exitPass {
@@ -492,6 +510,9 @@ func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int 
 		worse(exitFail)
 	} else {
 		row(s, "PASS", fmt.Sprintf("real user homes unchanged (%d entries checked)", len(users)))
+	}
+	if !h.checkGradleRoot(ctx, p, s) {
+		worse(exitFail)
 	}
 	return code
 }
