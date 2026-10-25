@@ -1,0 +1,11 @@
+-- args --
+verdict
+@DIR@/run.log
+-- want --
+exit 1
+FAIL  run-niagara-test  no test summary (no Total tests run line)
+FAIL  run-niagara-test  verdict: 1 FAIL reason
+-- @kind --
+truth: hand-written from the C40 contract (testdata/README.md); there is no bash tool to record from
+-- run.log --
+BUILD SUCCESSFUL in 12s

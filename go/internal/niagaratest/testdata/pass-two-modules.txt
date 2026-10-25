@@ -1,0 +1,16 @@
+-- args --
+verdict
+@DIR@/run.log
+-- want --
+exit 0
+PASS  run-niagara-test  line 2: run 6, failures 0, skips 0
+PASS  run-niagara-test  line 4: run 4, failures 0, skips 1
+PASS  run-niagara-test  verdict: 2 test summaries, 10 tests run, 0 failures
+-- @kind --
+truth: hand-written from the C40 contract (testdata/README.md); there is no bash tool to record from
+-- run.log --
+Running moduleATest
+Total tests run: 6, Failures: 0, Skips: 0
+Running moduleBTest
+Total tests run: 4, Failures: 0, Skips: 1
+BUILD SUCCESSFUL
