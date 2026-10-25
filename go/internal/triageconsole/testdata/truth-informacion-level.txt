@@ -1,0 +1,22 @@
+-- args --
+--tag
+plant
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:02 01-Oct-26 CST -> 10:00:02 01-Oct-26 CST  SEVERE latin1 block @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:04 01-Oct-26 CST -> 10:00:04 01-Oct-26 CST  SEVERE neighbour block @ Nb.frame(Nb.java:3)
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  SEVERE utf8 block @ [plant]
+-- stderr --
+-- @kind --
+truth: hand-written; the bash recorded at 79ca5a2c compared substr(s, 1, 8) with the 9-byte "INFORMACI", so an INFORMACIÓN header (UTF-8 or Latin-1, the Spanish java.util.logging name of INFO) never closed the open block and its frames attached to the previous WARNING/SEVERE row; the port makes exactly INFORMACIÓN in either encoding a level that closes the block, while INFORMACIONAL and the unaccented INFORMACION (edge-levels) stay no level
+-- a.txt --
+SEVERE [10:00:00 01-Oct-26 CST][plant] utf8 block
+INFORMACIÓN [10:00:01 01-Oct-26 CST][sys] utf8 info closes the block
+  	at com.angeles.Utf.frame(Utf.java:1)
+SEVERE [10:00:02 01-Oct-26 CST][plant] latin1 block
+INFORMACI�N [10:00:03 01-Oct-26 CST][sys] latin1 info closes the block
+  	at com.angeles.Lat.frame(Lat.java:2)
+SEVERE [10:00:04 01-Oct-26 CST][plant] neighbour block
+INFORMACIONAL [10:00:05 01-Oct-26 CST][sys] informacional is no level
+  	at com.angeles.Nb.frame(Nb.java:3)
