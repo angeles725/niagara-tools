@@ -1,0 +1,25 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  type-outside-region  @DIR@/src/com/example/BDemoView.java:9  hand-written getType() outside the generated region of BDemoView: Slot-o-Matic writes its own there, so compileJava fails (method getType() is already defined) -- delete the hand-written one and keep the region
+-- stderr --
+-- src/com/example/BDemoView.java --
+package com.example;
+
+@NiagaraType(
+  agent = @AgentOn(types = { "demo:Demo" })
+)
+public final class BDemoView extends BWbView
+{
+  @Override
+  public Type getType()
+  {
+    return TYPE;
+  }
+
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.example.BDemoView(1111111111)1.0$ @*/
+  public static final Type TYPE = Sys.loadType(BDemoView.class);
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}

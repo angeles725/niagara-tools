@@ -1,0 +1,24 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  type-outside-region  @DIR@/src/com/example/BDemoDup.java:16  hand-written TYPE outside the generated region of BDemoDup: Slot-o-Matic writes its own there, so compileJava fails (variable TYPE is already defined) -- delete the hand-written one and keep the region
+-- stderr --
+-- src/com/example/BDemoDup.java --
+package com.example;
+
+@NiagaraType
+public class BDemoDup extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.example.BDemoDup(2979906276)1.0$ @*/
+  //region Type
+
+  public Type getType() { return TYPE; }
+  public static final Type TYPE = Sys.loadType(BDemoDup.class);
+
+  //endregion Type
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+
+  public static final Type TYPE = Sys.loadType(BDemoDup.class);
+}
