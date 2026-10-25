@@ -31,8 +31,11 @@
 # srcTest/ superclass is <SimpleName>.<method>; their count must equal the root ignored ("source and TestNG disagree"
 # is FAIL) and `--allow-ignored <Class.method>` (repeatable, with --allow-ignored-reason) waives exactly that set: a
 # new disabled method or a stale name is FAIL, so a swapped disable fails although the count holds. A class-level
-# disable, a non-literal enabled value or an unreadable registered source is exit 3 before the build; run's count
-# pair is the fallback that skips the source, and mixing it with --allow-ignored is exit 2. A missing, malformed, truncated or over-64 MiB file is
+# disable, a non-literal enabled value or an unreadable registered source is exit 3 before the build. Every run
+# prints the scanned names. run's count pair is the fallback for a source that cannot name the set: the scan still
+# runs, and the count is judged only when the scan refused (case (i), a NOTE row instead of exit 3) or its count
+# differs from the root ignored (case (ii)); a scan that names every ignored method FAILs the count ("use
+# --allow-ignored names"), whatever the reason. Mixing it with --allow-ignored is exit 2. A missing, malformed, truncated or over-64 MiB file is
 # FAIL (exit 1), with a row per failed test-method (20 at most, then "and N more"). A <log>, when given, still
 # fails the run on its rejections and failure counts; its missing summary line is no reason.
 # Exits: 0 PASS; 1 FAIL; 2 usage; 3 unreadable log, or the Go tool cannot be built.

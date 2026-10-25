@@ -126,8 +126,9 @@ func TestRunIgnored(t *testing.T) {
 		want  string
 	}{
 		{"ignored without an allowance", nil, exitFail, "FAIL  run-niagara-test  testng: 2 ignored test-methods"},
-		{"allowed", []string{"--allow-ignored-count", "2", "--allow-ignored-reason", reason}, exitPass,
-			"PASS  run-niagara-test  testng: 2 ignored test-methods allowed (--allow-ignored-count 2): " + reason},
+		{"allowed (case (ii): no registered type, so the source disables none)", []string{"--allow-ignored-count", "2", "--allow-ignored-reason", reason}, exitPass,
+			"PASS  run-niagara-test  testng: 2 ignored test-methods allowed (--allow-ignored-count 2, case (ii): the source disables 0, " +
+				"TestNG ignored 2): " + reason},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
