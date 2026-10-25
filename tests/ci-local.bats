@@ -177,10 +177,19 @@ fake_cgroup() { # fake_cgroup <name> <current> <max>
   printf '#!/bin/sh\necho "bats-args: $*"\n' > "$TMPDIR_T/bin/bats"
   chmod +x "$TMPDIR_T/bin/bats"
   printf 'name: CI\non: pull_request\njobs:\n  bats:\n    runs-on: ubuntu-latest\n    steps:\n      - name: bats j4\n        run: bats -j 4 --formatter tap tests/*.bats\n' > "$TMPDIR_T/j4.yml"
-  # A PATH without any GNU parallel (this host may have one), keeping go, bash and the rest.
-  local d nopar=""
-  while IFS= read -r -d: d; do [ -x "$d/parallel" ] || nopar="$nopar${nopar:+:}$d"; done <<< "$PATH:"
-  PATH="$TMPDIR_T/bin:$nopar" run "$CL" --ci-file "$TMPDIR_T/j4.yml" --cache-dir "$TMPDIR_T/cache" -j 2
+  # A PATH without GNU parallel that keeps every other tool: a shadow dir linking each executable on PATH
+  # (first hit wins, as PATH lookup does) except parallel. Dropping whole PATH dirs instead loses the tools
+  # that share a dir with parallel (CI installs it in /usr/local/bin beside bats and others).
+  local d f shadow="$TMPDIR_T/no-parallel"
+  mkdir -p "$shadow"
+  while IFS= read -r -d: d; do
+    [ -d "$d" ] || continue
+    for f in "$d"/*; do
+      [ -x "$f" ] && [ ! -d "$f" ] && [ "${f##*/}" != parallel ] && [ ! -e "$shadow/${f##*/}" ] \
+        && ln -s "$f" "$shadow/${f##*/}"
+    done
+  done <<< "$PATH:"
+  PATH="$TMPDIR_T/bin:$shadow" run "$CL" --ci-file "$TMPDIR_T/j4.yml" --cache-dir "$TMPDIR_T/cache" -j 2
   [ "$status" -eq 0 ]
   [[ "$output" == *"bats-args: --formatter tap tests/"* ]]
   printf '#!/bin/sh\nexit 0\n' > "$TMPDIR_T/bin/parallel"
