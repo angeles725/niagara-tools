@@ -11,7 +11,7 @@ usage: run-niagara-test verdict [<log>|-]
        run-niagara-test run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
                             [--timeout <dur>] [--keep-home] [--scratch <dir>] [--jdk8 <dir>]
                             [--gradle-user-home <dir>] [--module-verification low] [--exclude-jar <glob>]...
-                            [--restore-gradle-root] [--log-dir <dir>]
+                            [--restore-gradle-root] [--log-dir <dir>] [--reuse-home <dir>]
                             [--allow-ignored <Class.method>... | --allow-ignored-count <n>] [--allow-ignored-reason <why>]
   verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
            or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
@@ -73,6 +73,16 @@ usage: run-niagara-test verdict [<log>|-]
            log: <stem>.testng-results.xml (a copy) and <stem>.traces.txt (the whole full-stacktrace of every
            FAIL test-method), each cut at a line end under 4 MiB with a "(truncated: ...)" row; a missing or
            unreadable results file is a "testng-results.xml unavailable" row in the log instead.
+           --reuse-home <dir> boots again on the dir a --keep-home run kept (its "cleanup: kept" row), to prove
+           what survives a restart. Refused (exit 2): a dir not under the scratch parent, one that is, holds or
+           sits in a real %USERPROFILE%\Niagara4.*\<brand> or has registry\ or security\ at its top, and one
+           whose run-niagara-test.marker (written by every run in its dir: run id, install, sha256 of the
+           install's defaults\system.properties, and the run log a --keep-home run wrote) does not match: the
+           run id must be the one the kept run's log in --log-dir records, the install and the sha256 this run's.
+           Nothing is copied again (the home copy, its registry and the scratch niagara_user_home stay); the
+           module jars are rebuilt and out\ starts empty. Every other gate runs; --exclude-jar and
+           --module-verification are exit 2 with it. The dir is deleted at the end ("cleanup: deleted") unless
+           --keep-home again.
 exit: verdict 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
       run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, git, robocopy, gradle, cleanup), 4 timeout
 -- @kind --

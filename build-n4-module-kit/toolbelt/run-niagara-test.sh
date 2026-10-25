@@ -12,7 +12,7 @@
 #                                [--timeout <dur, default 30m>] [--keep-home] [--scratch <dir>]
 #                                [--jdk8 <WSL JDK 8 dir, default /usr/lib/jvm/java-8-openjdk-amd64>]
 #                                [--gradle-user-home <dir, default ~/.gradle>] [--module-verification low]
-#                                [--exclude-jar <glob>]... [--restore-gradle-root] [--log-dir <dir>]
+#                                [--exclude-jar <glob>]... [--restore-gradle-root] [--log-dir <dir>] [--reuse-home <dir>]
 #                                [--allow-ignored <Class.method>... | --allow-ignored-count <n>] [--allow-ignored-reason <why>]
 # Contract: PASS only when the log holds at least one `Total tests run: N` line and every one has N > 0 and
 # `Failures: 0`. FAIL on a summary with 0 tests, failures or no Failures count; a `Failures:` key outside a
@@ -90,6 +90,16 @@
 # A failed run also keeps <stem>.testng-results.xml (a copy) and <stem>.traces.txt (the whole full-stacktrace of
 # every FAIL test-method) beside the log, redacted the same way, each cut at a line end under 4 MiB with a
 # `(truncated: ...)` row; a missing or unreadable results file is a `testng-results.xml unavailable` row instead.
+# --reuse-home <dir>: boot again on the dir a --keep-home run kept (`cleanup: kept <dir>`), to prove what survives a
+# station restart. Every run writes run-niagara-test.marker in its dir (run id <UTC stamp>-<module>-<dir>-<nonce>,
+# install, sha256 of the install's defaults\system.properties, and, once a --keep-home run wrote it, its run log, whose
+# header records the same `run id:`). Refused (exit 2): a dir not under the scratch parent; one that is, holds or sits
+# in a real %USERPROFILE%\Niagara4.*\<brand>, or has registry\ or security\ at its top (D3, a copied marker changes
+# nothing); no marker; a marker whose run id is not the one its log in --log-dir records, or whose install or sha256
+# is not this run's (each named). Nothing is copied again: the home copy, its registry and the scratch
+# niagara_user_home stay; the module jars are rebuilt and out\ starts empty. Every other gate runs; --exclude-jar
+# and --module-verification are exit 2 with it. The dir is deleted at the end (`cleanup: deleted <dir>`) unless
+# --keep-home again.
 #
 # Implementation: go/internal/niagaratest (goldens in its testdata/, hand-written: no bash tool to record from).
 # go/go-tool.sh `go_tool_bin` builds go/bin/run-niagara-test when it is missing or older than a Go source, then

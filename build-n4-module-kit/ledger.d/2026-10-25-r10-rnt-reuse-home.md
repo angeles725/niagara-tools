@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: run-niagara-test run boots a second time on a kept home with --reuse-home -->
+log: 2026-10-25 · quality round 10 → `run-niagara-test run --reuse-home <dir>` (`go/internal/niagaratest/reusehome.go`) boots again on a dir a `--keep-home` run kept, to prove state across a restart. Every run writes `run-niagara-test.marker` (run id, install, sha256 of the install's defaults/system.properties, and the run log a --keep-home run wrote, whose header records the run id). Refused, exit 2 naming the field: a dir not under the scratch parent, a real or copied Niagara user home (D3), no marker, a run id that is not the kept log's, an install or sha256 that is not this run's. Nothing is copied again; the module jars are rebuilt and out/ starts empty; the dir is deleted at the end unless --keep-home. Retro retros/2026-10-25-r10-rnt-reuse-home.md (1Δ, folded). [ev: retro r10-rnt-reuse-home Δ1]
+open_issue: proven on the fake runner only; a live two-boot reload proof (data persisted in boot 1, reloaded in boot 2) on a client root is owed (retro r10-rnt-reuse-home Δ1).

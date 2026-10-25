@@ -44,6 +44,7 @@ var (
 type runConfig struct {
 	install, gradleRoot, part, module, scratch string
 	jdk8, gradleUserHome, logDir               string
+	reuseHome                                  string // --reuse-home: boot again on a dir a --keep-home run kept
 	timeout                                    time.Duration
 	keepHome, verifyLow, restoreRoot           bool
 	excludeJars                                []string // --exclude-jar globs, in flag order
@@ -62,6 +63,9 @@ type plan struct {
 	rootTop                             string       // its worktree top, where the status paths start
 	rows                                *lineRing    // the last rows the run printed, for the run log
 	logDirSet                           bool         // --log-dir was given: a green run keeps a log too
+	runID                               string       // this run's id, in its marker and its log (reusehome.go)
+	marker                              marker       // the marker this run wrote in its scratch dir
+	logPath                             string       // the run log once written
 }
 
 func (p *plan) home() winDir        { return winDir{p.dir.wsl + "/home", p.dir.win + `\home`} }
@@ -134,6 +138,7 @@ func parseRun(args []string) (runConfig, error) {
 	fs.StringVar(&c.jdk8, "jdk8", "", "")
 	fs.StringVar(&c.gradleUserHome, "gradle-user-home", "", "")
 	fs.StringVar(&c.logDir, "log-dir", "", "")
+	fs.StringVar(&c.reuseHome, "reuse-home", "", "")
 	fs.DurationVar(&c.timeout, "timeout", defaultTimeout, "")
 	fs.BoolVar(&c.keepHome, "keep-home", false, "")
 	fs.BoolVar(&c.restoreRoot, "restore-gradle-root", false, "")
@@ -168,6 +173,12 @@ func parseRun(args []string) (runConfig, error) {
 		return c, fmt.Errorf("run: --module %q is not a module name", c.module)
 	case c.timeout <= 0 || c.timeout > maxTimeout:
 		return c, fmt.Errorf("run: --timeout %s is not in (0, %s]", c.timeout, maxTimeout)
+	case set["reuse-home"] && c.reuseHome == "":
+		return c, fmt.Errorf("run: --reuse-home needs a dir")
+	case c.reuseHome != "" && len(c.excludeJars) > 0:
+		return c, fmt.Errorf("run: --reuse-home takes no --exclude-jar: the kept home keeps the copy the run that made it took")
+	case c.reuseHome != "" && c.verifyLow:
+		return c, fmt.Errorf("run: --reuse-home takes no --module-verification: the kept copy keeps the verification mode the run that made it set")
 	}
 	return c, nil
 }
@@ -251,6 +262,13 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	if within(p.parent.win, p.install.win) || within(p.install.win, p.parent.win) {
 		return refuse("the build's niagara_home would be inside --install (scratch %s, install %s)", p.parent.win, p.install.win)
 	}
+	// --reuse-home: under the scratch parent, no real user home (D3), its marker bound to the kept run's log and
+	// to this install (reusehome.go). Guard 3 and every later gate still apply.
+	if cfg.reuseHome != "" {
+		if why := h.checkReuse(p); why != "" {
+			return refuse("%s", why)
+		}
+	}
 	// Guard 3: refuse an install a running station, NRE or Workbench uses.
 	rows, ok := h.powershell(ctx, fmt.Sprintf(inUseScript, p.install.win))
 	if !ok {
@@ -333,20 +351,29 @@ func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
 			return exitEnv
 		}
 	}
-	dir, err := os.MkdirTemp(p.parent.wsl, "run-niagara-test-")
-	if err != nil {
-		fmt.Fprintf(s.Err, "%s: run: %v\n", name, err)
+	copyStep := h.copyHome
+	if p.reuseHome == "" {
+		dir, err := os.MkdirTemp(p.parent.wsl, "run-niagara-test-")
+		if err != nil {
+			fmt.Fprintf(s.Err, "%s: run: %v\n", name, err)
+			return exitEnv
+		}
+		win, _ := h.toWin(dir)
+		p.dir = winDir{dir, win}
+	} else {
+		copyStep = h.keptHome
+	}
+	defer func() { code = h.cleanup(p, snap, users, s, code) }()
+	if err := h.takeHome(p); err != nil {
+		row(s, "FAIL", "marker: cannot bind "+p.dir.win+" to this run: "+err.Error())
 		return exitEnv
 	}
-	win, _ := h.toWin(dir)
-	p.dir = winDir{dir, win}
-	defer func() { code = h.cleanup(p, snap, users, s, code) }()
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 	for _, step := range []struct {
 		name string
 		do   func(context.Context, *plan, cli.Stdio) (int, error)
-	}{{"copy", h.copyHome}, {"module verification", h.lowerVerification}, {"build", h.build}, {"run", h.testExe}} {
+	}{{"copy", copyStep}, {"module verification", h.lowerVerification}, {"build", h.build}, {"run", h.testExe}} {
 		code, err := step.do(ctx, p, s)
 		switch {
 		case errors.Is(err, context.DeadlineExceeded):
@@ -413,6 +440,14 @@ func (h host) copyHome(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	if len(skipped) > 0 {
 		row(s, "PASS", fmt.Sprintf("copy: %s (dotted module name): %s", plural(len(skipped), "jar skipped", "jars skipped"), strings.Join(skipped, " ")))
 	}
+	return -1, nil
+}
+
+// keptHome is the copy step of a --reuse-home run: nothing is copied over the kept home. Its copy, the registry
+// the NRE built in it, the scratch niagara_user_home and user.home stay; the build installs the module jars again.
+func (h host) keptHome(_ context.Context, p *plan, s cli.Stdio) (int, error) {
+	p.windows = true
+	row(s, "PASS", "reuse: "+p.dir.win+" (no copy: the home copy, its registry and the scratch niagara_user_home stay; the module jars are rebuilt)")
 	return -1, nil
 }
 
@@ -571,6 +606,8 @@ func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int 
 	} else if err := os.RemoveAll(p.dir.wsl); err != nil {
 		row(s, "FAIL", "cleanup: cannot delete "+p.dir.win+": "+err.Error())
 		worse(exitEnv)
+	} else if p.reuseHome != "" {
+		row(s, "PASS", "cleanup: deleted "+p.dir.win)
 	}
 	if now, err := userHomeSnapshot(p.profile); err != nil {
 		row(s, "FAIL", "real user homes unchanged: cannot re-read them: "+err.Error())
@@ -586,6 +623,14 @@ func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int 
 	}
 	if !h.writeRunLog(p, ev, code, s) {
 		worse(exitEnv)
+	}
+	// A kept dir names its run log in its marker: the record a later --reuse-home binds the marker to.
+	if p.keepHome && p.logPath != "" {
+		p.marker.log = p.logPath
+		if err := writeMarker(p.dir.wsl, p.marker); err != nil {
+			row(s, "FAIL", "cleanup: cannot name the run log in the kept marker: "+err.Error())
+			worse(exitEnv)
+		}
 	}
 	return code
 }
