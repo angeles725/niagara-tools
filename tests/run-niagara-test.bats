@@ -60,3 +60,18 @@ setup() {
   [ "$status" -eq 2 ] || { echo "$output"; return 1; }
   [[ "$output" == *'flag needs an argument: -log-dir'* ]]
 }
+
+@test "RNT9: --testng fails a results file with ignored test-methods unless --allow-ignored-count waives exactly that count" {
+  # Mutation: RNT9 -- dropping the ignored check (judgeIgnored) turns the first run green
+  printf '<testng-results skipped="0" failed="0" ignored="1" total="2" passed="1"><suite name="S"><test name="T">%s</test></suite></testng-results>\n' \
+    '<class name="test.com.example.ModuleA.BExampleStationTest"><test-method status="PASS" name="reads_value"/></class>' > "$BATS_TEST_TMPDIR/testng-results.xml"
+  run "$R" verdict --testng "$BATS_TEST_TMPDIR/testng-results.xml"
+  [ "$status" -eq 1 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"FAIL  run-niagara-test  testng: 1 ignored test-method (@Test(enabled = false) or excluded"* ]]
+  run "$R" verdict --testng "$BATS_TEST_TMPDIR/testng-results.xml" --allow-ignored-count 1 --allow-ignored-reason 'needs a live device'
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"PASS  run-niagara-test  testng: 1 ignored test-method allowed (--allow-ignored-count 1): needs a live device"* ]]
+  run "$R" verdict --testng "$BATS_TEST_TMPDIR/testng-results.xml" --allow-ignored-count 1
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"--allow-ignored-count needs --allow-ignored-reason <why>"* ]]
+}
