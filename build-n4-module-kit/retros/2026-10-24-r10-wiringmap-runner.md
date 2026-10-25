@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · r10-wiringmap-runner
@@ -35,3 +35,11 @@ The `toolbelt/new-retro.sh` header no longer names the deleted newretro recorder
 ## Lessons
 - The shared recorder reproduced the private recorder's bytes exactly once the default `HOME`/`LC_ALL` were added:
   the bash reads neither, so no case declares them.
+
+## Fold
+- The migration is code already shipped in the PR that wrote this retro (`go/internal/wiringmap`); not re-implemented.
+- Δ1 → `BUILD-LOOP.md` § 5 golden-case bullet (a converter reads bytes); Δ2 → § 5 What to port (retiring a recorder greps every header).
+- The follow-up is done on main: `toolbelt/generate-wiring-map.sh` line 45 names the shared `golden/record/record.sh`. Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1 in the `BUILD-LOOP.md` § 5 golden-case bullet; Δ2 in § 5 What to port.

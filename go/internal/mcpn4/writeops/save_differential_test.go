@@ -4,16 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
 )
@@ -288,22 +287,17 @@ func (c *saveCase) layout(t *testing.T, root string, i int) string {
 }
 
 func TestSavePlanAndReadbackDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
-	root := t.TempDir()
+	g := golden.Open(t, "save")
+	// The cases run in a temp dir under relative paths: the plan_hash covers the home path
+	// in the notes, so only a path that is the same on every run keeps the golden replayable.
+	t.Chdir(t.TempDir())
+	root := "."
 	cases := saveCorpus()
 	lines := make([]string, len(cases))
 	for i := range cases {
 		lines[i] = cases[i].layout(t, root, i)
 	}
-	cmd := exec.Command(py, "-c", pySave)
-	cmd.Dir = kit
-	cmd.Env = append(cmd.Environ(), "PYTHONDONTWRITEBYTECODE=1")
-	cmd.Stdin = strings.NewReader(strings.Join(lines, "\n") + "\n")
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
+	out := g.Run(pySave, []byte(strings.Join(lines, "\n")+"\n"))
 	sc := bufio.NewScanner(strings.NewReader(string(out)))
 	sc.Buffer(nil, 1<<22)
 	kinds := map[string]int{}

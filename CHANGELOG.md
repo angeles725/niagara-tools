@@ -15,6 +15,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
   default, even right after `make`) and exits 0 like the Python server; a second signal forces the exit, and a client
   gone mid-reply ends with exit 1 and the session closed. See `mcp-n4-kit/docs/go-port-plan.md` section 22.
 
+---
+
+## [v0.32.0] - 2026-10-25
+
+### Highlights — quality rounds 8-10
+
+- **Go ports.** The kit's parsing tools and lints run on the Go module (`go/`): each `toolbelt/*.sh` name is kept as a
+  thin `go_tool_bin` wrapper, and every port was proven byte-identical to its bash before its truth fixes landed.
+- **mcp-n4 defaults to the Go server**, with the Python server kept for one release as a fallback (details below).
+- **Driver authoring kit DR1-DR5.** Driver doctrine (`types/driver-authoring.md`), a driver scaffold, driver lints,
+  a driver mode of the verify gate and a worked driver exemplar. [PR #498, #502, #503, #510, #534]
+- **One golden Runner.** Go ports replay their goldens through the shared `golden.Runner` and record them with one
+  `golden/record/record.sh` (hermetic environment, the whole post-run tree); the private loops and recorders are
+  gone. [PR #516]
+- **kit-cite-resolve and citation fixes.** False-positive classes fixed in the citation parser and resolver, DRIFT
+  for anchored guide pointers, and dotted section paths read whole. [PR #499, #509, #514, #515, #517]
+- **Local client gate findings.** `lint-slotomatic-markers` FAILs a `TYPE`/`getType()` declared by hand outside
+  the generated region [PR #540], and the `report-module` summary names a skipped floor check beside a FAIL
+  [PR #539].
+- **Retro fold.** Every pending kit retro of the round is folded into the kit doctrine (`BUILD-LOOP.md` § 5,
+  `build-verify.md`, `types/moduleTest.md`); no retro is left pending.
+
 ### Changed — mcp-n4 defaults to the Go server
 
 - `go/bin/mcp-n4` is now the default mcp-n4 server: every read and write tool is ported, and the in-doubt matrix is

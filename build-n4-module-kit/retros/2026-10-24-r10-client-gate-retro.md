@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 5 -->
 # 2026-10-24 · kit · r10-client-gate-retro
@@ -75,8 +75,15 @@ Running that gate on every head exposed five things the kit does not say yet:
 - Stale tests and code regressions look the same in a failing run. `git blame` on the assertion plus the
   naming in the repository's own docs and seed tables tells them apart, without a station.
 
+## Fold
+- Δ2 → `build-verify.md` § Mirror (a reused mirror is not a deploy baseline); Δ3 → `types/moduleTest.md` § What to test (a discovering WSL runner with a checked exclude list); Δ5 → `build-verify.md` § Client repository CI (local exact-head gate, PR comment as the record).
+- Δ1 landed on main in #540 (`lint-slotomatic-markers` `type-outside-region`, `build-verify.md` § Raw gradle); Δ4 landed in #539 (`go/internal/reportmodule` summary, `BUILD-LOOP.md` § 5 floor bullet). Both are shipped code, cited where they landed; not re-implemented.
+
 ## Owed
 - Δ1 FOLDED (branch `feat/r10-lint-type-dup`): the `build-verify.md` § Raw gradle bullet, and as code the
   `type-outside-region` FAIL sub-check of `toolbelt/lint-slotomatic-markers.sh`
   (`go/internal/lint/rules/slotomaticmarkers`, not lint-structure: it reads the same region markers).
-- Δ4's summary change is a code change in `go/internal/reportmodule`; it needs its own RED-first PR.
+- Δ4 DONE by niagara-tools #539: the `report-module` summary names a floor SKIP beside a FAIL.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1 (#540) and Δ4 (#539) shipped code; Δ2, Δ5 in `build-verify.md`; Δ3 in `types/moduleTest.md`.

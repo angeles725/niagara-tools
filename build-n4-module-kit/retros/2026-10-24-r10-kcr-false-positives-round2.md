@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · r10-kcr-false-positives-round2
@@ -57,3 +57,10 @@ Two classes did not match the kit, so they were stopped and reported instead of 
 ## Owed
 - The `archive` kind checks only that the zip exists. Opening it to check the entry and its lines would need a zip
   reader in the resolver, and no kit card needs that today.
+
+## Fold
+- Δ1 is code already shipped in the PR that wrote this retro (`go/internal/citeparse`, `go/internal/citeresolve`); not re-implemented. Its shapes and both lessons (a triage class is a hypothesis until a card shows it; diff excerpts too) → `BUILD-LOOP.md` § 5 Citation pre-filter bullet.
+- G4 and G8 were rejected in the retro itself with reasons; the owed zip-entry check has no kit card that needs it; no issue.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1 shipped code, cited in the `BUILD-LOOP.md` § 5 Citation pre-filter bullet.

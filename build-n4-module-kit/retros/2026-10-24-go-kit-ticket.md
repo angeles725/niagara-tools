@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-kit-ticket
@@ -45,5 +45,11 @@ through `go_tool_bin` with the full PATH, so the wrapper stays fail-closed on th
 - Read the whole bats file before scoping a port: the gh-present kit-ticket cases (RL4b-RL4f) sit 140 lines below RL4.
 - A restricted-PATH test is the first thing a Go wrapper breaks; check every `PATH=` run of the script before writing the shim.
 
+## Fold
+- The port is code already shipped in the PR that wrote this retro (`go/internal/kitticket`, `toolbelt/kit-ticket.sh` wrapper); not re-implemented.
+- Δ1 → `BUILD-LOOP.md` § 5 What to port (restricted-PATH bats builds the binary in `setup_file`).
+- Δ2 and Δ3 → `BUILD-LOOP.md` § 5 golden-case bullet (a fake external command in the case tree; a leaked `$$` as a truth case with `Host.Pid`), not `go/internal/lint/rules/golden/record/README.md`, whose citations the fold audit does not count.
+- Both follow-ups (shell-escape quoting of an odd path, ENOEXEC fallback gh) are recorded limits with no real kit path; no issue. The lessons are covered by Δ1.
+
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-kit-ticket.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1 in `BUILD-LOOP.md` § 5 What to port; Δ2, Δ3 in the § 5 golden-case bullet.

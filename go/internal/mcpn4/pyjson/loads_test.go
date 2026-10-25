@@ -4,13 +4,10 @@ import (
 	"bufio"
 	"encoding/hex"
 	"math/rand/v2"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 )
 
 // loadsCases pin the error texts the BOX client shows ("transport failure: <text>") for a reply
@@ -69,7 +66,7 @@ func TestDecodeUTF8ReplaceCountsMaximalSubparts(t *testing.T) {
 // then raw.decode("utf-8", "replace") as ASCII.
 const loadsDriver = `
 import json, sys
-for line in open(sys.argv[1]):
+for line in sys.stdin:
     raw = bytes.fromhex(line.strip())
     try:
         out = "ok " + json.dumps(json.loads(raw.decode()))
@@ -80,9 +77,8 @@ for line in open(sys.argv[1]):
 
 // TestDifferentialLoads runs the boundary cases, the decode corpus and random byte strings
 // through CPython and through Loads / DecodeUTF8: the lines must be equal.
-// It skips, naming the Python found, unless that is the target CPython (pytarget.Minor).
+// Python's lines are the golden testdata/loads.golden.jsonl.
 func TestDifferentialLoads(t *testing.T) {
-	py := pytarget.Python(t)
 	var docs []string
 	for _, c := range loadsCases {
 		docs = append(docs, c.in)
@@ -107,14 +103,7 @@ func TestDifferentialLoads(t *testing.T) {
 	for _, d := range docs {
 		in.WriteString(hex.EncodeToString([]byte(d)) + "\n")
 	}
-	path := filepath.Join(t.TempDir(), "docs.txt")
-	if err := os.WriteFile(path, []byte(in.String()), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	out, err := exec.Command(py, "-I", "-c", loadsDriver, path).Output()
-	if err != nil {
-		t.Fatalf("python3 driver: %v", err)
-	}
+	out := golden.Open(t, "loads").Run(loadsDriver, []byte(in.String()))
 	sc := bufio.NewScanner(strings.NewReader(string(out)))
 	sc.Buffer(nil, 1<<20)
 	i, fails := 0, 0
