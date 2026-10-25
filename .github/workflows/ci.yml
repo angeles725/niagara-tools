@@ -89,10 +89,6 @@ jobs:
       - name: bats (all unit tests)
         run: bats tests/*.bats
 
-      # Go is the default server since S16 (the mcp-n4-go job runs it); this step pins the fallback.
-      - name: mcp-n4-kit unittest (Python fallback server)
-        run: MCP_N4_IMPL=python python3 -m unittest discover -s mcp-n4-kit/tests -v
-
       - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
         run: |
           bats --formatter tap tests/run-pure-test.bats | tee /tmp/run-pure-test.tap
@@ -213,4 +209,4 @@ jobs:
         run: cd go && go build -o bin/ ./cmd/mcp-n4
 
       - name: mcp-n4-kit unittest (Go server)
-        run: MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests -v
+        run: python3 -m unittest discover -s mcp-n4-kit/tests -v
