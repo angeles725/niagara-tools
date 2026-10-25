@@ -214,7 +214,7 @@ One command runs the module's station tests on a throwaway copy of the install a
 toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-root <client gradle root> \
   --part ModuleA-rt --module ModuleA [--timeout 30m] [--keep-home] [--scratch '<dir under %TEMP%>'] \
   [--jdk8 /usr/lib/jvm/java-8-openjdk-amd64] [--gradle-user-home ~/.gradle] [--module-verification low] \
-  [--exclude-jar '<glob>']...
+  [--exclude-jar '<glob>']... [--restore-gradle-root]
 ```
 
 - It copies the install into a new dir under `%TEMP%` (robocopy: `bin etc jre lib security defaults`, then the
@@ -240,7 +240,7 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   `niagara_user_home` without the `etc\` and `security\` the NRE creates, is FAIL `[ev: retro r10-rnt-run-live-fixes Δ1]`.
 - Cleanup runs on every path: it kills this run's Windows processes by PID (`taskkill /PID <pid> /T /F`), confirms
   none is left, and deletes only the dir it created (kept with `--keep-home`). Exits: 0 PASS, 1 FAIL, 2 usage or
-  refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout (the run is killed).
+  refused, 3 environment (cmd.exe, git, robocopy, gradle, cleanup), 4 timeout (the run is killed).
 - The first boot of a copy takes about 4.5 min (registry rebuild); later boots 26-80 s. The copy itself takes
   about 5 s; one batched boot of every class of a module took 7-10 min, so budget a mutation RED per boot
   accordingly `[ev: retro r10-station-test-campaign Δ3]`.
@@ -263,6 +263,21 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   jar of the module under test (an old 1.8 `moduleA-ux.jar` in the install) never sits next to the freshly built
   `moduleA-rt.jar`; the glob is a case-insensitive jar basename of `*` and `?` only, and one matching no jar is FAIL,
   exit 2, before anything is copied `[ev: retro r10-rnt-exclude-jar Δ1]`.
+- **The build must not change the client's source tree.** `--gradle-root` must be a git worktree (else `gradle
+  root is not a git worktree: cannot verify it`, exit 3, before any copy). The runner takes `git status
+  --porcelain=v1 -z --untracked-files=all` of it, with a sha256 of every listed file (so a rewrite of a file that
+  was already dirty counts), before the copy and again after cleanup; any new, modified, deleted or rewritten path
+  is FAIL (`gradle root changed by the build: <paths>`, 10 names, then "and N more"), else `gradle root unchanged
+  (<n> tracked changes before, same after)`. `--restore-gradle-root` (opt-in) then checks out (`git
+  --literal-pathspecs checkout -- <paths>`) only the files that were clean before and that the build modified or
+  deleted, never a file already dirty, never deletes an untracked file (it lists the ones the build created),
+  re-reads the status and prints `gradle root restored: <paths>`; the run stays FAIL, since the restore is hygiene,
+  not a pass. No `git clean`, `git reset` or `git checkout .` is ever run `[ev: retro r10-rnt-gradle-root-gate Δ1]`.
+- **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13), `:<part>:compileModuleTestJava` appends every
+  `@NiagaraType` test class to the PRODUCTION `<part>/module-include.xml`** (never to `moduleTest-include.xml`), and
+  it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types. Check
+  `git status` of the gradle root after any moduleTest compile, by hand or through the runner's gate
+  `[ev: retro r10-rnt-gradle-root-gate Δ2]`.
 
 Fallback, by hand (the route the runner automates):
 
