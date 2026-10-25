@@ -63,6 +63,18 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
+@test "TC-DASH3: the emitted -ux servlet overrides only real BWebServlet entry points (never doService(WebOp))" {
+  # BWebServlet's overridable dispatch set is service/doGet/doPost/doPut/doDelete(WebOp); an @Override of
+  # doService(WebOp) failed :ModuleA-ux:compileJava on both 4.14 and 4.15 (types/dashboard.md override contract).
+  # Named mutation: rename doGet back to doService in the fixture -> this test fails.
+  run "$SC" ModuleA "$OUT" --type dashboard --vendor Example
+  [ "$status" -eq 0 ]
+  V="$OUT/ModuleA/ModuleA/ModuleA-ux/src/com/example/ModuleA/ux/BModuleAServlet.java"
+  run grep -nE 'void doService\(WebOp' "$V"
+  [ "$status" -eq 1 ]
+  grep -qE 'public void doGet\(WebOp op\)' "$V"
+}
+
 @test "TC-DASH2: invalid --type exits 2" {
   run "$SC" MyModule "$OUT" --type unknown
   [ "$status" -eq 2 ]
