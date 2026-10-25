@@ -29,7 +29,8 @@ with `validity 30` and `refresh 15`, so every signing regenerated the key and bo
 that no JVM can verify. The NRE dropped both modules (`SecurityException: cannot verify signature block file
 META-INF/THROWAWA`), so `getModules("ModuleA")` threw `ModuleNotFoundException` and TestRunner printed
 `invalid test target(s)`. With the plugin's own defaults (`validity 365`, `refresh 183`) both jars are `jar
-verified` offline. The GREEN boot is still owed.
+verified` offline. A third boot, from this branch's runner (with the Δ5 gate) and a 365/183 throwaway profile,
+was GREEN: `testng: total 3, passed 3, failed 0, skipped 0` (the three `B<Mod>LinkTest` methods).
 
 The offline checks also found that the dashboard `-ux` servlet never compiled, on 4.14 or 4.15: it declared
 `@Override doService(WebOp)`, which is not a BWebServlet method. It now overrides `doGet` and `doPost`.
@@ -68,6 +69,13 @@ The offline checks also found that the dashboard `-ux` servlet never compiled, o
   `exit 0, want 2 with "niagara.signing.validity=30, niagara.signing.refresh=15"` and `8 copy/build/run calls after a
   refusal`. GREEN after `signingprofile.go`. Mutations, each failing the package tests: margin 32 -> 31 (the 214/183 case),
   the predicate `validity > refresh` (the plugin's own check, which passes 30/15), and the call removed from `validate`.
+- Third boot (runner at 12f4fa5d, a fresh 365/183 keystore, scratch root a git worktree, `--module-verification low`,
+  no `--keep-home`): preflight attribution x4 PASS; `module verification: low (copy only)` PASS; `testng: total 3,
+  passed 3, failed 0, skipped 0`; `console line 27: run 3, failures 0, skips 0`; `console line 32: run 3, failures 0,
+  skips 0 (all run tests)`; `verdict: 3 tests run, 0 failed, 0 skipped (testng-results)`; `install unchanged (747
+  entries checked)`; `install defaults/system.properties unchanged (sha256 390e59e9)`; `real user homes unchanged (59
+  entries checked)`; `gradle root unchanged (0 tracked changes before, same after)`; exit 0. The abstract fixture base
+  was skipped as expected; the link test was the one class run.
 - Offline: `jarsigner -verify` on the kept `ModuleA-rt.jar` failed the same way, so the jar was broken at build
   time. The keystore's cert read `Valid from 03:24:06 until Oct 30` (minted at that build). After rewriting the
   profile to 365/183 with a fresh keystore, two consecutive `clean jar moduleTestJar` builds gave `jar verified` for
@@ -106,6 +114,5 @@ The offline checks also found that the dashboard `-ux` servlet never compiled, o
   build offline was still worth it: it found a second, real gap in the signing template.
 
 ## Owed
-- The GREEN boot of a scaffolded dashboard module, with a 365/183 throwaway profile (needs a boot approval).
 - Whether a 4.15 station test needs the test module's dependency on `<Mod>-rt` that the signing block drops.
 - Δ2 and Δ4 above (Δ3 landed as runner D6, #566; Δ5 is the runner gate in this branch).
