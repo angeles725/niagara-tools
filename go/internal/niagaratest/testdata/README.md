@@ -19,3 +19,6 @@ stderr (where test.exe prints its summaries; stdout holds only thread dumps), by
 written) except for the module, package and suite names, replaced by `ModuleA`/`moduleA`/`example`. Its XML edges (total 0,
 malformed or truncated XML, counts that disagree, bad root attributes, the size cap) are the table of
 `testng_test.go`.
+
+`pass-grand-total` replays the same real stderr through the console verdict: its `Results of all run tests`
+summary is the grand total the PASS row reports, never added to the per-suite lines.

@@ -94,10 +94,7 @@ func verdict(args []string, s cli.Stdio, stdin io.Reader) int {
 	if code >= 0 {
 		return code
 	}
-	ran := 0
-	for _, sm := range res.Summaries {
-		ran += sm.Run
-	}
+	ran := testsRun(res.Summaries)
 	consoleRows(s, res, "")
 	if res.Pass {
 		row(s, "PASS", fmt.Sprintf("verdict: %s, %s, 0 failures",
@@ -106,6 +103,22 @@ func verdict(args []string, s cli.Stdio, stdin io.Reader) int {
 	}
 	row(s, "FAIL", "verdict: "+plural(len(res.Reasons), "FAIL reason", "FAIL reasons"))
 	return exitFail
+}
+
+// testsRun is the run count of the last grand-total summary, else the sum of the summaries: a grand total
+// already holds the per-suite counts before it. Each summary still passes or fails on its own.
+func testsRun(sums []Summary) int {
+	sum, grand := 0, -1
+	for _, sm := range sums {
+		sum += sm.Run
+		if sm.GrandTotal {
+			grand = sm.Run
+		}
+	}
+	if grand >= 0 {
+		return grand
+	}
+	return sum
 }
 
 // readLog judges the log named by logs (none or "-": stdin). code is -1, or the exit of an unreadable log.
@@ -173,6 +186,9 @@ func testngVerdict(xmlPath string, logs []string, s cli.Stdio, stdin io.Reader) 
 func consoleRows(s cli.Stdio, res Result, prefix string) {
 	for _, sm := range res.Summaries {
 		detail := fmt.Sprintf("%sline %d: run %d, failures %s, skips %s", prefix, sm.Line, sm.Run, shown(sm.Failures), shown(sm.Skips))
+		if sm.GrandTotal {
+			detail += " (all run tests)"
+		}
 		if p := sm.Problem(); p != "" {
 			row(s, "FAIL", detail+"; "+p)
 		} else {

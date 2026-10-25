@@ -9,7 +9,7 @@ PASS  run-niagara-test  testng: total 11, passed 11, failed 0, skipped 0
 PASS  run-niagara-test  console line 6: run 3, failures 0, skips 0
 PASS  run-niagara-test  console line 13: run 3, failures 0, skips 0
 PASS  run-niagara-test  console line 22: run 5, failures 0, skips 0
-PASS  run-niagara-test  console line 26: run 11, failures 0, skips 0
+PASS  run-niagara-test  console line 26: run 11, failures 0, skips 0 (all run tests)
 PASS  run-niagara-test  verdict: 11 tests run, 0 failed, 0 skipped (testng-results)
 -- @kind --
 truth: a real station-test run of bin\test.exe <module> -v:2 -output:<dir> (its stderr and results file), anonymized (testdata/README.md)

@@ -24,6 +24,7 @@ const (
 	failuresKey   = "Failures:"
 	invalidTarget = "invalid test target(s)"
 	badSignature  = "failed signature validation"
+	grandHeader   = "Results of all run tests"
 )
 
 // noSummary is the reason of a log with no summary line. In --testng mode it is no reason: the results file
@@ -31,9 +32,11 @@ const (
 const noSummary = "no test summary (no Total tests run line)"
 
 // Summary is one `Total tests run: N, Failures: F, Skips: S` line. Failures and Skips are -1 when the line
-// has no such count. Line numbers start at 1.
+// has no such count. Line numbers start at 1. GrandTotal marks the line right after TestNG's `Results of all
+// run tests` header: the total of the per-suite summaries before it, which test.exe prints last.
 type Summary struct {
 	Line, Run, Failures, Skips int
+	GrandTotal                 bool
 }
 
 // Problem says why the summary fails the run, "" when it passes: tests ran and none failed.
@@ -73,7 +76,7 @@ func Verdict(r io.Reader) Result {
 	var res Result
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 64*1024), MaxLine)
-	n, sawSummary := 0, false
+	n, sawSummary, grand := 0, false, false
 	for sc.Scan() {
 		n++
 		line := strings.TrimSuffix(sc.Text(), "\r")
@@ -91,6 +94,7 @@ func Verdict(r io.Reader) Result {
 				res.fail(n, "malformed test summary")
 				continue
 			}
+			s.GrandTotal = grand
 			res.Summaries = append(res.Summaries, s)
 			if p := s.Problem(); p != "" {
 				res.fail(n, p)
@@ -98,6 +102,7 @@ func Verdict(r io.Reader) Result {
 		} else {
 			res.strayFailures(n, line)
 		}
+		grand = strings.TrimSpace(line) == grandHeader
 	}
 	if err := sc.Err(); errors.Is(err, bufio.ErrTooLong) {
 		res.fail(n+1, fmt.Sprintf("line longer than %d bytes: the log is not read past it", MaxLine))

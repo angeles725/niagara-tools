@@ -16,7 +16,7 @@ FAIL  run-niagara-test  testng: test-method minOff_slotDefault_isZero FAIL
 FAIL  run-niagara-test  console line 6: run 3, failures 3, skips 0; 3 failures
 FAIL  run-niagara-test  console line 13: run 3, failures 1, skips 0; 1 failure
 FAIL  run-niagara-test  console line 22: run 5, failures 2, skips 0; 2 failures
-FAIL  run-niagara-test  console line 26: run 11, failures 6, skips 0; 6 failures
+FAIL  run-niagara-test  console line 26: run 11, failures 6, skips 0 (all run tests); 6 failures
 FAIL  run-niagara-test  verdict: 5 FAIL reasons
 -- @kind --
 truth: a real station-test run of bin\test.exe <module> -v:2 -output:<dir> (its stderr and results file), anonymized (testdata/README.md)

@@ -41,12 +41,15 @@ stdout held only shutdown thread dumps. The finished run showed where the summar
   signature rejection with a green XML, `--testng` with no value) and 2 from the real run (green, 6 failed),
   anonymized, with no case repeated between table and goldens; one bats smoke run (RNT3). RED was observed on a
   stub `TestNG`/`TestNGFile` (9/9 table cases, the size cap) and the unchanged CLI (11/16 goldens).
-- **Not done here.** Phase 1's PASS row sums every summary line, so a real stderr (3 + 3 + 5 per suite, then the
-  11 of `Results of all run tests`) reads "22 tests run"; the verdict is right, the count is not. The runner
-  half of G33 is owed.
+- **Phase-1 count fix.** The console PASS row summed every summary line, so the real stderr (3 + 3 + 5 per
+  suite, then the 11 of `Results of all run tests`) read "22 tests run". A summary right after that header is
+  now marked `GrandTotal` (its row says "(all run tests)") and the PASS row reports it; without the block the
+  per-suite lines are still summed, and every summary line still fails the run on its own. RED: the
+  `pass-grand-total` golden (the real stderr) printed "22 tests run", and two table cases lacked the mark.
+- **Not done here.** The runner half of G33 is owed.
 
 ## Evidence
-- `go test ./internal/niagaratest` green: TestNG table, size cap, 18 goldens `[ev: go/internal/niagaratest/testng_test.go]`
+- `go test ./internal/niagaratest` green: TestNG table, size cap, 19 goldens `[ev: go/internal/niagaratest/testng_test.go]`
 - the real run, anonymized: `[ev: go/internal/niagaratest/testdata/real-red.txt]`
 - bats RNT1-RNT3 green `[ev: tests/run-niagara-test.bats]`
 

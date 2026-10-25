@@ -1,0 +1,40 @@
+-- args --
+verdict
+@DIR@/stderr.log
+-- want --
+exit 0
+PASS  run-niagara-test  line 6: run 3, failures 0, skips 0
+PASS  run-niagara-test  line 13: run 3, failures 0, skips 0
+PASS  run-niagara-test  line 22: run 5, failures 0, skips 0
+PASS  run-niagara-test  line 26: run 11, failures 0, skips 0 (all run tests)
+PASS  run-niagara-test  verdict: 4 test summaries, 11 tests run, 0 failures
+-- @kind --
+truth: the stderr of a real station-test run of bin\test.exe <module> -v:2, anonymized (testdata/README.md)
+-- stderr.log --
+ TestNG Test Ended: autoLockout_latchesTheUnit_andLeavesItsModeAuto on Auto Lockout Keeps Mode Station Test
+ TestNG Test Ended: faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord on Auto Lockout Keeps Mode Station Test
+ TestNG Test Ended: wholeRackLocked_everyModeStillAuto_rackUnavailable on Auto Lockout Keeps Mode Station Test
+===============================================
+ModuleATest_AutoLockoutKeepsModeStationTest
+Total tests run: 3, Failures: 0, Skips: 0
+===============================================
+ TestNG Test Ended: restartDelay_slotHoldsTheLatch_untilItElapses on Hand Low Suction Wiring Station Test
+ TestNG Test Ended: restartDiff_slotHoldsTheLatch_untilLimitPlusDiff on Hand Low Suction Wiring Station Test
+ TestNG Test Ended: trip_isPublishedOnAllThreeStatusSlots on Hand Low Suction Wiring Station Test
+===============================================
+ModuleATest_HandLowSuctionWiringStationTest
+Total tests run: 3, Failures: 0, Skips: 0
+===============================================
+ TestNG Test Ended: autoRestart_atDefaultMinOff_isNotHeldOff on Min Off Default Station Test
+ TestNG Test Ended: handRestart_atDefaultMinOff_isImmediate on Min Off Default Station Test
+ TestNG Test Ended: handRestart_isNotBlocked_evenByANonzeroMinOff on Min Off Default Station Test
+ TestNG Test Ended: minOff_slotDefault_isZero on Min Off Default Station Test
+ TestNG Test Ended: minOn_slotDefault_isStillThreeMinutes on Min Off Default Station Test
+===============================================
+ModuleATest_MinOffDefaultStationTest
+Total tests run: 5, Failures: 0, Skips: 0
+===============================================
+===============================================
+Results of all run tests
+Total tests run: 11, Failures: 0, Skips: 0
+===============================================
