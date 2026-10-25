@@ -129,7 +129,9 @@ JAVA
 
 @test "BA4: CHECK2 — un-hidden intervalExpired (f='o') WARNs; --strict makes it FAIL" {
   run "$BA" "$T/synthetic.bog" --module ColdRoomPan --source-dir "$T/src"
-  [[ "$output" == *"CHECK2"* ]] && [[ "$output" == *"WARN"* ]] && [[ "$output" == *"intervalExpired"* ]]
+  [[ "$output" == *"CHECK2"* ]]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"intervalExpired"* ]]
   run "$BA" --strict "$T/synthetic.bog" --module ColdRoomPan --source-dir "$T/src"
   [ "$status" -eq 1 ]
   [[ "$output" == *"CHECK2"* ]] && [[ "$output" == *"FAIL"* ]]
@@ -142,7 +144,8 @@ JAVA
 
 @test "BA6: without --source-dir, CHECK2/3/4/5/6/7 SKIP; CHECK1/8/9/10/11/12 still run" {
   run "$BA" "$T/synthetic.bog" --module ColdRoomPan
-  [[ "$output" == *"SKIP"* ]] && [[ "$output" == *"CHECK5"* ]]
+  [[ "$output" == *"SKIP"* ]]
+  [[ "$output" == *"CHECK5"* ]]
   [[ "$output" == *"CHECK1"* ]]
 }
 
