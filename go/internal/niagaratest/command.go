@@ -18,7 +18,8 @@ const name = "run-niagara-test"
 const usage = `usage: run-niagara-test verdict [<log>|-]
        run-niagara-test verdict --testng <testng-results.xml> [<log>|-]
        run-niagara-test run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
-                            [--timeout <dur>] [--keep-home] [--scratch <dir>]
+                            [--timeout <dur>] [--keep-home] [--scratch <dir>] [--jdk8 <dir>]
+                            [--gradle-user-home <dir>]
   verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
            or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
            "Total tests run: N" line has N > 0 and 0 failures; a stray Failures count, "invalid test
@@ -35,8 +36,13 @@ const usage = `usage: run-niagara-test verdict [<log>|-]
            a scratch niagara_user_home, judge with verdict --testng (stderr as the console log; a non-zero
            exit with green results is FAIL), then kill this run's processes and delete the dir unless
            --keep-home. Refused: an install under a user home, without bin/test.exe, or used by a running
-           station; a scratch outside %TEMP%. The install is never written; a change to it is FAIL.
-           --timeout (default 30m) kills the run.
+           station (a service's unreadable station.exe is attributed through its niagarad service, or
+           refused); a scratch outside %TEMP%. The install is never written; a change to it is FAIL. The
+           NRE must use the scratch niagara_user_home: a change to a real %USERPROFILE%\Niagara4.*\<brand>
+           registry\ or security\, or no etc\ and security\ in the scratch home, is FAIL. test.exe gets it
+           as niagara_user_home through WSLENV (niagara_user_home/w). The build uses the WSL JDK 8
+           --jdk8 (default /usr/lib/jvm/java-8-openjdk-amd64, JAVA_HOME and installations.paths) and the
+           gradle cache --gradle-user-home (default ~/.gradle). --timeout (default 30m) kills the run.
 exit: verdict 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
       run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout
 `

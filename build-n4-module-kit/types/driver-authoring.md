@@ -966,6 +966,12 @@ Running it from WSL — each step is a failure seen on the way:
 - **The user home must be on a Windows-local drive:** `test.exe` honours the `niagara_user_home` environment
   variable, but on the UNC drive the NRE stops with `FileLockException: error obtaining lock for …\security\.km`.
   Point it at a fresh scratch dir under `%TEMP%`, never the real `Niagara4.x` user home, and delete it afterwards.
+- **Pass `niagara_user_home` to Windows with `WSLENV=niagara_user_home/w`, never through `cmd /c "set …"`:** run
+  `bin/test.exe` straight from WSL with `niagara_user_home=<Windows path>` and `niagara_user_home/w` appended to
+  `WSLENV`. WSL escapes the inner quotes of a `cmd /c "set "niagara_user_home=…" && …"` line, so the variable never
+  arrives and the NRE writes the real user home (its registry and signers cache). Verify every run: afterwards the
+  scratch home holds `security\` and `etc\`, and the real `Niagara4.x` homes are unchanged (`run-niagara-test run`
+  checks both, `types/moduleTest.md` § Running from WSL) `[ev: retro r10-rnt-run-live-fixes Δ2]`.
 - **First boot is slow:** about 16 min (registry rebuilt, 14206 types, plus the module signature registry); later
   boots about 10 min over `\\wsl.localhost`. A stray jar whose module name has a dot (`nmodsreflow.77-rt.jar`) made
   every boot rebuild the registry (`Out-of-date: Module added …`); leave such jars out of the copy.

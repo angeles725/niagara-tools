@@ -29,11 +29,13 @@ type Runner interface {
 	Run(ctx context.Context, c Cmd) (int, error)
 }
 
-// host is where a run happens: the runner, the WSL mount root of the Windows drives, and the WSL home.
+// host is where a run happens: the runner, the WSL mount root of the Windows drives, the WSL home, and the
+// WSL JDK 8 the build uses unless --jdk8 names another.
 type host struct {
 	run  Runner
 	mnt  string
 	home string
+	jdk8 string
 }
 
 // execRunner runs a real process in its own process group; ctx ending kills the whole group.
@@ -100,15 +102,24 @@ func (h host) powershell(ctx context.Context, script string) ([]string, bool) {
 	return rows[:len(rows)-1], true
 }
 
-// inUseScript lists what makes an install unsafe to copy from: a station.exe, nre.exe, java.exe or wb.exe
-// whose executable path or command line names the install (PROC <pid> <image>), and a stations\*\config.bog.lock
-// that another process holds open (LOCK <path>): a running station keeps that file open, so an exclusive
-// read-only open fails with a sharing violation. Opening it never writes. A probe that cannot tell prints UNKNOWN.
+// inUseScript lists what makes an install unsafe to copy from: a station.exe, nre.exe, java.exe, wb.exe or
+// niagarad.exe whose executable path or command line names the install (PROC <pid> <image>), and a
+// stations\*\config.bog.lock that another process holds open (LOCK <path>): a running station keeps that file
+// open, so an exclusive read-only open fails with a sharing violation. Opening it never writes. A probe that
+// cannot tell prints UNKNOWN. A non-elevated caller reads no path or command line of a LocalSystem service's
+// processes: those (java.exe aside) print UNREAD <pid> <ppid> <image>, and every niagarad service prints
+// SVC <pid> <name> <PathName>, readable without elevation, so attribute can name their install. Tab-separated.
 const inUseScript = `$h = '%s\'
-$names = 'station.exe','nre.exe','java.exe','wb.exe'
+$t = [char]9
+$names = 'station.exe','nre.exe','java.exe','wb.exe','niagarad.exe'
 Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $names -contains ([string]$_.Name).ToLower() } |
-  Where-Object { ([string]$_.CommandLine + ' ' + [string]$_.ExecutablePath).IndexOf($h, [StringComparison]::OrdinalIgnoreCase) -ge 0 } |
-  ForEach-Object { 'PROC ' + $_.ProcessId + ' ' + $_.Name }
+  ForEach-Object {
+    $s = [string]$_.CommandLine + ' ' + [string]$_.ExecutablePath
+    if ($s.Trim() -eq '') { if (([string]$_.Name).ToLower() -ne 'java.exe') { 'UNREAD' + $t + $_.ProcessId + $t + $_.ParentProcessId + $t + $_.Name } }
+    elseif ($s.IndexOf($h, [StringComparison]::OrdinalIgnoreCase) -ge 0) { 'PROC ' + $_.ProcessId + ' ' + $_.Name }
+  }
+Get-CimInstance Win32_Service -ErrorAction Stop | Where-Object { $_.ProcessId -gt 0 -and ([string]$_.PathName).ToLower().Contains('niagarad.exe') } |
+  ForEach-Object { 'SVC' + $t + $_.ProcessId + $t + $_.Name + $t + $_.PathName }
 $st = Join-Path $h 'stations'
 if (Test-Path -LiteralPath $st) {
   try { $dirs = Get-ChildItem -LiteralPath $st -Directory -ErrorAction Stop } catch { 'UNKNOWN ' + $st; $dirs = @() }
