@@ -38,6 +38,10 @@ func alphaSource(disabled ...string) string {
 	return b.String()
 }
 
+// classDisabledSource is BAlphaTest disabled at class level, which the scan refuses.
+const classDisabledSource = "package test.com.example.moduleA;\n\nimport org.testng.annotations.Test;\n\n" +
+	"@Test(enabled = false)\npublic class BAlphaTest extends BTestNg\n{\n  public void a() {}\n}\n"
+
 // registerAlpha writes the part's moduleTest-include.xml registering BAlphaTest, and its source.
 func (fx *fixture) registerAlpha(t *testing.T, source string) {
 	t.Helper()
@@ -61,7 +65,9 @@ func ignoredResults(passed, ignored int) string {
 // TestRunIgnoredNamedFromSource pins the source half of the ignored gate: run names the @Test(enabled = false)
 // methods of the registered types from the source under --gradle-root, FAILs when their count is not TestNG's root
 // ignored, and waives them only by name (--allow-ignored <Class.method>), so a swap of one disable for another is
-// caught although the count stays the same. The count pair stays the fallback, and skips the source.
+// caught although the count stays the same. The count pair is the fallback for a source that cannot name the set:
+// the scan still runs and its names are printed, and the count is accepted only when the scan refused (case (i)) or
+// its count is not TestNG's (case (ii)); a scan that names every ignored method FAILs the count (use the names).
 func TestRunIgnoredNamedFromSource(t *testing.T) {
 	t.Parallel()
 	const why = "--allow-ignored-reason"
@@ -77,9 +83,11 @@ func TestRunIgnoredNamedFromSource(t *testing.T) {
 		buildRun bool
 	}{
 		{"two disabled in source, no allowance", alphaSource("a", "b"), 2, nil, exitFail, []string{
+			"PASS  run-niagara-test  source: the registered types disable 2 test-methods: BAlphaTest.a, BAlphaTest.b",
 			"FAIL  run-niagara-test  testng: 2 new disabled test-methods not allowed: BAlphaTest.a, BAlphaTest.b"}, false, nil, true},
 		{"allowed by name, exactly the disabled set", alphaSource("a", "c"), 2,
 			[]string{"--allow-ignored", "BAlphaTest.c", "--allow-ignored", "BAlphaTest.a", why, reason}, exitPass, []string{
+				"PASS  run-niagara-test  source: the registered types disable 2 test-methods: BAlphaTest.a, BAlphaTest.c",
 				"PASS  run-niagara-test  testng: 2 ignored test-methods allowed by name (--allow-ignored): BAlphaTest.a, BAlphaTest.c: " + reason},
 			false, []string{"FAIL  run-niagara-test  testng"}, true},
 		{"the swap: allowance names a, source now disables b, count still 1", alphaSource("b"), 1,
@@ -90,12 +98,39 @@ func TestRunIgnoredNamedFromSource(t *testing.T) {
 			[]string{"--allow-ignored", "BAlphaTest.a", why, reason}, exitFail, []string{
 				"FAIL  run-niagara-test  testng: 3 ignored test-methods, but the registered types' source disables 1 (BAlphaTest.a): " +
 					"source and TestNG disagree"}, false, nil, true},
-		{"count fallback, names not used", alphaSource("a", "b"), 2,
-			[]string{"--allow-ignored-count", "2", why, reason}, exitPass, []string{
-				"PASS  run-niagara-test  testng: 2 ignored test-methods allowed (--allow-ignored-count 2): " + reason}, false, nil, true},
-		{"count fallback skips the source scan", "/* never closed\n", 1,
+		// The count fallback runs the scan too, and is accepted only when the source cannot name the set.
+		{"(a) the swap under the count fallback: source now disables b, count 1, TestNG 1", alphaSource("b"), 1,
+			[]string{"--allow-ignored-count", "1", why, reason}, exitFail, []string{
+				"PASS  run-niagara-test  source: the registered types disable 1 test-method: BAlphaTest.b",
+				"FAIL  run-niagara-test  testng: --allow-ignored-count 1 refused: the source names every ignored test-method " +
+					"(BAlphaTest.b): use --allow-ignored names"}, false, []string{"PASS  run-niagara-test  testng: 1 ignored"}, true},
+		{"(b) the count fallback with the exact count, the source names them", alphaSource("a", "b"), 2,
+			[]string{"--allow-ignored-count", "2", why, reason}, exitFail, []string{
+				"PASS  run-niagara-test  source: the registered types disable 2 test-methods: BAlphaTest.a, BAlphaTest.b",
+				"FAIL  run-niagara-test  testng: --allow-ignored-count 2 refused: the source names every ignored test-method " +
+					"(BAlphaTest.a, BAlphaTest.b): use --allow-ignored names"}, false, []string{"PASS  run-niagara-test  testng: 2 ignored"}, true},
+		{"(c) case (i): a class-level disable refuses the scan, the count fallback applies", classDisabledSource, 1,
 			[]string{"--allow-ignored-count", "1", why, reason}, exitPass, []string{
-				"PASS  run-niagara-test  testng: 1 ignored test-method allowed (--allow-ignored-count 1): " + reason}, false, nil, true},
+				"NOTE  run-niagara-test  source: cannot name the disabled test-methods of " + alphaType + ": ",
+				"class-level @Test(enabled = false) on BAlphaTest",
+				"; the count fallback applies (case (i): the source scan refused)",
+				"PASS  run-niagara-test  testng: 1 ignored test-method allowed (--allow-ignored-count 1, case (i): the source scan refused): " +
+					reason}, false, []string{"FAIL  run-niagara-test"}, true},
+		{"(c) case (i): an unparseable source under the count fallback", "/* never closed\n", 1,
+			[]string{"--allow-ignored-count", "1", why, reason}, exitPass, []string{
+				"NOTE  run-niagara-test  source: cannot name the disabled test-methods of " + alphaType + ": ",
+				"PASS  run-niagara-test  testng: 1 ignored test-method allowed (--allow-ignored-count 1, case (i): the source scan refused): " +
+					reason}, false, nil, true},
+		{"(d) case (ii): source disables 1, TestNG ignored 3, count 3", alphaSource("a"), 3,
+			[]string{"--allow-ignored-count", "3", why, reason}, exitPass, []string{
+				"PASS  run-niagara-test  source: the registered types disable 1 test-method: BAlphaTest.a",
+				"PASS  run-niagara-test  testng: 3 ignored test-methods allowed (--allow-ignored-count 3, case (ii): the source disables 1, " +
+					"TestNG ignored 3): " + reason}, false, []string{"FAIL  run-niagara-test"}, true},
+		{"(d) case (ii) still judges the count: TestNG ignored 3, count 2", alphaSource("a"), 3,
+			[]string{"--allow-ignored-count", "2", why, reason}, exitFail, []string{
+				"FAIL  run-niagara-test  testng: 3 ignored test-methods, more than the 2 allowed"}, false, nil, true},
+		{"(f) no allowance and no disable: the report names none", alphaSource(), 0, nil, exitPass, []string{
+			"PASS  run-niagara-test  source: the registered types disable 0 test-methods"}, false, nil, true},
 		{"names and a count mixed", alphaSource("a"), 1,
 			[]string{"--allow-ignored", "BAlphaTest.a", "--allow-ignored-count", "1", why, reason}, exitUsage, []string{
 				"run: --allow-ignored names the methods and --allow-ignored-count counts them: give one, not both"}, true, nil, false},
