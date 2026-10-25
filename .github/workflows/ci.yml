@@ -187,3 +187,29 @@ jobs:
         run: |
           bash build-n4-module-kit/toolbelt/triage-console.sh --package com.angeles \
             tests/fixtures/triage-console/console.txt | grep -q 'IllegalArgumentException'
+
+  # The mcp-n4 black-box suite against the Go server (mcp-n4-kit/docs/go-port-plan.md section 20).
+  # Its own job so the bound covers it alone; no mutation testing here (it OOM-killed runners).
+  mcp-n4-go:
+    name: mcp-n4 black-box suite (Go server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          cache: false
+
+      - name: Set up CPython 3.15 (the mcp-n4 target the black-box suite runs on)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+
+      - name: Go build (go/bin/mcp-n4 — the server the suite drives)
+        run: cd go && go build -o bin/ ./cmd/mcp-n4
+
+      - name: mcp-n4-kit unittest (Go server)
+        run: MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests -v
