@@ -24,6 +24,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
   gone. [PR #516]
 - **kit-cite-resolve and citation fixes.** False-positive classes fixed in the citation parser and resolver, DRIFT
   for anchored guide pointers, and dotted section paths read whole. [PR #499, #509, #514, #515, #517]
+- **Local client gate findings.** `lint-slotomatic-markers` FAILs a `TYPE`/`getType()` declared by hand outside
+  the generated region [PR #540], and the `report-module` summary names a skipped floor check beside a FAIL
+  [PR #539].
+- **Retro fold.** Every pending kit retro of the round is folded into the kit doctrine (`BUILD-LOOP.md` § 5,
+  `build-verify.md`, `types/moduleTest.md`); no retro is left pending.
 
 ### Changed — mcp-n4 defaults to the Go server
 
