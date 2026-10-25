@@ -68,11 +68,14 @@ var months = map[string]int{
 	"ene": 1, "abr": 4, "ago": 8, "set": 9, "dic": 12,
 }
 
-// isLevel: the bash also compared substr(s, 1, 8) with the 9-byte "INFORMACI", which never matches, so an
-// INFORMACIÓN line is no header (it continues the open block); the port keeps that.
+// isLevel: INFORMACIÓN, the Spanish java.util.logging name of INFO, is a level in UTF-8 and in Latin-1 (Ó is
+// 0xD3), so its header closes the open block. Truth difference (truth-informacion-level): the bash compared
+// substr(s, 1, 8) with the 9-byte "INFORMACI", which never matched, so its frames joined the previous block.
+// Matching is exact, as for every other level: INFORMACIONAL and the unaccented INFORMACION stay no level.
 func isLevel(s string) bool {
 	switch s {
-	case "SEVERE", "WARNING", "INFO", "CONFIG", "FINE", "FINER", "FINEST", "GRAVE", "ADVERTENCIA":
+	case "SEVERE", "WARNING", "INFO", "CONFIG", "FINE", "FINER", "FINEST", "GRAVE", "ADVERTENCIA",
+		"INFORMACI\u00d3N", "INFORMACI\xd3N":
 		return true
 	}
 	return false
