@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: angeles725/niagara-tools
-          ref: v0.31.0
+          ref: v0.32.0
           path: n4-kit
       - name: split-package-check --strict (one package, one module)
         run: bash n4-kit/build-n4-module-kit/toolbelt/split-package-check.sh --strict client

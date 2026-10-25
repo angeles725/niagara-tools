@@ -203,11 +203,11 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.31.0                      # current repo VERSION (deferred-lints-2026-10-03 close, D1-D5b)
+version: 0.32.0                      # current repo VERSION (quality round 10 close, 2026-10-25)
 last_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state
 open_issues:
 retro_required: true                 # GATED — deferred-lints close retro filed: retros/2026-10-03-deferred-lints-2026-10-03-close.md (5 deltas, pending)
-retro_pending: true                 # cleared 2026-10-24 (round-10 fold sweep, branch docs/r10-fold-tail2): every kit retro under retros/ is folded; was set 2026-10-14 by new-retro.sh for retros/2026-10-14-ws-placement.md and kept true through the 2026-10-15..10-24 retro waves
+retro_pending: false                 # cleared 2026-10-25 (round-10 fold sweep, branch docs/r10-fold-tail3): every kit retro under retros/ is folded, r10-client-gate-retro last (Δ1 #540, Δ4 #539); cleared 2026-10-24 by docs/r10-fold-tail2 and set again by the later round-10 retros
 last_commit: 905d597                  # P7c merge (PR #225); the close/release merge is the v0.30.0 tag
 last_session: the log lines below    # session log, oldest first; generated from ledger.d/
 <!-- /build-state.v1 -->

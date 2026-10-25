@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-station-snapshot
@@ -48,5 +48,11 @@ restricted PATH, so no bats file changed.
 - Walking every failure branch of a small bash tool turns up behaviours nobody meant (exit 0 with an empty
   manifest); a truth case is cheaper than arguing about them later.
 
+## Fold
+- The port is code already shipped in the PR that wrote this retro (`go/internal/stationsnapshot`); not re-implemented.
+- Δ1 and Δ2 → `BUILD-LOOP.md` § 5 golden-case bullet (fake `date` printing the `Host.Now` stamp; a tab in a file name is not recordable: `record.sh` `snap` keys its index and sort on tabs, checked).
+- Δ3 → `BUILD-LOOP.md` § 5 "Port byte-identical first" bullet (a bash defect the port cannot reproduce is a truth case whose `@kind` states it).
+- The follow-ups (GNU cp quoting, the unreproduced shapes) are recorded limits with no real station path; no issue.
+
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-station-snapshot.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1, Δ2 in the `BUILD-LOOP.md` § 5 golden-case bullet; Δ3 in the § 5 port bullet.

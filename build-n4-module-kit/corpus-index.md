@@ -58,6 +58,7 @@ actionable punch-list) · `-wb` build → **B751** (the wb ladder) · `-ux` buil
 | **B955** | envCtrlDriver SDK example (rt) — a complete minimal N4 field driver, first-party source; the rt SPI contract in a real build | rt / exemplar |
 | **B956** | envCtrlDriver SDK example (wb) — the Workbench device/point manager UI for the SDK driver exemplar | wb / exemplar |
 | **B877** | NDriver chassis vs DDF: the two generic driver bases, their comm-layer contracts and the transport matrix — read before choosing a driver framework (`types/driver-authoring.md` § 1.8) | driver |
+| **B1421** | DR5 station-test evidence: `BTestNgStation` needs its default Fox service, the WSL user-home lock and symlink-mirror walls, the Context-form discovery dispatch, and why a test run is judged by its counts — read before running driver station tests (`types/driver-authoring.md` § 12 / § 12.1) | driver / test |
 | **B957** | typeExtensionDemo SDK example (ux) — a browser type-extension with JS build + Jasmine tests; the ux SPI patterns in a real build | ux / exemplar |
 | **B1015** | Building `UmbrellaDashboard` — a dashboard-type N4 module (facade + servlet + 3D SPA), rt+ux built green @4.14; the DashboardPan exemplar in a second module | reference / dashboard |
 

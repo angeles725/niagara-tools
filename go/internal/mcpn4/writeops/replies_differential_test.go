@@ -2,14 +2,12 @@ package writeops_test
 
 import (
 	"bufio"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
 )
@@ -107,17 +105,9 @@ func goReplies(c *pyjson.Object) *pyjson.Object {
 }
 
 func TestInverseRecoverAndReadbackDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "replies")
 	cases := append(createCases(), linkCases()...)
-	cmd := exec.Command(py, "-c", pyReplies)
-	cmd.Dir = kit
-	cmd.Env = append(cmd.Environ(), "PYTHONDONTWRITEBYTECODE=1")
-	cmd.Stdin = strings.NewReader(strings.Join(cases, "\n") + "\n")
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
+	out := g.Run(pyReplies, []byte(strings.Join(cases, "\n")+"\n"))
 	sc := bufio.NewScanner(strings.NewReader(string(out)))
 	sc.Buffer(nil, 1<<22)
 	kinds, n := map[string]int{}, 0

@@ -4,18 +4,17 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/journal"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
 )
@@ -201,17 +200,10 @@ func goRollback(c *pyjson.Object) *pyjson.Object {
 }
 
 func TestRollbackPlanRunsAndReadbackDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "rollback")
 	cases := rollbackCases(t)
-	cmd := exec.Command(py, "-c", pyRollback)
-	cmd.Dir = kit
-	cmd.Env = append(cmd.Environ(), "PYTHONDONTWRITEBYTECODE=1")
-	cmd.Stdin = strings.NewReader(strings.Join(cases, "\n") + "\n")
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
+	g.Alias(filepath.Dir(t.TempDir()), "$TMP") // the parent of rollbackCases' state dirs
+	out := g.Run(pyRollback, []byte(strings.Join(cases, "\n")+"\n"))
 	sc := bufio.NewScanner(strings.NewReader(string(out)))
 	sc.Buffer(nil, 1<<24)
 	kinds, n := map[string]int{}, 0
