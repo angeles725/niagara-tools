@@ -323,6 +323,11 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   `(truncated: ...)` row, so a cut never splits a path the redactor must see whole. A missing or unreadable results
   file is a `testng-results.xml unavailable: <why>` row in the log's `kept evidence` section; a green run keeps
   neither file `[ev: retro r10-rnt-fail-evidence Δ1]`.
+- **A failed run keeps test.exe's whole stderr beside its log.** The run log's 200-line stderr tail can cut the
+  station-log lines around the failing class, so on exit 1, 3 or 4 the runner also reads `out/stderr.txt` before
+  cleanup and writes `<stem>.stderr.txt` (0600), redacted and cut at a line end under 4 MiB like the testng
+  evidence; the `kept evidence` section names it, a missing or unreadable file is a `test.exe stderr unavailable:
+  <why>` row, and a green run keeps none `[ev: retro r10-rnt-full-stderr Δ1]`.
 - **`--reuse-home '<kept dir>'` boots a second time on a home a `--keep-home` run kept**, so a test can prove what
   survives a station restart (data written in boot 1, read back in boot 2). It is the one flag that points the
   runner at an existing dir, so it is guarded: the dir must lie under the scratch parent, must not be, hold or sit

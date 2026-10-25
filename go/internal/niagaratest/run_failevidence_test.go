@@ -77,8 +77,8 @@ func TestRunFailKeepsTestNGEvidence(t *testing.T) {
 	}
 	log, sib := fx.kept(t, out)
 	results, traces := sib["testng-results.xml"], sib["traces.txt"]
-	if results == "" || traces == "" || len(sib) != 2 {
-		t.Fatalf("log dir siblings %q, want testng-results.xml and traces.txt", keys(sib))
+	if results == "" || traces == "" || len(sib) != 3 {
+		t.Fatalf("log dir siblings %q, want testng-results.xml, traces.txt and stderr.txt", keys(sib))
 	}
 	for _, w := range []string{`<test-method status="FAIL" name="writes_value">`, "frame 300\n", `at <copy>\modules\moduleA-rt.jar`} {
 		if !strings.Contains(results, w) {
@@ -114,7 +114,7 @@ func TestRunFailKeepsTestNGEvidence(t *testing.T) {
 	}
 }
 
-// A green run keeps only its run log, even with --log-dir: no results copy, no traces.
+// A green run keeps only its run log, even with --log-dir: no results copy, no traces, no stderr copy.
 func TestRunPassKeepsNoTestNGEvidence(t *testing.T) {
 	t.Parallel()
 	fx := newFixture(t)
@@ -149,7 +149,7 @@ func TestRunFailTestNGUnavailable(t *testing.T) {
 				t.Fatalf("exit %d, want 1:\n%s", code, out)
 			}
 			log, sib := fx.kept(t, out)
-			if !regexp.MustCompile(`(?m)^testng-results\.xml unavailable: .+$`).MatchString(log) || len(sib) != 0 {
+			if !regexp.MustCompile(`(?m)^testng-results\.xml unavailable: .+$`).MatchString(log) || len(sib) != 1 || sib["stderr.txt"] != "" {
 				t.Errorf("siblings %q, log:\n%s", keys(sib), log)
 			}
 			if strings.Contains(log, "run-niagara-test-") {
@@ -181,6 +181,114 @@ func TestRunFailTestNGEvidenceCapped(t *testing.T) {
 	}
 	if !strings.Contains(traces, "frame 1\n") {
 		t.Errorf("traces lack the first frames")
+	}
+}
+
+// stderrRun is a test.exe that fails on traceXML and writes stderr to its stderr: the station log a failed run
+// keeps whole beside its log.
+func stderrRun(fx *fixture, stderr func(scratch, copyDir string) string) func(context.Context, Cmd) (int, error) {
+	return func(_ context.Context, c Cmd) (int, error) {
+		scratch := strings.TrimSuffix(argValue(c.Args, "-output:"), `\out\testng`)
+		fx.f.testExe(c, traceXML(scratch, scratch+`\home`, "/nonexistent-home", 3), stderr(scratch, scratch+`\home`))
+		fx.f.useNUH(c)
+		return 1, nil
+	}
+}
+
+// A FAIL run keeps test.exe's whole stderr (the station log), far past the 200-line tail of the run log, with the
+// scratch dir, its home copy and the user home redacted, and names it in the kept evidence section.
+func TestRunFailKeepsFullStderr(t *testing.T) {
+	t.Parallel()
+	fx := newFixture(t)
+	fx.h.home = "/home/dev"
+	fx.f.on["test"] = stderrRun(fx, func(scratch, copyDir string) string {
+		return numbered("station", 500) + fmt.Sprintf("Loading %s\\modules\\moduleA-rt.jar\r\nscratch %s\\out\\x\r\ngradle /home/dev/.gradle/y\r\n",
+			copyDir, scratch) + "Total tests run: 2, Failures: 1, Skips: 0\r\n"
+	})
+	code, out := fx.run(t, append([]string{"run"}, fx.args()...)...)
+	if code != exitFail {
+		t.Fatalf("exit %d, want 1:\n%s", code, out)
+	}
+	log, sib := fx.kept(t, out)
+	stderr, ok := sib["stderr.txt"]
+	if !ok {
+		t.Fatalf("log dir siblings %q, want a stderr.txt", keys(sib))
+	}
+	for _, w := range []string{"station 1\r\n", "station 2\r\n", "station 250\r\n", "station 500\r\n",
+		`Loading <copy>\modules\moduleA-rt.jar`, `scratch <scratch>\out\x`, "gradle <you>/.gradle/y", "Total tests run: 2"} {
+		if !strings.Contains(stderr, w) {
+			t.Errorf("stderr copy lacks %q", w)
+		}
+	}
+	for _, nw := range []string{"run-niagara-test-", "/home/dev"} {
+		if strings.Contains(stderr, nw) {
+			t.Errorf("stderr copy holds %q (want it redacted)", nw)
+		}
+	}
+	if !regexp.MustCompile(`(?m)^test\.exe stderr: copied to \S+\.stderr\.txt$`).MatchString(log) {
+		t.Errorf("kept evidence does not name the stderr copy:\n%s", log)
+	}
+}
+
+// A stderr over the copy cap is cut at a line end below it, with a final truncation row.
+func TestRunFailFullStderrCapped(t *testing.T) {
+	t.Parallel()
+	fx := newFixture(t)
+	n := evidenceCap/12 + 1000 // "station <i>\r\n" is at least 12 bytes from i = 1000: the file is over the cap
+	fx.f.on["test"] = stderrRun(fx, func(string, string) string { return numbered("station", n) })
+	code, out := fx.run(t, append([]string{"run"}, fx.args()...)...)
+	if code != exitFail {
+		t.Fatalf("exit %d, want 1:\n%s", code, out)
+	}
+	_, sib := fx.kept(t, out)
+	stderr := sib["stderr.txt"]
+	if len(stderr) > evidenceCap+512 {
+		t.Errorf("stderr copy is %d bytes, over the %d cap", len(stderr), evidenceCap)
+	}
+	if !regexp.MustCompile(`\r\n\(truncated: [^\n]*\)\n$`).MatchString(stderr) {
+		t.Errorf("stderr copy lacks a line-end cut and a final truncation row:\n...%q", stderr[max(len(stderr)-300, 0):])
+	}
+	if !strings.HasPrefix(stderr, "station 1\r\nstation 2\r\n") || strings.Contains(stderr, fmt.Sprintf("station %d\r", n)) {
+		t.Errorf("stderr copy does not keep the head and drop the tail")
+	}
+}
+
+// A missing or unreadable stderr.txt is a "test.exe stderr unavailable" row in the log, redacted, and no copy;
+// the run still ends with its log, never a crash.
+func TestRunFailFullStderrUnavailable(t *testing.T) {
+	t.Parallel()
+	for name, mk := range map[string]func(t *testing.T, path string){
+		"missing":   func(t *testing.T, path string) { rm(t, path) },
+		"directory": func(t *testing.T, path string) { rm(t, path); write(t, filepath.Join(path, "x"), "x") },
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			fx := newFixture(t)
+			fx.f.on["test"] = func(_ context.Context, c Cmd) (int, error) {
+				fx.f.testExe(c, traceXML("s", "c", "/nonexistent-home", 3), "Total tests run: 2, Failures: 1, Skips: 0\r\n")
+				mk(t, filepath.Join(filepath.Dir(fx.f.wsl(argValue(c.Args, "-output:"))), "stderr.txt"))
+				fx.f.useNUH(c)
+				return 1, nil
+			}
+			code, out := fx.run(t, append([]string{"run"}, fx.args()...)...)
+			if code != exitEnv { // the console cross-check cannot read stderr.txt either
+				t.Fatalf("exit %d, want 3:\n%s", code, out)
+			}
+			log, sib := fx.kept(t, out)
+			if _, ok := sib["stderr.txt"]; ok || !regexp.MustCompile(`(?m)^test\.exe stderr unavailable: .+$`).MatchString(log) {
+				t.Errorf("siblings %q, log:\n%s", keys(sib), log)
+			}
+			if strings.Contains(log, "run-niagara-test-") {
+				t.Errorf("the unavailable row is not redacted:\n%s", log)
+			}
+		})
+	}
+}
+
+func rm(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -28,7 +28,8 @@ const (
 	diagMaxEntries  = 200
 )
 
-// evidenceCap bounds each file a failed run keeps beside its log: the testng-results.xml copy and the traces.
+// evidenceCap bounds each file a failed run keeps beside its log: the testng-results.xml copy, the traces and the
+// stderr copy.
 const evidenceCap = 4 << 20
 
 // lineRing is an io.Writer that keeps the last max lines written to it, each cut at lineCap bytes; CR is dropped.
@@ -142,6 +143,7 @@ func (s *skipFirstLine) Read(p []byte) (int, error) {
 type evidence struct {
 	stderr, stdout, listing []string
 	testng                  testngEvidence // kept beside the log on a failed run only
+	fullStderr              stderrEvidence // kept beside the log on a failed run only
 }
 
 // gatherEvidence reads the tails of test.exe's streams and lists its -output: dir, every read bounded.
@@ -163,6 +165,7 @@ func gatherEvidence(p *plan) evidence {
 		}
 	}
 	ev.testng = gatherTestNG(p.sub("out/testng/testng-results.xml"))
+	ev.fullStderr = gatherStderr(p.sub("out/stderr.txt"))
 	root := p.sub("out/testng")
 	if !isDir(root) {
 		ev.listing = []string{"(no -output: dir)"}
@@ -282,9 +285,15 @@ func (h host) writeRunLog(p *plan, ev evidence, code int, s cli.Stdio) bool {
 	}
 	red, kept := h.redactorFor(p), true
 	if code != exitPass {
-		rows, kerr := keepTestNG(ev.testng, strings.TrimSuffix(path.name, ".log"), red)
+		stem := strings.TrimSuffix(path.name, ".log")
+		rows, kerr := keepTestNG(ev.testng, stem, red)
+		if kerr == nil {
+			var more []string
+			more, kerr = keepStderr(ev.fullStderr, stem, red)
+			rows = append(rows, more...)
+		}
 		if kerr != nil {
-			rows, kept = append(rows, "cannot keep the testng evidence: "+kerr.Error()), false
+			rows, kept = append(rows, "cannot keep the fail evidence: "+kerr.Error()), false
 		}
 		section("kept evidence", rows)
 	}
@@ -304,7 +313,7 @@ func (h host) writeRunLog(p *plan, ev evidence, code int, s cli.Stdio) bool {
 	p.logPath = path.name
 	row(s, status, label+": "+path.name)
 	if !kept {
-		row(s, "FAIL", "diagnostics: cannot keep the testng evidence beside "+path.name)
+		row(s, "FAIL", "diagnostics: cannot keep the fail evidence beside "+path.name)
 	}
 	return kept
 }
