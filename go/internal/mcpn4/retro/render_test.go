@@ -4,18 +4,9 @@ package retro
 // (go_server.go_twin("retro", "unit")).
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
-
-func TestTheTemplateShipsInsideThePackage(t *testing.T) {
-	want, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "mcp-n4-kit", "mcp_n4", "templates", "retro.template.md"))
-	if err != nil || template != string(want) {
-		t.Errorf("the embedded template is not mcp_n4/templates/retro.template.md (%v)", err)
-	}
-}
 
 func TestMarkdownFollowsTheTemplateWithDeltaTable(t *testing.T) {
 	s := newStateDir(t)

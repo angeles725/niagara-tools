@@ -11,7 +11,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// template is mcp_n4/templates/retro.template.md, byte for byte (TestTheTemplateShipsInsideThePackage).
+// template is the retro template (the Python server's mcp_n4/templates/retro.template.md, byte
+// for byte, until S17 made this embedded copy the only one).
 //
 //go:embed retro.template.md
 var template string
