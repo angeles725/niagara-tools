@@ -34,7 +34,7 @@ func (c *Client) GetOrd(ord string, timeout float64, maxBytes int) (string, bool
 	if err != nil {
 		return "", false, err
 	}
-	resp, err := c.do("GET", "/ord/"+path, nil, map[string]string{"Accept": "text/csv"}, timeout, maxBytes+1)
+	resp, err := c.do(c.interrupt, "GET", "/ord/"+path, nil, map[string]string{"Accept": "text/csv"}, timeout, maxBytes+1)
 	if err != nil {
 		return "", false, c.mapError(err, "ord", "get", true)
 	}
@@ -72,7 +72,7 @@ func (c *Client) GetFile(urlPath string, timeout float64, maxBytes int) (*File, 
 	if maxBytes <= 0 {
 		maxBytes = MaxFileBytes
 	}
-	resp, err := c.do("GET", urlPath, nil, nil, timeout, maxBytes+1)
+	resp, err := c.do(c.interrupt, "GET", urlPath, nil, nil, timeout, maxBytes+1)
 	if err != nil {
 		if st, ok := err.(*httpStatus); ok && (st.code == 403 || st.code == 404) {
 			return nil, &Error{Kind: KindHTTPStatus, Msg: fmt.Sprintf("HTTP %d from station", st.code),
@@ -100,7 +100,7 @@ func (c *Client) About(timeout float64, maxBytes int) (string, error) {
 	if maxBytes <= 0 {
 		maxBytes = MaxAboutBytes
 	}
-	resp, err := c.do("GET", "/obix/about/", nil, nil, timeout, maxBytes)
+	resp, err := c.do(c.interrupt, "GET", "/obix/about/", nil, nil, timeout, maxBytes)
 	if err != nil {
 		return "", c.mapError(err, "obix", "about", false)
 	}

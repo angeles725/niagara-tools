@@ -5,13 +5,17 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 
 	kitcli "github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -25,12 +29,25 @@ import (
 // Prog is the argparse prog name every message starts with.
 const Prog = "mcp_n4.server"
 
-// Main is the kitcli.Main entry point: it serves the process stdin.
-func Main(args []string, s kitcli.Stdio) int { return Run(args, os.Stdin, s) }
+// Main is the kitcli.Main entry point: it serves the process stdin until EOF or the first SIGINT
+// or SIGTERM (watchSignals). SIGPIPE is ignored, as Python ignores it: a client gone mid-reply
+// fails the write (exit 1, session closed) instead of killing the server.
+func Main(args []string, s kitcli.Stdio) int {
+	signal.Ignore(syscall.SIGPIPE)
+	sigs := make(chan os.Signal, 2)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+	return RunContext(watchSignals(sigs, os.Exit), args, os.Stdin, s)
+}
 
-// Run parses args, makes the start checks and serves in until EOF. Exit codes are server.py's:
-// 0 after EOF (or --help), 2 on a flag error or a refused start, 1 when the stdio loop fails.
+// Run is RunContext with no interrupt.
 func Run(args []string, in io.Reader, s kitcli.Stdio) int {
+	return RunContext(context.Background(), args, in, s)
+}
+
+// RunContext parses args, makes the start checks and serves in until EOF or until interrupt is
+// done. Exit codes are server.py's: 0 after EOF, an interrupt (or --help), 2 on a flag error or a
+// refused start, 1 when the stdio loop fails.
+func RunContext(interrupt context.Context, args []string, in io.Reader, s kitcli.Stdio) int {
 	reg := registry.Default()
 	cfg, help, uerr := Parse(args)
 	if uerr != nil {
@@ -45,12 +62,12 @@ func Run(args []string, in io.Reader, s kitcli.Stdio) int {
 		fmt.Fprintf(s.Err, "%s: %s\n", Prog, err)
 		return 2
 	}
-	srv, err := NewServer(cfg)
+	srv, err := newServer(interrupt, cfg)
 	if err != nil {
 		fmt.Fprintf(s.Err, "%s: %s\n", Prog, err)
 		return 2
 	}
-	if err := srv.Serve(in, s.Out); err != nil {
+	if err := srv.ServeContext(interrupt, in, s.Out); err != nil {
 		fmt.Fprintf(s.Err, "%s: %s\n", Prog, err)
 		return 1
 	}
@@ -59,11 +76,18 @@ func Run(args []string, in io.Reader, s kitcli.Stdio) int {
 
 // NewServer is Server(...) for a cfg Check accepted: the read tools and, with --allow-writes,
 // the write state (WriteState's start checks: limits, state dir, scopes) and the write tools.
-func NewServer(cfg Config) (*jsonrpc.Server, error) {
+func NewServer(cfg Config) (*jsonrpc.Server, error) { return newServer(context.Background(), cfg) }
+
+// newServer is NewServer whose station requests interrupt cancels.
+func newServer(interrupt context.Context, cfg Config) (*jsonrpc.Server, error) {
 	reg := registry.Default()
 	srv := jsonrpc.New(reg)
 	ctx := NewContext(cfg)
-	tools := &readtools.Tools{Ctx: ctx, NewClient: readtools.BoxFactory, ServerVersion: reg.Version}
+	factory := func(bc box.Config, onAuthError func(*box.Error)) (readtools.Client, error) {
+		bc.Interrupt = interrupt
+		return readtools.BoxFactory(bc, onAuthError)
+	}
+	tools := &readtools.Tools{Ctx: ctx, NewClient: factory, ServerVersion: reg.Version}
 	if cfg.AllowWrites {
 		state, err := NewWriteState(cfg)
 		if err != nil {

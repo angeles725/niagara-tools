@@ -6,6 +6,7 @@ package jsonrpc
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 
@@ -99,24 +100,62 @@ func (s *Server) EnableWrites() {
 // still handled. A read or write error ends the loop and is returned. However the loop ends, the
 // station session is closed.
 func (s *Server) Serve(in io.Reader, out io.Writer) error {
+	return s.ServeContext(context.Background(), in, out)
+}
+
+// ServeContext is Serve that also ends when ctx is done (Ctrl-C or SIGTERM: serve's
+// KeyboardInterrupt): it returns nil at once, even while a read blocks, and writes no reply for a
+// request the interrupt cut short. The station session is still closed.
+func (s *Server) ServeContext(ctx context.Context, in io.Reader, out io.Writer) error {
 	if s.Ctx != nil {
 		defer s.Ctx.Close()
 	}
-	r := bufio.NewReader(in)
+	type read struct {
+		line []byte
+		err  error
+	}
+	lines, done := make(chan read), make(chan struct{})
+	defer close(done)
+	go func() {
+		r := bufio.NewReader(in)
+		for {
+			line, err := r.ReadBytes('\n')
+			select {
+			case lines <- read{line, err}:
+			case <-done:
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
 	for {
-		line, err := r.ReadBytes('\n')
-		if len(line) > 0 {
-			if reply, ok := s.HandleLine(line); ok {
+		var next read
+		select {
+		case <-ctx.Done():
+			return nil
+		case next = <-lines:
+		}
+		if ctx.Err() != nil { // both were ready: the interrupt wins
+			return nil
+		}
+		if len(next.line) > 0 {
+			reply, ok := s.HandleLine(next.line)
+			if ctx.Err() != nil {
+				return nil
+			}
+			if ok {
 				if _, werr := out.Write(append(reply, '\n')); werr != nil {
 					return werr
 				}
 			}
 		}
-		if errors.Is(err, io.EOF) {
+		if errors.Is(next.err, io.EOF) {
 			return nil
 		}
-		if err != nil {
-			return err
+		if next.err != nil {
+			return next.err
 		}
 	}
 }

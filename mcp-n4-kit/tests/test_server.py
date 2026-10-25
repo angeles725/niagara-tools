@@ -2,8 +2,10 @@ import contextlib
 import io
 import json
 import os
+import signal
 import subprocess
 import sys
+import threading
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -51,7 +53,8 @@ class TestProtocol(unittest.TestCase):
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "2025-11-25"}))
         self.assertEqual(res["result"]["protocolVersion"], "2025-06-18")
 
-    @go_server.go_twin("jsonrpc", "in-process")
+    @go_server.go_twin("jsonrpc", "in-process",
+                       twin="cli.TestHelpStatesTheSupportedProtocolSetContract")
     def test_doc_contract_states_the_supported_set_and_the_naming_heuristic(self):
         """The one place that pins documentation wording (the operator-facing contract)."""
         self.assertIn("Only add a newer", server.__doc__)
@@ -142,7 +145,7 @@ class TestProtocol(unittest.TestCase):
             self.assertTrue(res["isError"])
             self.assertIn("clear reason", res["content"][0]["text"])
 
-    @go_server.go_twin("jsonrpc", "internals")
+    @go_server.go_twin("jsonrpc", "internals", twin="session.TestModeAndStationNames")
     def test_flags_record_mode(self):
         self.assertEqual(server.Server().ctx.mode, "read-only")
         self.assertEqual(server.Server(allow_writes=True).ctx.mode, "writes-allowed")
@@ -255,7 +258,8 @@ class TestRobustness(unittest.TestCase):
             srv.serve(lines(), io.StringIO())
         self.assertEqual(closed, [1])
 
-    @go_server.go_twin("jsonrpc", "internals")
+    @go_server.go_twin("jsonrpc", "internals",
+                       twin="jsonrpc.TestServeContextStopsOnInterruptAndClosesTheSession")
     def test_serve_exits_cleanly_on_keyboard_interrupt_and_closes(self):
         srv = server.Server()
         closed = []
@@ -267,7 +271,8 @@ class TestRobustness(unittest.TestCase):
         srv.serve(lines(), io.StringIO())  # no exception
         self.assertEqual(closed, [1])
 
-    @go_server.go_twin("jsonrpc", "unit")
+    @go_server.go_twin("jsonrpc", "unit",
+                       twin="session.TestCloseClearsTheSessionAndClosesItsClient")
     def test_close_clears_the_session_even_when_the_client_close_raises(self):
         class Boom:
             def close(self):
@@ -278,13 +283,14 @@ class TestRobustness(unittest.TestCase):
             ctx.close()
         self.assertIsNone(ctx.session)
 
-    @go_server.go_twin("jsonrpc", "unit")
+    @go_server.go_twin("jsonrpc", "unit", twin="session.TestScrubHidesTheSecretOnlyOnceOneIsSet")
     def test_set_secret_scrubs_outputs(self):
         ctx = tools_read.Context()
         ctx.set_secret("hunter2-value")
         self.assertEqual(ctx.scrub("pw=hunter2-value!"), "pw=***!")
 
-    @go_server.go_twin("jsonrpc", "internals")
+    @go_server.go_twin("jsonrpc", "internals",
+                       twin="session.TestFailedConnectOnMissingCredentialsClosesTheOldSession")
     def test_connect_survives_a_failing_close_of_the_old_session(self):
         class Boom:
             def close(self):
@@ -295,6 +301,86 @@ class TestRobustness(unittest.TestCase):
                                               "arguments": {"station": "S"}}))["result"]
         self.assertTrue(res["isError"])
         self.assertIsNone(srv.ctx.session)
+
+
+class TestShutdown(unittest.TestCase):
+    """Black-box: the server process (the Go binary; `python -m mcp_n4.server` under
+    MCP_N4_IMPL=python) deletes the station's BOX session however it is stopped
+    (docs/go-port-plan.md section 22)."""
+    PASSWORD = "s3cret-pw-value"
+    TIMEOUT = 15
+
+    def setUp(self):
+        self.fake = FakeStation(password=self.PASSWORD).start()
+        self.addCleanup(self.fake.stop)
+        cmd = [go_server.resolve_binary()] if go_server.GO else [sys.executable, "-m",
+                                                                 "mcp_n4.server"]
+        env = dict(os.environ, MCP_N4_USER="admin", MCP_N4_PASSWORD=self.PASSWORD)
+        self.proc = subprocess.Popen(
+            cmd + go_server.server_args(allow_http=True, stations={"FakeStation": self.fake.url}),
+            cwd=KIT_DIR, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        self.addCleanup(self.reap)
+
+    def reap(self):
+        if self.proc.poll() is None:  # only the child this test started
+            self.proc.kill()
+        self.proc.wait()
+        for stream in (self.proc.stdin, self.proc.stdout, self.proc.stderr):
+            with contextlib.suppress(OSError):
+                stream.close()
+
+    def send(self, msg):
+        self.proc.stdin.write((json.dumps(msg) + "\n").encode())
+        self.proc.stdin.flush()
+
+    def connect(self):
+        self.send(rpc("tools/call", {"name": "n4_connect", "arguments": {"station": "FakeStation"}}))
+
+    def stopped_by(self, sig):
+        """Send sig with stdin still open (EOF alone closes the session too): exit code, the
+        output after it, and the station's sessions."""
+        self.proc.send_signal(sig)
+        code = self.proc.wait(self.TIMEOUT)
+        return code, self.proc.stdout.read(), self.proc.stderr.read(), self.fake.sessions
+
+    def assert_signal_closes_the_session(self, sig):
+        self.connect()
+        self.assertIn(b'"station_name"', self.proc.stdout.readline())
+        self.assertEqual(self.fake.sessions, {"sess-1"})
+        self.assertEqual(self.stopped_by(sig), (0, b"", b"", set()))
+
+    def test_sigint_deletes_the_station_session_and_exits_zero(self):
+        self.assert_signal_closes_the_session(signal.SIGINT)
+
+    @unittest.skipUnless(go_server.GO, "the Python server has no SIGTERM handler: it dies by the "
+                                       "signal and leaves the session (go-port-plan section 22)")
+    def test_sigterm_deletes_the_station_session_and_exits_zero(self):
+        self.assert_signal_closes_the_session(signal.SIGTERM)
+
+    def test_sigint_after_make_still_deletes_the_station_session(self):
+        reached, release = threading.Event(), threading.Event()
+        self.addCleanup(release.set)
+
+        def hook(frame):
+            if frame["m"][0]["k"] == "makessc":
+                reached.set()
+                release.wait(self.TIMEOUT)
+        self.fake.hook = hook
+        self.connect()
+        self.assertTrue(reached.wait(self.TIMEOUT))
+        self.assertEqual(self.fake.sessions, {"sess-1"})
+        self.assertEqual(self.stopped_by(signal.SIGINT), (0, b"", b"", set()))
+
+    def test_a_client_gone_mid_reply_still_deletes_the_station_session(self):
+        self.connect()
+        self.proc.stdout.readline()
+        self.proc.stdout.close()
+        with contextlib.suppress(BrokenPipeError):
+            self.send(rpc("ping"))  # its reply cannot be written: EPIPE, not a SIGPIPE death
+        code = self.proc.wait(self.TIMEOUT)
+        self.assertGreater(code, 0)  # an exit status (Python 120, Go 1), never a signal
+        self.assertEqual(self.fake.sessions, set())
 
 
 class ToolTestCase(unittest.TestCase):
@@ -873,7 +959,8 @@ class TestStdioEndToEnd(unittest.TestCase):
             go_server.skip_if_unported(reply)
         return proc, replies
 
-    @go_server.go_twin("cli", "in-process")
+    @go_server.go_twin("cli", "in-process", python_only="a Python import side effect; a Go binary "
+                       "has no import (its start: cli.TestEofEndsTheServerWithExitZero)")
     def test_import_prints_nothing(self):
         proc = subprocess.run([sys.executable, "-c", "import mcp_n4.server"], cwd=KIT_DIR,
                               capture_output=True, text=True, timeout=60)

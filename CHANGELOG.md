@@ -10,6 +10,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.32.1] - 2026-10-25
+
+### Fixed — mcp-n4 Go server closes the station session on Ctrl-C/SIGTERM
+
+- The Go `mcp-n4` server (the default) died by SIGINT, SIGTERM or SIGPIPE and left its BOX session open on the
+  station. It now cancels the station requests in flight, deletes the session (bounded by `--http-timeout`, 20 s by
+  default, even right after `make`) and exits 0 like the Python server; a second signal forces the exit, and a client
+  gone mid-reply ends with exit 1 and the session closed. See `mcp-n4-kit/docs/go-port-plan.md` section 22.
+
+---
+
 ## [v0.32.0] - 2026-10-25
 
 ### Highlights — quality rounds 8-10

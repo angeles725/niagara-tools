@@ -1,7 +1,9 @@
 package box
 
 import (
+	"context"
 	"errors"
+	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -56,12 +58,17 @@ func (c *Client) Open() (any, error) {
 	return root, nil
 }
 
-// Close is BoxClient.close: delete the server session, swallowing any failure.
+// Close is BoxClient.close: delete the server session, swallowing any failure. The del ignores
+// Interrupt (closing is what an interrupt asks for) and is bounded instead by one whole-request
+// deadline of the client timeout (--http-timeout, 20 s by default): a dead or dripping station
+// cannot hang the shutdown.
 func (c *Client) Close() {
 	if !pyjson.Truthy(c.sid) {
 		return
 	}
-	c.Call(Channel, "del", obj("id", c.sid))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.timeout*float64(time.Second)))
+	defer cancel()
+	c.call(ctx, Channel, "del", obj("id", c.sid))
 	c.sid = nil
 }
 

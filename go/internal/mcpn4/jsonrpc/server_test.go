@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"strings"
@@ -246,3 +247,28 @@ type escaped string
 
 func (e escaped) Error() string  { return string(e) }
 func (e escaped) PyType() string { return string(e) }
+
+// An interrupt ends the loop at once, even while a read blocks, writes no reply for the request it
+// cut short and still closes the session (test_server serve's KeyboardInterrupt).
+func TestServeContextStopsOnInterruptAndClosesTheSession(t *testing.T) {
+	t.Parallel()
+	for _, mid := range []bool{true, false} {
+		interrupt, cancel := context.WithCancel(context.Background())
+		ctx := &fakeContext{connected: true}
+		s := navigateServer(ctx, func(*pyjson.Object) (*pyjson.Object, error) {
+			cancel() // the signal arrives while the tool runs
+			return obj("ok", true), nil
+		})
+		in, w := io.Pipe() // reads block until the test closes it
+		t.Cleanup(func() { w.Close() })
+		if mid {
+			go w.Write([]byte(callNavigate + "\n"))
+		} else {
+			cancel()
+		}
+		var out bytes.Buffer
+		if err := s.ServeContext(interrupt, in, &out); err != nil || out.Len() != 0 || ctx.closed != 1 {
+			t.Errorf("mid-request %v: err %v, out %q, closed %d", mid, err, out.String(), ctx.closed)
+		}
+	}
+}

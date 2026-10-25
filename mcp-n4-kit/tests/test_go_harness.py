@@ -199,6 +199,14 @@ class TestSkipInventory(unittest.TestCase):
                          "these TWIN_DEBT entries resolve or are gone: delete them")
         self.assertLessEqual(len(go_server.TWIN_DEBT), go_server.TWIN_DEBT_CEILING)
 
+    def test_every_python_only_marker_says_why_and_is_neither_twin_nor_debt(self):
+        self.assertTrue(go_server.PYTHON_ONLY)
+        for test_id, reason in go_server.PYTHON_ONLY.items():
+            self.assertIn(test_id, self.ids)
+            self.assertTrue(reason.strip(), test_id)
+            self.assertNotIn(test_id, go_server.TWIN_DEBT)
+        self.assertFalse(set(go_server.PYTHON_ONLY) & set(go_server.unresolved_twins()))
+
 
 class TestTwinResolution(unittest.TestCase):
     """A twin resolves only to a real `func TestX` of its package, or a box replay scenario."""
@@ -230,6 +238,12 @@ class TestTwinResolution(unittest.TestCase):
             with open(os.path.join(root, "pkg", "a.go"), "w", encoding="utf-8") as fh:
                 fh.write("func TestNotATestFile(t *testing.T) {}\n")
             self.assertEqual(go_server.go_tests(root), {"pkg": {"TestOne"}})
+
+    def test_python_only_needs_a_reason_and_no_twin(self):
+        for kw in ({"python_only": ""}, {"python_only": "  "}, {"python_only": 5},
+                   {"python_only": "why", "twin": "plan.TestX"}):
+            with self.assertRaises(ValueError, msg=repr(kw)):
+                go_server.go_twin("plan", "unit", **kw)
 
     def test_an_explicit_twin_is_validated_and_names_one_test_only(self):
         with self.assertRaises(ValueError):
