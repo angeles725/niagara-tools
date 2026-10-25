@@ -15,7 +15,8 @@ import (
 
 // TestReplayRecordedFrames is the recorded-frame differential of slice S3: every scenario of
 // testdata/replay.jsonl (written by mcp-n4-kit/tests/go_box.py from a Python BoxClient talking
-// to the recording FakeStation) is replayed to the Go client. The station answers each request
+// to the recording FakeStation, until S17 removed both; the file is now frozen) is replayed to
+// the Go client. The station answers each request
 // with the next recorded reply, every request body must equal the recorded one byte for byte,
 // no recorded frame may be left over, and each op result must equal Python's. Nothing is
 // masked: the FakeStation session id and handles are deterministic and no request carries a
