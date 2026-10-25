@@ -1,21 +1,17 @@
 package jsonrpc
 
 import (
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // raisingDriver answers callEcho on the Python server whose tool raises an exception the server
 // does not expect (its catch-all), then a ping: the process must live on.
 const raisingDriver = `
 import sys
-sys.path.insert(0, sys.argv[1])
 from mcp_n4 import server
 srv = server.Server()
 def boom(ctx, args):
@@ -34,18 +30,7 @@ func panicking(*pyjson.Object) (*pyjson.Object, error) {
 }
 
 func TestAPanickingToolAnswersAsPythonsCatchAllAndTheServerLivesOn(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	cmd := exec.Command(py, "-I", "-c", raisingDriver, kit)
-	cmd.Env = append(os.Environ(), "PYTHONDONTWRITEBYTECODE=1")
-	cmd.Stdin = strings.NewReader(callEcho + "\n" + pingLine + "\n")
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python3 driver: %v", err)
-	}
+	out := golden.Open(t, "panic").Run(raisingDriver, []byte(callEcho+"\n"+pingLine+"\n"))
 	s := echoServer(panicking)
 	got := handle(t, s, callEcho) + "\n" + handle(t, s, pingLine) + "\n"
 	if got != string(out) {
