@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-25 · kit · r10-ltf1-marker-reset
@@ -48,3 +48,12 @@ never headed `status`. The kit's own `fixtures/MinimalDash` BMinimalDash shows t
 ## Lessons
 - A lint that reads a comment block must say what ends the block; in Niagara sources the annotations stand between
   the class javadoc and the properties, so "another annotation ends the block" silently disowned every class javadoc.
+
+## Fold
+- The class-javadoc harvest is code already shipped in the PR that wrote this retro (`go/internal/lint/rules/linktargetflags`, goldens `classdoc-*`, bats LTF-classdoc and LTF-classdoc-named); not re-implemented.
+- Δ2 → `types/dashboard.md` § rt — the facade, the link-in bullet: name each link-in slot in code formatting in the class javadoc.
+- Δ1 deferred in the same bullet: bare-word matching is a proposal with no real facade that needs it yet; not implemented.
+- The expected MinimalDash `status` hit is the defect itself and is being fixed on another branch.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-5`; log in `ledger.d/2026-10-25-r10-fold-tail5.md`) — Δ2 in `types/dashboard.md` § rt; Δ1 deferred there (no real case yet).
