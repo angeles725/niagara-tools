@@ -146,8 +146,10 @@ jobs:
           plan="$(grep -m 1 -E '^1\.\.[0-9]+$' "$TAP" || true)"; plan="${plan#1..}"
           got="$(grep -cE '^(not )?ok ' "$TAP" || true)"
           printf 'bats: the suite holds %s tests; TAP plan %s; %s results\n' "$want" "${plan:-missing}" "$got"
-          [ "$want" -gt 0 ] && [ "$plan" = "$want" ] && [ "$got" -eq "$want" ] \
-            || { printf 'ERROR: bats reported %s results (plan %s) for a suite of %s tests\n' "$got" "${plan:-missing}" "$want" >&2; exit 1; }
+          if ! { [ "$want" -gt 0 ] && [ "$plan" = "$want" ] && [ "$got" -eq "$want" ]; }; then
+            printf 'ERROR: bats reported %s results (plan %s) for a suite of %s tests\n' "$got" "${plan:-missing}" "$want" >&2
+            exit 1
+          fi
 
       - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
         run: |
