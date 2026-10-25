@@ -233,6 +233,7 @@ Before `git commit`:
 - [ ] No `Co-Authored-By` trailers. No AI attribution of any kind.
 - [ ] If `scripts/ng-deploy.sh` flag/exit/env surface changed: `VERSION` bumped,
       `CHANGELOG.md` entry added.
+- [ ] A kit behaviour change (`go/`, `build-n4-module-kit/`, `tools/`) adds a `changelog.d/` fragment (§ 6.2).
 - [ ] If new KB topic added: `docs/GOTCHAS.md` updated, bidirectional links present.
 - [ ] No accidentally committed `.env.local` files (`.gitignore` covers `.env.*` with explicit
       `!.env.local.example` exception — verify `git status` is clean of personal env files).
@@ -284,6 +285,27 @@ scripts/install-hooks.sh --uninstall  # deactivate: restore the default hooks
 It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-existing custom
 `core.hooksPath` (your own hooks are never silently clobbered) — pass `--force` to override. See
 `build-n4-module-kit/BUILD-LOOP.md` §7 for the close-gate contract the hook enforces.
+
+### 6.2 The changelog gate
+
+The same `.githooks/pre-push` (and the `changelog` job of `ci.yml`, over `origin/main..HEAD`, so a clone without
+the hook cannot skip it) runs `scripts/changelog-gate.sh` over the pushed range (`go/internal/changelog`). A range
+that changes kit behaviour, meaning any path under `go/`, `build-n4-module-kit/` or `tools/` except the retro gate's
+own exclusions (`go/bin/`, `BUILD-STATE(.src).md`, `ledger.d/`, `retros/`), FAILS unless it carries one of these.
+Tests and docs under those trees count as behaviour.
+
+- **A fragment** `changelog.d/<YYYY-MM-DD>-<slug>.md` at the repository root, added in the range (preferred: two
+  PRs never conflict on it). Line 1 is a Keep a Changelog heading, `### Added|Changed|Deprecated|Removed|Fixed|Security`
+  with an optional ` — <title>`; every heading has at least one `- ` bullet; no other heading level appears.
+- **A non-blank line added inside `## [Unreleased]`** of `CHANGELOG.md`. An edit to an older release section does
+  not count.
+- **A `Changelog: none (<reason>)` trailer** in any commit of the range. The reason is non-empty, one printable line,
+  at most 120 characters, and the gate prints it.
+
+A malformed fragment, or a `Changelog:` line not of that form, refuses the push even when the range changes no
+behaviour. Exits: 0 pass or not applicable, 1 refused, 3 a malformed range or no `git`. The gate runs after the
+live-doctrine citation gate and before the retro exits, so a `Retro: none (trivial: …)` trailer does not waive it.
+`[ev: retro r10-changelog-gate Δ1]`
 
 ---
 

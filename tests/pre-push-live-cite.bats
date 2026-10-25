@@ -42,7 +42,7 @@ case "$1" in
 esac
 GIT
   chmod +x "$FAKEBIN/git"
-  printf 'feat: x\n\nRetro: none (trivial: test)\n' > "$BATS_TEST_TMPDIR/log"
+  printf 'feat: x\n\nRetro: none (trivial: test)\nChangelog: none (live-cite fixture)\n' > "$BATS_TEST_TMPDIR/log"
 }
 
 push() { # push <changed paths...>: the range changes these files

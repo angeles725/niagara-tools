@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The checks run as four parallel jobs (go, bats, lint-sweeps, mcp-n4-go); the wall time is the slowest
+  # The checks run as five parallel jobs (go, bats, lint-sweeps, mcp-n4-go, changelog); the wall time is the slowest
   # job, not their sum. Every step of the former single `checks` job runs in exactly one of them.
   go:
     name: Go gofmt + vet + test + build
@@ -313,3 +313,29 @@ jobs:
 
       - name: mcp-n4-kit unittest (Go server)
         run: python3 -m unittest discover -s mcp-n4-kit/tests -v
+
+  # The changelog gate of .githooks/pre-push, server side: a clone without the hook still cannot merge a kit
+  # behaviour change (go/, build-n4-module-kit/, tools/) with no CHANGELOG entry (CONTRIBUTING.md § 6.2). It needs
+  # the history, so its own job checks out with fetch-depth 0. On a pull_request HEAD is the merge commit and
+  # origin/main..HEAD is exactly the PR's change; on a push to main the range is empty and the gate is not
+  # applicable. The retro half of the hook stays local-only.
+  changelog:
+    name: changelog gate (kit behaviour changes carry a CHANGELOG entry)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
+
+      - name: changelog-gate over origin/main..HEAD (a fragment, an [Unreleased] line or a no-entry trailer)
+        run: bash scripts/changelog-gate.sh --range "$(git merge-base origin/main HEAD)..HEAD"
