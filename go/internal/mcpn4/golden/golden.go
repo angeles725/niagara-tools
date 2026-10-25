@@ -4,7 +4,8 @@
 // With pytarget.RecordEnv=1 the script runs on the target CPython and every call is appended to
 // testdata/<name>.golden.jsonl; otherwise the file is replayed and no interpreter is needed.
 // Replay is strict, like box/testdata/replay.jsonl: each call must send the recorded script
-// and stdin byte for byte, in order, and no recorded call may be left over.
+// and stdin byte for byte, in order, and no recorded call may be left over. A missing golden
+// fails: a differential that silently stopped comparing would look like one that passed.
 package golden
 
 import (
@@ -69,7 +70,7 @@ func Open(t testing.TB, name string) *Golden {
 	}
 	data, err := os.ReadFile(g.path)
 	if errors.Is(err, fs.ErrNotExist) {
-		t.Skipf("golden %s missing: %s", g.path, g.hint)
+		t.Fatalf("golden %s missing: %s", g.path, g.hint)
 	}
 	if err != nil {
 		t.Fatal(err)

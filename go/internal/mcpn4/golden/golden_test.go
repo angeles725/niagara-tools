@@ -85,7 +85,7 @@ func TestReplay(t *testing.T) {
 		calls                func(g *Golden)
 	}{
 		{"recorded calls replay in order", rec, "pass", both},
-		{"missing golden skips with the re-record hint", "", "skip: golden testdata/x.golden.jsonl missing: re-record with MCP_N4_RECORD=1", both},
+		{"missing golden fails with the re-record hint", "", "fail: golden testdata/x.golden.jsonl missing: re-record with MCP_N4_RECORD=1", both},
 		{"changed cases are stale", rec, "fail: golden testdata/x.golden.jsonl is stale: call 1 sends other cases (first difference at byte 2)",
 			func(g *Golden) { g.Run("s", []byte("inX")) }},
 		{"changed script is stale", rec, "fail: golden testdata/x.golden.jsonl is stale: call 1 runs a changed script",
