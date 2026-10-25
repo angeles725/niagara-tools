@@ -6,16 +6,16 @@ Python server on the same input. S17 removes that Python, so those answers are f
 `[args, answer]`. The Go binary is compared with the recording; the args must match it, so a
 test that changes its input fails instead of comparing against a stale answer.
 
-Paths that change between runs (a temporary state dir) and today's date are recorded as
-placeholders (`aliases`) and replayed as this run's values. Recording needs the Python server
-and `MCP_N4_RECORD_ORACLE=1`; once that Python is gone the recordings are fixed.
+Paths that change between runs (a temporary state dir) and today's date were recorded as
+placeholders (`aliases`) and are replayed as this run's values. The recordings were made with
+`MCP_N4_RECORD_ORACLE=1` while the Python server existed (S17, before its removal); they are
+frozen and cannot be re-recorded.
 """
 import datetime
 import json
 import os
 
 FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "oracles")
-RECORD = os.environ.get("MCP_N4_RECORD_ORACLE") == "1"
 TODAY = "<today-utc>"
 
 
@@ -24,16 +24,13 @@ def today_utc():
 
 
 class Frozen:
-    """The recorded oracle of one test: `frozen(args, compute)` is the answer of the next call."""
+    """The recorded oracle of one test: `frozen(args)` is the answer of its next call."""
 
     def __init__(self, test, name, aliases=()):
         self.test, self.path = test, os.path.join(FIXTURES, name + ".json")
         self.key = ".".join(test.id().split(".")[-2:])
         self.aliases = list(aliases)
-        self.calls, self.next = [], 0
-        if RECORD:
-            test.addCleanup(self._save)
-            return
+        self.next = 0
         with open(self.path, encoding="utf-8") as fh:
             self.recorded = json.load(fh)["calls"].get(self.key)
         if self.recorded is None:
@@ -45,13 +42,9 @@ class Frozen:
             text = text.replace(placeholder, real) if back else text.replace(real, placeholder)
         return text
 
-    def __call__(self, args, compute=None):
-        """The answer to `args`: `compute()` when recording, else the recorded one."""
+    def __call__(self, args):
+        """The recorded answer to `args` (which must be the recorded args of this call)."""
         args = json.loads(self._swap(json.dumps(args), False))
-        if RECORD:
-            answer = compute()
-            self.calls.append([args, json.loads(self._swap(json.dumps(answer), False))])
-            return answer
         i, self.next = self.next, self.next + 1
         if i >= len(self.recorded):
             self.test.fail("%s: %s makes more calls than the %d recorded"
@@ -65,17 +58,3 @@ class Frozen:
         if self.next != len(self.recorded):
             self.test.fail("%s: %s made %d of the %d recorded calls"
                            % (self.path, self.key, self.next, len(self.recorded)))
-
-    def _save(self):
-        try:
-            with open(self.path, encoding="utf-8") as fh:
-                data = json.load(fh)
-        except FileNotFoundError:
-            data = {"note": "Recorded from the in-process Python mcp-n4 server before S17 "
-                            "removed it (tests/oracle.py); it cannot be re-recorded.",
-                    "calls": {}}
-        data["calls"][self.key] = self.calls
-        os.makedirs(FIXTURES, exist_ok=True)
-        with open(self.path, "w", encoding="utf-8") as fh:
-            json.dump(data, fh, indent=1, ensure_ascii=True)  # key order is part of the bytes
-            fh.write("\n")

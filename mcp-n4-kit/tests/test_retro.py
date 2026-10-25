@@ -5,7 +5,6 @@ import os
 import shutil
 import sys
 import tempfile
-import types
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -172,20 +171,9 @@ class TestTheDraftIsPythonsDraft(Fixture):
                "params": {"name": "n4_session_retro_draft", "arguments": args}}
         return self.srv.dispatch(msg)["result"]
 
-    def python(self, args):
-        """What the Python server answered (recording only): the draft, or the error text."""
-        from mcp_n4 import tools_read
-        ctx = types.SimpleNamespace(session=None, state_dir=self.dir, observations=[],
-                                    started_at=None)  # every call here passes since
-        try:
-            return {"draft": tools_read.n4_session_retro_draft(ctx, args)}
-        except ValueError as exc:
-            return {"error": str(exc)}
-        except Exception as exc:  # noqa: BLE001 - the server names the type only
-            return {"error": "internal error (%s)" % type(exc).__name__}
-
     def expected(self, **args):
-        return self.frozen(args, lambda: self.python(args))
+        """What the Python server answered: {"draft": ...} or {"error": text}."""
+        return self.frozen(args)
 
     def assertSameDraft(self, **args):
         result = self.reply(**args)

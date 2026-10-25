@@ -8,7 +8,6 @@ import os
 import shutil
 import sys
 import tempfile
-import types
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -33,11 +32,7 @@ class TestListBatchesOnAPythonJournal(test_server.ToolTestCase):
         self.frozen = oracle.Frozen(self, "list_batches", aliases=[(self.state_dir, "<state>")])
 
     def expected(self, **args):
-        def compute():
-            from mcp_n4 import tools_read
-            return tools_read.n4_list_batches(types.SimpleNamespace(state_dir=self.state_dir),
-                                              args)
-        return self.frozen(args, compute)
+        return self.frozen(args)
 
     def append(self, data):
         with open(self.journal, "ab") as fh:
