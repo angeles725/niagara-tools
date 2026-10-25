@@ -86,6 +86,11 @@ The offline checks also found that the dashboard `-ux` servlet never compiled, o
   signingProfileFile }` block drops it (plugin 7.6.22, same with the 4.14 mirror); a known-good client root without that
   block gets a `<dependency name="<Mod>-rt" …/>` line. The driver scaffold has the same gap and its test still ran 6/6
   on 4.14, so it was not the cause here; it stays an open question whether a 4.15 run needs it.
+  **Erratum (2026-10-25):** this did not reproduce. A minimal rebuild of the logic, dashboard and driver scaffolds
+  with the root block (plugin 7.6.22 on 4.15, 7.6.17 on 4.14) keeps `<dependency name="ModuleA-rt" …/>` in the
+  test `module.xml`; `NiagaraModulePlugin.kt:202` adds the module itself as a moduleTest compileOnly dependency
+  unconditionally and the plugin class references no signing. Removing only `niagaraSigning {}` while
+  `allowDefaultProfile.set(false)` stays fails configuration, so the original comparison was not like-for-like.
 - `-ux`: `:ModuleA-ux:compileJava` failed at `BModuleAServlet.java:74` (`method does not override or implement a method
   from a supertype`) on both the 4.15.3.28 and the 4.14.0.162 mirrors; after the fix it passes on both, with both
   `compileModuleTestJava` tasks.
@@ -114,5 +119,4 @@ The offline checks also found that the dashboard `-ux` servlet never compiled, o
   build offline was still worth it: it found a second, real gap in the signing template.
 
 ## Owed
-- Whether a 4.15 station test needs the test module's dependency on `<Mod>-rt` that the signing block drops.
 - Δ2 and Δ4 above (Δ3 landed as runner D6, #566; Δ5 is the runner gate in this branch).
