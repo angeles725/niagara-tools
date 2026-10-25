@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: run-niagara-test fails a TestNG run with ignored methods unless a counted, reasoned allowance waives them -->
+log: 2026-10-25 · quality round 10 → `run-niagara-test verdict --testng` and `run` (`go/internal/niagaratest/ignored.go`) FAIL a testng-results.xml whose root `ignored` is above 0 (`@Test(enabled = false)` or excluded methods count in `ignored` and `total` only, with no `test-method` element: a 43-test run with 20 disabled read `passed 21, failed 2` and no row named the 20); `--allow-ignored-count <n> --allow-ignored-reason <why>` waives exactly n and prints the reason, more or fewer ignored than allowed is FAIL, a count without a reason is exit 2. The PASS row counts total - ignored as run. Retro retros/2026-10-25-r10-rnt-ignored-methods.md (1Δ, folded). [ev: retro r10-rnt-ignored-methods Δ1]
+open_issue: the gate is proven on synthetic results and the fake runner only; a live `run` of a client root with disabled tests and a matching allowance is owed (retro r10-rnt-ignored-methods Δ1).

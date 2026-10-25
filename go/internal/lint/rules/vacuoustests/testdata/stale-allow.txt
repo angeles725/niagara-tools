@@ -1,0 +1,22 @@
+-- args --
+--allow
+BAlphaTest.real
+--allow
+BAlphaTest.placeholder
+--allow-reason
+why
+@DIR@/ModuleA
+-- want --
+exit 1
+PASS  allowed  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java:5  BAlphaTest.placeholder: trivially-true, allowed: why
+FAIL  stale-allow  --allow BAlphaTest.real names no flagged test method (remove it)
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java --
+package com.x.test;
+import org.testng.annotations.Test;
+public class BAlphaTest {
+  @Test
+  public void placeholder() { assertTrue(true); }
+  @Test
+  public void real() { assertEquals(1 + 1, 2); }
+}

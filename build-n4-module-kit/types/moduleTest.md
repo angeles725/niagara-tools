@@ -83,7 +83,7 @@ added to the production `module-include.xml` — that would ship test code in th
 types → `moduleTestJar` only.  A `moduleTestJar` is built by the Gradle plugin alongside the regular jar
 when this file is present. `[ev: corpus B958 §958.4]`
 
-**Plugin-version trap (gradle plugin 7.3.40, iC-Niagara 4.13):** `:<part>:compileModuleTestJava` runs the
+**Plugin-version trap (gradle plugin 7.3.40, iC-Niagara 4.13, and 7.6.22, observed):** `:<part>:compileModuleTestJava` runs the
 annotation processor against the production `module-include.xml` and appends every `@NiagaraType` class under
 `srcTest/` to it. An ordinary `:<part>:jar` after that ships the test types in the production jar's
 `module.xml`. Run `git status` after every moduleTest compile and revert any new `<type>` line in
@@ -203,6 +203,15 @@ public void ngTestLinkCheck2() {
 
 ## Checklist before adding a moduleTest
 
+A scaffolded module already has one. `toolbelt/scaffold-module.sh --type logic|dashboard` emits the station test
+from `templates/station-test` into `<Mod>-rt`: `B<Mod>StationTestBase` (a `BTestNgStation` with Fox off, which
+tolerates only the exact `Fox service did not start in time` failure while the station runs; unique per-test
+mounts removed in `@AfterMethod`; `await` and `holds` helpers), `B<Mod>LinkTest` (for each slot in
+`LINK_IN_SLOTS`: LinkCheck accepts a link from a plain source, the slot is not READONLY, and a BLink carries a
+change to each double slot), `moduleTest-include.xml`, and both test dependencies in the gradle file. `--type
+driver` ships its loopback test instead (`types/driver-authoring.md` § 12.1). Add every new link-in slot to
+`LINK_IN_SLOTS`. `[ev: retro r10-scaffold-station-test Δ1]`
+
 1. `srcTest/com/<vendor>/<mod>/test/BYourModuleTest.java` — extends `BTestNg`, `@NiagaraType`, TestNG
    annotations.
 2. `<part>/moduleTest-include.xml` — registers the test type; does NOT appear in `module-include.xml`.
@@ -223,7 +232,7 @@ One command runs the module's station tests on a throwaway copy of the install a
 toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-root <client gradle root> \
   --part ModuleA-rt --module ModuleA [--timeout 30m] [--keep-home] [--scratch '<dir under %TEMP%>'] \
   [--jdk8 /usr/lib/jvm/java-8-openjdk-amd64] [--gradle-user-home ~/.gradle] [--module-verification low] \
-  [--exclude-jar '<glob>']... [--restore-gradle-root] [--log-dir <dir>]
+  [--exclude-jar '<glob>']... [--restore-gradle-root] [--log-dir <dir>] [--reuse-home '<kept dir>']
 ```
 
 - It copies the install into a new dir under `%TEMP%` (robocopy: `bin etc jre lib security defaults`, then the
@@ -239,6 +248,16 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   another process holds open, and a probe that cannot tell refuses too `[ev: retro r10-run-niagara-test-run Δ2]` (a service's `station.exe`, whose path a non-elevated probe cannot read, is attributed
   through its `niagarad` service's `PathName`; one that cannot be attributed is refused `[ev: retro r10-rnt-run-live-fixes Δ3]`); a scratch outside `%TEMP%`; a build home inside the install. The install is never
   written: a change in its `modules/`, `etc/`, `security/` or top level is FAIL.
+- It also refuses (exit 2, before any copy) a `LocalSigningProfile` named by `niagaraSigningProfile` (in
+  `GRADLE_USER_HOME/gradle.properties`, else the gradle root's) whose `niagara.signing.validity` minus
+  `niagara.signing.refresh` is below 32 days, and names both values. The signing plugin sets a new key's notAfter
+  to day `validity` of the current month (`Calendar.set(DAY_OF_MONTH, validity)`, niagara-plugins 7.6.22
+  `LocalSigningProfile.kt:388`) and re-mints the key when fewer than `refresh` days are left (`:216-225`). A
+  throwaway 30/15 profile on 25 October therefore minted a 5-day key at every signing; the jars failed `cannot
+  verify signature block file`, the NRE dropped them and test.exe printed only `invalid test target(s)`. Write a
+  throwaway profile with the plugin defaults, 365/183, and no `niagara.signing.keypass.<alias>` entry (the plugin
+  adds it; a pre-seeded one fails `:jar` with `Password for <alias> already present`).
+  `[ev: retro r10-scaffold-station-test Δ5]`
 - The scratch user home reaches the NRE through the environment: `bin/test.exe` runs straight from WSL with the
   copy as cwd, `niagara_user_home=<Windows path>` and `WSLENV` extended with `niagara_user_home/w` (the NRE reads
   `niagara_user_home` before it falls back to `%USERPROFILE%\Niagara<maj>.<min>\<brand>`). A `set
@@ -277,7 +296,9 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   root is not a git worktree: cannot verify it`, exit 3, before any copy). The runner takes `git status
   --porcelain=v1 -z --untracked-files=all` of it, with a sha256 of every listed file (so a rewrite of a file that
   was already dirty counts), before the copy and again after cleanup; any new, modified, deleted or rewritten path
-  is FAIL (`gradle root changed by the build: <paths>`, 10 names, then "and N more"), else `gradle root unchanged
+  is FAIL (`gradle root changed by the build: <paths>`, 10 names, then "and N more"; when a `*/module-include.xml`
+  changed, the row goes on to name the plugin-version trap below, points at `--restore-gradle-root` and this note,
+  and says whether the restore checked the file out `[ev: retro r10-rnt-d5-trap-row Δ1]`), else `gradle root unchanged
   (<n> tracked changes before, same after)`. `--restore-gradle-root` (opt-in) then checks out (`git
   --literal-pathspecs checkout -- <paths>`) only the files that were clean before and that the build modified or
   deleted, never a file already dirty, never deletes an untracked file (it lists the ones the build created),
@@ -296,9 +317,44 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   `--log-dir` is given or `--keep-home` is on (`run log: <path>`); `--keep-home` keeps the dir as before and
   writes the log too. A run refused or failing before its scratch dir exists prints its reason only
   `[ev: retro r10-rnt-fail-diagnostics Δ1]`.
-- **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13), `:<part>:compileModuleTestJava` appends every
+- **A failed run keeps testng-results.xml and every failure's whole trace beside its log.** The 200-line stderr
+  tail can start inside a long stack trace, so on exit 1, 3 or 4 the runner also reads `testng-results.xml` before
+  cleanup and writes, next to `<stem>.log`, `<stem>.testng-results.xml` (a copy) and `<stem>.traces.txt` (one
+  `== FAIL <class>.<method> ==` section per FAIL test-method, configuration methods marked `(config)`, holding its
+  `<full-stacktrace>` whole), both 0600 and redacted like the log. Each is cut at a line end under 4 MiB with a
+  `(truncated: ...)` row, so a cut never splits a path the redactor must see whole. A missing or unreadable results
+  file is a `testng-results.xml unavailable: <why>` row in the log's `kept evidence` section; a green run keeps
+  neither file `[ev: retro r10-rnt-fail-evidence Δ1]`.
+- **A failed run keeps test.exe's whole stderr beside its log.** The run log's 200-line stderr tail can cut the
+  station-log lines around the failing class, so on exit 1, 3 or 4 the runner also reads `out/stderr.txt` before
+  cleanup and writes `<stem>.stderr.txt` (0600), redacted and cut at a line end under 4 MiB like the testng
+  evidence; the `kept evidence` section names it, a missing or unreadable file is a `test.exe stderr unavailable:
+  <why>` row, and a green run keeps none `[ev: retro r10-rnt-full-stderr Δ1]`.
+- **`--reuse-home '<kept dir>'` boots a second time on a home a `--keep-home` run kept**, so a test can prove what
+  survives a station restart (data written in boot 1, read back in boot 2). It is the one flag that points the
+  runner at an existing dir, so it is guarded: the dir must lie under the scratch parent, must not be, hold or sit
+  in a real `%USERPROFILE%\Niagara4.*\<brand>` or have `registry\`/`security\` at its top (D3; a copied marker
+  changes nothing), and must carry the `run-niagara-test.marker` every run writes in its dir (run id, install,
+  sha256 of the install's `defaults\system.properties`, and the run log a `--keep-home` run wrote). The marker's
+  run id must be the one that log, in `--log-dir`, records, and its install and sha256 this run's; each mismatch
+  is exit 2 naming the field. Nothing is copied again: the home copy, its registry and the scratch
+  `niagara_user_home` (station data) stay; `:jar`/`:moduleTestJar` rebuild the module jars into it and `out\`
+  starts empty. `--exclude-jar` and `--module-verification` are exit 2 with it (the kept copy keeps boot 1's).
+  The dir is deleted at the end (`cleanup: deleted <dir>`) unless `--keep-home` is given again. Proven on the fake
+  runner only; a live two-boot reload on a client root is owed `[ev: retro r10-rnt-reuse-home Δ1]`.
+- **The scratch home must be written by this boot, not only exist.** On `--reuse-home` the kept `nuh\` already has
+  boot 1's `etc\` and `security\`, so the runner also records every regular file under `nuh\` just before
+  `bin/test.exe` starts (which holds what the build put there) and its start and exit times: a boot that leaves no
+  file new or changed with an mtime in that window, widened by a printed 2 s clock-skew tolerance (WSL clock vs
+  Windows mtimes), is `FAIL  ...  scratch niagara_user_home not written by this boot`; the PASS row names up to 5
+  files relative to `nuh\` with their mtimes. No file is required by name: which ones the NRE rewrites on every
+  boot is not recorded. It runs on fresh runs too, and the real-home snapshot still gates both. The walk is capped
+  (20000 entries, 16 dirs deep; over a cap is FAIL). Fake runner only; the live check is owed on the next client
+  reuse run `[ev: retro r10-rnt-reuse-nre-proof Δ1]`.
+- **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13) and 7.6.22 (observed), `:<part>:compileModuleTestJava` appends every
   `@NiagaraType` test class to the PRODUCTION `<part>/module-include.xml`** (never to `moduleTest-include.xml`), and
-  it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types. Check
+  it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types (a
+  7.6.22 `moduleTestJar` build added 3 test types to the `-rt` and 2 to the `-ux` production file of a client root). Check
   `git status` of the gradle root after any moduleTest compile, by hand or through the runner's gate
   `[ev: retro r10-rnt-gradle-root-gate Δ2]`.
 
@@ -597,6 +653,31 @@ the main Gradle section above).
   a failed `setupStation` skips its tests, which the root counts as skipped, not failed) has status FAIL
   and the root counts match the test-methods; a missing or malformed file is FAIL.
   `[ev: retro r10-run-niagara-test-testng Δ1]`
+- **The root `total` counts ignored methods that never ran:** `@Test(enabled = false)` (or a group exclusion) adds
+  to `ignored` and `total` only, with no `test-method` element, so a run of 43 with 20 disabled reads green once its
+  2 failures are fixed. `verdict --testng` and `run` FAIL any ignored count unless `--allow-ignored-count <n>
+  --allow-ignored-reason <why>` waives exactly n (the reason is printed); more ignored than n, fewer (a stale
+  allowance), or a count with no reason (exit 2) is never a pass `[ev: retro r10-rnt-ignored-methods Δ1]`.
+- **A counted allowance misses a swapped disable:** disable one new test and re-enable an old one, and the
+  ignored count still matches. `run` names the ignored methods from the source: every method-level
+  `@Test(enabled = false)` a type of `<part>/moduleTest-include.xml` declares, or inherits from a `srcTest/`
+  superclass, is `<SimpleName>.<method>`; their count must equal the root `ignored`, and `--allow-ignored
+  <Class.method>` (repeatable, with `--allow-ignored-reason`) waives exactly that set, a new or a stale name FAIL. A
+  class-level disable, a non-literal `enabled` or an unreadable registered source is exit 3 before the build
+  `[ev: retro r10-rnt-ignored-names Δ1]`.
+- **The count fallback can hide the same swap:** a count that skips the source passes a swapped disable again. `run`
+  scans the source under `--allow-ignored-count` too and prints the scanned names; the count is accepted only when
+  the scan refused (case (i): a NOTE row, not exit 3) or the source count differs from the root `ignored` (case
+  (ii): a group exclusion, a base outside `srcTest/`), and the row names the case. When the scan names every
+  ignored method the count FAILs ("use --allow-ignored names"); the reason is a printed note and never overrides
+  that. `verdict --testng` has no source and keeps the count pair `[ev: retro r10-rnt-fallback-strict Δ1]`.
+- **A green run proves nothing for a test that cannot fail or never runs:** an `assertTrue(true)` placeholder, a
+  test with no assertion, and a JUnit `assumeTrue(false)` (or a first-statement `throw new SkipException`) all
+  pass or skip silently. `lint-vacuous-tests.sh <gradle-root>` FAILs each `@Test` method under `srcTest/` of these
+  shapes; `expectedExceptions` / `expected =` and an assertion made through a helper of the same class, an
+  enclosing class, a `srcTest/` superclass or a statically imported `srcTest/` class (one level deep) keep a test
+  clean. Waive one only by name:
+  `--allow <Class.method> --allow-reason <why>` (a stale name FAILs) `[ev: retro r10-lint-vacuous-tests Δ1]`.
 - **`niagaraTest` is `bin/test`:** the task only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
   (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so `test.exe <module>` on a scratch COPY of the home (not a
   symlink mirror: Windows sees its links as dangling junctions) runs the same tests without gradle; set

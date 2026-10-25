@@ -190,7 +190,8 @@ func TestRunGradleRootRestore(t *testing.T) {
 	}
 	code, out := fx.run(t, append([]string{"run"}, fx.args("--restore-gradle-root")...)...)
 	for _, w := range []string{
-		"FAIL  run-niagara-test  gradle root changed by the build: ModuleA-rt/module-include.xml ModuleA-rt/new.xml ModuleA-ux/module-include.xml gone.txt\n",
+		trapRow("ModuleA-rt/module-include.xml ModuleA-rt/new.xml ModuleA-ux/module-include.xml gone.txt",
+			"--restore-gradle-root restored the ones that were clean before (next row)"),
 		"PASS  run-niagara-test  gradle root restored: ModuleA-rt/module-include.xml gone.txt (untracked files the build created, left in place: ModuleA-rt/new.xml)\n",
 	} {
 		if !strings.Contains(out, w) {
@@ -268,5 +269,89 @@ func noDestructiveGit(t *testing.T, fx *fixture) {
 		if v == "checkout" && (slices.Contains(c.Args, ".") || !slices.Contains(c.Args, "--")) {
 			t.Errorf("checkout of the whole tree or without --: %q", c.Args)
 		}
+	}
+}
+
+// trapRow is the FAIL row of a build that changed a */module-include.xml: the generic row, then the known cause
+// (the plugin's moduleTest compile appending test types to the production file), the restore flag and the doc.
+func trapRow(paths, restore string) string {
+	return "FAIL  run-niagara-test  gradle root changed by the build: " + paths + " (module-include.xml: niagara " +
+		"gradle plugin 7.3.40 and 7.6.22 (observed) append the test types to the PRODUCTION module-include.xml in " +
+		":<part>:moduleTestJar or the moduleTest compile whenever the test sources changed; " + restore +
+		"; see build-n4-module-kit/types/moduleTest.md, plugin-version trap)\n"
+}
+
+// A changed */module-include.xml names the plugin trap in the FAIL row; the exit stays 1 and nothing is checked
+// out without --restore-gradle-root.
+func TestRunGradleRootModuleIncludeNamesTrap(t *testing.T) {
+	t.Parallel()
+	const nested = "ModuleA/ModuleA-rt/module-include.xml"
+	fx := newFixture(t)
+	write(t, filepath.Join(fx.gradle, filepath.FromSlash(nested)), "<types/>\n")
+	fx.git(t, "add", "-A")
+	fx.git(t, "commit", "-q", "-m", "nested")
+	fx.f.on["gradle"] = func(context.Context, Cmd) (int, error) {
+		write(t, filepath.Join(fx.gradle, filepath.FromSlash(nested)), "<types><type name=\"BExampleTest\"/></types>\n")
+		return 0, nil
+	}
+	code, out := fx.run(t, append([]string{"run"}, fx.args()...)...)
+	want := trapRow(nested, "rerun with --restore-gradle-root to check it out")
+	if code != exitFail || !strings.Contains(out, want) {
+		t.Errorf("exit %d, want 1 with %q:\n%s", code, want, out)
+	}
+	if n := len(fx.f.of("git-checkout")); n != 0 {
+		t.Errorf("%d checkouts without --restore-gradle-root", n)
+	}
+}
+
+// Any other changed file keeps the generic row, with no trap text.
+func TestRunGradleRootOtherFileKeepsGenericRow(t *testing.T) {
+	t.Parallel()
+	fx := newFixture(t)
+	write(t, filepath.Join(fx.gradle, "build.gradle.kts"), "// tracked\n")
+	fx.git(t, "add", "-A")
+	fx.git(t, "commit", "-q", "-m", "kts")
+	fx.f.on["gradle"] = func(context.Context, Cmd) (int, error) {
+		write(t, filepath.Join(fx.gradle, "build.gradle.kts"), "// rewritten\n")
+		return 0, nil
+	}
+	code, out := fx.run(t, append([]string{"run"}, fx.args()...)...)
+	want := "FAIL  run-niagara-test  gradle root changed by the build: build.gradle.kts\n"
+	if code != exitFail || !strings.Contains(out, want) || strings.Contains(out, "plugin-version trap") {
+		t.Errorf("exit %d, want 1 with the generic %q:\n%s", code, want, out)
+	}
+}
+
+// With --restore-gradle-root the trap row says the file was restored, the restored row follows, and the run
+// stays FAIL; a restore the re-snapshot does not confirm says it was not.
+func TestRunGradleRootModuleIncludeRestoredTrap(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name      string
+		checkout  bool // the real checkout runs; false = a no-op checkout, so the restore is unconfirmed
+		restore   string
+		restoreRw string
+	}{
+		{"restored", true, "--restore-gradle-root restored the ones that were clean before (next row)",
+			"PASS  run-niagara-test  gradle root restored: " + moduleInclude + "\n"},
+		{"unconfirmed", false, "--restore-gradle-root did not restore it (next row)",
+			"FAIL  run-niagara-test  gradle root not restored: " + moduleInclude + " still differs after git checkout\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			fx := newFixture(t)
+			fx.f.on["gradle"] = func(context.Context, Cmd) (int, error) {
+				write(t, filepath.Join(fx.gradle, moduleInclude), "<types><type/></types>\n")
+				return 0, nil
+			}
+			if !tc.checkout {
+				fx.f.on["git-checkout"] = func(context.Context, Cmd) (int, error) { return 0, nil }
+			}
+			code, out := fx.run(t, append([]string{"run"}, fx.args("--restore-gradle-root")...)...)
+			want := trapRow(moduleInclude, tc.restore) + tc.restoreRw
+			if code != exitFail || !strings.Contains(out, want) {
+				t.Errorf("exit %d, want 1 with %q:\n%s", code, want, out)
+			}
+		})
 	}
 }

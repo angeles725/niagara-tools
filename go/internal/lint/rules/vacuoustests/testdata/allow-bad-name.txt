@@ -1,0 +1,12 @@
+-- args --
+--allow
+placeholder
+--allow-reason
+why
+@DIR@/ModuleA
+-- want --
+exit 3
+-- stderr --
+lint-vacuous-tests: --allow placeholder: not a <Class.method> name
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java --
+class BAlphaTest { }

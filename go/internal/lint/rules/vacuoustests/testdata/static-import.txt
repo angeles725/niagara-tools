@@ -1,0 +1,50 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 1
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BMemberTest.java:6  BMemberTest.viaOtherMember: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BWaitTest.java:9  BWaitTest.viaQuiet: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BWaitTest.java:11  BWaitTest.viaNotImported: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+FAIL  trivially-true  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BWaitTest.java:13  BWaitTest.messageFirst: its only assertions are trivially true, so it cannot fail
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BWaitTest.java:15  BWaitTest.viaTwoLevels: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/ModuleAFixture.java --
+package com.x.test;
+public final class ModuleAFixture {
+  static void await(boolean cond) { assertTrue(cond); }
+  static void settle(boolean cond) { await(cond); }
+}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/ModuleAQuiet.java --
+package com.x.test;
+public final class ModuleAQuiet {
+  static void pause(long ms) { }
+  static void check(int v) { org.junit.Assert.assertTrue(v > 0); }
+}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BWaitTest.java --
+package com.x.test;
+import static com.x.test.ModuleAFixture.*;
+import static com.x.test.ModuleAQuiet.pause;
+import org.junit.Test;
+public class BWaitTest {
+  @Test
+  public void viaStaticImport() { await(ready()); }
+  @Test
+  public void viaQuiet() { pause(10); }
+  @Test
+  public void viaNotImported() { check(1); }
+  @Test
+  public void messageFirst() { assertTrue("msg", true); }
+  @Test
+  public void viaTwoLevels() { settle(ready()); }
+  private boolean ready() { return true; }
+}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BMemberTest.java --
+package com.x.test;
+import static com.x.test.ModuleAFixture.await;
+import org.junit.Test;
+public class BMemberTest {
+  @Test
+  public void viaOtherMember() { settle(true); }
+  @Test
+  public void viaMember() { await(true); }
+}

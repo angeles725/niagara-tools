@@ -1,20 +1,19 @@
-"""n4_list_batches on a state dir the Python server wrote (fixtures/journal/generate.py).
+"""n4_list_batches on a state dir the Python server wrote (fixtures/journal/python-written).
 
-Black-box under both implementations (MCP_N4_IMPL=go included): the reply must be the one
-tools_read.n4_list_batches computes in-process on the same files, byte for byte.
+Black-box: the reply must be the one the Python server's tools_read.n4_list_batches computed
+in-process on the same files, byte for byte, frozen in fixtures/oracles (S17).
 """
 import json
 import os
 import shutil
 import sys
 import tempfile
-import types
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import oracle  # noqa: E402
 import test_server  # noqa: E402
-from mcp_n4 import tools_read  # noqa: E402
 
 FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "journal",
                        "python-written")
@@ -30,9 +29,10 @@ class TestListBatchesOnAPythonJournal(test_server.ToolTestCase):
         self.journal = os.path.join(self.state_dir, "journal.jsonl")
         self.srv = self.make_server(allow_http=True, env=self.env, stations=self.stations,
                                     state_dir=self.state_dir)
+        self.frozen = oracle.Frozen(self, "list_batches", aliases=[(self.state_dir, "<state>")])
 
     def expected(self, **args):
-        return tools_read.n4_list_batches(types.SimpleNamespace(state_dir=self.state_dir), args)
+        return self.frozen(args)
 
     def append(self, data):
         with open(self.journal, "ab") as fh:

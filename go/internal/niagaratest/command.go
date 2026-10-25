@@ -16,11 +16,13 @@ const name = "run-niagara-test"
 
 // usage names every subcommand.
 const usage = `usage: run-niagara-test verdict [<log>|-]
-       run-niagara-test verdict --testng <testng-results.xml> [<log>|-]
+       run-niagara-test verdict --testng <testng-results.xml> [--allow-ignored-count <n> --allow-ignored-reason <why>]
+                                [<log>|-]
        run-niagara-test run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
                             [--timeout <dur>] [--keep-home] [--scratch <dir>] [--jdk8 <dir>]
                             [--gradle-user-home <dir>] [--module-verification low] [--exclude-jar <glob>]...
-                            [--restore-gradle-root] [--log-dir <dir>]
+                            [--restore-gradle-root] [--log-dir <dir>] [--reuse-home <dir>]
+                            [--allow-ignored <Class.method>... | --allow-ignored-count <n>] [--allow-ignored-reason <why>]
   verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
            or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
            "Total tests run: N" line has N > 0 and 0 failures; a stray Failures count, "invalid test
@@ -29,7 +31,22 @@ const usage = `usage: run-niagara-test verdict [<log>|-]
   --testng decide from the TestNG results file of test.exe -output:<dir> instead, the authoritative record
            (test.exe prints its summaries on stderr; its stdout holds only thread dumps). PASS only when
            total > 0, failed = 0, skipped = 0, no test-method (config included) has status FAIL and the
-           root counts match the test-methods; a missing, malformed or over 64 MiB file is FAIL. A <log>,
+           root counts match the test-methods, and ignored = 0; a missing, malformed or over 64 MiB file is FAIL.
+           Ignored methods (@Test(enabled = false) or excluded) are only a count in the file, never named:
+           --allow-ignored-count <n> --allow-ignored-reason <why> (both or neither, n from 1, the reason one
+           printable line) waives exactly n and prints the reason; more ignored than n (a new disable) or
+           fewer (a stale allowance) is FAIL. run names them from the source instead: every method-level
+           @Test(enabled = false) a registered type of <part>/moduleTest-include.xml declares, or inherits from
+           a srcTest/ superclass, is <SimpleName>.<method> (an abstract type counts on its concrete subclasses);
+           their count must equal the root ignored ("source and TestNG disagree" is FAIL), and --allow-ignored
+           <Class.method> (repeatable, with --allow-ignored-reason) waives exactly that set: a disabled method not
+           named (new) or a name no source disables (stale) is FAIL, so swapping one disable for another fails
+           although the count holds. A class-level @Test(enabled = false), an enabled value that is no literal or
+           a registered source the scanner cannot read is exit 3, before the build. Every run prints the names
+           the scan found. run's count pair is the fallback for a source that cannot name the set: the scan still
+           runs, and the count is judged only when the scan refused (case (i): a NOTE row, not exit 3) or its
+           count differs from the root ignored (case (ii)); when it names every ignored method, the count is FAIL
+           ("use --allow-ignored names"), whatever the reason. Mixing it with --allow-ignored is exit 2. A <log>,
            when given (- for standard input; capture stderr, 2>&1), is a cross-check: its rejections and
            failure counts fail the run, its missing summary line does not.
   run      from WSL, copy the install (X:\... or /mnt/x/...) into a new dir under %TEMP% (or --scratch, under
@@ -40,7 +57,9 @@ const usage = `usage: run-niagara-test verdict [<log>|-]
            station (a service's unreadable station.exe is attributed through its niagarad service, or
            refused); a scratch outside %TEMP%. The install is never written; a change to it is FAIL. The
            NRE must use the scratch niagara_user_home: a change to a real %USERPROFILE%\Niagara4.*\<brand>
-           registry\ or security\, or no etc\ and security\ in the scratch home, is FAIL. test.exe gets it
+           registry\ or security\, no etc\ and security\ in the scratch home, or no file under it that this
+           boot wrote (new or changed since test.exe started, its mtime between test.exe's start and exit
+           widened by a 2s clock-skew tolerance; a reused home's etc\ is boot 1's), is FAIL. test.exe gets it
            as niagara_user_home through WSLENV (niagara_user_home/w). The build uses the WSL JDK 8
            --jdk8 (default /usr/lib/jvm/java-8-openjdk-amd64, JAVA_HOME and installations.paths) and the
            gradle cache --gradle-user-home (default ~/.gradle). --timeout (default 30m) kills the run.
@@ -62,7 +81,21 @@ const usage = `usage: run-niagara-test verdict [<log>|-]
            stdout lines of test.exe (each cut at 4 KiB), the -output: dir listing and the exit status, and a
            "diagnostics kept: <path>" row. The scratch dir and its home copy read <scratch> and <copy>, the
            %USERPROFILE% and the WSL home <you>; install paths stay. A green run writes one only with an
-           explicit --log-dir or --keep-home.
+           explicit --log-dir or --keep-home. A failed run also keeps, redacted the same way, beside the
+           log: <stem>.testng-results.xml (a copy), <stem>.traces.txt (the whole full-stacktrace of every
+           FAIL test-method) and <stem>.stderr.txt (the whole test.exe stderr, the station log), each cut at a
+           line end under 4 MiB with a "(truncated: ...)" row; a missing or unreadable results or stderr file
+           is a "testng-results.xml unavailable" or "test.exe stderr unavailable" row in the log instead.
+           --reuse-home <dir> boots again on the dir a --keep-home run kept (its "cleanup: kept" row), to prove
+           what survives a restart. Refused (exit 2): a dir not under the scratch parent, one that is, holds or
+           sits in a real %USERPROFILE%\Niagara4.*\<brand> or has registry\ or security\ at its top, and one
+           whose run-niagara-test.marker (written by every run in its dir: run id, install, sha256 of the
+           install's defaults\system.properties, and the run log a --keep-home run wrote) does not match: the
+           run id must be the one the kept run's log in --log-dir records, the install and the sha256 this run's.
+           Nothing is copied again (the home copy, its registry and the scratch niagara_user_home stay); the
+           module jars are rebuilt and out\ starts empty. Every other gate runs; --exclude-jar and
+           --module-verification are exit 2 with it. The dir is deleted at the end ("cleanup: deleted") unless
+           --keep-home again.
 exit: verdict 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
       run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, git, robocopy, gradle, cleanup), 4 timeout
 `
@@ -102,30 +135,44 @@ func usageError(s cli.Stdio, msg string) int {
 	return exitUsage
 }
 
-// verdict parses `[--testng <xml>] [<log>|-]` and judges the console log, the TestNG results file, or both.
+// verdictFlags are the value flags of verdict, each with the name of its value.
+var verdictFlags = map[string]string{"--testng": "<testng-results.xml>", "--allow-ignored-count": "<n>", "--allow-ignored-reason": "<why>"}
+
+// verdict parses `[--testng <xml> [--allow-ignored-count <n> --allow-ignored-reason <why>]] [<log>|-]` and judges
+// the console log, the TestNG results file, or both.
 func verdict(args []string, s cli.Stdio, stdin io.Reader) int {
-	var xmlPath string
 	var logs []string
-	testng := false
+	vals := map[string]string{}
 	for i := 0; i < len(args); i++ {
-		if args[i] != "--testng" {
+		value, isFlag := verdictFlags[args[i]]
+		if !isFlag {
 			logs = append(logs, args[i])
 			continue
 		}
-		if testng {
-			return usageError(s, "--testng given twice")
+		if _, twice := vals[args[i]]; twice {
+			return usageError(s, args[i]+" given twice")
 		}
 		if i+1 == len(args) {
-			return usageError(s, "--testng needs a <testng-results.xml>")
+			return usageError(s, args[i]+" needs a "+value)
 		}
-		testng, xmlPath = true, args[i+1]
+		vals[args[i]] = args[i+1]
 		i++
 	}
 	if len(logs) > 1 {
 		return usageError(s, "verdict takes one log at most")
 	}
+	count, countSet := vals["--allow-ignored-count"]
+	why, whySet := vals["--allow-ignored-reason"]
+	allow, err := parseAllowance(count, countSet, why, whySet)
+	if err != nil {
+		return usageError(s, err.Error())
+	}
+	xmlPath, testng := vals["--testng"]
 	if testng {
-		return testngVerdict(xmlPath, logs, s, stdin)
+		return testngVerdict(xmlPath, logs, allow, s, stdin)
+	}
+	if countSet {
+		return usageError(s, "--allow-ignored-count needs --testng (a console log has no ignored count)")
 	}
 	res, code := readLog(logs, s, stdin)
 	if code >= 0 {
@@ -178,7 +225,7 @@ func readLog(logs []string, s cli.Stdio, stdin io.Reader) (Result, int) {
 
 // testngVerdict judges the results file, then the console log when one is named (only then is stdin read),
 // and prints the file's rows, the log's rows and the verdict.
-func testngVerdict(xmlPath string, logs []string, s cli.Stdio, stdin io.Reader) int {
+func testngVerdict(xmlPath string, logs []string, allow IgnoredAllowance, s cli.Stdio, stdin io.Reader) int {
 	var console Result
 	if len(logs) == 1 {
 		var code int
@@ -187,14 +234,21 @@ func testngVerdict(xmlPath string, logs []string, s cli.Stdio, stdin io.Reader) 
 		}
 		console.Reasons = slices.DeleteFunc(console.Reasons, func(r Reason) bool { return r.Line == 0 && r.Text == noSummary })
 	}
-	res := TestNGFile(xmlPath)
+	res := TestNGFile(xmlPath, allow)
 	if res.Root {
 		status := "FAIL"
 		if res.Pass {
 			status = "PASS"
 		}
-		row(s, status, fmt.Sprintf("testng: total %s, passed %s, failed %s, skipped %s",
-			shown(res.Total), shown(res.Passed), shown(res.Failed), shown(res.Skipped)))
+		ignored := ""
+		if res.Ignored != 0 {
+			ignored = ", ignored " + shown(res.Ignored)
+		}
+		row(s, status, fmt.Sprintf("testng: total %s, passed %s, failed %s, skipped %s%s",
+			shown(res.Total), shown(res.Passed), shown(res.Failed), shown(res.Skipped), ignored))
+	}
+	if res.Allowed != "" {
+		row(s, "PASS", "testng: "+res.Allowed)
 	}
 	for _, r := range res.Reasons {
 		row(s, "FAIL", "testng: "+r)
@@ -215,7 +269,7 @@ func testngVerdict(xmlPath string, logs []string, s cli.Stdio, stdin io.Reader) 
 		row(s, "FAIL", "verdict: "+plural(n, "FAIL reason", "FAIL reasons"))
 		return exitFail
 	}
-	row(s, "PASS", fmt.Sprintf("verdict: %s, 0 failed, 0 skipped (testng-results)", plural(res.Total, "test run", "tests run")))
+	row(s, "PASS", fmt.Sprintf("verdict: %s, 0 failed, 0 skipped (testng-results)", plural(res.Total-res.Ignored, "test run", "tests run")))
 	return exitPass
 }
 

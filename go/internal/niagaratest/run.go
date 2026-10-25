@@ -44,9 +44,11 @@ var (
 type runConfig struct {
 	install, gradleRoot, part, module, scratch string
 	jdk8, gradleUserHome, logDir               string
+	reuseHome                                  string // --reuse-home: boot again on a dir a --keep-home run kept
 	timeout                                    time.Duration
 	keepHome, verifyLow, restoreRoot           bool
 	excludeJars                                []string // --exclude-jar globs, in flag order
+	allow                                      IgnoredAllowance
 }
 
 // plan is a validated run: the install, %TEMP%, %USERPROFILE%, the scratch parent and, once created, the
@@ -61,6 +63,9 @@ type plan struct {
 	rootTop                             string       // its worktree top, where the status paths start
 	rows                                *lineRing    // the last rows the run printed, for the run log
 	logDirSet                           bool         // --log-dir was given: a green run keeps a log too
+	runID                               string       // this run's id, in its marker and its log (reusehome.go)
+	marker                              marker       // the marker this run wrote in its scratch dir
+	logPath                             string       // the run log once written
 }
 
 func (p *plan) home() winDir        { return winDir{p.dir.wsl + "/home", p.dir.win + `\home`} }
@@ -133,12 +138,24 @@ func parseRun(args []string) (runConfig, error) {
 	fs.StringVar(&c.jdk8, "jdk8", "", "")
 	fs.StringVar(&c.gradleUserHome, "gradle-user-home", "", "")
 	fs.StringVar(&c.logDir, "log-dir", "", "")
+	fs.StringVar(&c.reuseHome, "reuse-home", "", "")
 	fs.DurationVar(&c.timeout, "timeout", defaultTimeout, "")
 	fs.BoolVar(&c.keepHome, "keep-home", false, "")
 	fs.BoolVar(&c.restoreRoot, "restore-gradle-root", false, "")
 	fs.Var(verificationFlag{&c.verifyLow}, "module-verification", "")
 	fs.Var(excludeFlag{&c.excludeJars}, "exclude-jar", "")
+	var count, why string
+	var names []string
+	fs.Var(namesFlag{&names}, "allow-ignored", "")
+	fs.StringVar(&count, "allow-ignored-count", "", "")
+	fs.StringVar(&why, "allow-ignored-reason", "", "")
 	if err := fs.Parse(args); err != nil {
+		return c, fmt.Errorf("run: %v", err)
+	}
+	set := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
+	var err error
+	if c.allow, err = parseRunAllowance(count, set["allow-ignored-count"], why, set["allow-ignored-reason"], names); err != nil {
 		return c, fmt.Errorf("run: %v", err)
 	}
 	if fs.NArg() > 0 {
@@ -156,6 +173,12 @@ func parseRun(args []string) (runConfig, error) {
 		return c, fmt.Errorf("run: --module %q is not a module name", c.module)
 	case c.timeout <= 0 || c.timeout > maxTimeout:
 		return c, fmt.Errorf("run: --timeout %s is not in (0, %s]", c.timeout, maxTimeout)
+	case set["reuse-home"] && c.reuseHome == "":
+		return c, fmt.Errorf("run: --reuse-home needs a dir")
+	case c.reuseHome != "" && len(c.excludeJars) > 0:
+		return c, fmt.Errorf("run: --reuse-home takes no --exclude-jar: the kept home keeps the copy the run that made it took")
+	case c.reuseHome != "" && c.verifyLow:
+		return c, fmt.Errorf("run: --reuse-home takes no --module-verification: the kept copy keeps the verification mode the run that made it set")
 	}
 	return c, nil
 }
@@ -204,6 +227,11 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	if !filepath.IsAbs(cfg.gradleUserHome) {
 		return refuse("--gradle-user-home %q is not an absolute WSL path", cfg.gradleUserHome)
 	}
+	// A LocalSigningProfile whose refresh outlasts the key it mints re-mints it at every signing: the jars then
+	// fail signature verification and the NRE drops them (signingprofile.go). Refused before anything is copied.
+	if why := signingProfileRefusal(p.gradleRoot, cfg.gradleUserHome); why != "" {
+		return refuse("%s", why)
+	}
 	for _, v := range []struct {
 		name string
 		dst  *winDir
@@ -234,6 +262,13 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	if within(p.parent.win, p.install.win) || within(p.install.win, p.parent.win) {
 		return refuse("the build's niagara_home would be inside --install (scratch %s, install %s)", p.parent.win, p.install.win)
 	}
+	// --reuse-home: under the scratch parent, no real user home (D3), its marker bound to the kept run's log and
+	// to this install (reusehome.go). Guard 3 and every later gate still apply.
+	if cfg.reuseHome != "" {
+		if why := h.checkReuse(p); why != "" {
+			return refuse("%s", why)
+		}
+	}
 	// Guard 3: refuse an install a running station, NRE or Workbench uses.
 	rows, ok := h.powershell(ctx, fmt.Sprintf(inUseScript, p.install.win))
 	if !ok {
@@ -260,9 +295,35 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	return p, -1
 }
 
+// scanIgnored names the disabled test-methods of the part's registered types from the source before the build,
+// under every allowance, and prints them. A refusal stops the run (exit 3) unless the count fallback is given:
+// then it is a NOTE row and the count is judged as case (i). -1 goes on.
+func scanIgnored(p *plan, s cli.Stdio) int {
+	src, err := disabledInSource(filepath.Join(p.gradleRoot, filepath.FromSlash(strings.ReplaceAll(p.part, ":", "/"))))
+	switch {
+	case err != nil && p.allow.Count == 0:
+		row(s, "FAIL", "source: "+err.Error())
+		return exitEnv
+	case err != nil:
+		row(s, "NOTE", "source: "+err.Error()+"; the count fallback applies (case (i): the source scan refused)")
+		p.allow.Refused = err.Error()
+	default:
+		names := ""
+		if len(src) > 0 {
+			names = ": " + named(src)
+		}
+		row(s, "PASS", "source: the registered types disable "+plural(len(src), "test-method", "test-methods")+names)
+		p.allow.Source, p.allow.Scanned = src, true
+	}
+	return -1
+}
+
 // execute snapshots the gradle root, the install and the real user homes, creates the scratch dir, then copies,
 // builds, runs and judges; cleanup runs on every path out, a panic included (the panic goes on after it).
 func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
+	if code := scanIgnored(p, s); code >= 0 {
+		return code
+	}
 	var ok bool
 	if p.rootTop, ok = h.rootTop(ctx, p.gradleRoot); !ok {
 		row(s, "FAIL", "gradle root is not a git worktree: cannot verify it")
@@ -290,20 +351,29 @@ func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
 			return exitEnv
 		}
 	}
-	dir, err := os.MkdirTemp(p.parent.wsl, "run-niagara-test-")
-	if err != nil {
-		fmt.Fprintf(s.Err, "%s: run: %v\n", name, err)
+	copyStep := h.copyHome
+	if p.reuseHome == "" {
+		dir, err := os.MkdirTemp(p.parent.wsl, "run-niagara-test-")
+		if err != nil {
+			fmt.Fprintf(s.Err, "%s: run: %v\n", name, err)
+			return exitEnv
+		}
+		win, _ := h.toWin(dir)
+		p.dir = winDir{dir, win}
+	} else {
+		copyStep = h.keptHome
+	}
+	defer func() { code = h.cleanup(p, snap, users, s, code) }()
+	if err := h.takeHome(p); err != nil {
+		row(s, "FAIL", "marker: cannot bind "+p.dir.win+" to this run: "+err.Error())
 		return exitEnv
 	}
-	win, _ := h.toWin(dir)
-	p.dir = winDir{dir, win}
-	defer func() { code = h.cleanup(p, snap, users, s, code) }()
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 	for _, step := range []struct {
 		name string
 		do   func(context.Context, *plan, cli.Stdio) (int, error)
-	}{{"copy", h.copyHome}, {"module verification", h.lowerVerification}, {"build", h.build}, {"run", h.testExe}} {
+	}{{"copy", copyStep}, {"module verification", h.lowerVerification}, {"build", h.build}, {"run", h.testExe}} {
 		code, err := step.do(ctx, p, s)
 		switch {
 		case errors.Is(err, context.DeadlineExceeded):
@@ -370,6 +440,14 @@ func (h host) copyHome(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	if len(skipped) > 0 {
 		row(s, "PASS", fmt.Sprintf("copy: %s (dotted module name): %s", plural(len(skipped), "jar skipped", "jars skipped"), strings.Join(skipped, " ")))
 	}
+	return -1, nil
+}
+
+// keptHome is the copy step of a --reuse-home run: nothing is copied over the kept home. Its copy, the registry
+// the NRE built in it, the scratch niagara_user_home and user.home stay; the build installs the module jars again.
+func (h host) keptHome(_ context.Context, p *plan, s cli.Stdio) (int, error) {
+	p.windows = true
+	row(s, "PASS", "reuse: "+p.dir.win+" (no copy: the home copy, its registry and the scratch niagara_user_home stay; the module jars are rebuilt)")
 	return -1, nil
 }
 
@@ -455,8 +533,8 @@ func tail(path string, n int64) string {
 // judges testng-results.xml with stderr as the console cross-check; the exit code is a third check only (WSL
 // reports the Windows exit -1 as 255). The scratch niagara_user_home reaches the NRE through the interop
 // environment (WSLENV niagara_user_home/w): a cmd.exe `set "…"` does not, as WSL re-quotes its inner quotes.
-// D3 still gates it: the NRE must have created etc\ and security\ in the scratch home, and cleanup compares
-// the real user homes.
+// D3 still gates it: the NRE must have created etc\ and security\ in the scratch home and written a file under
+// it during this boot (nuhproof.go), and cleanup compares the real user homes.
 func (h host) testExe(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	files := map[string]*os.File{}
 	for _, n := range []string{"stdout", "stderr"} {
@@ -471,23 +549,33 @@ func (h host) testExe(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	if v := os.Getenv("WSLENV"); v != "" {
 		wslenv = v + ":" + wslenv
 	}
+	before, err := walkNUH(p.sub("nuh"))
+	if err != nil {
+		return -1, fmt.Errorf("cannot read the scratch niagara_user_home before the boot: %v", err)
+	}
+	start := time.Now()
 	exit, err := h.run.Run(ctx, Cmd{Name: p.home().wsl + "/bin/test.exe", Dir: p.home().wsl,
 		Args:   []string{p.module, "-v:2", "-output:" + p.subWin("out/testng")},
 		Env:    []string{"WSLENV=" + wslenv, "niagara_user_home=" + p.subWin("nuh")},
 		Stdout: files["stdout"], Stderr: files["stderr"]})
+	end := time.Now()
 	if err != nil {
 		return -1, err
 	}
-	code := testngVerdict(p.sub("out/testng/testng-results.xml"), []string{p.sub("out/stderr.txt")}, s, nil)
+	code := testngVerdict(p.sub("out/testng/testng-results.xml"), []string{p.sub("out/stderr.txt")}, p.allow, s, nil)
 	if code != exitPass {
 		signatureHint(p, s, p.sub("out/stderr.txt"), p.sub("out/stdout.txt"))
 	}
+	written, unwritten := nuhWritten(p.sub("nuh"), before, start, end)
 	switch {
 	case !isDir(p.sub("nuh/etc")) || !isDir(p.sub("nuh/security")):
 		row(s, "FAIL", "scratch niagara_user_home was not used (no etc/ and security/ in it)")
+	case unwritten != "":
+		row(s, "FAIL", unwritten)
 	case exit != 0 && code == exitPass:
 		row(s, "FAIL", fmt.Sprintf("run: exit %d but results green", exit))
 	default:
+		row(s, "PASS", written)
 		return code, nil
 	}
 	return exitFail, nil
@@ -528,6 +616,8 @@ func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int 
 	} else if err := os.RemoveAll(p.dir.wsl); err != nil {
 		row(s, "FAIL", "cleanup: cannot delete "+p.dir.win+": "+err.Error())
 		worse(exitEnv)
+	} else if p.reuseHome != "" {
+		row(s, "PASS", "cleanup: deleted "+p.dir.win)
 	}
 	if now, err := userHomeSnapshot(p.profile); err != nil {
 		row(s, "FAIL", "real user homes unchanged: cannot re-read them: "+err.Error())
@@ -543,6 +633,14 @@ func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int 
 	}
 	if !h.writeRunLog(p, ev, code, s) {
 		worse(exitEnv)
+	}
+	// A kept dir names its run log in its marker: the record a later --reuse-home binds the marker to.
+	if p.keepHome && p.logPath != "" {
+		p.marker.log = p.logPath
+		if err := writeMarker(p.dir.wsl, p.marker); err != nil {
+			row(s, "FAIL", "cleanup: cannot name the run log in the kept marker: "+err.Error())
+			worse(exitEnv)
+		}
 	}
 	return code
 }

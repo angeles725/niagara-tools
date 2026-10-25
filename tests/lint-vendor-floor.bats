@@ -39,7 +39,9 @@ _need_acorn() {
 @test "VF3: node missing -> typed SKIP row naming node and exit 4 (never a silent pass)" {
   KIT_NODE=/nonexistent/node run "$LVF" "$FX/syntax"
   [ "$status" -eq 4 ]
-  [[ "$output" == *"SKIP"* ]] && [[ "$output" == *"vendor-floor"* ]] && [[ "$output" == *"unavailable"* ]]
+  [[ "$output" == *"SKIP"* ]]
+  [[ "$output" == *"vendor-floor"* ]]
+  [[ "$output" == *"unavailable"* ]]
   [[ "$output" == *"node"* ]]
 }
 
@@ -60,7 +62,8 @@ _need_acorn() {
   _need_acorn
   run "$LVF" "$FX/syntax"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"vendor-floor"* ]]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"vendor-floor"* ]]
   [[ "$output" == *"bad-2.0.0.min.js:2"* ]] && [[ "$output" == *"syntax"* ]]
 }
 
@@ -68,9 +71,12 @@ _need_acorn() {
   _need_acorn
   run "$LVF" "$FX/api"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"api-3.0.0.js:2"* ]] && [[ "$output" == *"replaceAll"* ]]
-  [[ "$output" == *"api-3.0.0.js:3"* ]] && [[ "$output" == *"hasOwn"* ]]
-  [[ "$output" == *"api-3.0.0.js:4"* ]] && [[ "$output" == *"findLast"* ]]
+  [[ "$output" == *"api-3.0.0.js:2"* ]]
+  [[ "$output" == *"replaceAll"* ]]
+  [[ "$output" == *"api-3.0.0.js:3"* ]]
+  [[ "$output" == *"hasOwn"* ]]
+  [[ "$output" == *"api-3.0.0.js:4"* ]]
+  [[ "$output" == *"findLast"* ]]
   [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 3 ]
 }
 

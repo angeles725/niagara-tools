@@ -80,8 +80,10 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$B" --target-version 4.14 --plugin-version 7.6.17 "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]
   v="$(cat "$TMPDIR_T/verify.args")"
-  [[ "$v" == *"--src $ROOT/Foo"* ]] && [[ "$v" == *"--target-version 4.14"* ]]
-  [[ "$v" == *"Foo-rt/build/libs/Foo-rt.jar"* ]] && [[ "$v" == *"Foo-ux/build/libs/Foo-ux.jar"* ]]
+  [[ "$v" == *"--src $ROOT/Foo"* ]]
+  [[ "$v" == *"--target-version 4.14"* ]]
+  [[ "$v" == *"Foo-rt/build/libs/Foo-rt.jar"* ]]
+  [[ "$v" == *"Foo-ux/build/libs/Foo-ux.jar"* ]]
   [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"-PniagaraPluginVersion=7.6.17"* ]]
   FAKE_VERIFY_EXIT=1 run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 50 ]
@@ -1045,7 +1047,8 @@ _install_gradlew() {
   _install_gradlew "$TMPDIR_T/nh"
   run "$B_RAW" --profiles rt --no-drift-check "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 10 ]
-  [[ "$output" == *"mirror-niagara-home.sh"* ]] && [[ "$output" == *"--install-into-home"* ]]
+  [[ "$output" == *"mirror-niagara-home.sh"* ]]
+  [[ "$output" == *"--install-into-home"* ]]
   [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
   [ -z "$(ls -A "$TMPDIR_T/nh/modules")" ]
 }

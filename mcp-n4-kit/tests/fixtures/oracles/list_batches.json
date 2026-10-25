@@ -1,0 +1,840 @@
+{
+ "note": "Recorded from the in-process Python mcp-n4 server before S17 removed it (tests/oracle.py); it cannot be re-recorded.",
+ "calls": {
+  "TestListBatchesOnAPythonJournal.test_a_line_python_cannot_decode_is_one_unreadable_row_not_a_failed_list": [
+   [
+    {},
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ],
+     "incomplete": "this list is incomplete: 1 journal line(s) are unreadable; a batch recorded on one is missing or partial here, and n4_rollback refuses every batch such a line may belong to",
+     "unreadable": [
+      "unreadable journal line 5: UnicodeDecodeError"
+     ]
+    }
+   ],
+   [
+    {
+     "limit": 1
+    },
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      }
+     ],
+     "incomplete": "this list is incomplete: 1 journal line(s) are unreadable; a batch recorded on one is missing or partial here, and n4_rollback refuses every batch such a line may belong to",
+     "unreadable": [
+      "unreadable journal line 5: UnicodeDecodeError"
+     ]
+    }
+   ]
+  ],
+  "TestListBatchesOnAPythonJournal.test_a_readable_journal_says_nothing_about_unreadable_lines": [],
+  "TestListBatchesOnAPythonJournal.test_an_unhashable_batch_id_is_one_unreadable_row_not_a_failed_list": [
+   [
+    {},
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ],
+     "incomplete": "this list is incomplete: 3 journal line(s) are unreadable; a batch recorded on one is missing or partial here, and n4_rollback refuses every batch such a line may belong to",
+     "unreadable": [
+      "unreadable journal line 3: TypeError",
+      "unreadable journal line 16: TypeError",
+      "unreadable journal line 17: TypeError"
+     ]
+    }
+   ],
+   [
+    {
+     "limit": 1
+    },
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      }
+     ],
+     "incomplete": "this list is incomplete: 3 journal line(s) are unreadable; a batch recorded on one is missing or partial here, and n4_rollback refuses every batch such a line may belong to",
+     "unreadable": [
+      "unreadable journal line 3: TypeError",
+      "unreadable journal line 16: TypeError",
+      "unreadable journal line 17: TypeError"
+     ]
+    }
+   ]
+  ],
+  "TestListBatchesOnAPythonJournal.test_it_needs_no_session_and_no_journal_lists_nothing": [],
+  "TestListBatchesOnAPythonJournal.test_the_python_written_batches_are_listed_as_python_lists_them": [
+   [
+    {},
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ]
+    }
+   ],
+   [
+    {},
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ]
+    }
+   ],
+   [
+    {
+     "limit": 1
+    },
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      }
+     ]
+    }
+   ],
+   [
+    {
+     "limit": 1
+    },
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      }
+     ]
+    }
+   ],
+   [
+    {
+     "limit": 6
+    },
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ]
+    }
+   ],
+   [
+    {
+     "limit": 6
+    },
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ]
+    }
+   ],
+   [
+    {
+     "limit": 1000
+    },
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ]
+    }
+   ],
+   [
+    {
+     "limit": 1000
+    },
+    {
+     "total": 6,
+     "batches": [
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ]
+    }
+   ]
+  ],
+  "TestListBatchesOnAPythonJournal.test_torn_and_odd_lines_are_read_as_python_reads_them": [
+   [
+    {},
+    {
+     "total": 7,
+     "batches": [
+      {
+       "batch_id": true,
+       "tool": null,
+       "station_name": null,
+       "ts": null,
+       "result_ts": NaN,
+       "state": "completed",
+       "verdict": "v",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "3a943320bd0b4d3783dacf7ebf6c5833",
+       "tool": "n4_create_link",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "in-doubt",
+       "verdict": "unverified",
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "8ffa0b5fc93148dfac37517c8ea46cdd",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": null,
+       "state": "in-doubt",
+       "verdict": null,
+       "rollback_of": null,
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "318a737088f445e08947b31cfb3a2489",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "80a3a63512814baca17ed73c9e8874f4",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "80a3a63512814baca17ed73c9e8874f4",
+       "tool": "n4_remove_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "318a737088f445e08947b31cfb3a2489"
+       ]
+      },
+      {
+       "batch_id": "ce96d633fab8445dba1a960469dbd564",
+       "tool": "n4_rollback",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": "46aaed85dca34bc2ad345108c991b481",
+       "rolled_back_by": []
+      },
+      {
+       "batch_id": "46aaed85dca34bc2ad345108c991b481",
+       "tool": "n4_create_component",
+       "station_name": "FakeStation",
+       "ts": "2026-10-24T11:56:00+00:00",
+       "result_ts": "2026-10-24T11:56:00+00:00",
+       "state": "completed",
+       "verdict": "verified",
+       "rollback_of": null,
+       "rolled_back_by": [
+        "ce96d633fab8445dba1a960469dbd564"
+       ]
+      }
+     ]
+    }
+   ]
+  ]
+ }
+}

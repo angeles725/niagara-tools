@@ -21,8 +21,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The checks run as parallel jobs (go, two bats shards, lint-sweeps, mcp-n4-go); the wall time is the
-  # slowest job, not their sum. Every step of the former single `checks` job runs in exactly one of them.
+  # The checks run as parallel jobs (go, two bats shards, lint-sweeps, mcp-n4-go, changelog); the wall time is
+  # the slowest job, not their sum. Every step of the former single `checks` job runs in exactly one of them.
   # The bats suite is split by scripts/bats-shard.sh (duration-weighted, every tests/*.bats file in exactly
   # one shard, checked in each shard), because one bats job was the critical path.
   go:
@@ -41,9 +41,9 @@ jobs:
           cache: true
           cache-dependency-path: go/go.mod
 
-      # The mcp-n4 target (go/internal/mcpn4/pytarget.Minor): the Go differentials compare against
-      # it and skip on any other python3, so CI must provide it. Later steps run it too.
-      - name: Set up CPython 3.15 (the mcp-n4 target the Go differentials compare against)
+      # The python3 of the reference host. No Go test runs Python since S17 (the mcp-n4 differentials
+      # replay frozen goldens); the later steps that call python3 run this one.
+      - name: Set up CPython 3.15 (the python3 the later steps run)
         uses: actions/setup-python@v7
         with:
           python-version: "3.15"
@@ -55,9 +55,8 @@ jobs:
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
           go vet ./...
-          # A differential against another python3 would skip, not pass: refuse that in CI.
           # -count=1: tests read files through subprocesses Go does not track, so a cached result could be stale.
-          MCP_N4_PYTHON="$(command -v python3)" go test -count=1 ./...
+          go test -count=1 ./...
 
       - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
         run: cd go && go build -o bin/ ./cmd/...
@@ -150,9 +149,8 @@ jobs:
           cache: true
           cache-dependency-path: go/go.mod
 
-      # The python3 the bats suites have always run on (CI pinned it for the Go differentials before the
-      # split into jobs): keep the same interpreter on PATH here.
-      - name: Set up CPython 3.15 (the mcp-n4 target the Go differentials compare against)
+      # The python3 the bats suites have always run on: keep the same interpreter on PATH here.
+      - name: Set up CPython 3.15 (the python3 the bats suites run)
         uses: actions/setup-python@v7
         with:
           python-version: "3.15"
@@ -240,6 +238,9 @@ jobs:
 
       - name: gen-build-state --check (every ledger.d/ fragment + BUILD-STATE.src.md generates BUILD-STATE.md — fails closed)
         run: bash build-n4-module-kit/toolbelt/gen-build-state.sh --check
+
+      - name: gen-changelog --check (every changelog.d/ fragment is one the release fold accepts — fails closed)
+        run: bash scripts/gen-changelog.sh --check
 
       - name: lint-timers (timer-ticket conformance over committed fixtures — Campaign 6 PR8)
         run: |
@@ -329,12 +330,34 @@ jobs:
         with:
           python-version: "3.15"
 
-      - name: Go build (go/bin/mcp-n4 — the server the suite drives)
-        run: cd go && go build -o bin/ ./cmd/mcp-n4
+      - name: Go build (go/bin/mcp-n4 + go/bin/retro-draft — the server and the drafter the suite drives)
+        run: cd go && go build -o bin/ ./cmd/mcp-n4 ./cmd/mcp-n4/retro-draft
 
       - name: mcp-n4-kit unittest (Go server)
-        run: MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests -v
+        run: python3 -m unittest discover -s mcp-n4-kit/tests -v
 
-      # Go is the default server since S16 (the step above runs it); this step pins the fallback.
-      - name: mcp-n4-kit unittest (Python fallback server)
-        run: MCP_N4_IMPL=python python3 -m unittest discover -s mcp-n4-kit/tests -v
+  # The changelog gate of .githooks/pre-push, server side: a clone without the hook still cannot merge a kit
+  # behaviour change (go/, build-n4-module-kit/, tools/) with no CHANGELOG entry (CONTRIBUTING.md § 6.2). It needs
+  # the history, so its own job checks out with fetch-depth 0. On a pull_request HEAD is the merge commit and
+  # origin/main..HEAD is exactly the PR's change; on a push to main the range is empty and the gate is not
+  # applicable. The retro half of the hook stays local-only.
+  changelog:
+    name: changelog gate (kit behaviour changes carry a CHANGELOG entry)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
+
+      - name: changelog-gate over origin/main..HEAD (a fragment, an [Unreleased] line or a no-entry trailer)
+        run: bash scripts/changelog-gate.sh --range "$(git merge-base origin/main HEAD)..HEAD"

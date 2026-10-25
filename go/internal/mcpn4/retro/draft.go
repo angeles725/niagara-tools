@@ -44,6 +44,12 @@ func Draft(stateDir, station, since string, observations []*pyjson.Object) (*pyj
 	return draft(stateDir, station, time.Now().UTC().Format("2006-01-02"), since, observations, sinceFilter)
 }
 
+// DraftOn is Draft dated date (YYYY-MM-DD) and with no read observations: the draft
+// tools/new_retro.py writes for a past session (go/cmd/mcp-n4/retro-draft).
+func DraftOn(stateDir, station, date, since string) (*pyjson.Object, error) {
+	return draft(stateDir, station, date, since, nil, sinceFilter)
+}
+
 func draft(stateDir, station, date, since string, observations []*pyjson.Object,
 	newFilter func(string) (keepFunc, error)) (*pyjson.Object, error) {
 	stateDir = safety.ExpandUser(stateDir)

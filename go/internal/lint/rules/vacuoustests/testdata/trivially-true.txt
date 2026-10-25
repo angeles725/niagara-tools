@@ -1,0 +1,30 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 1
+FAIL  trivially-true  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java:7  BAlphaTest.placeholder: its only assertions are trivially true, so it cannot fail
+FAIL  trivially-true  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java:9  BAlphaTest.message: its only assertions are trivially true, so it cannot fail
+FAIL  trivially-true  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java:15  BAlphaTest.sameLiteral: its only assertions are trivially true, so it cannot fail
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java --
+package com.x.test;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+import static org.testng.Assert.*;
+public class BAlphaTest extends BTestNg {
+  @Test
+  public void placeholder() { assertTrue(true); }
+  @Test(groups = {"ci"})
+  public void message() {
+    Assert.assertTrue(true, "todo");
+    assertFalse(false);
+    org.junit.Assert.assertTrue("why", true);
+  }
+  @Test
+  public void sameLiteral() { assertEquals("a", "a"); assertEquals(1, 1, "msg"); }
+  @Test
+  public void real() { assertTrue(true); assertEquals(compute(), 2); }
+  @Test
+  public void notSameLiteral() { assertEquals("a", "b"); }
+  private int compute() { return 2; }
+}

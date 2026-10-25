@@ -159,7 +159,9 @@ JAVA
   E="$BATS_TEST_TMPDIR/empty"; rm -rf "$E"; mkdir -p "$E"
   run "$DIS" "$E"
   [ "$status" -eq 3 ]
-  [[ "$output" == *"ERROR"* ]] && [[ "$output" == *"demand-in-scope"* ]] && [[ "$output" != *"WARN"* ]]
+  [[ "$output" == *"ERROR"* ]]
+  [[ "$output" == *"demand-in-scope"* ]]
+  [[ "$output" != *"WARN"* ]]
   N="$BATS_TEST_TMPDIR/nojava"; rm -rf "$N"; mkdir -p "$N/com/x"; printf 'not java\n' > "$N/com/x/README.txt"
   run "$DIS" "$N"
   [ "$status" -eq 3 ]

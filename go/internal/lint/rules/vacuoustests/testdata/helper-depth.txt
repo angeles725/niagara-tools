@@ -1,0 +1,31 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 1
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BDeltaTest.java:5  BDeltaTest.viaTwoLevels: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BDeltaTest.java:7  BDeltaTest.viaNonAsserting: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BDeltaTest.java:9  BDeltaTest.viaOtherClass: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BBaseTest.java --
+package com.x.test;
+public abstract class BBaseTest {
+  protected void checkRange(int v) { org.testng.Assert.assertTrue(v > 0); }
+  protected void twoLevels(int v) { checkRange(v); }
+}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BDeltaTest.java --
+package com.x.test;
+import org.testng.annotations.Test;
+public class BDeltaTest extends BBaseTest {
+  @Test
+  public void viaTwoLevels() { twoLevels(compute()); }
+  @Test
+  public void viaNonAsserting() { compute(); }
+  @Test
+  public void viaOtherClass() { new BOther().unrelated(1); }
+  private int compute() { return 2; }
+}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BOther.java --
+package com.x.test;
+public class BOther {
+  void unrelated(int v) { org.testng.Assert.assertTrue(v > 0); }
+}

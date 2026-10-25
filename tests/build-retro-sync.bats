@@ -53,7 +53,9 @@ case "$1" in
   rev-parse) echo "${FAKE_TOPLEVEL:-$PWD}" ;;
   diff)      if [ "${2:-}" = --name-only ]; then [ -f "$FAKE_CHANGED_FILE" ] && cat "$FAKE_CHANGED_FILE"
              else [ -f "${FAKE_PATCH_FILE:-}" ] && cat "$FAKE_PATCH_FILE"; fi; exit 0 ;;
-  log)       [ -f "$FAKE_LOG_FILE" ] && cat "$FAKE_LOG_FILE" ;;
+  # every range also carries a changelog trailer: these tests pin the retro gate, not the changelog gate
+  # (tests/changelog-gate.bats), so the changelog gate must pass for each of them to reach the retro logic
+  log)       [ -f "$FAKE_LOG_FILE" ] && cat "$FAKE_LOG_FILE"; echo 'Changelog: none (retro-gate fixture)' ;;
   *)         exit 0 ;;
 esac
 GIT
@@ -545,7 +547,8 @@ newbranch_repo() { # newbranch_repo <dir> — main + origin/main at commit A; br
   mkdir -p "$d/build-n4-module-kit/toolbelt"
   echo 'echo hi' > "$d/build-n4-module-kit/toolbelt/new.sh"
   git -C "$d" add -A
-  git -C "$d" -c user.name=t -c user.email=t@t commit -q -m "feat: new toolbelt script"
+  # the changelog trailer lets the range reach the retro gate these tests pin (tests/changelog-gate.bats owns that gate)
+  git -C "$d" -c user.name=t -c user.email=t@t commit -q -m "feat: new toolbelt script" -m "Changelog: none (retro-gate fixture)"
 }
 
 @test "H19: the first push of a new branch gates the whole branch since main (no BUILD-STATE/retro -> FAIL)" {

@@ -77,6 +77,7 @@ FMT-STDERR $FIX/planted.sh:7" ]
 @test "FOI3: the scan is not vacuous (it reads the toolbelt, the scripts and the pre-push hook)" {
   run scanned_files
   [ "${#lines[@]}" -ge 60 ]
-  [[ "$output" == *".githooks/pre-push"* ]] && [[ "$output" == *"scripts/ng-deploy.sh"* ]]
+  [[ "$output" == *".githooks/pre-push"* ]]
+  [[ "$output" == *"scripts/ng-deploy.sh"* ]]
   [[ "$output" == *"build-n4-module-kit/toolbelt/report-module.sh"* ]]
 }

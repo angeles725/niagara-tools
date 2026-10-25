@@ -7,7 +7,30 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import base64
 import urllib.parse
 
-from mcp_n4 import box
+#: The Go server's component-type table (go/internal/mcpn4/box/types.go componentTypes, which
+#: box.TestTheFakeStationSharesTheComponentTypeTable keeps equal to this one): True when the
+#: station creates the type with its own add op, False when it is a slot value.
+COMPONENT_TYPES = {
+    "baja:Component": True,
+    "baja:Folder": True,
+    "baja:UnrestrictedFolder": True,
+    "control:NullProxyExt": True,
+    "control:PriorityLevel": False,
+    "baja:Link": False,
+    "baja:WsAnnotation": False,
+    "modbusCore:FlexAddress": False,
+    "bacnet:BacnetAddress": False,
+}
+
+
+def is_component_type(type_):
+    """The write tools' rule: a table entry decides, else every non-`baja` type is a component."""
+    if not isinstance(type_, str) or ":" not in type_:
+        return False
+    if type_ in COMPONENT_TYPES:
+        return COMPONENT_TYPES[type_]
+    return type_.partition(":")[0] != "baja"
+
 
 # Values equal to the type default are omitted from events, like the real station.
 _DEFAULTS = {"baja:Status": "0", "baja:Double": "0.0", "baja:Boolean": "false"}
@@ -221,7 +244,7 @@ class FakeStation:
             candidate = "%s%d" % (name, i)
         return candidate
 
-    _is_component = staticmethod(box.is_component_type)  # same rule as the write tools
+    _is_component = staticmethod(is_component_type)  # same rule as the write tools
 
     def _fill(self, node, bson):
         node.type = bson.get("t", node.type)

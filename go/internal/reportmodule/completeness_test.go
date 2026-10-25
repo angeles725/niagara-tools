@@ -13,9 +13,11 @@ import (
 // must be either a member or listed here, never silently skipped).
 var notInReport = map[string]string{
 	"lint-bacnet-status-flags": "reads a station config.bog, which a module root does not hold",
+	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",
 	"lint-guard-pins":          "a kit meta-check of the toolbelt's own lint headers, run by the kit gates",
 	"split-package-check":      "a project-level check across every module of a project, not of one module",
+	"lint-vacuous-tests":       "follow-up: its empty root (no srcTest/) is exit 3, so a member needs a noSource SKIP row in every report golden",
 }
 
 // TestEveryLintIsAMemberOrListed (issue #459): every n4lint rule in rules.All() and every

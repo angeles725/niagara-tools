@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: 47 mid-test && assertion lists split in tests/*.bats; lint-bats-errexit fails a mid-test && list of assertions or a bare ! cmd -->
+log: 2026-10-25 · quality round 10 → bats runs a test body under errexit, which ignores every command of an `&&` list but the last and a negated command, so a mid-test `[ a ] && [[ b ]]` or `! cmd` never failed its test. A sweep of every `*.bats` found 47 such `&&` lists in 17 `tests/*.bats` files and no bare mid-test `!`; all 47 were split one assertion per line and no test turned red. New `toolbelt/lint-bats-errexit.sh` (`go/internal/lint/rules/batserrexit`) FAILs both forms in `@test` bodies; `tests/lint-bats-errexit.bats` BEX-kit runs it over the kit's `tests/`. Retro retros/2026-10-25-r10-bats-list-hazard.md (1Δ, folded). [ev: retro r10-bats-list-hazard Δ1]
+open_issue: name a `lint-bats-errexit` step in `.github/workflows/ci.yml` (follow-up; BEX-kit already runs it in the bats job) (retro r10-bats-list-hazard § Fold).

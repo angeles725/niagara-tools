@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: lint-structure L16 fails a declared LocalSigningProfile with validity - refresh below 32 days, one predicate with run-niagara-test -->
+log: 2026-10-25 · quality round 10 → `lint-structure.sh` L16 (`go/internal/lint/rules/structure/module.go`) FAILs a gradle root whose `gradle.properties` names (`niagaraSigningProfile`) a LocalSigningProfile with `niagara.signing.validity - niagara.signing.refresh < 32` and names both values (the signing plugin sets notAfter to day `validity` of the current month, `LocalSigningProfile.kt:386-388`, so such a key re-mints at every signing and its jars fail verification); a missing profile WARNs, a malformed one is exit 3. The predicate moved to `go/internal/signingprofile`, shared with `run-niagara-test run`. The retro records the plugin bug as a vendor defect with a re-check on plugin upgrade. Retro retros/2026-10-25-r10-signing-margin-lint.md (1Δ, folded). [ev: retro r10-signing-margin-lint Δ1]
+open_issue: re-check `LocalSigningProfile` notAfter when the kit moves past niagara-plugins 7.6.22 (retro r10-signing-margin-lint § Vendor defect).

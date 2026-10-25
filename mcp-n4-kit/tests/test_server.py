@@ -1,5 +1,4 @@
 import contextlib
-import io
 import json
 import os
 import signal
@@ -11,11 +10,25 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import go_server  # noqa: E402
+import oracle  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
-from mcp_n4 import box, server, tools_read  # noqa: E402
+import box_client as box  # noqa: E402
 
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NO_SLEEP = dict(sleep=lambda s: None)
+#: What the server under test reports and enforces. Each literal is checked against the binary's
+#: own output below, so it cannot drift silently: the version and the protocol set against
+#: `initialize`, the nesting limit by the two tests that probe it, the tool lists against
+#: `tools/list` (read-only here, writes-allowed in test_tiers).
+SERVER_VERSION = "0.9.5"
+SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
+MAX_NESTING = 1000
+READ_TOOLS = ["n4_connect", "n4_describe_session", "n4_navigate", "n4_read_slots",
+              "n4_list_links", "n4_find_dangling_outputs", "n4_bql_query", "n4_inventory",
+              "n4_read_file", "n4_list_px_views", "n4_px_summary", "n4_list_batches",
+              "n4_session_retro_draft"]
+WRITE_TOOLS = ["n4_create_component", "n4_create_link", "n4_invoke_action",
+               "n4_remove_component", "n4_rollback", "n4_save_station", "n4_set_slot"]
 
 
 def rpc(method, params=None, id_=1):
@@ -36,29 +49,23 @@ class TestProtocol(unittest.TestCase):
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "2025-03-26"}))
         self.assertEqual(res["id"], 1)
         result = res["result"]
-        self.assertEqual(result["serverInfo"], {"name": "mcp-n4", "version": server.SERVER_VERSION})
+        self.assertEqual(result["serverInfo"], {"name": "mcp-n4", "version": SERVER_VERSION})
         self.assertEqual(result["capabilities"], {"tools": {"listChanged": False}})
         self.assertEqual(result["protocolVersion"], "2025-03-26")
 
     def test_initialize_falls_back_to_newest_supported_version(self):
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "1999-01-01"}))
-        self.assertEqual(res["result"]["protocolVersion"], server.SUPPORTED_PROTOCOL_VERSIONS[0])
+        self.assertEqual(res["result"]["protocolVersion"], SUPPORTED_PROTOCOL_VERSIONS[0])
         res = self.srv.dispatch(rpc("initialize"))
-        self.assertEqual(res["result"]["protocolVersion"], server.SUPPORTED_PROTOCOL_VERSIONS[0])
+        self.assertEqual(res["result"]["protocolVersion"], SUPPORTED_PROTOCOL_VERSIONS[0])
 
     def test_a_newer_protocol_version_is_not_echoed_until_its_semantics_exist(self):
         """Pins the documented supported set: newer revisions are answered with 2025-06-18."""
-        self.assertEqual(server.SUPPORTED_PROTOCOL_VERSIONS,
-                         ("2025-06-18", "2025-03-26", "2024-11-05"))
+        for version in SUPPORTED_PROTOCOL_VERSIONS:  # every supported revision is echoed
+            res = self.srv.dispatch(rpc("initialize", {"protocolVersion": version}))
+            self.assertEqual(res["result"]["protocolVersion"], version)
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "2025-11-25"}))
         self.assertEqual(res["result"]["protocolVersion"], "2025-06-18")
-
-    @go_server.go_twin("jsonrpc", "in-process",
-                       twin="cli.TestHelpStatesTheSupportedProtocolSetContract")
-    def test_doc_contract_states_the_supported_set_and_the_naming_heuristic(self):
-        """The one place that pins documentation wording (the operator-facing contract)."""
-        self.assertIn("Only add a newer", server.__doc__)
-        self.assertIn("Heuristic", box.is_component_type.__doc__)
 
     def test_initialized_notification_gets_no_reply(self):
         self.assertIsNone(self.srv.dispatch(rpc("notifications/initialized", id_=None)))
@@ -85,7 +92,7 @@ class TestProtocol(unittest.TestCase):
 
     def test_tools_list_entries_have_schema_and_read_only_annotations(self):
         tools = self.srv.dispatch(rpc("tools/list"))["result"]["tools"]
-        self.assertEqual([t["name"] for t in tools], [t.name for t in tools_read.TOOLS])
+        self.assertEqual([t["name"] for t in tools], READ_TOOLS)
         for tool in tools:
             self.assertEqual(tool["inputSchema"]["type"], "object")
             self.assertEqual(tool["annotations"], {"readOnlyHint": True, "openWorldHint": False})
@@ -109,62 +116,6 @@ class TestProtocol(unittest.TestCase):
         self.assertTrue(res["result"]["isError"])
         self.assertIn("not connected", res["result"]["content"][0]["text"])
 
-    @go_server.go_twin("jsonrpc", "injection")
-    def test_tool_result_carries_text_and_structured_content(self):
-        tool = tools_read.Tool("echo", "d", {"type": "object", "properties": {}},
-                               lambda ctx, args: {"a": 1}, needs_session=False)
-        res = server.Server(tools=[tool]).dispatch(
-            rpc("tools/call", {"name": "echo", "arguments": {}}))["result"]
-        self.assertEqual(res["structuredContent"], {"a": 1})
-        self.assertEqual(res["content"], [{"type": "text", "text": json.dumps({"a": 1})}])
-        self.assertFalse(res.get("isError", False))
-
-    @go_server.go_twin("jsonrpc", "injection")
-    def test_unexpected_tool_exception_is_short_error_without_message_or_trace(self):
-        def boom(ctx, args):
-            raise RuntimeError("topsecret-value in /home/x/file.py")
-        tool = tools_read.Tool("boom", "d", {"type": "object", "properties": {}}, boom,
-                               needs_session=False)
-        res = server.Server(tools=[tool]).dispatch(
-            rpc("tools/call", {"name": "boom", "arguments": {}}))["result"]
-        text = res["content"][0]["text"]
-        self.assertTrue(res["isError"])
-        self.assertIn("RuntimeError", text)
-        self.assertNotIn("topsecret", text)
-        self.assertNotIn("Traceback", text)
-
-    @go_server.go_twin("jsonrpc", "injection")
-    def test_tool_error_and_box_error_messages_are_shown(self):
-        for exc in (tools_read.ToolError("clear reason"), box.BoxError("clear reason")):
-            def boom(ctx, args, exc=exc):
-                raise exc
-            tool = tools_read.Tool("boom", "d", {"type": "object", "properties": {}}, boom,
-                                   needs_session=False)
-            res = server.Server(tools=[tool]).dispatch(
-                rpc("tools/call", {"name": "boom", "arguments": {}}))["result"]
-            self.assertTrue(res["isError"])
-            self.assertIn("clear reason", res["content"][0]["text"])
-
-    @go_server.go_twin("jsonrpc", "internals", twin="session.TestModeAndStationNames")
-    def test_flags_record_mode(self):
-        self.assertEqual(server.Server().ctx.mode, "read-only")
-        self.assertEqual(server.Server(allow_writes=True).ctx.mode, "writes-allowed")
-        self.assertFalse(server.Server().ctx.allow_http)
-
-    @go_server.go_twin("cli", "in-process")
-    def test_main_parses_flags_without_serving_at_import(self):
-        args = server.parse_args(["--allow-writes", "--allow-http-for-tests"])
-        self.assertTrue(args.allow_writes)
-        self.assertTrue(args.allow_http_for_tests)
-        args = server.parse_args(["--station", "a=https://h1", "--station", "b=https://h2:8443",
-                                  "--insecure-tls", "b", "--credential-env", "LAB"])
-        self.assertEqual(args.station, ["a=https://h1", "b=https://h2:8443"])
-        self.assertEqual((args.insecure_tls, args.credential_env), (["b"], "LAB"))
-        self.assertEqual(server.parse_args([]).credential_env, "MCP_N4")
-        args = server.parse_args([])
-        self.assertFalse(args.allow_writes)
-        self.assertFalse(args.allow_http_for_tests)
-
 
 class TestRobustness(unittest.TestCase):
     def make_server(self):
@@ -182,9 +133,9 @@ class TestRobustness(unittest.TestCase):
         self.assertIsNone(srv.handle_line('{"jsonrpc":"2.0","method":"ping"}'))
 
     def test_replies_are_the_bytes_the_python_server_writes(self):
-        """tools/list (every schema), errors and odd ids, compared byte for byte with an
-        in-process Python server: the Go port's protocol-parity proof (plan slice S2)."""
-        srv, reference = self.make_server(), server.Server()
+        """tools/list (every schema), errors and odd ids, compared byte for byte with what the
+        in-process Python server wrote (plan slice S2), frozen in fixtures/oracles (S17)."""
+        srv, frozen = self.make_server(), oracle.Frozen(self, "protocol")
         for line in ('{"jsonrpc":"2.0","id":2,"method":"tools/list"}',
                      '{"id":3,"method":"initialize","params":{"protocolVersion":"2024-11-05"}}',
                      '{"id":[1.0,"\\u00e9",{"k":null}],"method":"nope"}',
@@ -193,7 +144,8 @@ class TestRobustness(unittest.TestCase):
                      '"arguments":{"depth":0}}}',
                      '{"id":6,"method":"tools/call","params":{"name":"n4_navigate"}}',
                      '\u00a0{"id":7,"method":"ping"}\x0b', '{bad', '7'):
-            self.assertEqual(srv.handle_line(line), reference.handle_line(line), line)
+            want = frozen(line)
+            self.assertEqual(srv.handle_line(line), want, line)
 
     @staticmethod
     def nested_id(depth):
@@ -203,14 +155,14 @@ class TestRobustness(unittest.TestCase):
 
     def test_nesting_up_to_the_limit_is_answered(self):
         srv = self.make_server()
-        out = json.loads(srv.handle_line(self.nested_id(server.MAX_NESTING)))
+        out = json.loads(srv.handle_line(self.nested_id(MAX_NESTING)))
         self.assertEqual(out["result"], {})
-        self.assertEqual(json.dumps(out["id"]).count("["), server.MAX_NESTING - 1)
+        self.assertEqual(json.dumps(out["id"]).count("["), MAX_NESTING - 1)
 
     def test_deeper_nesting_is_a_parse_error_and_the_server_keeps_serving(self):
         """R8-D15: CPython's json raised RecursionError (not ValueError) and killed serve."""
         srv = self.make_server()
-        for depth in (server.MAX_NESTING + 1, 200000):
+        for depth in (MAX_NESTING + 1, 200000):
             for line in (self.nested_id(depth), '{"a":' * depth + "1" + "}" * depth):
                 out = json.loads(srv.handle_line(line))
                 self.assertEqual(out, {"jsonrpc": "2.0", "id": None,
@@ -223,89 +175,9 @@ class TestRobustness(unittest.TestCase):
         out = json.loads(srv.handle_line('\u2028{"id":1,"method":"ping"}\x85'))
         self.assertEqual(out["result"], {})
 
-    @go_server.go_twin("jsonrpc", "in-process")
-    def test_validate_supports_number_and_array(self):
-        schema = {"properties": {"n": {"type": "number", "minimum": 0},
-                                 "a": {"type": "array"}}}
-        server._validate(schema, {"n": 1.5, "a": [1]})
-        server._validate(schema, {"n": 2})
-        for args in ({"n": "x"}, {"n": True}, {"a": {}}, {"n": -1}):
-            with self.assertRaises(server.InvalidParams, msg=args):
-                server._validate(schema, args)
-
-    @go_server.go_twin("jsonrpc", "in-process")
-    def test_validate_fails_clearly_on_an_unknown_schema_type(self):
-        with self.assertRaises(ValueError) as cm:
-            server._validate({"properties": {"x": {"type": "float"}}}, {"x": 1})
-        self.assertIn("float", str(cm.exception))
-
-    @go_server.go_twin("jsonrpc", "in-process")
-    def test_every_registered_tool_schema_uses_a_known_type(self):
-        for tool in tools_read.TOOLS:
-            for spec in tool.input_schema["properties"].values():
-                self.assertIn(spec.get("type"), server._JSON_TYPES, tool.name)
-
-    @go_server.go_twin("jsonrpc", "internals")
-    def test_serve_closes_the_session_when_the_loop_raises(self):
-        srv = server.Server()
-        closed = []
-        srv.ctx.close = lambda: closed.append(1)
-
-        def lines():
-            yield '{"jsonrpc":"2.0","id":1,"method":"ping"}\n'
-            raise RuntimeError("stream broke")
-        with self.assertRaises(RuntimeError):
-            srv.serve(lines(), io.StringIO())
-        self.assertEqual(closed, [1])
-
-    @go_server.go_twin("jsonrpc", "internals",
-                       twin="jsonrpc.TestServeContextStopsOnInterruptAndClosesTheSession")
-    def test_serve_exits_cleanly_on_keyboard_interrupt_and_closes(self):
-        srv = server.Server()
-        closed = []
-        srv.ctx.close = lambda: closed.append(1)
-
-        def lines():
-            raise KeyboardInterrupt
-            yield
-        srv.serve(lines(), io.StringIO())  # no exception
-        self.assertEqual(closed, [1])
-
-    @go_server.go_twin("jsonrpc", "unit",
-                       twin="session.TestCloseClearsTheSessionAndClosesItsClient")
-    def test_close_clears_the_session_even_when_the_client_close_raises(self):
-        class Boom:
-            def close(self):
-                raise OSError("unreachable")
-        ctx = tools_read.Context()
-        ctx.session = tools_read.Session(Boom(), "S", "https://h", "2")
-        with self.assertRaises(OSError):
-            ctx.close()
-        self.assertIsNone(ctx.session)
-
-    @go_server.go_twin("jsonrpc", "unit", twin="session.TestScrubHidesTheSecretOnlyOnceOneIsSet")
-    def test_set_secret_scrubs_outputs(self):
-        ctx = tools_read.Context()
-        ctx.set_secret("hunter2-value")
-        self.assertEqual(ctx.scrub("pw=hunter2-value!"), "pw=***!")
-
-    @go_server.go_twin("jsonrpc", "internals",
-                       twin="session.TestFailedConnectOnMissingCredentialsClosesTheOldSession")
-    def test_connect_survives_a_failing_close_of_the_old_session(self):
-        class Boom:
-            def close(self):
-                raise OSError("unreachable")
-        srv = server.Server(env={}, stations={"S": "https://h"})
-        srv.ctx.session = tools_read.Session(Boom(), "S", "https://h", "2")
-        res = srv.dispatch(rpc("tools/call", {"name": "n4_connect",
-                                              "arguments": {"station": "S"}}))["result"]
-        self.assertTrue(res["isError"])
-        self.assertIsNone(srv.ctx.session)
-
 
 class TestShutdown(unittest.TestCase):
-    """Black-box: the server process (the Go binary; `python -m mcp_n4.server` under
-    MCP_N4_IMPL=python) deletes the station's BOX session however it is stopped
+    """Black-box: the Go server process deletes the station's BOX session however it is stopped
     (docs/go-port-plan.md section 22)."""
     PASSWORD = "s3cret-pw-value"
     TIMEOUT = 15
@@ -313,8 +185,7 @@ class TestShutdown(unittest.TestCase):
     def setUp(self):
         self.fake = FakeStation(password=self.PASSWORD).start()
         self.addCleanup(self.fake.stop)
-        cmd = [go_server.resolve_binary()] if go_server.GO else [sys.executable, "-m",
-                                                                 "mcp_n4.server"]
+        cmd = [go_server.resolve_binary()]
         env = dict(os.environ, MCP_N4_USER="admin", MCP_N4_PASSWORD=self.PASSWORD)
         self.proc = subprocess.Popen(
             cmd + go_server.server_args(allow_http=True, stations={"FakeStation": self.fake.url}),
@@ -353,8 +224,6 @@ class TestShutdown(unittest.TestCase):
     def test_sigint_deletes_the_station_session_and_exits_zero(self):
         self.assert_signal_closes_the_session(signal.SIGINT)
 
-    @unittest.skipUnless(go_server.GO, "the Python server has no SIGTERM handler: it dies by the "
-                                       "signal and leaves the session (go-port-plan section 22)")
     def test_sigterm_deletes_the_station_session_and_exits_zero(self):
         self.assert_signal_closes_the_session(signal.SIGTERM)
 
@@ -400,10 +269,8 @@ class ToolTestCase(unittest.TestCase):
         return srv
 
     def station_client(self):
-        """A BoxClient to arrange station state: the session's own one in-process; under Go a
-        separate Python client logged in to the same FakeStation."""
-        if not go_server.GO:
-            return self.srv.ctx.session.client
+        """A BoxClient to arrange station state: a test client logged in to the same
+        FakeStation as the server under test."""
         client = box.BoxClient(self.fake.url, self.env.get("MCP_N4_USER", "admin"),
                                self.PASSWORD, allow_http=True)
         client.open()
@@ -460,29 +327,14 @@ class TestConnect(ToolTestCase):
         self.assertEqual(self.fake.requests, 0)
 
     def test_credential_env_is_not_a_tool_argument(self):
-        props = [t for t in tools_read.TOOLS if t.name == "n4_connect"][0].input_schema
+        tools = self.srv.dispatch(rpc("tools/list"))["result"]["tools"]
+        props = [t for t in tools if t["name"] == "n4_connect"][0]["inputSchema"]
         self.assertEqual(set(props["properties"]), {"station", "expected_station"})
         self.assertEqual(props["required"], ["station"])
         res = self.srv.dispatch(rpc("tools/call", {"name": "n4_connect", "arguments": {
             "station": "FakeStation", "base_url": "https://evil.example"}}))
         self.assertNotIn("error", res)  # unknown args are ignored, never used
         self.assertEqual(res["result"]["structuredContent"]["base_url"], self.fake.url)
-
-    @go_server.go_twin("session", "internals")
-    def test_missing_env_vars_name_the_variables_not_values(self):
-        self.srv.ctx.env = {}
-        text = self.err("n4_connect", station="FakeStation")
-        self.assertIn("MCP_N4_USER", text)
-        self.assertIn("MCP_N4_PASSWORD", text)
-        self.assertEqual(self.fake.requests, 0)
-
-    @go_server.go_twin("session", "internals")
-    def test_wrong_password_is_an_error_without_leaking_the_secret(self):
-        self.srv.ctx.env = {"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": "wrong-pw-1234"}
-        text = self.err("n4_connect", station="FakeStation")
-        self.assertNotIn("wrong-pw-1234", text)
-        self.assertEqual(self.fake.requests, 1)  # no login retry (B1179)
-        self.assertIn("not connected", self.err("n4_navigate"))
 
     def test_http_station_is_refused_at_start_without_the_test_flag(self):
         with self.assertRaises(ValueError) as cm:
@@ -502,115 +354,16 @@ class TestConnect(ToolTestCase):
         self.assertIn("--station NAME=URL", text)
         self.assertEqual(self.fake.requests, 0)
 
-    @go_server.go_twin("session", "internals")
-    def test_expected_station_defaults_to_the_station_name(self):
-        out = self.connect()
-        self.assertEqual(out["station_name"], "FakeStation")
-        self.assertTrue(self.srv.ctx.session.identity_verified)
-
-    @go_server.go_twin("session", "internals")
-    def test_default_expected_name_mismatch_is_refused(self):
-        self.srv = self.make_server(allow_http=True, env=self.env,
-                                    stations={"Other": self.fake.url})
-        text = self.err("n4_connect", station="Other")
-        self.assertIn("Other", text)
-        self.assertIn("FakeStation", text)
-        self.assertIsNone(self.srv.ctx.session)
-
-    @go_server.go_twin("cli", "internals")
-    def test_load_wait_and_http_timeout_flags_reach_the_client(self):
-        # F11 (audit 2026-10-03): the fixed 3 s load window and 20 s HTTP timeout are
-        # operator flags with bounds.
-        args = server.parse_args([])
-        self.assertEqual((args.load_wait, args.http_timeout), (3.0, 20))
-        args = server.parse_args(["--load-wait", "12.5", "--http-timeout", "90"])
-        self.assertEqual((args.load_wait, args.http_timeout), (12.5, 90))
-        for flag, bad in (("--load-wait", "0.5"), ("--load-wait", "61"),
-                          ("--http-timeout", "4"), ("--http-timeout", "301")):
-            err = io.StringIO()
-            with contextlib.redirect_stderr(err), self.assertRaises(SystemExit):
-                server.parse_args([flag, bad])
-            self.assertIn(flag, err.getvalue())
-        srv = server.Server(allow_http=True, env=self.env, stations=self.stations,
-                            load_wait=12.5, http_timeout=90)
-        self.addCleanup(srv.ctx.close)
-        srv.dispatch(rpc("tools/call", {"name": "n4_connect",
-                                        "arguments": {"station": "FakeStation"}}))
-        client = srv.ctx.session.client
-        self.assertEqual((client.timeout, client.load_wait), (90, 12.5))
-
-    @go_server.go_twin("session", "injection")
-    def test_tls_is_verified_unless_the_operator_marks_the_station_insecure(self):
-        seen = []
-
-        def factory(url, user, secret, insecure_tls=False, allow_http=False):
-            seen.append(insecure_tls)
-            return box.BoxClient(url, user, secret, insecure_tls=insecure_tls,
-                                 allow_http=allow_http)
-        for insecure, want in (((), False), (("FakeStation",), True)):
-            srv = server.Server(allow_http=True, env=self.env, stations=self.stations,
-                                insecure_tls=insecure, client_factory=factory)
-            self.addCleanup(srv.ctx.close)
-            res = srv.dispatch(rpc("tools/call", {"name": "n4_connect",
-                                                  "arguments": {"station": "FakeStation"}}))
-            self.assertNotIn("error", res)
-            self.assertEqual(seen[-1], want)
-
-    @go_server.go_twin("session", "in-process")
-    def test_insecure_tls_for_an_unconfigured_station_is_a_start_error(self):
-        with self.assertRaises(ValueError):
-            server.Server(allow_http=True, stations=self.stations, insecure_tls=("ghost",))
-
-    @go_server.go_twin("session", "internals")
-    def test_failed_connect_on_unknown_station_closes_the_old_session(self):
-        self.connect()
-        self.err("n4_connect", station="ghost")
-        self.assertIsNone(self.srv.ctx.session)
-        self.assertEqual(self.fake.sessions, set())
-
-    @go_server.go_twin("session", "internals")
-    def test_failed_connect_on_missing_credentials_closes_the_old_session(self):
-        self.connect()
-        self.srv.ctx.env = {}
-        self.err("n4_connect", station="FakeStation")
-        self.assertIsNone(self.srv.ctx.session)
-        self.assertEqual(self.fake.sessions, set())
-        self.assertIn("not connected", self.err("n4_navigate"))
-
     def test_expected_station_match_connects(self):
         self.assertEqual(self.connect(expected_station="FakeStation")["station_name"],
                          "FakeStation")
-
-    @go_server.go_twin("session", "internals")
-    def test_expected_station_mismatch_closes_session_and_names_both(self):
-        text = self.err("n4_connect", station="FakeStation", expected_station="OtherStation")
-        self.assertIn("OtherStation", text)
-        self.assertIn("FakeStation", text)
-        self.assertIsNone(self.srv.ctx.session)
-        self.assertEqual(self.fake.sessions, set())
-        self.assertIn("not connected", self.err("n4_navigate"))
-
-    @go_server.go_twin("session", "internals")
-    def test_reconnect_closes_the_previous_session(self):
-        self.connect()
-        first = self.srv.ctx.session.client
-        self.connect()
-        self.assertIsNone(first.sid)
-        self.assertIsNot(self.srv.ctx.session.client, first)
-
-    @go_server.go_twin("session", "internals")
-    def test_failed_reconnect_leaves_no_session(self):
-        self.connect()
-        self.srv.ctx.env = {"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": "wrong-pw-1234"}
-        self.err("n4_connect", station="FakeStation")
-        self.assertIsNone(self.srv.ctx.session)
 
 
 class TestDescribeSession(ToolTestCase):
     def test_describe_before_connect_reports_disconnected(self):
         out = self.ok("n4_describe_session")
         self.assertEqual(out, {"connected": False, "station_name": None, "base_url": None,
-                               "mode": "read-only", "server_version": server.SERVER_VERSION,
+                               "mode": "read-only", "server_version": SERVER_VERSION,
                                "configured_stations": ["FakeStation"], "version": None,
                                "version_source": None, "tier": None, "tier_writes": None})
 
@@ -619,7 +372,7 @@ class TestDescribeSession(ToolTestCase):
         out = self.ok("n4_describe_session")
         self.assertEqual(out, {"connected": True, "station_name": "FakeStation",
                                "base_url": self.fake.url, "mode": "read-only",
-                               "server_version": server.SERVER_VERSION,
+                               "server_version": SERVER_VERSION,
                                "configured_stations": ["FakeStation"],
                                "version": "4.14.0.162", "version_source": "/obix/about/",
                                "tier": "A", "tier_writes": "allowed"})
@@ -771,35 +524,6 @@ class TestReadSlots(StationTestCase):
         slot = self.slots(nn)["txt"]
         self.assertEqual((slot["value"], slot["status"]), ("abc", "0"))
 
-    @go_server.go_twin("readtools", "unit")
-    def test_complex_slot_without_a_value_falls_back_to_its_display_string(self):
-        nodes = {"": {"t": "modbusCore:ModbusClientNumericProxyExt"},
-                 "dataAddress": {"n": "dataAddress", "t": "modbusCore:FlexAddress",
-                                 "d": "Decimal:302"},
-                 "dataAddress/address": {"n": "address", "t": "baja:String", "v": "302",
-                                         "d": "302"},
-                 "address": {"n": "address", "t": "bacnet:BacnetAddress",
-                             "d": "1:<device-ip>:47808"}}
-        flex = tools_read._slot_entry(nodes, "dataAddress")
-        self.assertEqual((flex["value"], flex["value_display"]), ("Decimal:302", "Decimal:302"))
-        self.assertEqual(tools_read._slot_entry(nodes, "address")["value"], "1:<device-ip>:47808")
-
-    @go_server.go_twin("readtools", "unit")
-    def test_a_decoded_value_is_kept_and_its_display_rides_along(self):
-        nodes = {"conversion": {"t": "driver:LinearConversion", "v": "0.1;0.0",
-                                "d": "Linear *0.10"}}
-        entry = tools_read._slot_entry(nodes, "conversion")
-        self.assertEqual((entry["value"], entry["value_display"]), ("0.1;0.0", "Linear *0.10"))
-
-    @go_server.go_twin("readtools", "injection")
-    def test_read_slots_and_navigate_report_elapsed_ms(self):
-        nn, _ = self.add_with_out("Calc")
-        ticks = iter([10.0, 10.25, 20.0, 20.5])
-        self.srv.ctx.clock = lambda: next(ticks)
-        out = self.ok("n4_read_slots", ord="station:|slot:/Folder/" + nn)
-        self.assertEqual(out["elapsed_ms"], 250)
-        self.assertEqual(self.ok("n4_navigate")["elapsed_ms"], 500)
-
     def test_ord_is_required(self):
         res = self.srv.dispatch(rpc("tools/call", {"name": "n4_read_slots", "arguments": {}}))
         self.assertEqual(res["error"]["code"], -32602)
@@ -948,23 +672,12 @@ class TestStdioEndToEnd(unittest.TestCase):
 
     def run_server(self, lines, args=()):
         env = dict(os.environ, MCP_N4_USER="admin", MCP_N4_PASSWORD=self.PASSWORD)
-        command = ([go_server.resolve_binary()] if go_server.GO
-                   else [sys.executable, "-m", "mcp_n4.server"])
+        command = [go_server.resolve_binary()]
         proc = subprocess.run(
             command + list(args), cwd=KIT_DIR, env=env,
             input="".join(json.dumps(m) + "\n" for m in lines), capture_output=True,
             text=True, timeout=60)
-        replies = [json.loads(line) for line in proc.stdout.splitlines()]
-        for reply in replies:
-            go_server.skip_if_unported(reply)
-        return proc, replies
-
-    @go_server.go_twin("cli", "in-process", python_only="a Python import side effect; a Go binary "
-                       "has no import (its start: cli.TestEofEndsTheServerWithExitZero)")
-    def test_import_prints_nothing(self):
-        proc = subprocess.run([sys.executable, "-c", "import mcp_n4.server"], cwd=KIT_DIR,
-                              capture_output=True, text=True, timeout=60)
-        self.assertEqual((proc.returncode, proc.stdout, proc.stderr), (0, "", ""))
+        return proc, [json.loads(line) for line in proc.stdout.splitlines()]
 
     def test_session_over_stdio_against_the_fake_station(self):
         fake = FakeStation(password=self.PASSWORD).start()

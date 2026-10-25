@@ -5,12 +5,14 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import go_server  # noqa: E402
+import test_retro  # noqa: E402  (module import: its tests are not re-collected here)
 import test_server  # noqa: E402
 import test_tools_write  # noqa: E402
-from mcp_n4 import box, retro, safety, server, tiers, tools_write  # noqa: E402
 
 FOLDER = test_tools_write.FOLDER
+#: The reason every tier refusal starts with (the Go server's tier gate words it; each test
+#: that uses it finds it in a real refusal, so it cannot drift silently).
+REASON_TIER = "version tier refuses writes"
 #: Every mutating tool with arguments that pass schema validation.
 MUTATING = [
     ("n4_create_component", {"parent_ord": FOLDER, "name": "X", "type": "kitControl:NumericConst"}),
@@ -22,59 +24,6 @@ MUTATING = [
     ("n4_rollback", {"batch_id": "0" * 32}),
     ("n4_save_station", {}),
 ]
-
-
-class TestTierClassification(unittest.TestCase):
-    @go_server.go_twin("tiers", "unit")
-    def test_tier_table(self):
-        table = {
-            "4.13.2.18": "A", "4.14.0.162": "A", "4.14": "A", "4.13.0.0.1": "A",
-            "4.15.3.28": "B", "4.3.58.18": "B",
-            "4.12.1.16": "C", "4.4.73.24": "C", "4.30.1": "C", "4.1.27": "C",
-            "5.0.0": "C", "3.8.401": "C",
-            None: "C", "": "C", "garbage": "C", "4": "C", "v4.14.0": "C",
-        }
-        for version, want in table.items():
-            self.assertEqual(tiers.tier_of(version), want, version)
-
-    @go_server.go_twin("tiers", "unit")
-    def test_product_version_is_read_from_the_about_document(self):
-        xml = ('<obj is="obix:About"><str name="serverName" val="h"/>'
-               '<str name="productVersion" val="4.15.3.28"/></obj>')
-        self.assertEqual(tiers.product_version(xml), "4.15.3.28")
-        swapped = '<obj><str val="4.13.2.18" name="productVersion" /></obj>'
-        self.assertEqual(tiers.product_version(swapped), "4.13.2.18")
-        for text in ("", "<obj/>", '<str name="productName" val="Niagara"/>', None):
-            self.assertIsNone(tiers.product_version(text))
-
-    @go_server.go_twin("tiers", "unit")
-    def test_write_block_policy(self):
-        self.assertIsNone(tiers.write_block("A", "4.14.0.162", "S", {}))
-        self.assertIsNone(tiers.write_block("B", "4.15.3.28", "S", {"B": {"S"}}))
-        self.assertIsNone(tiers.write_block("C", "4.10.0", "S", {"C": {"S"}}))
-        self.assertIsNotNone(tiers.write_block("B", "4.15.3.28", "S", {"B": {"other"}}))
-        self.assertIsNotNone(tiers.write_block("B", "4.15.3.28", "S", {"C": {"S"}}))
-        self.assertIsNotNone(tiers.write_block("C", None, "S", {"B": {"S"}}))
-
-    @go_server.go_twin("tiers", "unit")
-    def test_refusals_name_the_routes(self):
-        b = tiers.write_block("B", "4.15.3.28", "S", {})
-        c = tiers.write_block("C", None, "S", {})
-        for text in (b, c):
-            self.assertIn(safety.REASON_TIER, text)
-            self.assertIn("Workbench", text)
-            self.assertIn("dry run", text)
-        self.assertIn("--allow-tier-b S", b)
-        self.assertIn("4.15.3.28", b)
-        self.assertIn("--allow-tier-c S", c)
-        self.assertIn("unknown", c)
-        for step in ("reg.loadContract", "loadRoot", "scratch"):
-            self.assertIn(step, c)
-
-    @go_server.go_twin("tiers", "unit")
-    def test_the_retro_classifies_tier_refusals(self):
-        needles = [n for r in retro._REFUSALS for n in r[1]]
-        self.assertIn(safety.REASON_TIER, needles)
 
 
 class TestConnectReportsTier(test_server.ToolTestCase):
@@ -94,41 +43,9 @@ class TestConnectReportsTier(test_server.ToolTestCase):
     def test_a_detected_version_carries_no_version_error(self):
         self.assertNotIn("version_error", self.connect())
 
-    @go_server.go_twin("tiers", "internals")
-    def test_an_about_auth_rejection_is_reported_not_swallowed(self):
-        orig = box.BoxClient.about
-
-        def about_401(client, *a, **kw):
-            raise box.AuthError(box.auth_message(401), "obix", "about")
-        box.BoxClient.about = about_401
-        self.addCleanup(setattr, box.BoxClient, "about", orig)
-        out = self.connect()
-        self.assertEqual((out["version"], out["tier"], out["tier_writes"]), (None, "C", "refused"))
-        self.assertIn("HTTP 401", out["version_error"])
-        self.assertIn("failed login", out["version_error"])
-        self.assertIsNotNone(self.srv.ctx.session)  # detection never fails the connect
-        self.assertIn("HTTP 401", self.ok("n4_describe_session")["version_error"])
-
     def test_a_missing_about_endpoint_is_reported(self):
         self.fake.product_version = None
         self.assertIn("HTTP 404", self.connect()["version_error"])
-
-    @go_server.go_twin("tiers", "injection")
-    def test_a_transport_failure_or_a_client_without_about_is_tier_c(self):
-        def broken(client, *a, **kw):
-            raise box.BoxError("transport failure: reset", "obix", "about")
-        for patch in (broken, None):
-            orig = box.BoxClient.about
-            if patch is None:
-                del box.BoxClient.about
-            else:
-                box.BoxClient.about = patch
-            try:
-                out = self.connect()
-            finally:
-                box.BoxClient.about = orig
-            self.assertEqual((out["tier"], out["version"]), ("C", None))
-            self.assertTrue(out["version_error"])
 
     def test_tier_b_station_reports_refused_without_opt_in(self):
         self.fake.product_version = "4.15.3.28"
@@ -139,18 +56,6 @@ class TestConnectReportsTier(test_server.ToolTestCase):
         desc = self.ok("n4_describe_session")
         self.assertIsNone(desc["tier"])
         self.assertIsNone(desc["version"])
-
-    @go_server.go_twin("tiers", "in-process")
-    def test_opt_in_for_an_unconfigured_station_is_a_start_error(self):
-        for kw in ({"allow_tier_b": ("ghost",)}, {"allow_tier_c": ("ghost",)}):
-            with self.assertRaises(ValueError):
-                server.Server(allow_http=True, stations=self.stations, **kw)
-
-    @go_server.go_twin("cli", "in-process")
-    def test_cli_parses_the_opt_in_flags(self):
-        args = server.parse_args(["--allow-tier-b", "S1", "--allow-tier-b", "S2",
-                                  "--allow-tier-c", "S3"])
-        self.assertEqual((args.allow_tier_b, args.allow_tier_c), (["S1", "S2"], ["S3"]))
 
 
 class TierWriteCase(test_tools_write.WriteTestCase):
@@ -195,7 +100,7 @@ class TestTierB(TierWriteCase):
         plan = self.dry("n4_create_component", **self.create())
         text = self.err("n4_create_component", dry_run=False,
                         confirmation_token=plan["confirmation_token"], **self.create())
-        self.assertIn(safety.REASON_TIER, text)
+        self.assertIn(REASON_TIER, text)
         self.assertIn("--allow-tier-b FakeStation", text)
         self.assertIn("Workbench", text)
         self.assertNotIn("Pump", self.children())
@@ -204,10 +109,14 @@ class TestTierB(TierWriteCase):
 
     def test_every_mutating_tool_is_gated(self):
         self.connect_verified()
-        self.assertEqual(sorted(t for t, _ in MUTATING), sorted(tools_write.NAMES))
+        self.assertEqual(sorted(t for t, _ in MUTATING), test_server.WRITE_TOOLS)
+        listed = [t["name"] for t in self.srv.dispatch(test_server.rpc("tools/list"))[
+            "result"]["tools"]]  # the binary's own write tools: WRITE_TOOLS cannot drift
+        self.assertEqual(sorted(set(listed) - set(test_server.READ_TOOLS)),
+                         test_server.WRITE_TOOLS)
         for tool, args in MUTATING:
             text = self.err(tool, dry_run=False, confirmation_token="1.a.b", **args)
-            self.assertIn(safety.REASON_TIER, text, tool)
+            self.assertIn(REASON_TIER, text, tool)
 
     def test_operator_opt_in_allows_writes(self):
         self.start_server(allow_tier_b=("FakeStation",))
@@ -233,7 +142,7 @@ class TestTierC(TierWriteCase):
         self.assertEqual(plan["tier_gate"]["tier"], "C")
         text = self.err("n4_create_component", dry_run=False,
                         confirmation_token=plan["confirmation_token"], **self.create())
-        for needle in (safety.REASON_TIER, "--allow-tier-c FakeStation", "reg.loadContract",
+        for needle in (REASON_TIER, "--allow-tier-c FakeStation", "reg.loadContract",
                        "scratch", "Workbench"):
             self.assertIn(needle, text)
         self.assertNotIn("Pump", self.children())
@@ -249,6 +158,9 @@ class TestTierC(TierWriteCase):
         self.connect_verified()
         plan = self.dry("n4_create_component", **self.create())
         self.assertEqual((plan["tier_gate"]["tier"], plan["tier_gate"]["version"]), ("C", None))
+        text = self.err("n4_create_component", dry_run=False,
+                        confirmation_token=plan["confirmation_token"], **self.create())
+        self.assertEqual(text, test_retro.tier_refusal("FakeStation"))
 
     def test_operator_opt_in_allows_writes(self):
         self.start_server(allow_tier_c=("FakeStation",))

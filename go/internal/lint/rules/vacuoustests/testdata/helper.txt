@@ -1,0 +1,25 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 0
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BBaseTest.java --
+package com.x.test;
+public abstract class BBaseTest {
+  protected void checkRange(int v) { org.testng.Assert.assertTrue(v > 0); }
+}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BDeltaTest.java --
+package com.x.test;
+import org.testng.annotations.Test;
+public class BDeltaTest extends BBaseTest {
+  @Test
+  public void viaBase() { checkRange(compute()); }
+  @Test
+  public void viaOwn() { this.sameAsTwo(compute()); }
+  private void sameAsTwo(int v) { assertEquals(v, 2); }
+  private int compute() { return 2; }
+  public static class Inner {
+    @Test
+    public void viaEnclosing() { checkRange(2); }
+  }
+}

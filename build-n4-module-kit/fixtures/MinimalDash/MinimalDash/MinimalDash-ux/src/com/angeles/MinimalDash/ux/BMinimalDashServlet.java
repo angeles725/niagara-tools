@@ -55,8 +55,25 @@ public class BMinimalDashServlet
   // Request dispatch — thin adapter over the pure router (DUX1)
   // -------------------------------------------------------------------------
 
+  /*
+   * BWebServlet's overridable entry points are service/doGet/doPost/doPut/doDelete(WebOp);
+   * doService(WebOp) is not one of them, so an @Override of it does not compile and an
+   * un-annotated one never fires (types/dashboard.md, BWebServlet override contract).
+   */
+
   @Override
-  public void doService(WebOp op) throws Exception
+  public void doGet(WebOp op) throws Exception
+  {
+    dispatch(op);
+  }
+
+  @Override
+  public void doPost(WebOp op) throws Exception
+  {
+    dispatch(op);
+  }
+
+  private void dispatch(WebOp op) throws Exception
   {
     HttpServletRequest req  = op.getRequest();
     HttpServletResponse rsp = op.getResponse();

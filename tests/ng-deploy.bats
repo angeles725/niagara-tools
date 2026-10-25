@@ -730,7 +730,8 @@ STUB
         tar tzf _backups/test-pre-*.tar.gz
     "
     [ "$status" -eq 0 ]
-    [[ "$output" == *"test-rt.jar"* ]] && [[ "$output" == *"test-ux.jar"* ]]
+    [[ "$output" == *"test-rt.jar"* ]]
+    [[ "$output" == *"test-ux.jar"* ]]
     [[ "$output" != *"Other-rt.jar"* ]]          # RED today: whole-dir tar includes the sibling
 }
 
