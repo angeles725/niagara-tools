@@ -46,6 +46,8 @@ type tstation struct {
 	sent     []any
 	failLoad func(ord string, depth int) error
 	onSync   func(op *pyjson.Object)
+	assign   func(name string) string // the name an add gets (nil: the one asked for)
+	failSSC  error                    // every checkLinks fails with it, before it is applied
 }
 
 func newTStation() *tstation {
@@ -141,6 +143,9 @@ func (s *tstation) Sync(op any) (any, error) {
 	var reply any = []any{}
 	switch get(o, "nm") {
 	case "a":
+		if s.assign != nil {
+			name = s.assign(name)
+		}
 		if parent.child(name) != nil {
 			return nil, &box.Error{Kind: box.KindBox, Msg: "Unable to process request."}
 		}
@@ -163,6 +168,9 @@ func (s *tstation) Sync(op any) (any, error) {
 
 func (s *tstation) SSC(key string, arg any) (any, error) {
 	s.sent = append(s.sent, arg)
+	if s.failSSC != nil {
+		return nil, s.failSSC
+	}
 	a := arg.(*pyjson.Object)
 	tgt := s.byH[get(a, "t").(string)]
 	name := "Link"
@@ -367,6 +375,27 @@ func TestAComponentOrRelinkIntentThatCannotBeWrittenStopsInDoubt(t *testing.T) {
 	}
 }
 
+// A relink send that fails with anything but a station error (Python's `except Exception`,
+// which no station reply reaches: box raises only BoxError) leaves the batch in-doubt with the
+// class name, listing the components created; a station error is no verdict instead.
+func TestARelinkSendThatFailsUnexpectedlyIsInDoubtListingTheComponents(t *testing.T) {
+	r := newTRig(t, 200)
+	bid := r.removed(t)
+	r.st.failSSC = &plan.PyError{Type: "TypeError", Msg: "odd reply"}
+	text, isErr, _ := r.write(t, "n4_rollback", obj("batch_id", bid))
+	if !isErr || !strings.Contains(text, "in-doubt (the station may or may not have applied it; inspect it before retrying): TypeError. "+
+		"Components already created by this batch (remove the top-level one to clean up): "+tFolder+"/Grp, ") ||
+		!strings.Contains(text, tFolder+"/Grp/Sub/Deep") {
+		t.Fatal(text)
+	}
+	r = newTRig(t, 200)
+	bid = r.removed(t)
+	r.st.failSSC = &box.Error{Kind: box.KindBox, Msg: "HTTP 500 from station"}
+	if _, isErr, out := r.write(t, "n4_rollback", obj("batch_id", bid)); isErr || get(out, "in_doubt") != true {
+		t.Fatalf("a station error: %v %s", isErr, pyjson.Repr(out))
+	}
+}
+
 // A load of a restored component for its relinks that fails leaves the batch in-doubt, listing
 // the components created.
 func TestAFailingRelinkLoadIsInDoubtNotACrash(t *testing.T) {
@@ -492,5 +521,88 @@ func TestAGroupWithOneWritableEchoesItsFrozenChild(t *testing.T) {
 	if got := pyjson.Repr(get(back, "frozen_children_not_restored")); got !=
 		"[{'path': '"+tFolder+"/One/Sp/proxyExt', 'n': 'proxyExt', 'type': 'control:NullProxyExt'}]" {
 		t.Fatalf("%s", pyjson.Repr(back))
+	}
+}
+
+// Precedence: a skipped relink (mismatch) outranks a frozen child the read-back cannot load
+// (unverified); the journal records the same verdict.
+func TestASkippedRelinkBesideAReadErrorMakesTheRollbackAMismatch(t *testing.T) {
+	r := newTRig(t, 200)
+	bid := r.removed(t)
+	r.st.onSync = func(op *pyjson.Object) { // the station drops Src right after re-creating it
+		if get(op, "nm") == "a" && get(op, "n") == "Src" {
+			g := r.st.resolve(tFolder + "/Grp")
+			for i, k := range g.kids {
+				if k.name == "Src" {
+					g.kids = append(g.kids[:i], g.kids[i+1:]...)
+				}
+			}
+		}
+	}
+	r.st.failLoad = func(o string, depth int) error { // every frozen child is unread
+		if depth == FrozenCheckDepth && (strings.HasSuffix(o, "/Sp") || strings.HasSuffix(o, "/En")) {
+			return &box.Error{Kind: box.KindBox, Msg: "HTTP 503 from station"}
+		}
+		return nil
+	}
+	text, isErr, out := r.write(t, "n4_rollback", obj("batch_id", bid))
+	if isErr {
+		t.Fatal(text)
+	}
+	gaps, _ := get(out, "frozen_config_not_restored").([]any)
+	if get(out, "verdict") != "mismatch" || pyjson.Repr(get(out, "relinks")) != "{'restored': 0, 'skipped': 1}" || len(gaps) == 0 {
+		t.Fatalf("%s", pyjson.Repr(out))
+	}
+	for _, g := range gaps {
+		if get(g.(*pyjson.Object), "readback_error") != "HTTP 503 from station" {
+			t.Errorf("gap %s", pyjson.Repr(g))
+		}
+	}
+	if view, err := journal.New(r.dir).Read(get(out, "batch_id").(string)); err != nil || get(view, "verdict") != "mismatch" {
+		t.Errorf("journal %s %v", pyjson.Repr(view), err)
+	}
+}
+
+// The nested components and the ORDs created for them are paired by position, so lists of
+// different lengths are a mismatch even when every created component reads back right.
+func TestMismatchedComponentsAndCreatedListsAreAVerdictMismatch(t *testing.T) {
+	st := newTStation()
+	k := st.add(st.byH["3"], "K", "kitControl:NumericConst")
+	k.kids = []*tnode{{name: "wsAnnotation", t: "baja:WsAnnotation"}}
+	spec := obj("n", "K", "parent_path", "", "top", 0, "b", obj("t", "kitControl:NumericConst"))
+	other := obj("n", "L", "parent_path", "", "top", 0, "b", obj("t", "kitControl:NumericConst"))
+	d := &rollbackData{rollbackOf: "b1", ordOf: map[string]string{}, components: []any{spec, other},
+		created: []any{tFolder + "/K"}, hasCreated: true}
+	if _, _, _, verdict, err := rollbackReadback(st, nil, &plan.Planned{Data: d}, nil, nil); err != nil || verdict != "mismatch" {
+		t.Fatalf("%s %v", verdict, err)
+	}
+	d.components = d.components[:1] // paired one to one, the same component reads back right
+	if _, _, _, verdict, err := rollbackReadback(st, nil, &plan.Planned{Data: d}, nil, nil); err != nil || verdict != "verified" {
+		t.Fatalf("paired: %s %v", verdict, err)
+	}
+}
+
+// The result record and the journal view keep the name the station assigned, which the
+// inverse removes; the intent kept the planned one.
+func TestTheResultRecordsTheServerAssignedNameNotThePlannedOne(t *testing.T) {
+	r := newTRig(t, 200)
+	r.st.assign = func(name string) string { return name + "1" }
+	_, _, out := r.write(t, "n4_create_component", obj("parent_ord", tFolder, "name", "Pump", "type", "kitControl:NumericConst"))
+	data, _ := os.ReadFile(filepath.Join(r.dir, "journal.jsonl"))
+	var lines []*pyjson.Object
+	for _, l := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		v, err := pyjson.Unmarshal([]byte(l))
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines = append(lines, v.(*pyjson.Object))
+	}
+	first := func(o *pyjson.Object, k string) any { return get(get(o, k).([]any)[0].(*pyjson.Object), "n") }
+	if len(lines) != 2 || first(lines[0], "inverse_plan") != "Pump" || first(lines[1], "inverse") != "Pump1" {
+		t.Fatalf("%s %s", pyjson.Repr(out), data)
+	}
+	view, err := journal.New(r.dir).Read(get(out, "batch_id").(string))
+	if err != nil || get(view, "state") != "completed" || first(view, "inverse") != "Pump1" {
+		t.Fatalf("%s %v", pyjson.Repr(view), err)
 	}
 }

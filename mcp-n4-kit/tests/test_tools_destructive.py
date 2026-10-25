@@ -448,7 +448,8 @@ class TestRollback(DestructiveCase):
         self.rollback(removed["batch_id"])
         self.assertIn("relink-intent", seen[-1])
 
-    @go_server.go_twin("writeops", "internals")
+    @go_server.go_twin("writeops", "internals",
+                       twin="writeops.TestRollbackOfARemoveRecreatesTypeSlotsAnnotationAndLinks")
     def test_relinks_consume_the_write_budget(self):
         nn, removed = self.removed_group()
         before = self.srv.ctx.write.writes_executed
@@ -465,7 +466,8 @@ class TestRollback(DestructiveCase):
         self.assertIn("relink", text)
         self.assertNotIn(nn, self.children())  # nothing was re-created
 
-    @go_server.go_twin("writeops", "internals")
+    @go_server.go_twin("writeops", "internals",
+                       twin="writeops.TestCurrentScopeIsEnforcedOnEveryRecordedTarget")
     def test_a_relink_end_outside_the_write_scope_is_refused_and_nothing_is_sent(self):
         nn, removed = self.removed_group()
         real = self.srv.ctx.write.scope
@@ -648,7 +650,9 @@ class TestRollback(DestructiveCase):
         self.assertEqual(back["verdict"], "verified", back)
         self.assertNotIn("frozen_config_not_restored", back)
 
-    @go_server.go_twin("writeops", "unit")
+    @go_server.go_twin(
+        "writeops", "unit",
+        twin="writeops.TestTheFrozenCheckTreatsOmittedDefaultsAsEqualAndAReadErrorAsUnread")
     def test_the_frozen_check_treats_an_omitted_default_as_equal(self):
         """The station omits slots at their default; a captured `0` status is not a loss."""
         captured = {"nm": "p", "t": "control:NullProxyExt", "s": [
@@ -673,7 +677,9 @@ class TestRollback(DestructiveCase):
         gap = tools_write._frozen_check(Client(live), check)
         self.assertEqual((gap["slots"], gap["missing"]), (["tuningPolicyName"], False))
 
-    @go_server.go_twin("writeops", "unit")
+    @go_server.go_twin(
+        "writeops", "unit",
+        twin="writeops.TestTheFrozenCheckTreatsOmittedDefaultsAsEqualAndAReadErrorAsUnread")
     def test_the_frozen_check_treats_an_omitted_nested_default_slot_as_equal(self):
         """A Status slot the station omits whole (value and status at default) is not a
         loss (v0.28.0 advisory review R4-002); one with a non-default nested value still is."""
@@ -691,7 +697,9 @@ class TestRollback(DestructiveCase):
         gap = tools_write._frozen_check(Client(), check)
         self.assertEqual((gap["slots"], gap["missing"]), (["readValue"], False))
 
-    @go_server.go_twin("writeops", "unit")
+    @go_server.go_twin(
+        "writeops", "unit",
+        twin="writeops.TestTheFrozenCheckTreatsOmittedDefaultsAsEqualAndAReadErrorAsUnread")
     def test_a_frozen_check_read_error_is_reported_distinctly_not_as_missing(self):
         """A station read error is not evidence the frozen child is gone (v0.28.0 advisory review
         R4-001/R2-001/R3-001)."""
@@ -705,7 +713,9 @@ class TestRollback(DestructiveCase):
         self.assertEqual(gap["readback_error"], "HTTP 503 from station")
         self.assertEqual(gap["path"], check["path"])
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin(
+        "writeops", "injection",
+        twin="writeops.TestAFrozenCheckReadErrorMakesTheRollbackUnverifiedAndIsScrubbed")
     def test_a_frozen_check_read_error_makes_the_rollback_unverified(self):
         nn, gh = self.writable_group()
         self.configure_proxy_ext(nn)
@@ -734,7 +744,9 @@ class TestRollback(DestructiveCase):
                 mock.patch.object(tools_write, "FROZEN_CHECK_DEPTH", 7):
             yield
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin(
+        "writeops", "injection",
+        twin="writeops.TestAFrozenCheckReadErrorMakesTheRollbackUnverifiedAndIsScrubbed")
     def test_a_frozen_check_read_error_is_scrubbed_of_the_session_secret(self):
         """The gap's readback_error goes through ctx.scrub (issue #190 R3-001)."""
         nn, gh = self.writable_group()
@@ -751,7 +763,9 @@ class TestRollback(DestructiveCase):
                              "HTTP 401 from station: credentials *** rejected")
         self.assertNotIn(self.PASSWORD, json.dumps(back))
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin(
+        "writeops", "injection",
+        twin="writeops.TestAFrozenCheckReadErrorMakesTheRollbackUnverifiedAndIsScrubbed")
     def test_a_read_error_beside_a_real_frozen_gap_makes_the_rollback_unverified(self):
         """Precedence: an unread frozen child outranks a real config gap (issue #190 R3-002)."""
         nn, gh = self.writable_group()
@@ -901,7 +915,8 @@ class TestRollback(DestructiveCase):
         self.assertIn("2 component(s)", text)
         self.assertNotIn(nn, self.children())
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin("writeops", "injection",
+                       twin="writeops.TestRollbackOfARemoveRecreatesTypeSlotsAnnotationAndLinks")
     def test_each_component_is_journaled_before_it_is_sent_and_counts_against_the_budget(self):
         nn, removed = self.removed_group()
         seen = []
@@ -1318,7 +1333,8 @@ class TestWriteBranchDebt(DestructiveCase):
         self.journal().append({"batch_id": bid, "phase": "result", "verdict": "verified",
                                "inverse": inverse, "accepted": None})
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin("writeops", "injection",
+                       twin="writeops.TestAComponentOrRelinkIntentThatCannotBeWrittenStopsInDoubt")
     def test_a_component_intent_that_cannot_be_written_stops_with_an_in_doubt_batch(self):
         nn, removed = self.removed_group()
         self.failing_append("component-intent")
@@ -1331,7 +1347,8 @@ class TestWriteBranchDebt(DestructiveCase):
         self.assertIsNotNone(grp)  # the top add was sent before the failure
         self.assertEqual([c.name for c in grp.children if c.handle], [])  # no nested add
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin("writeops", "injection",
+                       twin="writeops.TestAComponentOrRelinkIntentThatCannotBeWrittenStopsInDoubt")
     def test_a_relink_intent_that_cannot_be_written_sends_no_link(self):
         nn, removed = self.removed_group()
         self.failing_append("relink-intent")
@@ -1349,7 +1366,8 @@ class TestWriteBranchDebt(DestructiveCase):
     def intent_ids(self):
         return [e["batch_id"] for e in self.lines("journal.jsonl") if e.get("phase") == "intent"]
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin("writeops", "injection",
+                       twin="writeops.TestAComponentOrRelinkIntentThatCannotBeWrittenStopsInDoubt")
     def test_a_failed_relink_intent_is_audited_as_an_in_doubt_error_with_its_batch(self):
         # Finding 1: components were re-created before the relink intent failed, so the
         # audit line is an error of that batch, not a "refused" call without a batch_id.
@@ -1406,7 +1424,8 @@ class TestWriteBranchDebt(DestructiveCase):
         audit = self.last_audit()
         self.assertEqual((audit["outcome"], audit["batch_id"]), ("error", batch))
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin("writeops", "injection",
+                       twin="plan.TestAPartialResultThatCannotBeJournaledIsSaidAndStaysInDoubt")
     def test_a_partial_result_that_cannot_be_journaled_is_said_and_stays_in_doubt(self):
         bid = self.craft_two_adds()
         plan = self.dry("n4_rollback", batch_id=bid)
@@ -1418,7 +1437,8 @@ class TestWriteBranchDebt(DestructiveCase):
         self.assertIn("in-doubt result record could not be journaled", text)
         self.assertEqual(self.journal().read(self.intent_ids()[-1])["state"], "in-doubt")
 
-    @go_server.go_twin("writeops", "injection")
+    @go_server.go_twin("writeops", "injection",
+                       twin="plan.TestAnUnexpectedFailureAfterTheIntentKeepsTheBatchID")
     def test_an_unexpected_failure_after_the_intent_keeps_the_batch_id(self):
         # Finding 3: a non-ToolError after the intent (here the result record cannot be
         # serialized) is the batch's in-doubt error, in the reply and in the audit line.

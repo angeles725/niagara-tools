@@ -186,6 +186,52 @@ class TestSkipInventory(unittest.TestCase):
         with self.assertRaises(ValueError):
             go_server.go_twin("box", "flaky")
 
+    def test_every_go_twin_resolves_to_a_go_test_or_is_listed_debt(self):
+        unresolved = set(go_server.unresolved_twins())
+        self.assertEqual(sorted(unresolved - go_server.TWIN_DEBT), [],
+                         "these go_twin markers name no Go test: fix the twin or add the test")
+        self.assertEqual(sorted(go_server.TWIN_DEBT - unresolved), [],
+                         "these TWIN_DEBT entries resolve or are gone: delete them")
+        self.assertLessEqual(len(go_server.TWIN_DEBT), go_server.TWIN_DEBT_CEILING)
+
+
+class TestTwinResolution(unittest.TestCase):
+    """A twin resolves only to a real `func TestX` of its package, or a box replay scenario."""
+
+    TESTS = {"plan": {"TestRealOne"}, "box": {"TestBoxed"}}
+
+    def resolves(self, twin, name="test_x", ports=()):
+        return go_server.twin_resolves(("m", "C", name, twin, "unit"), self.TESTS, set(ports))
+
+    def test_a_real_go_test_of_the_named_package_resolves(self):
+        self.assertTrue(self.resolves("plan.TestRealOne"))
+        self.assertTrue(self.resolves("box.TestBoxed"))
+
+    def test_a_missing_name_another_package_or_other_case_does_not(self):
+        for twin in ("plan.TestMissing", "writeops.TestRealOne", "plan.TestRealone"):
+            self.assertFalse(self.resolves(twin), twin)
+
+    def test_only_a_box_twin_resolves_through_a_replay_scenario(self):
+        self.assertTrue(self.resolves("box.TestX", ports={"test_x"}))
+        self.assertFalse(self.resolves("box.TestX", ports={"test_y"}))
+        self.assertFalse(self.resolves("plan.TestX", ports={"test_x"}))
+
+    def test_the_scan_reads_func_test_declarations_of_each_package(self):
+        with tempfile.TemporaryDirectory() as root:
+            os.mkdir(os.path.join(root, "pkg"))
+            with open(os.path.join(root, "pkg", "a_test.go"), "w", encoding="utf-8") as fh:
+                fh.write("package pkg\n\nfunc TestOne(t *testing.T) {}\n"
+                         "func helper(t *testing.T) {}\n// func TestCommented(t *testing.T)\n")
+            with open(os.path.join(root, "pkg", "a.go"), "w", encoding="utf-8") as fh:
+                fh.write("func TestNotATestFile(t *testing.T) {}\n")
+            self.assertEqual(go_server.go_tests(root), {"pkg": {"TestOne"}})
+
+    def test_an_explicit_twin_is_validated_and_names_one_test_only(self):
+        with self.assertRaises(ValueError):
+            go_server.go_twin("plan", "unit", twin="plan.notATest")
+        with self.assertRaises(ValueError):
+            go_server.go_twin("plan", "unit", twin="plan.TestX")(type("C", (), {}))
+
 
 class TestUnportedSkip(unittest.TestCase):
     """Only the exact unported tool error skips; every other error still fails the test."""

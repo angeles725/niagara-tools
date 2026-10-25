@@ -748,7 +748,7 @@ class TestLooseStateFileBeforeSend(WriteTestCase):
             self.box.remove_component("3", "Pump")
 
 
-@go_server.go_twin("plan", "injection")
+@go_server.go_twin("writeops", "injection")
 class TestNestedReadbackPairing(WriteTestCase):
     def test_mismatched_components_and_created_lists_are_a_verdict_mismatch(self):
         spec = {"n": "K", "parent_path": "", "top": 0, "b": {"t": "kitControl:NumericConst"}}
@@ -788,7 +788,7 @@ class TestJournalAndAudit(WriteTestCase):
         self.assertEqual(result["inverse"], [{"nm": "v", "h": "3", "n": "Pump"}])
         self.assertEqual(result["accepted"], {"id": "a", "nn": "Pump"})
 
-    @go_server.go_twin("plan", "internals")
+    @go_server.go_twin("writeops", "internals")
     def test_the_result_records_the_server_assigned_name_not_the_planned_one(self):
         self.add("Pump")
         out = self.run_write("n4_create_component", **self.ARGS)

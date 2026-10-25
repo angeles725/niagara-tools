@@ -27,6 +27,18 @@ class _Node:
 _WRITABLES = ("control:NumericWritable", "control:BooleanWritable")
 
 
+#: A hook answer that closes the connection without any HTTP answer.
+DROP = object()
+
+
+class Raw:
+    """A hook answer written as the whole response, not HTTP-framed, then the connection
+    closes."""
+
+    def __init__(self, data):
+        self.data = data
+
+
 class FakeStation:
     def __init__(self, user="admin", password="secret", station_name="FakeStation"):
         self.user, self.password = user, password
@@ -37,7 +49,8 @@ class FakeStation:
         self.config_path = None
         self.save_rewrites = True
         self.sessions = set()
-        # Fault injection: hook(frame) -> None (serve normally) or (code, body_bytes, headers).
+        # Fault injection: hook(frame) -> None (serve normally), (code, body_bytes, headers),
+        # or a transport fault: DROP (close with no answer) or Raw(bytes) (the whole answer).
         self.hook = None
         # Called with each applied syncTo op, so a test can tamper with the model
         # afterwards (e.g. to simulate a read-back mismatch).
@@ -113,6 +126,12 @@ class FakeStation:
                     return
                 if station.hook is not None:
                     injected = station.hook(json.loads(raw))
+                    if injected is DROP or isinstance(injected, Raw):
+                        station._record(raw, 0, b"" if injected is DROP else injected.data)
+                        if injected is not DROP:
+                            self.wfile.write(injected.data)
+                        self.close_connection = True
+                        return
                     if injected is not None:
                         code, payload, headers = injected
                         station._record(raw, code, payload)
