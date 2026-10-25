@@ -47,6 +47,7 @@ type runConfig struct {
 	timeout                                    time.Duration
 	keepHome, verifyLow, restoreRoot           bool
 	excludeJars                                []string // --exclude-jar globs, in flag order
+	allow                                      IgnoredAllowance
 }
 
 // plan is a validated run: the install, %TEMP%, %USERPROFILE%, the scratch parent and, once created, the
@@ -138,7 +139,16 @@ func parseRun(args []string) (runConfig, error) {
 	fs.BoolVar(&c.restoreRoot, "restore-gradle-root", false, "")
 	fs.Var(verificationFlag{&c.verifyLow}, "module-verification", "")
 	fs.Var(excludeFlag{&c.excludeJars}, "exclude-jar", "")
+	var count, why string
+	fs.StringVar(&count, "allow-ignored-count", "", "")
+	fs.StringVar(&why, "allow-ignored-reason", "", "")
 	if err := fs.Parse(args); err != nil {
+		return c, fmt.Errorf("run: %v", err)
+	}
+	set := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
+	var err error
+	if c.allow, err = parseAllowance(count, set["allow-ignored-count"], why, set["allow-ignored-reason"]); err != nil {
 		return c, fmt.Errorf("run: %v", err)
 	}
 	if fs.NArg() > 0 {
@@ -483,7 +493,7 @@ func (h host) testExe(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	code := testngVerdict(p.sub("out/testng/testng-results.xml"), []string{p.sub("out/stderr.txt")}, s, nil)
+	code := testngVerdict(p.sub("out/testng/testng-results.xml"), []string{p.sub("out/stderr.txt")}, p.allow, s, nil)
 	if code != exitPass {
 		signatureHint(p, s, p.sub("out/stderr.txt"), p.sub("out/stdout.txt"))
 	}

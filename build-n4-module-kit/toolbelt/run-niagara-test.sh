@@ -6,12 +6,14 @@
 # retro testing-parity-btestng). This tool reads the output instead (kit spec C40, Go tool G33).
 #
 # Usage: run-niagara-test.sh verdict [<log>|-]     (no <log> or - reads standard input)
-#        run-niagara-test.sh verdict --testng <testng-results.xml> [<log>|-]
+#        run-niagara-test.sh verdict --testng <testng-results.xml> [--allow-ignored-count <n> --allow-ignored-reason <why>]
+#                                    [<log>|-]
 #        run-niagara-test.sh run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
 #                                [--timeout <dur, default 30m>] [--keep-home] [--scratch <dir>]
 #                                [--jdk8 <WSL JDK 8 dir, default /usr/lib/jvm/java-8-openjdk-amd64>]
 #                                [--gradle-user-home <dir, default ~/.gradle>] [--module-verification low]
 #                                [--exclude-jar <glob>]... [--restore-gradle-root] [--log-dir <dir>]
+#                                [--allow-ignored-count <n> --allow-ignored-reason <why>]
 # Contract: PASS only when the log holds at least one `Total tests run: N` line and every one has N > 0 and
 # `Failures: 0`. FAIL on a summary with 0 tests, failures or no Failures count; a `Failures:` key outside a
 # summary with a count above 0 or a value that is no count; `invalid test target(s)`; `failed signature
@@ -21,7 +23,10 @@
 # holds only shutdown thread dumps. <dir>/testng-results.xml is the authoritative verdict; a console log
 # (capture stderr, or 2>&1, never stdout alone) is a cross-check. PASS only when its root has total > 0,
 # failed = 0 and skipped = 0, no test-method (config methods included: a failed setupStation skips its tests) has status
-# FAIL, and the root counts match the test-methods. A missing, malformed, truncated or over-64 MiB file is
+# FAIL, the root counts match the test-methods, and its ignored count is 0. Ignored methods (@Test(enabled = false)
+# or excluded) are only a count in the file, never named, so `--allow-ignored-count <n> --allow-ignored-reason <why>`
+# (both or neither, else exit 2; n from 1; the reason one printable line) waives exactly n and prints the reason; more
+# ignored than n (a new disable) or fewer (a stale allowance) is FAIL. run takes the same pair. A missing, malformed, truncated or over-64 MiB file is
 # FAIL (exit 1), with a row per failed test-method (20 at most, then "and N more"). A <log>, when given, still
 # fails the run on its rejections and failure counts; its missing summary line is no reason.
 # Exits: 0 PASS; 1 FAIL; 2 usage; 3 unreadable log, or the Go tool cannot be built.

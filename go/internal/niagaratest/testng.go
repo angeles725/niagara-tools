@@ -25,18 +25,20 @@ type Method struct {
 // TestNGResult is the verdict on one testng-results.xml, the file `bin\test.exe <module> -output:<dir>` writes:
 // the authoritative record of the run (its `Total tests run` summaries go to stderr, not stdout). Root says a <testng-results> root was read; Total, Passed,
 // Failed and Skipped are its attributes, -1 when missing or no count. Failing lists every FAIL test-method in
-// document order. Reasons holds every cause of a FAIL.
+// document order. Reasons holds every cause of a FAIL. Ignored is the optional root ignored count (0 when
+// absent, -1 when no count); Allowed, when set, says an IgnoredAllowance waived exactly that many.
 type TestNGResult struct {
-	Pass                           bool
-	Root                           bool
-	Total, Passed, Failed, Skipped int
-	Failing                        []Method
-	Reasons                        []string
+	Pass                                    bool
+	Root                                    bool
+	Total, Passed, Failed, Skipped, Ignored int
+	Failing                                 []Method
+	Reasons                                 []string
+	Allowed                                 string
 }
 
-// TestNGFile opens path and judges it with TestNG. A file that cannot be opened or is larger than
+// TestNGFile opens path and judges it with TestNG, allow waiving its ignored methods. A file that cannot be opened or is larger than
 // MaxTestNGBytes is a FAIL: a run that wrote no results file is no pass.
-func TestNGFile(path string) TestNGResult {
+func TestNGFile(path string, allow IgnoredAllowance) TestNGResult {
 	f, err := os.Open(path)
 	if err != nil {
 		return unread().fail(fmt.Sprintf("cannot read %s: %s", path, strerror.Text(err)))
@@ -48,20 +50,19 @@ func TestNGFile(path string) TestNGResult {
 		return unread().fail(fmt.Sprintf("file larger than %d MiB (%d bytes): not read", MaxTestNGBytes>>20, MaxTestNGBytes))
 	}
 	// The cap holds again for a file that grows after Stat: the read ends at the cap, mid-document, as malformed.
-	return TestNG(io.LimitReader(f, MaxTestNGBytes))
+	return TestNG(io.LimitReader(f, MaxTestNGBytes), allow)
 }
 
 // unread is the result before the root is read: no counts.
 func unread() TestNGResult { return TestNGResult{Total: -1, Passed: -1, Failed: -1, Skipped: -1} }
 
 // TestNG reads a testng-results document token by token. It passes only when the root is <testng-results>
-// with total > 0, failed = 0 and skipped = 0, no test-method has status FAIL (configuration methods
+// with total > 0, failed = 0 and skipped = 0, ignored = 0 or exactly the count allow waives, no test-method has status FAIL (configuration methods
 // included: they are not in the root counts, and their failure skips tests), the document is well-formed to
 // its end, and the root counts agree with the statuses of the non-config test-methods.
-func TestNG(r io.Reader) TestNGResult {
+func TestNG(r io.Reader, allow IgnoredAllowance) TestNGResult {
 	res := unread()
 	dec := xml.NewDecoder(r)
-	ignored := 0
 	seen := map[string]int{"PASS": 0, "FAIL": 0, "SKIP": 0}
 	configFails := 0
 	for {
@@ -84,7 +85,7 @@ func TestNG(r io.Reader) TestNGResult {
 				return res.fail(fmt.Sprintf("root element <%s>, not <testng-results>", el.Name.Local))
 			}
 			res.Root = true
-			ignored = res.rootCounts(el)
+			res.rootCounts(el)
 			continue
 		}
 		if el.Name.Local != "test-method" {
@@ -109,7 +110,7 @@ func TestNG(r io.Reader) TestNGResult {
 	if !res.Root {
 		return res.fail("no testng-results root (empty file)")
 	}
-	res.counts(seen, ignored, configFails)
+	res.counts(seen, configFails, allow)
 	res.Pass = len(res.Reasons) == 0
 	return res
 }
@@ -120,16 +121,15 @@ func (r TestNGResult) fail(reason string) TestNGResult {
 	return r
 }
 
-// rootCounts reads the root's count attributes in a fixed order, a reason for each one missing or no count,
-// and returns ignored (optional: 0 when absent).
-func (r *TestNGResult) rootCounts(el xml.StartElement) int {
-	ignored := 0
+// rootCounts reads the root's count attributes in a fixed order, a reason for each one missing or no count
+// (ignored is optional: 0 when absent).
+func (r *TestNGResult) rootCounts(el xml.StartElement) {
 	for _, a := range []struct {
 		key      string
 		dst      *int
 		optional bool
 	}{{"total", &r.Total, false}, {"passed", &r.Passed, false}, {"failed", &r.Failed, false},
-		{"skipped", &r.Skipped, false}, {"ignored", &ignored, true}} {
+		{"skipped", &r.Skipped, false}, {"ignored", &r.Ignored, true}} {
 		v, found := attrOK(el, a.key)
 		if !found {
 			if !a.optional {
@@ -145,13 +145,12 @@ func (r *TestNGResult) rootCounts(el xml.StartElement) int {
 		}
 		*a.dst = int(n)
 	}
-	return ignored
 }
 
 // counts adds the reasons of the root counts once the whole document is read. A root attribute that is
 // missing or no count already failed the run, and the cross-checks need every count, so they are skipped.
-func (r *TestNGResult) counts(seen map[string]int, ignored, configFails int) {
-	if r.Total < 0 || r.Passed < 0 || r.Failed < 0 || r.Skipped < 0 || ignored < 0 {
+func (r *TestNGResult) counts(seen map[string]int, configFails int, allow IgnoredAllowance) {
+	if r.Total < 0 || r.Passed < 0 || r.Failed < 0 || r.Skipped < 0 || r.Ignored < 0 {
 		return
 	}
 	if r.Total == 0 {
@@ -171,9 +170,10 @@ func (r *TestNGResult) counts(seen map[string]int, ignored, configFails int) {
 			"root counts passed %d, failed %d, skipped %d disagree with the test-methods: %d PASS, %d FAIL, %d SKIP",
 			r.Passed, r.Failed, r.Skipped, seen["PASS"], seen["FAIL"], seen["SKIP"]))
 	}
-	if sum := r.Passed + r.Failed + r.Skipped + ignored; sum != r.Total {
+	if sum := r.Passed + r.Failed + r.Skipped + r.Ignored; sum != r.Total {
 		r.Reasons = append(r.Reasons, fmt.Sprintf("root total %d is not passed+failed+skipped+ignored (%d)", r.Total, sum))
 	}
+	r.judgeIgnored(allow)
 }
 
 func attr(el xml.StartElement, key string) string {

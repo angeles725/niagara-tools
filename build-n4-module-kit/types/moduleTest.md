@@ -616,6 +616,11 @@ the main Gradle section above).
   a failed `setupStation` skips its tests, which the root counts as skipped, not failed) has status FAIL
   and the root counts match the test-methods; a missing or malformed file is FAIL.
   `[ev: retro r10-run-niagara-test-testng Δ1]`
+- **The root `total` counts ignored methods that never ran:** `@Test(enabled = false)` (or a group exclusion) adds
+  to `ignored` and `total` only, with no `test-method` element, so a run of 43 with 20 disabled reads green once its
+  2 failures are fixed. `verdict --testng` and `run` FAIL any ignored count unless `--allow-ignored-count <n>
+  --allow-ignored-reason <why>` waives exactly n (the reason is printed); more ignored than n, fewer (a stale
+  allowance), or a count with no reason (exit 2) is never a pass `[ev: retro r10-rnt-ignored-methods Δ1]`.
 - **`niagaraTest` is `bin/test`:** the task only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
   (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so `test.exe <module>` on a scratch COPY of the home (not a
   symlink mirror: Windows sees its links as dangling junctions) runs the same tests without gradle; set
