@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -25,6 +24,7 @@ const (
 		`<class name="test.com.example.ModuleA.BExampleStationTest"><test-method status="FAIL" name="reads_value"/></class></test></suite></testng-results>`
 	greenLog = "Total tests run: 1, Failures: 0, Skips: 0\r\n"
 	tempWin  = `C:\Users\you\AppData\Local\Temp`
+	profWin  = `C:\Users\you`
 )
 
 // fake is the command runner seam: it records every call and answers with a per-kind handler.
@@ -36,11 +36,12 @@ type fake struct {
 	on    map[string]func(context.Context, Cmd) (int, error)
 }
 
-// fixture is a fake Windows drive (mnt/c) holding an install and %TEMP%, plus a gradle root.
+// fixture is a fake Windows drive (mnt/c) holding an install, %TEMP% and a real Niagara user home
+// (%USERPROFILE%\Niagara4.15\brand), plus a gradle root and a WSL JDK 8.
 type fixture struct {
-	mnt, install, temp, gradle string
-	f                          *fake
-	h                          host
+	mnt, install, temp, gradle, userHome, jdk string
+	f                                         *fake
+	h                                         host
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -53,11 +54,17 @@ func newFixture(t *testing.T) *fixture {
 		write(t, filepath.Join(fx.install, p), "x")
 	}
 	write(t, filepath.Join(fx.gradle, "gradlew"), "#!/bin/sh\n")
+	fx.userHome = filepath.Join(fx.mnt, "c", "Users", "you", "Niagara4.15", "brand")
+	for _, p := range []string{"registry/registry.db", "registry/registry.chk", "security/keystore", "logs/l.txt"} {
+		write(t, filepath.Join(fx.userHome, p), "x")
+	}
+	fx.jdk = t.TempDir()
+	write(t, filepath.Join(fx.jdk, "bin", "javac"), "x")
 	if err := os.MkdirAll(fx.temp, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	fx.f = &fake{t: t, fx: fx, on: map[string]func(context.Context, Cmd) (int, error){}}
-	fx.h = host{run: fx.f, mnt: fx.mnt, home: "/nonexistent-home"}
+	fx.h = host{run: fx.f, mnt: fx.mnt, home: "/nonexistent-home", jdk8: fx.jdk}
 	return fx
 }
 
@@ -92,10 +99,12 @@ func kindOf(c Cmd) string {
 			return "preflight"
 		}
 		return "procs"
-	case c.Name == "cmd.exe" && len(c.Args) > 1 && c.Args[0] == "/v:on":
+	case strings.HasSuffix(c.Name, "/bin/test.exe"):
 		return "test"
 	case c.Name == "cmd.exe" && len(c.Args) > 1 && c.Args[1] == "echo %TEMP%":
 		return "temp"
+	case c.Name == "cmd.exe" && len(c.Args) > 1 && c.Args[1] == "echo %USERPROFILE%":
+		return "profile"
 	case c.Name == "cmd.exe" && len(c.Args) > 1:
 		return c.Args[1]
 	}
@@ -125,18 +134,22 @@ func (f *fake) Run(ctx context.Context, c Cmd) (int, error) {
 	return f.std(c)
 }
 
-// std is the green route: robocopy copies for real, gradle succeeds, test.exe writes a green XML.
+// std is the green route: robocopy copies for real, gradle succeeds, test.exe writes a green XML and its
+// registry into the scratch niagara_user_home.
 func (f *fake) std(c Cmd) (int, error) {
 	switch kindOf(c) {
 	case "temp":
 		fmt.Fprint(c.Stdout, tempWin+"\r\n")
+	case "profile":
+		fmt.Fprint(c.Stdout, profWin+"\r\n")
 	case "preflight", "procs":
 		fmt.Fprint(c.Stdout, "DONE\r\n")
 	case "robocopy":
 		f.robocopy(c.Args[2:])
 		return 1, nil
 	case "test":
-		f.testExe(c, greenXML, greenLog, "0")
+		f.testExe(c, greenXML, greenLog)
+		f.useNUH(c)
 	}
 	return 0, nil
 }
@@ -171,15 +184,18 @@ func (f *fake) robocopy(args []string) {
 	})
 }
 
-var outRe, errRe = regexp.MustCompile(`-output:(\S+)`), regexp.MustCompile(`2>(\S+)`)
-
-func (f *fake) testExe(c Cmd, xml, log, exit string) {
-	line := c.Args[len(c.Args)-1]
-	write(f.t, filepath.Join(f.wsl(outRe.FindStringSubmatch(line)[1]), "testng-results.xml"), xml)
-	write(f.t, f.wsl(errRe.FindStringSubmatch(line)[1]), log)
-	if exit != "" {
-		fmt.Fprintf(c.Stdout, "EXIT=%s\r\n", exit)
+// useNUH is a test.exe that honours the niagara_user_home its environment carries: the NRE creates its etc\
+// and security\ there.
+func (f *fake) useNUH(c Cmd) {
+	for _, p := range []string{"etc/nre.properties", "security/keystore.jceks"} {
+		write(f.t, filepath.Join(f.wsl(argValue(c.Env, "niagara_user_home=")), p), "x")
 	}
+}
+
+// testExe writes the results file into the -output: dir and the console log to stderr.
+func (f *fake) testExe(c Cmd, xml, log string) {
+	write(f.t, filepath.Join(f.wsl(argValue(c.Args, "-output:")), "testng-results.xml"), xml)
+	fmt.Fprint(c.Stderr, log)
 }
 
 func (f *fake) kinds() []string {
@@ -239,12 +255,13 @@ func TestRunGreenRoute(t *testing.T) {
 	if code != exitPass {
 		t.Fatalf("exit %d\n%s", code, out)
 	}
-	want := "temp preflight robocopy gradle test procs"
+	want := "temp profile preflight robocopy gradle test procs"
 	if got := strings.Join(fx.f.kinds(), " "); got != want {
 		t.Errorf("steps %q, want %q", got, want)
 	}
 	for _, w := range []string{"PASS  run-niagara-test  verdict: 1 test run, 0 failed, 0 skipped (testng-results)",
-		"PASS  run-niagara-test  install unchanged (", "copy: 1 jar skipped (dotted module name): stray.77-rt.jar"} {
+		"PASS  run-niagara-test  install unchanged (", "PASS  run-niagara-test  real user homes unchanged (5 entries checked)",
+		"copy: 1 jar skipped (dotted module name): stray.77-rt.jar"} {
 		if !strings.Contains(out, w) {
 			t.Errorf("no %q in\n%s", w, out)
 		}
@@ -264,8 +281,8 @@ func TestRunGreenRoute(t *testing.T) {
 	if uh := argValue(g.Args, "-Pniagara_user_home="); !strings.HasSuffix(uh, "/nuh") || !strings.HasPrefix(uh, fx.temp) {
 		t.Errorf("niagara_user_home %q is not scratch", uh)
 	}
-	if len(g.Env) != 1 || !strings.HasPrefix(g.Env[0], "JAVA_TOOL_OPTIONS=-Duser.home="+fx.temp) {
-		t.Errorf("gradle env %q", g.Env)
+	if uh := envValue(g.Env, "JAVA_TOOL_OPTIONS="); !strings.HasPrefix(uh, "-Duser.home="+fx.temp) {
+		t.Errorf("gradle env %q: user.home is not scratch", g.Env)
 	}
 	if l := fx.leftovers(t); len(l) != 0 {
 		t.Errorf("left in %%TEMP%%: %q", l)
@@ -370,16 +387,23 @@ func replace(args []string, old, repl string) []string {
 
 func TestRunVerdictWiredToXML(t *testing.T) {
 	t.Parallel()
-	cases := []struct{ name, xml, exit, want string }{
-		{"red XML", redXML, "-1", "FAIL  run-niagara-test  testng: test-method reads_value FAIL"},
-		{"exit -1 but results green", greenXML, "-1", "FAIL  run-niagara-test  run: exit -1 but results green"},
-		{"no exit status read", greenXML, "", "FAIL  run-niagara-test  run: no exit status read"},
+	cases := []struct {
+		name, xml string
+		exit      int
+		want      string
+	}{
+		{"red XML", redXML, 255, "FAIL  run-niagara-test  testng: test-method reads_value FAIL"},
+		{"exit -1 (255 through WSL) but results green", greenXML, 255, "FAIL  run-niagara-test  run: exit 255 but results green"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			fx := newFixture(t)
-			fx.f.on["test"] = func(_ context.Context, c Cmd) (int, error) { fx.f.testExe(c, tc.xml, greenLog, tc.exit); return 0, nil }
+			fx.f.on["test"] = func(_ context.Context, c Cmd) (int, error) {
+				fx.f.testExe(c, tc.xml, greenLog)
+				fx.f.useNUH(c)
+				return tc.exit, nil
+			}
 			code, out := fx.run(t, append([]string{"run"}, fx.args()...)...)
 			if code != exitFail || !strings.Contains(out, tc.want) {
 				t.Errorf("exit %d, want 1 with %q:\n%s", code, tc.want, out)

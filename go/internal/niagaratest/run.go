@@ -28,6 +28,7 @@ const (
 	defaultTimeout = 30 * time.Minute
 	maxTimeout     = 24 * time.Hour
 	cleanupTimeout = 2 * time.Minute
+	defaultJDK8    = "/usr/lib/jvm/java-8-openjdk-amd64"
 )
 
 // copiedDirs are the install dirs the home copy takes whole; modules/ is copied jar by jar (copyJars).
@@ -37,21 +38,22 @@ var (
 	partRe    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*(:[A-Za-z0-9][A-Za-z0-9_.-]*)*$`)
 	moduleRe  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 	versionRe = regexp.MustCompile(`^[0-9]+(\.[0-9]+)+$`)
-	exitRe    = regexp.MustCompile(`EXIT=(-?[0-9]+)`)
 )
 
 // runConfig is the parsed command line of run.
 type runConfig struct {
 	install, gradleRoot, part, module, scratch string
+	jdk8, gradleUserHome                       string
 	timeout                                    time.Duration
 	keepHome                                   bool
 }
 
-// plan is a validated run: the install, %TEMP%, the scratch parent and, once created, the scratch dir.
+// plan is a validated run: the install, %TEMP%, %USERPROFILE%, the scratch parent and, once created, the
+// scratch dir.
 type plan struct {
 	runConfig
-	install, temp, parent, dir winDir
-	windows                    bool // a Windows-side step started: cleanup must look for its processes
+	install, temp, profile, parent, dir winDir
+	windows                             bool // a Windows-side step started: cleanup must look for its processes
 }
 
 func (p *plan) home() winDir        { return winDir{p.dir.wsl + "/home", p.dir.win + `\home`} }
@@ -65,7 +67,7 @@ func runCmd(args []string, s cli.Stdio) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	home, _ := os.UserHomeDir()
-	return host{run: execRunner{}, mnt: "/mnt", home: home}.runMain(ctx, append([]string{"run"}, args...), s)
+	return host{run: execRunner{}, mnt: "/mnt", home: home, jdk8: defaultJDK8}.runMain(ctx, append([]string{"run"}, args...), s)
 }
 
 // runMain parses `run …`, validates every path and probe, then runs the test with its cleanup.
@@ -76,6 +78,12 @@ func (h host) runMain(ctx context.Context, args []string, s cli.Stdio) int {
 	cfg, err := parseRun(args[1:])
 	if err != nil {
 		return usageError(s, err.Error())
+	}
+	if cfg.jdk8 == "" {
+		cfg.jdk8 = h.jdk8
+	}
+	if cfg.gradleUserHome == "" && h.home != "" {
+		cfg.gradleUserHome = filepath.Join(h.home, ".gradle")
 	}
 	p, code := h.validate(ctx, cfg, s)
 	if code >= 0 {
@@ -93,6 +101,8 @@ func parseRun(args []string) (runConfig, error) {
 	fs.StringVar(&c.part, "part", "", "")
 	fs.StringVar(&c.module, "module", "", "")
 	fs.StringVar(&c.scratch, "scratch", "", "")
+	fs.StringVar(&c.jdk8, "jdk8", "", "")
+	fs.StringVar(&c.gradleUserHome, "gradle-user-home", "", "")
 	fs.DurationVar(&c.timeout, "timeout", defaultTimeout, "")
 	fs.BoolVar(&c.keepHome, "keep-home", false, "")
 	if err := fs.Parse(args); err != nil {
@@ -137,14 +147,25 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	if info, err := os.Stat(filepath.Join(cfg.gradleRoot, "gradlew")); err != nil || !info.Mode().IsRegular() {
 		return refuse("--gradle-root %s has no gradlew", cfg.gradleRoot)
 	}
-	out := &capped{max: maxCaptured}
-	if code, err := h.run.Run(ctx, Cmd{Name: "cmd.exe", Args: []string{"/c", "echo %TEMP%"}, Stdout: out}); err != nil || code != 0 {
-		fmt.Fprintf(s.Err, "%s: run: cannot read %%TEMP%% through cmd.exe (exit %d, %v)\n", name, code, err)
-		return nil, exitEnv
+	if info, err := os.Stat(filepath.Join(cfg.jdk8, "bin", "javac")); err != nil || !info.Mode().IsRegular() {
+		return refuse("--jdk8 %s has no bin/javac (a WSL JDK 8)", cfg.jdk8)
 	}
-	if p.temp, err = h.canonical("%TEMP%", strings.TrimSpace(out.buf.String())); err != nil {
-		fmt.Fprintf(s.Err, "%s: run: %v\n", name, err)
-		return nil, exitEnv
+	if !filepath.IsAbs(cfg.gradleUserHome) {
+		return refuse("--gradle-user-home %q is not an absolute WSL path", cfg.gradleUserHome)
+	}
+	for _, v := range []struct {
+		name string
+		dst  *winDir
+	}{{"%TEMP%", &p.temp}, {"%USERPROFILE%", &p.profile}} {
+		out := &capped{max: maxCaptured}
+		if code, err := h.run.Run(ctx, Cmd{Name: "cmd.exe", Args: []string{"/c", "echo " + v.name}, Stdout: out}); err != nil || code != 0 {
+			fmt.Fprintf(s.Err, "%s: run: cannot read %s through cmd.exe (exit %d, %v)\n", name, v.name, code, err)
+			return nil, exitEnv
+		}
+		if *v.dst, err = h.canonical(v.name, strings.TrimSpace(out.buf.String())); err != nil {
+			fmt.Fprintf(s.Err, "%s: run: %v\n", name, err)
+			return nil, exitEnv
+		}
 	}
 	p.parent = p.temp
 	if cfg.scratch != "" {
@@ -167,8 +188,16 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	if !ok {
 		return refuse("cannot verify that no station uses the install (the PowerShell probe failed)")
 	}
+	svcs := services(rows)
 	for _, r := range rows {
 		switch {
+		case strings.HasPrefix(r, "SVC\t"):
+		case strings.HasPrefix(r, "UNREAD\t"):
+			pass, refusal := attribute(r, svcs, p.install.win)
+			if refusal != "" {
+				return refuse("%s", refusal)
+			}
+			row(s, "PASS", pass)
 		case strings.HasPrefix(r, "PROC "):
 			return refuse("a running process uses the install: %s", r)
 		case strings.HasPrefix(r, "LOCK "):
@@ -188,6 +217,11 @@ func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
 		fmt.Fprintf(s.Err, "%s: run: cannot snapshot the install: %v\n", name, err)
 		return exitEnv
 	}
+	users, err := userHomeSnapshot(p.profile)
+	if err != nil {
+		fmt.Fprintf(s.Err, "%s: run: cannot snapshot the real user homes: %v\n", name, err)
+		return exitEnv
+	}
 	dir, err := os.MkdirTemp(p.parent.wsl, "run-niagara-test-")
 	if err != nil {
 		fmt.Fprintf(s.Err, "%s: run: %v\n", name, err)
@@ -195,7 +229,7 @@ func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
 	}
 	win, _ := h.toWin(dir)
 	p.dir = winDir{dir, win}
-	defer func() { code = h.cleanup(p, snap, s, code) }()
+	defer func() { code = h.cleanup(p, snap, users, s, code) }()
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 	for _, step := range []struct {
@@ -301,7 +335,9 @@ func pluginVersion(home string) (string, error) {
 }
 
 // build runs gradle in WSL against the copy: :jar and :moduleTestJar install into the copy's modules/, and
-// every home gradle or the signing plugin writes (niagara_user_home, user.home) is scratch.
+// every home the signing plugin writes (niagara_user_home, user.home) is scratch. Gradle's own cache is the
+// caller's (GRADLE_USER_HOME: no 7.6 download per run), and its JDK the WSL JDK 8 (-P overrides a client
+// gradle.properties that names a Windows JDK path, which WSL gradle cannot parse).
 func (h host) build(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	v, err := pluginVersion(p.home().wsl)
 	if err != nil {
@@ -319,8 +355,9 @@ func (h host) build(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	defer log.Close()
 	code, err := h.run.Run(ctx, Cmd{Name: "bash", Dir: p.gradleRoot, Stdout: log, Stderr: log,
 		Args: []string{"./gradlew", "--no-daemon", "--max-workers=4", "-Pniagara_home=" + p.home().wsl,
-			"-Pniagara_user_home=" + p.sub("nuh"), "-PniagaraPluginVersion=" + v, ":" + p.part + ":jar", ":" + p.part + ":moduleTestJar"},
-		Env: []string{"JAVA_TOOL_OPTIONS=-Duser.home=" + p.sub("gradle-uh")}})
+			"-Pniagara_user_home=" + p.sub("nuh"), "-PniagaraPluginVersion=" + v, "-Porg.gradle.java.installations.paths=" + p.jdk8,
+			":" + p.part + ":jar", ":" + p.part + ":moduleTestJar"},
+		Env: []string{"JAVA_HOME=" + p.jdk8, "GRADLE_USER_HOME=" + p.gradleUserHome, "JAVA_TOOL_OPTIONS=-Duser.home=" + p.sub("gradle-uh")}})
 	if err != nil || code == 0 {
 		return -1, err
 	}
@@ -343,31 +380,49 @@ func tail(path string, n int64) string {
 	return string(b)
 }
 
-// testExe runs bin\test.exe on the copy with a scratch niagara_user_home, its streams in files, then judges
-// testng-results.xml with stderr as the console cross-check; the exit code is a third check only.
+// testExe runs the copy's bin\test.exe straight from WSL, with the copy as cwd and its streams in files, then
+// judges testng-results.xml with stderr as the console cross-check; the exit code is a third check only (WSL
+// reports the Windows exit -1 as 255). The scratch niagara_user_home reaches the NRE through the interop
+// environment (WSLENV niagara_user_home/w): a cmd.exe `set "…"` does not, as WSL re-quotes its inner quotes.
+// D3 still gates it: the NRE must have created etc\ and security\ in the scratch home, and cleanup compares
+// the real user homes.
 func (h host) testExe(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
-	line := fmt.Sprintf(`set "niagara_user_home=%s" && cd /d %s && bin\test.exe %s -v:2 -output:%s 1>%s 2>%s & echo EXIT=!ERRORLEVEL!`,
-		p.subWin("nuh"), p.home().win, p.module, p.subWin("out/testng"), p.subWin("out/stdout.txt"), p.subWin("out/stderr.txt"))
-	out := &capped{max: maxCaptured}
-	if _, err := h.run.Run(ctx, Cmd{Name: "cmd.exe", Args: []string{"/v:on", "/c", line}, Stdout: out}); err != nil {
+	files := map[string]*os.File{}
+	for _, n := range []string{"stdout", "stderr"} {
+		f, err := os.Create(p.sub("out/" + n + ".txt"))
+		if err != nil {
+			return -1, err
+		}
+		defer f.Close()
+		files[n] = f
+	}
+	wslenv := "niagara_user_home/w"
+	if v := os.Getenv("WSLENV"); v != "" {
+		wslenv = v + ":" + wslenv
+	}
+	exit, err := h.run.Run(ctx, Cmd{Name: p.home().wsl + "/bin/test.exe", Dir: p.home().wsl,
+		Args:   []string{p.module, "-v:2", "-output:" + p.subWin("out/testng")},
+		Env:    []string{"WSLENV=" + wslenv, "niagara_user_home=" + p.subWin("nuh")},
+		Stdout: files["stdout"], Stderr: files["stderr"]})
+	if err != nil {
 		return -1, err
 	}
 	code := testngVerdict(p.sub("out/testng/testng-results.xml"), []string{p.sub("out/stderr.txt")}, s, nil)
-	m := exitRe.FindStringSubmatch(out.buf.String())
 	switch {
-	case m == nil:
-		row(s, "FAIL", "run: no exit status read")
-	case m[1] != "0" && code == exitPass:
-		row(s, "FAIL", "run: exit "+m[1]+" but results green")
+	case !isDir(p.sub("nuh/etc")) || !isDir(p.sub("nuh/security")):
+		row(s, "FAIL", "scratch niagara_user_home was not used (no etc/ and security/ in it)")
+	case exit != 0 && code == exitPass:
+		row(s, "FAIL", fmt.Sprintf("run: exit %d but results green", exit))
 	default:
 		return code, nil
 	}
 	return exitFail, nil
 }
 
-// cleanup kills the Windows processes of this run, compares the install with its snapshot and deletes the
-// scratch dir the run created (only that dir, unless --keep-home). It can only make code worse.
-func (h host) cleanup(p *plan, snap snapshot, s cli.Stdio, code int) int {
+// cleanup kills the Windows processes of this run, compares the install with its snapshot, deletes the
+// scratch dir the run created (only that dir, unless --keep-home), then compares the real user homes with
+// theirs. It can only make code worse.
+func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int {
 	worse := func(c int) {
 		if code == exitPass {
 			code = c
@@ -391,11 +446,18 @@ func (h host) cleanup(p *plan, snap snapshot, s cli.Stdio, code int) int {
 	}
 	if p.keepHome {
 		row(s, "PASS", "cleanup: kept "+p.dir.win)
-		return code
-	}
-	if err := os.RemoveAll(p.dir.wsl); err != nil {
+	} else if err := os.RemoveAll(p.dir.wsl); err != nil {
 		row(s, "FAIL", "cleanup: cannot delete "+p.dir.win+": "+err.Error())
 		worse(exitEnv)
+	}
+	if now, err := userHomeSnapshot(p.profile); err != nil {
+		row(s, "FAIL", "real user homes unchanged: cannot re-read them: "+err.Error())
+		worse(exitFail)
+	} else if d := users.diff(now); d != "" {
+		row(s, "FAIL", "real user home changed during the run: "+d)
+		worse(exitFail)
+	} else {
+		row(s, "PASS", fmt.Sprintf("real user homes unchanged (%d entries checked)", len(users)))
 	}
 	return code
 }
