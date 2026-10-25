@@ -9,9 +9,9 @@
 #   --vendor <v>     display vendor name (copyright, defaultVendor); default Angeles
 #   --target-version <x.y>  baja target version; default 4.14
 #   --plugin-version <v>    Niagara Gradle plugin version baked into settings.gradle.kts; default 7.6.17
-#   --type <logic|dashboard>  scaffold type (default: logic)
-#                    logic     — single-profile -rt skeleton (MinimalPan fixture)
-#                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture)
+#   --type <logic|dashboard|driver>  scaffold type (default: logic)
+#                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
+#                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay
 #                    driver    — NDriver -rt (UDP comm config subclass, codec, discovery) + -wb point manager
 #                                (MinimalDriver fixture; types/driver-authoring.md § 1.6-§ 1.11, § 5, § 12)
 #
@@ -179,6 +179,40 @@ while IFS= read -r -d '' src; do
         "$src" > "$dst" ;;
   esac
 done < <(find "$FIXTURE_ROOT" -type f -print0)
+
+################################################################
+# Station-test overlay (logic + dashboard only): a Fox-off BTestNgStation fixture base,
+# a link-in sample test and moduleTest-include.xml, from templates/station-test
+# (types/moduleTest.md). The driver fixture ships its own loopback station test.
+# Template tokens: ModuleA → <ModuleName>, com.example → com.<vendor-lc>,
+# Example → <vendor>, @LINK_IN_SLOTS@ → the fixture component's link-in slots.
+################################################################
+case "$TYPE" in
+  logic)     LINK_IN_SLOTS='"setpoint", "interval"' ;;
+  dashboard) LINK_IN_SLOTS='"setpoint", "status"' ;;
+  *)         LINK_IN_SLOTS="" ;;
+esac
+if [ -n "$LINK_IN_SLOTS" ]; then
+  ST_ROOT="${_SCRIPT_DIR}/../templates/station-test"
+  if [ ! -f "${ST_ROOT}/moduleTest-include.xml" ]; then
+    printf 'scaffold-module: station-test template not found: %s\n' "${ST_ROOT}" >&2
+    exit 3
+  fi
+  ST_DEST="${DEST}/${MOD}/${MOD}-rt"
+  while IFS= read -r -d '' src; do
+    rel="${src#"${ST_ROOT}"/}"
+    dst_rel="$(printf '%s' "$rel" \
+      | sed -e "s|com/example/|com/${VENDOR_LC}/|g" -e "s|ModuleA|${MOD}|g")"
+    dst="${ST_DEST}/${dst_rel}"
+    mkdir -p "$(dirname "$dst")"
+    sed \
+      -e "s|@LINK_IN_SLOTS@|${LINK_IN_SLOTS}|g" \
+      -e "s|com\.example\.|com.${VENDOR_LC}.|g" \
+      -e "s|ModuleA|${MOD}|g" \
+      -e "s|Example|${VENDOR}|g" \
+      "$src" > "$dst"
+  done < <(find "$ST_ROOT" -type f -print0)
+fi
 
 # Preserve executable bit on gradlew (binary copy loses the chmod recorded in git)
 chmod +x "${DEST}/gradlew"

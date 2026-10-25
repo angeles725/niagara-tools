@@ -203,6 +203,15 @@ public void ngTestLinkCheck2() {
 
 ## Checklist before adding a moduleTest
 
+A scaffolded module already has one. `toolbelt/scaffold-module.sh --type logic|dashboard` emits the station test
+from `templates/station-test` into `<Mod>-rt`: `B<Mod>StationTestBase` (a `BTestNgStation` with Fox off, which
+tolerates only the exact `Fox service did not start in time` failure while the station runs; unique per-test
+mounts removed in `@AfterMethod`; `await` and `holds` helpers), `B<Mod>LinkTest` (for each slot in
+`LINK_IN_SLOTS`: LinkCheck accepts a link from a plain source, the slot is not READONLY, and a BLink carries a
+change to each double slot), `moduleTest-include.xml`, and both test dependencies in the gradle file. `--type
+driver` ships its loopback test instead (`types/driver-authoring.md` § 12.1). Add every new link-in slot to
+`LINK_IN_SLOTS`. `[ev: retro r10-scaffold-station-test Δ1]`
+
 1. `srcTest/com/<vendor>/<mod>/test/BYourModuleTest.java` — extends `BTestNg`, `@NiagaraType`, TestNG
    annotations.
 2. `<part>/moduleTest-include.xml` — registers the test type; does NOT appear in `module-include.xml`.
@@ -239,6 +248,16 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   another process holds open, and a probe that cannot tell refuses too `[ev: retro r10-run-niagara-test-run Δ2]` (a service's `station.exe`, whose path a non-elevated probe cannot read, is attributed
   through its `niagarad` service's `PathName`; one that cannot be attributed is refused `[ev: retro r10-rnt-run-live-fixes Δ3]`); a scratch outside `%TEMP%`; a build home inside the install. The install is never
   written: a change in its `modules/`, `etc/`, `security/` or top level is FAIL.
+- It also refuses (exit 2, before any copy) a `LocalSigningProfile` named by `niagaraSigningProfile` (in
+  `GRADLE_USER_HOME/gradle.properties`, else the gradle root's) whose `niagara.signing.validity` minus
+  `niagara.signing.refresh` is below 32 days, and names both values. The signing plugin sets a new key's notAfter
+  to day `validity` of the current month (`Calendar.set(DAY_OF_MONTH, validity)`, niagara-plugins 7.6.22
+  `LocalSigningProfile.kt:388`) and re-mints the key when fewer than `refresh` days are left (`:216-225`). A
+  throwaway 30/15 profile on 25 October therefore minted a 5-day key at every signing; the jars failed `cannot
+  verify signature block file`, the NRE dropped them and test.exe printed only `invalid test target(s)`. Write a
+  throwaway profile with the plugin defaults, 365/183, and no `niagara.signing.keypass.<alias>` entry (the plugin
+  adds it; a pre-seeded one fails `:jar` with `Password for <alias> already present`).
+  `[ev: retro r10-scaffold-station-test Δ5]`
 - The scratch user home reaches the NRE through the environment: `bin/test.exe` runs straight from WSL with the
   copy as cwd, `niagara_user_home=<Windows path>` and `WSLENV` extended with `niagara_user_home/w` (the NRE reads
   `niagara_user_home` before it falls back to `%USERPROFILE%\Niagara<maj>.<min>\<brand>`). A `set
