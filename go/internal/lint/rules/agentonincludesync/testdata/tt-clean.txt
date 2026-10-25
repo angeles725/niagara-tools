@@ -1,0 +1,26 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 0
+-- stderr --
+-- ModuleA/ModuleA-rt/module-include.xml --
+<types>
+  <type name="Pan" class="com.x.BPan"/>
+</types>
+-- ModuleA/ModuleA-rt/moduleTest-include.xml --
+<types>
+  <type name="ModuleATest" class="com.x.test.BModuleATest"/>
+</types>
+-- ModuleA/ModuleA-rt/src/com/x/BPan.java --
+package com.x;
+@NiagaraType
+public class BPan {}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BModuleATest.java --
+package com.x.test;
+// mentions com.x.BPan in a comment: not a test class
+@NiagaraType
+public class BModuleATest extends BTestNg {}
+-- ModuleA/ModuleA-rt/srcTest/com/x/src/BTestOnly.java --
+package com.x.src;
+@NiagaraType
+public class BTestOnly {}

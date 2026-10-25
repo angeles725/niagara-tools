@@ -1,0 +1,12 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 3
+-- stderr --
+lint-agent-on-include-sync: @DIR@/ModuleA/ModuleA-rt/moduleTest-include.xml:2:1: element <types> opened at 1:1 is never closed
+-- ModuleA/ModuleA-rt/module-include.xml --
+<types>
+  <type name="ModuleATest" class="com.x.test.BModuleATest"/>
+</types>
+-- ModuleA/ModuleA-rt/moduleTest-include.xml --
+<types>

@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: run-niagara-test run --exclude-jar keeps stale install jars out of the copy -->
+log: 2026-10-25 · quality round 10 → `run-niagara-test run --exclude-jar <glob>` (`go/internal/niagaratest`), repeatable: the top-level `modules\*.jar` a glob matches stay out of the disposable copy, so a stale jar of the module under test (an old `<module>-ux.jar`) never sits next to the freshly built jars; one `copy: excluded <n> jar(s) matching <glob>` row per glob (10 names, then "and N more"); a glob matching no jar is FAIL, exit 2, before anything is copied; the glob is a case-insensitive jar basename of letters, digits, `_ . - * ?` (a path, `..` or a metacharacter is exit 2). The install is never written. Retro retros/2026-10-25-r10-rnt-exclude-jar.md (pending). [ev: retro r10-rnt-exclude-jar]
+open_issue: `--exclude-jar` is proven only on the fake runner; a live `run` against an install holding a stale `<module>-ux.jar` is owed (retro r10-rnt-exclude-jar Δ1).

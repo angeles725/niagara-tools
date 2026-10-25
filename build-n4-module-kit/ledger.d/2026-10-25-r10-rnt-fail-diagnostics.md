@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: run-niagara-test run keeps a redacted run log on a failed run -->
+log: 2026-10-25 · quality round 10 → `run-niagara-test run` run log (`go/internal/niagaratest/diagnostics.go`): on exit 1, 3 or 4, before cleanup deletes the scratch dir, the last 200 stderr and 50 stdout lines of test.exe (a line ring, 4 KiB a line, at most the file's last 8 MiB read) and the `-output:` listing are read, then written last with the runner's rows and the exit status to `<UTC timestamp>-<module>.log` (0600) under `--log-dir` (default `$XDG_STATE_HOME/run-niagara-test`, 0700), row `diagnostics kept: <path>`; scratch, copy, `%USERPROFILE%` and `$HOME` are redacted to `<scratch>`/`<copy>`/`<you>`, install paths stay; a green run writes one only with `--log-dir` or `--keep-home`. Retro retros/2026-10-25-r10-rnt-fail-diagnostics.md (pending). [ev: retro r10-rnt-fail-diagnostics]
+open_issue: the run log is proven only on the fake runner; a live failed `run` that shows the kept log with real test.exe output and its redaction is owed (retro r10-rnt-fail-diagnostics Δ1).

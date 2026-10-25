@@ -40,6 +40,7 @@ type fake struct {
 // (%USERPROFILE%\Niagara4.15\brand), plus a gradle root and a WSL JDK 8.
 type fixture struct {
 	mnt, install, temp, gradle, userHome, jdk string
+	state                                     string // the WSL state dir run logs default under
 	f                                         *fake
 	h                                         host
 }
@@ -54,6 +55,10 @@ func newFixture(t *testing.T) *fixture {
 		write(t, filepath.Join(fx.install, p), "x")
 	}
 	write(t, filepath.Join(fx.gradle, "gradlew"), "#!/bin/sh\n")
+	write(t, filepath.Join(fx.gradle, "ModuleA-rt", "module-include.xml"), "<types/>\n")
+	fx.git(t, "init", "-q")
+	fx.git(t, "add", "-A")
+	fx.git(t, "commit", "-q", "-m", "fixture")
 	fx.userHome = filepath.Join(fx.mnt, "c", "Users", "you", "Niagara4.15", "brand")
 	for _, p := range []string{"registry/registry.db", "registry/registry.chk", "security/keystore", "logs/l.txt"} {
 		write(t, filepath.Join(fx.userHome, p), "x")
@@ -64,7 +69,8 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	fx.f = &fake{t: t, fx: fx, on: map[string]func(context.Context, Cmd) (int, error){}}
-	fx.h = host{run: fx.f, mnt: fx.mnt, home: "/nonexistent-home", jdk8: fx.jdk}
+	fx.state = t.TempDir()
+	fx.h = host{run: fx.f, mnt: fx.mnt, home: "/nonexistent-home", jdk8: fx.jdk, state: fx.state}
 	return fx
 }
 
@@ -89,9 +95,11 @@ func (fx *fixture) run(t *testing.T, args ...string) (int, string) {
 	return code, o.String() + e.String()
 }
 
-// kindOf names a call: temp, preflight, procs, robocopy, taskkill, gradle or test.
+// kindOf names a call: temp, preflight, procs, robocopy, taskkill, gradle, test or git-<verb>.
 func kindOf(c Cmd) string {
 	switch {
+	case c.Name == "git":
+		return "git-" + gitVerb(c.Args)
 	case c.Name == "bash":
 		return "gradle"
 	case c.Name == "powershell.exe":
@@ -131,12 +139,15 @@ func (f *fake) Run(ctx context.Context, c Cmd) (int, error) {
 	if h != nil {
 		return h(ctx, c)
 	}
-	return f.std(c)
+	return f.std(ctx, c)
 }
 
 // std is the green route: robocopy copies for real, gradle succeeds, test.exe writes a green XML and its
 // registry into the scratch niagara_user_home.
-func (f *fake) std(c Cmd) (int, error) {
+func (f *fake) std(ctx context.Context, c Cmd) (int, error) {
+	if c.Name == "git" {
+		return f.fx.realGit(ctx, c)
+	}
 	switch kindOf(c) {
 	case "temp":
 		fmt.Fprint(c.Stdout, tempWin+"\r\n")
@@ -255,7 +266,7 @@ func TestRunGreenRoute(t *testing.T) {
 	if code != exitPass {
 		t.Fatalf("exit %d\n%s", code, out)
 	}
-	want := "temp profile preflight robocopy gradle test procs"
+	want := "temp profile preflight git-rev-parse git-status robocopy gradle test procs git-status"
 	if got := strings.Join(fx.f.kinds(), " "); got != want {
 		t.Errorf("steps %q, want %q", got, want)
 	}

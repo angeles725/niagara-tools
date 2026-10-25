@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -92,7 +93,7 @@ func TestRunModuleVerificationLowAppendsOneLine(t *testing.T) {
 			if !strings.Contains(out, "PASS  run-niagara-test  module verification: low (copy only)") {
 				t.Errorf("no module verification row:\n%s", out)
 			}
-			if fx.f.kinds()[4] != "gradle" {
+			if ks := fx.f.kinds(); ks[slices.Index(ks, "robocopy")+1] != "gradle" {
 				t.Errorf("steps %q", fx.f.kinds())
 			}
 		})

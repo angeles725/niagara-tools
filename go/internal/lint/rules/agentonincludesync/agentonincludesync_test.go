@@ -10,4 +10,4 @@ import (
 // to record): single string, array, two @AgentOn, @AgentOn in a comment or a string, a line with no <agent>,
 // a partial set, a class absent from module-include.xml, a nested type, a part with no module-include.xml,
 // a root with none (exit 3), a malformed file (exit 3), srcTest/ and non-src files skipped, usage.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 13) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 19) }

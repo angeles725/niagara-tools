@@ -9,7 +9,8 @@ usage: run-niagara-test verdict [<log>|-]
        run-niagara-test verdict --testng <testng-results.xml> [<log>|-]
        run-niagara-test run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
                             [--timeout <dur>] [--keep-home] [--scratch <dir>] [--jdk8 <dir>]
-                            [--gradle-user-home <dir>] [--module-verification low]
+                            [--gradle-user-home <dir>] [--module-verification low] [--exclude-jar <glob>]...
+                            [--restore-gradle-root] [--log-dir <dir>]
   verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
            or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
            "Total tests run: N" line has N > 0 and 0 failures; a stray Failures count, "invalid test
@@ -36,7 +37,23 @@ usage: run-niagara-test verdict [<log>|-]
            --module-verification low (TEST ONLY, off by default) appends niagara.moduleVerificationMode=low
            to the copy's defaults\system.properties, never the install's (4.15 defaults to medium, which
            rejects a self-signed test jar; 4.14 ships low); the install's file is hashed before and after.
+           --exclude-jar <glob> (repeatable; a jar basename of letters, digits, _ . - * ?, case-insensitive)
+           leaves the matching top-level modules\*.jar out of the copy (a stale <module>-ux.jar beside the
+           freshly built jars); a glob matching no jar is FAIL, exit 2, before anything is copied.
+           --gradle-root must be a git worktree (else exit 3, before any copy): its git status, every listed
+           file hashed, is taken before the copy and after cleanup, and any change is FAIL (plugin 7.3.40's
+           compileModuleTestJava appends the test types to the production module-include.xml).
+           --restore-gradle-root then checks out only the files that were clean before and the build
+           modified; it never touches a file already dirty, never deletes an untracked file (it lists them),
+           and the run stays FAIL.
+           A failed run (exit 1, 3 or 4 once its scratch dir exists) keeps a run log before the dir is deleted:
+           --log-dir (default $XDG_STATE_HOME/run-niagara-test, else ~/.local/state/run-niagara-test, made
+           0700) gets <UTC timestamp>-<module>.log (0600) with the runner's rows, the last 200 stderr and 50
+           stdout lines of test.exe (each cut at 4 KiB), the -output: dir listing and the exit status, and a
+           "diagnostics kept: <path>" row. The scratch dir and its home copy read <scratch> and <copy>, the
+           %USERPROFILE% and the WSL home <you>; install paths stay. A green run writes one only with an
+           explicit --log-dir or --keep-home.
 exit: verdict 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
-      run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout
+      run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, git, robocopy, gradle, cleanup), 4 timeout
 -- @kind --
 truth: hand-written from the C40 contract (testdata/README.md); there is no bash tool to record from

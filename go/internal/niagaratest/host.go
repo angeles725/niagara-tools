@@ -32,10 +32,11 @@ type Runner interface {
 // host is where a run happens: the runner, the WSL mount root of the Windows drives, the WSL home, and the
 // WSL JDK 8 the build uses unless --jdk8 names another.
 type host struct {
-	run  Runner
-	mnt  string
-	home string
-	jdk8 string
+	run   Runner
+	mnt   string
+	home  string
+	jdk8  string
+	state string
 }
 
 // execRunner runs a real process in its own process group; ctx ending kills the whole group.
