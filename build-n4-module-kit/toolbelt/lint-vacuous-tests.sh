@@ -35,6 +35,7 @@
 # Mutation: VT2 -- not resolving helpers flags the check(...) test as no-assertion
 # Mutation: VT3 -- dropping the always-skipped check reads assumeTrue(false) as a test that runs
 # Mutation: VT4 -- skipping the stale check passes an --allow that names a test which is not flagged
+# Mutation: VT5-static -- not resolving static imports flags the static-imported await(...) test as no-assertion
 # VCS-free by design.
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
