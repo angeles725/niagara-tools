@@ -14,7 +14,7 @@ import (
 )
 
 // TestGolden replays every run recorded from the bash verify-module.sh (testdata/*.txt).
-func TestGolden(t *testing.T) { golden.RunMain(t, Main, 171) }
+func TestGolden(t *testing.T) { golden.RunMain(t, Main, 173) }
 
 // write creates every file of tree under dir; a ".jar" key is a zip of its "|"-separated name=text entries.
 func write(t *testing.T, dir string, tree map[string]string) {

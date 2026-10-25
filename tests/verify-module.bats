@@ -385,6 +385,20 @@ KTS
   [[ "$output" == *"FAIL  moduletest"* ]]
 }
 
+@test "MT5: a production module-include.xml registering a srcTest/ type FAILs moduletest (exit 1)" {
+  # Mutation: MT5 -- dropping the testTypesInProd call in moduleTest passes this part (PASS moduletest)
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x" "$TMPDIR_T/mod/Foo-rt/srcTest/com/x/test"
+  : > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  printf 'package com.x.test;\n@NiagaraType\npublic class BFooTest extends BTestNg {}\n' > "$TMPDIR_T/mod/Foo-rt/srcTest/com/x/test/BFooTest.java"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A com.x.test.BFooTest
+  printf '<moduleTest><types/></moduleTest>\n' > "$TMPDIR_T/mod/Foo-rt/moduleTest-include.xml"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  moduletest  $TMPDIR_T/Foo-rt.jar  com.x.test.BFooTest: test type in the production module-include.xml (source $TMPDIR_T/mod/Foo-rt/srcTest/com/x/test/BFooTest.java)"* ]]
+  [[ "$output" != *"PASS  moduletest"* ]]
+}
+
 @test "MT4: a -ux jar is skipped by moduletest (check is -rt-only)" {
   good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-ux.jar" "$TMPDIR_T/d"
   mkdir -p "$TMPDIR_T/mod/Foo-ux/src/com/x"; : > "$TMPDIR_T/mod/Foo-ux/src/com/x/A.java"
