@@ -77,6 +77,24 @@ test_class() {
   [ "$status" -eq 3 ]
 }
 
+@test "VT5-static: a test asserting only through a static-imported srcTest helper is clean; a non-asserting one FAILs" {
+  # Mutation: VT5-static -- not resolving static imports flags the static-imported await(...) test as no-assertion
+  printf '%s\n' 'package com.example.test;' 'import static org.testng.Assert.assertTrue;' 'public class ModuleAFixture {' \
+    '  static void await(boolean c) { assertTrue(c); }' '}' > "$T/ModuleAFixture.java"
+  printf '%s\n' 'package com.example.test;' 'public class ModuleANoop {' \
+    '  static void await(boolean c) { System.out.println(c); }' '}' > "$T/ModuleANoop.java"
+  printf '%s\n' 'package com.example.test;' 'import static com.example.test.ModuleAFixture.*;' \
+    'import org.testng.annotations.Test;' 'public class BDeltaTest {' '  @Test' '  public void m1() { await(compute() > 0); }' '}' \
+    > "$T/BDeltaTest.java"
+  printf '%s\n' 'package com.example.test;' 'import static com.example.test.ModuleANoop.*;' \
+    'import org.testng.annotations.Test;' 'public class BEpsilonTest {' '  @Test' '  public void m1() { await(compute() > 0); }' '}' \
+    > "$T/BEpsilonTest.java"
+  run "$L" "$ROOT"
+  [ "$status" -eq 1 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" == "FAIL  no-assertion  $T/BEpsilonTest.java:6  BEpsilonTest.m1: no assertion "* ]]
+}
+
 @test "VT-env: an unparseable source and a root with no srcTest/ *.java are exit 3" {
   printf '%s\n' 'class BBadTest {' '  /* never closed' > "$T/BBadTest.java"
   run "$L" "$ROOT"
