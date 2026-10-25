@@ -13,9 +13,48 @@ permissions:
   contents: read
 
 jobs:
-  checks:
-    name: shellcheck + bats + ledger sweep
+  # The checks run as four parallel jobs (go, bats, lint-sweeps, mcp-n4-go); the wall time is the slowest
+  # job, not their sum. Every step of the former single `checks` job runs in exactly one of them.
+  go:
+    name: Go gofmt + vet + test + build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
+
+      # The mcp-n4 target (go/internal/mcpn4/pytarget.Minor): the Go differentials compare against
+      # it and skip on any other python3, so CI must provide it. Later steps run it too.
+      - name: Set up CPython 3.15 (the mcp-n4 target the Go differentials compare against)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+
+      - name: Go gofmt + vet + test (go/)
+        run: |
+          cd go
+          # The assignment fails the step when gofmt itself fails; a non-empty list fails it too.
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
+          go vet ./...
+          # A differential against another python3 would skip, not pass: refuse that in CI.
+          # -count=1: tests read files through subprocesses Go does not track, so a cached result could be stale.
+          MCP_N4_PYTHON="$(command -v python3)" go test -count=1 ./...
+
+      - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
+        run: cd go && go build -o bin/ ./cmd/...
+
+  bats:
+    name: bats unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -50,6 +89,39 @@ jobs:
       - name: Install bats
         run: sudo apt-get update && sudo apt-get install -y bats
 
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
+
+      # The python3 the bats suites have always run on (CI pinned it for the Go differentials before the
+      # split into jobs): keep the same interpreter on PATH here.
+      - name: Set up CPython 3.15 (the mcp-n4 target the Go differentials compare against)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+
+      - name: bats (all unit tests)
+        run: bats tests/*.bats
+
+      - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
+        run: |
+          bats --formatter tap tests/run-pure-test.bats | tee /tmp/run-pure-test.tap
+          if grep -q '# skip' /tmp/run-pure-test.tap; then
+            printf 'ERROR: run-pure-test.bats produced SKIP lines — junit pre-fetch may have failed\n' >&2
+            exit 1
+          fi
+
+  lint-sweeps:
+    name: shellcheck + ledger sweeps + kit lints
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
       - name: Install shellcheck (pinned — reproducible, no version drift)
         run: |
           SC=v0.10.0
@@ -65,44 +137,8 @@ jobs:
           cache: true
           cache-dependency-path: go/go.mod
 
-      # The mcp-n4 target (go/internal/mcpn4/pytarget.Minor): the Go differentials compare against
-      # it and skip on any other python3, so CI must provide it. Later steps run it too.
-      - name: Set up CPython 3.15 (the mcp-n4 target the Go differentials compare against)
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.15"
-
-      - name: Go gofmt + vet + test (go/)
-        run: |
-          cd go
-          # The assignment fails the step when gofmt itself fails; a non-empty list fails it too.
-          unformatted="$(gofmt -l .)"
-          if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
-          go vet ./...
-          # A differential against another python3 would skip, not pass: refuse that in CI.
-          # -count=1: tests read files through subprocesses Go does not track, so a cached result could be stale.
-          MCP_N4_PYTHON="$(command -v python3)" go test -count=1 ./...
-
-      - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
-        run: cd go && go build -o bin/ ./cmd/...
-
       - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
         run: shellcheck scripts/*.sh scripts/lib/*.sh go/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/toolbelt/lib/*.sh build-n4-module-kit/templates/client-pre-push .githooks/* tests/*.bats tests/helpers/*.bash
-
-      - name: bats (all unit tests)
-        run: bats tests/*.bats
-
-      # Go is the default server since S16 (the mcp-n4-go job runs it); this step pins the fallback.
-      - name: mcp-n4-kit unittest (Python fallback server)
-        run: MCP_N4_IMPL=python python3 -m unittest discover -s mcp-n4-kit/tests -v
-
-      - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
-        run: |
-          bats --formatter tap tests/run-pure-test.bats | tee /tmp/run-pure-test.tap
-          if grep -q '# skip' /tmp/run-pure-test.tap; then
-            printf 'ERROR: run-pure-test.bats produced SKIP lines — junit pre-fetch may have failed\n' >&2
-            exit 1
-          fi
 
       - name: sweep-build-state + sweep-fold-audit over fresh kit-state output (BUILD-STATE ↔ retros/INDEX coherence; folded retros cited)
         run: |
@@ -192,8 +228,10 @@ jobs:
           bash build-n4-module-kit/toolbelt/triage-console.sh --package com.angeles \
             tests/fixtures/triage-console/console.txt | grep -q 'IllegalArgumentException'
 
+
   # The mcp-n4 black-box suite against the Go server (mcp-n4-kit/docs/go-port-plan.md section 20).
-  # Its own job so the bound covers it alone; no mutation testing here (it OOM-killed runners).
+  # Its own job so the bound covers it alone, with the Python fallback suite beside it; no mutation testing
+  # here (it OOM-killed runners).
   mcp-n4-go:
     name: mcp-n4 black-box suite (Go server)
     runs-on: ubuntu-latest
@@ -219,3 +257,7 @@ jobs:
 
       - name: mcp-n4-kit unittest (Go server)
         run: MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests -v
+
+      # Go is the default server since S16 (the step above runs it); this step pins the fallback.
+      - name: mcp-n4-kit unittest (Python fallback server)
+        run: MCP_N4_IMPL=python python3 -m unittest discover -s mcp-n4-kit/tests -v
