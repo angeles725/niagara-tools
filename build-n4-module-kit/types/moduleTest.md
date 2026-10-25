@@ -83,6 +83,15 @@ added to the production `module-include.xml` — that would ship test code in th
 types → `moduleTestJar` only.  A `moduleTestJar` is built by the Gradle plugin alongside the regular jar
 when this file is present. `[ev: corpus B958 §958.4]`
 
+**Plugin-version trap (gradle plugin 7.3.40, iC-Niagara 4.13):** `:<part>:compileModuleTestJava` runs the
+annotation processor against the production `module-include.xml` and appends every `@NiagaraType` class under
+`srcTest/` to it. An ordinary `:<part>:jar` after that ships the test types in the production jar's
+`module.xml`. Run `git status` after every moduleTest compile and revert any new `<type>` line in
+`module-include.xml`. The check catches it: `lint-agent-on-include-sync.sh` sub-check `test-type-in-prod`
+(run by `report-module.sh`) and the `moduletest` row of `verify-module.sh --src` FAIL a production `<type>`
+whose class is declared under the part's `srcTest/` or listed in its `moduleTest-include.xml`.
+`[ev: retro r10-lint-test-types-in-prod]`
+
 ---
 
 ## Gradle dependencies (`.gradle.kts`)

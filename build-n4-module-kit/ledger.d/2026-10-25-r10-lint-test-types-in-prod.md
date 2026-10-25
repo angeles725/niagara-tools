@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: test-type-in-prod sub-check (lint-agent-on-include-sync + verify-module moduletest) -->
+log: 2026-10-25 · quality round 10 → `lint-agent-on-include-sync.sh` gains sub-check `test-type-in-prod` (`go/internal/lint/rules/agentonincludesync/testtypes.go`): FAIL a production `module-include.xml` `<type class>` declared under the part's `srcTest/` (naming the source) or listed in its `moduleTest-include.xml`; a malformed `moduleTest-include.xml` exits 3. Gradle plugin 7.3.40 (iC-Niagara 4.13) `compileModuleTestJava` appends srcTest `@NiagaraType` classes to the production file. `verify-module.sh --src` runs the same check (`PartTestLeaks`) first in its `moduletest` row on every part; report-module reaches it through its existing member (RM7d). `types/moduleTest.md` gains the plugin-version trap. Retro retros/2026-10-25-r10-lint-test-types-in-prod.md (pending). [ev: retro r10-lint-test-types-in-prod]
+open_issue: the 7.3.40 append behavior is the coordinator's observation, not reproduced on a plugin here (retro r10-lint-test-types-in-prod).
