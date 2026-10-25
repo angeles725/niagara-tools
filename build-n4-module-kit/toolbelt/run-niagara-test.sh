@@ -6,11 +6,18 @@
 # retro testing-parity-btestng). This tool reads the output instead (kit spec C40, Go tool G33).
 #
 # Usage: run-niagara-test.sh verdict [<log>|-]     (no <log> or - reads standard input)
+#        run-niagara-test.sh verdict --testng <testng-results.xml> [<log>|-]
 # Contract: PASS only when the log holds at least one `Total tests run: N` line and every one has N > 0 and
 # `Failures: 0`. FAIL on a summary with 0 tests, failures or no Failures count; a `Failures:` key outside a
 # summary with a count above 0 or a value that is no count; `invalid test target(s)`; `failed signature
 # validation`; a malformed summary; no summary at all; or a line longer than 1 MiB (the rest is unread). One `PASS|FAIL  run-niagara-test  <detail>` row per
 # summary line and per other reason, then the verdict row.
+# --testng: `test.exe <module> -v:2 -output:<dir>` prints NO summary line on its console (only thread dumps);
+# the verdict lives in <dir>/testng-results.xml. PASS only when its root has total > 0, failed = 0 and
+# skipped = 0, no test-method (config methods included: a failed setupStation skips its tests) has status
+# FAIL, and the root counts match the test-methods. A missing, malformed, truncated or over-64 MiB file is
+# FAIL (exit 1), with a row per failed test-method (20 at most, then "and N more"). A <log>, when given, still
+# fails the run on its rejections and failure counts; its missing summary line is no reason.
 # Exits: 0 PASS; 1 FAIL; 2 usage; 3 unreadable log, or the Go tool cannot be built.
 # Phase 1 is the verdict only: running the test (scratch copy, :clean, test.exe, jar backup and restore) is owed.
 #

@@ -482,6 +482,13 @@ the main Gradle section above).
   exit code. Phase 1 is the verdict only: run the test yourself (§ Running from WSL; `:clean` first, back up and
   restore `modules/<part>.jar`) until the runner half of G33 lands. `[ev: retro testing-parity-btestng Δ2]`
   `[ev: retro r10-run-niagara-test-go]`
+- **`test.exe <module> -v:2 -output:<dir>` prints no `Total tests run` line:** its console holds only thread
+  dumps, so a console verdict there is always FAIL (no summary). The verdict lives in
+  `<dir>/testng-results.xml`: judge it with `toolbelt/run-niagara-test.sh verdict --testng
+  <dir>/testng-results.xml [<console log>]`. PASS only when the root has total > 0, failed = 0, skipped = 0, no
+  `test-method` (config methods included: a failed `setupStation` skips its tests, which the root counts as
+  skipped, not failed) has status FAIL and the root counts match the test-methods; a missing or malformed file
+  is FAIL. `[ev: retro r10-run-niagara-test-testng Δ1]`
 - **`niagaraTest` is `bin/test`:** the task only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
   (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so `test.exe <module>` on a scratch COPY of the home (not a
   symlink mirror: Windows sees its links as dangling junctions) runs the same tests without gradle; set
