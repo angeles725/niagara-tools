@@ -2,13 +2,12 @@ package journal
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // The helper runs safety.Journal, n4_list_batches and the journal checks of _rollback_plan on
@@ -129,11 +128,13 @@ var gateKinds = []string{"must be a 32-character", "unknown batch", "is itself a
 var ids = []any{idA, idB, idC, idD, idA + "\n", idA + "\n\n", "x", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", nil, 5}
 
 func TestJournalDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "journal")
 	dirs := []string{fixtureDir}
 	for i, body := range edgeJournals {
 		dir := filepath.Join(t.TempDir(), "s")
+		if i == 0 { // every t.TempDir of the test shares this parent
+			g.Alias(filepath.Dir(filepath.Dir(dir)), "$TMP")
+		}
 		os.MkdirAll(dir, 0o700)
 		if i > 0 { // the first edge case is a state dir without a journal
 			os.WriteFile(filepath.Join(dir, "journal.jsonl"), []byte(body), 0o600)
@@ -154,15 +155,7 @@ func TestJournalDifferentialPython(t *testing.T) {
 		got = append(got, goSide(dir, these)...)
 	}
 	data, _ := pyjson.Marshal(cases, pyjson.Options{})
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, helperScript)
-	cmd.Stdin = strings.NewReader(string(data))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
-	}
-	want, err := pyjson.Loads(out)
+	want, err := pyjson.Loads(g.Run(helperScript, data))
 	if err != nil || len(want.([]any)) != len(got) {
 		t.Fatalf("python answered %v for %d Go results (%v)", len(want.([]any)), len(got), err)
 	}

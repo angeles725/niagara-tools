@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/tiers"
 )
@@ -179,9 +180,12 @@ func goDraft(t *testing.T, dir string, st sessionState) string {
 }
 
 func TestDraftDifferentialPython(t *testing.T) {
+	g := golden.Open(t, "draft")
 	fixture, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit", "tests", "fixtures", "journal", "python-written"))
 	states := sessionStates()
 	dirs := []string{fixture, filepath.Join(t.TempDir(), "missing")}
+	g.Alias(fixture, "$FIXTURE")
+	g.Alias(filepath.Dir(filepath.Dir(dirs[1])), "$TMP") // every t.TempDir of the test shares it
 	for _, st := range states {
 		dir := t.TempDir()
 		for name, body := range map[string]string{"audit.jsonl": st.audit, "journal.jsonl": st.journal} {
@@ -205,7 +209,7 @@ func TestDraftDifferentialPython(t *testing.T) {
 		c.Set("obs", obs)
 		cases = append(cases, c)
 	}
-	want := runPython(t, draftScript, cases)
+	want := runPython(t, g, draftScript, cases)
 	kinds := map[string]int{}
 	for i, st := range states {
 		got := goDraft(t, dirs[i], st)

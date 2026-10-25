@@ -2,15 +2,12 @@ package cli
 
 import (
 	"bytes"
-	"os"
-	"os/exec"
-	"path/filepath"
+	"encoding/json"
 	"strings"
-	"sync"
 	"testing"
 
 	kitcli "github.com/angeles725/niagara-tools/go/internal/cli"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 )
 
 func run(args []string, stdin string) (code int, out, errOut string) {
@@ -43,47 +40,71 @@ var argvCorpus = [][]string{
 	{"--allow-writes", "--station", "a=b"},
 }
 
-// TestDifferentialPython is the command-line equivalence proof: for every argv above, exit code,
-// stdout and stderr equal those of `python3 -m mcp_n4.server` with an empty stdin (argparse at
-// 80 columns, no color).
-// It skips, naming the Python found, unless that is the target CPython (pytarget.Minor).
-func TestDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+// serverScript starts `python3 -m mcp_n4.server` from the kit once per argv of the case, four
+// at a time, with the case's environment added and an empty stdin, and prints each exit code,
+// stdout and stderr. Arguments and output travel as Latin-1 text, so any byte round-trips.
+const serverScript = `import json, os, subprocess, sys
+from concurrent.futures import ThreadPoolExecutor
+case = json.load(sys.stdin)
+env = dict(os.environ, **case["env"])
+def run(argv):
+    p = subprocess.run([os.fsencode(sys.executable), b"-m", b"mcp_n4.server"] + [a.encode("latin-1") for a in argv],
+                       cwd=sys.path[0], env=env, stdin=subprocess.DEVNULL, capture_output=True)
+    return [p.returncode, p.stdout.decode("latin-1"), p.stderr.decode("latin-1")]
+with ThreadPoolExecutor(4) as pool:
+    print(json.dumps(list(pool.map(run, case["argvs"]))))`
+
+type result struct {
+	code     int
+	out, err string
+}
+
+// pythonServer is what serverScript, recorded in g, answers for each argv.
+func pythonServer(t *testing.T, g *golden.Golden, env map[string]string, argvs [][]string) []result {
+	t.Helper()
+	latin1 := func(s string) string { // each byte as the code point of the same value
+		r := make([]rune, len(s))
+		for i := range len(s) {
+			r[i] = rune(s[i])
+		}
+		return string(r)
+	}
+	bytesOf := func(s string) string {
+		var b []byte
+		for _, r := range s {
+			b = append(b, byte(r))
+		}
+		return string(b)
+	}
+	var enc [][]string
+	for _, argv := range argvs {
+		e := []string{}
+		for _, a := range argv {
+			e = append(e, latin1(a))
+		}
+		enc = append(enc, e)
+	}
+	in, err := json.Marshal(map[string]any{"env": env, "argvs": enc})
 	if err != nil {
 		t.Fatal(err)
 	}
-	type result struct {
-		code     int
-		out, err string
+	var rows [][3]any
+	if err := json.Unmarshal(g.Run(serverScript, in), &rows); err != nil || len(rows) != len(argvs) {
+		t.Fatalf("python answered %d of %d argvs (%v)", len(rows), len(argvs), err)
 	}
-	want := make([]result, len(argvCorpus))
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, 4)
-	for i, argv := range argvCorpus {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			cmd := exec.Command(py, append([]string{"-m", "mcp_n4.server"}, argv...)...)
-			cmd.Dir = kit
-			cmd.Env = append(os.Environ(), "COLUMNS=80", "NO_COLOR=1", "PYTHON_COLORS=0", "PYTHONDONTWRITEBYTECODE=1")
-			var o, e bytes.Buffer
-			cmd.Stdout, cmd.Stderr = &o, &e
-			code := 0
-			if err := cmd.Run(); err != nil {
-				ee, ok := err.(*exec.ExitError)
-				if !ok {
-					t.Errorf("%q: %v", argv, err)
-					return
-				}
-				code = ee.ExitCode()
-			}
-			want[i] = result{code, o.String(), e.String()}
-		}()
+	out := make([]result, len(rows))
+	for i, r := range rows {
+		out[i] = result{int(r[0].(float64)), bytesOf(r[1].(string)), bytesOf(r[2].(string))}
 	}
-	wg.Wait()
+	return out
+}
+
+// TestDifferentialPython is the command-line equivalence proof: for every argv above, exit code,
+// stdout and stderr equal those of `python3 -m mcp_n4.server` with an empty stdin (argparse at
+// 80 columns, no color), recorded in testdata/argv.golden.jsonl.
+func TestDifferentialPython(t *testing.T) {
+	want := pythonServer(t, golden.Open(t, "argv"),
+		map[string]string{"COLUMNS": "80", "NO_COLOR": "1", "PYTHON_COLORS": "0", "PYTHONDONTWRITEBYTECODE": "1"}, argvCorpus)
 	for i, argv := range argvCorpus {
 		code, out, errOut := run(argv, "")
 		if got := (result{code, out, errOut}); got != want[i] {
