@@ -1,0 +1,84 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 0
+A-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-rt  SKIP  lint-lexicon-ascii  no *.lexicon under A-rt
+A-rt  PASS  lint-link-target-flags  clean (no wiring map)
+A-rt  PASS  lint-no-system-out  clean
+A-rt  PASS  lint-slotomatic-markers  clean
+A-rt  PASS  lint-recovery-path  clean
+A-rt  PASS  lint-config-sanity  clean
+A-rt  PASS  lint-no-md5-credential-digest  clean
+A-rt  PASS  lint-size  clean
+A-rt  PASS  lint-license-isoperational-gate  clean
+A-rt  PASS  lint-set-null-ord  clean
+A-rt  PASS  lint-ws-placement  clean
+A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+B-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+B-ux  SKIP  lint-lexicon-ascii  no *.lexicon under B-ux
+B-ux  PASS  lint-link-target-flags  clean (no wiring map)
+B-ux  PASS  lint-no-system-out  clean
+B-ux  PASS  lint-slotomatic-markers  clean
+B-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
+B-ux  SKIP  lint-servlet  no BWebServlet
+B-ux  SKIP  rc-scan  no src/rc/
+B-ux  PASS  lint-no-md5-credential-digest  clean
+B-ux  PASS  lint-size  clean
+B-ux  PASS  lint-license-isoperational-gate  clean
+B-ux  PASS  lint-set-null-ord  clean
+B-ux  PASS  lint-ws-placement  clean
+B-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+C-wb  SKIP  verify-module  no built jar under build/libs (floor check not run)
+C-wb  SKIP  lint-lexicon-ascii  no *.lexicon under C-wb
+C-wb  PASS  lint-link-target-flags  clean (no wiring map)
+C-wb  PASS  lint-no-system-out  clean
+C-wb  PASS  lint-slotomatic-markers  clean
+C-wb  PASS  lint-no-md5-credential-digest  clean
+C-wb  PASS  lint-size  clean
+C-wb  PASS  lint-license-isoperational-gate  clean
+C-wb  PASS  lint-set-null-ord  clean
+C-wb  PASS  lint-ws-placement  clean
+C-wb  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+D-se  SKIP  verify-module  no built jar under build/libs (floor check not run)
+D-se  SKIP  lint-lexicon-ascii  no *.lexicon under D-se
+D-se  PASS  lint-link-target-flags  clean (no wiring map)
+D-se  PASS  lint-no-system-out  clean
+D-se  PASS  lint-slotomatic-markers  clean
+D-se  PASS  lint-se-display  clean
+D-se  PASS  lint-no-md5-credential-digest  clean
+D-se  PASS  lint-size  clean
+D-se  PASS  lint-license-isoperational-gate  clean
+D-se  PASS  lint-set-null-ord  clean
+D-se  PASS  lint-ws-placement  clean
+D-se  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+E  SKIP  verify-module  no built jar under build/libs (floor check not run)
+E  SKIP  lint-lexicon-ascii  no *.lexicon under E
+E  PASS  lint-link-target-flags  clean (no wiring map)
+E  PASS  lint-no-system-out  clean
+E  PASS  lint-slotomatic-markers  clean
+E  PASS  lint-no-md5-credential-digest  clean
+E  PASS  lint-size  clean
+E  PASS  lint-license-isoperational-gate  clean
+E  PASS  lint-set-null-ord  clean
+E  PASS  lint-ws-placement  clean
+E  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 5 artifacts · 48 PASS · 0 FAIL · 0 WARN · 19 SKIP · 0 ADVISORY  ->  CLEAN
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/A-rt/src (dir) --
+-- m/B-ux/src (dir) --
+-- m/C-wb/src (dir) --
+-- m/D-se/src (dir) --
+-- m/E/src (dir) --
+-- toolbelt/.stub-rest --

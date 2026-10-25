@@ -55,7 +55,7 @@ func Read(path string) (Case, error) {
 		case strings.HasSuffix(name, " (dir)"):
 			c.Dirs = append(c.Dirs, strings.TrimSuffix(name, " (dir)"))
 		case strings.HasSuffix(name, " (jar)"):
-			jar, err := buildJar(body)
+			jar, err := BuildJar(body)
 			if err != nil && bad == nil {
 				bad = fmt.Errorf("%s: %s: %w", path, name, err)
 			}
@@ -111,8 +111,10 @@ func decode(name, body string) (string, string, error) {
 	return name, body, nil
 }
 
-// buildJar is the zip a "(jar)" section spells.
-func buildJar(body string) (string, error) {
+// BuildJar is the zip a "(jar)" section spells: one "--- <entry> (stored|deflated)[ <marker>] ---" header
+// per entry, in archive order, its body spelled as a file section is (internal/storedrepack/jarlist builds its
+// input jars with it too).
+func BuildJar(body string) (string, error) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	for _, sec := range sections(body, "--- ", " ---\n") {

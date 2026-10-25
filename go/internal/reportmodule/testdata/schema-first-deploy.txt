@@ -1,0 +1,71 @@
+-- args --
+--first-deploy
+m
+-- want --
+exit 4
+A  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A  SKIP  lint-lexicon-ascii  no *.lexicon under A
+A  SKIP  lint-delays  no src/
+A  SKIP  lint-demand-scope  no src/
+A  SKIP  lint-silent-protection  no src/
+A  SKIP  lint-link-target-flags  no src/
+A  SKIP  lint-ext-writable-shape  no src/
+A  SKIP  lint-no-system-out  no src/
+A  SKIP  lint-slotomatic-markers  no src/
+A  SKIP  lint-clock-zero-floor  no src/
+A  SKIP  lint-null-context-write  no src/
+A  SKIP  lint-bql-string-concat  no src/
+A  SKIP  lint-arbitrary-ord  no src/
+A  SKIP  lint-persist-hot-write  no src/
+A  SKIP  lint-changed-hot-write  no src/
+A  SKIP  lint-inert-coordination  no src/
+A  SKIP  lint-session-store-lazy-evict  no src/
+A  SKIP  lint-bformat-call  no src/
+A  SKIP  lint-service-types  no src/
+A  SKIP  lint-driver-scaffold  no src/
+A  SKIP  lint-no-md5-credential-digest  no src/
+A  SKIP  lint-size  no src/
+A  SKIP  lint-license-isoperational-gate  no src/
+A  SKIP  lint-set-null-ord  no src/
+A  SKIP  lint-ws-placement  no src/
+A  SKIP  schema-risk  N/A (--first-deploy: never deployed, no baseline to diff)
+B  SKIP  verify-module  no built jar under build/libs (floor check not run)
+B  SKIP  lint-lexicon-ascii  no *.lexicon under B
+B  SKIP  lint-delays  no src/
+B  SKIP  lint-demand-scope  no src/
+B  SKIP  lint-silent-protection  no src/
+B  SKIP  lint-link-target-flags  no src/
+B  SKIP  lint-ext-writable-shape  no src/
+B  SKIP  lint-no-system-out  no src/
+B  SKIP  lint-slotomatic-markers  no src/
+B  SKIP  lint-clock-zero-floor  no src/
+B  SKIP  lint-null-context-write  no src/
+B  SKIP  lint-bql-string-concat  no src/
+B  SKIP  lint-arbitrary-ord  no src/
+B  SKIP  lint-persist-hot-write  no src/
+B  SKIP  lint-changed-hot-write  no src/
+B  SKIP  lint-inert-coordination  no src/
+B  SKIP  lint-session-store-lazy-evict  no src/
+B  SKIP  lint-bformat-call  no src/
+B  SKIP  lint-service-types  no src/
+B  SKIP  lint-driver-scaffold  no src/
+B  SKIP  lint-no-md5-credential-digest  no src/
+B  SKIP  lint-size  no src/
+B  SKIP  lint-license-isoperational-gate  no src/
+B  SKIP  lint-set-null-ord  no src/
+B  SKIP  lint-ws-placement  no src/
+B  PASS  schema-risk  verdict=SAFE
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 2 artifacts · 6 PASS · 0 FAIL · 0 WARN · 52 SKIP · 0 ADVISORY  ->  INCOMPLETE
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/A (dir) --
+-- m/B/.deploy-baseline (dir) --
+-- toolbelt/.stub-rest --

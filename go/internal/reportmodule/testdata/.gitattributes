@@ -1,0 +1,2 @@
+# The expected rows keep their trailing spaces: no editor or git whitespace fix may strip them.
+*.txt -whitespace

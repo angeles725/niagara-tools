@@ -1,0 +1,88 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 3
+A-0warn  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-0warn  SKIP  lint-lexicon-ascii  no *.lexicon under A-0warn
+A-0warn  WARN  ltf  B.java:3  advisory
+A-0warn  PASS  lint-link-target-flags  clean (no wiring map)
+A-0warn  PASS  lint-no-system-out  clean
+A-0warn  PASS  lint-slotomatic-markers  clean
+A-0warn  PASS  lint-no-md5-credential-digest  clean
+A-0warn  PASS  lint-size  clean
+A-0warn  PASS  lint-license-isoperational-gate  clean
+A-0warn  PASS  lint-set-null-ord  clean
+A-0warn  PASS  lint-ws-placement  clean
+A-0warn  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-1  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-1  SKIP  lint-lexicon-ascii  no *.lexicon under A-1
+A-1  FAIL  lint-link-target-flags  exited 1 with no FAIL row (crash or unexpected output) -- run lint-link-target-flags.sh manually
+A-1  PASS  lint-no-system-out  clean
+A-1  PASS  lint-slotomatic-markers  clean
+A-1  PASS  lint-no-md5-credential-digest  clean
+A-1  PASS  lint-size  clean
+A-1  PASS  lint-license-isoperational-gate  clean
+A-1  PASS  lint-set-null-ord  clean
+A-1  PASS  lint-ws-placement  clean
+A-1  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-127  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-127  SKIP  lint-lexicon-ascii  no *.lexicon under A-127
+A-127  FAIL  lint-link-target-flags  exited 127 with no FAIL row (crash or unexpected output) -- run lint-link-target-flags.sh manually
+A-127  PASS  lint-no-system-out  clean
+A-127  PASS  lint-slotomatic-markers  clean
+A-127  PASS  lint-no-md5-credential-digest  clean
+A-127  PASS  lint-size  clean
+A-127  PASS  lint-license-isoperational-gate  clean
+A-127  PASS  lint-set-null-ord  clean
+A-127  PASS  lint-ws-placement  clean
+A-127  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-2fail  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-2fail  SKIP  lint-lexicon-ascii  no *.lexicon under A-2fail
+A-2fail  FAIL  ltf  B.java:2  LTF2 bad
+A-2fail  PASS  lint-no-system-out  clean
+A-2fail  PASS  lint-slotomatic-markers  clean
+A-2fail  PASS  lint-no-md5-credential-digest  clean
+A-2fail  PASS  lint-size  clean
+A-2fail  PASS  lint-license-isoperational-gate  clean
+A-2fail  PASS  lint-set-null-ord  clean
+A-2fail  PASS  lint-ws-placement  clean
+A-2fail  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-3  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-3  SKIP  lint-lexicon-ascii  no *.lexicon under A-3
+A-3  ERROR  lint-link-target-flags  env fault (exit 3)
+A-3  PASS  lint-no-system-out  clean
+A-3  PASS  lint-slotomatic-markers  clean
+A-3  PASS  lint-no-md5-credential-digest  clean
+A-3  PASS  lint-size  clean
+A-3  PASS  lint-license-isoperational-gate  clean
+A-3  PASS  lint-set-null-ord  clean
+A-3  PASS  lint-ws-placement  clean
+A-3  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 5 artifacts · 41 PASS · 3 FAIL · 1 WARN · 16 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/A-0warn/src (dir) --
+-- m/A-1/src (dir) --
+-- m/A-127/src (dir) --
+-- m/A-2fail/src (dir) --
+-- m/A-3/src (dir) --
+-- toolbelt/.stub-rest --
+-- toolbelt/lint-link-target-flags.sh (mode 755) --
+#!/usr/bin/env bash
+case "$1" in
+  */A-127/*) echo "lint: command not found" >&2; exit 127 ;;
+  */A-1/*) echo "Traceback: boom"; exit 1 ;;
+  */A-3/*) exit 3 ;;
+  */A-2fail/*) printf 'FAIL  ltf  /x/B.java:2  LTF2 bad\n'; exit 2 ;;
+  */A-0warn/*) printf 'WARN  ltf  /x/B.java:3  advisory\n' ;;
+esac
