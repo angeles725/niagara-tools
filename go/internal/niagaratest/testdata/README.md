@@ -10,3 +10,15 @@ client log. Real anonymized logs are owed as a follow-up (ledger fragment `r10-r
 
 The parser's line shapes and edges (CRLF, prefixes, malformed numbers, a huge line) are the table of
 `verdict_test.go`; these cases pin only the CLI: its rows, usage, exits and unreadable logs.
+
+The `testng-*` cases pin `verdict --testng`: every `testng-results.xml` is synthetic and anonymized
+(`ModuleA`, `com.example`), built from the element and attribute shapes of a real station-test run of
+`bin\test.exe <module> -v:2 -output:<dir>`. The two `real-*` cases are that run itself, one green and one with
+6 failed tests: its `testng-results.xml` whole, and the summary and `TestNG Test Ended|Failed` lines of its
+stderr (where test.exe prints its summaries; stdout holds only thread dumps), byte for byte (CRLF and LF as
+written) except for the module, package and suite names, replaced by `ModuleA`/`moduleA`/`example`. Its XML edges (total 0,
+malformed or truncated XML, counts that disagree, bad root attributes, the size cap) are the table of
+`testng_test.go`.
+
+`pass-grand-total` replays the same real stderr through the console verdict: its `Results of all run tests`
+summary is the grand total the PASS row reports, never added to the per-suite lines.

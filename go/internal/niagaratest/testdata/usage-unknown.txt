@@ -1,16 +1,90 @@
 -- args --
-run
+rerun
 moduleA
 -- want --
 exit 2
 -- stderr --
-run-niagara-test: unknown subcommand: run
+run-niagara-test: unknown subcommand: rerun
 usage: run-niagara-test verdict [<log>|-]
+       run-niagara-test verdict --testng <testng-results.xml> [--allow-ignored-count <n> --allow-ignored-reason <why>]
+                                [<log>|-]
+       run-niagara-test run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
+                            [--timeout <dur>] [--keep-home] [--scratch <dir>] [--jdk8 <dir>]
+                            [--gradle-user-home <dir>] [--module-verification low] [--exclude-jar <glob>]...
+                            [--restore-gradle-root] [--log-dir <dir>] [--reuse-home <dir>]
+                            [--allow-ignored <Class.method>... | --allow-ignored-count <n>] [--allow-ignored-reason <why>]
   verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
            or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
            "Total tests run: N" line has N > 0 and 0 failures; a stray Failures count, "invalid test
            target(s)", "failed signature validation", a malformed summary or no summary is FAIL.
            The exit code and BUILD SUCCESSFUL of the run are never read.
-exit: 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
+  --testng decide from the TestNG results file of test.exe -output:<dir> instead, the authoritative record
+           (test.exe prints its summaries on stderr; its stdout holds only thread dumps). PASS only when
+           total > 0, failed = 0, skipped = 0, no test-method (config included) has status FAIL and the
+           root counts match the test-methods, and ignored = 0; a missing, malformed or over 64 MiB file is FAIL.
+           Ignored methods (@Test(enabled = false) or excluded) are only a count in the file, never named:
+           --allow-ignored-count <n> --allow-ignored-reason <why> (both or neither, n from 1, the reason one
+           printable line) waives exactly n and prints the reason; more ignored than n (a new disable) or
+           fewer (a stale allowance) is FAIL. run names them from the source instead: every method-level
+           @Test(enabled = false) a registered type of <part>/moduleTest-include.xml declares, or inherits from
+           a srcTest/ superclass, is <SimpleName>.<method> (an abstract type counts on its concrete subclasses);
+           their count must equal the root ignored ("source and TestNG disagree" is FAIL), and --allow-ignored
+           <Class.method> (repeatable, with --allow-ignored-reason) waives exactly that set: a disabled method not
+           named (new) or a name no source disables (stale) is FAIL, so swapping one disable for another fails
+           although the count holds. A class-level @Test(enabled = false), an enabled value that is no literal or
+           a registered source the scanner cannot read is exit 3, before the build. Every run prints the names
+           the scan found. run's count pair is the fallback for a source that cannot name the set: the scan still
+           runs, and the count is judged only when the scan refused (case (i): a NOTE row, not exit 3) or its
+           count differs from the root ignored (case (ii)); when it names every ignored method, the count is FAIL
+           ("use --allow-ignored names"), whatever the reason. Mixing it with --allow-ignored is exit 2. A <log>,
+           when given (- for standard input; capture stderr, 2>&1), is a cross-check: its rejections and
+           failure counts fail the run, its missing summary line does not.
+  run      from WSL, copy the install (X:\... or /mnt/x/...) into a new dir under %TEMP% (or --scratch, under
+           %TEMP%), build :<part>:jar and :moduleTestJar against the copy, run bin\test.exe <module> on it with
+           a scratch niagara_user_home, judge with verdict --testng (stderr as the console log; a non-zero
+           exit with green results is FAIL), then kill this run's processes and delete the dir unless
+           --keep-home. Refused: an install under a user home, without bin/test.exe, or used by a running
+           station (a service's unreadable station.exe is attributed through its niagarad service, or
+           refused); a scratch outside %TEMP%. The install is never written; a change to it is FAIL. The
+           NRE must use the scratch niagara_user_home: a change to a real %USERPROFILE%\Niagara4.*\<brand>
+           registry\ or security\, or no etc\ and security\ in the scratch home, is FAIL. test.exe gets it
+           as niagara_user_home through WSLENV (niagara_user_home/w). The build uses the WSL JDK 8
+           --jdk8 (default /usr/lib/jvm/java-8-openjdk-amd64, JAVA_HOME and installations.paths) and the
+           gradle cache --gradle-user-home (default ~/.gradle). --timeout (default 30m) kills the run.
+           --module-verification low (TEST ONLY, off by default) appends niagara.moduleVerificationMode=low
+           to the copy's defaults\system.properties, never the install's (4.15 defaults to medium, which
+           rejects a self-signed test jar; 4.14 ships low); the install's file is hashed before and after.
+           --exclude-jar <glob> (repeatable; a jar basename of letters, digits, _ . - * ?, case-insensitive)
+           leaves the matching top-level modules\*.jar out of the copy (a stale <module>-ux.jar beside the
+           freshly built jars); a glob matching no jar is FAIL, exit 2, before anything is copied.
+           --gradle-root must be a git worktree (else exit 3, before any copy): its git status, every listed
+           file hashed, is taken before the copy and after cleanup, and any change is FAIL (plugin 7.3.40's
+           compileModuleTestJava appends the test types to the production module-include.xml).
+           --restore-gradle-root then checks out only the files that were clean before and the build
+           modified; it never touches a file already dirty, never deletes an untracked file (it lists them),
+           and the run stays FAIL.
+           A failed run (exit 1, 3 or 4 once its scratch dir exists) keeps a run log before the dir is deleted:
+           --log-dir (default $XDG_STATE_HOME/run-niagara-test, else ~/.local/state/run-niagara-test, made
+           0700) gets <UTC timestamp>-<module>.log (0600) with the runner's rows, the last 200 stderr and 50
+           stdout lines of test.exe (each cut at 4 KiB), the -output: dir listing and the exit status, and a
+           "diagnostics kept: <path>" row. The scratch dir and its home copy read <scratch> and <copy>, the
+           %USERPROFILE% and the WSL home <you>; install paths stay. A green run writes one only with an
+           explicit --log-dir or --keep-home. A failed run also keeps, redacted the same way, beside the
+           log: <stem>.testng-results.xml (a copy), <stem>.traces.txt (the whole full-stacktrace of every
+           FAIL test-method) and <stem>.stderr.txt (the whole test.exe stderr, the station log), each cut at a
+           line end under 4 MiB with a "(truncated: ...)" row; a missing or unreadable results or stderr file
+           is a "testng-results.xml unavailable" or "test.exe stderr unavailable" row in the log instead.
+           --reuse-home <dir> boots again on the dir a --keep-home run kept (its "cleanup: kept" row), to prove
+           what survives a restart. Refused (exit 2): a dir not under the scratch parent, one that is, holds or
+           sits in a real %USERPROFILE%\Niagara4.*\<brand> or has registry\ or security\ at its top, and one
+           whose run-niagara-test.marker (written by every run in its dir: run id, install, sha256 of the
+           install's defaults\system.properties, and the run log a --keep-home run wrote) does not match: the
+           run id must be the one the kept run's log in --log-dir records, the install and the sha256 this run's.
+           Nothing is copied again (the home copy, its registry and the scratch niagara_user_home stay); the
+           module jars are rebuilt and out\ starts empty. Every other gate runs; --exclude-jar and
+           --module-verification are exit 2 with it. The dir is deleted at the end ("cleanup: deleted") unless
+           --keep-home again.
+exit: verdict 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
+      run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, git, robocopy, gradle, cleanup), 4 timeout
 -- @kind --
 truth: hand-written from the C40 contract (testdata/README.md); there is no bash tool to record from

@@ -1,0 +1,27 @@
+-- args --
+@DIR@/root
+-- want --
+exit 0
+-- stderr --
+-- root/com/x/BDash.java --
+package com.x;
+import javax.baja.sys.*;
+/**
+ * BDash: a facade whose display slots are link-in targets, linked from the control module.
+ * The integrator links control points into its display slots. See {@link BDashService}.
+ */
+@NiagaraType
+@NiagaraProperty(
+  name = "defrostStart",
+  type = "BAbsTime",
+  defaultValue = "BAbsTime.NULL",
+  flags = Flags.TRANSIENT | Flags.SUMMARY | Flags.READONLY
+)
+@NiagaraProperty(
+  name = "status",
+  type = "double",
+  defaultValue = "0d",
+  flags = Flags.SUMMARY | Flags.READONLY
+)
+public class BDash extends BComponent {
+}

@@ -164,6 +164,14 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
   with the line removed, the plugin creates `user.home/.tridium/security/niagara.signing.{xml,jceks}` and the build
   passes signed `NIAGARA4` by a "For Development Purposes Only" Niagara4Modules certificate. `[CERT-live local build]`
   A production CA-issued profile was not exercised (none on that machine).
+- **A hand-written LocalSigningProfile needs validity - refresh >= 32 days, and lint-structure L16 FAILs one that
+  has less.** The signing plugin sets a new key's notAfter to day `validity` of the current month instead of adding
+  `validity` days, and re-mints the key when fewer than `refresh` days are left (niagara-plugins 7.6.22
+  `LocalSigningProfile.kt:386-388` and `:216-225`), so a 30/15 profile re-mints at every signing and its jars carry
+  a signature block no JVM verifies. `lint-structure.sh` L16 reads the `niagaraSigningProfile` the gradle root's
+  `gradle.properties` names and FAILs such a profile with both values; `run-niagara-test run` refuses the same
+  profile from the same predicate (`go/internal/signingprofile`). Use the plugin defaults, 365/183. Re-check the
+  plugin on an upgrade (the vendor-defect section of the retro). `[ev: retro r10-signing-margin-lint Δ1]`
 - **Six permission groups require a signed, trusted module:** `REFLECTION`, `ACCESS_CLASS`, `MBEAN_PERMISSION`,
   `THIRD_PARTY_PERMISSION`, `PROTECTION_DOMAIN`, `HSM_SIGNING` (`requiresSignature()` is true in exactly these six
   `com/tridium/security/*PermissionGroup` classes, vineflower 4.14.0.162; the devguide names only REFLECTION and
@@ -350,3 +358,5 @@ See also: `docs/module-dev-workflow.md` (toolchain, codegen round-trip, dev loop
 - **One rule, two scripts: duplicate only the rule table and pin the copies with a test.** When a check already lives in another toolbelt script and a shared `toolbelt/lib` file is not an option, copy the requirement table verbatim (e.g. `lint-structure.sh` `L15_SIGN_ERE` = `preflight.sh` `SAMPLE_SIGN_ERE`) and add a bats test that fails when they differ (`tests/lint-structure.bats` LS15-sync). `[ev: retro r8-t9i-libs Δ2]`
 - **Prefer row-level output parsing over exit-code-only aggregation when composing toolbelt scripts:** a member tool that exits 0 may still emit WARN rows that must propagate (e.g. `slot-coverage.sh` exits 0 on <100% coverage); exit codes are a secondary ORed guard for crashed members. [ev: retro campaign7-report-module]
 - **Emit a single count row (PASS N=0 / FAIL N>0) when relaying dup-count checks from a composed tool:** relaying individual WARN lines per duplicate key adds noise in multi-artifact reports; a count row is cleaner and machine-parseable. [ev: retro campaign7-report-module]
+- **A bats assertion is one command on its own line, never an earlier element of an `&&` list or a bare `! cmd`:** bats runs a test body under errexit, and bash ignores errexit for every command of an `&&` list except the last one and for a negated command, so mid-test `[ "$status" -eq 1 ] && [[ "$output" == *x* ]]` never fails its test when the status is wrong (a mutation run of a new lint stayed green on exactly that line). Write one assertion per line; negate with `run ! cmd` (bats 1.5+, it overwrites `$status`/`$output`) or `! cmd || return 1`. `toolbelt/lint-bats-errexit.sh` FAILs both forms in `@test` bodies, and `tests/lint-bats-errexit.bats` BEX-kit runs it over the kit's own `tests/`. `[ev: retro r10-bats-list-hazard Δ1]`
+- **A close-gate pin references a durable archived fixture, never a session scratchpad:** exact counts pinned to a file that lived only in a temporary session copy become unverifiable once it is cleaned (c8-close SC16-smoke, retired as a loud skip). A close fixture is a client station bog, so it lives in a private location outside this public repository (a private repository or a configured private directory), never in it; the public gate records only the fixture's sha256 and an env var naming the private file, and SKIPs loudly when that file is absent or its sha256 does not match. [ev: retro r10-c8-close-retire Δ1]

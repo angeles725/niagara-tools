@@ -30,14 +30,16 @@ setup() {
 @test "RC1: a hardcoded ORD literal under rc/ FAILs (ord), exit 1 (ord-only -> the clean mutation target)" {
   run "$RS" "$FX/ord"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"ord"* ]]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"ord"* ]]
   [[ "$output" == *"app.js"* ]]
 }
 
 @test "RC2: an IPv4 host literal FAILs (host) but a W3C SVG namespace does NOT (false-positive control)" {
   run "$RS" "$FX/host"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"host"* ]]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"host"* ]]
   [[ "$output" == *"127.0.0.1"* ]] || [[ "$output" == *"config.js"* ]]
   # the SVG/xlink namespace URIs on the same file must NOT be reported as hosts:
   [[ "$output" != *"www.w3.org"* ]]
@@ -103,7 +105,8 @@ setup() {
 @test "RC10: a handle ORD h:<hex> FAILs (ord-literal, segment-start anchored), CSS width:/depth: does NOT" {
   run "$RS" "$FX/handle"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"ord"* ]]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"ord"* ]]
   [[ "$output" == *"handle.js"* ]]
   # CSS and HTML width:/height: must NOT be flagged as handle ORDs:
   [[ "$output" != *"style.css"* ]]

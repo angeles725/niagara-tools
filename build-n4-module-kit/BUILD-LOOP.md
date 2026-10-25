@@ -236,6 +236,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     § 2.2). A bash script gets small fixes only. A check that is not ported yet is written down as an owed
     `Go lint` item in a `ledger.d/` fragment `open_issue:` line — id, scanned files, rule, row format, exit
     contract and the cases that must WARN and stay clean (G1-G7 are the model). `[ev: retro r8-t22-retro-deltas Δ1]`
+    `go_tool_bin`'s staleness walk watches what `go build` reads: every file under `go/` except `bin/`, `testdata/`
+    and `*_test.go`, `//go:embed` assets included; a `*.go`/`go.mod` filter served a stale embedded asset
+    (`tests/go-tool.bats` GT10-GT14). `[ev: retro r10-go-tool-walk-scope Δ1]` Before a cache or stamp replaces such a
+    walk, count its stat calls: a check that is fail-safe against later edits stats the same files (a prebuilt stamp
+    measured 12.5-16 ms against a 16-25 ms walk), so narrow the walked set instead. `[ev: retro r10-go-tool-walk-scope Δ2]`
   - **What to port.** Port a tool to Go when it PARSES structured input (Java, XML, jars, ledgers) or has had a
     parsing bug; pure orchestration glue (`toolbelt/build.sh`, wrappers that only sequence gradle or copy steps)
     stays bash. Every port proves stdout, stderr and exit code byte-identical to the
@@ -525,7 +530,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]` A tool that judges a log
     fails closed on a cut read: a line past `bufio.Scanner`'s cap (`bufio.ErrTooLong`) is a FAIL reason at its line
     number, never a silent end of input, because a failure after it would go unseen (`go/internal/niagaratest`).
-    `[ev: retro r10-run-niagara-test-go Δ2]`
+    `[ev: retro r10-run-niagara-test-go Δ2]` A results-file verdict fails on skips and on any FAIL test-method, config
+    methods included: TestNG's root counts leave `is-config` methods out, so a failed `@BeforeClass` reads failed=0
+    with skips (`go/internal/niagaratest/testdata/testng-config-skips.txt`). `[ev: retro r10-run-niagara-test-testng Δ2]`
   - **A path filter in a gate skips only paths no check applies to.** A gate that picks its checks from the
     changed or staged paths (a hook, a CI step, a wrapper) states, for each class of path it can see (code, tool,
     doc, data, generated), which check runs or why none applies. An early exit is proven by a test that changes

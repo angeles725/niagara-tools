@@ -9,7 +9,7 @@ import java.util.function.Function;
  * Pure routing logic for {@link BMinimalDashServlet}.
  *
  * <p>This package-private final class is the ONLY place where routing decisions
- * are made. The servlet's {@code doService} calls {@link #route} and then executes
+ * are made. The servlet's {@code doGet}/{@code doPost} call {@link #route} and then executes
  * the returned {@link RouteAction} against the Niagara WebOp. Because it takes only
  * plain-Java inputs (method, path, header/param lookup functions) it is fully
  * WSL-unit-testable with zero Niagara dependency (DUX1 pure-router pattern).

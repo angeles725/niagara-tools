@@ -10,7 +10,7 @@ type rule struct{}
 func (rule) ID() string              { return "lint-structure" }
 func (rule) Severity() lint.Severity { return lint.Fail }
 
-// CheckRoot runs every check in the bash lint's row order: L10, then L6-L11 per profile, then L12-L15.
+// CheckRoot runs every check in the bash lint's row order: L10, then L6-L11 per profile, then L12-L16.
 func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 	s := &scan{root: root}
 	profiles := s.profiles()

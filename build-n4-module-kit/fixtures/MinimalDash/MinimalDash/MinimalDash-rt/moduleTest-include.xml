@@ -1,0 +1,5 @@
+<!-- Station-side tests (types/moduleTest.md § TEST-G8); never listed in module-include.xml. -->
+<types>
+  <type class="test.com.angeles.MinimalDash.BMinimalDashStationTestBase" name="MinimalDashStationTestBase"/>
+  <type class="test.com.angeles.MinimalDash.BMinimalDashLinkTest" name="MinimalDashLinkTest"/>
+</types>

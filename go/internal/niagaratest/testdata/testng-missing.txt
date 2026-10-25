@@ -1,0 +1,11 @@
+-- args --
+verdict
+--testng
+@DIR@/out/testng-results.xml
+-- want --
+exit 1
+FAIL  run-niagara-test  testng: cannot read @DIR@/out/testng-results.xml: No such file or directory
+FAIL  run-niagara-test  verdict: 1 FAIL reason
+-- @kind --
+truth: hand-written from the C40 contract and a real testng-results.xml shape (testdata/README.md)
+-- out (dir) --

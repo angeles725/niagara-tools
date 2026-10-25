@@ -22,6 +22,47 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.33.0] - 2026-10-25
+
+### Added — `run-niagara-test`, the guarded station-test runner
+
+- `run-niagara-test run` builds into a disposable copy of the Niagara home, never `--install`, refuses an install a
+  running station holds, and proves the install unchanged after the run (#556). `verdict --testng` reads the TestNG
+  stderr summary and the -1 exit of `test.exe` (#555).
+- The NRE user home is sandboxed through `WSLENV`; writes to the real user home fail the run (#557).
+- New options: `--module-verification low` for the disposable copy (#559), `--exclude-jar` to keep stale install jars
+  out of the copy (#563), `--reuse-home` to boot again on a kept home (#579).
+- A run whose build changes the gradle root fails, with an opt-in restore (#564).
+- Ignored TestNG methods fail the run unless allowed by name (`--allow-ignored`) or, when the source cannot name the
+  set, by count (#571, #573, #575).
+- A failed run keeps a redacted log with the TestNG results, full failure traces and full stderr (#566, #572, #581).
+
+### Added — lints and scaffold
+
+- A production `module-include.xml` must not register test types (`test-type-in-prod`, also checked by
+  verify-module) (#569).
+- lint-structure L16 fails a declared signing profile whose refresh margin re-mints its key (#574).
+- New lints for bats assertions that `set -e` cannot see (#576) and for test methods that cannot fail or never run
+  (#577, pinned in bats by #580).
+- `scaffold-module.sh` emits a station-test skeleton for the logic and dashboard types, plus a signing-profile
+  preflight gate (#570).
+
+### Fixed
+
+- LTF1 reads a class javadoc that names a link target past `@NiagaraType` (#565).
+- triageconsole treats the remaining Spanish JDK 8 log levels as headers (#553).
+- `go_tool_bin` walks only what `go build` reads, and now sees edits to embedded non-Go assets (#562).
+
+### Changed — CI, tests and docs
+
+- CI runs parallel jobs, bats with `-j 4` (fail-closed on the test count) and a Go build cache (#554); superseded PR
+  runs are cancelled and draft PRs are skipped (#560).
+- The mcp-n4 Go box live differential replays from a recorded golden (#552).
+- The c8-close SC16 pin is retired because its snapshot fixture is gone (#578).
+- Station-test campaign retro and round-10 tail retros folded into the kit docs (#561, #567, #568).
+
+---
+
 ## [v0.32.1] - 2026-10-25
 
 ### Fixed — mcp-n4 Go server closes the station session on Ctrl-C/SIGTERM

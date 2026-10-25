@@ -1,0 +1,19 @@
+-- args --
+--allow
+BAlphaTest.placeholder
+--allow-reason
+kept until the station test lands
+@DIR@/ModuleA
+-- want --
+exit 0
+PASS  allowed  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java:5  BAlphaTest.placeholder: trivially-true, allowed: kept until the station test lands
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java --
+package com.x.test;
+import org.testng.annotations.Test;
+public class BAlphaTest {
+  @Test
+  public void placeholder() { assertTrue(true); }
+  @Test
+  public void real() { assertEquals(1 + 1, 2); }
+}

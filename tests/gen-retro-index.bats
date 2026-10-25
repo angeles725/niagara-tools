@@ -176,7 +176,7 @@ _copy_top() {
   [ -x "$bin" ]
   [ "$(_rows)" = "| 2026-09-01-alpha.md | kit | 2026-09-01 | folded | 0 |" ]
   touch -d '2000-01-01' "$bin"
-  find "$TOP/go" -path "$TOP/go/bin" -prune -o \( -name '*.go' -o -name go.mod \) -exec touch -d '1999-06-01' {} +
+  find "$TOP/go" -path "$TOP/go/bin" -prune -o ! -type d -exec touch -d '1999-06-01' {} +
   run bash "$TOP/build-n4-module-kit/toolbelt/gen-retro-index.sh" --check "$FK"
   [ "$status" -eq 0 ]
   [ "$(date -r "$bin" +%Y)" = 2000 ] # every source is older: reused, not rebuilt

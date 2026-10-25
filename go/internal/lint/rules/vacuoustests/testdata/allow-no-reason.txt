@@ -1,0 +1,10 @@
+-- args --
+--allow
+BAlphaTest.placeholder
+@DIR@/ModuleA
+-- want --
+exit 3
+-- stderr --
+lint-vacuous-tests: --allow needs --allow-reason <why> (the reason is printed in the report)
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java --
+class BAlphaTest { }

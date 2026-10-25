@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: a failed run-niagara-test run keeps testng-results.xml and every failed method's whole trace beside its log -->
+log: 2026-10-25 · quality round 10 → a failed `run-niagara-test run` (`go/internal/niagaratest/failevidence.go`) reads testng-results.xml before cleanup and keeps `<stem>.testng-results.xml` (a copy) and `<stem>.traces.txt` (one section per FAIL test-method with its whole `<full-stacktrace>`) beside `<stem>.log`, redacted by the log's own redactor, each cut at a line end under 4 MiB with a marker row; a missing or unreadable results file is a row in the log. A real run's 200-line stderr tail had started inside a trace. Retro retros/2026-10-25-r10-rnt-fail-evidence.md (1Δ, folded). [ev: retro r10-rnt-fail-evidence Δ1]
+open_issue: proven on synthetic results and the fake runner only; a live failed `run` whose kept traces are checked against the console is owed (retro r10-rnt-fail-evidence Δ1).

@@ -52,6 +52,13 @@ var (
 	slotCell = regexp.MustCompile("^`[A-Za-z_][A-Za-z0-9_]*`$")
 	selfCell = regexp.MustCompile(`^\(?(self|self-set|n/a|none)\)?$`)
 	letter   = regexp.MustCompile(`[a-z]`)
+	// The class-comment marker (see harvest): a sentence of a comment block, its {@link ...} tags removed, a link
+	// keyword (linkText, "link target", or link/links/linked within four words of from/into/to) and the slot
+	// names in code formatting (`x` or {@code x}).
+	linkTag  = regexp.MustCompile(`\{@link(plain)?[[:space:]][^}]*\}`)
+	sentence = regexp.MustCompile(`\.([[:space:]]|$)|;|</?p>`)
+	nameKey  = regexp.MustCompile(linkText.String() + `|link target|\blink(s|ed)?[[:space:]]([a-z0-9'_-]+[[:space:]]){0,4}(from|into|to)\b`)
+	codeName = regexp.MustCompile("`([A-Za-z_][A-Za-z0-9_]*)`|\\{@code[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\\}")
 )
 
 const (
@@ -129,7 +136,11 @@ func (r *rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	code, named := linescan.Code(f), f.Stripped()
 	inProp, prevCmt := false, false
 	buf, nbuf, cmt, pline := "", "", "", 0
+	marked := map[string]bool{}
 	for i, ln := range f.Raw {
+		if prevCmt && !inProp && !comment.MatchString(ln) {
+			harvest(cmt, marked) // the block ends here, at an annotation such as @NiagaraType too
+		}
 		switch {
 		case inProp:
 			buf, nbuf = buf+" "+code[i], nbuf+" "+named[i]
@@ -153,10 +164,13 @@ func (r *rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if m := nameAttr.FindStringSubmatch(nbuf); m != nil {
 			name := m[1]
 			linked, mapped := linkText.MatchString(lower(cmt)), r.targets[name]
-			if strings.Contains(buf, "READONLY") && (linked || mapped) {
+			if strings.Contains(buf, "READONLY") && (linked || mapped || marked[name]) {
 				why := "wiring-map Table 2" // "(wiring-map Table 2)" is matched by report-module.sh and commissioning-verify.sh
-				if linked {
+				switch {
+				case linked:
 					why = "link comment"
+				case !mapped:
+					why = "class comment"
 				}
 				out = append(out, lint.Finding{Line: pline, Msg: fmt.Sprintf(ltf1, name, why)})
 			}
@@ -168,6 +182,44 @@ func (r *rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		inProp, buf, nbuf, pline, prevCmt = false, "", "", 0, false // cmt kept: a block heads its run of properties
 	}
 	return out, nil
+}
+
+// harvest adds to marked the slots a comment block names as link targets, so a class javadoc keeps marking
+// them past the @NiagaraType line that ends its block (r10 ltf1-marker-reset). In each sentence that holds a
+// link keyword, every keyword marks one slot in code formatting: the last one before a "from" keyword ("`status`
+// is linked from ...", "({@code status}) that the integrator links from ..."), else the first one after the
+// keyword ("links control points into {@code status}"), else the nearest one before it. A sentence that names
+// no slot marks none: a keyword alone never marks every slot of the class.
+func harvest(cmt string, marked map[string]bool) {
+	for _, s := range sentence.Split(linkTag.ReplaceAllString(cmt, " "), -1) {
+		names := codeName.FindAllStringSubmatchIndex(s, -1)
+		if len(names) == 0 {
+			continue
+		}
+		low := lower(s)
+		for _, k := range nameKey.FindAllStringIndex(low, -1) {
+			before, after := -1, -1
+			for j, n := range names {
+				if n[1] <= k[0] {
+					before = j
+				} else if n[0] >= k[1] && after < 0 {
+					after = j
+				}
+			}
+			pick := after
+			if pick < 0 || (before >= 0 && strings.HasSuffix(low[k[0]:k[1]], "from")) {
+				pick = before
+			}
+			if pick >= 0 {
+				n := names[pick]
+				if n[2] >= 0 {
+					marked[s[n[2]:n[3]]] = true
+				} else {
+					marked[s[n[4]:n[5]]] = true
+				}
+			}
+		}
+	}
 }
 
 // trim is the awk trim(): leading and trailing [[:space:]] removed.

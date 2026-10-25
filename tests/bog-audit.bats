@@ -107,6 +107,8 @@ package com.angeles.ColdRoomPan;
 public class BEvaporatorUnit {}
 JAVA
   # real bogs (local-only smokes): C8_PANCCADIA_BOG overrides; else the extracted copy in the shard scratchpad
+  # The default below points at a session-scratch copy that may no longer exist (the real-bog smokes then
+  # skip); set the override env var read below to an archived fixture instead.
   BOGX="/tmp/claude-1000/-home-cristian-niagara-research/dd08d593-6527-4dc7-885c-938ea923b73f/scratchpad/bogx"
 }
 
@@ -129,7 +131,9 @@ JAVA
 
 @test "BA4: CHECK2 — un-hidden intervalExpired (f='o') WARNs; --strict makes it FAIL" {
   run "$BA" "$T/synthetic.bog" --module ColdRoomPan --source-dir "$T/src"
-  [[ "$output" == *"CHECK2"* ]] && [[ "$output" == *"WARN"* ]] && [[ "$output" == *"intervalExpired"* ]]
+  [[ "$output" == *"CHECK2"* ]]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"intervalExpired"* ]]
   run "$BA" --strict "$T/synthetic.bog" --module ColdRoomPan --source-dir "$T/src"
   [ "$status" -eq 1 ]
   [[ "$output" == *"CHECK2"* ]] && [[ "$output" == *"FAIL"* ]]
@@ -142,7 +146,8 @@ JAVA
 
 @test "BA6: without --source-dir, CHECK2/3/4/5/6/7 SKIP; CHECK1/8/9/10/11/12 still run" {
   run "$BA" "$T/synthetic.bog" --module ColdRoomPan
-  [[ "$output" == *"SKIP"* ]] && [[ "$output" == *"CHECK5"* ]]
+  [[ "$output" == *"SKIP"* ]]
+  [[ "$output" == *"CHECK5"* ]]
   [[ "$output" == *"CHECK1"* ]]
 }
 

@@ -48,7 +48,8 @@ JAVA
   run "$LSP" "$S"
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c 'WARN')" -eq 1 ]
-  [[ "$output" == *"lint-silent-protection"* ]] && [[ "$output" == *"CompressorControl.java"* ]]
+  [[ "$output" == *"lint-silent-protection"* ]]
+  [[ "$output" == *"CompressorControl.java"* ]]
   [[ "$output" == *"no status/reason/alarm surface"* ]]
 }
 
@@ -262,7 +263,9 @@ JAVA
   E="$BATS_TEST_TMPDIR/empty"; rm -rf "$E"; mkdir -p "$E"
   run "$LSP" "$E"
   [ "$status" -eq 3 ]
-  [[ "$output" == *"ERROR"* ]] && [[ "$output" == *"lint-silent-protection"* ]] && [[ "$output" != *"WARN"* ]]
+  [[ "$output" == *"ERROR"* ]]
+  [[ "$output" == *"lint-silent-protection"* ]]
+  [[ "$output" != *"WARN"* ]]
   N="$BATS_TEST_TMPDIR/nojava"; rm -rf "$N"; mkdir -p "$N/com/x"; printf 'not java\n' > "$N/com/x/README.txt"
   run "$LSP" "$N"
   [ "$status" -eq 3 ]

@@ -7,15 +7,63 @@ name: CI
 on:
   push:
     branches: [main]
+  # A draft PR runs nothing; marking it ready (ready_for_review) starts the full run.
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
 
+# A newer push to a PR cancels its superseded run, so only the PR head is checked. A push to main
+# keys on its commit (one group per merge) and never cancels: every merge keeps its own full run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  checks:
-    name: shellcheck + bats + ledger sweep
+  # The checks run as four parallel jobs (go, bats, lint-sweeps, mcp-n4-go); the wall time is the slowest
+  # job, not their sum. Every step of the former single `checks` job runs in exactly one of them.
+  go:
+    name: Go gofmt + vet + test + build
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
+
+      # The python3 of the reference host. No Go test runs Python since S17 (the mcp-n4 differentials
+      # replay frozen goldens); the later steps that call python3 run this one.
+      - name: Set up CPython 3.15 (the python3 the later steps run)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+
+      - name: Go gofmt + vet + test (go/)
+        run: |
+          cd go
+          # The assignment fails the step when gofmt itself fails; a non-empty list fails it too.
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
+          go vet ./...
+          # -count=1: tests read files through subprocesses Go does not track, so a cached result could be stale.
+          go test -count=1 ./...
+
+      - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
+        run: cd go && go build -o bin/ ./cmd/...
+
+  bats:
+    name: bats unit tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -47,8 +95,87 @@ jobs:
           echo "${HC_SHA256}  ${HC_DIR}/hamcrest-core-1.3.jar" | sha256sum -c - \
             || { printf 'sha256 mismatch: hamcrest-core-1.3.jar\n' >&2; exit 1; }
 
-      - name: Install bats
-        run: sudo apt-get update && sudo apt-get install -y bats
+      # Pinned like shellcheck, no apt-get update: bats-core 1.10.0 (the version the ubuntu-latest apt package
+      # gave) and GNU parallel, which `bats -j` needs (without it bats runs no test; the bats step counts them).
+      # A sha256 mismatch is a hard stop, never a silent re-pin.
+      - name: Install bats-core 1.10.0 + GNU parallel 20240222 (pinned sha256)
+        run: |
+          BATS_VER=1.10.0
+          BATS_SHA256=a1a9f7875aa4b6a9480ca384d5865f1ccf1b0b1faead6b47aa47d79709a5c5fd
+          PAR_VER=20240222
+          PAR_SHA256=eba09b6a7e238f622293f7d461597f35075cb56f170d0a73148f53d259ec8556
+          T="$(mktemp -d "${RUNNER_TEMP:-/tmp}/bats-install.XXXXXX")"
+
+          curl -fsSL --retry 3 -o "$T/bats.tar.gz" \
+            "https://github.com/bats-core/bats-core/archive/refs/tags/v${BATS_VER}.tar.gz"
+          echo "${BATS_SHA256}  $T/bats.tar.gz" | sha256sum -c - \
+            || { printf 'sha256 mismatch: bats-core v%s\n' "$BATS_VER" >&2; exit 1; }
+          tar -xzf "$T/bats.tar.gz" -C "$T"
+          sudo "$T/bats-core-${BATS_VER}/install.sh" /usr/local
+
+          # ftpmirror.gnu.org redirects to a nearby mirror; ftp.gnu.org is the fallback. The sha256 pins the bytes.
+          curl -fsSL --retry 3 -o "$T/parallel.tar.bz2" "https://ftpmirror.gnu.org/parallel/parallel-${PAR_VER}.tar.bz2" \
+            || curl -fsSL --retry 3 -o "$T/parallel.tar.bz2" "https://ftp.gnu.org/gnu/parallel/parallel-${PAR_VER}.tar.bz2"
+          echo "${PAR_SHA256}  $T/parallel.tar.bz2" | sha256sum -c - \
+            || { printf 'sha256 mismatch: parallel-%s\n' "$PAR_VER" >&2; exit 1; }
+          tar -xjf "$T/parallel.tar.bz2" -C "$T" "parallel-${PAR_VER}/src/parallel"
+          sudo install "$T/parallel-${PAR_VER}/src/parallel" /usr/local/bin/parallel
+          mkdir -p "$HOME/.parallel" && touch "$HOME/.parallel/will-cite"
+
+          bats --version
+          parallel --version | head -n 1
+
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
+
+      # The python3 the bats suites have always run on: keep the same interpreter on PATH here.
+      - name: Set up CPython 3.15 (the python3 the bats suites run)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+
+      # The toolbelt wrappers build go/bin on demand; build it once so the parallel suites do not race to.
+      - name: Pre-build go/bin (the binaries the bats suites exec through the toolbelt wrappers)
+        run: cd go && go build -o bin/ ./cmd/...
+
+      - name: bats (all unit tests)
+        run: |
+          # -j 4: four test files at a time, one per ubuntu-latest vCPU. --no-parallelize-within-files: bats'
+          # in-file parallelism waits for a free slot by polling with `sleep 1`, which made -j slower than a
+          # serial run; GNU parallel schedules whole files without it. Fail closed: the run must report one
+          # result per test in its TAP plan (bats counts the suite up front), so a silent zero or partial
+          # parallel run cannot pass.
+          set -o pipefail
+          TAP="$RUNNER_TEMP/bats.tap"
+          bats -j 4 --no-parallelize-within-files --formatter tap tests/*.bats | tee "$TAP"
+          plan="$(grep -m 1 -E '^1\.\.[0-9]+$' "$TAP" || true)"; plan="${plan#1..}"
+          got="$(grep -cE '^(not )?ok ' "$TAP" || true)"
+          printf 'bats: TAP plan %s; %s results\n' "${plan:-missing}" "$got"
+          if ! { [ "$plan" -gt 0 ] && [ "$got" -eq "$plan" ]; }; then
+            printf 'ERROR: bats reported %s results for a TAP plan of %s tests\n' "$got" "${plan:-missing}" >&2
+            exit 1
+          fi
+
+      - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
+        run: |
+          bats --formatter tap tests/run-pure-test.bats | tee /tmp/run-pure-test.tap
+          if grep -q '# skip' /tmp/run-pure-test.tap; then
+            printf 'ERROR: run-pure-test.bats produced SKIP lines — junit pre-fetch may have failed\n' >&2
+            exit 1
+          fi
+
+  lint-sweeps:
+    name: shellcheck + ledger sweeps + kit lints
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
 
       - name: Install shellcheck (pinned — reproducible, no version drift)
         run: |
@@ -61,40 +188,12 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go/go.mod
-          cache: false
-
-      # The python3 of the reference host. No Go test runs Python since S17 (the mcp-n4 differentials
-      # replay frozen goldens); the later steps that call python3 run this one.
-      - name: Set up CPython 3.15 (the python3 the later steps run)
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.15"
-
-      - name: Go gofmt + vet + test (go/)
-        run: |
-          cd go
-          # The assignment fails the step when gofmt itself fails; a non-empty list fails it too.
-          unformatted="$(gofmt -l .)"
-          if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
-          go vet ./...
-          go test ./...
-
-      - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
-        run: cd go && go build -o bin/ ./cmd/...
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
 
       - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
         run: shellcheck scripts/*.sh scripts/lib/*.sh go/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/toolbelt/lib/*.sh build-n4-module-kit/templates/client-pre-push .githooks/* tests/*.bats tests/helpers/*.bash
-
-      - name: bats (all unit tests)
-        run: bats tests/*.bats
-
-      - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
-        run: |
-          bats --formatter tap tests/run-pure-test.bats | tee /tmp/run-pure-test.tap
-          if grep -q '# skip' /tmp/run-pure-test.tap; then
-            printf 'ERROR: run-pure-test.bats produced SKIP lines — junit pre-fetch may have failed\n' >&2
-            exit 1
-          fi
 
       - name: sweep-build-state + sweep-fold-audit over fresh kit-state output (BUILD-STATE ↔ retros/INDEX coherence; folded retros cited)
         run: |
@@ -184,10 +283,13 @@ jobs:
           bash build-n4-module-kit/toolbelt/triage-console.sh --package com.angeles \
             tests/fixtures/triage-console/console.txt | grep -q 'IllegalArgumentException'
 
+
   # The mcp-n4 black-box suite against the Go server (mcp-n4-kit/docs/go-port-plan.md section 20).
-  # Its own job so the bound covers it alone; no mutation testing here (it OOM-killed runners).
+  # Its own job so the bound covers it alone, with the Python fallback suite beside it; no mutation testing
+  # here (it OOM-killed runners).
   mcp-n4-go:
     name: mcp-n4 black-box suite (Go server)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -197,7 +299,9 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go/go.mod
-          cache: false
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
 
       - name: Set up CPython 3.15 (the mcp-n4 target the black-box suite runs on)
         uses: actions/setup-python@v7

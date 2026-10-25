@@ -14,8 +14,13 @@ import javax.baja.sys.Type;
  * BMinimalDash — minimal dashboard facade component.
  *
  * <p>A pure slot container: one OPERATOR-writable config slot ({@code setpoint})
- * and one READONLY display slot ({@code status}) that the integrator links from
+ * and one SUMMARY display slot ({@code status}) that the integrator links from
  * a control module's output point. No control logic lives here.</p>
+ *
+ * <p>{@code status} is a link-in target, so it is never READONLY: LinkCheck refuses a
+ * READONLY target and the slot would show its default forever. It carries no OPERATOR
+ * flag; a servlet write path must reject non-OPERATOR targets server-side.
+ * [ev: dashboard.md — a link-IN display slot is SUMMARY only]</p>
  *
  * <p>The HTTP servlet ({@link com.angeles.MinimalDash.ux.BMinimalDashServlet})
  * walks these slots to serve the browser dashboard. The integrator links control
@@ -36,7 +41,7 @@ import javax.baja.sys.Type;
   name = "status",
   type = "double",
   defaultValue = "0d",
-  flags = Flags.SUMMARY | Flags.READONLY
+  flags = Flags.SUMMARY
 )
 public class BMinimalDash
   extends BComponent

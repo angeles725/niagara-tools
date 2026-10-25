@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: c8-close SC16-smoke retired as one loud skip; its pinned snapshot fixture is gone -->
+log: 2026-10-25 · quality round 10 → `tests/c8-close.bats` SC16-smoke pinned exact bog-audit counts to a campaign-8 station-bog snapshot kept only in a temporary session copy, which no longer exists, so the counts are unverifiable. SC16-smoke now skips unconditionally with that reason (old body kept for history); the header records the retirement and `tests/bog-audit.bats` comments its session-scratch default path. Proposed rule: a close fixture lives in a private location outside the public repository; the public gate records only its sha256 and an env var naming the private file, and skips loudly when it is absent or the sha256 does not match. Retro retros/2026-10-25-r10-c8-close-retire.md (1Δ, folded). [ev: retro r10-c8-close-retire Δ1]
+open_issue: give the next real-bog close pin a private archived fixture, its recorded sha256 and the skip-on-mismatch guard (retro r10-c8-close-retire § Fold).

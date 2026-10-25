@@ -27,7 +27,9 @@ setup() {
 @test "SN1: copies config.bog + both console*.txt and NOTHING else (history/ decoy excluded), exit 0" {
   run "$SNAP" "$ST" "$OUT"
   [ "$status" -eq 0 ]
-  [ -f "$OUT/config.bog" ] && [ -f "$OUT/console_1.txt" ] && [ -f "$OUT/console_2.txt" ]
+  [ -f "$OUT/config.bog" ]
+  [ -f "$OUT/console_1.txt" ]
+  [ -f "$OUT/console_2.txt" ]
   [ ! -e "$OUT/history" ] && [ ! -e "$OUT/old.log" ]
 }
 
@@ -37,7 +39,8 @@ setup() {
   [ -f "$OUT/manifest.json" ]
   bogsum=$(sha256sum "$ST/config.bog" | cut -d' ' -f1)
   grep -q "$bogsum" "$OUT/manifest.json"                 # the manifest hash MATCHES the actual file
-  grep -q "console_1.txt" "$OUT/manifest.json" && grep -q "console_2.txt" "$OUT/manifest.json"
+  grep -q "console_1.txt" "$OUT/manifest.json"
+  grep -q "console_2.txt" "$OUT/manifest.json"
   grep -qiE '"(ts|timestamp)"' "$OUT/manifest.json"
 }
 

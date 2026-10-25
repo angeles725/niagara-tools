@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: run-niagara-test run accepts the ignored-count fallback only when the source cannot name the set -->
+log: 2026-10-25 · quality round 10 → `run-niagara-test run` (`go/internal/niagaratest/run.go` `scanIgnored`, `ignored.go`) scans the source under `--allow-ignored-count` too and prints the scanned `Class.method` names in every report; the count is accepted only when the scan refused (case (i): a NOTE row instead of exit 3) or the source count differs from the root `ignored` (case (ii)), the PASS row naming the case, and a scan that names every ignored method FAILs the count "use --allow-ignored names" whatever the reason, closing the swap the count fallback still allowed; `verdict --testng` keeps the count pair. Retro retros/2026-10-25-r10-rnt-fallback-strict.md (1Δ, folded). [ev: retro r10-rnt-fallback-strict Δ1]
+open_issue: proven on synthetic sources and the fake runner only; a live `run` of a client root under the count fallback is owed (retro r10-rnt-fallback-strict Δ1).

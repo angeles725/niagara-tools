@@ -12,8 +12,9 @@ import (
 )
 
 // TestGolden: every tests/lint-link-target-flags.bats run on a readable, non-empty tree and every edge tree,
-// recorded from the bash lint (origin/main 8a1c26f) on copies of its root and map.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 54) }
+// recorded from the bash lint (origin/main 8a1c26f) on copies of its root and map; truth-* (2026-10-24) and
+// classdoc-* (r10 ltf1-marker-reset: a class javadoc naming a slot past @NiagaraType) are written by hand.
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 58) }
 
 // TestEmptyDir: an empty root directory (the golden format cannot hold one) is the K20 ERROR row, exit 3.
 func TestEmptyDir(t *testing.T) {

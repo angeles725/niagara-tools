@@ -9,11 +9,13 @@
 //
 // Java is read as javasrc.Tokens (comments stripped, a literal one token), so an annotation in a comment or a string
 // is not one; a types value that is not a string literal (a constant) cannot be resolved and is not checked. The
-// part of a source file is the deepest directory holding a module-include.xml whose src/ contains it; srcTest/ and
-// build/ are never read, and a *.java outside every src/ is not a part source.
+// part of a source file is the deepest directory holding a module-include.xml whose src/ contains it; build/ is never
+// read, a *.java outside every src/ is not a part source, and a srcTest/ source is read only by the
+// test-type-in-prod sub-check (testtypes.go).
 package agentonincludesync
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -27,12 +29,12 @@ const ID = "lint-agent-on-include-sync"
 
 const include = "module-include.xml"
 
-// Spec registers the rule: [--] <module-root>... (each root checked on its own), every *.java and module-include.xml
-// outside srcTest/ and build/; a root with no module-include.xml is the ERROR row (exit 3). Its roots are module or
+// Spec registers the rule: [--] <module-root>... (each root checked on its own), every *.java, module-include.xml and
+// moduleTest-include.xml outside build/; a root with no module-include.xml is the ERROR row (exit 3). Its roots are module or
 // part roots, never source roots, so n4lint --all leaves it out (Spec.ModuleRoot).
 func Spec() lint.Spec {
 	return lint.Spec{Tree: rule{}, Mode: lint.Each, ModuleRoot: true, Usage: "usage: lint-agent-on-include-sync.sh [--] <module-root>...",
-		Select:     lint.Selection{Names: []string{"*.java", include}, Prune: []string{"srcTest", "build"}},
+		Select:     lint.Selection{Names: []string{"*.java", include, testInclude}, Prune: []string{"build"}},
 		EmptyError: lint.EmptyRow{Msg: "no " + include + " under the root (wrong path: pass a module or part root)"}}
 }
 
@@ -45,6 +47,8 @@ func (rule) Severity() lint.Severity { return lint.Fail }
 // malformed module-include.xml is an error (exit 3) after the rows of the other files.
 func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 	parts := map[string]map[string][]string{} // part dir -> class -> on types
+	docs := map[string]*xmlsrc.Doc{}          // part dir -> its module-include.xml
+	tests := map[string]*xmlsrc.Doc{}         // part dir -> its moduleTest-include.xml
 	var bad error
 	for _, f := range files {
 		if dir, ok := strings.CutSuffix(f.Path, "/"+include); ok {
@@ -52,7 +56,14 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 			if doc, err := xmlsrc.Open(f.Path); err != nil {
 				bad = err
 			} else {
-				parts[dir] = onTypes(doc)
+				parts[dir], docs[dir] = onTypes(doc), doc
+			}
+		} else if dir, ok := strings.CutSuffix(f.Path, "/"+testInclude); ok {
+			tests[dir] = nil // malformed: the part's test-type-in-prod check is skipped
+			if doc, err := xmlsrc.Open(f.Path); err != nil {
+				bad = err
+			} else {
+				tests[dir] = doc
 			}
 		}
 	}
@@ -60,8 +71,20 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 		return nil, lint.ErrEmptyRoot
 	}
 	var out []lint.Finding
+	sources := map[string]map[string]string{} // part dir -> srcTest binary name -> file
 	for _, f := range files {
 		if !strings.HasSuffix(f.Path, ".java") {
+			continue
+		}
+		if strings.Contains(f.Path, "/srcTest/") { // a test source: read for test-type-in-prod only
+			if dir, ok := testPart(f.Path, parts); ok {
+				if sources[dir] == nil {
+					sources[dir] = map[string]string{}
+				}
+				for _, c := range TestClasses(javasrc.Tokens(f.Stripped())) {
+					sources[dir][c] = f.Path
+				}
+			}
 			continue
 		}
 		dir, ok := partOf(f.Path, parts)
@@ -74,7 +97,23 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 			}
 		}
 	}
-	return out, bad
+	return append(out, testLeakRows(docs, tests, sources)...), bad
+}
+
+// testLeakRows is the test-type-in-prod rows of every well-formed part, in part order; a part whose
+// moduleTest-include.xml is malformed is not checked (the error is the result).
+func testLeakRows(docs, tests map[string]*xmlsrc.Doc, sources map[string]map[string]string) []lint.Finding {
+	var out []lint.Finding
+	for _, dir := range slices.Sorted(maps.Keys(docs)) {
+		test, has := tests[dir]
+		if has && test == nil {
+			continue
+		}
+		for _, l := range TestLeaks(docs[dir], test, sources[dir]) {
+			out = append(out, lint.Finding{Check: TestCheck, Path: docs[dir].Path, Line: l.Line, Msg: l.Msg()})
+		}
+	}
+	return out
 }
 
 // check is the row message for one annotated type, or "" when its line carries every declared on type.

@@ -10,6 +10,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/ktssrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonincludesync"
 )
 
 // declaredDeps are the module names gradle.kts declares, read through ktssrc (comments and string
@@ -111,7 +112,16 @@ func (r *run) phantomDep() bool {
 // moduleTest looks for moduleTest-include.xml through the shared walk: a copy under a dot directory
 // (.deploy-baseline/) or a sibling *-worktrees checkout is not this module's. The bash's unpruned find took
 // one as present (declared difference, truth-moduletest-pruned).
+//
+// Before that, on every part with --src, a production module-include.xml <type> that is a test type (its class
+// under srcTest/ or listed in moduleTest-include.xml) is a FAIL row: the shared lint-agent-on-include-sync
+// test-type-in-prod sub-check (agentonincludesync.PartTestLeaks). A clean part prints no row for it.
 func (r *run) moduleTest() bool {
+	if r.src != "" {
+		if ok, done := r.testTypesInProd(r.src + "/" + basename(r.jar.path, ".jar")); done {
+			return ok
+		}
+	}
 	if !strings.HasSuffix(basename(r.jar.path, ".jar"), "-rt") {
 		r.row("SKIP", "moduletest", "not an -rt jar")
 		return true
@@ -139,6 +149,21 @@ func (r *run) moduleTest() bool {
 		r.row("WARN", "moduletest", msg)
 	}
 	return true
+}
+
+// testTypesInProd prints one moduletest FAIL row per test type the part's module-include.xml registers (ok false); a
+// malformed XML file or an unreadable srcTest/ source is the env error (exit 3). done ends the moduletest check: a
+// clean part goes on to the moduleTest-include.xml presence rows.
+func (r *run) testTypesInProd(pd string) (ok, done bool) {
+	leaks, err := agentonincludesync.PartTestLeaks(pd)
+	if err != nil {
+		r.envError(err.Error())
+		return true, true
+	}
+	for _, l := range leaks {
+		r.row("FAIL", "moduletest", l.Msg())
+	}
+	return len(leaks) == 0, len(leaks) > 0
 }
 
 var typeValueRe = rx(`type[[:space:]]*=[[:space:]]*"[^"]*"`)
