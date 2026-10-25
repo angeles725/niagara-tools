@@ -16,6 +16,19 @@ from mcp_n4 import box, server, tools_read  # noqa: E402
 
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NO_SLEEP = dict(sleep=lambda s: None)
+#: What the server under test reports and enforces. Each literal is checked against the binary's
+#: own output below, so it cannot drift silently: the version and the protocol set against
+#: `initialize`, the nesting limit by the two tests that probe it, the tool lists against
+#: `tools/list` (read-only here, writes-allowed in test_tiers).
+SERVER_VERSION = "0.9.5"
+SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
+MAX_NESTING = 1000
+READ_TOOLS = ["n4_connect", "n4_describe_session", "n4_navigate", "n4_read_slots",
+              "n4_list_links", "n4_find_dangling_outputs", "n4_bql_query", "n4_inventory",
+              "n4_read_file", "n4_list_px_views", "n4_px_summary", "n4_list_batches",
+              "n4_session_retro_draft"]
+WRITE_TOOLS = ["n4_create_component", "n4_create_link", "n4_invoke_action",
+               "n4_remove_component", "n4_rollback", "n4_save_station", "n4_set_slot"]
 
 
 def rpc(method, params=None, id_=1):
@@ -36,20 +49,21 @@ class TestProtocol(unittest.TestCase):
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "2025-03-26"}))
         self.assertEqual(res["id"], 1)
         result = res["result"]
-        self.assertEqual(result["serverInfo"], {"name": "mcp-n4", "version": server.SERVER_VERSION})
+        self.assertEqual(result["serverInfo"], {"name": "mcp-n4", "version": SERVER_VERSION})
         self.assertEqual(result["capabilities"], {"tools": {"listChanged": False}})
         self.assertEqual(result["protocolVersion"], "2025-03-26")
 
     def test_initialize_falls_back_to_newest_supported_version(self):
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "1999-01-01"}))
-        self.assertEqual(res["result"]["protocolVersion"], server.SUPPORTED_PROTOCOL_VERSIONS[0])
+        self.assertEqual(res["result"]["protocolVersion"], SUPPORTED_PROTOCOL_VERSIONS[0])
         res = self.srv.dispatch(rpc("initialize"))
-        self.assertEqual(res["result"]["protocolVersion"], server.SUPPORTED_PROTOCOL_VERSIONS[0])
+        self.assertEqual(res["result"]["protocolVersion"], SUPPORTED_PROTOCOL_VERSIONS[0])
 
     def test_a_newer_protocol_version_is_not_echoed_until_its_semantics_exist(self):
         """Pins the documented supported set: newer revisions are answered with 2025-06-18."""
-        self.assertEqual(server.SUPPORTED_PROTOCOL_VERSIONS,
-                         ("2025-06-18", "2025-03-26", "2024-11-05"))
+        for version in SUPPORTED_PROTOCOL_VERSIONS:  # every supported revision is echoed
+            res = self.srv.dispatch(rpc("initialize", {"protocolVersion": version}))
+            self.assertEqual(res["result"]["protocolVersion"], version)
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "2025-11-25"}))
         self.assertEqual(res["result"]["protocolVersion"], "2025-06-18")
 
@@ -85,7 +99,7 @@ class TestProtocol(unittest.TestCase):
 
     def test_tools_list_entries_have_schema_and_read_only_annotations(self):
         tools = self.srv.dispatch(rpc("tools/list"))["result"]["tools"]
-        self.assertEqual([t["name"] for t in tools], [t.name for t in tools_read.TOOLS])
+        self.assertEqual([t["name"] for t in tools], READ_TOOLS)
         for tool in tools:
             self.assertEqual(tool["inputSchema"]["type"], "object")
             self.assertEqual(tool["annotations"], {"readOnlyHint": True, "openWorldHint": False})
@@ -203,14 +217,14 @@ class TestRobustness(unittest.TestCase):
 
     def test_nesting_up_to_the_limit_is_answered(self):
         srv = self.make_server()
-        out = json.loads(srv.handle_line(self.nested_id(server.MAX_NESTING)))
+        out = json.loads(srv.handle_line(self.nested_id(MAX_NESTING)))
         self.assertEqual(out["result"], {})
-        self.assertEqual(json.dumps(out["id"]).count("["), server.MAX_NESTING - 1)
+        self.assertEqual(json.dumps(out["id"]).count("["), MAX_NESTING - 1)
 
     def test_deeper_nesting_is_a_parse_error_and_the_server_keeps_serving(self):
         """R8-D15: CPython's json raised RecursionError (not ValueError) and killed serve."""
         srv = self.make_server()
-        for depth in (server.MAX_NESTING + 1, 200000):
+        for depth in (MAX_NESTING + 1, 200000):
             for line in (self.nested_id(depth), '{"a":' * depth + "1" + "}" * depth):
                 out = json.loads(srv.handle_line(line))
                 self.assertEqual(out, {"jsonrpc": "2.0", "id": None,
@@ -460,7 +474,8 @@ class TestConnect(ToolTestCase):
         self.assertEqual(self.fake.requests, 0)
 
     def test_credential_env_is_not_a_tool_argument(self):
-        props = [t for t in tools_read.TOOLS if t.name == "n4_connect"][0].input_schema
+        tools = self.srv.dispatch(rpc("tools/list"))["result"]["tools"]
+        props = [t for t in tools if t["name"] == "n4_connect"][0]["inputSchema"]
         self.assertEqual(set(props["properties"]), {"station", "expected_station"})
         self.assertEqual(props["required"], ["station"])
         res = self.srv.dispatch(rpc("tools/call", {"name": "n4_connect", "arguments": {
@@ -610,7 +625,7 @@ class TestDescribeSession(ToolTestCase):
     def test_describe_before_connect_reports_disconnected(self):
         out = self.ok("n4_describe_session")
         self.assertEqual(out, {"connected": False, "station_name": None, "base_url": None,
-                               "mode": "read-only", "server_version": server.SERVER_VERSION,
+                               "mode": "read-only", "server_version": SERVER_VERSION,
                                "configured_stations": ["FakeStation"], "version": None,
                                "version_source": None, "tier": None, "tier_writes": None})
 
@@ -619,7 +634,7 @@ class TestDescribeSession(ToolTestCase):
         out = self.ok("n4_describe_session")
         self.assertEqual(out, {"connected": True, "station_name": "FakeStation",
                                "base_url": self.fake.url, "mode": "read-only",
-                               "server_version": server.SERVER_VERSION,
+                               "server_version": SERVER_VERSION,
                                "configured_stations": ["FakeStation"],
                                "version": "4.14.0.162", "version_source": "/obix/about/",
                                "tier": "A", "tier_writes": "allowed"})

@@ -13,10 +13,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import go_server  # noqa: E402
 import fake_station  # noqa: E402
 import test_tools_write as ttw  # noqa: E402  (module import: its tests are not re-collected)
+import state_files  # noqa: E402
 from mcp_n4 import box, safety, server, tools_write  # noqa: E402
 
 FOLDER = ttw.FOLDER
 NO_SLEEP = ttw.NO_SLEEP
+#: Limits and wording of the Go server's write engine. The tests that use them find each one in
+#: a real plan or refusal, so a drift fails them.
+SNAPSHOT_DEPTH = 3
+LINK_SCAN_DEPTH = 6
+REASON_JOURNAL_UNREADABLE = "journal line unreadable"
 
 
 class DestructiveCase(ttw.WriteTestCase):
@@ -39,7 +45,7 @@ class DestructiveCase(ttw.WriteTestCase):
 
     def journal(self):
         """The journal the server wrote, read (and crafted) through its state file."""
-        return safety.Journal(self.state_dir)
+        return state_files.Journal(self.state_dir)
 
     def patch(self, obj, attr, new):
         """Replace obj.attr until this test ends; the original is restored on cleanup."""
@@ -146,7 +152,7 @@ class TestOutgoingLinks(DestructiveCase):
                         link_scan_ord=FOLDER)["plan"]
         self.assertNotIn("outgoing_links_broken", plan)
         note = [n for n in plan["notes"] if "no outgoing links" in n][0]
-        self.assertIn("depth %d" % tools_write.LINK_SCAN_DEPTH, note)
+        self.assertIn("depth %d" % LINK_SCAN_DEPTH, note)
         self.assertIn("deeper", note)  # an empty scan must say what it could not see
 
     def test_the_scan_root_must_be_inside_the_write_scope(self):
@@ -320,7 +326,6 @@ class TestRollback(DestructiveCase):
         fallback = self.fake.folder.child(nn).child("Src").child("fallback")
         self.assertEqual(fallback.child("value").value, "7.0")
         self.assertEqual(fallback.child("status").value, "0")  # no runtime activeLevel facet
-        self.assertEqual(tools_write.RUNTIME_OUTPUT_SLOTS, ("out",))
 
     def test_the_snapshot_keeps_configured_status_bits_and_drops_only_facets(self):
         """Review R4-status-coercion: a null (0x40) fallback must not come back as ok."""
@@ -362,7 +367,7 @@ class TestRollback(DestructiveCase):
         sent = self.sent_adds()
         back = self.rollback(removed["batch_id"])
         self.assertEqual(back["verdict"], "verified", back)
-        self.assertNotIn('"t": null', safety.canonical([op["b"] for op in sent]).replace(
+        self.assertNotIn('"t": null', state_files.canonical([op["b"] for op in sent]).replace(
             '"t":null', '"t": null'))
         tgt = [op for op in sent if op["nm"] == "a" and op["n"] == "Tgt"][0]
         names = [c["n"] for c in tgt["b"].get("s", [])]
@@ -1051,7 +1056,7 @@ class TestRollback(DestructiveCase):
         self.append_journal(b'{"batch_id": "\xff"}\n{"batch_id": [1], "phase": "intent", '
                             b'"rollback_of": "%s"}\n' % out["batch_id"].encode())
         text = self.err("n4_rollback", batch_id=out["batch_id"])
-        self.assertIn(safety.REASON_JOURNAL_UNREADABLE, text)
+        self.assertIn(REASON_JOURNAL_UNREADABLE, text)
         self.assertIn("line(s) 3 (UnicodeDecodeError), 4 (TypeError)", text)
         self.assertEqual(self.children(), ["Pump"])
 
@@ -1062,7 +1067,7 @@ class TestRollback(DestructiveCase):
                             b'{"batch_id": "%s", "phase": "component-intent", "ops": 7}\n'
                             % (b"ee" * 16))
         self.assertEqual(self.rollback(out["batch_id"])["verdict"], "verified")
-        self.assertIn(safety.REASON_JOURNAL_UNREADABLE,
+        self.assertIn(REASON_JOURNAL_UNREADABLE,
                       self.err("n4_rollback", batch_id="ee" * 16))
 
     def test_a_batch_id_with_a_trailing_newline_is_malformed(self):
@@ -1286,7 +1291,7 @@ class TestSnapshotTruncation(DestructiveCase):
         nn = self.deep_group()
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
         self.assertEqual(plan["plan"]["snapshot_truncated"],
-                         {"depth": tools_write.SNAPSHOT_DEPTH, "paths": ["L1/L2/C/limit"]})
+                         {"depth": SNAPSHOT_DEPTH, "paths": ["L1/L2/C/limit"]})
         note = next(n for n in plan["plan"]["notes"] if "deeper than the snapshot" in n)
         # H6 review R3: only one level below the cut is loaded, so the count is a floor.
         self.assertIn("at least 1", note)

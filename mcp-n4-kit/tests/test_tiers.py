@@ -6,11 +6,15 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import go_server  # noqa: E402
+import test_retro  # noqa: E402  (module import: its tests are not re-collected here)
 import test_server  # noqa: E402
 import test_tools_write  # noqa: E402
 from mcp_n4 import box, retro, safety, server, tiers, tools_write  # noqa: E402
 
 FOLDER = test_tools_write.FOLDER
+#: The reason every tier refusal starts with (the Go server's tier gate words it; each test
+#: that uses it finds it in a real refusal, so it cannot drift silently).
+REASON_TIER = "version tier refuses writes"
 #: Every mutating tool with arguments that pass schema validation.
 MUTATING = [
     ("n4_create_component", {"parent_ord": FOLDER, "name": "X", "type": "kitControl:NumericConst"}),
@@ -61,7 +65,7 @@ class TestTierClassification(unittest.TestCase):
         b = tiers.write_block("B", "4.15.3.28", "S", {})
         c = tiers.write_block("C", None, "S", {})
         for text in (b, c):
-            self.assertIn(safety.REASON_TIER, text)
+            self.assertIn(REASON_TIER, text)
             self.assertIn("Workbench", text)
             self.assertIn("dry run", text)
         self.assertIn("--allow-tier-b S", b)
@@ -74,7 +78,7 @@ class TestTierClassification(unittest.TestCase):
     @go_server.go_twin("tiers", "unit")
     def test_the_retro_classifies_tier_refusals(self):
         needles = [n for r in retro._REFUSALS for n in r[1]]
-        self.assertIn(safety.REASON_TIER, needles)
+        self.assertIn(REASON_TIER, needles)
 
 
 class TestConnectReportsTier(test_server.ToolTestCase):
@@ -195,7 +199,7 @@ class TestTierB(TierWriteCase):
         plan = self.dry("n4_create_component", **self.create())
         text = self.err("n4_create_component", dry_run=False,
                         confirmation_token=plan["confirmation_token"], **self.create())
-        self.assertIn(safety.REASON_TIER, text)
+        self.assertIn(REASON_TIER, text)
         self.assertIn("--allow-tier-b FakeStation", text)
         self.assertIn("Workbench", text)
         self.assertNotIn("Pump", self.children())
@@ -204,10 +208,14 @@ class TestTierB(TierWriteCase):
 
     def test_every_mutating_tool_is_gated(self):
         self.connect_verified()
-        self.assertEqual(sorted(t for t, _ in MUTATING), sorted(tools_write.NAMES))
+        self.assertEqual(sorted(t for t, _ in MUTATING), test_server.WRITE_TOOLS)
+        listed = [t["name"] for t in self.srv.dispatch(test_server.rpc("tools/list"))[
+            "result"]["tools"]]  # the binary's own write tools: WRITE_TOOLS cannot drift
+        self.assertEqual(sorted(set(listed) - set(test_server.READ_TOOLS)),
+                         test_server.WRITE_TOOLS)
         for tool, args in MUTATING:
             text = self.err(tool, dry_run=False, confirmation_token="1.a.b", **args)
-            self.assertIn(safety.REASON_TIER, text, tool)
+            self.assertIn(REASON_TIER, text, tool)
 
     def test_operator_opt_in_allows_writes(self):
         self.start_server(allow_tier_b=("FakeStation",))
@@ -233,7 +241,7 @@ class TestTierC(TierWriteCase):
         self.assertEqual(plan["tier_gate"]["tier"], "C")
         text = self.err("n4_create_component", dry_run=False,
                         confirmation_token=plan["confirmation_token"], **self.create())
-        for needle in (safety.REASON_TIER, "--allow-tier-c FakeStation", "reg.loadContract",
+        for needle in (REASON_TIER, "--allow-tier-c FakeStation", "reg.loadContract",
                        "scratch", "Workbench"):
             self.assertIn(needle, text)
         self.assertNotIn("Pump", self.children())
@@ -249,6 +257,9 @@ class TestTierC(TierWriteCase):
         self.connect_verified()
         plan = self.dry("n4_create_component", **self.create())
         self.assertEqual((plan["tier_gate"]["tier"], plan["tier_gate"]["version"]), ("C", None))
+        text = self.err("n4_create_component", dry_run=False,
+                        confirmation_token=plan["confirmation_token"], **self.create())
+        self.assertEqual(text, test_retro.tier_refusal("FakeStation"))
 
     def test_operator_opt_in_allows_writes(self):
         self.start_server(allow_tier_c=("FakeStation",))

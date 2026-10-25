@@ -11,6 +11,7 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import go_server  # noqa: E402
+import state_files  # noqa: E402
 import test_server  # noqa: E402
 from mcp_n4 import retro, safety, tools_read  # noqa: E402
 
@@ -23,7 +24,7 @@ FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "
 def audit_row(ts, tool, outcome, reason, batch_id=None, args=None):
     return {"ts": ts, "tool": tool, "batch_id": batch_id, "dry_run": outcome == "planned",
             "outcome": outcome, "reason": reason,
-            "args_redacted": safety.redact_args(args or {})}
+            "args_redacted": state_files.redact_args(args or {})}
 
 
 def journal_batch(bid, ts, verdict, tool="n4_set_slot", in_doubt=False, with_result=True,
@@ -58,7 +59,7 @@ class Fixture(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.dir = os.path.join(tmp.name, "state")
-        self.audit, self.journal = safety.AuditLog(self.dir), safety.Journal(self.dir)
+        self.audit, self.journal = state_files.AuditLog(self.dir), state_files.Journal(self.dir)
 
     def add_audit(self, *rows):
         for r in rows:
@@ -306,7 +307,7 @@ class TestServerTool(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             state = os.path.join(tmp, "s")
             for r in journal_batch(B1, "2026-10-01T11:00:00+00:00", "mismatch"):
-                safety.Journal(state).append(r)
+                state_files.Journal(state).append(r)
             srv = self.server(state_dir=state)
             res = self.rpc(srv, "tools/call", {"name": "n4_session_retro_draft",
                                                "arguments": {"since": "2000-01-01T00:00:00Z"}}
@@ -323,7 +324,7 @@ class TestServerTool(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             state = os.path.join(tmp, "s")
             for r in journal_batch(B1, "2026-10-01T11:00:00+00:00", "mismatch"):
-                safety.Journal(state).append(r)  # written before this server started
+                state_files.Journal(state).append(r)  # written before this server started
             srv = self.server(state_dir=state)
             call = lambda args: self.rpc(srv, "tools/call", {
                 "name": "n4_session_retro_draft", "arguments": args})["result"]["structuredContent"]
@@ -340,9 +341,16 @@ class TestServerTool(unittest.TestCase):
             self.assertEqual(res["content"][0]["text"], "not an ISO-8601 timestamp: 'nope'")
 
 
-def tier_refusal():
-    from mcp_n4 import tiers
-    return tiers.write_block("C", None, "LLM", {})
+def tier_refusal(station="LLM"):
+    """The tier-C refusal of a station with no version, as the Go server words it
+    (test_tiers.TestTierC compares it with a real refusal, so it cannot drift silently)."""
+    return ("version tier refuses writes: station %s is tier C (version unknown (no oBIX "
+            "productVersion at /obix/about/)): writes need the probe sequence first (METHODOLOGY "
+            "section 5): `reg.loadContract` and `loadRoot` succeed and one harmless scratch write "
+            "(create, read back, remove in a scratch folder) is verified on this build. The server "
+            "has no probe tool. Routes: (1) dry runs stay allowed here, so the plan can be "
+            "reviewed now; (2) make the change in Workbench; (3) run that probe (e.g. in "
+            "Workbench or a PoC script), then restart the server with `--allow-tier-c %s`." % (station, station))
 
 
 #: Refusal reasons of every class, worded as the raise sites word them.

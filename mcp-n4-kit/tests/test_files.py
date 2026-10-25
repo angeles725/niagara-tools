@@ -231,10 +231,10 @@ class TestReadFileTool(FileToolCase):
         self.assertEqual((obs["tool"], obs["ord"]), ("n4_read_file", "file:^px/General.px"))
 
     def test_the_tools_are_listed_as_read_only(self):
-        names = [t.name for t in tools_read.TOOLS]
+        tools = {t["name"]: t for t in self.srv.dispatch(
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]}
         for name in ("n4_read_file", "n4_list_px_views", "n4_px_summary"):
-            self.assertIn(name, names)
-            self.assertNotIn(name, tools_write.NAMES)
+            self.assertEqual(tools[name]["annotations"]["readOnlyHint"], True, name)
 
 
 class TestReadFileOutput(FileToolCase):

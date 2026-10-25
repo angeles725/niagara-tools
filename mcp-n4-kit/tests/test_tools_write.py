@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import go_server  # noqa: E402
 import test_server  # noqa: E402  (module import: its test classes are not re-collected here)
+import state_files  # noqa: E402
 from mcp_n4 import box, safety, server, tools_write  # noqa: E402
 
 WRITE_TOOLS = ["n4_create_component", "n4_set_slot", "n4_invoke_action", "n4_create_link"]
@@ -78,7 +79,7 @@ class WriteTestCase(test_server.ToolTestCase):
 
     def batch(self, batch_id):
         """The merged journal view of a batch, read from the state file the server wrote."""
-        return safety.Journal(self.state_dir).read(batch_id)
+        return state_files.Journal(self.state_dir).read(batch_id)
 
     def lines(self, name):
         path = os.path.join(self.state_dir, name)
@@ -911,7 +912,7 @@ class TestJournalAndAudit(WriteTestCase):
         for secret in ("hunter2", "s3cr3t-x", token, self.PASSWORD):
             self.assertNotIn(secret, audit)
         self.assertNotIn(self.PASSWORD, json.dumps([plan, out]))
-        self.assertIn(tools_write.safety.REDACTED, audit)
+        self.assertIn(state_files.REDACTED, audit)
 
     def test_state_files_are_private(self):
         self.run_write("n4_create_component", **self.ARGS)
