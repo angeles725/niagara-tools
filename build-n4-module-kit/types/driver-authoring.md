@@ -992,6 +992,13 @@ Running it from WSL — each step is a failure seen on the way:
   warning after the summary) is install noise. `[ev: retro r10-run-niagara-test-testng Δ3]`
 - **An untrusted signer did not block the run here:** the loader WARNed `Could not validate cert chain` for both
   jars and still loaded and ran them (fresh user home, this install's default verification mode).
+- **On 4.15 the same jar is rejected:** 4.14 ships `niagara.moduleVerificationMode=low` in
+  `defaults/system.properties`; 4.15 ships it commented out, so the code default `medium` fails the jar with
+  `failed signature validation` and test.exe prints `invalid test target(s)` and exits 0. For a station test on a
+  disposable copy only, `run-niagara-test run --module-verification low` appends the 4.14 line to the copy (never
+  the install, whose file it hashes before and after). TEST-ONLY: never on a commissioning or production home, and
+  `low` still rejects a module that requests one of the six signature-required permission groups
+  (`types/moduleTest.md` § Running from WSL) `[ev: retro r10-rnt-module-verification Δ2]`.
 - **The signing key needs the code-signing usage:** a plain `keytool -genkeypair` key fails `:jar` with
   `Certificate for <alias> is not valid for code signing`; add `-ext EKU=codeSigning -ext KU=digitalSignature`.
 

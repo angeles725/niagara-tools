@@ -6,7 +6,7 @@ usage: run-niagara-test verdict [<log>|-]
        run-niagara-test verdict --testng <testng-results.xml> [<log>|-]
        run-niagara-test run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
                             [--timeout <dur>] [--keep-home] [--scratch <dir>] [--jdk8 <dir>]
-                            [--gradle-user-home <dir>]
+                            [--gradle-user-home <dir>] [--module-verification low]
   verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
            or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
            "Total tests run: N" line has N > 0 and 0 failures; a stray Failures count, "invalid test
@@ -30,6 +30,9 @@ usage: run-niagara-test verdict [<log>|-]
            as niagara_user_home through WSLENV (niagara_user_home/w). The build uses the WSL JDK 8
            --jdk8 (default /usr/lib/jvm/java-8-openjdk-amd64, JAVA_HOME and installations.paths) and the
            gradle cache --gradle-user-home (default ~/.gradle). --timeout (default 30m) kills the run.
+           --module-verification low (TEST ONLY, off by default) appends niagara.moduleVerificationMode=low
+           to the copy's defaults\system.properties, never the install's (4.15 defaults to medium, which
+           rejects a self-signed test jar; 4.14 ships low); the install's file is hashed before and after.
 exit: verdict 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
       run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout
 -- @kind --

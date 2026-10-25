@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: run-niagara-test run --module-verification low for the disposable copy -->
+log: 2026-10-24 · quality round 10 → `run-niagara-test run --module-verification low` (`go/internal/niagaratest`), test-only and off by default: after robocopy it appends `niagara.moduleVerificationMode=low` (the file's line ending) to the copy's `defaults/system.properties` only, refused (exit 2) when that file resolves inside `--install`, outside the run's scratch dir or off the drives; the install's file is sha256-checked before the copy and after cleanup (a change is FAIL); without the flag a `failed signature validation` console adds a hint row. 4.14 ships `low`, 4.15 leaves it commented out (code default `medium`); `low` still rejects the six signature-required permission groups. Retro retros/2026-10-24-r10-rnt-module-verification.md (pending). [ev: retro r10-rnt-module-verification]
+open_issue: `--module-verification low` is proven only on the fake runner; a live 4.15 `run` with a self-signed test jar is owed (retro r10-rnt-module-verification Δ1).

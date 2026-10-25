@@ -36,3 +36,9 @@ setup() {
   [ "$status" -eq 2 ] || { echo "$output"; return 1; }
   [[ "$output" == *"--install $BATS_TEST_TMPDIR/home: not on a Windows drive"* ]]
 }
+
+@test "RNT5: run takes only low for --module-verification: any other value is exit 2, before copying anything" {
+  run "$R" run --install 'C:\Niagara\N4' --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA --module-verification medium
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *'--module-verification "medium": the only value is low'* ]]
+}
