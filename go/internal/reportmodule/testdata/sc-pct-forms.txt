@@ -1,0 +1,187 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 0
+P1  SKIP  verify-module  no built jar under build/libs (floor check not run)
+P1  PASS  dup-keys  0
+P1  PASS  slot-coverage  100%
+P1  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+P1  SKIP  lint-delays  no src/
+P1  SKIP  lint-demand-scope  no src/
+P1  SKIP  lint-silent-protection  no src/
+P1  SKIP  lint-link-target-flags  no src/
+P1  SKIP  lint-ext-writable-shape  no src/
+P1  SKIP  lint-no-system-out  no src/
+P1  SKIP  lint-slotomatic-markers  no src/
+P1  SKIP  lint-clock-zero-floor  no src/
+P1  SKIP  lint-null-context-write  no src/
+P1  SKIP  lint-bql-string-concat  no src/
+P1  SKIP  lint-arbitrary-ord  no src/
+P1  SKIP  lint-persist-hot-write  no src/
+P1  SKIP  lint-changed-hot-write  no src/
+P1  SKIP  lint-inert-coordination  no src/
+P1  SKIP  lint-session-store-lazy-evict  no src/
+P1  SKIP  lint-bformat-call  no src/
+P1  SKIP  lint-service-types  no src/
+P1  SKIP  lint-driver-scaffold  no src/
+P1  SKIP  lint-no-md5-credential-digest  no src/
+P1  SKIP  lint-size  no src/
+P1  SKIP  lint-license-isoperational-gate  no src/
+P1  SKIP  lint-set-null-ord  no src/
+P1  SKIP  lint-ws-placement  no src/
+P1  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P2  SKIP  verify-module  no built jar under build/libs (floor check not run)
+P2  PASS  dup-keys  0
+P2  PASS  slot-coverage  150.5%
+P2  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+P2  SKIP  lint-delays  no src/
+P2  SKIP  lint-demand-scope  no src/
+P2  SKIP  lint-silent-protection  no src/
+P2  SKIP  lint-link-target-flags  no src/
+P2  SKIP  lint-ext-writable-shape  no src/
+P2  SKIP  lint-no-system-out  no src/
+P2  SKIP  lint-slotomatic-markers  no src/
+P2  SKIP  lint-clock-zero-floor  no src/
+P2  SKIP  lint-null-context-write  no src/
+P2  SKIP  lint-bql-string-concat  no src/
+P2  SKIP  lint-arbitrary-ord  no src/
+P2  SKIP  lint-persist-hot-write  no src/
+P2  SKIP  lint-changed-hot-write  no src/
+P2  SKIP  lint-inert-coordination  no src/
+P2  SKIP  lint-session-store-lazy-evict  no src/
+P2  SKIP  lint-bformat-call  no src/
+P2  SKIP  lint-service-types  no src/
+P2  SKIP  lint-driver-scaffold  no src/
+P2  SKIP  lint-no-md5-credential-digest  no src/
+P2  SKIP  lint-size  no src/
+P2  SKIP  lint-license-isoperational-gate  no src/
+P2  SKIP  lint-set-null-ord  no src/
+P2  SKIP  lint-ws-placement  no src/
+P2  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P3  SKIP  verify-module  no built jar under build/libs (floor check not run)
+P3  PASS  dup-keys  0
+P3  WARN  slot-coverage  0.0% (missing A)
+P3  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+P3  SKIP  lint-delays  no src/
+P3  SKIP  lint-demand-scope  no src/
+P3  SKIP  lint-silent-protection  no src/
+P3  SKIP  lint-link-target-flags  no src/
+P3  SKIP  lint-ext-writable-shape  no src/
+P3  SKIP  lint-no-system-out  no src/
+P3  SKIP  lint-slotomatic-markers  no src/
+P3  SKIP  lint-clock-zero-floor  no src/
+P3  SKIP  lint-null-context-write  no src/
+P3  SKIP  lint-bql-string-concat  no src/
+P3  SKIP  lint-arbitrary-ord  no src/
+P3  SKIP  lint-persist-hot-write  no src/
+P3  SKIP  lint-changed-hot-write  no src/
+P3  SKIP  lint-inert-coordination  no src/
+P3  SKIP  lint-session-store-lazy-evict  no src/
+P3  SKIP  lint-bformat-call  no src/
+P3  SKIP  lint-service-types  no src/
+P3  SKIP  lint-driver-scaffold  no src/
+P3  SKIP  lint-no-md5-credential-digest  no src/
+P3  SKIP  lint-size  no src/
+P3  SKIP  lint-license-isoperational-gate  no src/
+P3  SKIP  lint-set-null-ord  no src/
+P3  SKIP  lint-ws-placement  no src/
+P3  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P4  SKIP  verify-module  no built jar under build/libs (floor check not run)
+P4  PASS  dup-keys  0
+P4  PASS  slot-coverage  +100.0%
+P4  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+P4  SKIP  lint-delays  no src/
+P4  SKIP  lint-demand-scope  no src/
+P4  SKIP  lint-silent-protection  no src/
+P4  SKIP  lint-link-target-flags  no src/
+P4  SKIP  lint-ext-writable-shape  no src/
+P4  SKIP  lint-no-system-out  no src/
+P4  SKIP  lint-slotomatic-markers  no src/
+P4  SKIP  lint-clock-zero-floor  no src/
+P4  SKIP  lint-null-context-write  no src/
+P4  SKIP  lint-bql-string-concat  no src/
+P4  SKIP  lint-arbitrary-ord  no src/
+P4  SKIP  lint-persist-hot-write  no src/
+P4  SKIP  lint-changed-hot-write  no src/
+P4  SKIP  lint-inert-coordination  no src/
+P4  SKIP  lint-session-store-lazy-evict  no src/
+P4  SKIP  lint-bformat-call  no src/
+P4  SKIP  lint-service-types  no src/
+P4  SKIP  lint-driver-scaffold  no src/
+P4  SKIP  lint-no-md5-credential-digest  no src/
+P4  SKIP  lint-size  no src/
+P4  SKIP  lint-license-isoperational-gate  no src/
+P4  SKIP  lint-set-null-ord  no src/
+P4  SKIP  lint-ws-placement  no src/
+P4  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P5  SKIP  verify-module  no built jar under build/libs (floor check not run)
+P5  PASS  dup-keys  0
+P5  WARN  slot-coverage  -5% (missing Q)
+P5  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+P5  SKIP  lint-delays  no src/
+P5  SKIP  lint-demand-scope  no src/
+P5  SKIP  lint-silent-protection  no src/
+P5  SKIP  lint-link-target-flags  no src/
+P5  SKIP  lint-ext-writable-shape  no src/
+P5  SKIP  lint-no-system-out  no src/
+P5  SKIP  lint-slotomatic-markers  no src/
+P5  SKIP  lint-clock-zero-floor  no src/
+P5  SKIP  lint-null-context-write  no src/
+P5  SKIP  lint-bql-string-concat  no src/
+P5  SKIP  lint-arbitrary-ord  no src/
+P5  SKIP  lint-persist-hot-write  no src/
+P5  SKIP  lint-changed-hot-write  no src/
+P5  SKIP  lint-inert-coordination  no src/
+P5  SKIP  lint-session-store-lazy-evict  no src/
+P5  SKIP  lint-bformat-call  no src/
+P5  SKIP  lint-service-types  no src/
+P5  SKIP  lint-driver-scaffold  no src/
+P5  SKIP  lint-no-md5-credential-digest  no src/
+P5  SKIP  lint-size  no src/
+P5  SKIP  lint-license-isoperational-gate  no src/
+P5  SKIP  lint-set-null-ord  no src/
+P5  SKIP  lint-ws-placement  no src/
+P5  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 5 artifacts · 18 PASS · 0 FAIL · 2 WARN · 126 SKIP · 0 ADVISORY  ->  CLEAN
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/P1/module-include.xml --
+<types/>
+-- m/P1/module.lexicon --
+k=v
+-- m/P2/module-include.xml --
+<types/>
+-- m/P2/module.lexicon --
+k=v
+-- m/P3/module-include.xml --
+<types/>
+-- m/P3/module.lexicon --
+k=v
+-- m/P4/module-include.xml --
+<types/>
+-- m/P4/module.lexicon --
+k=v
+-- m/P5/module-include.xml --
+<types/>
+-- m/P5/module.lexicon --
+k=v
+-- toolbelt/.stub-rest --
+-- toolbelt/slot-coverage.sh (mode 755) --
+#!/usr/bin/env bash
+case "$1" in
+  */P1/*) printf '%s\n' "pct=100" ;;
+  */P2/*) printf '%s\n' "pct=150.5 (x)" ;;
+  */P3/*) printf '%s\n' "pct=0.0 (type-set)" "missing=A" ;;
+  */P4/*) printf '%s\n' "pct=+100.0" ;;
+  */P5/*) printf '%s\n' "pct=-5" "missing=Q" ;;
+esac

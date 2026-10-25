@@ -250,3 +250,24 @@ func TestMainReadOnlyIndex(t *testing.T) {
 		t.Errorf("got (%d, %q, %q)", code, stdout, errs)
 	}
 }
+
+// TestScanAutoFromMemberTable: report-module.sh is a Go wrapper that invokes no lint in its text, so Auto comes
+// from the Go report's member table; a lint it does not run stays no, and a kit with no report-module.sh has none.
+func TestScanAutoFromMemberTable(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		"lint-timers.sh":   lint("lint-timers.sh", "a member.", "lint-timers.sh <src>", "0 clean"),
+		"lint-manual.sh":   lint("lint-manual.sh", "not a member.", "lint-manual.sh <src>", "0 clean"),
+		"report-module.sh": "#!/usr/bin/env bash\nBIN=\"$(go_tool_bin \"$GO_DIR\" report-module)\" || exit 3\nexec \"$BIN\" \"$@\"\n",
+	}
+	_, tb := kit(t, files)
+	rows, _, _, err := Scan(tb)
+	if err != nil || len(rows) != 2 || rows[0].Name != "lint-manual.sh" || rows[0].Auto || !rows[1].Auto {
+		t.Errorf("GLI-members: rows %+v, err %v: want lint-manual.sh no, lint-timers.sh yes", rows, err)
+	}
+	delete(files, "report-module.sh")
+	_, tb = kit(t, files)
+	if rows, _, _, _ := Scan(tb); len(rows) != 2 || rows[1].Auto {
+		t.Errorf("no report-module.sh: rows %+v, want every lint Auto no", rows)
+	}
+}

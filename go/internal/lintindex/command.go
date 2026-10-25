@@ -8,6 +8,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/gen"
+	"github.com/angeles725/niagara-tools/go/internal/reportmodule"
 )
 
 // Exit codes of gen-lint-index (unchanged from the bash tool).
@@ -30,12 +31,18 @@ type Problem struct {
 }
 
 // Scan reads every regular toolbelt/lint-*.sh under tb (symlinks followed, C byte order) and
-// returns their rows, Auto set from tb/report-module.sh, plus the per-lint problems. A
-// report-module.sh that cannot be read marks every lint Auto no and is reported in warn.
+// returns their rows, Auto set when tb has a report-module.sh, plus the per-lint problems. Auto is
+// yes for a lint of the Go report's member table (reportmodule.Scripts: report-module.sh is a
+// wrapper of go/internal/reportmodule) or one a bash report-module.sh text invokes (InvokedByReport).
+// A report-module.sh that cannot be read marks every lint Auto no and is reported in warn.
 func Scan(tb string) (rows []Row, problems []Problem, warn string, err error) {
 	paths, err := filepath.Glob(filepath.Join(tb, "lint-*.sh"))
 	if err != nil {
 		return nil, nil, "", err
+	}
+	members := map[string]bool{}
+	for _, m := range reportmodule.Scripts() {
+		members[m] = true
 	}
 	report := ""
 	if rm := filepath.Join(tb, "report-module.sh"); gen.IsRegular(rm) {
@@ -60,7 +67,8 @@ func Scan(tb string) (rows []Row, problems []Problem, warn string, err error) {
 			problems = append(problems, Problem{name, problem, false})
 			continue
 		}
-		row.Auto = report != "" && InvokedByReport(report, name)
+		// Mutation: GLI-members -- reading only the report-module.sh text marks every member Auto no
+		row.Auto = report != "" && (members[name] || InvokedByReport(report, name))
 		rows = append(rows, row)
 	}
 	return rows, problems, warn, nil

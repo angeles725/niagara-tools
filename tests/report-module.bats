@@ -589,8 +589,8 @@ JAVA
 #   RM43  the chosen wiring map is named in the row detail (PASS row and the Table 2 FAIL reason), so a
 #         false FAIL from the parent-dir fallback can be traced. (R4-parent-map-discovery)
 #   RM44  the full summary string of a zero-ADVISORY run is pinned. (R3-summary-format-change)
-#   RM45  structural: report-module's optional-argument array is expanded with ${A[@]+"${A[@]}"} (an empty
-#         "${A[@]}" is an unbound-variable error under set -u on bash < 4.4). (R3/R4-empty-array-set-u)
+#   (RM45, a grep of the bash script's set -u safe array expansion, was retired with the Go port: the report
+#   is go/internal/reportmodule, which has no shell array; the no-map invocation is pinned by its goldens.)
 # The member is replaced through a symlinked copy of the toolbelt (TOOLBELT resolves to the dir of the
 # invoked path), so no env override is added to the production script.
 # NAMED MUTATIONS (observed): RM-failopen (drop the non-zero-without-FAIL branch) -> RM40, RM41 flip;
@@ -637,15 +637,6 @@ JAVA
   [ "$status" -eq 0 ]
   local last; last="$(printf '%s\n' "$output" | tail -1)"
   [[ "$last" =~ ^report-module:\ 1\ artifact\ ·\ [0-9]+\ PASS\ ·\ 0\ FAIL\ ·\ [0-9]+\ WARN\ ·\ [0-9]+\ SKIP\ ·\ 0\ ADVISORY\ \ -\>\ \ CLEAN$ ]]
-}
-
-@test "RM45: optional-argument arrays use the set -u safe \${A[@]+\"\${A[@]}\"} expansion" {
-  # report-module.sh only: commissioning-verify.sh is a Go wrapper now and holds no optional-argument array.
-  # Mutation: RM-setu (unguard "${LTF_ARGS[@]}" in report-module.sh) -> RM45 flips.
-  run grep -nE '[^+]"\$\{LTF_ARGS\[@\]\}"' "$KIT/toolbelt/report-module.sh"
-  [ "$status" -eq 1 ]
-  # shellcheck disable=SC2016  # literal source text, not an expansion
-  grep -qF '${LTF_ARGS[@]+"${LTF_ARGS[@]}"}' "$KIT/toolbelt/report-module.sh"
 }
 
 # polish-2026-10-02 P1c (#199, P1b review advisories): the map path is a literal in the substituted
@@ -861,28 +852,9 @@ JAVA
   [[ "$output" != *"scanning 3 files"* ]]
 }
 
-@test "RM-row-parser: no pasted per-line row parser -- one awk call site parses every member's rows (r9 M3)" {
-  # Mutation: RM-row-parser -- re-pasting the per-line `printf '%s' "$_ln" | awk` parser forks awk once per row
-  # (kit retro rule: no per-line forks) and drifts from the shared ROW_AWK grammar.
-  run grep -c -F "printf '%s' \"\$_ln\" | awk" "$RM"
-  [ "$output" = "0" ]
-  run grep -c 'awk -v sel=' "$RM"
-  [ "$output" = "1" ]
-}
-
-@test "RM-exit-capture: every member capture keeps its exit on the same line -- no bare \$? after _o=\$(...) (r9 M3)" {
-  # Mutation: RM-exit-capture -- a bare `_o=$(member)` with "$?" read on the next line aborts the report under
-  # errexit on the first failing member and breaks as soon as a command is inserted between the two lines.
-  # shellcheck disable=SC2016  # literal regex, nothing to expand
-  run grep -c '^[^#]*_o=\$(' "$RM"
-  [ "$output" -gt 0 ]
-  local total="$output"
-  # shellcheck disable=SC2016  # literal regex, nothing to expand
-  run grep -c '^[^#]*_rc=0; _o=\$(.*) || _rc=\$?$' "$RM"
-  [ "$output" = "$total" ]
-  run grep -c '^[^#]*"\$?"' "$RM"
-  [ "$output" = "0" ]
-}
+# RM-row-parser and RM-exit-capture (greps of the bash script: one awk call site, `_rc=0; _o=$(...) || _rc=$?`
+# on one line) were retired with the Go port: the one row parser is go/internal/reportmodule parseRows
+# (rows_test.go TestParseRows, the rows-* goldens) and the exit status is the runner's return value.
 
 @test "RM-symroot: a symlinked module root lists its artifacts like find -H, same report as the directory (issue #329)" {
   # Mutation: RM-symroot -- dropping -H from the artifact find lists no artifact under a symlinked root.

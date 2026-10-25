@@ -1,0 +1,133 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 3
+A-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-ux  SKIP  lint-lexicon-ascii  no *.lexicon under A-ux
+A-ux  PASS  lint-link-target-flags  clean (no wiring map)
+A-ux  PASS  lint-no-system-out  clean
+A-ux  PASS  lint-slotomatic-markers  clean
+A-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
+A-ux  PASS  lint-servlet  clean
+A-ux  SKIP  rc-scan  no src/rc/
+A-ux  PASS  lint-no-md5-credential-digest  clean
+A-ux  PASS  lint-size  clean
+A-ux  PASS  lint-license-isoperational-gate  clean
+A-ux  PASS  lint-set-null-ord  clean
+A-ux  PASS  lint-ws-placement  clean
+A-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+B-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+B-ux  SKIP  lint-lexicon-ascii  no *.lexicon under B-ux
+B-ux  PASS  lint-link-target-flags  clean (no wiring map)
+B-ux  PASS  lint-no-system-out  clean
+B-ux  PASS  lint-slotomatic-markers  clean
+B-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
+B-ux  SKIP  lint-servlet  no BWebServlet
+B-ux  SKIP  rc-scan  no src/rc/
+B-ux  PASS  lint-no-md5-credential-digest  clean
+B-ux  PASS  lint-size  clean
+B-ux  PASS  lint-license-isoperational-gate  clean
+B-ux  PASS  lint-set-null-ord  clean
+B-ux  PASS  lint-ws-placement  clean
+B-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+C-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+C-ux  SKIP  lint-lexicon-ascii  no *.lexicon under C-ux
+C-ux  PASS  lint-link-target-flags  clean (no wiring map)
+C-ux  PASS  lint-no-system-out  clean
+C-ux  PASS  lint-slotomatic-markers  clean
+C-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
+C-ux  WARN  servlet  B.java:1  advisory
+C-ux  PASS  lint-servlet  clean
+C-ux  SKIP  rc-scan  no src/rc/
+C-ux  PASS  lint-no-md5-credential-digest  clean
+C-ux  PASS  lint-size  clean
+C-ux  PASS  lint-license-isoperational-gate  clean
+C-ux  PASS  lint-set-null-ord  clean
+C-ux  PASS  lint-ws-placement  clean
+C-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+D-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+D-ux  SKIP  lint-lexicon-ascii  no *.lexicon under D-ux
+D-ux  PASS  lint-link-target-flags  clean (no wiring map)
+D-ux  PASS  lint-no-system-out  clean
+D-ux  PASS  lint-slotomatic-markers  clean
+D-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
+D-ux  FAIL  servlet-auth  BMy.java:9  write without auth
+D-ux  SKIP  rc-scan  no src/rc/
+D-ux  PASS  lint-no-md5-credential-digest  clean
+D-ux  PASS  lint-size  clean
+D-ux  PASS  lint-license-isoperational-gate  clean
+D-ux  PASS  lint-set-null-ord  clean
+D-ux  PASS  lint-ws-placement  clean
+D-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+E-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+E-ux  SKIP  lint-lexicon-ascii  no *.lexicon under E-ux
+E-ux  PASS  lint-link-target-flags  clean (no wiring map)
+E-ux  PASS  lint-no-system-out  clean
+E-ux  PASS  lint-slotomatic-markers  clean
+E-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
+E-ux  ERROR  lint-servlet  env fault (exit 3)
+E-ux  SKIP  rc-scan  no src/rc/
+E-ux  PASS  lint-no-md5-credential-digest  clean
+E-ux  PASS  lint-size  clean
+E-ux  PASS  lint-license-isoperational-gate  clean
+E-ux  PASS  lint-set-null-ord  clean
+E-ux  PASS  lint-ws-placement  clean
+E-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+F-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+F-ux  SKIP  lint-lexicon-ascii  no *.lexicon under F-ux
+F-ux  SKIP  lint-delays  no src/
+F-ux  SKIP  lint-demand-scope  no src/
+F-ux  SKIP  lint-silent-protection  no src/
+F-ux  SKIP  lint-link-target-flags  no src/
+F-ux  SKIP  lint-ext-writable-shape  no src/
+F-ux  SKIP  lint-no-system-out  no src/
+F-ux  SKIP  lint-slotomatic-markers  no src/
+F-ux  SKIP  lint-clock-zero-floor  no src/
+F-ux  SKIP  lint-null-context-write  no src/
+F-ux  SKIP  lint-bql-string-concat  no src/
+F-ux  SKIP  lint-arbitrary-ord  no src/
+F-ux  SKIP  lint-persist-hot-write  no src/
+F-ux  SKIP  lint-changed-hot-write  no src/
+F-ux  SKIP  lint-inert-coordination  no src/
+F-ux  SKIP  lint-session-store-lazy-evict  no src/
+F-ux  SKIP  lint-bformat-call  no src/
+F-ux  SKIP  lint-service-types  no src/
+F-ux  SKIP  lint-driver-scaffold  no src/
+F-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
+F-ux  SKIP  lint-servlet  no src/
+F-ux  SKIP  rc-scan  no src/rc/
+F-ux  SKIP  lint-no-md5-credential-digest  no src/
+F-ux  SKIP  lint-size  no src/
+F-ux  SKIP  lint-license-isoperational-gate  no src/
+F-ux  SKIP  lint-set-null-ord  no src/
+F-ux  SKIP  lint-ws-placement  no src/
+F-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 6 artifacts · 47 PASS · 1 FAIL · 1 WARN · 56 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/A-ux/src (dir) --
+-- m/B-ux/src (dir) --
+-- m/C-ux/src (dir) --
+-- m/D-ux/src (dir) --
+-- m/E-ux/src (dir) --
+-- m/F-ux (dir) --
+-- toolbelt/.stub-rest --
+-- toolbelt/lint-servlet.sh (mode 755) --
+#!/usr/bin/env bash
+case "$1" in
+  */A-ux/*) printf 'INFO  api-response-headers  /s/BInfo.java:3  no headers set\n' ;;
+  */B-ux/*) printf 'no servlet\n' ;;
+  */C-ux/*) printf 'WARN  servlet  /s/B.java:1  advisory\n' ;;
+  */D-ux/*) printf 'FAIL  servlet-auth  /s/BMy.java:9  write without auth\n'; exit 1 ;;
+  */E-ux/*) printf ' INFO not at start\n'; exit 3 ;;
+esac

@@ -1,0 +1,47 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 1
+A-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-rt  FAIL  timer-ticket  BLeak.java:14  ticket never cancelled
+A-rt  PASS  timer-ticket  BOk.java:3  cancelled in stopped()
+A-rt  WARN  job-cancel  BRun.java:9  dropped by the relay
+A-rt  FAIL  timer-ticket  NoLine.java:/t/NoLine.java  no line
+A-rt  FAIL  timer-ticket  dir:4  dir
+A-rt  FAIL  x  x:x  x
+A-rt  FAIL  FAIL  FAIL:FAIL  FAIL
+A-rt  PASSING  odd  P.java:1  prefix
+A-rt  FAIL  tt  :5  empty path
+A-rt  FAIL  tt  C.java:6  colon dir
+A-rt  SKIP  lint-lexicon-ascii  no *.lexicon under A-rt
+A-rt  PASS  lint-link-target-flags  clean (no wiring map)
+A-rt  PASS  lint-no-system-out  clean
+A-rt  PASS  lint-slotomatic-markers  clean
+A-rt  PASS  lint-recovery-path  clean
+A-rt  PASS  lint-config-sanity  clean
+A-rt  PASS  lint-no-md5-credential-digest  clean
+A-rt  PASS  lint-size  clean
+A-rt  PASS  lint-license-isoperational-gate  clean
+A-rt  PASS  lint-set-null-ord  clean
+A-rt  PASS  lint-ws-placement  clean
+A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 1 artifact · 16 PASS · 7 FAIL · 1 WARN · 4 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+truth: the lint-timers row split of the recorded lt-rows case, with its WARN job-cancel row now relayed (the bash dropped every lint-timers WARN row)
+-- m/A-rt/src (dir) --
+-- toolbelt/.stub-rest --
+-- toolbelt/lint-timers.sh (mode 755) --
+#!/usr/bin/env bash
+printf '%s\n' "FAIL  timer-ticket  /t/BLeak.java:14  ticket never cancelled" "PASS  timer-ticket  /t/BOk.java:3  cancelled in stopped()" \
+  "WARN  job-cancel  /t/BRun.java:9  dropped by the relay" "FAIL  timer-ticket  /t/NoLine.java  no line" "FAIL  timer-ticket  /t/dir/:4  dir" \
+  "FAIL  x" "FAIL" "PASSING  odd  /t/P.java:1  prefix" "FAIL  tt  :5  empty path" "FAIL  tt  /a:b/C.java:6  colon dir" ""
+exit 1

@@ -672,7 +672,8 @@ class TestRemoveComponentParity(ParityTestCase):
 
 
 def fail_nth(side, key, nth, reply):
-    """A hook: the nth callssc `key` from now on answers `reply` (code, body)."""
+    """A hook: the nth callssc `key` from now on answers `reply`: (code, body), or a
+    transport fault (fake_station.DROP or fake_station.Raw)."""
     seen = []
 
     def hook(frame):
@@ -680,6 +681,8 @@ def fail_nth(side, key, nth, reply):
         if key in sck:
             seen.append(True)
             if len(seen) == nth:
+                if reply is fake_station.DROP or isinstance(reply, fake_station.Raw):
+                    return reply
                 return reply[0], reply[1], {}
         return None
     side.fake.hook = hook
@@ -886,6 +889,159 @@ class TestRollbackParity(ParityTestCase):
             side.call("n4_list_batches")
         self.assertSameRun(scenario)
 
+    def test_transport_faults_and_unexpected_failures_keep_the_batch_id(self):
+        """A dropped connection or a non-HTTP answer (BoxError) on a send, op 2 of 3, the
+        relink and the read-back; then a nested add answered with a name that is no slot
+        name (ValueError, the unexpected-failure wrap after the sends)."""
+        faults = (fake_station.DROP, fake_station.Raw(b"garbage\r\n\r\n"))
+
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+
+            def faulted(tool, key, fault, nth=1, **args):
+                token = side.call(tool, **args)["confirmation_token"]
+                fail_nth(side, key, nth, fault)
+                side.call(tool, dry_run=False, confirmation_token=token, **args)
+                side.fake.hook = None
+            for i, fault in enumerate(faults):
+                faulted("n4_set_slot", "syncTo", fault, **SET)
+                faulted("n4_set_slot", "loadSlots", fault, nth=2, **SET)  # the read-back
+                bid = "a%d" % i * 16
+                craft(side, bid, [{"nm": "a", "h": "3", "n": "T%d%s" % (i, n),
+                                   "b": {"nm": "p", "t": "baja:Folder"}} for n in "ABC"],
+                      {FOLDER: "3"})
+                faulted("n4_rollback", "syncTo", fault, nth=2, batch_id=bid)
+                bid = removed(side, remove_group(side, "Tl%d" % i))
+                faulted("n4_rollback", "checkLinks", fault, batch_id=bid)
+            orig = side.fake._sync
+            for i, name in enumerate((["l"], "a/b", "")):
+                bid = removed(side, remove_group(side, "Tn%d" % i))
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+                side.fake._sync = lambda op, name=name: (orig(op), [{"id": "a", "nn": name}])[1] \
+                    if op["nm"] == "a" and op["n"] == "Src" else orig(op)
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+                side.fake._sync = orig
+            side.call("n4_list_batches")
+        for side in self.assertSameRun(scenario):  # every error names its batch, in the audit too
+            errors = [json.loads(line) for line in side.state("audit.jsonl").splitlines()]
+            errors = [a for a in errors if a["outcome"] == "error" and a["tool"] != "n4_connect"]
+            texts = [json.loads(r)["result"]["content"][0]["text"] for r in side.replies]
+            self.assertTrue(errors)
+            for audit in errors:
+                self.assertTrue(any(audit["batch_id"] in t and "in-doubt" in t for t in texts),
+                                audit)
+
+    def test_journal_faults_in_rollback_runs(self):
+        """The journal turns unwritable mid-run: before a component intent, before the relink
+        intent, and before the in-doubt result of a batch whose op 2 of 3 failed."""
+        def scenario(side):
+            side.connect()
+            journal = os.path.join(side.state_dir, "journal.jsonl")
+
+            def lose_after_add(name):  # once the add of `name` is applied, until restored
+                def on_sync(op):
+                    if op["nm"] == "a" and op["n"] == name and not os.path.isdir(journal):
+                        os.rename(journal, journal + ".kept")
+                        os.makedirs(journal, mode=0o700)
+                side.fake.on_sync = on_sync
+
+            def run(bid, after, fail=None):
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+                lose_after_add(after)
+                if fail:
+                    fail_nth(side, "syncTo", *fail)
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+                side.fake.on_sync = side.fake.hook = None
+                os.rmdir(journal)
+                os.rename(journal + ".kept", journal)
+                return bid
+            nn = remove_group(side, "Jc")
+            bids = [run(removed(side, nn), nn)]  # the top add is sent, Src's intent is not
+            bids.append(run(removed(side, remove_group(side, "Jr")), "Tgt"))  # no relink sent
+            three = [{"nm": "a", "h": "3", "n": n, "b": {"nm": "p", "t": "baja:Folder"}}
+                     for n in ("A3", "B3", "C3")]
+            craft(side, "af" * 16, three, {FOLDER: "3"})
+            bids.append(run("af" * 16, "A3", fail=(2, (500, b"boom"))))
+            side.call("n4_list_batches")
+            for bid in bids:  # each stays in-doubt
+                side.call("n4_rollback", batch_id=bid)
+        self.assertSameRun(scenario)
+
+
+def in_doubt_batches(side):
+    """One in-doubt batch per write tool, made by the server itself; returns their ids."""
+    side.connect()
+    status_numeric(side)
+    side.add("Sp", "control:NumericWritable")
+    side.add("Tgt")
+    calls = [("syncTo", "n4_set_slot", SET), ("invokeAction", "n4_invoke_action",
+                                               dict(ord=FOLDER + "/Sp", action="auto")),
+             ("syncTo", "n4_create_component", CREATE),
+             ("checkLinks", "n4_create_link", dict(source_ord=CALC, source_slot="out",
+                                                   target_ord=FOLDER + "/Tgt", target_slot="in10")),
+             ("syncTo", "n4_remove_component", dict(parent_ord=FOLDER, name="Tgt")),
+             ("invokeAction", "n4_save_station", {})]
+    bids = []
+    for key, tool, args in calls:
+        token = side.call(tool, **args)["confirmation_token"]
+        fail_after(side, None, key, (500, b"boom"))
+        side.call(tool, dry_run=False, confirmation_token=token, **args)
+        side.fake.hook = None
+        bids.append(json.loads(side.state("journal.jsonl").splitlines()[-1])["batch_id"])
+    # a result flagged in_doubt: the link was accepted without a name
+    orig = answering(side, "_check_link", {"v": True})
+    bids.append(side.write("n4_create_link", source_ord=CALC, source_slot="out",
+                           target_ord=FOLDER + "/Tgt", target_slot="in10")["batch_id"])
+    side.fake._check_link = orig
+    # a partial: op 2 of 3 of a rollback failed (its result is in_doubt; refused as a rollback)
+    craft(side, "ba" * 16, [{"nm": "a", "h": "3", "n": n, "b": {"nm": "p", "t": "baja:Folder"}}
+                            for n in ("P1", "P2", "P3")], {FOLDER: "3"})
+    token = side.call("n4_rollback", batch_id="ba" * 16)["confirmation_token"]
+    fail_nth(side, "syncTo", 2, (500, b"boom"))
+    side.call("n4_rollback", batch_id="ba" * 16, dry_run=False, confirmation_token=token)
+    side.fake.hook = None
+    bids.append(json.loads(side.state("journal.jsonl").splitlines()[-1])["batch_id"])
+    return bids
+
+
+class TestInDoubtRefusalParity(ParityTestCase):
+    """An in-doubt batch is never rolled back blindly: the refusal dumps its journaled intent."""
+
+    def test_each_tools_in_doubt_batch_is_refused_with_its_intent(self):
+        def scenario(side):
+            for bid in in_doubt_batches(side):
+                side.call("n4_rollback", batch_id=bid)
+            side.call("n4_list_batches")
+        for side in self.assertSameRun(scenario):
+            refusals = [json.loads(r)["result"]["content"][0]["text"] for r in side.replies[-9:-1]]
+            self.assertEqual(sum("is in-doubt (the station may or may not have applied it); "
+                                 "rolling it back blindly" in t for t in refusals), 7, refusals)
+
+    def test_an_in_doubt_batch_of_the_server_under_test_is_refused_by_python(self):
+        """The mirror of journal.TestAPythonInDoubtBatchIsRefused: Python reads the state dir
+        the server under test wrote and refuses each in-doubt batch with the same bytes."""
+        side = Side(self, None)
+        bids = in_doubt_batches(side)
+        if side.client is not None:
+            side.client.close()
+
+        def refusals():
+            for bid in bids:
+                side.call("n4_rollback", batch_id=bid)
+            return side.replies[-len(bids):]
+        theirs = refusals()
+        go_server.close_server(side.srv)
+        side.srv = go_server.make_server("python", **side.opts)
+        side.connect()
+        ours = refusals()
+        self.assertEqual(ours, theirs)
+        texts = [json.loads(r)["result"]["content"][0]["text"] for r in ours]
+        for bid, text in zip(bids[:7], texts):
+            self.assertTrue(text.startswith("batch %s is in-doubt (the station may or may not "
+                                            "have applied it)" % bid), text)
+            self.assertIn("Journaled intent: {", text)
+        self.assertIn("is itself a rollback", texts[7])
 
 def save_and(side, then):
     """The FakeStation's save, then `then()` (until the next restore)."""

@@ -16,7 +16,7 @@ what it needs.
 |---|---|---|
 | R-A BOX JSON | Default. Read, create, set, link, invoke, remove, save with no module on the station. | Implemented (`mcp_n4/box.py` + tools). Live-certified in B1199. |
 | R-B Java Fox sidecar | Fidelity cross-check, or fallback when BOX is disabled. Needs JRE 8 and the install jars. | Not built (B1197 phase P5). |
-| R-F offline BOG-XML | Zero-risk dry run and diff against a `config.bog` snapshot: niagara-research `tools/bog-nav.py` and `tools/bog-write.py`. | External tools. **manual** |
+| R-F offline BOG-XML | Zero-risk dry run and diff against a `config.bog` snapshot: the niagara-research Go commands `bognav` and `bog-write`. | External tools. **manual** |
 | R-E oBIX | Values only (read, write a value, invoke). No structure editing. | External. **manual** |
 | R-D in-station module | Last resort, only where BOX is blocked and a module is acceptable. It adds attack surface. | Not built. |
 
