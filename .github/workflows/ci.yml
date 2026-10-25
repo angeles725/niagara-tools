@@ -61,7 +61,9 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go/go.mod
-          cache: false
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
 
       # The mcp-n4 target (go/internal/mcpn4/pytarget.Minor): the Go differentials compare against
       # it and skip on any other python3, so CI must provide it. Later steps run it too.
@@ -78,7 +80,8 @@ jobs:
           if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
           go vet ./...
           # A differential against another python3 would skip, not pass: refuse that in CI.
-          MCP_N4_PYTHON="$(command -v python3)" go test ./...
+          # -count=1: tests read files through subprocesses Go does not track, so a cached result could be stale.
+          MCP_N4_PYTHON="$(command -v python3)" go test -count=1 ./...
 
       - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
         run: cd go && go build -o bin/ ./cmd/...
@@ -202,7 +205,9 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go/go.mod
-          cache: false
+          # No go.sum (the module has no dependencies): key the build cache on go.mod instead.
+          cache: true
+          cache-dependency-path: go/go.mod
 
       - name: Set up CPython 3.15 (the mcp-n4 target the black-box suite runs on)
         uses: actions/setup-python@v7
