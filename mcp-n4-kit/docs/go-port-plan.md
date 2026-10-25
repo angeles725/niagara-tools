@@ -212,9 +212,9 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_box.py` | 92 | 69 | 0 | 23 | 0 | 92 | 0 |
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
-| `test_go_harness.py` | 31 | 0 | 0 | 0 | 0 | 0 | 31 |
+| `test_go_harness.py` | 32 | 0 | 0 | 0 | 0 | 0 | 32 |
 | `test_list_batches.py` | 6 | 0 | 0 | 0 | 0 | 0 | 6 |
-| `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
+| `test_live_smoke.py` | 36 | 0 | 0 | 0 | 0 | 0 | 36 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
@@ -225,7 +225,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tools_destructive.py` | 101 | 4 | 7 | 13 | 2 | 26 | 75 |
 | `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
 | `test_write_parity.py` | 31 | 0 | 0 | 0 | 0 | 0 | 31 |
-| **Total** | **679** | **166** | **34** | **90** | **18** | **308** | **371** |
+| **Total** | **686** | **166** | **34** | **90** | **18** | **308** | **378** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer

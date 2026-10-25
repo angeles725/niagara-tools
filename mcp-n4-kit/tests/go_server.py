@@ -2,10 +2,11 @@
 
 `MCP_N4_IMPL` selects the server the tool tests drive:
 
-- unset or `python` (default): the in-process `mcp_n4.server.Server`, exactly as before;
-- `go`: `GoServer`, a long-lived `mcp-n4` subprocess spoken to over stdio, one JSON line per
-  request. The binary is `MCP_N4_GO_BIN`, else `go/bin/mcp-n4` at the repository root. A
-  missing binary raises `GoBinaryMissing`: a Go run never passes silently on Python.
+- unset or `go` (the default since S16): `GoServer`, a long-lived `mcp-n4` subprocess spoken to
+  over stdio, one JSON line per request. The binary is `MCP_N4_GO_BIN`, else `go/bin/mcp-n4` at
+  the repository root. A missing binary raises `GoBinaryMissing`: a Go run never passes
+  silently on Python;
+- `python` (the fallback, kept one release): the in-process `mcp_n4.server.Server`.
 
 Tests that cannot run black-box carry `@go_twin(package, category)`: they are skipped under
 Go and name the Go test that replaces them. The per-file inventory lives in the plan doc and
@@ -33,7 +34,14 @@ KIT_DIR = os.path.dirname(TESTS_DIR)
 REPO_DIR = os.path.dirname(KIT_DIR)
 DEFAULT_BINARY = os.path.join(REPO_DIR, "go", "bin", "mcp-n4")
 IMPLS = ("python", "go")
-IMPL = os.environ.get("MCP_N4_IMPL") or "python"
+
+
+def resolve_impl(environ=os.environ):
+    """The server `MCP_N4_IMPL` selects: Go unless it says otherwise (S16)."""
+    return environ.get("MCP_N4_IMPL") or "go"
+
+
+IMPL = resolve_impl()
 GO = IMPL == "go"
 REPLY_TIMEOUT = 60.0
 #: The tool error / start refusal text of a part the Go binary does not port yet
@@ -55,7 +63,7 @@ REGISTRY = set()
 
 
 class GoBinaryMissing(RuntimeError):
-    """MCP_N4_IMPL=go was asked for but there is no binary to run."""
+    """The Go server (the default, or MCP_N4_IMPL=go) was asked for but there is no binary."""
 
 
 class GoServerError(RuntimeError):
@@ -121,8 +129,9 @@ def resolve_binary(binary=None):
     path = binary or os.environ.get("MCP_N4_GO_BIN") or DEFAULT_BINARY
     if not (os.path.isfile(path) and os.access(path, os.X_OK)):
         raise GoBinaryMissing(
-            "MCP_N4_IMPL=go but there is no executable Go server at %s; build it "
-            "(cd go && go build -o bin/ ./cmd/mcp-n4) or set MCP_N4_GO_BIN" % path)
+            "the Go server (MCP_N4_IMPL=go, the default) has no executable at %s; build it "
+            "(cd go && go build -o bin/ ./cmd/mcp-n4), set MCP_N4_GO_BIN, or select the Python "
+            "fallback with MCP_N4_IMPL=python" % path)
     return path
 
 
@@ -247,7 +256,7 @@ class GoServer:
 
 
 def make_server(impl=None, binary=None, **kw):
-    """The server under test: in-process Python (default) or the Go binary (MCP_N4_IMPL=go)."""
+    """The server under test: the Go binary (default) or in-process Python (MCP_N4_IMPL=python)."""
     impl = impl or IMPL
     if impl == "python":
         from mcp_n4 import server
