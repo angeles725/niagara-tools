@@ -3,14 +3,13 @@ package cli
 import (
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
@@ -89,11 +88,12 @@ func TestTheWriteStateRefusesThemToo(t *testing.T) {
 }
 
 // TestWriteStartDifferentialPython: a start with --allow-writes on each kind of state dir and
-// scope exits, prints and refuses as `python3 -m mcp_n4.server` does (same dirs, empty stdin).
+// scope exits, prints and refuses as `python3 -m mcp_n4.server` does (same dirs, empty stdin),
+// recorded in testdata/write-start.golden.jsonl.
 func TestWriteStartDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "write-start")
 	tmp := t.TempDir()
+	g.Alias(filepath.Dir(tmp), "$TMP") // every t.TempDir of the test shares it
 	loose := looseDir(t)
 	file := filepath.Join(tmp, "file")
 	os.WriteFile(file, nil, 0o600)
@@ -101,26 +101,21 @@ func TestWriteStartDifferentialPython(t *testing.T) {
 	os.Mkdir(withLoose, 0o700)
 	os.WriteFile(filepath.Join(withLoose, "audit.jsonl"), nil, 0o640)
 	missing := filepath.Join(tmp, "missing", "state")
-	for _, argv := range [][]string{
+	argvs := [][]string{
 		{"--state-dir", loose}, {"--state-dir", file}, {"--state-dir", withLoose}, {"--state-dir", missing},
 		{"--state-dir", missing, "--write-scope", "station:|slot:/A", "--write-scope", "station:|slot:/A|h:1"},
 		{"--state-dir", missing, "--write-scope", "station:"}, {"--state-dir", missing, "--write-scope", "station:|slot:/A/"},
 		{"--state-dir", loose, "--write-scope", "x"}, {"--state-dir", loose, "--station", "a=http://h"},
 		{"--state-dir", missing, "--token-ttl", "1", "--max-writes", "1"},
-	} {
-		argv = append([]string{"--allow-writes"}, argv...)
-		cmd := exec.Command(py, append([]string{"-m", "mcp_n4.server"}, argv...)...)
-		cmd.Dir = kit
-		cmd.Env = append(os.Environ(), "PYTHONDONTWRITEBYTECODE=1")
-		var o, e strings.Builder
-		cmd.Stdout, cmd.Stderr = &o, &e
-		want := 0
-		if err := cmd.Run(); err != nil {
-			want = err.(*exec.ExitError).ExitCode()
-		}
+	}
+	for i := range argvs {
+		argvs[i] = append([]string{"--allow-writes"}, argvs[i]...)
+	}
+	want := pythonServer(t, g, map[string]string{"PYTHONDONTWRITEBYTECODE": "1"}, argvs)
+	for i, argv := range argvs {
 		code, out, errOut := run(argv, "")
-		if code != want || out != o.String() || errOut != e.String() {
-			t.Errorf("%q:\n go     %d %q %q\n python %d %q %q", argv, code, out, errOut, want, o.String(), e.String())
+		if w := want[i]; code != w.code || out != w.out || errOut != w.err {
+			t.Errorf("%q:\n go     %d %q %q\n python %d %q %q", argv, code, out, errOut, w.code, w.out, w.err)
 		}
 	}
 	if _, err := os.Stat(missing); err == nil {
