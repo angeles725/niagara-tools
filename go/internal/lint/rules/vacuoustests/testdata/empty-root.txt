@@ -1,0 +1,9 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 3
+ERROR  lint-vacuous-tests  @DIR@/ModuleA  no *.java under a srcTest/ (wrong path: pass a gradle or module root)
+-- stderr --
+-- ModuleA/ModuleA-rt/src/com/x/BPan.java --
+package com.x;
+public class BPan { }

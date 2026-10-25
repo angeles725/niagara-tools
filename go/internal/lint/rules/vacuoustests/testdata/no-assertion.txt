@@ -1,0 +1,32 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 1
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BBetaTest.java:5  BBetaTest.runsOnly: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+-- stderr --
+-- ModuleA/ModuleA-rt/src/com/x/BPan.java --
+package com.x;
+public class BPan {
+  @Test
+  public void notATest() { }
+}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BBetaTest.java --
+package com.x.test;
+import org.junit.Test;
+public class BBetaTest {
+  @Test
+  public void runsOnly() {
+    new Object().toString();
+    // assertTrue(compute());
+    String s = "assertEquals(1, 2)";
+  }
+  @org.testng.annotations.Test
+  public void verifies() { verify(1); }
+  @Test
+  public void fails() { if (bad()) fail("bad"); }
+  @Test
+  public void expects() { expectFault(() -> bad()); }
+  private boolean bad() { return false; }
+  private void verify(int n) { }
+  private void expectFault(Runnable r) { }
+}
