@@ -20,18 +20,23 @@ const Minor = "3.15"
 // the target: a mismatch fails the test instead of skipping it.
 const Env = "MCP_N4_PYTHON"
 
-// Python returns the target interpreter. Otherwise it skips t (fails it when Env is set),
-// printing the version found and the target.
+// RecordEnv set to 1 makes the differentials run the target and record its output as goldens
+// (package golden); recording without the target fails instead of skipping.
+const RecordEnv = "MCP_N4_RECORD"
+
+// Python returns the target interpreter. Otherwise it skips t (fails it when Env or RecordEnv
+// is set), printing the version found and the target.
 func Python(t testing.TB) string {
 	t.Helper()
 	py := os.Getenv(Env)
 	stop := t.Skipf
-	if py != "" {
+	if py != "" || os.Getenv(RecordEnv) == "1" {
 		stop = t.Fatalf
-	} else {
+	}
+	if py == "" {
 		var err error
 		if py, err = exec.LookPath("python3"); err != nil {
-			t.Skipf("Python differential not run: no python3 on PATH and %s unset; it targets CPython %s", Env, Minor)
+			stop("Python differential not run: no python3 on PATH and %s unset; it targets CPython %s", Env, Minor)
 		}
 	}
 	out, err := exec.Command(py, "-I", "-c", "import sys; print('%d.%d' % sys.version_info[:2])").Output()
