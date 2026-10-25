@@ -2,13 +2,12 @@ package writeops
 
 import (
 	"bufio"
-	"os/exec"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 const pySorted = `import json, sys
@@ -59,14 +58,8 @@ func sortCases() []string {
 }
 
 func TestPySortDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
 	cases := sortCases()
-	cmd := exec.Command(py, "-I", "-c", pySorted)
-	cmd.Stdin = strings.NewReader(strings.Join(cases, "\n") + "\n")
-	raw, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := golden.Open(t, "pysort").Run(pySorted, []byte(strings.Join(cases, "\n")+"\n"))
 	sc := bufio.NewScanner(strings.NewReader(string(raw)))
 	n, errs := 0, 0
 	for ; sc.Scan(); n++ {

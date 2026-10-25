@@ -6,13 +6,10 @@ import (
 	"encoding/hex"
 	"math"
 	"math/rand/v2"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 )
 
 // TestDifferentialPython is the equivalence proof against CPython's json module: every boundary
@@ -20,11 +17,11 @@ import (
 // and safety.canonical, then float() for a top-level number; random float bit patterns go
 // through repr(). python3 decodes the input bytes with surrogateescape, as its stdin does in
 // UTF-8 mode (the default since 3.15). The Go result must equal Python's byte for byte.
-// It skips, naming the Python found, unless that is the target CPython (pytarget.Minor).
+// Python's lines are the golden testdata/differential.golden.jsonl.
 
 const pyDriver = `
 import json, struct, sys
-for line in open(sys.argv[1]):
+for line in sys.stdin:
     kind, data = line.rstrip("\n").split(" ", 1)
     raw = bytes.fromhex(data)
     if kind == "F":
@@ -47,7 +44,6 @@ for line in open(sys.argv[1]):
 const fuzzSeed, fuzzDocs, fuzzFloats = 20261022, 4000, 4000
 
 func TestDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
 	rng := rand.New(rand.NewPCG(fuzzSeed, fuzzSeed))
 	var docs []string
 	for _, c := range decodeCases {
@@ -71,17 +67,7 @@ func TestDifferentialPython(t *testing.T) {
 		binary.LittleEndian.PutUint64(b[:], f)
 		in.WriteString("F " + hex.EncodeToString(b[:]) + "\n")
 	}
-	path := filepath.Join(t.TempDir(), "corpus.txt")
-	if err := os.WriteFile(path, []byte(in.String()), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	cmd := exec.Command(py, "-I", "-c", pyDriver, path)
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python3 driver: %v\n%s", err, stderr.String())
-	}
+	out := golden.Open(t, "differential").Run(pyDriver, []byte(in.String()))
 	sc := bufio.NewScanner(strings.NewReader(string(out)))
 	sc.Buffer(nil, 1<<20)
 	var want []string

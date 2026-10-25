@@ -6,13 +6,12 @@ import (
 	"errors"
 	"math/rand"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // probes are hand-picked documents: every error class, positions after line breaks and wide
@@ -142,19 +141,19 @@ func treeJSON(el *Element) any {
 // TestDifferentialPython parses the probes, 3,000 mutants of the synthetic Px view and, when
 // PYXML_EXPAT_SUITE is set, niagara-go's expat suite with ElementTree.fromstring(str) on the
 // target CPython and with Parse, and requires the same tree or the same ParseError text. A
-// document holding a DOCTYPE is only checked to be one (parse_px never parses it).
+// document holding a DOCTYPE is only checked to be one (parse_px never parses it). Python's
+// trees are the goldens testdata/tree.golden.jsonl and, for the suite, tree-suite.golden.jsonl.
 func TestDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	inputs := append(append(append([]string{}, probes...), mutants(t, 3000)...), suite(t)...)
-	in, _ := json.Marshal(inputs)
-	cmd := exec.Command(py, "-I", "-c", treeScript)
-	cmd.Stdin = strings.NewReader(string(in))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
+	diffTrees(t, "tree", append(append([]string{}, probes...), mutants(t, 3000)...))
+	if docs := suite(t); docs != nil {
+		diffTrees(t, "tree-suite", docs)
 	}
+}
+
+// diffTrees compares Parse with the trees golden name recorded for inputs.
+func diffTrees(t *testing.T, name string, inputs []string) {
+	in, _ := json.Marshal(inputs)
+	out := golden.Open(t, name).Run(treeScript, in)
 	var want []json.RawMessage
 	if err := json.Unmarshal(out, &want); err != nil {
 		t.Fatal(err)
