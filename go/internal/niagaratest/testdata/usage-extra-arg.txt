@@ -1,0 +1,17 @@
+-- args --
+verdict
+a.log
+b.log
+-- want --
+exit 2
+-- stderr --
+run-niagara-test: verdict takes one log at most
+usage: run-niagara-test verdict [<log>|-]
+  verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
+           or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
+           "Total tests run: N" line has N > 0 and 0 failures; a stray Failures count, "invalid test
+           target(s)", "failed signature validation", a malformed summary or no summary is FAIL.
+           The exit code and BUILD SUCCESSFUL of the run are never read.
+exit: 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
+-- @kind --
+truth: hand-written from the C40 contract (testdata/README.md); there is no bash tool to record from
