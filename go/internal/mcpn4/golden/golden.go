@@ -18,6 +18,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 	"unicode/utf8"
 
@@ -38,13 +40,15 @@ const maxInline = 64 << 10
 
 // Golden is the recorded Python of one differential.
 type Golden struct {
-	t    testing.TB
-	path string
-	py   string // set only when recording
-	kit  string
-	recs []record
-	next int
-	hint string // how to re-record, printed by every stale or missing golden
+	t     testing.TB
+	path  string
+	py    string // set only when recording
+	kit   string
+	recs  []record
+	alias []string // strings.Replacer pairs from the real text to its placeholder
+	masks []func(string) string
+	next  int
+	hint  string // how to re-record, printed by every stale or missing golden
 }
 
 // Open returns the golden testdata/<name>.golden.jsonl of t's package. Recording needs the
@@ -88,12 +92,34 @@ func Open(t testing.TB, name string) *Golden {
 	return g
 }
 
+// Alias records real, a path that changes between runs (a t.TempDir), as placeholder in both
+// the cases and the output, and replays placeholder as the real of the run.
+func (g *Golden) Alias(real, placeholder string) {
+	g.alias = append(g.alias, real, placeholder)
+}
+
+// Mask rewrites each match of re in what Python prints to repl before it is recorded: for
+// output that varies between runs and that the test ignores anyway (a timestamp), so a
+// re-recording stays byte-identical.
+func (g *Golden) Mask(re *regexp.Regexp, repl string) {
+	g.masks = append(g.masks, func(s string) string { return re.ReplaceAllLiteralString(s, repl) })
+}
+
+// swap applies the aliases forward (real to placeholder) or back.
+func (g *Golden) swap(text string, back bool) string {
+	pairs := append([]string{}, g.alias...)
+	for i := 0; back && i < len(pairs); i += 2 {
+		pairs[i], pairs[i+1] = pairs[i+1], pairs[i]
+	}
+	return strings.NewReplacer(pairs...).Replace(text)
+}
+
 // Run is the script's stdout for stdin: run on the target when recording, else the recorded one.
 // The script runs as the differentials always ran it, with the kit first on sys.path.
 func (g *Golden) Run(script string, stdin []byte) []byte {
 	g.t.Helper()
-	sum := sha256.Sum256([]byte(script))
-	digest := hex.EncodeToString(sum[:8])
+	digest := sha256Hex([]byte(script))[:16]
+	masked := g.swap(string(stdin), false)
 	if g.py != "" {
 		cmd := exec.Command(g.py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", g.kit, script)
 		cmd.Stdin = bytes.NewReader(stdin)
@@ -106,9 +132,13 @@ func (g *Golden) Run(script string, stdin []byte) []byte {
 		if !utf8.Valid(stdin) || !utf8.Valid(out) {
 			g.t.Fatalf("golden %s: call %d is not UTF-8, a JSON golden cannot hold it byte for byte", g.path, len(g.recs)+1)
 		}
-		r := record{Script: digest, Stdin: string(stdin), Stdout: string(out)}
-		if len(stdin) > maxInline {
-			r.Stdin, r.StdinSHA256 = "", sha256Hex(stdin)
+		stdout := g.swap(string(out), false)
+		for _, m := range g.masks {
+			stdout = m(stdout)
+		}
+		r := record{Script: digest, Stdin: masked, Stdout: stdout}
+		if len(masked) > maxInline {
+			r.Stdin, r.StdinSHA256 = "", sha256Hex([]byte(masked))
 		}
 		g.recs = append(g.recs, r)
 		return out
@@ -123,14 +153,14 @@ func (g *Golden) Run(script string, stdin []byte) []byte {
 		g.t.Fatalf("golden %s is stale: call %d runs a changed script; %s", g.path, i+1, g.hint)
 	}
 	if r.StdinSHA256 != "" {
-		if r.StdinSHA256 != sha256Hex(stdin) {
+		if r.StdinSHA256 != sha256Hex([]byte(masked)) {
 			g.t.Fatalf("golden %s is stale: call %d sends other cases (SHA-256 differs); %s", g.path, i+1, g.hint)
 		}
-	} else if r.Stdin != string(stdin) {
+	} else if r.Stdin != masked {
 		g.t.Fatalf("golden %s is stale: call %d sends other cases (first difference at byte %d); %s",
-			g.path, i+1, firstDiff(r.Stdin, string(stdin)), g.hint)
+			g.path, i+1, firstDiff(r.Stdin, masked), g.hint)
 	}
-	return []byte(r.Stdout)
+	return []byte(g.swap(r.Stdout, true))
 }
 
 // write saves the recorded calls, one JSON object per line, unless the test failed or skipped.

@@ -97,6 +97,13 @@ func TestReplay(t *testing.T) {
 		{"large cases replay by digest", big, "pass", func(g *Golden) { g.Run("s", bigIn) }},
 		{"changed large cases are stale", big, "fail: golden testdata/x.golden.jsonl is stale: call 1 sends other cases (SHA-256 differs)",
 			func(g *Golden) { g.Run("s", append([]byte("x"), bigIn[1:]...)) }},
+		{"an alias replays as the run's real text", `{"script":"043a718774c572bd","stdin":"in $R","stdout":"out $R"}` + "\n", "pass",
+			func(g *Golden) {
+				g.Alias("/tmp/run2", "$R")
+				if got := string(g.Run("s", []byte("in /tmp/run2"))); got != "out /tmp/run2" {
+					g.t.Errorf("replayed %q", got)
+				}
+			}},
 		{"a corrupt golden fails", "{", "fail: golden testdata/x.golden.jsonl: record 1: unexpected EOF", both},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
