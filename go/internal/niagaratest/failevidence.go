@@ -146,6 +146,37 @@ func keepTestNG(ev testngEvidence, stem string, red redactor) ([]string, error) 
 	return rows, nil
 }
 
+// stderrEvidence is test.exe's whole stderr (it carries the station log), read before cleanup deletes the scratch
+// dir and cut like the results copy; unavailable says why it could not be read ("" when it was).
+type stderrEvidence struct{ body, unavailable string }
+
+// gatherStderr reads at most evidenceCap+1 bytes of stderr.txt; no buffer is sized from the file.
+func gatherStderr(path string) stderrEvidence {
+	f, err := os.Open(path)
+	if err != nil {
+		return stderrEvidence{unavailable: strerror.Text(err) + ": " + path}
+	}
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, evidenceCap+1))
+	if err != nil {
+		return stderrEvidence{unavailable: strerror.Text(err) + ": " + path}
+	}
+	return stderrEvidence{body: capAtLine(b, len(b) > evidenceCap, "stderr over %d bytes")}
+}
+
+// keepStderr writes the redacted stderr copy beside the log named stem.log, 0600 and made exclusively, and
+// returns the log's row naming it.
+func keepStderr(ev stderrEvidence, stem string, red redactor) ([]string, error) {
+	if ev.unavailable != "" {
+		return []string{"test.exe stderr unavailable: " + ev.unavailable}, nil
+	}
+	name := stem + ".stderr.txt"
+	if err := writeExclusive(name, red.apply(ev.body)); err != nil {
+		return nil, err
+	}
+	return []string{"test.exe stderr: copied to " + name}, nil
+}
+
 func writeExclusive(name, body string) error {
 	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {

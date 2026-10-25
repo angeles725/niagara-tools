@@ -67,9 +67,10 @@ usage: run-niagara-test verdict [<log>|-]
            "diagnostics kept: <path>" row. The scratch dir and its home copy read <scratch> and <copy>, the
            %USERPROFILE% and the WSL home <you>; install paths stay. A green run writes one only with an
            explicit --log-dir or --keep-home. A failed run also keeps, redacted the same way, beside the
-           log: <stem>.testng-results.xml (a copy) and <stem>.traces.txt (the whole full-stacktrace of every
-           FAIL test-method), each cut at a line end under 4 MiB with a "(truncated: ...)" row; a missing or
-           unreadable results file is a "testng-results.xml unavailable" row in the log instead.
+           log: <stem>.testng-results.xml (a copy), <stem>.traces.txt (the whole full-stacktrace of every
+           FAIL test-method) and <stem>.stderr.txt (the whole test.exe stderr, the station log), each cut at a
+           line end under 4 MiB with a "(truncated: ...)" row; a missing or unreadable results or stderr file
+           is a "testng-results.xml unavailable" or "test.exe stderr unavailable" row in the log instead.
            --reuse-home <dir> boots again on the dir a --keep-home run kept (its "cleanup: kept" row), to prove
            what survives a restart. Refused (exit 2): a dir not under the scratch parent, one that is, holds or
            sits in a real %USERPROFILE%\Niagara4.*\<brand> or has registry\ or security\ at its top, and one

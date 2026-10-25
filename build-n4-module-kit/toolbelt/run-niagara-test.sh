@@ -87,9 +87,10 @@
 # $XDG_STATE_HOME/run-niagara-test, else ~/.local/state/run-niagara-test, 0700): `diagnostics kept: <path>`. The
 # scratch dir and its copy read <scratch> and <copy> (Windows and /mnt forms, any case), %USERPROFILE% and $HOME
 # <you>; install paths stay. A green run writes one only with --log-dir or --keep-home. Attach the log, not the home.
-# A failed run also keeps <stem>.testng-results.xml (a copy) and <stem>.traces.txt (the whole full-stacktrace of
-# every FAIL test-method) beside the log, redacted the same way, each cut at a line end under 4 MiB with a
-# `(truncated: ...)` row; a missing or unreadable results file is a `testng-results.xml unavailable` row instead.
+# A failed run also keeps <stem>.testng-results.xml (a copy), <stem>.traces.txt (the whole full-stacktrace of
+# every FAIL test-method) and <stem>.stderr.txt (the whole test.exe stderr, the station log) beside the log,
+# redacted the same way, each cut at a line end under 4 MiB with a `(truncated: ...)` row; a missing or unreadable
+# results or stderr file is a `testng-results.xml unavailable` or `test.exe stderr unavailable` row instead.
 # --reuse-home <dir>: boot again on the dir a --keep-home run kept (`cleanup: kept <dir>`), to prove what survives a
 # station restart. Every run writes run-niagara-test.marker in its dir (run id <UTC stamp>-<module>-<dir>-<nonce>,
 # install, sha256 of the install's defaults\system.properties, and, once a --keep-home run wrote it, its run log, whose
