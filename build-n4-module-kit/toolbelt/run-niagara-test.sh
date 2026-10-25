@@ -7,9 +7,9 @@
 #
 # Usage: run-niagara-test.sh verdict [<log>|-]     (no <log> or - reads standard input)
 # Contract: PASS only when the log holds at least one `Total tests run: N` line and every one has N > 0 and
-# `Failures: 0`. FAIL on a summary with 0 tests, failures or no Failures count; a `Failures: N>0` line outside a
-# summary; `invalid test target(s)`; `failed signature validation`; a malformed summary; no summary at all; or a
-# line longer than 1 MiB (the rest of the log is unread). One `PASS|FAIL  run-niagara-test  <detail>` row per
+# `Failures: 0`. FAIL on a summary with 0 tests, failures or no Failures count; a `Failures:` key outside a
+# summary with a count above 0 or a value that is no count; `invalid test target(s)`; `failed signature
+# validation`; a malformed summary; no summary at all; or a line longer than 1 MiB (the rest is unread). One `PASS|FAIL  run-niagara-test  <detail>` row per
 # summary line and per other reason, then the verdict row.
 # Exits: 0 PASS; 1 FAIL; 2 usage; 3 unreadable log, or the Go tool cannot be built.
 # Phase 1 is the verdict only: running the test (scratch copy, :clean, test.exe, jar backup and restore) is owed.

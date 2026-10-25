@@ -91,10 +91,8 @@ func Verdict(r io.Reader) Result {
 			if p := s.Problem(); p != "" {
 				res.fail(n, p)
 			}
-		} else if i := strings.Index(line, failuresKey); i >= 0 {
-			if f, ok := count(line[i+len(failuresKey):]); ok && f > 0 {
-				res.fail(n, fmt.Sprintf("%d failures (a Failures line outside a test summary)", f))
-			}
+		} else {
+			res.strayFailures(n, line)
 		}
 	}
 	if err := sc.Err(); errors.Is(err, bufio.ErrTooLong) {
@@ -111,6 +109,23 @@ func Verdict(r io.Reader) Result {
 }
 
 func (r *Result) fail(line int, text string) { r.Reasons = append(r.Reasons, Reason{line, text}) }
+
+// strayFailures fails the run on every "Failures:" key of a line that is no summary: a count above 0, or a
+// value that is no count, is a reason (a value that cannot be read must never read as 0 failures).
+func (r *Result) strayFailures(n int, line string) {
+	for rest := line; ; {
+		i := strings.Index(rest, failuresKey)
+		if i < 0 {
+			return
+		}
+		rest = rest[i+len(failuresKey):]
+		if f, ok := count(rest); !ok {
+			r.fail(n, "malformed Failures count")
+		} else if f > 0 {
+			r.fail(n, fmt.Sprintf("%d failures (a Failures line outside a test summary)", f))
+		}
+	}
+}
 
 // parseSummary reads what follows "Total tests run:": the run count, then ", Key: value" fields, of which
 // Failures and Skips are kept and any other key is ignored.
@@ -138,15 +153,16 @@ func parseSummary(line int, rest string) (Summary, bool) {
 	return s, true
 }
 
-// count reads a count: leading blanks, decimal digits, then the end or a blank (so "6 (took 3 s)" is 6, and
-// "6x", "-1", "six" and a number past int32 are malformed).
+// count reads the count token at the start of s: leading blanks, decimal digits, then the end or any byte
+// that cannot continue a number (a blank or punctuation such as , ; ) ]). So "6 (took 3 s)", "5, Skips: 0"
+// and "1)" are counts, while "6x", "1.5", "-1", "six" and a number past int32 are malformed.
 func count(s string) (int, bool) {
 	s = strings.TrimLeft(s, " \t")
 	end := 0
 	for end < len(s) && s[end] >= '0' && s[end] <= '9' {
 		end++
 	}
-	if end == 0 || (end < len(s) && s[end] != ' ' && s[end] != '\t') {
+	if end == 0 || (end < len(s) && continuesNumber(s[end])) {
 		return 0, false
 	}
 	v, err := strconv.ParseUint(s[:end], 10, 31)
@@ -154,4 +170,9 @@ func count(s string) (int, bool) {
 		return 0, false
 	}
 	return int(v), true
+}
+
+// continuesNumber says whether b, right after a digit run, would make it part of a longer word or number.
+func continuesNumber(b byte) bool {
+	return b == '_' || b == '.' || (b >= '0' && b <= '9') || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
 }
