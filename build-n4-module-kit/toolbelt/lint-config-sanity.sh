@@ -44,7 +44,9 @@
 # [ev: retro live-commissioning-verification-gaps]
 #
 # Source of defaults: only the Java @NiagaraProperty annotation, read from the raw source (comments are
-#   not stripped): CS1/CS4 read its defaultValue= literal, CS2 a BDouble.make(0) anywhere in it. When
+#   not stripped) by CS1/CS4, which read its defaultValue= literal. CS2 reads it with comments blanked
+#   (literals kept): OPERATOR and a BDouble.make(0) in a comment inside the annotation ("never
+#   OPERATOR-writable") count for nothing (issue #459). When
 #   that is absent or unreadable the check is skipped (never false-FAIL) — except a BRelTime default on
 #   an *Interval/*Duration slot, which is a CS1 "unreadable" WARN row.
 #
@@ -68,6 +70,7 @@
 # Mutation: LCS-floor-status -- dropping the status/counter suffix exclusion WARNs on cutoutCount / cutoutActive
 # Mutation: LCS-floor-trip -- putting Trip|Alarm|Fault back in the status suffixes silences lpCutoutTrip=0
 # Mutation: LCS-floor-suffix -- anchoring the cutout token to the name end misses lpCutoutPsi / lowLimitBar
+# Mutation: LCS-cs2-comment -- reading CS2 from the raw lines again FAILs the READONLY heatSetpoint whose comment says OPERATOR
 # Mutation: CS1-units -- comparing raw factory arguments (makeHours(4) vs make(1800000L)) false-FAILs a sane pair
 # Mutation: CS1-mixed -- reading make(ms) and makeSeconds(s) as one unit passes a 30 s cycle with a 60 s defrost
 # Mutation: CS1-minutes -- skipping makeMinutes silently passes a 10 min cycle with a 45 min defrost

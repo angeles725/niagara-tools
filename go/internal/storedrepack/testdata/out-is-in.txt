@@ -1,0 +1,19 @@
+-- args --
+in.jar
+in.jar
+-- want --
+exit 1
+-- stderr --
+stored-repack: refusing to overwrite existing in.jar
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/stored-repack.sh at 91b9e3d6 (sha256 56ba74c5bc7350132b621248f61fd2cbd7dc177927cb674ec73564999d937d7b)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- in.jar.spec --
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- a.txt ---
+a
+-- @after in.jar.listing --
+entries 2
+head META-INF/MANIFEST.MF deflated size=22 sha256=51b6d211a461039a +descriptor
+rest a.txt deflated size=2 sha256=87428fc522803d31 +descriptor

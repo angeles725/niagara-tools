@@ -117,7 +117,7 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
 
 `getStatus().isValid()` covers `BStatus.NULL` / `BStatus.FAULT` / `BStatus.STALE`; `Double.isFinite` covers NaN and ±Infinity from a detached link. Both guards are needed — a linked slot can carry a finite value with an INVALID status when the source is faulted.
 
-**Every staging comparison names its fallback.** A comparison with NaN is false in both directions, so `demand > stageOn` and `demand < stageOff` both stay false and a stage freezes where it is; decide explicitly what NaN or an invalid status means (hold, stage off, or a safe count) before the comparison, in the pure function. Wiresheet logic hides it further: a vendor Expr block evaluates a null on a Double/Float input as NaN, but on an Integer/Long input it keeps the LAST valid value (and a NaN input becomes 0), and a Boolean input also keeps the last value (4.15.6.20 guide `EngNotes/aHandlingNull_ExprComponent.txt:13-17`; behaviour not verified in code). `[ev: retro devguide415-r2-runtime-contracts-formats Δ9]` `[ev: corpus B1353 §1353.2]`
+**Every staging comparison names its fallback.** A comparison with NaN is false in both directions, so `demand > stageOn` and `demand < stageOff` both stay false and a stage freezes where it is; decide explicitly what NaN or an invalid status means (hold, stage off, or a safe count) before the comparison, in the pure function. Wiresheet logic hides it further: a vendor Expr block evaluates a null on a Double/Float input as NaN, but on an Integer/Long input it keeps the LAST valid value (and a NaN input becomes 0), and a Boolean input also keeps the last value (4.15.6.20 guide `EngNotes/aHandlingNull_ExprComponent.txt:13-17` "In a math expression, if a Double or"; behaviour not verified in code). `[ev: retro devguide415-r2-runtime-contracts-formats Δ9]` `[ev: corpus B1353 §1353.2]`
 
 ## Linking across custom modules
 
@@ -426,7 +426,7 @@ An informational flag still gets a readable surface (status/reason slot, dashboa
   - **Timers are TRANSIENT.** `BooleanDelay` `out`/`outNot` carry TRANSIENT (flags 74, `timer/BBooleanDelay.java:82-83`) and `lastInput` is a plain field (`:88`), so a boot with In=true re-runs the on-delay and a min-off cannot survive a restart; `Counter.out` persists (flags 8, `util/BCounter.java:63`). `[ev: retro devguide415-r2-control-alarms-schedules Δ6]`
   - **LoopPoint ships inert:** `kP`=`kI`=`kD`=`bias`=0 (`BLoopPoint.java:119-122`), so a dropped loop outputs only the bias; it runs on its own `executeTime` ticket (500 ms, `:114`, `:340`), not on link changes (LC2). `[ev: retro devguide415-r2-control-alarms-schedules Δ7]`
   - **Tstat** has hysteresis but no lockout: pair it with a BooleanDelay or InterstartDelayControl. Totalizer, alarm and history extensions go only on point-based blocks (LoopPoint, InterstartDelayControl, Tstat), and an alarm ext that reads a totalizer sits BELOW it in slot order (4.15.6.20 guide, corpus B1331 rows 7-8). `[ev: retro devguide415-r2-control-alarms-schedules Δ8]`
-- **LC8 / Alarm extension chooser + inhibit** (4.15.6.20 guide `Alarms/TypesOfAlarmExtensions-AFC63D65.txt:11-23`) `[ev: retro devguide415-r2-control-alarms-schedules Δ2]` `[ev: corpus B1324]`: compressor fail-to-run → `BooleanCommandFailureAlarmExt` on the BooleanWritable (command vs sensed); run-hours service → `ElapsedActiveTimeAlarmExt` with a `DiscreteTotalizerExt` on the same point; temperatures → `OutOfRangeAlarmExt` (fixed limits) or `FloatLimitAlarmExt` (setpoint ± differential). Link `alarmInhibit` (a linkable `BStatusBoolean`, vineflower alarm-rt 4.14.0.162 `BAlarmSourceExt.java:186`) from defrost-active or compressor-off so an expected excursion does not alarm; `inhibitTime` holds the inhibit after release (guide `Alarms/alarm-AlarmSourceExt.txt:17-18`). Write alarm texts against the record (`%alarmData.presentValue%`), not `%parent.out%`: the text is stored as BFormat and resolved when the record is read (corpus B1324 row 5).
+- **LC8 / Alarm extension chooser + inhibit** (4.15.6.20 guide `Alarms/TypesOfAlarmExtensions-AFC63D65.txt:11-23` "based upon numeric alarm high and low limits.") `[ev: retro devguide415-r2-control-alarms-schedules Δ2]` `[ev: corpus B1324]`: compressor fail-to-run → `BooleanCommandFailureAlarmExt` on the BooleanWritable (command vs sensed); run-hours service → `ElapsedActiveTimeAlarmExt` with a `DiscreteTotalizerExt` on the same point; temperatures → `OutOfRangeAlarmExt` (fixed limits) or `FloatLimitAlarmExt` (setpoint ± differential). Link `alarmInhibit` (a linkable `BStatusBoolean`, vineflower alarm-rt 4.14.0.162 `BAlarmSourceExt.java:186`) from defrost-active or compressor-off so an expected excursion does not alarm; `inhibitTime` holds the inhibit after release (guide `Alarms/alarm-AlarmSourceExt.txt:17-18` "true prevents all alarm generation due to any"). Write alarm texts against the record (`%alarmData.presentValue%`), not `%parent.out%`: the text is stored as BFormat and resolved when the record is read (corpus B1324 row 5).
 - **LC6 / Scheduler seam DI:** instead of calling `Clock.schedule` directly in the arming method, inject a tiny interface `interface Sched { Object at(long delayMs); void cancel(Object t); }` — production wires a `Clock`-backed impl; a test wires a fake that records `at(delayMs)` calls. This makes "which path arms, with what delay, cancel-before-reschedule" unit-testable without a station. [ev: corpus B743 §743.3]
 
 See also: `docs/how-to-create-coldroom-module.md` (end-to-end ColdRoomPan build); corpus **B729** (timer lifecycle: started/atSteadyState/clockChanged) + **B730** (rt idioms catalog).
@@ -452,7 +452,7 @@ An independent monitor on the producer's `lastTick` is the layer Tridium does NO
 A module can tag every component of its types with semantic tags so NEQL queries, hierarchies and Haystack
 tooling see them. **First check the licence:** the tags licence enables the first two dictionaries only
 (`Dictionary.limit`, default 2) and Niagara's own `n` dictionary takes one; a third goes to fault and its tags
-vanish (UG `Tagging/LicenseRequirements-474FC1B4.txt:7`, corpus B1329 §1329.1 row 1). Prefer direct tags or rules in an
+vanish (UG `Tagging/LicenseRequirements-474FC1B4.txt:7` "The tags license is required to use the", corpus B1329 §1329.1 row 1). Prefer direct tags or rules in an
 existing dictionary (`hs`) unless the site licence allows another. `[ev: retro devguide415-r2-security-tags-analytics Δ5]`
 
 **Recipe** (no method overrides — the dictionary is configured through its slots):
@@ -478,7 +478,7 @@ rows 4-8). `[ev: retro devguide415-r2-security-tags-analytics Δ7]`
 
 **ExportTags copy, they do not proxy:** a `ComponentTag` replicates the tagged component under the Supervisor's
 `NiagaraStation` as a copy; later edits in the source station do not reach it (4.15.6.20
-`ExportTags/aComponentTags.txt:7-11`). For live values on a Supervisor use proxy points (a `PointTag` or the
+`ExportTags/aComponentTags.txt:7-11` "The ComponentTag is an available “general purpose” export"). For live values on a Supervisor use proxy points (a `PointTag` or the
 Niagara network), oBIX or the cloud path, never a `ComponentTag`. `[ev: retro devguide415-r2-security-tags-analytics Δ8]`
 
 ### Tags in code `[ev: retro devguide415-nav-subscriptions-tags-ords Δ10]`
@@ -503,9 +503,9 @@ Corpus B1311 §1311.1 rows 1-6, 13 (`javax/baja/tag/Tags.java:66-69,97` docSourc
   `hs:equip` and give it a direct `hs:siteRef` to the `hs:site` component. The implied `hs:equipRef` reaches only a
   `BControlPoint` under an `hs:equip` ancestor whose proxy ext is not `BNullProxyExt`, and never one that already has
   a direct `hs:equipRef` (vineflower haystack-rt 4.14.0.162 `BContainmentRelation.java:48-49`; 4.15.6.20
-  `Tagging/haystack-EquipRelation.txt:11`). So our logic and setpoint points (NullProxy writables) and our own
+  `Tagging/haystack-EquipRelation.txt:11` "The smart EquipRef relation implies an hs:equipRef between"). So our logic and setpoint points (NullProxy writables) and our own
   non-point components need a DIRECT `hs:equipRef`; the implied `hs:siteRef` then follows point → equip → site
-  (`Tagging/haystack-SiteRelation.txt:9`). Check with Spy "Tags Implied" (corpus B1329 rows 2-3).
+  (`Tagging/haystack-SiteRelation.txt:9` "The haystack module supports a smart site relation"). Check with Spy "Tags Implied" (corpus B1329 rows 2-3).
 - **Deploy safety:** additive — no schema or containment change.
 
 ## BQL function reference card `[ev: corpus B1108]`

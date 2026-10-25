@@ -31,7 +31,14 @@
 #                       not that the second read rejects a bad value (BEnumRange.get(String) throws on an
 #                       unknown tag; a lookup mapping any text to a value would pass too) [ev: issue #459].
 #   cache-nofinger WARN Cache-Control max-age>0 in the file without a fingerprinted resource
-#                       (static detection: Cache-Control and max-age=[1-9] on one line).
+#                       (static detection: Cache-Control and max-age=[1-9] on one line). No row when every
+#                       max-age literal on the line is the then-branch of a ternary whose condition is a
+#                       fingerprint test, getParameter("v"|"ver"|"version") != null with no || and no ?:
+#                       (`req.getParameter("v") != null ? "public, max-age=3600" : "no-cache"`), or a
+#                       boolean parameter of the private method holding the line that every call of that
+#                       name in the file passes such a test [ev: issue #459]. A build-time token
+#                       replacement in a gradle script is not read: the servlet alone does not prove the
+#                       request carries the token, so an unconditional max-age stays a row.
 #   log-in-handler WARN LOG.info( inside a doGet/doPost/service handler body.
 #   csrf-xrw-only WARN  X-Requested-With check in the file with no CsrfUtil/x-niagara-csrfToken/
 #                       csrfToken reference — XHR-only guard is weaker than Niagara CSRF token.

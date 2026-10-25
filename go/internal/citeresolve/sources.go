@@ -49,8 +49,8 @@ func (e *Engine) moduleDir(p citeparse.Pointer, module, dir string) Result {
 	return res
 }
 
-// infix resolves `<dir or part>/…/<suffix>`: a file below that directory (or module part's copies)
-// whose path ends in /<suffix>.
+// infix resolves `<dir or part>/…/<suffix>`: a file below that directory (under a root or the course
+// tree, or a module part's copies) whose path ends in /<suffix>.
 func (e *Engine) infix(p citeparse.Pointer, c *Card) Result {
 	prefix, suffix, _ := strings.Cut(p.Target, "/…/")
 	ro := e.roots
@@ -58,7 +58,7 @@ func (e *Engine) infix(p citeparse.Pointer, c *Card) Result {
 	if !strings.Contains(prefix, "/") {
 		dirs = e.moduleDirs(prefix)
 	}
-	if d, err := first(prefix, c.Dir, ro.Kit, ro.Repo, ro.Research, e.help(), ro.Modules); err != nil {
+	if d, err := first(prefix, c.Dir, ro.Kit, ro.Repo, ro.Research, e.help(), ro.Modules, e.course()); err != nil {
 		return toolError(err)
 	} else if d != "" {
 		if dirs = append(dirs, d); !e.covered(d) {
@@ -155,10 +155,11 @@ func (r vineResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 	return res
 }
 
-type javapResolver struct{ e *Engine }
+type jarResolver struct{ e *Engine }
 
-// Resolve finds the jar in organized/, else in the Gradle cache; what javap printed is not reproduced.
-func (r javapResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
+// Resolve finds the jar of a javap or jar-entry pointer in organized/, else in the Gradle cache; what javap
+// printed, and the entry inside the jar, are not checked.
+func (r jarResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 	jar := filepath.Base(p.Target)
 	f, err := first(jar, r.e.organizedDirs(strings.TrimSuffix(jar, ".jar"))...)
 	if err == nil && f == "" {
@@ -170,7 +171,11 @@ func (r javapResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 	case f == "":
 		return Result{Status: MissingFile, Detail: "no " + jar + " under organized/ or the Gradle cache"}
 	}
-	return Result{Status: Resolved, File: f, Detail: "jar " + f + " [javap output not checked]"}
+	unchecked := "javap output"
+	if p.Kind == citeparse.Jar {
+		unchecked = "entry " + p.File
+	}
+	return Result{Status: Resolved, File: f, Detail: "jar " + f + " [" + unchecked + " not checked]"}
 }
 
 // gradleCacheJars are the Gradle cache layouts that hold a jar by its file name, relative to the Gradle

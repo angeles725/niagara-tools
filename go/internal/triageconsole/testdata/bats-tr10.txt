@@ -1,0 +1,11 @@
+-- args --
+--package
+com.angeles
+@REPO@/tests/fixtures/triage-console/console-foreign.txt
+-- want --
+exit 1
+FAIL  triage-console  console-foreign.txt  1x 16:20:10 02-Sep-26 CST -> 16:20:10 02-Sep-26 CST  WARNING IllegalArgumentException: time <= 0 @ BDefrostController.armTrigger(BDefrostController.java:431)
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/triage-console.sh at 79ca5a2c (sha256 c6c6a1526a4252bd8c6f078a6e23702e3f0ea628679e4e2c0903b6ccafae5920)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0

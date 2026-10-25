@@ -1,0 +1,19 @@
+-- args --
+kit
+abcdef ghi
+-- want --
+exit 3
+-- stderr --
+new-retro: slug must be [A-Za-z0-9][A-Za-z0-9._-]+ and >= 6 chars: abcdef ghi
+-- @kind --
+truth: hand-edited want of the case edge-slug-space-after-six recorded at 15e792d1: the whole slug must match [A-Za-z0-9][A-Za-z0-9._-]+ (the bash glob checked only its first 6 chars)
+-- @env --
+KIT=@DIR@/kit
+-- kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|

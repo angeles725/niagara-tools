@@ -2,13 +2,11 @@ package token
 
 import (
 	"encoding/hex"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // The Python side injects the key, clock and pending nonces into one ConfirmationTokens
@@ -55,8 +53,7 @@ type tokenCase struct {
 }
 
 func TestTokensDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "tokens")
 	key := strings.Repeat("ab", 16) + strings.Repeat("0f", 16)
 	var cases []any
 	var gotGo []any
@@ -86,11 +83,8 @@ func TestTokensDifferentialPython(t *testing.T) {
 				c.Set("now", pyjson.FloatNumber(tc.now))
 				c.Set("ttl", 300)
 				c.Set("key", key)
-				pend := []any{}
-				for n, e := range tc.pending {
-					pend = append(pend, []any{n, e})
-				}
-				c.Set("pending", pend)
+				// Sorted, not map order: the cases are recorded in a golden that replays byte for byte.
+				c.Set("pending", sortedPending(tc.pending))
 				c.Set("tool", tool)
 				c.Set("args", args)
 				c.Set("plan", "p1")
@@ -106,14 +100,7 @@ func TestTokensDifferentialPython(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, helperScript)
-	cmd.Stdin = strings.NewReader(string(data))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
-	}
+	out := g.Run(helperScript, data)
 	want := strings.TrimSpace(string(out))
 	got, _ := pyjson.Marshal(gotGo, pyjson.Options{})
 	if string(got) != want {

@@ -87,7 +87,12 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	if !ok {
 		return nil, "", &PyError{Type: "AttributeError", Msg: "the station client cannot write"}
 	}
-	planned, err := impl.Plan(client, args)
+	var planned *Planned
+	if impl.PlanWith != nil {
+		planned, err = impl.PlanWith(client, args, w, sess)
+	} else {
+		planned, err = impl.Plan(client, args)
+	}
 	if err != nil {
 		return nil, "", err
 	}
@@ -118,11 +123,11 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 			"); the confirmation token is spent, run the dry run again")
 	}
 	w.WritesExecuted++ // counted once sent, whatever the station answers
-	// From here on the batch exists: execute's only error is its in-doubt one, and a panic
-	// (Python's unexpected exception) leaves the batch in-doubt too.
+	// From here on the batch exists: every failure is its in-doubt error, a panic (Python's
+	// unexpected exception) too.
 	out, err = jsonrpc.Recover(func() (*pyjson.Object, error) { return e.execute(client, impl, args, planned, batchID) })
-	var p *jsonrpc.Panic
-	if errors.As(err, &p) {
+	var doubt *InDoubt
+	if err != nil && !errors.As(err, &doubt) {
 		err = inDoubt(batchID, err)
 	}
 	return out, batchID, err

@@ -53,11 +53,11 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
   ORDs (`slot:..`), `$(var)` ORD variables set by a parent `PxInclude`, or tag-based bindings, so one page serves the
   JACE and the Supervisor; icons only from modules (`module://icons/...`); in Hx the `visible` property refreshes
   every 5 s; WebService › Warmup Config speeds the first HxPx page after a restart. [CERT-doc] guides (GD =
-  niagara-help 4.15.6.20 `guides-clean/`) `GD/Graphics/AboutTypesOfPxTargetMediaGraphicsN4-504311E0.txt:11,16-27,37,49`,
-  `GD/Graphics/docGraphics_DevelopingForPortability-FAA1EFED.txt:7,27`,
-  `GD/Graphics/pBasicProcedureForUsingThePxIncludeW-13B8E5FB.txt:12`, `GD/Graphics/aPxView.txt:18`,
-  `GD/Graphics/bajaui-CanvasPane.txt:13`, `GD/Graphics/AboutTag-basedBindingsGraphics-C42EE774.txt:7`,
-  `GD/Graphics/UsingTheVisibilePropertyInHxProfile-16D68DD7.txt:25`, `GD/User/web-WebWarmupConfig.txt:7`. Owed lint:
+  niagara-help 4.15.6.20 `guides-clean/`) `GD/Graphics/AboutTypesOfPxTargetMediaGraphicsN4-504311E0.txt:11,16-27,37,49` "Note: Media values affect the initial contents of",
+  `GD/Graphics/docGraphics_DevelopingForPortability-FAA1EFED.txt:7,27` "Develop Px Views that you can easily use",
+  `GD/Graphics/pBasicProcedureForUsingThePxIncludeW-13B8E5FB.txt:12` "If you are using any bound variables, consider", `GD/Graphics/aPxView.txt:18` "Icon graphics must be linked into your view",
+  `GD/Graphics/bajaui-CanvasPane.txt:13` "Note: It provides support for absolute positioning for", `GD/Graphics/AboutTag-basedBindingsGraphics-C42EE774.txt:7` "Niagara has added support for tag-based bindings. Tag-based",
+  `GD/Graphics/UsingTheVisibilePropertyInHxProfile-16D68DD7.txt:25` "The visible property updates every 5 seconds.", `GD/User/web-WebWarmupConfig.txt:7` "These properties configure what happens when a controller". Owed lint:
   G77 `px-portability`. `[ev: retro devguide415-r2-web-ui-hmi Δ4]`
 - **"How to feed live data" decision matrix — match the serving recipe to the channel:** (a) **Servlet-SPA** → REST-poll (a self-scheduled `setTimeout` loop per § Poll loop reliability + 1 s local tick for JACE-computed fields); no BOX/Fox subscription — the servlet SPA does not use one, by design; (b) **bajaux `@AgentOn` view** → `subscriberMixIn` Fox/BOX subscription (push on value change; B752-G2 still open — treat as P2); (c) **PX page** → `*Binding` handles live data implicitly (no author code); (d) **Query** (alarms, history) → BQL via `BOrd.make(bql).get(cx, null)` → `BITable` (pull, not push). Rule [INFER]: do NOT mix channels (no BOX subscription from a plain servlet, no polling from a PX binding). `[ev: corpus B752 §752.4, B553 §553.1–553.3]`
 - `BWebServlet` subclass; `getServletName()` = the mount prefix → `/<prefix>/`. Registered as a `<type>` in module-include.xml + a palette instance under a Servlets folder.
@@ -70,7 +70,7 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **DJS1 — testable SPA JS:** split inline JS into files + add a dual-export shim (`if(typeof module!=='undefined')module.exports=…`) + a Node harness for logic tests; `node --check` proves syntax only. DashboardPan's 2300-line inline `index.html` is the anti-pattern. [ev: corpus B762] **For NEW servlet-SPAs DJS1 extends to the whole `rc/` tree (CSS too, not only JS):** `index.html` = markup only, `css/` split by layer, `js/` split by responsibility, no inline `<style>`/`<script>` beyond a boot tag — the canonical tree is `frontend-standard.md` § Component layout. A deployed single-file SPA is not restructured unless the user explicitly requests the split. `[ev: retro dashboard-rc-file-split Δ1]`
 - **Splitting an existing SPA is its own behavior-neutral work unit:** the same commit retargets every source-structural test that reads `rc/index.html` as text to the new files; neutrality is proved with `toolbelt/hmi-sweep.js` (same views, same verdicts before and after) plus `node --check` on every new file; no feature change rides in that commit. `[ev: retro dashboard-rc-file-split Δ5]`
 - **DUX-TEST1 — browser test harness (Jasmine + Karma + grunt-niagara):** the first-party pattern for
-  executable browser-side assertions on ux code — entirely absent from our kit until now; `dashboard-preview.py`
+  executable browser-side assertions on ux code — entirely absent from our kit until now; `dashboard-preview` (the niagara-research Go binary)
   runs a layout preview but asserts nothing. Pattern from `typeExtensionDemo-ux` (B957 §957.5):
   Async spec helper `promiseUtils` (`srcTest` only): `types/horizons.md` § 2.
   - **Specs:** `srcTest/rc/spec/DemoSizeSpec.js` — Jasmine `describe/it` blocks; `require` the type under
@@ -195,7 +195,7 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   `[ev: retro devguide415-horizons-authoring-security Δ1]`
 - **4.15 adds an absolute logoff** counted from login that activity cannot reset (`UserService.absoluteLogoffEnabled`,
   default period 7 days, per-user `absoluteLogoffEnabled`); a 24/7 kiosk user needs both flags off or a planned
-  weekly re-login. `[ev: corpus B1344 §1344.3]` [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:15-23`
+  weekly re-login. `[ev: corpus B1344 §1344.3]` [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:15-23` "As of Niagara 4.15, the Absolute Logoff option"
   4.14 has no absolute logoff (not in the 4.14.0.162 decompile, corpus B1344 §1344.3); 4.13 not verified.
   `[ev: retro devguide415-r3-web-session-headers Δ2]` `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
 - **The SPA must survive a session that ends anyway** (absolute logoff, an admin's session invalidation, a
@@ -204,12 +204,12 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   the poll a 200 HTML login page, so test `response.redirected` or a non-JSON `Content-Type`, not only the
   status code; otherwise every tick fails JSON parsing in exactly the silent loop this rule forbids. `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
 - **Kiosk panel user — commissioning checklist** (per display, 4.15.6.20 Touch guide): dedicated user; Auto
-  Logoff Enabled = false (`Touch/SettingUpADisplayUser-EntsecInstall-4CB4BEC4.txt:24`); Allow Concurrent
-  Sessions = false (`Touch/UpdatingTheIntrusionDisplayUserEnts-5053926B.txt:23`); on 4.15 also Absolute Logoff
+  Logoff Enabled = false (`Touch/SettingUpADisplayUser-EntsecInstall-4CB4BEC4.txt:24` "Under Auto Logoff Settings, remove the check mark"); Allow Concurrent
+  Sessions = false (`Touch/UpdatingTheIntrusionDisplayUserEnts-5053926B.txt:23` "For Allow Concurrent Sessions, select false"); on 4.15 also Absolute Logoff
   off or a planned weekly re-login; a role with read (R) and invoke (I) on the app's categories only
-  (`Touch/CreatingARoleToAssignToTheDisplay-CF979AC4.txt:25`); a `.nav` file under Files as the landing page, one
-  per display (`Touch/SettingUpANavigationFileForTheOnscr-504FCDC3.txt:7,12`); the panel's configuration password
-  turned on (default OFF, `Touch/GeneralSettingsTouch-F06218DF.txt:20`). For re-login after a panel reboot,
+  (`Touch/CreatingARoleToAssignToTheDisplay-CF979AC4.txt:25` "Click the cell to assign read (R) and"); a `.nav` file under Files as the landing page, one
+  per display (`Touch/SettingUpANavigationFileForTheOnscr-504FCDC3.txt:7,12` "The onscreen Px view serves as the home"); the panel's configuration password
+  turned on (default OFF, `Touch/GeneralSettingsTouch-F06218DF.txt:20` "Enables (ON) and disables (OFF) the requirement to"). For re-login after a panel reboot,
   prefer client-certificate SSO (`types/security.md` § 3.4). `[ev: retro devguide415-r2-web-ui-hmi Δ6]`
 - **Workbench views** not hosted on a station component report activity through `BFoxProxySession.userActivity()`;
   `NotifyListener.onNotify()` fires with ≤30 s left. [CERT-doc] `niagara-help/devguide-clean/autoLogoffWb.txt:6-46`
@@ -247,8 +247,8 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   server-side (its data needs a timestamp and a non-String value; no live mode, no Delta); a points folder plots only
   its first 10 histories; `file:^charts/defaultOptions.chart` holds shared axis, sampling and time-range defaults.
   Keep the hand-rolled SVG below on the `hmi` panel. [CERT] `webChart-rt.jar!WEB-INF/web.xml` (`/query/*`,
-  `/file/*`), vineflower `WebChartQueryServlet.java:47,95`; [CERT-doc] `GD/WebCharts/AddingDataToAChart-959F4DCC.txt:22,25`,
-  `GD/WebCharts/webChart-ChartWidget.txt:73`, `GD/WebCharts/CreatingADefaultOptionsChartFileWeb-32F441A8.txt:17`
+  `/file/*`), vineflower `WebChartQueryServlet.java:47,95`; [CERT-doc] `GD/WebCharts/AddingDataToAChart-959F4DCC.txt:22,25` "NOTE: When adding a points folder to a",
+  `GD/WebCharts/webChart-ChartWidget.txt:73` "Provides ord for the defaultOption widget. You can", `GD/WebCharts/CreatingADefaultOptionsChartFileWeb-32F441A8.txt:17` "NOTE: The defaultOptions file is used only to"
   (GD as in § ux Px rules). The series-transform servlet path (`/seriesTransformQuery/*` in its jar) is not called
   live yet [INFER] (B1339-G1). `[ev: retro devguide415-r2-web-ui-hmi Δ8]`
 - **Size the SVG chart's `viewBox` to the MEASURED box in real px each render — do not carry a fixed art-board viewBox with `preserveAspectRatio="none"`:** measure `getBoundingClientRect()` (guard width>60) and set `viewBox="0 0 <w> <h>"` so 1 unit = 1px and strokes/axis text stop distorting. [ev: retro dashboardpan-hmi-touch-ux Δ5]
@@ -275,13 +275,13 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   profiles and the KioskService are not supported in Niagara 4, and Mobile profiles are deprecated
   (`frontend-standard.md` § Profiles); `Enable Nav Tree Side Bar` and `Enable View Selection` (default true) hide the
   side bar and the view selector for a panel user; the Hx theme is chosen per profile on the user or prototype
-  (`selectedHxTheme`, default Zebra — `theme.md` § 2). [CERT-doc] `GD/Graphics/AboutKioskProfiles-E920D19F.txt:9`,
-  `GD/User/baja-User.txt:54-66,89`; [CERT] vineflower `hx-wb BHxProfile.java:86`. `[ev: retro devguide415-r2-web-ui-hmi Δ3]`
+  (`selectedHxTheme`, default Zebra — `theme.md` § 2). [CERT-doc] `GD/Graphics/AboutKioskProfiles-E920D19F.txt:9` "Note: Currently, the KioskService and the Kiosk Profiles",
+  `GD/User/baja-User.txt:54-66,89` "drop-down list (defaults to Zebra)"; [CERT] vineflower `hx-wb BHxProfile.java:86`. `[ev: retro devguide415-r2-web-ui-hmi Δ3]`
 - **Coexisting with the Tridium DashboardService (`dashboard-rt`/`-ux`/`-wb`):** a different product from this
   servlet dashboard. It keeps per-user state as `db*.json` under the protected station home
   `file:~stations/<station>/dashboards/<user>`; a `DashboardPane` holds exactly one HTML5 WebWidget (WebChart,
   CircularGauge) and its `Id` (`%ord%;%viewId%;%widgetOrd%;%jsOrd%`) keys each user's saved data — leave it at the
-  default. [CERT-doc] `GD/EngNotes/dashboard-DashboardService.txt:7`, `GD/EngNotes/CreatingADashboard-34B5B646.txt:38`,
+  default. [CERT-doc] `GD/EngNotes/dashboard-DashboardService.txt:7` "The DashboardService must be added to a station's", `GD/EngNotes/CreatingADashboard-34B5B646.txt:38` "NOTE: A Dashboard Pane may contain only one",
   `GD/EngNotes/dashboard-DashboardPane.txt:7,22`. Both may sit in one Services container, so do not name our facade
   service slot `DashboardService` on such a station [INFER]. `[ev: retro devguide415-r2-web-ui-hmi Δ10]`
 
@@ -296,14 +296,14 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **No page scroll** at the panel resolution. Chrome (header+nav+footer) ≈180px → page content ≤ ~620px. If an entity has many fields, use a **per-entity selector** (one at a time) + a 2-column grid, not all side-by-side.
 - **Touch:** targets ≥44px (52px for primary); edit via **+/− steppers**, not type-a-number (no keyboard); toggle switch for booleans; one "Guardar cambios" per entity. Neutralize hover-only states.
 - Kiosk meta: `user-scalable=no`, `touch-action:manipulation`, `overscroll-behavior:none`.
-- Verify every page fits at exactly 1280×800 (headless Chrome or dashboard-preview.py `/hmi`). **Mechanized:** `node toolbelt/hmi-sweep.js --url <preview-url> --target <alarm-banner selector> [--subtab <sel>] [--scenario name=query --api-match /api/]` clicks every `.nav-item` view (and each declared sub-tab) at 1280×800 and reports per view: document scroll (FAIL), an inner scroller not named by `--allow-scroller` (WARN), the target covered or invisible (FAIL); same enumeration every run, so results compare across sessions. It is the no-scroll check of the verify step (`build-verify.md` § Frontend verify step). `[ev: retro comppan-fase2-amps-alarms Δ3]` `[ev: retro panccadia-persistent-config-hoa Δ4]`
+- Verify every page fits at exactly 1280×800 (headless Chrome or the dashboard-preview binary `/hmi`). **Mechanized:** `node toolbelt/hmi-sweep.js --url <preview-url> --target <alarm-banner selector> [--subtab <sel>] [--scenario name=query --api-match /api/]` clicks every `.nav-item` view (and each declared sub-tab) at 1280×800 and reports per view: document scroll (FAIL), an inner scroller not named by `--allow-scroller` (WARN), the target covered or invisible (FAIL); same enumeration every run, so results compare across sessions. It is the no-scroll check of the verify step (`build-verify.md` § Frontend verify step). `[ev: retro comppan-fase2-amps-alarms Δ3]` `[ev: retro panccadia-persistent-config-hoa Δ4]`
 - **Browser feature floor = the PANEL engine (Chromium 83 class), not the desktop browser or a version table:** no CSS `inset:`, flex `gap` (grid `gap` is fine), `aspect-ratio`, `min()`/`max()`/`clamp()`, `backdrop-filter`; no JS `??=` `||=` `&&=`, `.replaceAll(`, `.at(`, `structuredClone`, top-level `await`. Real failures: an `inset:0` login background collapsed to a 0×0 box on an embedded-Chromium panel, flex `gap` and `inset` broke a login modal, and `min()`/`max()` failed on a real panel although the desktop version table claims support. Verify the layout on the panel (or its simulator) before deploy. Enforced: `rc-scan.sh` check `browser-floor` — WARN by default, FAIL under `--strict` or `--profile hmi|both` (the caller passes the module's `ui_profile`). `[ev: retro dashboard-frontend-reliability-rules Δ5]` `[ev: retro panccadia-commissioning-lessons Δ6]` `[ev: retro panccadia-persistent-config-hoa Δ4]`
 - **Script format for the panel browser (Chromium 83): classic scripts + the DJS1 dual-export shim, not ES `type="module"`,** so the same files load in the panel AND in the Node logic harness without a bundler; the load order is explicit in `index.html`. `[ev: retro dashboard-rc-file-split Δ4]`
 - **Layout shell:** header (identity, global status, active alarms, active write session) → nav → content; a TOP nav bar on the 1280×800 kiosk (a side nav only for desktop dashboards with many sections); tabs named by the site's systems; no orphan pages (every page section has a nav entry and vice versa — enforced by `rc-scan.sh` check `orphan-page`, WARN). Shared-shell rule: `frontend-standard.md` § 1. `[ev: retro dashboard-frontend-standard Δ9]`
 - **Stale-data visibility (new modules):** after a time window without a successful read (N× `pollMs`, from the timing config), the UI marks values as stale and shows the last-good timestamp, so a frozen page never passes for live data. A project may opt out only by an explicit user decision recorded in the module docs (an existing process-stale dimming may then stay). `[ev: retro dashboard-frontend-reliability-rules Δ9]`
 - **Document a kiosk recovery ladder per HMI module, each layer with its blind spot:** (1) in-page — `fetchT` timeout + the success-time watchdog (§ Poll loop reliability); (2) an operator "Refresh" button; (3) station-side liveness — a page heartbeat feeding an `hmiStatus` (Healthy / Stale / Down) on the station plus a Workbench "reload HMI" action; (4) physical — panel cable/power. Layers (1)-(2) die with the page: neither can recover a page REPLACED by a non-app page (login/error), and only (3)-(4) observe or cover that case. `[ev: retro dashboard-frontend-reliability-rules Δ4]`
 
-- **`dashboard-preview.py` has `--editor` (a preview-only overlay label editor — drag + live rx/ry readout, the sanctioned way to reposition overlays without touching the module) and `--mock <json>` (seeds `/api/*` with realistic `{v,st,nm}`); for an off-site operator, deliver a screenshot/PDF via a Playwright script (`page.click('[data-page=X]')` for a non-default tab) + `chrome --headless --print-to-pdf` with a `@page A4` block.** [ev: retro editing-base64-heavy-spa-and-the-preview-screenshot-pdf-pipeline · U9] [ev: retro dashboardpan-ux-direct-build #5]
+- **`dashboard-preview` (`~/.local/lib/niagara-go/bin/dashboard-preview`) has `--editor` (a preview-only overlay label editor — drag + live rx/ry readout, the sanctioned way to reposition overlays without touching the module) and `--mock <json>` (seeds `/api/*` with realistic `{v,st,nm}`); for an off-site operator, deliver a screenshot/PDF via a Playwright script (`page.click('[data-page=X]')` for a non-default tab) + `chrome --headless --print-to-pdf` with a `@page A4` block.** [ev: retro editing-base64-heavy-spa-and-the-preview-screenshot-pdf-pipeline · U9] [ev: retro dashboardpan-ux-direct-build #5]
 - **A scenario-driven preview mock must see the page's scenario selector:** a fixed `jsonUrl` (`/<prefix>/api/equipment`) never carries the page's `?worst=1`/`?degraded=1` query, so `page.goto(url + '?worst=1')` silently exercises the DEFAULT mock. Either the SPA (or the preview server) builds `jsonUrl` from its OWN `window.location.search`, or the sweep/test harness intercepts the API request and appends the scenario query explicitly — never assume a page-URL scenario reaches the mock. `[ev: retro comppan-fase2-amps-alarms Δ4]`
 
 ## Real alarms (Phase B — see corpus B6/B8, chihuahua B166)

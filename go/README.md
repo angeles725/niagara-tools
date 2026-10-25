@@ -21,23 +21,39 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `internal/xmlsrc/` | the XML scanner the XML and `.bog` lints share: `Open` (a zipped `.bog` is read through the same call) and `Parse` return a well-formed `Doc` or a positioned `*Error`; `Doc.Elements`, `Find`, `Children`, `Text`, `Element.Attr`, `Element.Empty` (written as `<name/>`) and `UnescapeName` (`.bog` slot names) |
 | `internal/ktssrc/` | the Kotlin scanner the `*.gradle.kts` lints share: `Tokens` (identifiers, `"..."` and `"""..."""` strings with their `$x`/`${...}` templates, chars, numbers, punctuation; `//` and nested `/* */` comments dropped; each with its byte span) or a line-numbered `*Error`, and `Code`, the tokens back as code lines (comments gone, literals reduced to their quotes) for a line-wise match; used by lint-uberjar-api-conflict and lint-structure L14/L15; `TestSweepRealFiles` (`KTSSRC_SWEEP_ROOTS`) reads real build scripts |
 | `internal/signblock/` | `Parts`: the one Go table of the root signing-block requirements (`toolbelt/lib/signing-block.sh`, pinned entry by entry by its test and `tests/lint-structure.bats` LS15-sync) and `Missing` (the parts no code line matches), read by lint-structure L15 and preflight sample-sign |
-| `internal/preflight/` + `cmd/preflight/` | the BUILD-LOOP §0.b environment preflight of `toolbelt/preflight.sh` (win-path, jdk8, plugin-pin, jar-lock, version-drift, `--sample` rows): one func per check in `checks`; lsof, `java -version` and `df` run through the injectable `Host`; `testdata/*.txt` are golden runs recorded from the bash script (an `@env` section is the whole environment of the run) |
+| `internal/preflight/` + `cmd/preflight/` | the BUILD-LOOP §0.b environment preflight of `toolbelt/preflight.sh` (win-path, jdk8, plugin-pin, jar-lock, version-drift, `--sample` rows): one func per check in `checks`; lsof, `java -version` and `df` run through the injectable `Host`; `testdata/*.txt` are golden runs recorded from the bash script by `rules/golden/record/record.sh` and replayed by `golden.Runner` |
 | `internal/lint/rules/linescan/` | shared by the line-matching rules (ports of `awk_lint_each` / `awk_lint_strip_run` lints): `Code` (a file's lines with comments blanked and literal contents removed, the view a code token is matched in) and the row texts `Source` (leading space trimmed) and `Trimmed` (both ends) |
-| `internal/lint/rules/golden/` | test helper: `Run` checks a rule against its `testdata/*.txt` cases recorded from the bash lint, `Unreadable` its `awk_lint_run` failure contract |
+| `internal/lint/rules/golden/` | test helper: `Runner` replays a `testdata/*.txt` case set hermetically (the case's env only, exact output, the whole post-run tree), `record/record.sh` records one from the pinned bash (`record/README.md`: format and recording); `Run`/`RunMain` are Runner wrappers for the lint goldens, `Unreadable` checks the `awk_lint_run` failure contract, `BuildJar` builds the zip a `(jar)` section spells |
 | `internal/bogaudit/` | `bog-audit` (`toolbelt/bog-audit.sh`): a station bog read once through `xmlsrc` and replayed through the python line scanner's state machine it replaced, `--source-dir` read as that scanner read it (`htmltext.Decode`, `javasrc.ParenDepth`), Python's `repr`/`str(float)`/`float()` in `pyfmt.go`; its own CLI, not an n4lint rule (one bog file plus repeatable `--module`, `CHECK<n>  <STATUS>` rows); goldens in `testdata/` (`<path> (zip)` sections are zipped as `file.xml`) |
 | `cmd/bog-audit/` | `bog-audit <config.bog\|file.xml> --module <MOD>... [--source-dir <DIR>] [--strict]` |
 | `cmd/n4lint/` | `n4lint <rule>[,<rule>...] <args>...` or `n4lint --all [--strict] [--] <src-root>...` |
 | `internal/citeparse/` | the kit citation grammar, pure: `Card` returns every evidence pointer of a card (`[ev: …]`/`[deferred: …]` clauses, per-card path aliases, prose citations) as a `Pointer` |
 | `internal/citeresolve/` | one `Resolver` per pointer kind over injected `Roots` and one file cache; `Main` of `kit-cite-resolve` (status per pointer with an excerpt; a pre-filter, never a truth verdict) |
 | `cmd/kit-cite-resolve/` | `kit-cite-resolve [--kit DIR] [--research DIR] [--modules DIR] [--memory DIR] [--version VER] [--format tsv\|json] [--strict] <card.md>...` |
-| `internal/commissioningverify/` | `Main` of `commissioning-verify`, the §6.b commissioning punch-list of toolbelt/commissioning-verify.sh: `sourceDirs` (the `<root>/*/*-rt/src` walk), `sourceChecks` (the four source lints run through their toolbelt wrappers, the toolbelt from `COMMISSIONING_VERIFY_TOOLBELT`), `stationChecks` (bog-audit in process, CHECK11 and CHECK13-20 folded) and `owedRows` (the values-owed table reader); exit 0 clean / 1 any FAIL / 3 usage or env; golden cases read with `rules/golden.Read` |
+| `internal/commissioningverify/` | `Main` of `commissioning-verify`, the §6.b commissioning punch-list of toolbelt/commissioning-verify.sh: `sourceDirs` (the `<root>/*/*-rt/src` walk), `sourceChecks` (the four source lints run through their toolbelt wrappers, the toolbelt from `COMMISSIONING_VERIFY_TOOLBELT`), `stationChecks` (bog-audit in process, CHECK11 and CHECK13-20 folded) and `owedRows` (the values-owed table reader); exit 0 clean / 1 any FAIL / 3 usage or env; goldens replayed by `golden.Runner` (`testdata/README.md`) |
 | `cmd/commissioning-verify/` | `commissioning-verify <module-root> [--bog <config.bog>] [--module <MOD>] [--values-owed <file>] [--wiring-map <file>] [--strict]` |
+| `internal/reportmodule/` | `Main` of `report-module`, the aggregated module conformance report of toolbelt/report-module.sh: `discover` (the artifact walk), the `perArtifact`/`perModule` member tables (`members.go`: script, suffix gate, input, row filter, verdict), `parseRows` (the one row parser, `rows.go`), the special members (`special.go`, `eslint.go`) and `summary`; every member runs through its toolbelt wrapper (`REPORT_MODULE_TOOLBELT`); `Scripts` feeds INDEX.md's Auto column; exit 0 / 1 FAIL / 2 usage / 3 env / 4 INCOMPLETE; goldens replayed by `golden.Runner` (`testdata/README.md`) |
+| `cmd/report-module/` | `report-module <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi\|lan\|both\|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only]` |
 | `internal/schemarisk/` | `Main` of `schema-risk`: the B795 §795.4 slot-diff classifier of toolbelt/schema-risk.sh. `Parse` harvests the `@NiagaraProperty`/`@NiagaraAction`/`@NiagaraTopic` slots of a snapshot (an annotation joined until its parentheses balance, `javasrc.ParenDepth`), `Diff` classifies each change, and the embedded `b795-795.4.csv` gives its verdict; exit 0 SAFE / 1 LOSSY / 2 OUTAGE / 3 usage / 4 env |
 | `cmd/schema-risk/` | `schema-risk <before-dir> <after-dir>` |
+| `internal/newretro/` | `Command` of `new-retro` (`toolbelt/new-retro.sh`): writes the retro stub, regenerates retros/INDEX.md in process through `retroindex.Generate`/`Output` (the stub is removed again when that fails) and flips retro_pending in BUILD-STATE.src.md (`Flip`, the awk it replaced); the kit root is `$KIT`, a leading `<kit-root>` holding retros/, or `NEW_RETRO_DEFAULT_ROOT`; goldens in `testdata/` recorded by `rules/golden/record/record.sh` and replayed by `golden.Runner` (the date is injected) |
+| `cmd/new-retro/` | `new-retro [<kit-root>] <module\|kit> <slug> [--date YYYY-MM-DD] [--deltas N]` |
+| `internal/triageconsole/` | `Main` of `triage-console` (`toolbelt/triage-console.sh`): own-module exception triage over station console logs, the awk program it replaced (`scanner`: channels C1 own frame, C2/C2b own tag or own-package path, C3 [sys] fatal, [sys.xml] drift, [sys.registry] missing own class; `--site` classes in `siteClass`), own rows in gawk for-in order (`awkorder`), awk `-v` escape processing (`escaper`); the default package, tag and module-prefix lists come from the wrapper (`TRIAGE_CONSOLE_DEFAULT_*`); goldens in `testdata/` recorded by `rules/golden/record/record.sh` and replayed by `golden.Runner` |
+| `cmd/triage-console/` | `triage-console [--package PKG] [--tag TAG_LIST] [--module-prefix PFX_LIST] [--site] [--console-dir DIR] <console.txt\|dir>...` |
+| `internal/kitticket/` | `Command` of `kit-ticket` (`toolbelt/kit-ticket.sh`): `gh issue create` with the ticket body, or the ticket in retros/tickets/<date>-<slug>.md when gh is absent (SKIP, exit 0) or fails (LOCAL exit 4 / FAIL exit 3); the kit root is `$KIT` or `KIT_TICKET_DEFAULT_ROOT`, and `KIT_TICKET_SCRIPT` names the script in the shell-style error messages; goldens in `testdata/` recorded by `rules/golden/record/record.sh` (fake gh in the case tree) and replayed by `golden.Runner` (date and pid injected) |
+| `cmd/kit-ticket/` | `kit-ticket "<title>" [--from <retro-file>] [--repo <owner/repo>]` |
+| `internal/stationsnapshot/` | `Command` of `station-snapshot` (`toolbelt/station-snapshot.sh`): copies config.bog and console*.txt as `cp -p` + `chmod 0644`, records history/** as size pointers and writes manifest.json (sha256, bytes, UTC stamp); `STATION_SNAPSHOT_SCRIPT` names the script in the shell-style error messages; goldens in `testdata/` recorded by `rules/golden/record/record.sh` and replayed by `golden.Runner` (the clock is injected) |
+| `cmd/station-snapshot/` | `station-snapshot <station-dir> <out-dir>` |
 | `internal/rcscan/` | `Main` of rc-scan, the browser-resource lint of a module's `rc/` assets (`toolbelt/rc-scan.sh` header: checks, flags, rows, exits): the awk port read line by line under gawk's `LC_ALL=C` rules (bytes, POSIX classes, leftmost-longest spans), each pattern pre-checked by a literal its match must hold; not an n4lint rule (its `<artifact-dir>` first, `--profile`/`--legacy` and `<check-id>: ` message contract), golden cases read with `rules/golden.Read` |
 | `cmd/rc-scan/` | `rc-scan <artifact-dir> [--strict] [--profile hmi\|lan\|both\|unknown] [--legacy]` |
 | `internal/obixlinkaudit/` | `Main` of `obix-link-audit` (`toolbelt/obix-link-audit.sh`): `DeclaredRows` (the selected wiring-map table), `Links` (each `display="Indirect\|Direct: <src> -> <tgt>"` of an `internal/xmlsrc` document; a malformed response is exit 3), `Report` (MATCH/MISMATCH/MISSING/SKIP rows) and the live mode's one read-only `net/http` GET (credentials from `OBIX_USER`/`OBIX_PASS` only) |
 | `cmd/obix-link-audit/` | `obix-link-audit --map <wiring-map.md> (--xml <component.xml> \| --obix <base-url> --component <path>) [--table 1\|2] [--insecure]` |
+| `internal/wiringmap/` | `Main` of `generate-wiring-map` (`toolbelt/generate-wiring-map.sh`): `Slots` (the OPERATOR and SUMMARY/READONLY `@NiagaraProperty` slots of one source, read through `javasrc.NiagaraProperties`), the bare-key lexicon display names and the three-section render whose tables `internal/obixlinkaudit` reads back; `testdata/*.txt` are golden runs recorded from the bash script by `rules/golden/record/record.sh` and replayed by `golden.Runner` in the case tree as cwd (`CHDIR=1`) |
+| `cmd/generate-wiring-map/` | `generate-wiring-map <facade-src-dir> [--lexicon <module.lexicon>] [--output <file>]` |
+| `internal/storedrepack/` | `Main` of `stored-repack` (`toolbelt/stored-repack.sh`): the entries of a jar streamed through `archive/zip` into a temporary file beside the output, every one STORED with its sizes in the local header, in signed-jar order (manifest, each `META-INF/<ALIAS>.SF` with its blocks, then the rest in input order), checked and linked into place; `jarlist/` (test side) lists an output jar, and the input jars are `golden.BuildJar` specs; `testdata/*.txt` are golden runs recorded from the bash script with the `testdata/setup.sh` hooks, compared through that listing |
+| `cmd/stored-repack/` | `stored-repack <in.jar> <out.jar>` |
+| `internal/niagaratest/` | `Main` of `run-niagara-test` (`toolbelt/run-niagara-test.sh`, kit spec C40, Go tool G33): `Verdict` reads a test run log line by line (`bufio.Scanner`, lines capped at `MaxLine`) and passes it only when every `Total tests run: N` summary has N > 0 and 0 failures and no line reports a stray failure count, `invalid test target(s)` or `failed signature validation`; the exit code and BUILD SUCCESSFUL are never read; exit 0 PASS / 1 FAIL / 2 usage / 3 unreadable log; hand-written CLI goldens replayed by `golden.Runner` (`testdata/README.md`) |
+| `cmd/run-niagara-test/` | `run-niagara-test verdict [<log>\|-]` |
 
 The engine walks each root once and reads and scans each file once for every selected rule. Every row is
 `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>:<line>  <message>`, or `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>: <message>` for a
@@ -83,7 +99,9 @@ rule's rows stay contiguous.
    registered rule: a later run in the same process, or a rule list, would see the values); a non-nil error
    is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
    value options go in `Spec.Options` (every value, in order, in `Args.Values[<option>]`) and `--strict` is a
-   flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`).
+   flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`). Boolean flags go in `Spec.Flags`
+   (e.g. `--no-default-allow`): anywhere, no value, `Args.Flags[<flag>]` true when given; `<flag>=<v>` is an
+   unknown option (reference: `rules/privateapiimport`).
    `Mode` `Anywhere` takes `--strict` before or after the root; another `-` argument prints
    `<lint>: unknown option: <arg>` and a second root `<lint>: unexpected argument: <arg>` (exit 3, no usage
    line), and no root the usage line (reference: `rules/wbthreading`). `Spec.CheckFirst` prints a finding as
@@ -173,9 +191,22 @@ rule's rows stay contiguous.
    what hand-written expectations miss (row order, gawk hash order, read and grep quirks); a port whose
    tests restate the bats assertions as substrings, or that copies the golden parser into its own
    package, is a review finding. `[ev: retro go-lint-timers Δ1]` `[ev: retro go-lint-ord-ports Δ2]`
+   A port that is not a lint rule (a command with env, side effects, modes or symlinks) replays its cases
+   through `golden.Runner` and records them with `rules/golden/record/record.sh` from the pinned bash
+   (`rules/golden/record/README.md`); it keeps no golden loop or recorder of its own.
    A new rule with no bash lint behind it (reference: `rules/machinedefaultpath`) writes its golden cases by
    hand from the doctrine (usage, empty root, pruned directories, several roots) and its table tests from the
    doctrine's positive and negative shapes, RED first.
+   A command that writes files records each one as an `@after <file>` section of its case, and runs
+   every case with the case tree as its working directory (`CHDIR=1` in `record.env`), so relative
+   `--output` paths replay too (reference: `internal/wiringmap`). `[ev: retro r10-generate-wiring-map-go Δ1]`
+   A command whose output is a binary archive pins its observable contract, not its bytes: the case's
+   `setup.sh` builds each input from a text spec, and the run goes through a wrapper that writes a listing
+   of the output (entry names, order, method, size, content hash) that the Go replay writes too
+   (reference: `internal/storedrepack`, `testdata/setup.sh`). `[ev: retro r10-stored-repack-go Δ1]`
+   Budget a port's tests against the code it replaces: reuse `golden.Runner` (its `Setup` hook, one shared
+   listing) before adding a test-only package, keep a unit test only for what no golden can see, and prove a
+   slimming with the same mutation table before and after. `[ev: retro r10-stored-repack-go Δ3]`
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every
@@ -184,16 +215,33 @@ rule's rows stay contiguous.
    hand-written `testdata/truth-*.txt` case (same format) plus a bats test whose `# Mutation:` pin names it.
    A line-matching rule reads `linescan.Code(f)` (or `f.Stripped()` when the token lives in a literal),
    never the raw line cut at its first `//` (string-unaware: a `//` in "http://h" hid the rest of the line).
+   An annotation harvest joins `@NiagaraProperty` lines with `javasrc.PropertyScan` over the
+   `javasrc.MaskLiterals` view of the `javasrc.Strip` lines and reads the name and flags from the
+   stripped text: on raw lines a `(` in a javadoc or a string literal held the scan open and dropped every
+   annotation after it, and a flag word in a comment changed the table. `[ev: retro r10-generate-wiring-map-go Δ3]`
 
 Do not copy the walker, the formatter, the argument parser or the comment stripper into a rule package;
 change the shared code instead.
+A tool that writes a file another tool reads (generate-wiring-map writes the map obix-link-audit reads)
+tests its output through the reader's parser (`wiringmap.TestMapReadBack` calls `obixlinkaudit.DeclaredRows`),
+and the reader finds a column by its header cell, never by a fixed index: a column added to the generator
+shifted the audited RT slot onto the display name. `[ev: retro r10-generate-wiring-map-go Δ2]`
+A STORED zip entry written from Go goes through `zip.Writer.CreateRaw` with the CRC and size of the source
+header and the bytes streamed from `zip.File.Open`, which fails at EOF when they do not match: `CreateHeader`
+always sets the data-descriptor flag, and `java.util.zip.ZipInputStream` rejects a STORED entry that has one.
+`[ev: retro r10-stored-repack-go Δ2]`
 
 ## XML rules
 
 R8-D12: an XML or `.bog` lint is ported only onto `internal/xmlsrc`, never onto its own regexes or a second
 tokenizer. Each file is read once (UTF-8, ISO-8859-1 or US-ASCII; a zipped `.bog` unzipped in memory) and is either
 a well-formed `Doc` or an `*Error` printed as `path:line:col: message`; a malformed file is a finding, never an empty
-result. A rule that returns that `*Error` from `Check` has it printed once, `<lint>: path:line:col: message` (exit 3),
+result. One exception follows Niagara: a `bajaObjectGraph` may hold U+0000 (a `&#x0;`, as
+`XWriter.safe` writes it, or a literal byte) in text, attribute values, comments and CDATA, because `XParser` reads it
+there (nre `javax/baja/xml/XParser.java:958-1030`); the `Doc` holds it as U+0000 and carries one `Doc.Warnings` entry at
+the first, which every `.bog` consumer prints (`bog-audit` an `XML  WARN  <path>:<line>:<col>` row that
+`commissioning-verify` relays as `bog-xml`, each lint rule that reads a `.bog` (lint-bformat-call, lint-write-path `--bog`,
+lint-bacnet-status-flags) a WARN row through `lint.XMLWarnings`); a name holding it, and any other document, stay an `*Error`. A rule that returns that `*Error` from `Check` has it printed once, `<lint>: path:line:col: message` (exit 3),
 not behind the engine's `cannot scan <path>: <rule>:` prefix. Writing XML and XPath are out of scope. `TestParityExpatSuite` (`XMLSRC_EXPAT_SUITE` = niagara-go's
 `internal/pyxml/testdata/xmlerrors.json`) checks the well-formedness verdict against expat; `TestSweepRealFiles`
 (`XMLSRC_SWEEP_ROOTS`) opens real client and module files. `bog-audit.sh` (`internal/bogaudit`) reads station bogs through it. The first consumer is `lint-agent-on-shape.sh` (`rules/agentonshape`: every `<on>` element of each module-include.xml, a malformed file a positioned `path:line:col` error, exit 3); the second is `lint-agent-on-include-sync.sh` (`rules/agentonincludesync`, G99: each part's module-include.xml `<type class>` line against its sources' `@NiagaraType` `@AgentOn` types, read with `javasrc.Tokens`); the third is `lint-bacnet-status-flags.sh` (`rules/bacnetstatusflags`, G36: every `*.bog` under a station directory, BACnet Present_Value proxies whose point facets lack `statusFlags=true`, one row per device); `split-package-check.sh` only looks for its build markers by name and reads no XML.

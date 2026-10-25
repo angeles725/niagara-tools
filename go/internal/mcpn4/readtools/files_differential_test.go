@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
@@ -54,9 +53,8 @@ print(json.dumps([out, bool(case["out"]) and os.path.lexists(case["out"]) and
 // lone surrogate url_path cannot quote, output_file saved, refused and skipped, the Px summary
 // and its refusals, and the Px view rows with NULL and slot-path owners.
 func TestFilesDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
-	view, err := os.ReadFile(filepath.Join(kit, "tests", "fixtures", "synthetic_view.px"))
+	g := golden.Open(t, "file-tools")
+	view, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "mcp-n4-kit", "tests", "fixtures", "synthetic_view.px"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,6 +119,7 @@ func TestFilesDifferentialPython(t *testing.T) {
 		}{"n4_read_file", string(arg), px, "", ""})
 	}
 	root := t.TempDir()
+	g.Alias(root, "$STATE_ROOT") // the cases and replies name the state dirs under it
 	for i, c := range cases {
 		state := filepath.Join(root, fmt.Sprint(i), "state")
 		out := ""
@@ -134,14 +133,7 @@ func TestFilesDifferentialPython(t *testing.T) {
 		pf := c.file
 		pf.Body = string(latin)
 		in, _ := json.Marshal(map[string]any{"tool": c.tool, "args": c.args, "file": pf, "bql": c.bql, "state": state, "out": out})
-		cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, filesScript)
-		cmd.Stdin = strings.NewReader(string(in))
-		var stderr strings.Builder
-		cmd.Stderr = &stderr
-		raw, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("case %d python: %v\n%s", i, err, stderr.String())
-		}
+		raw := g.Run(filesScript, in)
 		var want []any
 		if err := json.Unmarshal(raw, &want); err != nil {
 			t.Fatal(err)

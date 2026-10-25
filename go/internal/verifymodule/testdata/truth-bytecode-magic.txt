@@ -1,0 +1,43 @@
+declared difference: bytecode reads the CAFEBABE magic and the full two-byte major; the bash read byte 7 alone (od -j6 -N2 | awk '{print $2}'), so a major of 308 (0x0134) passed as 52, and so did an entry without the class-file magic
+-- args --
+@DIR@/m.jar
+-- want --
+exit 1
+FAIL  bytecode   @DIR@/m.jar  2 of 3 classes not major 52 (expected Java 8); first: com/x/Hi.class major=308
+PASS  signed     @DIR@/m.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/m.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/m.jar  no --target-version
+SKIP  stored     @DIR@/m.jar  no --stored
+SKIP  typecount  @DIR@/m.jar  no --src
+SKIP  facets     @DIR@/m.jar  no --src
+SKIP  facets-req  @DIR@/m.jar  no --src
+SKIP  ord-literal  @DIR@/m.jar  no --src
+SKIP  palette    @DIR@/m.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/m.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/m.jar  no --src
+SKIP  moduletest  @DIR@/m.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/m.jar  no --src
+SKIP  transient-operator  @DIR@/m.jar  no --src
+SKIP  compact3-import  @DIR@/m.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/m.jar  no --src
+SKIP  slot-wall  @DIR@/m.jar  no --src
+verify-module: 2 passed, 1 failed, 15 skipped, 0 warned -> FAILED
+-- stderr --
+-- m.jar (jar) --
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (stored) ---
+<module name="Foo" vendor="Angeles">
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+--- com/x/A.class (stored) (class 52) ---
+--- com/x/Hi.class (stored) (base64) ---
+yv66vgAAATQ=
+--- com/x/NoMagic.class (stored) (base64) ---
+AAAAAAAAADQ=

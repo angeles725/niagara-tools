@@ -1,0 +1,21 @@
+-- args --
+kit
+slugabc
+--date
+2026-13-01
+-- want --
+exit 3
+-- stderr --
+new-retro: --date must be a YYYY-MM-DD date: 2026-13-01
+-- @kind --
+truth: hand-written from the case edge-date-escapes-retros recorded at 15e792d1: a YYYY-MM-DD shape that is no calendar date is refused (the bash wrote it)
+-- @env --
+KIT=@DIR@/kit
+-- kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|

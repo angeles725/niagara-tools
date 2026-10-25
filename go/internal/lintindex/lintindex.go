@@ -29,7 +29,7 @@ type Row struct {
 	Usage string // Usage lines joined with <br>
 	Exit  string // Exit lines joined with <br>
 	Ev    string // [ev: ...] tags, space-separated
-	Auto  bool   // report-module.sh invokes the lint
+	Auto  bool   // report-module runs the lint (its Go member table, or a bash report-module.sh text)
 }
 
 var (

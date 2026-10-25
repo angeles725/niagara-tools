@@ -1,0 +1,30 @@
+-- args --
+@REPO@/tests/fixtures/report-module/clean
+-- want --
+exit 4
+DemoPan-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
+DemoPan-rt  PASS  dup-keys  0
+DemoPan-rt  PASS  slot-coverage  100.0%
+DemoPan-rt  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+DemoPan-rt  PASS  lint-link-target-flags  clean (no wiring map)
+DemoPan-rt  PASS  lint-no-system-out  clean
+DemoPan-rt  PASS  lint-slotomatic-markers  clean
+DemoPan-rt  PASS  lint-recovery-path  clean
+DemoPan-rt  PASS  lint-config-sanity  clean
+DemoPan-rt  PASS  lint-no-md5-credential-digest  clean
+DemoPan-rt  PASS  lint-size  clean
+DemoPan-rt  PASS  lint-license-isoperational-gate  clean
+DemoPan-rt  PASS  lint-set-null-ord  clean
+DemoPan-rt  PASS  lint-ws-placement  clean
+DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  SKIP  lint-write-path  no write-path-matrix.md
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 1 artifact · 17 PASS · 0 FAIL · 0 WARN · 4 SKIP · 0 ADVISORY  ->  INCOMPLETE
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0

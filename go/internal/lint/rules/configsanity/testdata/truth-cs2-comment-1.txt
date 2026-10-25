@@ -1,0 +1,33 @@
+-- args --
+@DIR@/one
+-- want --
+exit 1
+FAIL  lint-config-sanity  @DIR@/one/BFoo.java:19  CS2: zero-default setpoint "coolSetpoint" with OPERATOR flag and no min>0 facet
+-- stderr --
+-- one/BFoo.java --
+package com.x;
+import javax.baja.sys.*;
+@NiagaraType
+public final class BFoo extends BComponent {
+  @NiagaraProperty(
+    name = "heatSetpoint",
+    // Read-only (never OPERATOR-writable): only the control logic sets it.
+    flags = Flags.SUMMARY | Flags.READONLY,
+    defaultValue = "BDouble.make(0.0)"
+  )
+  private BDouble heatSetpoint;
+  @NiagaraProperty(
+    name = "fanSet",
+    /* not OPERATOR: computed */ flags = Flags.READONLY,
+    defaultValue = "BDouble.make(0)"
+  )
+  private BDouble fanSet;
+  // operator-facing knob
+  @NiagaraProperty(
+    name = "coolSetpoint",
+    // a plain comment
+    flags = Flags.OPERATOR,
+    defaultValue = "BDouble.make(0.0)"
+  )
+  private BDouble coolSetpoint;
+}

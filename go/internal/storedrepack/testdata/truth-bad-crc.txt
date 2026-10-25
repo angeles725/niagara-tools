@@ -1,0 +1,12 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 1
+-- stderr --
+stored-repack: in.jar: entry a.txt: zip: checksum error
+stored-repack: cannot unzip in.jar
+-- @kind --
+truth: an entry whose bytes do not match its CRC fails before any output exists; Go names the entry where the bash relayed unzip's own CRC report
+-- in.jar (base64) --
+UEsDBBQACAAAAAAAAAAAAAAAAAAAAAAAAAAUAAAATUVUQS1JTkYvTUFOSUZFU1QuTUZNYW5pZmVzdC1WZXJzaW9uOiAxLjAKUEsHCHrfWiAWAAAAFgAAAFBLAwQUAAgAAAAAAAAAAAAAAAAAAAAAAAAABQAAAGEudHh0amVsbG8KUEsHCCAwOjYGAAAABgAAAFBLAQIUABQACAAAAAAAAAB631ogFgAAABYAAAAUAAAAAAAAAAAAAAAAAAAAAABNRVRBLUlORi9NQU5JRkVTVC5NRlBLAQIUABQACAAAAAAAAAAgMDo2BgAAAAYAAAAFAAAAAAAAAAAAAAAAAFgAAABhLnR4dFBLBQYAAAAAAgACAHUAAACRAAAAAAA=

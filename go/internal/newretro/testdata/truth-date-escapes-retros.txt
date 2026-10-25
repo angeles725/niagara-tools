@@ -1,0 +1,21 @@
+-- args --
+kit
+slugabc
+--date
+../x
+-- want --
+exit 3
+-- stderr --
+new-retro: --date must be a YYYY-MM-DD date: ../x
+-- @kind --
+truth: hand-edited want of the case edge-date-escapes-retros recorded at 15e792d1: --date must be a YYYY-MM-DD date (the bash wrote kit/x-slugabc.md outside retros/ and flipped the envelope)
+-- @env --
+KIT=@DIR@/kit
+-- kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|

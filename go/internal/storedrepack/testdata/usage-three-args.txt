@@ -1,0 +1,24 @@
+-- args --
+in.jar
+out.jar
+extra
+-- want --
+exit 2
+-- stderr --
+stored-repack.sh — repackage a signed N4 module jar with every entry STORED (no compression).
+
+WHY: Workbench's JarFileSigner re-deflates each entry while re-signing; when the JDK that built
+the jar (WSL OpenJDK 8) and the Workbench JDK (Windows Zulu 8) deflate to different sizes it aborts
+with "ZipException: invalid entry compressed size (expected N but got M)". A clean rebuild does NOT
+fix it (same deflater, same size) and a local `jarsigner` cannot detect it (same deflater again).
+STORED entries make the mismatch impossible by construction and keep the content bytes identical,
+so the existing signature stays valid. Field-confirmed (operator re-signed STORED jars, 2026-09-01).
+
+Entry order matters for a valid signed jar: META-INF/MANIFEST.MF first, then every
+META-INF/<ALIAS>.SF with its .RSA/.DSA/.EC block (NIAGARA4, CODESIGN, SERVER1, ...), then everything else. Cost: a bigger jar (deflate ratio lost).
+
+Usage: stored-repack.sh <in.jar> <out.jar>      (refuses to overwrite an existing out.jar)
+Check: verify-module.sh --stored <out.jar>      (0 "Defl:" entries)
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/stored-repack.sh at 91b9e3d6 (sha256 56ba74c5bc7350132b621248f61fd2cbd7dc177927cb674ec73564999d937d7b)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0

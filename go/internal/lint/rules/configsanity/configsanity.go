@@ -87,7 +87,7 @@ var (
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
 	out = append(out, intervalPass(f.Raw)...)
-	out = append(out, setpointPass(f.Raw)...)
+	out = append(out, setpointPass(f.Stripped())...)
 	out = append(out, commentPass(f.Raw)...)
 	out = append(out, floorPass(f.Raw)...)
 	return out, nil
@@ -247,10 +247,11 @@ func awkNum(s string) float64 {
 }
 
 // setpointPass is CS2: an OPERATOR *Setpoint / *Set slot whose default is BDouble.make(0) with no
-// BFacets.MIN of a positive BDouble FAILs.
-func setpointPass(raw []string) []lint.Finding {
+// BFacets.MIN of a positive BDouble FAILs. It reads the comment-stripped lines (literals kept): a comment
+// inside the annotation that mentions OPERATOR ("never OPERATOR-writable") flags nothing (issue #459).
+func setpointPass(code []string) []lint.Finding {
 	var out []lint.Finding
-	javasrc.NiagaraProperties(raw, func(text string, line int) {
+	javasrc.NiagaraProperties(code, func(text string, line int) {
 		pname, _ := attr(nameAttr, text)
 		if !setpointName.MatchString(pname) || !strings.Contains(text, "OPERATOR") {
 			return

@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: round-10 fold sweep: go-commissioning-verify retro folded -->
+log: 2026-10-24 · round-10 fold sweep, commissioning tail → retro go-commissioning-verify folded: `BUILD-LOOP.md` § 6.b states that commissioning-verify is the Go wrapper and fails closed (bog-audit exit 3 SKIP names an unreadable or malformed bog or no component, the station fold relays FAIL, WARN and PASS for every folded check, a lint exiting non-zero with no row is a FAIL, an unreadable values-owed table is exit 3); § 5 gains the orchestrator-port bullet (pass the unresolved toolbelt directory so stubbed tests keep their stubs; re-point structural pins that grep a ported script). [ev: retro go-commissioning-verify]
+open_issue: golden cases that run the real toolbelt wrappers rebuild `go/bin/<tool>` on demand inside the live tree (`go/go-tool.sh` `go_tool_bin`), so a test run can write `go/bin` (retro go-commissioning-verify, 2026-10-24 fold; needs code): give each test a per-test GO_DIR/bin or hand the wrappers a prebuilt binary.

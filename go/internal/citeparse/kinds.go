@@ -9,6 +9,7 @@ import (
 var (
 	pageTok    = regexp.MustCompile(`^pp?\.?(\d+(?:-\d+)?)$`)
 	moduleName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]*(?:-[a-z]{2,3})?$`)
+	zipEntry   = regexp.MustCompile("^`?(.+?\\.zip)!(\\S+?)`?(?:\\s+(.*))?$")
 	moduleFile = regexp.MustCompile(`^(?:module(?:-include|-permissions)?\.xml|module\.palette|module\.lexicon|(?:[\w-]+\.)?gradle\.kts)$`)
 )
 
@@ -30,6 +31,14 @@ func courseClause(c, rest string) []Pointer {
 	}
 	path, lines := splitLines(strings.Join(f, " "))
 	return []Pointer{{Kind: Course, Target: path, Lines: lines, Pages: pages, Raw: c}}
+}
+
+// archiveClause reads `<path>.zip!<entry>[:ranges]` (the path may hold spaces) as the zip and the entry in
+// it, after `code` or `course`.
+func archiveClause(c, rest string) []Pointer {
+	m := zipEntry.FindStringSubmatch(rest)
+	entry, lines := splitLines(strings.TrimPrefix(m[2], "/"))
+	return []Pointer{{Kind: Archive, Target: m[1], File: entry, Lines: lines, Notes: strings.Fields(m[3]), Raw: c}}
 }
 
 // bitacoraClause reads `bitácora <slug>[ §section…]`: a client bitacora/<date>-<slug>.md file.

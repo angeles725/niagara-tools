@@ -18,7 +18,7 @@ truth: hand-edited want of the case edge-drift-many-siblings recorded at 5a4668f
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts
--- fakebin/lsof (exec) --
+-- fakebin/lsof (mode 755) --
 #!/usr/bin/env bash
 printf "p1\nn/usr/bin/lsof\n"
 -- gr/settings.gradle.kts --
@@ -29,7 +29,7 @@ val niagaraPluginVersion = "7.6.17"
 IMPLEMENTOR="Adoptium"
 JAVA_VERSION="1.8.0_302"
 JAVA_VERSION_DATE="2021-10-19"
--- jvmnr/java-8-openjdk-wsl/bin/java (exec) --
+-- jvmnr/java-8-openjdk-wsl/bin/java (mode 755) --
 #!/usr/bin/env bash
 # Fakebin: simulates WSL openjdk-8 that has no release file but reports 1.8 via -version.
 printf 'openjdk version "1.8.0_412" 2020-04-14\nOpenJDK Runtime Environment (build 1.8.0_412-8u412-b08-0ubuntu1~22.04-b08)\n' >&2

@@ -48,14 +48,14 @@ func Read(path string) (Case, error) {
 			if body == "" {
 				c.Args = nil
 			}
-		case name == "want":
-			c.Want = body
-		case name == "stderr":
-			c.Stderr = body
+		case name == "want", name == "want (noeol)":
+			c.Want = noeol(name, body)
+		case name == "stderr", name == "stderr (noeol)":
+			c.Stderr = noeol(name, body)
 		case strings.HasSuffix(name, " (dir)"):
 			c.Dirs = append(c.Dirs, strings.TrimSuffix(name, " (dir)"))
 		case strings.HasSuffix(name, " (jar)"):
-			jar, err := buildJar(body)
+			jar, err := BuildJar(body)
 			if err != nil && bad == nil {
 				bad = fmt.Errorf("%s: %s: %w", path, name, err)
 			}
@@ -69,6 +69,14 @@ func Read(path string) (Case, error) {
 		}
 	}
 	return c, bad
+}
+
+// noeol is body without its last "\n" when name ends in " (noeol)": output whose last line has none.
+func noeol(name, body string) string {
+	if strings.HasSuffix(name, " (noeol)") {
+		return strings.TrimSuffix(body, "\n")
+	}
+	return body
 }
 
 // sections splits text at its header lines (open + name + close) into {name, body} pairs; text before the
@@ -103,8 +111,10 @@ func decode(name, body string) (string, string, error) {
 	return name, body, nil
 }
 
-// buildJar is the zip a "(jar)" section spells.
-func buildJar(body string) (string, error) {
+// BuildJar is the zip a "(jar)" section spells: one "--- <entry> (stored|deflated)[ <marker>] ---" header
+// per entry, in archive order, its body spelled as a file section is (internal/storedrepack/jarlist builds its
+// input jars with it too).
+func BuildJar(body string) (string, error) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	for _, sec := range sections(body, "--- ", " ---\n") {
@@ -138,46 +148,11 @@ func Run(t *testing.T, spec lint.Spec, min int) {
 	RunMain(t, func(args []string, s cli.Stdio) int { return command(append([]string{spec.ID()}, args...), s) }, min)
 }
 
-// RunMain is Run for a command that is not a lint rule: m gets each case's arguments as recorded.
+// RunMain is Run for a command that is not a lint rule: m gets each case's arguments as recorded. It is a
+// Runner for at least min cases, so every case also proves the run left its tree untouched.
 func RunMain(t *testing.T, m cli.Main, min int) {
 	t.Helper()
-	paths, _ := filepath.Glob("testdata/*.txt")
-	if len(paths) < min {
-		t.Fatalf("found %d golden cases, want at least %d", len(paths), min)
-	}
-	for _, p := range paths {
-		t.Run(strings.TrimSuffix(filepath.Base(p), ".txt"), func(t *testing.T) {
-			c, err := Read(p)
-			if err != nil {
-				t.Fatal(err)
-			}
-			dir := t.TempDir()
-			for _, d := range c.Dirs {
-				if err := os.MkdirAll(filepath.Join(dir, d), 0o755); err != nil {
-					t.Fatal(err)
-				}
-			}
-			for f, text := range c.Files {
-				full := filepath.Join(dir, f)
-				if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(full, []byte(text), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-			var args []string
-			for _, a := range c.Args {
-				args = append(args, strings.ReplaceAll(a, "@DIR@", dir))
-			}
-			var o, e bytes.Buffer
-			code := m(args, cli.Stdio{Out: &o, Err: &e})
-			got := strings.ReplaceAll(fmt.Sprintf("exit %d\n%s", code, o.String()), dir, "@DIR@")
-			if stderr := strings.ReplaceAll(e.String(), dir, "@DIR@"); got != c.Want || stderr != c.Stderr {
-				t.Errorf("got\n%s-- stderr --\n%s\nwant\n%s-- stderr --\n%s", got, stderr, c.Want, c.Stderr)
-			}
-		})
-	}
+	Runner{Cases: min, AtLeast: true, Main: func(_, args []string, s cli.Stdio) int { return m(args, s) }}.Run(t)
 }
 
 // Unreadable checks the awk_lint_run failure contract of a rule that sets ContinueOnWalkError: under a root
@@ -185,8 +160,10 @@ func RunMain(t *testing.T, m cli.Main, min int) {
 // the walk env line, then the scan env line, prints the rows a.java alone gives (at least one) and exits 3.
 func Unreadable(t *testing.T, spec lint.Spec, src string) {
 	t.Helper()
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: chmod 000 does not block reads")
+	if skip, msg := rootVerdict(os.Geteuid(), os.Getenv(RootOptIn), []string{"a/U.java", "locked"}); skip {
+		t.Skip(msg)
+	} else if msg != "" {
+		t.Fatal(msg)
 	}
 	run := func(dir string) (int, string, string) {
 		var o, e bytes.Buffer

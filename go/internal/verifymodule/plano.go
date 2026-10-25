@@ -4,8 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -28,29 +30,29 @@ var (
 )
 
 // plano is --plano: Rc (IMG_W/IMG_H) == Ri (the #planoImg PNG header) == Rv (the zones viewBox) and every
-// numeric aspect-ratio == Rc, by integer cross-multiplication. ok is false when bash arithmetic failed on
-// an operand: the bash then left the --plano block and ran the gate on the same argument.
-func plano(args []string, s cli.Stdio) (code int, ok bool) {
+// numeric aspect-ratio == Rc, by cross-multiplication. A viewBox is SVG numbers (1920.5 is valid); one
+// whose width or height is no finite number > 0 is a FAIL row.
+func plano(args []string, s cli.Stdio) int {
 	if len(args) != 1 {
 		fmt.Fprintln(s.Err, "usage: verify-module.sh --plano <index.html|jar>")
-		return 2, true
+		return 2
 	}
 	in, html := args[0], ""
 	if !lint.IsFile(in) {
 		fmt.Fprintf(s.Err, "verify-module: file not readable: %s\n", in)
-		return 3, true
+		return 3
 	}
 	if strings.HasSuffix(in, ".jar") {
 		var found bool
 		if html, found = jarEntry(in, "rc/index.html"); !found {
 			fmt.Fprintf(s.Err, "verify-module: no rc/index.html in: %s\n", in)
-			return 3, true
+			return 3
 		}
 	} else if data, err := os.ReadFile(in); err == nil {
 		html = string(data)
-	} else { // the two IMG_W/IMG_H greps had no 2>/dev/null
-		msg := "grep: " + in + ": " + strerror.Text(err) + "\n"
-		fmt.Fprint(s.Err, msg+msg)
+	} else { // the bash grepped it into a verdict; it gets none
+		fmt.Fprintf(s.Err, "verify-module: cannot read %s: %s\n", in, strerror.Text(err))
+		return 3
 	}
 	p := planoRun{s: s, in: in}
 	return p.check(newGrepText(html))
@@ -82,15 +84,15 @@ func (p *planoRun) row(status, detail string) {
 	fmt.Fprintf(p.s.Out, "%-4s  %-9s  %s  %s\n", status, "plano", p.in, detail)
 }
 
-func (p *planoRun) check(t grepText) (int, bool) {
+func (p *planoRun) check(t grepText) int {
 	rcW, rcH := firstDigits(t.only(imgWRe)), firstDigits(t.only(imgHRe))
 	if rcW == "" || rcH == "" {
 		if t.count(overlayRe) == 0 {
 			p.row("SKIP", "not a plano dashboard (3D/self-contained SPA) — IMG_W/IMG_H and overlay markers absent")
-			return 0, true
+			return 0
 		}
 		p.row("FAIL", "Rc: IMG_W/IMG_H not found")
-		return 1, true
+		return 1
 	}
 	vb := ""
 	if ms := linesHolding(t, `id="zonas"`).only(viewBoxRe); len(ms) > 0 {
@@ -100,9 +102,13 @@ func (p *planoRun) check(t grepText) (int, bool) {
 	}
 	if vb == "" {
 		p.row("FAIL", `Rv: no id="zonas" viewBox found`)
-		return 1, true
+		return 1
 	}
 	rv := awkFields(vb)
+	if !positive(rv[0]) || !positive(rv[1]) {
+		p.row("FAIL", "Rv: viewBox width/height is not a finite number > 0: "+vb)
+		return 1
+	}
 	b64 := ""
 	if ms := linesHolding(t, `id="planoImg"`).only(pngB64Re); len(ms) > 0 {
 		b64 = strings.TrimPrefix(ms[0], "data:image/png;base64,")
@@ -110,61 +116,54 @@ func (p *planoRun) check(t grepText) (int, bool) {
 	}
 	if b64 == "" {
 		p.row("FAIL", "Ri: no #planoImg with data:image/png;base64 found")
-		return 1, true
+		return 1
 	}
 	riW, riH := pngSize(b64)
 	if riW == 0 || riH == 0 {
 		p.row("FAIL", "Ri: #planoImg PNG header invalid or unreadable")
-		return 1, true
+		return 1
 	}
 	ri := []string{itoa(int(riW)), itoa(int(riH))}
-	steps := []func() (bool, *arithErr){
-		func() (bool, *arithErr) {
-			return p.unless(rcW, rcH, ri[0], ri[1], fmt.Sprintf("Rc(%s/%s) != Ri(%s/%s): IMG_W/IMG_H vs intrinsic PNG", rcW, rcH, ri[0], ri[1]))
-		},
-		func() (bool, *arithErr) {
-			return p.unless(rcW, rcH, rv[0], rv[1], fmt.Sprintf("Rv(%s/%s) != Rc(%s/%s): viewBox vs IMG_W/IMG_H", rv[0], rv[1], rcW, rcH))
-		},
-	}
+	p.unless(rcW, rcH, ri[0], ri[1], fmt.Sprintf("Rc(%s/%s) != Ri(%s/%s): IMG_W/IMG_H vs intrinsic PNG", rcW, rcH, ri[0], ri[1]))
+	p.unless(rcW, rcH, rv[0], rv[1], fmt.Sprintf("Rv(%s/%s) != Rc(%s/%s): viewBox vs IMG_W/IMG_H", rv[0], rv[1], rcW, rcH))
 	for _, ln := range linesHolding(t, "aspect-ratio:").lines {
-		steps = append(steps, func() (bool, *arithErr) { return p.aspect(ln, rcW, rcH) })
-	}
-	for _, step := range steps {
-		if _, err := step(); err != nil {
-			fmt.Fprintf(p.s.Err, "verify-module: %s\n", err.msg)
-			if err.unbound {
-				return 1, true
-			}
-			return 0, false
-		}
+		p.aspect(ln, rcW, rcH)
 	}
 	if !p.fail {
 		p.row("PASS", fmt.Sprintf("Rc=%s/%s Ri=%s/%s Rv=%s/%s — all agree", rcW, rcH, ri[0], ri[1], rv[0], rv[1]))
-		return 0, true
+		return 0
 	}
-	return 1, true
+	return 1
 }
 
-// unless prints a FAIL row with msg unless a/b == c/d (a*d == b*c in bash arithmetic).
-func (p *planoRun) unless(a, b, c, d, msg string) (bool, *arithErr) {
-	var v [4]int64
+// ratioTolerance is the relative difference a*d vs b*c within which two ratios agree: float rounding
+// only. The bash compared integers exactly, which a decimal viewBox (1920.5) cannot be.
+const ratioTolerance = 1e-9
+
+// unless prints a FAIL row with msg unless a/b == c/d (a*d == b*c in float, within ratioTolerance).
+// Every operand is a number: digits (IMG_W/IMG_H, the PNG size, an aspect-ratio) or a viewBox value
+// positive() accepted.
+func (p *planoRun) unless(a, b, c, d, msg string) {
+	var v [4]float64
 	for i, x := range []string{a, d, b, c} {
-		n, err := bashInt(x)
-		if err != nil {
-			return false, err
-		}
-		v[i] = n
+		v[i], _ = strconv.ParseFloat(x, 64)
 	}
-	if v[0]*v[1] != v[2]*v[3] {
+	l, r := v[0]*v[1], v[2]*v[3]
+	if math.Abs(l-r) > ratioTolerance*math.Max(math.Abs(l), math.Abs(r)) {
 		p.row("FAIL", msg)
 		p.fail = true
 	}
-	return true, nil
+}
+
+// positive is whether s is an SVG viewBox width or height the check can use: a finite number > 0.
+func positive(s string) bool {
+	f, err := strconv.ParseFloat(s, 64)
+	return err == nil && f > 0 && !math.IsInf(f, 0)
 }
 
 // aspect checks every aspect-ratio of one CSS line against Rc, as the bash read it: all of the line's
 // values joined by newlines, blanks and tabs dropped, then cut at its first and last "/".
-func (p *planoRun) aspect(ln, rcW, rcH string) (bool, *arithErr) {
+func (p *planoRun) aspect(ln, rcW, rcH string) {
 	var vals []string
 	for _, m := range newGrepText(ln).only(aspectRe) {
 		k := aspectHead.FindStringIndex(m) // sed s/aspect-ratio:[[:space:]]*//: the first one only
@@ -173,20 +172,20 @@ func (p *planoRun) aspect(ln, rcW, rcH string) (bool, *arithErr) {
 	raw := subst(strings.Join(vals, "\n"))
 	v := strings.NewReplacer(" ", "", "\t", "").Replace(raw)
 	if raw == "" || v == "auto" {
-		return true, nil
+		return
 	}
 	if !ratioGlob.MatchString(v) {
 		p.row("FAIL", "unparseable aspect-ratio: "+v)
 		p.fail = true
-		return true, nil
+		return
 	}
 	n, d := v[:strings.IndexByte(v, '/')], v[strings.LastIndexByte(v, '/')+1:]
 	if n == "" || d == "" || strings.Trim(n, "0123456789") != "" || strings.Trim(d, "0123456789") != "" {
 		p.row("FAIL", "unparseable aspect-ratio: "+v)
 		p.fail = true
-		return true, nil
+		return
 	}
-	return p.unless(n, d, rcW, rcH, fmt.Sprintf("aspect-ratio %s != Rc(%s/%s)", v, rcW, rcH))
+	p.unless(n, d, rcW, rcH, fmt.Sprintf("aspect-ratio %s != Rc(%s/%s)", v, rcW, rcH))
 }
 
 // firstDigits is `| grep -oE '[0-9]+$' | head -1` over grep -o matches.

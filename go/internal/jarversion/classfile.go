@@ -45,6 +45,19 @@ func Major(head []byte) int {
 	}
 }
 
+// ClassMagic is the four bytes a class file opens with.
+const ClassMagic = "\xca\xfe\xba\xbe"
+
+// ClassMajor is the class-file major version in head as the JVM reads it: the CAFEBABE magic, then the
+// two-byte big-endian major at bytes 6-7. ok is false for a head shorter than 8 bytes or without the
+// magic: that entry is not a class file. Major keeps the bash tool's looser od read for this lint.
+func ClassMajor(head []byte) (major int, ok bool) {
+	if len(head) < 8 || string(head[:4]) != ClassMagic {
+		return 0, false
+	}
+	return int(head[6])<<8 | int(head[7]), true
+}
+
 // AboveJava8 reports whether major is bytecode an N4 (Java 8) station cannot load.
 func AboveJava8(major int) bool {
 	// Mutation: BJCV2 -- dropping the > 52 comparison makes every bundled Java 9+ class pass.

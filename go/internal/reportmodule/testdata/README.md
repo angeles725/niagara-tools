@@ -1,0 +1,44 @@
+# report-module golden cases
+
+Each `*.txt` file is one run of `report-module` in the `golden.Runner` format
+(`go/internal/lint/rules/golden/record/README.md`). `@DIR@` is the case tree (the run's cwd) and `@REPO@` the
+repository root. `golden_test.go` replays every case with only the case's environment through a copy of the
+toolbelt whose entries are symlinks to the real one; a case's `toolbelt/<member> (mode 755)` sections are stubs
+that replace a member. A case that holds `toolbelt/.stub-rest` gets a stub that prints nothing and exits 0 for
+every other `*.sh` member, so an orchestration case runs no real lint. The run must leave the tree as it was.
+
+## Recorded cases (every name not starting with `truth-`)
+
+Recorded from the bash tool as it stood before the port: `build-n4-module-kit/toolbelt/report-module.sh` at
+commit `a98c3357` (`record.env` pins its sha256). The case families:
+
+| Prefix | Covers |
+|---|---|
+| `cli-` | usage and pre-check exits (2, 3), `--` handling, every flag forwarded, empty flag values |
+| `sum-` | summary pluralization, verdict and exit precedence (env 3 > FAIL 1 > INCOMPLETE 4), `--lint-only`, `--first-deploy`, uncounted statuses |
+| `wm-` | the wiring-map sources (flag, `<root>/docs`, `<root>/../docs`), a path holding `&`, the map named in the detail |
+| `rows-` | the shared row parser: `site`, `ws`, `base`, `nosite`, `swap` + keep, and the STALE/DRIFT as-WARN relay |
+| `verdict-`, `lint-` | the lint verdicts (`-`, `rows`, `fail`), exit 3, a non-zero exit with no row |
+| `par-`, `adv-` | the PASS wording after relayed WARN/ADVISORY rows, the advisory members' ERROR reason |
+| `gate-` | the artifact-suffix (`-rt`, `-ux`, `-wb`, `-se`) and `src/`, `src/rc/` gates |
+| `sc-`, `lt-`, `la-`, `ltf-`, `plano-`, `vm-`, `srv-`, `esl-`, `vf-`, `schema-`, `wp-`, `mm-`, `tc-` | one member family each: slot-coverage, lint-timers, lint-lexicon-ascii, lint-link-target-flags, verify-module --plano and --src, lint-servlet, ESLint resolution and exits, lint-vendor-floor, schema-risk, lint-write-path, the module-root members, triage-console |
+| `disc-` | artifact discovery: a symlinked, unreadable, relative, absolute or trailing-slash root, which entries count |
+| `fx-` | the `tests/fixtures/report-module` trees with the real members |
+
+To re-record them and prove the port byte-identical:
+
+```sh
+git show a98c3357:build-n4-module-kit/toolbelt/report-module.sh > /tmp/rm/report-module.sh
+memcap go/internal/lint/rules/golden/record/record.sh /tmp/rm/report-module.sh \
+  go/internal/reportmodule/testdata /tmp/rm/out
+diff -r go/internal/reportmodule/testdata /tmp/rm/out   # only the truth-* cases and README.md differ
+```
+
+`setup.sh` runs the script as `report-module.sh` of the same toolbelt copy; the members it runs are this
+checkout's wrappers. The `fx-` cases therefore pin the current lint rows too: a lint change that alters a row
+on those trees is re-recorded with it.
+
+## Truth cases (`truth-*`)
+
+Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro
+r10-report-module-go). They were produced through the Go tool after the fix and checked by hand.

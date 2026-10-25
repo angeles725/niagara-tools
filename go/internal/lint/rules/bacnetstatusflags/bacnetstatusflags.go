@@ -41,7 +41,8 @@ func (rule) Severity() lint.Severity { return lint.Warn }
 
 var proxyType = regexp.MustCompile(`^Bacnet[A-Za-z]*ProxyExt$`)
 
-// CheckTree reads each bog; a malformed or unreadable one fails the scan (exit 3) after the other bogs' rows.
+// CheckTree reads each bog; a malformed or unreadable one fails the scan (exit 3) after the other bogs' rows, and
+// what Niagara reads although XML 1.0 forbids it (xmlsrc.Doc.Warnings) is one WARN row before the bog's own.
 func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
 	var bad error
@@ -50,6 +51,10 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 		if err != nil {
 			bad = err
 			continue
+		}
+		for _, w := range lint.XMLWarnings(doc) {
+			w.Path = f.Path
+			out = append(out, w)
 		}
 		out = append(out, check(f.Path, doc)...)
 	}
