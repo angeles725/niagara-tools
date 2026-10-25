@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · r10-run-niagara-test-go
@@ -42,3 +42,11 @@ on a captured log. It lives in `go/internal/niagaratest` (`Verdict`) and `go/cmd
 ## Lessons
 - A verdict tool needs its own words for every way a log can be incomplete (no summary, a cut read, a malformed
   count); each one defaults to FAIL, because the tool exists to stop a silent pass.
+
+## Fold
+- Phase 1 is code already shipped in the PR that wrote this retro (`go/internal/niagaratest`, `toolbelt/run-niagara-test.sh`); not re-implemented.
+- Δ1 → `BUILD-LOOP.md` § 5 golden-case bullet (a tool with no bash source still uses `golden.Runner`); Δ2 → § 5 fail-closed bullet (`bufio.ErrTooLong` is a FAIL reason). Not `go/README.md`, whose citations the fold audit does not count.
+- Phase 2 (the runner half) stays the open issue in `ledger.d/2026-10-24-r10-run-niagara-test-go.md`.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1 in the `BUILD-LOOP.md` § 5 golden-case bullet; Δ2 in the § 5 fail-closed bullet.

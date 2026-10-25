@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-25 · kit · r10-lint-fp-459-rcscan-slotcov
@@ -60,5 +60,9 @@ The last open lint shapes of kit issue #459 outside report-module, plus one sibl
 - A golden recorded from the bash for byte identity can pin a false positive; a truth fix updates that want and
   names the difference, rather than treating the recording as the contract.
 
+## Fold
+- Δ1 and the slot-coverage fix are code already shipped in the PR that wrote this retro (`go/internal/lint/rules/configsanity`, `go/internal/slotcoverage`); not re-implemented. The rule and the lesson (a recorded golden can pin a false positive) → `BUILD-LOOP.md` § 5 literal-aware scanning bullet.
+- The rc-scan host-literal (true positive) and browser-floor (as designed) shapes need no change; they close the owed item of retro r10-lint-fp-459.
+
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-25-r10-lint-fp-459-rcscan-slotcov.md | kit | 2026-10-25 | pending | 1 |`
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1 shipped code, rule in the `BUILD-LOOP.md` § 5 literal-aware scanning bullet.

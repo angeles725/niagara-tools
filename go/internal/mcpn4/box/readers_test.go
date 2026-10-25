@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 const readerNodes = `{"": {"t": "a:B"}, "out": {"t": "baja:StatusNumeric"}, "out/status": {"v": "40"},
@@ -37,14 +35,11 @@ func TestChildrenAndStatusValue(t *testing.T) {
 }
 
 // TestParseStatusDifferentialPython compares ParseStatus with box.parse_status on the target
-// CPython: int(_, 16)'s whitespace, sign, prefix and underscore rules, Unicode digits, the
-// 200-character repr cut of its error, and the falsy and non-string values.
+// CPython (recorded in testdata/parse-status.golden.jsonl): int(_, 16)'s whitespace, sign,
+// prefix and underscore rules, Unicode digits, the 200-character repr cut of its error, and the
+// falsy and non-string values.
 func TestParseStatusDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	g := golden.Open(t, "parse-status")
 	values := []any{"0", "40", "40;units=x", "0;", ";x", "", nil, false, 0, 7, []any{}, []any{1}, "ff",
 		"-40", "+0x40", "-+1", " 0x_4_0　", "0X40", "4_0", "1__0", "_1", "1_", "0x", "0x__1", "0_x1",
 		"-", "  ", "٤٠", "\U0001d7d2\U0001d7ce", "\x00", "4 0", "\xed\xa0\x80", strings.Repeat("z", 300),
@@ -60,14 +55,8 @@ for v in json.load(sys.stdin):
         out.append("%s: %s" % (type(exc).__name__, exc))
 print(json.dumps(out))`
 	in, _ := pyjson.Marshal(values, pyjson.Options{})
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, script)
-	cmd.Stdin = strings.NewReader(string(in))
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v", err)
-	}
 	var want []string
-	if err := json.Unmarshal(out, &want); err != nil {
+	if err := json.Unmarshal(g.Run(script, in), &want); err != nil {
 		t.Fatal(err)
 	}
 	for i, v := range values {

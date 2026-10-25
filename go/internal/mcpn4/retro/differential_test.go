@@ -2,35 +2,23 @@ package retro
 
 import (
 	"math/rand"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
-// runPython runs script with mcp_n4 importable, the JSON of input on stdin, and decodes the
-// JSON it prints.
-func runPython(t *testing.T, script string, input any) []any {
+// runPython runs script with mcp_n4 importable (recorded in g), the JSON of input on stdin, and
+// decodes the JSON it prints.
+func runPython(t *testing.T, g *golden.Golden, script string, input any) []any {
 	t.Helper()
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
 	data, err := pyjson.Marshal(input, pyjson.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, script)
-	cmd.Stdin = strings.NewReader(string(data))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
-	}
-	v, err := pyjson.Loads(out)
+	v, err := pyjson.Loads(g.Run(script, data))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +99,7 @@ func TestParseTimestampDifferentialPython(t *testing.T) {
 	for i, s := range corpus {
 		input[i] = s
 	}
-	want := runPython(t, parseScript, input)
+	want := runPython(t, golden.Open(t, "parse-ts"), parseScript, input)
 	parsed := 0
 	for i, s := range corpus {
 		got, ok := parseTS(s)

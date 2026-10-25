@@ -156,6 +156,12 @@ test, seen RED before any caller moves to it; each caller keeps a test of its ob
 rendered HTML, slot values) that passes unchanged before and after the move: a `BTestNgStation` test when the output
 is slot behaviour, a golden or pure test otherwise. `[ev: retro modular-line-efficient-quality Δ4]`
 
+**A client's WSL JUnit runner discovers its suites, never lists them by hand:** every `*Test.java` under its
+`srcTest`/`test` roots, minus a commented exclude list with one reason per class (NRE kernel, live station,
+`BTest`). An exclude that names no file, or zero discovered suites, fails the run. A suite no gate runs is not a
+test: a hand-listed runner skipped four new suites and an always-failing probe, and one never-run suite had been
+stale since its first commit. `[ev: retro r10-client-gate-retro Δ3]`
+
 ---
 
 ## Worked example — asserting link validation
