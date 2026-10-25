@@ -48,3 +48,9 @@ setup() {
   [ "$status" -eq 2 ] || { echo "$output"; return 1; }
   [[ "$output" == *'--exclude-jar "mods\\moduleA-*.jar" is not a jar basename glob'* ]]
 }
+
+@test "RNT7: run takes --restore-gradle-root as a flag without a value: a value after it is exit 2, before copying anything" {
+  run "$R" run --install 'C:\Niagara\N4' --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA --restore-gradle-root yes
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *'run: unexpected argument "yes"'* ]]
+}
