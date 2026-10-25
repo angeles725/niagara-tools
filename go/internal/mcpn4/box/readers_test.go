@@ -13,16 +13,16 @@ import (
 
 const readerNodes = `{"": {"t": "a:B"}, "out": {"t": "baja:StatusNumeric"}, "out/status": {"v": "40"},
 	"sw": {"t": "baja:StatusBoolean"}, "sw/value": {"v": "true"}, "str": {"t": "baja:StatusString"},
-	"out/x/y": {}, "outer": {}}`
+	"out/x/y": {}, "outer": {}, "sb": {"t": "baja:StatusBoolean"}}`
 
 func TestChildrenAndStatusValue(t *testing.T) {
 	nodes := mustParse(t, readerNodes).(*pyjson.Object)
-	for path, want := range map[string]string{"": "out sw str outer", "out": "status", "out/x": "y", "outer": ""} {
+	for path, want := range map[string]string{"": "out sw str outer sb", "out": "status", "out/x": "y", "outer": ""} {
 		if got := strings.Join(Children(nodes, path).Keys(), " "); got != want {
 			t.Errorf("children(%q) = %q, want %q", path, got, want)
 		}
 	}
-	for path, want := range map[string]string{"out": "0.0 40", "sw": "true 0"} {
+	for path, want := range map[string]string{"out": "0.0 40", "sw": "true 0", "sb": "false 0"} {
 		v, st, err := StatusValue(nodes, path)
 		if got := pyjson.Str(v) + " " + pyjson.Str(st); err != nil || got != want {
 			t.Errorf("status_value(%s) = %q, %v; want %q", path, got, err, want)

@@ -876,8 +876,8 @@ class TestStdioEndToEnd(unittest.TestCase):
             go_server.skip_if_unported(reply)
         return proc, replies
 
-    @go_server.go_twin("cli", "in-process", python_only="a Python import side effect; a Go "
-                       "binary has no import, and its start is pinned by cli.TestEofEndsTheServerWithExitZero")
+    @go_server.go_twin("cli", "in-process", python_only="a Python import side effect; a Go binary "
+                       "has no import (its start: cli.TestEofEndsTheServerWithExitZero)")
     def test_import_prints_nothing(self):
         proc = subprocess.run([sys.executable, "-c", "import mcp_n4.server"], cwd=KIT_DIR,
                               capture_output=True, text=True, timeout=60)
