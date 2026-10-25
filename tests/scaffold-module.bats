@@ -401,3 +401,37 @@ st_golden_diff() {
   grep -q 'if (!FOX_NOT_STARTED.equals(e.getMessage()) || !station.isRunning()) throw e;' "$B"
   grep -q '@AfterMethod(alwaysRun = true)' "$B"
 }
+
+# st_link_in_flags <rt-dir> <Mod> <vendor-lc>: one "<slot> <flags>" line per LINK_IN_SLOTS entry of the
+# emitted link test, the flags read from that slot's @NiagaraProperty block in the emitted component
+# ("MISSING" when the component declares no such property).
+st_link_in_flags() {
+  local r="$1" mod="$2" v="$3"
+  local test="$r/srcTest/test/com/$v/$mod/B${mod}LinkTest.java" comp="$r/src/com/$v/$mod/B${mod}.java"
+  local slots
+  slots="$(sed -n 's/.*LINK_IN_SLOTS = { \(.*\) };.*/\1/p' "$test" | tr -d '" ' | tr ',' ' ')"
+  [ -n "$slots" ] || return 1
+  for s in $slots; do
+    awk -v want="$s" '
+      /@NiagaraProperty\(/ { inblk = 1; name = ""; flags = ""; next }
+      inblk && /name *= *"/ { n = $0; sub(/.*name *= *"/, "", n); sub(/".*/, "", n); name = n }
+      inblk && /flags *=/ { f = $0; sub(/.*flags *= */, "", f); flags = f }
+      inblk && /^\)/ { if (name == want) { print want " " flags; found = 1 } inblk = 0 }
+      END { if (!found) print want " MISSING" }
+    ' "$comp"
+  done
+}
+
+@test "TC-ST6: no link-in slot named by the emitted link test is READONLY in the emitted component (source-level guard)" {
+  # The station test asserts the same at run time (linkInSlotsAreNotReadonly): LinkCheck refuses a
+  # READONLY target (javax.baja.sys.LinkCheck.make, linkcheck.propReadonly), types/dashboard.md link-in rule.
+  # Named mutation: add Flags.READONLY to the dashboard fixture's status slot -> this test fails.
+  for t in logic dashboard; do
+    run "$SC" ModuleA "$OUT/$t" --type "$t" --vendor Example
+    [ "$status" -eq 0 ]
+    run st_link_in_flags "$OUT/$t/ModuleA/ModuleA/ModuleA-rt" ModuleA example
+    [ "$status" -eq 0 ]
+    [[ "$output" != *MISSING* ]]
+    [[ "$output" != *READONLY* ]]
+  done
+}
