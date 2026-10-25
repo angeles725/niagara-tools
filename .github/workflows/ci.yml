@@ -7,16 +7,25 @@ name: CI
 on:
   push:
     branches: [main]
+  # A draft PR runs nothing; marking it ready (ready_for_review) starts the full run.
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
+
+# A newer push to a PR cancels its superseded run, so only the PR head is checked. A push to main
+# keys on its commit (one group per merge) and never cancels: every merge keeps its own full run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # The checks run as four parallel jobs (go, bats, lint-sweeps, mcp-n4-go); the wall time is the slowest
   # job, not their sum. Every step of the former single `checks` job runs in exactly one of them.
   go:
     name: Go gofmt + vet + test + build
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -53,6 +62,7 @@ jobs:
 
   bats:
     name: bats unit tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -163,6 +173,7 @@ jobs:
 
   lint-sweeps:
     name: shellcheck + ledger sweeps + kit lints
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -280,6 +291,7 @@ jobs:
   # here (it OOM-killed runners).
   mcp-n4-go:
     name: mcp-n4 black-box suite (Go server)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
