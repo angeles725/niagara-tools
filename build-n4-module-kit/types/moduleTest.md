@@ -212,7 +212,9 @@ cmd.exe /c "cd /d C:\Users\<you>\AppData\Local\Temp\<copy> && gradlew.bat <same 
 - **Always `:clean` first:** after a failed run `niagaraTest` is UP-TO-DATE and reports nothing.
 - **Count the tests, not the exit code.** `BUILD SUCCESSFUL` with `Total tests run: 0` is a failed run. The two
   known causes: a WSL-side Gradle (plugin 7.6.17), and a test jar the test NRE cannot trust: the default
-  self-signed `Niagara4Modules` dev key logs `Could not validate cert chain` → `invalid test target(s)`. Sign with a
+  self-signed `Niagara4Modules` dev key logs `Could not validate cert chain` → `invalid test target(s)` (on
+  4.14.0.162 with a fresh user home the same WARN did not stop a throwaway-signed test jar from running, § 12.1 of
+  `types/driver-authoring.md`; check the summary line, not the WARN). Sign with a
   CA-chained profile (`niagaraSigning { aliases; signingProfileFile }`, `build-verify.md` § Signing per deploy
   target) or import the signer's root into that NRE's user trust store; ask before changing a client root's
   signing block, since it also signs the shipped jars.
@@ -471,6 +473,16 @@ the main Gradle section above).
   (Go tool G33 `run-niagara-test`: scratch copy, `:clean` first, PASS only when every `Total tests run: N` has N > 0
   and 0 failures, FAIL on `invalid test target(s)` or `failed signature validation`, back up and restore
   `modules/<part>.jar`), read those lines in the output yourself (§ Running from WSL). `[ev: retro testing-parity-btestng Δ2]`
+- **`niagaraTest` is `bin/test`:** the task only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
+  (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so `test.exe <module>` on a scratch COPY of the home (not a
+  symlink mirror: Windows sees its links as dangling junctions) runs the same tests without gradle; set
+  `niagara_user_home` to a fresh Windows-local dir (a `\\wsl.localhost` user home fails with a `FileLockException`
+  on `security\.km`). It exits 0 with failing tests: count them. Steps and timings: `types/driver-authoring.md` § 12.1.
+  `[ev: retro r10-dr5-driver-exemplar Δ1]`
+- **`BTestNgStation` needs its Fox service:** `startStation` takes the first `BFoxService` child, so
+  `makeDefaultAuthFoxServices = false` fails setup with `ArrayIndexOutOfBoundsException: 0` and skips every test.
+  Keep Fox on a free `foxPort` (the default 1911 is taken whenever a station or platform runs on the host).
+  `[ev: retro r10-dr5-driver-exemplar Δ1]`
 - **No test depends on the network or Wi-Fi:** a test that needs a reachable host fails for reasons the code does
   not control. Pure seams (`run-pure-test.sh`) or a station-local fixture replace it. `[ev: corpus B1418 §1418.5 g]` `[ev: retro course-recordings Δ7]`
 - **Do not run `gradle -t` with IDE autosave:** continuous build compiles half-written files and reports

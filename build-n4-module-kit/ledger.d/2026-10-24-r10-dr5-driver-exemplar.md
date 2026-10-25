@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: driver exemplar (DR5): BTestNgStation loopback test ran 6/6 through bin/test -->
+log: 2026-10-24 · quality round 10 DR5 → `fixtures/MinimalDriver` ships `B<Mod>LoopbackTest` (BTestNgStation, moduleTest-include.xml only) + a 127.0.0.1 port-0 codec mock; ran 6/6 via `bin\test.exe` on a scratch copy of the 4.14.0.162 home (RED: device-error mock 6/6 fail, wrong-tag mock 5/6); verify-module moduletest WARN gone (ALL PASS); `-wb` manager agent registered in module-include (report-module CLEAN); Context-form network discovery confirmed bound; `types/driver-authoring.md` § 12.1 and `types/moduleTest.md` TEST-G8 gotchas. Tests TC-DRV7, TC-DRV8. Retro retros/2026-10-24-r10-dr5-driver-exemplar.md (3Δ, folded). [ev: retro r10-dr5-driver-exemplar Δ1]
+open_issue: driver authoring after DR5 (retro r10-dr5-driver-exemplar): G33 run-niagara-test can now script the proven route (scratch home copy, local niagara_user_home, bin/test, read the summary); the station test runs locally only (no Windows NRE in CI); a TCP scaffold variant is still not built.
