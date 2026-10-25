@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-24 · kit · r10-golden-runner
@@ -62,3 +62,11 @@ case byte for byte apart from the new `@kind` header (and canonical tree order /
 ## Lessons
 - Python's text mode rewrites CRLF on read: a converter of byte-exact fixtures opens files with `newline=''`.
 - A twin materialization is the simplest honest "before" snapshot: the run dir cannot be unlocked to read it.
+
+## Fold
+- The Runner and recorder are code already shipped in the PR that wrote this retro (`go/internal/lint/rules/golden/runner.go`, `record/record.sh`); not re-implemented.
+- Δ1-Δ4 → `BUILD-LOOP.md` § 5 golden-case bullet (one Runner and recorder; re-record to prove a conversion; `EXTRA` pins sourced files; the declared-only environment).
+- Follow-ups: wiringmap migrated by retro r10-wiringmap-runner; the `toolbelt/new-retro.sh` header now names the shared recorder; verifymodule's `TestUnreadableSource` is no longer on main. Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1-Δ4 in the `BUILD-LOOP.md` § 5 golden-case bullet.
