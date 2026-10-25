@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-25 · kit · r10-rnt-gradle-root-gate
@@ -40,3 +40,11 @@ before/after snapshots; it had no gate on the gradle root. Each rule got a fake-
 ## Lessons
 - A sandbox that guards the install and the user homes still leaks through the one tree it builds from: gate every tree a build can write, the source tree included.
 - `git status` codes alone miss a second write to a file that was already dirty; hash every listed file.
+
+## Fold
+- The gate is code already shipped in the PR that wrote this retro (`go/internal/niagaratest/gradleroot.go`, `run_gradleroot_test.go`); not re-implemented.
+- Δ1 and Δ2 were cited at merge in `types/moduleTest.md` § Running from WSL (the gradle-root gate bullet and the plugin-version trap). No doctrine text added.
+- Lesson 2 (hash every listed file, status codes miss a second write) is in the Δ1 bullet. Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-4`; log in `ledger.d/2026-10-25-r10-fold-tail4.md`) — Δ1, Δ2 in `types/moduleTest.md` § Running from WSL.
