@@ -1,0 +1,21 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 3
+FAIL  trivially-true  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java:5  BAlphaTest.placeholder: its only assertions are trivially true, so it cannot fail
+-- stderr --
+lint-vacuous-tests: cannot scan @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BBadTest.java: it ends inside a /* comment
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BAlphaTest.java --
+package com.x.test;
+import org.testng.annotations.Test;
+public class BAlphaTest {
+  @Test
+  public void placeholder() { assertTrue(true); }
+}
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BBadTest.java --
+package com.x.test;
+public class BBadTest {
+  @Test
+  public void t() { }
+  /* never closed
+}

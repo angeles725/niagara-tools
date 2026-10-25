@@ -1,0 +1,19 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 0
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BZetaTest.java --
+package com.x.test;
+import org.testng.annotations.*;
+public class BZetaTest {
+  @BeforeMethod
+  public void setUp() { station = 1; }
+  @AfterMethod(alwaysRun = true)
+  public void tearDown() { station = 0; }
+  @BeforeClass public void once() { }
+  @Test public void real() { assertEquals(station, 1); }
+  @DataProvider(name = "d") public Object[][] d() { return new Object[][] { }; }
+  @TestOnly public void notATest() { }
+  int station;
+}

@@ -637,6 +637,13 @@ the main Gradle section above).
   <Class.method>` (repeatable, with `--allow-ignored-reason`) waives exactly that set, a new or a stale name FAIL. A
   class-level disable, a non-literal `enabled` or an unreadable registered source is exit 3 before the build; the
   count pair stays the fallback that skips the source `[ev: retro r10-rnt-ignored-names Δ1]`.
+- **A green run proves nothing for a test that cannot fail or never runs:** an `assertTrue(true)` placeholder, a
+  test with no assertion, and a JUnit `assumeTrue(false)` (or a first-statement `throw new SkipException`) all
+  pass or skip silently. `lint-vacuous-tests.sh <gradle-root>` FAILs each `@Test` method under `srcTest/` of these
+  shapes; `expectedExceptions` / `expected =` and an assertion made through a helper of the same class, an
+  enclosing class, a `srcTest/` superclass or a statically imported `srcTest/` class (one level deep) keep a test
+  clean. Waive one only by name:
+  `--allow <Class.method> --allow-reason <why>` (a stale name FAILs) `[ev: retro r10-lint-vacuous-tests Δ1]`.
 - **`niagaraTest` is `bin/test`:** the task only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
   (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so `test.exe <module>` on a scratch COPY of the home (not a
   symlink mirror: Windows sees its links as dangling junctions) runs the same tests without gradle; set
