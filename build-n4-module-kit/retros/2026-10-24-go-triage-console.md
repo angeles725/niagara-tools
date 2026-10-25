@@ -61,7 +61,7 @@ Run directly, the binary defaults to empty lists.
 - Δ1, Δ2 and Δ3 are truth fixes already shipped in the PR that wrote this retro (`go/internal/triageconsole`, truth-* goldens); not re-implemented, cited in the fold log. Δ2's shell lesson (a `grep` stage in the caller's locale drops a Latin-1 row) also joins the `BUILD-LOOP.md` § 5 silent-input-drops bullet.
 - Δ4 → `BUILD-LOOP.md` § 5, the public-repository sentence of the "files outside the repository" bullet (client-named defaults stay in the wrapper).
 - Δ5 → `BUILD-LOOP.md` § 5 golden-case bullet (a bats-mirroring golden reads the fixture in place).
-- Follow-up `is_level` (INFORMACIÓN never a header) is a truth bug kept for identity: open issue in `ledger.d/2026-10-25-r10-fold-tail3.md`. `--` dropping operands and the locale sort order are kept quirks / recorded limits; no issue.
+- Follow-up `is_level` (INFORMACIÓN never a header) was a truth bug kept for identity: DONE by #545 (exact `INFORMACIÓN` match, golden `truth-informacion-level`). `--` dropping operands and the locale sort order are kept quirks / recorded limits; no issue.
 
 ---
 **Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail3`; log in `ledger.d/2026-10-25-r10-fold-tail3.md`) — Δ1-Δ3 shipped truth fixes, cited in the fold log (Δ2 also in the § 5 silent-drops bullet); Δ4, Δ5 in `BUILD-LOOP.md` § 5.
