@@ -107,6 +107,8 @@ package com.angeles.ColdRoomPan;
 public class BEvaporatorUnit {}
 JAVA
   # real bogs (local-only smokes): C8_PANCCADIA_BOG overrides; else the extracted copy in the shard scratchpad
+  # The default below points at a session-scratch copy that may no longer exist (the real-bog smokes then
+  # skip); set the override env var read below to an archived fixture instead.
   BOGX="/tmp/claude-1000/-home-cristian-niagara-research/dd08d593-6527-4dc7-885c-938ea923b73f/scratchpad/bogx"
 }
 
