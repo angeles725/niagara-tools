@@ -973,8 +973,17 @@ Running it from WSL — each step is a failure seen on the way:
   `BFoxService` child): `makeDefaultAuthFoxServices = false` fails setup with `ArrayIndexOutOfBoundsException: 0`
   and skips every test. Keep Fox and give it a free port (`foxPort`, default 1911, is taken whenever a station or
   platform runs on the host).
-- **`test.exe` exits 0 with failing tests:** read `Total tests run: N, Failures: F` (§ `types/moduleTest.md` Running
-  from WSL). A third-party thread the runner cannot stop (`Thread.stop()` warning after the summary) is install noise.
+- **A loopback-only station test turns Fox off:** the Windows NRE never binds Fox to 127.0.0.1 alone, so a test
+  that must listen on loopback only sets `foxEnabled`, `foxsEnabled`, multicast and announcement all false. Its
+  fixture then tolerates only `BTestNgStation`'s exact `Fox service did not start in time` failure, and only while
+  the station itself is running; any other setup failure still fails the run. This refines the free-port step
+  above, which still works when loopback-only is not required (a module's station-test run on test.exe).
+  `[ev: retro r10-run-niagara-test-testng Δ4]`
+- **`test.exe` exits -1 when a test fails, 0 when all pass:** `cmd /c "… & echo %ERRORLEVEL%"` showed 0 for failing
+  runs because `%ERRORLEVEL%` expands at parse time, before test.exe runs; read `!ERRORLEVEL!` under `cmd /v:on`.
+  Judge the run from its output anyway: `Total tests run: N, Failures: F` on stderr, or `testng-results.xml`
+  with `-output:` (§ `types/moduleTest.md` Known gotchas). A third-party thread the runner cannot stop (`Thread.stop()`
+  warning after the summary) is install noise. `[ev: retro r10-run-niagara-test-testng Δ3]`
 - **An untrusted signer did not block the run here:** the loader WARNed `Could not validate cert chain` for both
   jars and still loaded and ran them (fresh user home, this install's default verification mode).
 - **The signing key needs the code-signing usage:** a plain `keytool -genkeypair` key fails `:jar` with

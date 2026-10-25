@@ -482,19 +482,23 @@ the main Gradle section above).
   exit code. Phase 1 is the verdict only: run the test yourself (§ Running from WSL; `:clean` first, back up and
   restore `modules/<part>.jar`) until the runner half of G33 lands. `[ev: retro testing-parity-btestng Δ2]`
   `[ev: retro r10-run-niagara-test-go]`
-- **`test.exe <module> -v:2 -output:<dir>` prints no `Total tests run` line:** its console holds only thread
-  dumps, so a console verdict there is always FAIL (no summary). The verdict lives in
-  `<dir>/testng-results.xml`: judge it with `toolbelt/run-niagara-test.sh verdict --testng
-  <dir>/testng-results.xml [<console log>]`. PASS only when the root has total > 0, failed = 0, skipped = 0, no
-  `test-method` (config methods included: a failed `setupStation` skips its tests, which the root counts as
-  skipped, not failed) has status FAIL and the root counts match the test-methods; a missing or malformed file
-  is FAIL. `[ev: retro r10-run-niagara-test-testng Δ1]`
+- **`test.exe <module> -v:2` prints its `Total tests run` summaries on stderr:** its stdout holds only the
+  shutdown thread dumps, so a log of stdout alone has no summary (a console verdict on it is FAIL). Capture
+  stderr (`2>&1`), and with `-output:<dir>` judge the authoritative `<dir>/testng-results.xml`, the console as
+  a cross-check: `toolbelt/run-niagara-test.sh verdict --testng <dir>/testng-results.xml [<stderr log>]`.
+  PASS only when the root has total > 0, failed = 0, skipped = 0, no `test-method` (config methods included:
+  a failed `setupStation` skips its tests, which the root counts as skipped, not failed) has status FAIL
+  and the root counts match the test-methods; a missing or malformed file is FAIL.
+  `[ev: retro r10-run-niagara-test-testng Δ1]`
 - **`niagaraTest` is `bin/test`:** the task only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
   (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so `test.exe <module>` on a scratch COPY of the home (not a
   symlink mirror: Windows sees its links as dangling junctions) runs the same tests without gradle; set
   `niagara_user_home` to a fresh Windows-local dir (a `\\wsl.localhost` user home fails with a `FileLockException`
-  on `security\.km`). It exits 0 with failing tests: count them. Steps and timings: `types/driver-authoring.md` § 12.1.
-  `[ev: retro r10-dr5-driver-exemplar Δ1]`
+  on `security\.km`). It exits 0 when every test passes and -1 (255 or 4294967295, by reader) when any fails;
+  `cmd /c "… & echo %ERRORLEVEL%"` reads 0 either way, because `%ERRORLEVEL%` expands when the line is parsed,
+    before test.exe runs: use `cmd /v:on /c "… & echo !ERRORLEVEL!"`. Judge the output anyway (§ above). Steps
+  and timings: `types/driver-authoring.md` § 12.1.
+  `[ev: retro r10-dr5-driver-exemplar Δ1]` `[ev: retro r10-run-niagara-test-testng Δ3]`
 - **`BTestNgStation` needs its Fox service:** `startStation` takes the first `BFoxService` child, so
   `makeDefaultAuthFoxServices = false` fails setup with `ArrayIndexOutOfBoundsException: 0` and skips every test.
   Keep Fox on a free `foxPort` (the default 1911 is taken whenever a station or platform runs on the host).
