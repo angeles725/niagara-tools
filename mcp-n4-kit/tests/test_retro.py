@@ -11,6 +11,7 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import go_server  # noqa: E402
+import oracle  # noqa: E402
 import state_files  # noqa: E402
 import test_server  # noqa: E402
 from mcp_n4 import retro, safety, tools_read  # noqa: E402
@@ -366,8 +367,9 @@ EVERY_REFUSAL = [r for r, _ in REFUSALS] + [
 
 
 class TestTheDraftIsPythonsDraft(Fixture):
-    """The tool's reply, byte for byte, is the one tools_read.n4_session_retro_draft computes
-    in-process on the same state dir (black-box under both implementations)."""
+    """The tool's reply, byte for byte, is the one the Python server's
+    tools_read.n4_session_retro_draft computed in-process on the same state dir, frozen in
+    fixtures/oracles (S17)."""
 
     WHOLE = "1970-01-01T00:00:00Z"
 
@@ -375,20 +377,33 @@ class TestTheDraftIsPythonsDraft(Fixture):
         super().setUp()
         self.srv = go_server.make_server(state_dir=self.dir)
         self.addCleanup(go_server.close_server, self.srv)
+        self.frozen = oracle.Frozen(self, "retro_draft", aliases=[
+            (self.dir, "<state>"), (oracle.today_utc(), oracle.TODAY)])
 
     def reply(self, **args):
         msg = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                "params": {"name": "n4_session_retro_draft", "arguments": args}}
         return self.srv.dispatch(msg)["result"]
 
-    def expected(self, **args):
+    def python(self, args):
+        """What the Python server answered (recording only): the draft, or the error text."""
+        from mcp_n4 import tools_read
         ctx = types.SimpleNamespace(session=None, state_dir=self.dir, observations=[],
                                     started_at=None)  # every call here passes since
-        return tools_read.n4_session_retro_draft(ctx, args)
+        try:
+            return {"draft": tools_read.n4_session_retro_draft(ctx, args)}
+        except ValueError as exc:
+            return {"error": str(exc)}
+        except Exception as exc:  # noqa: BLE001 - the server names the type only
+            return {"error": "internal error (%s)" % type(exc).__name__}
+
+    def expected(self, **args):
+        return self.frozen(args, lambda: self.python(args))
 
     def assertSameDraft(self, **args):
         result = self.reply(**args)
-        want = self.expected(**args)
+        want = self.expected(**args).get("draft")
+        self.assertIsNotNone(want, "Python refused %r" % (args,))
         self.assertFalse(result.get("isError", False), result)
         self.assertEqual(result["content"][0]["text"], json.dumps(want))
         self.assertEqual(result["structuredContent"], want)
@@ -396,13 +411,8 @@ class TestTheDraftIsPythonsDraft(Fixture):
 
     def assertSameError(self, **args):
         result = self.reply(**args)
-        try:
-            self.expected(**args)
-        except ValueError as exc:
-            text = str(exc)
-        except Exception as exc:  # noqa: BLE001 - the server names the type only
-            text = "internal error (%s)" % type(exc).__name__
-        else:
+        text = self.expected(**args).get("error")
+        if text is None:
             self.fail("Python drafted %r" % (args,))
         self.assertTrue(result["isError"], result)
         self.assertEqual(result["content"][0]["text"], text)

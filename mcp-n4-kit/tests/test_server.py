@@ -11,6 +11,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import go_server  # noqa: E402
+import oracle  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
 from mcp_n4 import box, server, tools_read  # noqa: E402
 
@@ -196,9 +197,12 @@ class TestRobustness(unittest.TestCase):
         self.assertIsNone(srv.handle_line('{"jsonrpc":"2.0","method":"ping"}'))
 
     def test_replies_are_the_bytes_the_python_server_writes(self):
-        """tools/list (every schema), errors and odd ids, compared byte for byte with an
-        in-process Python server: the Go port's protocol-parity proof (plan slice S2)."""
-        srv, reference = self.make_server(), server.Server()
+        """tools/list (every schema), errors and odd ids, compared byte for byte with what the
+        in-process Python server wrote (plan slice S2), frozen in fixtures/oracles (S17)."""
+        srv, frozen = self.make_server(), oracle.Frozen(self, "protocol")
+        reference = None
+        if oracle.RECORD:
+            reference = server.Server()
         for line in ('{"jsonrpc":"2.0","id":2,"method":"tools/list"}',
                      '{"id":3,"method":"initialize","params":{"protocolVersion":"2024-11-05"}}',
                      '{"id":[1.0,"\\u00e9",{"k":null}],"method":"nope"}',
@@ -207,7 +211,8 @@ class TestRobustness(unittest.TestCase):
                      '"arguments":{"depth":0}}}',
                      '{"id":6,"method":"tools/call","params":{"name":"n4_navigate"}}',
                      '\u00a0{"id":7,"method":"ping"}\x0b', '{bad', '7'):
-            self.assertEqual(srv.handle_line(line), reference.handle_line(line), line)
+            want = frozen(line, lambda: reference.handle_line(line))
+            self.assertEqual(srv.handle_line(line), want, line)
 
     @staticmethod
     def nested_id(depth):
