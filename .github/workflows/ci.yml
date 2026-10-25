@@ -86,8 +86,12 @@ jobs:
           echo "${HC_SHA256}  ${HC_DIR}/hamcrest-core-1.3.jar" | sha256sum -c - \
             || { printf 'sha256 mismatch: hamcrest-core-1.3.jar\n' >&2; exit 1; }
 
-      - name: Install bats
-        run: sudo apt-get update && sudo apt-get install -y bats
+      # GNU parallel: `bats -j` needs it, and without it runs no test at all (the bats step counts them).
+      - name: Install bats + GNU parallel
+        run: |
+          sudo apt-get update && sudo apt-get install -y bats parallel
+          bats --version
+          parallel --version | head -n 1
 
       - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
         uses: actions/setup-go@v6
@@ -104,8 +108,23 @@ jobs:
         with:
           python-version: "3.15"
 
+      # The toolbelt wrappers build go/bin on demand; build it once so the parallel suites do not race to.
+      - name: Pre-build go/bin (the binaries the bats suites exec through the toolbelt wrappers)
+        run: cd go && go build -o bin/ ./cmd/...
+
       - name: bats (all unit tests)
-        run: bats tests/*.bats
+        run: |
+          # -j 4: one bats job per ubuntu-latest vCPU. Fail closed: the run must report one result per test
+          # the suite holds (`bats --count`), so a silent zero or partial parallel run cannot pass.
+          set -o pipefail
+          TAP="$RUNNER_TEMP/bats.tap"
+          want="$(bats --count tests/*.bats)"
+          bats -j 4 --formatter tap tests/*.bats | tee "$TAP"
+          plan="$(grep -m 1 -E '^1\.\.[0-9]+$' "$TAP" || true)"; plan="${plan#1..}"
+          got="$(grep -cE '^(not )?ok ' "$TAP" || true)"
+          printf 'bats: the suite holds %s tests; TAP plan %s; %s results\n' "$want" "${plan:-missing}" "$got"
+          [ "$want" -gt 0 ] && [ "$plan" = "$want" ] && [ "$got" -eq "$want" ] \
+            || { printf 'ERROR: bats reported %s results (plan %s) for a suite of %s tests\n' "$got" "${plan:-missing}" "$want" >&2; exit 1; }
 
       - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
         run: |
