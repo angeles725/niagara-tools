@@ -431,6 +431,62 @@ class TestSaveParameter(unittest.TestCase):
         self.assertFalse(sc.saved_with_folder)
 
 
+class TestServerSelection(unittest.TestCase):
+    """Go is the default server (S16); --impl / MCP_N4_IMPL=python select the fallback."""
+
+    def resolve(self, env, *extra):
+        args = live_smoke.parse_args(["--apply"] + list(extra))
+        return live_smoke.resolve_server(args, env), args
+
+    def executable(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "mcp-n4")
+        with open(path, "w") as fh:
+            fh.write("#!/bin/sh\n")
+        os.chmod(path, 0o700)
+        return path
+
+    def test_the_go_binary_is_the_default_launcher(self):
+        binary = self.executable()
+        problem, args = self.resolve({"MCP_N4_GO_BIN": binary})
+        self.assertIsNone(problem)
+        argv = live_smoke.server_argv(args)
+        self.assertEqual(argv[:2], [binary, "--allow-writes"])
+        self.assertNotIn("mcp_n4.server", argv)
+
+    def test_the_default_binary_is_go_bin_at_the_repository_root(self):
+        _, args = self.resolve({})
+        self.assertEqual(args.go_bin, live_smoke.DEFAULT_GO_BIN)
+        self.assertTrue(args.go_bin.endswith(os.path.join("go", "bin", "mcp-n4")))
+
+    def test_python_is_the_fallback_by_env_or_flag(self):
+        for env, extra in (({"MCP_N4_IMPL": "python"}, ()), ({"MCP_N4_IMPL": "go"},
+                                                              ("--impl", "python"))):
+            problem, args = self.resolve(dict(env, MCP_N4_GO_BIN="/no/such/mcp-n4"), *extra)
+            self.assertIsNone(problem)
+            self.assertEqual(live_smoke.server_argv(args)[:4],
+                             [sys.executable, "-m", "mcp_n4.server", "--allow-writes"])
+
+    def test_a_missing_go_binary_names_the_fallback_and_starts_nothing(self):
+        problem, _ = self.resolve({"MCP_N4_GO_BIN": "/no/such/mcp-n4"})
+        self.assertIn("/no/such/mcp-n4", problem)
+        self.assertIn("--impl python", problem)
+
+    def test_an_unknown_impl_is_refused(self):
+        problem, _ = self.resolve({"MCP_N4_IMPL": "rust"})
+        self.assertIn("MCP_N4_IMPL", problem)
+
+
+class TestMissingServer(RunnerCase):
+    def test_a_missing_go_binary_is_exit_2_before_any_station_contact(self):
+        self.env.update(MCP_N4_IMPL="go", MCP_N4_GO_BIN="/no/such/mcp-n4")
+        code, out, err = self.run_main(self.argv())
+        self.assertEqual(code, 2, out + err)
+        self.assertIn("--impl python", err)
+        self.assertEqual(self.fake.requests, 0)
+
+
 class TestShape(unittest.TestCase):
     def test_import_has_no_side_effects_and_main_is_guarded(self):
         self.assertTrue(callable(live_smoke.main))
