@@ -21,8 +21,10 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The checks run as four parallel jobs (go, bats, lint-sweeps, mcp-n4-go); the wall time is the slowest
-  # job, not their sum. Every step of the former single `checks` job runs in exactly one of them.
+  # The checks run as parallel jobs (go, two bats shards, lint-sweeps, mcp-n4-go); the wall time is the
+  # slowest job, not their sum. Every step of the former single `checks` job runs in exactly one of them.
+  # The bats suite is split by scripts/bats-shard.sh (duration-weighted, every tests/*.bats file in exactly
+  # one shard, checked in each shard), because one bats job was the critical path.
   go:
     name: Go gofmt + vet + test + build
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
@@ -61,12 +63,26 @@ jobs:
         run: cd go && go build -o bin/ ./cmd/...
 
   bats:
-    name: bats unit tests
+    name: bats unit tests (shard ${{ matrix.shard }}/2)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      SHARD: ${{ matrix.shard }}
+      SHARDS: 2  # keep equal to the length of matrix.shard
     steps:
       - uses: actions/checkout@v5
+
+      # Fail closed before any setup: every tests/*.bats file is in exactly one shard (a new file can never
+      # be silently skipped), and this shard's list is not empty.
+      - name: bats-shard --check (the shards partition tests/*.bats exactly)
+        run: |
+          scripts/bats-shard.sh --check "$SHARDS"
+          [ -n "$(scripts/bats-shard.sh "$SHARD" "$SHARDS")" ] || { printf 'ERROR: shard %s/%s is empty\n' "$SHARD" "$SHARDS" >&2; exit 1; }
 
       - name: Set up Java 8 (Temurin) — required by run-pure-test.sh javac -source 8
         uses: actions/setup-java@v5
@@ -145,16 +161,18 @@ jobs:
       - name: Pre-build go/bin (the binaries the bats suites exec through the toolbelt wrappers)
         run: cd go && go build -o bin/ ./cmd/...
 
-      - name: bats (all unit tests)
+      - name: bats (this shard's unit tests)
         run: |
           # -j 4: four test files at a time, one per ubuntu-latest vCPU. --no-parallelize-within-files: bats'
           # in-file parallelism waits for a free slot by polling with `sleep 1`, which made -j slower than a
           # serial run; GNU parallel schedules whole files without it. Fail closed: the run must report one
           # result per test in its TAP plan (bats counts the suite up front), so a silent zero or partial
-          # parallel run cannot pass.
+          # parallel run cannot pass. The shard list puts its heaviest files first, so they start at once.
           set -o pipefail
+          mapfile -t files < <(scripts/bats-shard.sh "$SHARD" "$SHARDS")
+          printf 'bats: shard %s/%s runs %d files\n' "$SHARD" "$SHARDS" "${#files[@]}"
           TAP="$RUNNER_TEMP/bats.tap"
-          bats -j 4 --no-parallelize-within-files --formatter tap tests/*.bats | tee "$TAP"
+          bats -j 4 --no-parallelize-within-files --formatter tap "${files[@]}" | tee "$TAP"
           plan="$(grep -m 1 -E '^1\.\.[0-9]+$' "$TAP" || true)"; plan="${plan#1..}"
           got="$(grep -cE '^(not )?ok ' "$TAP" || true)"
           printf 'bats: TAP plan %s; %s results\n' "${plan:-missing}" "$got"
@@ -164,6 +182,7 @@ jobs:
           fi
 
       - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
+        if: matrix.shard == 1
         run: |
           bats --formatter tap tests/run-pure-test.bats | tee /tmp/run-pure-test.tap
           if grep -q '# skip' /tmp/run-pure-test.tap; then
