@@ -22,8 +22,8 @@ type Method struct {
 	Config bool
 }
 
-// TestNGResult is the verdict on one testng-results.xml, the file `bin\test.exe <module> -output:<dir>` writes
-// (its console holds no `Total tests run` line). Root says a <testng-results> root was read; Total, Passed,
+// TestNGResult is the verdict on one testng-results.xml, the file `bin\test.exe <module> -output:<dir>` writes:
+// the authoritative record of the run (its `Total tests run` summaries go to stderr, not stdout). Root says a <testng-results> root was read; Total, Passed,
 // Failed and Skipped are its attributes, -1 when missing or no count. Failing lists every FAIL test-method in
 // document order. Reasons holds every cause of a FAIL.
 type TestNGResult struct {

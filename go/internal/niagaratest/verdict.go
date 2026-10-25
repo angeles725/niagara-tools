@@ -26,8 +26,8 @@ const (
 	badSignature  = "failed signature validation"
 )
 
-// noSummary is the reason of a log with no summary line. In --testng mode it is no reason: the console of
-// `test.exe -output:<dir>` never prints one.
+// noSummary is the reason of a log with no summary line. In --testng mode it is no reason: the results file
+// is the verdict, and a captured stdout of `test.exe` holds no summary (it goes to stderr).
 const noSummary = "no test summary (no Total tests run line)"
 
 // Summary is one `Total tests run: N, Failures: F, Skips: S` line. Failures and Skips are -1 when the line

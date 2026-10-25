@@ -1,0 +1,273 @@
+-- args --
+verdict
+--testng
+@DIR@/testng-results.xml
+@DIR@/stderr.log
+-- want --
+exit 0
+PASS  run-niagara-test  testng: total 11, passed 11, failed 0, skipped 0
+PASS  run-niagara-test  console line 6: run 3, failures 0, skips 0
+PASS  run-niagara-test  console line 13: run 3, failures 0, skips 0
+PASS  run-niagara-test  console line 22: run 5, failures 0, skips 0
+PASS  run-niagara-test  console line 26: run 11, failures 0, skips 0
+PASS  run-niagara-test  verdict: 11 tests run, 0 failed, 0 skipped (testng-results)
+-- @kind --
+truth: a real station-test run of bin\test.exe <module> -v:2 -output:<dir> (its stderr and results file), anonymized (testdata/README.md)
+-- stderr.log --
+ TestNG Test Ended: autoLockout_latchesTheUnit_andLeavesItsModeAuto on Auto Lockout Keeps Mode Station Test
+ TestNG Test Ended: faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord on Auto Lockout Keeps Mode Station Test
+ TestNG Test Ended: wholeRackLocked_everyModeStillAuto_rackUnavailable on Auto Lockout Keeps Mode Station Test
+===============================================
+ModuleATest_AutoLockoutKeepsModeStationTest
+Total tests run: 3, Failures: 0, Skips: 0
+===============================================
+ TestNG Test Ended: restartDelay_slotHoldsTheLatch_untilItElapses on Hand Low Suction Wiring Station Test
+ TestNG Test Ended: restartDiff_slotHoldsTheLatch_untilLimitPlusDiff on Hand Low Suction Wiring Station Test
+ TestNG Test Ended: trip_isPublishedOnAllThreeStatusSlots on Hand Low Suction Wiring Station Test
+===============================================
+ModuleATest_HandLowSuctionWiringStationTest
+Total tests run: 3, Failures: 0, Skips: 0
+===============================================
+ TestNG Test Ended: autoRestart_atDefaultMinOff_isNotHeldOff on Min Off Default Station Test
+ TestNG Test Ended: handRestart_atDefaultMinOff_isImmediate on Min Off Default Station Test
+ TestNG Test Ended: handRestart_isNotBlocked_evenByANonzeroMinOff on Min Off Default Station Test
+ TestNG Test Ended: minOff_slotDefault_isZero on Min Off Default Station Test
+ TestNG Test Ended: minOn_slotDefault_isStillThreeMinutes on Min Off Default Station Test
+===============================================
+ModuleATest_MinOffDefaultStationTest
+Total tests run: 5, Failures: 0, Skips: 0
+===============================================
+===============================================
+Results of all run tests
+Total tests run: 11, Failures: 0, Skips: 0
+===============================================
+-- testng-results.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results skipped="0" failed="0" ignored="0" total="11" passed="11">
+  <reporter-output>
+  </reporter-output>
+  <suite name="ModuleATest_AutoLockoutKeepsModeStationTest" duration-ms="46022" started-at="2026-10-25T04:15:57Z" finished-at="2026-10-25T04:16:43Z">
+    <groups>
+    </groups>
+    <test name="Command line test" duration-ms="46022" started-at="2026-10-25T04:15:57Z" finished-at="2026-10-25T04:16:43Z">
+      <class name="test.com.example.ModuleA.BAutoLockoutKeepsModeStationTest">
+        <test-method status="PASS" signature="setupStation()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="setupStation" is-config="true" duration-ms="18534" started-at="2026-10-25T04:15:57Z" description="Setup and start test station" finished-at="2026-10-25T04:16:16Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setupStation -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="setClassLoader" is-config="true" duration-ms="3" started-at="2026-10-25T04:16:16Z" finished-at="2026-10-25T04:16:16Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="autoLockout_latchesTheUnit_andLeavesItsModeAuto()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="autoLockout_latchesTheUnit_andLeavesItsModeAuto" duration-ms="5092" started-at="2026-10-25T04:16:16Z" finished-at="2026-10-25T04:16:21Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- autoLockout_latchesTheUnit_andLeavesItsModeAuto -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="unmountController" is-config="true" duration-ms="34" started-at="2026-10-25T04:16:21Z" finished-at="2026-10-25T04:16:21Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:16:21Z" finished-at="2026-10-25T04:16:21Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:16:21Z" finished-at="2026-10-25T04:16:21Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord" duration-ms="5070" started-at="2026-10-25T04:16:21Z" finished-at="2026-10-25T04:16:26Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="unmountController" is-config="true" duration-ms="29" started-at="2026-10-25T04:16:26Z" finished-at="2026-10-25T04:16:26Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:16:26Z" finished-at="2026-10-25T04:16:26Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="wholeRackLocked_everyModeStillAuto_rackUnavailable()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="wholeRackLocked_everyModeStillAuto_rackUnavailable" duration-ms="15122" started-at="2026-10-25T04:16:26Z" finished-at="2026-10-25T04:16:41Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- wholeRackLocked_everyModeStillAuto_rackUnavailable -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:16:26Z" finished-at="2026-10-25T04:16:26Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="unmountController" is-config="true" duration-ms="24" started-at="2026-10-25T04:16:41Z" finished-at="2026-10-25T04:16:41Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:16:41Z" finished-at="2026-10-25T04:16:41Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="teardownStation()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="teardownStation" is-config="true" duration-ms="2019" started-at="2026-10-25T04:16:41Z" description="Teardown test station" finished-at="2026-10-25T04:16:43Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- teardownStation -->
+      </class> <!-- test.com.example.ModuleA.BAutoLockoutKeepsModeStationTest -->
+    </test> <!-- Command line test -->
+  </suite> <!-- ModuleATest_AutoLockoutKeepsModeStationTest -->
+  <suite name="ModuleATest_HandLowSuctionWiringStationTest" duration-ms="18597" started-at="2026-10-25T04:16:43Z" finished-at="2026-10-25T04:17:02Z">
+    <groups>
+    </groups>
+    <test name="Command line test" duration-ms="18597" started-at="2026-10-25T04:16:43Z" finished-at="2026-10-25T04:17:02Z">
+      <class name="test.com.example.ModuleA.BHandLowSuctionWiringStationTest">
+        <test-method status="PASS" signature="setupStation()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="setupStation" is-config="true" duration-ms="6218" started-at="2026-10-25T04:16:43Z" description="Setup and start test station" finished-at="2026-10-25T04:16:50Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setupStation -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:16:50Z" finished-at="2026-10-25T04:16:50Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="restartDelay_slotHoldsTheLatch_untilItElapses()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restartDelay_slotHoldsTheLatch_untilItElapses" duration-ms="5048" started-at="2026-10-25T04:16:50Z" finished-at="2026-10-25T04:16:55Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restartDelay_slotHoldsTheLatch_untilItElapses -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="unmountController" is-config="true" duration-ms="22" started-at="2026-10-25T04:16:55Z" finished-at="2026-10-25T04:16:55Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:16:55Z" finished-at="2026-10-25T04:16:55Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:16:55Z" finished-at="2026-10-25T04:16:55Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="restartDiff_slotHoldsTheLatch_untilLimitPlusDiff()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restartDiff_slotHoldsTheLatch_untilLimitPlusDiff" duration-ms="5036" started-at="2026-10-25T04:16:55Z" finished-at="2026-10-25T04:17:00Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restartDiff_slotHoldsTheLatch_untilLimitPlusDiff -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="unmountController" is-config="true" duration-ms="127" started-at="2026-10-25T04:17:00Z" finished-at="2026-10-25T04:17:00Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restoreClassLoader" is-config="true" duration-ms="1" started-at="2026-10-25T04:17:00Z" finished-at="2026-10-25T04:17:00Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="trip_isPublishedOnAllThreeStatusSlots()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="trip_isPublishedOnAllThreeStatusSlots" duration-ms="25" started-at="2026-10-25T04:17:00Z" finished-at="2026-10-25T04:17:00Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- trip_isPublishedOnAllThreeStatusSlots -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:00Z" finished-at="2026-10-25T04:17:00Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="unmountController" is-config="true" duration-ms="81" started-at="2026-10-25T04:17:00Z" finished-at="2026-10-25T04:17:00Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:00Z" finished-at="2026-10-25T04:17:00Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="teardownStation()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="teardownStation" is-config="true" duration-ms="2035" started-at="2026-10-25T04:17:00Z" description="Teardown test station" finished-at="2026-10-25T04:17:02Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- teardownStation -->
+      </class> <!-- test.com.example.ModuleA.BHandLowSuctionWiringStationTest -->
+    </test> <!-- Command line test -->
+  </suite> <!-- ModuleATest_HandLowSuctionWiringStationTest -->
+  <suite name="ModuleATest_MinOffDefaultStationTest" duration-ms="26869" started-at="2026-10-25T04:17:02Z" finished-at="2026-10-25T04:17:29Z">
+    <groups>
+    </groups>
+    <test name="Command line test" duration-ms="26869" started-at="2026-10-25T04:17:02Z" finished-at="2026-10-25T04:17:29Z">
+      <class name="test.com.example.ModuleA.BMinOffDefaultStationTest">
+        <test-method status="PASS" signature="setupStation()[pri:0, instance:Min Off Default Station Test]" name="setupStation" is-config="true" duration-ms="9537" started-at="2026-10-25T04:17:02Z" description="Setup and start test station" finished-at="2026-10-25T04:17:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setupStation -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:12Z" finished-at="2026-10-25T04:17:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="autoRestart_atDefaultMinOff_isNotHeldOff()[pri:0, instance:Min Off Default Station Test]" name="autoRestart_atDefaultMinOff_isNotHeldOff" duration-ms="5059" started-at="2026-10-25T04:17:12Z" finished-at="2026-10-25T04:17:17Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- autoRestart_atDefaultMinOff_isNotHeldOff -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="24" started-at="2026-10-25T04:17:17Z" finished-at="2026-10-25T04:17:17Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:17Z" finished-at="2026-10-25T04:17:17Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="handRestart_atDefaultMinOff_isImmediate()[pri:0, instance:Min Off Default Station Test]" name="handRestart_atDefaultMinOff_isImmediate" duration-ms="5043" started-at="2026-10-25T04:17:17Z" finished-at="2026-10-25T04:17:22Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- handRestart_atDefaultMinOff_isImmediate -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:17Z" finished-at="2026-10-25T04:17:17Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="33" started-at="2026-10-25T04:17:22Z" finished-at="2026-10-25T04:17:22Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:22Z" finished-at="2026-10-25T04:17:22Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="handRestart_isNotBlocked_evenByANonzeroMinOff()[pri:0, instance:Min Off Default Station Test]" name="handRestart_isNotBlocked_evenByANonzeroMinOff" duration-ms="5050" started-at="2026-10-25T04:17:22Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- handRestart_isNotBlocked_evenByANonzeroMinOff -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:22Z" finished-at="2026-10-25T04:17:22Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="65" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="1" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="minOff_slotDefault_isZero()[pri:0, instance:Min Off Default Station Test]" name="minOff_slotDefault_isZero" duration-ms="1" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- minOff_slotDefault_isZero -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="7" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="minOn_slotDefault_isStillThreeMinutes()[pri:0, instance:Min Off Default Station Test]" name="minOn_slotDefault_isStillThreeMinutes" duration-ms="0" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- minOn_slotDefault_isStillThreeMinutes -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="teardownStation()[pri:0, instance:Min Off Default Station Test]" name="teardownStation" is-config="true" duration-ms="2034" started-at="2026-10-25T04:17:27Z" description="Teardown test station" finished-at="2026-10-25T04:17:29Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- teardownStation -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:17:27Z" finished-at="2026-10-25T04:17:27Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+      </class> <!-- test.com.example.ModuleA.BMinOffDefaultStationTest -->
+    </test> <!-- Command line test -->
+  </suite> <!-- ModuleATest_MinOffDefaultStationTest -->
+</testng-results>
