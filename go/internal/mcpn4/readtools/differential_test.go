@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
@@ -35,11 +34,7 @@ const stationTree = `{"": {"t": "baja:Folder", "h": "3"},
 // CPython and in Go, and requires the same reply text byte for byte: the JSON of a result, or
 // the error words (an internal error by its Python type), for well-formed and odd node shapes.
 func TestDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	g := golden.Open(t, "read-tools")
 	odd := func(k, v string) string { return `{"": {"t": "a:B"}, ` + `"` + k + `": ` + v + `}` }
 	cases := []struct{ tool, ord, args, tree string }{
 		{"n4_navigate", "station:|slot:/Folder", `{"depth": 3}`, stationTree},
@@ -95,14 +90,7 @@ print(json.dumps(out))`
 		rows = append(rows, map[string]string{"tool": c.tool, "ord": c.ord, "args": c.args, "tree": c.tree})
 	}
 	in, _ := json.Marshal(rows)
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, script)
-	cmd.Stdin = strings.NewReader(string(in))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
-	}
+	out := g.Run(script, in)
 	var want []string
 	if err := json.Unmarshal(out, &want); err != nil {
 		t.Fatal(err)
@@ -163,8 +151,7 @@ print(json.dumps([out, bool(case["file"]) and os.path.lexists(case["file"]) and
 // the row cap), the refusals, csv.writer's quoting and line ends, json.dump's bytes and a lone
 // surrogate that UTF-8 cannot encode. Progress timestamps are the only masked bytes.
 func TestBqlDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "bql-tools")
 	devices := "\ufeffSlot Path,Name,Type\nslot:/Drivers/N$201/D,D$2cx,a:Dev\nslot:/Drivers/M/localDevice,localDevice,a:Loc\n"
 	odd := "Name,B\n\" lead\",\"q\"\"uote\"\nA$0aB$00,\"\"\nx$ud800y$udc00,$ud800\nCaf$u00e9,\"line\r\nnext\"\n"
 	q := `{"base": "/Drivers", "query": "select name, b from x:Y"`
@@ -195,6 +182,8 @@ func TestBqlDifferentialPython(t *testing.T) {
 		{"n4_inventory", `{"base": "Drivers"}`, devices, 0, ""},
 	}
 	root := t.TempDir()
+	g.Alias(root, "$STATE_ROOT")                                           // the cases and replies name the state dirs under it
+	g.Mask(regexp.MustCompile(`\\"ts\\": \\"[^"\\]*\\"`), `\"ts\": \"T\"`) // progress stamps, masked below too
 	ts := regexp.MustCompile(`"ts": "[^"]*"`)
 	for i, c := range cases {
 		state := filepath.Join(root, fmt.Sprint(i), "state")
@@ -203,14 +192,7 @@ func TestBqlDifferentialPython(t *testing.T) {
 			file = filepath.Join(state, "bql", c.file)
 		}
 		in, _ := json.Marshal(map[string]any{"tool": c.tool, "args": c.args, "body": c.body, "cap": c.cap, "state": state, "file": file})
-		cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, bqlScript)
-		cmd.Stdin = strings.NewReader(string(in))
-		var stderr strings.Builder
-		cmd.Stderr = &stderr
-		out, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("case %d python: %v\n%s", i, err, stderr.String())
-		}
+		out := g.Run(bqlScript, in)
 		var want []any
 		if err := json.Unmarshal(out, &want); err != nil {
 			t.Fatal(err)

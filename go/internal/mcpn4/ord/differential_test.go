@@ -1,13 +1,11 @@
 package ord
 
 import (
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 const helperScript = `import json, sys
@@ -64,8 +62,7 @@ var parents = []string{"station:", "station:|", "station:||", "station:|slot:/",
 var names = []string{"X", "", "a/b", "a|b", "..", ".", "...", "A/B", "A//B", "/A", "A/", "é", "\xed\xa0\x80", "a b", "a\\b"}
 
 func TestScopeAndJoinDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
+	g := golden.Open(t, "scope-join")
 	in := pyjson.NewObject()
 	var scopeList []any
 	for _, s := range scopes {
@@ -82,14 +79,7 @@ func TestScopeAndJoinDifferentialPython(t *testing.T) {
 	// Go sees what Python sees: the table after one JSON round trip (an int is a Number).
 	loaded, _ := pyjson.Loads(data)
 	table, _ := loaded.(*pyjson.Object).Get("ords")
-	cmd := exec.Command(py, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); exec(sys.argv[2])", kit, helperScript)
-	cmd.Stdin = strings.NewReader(string(data))
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python: %v\n%s", err, stderr.String())
-	}
+	out := g.Run(helperScript, data)
 	var got []any
 	verdict := func(err error) string {
 		if err != nil {
