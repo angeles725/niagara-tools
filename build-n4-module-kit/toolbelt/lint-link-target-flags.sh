@@ -8,7 +8,15 @@
 #              target when (a) the comment block heading its run of consecutive annotations says
 #              "link-in", "linked from", "commissioning link" or "written by (a) BLink"
 #              (case-insensitive; the block ends at a blank line, code or another annotation),
-#              or (b) it is a backticked first-column slot of Table 2 (control -> facade) in the
+#              or (b) a comment block anywhere above it, such as the class javadoc above @NiagaraType,
+#              NAMES it in code formatting (`status` or {@code status}) in a sentence with a link
+#              keyword: those of (a), "link target", or link/links/linked within four words of
+#              from/into/to ("the integrator links control points into {@code status}"). Each keyword
+#              marks one name: the last one before a "from" keyword, else the first one after the
+#              keyword, else the nearest one before it; a sentence that names no slot marks none, so a
+#              keyword alone never marks every slot of the class. Row reason: (class comment).
+#              [ev: retro r10-ltf1-marker-reset]
+#              or (c) it is a backticked first-column slot of Table 2 (control -> facade) in the
 #              --wiring-map file (generate-wiring-map.sh layout) whose Source RT slot names a source
 #              (an unfilled `_(fill)_`, empty, self, n/a, none or dash source = the slot is self-set).
 #              READONLY stays legal for a slot the owning component/reader sets itself and no
@@ -22,7 +30,8 @@
 #              A non-OPERATOR computed status mode may stay TRANSIENT. [ev: retro panccadia-persistent-config-hoa Δ1]
 #
 # Heuristic limits (documented, grep-level): a link-in target with neither a comment nor a wiring-map
-# row is invisible to LTF1 — keep the module comment convention or pass --wiring-map. Flags are
+# row is invisible to LTF1 — keep the module comment convention or pass --wiring-map. A class comment
+# marks only a slot it names in code formatting; a bare word ("links into status") marks nothing. Flags are
 # matched as the READONLY / TRANSIENT / OPERATOR tokens anywhere in the annotation's code: a flag word in a
 # string (a defaultValue) or in a comment inside the annotation is not a flag, and a commented-out
 # @NiagaraProperty is not a property (truth fix 2026-10-24; real trees unchanged: Cliente 21, decompiled 0).
@@ -35,6 +44,8 @@
 # Mutation: LTF-header -- detecting the header on any row drops a data row whose display name starts with Source
 # Mutation: LTF-transient -- dropping the TRANSIENT operator-mode check lets a non-persisted HOA pass
 # Mutation: LTF-code -- reading the annotation's raw text FAILs a flag word in a defaultValue string or a commented-out annotation
+# Mutation: LTF-classdoc -- clearing the comment block at @NiagaraType loses the slot the class javadoc names
+# Mutation: LTF-classdoc-named -- marking every slot of a javadoc with a link keyword FAILs setpoint and defrostStart
 # Mutation: LTF-mapread -- going on with no Table 2 target passes a mapped READONLY slot clean on an unreadable map
 #
 # Implementation: rule package go/internal/lint/rules/linktargetflags on the shared engine go/internal/lint

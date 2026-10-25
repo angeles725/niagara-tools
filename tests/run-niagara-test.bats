@@ -54,3 +54,9 @@ setup() {
   [ "$status" -eq 2 ] || { echo "$output"; return 1; }
   [[ "$output" == *'run: unexpected argument "yes"'* ]]
 }
+
+@test "RNT8: run --log-dir needs a value: a bare --log-dir is exit 2, before copying anything" {
+  run "$R" run --install 'C:\Niagara\N4' --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA --log-dir
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *'flag needs an argument: -log-dir'* ]]
+}
