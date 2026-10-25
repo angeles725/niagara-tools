@@ -1,6 +1,7 @@
 package box
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -32,6 +33,9 @@ type Config struct {
 	InsecureTLS, AllowHTTP      bool
 	LoadWait                    float64
 	MaxReplyBytes               int
+	// Interrupt cancels every request in flight or to come when done (the server's Ctrl-C or
+	// SIGTERM); nil never cancels. The session's del outlives it: see Close.
+	Interrupt context.Context
 }
 
 // Client is box.BoxClient. It is not safe for concurrent use, like the Python client.
@@ -49,6 +53,7 @@ type Client struct {
 	// Sleep pauses between load polls (seconds); tests replace it to record the schedule.
 	Sleep func(seconds float64)
 
+	interrupt        context.Context
 	seq              int
 	sid              any
 	pending          []any
@@ -69,10 +74,14 @@ func New(cfg Config) (*Client, error) {
 	c := &Client{baseURL: strings.TrimRight(cfg.BaseURL, "/"), username: cfg.Username,
 		timeout: cfg.Timeout, insecureTLS: cfg.InsecureTLS, LoadWait: cfg.LoadWait,
 		MaxReplyBytes: cfg.MaxReplyBytes,
+		interrupt:     cfg.Interrupt,
 		auth:          "Basic " + base64.StdEncoding.EncodeToString([]byte(cfg.Username+":"+cfg.Password)),
 		Sleep:         func(s float64) { time.Sleep(time.Duration(s * float64(time.Second))) }}
 	if c.timeout <= 0 {
 		c.timeout = DefaultTimeout
+	}
+	if c.interrupt == nil {
+		c.interrupt = context.Background()
 	}
 	if c.LoadWait <= 0 {
 		c.LoadWait = MaxPollWait
@@ -105,6 +114,11 @@ func (c *Client) authError(code int, channel, key string) *Error {
 
 // Call is BoxClient.call: one BOX frame, the reply's first message body.
 func (c *Client) Call(channel, key string, body any) (any, error) {
+	return c.call(c.interrupt, channel, key, body)
+}
+
+// call is Call on ctx: the request is cancelled when ctx is done.
+func (c *Client) call(ctx context.Context, channel, key string, body any) (any, error) {
 	c.seq++
 	frame := obj("p", "box", "v", ProtocolVersion,
 		"m", []any{obj("r", 0, "t", "rt", "c", channel, "k", key, "b", body)}, "n", c.seq)
@@ -115,7 +129,7 @@ func (c *Client) Call(channel, key string, body any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.do("POST", "/box/", data, map[string]string{"Content-Type": "application/json"},
+	resp, err := c.do(ctx, "POST", "/box/", data, map[string]string{"Content-Type": "application/json"},
 		0, c.MaxReplyBytes+1)
 	if err != nil {
 		return nil, c.mapError(err, channel, key, false)

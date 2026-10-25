@@ -356,12 +356,11 @@ def unresolved_twins():
                   if "%s.%s.%s" % e[:3] not in PYTHON_ONLY and not twin_resolves(e, tests, ports))
 
 
-#: Markers whose twin resolves to nothing (docs/go-port-plan.md sections 19 and 21). Frozen and
-#: checked both ways: an entry that starts to resolve or disappears must be deleted, and the
+#: Markers whose twin resolves to nothing (docs/go-port-plan.md sections 19, 21 and 22). Frozen
+#: and checked both ways: an entry that starts to resolve or disappears must be deleted, and the
 #: list never grows past TWIN_DEBT_CEILING.
-TWIN_DEBT_CEILING = 2
+TWIN_DEBT_CEILING = 1
 TWIN_DEBT = frozenset([
-    "test_box.TestLockoutSafeOpen.test_interrupt_after_make_still_closes_the_server_session",
     "test_server.TestRobustness.test_serve_exits_cleanly_on_keyboard_interrupt_and_closes",
 ])
 

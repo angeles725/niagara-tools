@@ -58,9 +58,9 @@ func (c *deadlineConn) Write(b []byte) (int, error) {
 	return c.Conn.Write(b)
 }
 
-// do sends one request and reads at most limit bytes of a 2xx body. It returns *response, or an
-// error: *httpStatus, *Error (a refused redirect) or *transportFailure.
-func (c *Client) do(method, path string, body []byte, header map[string]string, timeout float64, limit int) (*response, error) {
+// do sends one request on ctx and reads at most limit bytes of a 2xx body. It returns *response,
+// or an error: *httpStatus, *Error (a refused redirect) or *transportFailure.
+func (c *Client) do(ctx context.Context, method, path string, body []byte, header map[string]string, timeout float64, limit int) (*response, error) {
 	if timeout <= 0 {
 		timeout = c.timeout
 	}
@@ -87,7 +87,7 @@ func (c *Client) do(method, path string, body []byte, header map[string]string, 
 	if body != nil {
 		rd = bytes.NewReader(body)
 	}
-	req, err := http.NewRequest(method, c.baseURL+path, rd)
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, rd)
 	if err != nil {
 		return nil, &transportFailure{"<urlopen error " + err.Error() + ">"}
 	}
