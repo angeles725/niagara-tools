@@ -20,3 +20,12 @@ setup() {
   [ "$status" -eq 1 ] || { echo "$output"; return 1; }
   [[ "$output" == *"FAIL  run-niagara-test  line 1: run 0, failures -, skips -; no tests ran (Total tests run: 0)"* ]]
 }
+
+@test "RNT3: --testng on a results file whose setup failed and skipped its tests is FAIL, exit 1" {
+  printf '<testng-results skipped="1" failed="0" ignored="0" total="1" passed="0"><suite name="S"><test name="T">%s%s</test></suite></testng-results>\n' \
+    '<class name="test.com.example.ModuleA.BExampleStationTest"><test-method status="FAIL" name="setupStation" is-config="true"/>' \
+    '<test-method status="SKIP" name="reads_value"/></class>' > "$BATS_TEST_TMPDIR/testng-results.xml"
+  run "$R" verdict --testng "$BATS_TEST_TMPDIR/testng-results.xml"
+  [ "$status" -eq 1 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"FAIL  run-niagara-test  testng: test-method setupStation FAIL (config)"* ]]
+}

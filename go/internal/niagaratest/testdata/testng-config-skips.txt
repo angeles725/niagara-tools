@@ -1,0 +1,28 @@
+-- args --
+verdict
+--testng
+@DIR@/testng-results.xml
+-- want --
+exit 1
+FAIL  run-niagara-test  testng: total 2, passed 0, failed 0, skipped 2
+FAIL  run-niagara-test  testng: 2 skipped (a failed setup skips its tests)
+FAIL  run-niagara-test  testng: 1 failed config method
+FAIL  run-niagara-test  testng: test-method setupStation FAIL (config)
+FAIL  run-niagara-test  verdict: 2 FAIL reasons
+-- @kind --
+truth: hand-written from the C40 contract and a real testng-results.xml shape (testdata/README.md)
+-- testng-results.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results skipped="2" failed="0" ignored="0" total="2" passed="0">
+  <reporter-output/>
+  <suite name="S" duration-ms="4200">
+    <groups/>
+    <test name="T" duration-ms="4200">
+      <class name="test.com.example.ModuleA.BExampleStationTest">
+        <test-method status="FAIL" signature="setupStation()[pri:0]" name="setupStation" is-config="true" duration-ms="10"/>
+        <test-method status="SKIP" signature="reads_value()[pri:0]" name="reads_value" duration-ms="10"/>
+        <test-method status="SKIP" signature="writes_value()[pri:0]" name="writes_value" duration-ms="10"/>
+      </class>
+    </test>
+  </suite>
+</testng-results>

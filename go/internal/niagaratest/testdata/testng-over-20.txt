@@ -1,0 +1,66 @@
+-- args --
+verdict
+--testng
+@DIR@/testng-results.xml
+-- want --
+exit 1
+FAIL  run-niagara-test  testng: total 22, passed 0, failed 22, skipped 0
+FAIL  run-niagara-test  testng: 22 failed
+FAIL  run-niagara-test  testng: test-method case_01 FAIL
+FAIL  run-niagara-test  testng: test-method case_02 FAIL
+FAIL  run-niagara-test  testng: test-method case_03 FAIL
+FAIL  run-niagara-test  testng: test-method case_04 FAIL
+FAIL  run-niagara-test  testng: test-method case_05 FAIL
+FAIL  run-niagara-test  testng: test-method case_06 FAIL
+FAIL  run-niagara-test  testng: test-method case_07 FAIL
+FAIL  run-niagara-test  testng: test-method case_08 FAIL
+FAIL  run-niagara-test  testng: test-method case_09 FAIL
+FAIL  run-niagara-test  testng: test-method case_10 FAIL
+FAIL  run-niagara-test  testng: test-method case_11 FAIL
+FAIL  run-niagara-test  testng: test-method case_12 FAIL
+FAIL  run-niagara-test  testng: test-method case_13 FAIL
+FAIL  run-niagara-test  testng: test-method case_14 FAIL
+FAIL  run-niagara-test  testng: test-method case_15 FAIL
+FAIL  run-niagara-test  testng: test-method case_16 FAIL
+FAIL  run-niagara-test  testng: test-method case_17 FAIL
+FAIL  run-niagara-test  testng: test-method case_18 FAIL
+FAIL  run-niagara-test  testng: test-method case_19 FAIL
+FAIL  run-niagara-test  testng: test-method case_20 FAIL
+FAIL  run-niagara-test  testng: and 2 more failed test-methods
+FAIL  run-niagara-test  verdict: 1 FAIL reason
+-- @kind --
+truth: hand-written from the C40 contract and a real testng-results.xml shape (testdata/README.md)
+-- testng-results.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results skipped="0" failed="22" ignored="0" total="22" passed="0">
+  <reporter-output/>
+  <suite name="S" duration-ms="4200">
+    <groups/>
+    <test name="T" duration-ms="4200">
+      <class name="test.com.example.ModuleA.BExampleStationTest">
+        <test-method status="FAIL" signature="case_01()[pri:0]" name="case_01" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_02()[pri:0]" name="case_02" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_03()[pri:0]" name="case_03" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_04()[pri:0]" name="case_04" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_05()[pri:0]" name="case_05" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_06()[pri:0]" name="case_06" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_07()[pri:0]" name="case_07" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_08()[pri:0]" name="case_08" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_09()[pri:0]" name="case_09" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_10()[pri:0]" name="case_10" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_11()[pri:0]" name="case_11" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_12()[pri:0]" name="case_12" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_13()[pri:0]" name="case_13" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_14()[pri:0]" name="case_14" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_15()[pri:0]" name="case_15" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_16()[pri:0]" name="case_16" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_17()[pri:0]" name="case_17" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_18()[pri:0]" name="case_18" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_19()[pri:0]" name="case_19" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_20()[pri:0]" name="case_20" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_21()[pri:0]" name="case_21" duration-ms="10"/>
+        <test-method status="FAIL" signature="case_22()[pri:0]" name="case_22" duration-ms="10"/>
+      </class>
+    </test>
+  </suite>
+</testng-results>
