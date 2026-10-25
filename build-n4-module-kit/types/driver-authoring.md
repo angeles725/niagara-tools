@@ -937,7 +937,59 @@ only driver test template is the video driver's,
   `@AgentOn` the driver's point device ext, § 1.6; a `BBasicNetwork` driver ships a manager `@AgentOn` its network or
   device, PD-01 § 1.3). Any other module prints no driver row. The enum-proxy range (§ 2) is a station facet set at
   commissioning, so the gate does not check it `[ev: retro r10-dr4-verify-driver Δ1]`.
-- Owed: a station-side loopback example built through the kit loop (DR5).
+
+### 12.1 · The scaffold's station test, and how it ran `[ev: retro r10-dr5-driver-exemplar Δ1]`
+
+The driver scaffold ships `srcTest/test/com/<vendor>/<Mod>/B<Mod>LoopbackTest.java` (a `BTestNgStation`, registered
+only in `moduleTest-include.xml`) and `<Mod>LoopbackDevice.java`, a plain-Java mock on `127.0.0.1` port 0 that
+answers with the driver's own codec and records every request, answered or not. Six cases, each waiting with
+`TestHelper.assertWillBeTrue`: an answered ping calls `pingOk` (a fresh `health.lastOkTime`; a new device is not
+down before its first ping, so `!isDown()` alone proves nothing), an unanswered ping makes the device down, a
+subscribed proxy reads the register with status ok, a write reaches the mock, a poll timeout faults the point and
+is followed by a ping, and the network's `submitDiscoveryJob` action finds the mock.
+
+What ran (2026-10-24, OptimizerSupervisor 4.14.0.162, scaffold `DemoDriver`, throwaway signer):
+- `build.sh` into a mirror: `verify-module: 27 passed, 0 failed, 9 skipped, 0 warned -> ALL PASS`, the moduletest
+  row `PASS  moduletest … moduleTest-include.xml present` (DR2's WARN is gone); `./gradlew :<Mod>-rt:moduleTestJar`
+  (same mirror isolation) compiles the test and installs `<Mod>-rtTest.jar`.
+- `niagaraTest` only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
+  (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so the run used `bin\test.exe DemoDriver -v:2 -output:…` directly:
+  `Total tests run: 6, Failures: 0, Skips: 0`, the six cases in about 20 s after the boot.
+- RED: the mock answering every request with device-error status 1 failed the suite; the mock answering with the
+  wrong sequence number failed 5 of 6 (see the aliasing note below).
+
+Running it from WSL — each step is a failure seen on the way:
+- **A symlink mirror is invisible to Windows:** through `\\wsl.localhost` its `bin\` is a dangling junction. Copy the
+  real files (`bin etc jre lib security defaults modules`, 1.3 GB) into a scratch dir, add the built jars and
+  `<Mod>-rtTest.jar` to its `modules\`, and reach it with `pushd \\wsl.localhost\<distro>\<path>` in a `.cmd`
+  (cmd.exe maps a drive letter; it rejects a UNC cwd).
+- **The user home must be on a Windows-local drive:** `test.exe` honours the `niagara_user_home` environment
+  variable, but on the UNC drive the NRE stops with `FileLockException: error obtaining lock for …\security\.km`.
+  Point it at a fresh scratch dir under `%TEMP%`, never the real `Niagara4.x` user home, and delete it afterwards.
+- **First boot is slow:** about 16 min (registry rebuilt, 14206 types, plus the module signature registry); later
+  boots about 10 min over `\\wsl.localhost`. A stray jar whose module name has a dot (`nmodsreflow.77-rt.jar`) made
+  every boot rebuild the registry (`Out-of-date: Module added …`); leave such jars out of the copy.
+- **`BTestNgStation.startStation` requires a serving Fox service** (`BTestNgStation.java:191-192` takes the first
+  `BFoxService` child): `makeDefaultAuthFoxServices = false` fails setup with `ArrayIndexOutOfBoundsException: 0`
+  and skips every test. Keep Fox and give it a free port (`foxPort`, default 1911, is taken whenever a station or
+  platform runs on the host).
+- **`test.exe` exits 0 with failing tests:** read `Total tests run: N, Failures: F` (§ `types/moduleTest.md` Running
+  from WSL). A third-party thread the runner cannot stop (`Thread.stop()` warning after the summary) is install noise.
+- **An untrusted signer did not block the run here:** the loader WARNed `Could not validate cert chain` for both
+  jars and still loaded and ran them (fresh user home, this install's default verification mode).
+- **The signing key needs the code-signing usage:** a plain `keytool -genkeypair` key fails `:jar` with
+  `Certificate for <alias> is not valid for code signing`; add `-ext EKU=codeSigning -ext KU=digitalSignature`.
+
+**Context-form discovery, checked live:** the network declares `submitDiscoveryJob` and implements only
+`doSubmitDiscoveryJob(BNDiscoveryPreferences, Context)`; neither `BNNetwork` nor its supers declare a one-argument
+form, so the introspector falls back to the Context form (`ComplexIntrospector.java:316-333`, `doTakesContext`).
+Invoked with `new BasicContext(getTestSuperUser())`, the action returned the job ord, the job ended `success` and
+found the mock's device id: that do method is the one Baja calls. `[ev: retro r10-dr5-driver-exemplar Δ2]`
+
+**Tag aliasing seen in the RED run:** with the mock answering request `n` with tag `n + 1`, the answered-ping case
+still passed. The likely cause is a late reply to an earlier ping (the network's own startup ping) carrying the
+next ping's tag and completing it, since no frame field tells the two apart `[INFER]`. A real device that echoes stale replies does the same; only a per-request nonce in the frame closes
+it. `[ev: retro r10-dr5-driver-exemplar Δ3]`
 
 ---
 

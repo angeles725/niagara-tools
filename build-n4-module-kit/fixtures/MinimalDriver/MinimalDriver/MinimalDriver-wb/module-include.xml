@@ -1,4 +1,9 @@
 <types>
   <!--com.angeles.MinimalDriver.wb-->
-  <type class="com.angeles.MinimalDriver.wb.BMinimalDriverPointManager" name="MinimalDriverPointManager"/>
+  <type class="com.angeles.MinimalDriver.wb.BMinimalDriverPointManager" name="MinimalDriverPointManager">
+    <agent>
+      <on type="MinimalDriver:MinimalDriverPointDeviceExt"/>
+      <on type="MinimalDriver:MinimalDriverPointFolder"/>
+    </agent>
+  </type>
 </types>
