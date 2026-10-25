@@ -51,6 +51,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uberjarapi"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/vacuoustests"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/writepath"
@@ -110,6 +111,7 @@ func All() []lint.Spec {
 		ndriverstaticcollection.Spec(),
 		ndrivertaglesscorrelation.Spec(),
 		bacnetstatusflags.Spec(),
+		vacuoustests.Spec(),
 		batserrexit.Spec(),
 	}
 }
