@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · r10-run-niagara-test-run
@@ -51,3 +51,13 @@ the copy, run `bin\test.exe <module> -v:2 -output:` with a scratch `niagara_user
 - A cmd.exe child started from WSL outlives the WSL process that started it; a timeout must find and kill the
   Windows process tree itself.
 - Refusing metacharacters in every path is cheaper and safer than escaping for cmd.exe and PowerShell at once.
+
+## Fold
+- The runner is code already shipped in the PR that wrote this retro (`go/internal/niagaratest/run.go`, `host.go`, `toolbelt/run-niagara-test.sh`); not re-implemented.
+- Δ1 was cited at merge in `types/moduleTest.md` § Running from WSL.
+- Δ2 → the § Running from WSL refusal bullet, now naming the fail-closed probe (`TestRunRefusals` "guard 3: the probe cannot tell").
+- Δ3 → the § Running from WSL cleanup bullet, not `types/driver-authoring.md` § 12.1, which defers to that section for the runner (`TestRunTimeoutKillsTree`, `run.go` taskkill by PID).
+- "Not done here" (no live run) was closed by the live fixes of retro r10-rnt-run-live-fixes. Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-4`; log in `ledger.d/2026-10-25-r10-fold-tail4.md`) — Δ1-Δ3 in `types/moduleTest.md` § Running from WSL.

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-24 · kit · r10-run-niagara-test-testng
@@ -66,3 +66,12 @@ stdout held only shutdown thread dumps. The finished run showed where the summar
   along, and a stdout-only capture made a working run look broken.
 - A `cmd /c` one-liner that echoes `%ERRORLEVEL%` reports the code from before the command ran; measure exit
   codes with delayed expansion before writing them down as a gotcha.
+
+## Fold
+- The verdict is code already shipped in the PR that wrote this retro (`go/internal/niagaratest/testng.go`, `verdict --testng`); not re-implemented.
+- Δ1 and Δ3 were cited at merge in `types/moduleTest.md` § Known gotchas (Δ3 also in `types/driver-authoring.md` § 12.1); Δ4 in `types/driver-authoring.md` § 12.1.
+- Δ2 → `BUILD-LOOP.md` § 5 fail-closed bullet (`testdata/testng-config-skips.txt`); the moduleTest gotcha already states the case for test.exe.
+- "Not done here" (the runner half of G33) shipped as retro r10-run-niagara-test-run. Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-4`; log in `ledger.d/2026-10-25-r10-fold-tail4.md`) — Δ1, Δ3 in `types/moduleTest.md` § Known gotchas; Δ2 in `BUILD-LOOP.md` § 5 fail-closed bullet; Δ4 in `types/driver-authoring.md` § 12.1.

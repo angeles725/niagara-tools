@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-25 · kit · r10-rnt-exclude-jar
@@ -33,3 +33,10 @@ the copy. Each rule got a fake-runner RED first; no Windows boot was run:
 
 ## Lessons
 - A filter flag whose glob can match nothing must fail loudly: a silent no-op exclusion leaves the stale jar in the copy and the run green for the wrong reason.
+
+## Fold
+- The flag is code already shipped in the PR that wrote this retro (`go/internal/niagaratest/exclude.go`, `run_exclude_test.go`); not re-implemented.
+- Δ1 was cited at merge in `types/moduleTest.md` § Running from WSL (the `--exclude-jar` bullet). No doctrine text added; the lesson (a glob matching nothing fails loudly) is in that bullet. Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-4`; log in `ledger.d/2026-10-25-r10-fold-tail4.md`) — Δ1 in `types/moduleTest.md` § Running from WSL.

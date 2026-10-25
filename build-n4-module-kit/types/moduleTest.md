@@ -224,11 +224,11 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   `-Porg.gradle.java.installations.paths` the WSL `--jdk8`, which overrides a client `gradle.properties` naming a
   Windows JDK; `GRADLE_USER_HOME` the caller's cache, so the gradle distribution is not downloaded per run), runs `bin\test.exe <module> -v:2 -output:` on it,
   and judges `testng-results.xml` with `verdict --testng` (stderr as the console log; a non-zero exit with green
-  results is FAIL).
+  results is FAIL) `[ev: retro r10-rnt-run-live-fixes Δ4]`.
 - It refuses (exit 2) an install under a user home, without `bin/test.exe`, or used by a running `station.exe`,
   `nre.exe`, `java.exe` or `wb.exe` (by command line or executable path), or with a `stations\*\config.bog.lock`
-  another process holds open (a service's `station.exe`, whose path a non-elevated probe cannot read, is attributed
-  through its `niagarad` service's `PathName`; one that cannot be attributed is refused); a scratch outside `%TEMP%`; a build home inside the install. The install is never
+  another process holds open, and a probe that cannot tell refuses too `[ev: retro r10-run-niagara-test-run Δ2]` (a service's `station.exe`, whose path a non-elevated probe cannot read, is attributed
+  through its `niagarad` service's `PathName`; one that cannot be attributed is refused `[ev: retro r10-rnt-run-live-fixes Δ3]`); a scratch outside `%TEMP%`; a build home inside the install. The install is never
   written: a change in its `modules/`, `etc/`, `security/` or top level is FAIL.
 - The scratch user home reaches the NRE through the environment: `bin/test.exe` runs straight from WSL with the
   copy as cwd, `niagara_user_home=<Windows path>` and `WSLENV` extended with `niagara_user_home/w` (the NRE reads
@@ -239,7 +239,8 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   and `security\` is compared before the copy and after cleanup, and a change there, or a scratch
   `niagara_user_home` without the `etc\` and `security\` the NRE creates, is FAIL `[ev: retro r10-rnt-run-live-fixes Δ1]`.
 - Cleanup runs on every path: it kills this run's Windows processes by PID (`taskkill /PID <pid> /T /F`), confirms
-  none is left, and deletes only the dir it created (kept with `--keep-home`). Exits: 0 PASS, 1 FAIL, 2 usage or
+  none is left (a WSL interop process that dies leaves its Windows process running, so only the PID kill bounds a
+  timed-out run `[ev: retro r10-run-niagara-test-run Δ3]`), and deletes only the dir it created (kept with `--keep-home`). Exits: 0 PASS, 1 FAIL, 2 usage or
   refused, 3 environment (cmd.exe, git, robocopy, gradle, cleanup), 4 timeout (the run is killed).
 - The first boot of a copy takes about 4.5 min (registry rebuild); later boots 26-80 s. The copy itself takes
   about 5 s; one batched boot of every class of a module took 7-10 min, so budget a mutation RED per boot

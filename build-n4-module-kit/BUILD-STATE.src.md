@@ -207,7 +207,7 @@ version: 0.32.1                      # current repo VERSION (mcp-n4 Go signal fi
 last_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state
 open_issues:
 retro_required: true                 # GATED — deferred-lints close retro filed: retros/2026-10-03-deferred-lints-2026-10-03-close.md (5 deltas, pending)
-retro_pending: true                  # set 2026-10-25 by retro r10-go-tool-walk-scope (pending); cleared 2026-10-25 (round-10 fold sweep, branch docs/r10-fold-tail3): every kit retro under retros/ is folded, r10-client-gate-retro last (Δ1 #540, Δ4 #539); cleared 2026-10-24 by docs/r10-fold-tail2 and set again by the later round-10 retros
+retro_pending: false                 # cleared 2026-10-25 (round-10 fold sweep, branch docs/r10-fold-tail-4): every kit retro under retros/ is folded, r10-go-tool-walk-scope last; set 2026-10-25 by retro r10-go-tool-walk-scope; cleared 2026-10-25 (branch docs/r10-fold-tail3): every kit retro under retros/ is folded, r10-client-gate-retro last (Δ1 #540, Δ4 #539); cleared 2026-10-24 by docs/r10-fold-tail2 and set again by the later round-10 retros
 last_commit: 905d597                  # P7c merge (PR #225); the close/release merge is the v0.30.0 tag
 last_session: the log lines below    # session log, oldest first; generated from ledger.d/
 <!-- /build-state.v1 -->

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-25 · kit · r10-go-tool-walk-scope
@@ -42,5 +42,10 @@ running with the old asset. Non-.go files now count, so such an edit triggers a 
   assets included, is still in it.
 - A prune is safe only while a test pins its assumption: here, no non-test file embeds from `testdata/`.
 
+## Fold
+- The narrowed walk is code already shipped in the PR that wrote this retro (`go/go-tool.sh` `go_tool_bin`, `tests/go-tool.bats` GT10-GT14); not re-implemented.
+- Δ1 and Δ2 → `BUILD-LOOP.md` § 5 Go-first bullet, not `CONTRIBUTING.md` § 2.2: that file is outside the kit and its citations are not counted by the fold audit; the Go-first bullet links to it for the layout.
+- Lesson 3 (a prune is safe only while a test pins its assumption) is GT14, cited with Δ1. Nothing owed.
+
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-25-r10-go-tool-walk-scope.md | kit | 2026-10-25 | pending | 2 |`
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-4`; log in `ledger.d/2026-10-25-r10-fold-tail4.md`) — Δ1, Δ2 in the `BUILD-LOOP.md` § 5 Go-first bullet.
