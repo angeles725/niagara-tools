@@ -47,7 +47,14 @@ proved boot 2. Each rule got a fake-runner RED first on generic `ModuleA` fixtur
 
 ## Fold
 - The proof is code in the branch that wrote this retro (`go/internal/niagaratest/nuhproof.go`).
-- Δ1 is cited in `types/moduleTest.md` § Running from WSL (the scratch-home-written bullet). Owed: the live check on the next client reuse run.
+- Δ1 is cited in `types/moduleTest.md` § Running from WSL (the scratch-home-written bullet). The live check ran on 2026-10-25 (see Live evidence).
+
+## Live evidence (2026-10-25, a client root on a 4.15 disposable copy, names only)
+Files under `nuh\` that the NRE wrote inside the boot window. The row names at most 5; the counts are the row's totals.
+- Fresh boot, 9 files: `logging/logging.properties`, `registry/registry.chk`, `registry/registry.db`, `security/.kr`, `security/exemptions.tes`, and 4 more.
+- `--keep-home` boot, 7 files: `logging/logging.properties`, `registry/registry.chk`, `registry/registry.db`, `security/.kr`, `security/signing/signers`, and 2 more.
+- `--reuse-home` boot on that kept home, 4 files: `registry/registry.chk`, `registry/registry.db`, `security/signing/signers`, `test/station/shared/<module data file>`.
+- On every boot the NRE rewrote `registry/registry.chk` and `registry/registry.db`. Re-check this list after an NRE or plugin upgrade: if a later version stops rewriting them, the row still holds as long as some other file qualifies.
 
 ---
 **Status**: FOLDED 2026-10-25 (branch `r10/rnt-reuse-nre-proof`; log in `ledger.d/2026-10-25-r10-rnt-reuse-nre-proof.md`) — Δ1 in `types/moduleTest.md` § Running from WSL.

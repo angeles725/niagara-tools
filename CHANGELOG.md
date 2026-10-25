@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+### Added — run-niagara-test proves the NRE wrote into the scratch home
+
+- Every `run` now proves that the NRE wrote into the scratch `niagara_user_home` during this boot: some regular file under `nuh\` must be new or changed since just before test.exe started, with its mtime inside the boot window (±2 s skew), or the run FAILs. The PASS row names the files. This closes the `--reuse-home` gap where a kept home's `etc\` and `security\` already existed from the earlier boot. Checked live on fresh, keep-home and reuse-home boots.
+
 ---
 
 ## [v0.32.1] - 2026-10-25
