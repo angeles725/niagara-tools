@@ -18,15 +18,18 @@ const maxReason = 200
 // ITestContext.getExcludedMethods() to the root ignored attribute, and XMLSuiteResultWriter writes test-method
 // elements for the passed, failed and skipped results alone. So verdict's allowance is a count with its reason: the
 // file names no method. run names them from the source instead (ignoredsrc.go): Names waives exactly that set
-// (--allow-ignored), and Count stays the fallback that skips the source. Count 0 and no Names is no allowance.
+// (--allow-ignored), and Count is the fallback for a source that cannot name it; run scans the source under the
+// count too, and a scan that names every ignored method FAILs the count. Count 0 and no Names is no allowance.
 type IgnoredAllowance struct {
 	Count  int
 	Reason string
 	Names  []string // --allow-ignored <Class.method>, sorted; never set with Count
 	// Source is the disabled test-methods the source names (disabledInSource), set by run when Scanned; then the
-	// gate compares them with the root count and with Names.
+	// gate compares them with the root count and with Names. Refused is why the scan could not name them (set by
+	// run under Count only: with names or no allowance a refusal stops the run).
 	Source  []string
 	Scanned bool
+	Refused string
 }
 
 // maxNames is how many --allow-ignored names run takes; methodRe is the shape of one (<Class>.<method>, a
@@ -102,14 +105,38 @@ func parseAllowance(count string, countSet bool, reason string, reasonSet bool) 
 	return IgnoredAllowance{Count: int(n), Reason: reason}, nil
 }
 
-// judgeIgnored compares the root ignored count with the allowance: ignored methods with no allowance, more than
-// allowed (a new disable) and fewer than allowed (a stale allowance) are each a reason; an exact match sets
-// Allowed, the row that prints the reason. A scanned source is judged by judgeNamed instead.
+// judgeIgnored compares the root ignored count with the allowance. A scanned source is judged by name
+// (judgeNamed); under the count fallback, a scan that names every ignored method refuses the count (the names
+// are the allowance), and otherwise judgeCount decides, the fallback's case printed on its row.
 func (r *TestNGResult) judgeIgnored(a IgnoredAllowance) {
-	if a.Scanned {
+	switch {
+	case a.Scanned && a.Count == 0:
 		r.judgeNamed(a)
-		return
+	case a.Scanned && r.Ignored > 0 && len(a.Source) == r.Ignored:
+		r.Reasons = append(r.Reasons, fmt.Sprintf("--allow-ignored-count %d refused: the source names every ignored test-method (%s): "+
+			"use --allow-ignored names (--allow-ignored <Class.method>... --allow-ignored-reason <why>); no reason waives a set the source names",
+			a.Count, named(a.Source)))
+	default:
+		r.judgeCount(a, r.fallbackCase(a))
 	}
+}
+
+// fallbackCase is why the count fallback applies, for its row: the scan refused (i), or the source and TestNG
+// counts differ (ii); "" when no source was read (verdict --testng).
+func (r *TestNGResult) fallbackCase(a IgnoredAllowance) string {
+	switch {
+	case a.Refused != "":
+		return "case (i): the source scan refused"
+	case a.Scanned:
+		return fmt.Sprintf("case (ii): the source disables %d, TestNG ignored %d", len(a.Source), r.Ignored)
+	}
+	return ""
+}
+
+// judgeCount compares the root ignored count with the allowed count: ignored methods with no allowance, more than
+// allowed (a new disable) and fewer than allowed (a stale allowance) are each a reason; an exact match sets
+// Allowed, the row that prints the reason (and why, the fallback's case, when set).
+func (r *TestNGResult) judgeCount(a IgnoredAllowance, why string) {
 	switch {
 	case a.Count == 0 && r.Ignored == 0:
 	case a.Count == 0:
@@ -122,7 +149,10 @@ func (r *TestNGResult) judgeIgnored(a IgnoredAllowance) {
 		r.Reasons = append(r.Reasons, fmt.Sprintf("%s, fewer than the %d allowed: a stale allowance, lower --allow-ignored-count to %d",
 			ignoredMethods(r.Ignored), a.Count, r.Ignored))
 	default:
-		r.Allowed = fmt.Sprintf("%s allowed (--allow-ignored-count %d): %s", ignoredMethods(r.Ignored), a.Count, a.Reason)
+		if why != "" {
+			why = ", " + why
+		}
+		r.Allowed = fmt.Sprintf("%s allowed (--allow-ignored-count %d%s): %s", ignoredMethods(r.Ignored), a.Count, why, a.Reason)
 	}
 }
 

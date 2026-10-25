@@ -29,8 +29,11 @@ usage: run-niagara-test verdict [<log>|-]
            <Class.method> (repeatable, with --allow-ignored-reason) waives exactly that set: a disabled method not
            named (new) or a name no source disables (stale) is FAIL, so swapping one disable for another fails
            although the count holds. A class-level @Test(enabled = false), an enabled value that is no literal or
-           a registered source the scanner cannot read is exit 3, before the build. run's count pair is the
-           fallback: it skips the source, and mixing it with --allow-ignored is exit 2. A <log>,
+           a registered source the scanner cannot read is exit 3, before the build. Every run prints the names
+           the scan found. run's count pair is the fallback for a source that cannot name the set: the scan still
+           runs, and the count is judged only when the scan refused (case (i): a NOTE row, not exit 3) or its
+           count differs from the root ignored (case (ii)); when it names every ignored method, the count is FAIL
+           ("use --allow-ignored names"), whatever the reason. Mixing it with --allow-ignored is exit 2. A <log>,
            when given (- for standard input; capture stderr, 2>&1), is a cross-check: its rejections and
            failure counts fail the run, its missing summary line does not.
   run      from WSL, copy the install (X:\... or /mnt/x/...) into a new dir under %TEMP% (or --scratch, under

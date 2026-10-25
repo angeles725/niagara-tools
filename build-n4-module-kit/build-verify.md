@@ -164,6 +164,14 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
   with the line removed, the plugin creates `user.home/.tridium/security/niagara.signing.{xml,jceks}` and the build
   passes signed `NIAGARA4` by a "For Development Purposes Only" Niagara4Modules certificate. `[CERT-live local build]`
   A production CA-issued profile was not exercised (none on that machine).
+- **A hand-written LocalSigningProfile needs validity - refresh >= 32 days, and lint-structure L16 FAILs one that
+  has less.** The signing plugin sets a new key's notAfter to day `validity` of the current month instead of adding
+  `validity` days, and re-mints the key when fewer than `refresh` days are left (niagara-plugins 7.6.22
+  `LocalSigningProfile.kt:386-388` and `:216-225`), so a 30/15 profile re-mints at every signing and its jars carry
+  a signature block no JVM verifies. `lint-structure.sh` L16 reads the `niagaraSigningProfile` the gradle root's
+  `gradle.properties` names and FAILs such a profile with both values; `run-niagara-test run` refuses the same
+  profile from the same predicate (`go/internal/signingprofile`). Use the plugin defaults, 365/183. Re-check the
+  plugin on an upgrade (the vendor-defect section of the retro). `[ev: retro r10-signing-margin-lint Δ1]`
 - **Six permission groups require a signed, trusted module:** `REFLECTION`, `ACCESS_CLASS`, `MBEAN_PERMISSION`,
   `THIRD_PARTY_PERMISSION`, `PROTECTION_DOMAIN`, `HSM_SIGNING` (`requiresSignature()` is true in exactly these six
   `com/tridium/security/*PermissionGroup` classes, vineflower 4.14.0.162; the devguide names only REFLECTION and

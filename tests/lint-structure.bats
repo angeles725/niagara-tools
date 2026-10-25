@@ -435,6 +435,56 @@ $_LS15_BLOCK
   done
 }
 
+# ---------------------------------------------------------------------------
+# L16 — the gradle root's gradle.properties names (niagaraSigningProfile) a LocalSigningProfile whose
+# validity - refresh is below 32 days: the signing plugin re-mints its key at every signing and the jars carry a
+# signature block no JVM verifies. One predicate with run-niagara-test (go/internal/signingprofile).
+# [ev: retro r10-signing-margin-lint Δ1]
+# ---------------------------------------------------------------------------
+_ls16_tree() {
+  # <root>/.git, gradle root <root>/Group (settings + gradle.properties naming signing/p.xml), profile <validity> <refresh>
+  _ls14_tree "$1" '  val gradlePluginVersion: String = providers.gradleProperty("niagaraPluginVersion").getOrElse("7.6.17")'
+  printf 'niagaraSigningProfile=signing/p.xml\n' > "$1/Group/gradle.properties"
+  mkdir -p "$1/Group/signing"
+  printf '<?xml version="1.0" encoding="UTF-8"?>\n<properties>\n<entry key="niagara.signing.validity">%s</entry>\n<entry key="niagara.signing.refresh">%s</entry>\n<entry key="niagara.signing.profileType">com.tridium.gradle.plugins.signing.profile.LocalSigningProfile</entry>\n</properties>\n' \
+    "$2" "$3" > "$1/Group/signing/p.xml"
+}
+
+@test "LS16-margin: a 30/15 LocalSigningProfile FAILs L16 naming both values; 214/183 (margin 31) FAILs; 365/183 passes" {
+  # Mutation: LS16-margin -- lowering signingprofile.MinMargin to 31 passes 214/183
+  ROOT=$(mktemp -d)
+  _ls16_tree "$ROOT" 30 15
+  run "$LS" "$ROOT/Group/Mod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-structure  $ROOT/Group/gradle.properties  L16: "*"niagara.signing.validity=30, niagara.signing.refresh=15"*"re-minted at every signing"* ]]
+  _ls16_tree "$ROOT" 214 183
+  run "$LS" "$ROOT/Group/Mod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"L16: "*"validity=214, niagara.signing.refresh=183"* ]]
+  _ls16_tree "$ROOT" 365 183
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 0 ] && [[ "$output" != *"L16"* ]]
+}
+
+@test "LS16-malformed: a profile value that is not a whole number is exit 3 with the read error, no verdict" {
+  ROOT=$(mktemp -d)
+  _ls16_tree "$ROOT" 'a year' 183
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-structure: cannot scan "*"p.xml: niagara.signing.validity=\"a year\" is not a whole number of days"* ]]
+}
+
+@test "LS16-none: a gradle root that declares no niagaraSigningProfile gets no L16 row" {
+  ROOT=$(mktemp -d)
+  _ls16_tree "$ROOT" 30 15
+  printf '# niagaraSigningProfile=signing/p.xml\n' > "$ROOT/Group/gradle.properties"
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 0 ] && [[ "$output" != *"L16"* ]]
+}
+
 @test "LS-symroot: a symlinked module root is walked like find -H, same rows as the directory (issue #329)" {
   # Mutation: LS-symroot -- dropping -H from the find in _find_files misses gradle.properties under a symlinked root.
   assert_symroot_same "$FX/client-gradleprops" "$LS" "$FX/client-gradleprops"
