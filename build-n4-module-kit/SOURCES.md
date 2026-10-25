@@ -3,8 +3,8 @@
 The 90% rule: before investigating anything, search the corpus. Most of module-building is already documented.
 
 ## Tools
-- **corpus-nav** — our own blocks: `python3 /home/cristian/niagara-research/tools/corpus-nav.py find|grep|show|connections|by-marker "<topic>"`.
-- **dashboard-preview** — local preview before compiling: `python3 /home/cristian/niagara-research/tools/dashboard-preview.py --rc <mod>/src/rc --prefix /<mount>` (open `/hmi`).
+- **corpus-nav** — our own blocks: `cnav find|grep|show|connections|by-marker "<topic>"` (Go command installed by niagara-research `tools/install.sh`).
+- **dashboard-preview** — local preview before compiling: `~/.local/lib/niagara-go/bin/dashboard-preview --rc <mod>/src/rc --prefix /<mount>` (open `/hmi`; Go binary installed by niagara-research `tools/install.sh`).
 - **niagara-help** — official Tridium docs: `python3 /home/cristian/niagara-research/niagara-help/tools/niagara_help.py find|class ...`.
 - **module-navigator** — code queries over `organized/`.
 

@@ -119,7 +119,7 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
   slot you are mirroring instead of re-tracing the path. `[ev: retro change-tier-time-budgets Δ2]`
 
 ## 3. Preview (UI types) — BEFORE compiling
-- `python3 /home/cristian/niagara-research/tools/dashboard-preview.py --rc <mod>/src/rc --prefix /<mount>`
+- `~/.local/lib/niagara-go/bin/dashboard-preview --rc <mod>/src/rc --prefix /<mount>`
 - Open `http://localhost:<port>/hmi` (1280×800 frame). Iterate design here — refresh, no build.
 - **Operator preview + explicit OK is a REQUIRED gate before building any `-ux` change (not optional):** seed the mock with the state that triggers the new behavior (e.g. `Cuarto3/evapNValveState` to exercise the output LEDs), so the operator actually sees it. The mock does NOT run `-rt` logic, so the preview approves the DASHBOARD's behavior, not the physical rt effect — say that to the operator. An `-rt`/`-wb`-only change has no preview (approved by design + pure tests). [ev: retro self-retro-preview-gate-wsl-tests-live-verify · T5]
 
