@@ -103,3 +103,27 @@ func TestCloseSwallowsAnyException(t *testing.T) {
 		}
 	}
 }
+
+// The "a load of another handle" flag is split's result, never client state a later call reads.
+func TestSplitReturnsTheOtherLoadFlagInsteadOfKeepingItOnTheClient(t *testing.T) {
+	c := newClient(t, "http://127.0.0.1:1", nil)
+	other := mustParse(t, `{"evs": {"ops": [{"nm": "l", "h": "9", "b": {"nm": "p", "t": "baja:Folder"}}]}}`)
+	if found, sawOther := c.split([]any{other}, "3"); found != nil || !sawOther {
+		t.Fatalf("split(other) = %v, %v", found, sawOther)
+	}
+	if found, sawOther := c.split(nil, "3"); found != nil || sawOther {
+		t.Fatalf("a later split(nothing) = %v, %v", found, sawOther)
+	}
+}
+
+// PendingEvents is a read-only view: changing what it returns never changes the client.
+func TestPendingEventsIsReadOnlyView(t *testing.T) {
+	c := newClient(t, "http://127.0.0.1:1", nil)
+	c.keep(mustParse(t, `{"evs": {"ops": [{"nm": "s", "h": "9"}]}}`))
+	view := c.PendingEvents()
+	view[0] = "changed"
+	_ = append(view[:1], "appended")
+	if got := c.PendingEvents(); len(got) != 1 || got[0] == "changed" {
+		t.Fatalf("pending = %v", got)
+	}
+}

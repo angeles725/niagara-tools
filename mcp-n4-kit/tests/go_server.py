@@ -359,29 +359,9 @@ def unresolved_twins():
 #: Markers whose twin resolves to nothing (docs/go-port-plan.md sections 19 and 21). Frozen and
 #: checked both ways: an entry that starts to resolve or disappears must be deleted, and the
 #: list never grows past TWIN_DEBT_CEILING.
-TWIN_DEBT_CEILING = 22
+TWIN_DEBT_CEILING = 2
 TWIN_DEBT = frozenset([
-    "test_box.TestErrorLabelsAndRedirectClose.test_malformed_reply_keys_use_session_component_key",
-    "test_box.TestErrorLabelsAndRedirectClose.test_redirect_handler_closes_response_before_raising",
-    "test_box.TestHandleCache.test_remove_component_invalidates_child_and_descendants",
-    "test_box.TestHandleCache.test_remove_component_with_unknown_parent_clears_cache",
-    "test_box.TestHandleCache.test_split_returns_the_other_load_flag_instead_of_keeping_it_on_the_client",
-    "test_box.TestHandleCache.test_the_station_model_rejects_an_add_nesting_a_baja_folder",
     "test_box.TestLockoutSafeOpen.test_interrupt_after_make_still_closes_the_server_session",
-    "test_box.TestLockoutSafeOpen.test_non_auth_failure_still_cleans_up",
-    "test_box.TestReadWrite.test_add_component_malformed_reply_is_boxerror",
-    "test_box.TestReadWrite.test_add_component_name_collision_yields_distinct_nn",
-    "test_box.TestReadWrite.test_add_component_visible_with_handle_and_annotation",
-    "test_box.TestReadWrite.test_check_links_returns_link_name_and_creates_link",
-    "test_box.TestReadWrite.test_pending_events_is_read_only_view",
-    "test_box.TestReadWrite.test_remove_component",
-    "test_box.TestReadWrite.test_save_station_increments_counter",
-    "test_box.TestReadWrite.test_set_slot_rejects_partial_status_by_default",
-    "test_box.TestReplyShapes.test_a_load_tree_of_the_wrong_shape_is_refused",
-    "test_box.TestReplyShapes.test_a_reply_nested_past_the_limit_is_refused",
-    "test_box.TestReplyShapes.test_a_well_formed_tree_still_loads",
-    "test_box.TestReplyShapes.test_an_early_event_whose_ops_are_no_list_is_kept_not_walked",
-    "test_box.TestReplyShapes.test_pollchgs_must_answer_a_list_of_events",
     "test_server.TestRobustness.test_serve_exits_cleanly_on_keyboard_interrupt_and_closes",
 ])
 

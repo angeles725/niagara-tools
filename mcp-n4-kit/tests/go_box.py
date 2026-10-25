@@ -176,6 +176,9 @@ def _lt(ord_str=FOLDER, **kw):
     return dict({"op": "load_tree", "ord": ord_str}, **kw)
 
 
+NUMERIC = {"nm": "p", "t": "kitControl:NumericConst", "s": []}
+
+
 def _shape(name, kw):
     return dict(name="malformed_reply_" + name, ports="test_malformed_reply_shapes_are_boxerror",
                 hook=Script(raw=_frame(**kw)), ops=[OPEN, STATE])
@@ -273,9 +276,11 @@ SCENARIOS = [
          ops=[OPEN, _lt("station:"), STATE]),
     dict(name="a_poll_answering_a_number_is_malformed", ports=None,
          hook=Script(muted=1, polls=[5]), ops=[OPEN, _lt("station:"), STATE]),
-    dict(name="a_poll_answering_a_string_is_malformed", ports=None,
+    dict(name="a_poll_answering_a_string_is_malformed",
+         ports="test_pollchgs_must_answer_a_list_of_events",
          hook=Script(muted=1, polls=["ab"]), ops=[OPEN, {"op": "poll"}, STATE]),
-    dict(name="an_early_event_with_ops_that_are_no_list_is_kept", ports=None,
+    dict(name="an_early_event_with_ops_that_are_no_list_is_kept",
+         ports="test_an_early_event_whose_ops_are_no_list_is_kept_not_walked",
          hook=Script(muted=1, polls=[[{"evs": {"ops": 5}}, {"evs": {"ops": "ab"}}],
                                      [_load("2", t="baja:Station")]]),
          ops=[OPEN, _lt("station:"), STATE]),
@@ -288,7 +293,8 @@ SCENARIOS = [
     dict(name="a_load_child_that_is_no_object_is_malformed", ports=None,
          hook=Script(muted=1, polls=[[], [_load("2", s=[{"n": "a", "s": [None]}])]]),
          ops=[OPEN, _lt("station:")]),
-    dict(name="a_reply_nested_past_the_limit_is_malformed", ports=None,
+    dict(name="a_reply_nested_past_the_limit_is_malformed",
+         ports="test_a_reply_nested_past_the_limit_is_refused",
          hook=Script(polls=[_nested(997), _nested(998)]),
          ops=[OPEN, {"op": "poll"}, {"op": "poll"}, STATE]),
     dict(name="a_load_with_an_empty_child_name_is_malformed", ports=None,
@@ -310,6 +316,22 @@ SCENARIOS = [
          ops=[OPEN, _sync("q", n="x"), _sync("s", h="99", n="x", b=box.bson_bool(True))]),
     dict(name="sync_http_500_is_boxerror", ports=None, hook=Script(fail={"syncTo": 500}),
          ops=[OPEN, _sync("s", h="3", n="x", b=box.bson_bool(True))]),
+    # S16b: the BoxClient write helpers no server tool calls, as the frames they send. Go has
+    # no such helpers; its plan engine sends these ops through the same Sync and SSC.
+    dict(name="add_component_visible_with_handle_and_annotation", ops=[
+        OPEN, _sync("a", n="Temp", b=dict(NUMERIC, s=[box.ws_annotation(10, 20)])), _lt(), STATE]),
+    dict(name="check_links_returns_link_name_and_creates_link", ops=[
+        OPEN, _sync("a", n="A", b=NUMERIC), _sync("a", n="B", b=NUMERIC),
+        {"op": "ssc", "key": "checkLinks",
+         "arg": {"s": "10", "ss": "out", "t": "11", "ts": "in10", "c": True}},
+        _lt(FOLDER + "/B"), STATE]),
+    dict(name="remove_component", ops=[
+        OPEN, _sync("a", n="Gone", b=NUMERIC), _sync("v", n="Gone"), _lt(), STATE]),
+    dict(name="save_station_increments_counter", ops=[
+        OPEN, {"op": "ssc", "key": "invokeAction", "arg": {"h": "2", "a": "save"}}, STATE]),
+    dict(name="the_station_model_rejects_an_add_nesting_a_baja_folder", ops=[
+        OPEN, _sync("a", n="Grp", b={"nm": "p", "t": "baja:Folder",
+                                     "s": [{"nm": "p", "n": "Sub", "t": "baja:Folder"}]}), STATE]),
 ]
 
 
