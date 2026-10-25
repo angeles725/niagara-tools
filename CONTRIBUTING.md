@@ -193,8 +193,10 @@ stabilizes (target: when chihuahua adopts `ng-deploy.sh` as a vendored dependenc
 When a release is warranted (per §1 step 4):
 
 1. Edit `VERSION`. Bump per §4 rules (e.g. `0.2.0` → `0.3.0`).
-2. Edit `CHANGELOG.md`. Add a new `## [vX.Y.Z] - YYYY-MM-DD` section ABOVE the existing
-   newest section. Populate `### Added` / `### Changed` / `### Fixed` / `### Removed` /
+2. Fold the fragments first: `bash scripts/gen-changelog.sh --write` appends every `changelog.d/*.md` (§ 6.2), in
+   date+slug order, to the end of `## [Unreleased]` and deletes them; it writes nothing when one is malformed.
+   Then edit `CHANGELOG.md`. Add a new `## [vX.Y.Z] - YYYY-MM-DD` section ABOVE the existing
+   newest section and move the folded `[Unreleased]` content into it, leaving `## [Unreleased]` empty. Populate `### Added` / `### Changed` / `### Fixed` / `### Removed` /
    `### Deprecated` / `### Security` subsections that apply (omit the others). Include the
    `### References` subsection with SDD slug + engram observation IDs (mirrors chihuahua style).
 3. Run the gate: `bats tests/*.bats && shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash`. Both must exit 0.
@@ -233,6 +235,7 @@ Before `git commit`:
 - [ ] No `Co-Authored-By` trailers. No AI attribution of any kind.
 - [ ] If `scripts/ng-deploy.sh` flag/exit/env surface changed: `VERSION` bumped,
       `CHANGELOG.md` entry added.
+- [ ] A kit behaviour change (`go/`, `build-n4-module-kit/`, `tools/`, `scripts/`) adds a `changelog.d/` fragment (§ 6.2).
 - [ ] If new KB topic added: `docs/GOTCHAS.md` updated, bidirectional links present.
 - [ ] No accidentally committed `.env.local` files (`.gitignore` covers `.env.*` with explicit
       `!.env.local.example` exception — verify `git status` is clean of personal env files).
@@ -284,6 +287,29 @@ scripts/install-hooks.sh --uninstall  # deactivate: restore the default hooks
 It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-existing custom
 `core.hooksPath` (your own hooks are never silently clobbered) — pass `--force` to override. See
 `build-n4-module-kit/BUILD-LOOP.md` §7 for the close-gate contract the hook enforces.
+
+### 6.2 The changelog gate
+
+The same `.githooks/pre-push` (and the `changelog` job of `ci.yml`, over `origin/main..HEAD`, so a clone without
+the hook cannot skip it) runs `scripts/changelog-gate.sh` over the pushed range (`go/internal/changelog`). A range
+that changes kit behaviour, meaning any path under `go/`, `build-n4-module-kit/`, `tools/` or `scripts/` except the retro gate's
+own exclusions (`go/bin/`, `BUILD-STATE(.src).md`, `ledger.d/`, `retros/`), FAILS unless it carries one of these.
+Tests and docs under those trees count as behaviour.
+
+- **A fragment** `changelog.d/<YYYY-MM-DD>-<slug>.md` at the repository root, added in the range (preferred: two
+  PRs never conflict on it). Line 1 is a Keep a Changelog heading, `### Added|Changed|Deprecated|Removed|Fixed|Security`
+  with an optional ` — <title>`; every heading has at least one `- ` bullet; no other heading level appears.
+- **A non-blank line added inside `## [Unreleased]`** of `CHANGELOG.md`. An edit to an older release section does
+  not count.
+- **A `Changelog: none (<reason>)` trailer** in any commit of the range. The reason is non-empty, one printable line,
+  at most 120 characters, and the gate prints it.
+
+A malformed fragment, or a `Changelog:` line not of that form, refuses the push even when the range changes no
+behaviour. Exits: 0 pass or not applicable, 1 refused, 3 a malformed range or no `git`. Fragments are folded into
+`## [Unreleased]` only at release time (`scripts/gen-changelog.sh --write`, § 5 step 2); CI runs
+`scripts/gen-changelog.sh --check`, so a fragment the fold would refuse never merges. The gate runs after the
+live-doctrine citation gate and before the retro exits, so a `Retro: none (trivial: …)` trailer does not waive it.
+`[ev: retro r10-changelog-gate Δ1]`
 
 ---
 

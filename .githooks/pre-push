@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pre-push — the continuity + retro enforcement gate (build-n4-module campaign PR2).
+# pre-push — the continuity + retro enforcement gate (build-n4-module campaign PR2), plus the changelog gate.
 #
 # git IS allowed here: a git hook is not a toolbelt/*.sh, so the kit-links.bats L2 rule
 # ("no toolbelt script invokes git") does not apply. This hook owns the git-diff half of the
@@ -111,6 +111,12 @@ live_cite_check() {   # returns 0 to go on; refuses on findings or a tool failur
   refuse "kit-cite-resolve failed (exit $rc; above), a tool failure is not a zero result"
 }
 live_cite_check
+
+# The changelog gate runs SECOND, before the retro exits below: a range that changes kit behaviour (go/,
+# build-n4-module-kit/, tools/, scripts/) needs a changelog.d/ fragment, an added `## [Unreleased]` line or a
+# `Changelog: none (<reason>)` trailer, and a malformed fragment or trailer refuses any range
+# (scripts/changelog-gate.sh; CONTRIBUTING.md § 6.2). ci.yml runs the same gate over origin/main..HEAD.
+bash "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/changelog-gate.sh" --range "$range" || exit 1
 
 # build-relevant = kit files EXCEPT BUILD-STATE.src.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
 # go/** except the built go/bin/ (the toolbelt wrappers exec the Go tools, so a go/ change changes lint
