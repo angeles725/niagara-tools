@@ -240,7 +240,13 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
 - Cleanup runs on every path: it kills this run's Windows processes by PID (`taskkill /PID <pid> /T /F`), confirms
   none is left, and deletes only the dir it created (kept with `--keep-home`). Exits: 0 PASS, 1 FAIL, 2 usage or
   refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout (the run is killed).
-- The first boot of a copy takes about 4.5 min (registry rebuild); later boots 26-80 s.
+- The first boot of a copy takes about 4.5 min (registry rebuild); later boots 26-80 s. The copy itself takes
+  about 5 s; one batched boot of every class of a module took 7-10 min, so budget a mutation RED per boot
+  accordingly `[ev: retro r10-station-test-campaign Δ3]`.
+- **A client root that hardcodes the niagara gradle plugin version ignores `-PniagaraPluginVersion`** and cannot
+  build against an install that ships another plugin version. Make the root read the property, with the old
+  literal as its default, so its own builds are unchanged; ask before changing a client root
+  `[ev: retro r10-station-test-campaign Δ2]`.
 - **`--module-verification low` is TEST-ONLY, for the disposable copy; never use it on a commissioning or
   production `niagara_home`.** Off by default, `low` its only value (anything else is exit 2). 4.14 ships
   `niagara.moduleVerificationMode=low` in `defaults/system.properties` (warn only); 4.15 ships the line commented
@@ -277,6 +283,12 @@ cmd.exe /c "cd /d C:\Users\<you>\AppData\Local\Temp\<copy> && gradlew.bat <same 
   delete any `%TEMP%` copy. Same route for `slotomatic`/`jar`: `build-verify.md` § Raw gradle.
 - Proof: the ColdRoomPan-rt `BTestNgStation` pilot ran 6/6 this way on 4.15.3.28, and five production mutations
   each failed 1-3 tests (client commit 337ee6c, retro `testing-parity-btestng`).
+- **Replace source-text tests with station tests, one mutation per boot.** A test that asserts on the Java source
+  proves the text, not the behaviour. The round-10 campaign replaced six such client tests with `BTestNgStation`
+  tests run by `run-niagara-test run` (11/11 on a 4.14 copy, 14/14 and 3/3 on 4.15 copies, a facade's links
+  checked through a per-slot `checkLink` and real `BLink` propagation). Pin each test with a named production
+  mutation, and boot once per mutation: RED on the class it targets and GREEN on every other class shows the RED
+  is that class's and the classes are independent `[ev: retro r10-station-test-campaign Δ1]`.
 
 See also: `types/structure.md §PASS state + scaffold` (scaffold emits a stub `moduleTest-include.xml`);
 `types/logic.md §Link lifecycle — gating and reacting` (the `doCheckLink`/INDIRECT-link patterns
@@ -337,6 +349,10 @@ boolean settled = TestHelper.waitFor(() -> myComp.isRunning(), 3_000L, 50L);
 
 Signature: `waitFor(BooleanSupplier condition, long timeout, long interval)`.
 `assertWillBeTrue` delegates to `waitFor` and calls `Assert.assertTrue` on the result.
+
+A single check of an output right after a synchronous action races the control cycle: either wait for the
+expected value as above, or, to prove a value holds, keep sampling it over a window that covers at least one
+cycle (a `holds`-style helper over `waitFor`). `[ev: retro r10-station-test-campaign Δ3]`
 
 `[ev: code docSource TestHelper.java :75-197]`
 
@@ -554,6 +570,9 @@ the main Gradle section above).
   `makeDefaultAuthFoxServices = false` fails setup with `ArrayIndexOutOfBoundsException: 0` and skips every test.
   Keep Fox on a free `foxPort` (the default 1911 is taken whenever a station or platform runs on the host).
   `[ev: retro r10-dr5-driver-exemplar Δ1]`
+- **A station outlives a single test:** give each test its own component names (a name reused across tests
+  collides with the previous test's component), and size every wait to the component's debounce plus one
+  tick, not to a default timeout (about 20 s for one module). `[ev: retro r10-station-test-campaign Δ4]`
 - **No test depends on the network or Wi-Fi:** a test that needs a reachable host fails for reasons the code does
   not control. Pure seams (`run-pure-test.sh`) or a station-local fixture replace it. `[ev: corpus B1418 §1418.5 g]` `[ev: retro course-recordings Δ7]`
 - **Do not run `gradle -t` with IDE autosave:** continuous build compiles half-written files and reports
