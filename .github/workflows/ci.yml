@@ -220,6 +220,9 @@ jobs:
       - name: gen-build-state --check (every ledger.d/ fragment + BUILD-STATE.src.md generates BUILD-STATE.md — fails closed)
         run: bash build-n4-module-kit/toolbelt/gen-build-state.sh --check
 
+      - name: gen-changelog --check (every changelog.d/ fragment is one the release fold accepts — fails closed)
+        run: bash scripts/gen-changelog.sh --check
+
       - name: lint-timers (timer-ticket conformance over committed fixtures — Campaign 6 PR8)
         run: |
           bash build-n4-module-kit/toolbelt/lint-timers.sh tests/fixtures/lint-timers

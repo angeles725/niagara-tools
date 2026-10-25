@@ -13,13 +13,17 @@ notes were rebuilt from the merge log. Nothing checked for an entry. The new `sc
 the retro gate's own bookkeeping exclusions) unless it adds a `changelog.d/` fragment, adds a non-blank line inside
 `## [Unreleased]`, or carries a `Changelog: none (<reason>)` trailer. Fragments follow the `ledger.d/` precedent:
 parallel PRs each add their own file instead of editing the same section. It runs in `.githooks/pre-push` and, unlike
-the retro half of the hook, in CI too (a new `changelog` job over `origin/main..HEAD` with full history).
+the retro half of the hook, in CI too (a new `changelog` job over `origin/main..HEAD` with full history). The
+release folds the fragments into `## [Unreleased]` with `scripts/gen-changelog.sh --write` and deletes them; CI runs
+its `--check`, so a fragment the fold would refuse never merges and no fragment is left out of a release.
 
 ## Evidence
 - RED: all 17 cases of `tests/changelog-gate.bats` failed on origin/main 6de4a657 (no gate script)
   `[ev: tests/changelog-gate.bats]`
 - Mutation CG-c: accepting any `CHANGELOG.md` change fails CG-c (an older-section edit passed)
   `[ev: tests/changelog-gate.bats]`
+- RED: all 9 cases of `tests/gen-changelog.bats` failed before `scripts/gen-changelog.sh` existed; mutation GC1
+  (fold right after the header) fails GC1 `[ev: tests/gen-changelog.bats]`
 - The retro-gate hook tests fake `git log`; their fake now also prints a `Changelog: none` trailer so each test
   still reaches the retro logic it pins `[ev: tests/build-retro-sync.bats]`
 
@@ -29,4 +33,6 @@ the retro half of the hook, in CI too (a new `changelog` job over `origin/main..
 | Δ1 | **A kit behaviour change carries its CHANGELOG entry in the same range, as a `changelog.d/` fragment, an `[Unreleased]` line or a reasoned `Changelog: none` trailer**, checked by the pre-push hook and by CI, so release notes are never rebuilt from the merge log. | `CONTRIBUTING.md` § 6.2 | CG-a..CG-k |
 
 ## Follow-ups
-- Fold `changelog.d/` into `## [Unreleased]` at release time (`gen-changelog --write`), so fragments reach a release.
+- `tools/` does not exist at the repository root today; the gate counts it so a future top-level `tools/` is covered.
+- `scripts/` is build-relevant for the retro gate but not a behaviour root for this gate (scope as briefed); a
+  `scripts/` change needs no CHANGELOG entry.

@@ -193,8 +193,10 @@ stabilizes (target: when chihuahua adopts `ng-deploy.sh` as a vendored dependenc
 When a release is warranted (per §1 step 4):
 
 1. Edit `VERSION`. Bump per §4 rules (e.g. `0.2.0` → `0.3.0`).
-2. Edit `CHANGELOG.md`. Add a new `## [vX.Y.Z] - YYYY-MM-DD` section ABOVE the existing
-   newest section. Populate `### Added` / `### Changed` / `### Fixed` / `### Removed` /
+2. Fold the fragments first: `bash scripts/gen-changelog.sh --write` appends every `changelog.d/*.md` (§ 6.2), in
+   date+slug order, to the end of `## [Unreleased]` and deletes them; it writes nothing when one is malformed.
+   Then edit `CHANGELOG.md`. Add a new `## [vX.Y.Z] - YYYY-MM-DD` section ABOVE the existing
+   newest section and move the folded `[Unreleased]` content into it, leaving `## [Unreleased]` empty. Populate `### Added` / `### Changed` / `### Fixed` / `### Removed` /
    `### Deprecated` / `### Security` subsections that apply (omit the others). Include the
    `### References` subsection with SDD slug + engram observation IDs (mirrors chihuahua style).
 3. Run the gate: `bats tests/*.bats && shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash`. Both must exit 0.
@@ -303,7 +305,9 @@ Tests and docs under those trees count as behaviour.
   at most 120 characters, and the gate prints it.
 
 A malformed fragment, or a `Changelog:` line not of that form, refuses the push even when the range changes no
-behaviour. Exits: 0 pass or not applicable, 1 refused, 3 a malformed range or no `git`. The gate runs after the
+behaviour. Exits: 0 pass or not applicable, 1 refused, 3 a malformed range or no `git`. Fragments are folded into
+`## [Unreleased]` only at release time (`scripts/gen-changelog.sh --write`, § 5 step 2); CI runs
+`scripts/gen-changelog.sh --check`, so a fragment the fold would refuse never merges. The gate runs after the
 live-doctrine citation gate and before the retro exits, so a `Retro: none (trivial: …)` trailer does not waive it.
 `[ev: retro r10-changelog-gate Δ1]`
 
