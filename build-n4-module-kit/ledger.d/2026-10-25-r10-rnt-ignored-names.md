@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: run-niagara-test run names the ignored test-methods from source and allows them by name -->
+log: 2026-10-25 · quality round 10 → `run-niagara-test run` (`go/internal/niagaratest/ignoredsrc.go`) names the `@Test(enabled = false)` methods of the types in `<part>/moduleTest-include.xml` from their `srcTest/` source (`<SimpleName>.<method>`, inherited through `srcTest/` superclasses), FAILs when that count differs from the root `ignored` ("source and TestNG disagree"), and waives them only by name with `--allow-ignored <Class.method>` (a new or stale name FAIL), closing the swap a counted allowance missed; class-level disables, non-literal `enabled` and unreadable registered sources are exit 3 before the build, `--allow-ignored-count` stays the fallback that skips the source. Retro retros/2026-10-25-r10-rnt-ignored-names.md (1Δ, folded). [ev: retro r10-rnt-ignored-names Δ1]
+open_issue: the source scan is proven on synthetic sources and the fake runner only; a live `run` of a client root with disabled tests and an --allow-ignored set is owed (retro r10-rnt-ignored-names Δ1).
