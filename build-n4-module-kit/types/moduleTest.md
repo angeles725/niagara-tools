@@ -194,6 +194,15 @@ public void ngTestLinkCheck2() {
 
 ## Checklist before adding a moduleTest
 
+A scaffolded module already has one. `toolbelt/scaffold-module.sh --type logic|dashboard` emits the station test
+from `templates/station-test` into `<Mod>-rt`: `B<Mod>StationTestBase` (a `BTestNgStation` with Fox off, which
+tolerates only the exact `Fox service did not start in time` failure while the station runs; unique per-test
+mounts removed in `@AfterMethod`; `await` and `holds` helpers), `B<Mod>LinkTest` (for each slot in
+`LINK_IN_SLOTS`: LinkCheck accepts a link from a plain source, the slot is not READONLY, and a BLink carries a
+change to each double slot), `moduleTest-include.xml`, and both test dependencies in the gradle file. `--type
+driver` ships its loopback test instead (`types/driver-authoring.md` § 12.1). Add every new link-in slot to
+`LINK_IN_SLOTS`. `[ev: retro r10-scaffold-station-test Δ1]`
+
 1. `srcTest/com/<vendor>/<mod>/test/BYourModuleTest.java` — extends `BTestNg`, `@NiagaraType`, TestNG
    annotations.
 2. `<part>/moduleTest-include.xml` — registers the test type; does NOT appear in `module-include.xml`.
