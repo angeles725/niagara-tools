@@ -20,10 +20,39 @@ export LC_ALL=C
 
 usage() { sed -n '/^# Usage:/,/^#$/p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
-# The slowest files, in seconds (empty: every file goes round-robin until measured weights land).
+# The slowest files, in seconds: timed one file at a time locally (bats 1.14, 2026-10-25), with the three
+# files whose local time is unrepresentative (report-module, ci-local, preflight) set from the CI TAP
+# stream of run 40173517342. Only the rough ordering of the heavy files matters; refresh when one shard
+# drifts well past the other.
 builtin_weights() {
   cat <<'EOF'
 # seconds file
+70 report-module.bats
+25 ci-local.bats
+15 build-sh.bats
+14 preflight.bats
+9.2 scaffold-module.bats
+9.1 ng-deploy.bats
+9.1 kit-state-hooks.bats
+7.3 lint-timers.bats
+6.8 verify-module.bats
+6.6 run-pure-test.bats
+6.6 build-retro-sync.bats
+6.5 commissioning-verify.bats
+6.1 lint-empty-root.bats
+5.2 kit-links.bats
+4.7 go-tool.bats
+4.6 lint-size.bats
+4.3 permissions-root.bats
+4.2 rc-scan.bats
+4.2 lint-inert-coordination.bats
+4.1 kit-resolve.bats
+4.1 go-wrapper-symlink.bats
+3.9 demand-in-scope.bats
+3.9 bog-audit.bats
+3.6 triage-console.bats
+3.5 lint-write-path.bats
+3.2 gen-retro-index.bats
 EOF
 }
 

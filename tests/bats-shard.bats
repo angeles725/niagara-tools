@@ -78,3 +78,13 @@ all_shards() {
   [ "$status" -eq 3 ]
 }
 
+@test "BS8: a shard lists its weighted files heaviest first, so bats -j starts the longest at once" {
+  # Mutation: BS8 -- printing rows in name order starts the 50 s file last in shard 1
+  printf '%s\n' '50 g.bats' '10 a.bats' '6 b.bats' > "$W"
+  run "$SHARD" --dir "$T" --weights "$W" 1 2
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "$T/g.bats" ]
+  run "$SHARD" --dir "$T" --weights "$W" 2 2
+  [ "${lines[0]}" = "$T/a.bats" ]
+  [ "${lines[1]}" = "$T/b.bats" ]
+}
