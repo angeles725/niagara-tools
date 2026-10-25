@@ -45,7 +45,7 @@ type runConfig struct {
 	install, gradleRoot, part, module, scratch string
 	jdk8, gradleUserHome                       string
 	timeout                                    time.Duration
-	keepHome                                   bool
+	keepHome, verifyLow                        bool
 }
 
 // plan is a validated run: the install, %TEMP%, %USERPROFILE%, the scratch parent and, once created, the
@@ -53,7 +53,8 @@ type runConfig struct {
 type plan struct {
 	runConfig
 	install, temp, profile, parent, dir winDir
-	windows                             bool // a Windows-side step started: cleanup must look for its processes
+	windows                             bool   // a Windows-side step started: cleanup must look for its processes
+	sysPropsSum                         string // --module-verification low: sha256 of the install's system.properties
 }
 
 func (p *plan) home() winDir        { return winDir{p.dir.wsl + "/home", p.dir.win + `\home`} }
@@ -105,6 +106,7 @@ func parseRun(args []string) (runConfig, error) {
 	fs.StringVar(&c.gradleUserHome, "gradle-user-home", "", "")
 	fs.DurationVar(&c.timeout, "timeout", defaultTimeout, "")
 	fs.BoolVar(&c.keepHome, "keep-home", false, "")
+	fs.Var(verificationFlag{&c.verifyLow}, "module-verification", "")
 	if err := fs.Parse(args); err != nil {
 		return c, fmt.Errorf("run: %v", err)
 	}
@@ -149,6 +151,9 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	}
 	if info, err := os.Stat(filepath.Join(cfg.jdk8, "bin", "javac")); err != nil || !info.Mode().IsRegular() {
 		return refuse("--jdk8 %s has no bin/javac (a WSL JDK 8)", cfg.jdk8)
+	}
+	if info, err := os.Stat(p.install.wsl + "/" + sysPropsRel); cfg.verifyLow && (err != nil || !info.Mode().IsRegular()) {
+		return refuse("--module-verification low: --install %s has no %s to lower in its copy", p.install.win, sysPropsRel)
 	}
 	if !filepath.IsAbs(cfg.gradleUserHome) {
 		return refuse("--gradle-user-home %q is not an absolute WSL path", cfg.gradleUserHome)
@@ -222,6 +227,12 @@ func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
 		fmt.Fprintf(s.Err, "%s: run: cannot snapshot the real user homes: %v\n", name, err)
 		return exitEnv
 	}
+	if p.verifyLow {
+		if p.sysPropsSum, err = fileSum(p.install.wsl + "/" + sysPropsRel); err != nil {
+			fmt.Fprintf(s.Err, "%s: run: cannot hash the install's %s: %v\n", name, sysPropsRel, err)
+			return exitEnv
+		}
+	}
 	dir, err := os.MkdirTemp(p.parent.wsl, "run-niagara-test-")
 	if err != nil {
 		fmt.Fprintf(s.Err, "%s: run: %v\n", name, err)
@@ -235,7 +246,7 @@ func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
 	for _, step := range []struct {
 		name string
 		do   func(context.Context, *plan, cli.Stdio) (int, error)
-	}{{"copy", h.copyHome}, {"build", h.build}, {"run", h.testExe}} {
+	}{{"copy", h.copyHome}, {"module verification", h.lowerVerification}, {"build", h.build}, {"run", h.testExe}} {
 		code, err := step.do(ctx, p, s)
 		switch {
 		case errors.Is(err, context.DeadlineExceeded):
@@ -408,6 +419,9 @@ func (h host) testExe(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 		return -1, err
 	}
 	code := testngVerdict(p.sub("out/testng/testng-results.xml"), []string{p.sub("out/stderr.txt")}, s, nil)
+	if code != exitPass {
+		signatureHint(p, s, p.sub("out/stderr.txt"), p.sub("out/stdout.txt"))
+	}
 	switch {
 	case !isDir(p.sub("nuh/etc")) || !isDir(p.sub("nuh/security")):
 		row(s, "FAIL", "scratch niagara_user_home was not used (no etc/ and security/ in it)")
@@ -443,6 +457,9 @@ func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int 
 		worse(exitFail)
 	} else {
 		row(s, "PASS", fmt.Sprintf("install unchanged (%d entries checked)", len(snap)))
+	}
+	if p.verifyLow && !checkInstallSysProps(p, s) {
+		worse(exitFail)
 	}
 	if p.keepHome {
 		row(s, "PASS", "cleanup: kept "+p.dir.win)
