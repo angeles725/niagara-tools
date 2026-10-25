@@ -40,6 +40,7 @@ type fake struct {
 // (%USERPROFILE%\Niagara4.15\brand), plus a gradle root and a WSL JDK 8.
 type fixture struct {
 	mnt, install, temp, gradle, userHome, jdk string
+	state                                     string // the WSL state dir run logs default under
 	f                                         *fake
 	h                                         host
 }
@@ -68,7 +69,8 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	fx.f = &fake{t: t, fx: fx, on: map[string]func(context.Context, Cmd) (int, error){}}
-	fx.h = host{run: fx.f, mnt: fx.mnt, home: "/nonexistent-home", jdk8: fx.jdk}
+	fx.state = t.TempDir()
+	fx.h = host{run: fx.f, mnt: fx.mnt, home: "/nonexistent-home", jdk8: fx.jdk, state: fx.state}
 	return fx
 }
 
