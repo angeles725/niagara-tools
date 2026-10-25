@@ -1,0 +1,37 @@
+-- args --
+--lint-only
+@REPO@/tests/fixtures/report-module/rc-scan-fail
+-- want --
+exit 1
+DemoPan-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+DemoPan-ux  PASS  dup-keys  0
+DemoPan-ux  SKIP  slot-coverage  N/A (no types declared)
+DemoPan-ux  SKIP  plano  not a plano dashboard (3D/self-contained SPA) — IMG_W/IMG_H and overlay markers absent
+DemoPan-ux  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+DemoPan-ux  PASS  lint-link-target-flags  clean (no wiring map)
+DemoPan-ux  PASS  lint-no-system-out  clean
+DemoPan-ux  PASS  lint-slotomatic-markers  clean
+DemoPan-ux  WARN  lint-jasmine-ux  ux ships src/rc but no srcTest/rc/spec/*.js
+DemoPan-ux  SKIP  lint-servlet  no BWebServlet
+DemoPan-ux  FAIL  rc-scan  index.html:2  ord-literal: hardcoded ORD literal
+DemoPan-ux  SKIP  eslint  no rc js
+DemoPan-ux  PASS  lint-no-md5-credential-digest  clean
+DemoPan-ux  PASS  lint-size  clean
+DemoPan-ux  PASS  lint-license-isoperational-gate  clean
+DemoPan-ux  PASS  lint-set-null-ord  clean
+DemoPan-ux  PASS  lint-ws-placement  clean
+DemoPan-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  SKIP  lint-write-path  no write-path-matrix.md
+(module)  PASS  lint-bundled-jar-class-version  clean
+(module)  SKIP  lint-ndriver-static-collection  no *.java under a -rt part's src/
+(module)  SKIP  lint-ndriver-tagless-correlation  no *.java under a -rt part's src/
+(run)  SKIP  triage-console  no --console-dir
+report-module: 1 artifact · 14 PASS · 1 FAIL · 1 WARN · 10 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0

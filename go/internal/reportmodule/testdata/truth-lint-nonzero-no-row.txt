@@ -1,0 +1,49 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 1
+A-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-rt  FAIL  lint-lexicon-ascii  exited 2 with no FAIL row (crash or unexpected output) -- run lint-lexicon-ascii.sh manually
+A-rt  FAIL  lint-delays  exited 2 with no FAIL row (crash or unexpected output) -- run lint-delays.sh manually
+A-rt  PASS  lint-link-target-flags  clean (no wiring map)
+A-rt  FAIL  lint-no-system-out  exited 127 with no FAIL row (crash or unexpected output) -- run lint-no-system-out.sh manually
+A-rt  PASS  lint-slotomatic-markers  clean
+A-rt  PASS  lint-recovery-path  clean
+A-rt  PASS  lint-config-sanity  clean
+A-rt  PASS  lint-no-md5-credential-digest  clean
+A-rt  PASS  lint-size  clean
+A-rt  PASS  lint-license-isoperational-gate  clean
+A-rt  PASS  lint-set-null-ord  clean
+A-rt  PASS  lint-ws-placement  clean
+A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  FAIL  lint-structure  exited 1 with no FAIL row (crash or unexpected output) -- run lint-structure.sh manually
+(module)  FAIL  lint-write-path  exited 2 with no FAIL row (crash or unexpected output) -- run lint-write-path.sh manually
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 1 artifact · 12 PASS · 5 FAIL · 0 WARN · 3 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+truth: a lint that exits non-zero (not 3) with no FAIL row is a FAIL row naming the exit, never PASS clean or silent (the bash lint_rows, lint-write-path and lint-lexicon-ascii failed open; lint-link-target-flags alone failed closed)
+-- m/A-rt/src (dir) --
+-- toolbelt/.stub-rest --
+-- toolbelt/lint-delays.sh (mode 755) --
+#!/usr/bin/env bash
+echo boom >&2; exit 2
+-- toolbelt/lint-no-system-out.sh (mode 755) --
+#!/usr/bin/env bash
+echo "lint: command not found" >&2; exit 127
+-- toolbelt/lint-structure.sh (mode 755) --
+#!/usr/bin/env bash
+exit 1
+-- toolbelt/lint-write-path.sh (mode 755) --
+#!/usr/bin/env bash
+exit 2
+-- m/A-rt/module.lexicon --
+k=v
+-- toolbelt/lint-lexicon-ascii.sh (mode 755) --
+#!/usr/bin/env bash
+echo "lexicon-ascii: cannot read" >&2; exit 2

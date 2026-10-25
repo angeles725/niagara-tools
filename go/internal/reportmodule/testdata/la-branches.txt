@@ -1,0 +1,194 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 3
+A-clean  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-clean  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-clean  SKIP  lint-delays  no src/
+A-clean  SKIP  lint-demand-scope  no src/
+A-clean  SKIP  lint-silent-protection  no src/
+A-clean  SKIP  lint-link-target-flags  no src/
+A-clean  SKIP  lint-ext-writable-shape  no src/
+A-clean  SKIP  lint-no-system-out  no src/
+A-clean  SKIP  lint-slotomatic-markers  no src/
+A-clean  SKIP  lint-clock-zero-floor  no src/
+A-clean  SKIP  lint-null-context-write  no src/
+A-clean  SKIP  lint-bql-string-concat  no src/
+A-clean  SKIP  lint-arbitrary-ord  no src/
+A-clean  SKIP  lint-persist-hot-write  no src/
+A-clean  SKIP  lint-changed-hot-write  no src/
+A-clean  SKIP  lint-inert-coordination  no src/
+A-clean  SKIP  lint-session-store-lazy-evict  no src/
+A-clean  SKIP  lint-bformat-call  no src/
+A-clean  SKIP  lint-service-types  no src/
+A-clean  SKIP  lint-driver-scaffold  no src/
+A-clean  SKIP  lint-no-md5-credential-digest  no src/
+A-clean  SKIP  lint-size  no src/
+A-clean  SKIP  lint-license-isoperational-gate  no src/
+A-clean  SKIP  lint-set-null-ord  no src/
+A-clean  SKIP  lint-ws-placement  no src/
+A-clean  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-deep  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-deep  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-deep  SKIP  lint-delays  no src/
+A-deep  SKIP  lint-demand-scope  no src/
+A-deep  SKIP  lint-silent-protection  no src/
+A-deep  SKIP  lint-link-target-flags  no src/
+A-deep  SKIP  lint-ext-writable-shape  no src/
+A-deep  SKIP  lint-no-system-out  no src/
+A-deep  SKIP  lint-slotomatic-markers  no src/
+A-deep  SKIP  lint-clock-zero-floor  no src/
+A-deep  SKIP  lint-null-context-write  no src/
+A-deep  SKIP  lint-bql-string-concat  no src/
+A-deep  SKIP  lint-arbitrary-ord  no src/
+A-deep  SKIP  lint-persist-hot-write  no src/
+A-deep  SKIP  lint-changed-hot-write  no src/
+A-deep  SKIP  lint-inert-coordination  no src/
+A-deep  SKIP  lint-session-store-lazy-evict  no src/
+A-deep  SKIP  lint-bformat-call  no src/
+A-deep  SKIP  lint-service-types  no src/
+A-deep  SKIP  lint-driver-scaffold  no src/
+A-deep  SKIP  lint-no-md5-credential-digest  no src/
+A-deep  SKIP  lint-size  no src/
+A-deep  SKIP  lint-license-isoperational-gate  no src/
+A-deep  SKIP  lint-set-null-ord  no src/
+A-deep  SKIP  lint-ws-placement  no src/
+A-deep  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-env  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-env  ERROR  lint-lexicon-ascii  env fault (exit 3)
+A-env  SKIP  lint-delays  no src/
+A-env  SKIP  lint-demand-scope  no src/
+A-env  SKIP  lint-silent-protection  no src/
+A-env  SKIP  lint-link-target-flags  no src/
+A-env  SKIP  lint-ext-writable-shape  no src/
+A-env  SKIP  lint-no-system-out  no src/
+A-env  SKIP  lint-slotomatic-markers  no src/
+A-env  SKIP  lint-clock-zero-floor  no src/
+A-env  SKIP  lint-null-context-write  no src/
+A-env  SKIP  lint-bql-string-concat  no src/
+A-env  SKIP  lint-arbitrary-ord  no src/
+A-env  SKIP  lint-persist-hot-write  no src/
+A-env  SKIP  lint-changed-hot-write  no src/
+A-env  SKIP  lint-inert-coordination  no src/
+A-env  SKIP  lint-session-store-lazy-evict  no src/
+A-env  SKIP  lint-bformat-call  no src/
+A-env  SKIP  lint-service-types  no src/
+A-env  SKIP  lint-driver-scaffold  no src/
+A-env  SKIP  lint-no-md5-credential-digest  no src/
+A-env  SKIP  lint-size  no src/
+A-env  SKIP  lint-license-isoperational-gate  no src/
+A-env  SKIP  lint-set-null-ord  no src/
+A-env  SKIP  lint-ws-placement  no src/
+A-env  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-fail  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-fail  FAIL  lexicon-ascii  /m/A-fail/module.lexicon:3  non-ASCII byte 0xc3
+A-fail  FAILED  lexicon-ascii  odd
+A-fail  FAIL  solo  solo
+A-fail  SKIP  lint-delays  no src/
+A-fail  SKIP  lint-demand-scope  no src/
+A-fail  SKIP  lint-silent-protection  no src/
+A-fail  SKIP  lint-link-target-flags  no src/
+A-fail  SKIP  lint-ext-writable-shape  no src/
+A-fail  SKIP  lint-no-system-out  no src/
+A-fail  SKIP  lint-slotomatic-markers  no src/
+A-fail  SKIP  lint-clock-zero-floor  no src/
+A-fail  SKIP  lint-null-context-write  no src/
+A-fail  SKIP  lint-bql-string-concat  no src/
+A-fail  SKIP  lint-arbitrary-ord  no src/
+A-fail  SKIP  lint-persist-hot-write  no src/
+A-fail  SKIP  lint-changed-hot-write  no src/
+A-fail  SKIP  lint-inert-coordination  no src/
+A-fail  SKIP  lint-session-store-lazy-evict  no src/
+A-fail  SKIP  lint-bformat-call  no src/
+A-fail  SKIP  lint-service-types  no src/
+A-fail  SKIP  lint-driver-scaffold  no src/
+A-fail  SKIP  lint-no-md5-credential-digest  no src/
+A-fail  SKIP  lint-size  no src/
+A-fail  SKIP  lint-license-isoperational-gate  no src/
+A-fail  SKIP  lint-set-null-ord  no src/
+A-fail  SKIP  lint-ws-placement  no src/
+A-fail  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-none  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-none  SKIP  lint-lexicon-ascii  no *.lexicon under A-none
+A-none  SKIP  lint-delays  no src/
+A-none  SKIP  lint-demand-scope  no src/
+A-none  SKIP  lint-silent-protection  no src/
+A-none  SKIP  lint-link-target-flags  no src/
+A-none  SKIP  lint-ext-writable-shape  no src/
+A-none  SKIP  lint-no-system-out  no src/
+A-none  SKIP  lint-slotomatic-markers  no src/
+A-none  SKIP  lint-clock-zero-floor  no src/
+A-none  SKIP  lint-null-context-write  no src/
+A-none  SKIP  lint-bql-string-concat  no src/
+A-none  SKIP  lint-arbitrary-ord  no src/
+A-none  SKIP  lint-persist-hot-write  no src/
+A-none  SKIP  lint-changed-hot-write  no src/
+A-none  SKIP  lint-inert-coordination  no src/
+A-none  SKIP  lint-session-store-lazy-evict  no src/
+A-none  SKIP  lint-bformat-call  no src/
+A-none  SKIP  lint-service-types  no src/
+A-none  SKIP  lint-driver-scaffold  no src/
+A-none  SKIP  lint-no-md5-credential-digest  no src/
+A-none  SKIP  lint-size  no src/
+A-none  SKIP  lint-license-isoperational-gate  no src/
+A-none  SKIP  lint-set-null-ord  no src/
+A-none  SKIP  lint-ws-placement  no src/
+A-none  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-toodeep  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-toodeep  SKIP  lint-lexicon-ascii  no *.lexicon under A-toodeep
+A-toodeep  SKIP  lint-delays  no src/
+A-toodeep  SKIP  lint-demand-scope  no src/
+A-toodeep  SKIP  lint-silent-protection  no src/
+A-toodeep  SKIP  lint-link-target-flags  no src/
+A-toodeep  SKIP  lint-ext-writable-shape  no src/
+A-toodeep  SKIP  lint-no-system-out  no src/
+A-toodeep  SKIP  lint-slotomatic-markers  no src/
+A-toodeep  SKIP  lint-clock-zero-floor  no src/
+A-toodeep  SKIP  lint-null-context-write  no src/
+A-toodeep  SKIP  lint-bql-string-concat  no src/
+A-toodeep  SKIP  lint-arbitrary-ord  no src/
+A-toodeep  SKIP  lint-persist-hot-write  no src/
+A-toodeep  SKIP  lint-changed-hot-write  no src/
+A-toodeep  SKIP  lint-inert-coordination  no src/
+A-toodeep  SKIP  lint-session-store-lazy-evict  no src/
+A-toodeep  SKIP  lint-bformat-call  no src/
+A-toodeep  SKIP  lint-service-types  no src/
+A-toodeep  SKIP  lint-driver-scaffold  no src/
+A-toodeep  SKIP  lint-no-md5-credential-digest  no src/
+A-toodeep  SKIP  lint-size  no src/
+A-toodeep  SKIP  lint-license-isoperational-gate  no src/
+A-toodeep  SKIP  lint-set-null-ord  no src/
+A-toodeep  SKIP  lint-ws-placement  no src/
+A-toodeep  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 6 artifacts · 7 PASS · 2 FAIL · 0 WARN · 153 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/A-clean/module.lexicon --
+k=v
+-- m/A-deep/sub/x.lexicon --
+k=v
+-- m/A-env/module.lexicon --
+k=v
+-- m/A-fail/module.lexicon --
+k=v
+-- m/A-none (dir) --
+-- m/A-toodeep/a/b/x.lexicon --
+k=v
+-- toolbelt/.stub-rest --
+-- toolbelt/lint-lexicon-ascii.sh (mode 755) --
+#!/usr/bin/env bash
+case "$1" in
+  */A-env) exit 3 ;;
+  */A-fail) printf '%s\n' "FAIL  lexicon-ascii  /m/A-fail/module.lexicon:3  non-ASCII byte 0xc3" "FAILED  lexicon-ascii  odd" "WARN  lexicon-ascii  ignored" "FAIL  solo"; exit 1 ;;
+  */A-deep) printf 'scanned\n' ;;
+esac

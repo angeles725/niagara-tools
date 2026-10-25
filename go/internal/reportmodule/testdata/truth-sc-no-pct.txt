@@ -1,0 +1,85 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 3
+A  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A  ERROR  slot-coverage  env fault (exit 127): no pct= line
+A  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A  SKIP  lint-delays  no src/
+A  SKIP  lint-demand-scope  no src/
+A  SKIP  lint-silent-protection  no src/
+A  SKIP  lint-link-target-flags  no src/
+A  SKIP  lint-ext-writable-shape  no src/
+A  SKIP  lint-no-system-out  no src/
+A  SKIP  lint-slotomatic-markers  no src/
+A  SKIP  lint-clock-zero-floor  no src/
+A  SKIP  lint-null-context-write  no src/
+A  SKIP  lint-bql-string-concat  no src/
+A  SKIP  lint-arbitrary-ord  no src/
+A  SKIP  lint-persist-hot-write  no src/
+A  SKIP  lint-changed-hot-write  no src/
+A  SKIP  lint-inert-coordination  no src/
+A  SKIP  lint-session-store-lazy-evict  no src/
+A  SKIP  lint-bformat-call  no src/
+A  SKIP  lint-service-types  no src/
+A  SKIP  lint-driver-scaffold  no src/
+A  SKIP  lint-no-md5-credential-digest  no src/
+A  SKIP  lint-size  no src/
+A  SKIP  lint-license-isoperational-gate  no src/
+A  SKIP  lint-set-null-ord  no src/
+A  SKIP  lint-ws-placement  no src/
+A  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+B  SKIP  verify-module  no built jar under build/libs (floor check not run)
+B  ERROR  slot-coverage  env fault (exit 2): no pct= line
+B  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+B  SKIP  lint-delays  no src/
+B  SKIP  lint-demand-scope  no src/
+B  SKIP  lint-silent-protection  no src/
+B  SKIP  lint-link-target-flags  no src/
+B  SKIP  lint-ext-writable-shape  no src/
+B  SKIP  lint-no-system-out  no src/
+B  SKIP  lint-slotomatic-markers  no src/
+B  SKIP  lint-clock-zero-floor  no src/
+B  SKIP  lint-null-context-write  no src/
+B  SKIP  lint-bql-string-concat  no src/
+B  SKIP  lint-arbitrary-ord  no src/
+B  SKIP  lint-persist-hot-write  no src/
+B  SKIP  lint-changed-hot-write  no src/
+B  SKIP  lint-inert-coordination  no src/
+B  SKIP  lint-session-store-lazy-evict  no src/
+B  SKIP  lint-bformat-call  no src/
+B  SKIP  lint-service-types  no src/
+B  SKIP  lint-driver-scaffold  no src/
+B  SKIP  lint-no-md5-credential-digest  no src/
+B  SKIP  lint-size  no src/
+B  SKIP  lint-license-isoperational-gate  no src/
+B  SKIP  lint-set-null-ord  no src/
+B  SKIP  lint-ws-placement  no src/
+B  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 2 artifacts · 7 PASS · 0 FAIL · 0 WARN · 51 SKIP · 0 ADVISORY  ->  CLEAN
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+truth: a slot-coverage run that prints no pct= line (a crash, a missing member, a usage exit) is an env fault ERROR row; the bash read the empty value as WARN slot-coverage "%" after a PASS dup-keys 0, with an integer-expression error on stderr
+-- toolbelt/.stub-rest --
+-- m/A/module-include.xml --
+<types/>
+-- m/A/module.lexicon --
+k=v
+-- m/B/module-include.xml --
+<types/>
+-- m/B/module.lexicon --
+k=v
+-- toolbelt/slot-coverage.sh (mode 755) --
+#!/usr/bin/env bash
+case "$1" in
+  */A/*) echo "slot-coverage: something broke" >&2; exit 127 ;;
+  */B/*) printf 'usage: slot-coverage.sh ...\n'; exit 2 ;;
+esac
