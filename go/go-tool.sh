@@ -6,9 +6,13 @@
 # copied wrapper (tests/build-retro-sync.bats _fixture_top) still finds it. [ev: retro go-ci-steps]
 #
 # go_tool_bin <go-dir> <tool> — make <go-dir>/bin/<tool> current and print its path on stdout.
-#   The binary is rebuilt when it is missing or older than any *.go or go.mod under <go-dir>
-#   (bin/ excluded). The first call after a source change pays one `go build` (seconds, cached after);
-#   that is the price of never running stale logic. Build output goes to stderr.
+#   The binary is rebuilt when it is missing or older than any source under <go-dir>: every file except
+#   bin/, testdata/ directories and *_test.go, which `go build` never compiles. Non-.go files count, so an
+#   edited //go:embed asset (registry.json, usage.txt, a template) rebuilds too; tests/go-tool.bats GT14
+#   fails if a non-test file ever embeds from testdata/. The first call after a source change pays one
+#   `go build` (seconds, cached after); that is the price of never running stale logic. Skipping the test
+#   files and fixtures halves the walk (~22 -> ~10 ms here). Build output goes to stderr.
+#   [ev: retro r10-go-tool-walk-scope]
 #   Returns 3 with a `<tool>: ...` message when <go-dir> has no go.mod, `go` is not on PATH, the
 #   staleness check cannot read <go-dir> or the build fails; the old binary is then left in place and
 #   no temporary file remains.
@@ -19,7 +23,7 @@ go_tool_bin() {
   if [ -x "$bin" ]; then
     # Fail closed: a find error (an unreadable source dir) must never pass as "nothing newer".
     # Mutation: GT9 -- piping this find into `head` (or `2>/dev/null || true`) hides its exit status and reuses a stale binary.
-    newer="$(find -H "$go_dir" -path "$go_dir/bin" -prune -o \( -name '*.go' -o -name go.mod \) -newer "$bin" -print -quit)" \
+    newer="$(find -H "$go_dir" \( -path "$go_dir/bin" -o -name testdata \) -prune -o ! -type d ! -name '*_test.go' -newer "$bin" -print -quit)" \
       || { printf '%s: cannot check whether %s is current (find failed under %s)\n' "$tool" "$bin" "$go_dir" >&2; return 3; }
   fi
   if [ ! -x "$bin" ] || [ -n "$newer" ]; then
