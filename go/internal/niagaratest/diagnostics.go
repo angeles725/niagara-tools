@@ -259,8 +259,8 @@ func (h host) writeRunLog(p *plan, ev evidence, code int, s cli.Stdio) bool {
 		return false
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "run-niagara-test run log\nmodule: %s\npart: %s\ninstall: %s\nwritten: %s\n",
-		p.module, p.part, p.install.win, time.Now().UTC().Format(time.RFC3339))
+	fmt.Fprintf(&b, "run-niagara-test run log\nmodule: %s\npart: %s\ninstall: %s\nrun id: %s\nwritten: %s\n",
+		p.module, p.part, p.install.win, p.runID, time.Now().UTC().Format(time.RFC3339))
 	section := func(title string, lines []string) {
 		fmt.Fprintf(&b, "\n== %s ==\n", title)
 		for _, l := range lines {
@@ -301,6 +301,7 @@ func (h host) writeRunLog(p *plan, ev evidence, code int, s cli.Stdio) bool {
 		row(s, "FAIL", "diagnostics: cannot write the run log in "+p.logDir+": "+err.Error())
 		return false
 	}
+	p.logPath = path.name
 	row(s, status, label+": "+path.name)
 	if !kept {
 		row(s, "FAIL", "diagnostics: cannot keep the testng evidence beside "+path.name)

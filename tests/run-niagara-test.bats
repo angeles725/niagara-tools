@@ -86,3 +86,12 @@ setup() {
   [ "$status" -eq 2 ] || { echo "$output"; return 1; }
   [[ "$output" == *'run: --allow-ignored needs --allow-ignored-reason <why>'* ]]
 }
+
+@test "RNT11: run refuses --reuse-home with a copy flag, and a bare --reuse-home, with exit 2, before copying anything" {
+  run "$R" run --install 'C:\Niagara\N4' --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA --reuse-home 'C:\T\run-niagara-test-1' --exclude-jar 'moduleA-*.jar'
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *'--reuse-home takes no --exclude-jar'* ]] || { echo "$output"; return 1; }
+  run "$R" run --install 'C:\Niagara\N4' --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA --reuse-home
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *'flag needs an argument: -reuse-home'* ]]
+}
