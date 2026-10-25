@@ -190,7 +190,7 @@ func TestLiveDifferential(t *testing.T) {
 			compareRequests(t, liveRequests(st.requests(), alias), want.Requests)
 			// Go sent Python's requests, so the station must have answered them as recorded; a
 			// case's answer edited without re-recording would compare Go with Python's old run.
-			if got := answers.take(lc.delay, alias); !t.Failed() && want.Answers != "" && got != want.Answers {
+			if got := answers.take(lc.delay, alias); !t.Failed() && got != want.Answers {
 				t.Fatalf("golden %s is stale: the station's answers for %q changed; %s", liveGolden, lc.name, liveHint)
 			}
 		})
