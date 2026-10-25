@@ -340,6 +340,15 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   starts empty. `--exclude-jar` and `--module-verification` are exit 2 with it (the kept copy keeps boot 1's).
   The dir is deleted at the end (`cleanup: deleted <dir>`) unless `--keep-home` is given again. Proven on the fake
   runner only; a live two-boot reload on a client root is owed `[ev: retro r10-rnt-reuse-home Δ1]`.
+- **The scratch home must be written by this boot, not only exist.** On `--reuse-home` the kept `nuh\` already has
+  boot 1's `etc\` and `security\`, so the runner also records every regular file under `nuh\` just before
+  `bin/test.exe` starts (which holds what the build put there) and its start and exit times: a boot that leaves no
+  file new or changed with an mtime in that window, widened by a printed 2 s clock-skew tolerance (WSL clock vs
+  Windows mtimes), is `FAIL  ...  scratch niagara_user_home not written by this boot`; the PASS row names up to 5
+  files relative to `nuh\` with their mtimes. No file is required by name: which ones the NRE rewrites on every
+  boot is not recorded. It runs on fresh runs too, and the real-home snapshot still gates both. The walk is capped
+  (20000 entries, 16 dirs deep; over a cap is FAIL). Fake runner only; the live check is owed on the next client
+  reuse run `[ev: retro r10-rnt-reuse-nre-proof Δ1]`.
 - **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13) and 7.6.22 (observed), `:<part>:compileModuleTestJava` appends every
   `@NiagaraType` test class to the PRODUCTION `<part>/module-include.xml`** (never to `moduleTest-include.xml`), and
   it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types (a
