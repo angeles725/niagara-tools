@@ -51,7 +51,7 @@
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only]
 # Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR  <check>  <detail>   (ERROR = member env fault, not counted; exit 3)
-# Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES|INCOMPLETE
+# Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES|INCOMPLETE|ISSUES (+INCOMPLETE)
 # Floor (BUILD-LOOP §5): verify-module (needs a built jar) and schema-risk (needs <artifact>/.deploy-baseline) never
 # read CLEAN when they SKIP — the verdict is INCOMPLETE, exit 4. --first-deploy: the module was never deployed, so
 # schema-risk has no baseline to diff (N/A, not a floor gap). --lint-only: a punch-list run that is not the floor
