@@ -1,11 +1,11 @@
 <!-- review-status: pending -->
 <!-- module: kit -->
-<!-- deltas: 4 -->
+<!-- deltas: 6 -->
 # 2026-10-25 · kit · r10-scaffold-station-test
 
 **Session**: niagara-tools quality round 10, `scaffold-module` emits a BTestNgStation skeleton for the logic and
 dashboard types, branch `r10/scaffold-station-test` from 1551c6bb (origin/main)
-**Delta count**: 4
+**Delta count**: 6
 
 ## What happened
 `scaffold-module.sh --type logic|dashboard` now copies `templates/station-test` into `<Mod>-rt`:
@@ -22,8 +22,17 @@ property link whose target is READONLY (`LinkCheck.java:108-109`, `linkcheck.pro
 `types/dashboard.md:12` already forbade it. It is now `SUMMARY` only. The logic fixture's gradle file gained
 `junit:junit:4.13.2`; without it the overlay makes lint-structure L11 FAIL.
 
-The one live boot was RED, not GREEN: the test NRE rejected the test module (`invalid test target(s)`). The gates
-held (install unchanged, real user homes unchanged), so no second boot was spent. The GREEN boot is owed.
+Both live boots were RED, not GREEN: the test NRE rejected the test module (`invalid test target(s)`). The gates
+held every time. The second, diagnostic boot (`--keep-home`, runner at 1be6011a with the fail diagnostics) found
+the cause, and it is in the session's own harness, not the scaffold: the throwaway signing profile was written
+with `validity 30` and `refresh 15`, so every signing regenerated the key and both jars carried a signature block
+that no JVM can verify. The NRE dropped both modules (`SecurityException: cannot verify signature block file
+META-INF/THROWAWA`), so `getModules("ModuleA")` threw `ModuleNotFoundException` and TestRunner printed
+`invalid test target(s)`. With the plugin's own defaults (`validity 365`, `refresh 183`) both jars are `jar
+verified` offline. The GREEN boot is still owed.
+
+The offline checks also found that the dashboard `-ux` servlet never compiled, on 4.14 or 4.15: it declared
+`@Override doService(WebOp)`, which is not a BWebServlet method. It now overrides `doGet` and `doPost`.
 
 ## Evidence
 - RED before the overlay: TC-ST1, TC-ST2, TC-ST3 and TC-ST5 failed (no emitted files). TC-ST4 (driver gets no
@@ -36,13 +45,30 @@ held (install unchanged, real user homes unchanged), so no second boot was spent
 - The `-ux` part of the dashboard scaffold does not compile against 4.15.3.28: `BModuleAServlet.java:74 method does
   not override or implement a method from a supertype` (`doService(WebOp)`). This was not caused by this change. The
   runner builds only `-rt`.
-- Runner rows: `module verification: low (copy only)` PASS; `testng: cannot read …/testng-results.xml` FAIL;
+- First boot (runner on this branch's base) rows: `module verification: low (copy only)` PASS; `testng: cannot read …/testng-results.xml` FAIL;
   `console line 65: invalid test target(s): the test NRE rejected the test module` FAIL; `install unchanged (747
   entries checked)` PASS; `install defaults/system.properties unchanged` PASS; `real user homes unchanged (59
   entries checked)` PASS; exit 1.
-- The built test module's `module.xml` lists only `baja` and `test-wb` as dependencies, not `ModuleA-rt`, although
-  `BModuleALinkTest` imports `com.example.ModuleA.BModuleA`. This is a candidate cause, not a proven one: the
-  console log went with the scratch dir.
+- Second boot (kit-run-main 1be6011a, `--keep-home`): the same FAIL rows, plus `cleanup: kept <scratch>`,
+  `gradle root unchanged (0 tracked changes before, same after)` and `diagnostics kept: <state>/20261025T092220Z-ModuleA.log`.
+  Console: `Error processing module file ModuleA-rt.jar` and `… ModuleA-rtTest.jar`, both `java.lang.SecurityException:
+  cannot verify signature block file META-INF/THROWAWA`, then `SEVERE [testrunner] invalid test target(s): ModuleA`
+  with `javax.baja.sys.ModuleNotFoundException: ModuleA at RegistryDatabase.getModules`. Tail copied to
+  `~/stationlogs/scf-20261025T092220Z-ModuleA-invalid-target.log`; the kept home (915 MB) was deleted at
+  2026-10-25T09:27:38Z.
+- Offline: `jarsigner -verify` on the kept `ModuleA-rt.jar` failed the same way, so the jar was broken at build
+  time. The keystore's cert read `Valid from 03:24:06 until Oct 30` (minted at that build). After rewriting the
+  profile to 365/183 with a fresh keystore, two consecutive `clean jar moduleTestJar` builds gave `jar verified` for
+  both jars (self-signed, which `low` accepts).
+- The first runner refused the scratch root until it was a git worktree (`gradle root is not a git worktree: cannot
+  verify it`, exit 3, before any copy); a `git init` with `build/` and `.gradle/` ignored satisfied it.
+- The test module's `module.xml` has no dependency on `ModuleA-rt`. Bisected: the kit root's `niagaraSigning { aliases;
+  signingProfileFile }` block drops it (plugin 7.6.22, same with the 4.14 mirror); a known-good client root without that
+  block gets a `<dependency name="<Mod>-rt" …/>` line. The driver scaffold has the same gap and its test still ran 6/6
+  on 4.14, so it was not the cause here; it stays an open question whether a 4.15 run needs it.
+- `-ux`: `:ModuleA-ux:compileJava` failed at `BModuleAServlet.java:74` (`method does not override or implement a method
+  from a supertype`) on both the 4.15.3.28 and the 4.14.0.162 mirrors; after the fix it passes on both, with both
+  `compileModuleTestJava` tasks.
 - `lint-link-target-flags` LTF1 stayed silent on the old `status`. In the Go rule (`linktargetflags.go`, `Check`),
   a non-comment, non-property line resets the comment block. The class javadoc that says the integrator links into
   `status` is followed by `@NiagaraType`, so that javadoc never heads the property run. A probe that rewrote the
@@ -55,15 +81,19 @@ held (install unchanged, real user homes unchanged), so no second boot was spent
 | Δ1 | The logic and dashboard scaffolds ship a Fox-off station-test fixture and a link-in sample test from `templates/station-test` | `templates/station-test`; `toolbelt/scaffold-module.sh`; `types/moduleTest.md` § Checklist | `[ev: code build-n4-module-kit/toolbelt/scaffold-module.sh]` |
 | Δ2 | LTF1 should read a class javadoc above `@NiagaraType` as heading the property run, or the scaffold convention should put a link-in comment on each link-in slot | `go/internal/lint/rules/linktargetflags/linktargetflags.go`; `toolbelt/lint-link-target-flags.sh` header | `[ev: code go/internal/lint/rules/linktargetflags/linktargetflags.go]` |
 | Δ3 | A FAIL run of `run-niagara-test run` should print the console lines around the rejection (or keep the console log) so one boot is enough to diagnose it | `go/internal/niagaratest/run.go` | `[ev: code go/internal/niagaratest/run.go]` |
+| Δ5 | A throwaway LocalSigningProfile keeps the plugin's validity/refresh (365/183): a refresh at or above the remaining validity re-mints the key at every signing and leaves a signature block no JVM verifies (`cannot verify signature block file`), which the NRE reports only as a missing module | `types/moduleTest.md` § Running from WSL; `types/distribution.md` § Development path | `[ev: retro r10-scaffold-station-test Δ5]` |
+| Δ6 | The scaffold's `-ux` servlet overrides `doGet`/`doPost(WebOp)`, never `doService(WebOp)` | `fixtures/MinimalDash` `-ux`; TC-DASH3 | `[ev: code build-n4-module-kit/fixtures/MinimalDash/MinimalDash/MinimalDash-ux/src/com/angeles/MinimalDash/ux/BMinimalDashServlet.java]` |
 | Δ4 | The driver scaffold's station test keeps Fox on a free port, which listens on every interface on the Windows NRE. A loopback-only policy needs the Fox-off fixture instead | `fixtures/MinimalDriver`; `types/driver-authoring.md` § 12.1 | `[ev: retro r10-run-niagara-test-testng Δ4]` |
 
 ## Lessons
 - A guard that catches a real defect in the kit's own fixture is the point of the station test: the dashboard
   scaffold had shipped an unlinkable display slot since the first dashboard fixture.
-- One boot is a scarce budget. Without the console log, a RED boot can only be classified, not diagnosed.
+- One boot is a scarce budget. Without the console log, a RED boot can only be classified, not diagnosed; with it,
+  the cause was one line above the runner's summary.
+- A plausible static cause (the missing self-dependency) was wrong; the console named the real one. Bisecting the
+  build offline was still worth it: it found a second, real gap in the signing template.
 
 ## Owed
-- The GREEN boot of a scaffolded dashboard module: rerun with `--keep-home` and read the console for the
-  rejection cause; check the missing `ModuleA-rt` dependency of the test module first.
-- The `-ux` servlet compile failure on 4.15 (`doService(WebOp)` override).
-- Δ2, Δ3 and Δ4 above.
+- The GREEN boot of a scaffolded dashboard module, with a 365/183 throwaway profile (needs a boot approval).
+- Whether a 4.15 station test needs the test module's dependency on `<Mod>-rt` that the signing block drops.
+- Δ2, Δ4 and Δ5 above (Δ3 landed as runner D6, #566).
