@@ -29,3 +29,10 @@ setup() {
   [ "$status" -eq 1 ] || { echo "$output"; return 1; }
   [[ "$output" == *"FAIL  run-niagara-test  testng: test-method setupStation FAIL (config)"* ]]
 }
+
+@test "RNT4: run refuses an install that is not on a Windows drive with exit 2, before copying anything" {
+  mkdir -p "$BATS_TEST_TMPDIR/home/bin" && : > "$BATS_TEST_TMPDIR/home/bin/test.exe"
+  run "$R" run --install "$BATS_TEST_TMPDIR/home" --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"--install $BATS_TEST_TMPDIR/home: not on a Windows drive"* ]]
+}
