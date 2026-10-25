@@ -1,0 +1,46 @@
+-- args --
+--tag
+plant
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:16 01-Oct-26 CST -> 10:00:16 01-Oct-26 CST  SEVERE muy detallados block @ MdNb.frame(MdNb.java:9)
+FAIL  triage-console  a.txt  1x 10:00:08 01-Oct-26 CST -> 10:00:08 01-Oct-26 CST  SEVERE mas latin1 block @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:06 01-Oct-26 CST -> 10:00:06 01-Oct-26 CST  SEVERE mas utf8 block @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:04 01-Oct-26 CST -> 10:00:04 01-Oct-26 CST  SEVERE muy block @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:10 01-Oct-26 CST -> 10:00:10 01-Oct-26 CST  SEVERE muy alone block @ MuyNb.frame(MuyNb.java:6)
+FAIL  triage-console  a.txt  1x 10:00:02 01-Oct-26 CST -> 10:00:02 01-Oct-26 CST  SEVERE detallado block @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  SEVERE configurar block @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:14 01-Oct-26 CST -> 10:00:14 01-Oct-26 CST  SEVERE mas alone block @ MasNb.frame(MasNb.java:8)
+FAIL  triage-console  a.txt  1x 10:00:12 01-Oct-26 CST -> 10:00:12 01-Oct-26 CST  SEVERE detallados block @ DetNb.frame(DetNb.java:7)
+-- stderr --
+-- @kind --
+truth: hand-written; the JDK 8 SimpleFormatter that the station console uses prints Level.getLocalizedLevelName(), which upper-cases the Spanish bundle names (Configurar, Detallado, Muy Detallado, Más Detallado) in the es locale, but the bash and the port knew only GRAVE, ADVERTENCIA and INFORMACIÓN, so a CONFIGURAR, DETALLADO, MUY DETALLADO or MÁS DETALLADO header (UTF-8 or Latin-1) never closed the open WARNING/SEVERE block and its frames attached to the previous row; the port makes those exact names levels, the two-word ones read as one token across a single blank, while MUY, DETALLADOS, MÁS and MUY DETALLADOS stay no level
+-- a.txt --
+SEVERE [10:00:00 01-Oct-26 CST][plant] configurar block
+CONFIGURAR [10:00:01 01-Oct-26 CST][sys] configurar closes the block
+  	at com.angeles.Cfg.frame(Cfg.java:1)
+SEVERE [10:00:02 01-Oct-26 CST][plant] detallado block
+DETALLADO [10:00:03 01-Oct-26 CST][sys] detallado closes the block
+  	at com.angeles.Det.frame(Det.java:2)
+SEVERE [10:00:04 01-Oct-26 CST][plant] muy block
+MUY DETALLADO [10:00:05 01-Oct-26 CST][sys] the two-word level closes the block
+  	at com.angeles.Muy.frame(Muy.java:3)
+SEVERE [10:00:06 01-Oct-26 CST][plant] mas utf8 block
+MÁS DETALLADO [10:00:07 01-Oct-26 CST][sys] utf8 two-word level closes the block
+  	at com.angeles.Mas.frame(Mas.java:4)
+SEVERE [10:00:08 01-Oct-26 CST][plant] mas latin1 block
+M�S DETALLADO [10:00:09 01-Oct-26 CST][sys] latin1 two-word level closes the block
+  	at com.angeles.Lat.frame(Lat.java:5)
+SEVERE [10:00:10 01-Oct-26 CST][plant] muy alone block
+MUY [10:00:11 01-Oct-26 CST][sys] muy alone is no level
+  	at com.angeles.MuyNb.frame(MuyNb.java:6)
+SEVERE [10:00:12 01-Oct-26 CST][plant] detallados block
+DETALLADOS [10:00:13 01-Oct-26 CST][sys] detallados is no level
+  	at com.angeles.DetNb.frame(DetNb.java:7)
+SEVERE [10:00:14 01-Oct-26 CST][plant] mas alone block
+MÁS [10:00:15 01-Oct-26 CST][sys] mas alone is no level
+  	at com.angeles.MasNb.frame(MasNb.java:8)
+SEVERE [10:00:16 01-Oct-26 CST][plant] muy detallados block
+MUY DETALLADOS [10:00:17 01-Oct-26 CST][sys] muy detallados is no level
+  	at com.angeles.MdNb.frame(MdNb.java:9)

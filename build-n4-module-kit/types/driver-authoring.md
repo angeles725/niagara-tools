@@ -966,6 +966,12 @@ Running it from WSL — each step is a failure seen on the way:
 - **The user home must be on a Windows-local drive:** `test.exe` honours the `niagara_user_home` environment
   variable, but on the UNC drive the NRE stops with `FileLockException: error obtaining lock for …\security\.km`.
   Point it at a fresh scratch dir under `%TEMP%`, never the real `Niagara4.x` user home, and delete it afterwards.
+- **Pass `niagara_user_home` to Windows with `WSLENV=niagara_user_home/w`, never through `cmd /c "set …"`:** run
+  `bin/test.exe` straight from WSL with `niagara_user_home=<Windows path>` and `niagara_user_home/w` appended to
+  `WSLENV`. WSL escapes the inner quotes of a `cmd /c "set "niagara_user_home=…" && …"` line, so the variable never
+  arrives and the NRE writes the real user home (its registry and signers cache). Verify every run: afterwards the
+  scratch home holds `security\` and `etc\`, and the real `Niagara4.x` homes are unchanged (`run-niagara-test run`
+  checks both, `types/moduleTest.md` § Running from WSL) `[ev: retro r10-rnt-run-live-fixes Δ2]`.
 - **First boot is slow:** about 16 min (registry rebuilt, 14206 types, plus the module signature registry); later
   boots about 10 min over `\\wsl.localhost`. A stray jar whose module name has a dot (`nmodsreflow.77-rt.jar`) made
   every boot rebuild the registry (`Out-of-date: Module added …`); leave such jars out of the copy.
@@ -973,8 +979,17 @@ Running it from WSL — each step is a failure seen on the way:
   `BFoxService` child): `makeDefaultAuthFoxServices = false` fails setup with `ArrayIndexOutOfBoundsException: 0`
   and skips every test. Keep Fox and give it a free port (`foxPort`, default 1911, is taken whenever a station or
   platform runs on the host).
-- **`test.exe` exits 0 with failing tests:** read `Total tests run: N, Failures: F` (§ `types/moduleTest.md` Running
-  from WSL). A third-party thread the runner cannot stop (`Thread.stop()` warning after the summary) is install noise.
+- **A loopback-only station test turns Fox off:** the Windows NRE never binds Fox to 127.0.0.1 alone, so a test
+  that must listen on loopback only sets `foxEnabled`, `foxsEnabled`, multicast and announcement all false. Its
+  fixture then tolerates only `BTestNgStation`'s exact `Fox service did not start in time` failure, and only while
+  the station itself is running; any other setup failure still fails the run. This refines the free-port step
+  above, which still works when loopback-only is not required (a module's station-test run on test.exe).
+  `[ev: retro r10-run-niagara-test-testng Δ4]`
+- **`test.exe` exits -1 when a test fails, 0 when all pass:** `cmd /c "… & echo %ERRORLEVEL%"` showed 0 for failing
+  runs because `%ERRORLEVEL%` expands at parse time, before test.exe runs; read `!ERRORLEVEL!` under `cmd /v:on`.
+  Judge the run from its output anyway: `Total tests run: N, Failures: F` on stderr, or `testng-results.xml`
+  with `-output:` (§ `types/moduleTest.md` Known gotchas). A third-party thread the runner cannot stop (`Thread.stop()`
+  warning after the summary) is install noise. `[ev: retro r10-run-niagara-test-testng Δ3]`
 - **An untrusted signer did not block the run here:** the loader WARNed `Could not validate cert chain` for both
   jars and still loaded and ran them (fresh user home, this install's default verification mode).
 - **The signing key needs the code-signing usage:** a plain `keytool -genkeypair` key fails `:jar` with

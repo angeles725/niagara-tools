@@ -1,0 +1,612 @@
+-- args --
+verdict
+--testng
+@DIR@/testng-results.xml
+@DIR@/stderr.log
+-- want --
+exit 1
+FAIL  run-niagara-test  testng: total 11, passed 5, failed 6, skipped 0
+FAIL  run-niagara-test  testng: 6 failed
+FAIL  run-niagara-test  testng: test-method autoLockout_latchesTheUnit_andLeavesItsModeAuto FAIL
+FAIL  run-niagara-test  testng: test-method faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord FAIL
+FAIL  run-niagara-test  testng: test-method wholeRackLocked_everyModeStillAuto_rackUnavailable FAIL
+FAIL  run-niagara-test  testng: test-method restartDelay_slotHoldsTheLatch_untilItElapses FAIL
+FAIL  run-niagara-test  testng: test-method autoRestart_atDefaultMinOff_isNotHeldOff FAIL
+FAIL  run-niagara-test  testng: test-method minOff_slotDefault_isZero FAIL
+FAIL  run-niagara-test  console line 6: run 3, failures 3, skips 0; 3 failures
+FAIL  run-niagara-test  console line 13: run 3, failures 1, skips 0; 1 failure
+FAIL  run-niagara-test  console line 22: run 5, failures 2, skips 0; 2 failures
+FAIL  run-niagara-test  console line 26: run 11, failures 6, skips 0 (all run tests); 6 failures
+FAIL  run-niagara-test  verdict: 5 FAIL reasons
+-- @kind --
+truth: a real station-test run of bin\test.exe <module> -v:2 -output:<dir> (its stderr and results file), anonymized (testdata/README.md)
+-- stderr.log --
+ TestNG Test Failed: autoLockout_latchesTheUnit_andLeavesItsModeAuto on Auto Lockout Keeps Mode Station Test - a proof-of-run fault should latch an auto-lockout: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0
+ TestNG Test Failed: faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord on Auto Lockout Keeps Mode Station Test - precondition: some unit auto-locked: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0
+ TestNG Test Failed: wholeRackLocked_everyModeStillAuto_rackUnavailable on Auto Lockout Keeps Mode Station Test - each staged unit faults in turn, so all three should end locked: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0
+===============================================
+ModuleATest_AutoLockoutKeepsModeStationTest
+Total tests run: 3, Failures: 3, Skips: 0
+===============================================
+ TestNG Test Failed: restartDelay_slotHoldsTheLatch_untilItElapses on Hand Low Suction Wiring Station Test - with lowSuctionRestartDelay = 1 h, a recovered reading must not release yet: c1{cmd=true,mode=1.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=25.0 suctionMismatch=false stagesOn=1.0 expected [true] but found [false]
+ TestNG Test Ended: restartDiff_slotHoldsTheLatch_untilLimitPlusDiff on Hand Low Suction Wiring Station Test
+ TestNG Test Ended: trip_isPublishedOnAllThreeStatusSlots on Hand Low Suction Wiring Station Test
+===============================================
+ModuleATest_HandLowSuctionWiringStationTest
+Total tests run: 3, Failures: 1, Skips: 0
+===============================================
+ TestNG Test Failed: autoRestart_atDefaultMinOff_isNotHeldOff on Min Off Default Station Test - AUTO should start one unit for one calling room: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0
+ TestNG Test Ended: handRestart_atDefaultMinOff_isImmediate on Min Off Default Station Test
+ TestNG Test Ended: handRestart_isNotBlocked_evenByANonzeroMinOff on Min Off Default Station Test
+ TestNG Test Failed: minOff_slotDefault_isZero on Min Off Default Station Test - minOff's declared default must be 0 (S6) expected [0] but found [180000]
+ TestNG Test Ended: minOn_slotDefault_isStillThreeMinutes on Min Off Default Station Test
+===============================================
+ModuleATest_MinOffDefaultStationTest
+Total tests run: 5, Failures: 2, Skips: 0
+===============================================
+===============================================
+Results of all run tests
+Total tests run: 11, Failures: 6, Skips: 0
+===============================================
+-- testng-results.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results skipped="0" failed="6" ignored="0" total="11" passed="5">
+  <reporter-output>
+  </reporter-output>
+  <suite name="ModuleATest_AutoLockoutKeepsModeStationTest" duration-ms="80623" started-at="2026-10-25T04:12:00Z" finished-at="2026-10-25T04:13:20Z">
+    <groups>
+    </groups>
+    <test name="Command line test" duration-ms="80623" started-at="2026-10-25T04:12:00Z" finished-at="2026-10-25T04:13:20Z">
+      <class name="test.com.example.ModuleA.BAutoLockoutKeepsModeStationTest">
+        <test-method status="PASS" signature="setupStation()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="setupStation" is-config="true" duration-ms="18224" started-at="2026-10-25T04:12:00Z" description="Setup and start test station" finished-at="2026-10-25T04:12:18Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setupStation -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:12:18Z" finished-at="2026-10-25T04:12:18Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="FAIL" signature="autoLockout_latchesTheUnit_andLeavesItsModeAuto()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="autoLockout_latchesTheUnit_andLeavesItsModeAuto" duration-ms="20101" started-at="2026-10-25T04:12:18Z" finished-at="2026-10-25T04:12:38Z">
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[a proof-of-run fault should latch an auto-lockout: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: a proof-of-run fault should latch an auto-lockout: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0
+at org.testng.Assert.fail(Assert.java:96)
+at javax.baja.test.TestHelper.assertWillBeTrue(TestHelper.java:135)
+at test.com.example.ModuleA.ModuleAStationFixture.await(ModuleAStationFixture.java:114)
+at test.com.example.ModuleA.BAutoLockoutKeepsModeStationTest.autoLockout_latchesTheUnit_andLeavesItsModeAuto(BAutoLockoutKeepsModeStationTest.java:95)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at org.testng.internal.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:124)
+at org.testng.internal.Invoker.invokeMethod(Invoker.java:583)
+at org.testng.internal.Invoker.invokeTestMethod(Invoker.java:719)
+at org.testng.internal.Invoker.invokeTestMethods(Invoker.java:989)
+at org.testng.internal.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:125)
+at org.testng.internal.TestMethodWorker.run(TestMethodWorker.java:109)
+at org.testng.TestRunner.privateRun(TestRunner.java:648)
+at org.testng.TestRunner.run(TestRunner.java:505)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:455)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:450)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:415)
+at org.testng.SuiteRunner.run(SuiteRunner.java:364)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:84)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1208)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1137)
+at org.testng.TestNG.runSuites(TestNG.java:1049)
+at org.testng.TestNG.run(TestNG.java:1017)
+at com.tridium.testng.TestRunnerNg.loop(TestRunnerNg.java:271)
+at com.tridium.testng.TestRunnerNg.run(TestRunnerNg.java:249)
+at javax.baja.test.TestRunner.run(TestRunner.java:226)
+at javax.baja.test.TestRunner.run(TestRunner.java:75)
+at javax.baja.test.TestRunner.run(TestRunner.java:275)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:376)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:366)
+at javax.baja.test.TestRunner.main(TestRunner.java:361)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.sys.Nre.runClass(Nre.java:570)
+at com.tridium.sys.Nre.main(Nre.java:362)
+at com.tridium.sys.Nre.bootstrap(Nre.java:175)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.nre.bootstrap.Bootstrap.Main(Bootstrap.java:149)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- autoLockout_latchesTheUnit_andLeavesItsModeAuto -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="unmountController" is-config="true" duration-ms="20" started-at="2026-10-25T04:12:38Z" finished-at="2026-10-25T04:12:38Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="restoreClassLoader" is-config="true" duration-ms="2" started-at="2026-10-25T04:12:38Z" finished-at="2026-10-25T04:12:38Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="setClassLoader" is-config="true" duration-ms="1" started-at="2026-10-25T04:12:38Z" finished-at="2026-10-25T04:12:38Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="FAIL" signature="faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord" duration-ms="20010" started-at="2026-10-25T04:12:38Z" finished-at="2026-10-25T04:12:58Z">
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[precondition: some unit auto-locked: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: precondition: some unit auto-locked: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0
+at org.testng.Assert.fail(Assert.java:96)
+at javax.baja.test.TestHelper.assertWillBeTrue(TestHelper.java:135)
+at test.com.example.ModuleA.ModuleAStationFixture.await(ModuleAStationFixture.java:114)
+at test.com.example.ModuleA.BAutoLockoutKeepsModeStationTest.faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord(BAutoLockoutKeepsModeStationTest.java:124)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at org.testng.internal.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:124)
+at org.testng.internal.Invoker.invokeMethod(Invoker.java:583)
+at org.testng.internal.Invoker.invokeTestMethod(Invoker.java:719)
+at org.testng.internal.Invoker.invokeTestMethods(Invoker.java:989)
+at org.testng.internal.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:125)
+at org.testng.internal.TestMethodWorker.run(TestMethodWorker.java:109)
+at org.testng.TestRunner.privateRun(TestRunner.java:648)
+at org.testng.TestRunner.run(TestRunner.java:505)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:455)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:450)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:415)
+at org.testng.SuiteRunner.run(SuiteRunner.java:364)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:84)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1208)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1137)
+at org.testng.TestNG.runSuites(TestNG.java:1049)
+at org.testng.TestNG.run(TestNG.java:1017)
+at com.tridium.testng.TestRunnerNg.loop(TestRunnerNg.java:271)
+at com.tridium.testng.TestRunnerNg.run(TestRunnerNg.java:249)
+at javax.baja.test.TestRunner.run(TestRunner.java:226)
+at javax.baja.test.TestRunner.run(TestRunner.java:75)
+at javax.baja.test.TestRunner.run(TestRunner.java:275)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:376)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:366)
+at javax.baja.test.TestRunner.main(TestRunner.java:361)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.sys.Nre.runClass(Nre.java:570)
+at com.tridium.sys.Nre.main(Nre.java:362)
+at com.tridium.sys.Nre.bootstrap(Nre.java:175)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.nre.bootstrap.Bootstrap.Main(Bootstrap.java:149)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- faultReset_clearsTheLatch_becauseTheModeWasNeverTheRecord -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="unmountController" is-config="true" duration-ms="40" started-at="2026-10-25T04:12:58Z" finished-at="2026-10-25T04:12:58Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:12:58Z" finished-at="2026-10-25T04:12:58Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:12:58Z" finished-at="2026-10-25T04:12:58Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="FAIL" signature="wholeRackLocked_everyModeStillAuto_rackUnavailable()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="wholeRackLocked_everyModeStillAuto_rackUnavailable" duration-ms="20044" started-at="2026-10-25T04:12:58Z" finished-at="2026-10-25T04:13:18Z">
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[each staged unit faults in turn, so all three should end locked: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: each staged unit faults in turn, so all three should end locked: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0
+at org.testng.Assert.fail(Assert.java:96)
+at javax.baja.test.TestHelper.assertWillBeTrue(TestHelper.java:135)
+at test.com.example.ModuleA.ModuleAStationFixture.await(ModuleAStationFixture.java:114)
+at test.com.example.ModuleA.BAutoLockoutKeepsModeStationTest.wholeRackLocked_everyModeStillAuto_rackUnavailable(BAutoLockoutKeepsModeStationTest.java:111)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at org.testng.internal.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:124)
+at org.testng.internal.Invoker.invokeMethod(Invoker.java:583)
+at org.testng.internal.Invoker.invokeTestMethod(Invoker.java:719)
+at org.testng.internal.Invoker.invokeTestMethods(Invoker.java:989)
+at org.testng.internal.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:125)
+at org.testng.internal.TestMethodWorker.run(TestMethodWorker.java:109)
+at org.testng.TestRunner.privateRun(TestRunner.java:648)
+at org.testng.TestRunner.run(TestRunner.java:505)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:455)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:450)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:415)
+at org.testng.SuiteRunner.run(SuiteRunner.java:364)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:84)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1208)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1137)
+at org.testng.TestNG.runSuites(TestNG.java:1049)
+at org.testng.TestNG.run(TestNG.java:1017)
+at com.tridium.testng.TestRunnerNg.loop(TestRunnerNg.java:271)
+at com.tridium.testng.TestRunnerNg.run(TestRunnerNg.java:249)
+at javax.baja.test.TestRunner.run(TestRunner.java:226)
+at javax.baja.test.TestRunner.run(TestRunner.java:75)
+at javax.baja.test.TestRunner.run(TestRunner.java:275)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:376)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:366)
+at javax.baja.test.TestRunner.main(TestRunner.java:361)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.sys.Nre.runClass(Nre.java:570)
+at com.tridium.sys.Nre.main(Nre.java:362)
+at com.tridium.sys.Nre.bootstrap(Nre.java:175)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.nre.bootstrap.Bootstrap.Main(Bootstrap.java:149)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- wholeRackLocked_everyModeStillAuto_rackUnavailable -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="unmountController" is-config="true" duration-ms="41" started-at="2026-10-25T04:13:18Z" finished-at="2026-10-25T04:13:18Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:13:18Z" finished-at="2026-10-25T04:13:18Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="teardownStation()[pri:0, instance:Auto Lockout Keeps Mode Station Test]" name="teardownStation" is-config="true" duration-ms="2061" started-at="2026-10-25T04:13:18Z" description="Teardown test station" finished-at="2026-10-25T04:13:20Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- teardownStation -->
+      </class> <!-- test.com.example.ModuleA.BAutoLockoutKeepsModeStationTest -->
+    </test> <!-- Command line test -->
+  </suite> <!-- ModuleATest_AutoLockoutKeepsModeStationTest -->
+  <suite name="ModuleATest_HandLowSuctionWiringStationTest" duration-ms="14681" started-at="2026-10-25T04:13:20Z" finished-at="2026-10-25T04:13:35Z">
+    <groups>
+    </groups>
+    <test name="Command line test" duration-ms="14681" started-at="2026-10-25T04:13:20Z" finished-at="2026-10-25T04:13:35Z">
+      <class name="test.com.example.ModuleA.BHandLowSuctionWiringStationTest">
+        <test-method status="PASS" signature="setupStation()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="setupStation" is-config="true" duration-ms="7559" started-at="2026-10-25T04:13:20Z" description="Setup and start test station" finished-at="2026-10-25T04:13:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setupStation -->
+        <test-method status="FAIL" signature="restartDelay_slotHoldsTheLatch_untilItElapses()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restartDelay_slotHoldsTheLatch_untilItElapses" duration-ms="15" started-at="2026-10-25T04:13:28Z" finished-at="2026-10-25T04:13:28Z">
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[with lowSuctionRestartDelay = 1 h, a recovered reading must not release yet: c1{cmd=true,mode=1.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=25.0 suctionMismatch=false stagesOn=1.0 expected [true] but found [false]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: with lowSuctionRestartDelay = 1 h, a recovered reading must not release yet: c1{cmd=true,mode=1.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=25.0 suctionMismatch=false stagesOn=1.0 expected [true] but found [false]
+at org.testng.Assert.fail(Assert.java:96)
+at org.testng.Assert.failNotEquals(Assert.java:776)
+at org.testng.Assert.assertTrue(Assert.java:44)
+at test.com.example.ModuleA.BHandLowSuctionWiringStationTest.restartDelay_slotHoldsTheLatch_untilItElapses(BHandLowSuctionWiringStationTest.java:143)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at org.testng.internal.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:124)
+at org.testng.internal.Invoker.invokeMethod(Invoker.java:583)
+at org.testng.internal.Invoker.invokeTestMethod(Invoker.java:719)
+at org.testng.internal.Invoker.invokeTestMethods(Invoker.java:989)
+at org.testng.internal.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:125)
+at org.testng.internal.TestMethodWorker.run(TestMethodWorker.java:109)
+at org.testng.TestRunner.privateRun(TestRunner.java:648)
+at org.testng.TestRunner.run(TestRunner.java:505)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:455)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:450)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:415)
+at org.testng.SuiteRunner.run(SuiteRunner.java:364)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:84)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1208)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1137)
+at org.testng.TestNG.runSuites(TestNG.java:1049)
+at org.testng.TestNG.run(TestNG.java:1017)
+at com.tridium.testng.TestRunnerNg.loop(TestRunnerNg.java:271)
+at com.tridium.testng.TestRunnerNg.run(TestRunnerNg.java:249)
+at javax.baja.test.TestRunner.run(TestRunner.java:226)
+at javax.baja.test.TestRunner.run(TestRunner.java:75)
+at javax.baja.test.TestRunner.run(TestRunner.java:275)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:376)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:366)
+at javax.baja.test.TestRunner.main(TestRunner.java:361)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.sys.Nre.runClass(Nre.java:570)
+at com.tridium.sys.Nre.main(Nre.java:362)
+at com.tridium.sys.Nre.bootstrap(Nre.java:175)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.nre.bootstrap.Bootstrap.Main(Bootstrap.java:149)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restartDelay_slotHoldsTheLatch_untilItElapses -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:13:28Z" finished-at="2026-10-25T04:13:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="unmountController" is-config="true" duration-ms="14" started-at="2026-10-25T04:13:28Z" finished-at="2026-10-25T04:13:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="setClassLoader" is-config="true" duration-ms="2" started-at="2026-10-25T04:13:28Z" finished-at="2026-10-25T04:13:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:13:28Z" finished-at="2026-10-25T04:13:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="restartDiff_slotHoldsTheLatch_untilLimitPlusDiff()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restartDiff_slotHoldsTheLatch_untilLimitPlusDiff" duration-ms="5041" started-at="2026-10-25T04:13:28Z" finished-at="2026-10-25T04:13:33Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restartDiff_slotHoldsTheLatch_untilLimitPlusDiff -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="unmountController" is-config="true" duration-ms="13" started-at="2026-10-25T04:13:33Z" finished-at="2026-10-25T04:13:33Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:13:33Z" finished-at="2026-10-25T04:13:33Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="trip_isPublishedOnAllThreeStatusSlots()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="trip_isPublishedOnAllThreeStatusSlots" duration-ms="8" started-at="2026-10-25T04:13:33Z" finished-at="2026-10-25T04:13:33Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- trip_isPublishedOnAllThreeStatusSlots -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:13:33Z" finished-at="2026-10-25T04:13:33Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="unmountController" is-config="true" duration-ms="11" started-at="2026-10-25T04:13:33Z" finished-at="2026-10-25T04:13:33Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:13:33Z" finished-at="2026-10-25T04:13:33Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="teardownStation()[pri:0, instance:Hand Low Suction Wiring Station Test]" name="teardownStation" is-config="true" duration-ms="2017" started-at="2026-10-25T04:13:33Z" description="Teardown test station" finished-at="2026-10-25T04:13:35Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- teardownStation -->
+      </class> <!-- test.com.example.ModuleA.BHandLowSuctionWiringStationTest -->
+    </test> <!-- Command line test -->
+  </suite> <!-- ModuleATest_HandLowSuctionWiringStationTest -->
+  <suite name="ModuleATest_MinOffDefaultStationTest" duration-ms="38501" started-at="2026-10-25T04:13:35Z" finished-at="2026-10-25T04:14:14Z">
+    <groups>
+    </groups>
+    <test name="Command line test" duration-ms="38501" started-at="2026-10-25T04:13:35Z" finished-at="2026-10-25T04:14:14Z">
+      <class name="test.com.example.ModuleA.BMinOffDefaultStationTest">
+        <test-method status="PASS" signature="setupStation()[pri:0, instance:Min Off Default Station Test]" name="setupStation" is-config="true" duration-ms="6185" started-at="2026-10-25T04:13:35Z" description="Setup and start test station" finished-at="2026-10-25T04:13:41Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setupStation -->
+        <test-method status="FAIL" signature="autoRestart_atDefaultMinOff_isNotHeldOff()[pri:0, instance:Min Off Default Station Test]" name="autoRestart_atDefaultMinOff_isNotHeldOff" duration-ms="20013" started-at="2026-10-25T04:13:41Z" finished-at="2026-10-25T04:14:01Z">
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[AUTO should start one unit for one calling room: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: AUTO should start one unit for one calling room: c1{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c2{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} c3{cmd=false,mode=0.0,autoLocked=false,fault=false,handLpTripped=false} suction1=0.0 suctionMismatch=false stagesOn=0.0
+at org.testng.Assert.fail(Assert.java:96)
+at javax.baja.test.TestHelper.assertWillBeTrue(TestHelper.java:135)
+at test.com.example.ModuleA.ModuleAStationFixture.await(ModuleAStationFixture.java:114)
+at test.com.example.ModuleA.BMinOffDefaultStationTest.autoRestart_atDefaultMinOff_isNotHeldOff(BMinOffDefaultStationTest.java:127)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at org.testng.internal.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:124)
+at org.testng.internal.Invoker.invokeMethod(Invoker.java:583)
+at org.testng.internal.Invoker.invokeTestMethod(Invoker.java:719)
+at org.testng.internal.Invoker.invokeTestMethods(Invoker.java:989)
+at org.testng.internal.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:125)
+at org.testng.internal.TestMethodWorker.run(TestMethodWorker.java:109)
+at org.testng.TestRunner.privateRun(TestRunner.java:648)
+at org.testng.TestRunner.run(TestRunner.java:505)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:455)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:450)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:415)
+at org.testng.SuiteRunner.run(SuiteRunner.java:364)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:84)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1208)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1137)
+at org.testng.TestNG.runSuites(TestNG.java:1049)
+at org.testng.TestNG.run(TestNG.java:1017)
+at com.tridium.testng.TestRunnerNg.loop(TestRunnerNg.java:271)
+at com.tridium.testng.TestRunnerNg.run(TestRunnerNg.java:249)
+at javax.baja.test.TestRunner.run(TestRunner.java:226)
+at javax.baja.test.TestRunner.run(TestRunner.java:75)
+at javax.baja.test.TestRunner.run(TestRunner.java:275)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:376)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:366)
+at javax.baja.test.TestRunner.main(TestRunner.java:361)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.sys.Nre.runClass(Nre.java:570)
+at com.tridium.sys.Nre.main(Nre.java:362)
+at com.tridium.sys.Nre.bootstrap(Nre.java:175)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.nre.bootstrap.Bootstrap.Main(Bootstrap.java:149)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- autoRestart_atDefaultMinOff_isNotHeldOff -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:13:41Z" finished-at="2026-10-25T04:13:41Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="47" started-at="2026-10-25T04:14:01Z" finished-at="2026-10-25T04:14:01Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:14:01Z" finished-at="2026-10-25T04:14:01Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:14:01Z" finished-at="2026-10-25T04:14:01Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="handRestart_atDefaultMinOff_isImmediate()[pri:0, instance:Min Off Default Station Test]" name="handRestart_atDefaultMinOff_isImmediate" duration-ms="5063" started-at="2026-10-25T04:14:01Z" finished-at="2026-10-25T04:14:06Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- handRestart_atDefaultMinOff_isImmediate -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="62" started-at="2026-10-25T04:14:06Z" finished-at="2026-10-25T04:14:06Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:14:06Z" finished-at="2026-10-25T04:14:06Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="1" started-at="2026-10-25T04:14:06Z" finished-at="2026-10-25T04:14:06Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="handRestart_isNotBlocked_evenByANonzeroMinOff()[pri:0, instance:Min Off Default Station Test]" name="handRestart_isNotBlocked_evenByANonzeroMinOff" duration-ms="5049" started-at="2026-10-25T04:14:06Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- handRestart_isNotBlocked_evenByANonzeroMinOff -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="40" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="2" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="FAIL" signature="minOff_slotDefault_isZero()[pri:0, instance:Min Off Default Station Test]" name="minOff_slotDefault_isZero" duration-ms="4" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[minOff's declared default must be 0 (S6) expected [0] but found [180000]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: minOff's declared default must be 0 (S6) expected [0] but found [180000]
+at org.testng.Assert.fail(Assert.java:96)
+at org.testng.Assert.failNotEquals(Assert.java:776)
+at org.testng.Assert.assertEqualsImpl(Assert.java:137)
+at org.testng.Assert.assertEquals(Assert.java:118)
+at org.testng.Assert.assertEquals(Assert.java:547)
+at test.com.example.ModuleA.BMinOffDefaultStationTest.minOff_slotDefault_isZero(BMinOffDefaultStationTest.java:89)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at org.testng.internal.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:124)
+at org.testng.internal.Invoker.invokeMethod(Invoker.java:583)
+at org.testng.internal.Invoker.invokeTestMethod(Invoker.java:719)
+at org.testng.internal.Invoker.invokeTestMethods(Invoker.java:989)
+at org.testng.internal.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:125)
+at org.testng.internal.TestMethodWorker.run(TestMethodWorker.java:109)
+at org.testng.TestRunner.privateRun(TestRunner.java:648)
+at org.testng.TestRunner.run(TestRunner.java:505)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:455)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:450)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:415)
+at org.testng.SuiteRunner.run(SuiteRunner.java:364)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:84)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1208)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1137)
+at org.testng.TestNG.runSuites(TestNG.java:1049)
+at org.testng.TestNG.run(TestNG.java:1017)
+at com.tridium.testng.TestRunnerNg.loop(TestRunnerNg.java:271)
+at com.tridium.testng.TestRunnerNg.run(TestRunnerNg.java:249)
+at javax.baja.test.TestRunner.run(TestRunner.java:226)
+at javax.baja.test.TestRunner.run(TestRunner.java:75)
+at javax.baja.test.TestRunner.run(TestRunner.java:275)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:376)
+at javax.baja.test.TestRunner.runTests(TestRunner.java:366)
+at javax.baja.test.TestRunner.main(TestRunner.java:361)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.sys.Nre.runClass(Nre.java:570)
+at com.tridium.sys.Nre.main(Nre.java:362)
+at com.tridium.sys.Nre.bootstrap(Nre.java:175)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:498)
+at com.tridium.nre.bootstrap.Bootstrap.Main(Bootstrap.java:149)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- minOff_slotDefault_isZero -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="0" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="restoreClassLoader()[pri:0, instance:Min Off Default Station Test]" name="restoreClassLoader" is-config="true" duration-ms="1" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- restoreClassLoader -->
+        <test-method status="PASS" signature="unmountController()[pri:0, instance:Min Off Default Station Test]" name="unmountController" is-config="true" duration-ms="0" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- unmountController -->
+        <test-method status="PASS" signature="minOn_slotDefault_isStillThreeMinutes()[pri:0, instance:Min Off Default Station Test]" name="minOn_slotDefault_isStillThreeMinutes" duration-ms="0" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- minOn_slotDefault_isStillThreeMinutes -->
+        <test-method status="PASS" signature="setClassLoader()[pri:0, instance:Min Off Default Station Test]" name="setClassLoader" is-config="true" duration-ms="0" started-at="2026-10-25T04:14:12Z" finished-at="2026-10-25T04:14:12Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setClassLoader -->
+        <test-method status="PASS" signature="teardownStation()[pri:0, instance:Min Off Default Station Test]" name="teardownStation" is-config="true" duration-ms="2027" started-at="2026-10-25T04:14:12Z" description="Teardown test station" finished-at="2026-10-25T04:14:14Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- teardownStation -->
+      </class> <!-- test.com.example.ModuleA.BMinOffDefaultStationTest -->
+    </test> <!-- Command line test -->
+  </suite> <!-- ModuleATest_MinOffDefaultStationTest -->
+</testng-results>

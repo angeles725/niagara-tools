@@ -20,3 +20,19 @@ setup() {
   [ "$status" -eq 1 ] || { echo "$output"; return 1; }
   [[ "$output" == *"FAIL  run-niagara-test  line 1: run 0, failures -, skips -; no tests ran (Total tests run: 0)"* ]]
 }
+
+@test "RNT3: --testng on a results file whose setup failed and skipped its tests is FAIL, exit 1" {
+  printf '<testng-results skipped="1" failed="0" ignored="0" total="1" passed="0"><suite name="S"><test name="T">%s%s</test></suite></testng-results>\n' \
+    '<class name="test.com.example.ModuleA.BExampleStationTest"><test-method status="FAIL" name="setupStation" is-config="true"/>' \
+    '<test-method status="SKIP" name="reads_value"/></class>' > "$BATS_TEST_TMPDIR/testng-results.xml"
+  run "$R" verdict --testng "$BATS_TEST_TMPDIR/testng-results.xml"
+  [ "$status" -eq 1 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"FAIL  run-niagara-test  testng: test-method setupStation FAIL (config)"* ]]
+}
+
+@test "RNT4: run refuses an install that is not on a Windows drive with exit 2, before copying anything" {
+  mkdir -p "$BATS_TEST_TMPDIR/home/bin" && : > "$BATS_TEST_TMPDIR/home/bin/test.exe"
+  run "$R" run --install "$BATS_TEST_TMPDIR/home" --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"--install $BATS_TEST_TMPDIR/home: not on a Windows drive"* ]]
+}
