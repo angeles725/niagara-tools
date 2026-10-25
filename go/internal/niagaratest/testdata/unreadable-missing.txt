@@ -1,0 +1,9 @@
+-- args --
+verdict
+@DIR@/nope.log
+-- want --
+exit 3
+-- stderr --
+run-niagara-test: cannot read @DIR@/nope.log: No such file or directory
+-- @kind --
+truth: hand-written from the C40 contract (testdata/README.md); there is no bash tool to record from
