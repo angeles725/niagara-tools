@@ -8,6 +8,7 @@ type Class struct {
 	Name    string // the simple name
 	Extends string // a class's superclass, simple name (a qualified name's last part, type arguments dropped); "" when none
 	Line    int    // the 0-based line of the name token
+	At      int    // the token index of its kind keyword
 	Body    [2]int // the body's token range [Body[0], Body[1]): inside its braces
 }
 
@@ -20,7 +21,7 @@ func Classes(toks []Token) []Class {
 		if t.Kind != TokIdent || !classKeyword[t.Text] || toks[k+1].Kind != TokIdent || (k > 0 && toks[k-1].Text == ".") {
 			continue
 		}
-		c := Class{Kind: t.Text, Name: toks[k+1].Text, Line: toks[k+1].Line}
+		c := Class{Kind: t.Text, Name: toks[k+1].Text, Line: toks[k+1].Line, At: k}
 		angle, paren, j := 0, 0, k+2
 		for ; j < len(toks); j++ {
 			switch s := toks[j].Text; {
@@ -46,6 +47,33 @@ func Classes(toks []Token) []Class {
 		out = append(out, c)
 	}
 	return out
+}
+
+// Annotated reports whether an annotation named name (its last identifier, so @a.b.Name too) stands among
+// the modifiers and annotations before c's kind keyword. The walk back skips each annotation's parenthesized
+// arguments whole and stops at any other token, such as the end of the previous member.
+func Annotated(toks []Token, c Class, name string) bool {
+	for i := c.At - 1; i >= 0; i-- {
+		switch t := toks[i]; {
+		case t.Text == ")":
+			for depth := 0; i >= 0; i-- {
+				if toks[i].Text == ")" {
+					depth++
+				} else if toks[i].Text == "(" {
+					if depth--; depth == 0 {
+						break
+					}
+				}
+			}
+		case t.Kind == TokIdent:
+			if t.Text == name && i > 0 && (toks[i-1].Text == "@" || toks[i-1].Text == ".") {
+				return true
+			}
+		case t.Text != "@" && t.Text != ".":
+			return false
+		}
+	}
+	return false
 }
 
 // typeName is the simple name of the (possibly qualified) type starting at toks[i]: its last identifier
