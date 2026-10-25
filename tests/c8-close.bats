@@ -13,6 +13,10 @@
 # sweep 0, sweeps 0/0, kit-links 8/8 green — BUT INDEX pending = 17 (fold PR not yet landed) and tag
 # v0.19.0 not yet cut. So CLOSE-index-pending and CLOSE-tag are RED until the close PR + tag; that is the
 # gate doing its job.
+#
+# RETIRED 2026-10-25: SC16-smoke skips unconditionally. Its exact counts were pinned to an archived station-bog
+# snapshot that was kept only in a temporary session copy and was found missing, so the counts cannot be
+# re-verified. A close-gate pin must reference a durable archived fixture.
 
 load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
 
@@ -131,6 +135,8 @@ _gen_state() {
 
 @test "SC16-smoke: bog-audit CHECK13-19 exact rows on PANCCADIA + CHECK13-19 clean on MX60" {
   _close
+  # Retired 2026-10-25: the snapshot fixture is gone; the body below is kept for history and never runs.
+  skip "pinned to the archived campaign-8 snapshot bog for client A/B, which is no longer available; counts are unverifiable"
   RB="${C8_PANCCADIA_BOG:-}"; [ -n "$RB" ] && [ -f "$RB" ] || skip "set C8_PANCCADIA_BOG"
   T="$BATS_TEST_TMPDIR"; case "$RB" in *.xml) ( cd "$(dirname "$RB")" && cp "$(basename "$RB")" "$T/f.xml" ) && ( cd "$T" && zip -q p.bog f.xml ); RB="$T/p.bog";; *) cp "$RB" "$T/p.bog"; RB="$T/p.bog";; esac
   run "$KIT/toolbelt/bog-audit.sh" "$RB" --module ColdRoomPan --module CompPan --module DashboardPan
