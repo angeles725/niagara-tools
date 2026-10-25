@@ -1,7 +1,9 @@
 // Package registry is the Python mcp-n4 surface the Go server serves verbatim: server name,
 // version and protocol versions, the argparse usage and help text, and every tool schema in
-// table order. It is data, not code: registry.json is generated from the Python server by
-// mcp-n4-kit/tests/go_registry.py, and test_go_harness fails when the two disagree.
+// table order. It is data, not code: registry.json was generated from the Python server by
+// mcp-n4-kit/tests/go_registry.py until S17 removed that server; it is now edited by hand, and
+// the black-box suite (test_server: tools/list, initialize, the frozen protocol replies) pins
+// what the binary serves from it.
 package registry
 
 import (

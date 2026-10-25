@@ -39,9 +39,9 @@ jobs:
           cache: true
           cache-dependency-path: go/go.mod
 
-      # The mcp-n4 target (go/internal/mcpn4/pytarget.Minor): the Go differentials compare against
-      # it and skip on any other python3, so CI must provide it. Later steps run it too.
-      - name: Set up CPython 3.15 (the mcp-n4 target the Go differentials compare against)
+      # The python3 of the reference host. No Go test runs Python since S17 (the mcp-n4 differentials
+      # replay frozen goldens); the later steps that call python3 run this one.
+      - name: Set up CPython 3.15 (the python3 the later steps run)
         uses: actions/setup-python@v7
         with:
           python-version: "3.15"
@@ -53,9 +53,8 @@ jobs:
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
           go vet ./...
-          # A differential against another python3 would skip, not pass: refuse that in CI.
           # -count=1: tests read files through subprocesses Go does not track, so a cached result could be stale.
-          MCP_N4_PYTHON="$(command -v python3)" go test -count=1 ./...
+          go test -count=1 ./...
 
       - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
         run: cd go && go build -o bin/ ./cmd/...
@@ -134,9 +133,8 @@ jobs:
           cache: true
           cache-dependency-path: go/go.mod
 
-      # The python3 the bats suites have always run on (CI pinned it for the Go differentials before the
-      # split into jobs): keep the same interpreter on PATH here.
-      - name: Set up CPython 3.15 (the mcp-n4 target the Go differentials compare against)
+      # The python3 the bats suites have always run on: keep the same interpreter on PATH here.
+      - name: Set up CPython 3.15 (the python3 the bats suites run)
         uses: actions/setup-python@v7
         with:
           python-version: "3.15"
@@ -310,12 +308,8 @@ jobs:
         with:
           python-version: "3.15"
 
-      - name: Go build (go/bin/mcp-n4 — the server the suite drives)
-        run: cd go && go build -o bin/ ./cmd/mcp-n4
+      - name: Go build (go/bin/mcp-n4 + go/bin/retro-draft — the server and the drafter the suite drives)
+        run: cd go && go build -o bin/ ./cmd/mcp-n4 ./cmd/mcp-n4/retro-draft
 
       - name: mcp-n4-kit unittest (Go server)
-        run: MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests -v
-
-      # Go is the default server since S16 (the step above runs it); this step pins the fallback.
-      - name: mcp-n4-kit unittest (Python fallback server)
-        run: MCP_N4_IMPL=python python3 -m unittest discover -s mcp-n4-kit/tests -v
+        run: python3 -m unittest discover -s mcp-n4-kit/tests -v
