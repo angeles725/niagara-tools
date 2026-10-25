@@ -421,12 +421,14 @@ Every session ends with a retro that proposes kit deltas (never applies them). T
 tool `n4_session_retro_draft` (both modes) drafts it from the server's audit and journal;
 `python3 tools/new_retro.py --station NAME --state-dir DIR [--since TS] [--dry-run]` writes
 `retros/YYYY-MM-DD-<station>-session.md` and a `pending` row in `retros/INDEX.md`. It refuses to
-overwrite without `--force`. Nothing is staged as a GitHub issue automatically.
+overwrite without `--force`. Nothing is staged as a GitHub issue automatically. The draft comes
+from the Go binary `go/bin/retro-draft` (`cd go && go build -o bin/ ./cmd/mcp-n4/retro-draft`;
+`MCP_N4_RETRO_DRAFT_BIN` names another), the server's own drafting code.
 
 ## Run the tests
 
 ```
-(cd go && go build -o bin/ ./cmd/mcp-n4)
+(cd go && go build -o bin/ ./cmd/mcp-n4 ./cmd/mcp-n4/retro-draft)
 python3 -m unittest discover -s mcp-n4-kit/tests -v
 MCP_N4_IMPL=python python3 -m unittest discover -s mcp-n4-kit/tests -v
 ```

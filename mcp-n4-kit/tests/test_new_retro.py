@@ -9,11 +9,12 @@ from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KIT = os.path.dirname(HERE)
-sys.path.insert(0, KIT)
+REPO = os.path.dirname(KIT)
+sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(KIT, "tools"))
 
-from mcp_n4 import safety  # noqa: E402
 import new_retro  # noqa: E402
+import state_files  # noqa: E402
 
 B1 = "%032x" % 1
 
@@ -34,7 +35,7 @@ class TestNewRetro(unittest.TestCase):
                      "inverse_plan": [], "targets": {}},
                     {"batch_id": B1, "ts": "2026-10-01T11:00:01+00:00", "phase": "result",
                      "accepted": None, "inverse": [], "verdict": "mismatch"}):
-            safety.Journal(self.state).append(row)
+            state_files.Journal(self.state).append(row)
 
     def run_cli(self, *extra):
         buf = io.StringIO()
@@ -168,9 +169,20 @@ class TestNewRetro(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertEqual(os.listdir(self.out), [])
 
-    def test_importing_the_module_only_prepends_the_kit_to_sys_path_and_default_out_dir_is_the_kit(self):
+    def test_the_draft_comes_from_the_go_binary_and_default_out_dir_is_the_kit(self):
         self.assertEqual(new_retro.DEFAULT_OUT_DIR, os.path.join(KIT, "retros"))
-        self.assertIn(KIT, sys.path)
+        self.assertEqual(new_retro.DEFAULT_BINARY, os.path.join(REPO, "go", "bin", "retro-draft"))
+        self.assertFalse(hasattr(new_retro, "retro"))  # no Python drafting code is imported
+
+    def test_a_missing_binary_is_exit_2_with_the_build_hint_and_writes_nothing(self):
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, {"MCP_N4_RETRO_DRAFT_BIN": "/no/such/retro-draft"}), \
+                mock.patch.object(sys, "stderr", err):
+            code, _ = self.run_cli()
+        self.assertEqual(code, 2)
+        self.assertIn("/no/such/retro-draft", err.getvalue())
+        self.assertIn("go build -o bin/ ./cmd/mcp-n4/retro-draft", err.getvalue())
+        self.assertEqual(os.listdir(self.out), ["INDEX.md"])
 
 
 class TestRetroStepIsDocumented(unittest.TestCase):
@@ -192,7 +204,8 @@ class TestRetroStepIsDocumented(unittest.TestCase):
     def test_the_template_and_index_exist_with_the_agreed_grammar(self):
         self.assertIn("| file | Station | Date | pending\\|folded | deltas |",
                       self.doc("retros", "INDEX.md"))
-        self.assertIn("## Proposed kit deltas", self.doc("mcp_n4", "templates", "retro.template.md"))
+        self.assertIn("## Proposed kit deltas", self.doc(
+            "..", "go", "internal", "mcpn4", "retro", "retro.template.md"))
 
 
 if __name__ == "__main__":

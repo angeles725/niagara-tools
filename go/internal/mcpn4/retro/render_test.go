@@ -6,7 +6,6 @@ package retro
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -16,25 +15,6 @@ func TestTheTemplateShipsInsideThePackage(t *testing.T) {
 	if err != nil || template != string(want) {
 		t.Errorf("the embedded template is not mcp_n4/templates/retro.template.md (%v)", err)
 	}
-}
-
-// countDeltas is retro.count_deltas (tools/new_retro.py's reader, Python-only): the table rows
-// under "## Proposed kit deltas"; an honesty line counts as zero.
-func countDeltas(markdown string) int {
-	m := regexp.MustCompile(`(?ms)^## Proposed kit deltas\n(.*?)(?:^## |\z)`).FindStringSubmatch(markdown)
-	if m == nil {
-		return 0
-	}
-	var rows []string
-	for _, ln := range strings.Split(m[1], "\n") {
-		if strings.HasPrefix(ln, "|") {
-			rows = append(rows, ln)
-		}
-	}
-	if len(rows) >= 2 && strings.HasPrefix(rows[1], "|---") {
-		return len(rows) - 2
-	}
-	return 0
 }
 
 func TestMarkdownFollowsTheTemplateWithDeltaTable(t *testing.T) {
@@ -57,7 +37,7 @@ func TestHonestyLineWhenThereIsNoFriction(t *testing.T) {
 	s.batch(b1, "2026-10-01T10:00:00+00:00", "verified", false, true)
 	out := s.draft("")
 	md := get(out, "markdown").(string)
-	if len(get(out, "candidates").([]any)) != 0 || !strings.Contains(md, "no new deltas;") || countDeltas(md) != 0 {
+	if len(get(out, "candidates").([]any)) != 0 || !strings.Contains(md, "no new deltas;") || CountDeltas(md) != 0 {
 		t.Errorf("%s", md)
 	}
 }
@@ -67,7 +47,7 @@ func TestCountDeltasCountsTableRowsUnderTheHeadingOnly(t *testing.T) {
 	s.batch(b1, "2026-10-01T11:00:00+00:00", "mismatch", false, true)
 	s.batch(b2, "2026-10-01T11:01:00+00:00", "failed", false, true)
 	out := s.draft("")
-	if n := countDeltas(get(out, "markdown").(string)); n != 2 || len(get(out, "candidates").([]any)) != 2 {
+	if n := CountDeltas(get(out, "markdown").(string)); n != 2 || len(get(out, "candidates").([]any)) != 2 {
 		t.Errorf("%d rows", n)
 	}
 }

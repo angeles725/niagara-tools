@@ -3,6 +3,7 @@ package retro
 import (
 	_ "embed"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -143,4 +144,23 @@ func render(candidates []*pyjson.Object, station, date string, audit, views []*p
 		text = strings.ReplaceAll(text, "{{"+kv[0]+"}}", kv[1]) // in order, as str.replace runs
 	}
 	return text, nil
+}
+
+// CountDeltas is retro.count_deltas, the INDEX row's delta count of tools/new_retro.py: the
+// table rows under "## Proposed kit deltas"; an honesty line counts as zero.
+func CountDeltas(markdown string) int {
+	m := regexp.MustCompile(`(?ms)^## Proposed kit deltas\n(.*?)(?:^## |\z)`).FindStringSubmatch(markdown)
+	if m == nil {
+		return 0
+	}
+	var rows []string
+	for _, ln := range strings.Split(m[1], "\n") {
+		if strings.HasPrefix(ln, "|") {
+			rows = append(rows, ln)
+		}
+	}
+	if len(rows) >= 2 && strings.HasPrefix(rows[1], "|---") {
+		return len(rows) - 2
+	}
+	return 0
 }
