@@ -1,0 +1,24 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/example/BDemoNote.java --
+package com.example;
+
+@NiagaraType
+public class BDemoNote extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.example.BDemoNote(4444444444)1.0$ @*/
+  public Type getType() { return TYPE; }
+  public static final Type TYPE = Sys.loadType(BDemoNote.class);
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+
+  // public static final Type TYPE = Sys.loadType(BDemoNote.class);
+  /* @Override public Type getType() { return TYPE; } */
+  static final String HINT = "public static final Type TYPE = ...; public Type getType()";
+  static final String BLOCK = """
+    public Type getType() { return TYPE; }
+    """;
+}

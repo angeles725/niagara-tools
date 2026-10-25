@@ -145,6 +145,21 @@ setup() {
   [[ "$output" == *"DemoPan-rt  PASS  lint-slotomatic-markers  clean"* ]]
 }
 
+@test "RM7c: a hand-written TYPE beside a Slot-o-Matic region surfaces a type-outside-region FAIL row and exits 1" {
+  # Mutation: RM7c -- dropping the type-outside-region sub-check reads this module clean
+  local t="$BATS_TEST_TMPDIR/rm7c"
+  mkdir -p "$t/DemoPan-wb/src/com/x"
+  printf '<types>\n</types>\n' > "$t/DemoPan-wb/module-include.xml"
+  # shellcheck disable=SC2016  # the literal Slot-o-Matic stamp text
+  printf '@NiagaraType\nclass BView\n{\n%s\n%s\n%s\n%s\n  static final Type TYPE = null;\n}\n' \
+    '//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/' \
+    '  /*@ $com.x.BView(1)1.0$ @*/' '  public static final Type TYPE = Sys.loadType(BView.class);' \
+    '//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/' > "$t/DemoPan-wb/src/com/x/BView.java"
+  run "$RM" --lint-only "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-wb  FAIL  type-outside-region  BView.java:8  hand-written TYPE outside the generated region of BView: "* ]]
+}
+
 @test "RM8: display class import in a -se artifact surfaces lint-se-display FAIL row and exits 1" {
   # se-display/DemoPan-se/src/com/x/BPanel.java imports javax.swing.JFrame
   run "$RM" --lint-only "$FX/se-display"
