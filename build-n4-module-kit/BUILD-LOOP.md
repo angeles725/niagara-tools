@@ -525,7 +525,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]` A tool that judges a log
     fails closed on a cut read: a line past `bufio.Scanner`'s cap (`bufio.ErrTooLong`) is a FAIL reason at its line
     number, never a silent end of input, because a failure after it would go unseen (`go/internal/niagaratest`).
-    `[ev: retro r10-run-niagara-test-go Δ2]`
+    `[ev: retro r10-run-niagara-test-go Δ2]` A results-file verdict fails on skips and on any FAIL test-method, config
+    methods included: TestNG's root counts leave `is-config` methods out, so a failed `@BeforeClass` reads failed=0
+    with skips (`go/internal/niagaratest/testdata/testng-config-skips.txt`). `[ev: retro r10-run-niagara-test-testng Δ2]`
   - **A path filter in a gate skips only paths no check applies to.** A gate that picks its checks from the
     changed or staged paths (a hook, a CI step, a wrapper) states, for each class of path it can see (code, tool,
     doc, data, generated), which check runs or why none applies. An early exit is proven by a test that changes
