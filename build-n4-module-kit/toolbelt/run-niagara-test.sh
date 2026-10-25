@@ -11,7 +11,7 @@
 #                                [--timeout <dur, default 30m>] [--keep-home] [--scratch <dir>]
 #                                [--jdk8 <WSL JDK 8 dir, default /usr/lib/jvm/java-8-openjdk-amd64>]
 #                                [--gradle-user-home <dir, default ~/.gradle>] [--module-verification low]
-#                                [--exclude-jar <glob>]...
+#                                [--exclude-jar <glob>]... [--restore-gradle-root] [--log-dir <dir>]
 # Contract: PASS only when the log holds at least one `Total tests run: N` line and every one has N > 0 and
 # `Failures: 0`. FAIL on a summary with 0 tests, failures or no Failures count; a `Failures:` key outside a
 # summary with a count above 0 or a value that is no count; `invalid test target(s)`; `failed signature
@@ -38,7 +38,7 @@
 # leaving no etc\ and security\ in the scratch niagara_user_home, is FAIL (the runner fails closed). test.exe runs straight from WSL
 # (cwd the copy) and gets the scratch home as niagara_user_home=<win path> with WSLENV niagara_user_home/w; a
 # cmd.exe `set "…"` does not reach it, as WSL re-quotes its inner quotes. Exits: 0 PASS; 1 FAIL; 2 usage or refused;
-# 3 environment (cmd.exe, robocopy, gradle, cleanup); 4 --timeout reached, the run killed. The tool opens no
+# 3 environment (cmd.exe, worktree status, robocopy, gradle, cleanup); 4 --timeout reached, the run killed. The tool opens no
 # port: a test that needs Fox on loopback only turns Fox off (types/driver-authoring.md § 12.1).
 # --module-verification low (TEST ONLY, off by default, `low` its only value): after robocopy, append
 # niagara.moduleVerificationMode=low (the file's own line ending) to the COPY's defaults\system.properties, never the
@@ -52,6 +52,23 @@
 # what it left out (10 names, then "and N more"). The glob is a case-insensitive jar basename of letters, digits,
 # _ . - * ?; a path separator, .., or a cmd/PowerShell metacharacter is exit 2, and a glob matching no jar is FAIL,
 # exit 2, before anything is copied. The install is never written.
+# Gradle-root gate (the Go tool, not this script, reads the worktree; kit-links L2 keeps .sh files git-free):
+# --gradle-root must be a version-controlled worktree (else a FAIL row says it cannot verify it, exit 3, before
+# any copy). Its porcelain status (-z, every untracked file listed), each listed file sha256-hashed
+# (a content change to an already-dirty file counts), is taken before the copy and after cleanup; any new,
+# modified, deleted or rewritten path is FAIL (`gradle root changed by the build: <10 paths, then "and N more">`),
+# else `gradle root unchanged (<n> tracked changes before, same after)`. Niagara gradle plugin 7.3.40 (4.13) makes
+# :<part>:compileModuleTestJava append every @NiagaraType test class to the PRODUCTION <part>/module-include.xml.
+# --restore-gradle-root then checks out (literal pathspecs) only the files that were clean before and are now
+# modified or deleted, never touches a file already dirty, never deletes an untracked file (it lists them),
+# re-reads the status and prints `gradle root restored: <paths>`; the run stays FAIL. It never cleans, resets or
+# checks out the whole tree (types/moduleTest.md § Running from WSL).
+# Run log: a failed run (exit 1, 3 or 4, once its scratch dir exists) reads, before cleanup deletes the dir, the
+# last 200 stderr and 50 stdout lines of test.exe (each cut at 4 KiB) and the -output: dir listing, and writes them
+# with the runner's rows and the exit status to <UTC timestamp>-<module>.log (0600) under --log-dir (default
+# $XDG_STATE_HOME/run-niagara-test, else ~/.local/state/run-niagara-test, 0700): `diagnostics kept: <path>`. The
+# scratch dir and its copy read <scratch> and <copy> (Windows and /mnt forms, any case), %USERPROFILE% and $HOME
+# <you>; install paths stay. A green run writes one only with --log-dir or --keep-home. Attach the log, not the home.
 #
 # Implementation: go/internal/niagaratest (goldens in its testdata/, hand-written: no bash tool to record from).
 # go/go-tool.sh `go_tool_bin` builds go/bin/run-niagara-test when it is missing or older than a Go source, then

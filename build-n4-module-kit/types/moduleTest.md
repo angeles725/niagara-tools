@@ -223,7 +223,7 @@ One command runs the module's station tests on a throwaway copy of the install a
 toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-root <client gradle root> \
   --part ModuleA-rt --module ModuleA [--timeout 30m] [--keep-home] [--scratch '<dir under %TEMP%>'] \
   [--jdk8 /usr/lib/jvm/java-8-openjdk-amd64] [--gradle-user-home ~/.gradle] [--module-verification low] \
-  [--exclude-jar '<glob>']...
+  [--exclude-jar '<glob>']... [--restore-gradle-root] [--log-dir <dir>]
 ```
 
 - It copies the install into a new dir under `%TEMP%` (robocopy: `bin etc jre lib security defaults`, then the
@@ -233,11 +233,11 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   `-Porg.gradle.java.installations.paths` the WSL `--jdk8`, which overrides a client `gradle.properties` naming a
   Windows JDK; `GRADLE_USER_HOME` the caller's cache, so the gradle distribution is not downloaded per run), runs `bin\test.exe <module> -v:2 -output:` on it,
   and judges `testng-results.xml` with `verdict --testng` (stderr as the console log; a non-zero exit with green
-  results is FAIL).
+  results is FAIL) `[ev: retro r10-rnt-run-live-fixes Δ4]`.
 - It refuses (exit 2) an install under a user home, without `bin/test.exe`, or used by a running `station.exe`,
   `nre.exe`, `java.exe` or `wb.exe` (by command line or executable path), or with a `stations\*\config.bog.lock`
-  another process holds open (a service's `station.exe`, whose path a non-elevated probe cannot read, is attributed
-  through its `niagarad` service's `PathName`; one that cannot be attributed is refused); a scratch outside `%TEMP%`; a build home inside the install. The install is never
+  another process holds open, and a probe that cannot tell refuses too `[ev: retro r10-run-niagara-test-run Δ2]` (a service's `station.exe`, whose path a non-elevated probe cannot read, is attributed
+  through its `niagarad` service's `PathName`; one that cannot be attributed is refused `[ev: retro r10-rnt-run-live-fixes Δ3]`); a scratch outside `%TEMP%`; a build home inside the install. The install is never
   written: a change in its `modules/`, `etc/`, `security/` or top level is FAIL.
 - The scratch user home reaches the NRE through the environment: `bin/test.exe` runs straight from WSL with the
   copy as cwd, `niagara_user_home=<Windows path>` and `WSLENV` extended with `niagara_user_home/w` (the NRE reads
@@ -248,8 +248,9 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   and `security\` is compared before the copy and after cleanup, and a change there, or a scratch
   `niagara_user_home` without the `etc\` and `security\` the NRE creates, is FAIL `[ev: retro r10-rnt-run-live-fixes Δ1]`.
 - Cleanup runs on every path: it kills this run's Windows processes by PID (`taskkill /PID <pid> /T /F`), confirms
-  none is left, and deletes only the dir it created (kept with `--keep-home`). Exits: 0 PASS, 1 FAIL, 2 usage or
-  refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout (the run is killed).
+  none is left (a WSL interop process that dies leaves its Windows process running, so only the PID kill bounds a
+  timed-out run `[ev: retro r10-run-niagara-test-run Δ3]`), and deletes only the dir it created (kept with `--keep-home`). Exits: 0 PASS, 1 FAIL, 2 usage or
+  refused, 3 environment (cmd.exe, git, robocopy, gradle, cleanup), 4 timeout (the run is killed).
 - The first boot of a copy takes about 4.5 min (registry rebuild); later boots 26-80 s. The copy itself takes
   about 5 s; one batched boot of every class of a module took 7-10 min, so budget a mutation RED per boot
   accordingly `[ev: retro r10-station-test-campaign Δ3]`.
@@ -272,6 +273,34 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   jar of the module under test (an old 1.8 `moduleA-ux.jar` in the install) never sits next to the freshly built
   `moduleA-rt.jar`; the glob is a case-insensitive jar basename of `*` and `?` only, and one matching no jar is FAIL,
   exit 2, before anything is copied `[ev: retro r10-rnt-exclude-jar Δ1]`.
+- **The build must not change the client's source tree.** `--gradle-root` must be a git worktree (else `gradle
+  root is not a git worktree: cannot verify it`, exit 3, before any copy). The runner takes `git status
+  --porcelain=v1 -z --untracked-files=all` of it, with a sha256 of every listed file (so a rewrite of a file that
+  was already dirty counts), before the copy and again after cleanup; any new, modified, deleted or rewritten path
+  is FAIL (`gradle root changed by the build: <paths>`, 10 names, then "and N more"), else `gradle root unchanged
+  (<n> tracked changes before, same after)`. `--restore-gradle-root` (opt-in) then checks out (`git
+  --literal-pathspecs checkout -- <paths>`) only the files that were clean before and that the build modified or
+  deleted, never a file already dirty, never deletes an untracked file (it lists the ones the build created),
+  re-reads the status and prints `gradle root restored: <paths>`; the run stays FAIL, since the restore is hygiene,
+  not a pass. No `git clean`, `git reset` or `git checkout .` is ever run `[ev: retro r10-rnt-gradle-root-gate Δ1]`.
+- **A failed run keeps its diagnostics; attach the log, not the home.** On exit 1, 3 or 4 (once the scratch dir
+  exists) the runner reads, before cleanup deletes the dir, the last 200 lines of test.exe stderr and the last 50 of
+  its stdout (each line cut at 4 KiB, a file read from at most its last 8 MiB) and lists the `-output:` dir (names
+  and sizes, 200 files at most), then writes `<UTC timestamp>-<module>.log` (mode 0600) under `--log-dir`, default
+  `$XDG_STATE_HOME/run-niagara-test`, else `~/.local/state/run-niagara-test` (made 0700), with the runner's own
+  rows (the last 500) and the exit status, and prints `FAIL  run-niagara-test  diagnostics kept: <path>`. So a
+  rejection such as `invalid test target(s)` stays explainable after a one-boot run. Before writing, the scratch dir
+  becomes `<scratch>` and its home copy `<copy>` (Windows, forward-slash and `/mnt` forms, any case), and
+  `%USERPROFILE%` and the WSL `$HOME` become `<you>`. Install paths stay as they are: they are the user's own and
+  needed to diagnose, so check the log before sharing it outside the team. A green run writes no log unless
+  `--log-dir` is given or `--keep-home` is on (`run log: <path>`); `--keep-home` keeps the dir as before and
+  writes the log too. A run refused or failing before its scratch dir exists prints its reason only
+  `[ev: retro r10-rnt-fail-diagnostics Δ1]`.
+- **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13), `:<part>:compileModuleTestJava` appends every
+  `@NiagaraType` test class to the PRODUCTION `<part>/module-include.xml`** (never to `moduleTest-include.xml`), and
+  it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types. Check
+  `git status` of the gradle root after any moduleTest compile, by hand or through the runner's gate
+  `[ev: retro r10-rnt-gradle-root-gate Δ2]`.
 
 Fallback, by hand (the route the runner automates):
 

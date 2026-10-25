@@ -43,9 +43,9 @@ var (
 // runConfig is the parsed command line of run.
 type runConfig struct {
 	install, gradleRoot, part, module, scratch string
-	jdk8, gradleUserHome                       string
+	jdk8, gradleUserHome, logDir               string
 	timeout                                    time.Duration
-	keepHome, verifyLow                        bool
+	keepHome, verifyLow, restoreRoot           bool
 	excludeJars                                []string // --exclude-jar globs, in flag order
 }
 
@@ -57,6 +57,10 @@ type plan struct {
 	windows                             bool   // a Windows-side step started: cleanup must look for its processes
 	sysPropsSum                         string // --module-verification low: sha256 of the install's system.properties
 	excluded                            []jarExclusion
+	root                                rootSnapshot // --gradle-root's git status before the copy
+	rootTop                             string       // its worktree top, where the status paths start
+	rows                                *lineRing    // the last rows the run printed, for the run log
+	logDirSet                           bool         // --log-dir was given: a green run keeps a log too
 }
 
 func (p *plan) home() winDir        { return winDir{p.dir.wsl + "/home", p.dir.win + `\home`} }
@@ -70,7 +74,7 @@ func runCmd(args []string, s cli.Stdio) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	home, _ := os.UserHomeDir()
-	return host{run: execRunner{}, mnt: "/mnt", home: home, jdk8: defaultJDK8}.runMain(ctx, append([]string{"run"}, args...), s)
+	return host{run: execRunner{}, mnt: "/mnt", home: home, jdk8: defaultJDK8, state: stateHome(home)}.runMain(ctx, append([]string{"run"}, args...), s)
 }
 
 // runMain parses `run …`, validates every path and probe, then runs the test with its cleanup.
@@ -82,6 +86,16 @@ func (h host) runMain(ctx context.Context, args []string, s cli.Stdio) int {
 	if err != nil {
 		return usageError(s, err.Error())
 	}
+	logDirSet := cfg.logDir != ""
+	if !logDirSet && h.state != "" {
+		cfg.logDir = filepath.Join(h.state, "run-niagara-test")
+	} else if logDirSet {
+		if cfg.logDir, err = filepath.Abs(cfg.logDir); err != nil {
+			return usageError(s, "run: --log-dir: "+err.Error())
+		}
+	}
+	rows := newLineRing(diagRowLines, diagLineCap)
+	s = tee(s, rows)
 	if cfg.jdk8 == "" {
 		cfg.jdk8 = h.jdk8
 	}
@@ -92,7 +106,19 @@ func (h host) runMain(ctx context.Context, args []string, s cli.Stdio) int {
 	if code >= 0 {
 		return code
 	}
+	p.rows, p.logDirSet = rows, logDirSet
 	return h.execute(ctx, p, s)
+}
+
+// stateHome is $XDG_STATE_HOME when it is absolute, else ~/.local/state; "" when neither is known.
+func stateHome(home string) string {
+	if v := os.Getenv("XDG_STATE_HOME"); filepath.IsAbs(v) {
+		return v
+	}
+	if home == "" {
+		return ""
+	}
+	return filepath.Join(home, ".local", "state")
 }
 
 func parseRun(args []string) (runConfig, error) {
@@ -106,8 +132,10 @@ func parseRun(args []string) (runConfig, error) {
 	fs.StringVar(&c.scratch, "scratch", "", "")
 	fs.StringVar(&c.jdk8, "jdk8", "", "")
 	fs.StringVar(&c.gradleUserHome, "gradle-user-home", "", "")
+	fs.StringVar(&c.logDir, "log-dir", "", "")
 	fs.DurationVar(&c.timeout, "timeout", defaultTimeout, "")
 	fs.BoolVar(&c.keepHome, "keep-home", false, "")
+	fs.BoolVar(&c.restoreRoot, "restore-gradle-root", false, "")
 	fs.Var(verificationFlag{&c.verifyLow}, "module-verification", "")
 	fs.Var(excludeFlag{&c.excludeJars}, "exclude-jar", "")
 	if err := fs.Parse(args); err != nil {
@@ -151,6 +179,10 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	}
 	if info, err := os.Stat(filepath.Join(cfg.gradleRoot, "gradlew")); err != nil || !info.Mode().IsRegular() {
 		return refuse("--gradle-root %s has no gradlew", cfg.gradleRoot)
+	}
+	// The gradle-root gate runs git -C on it: an absolute path, never one resolved against a later cwd.
+	if p.gradleRoot, err = filepath.Abs(cfg.gradleRoot); err != nil {
+		return refuse("--gradle-root %s: %v", cfg.gradleRoot, err)
 	}
 	if info, err := os.Stat(filepath.Join(cfg.jdk8, "bin", "javac")); err != nil || !info.Mode().IsRegular() {
 		return refuse("--jdk8 %s has no bin/javac (a WSL JDK 8)", cfg.jdk8)
@@ -228,9 +260,20 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	return p, -1
 }
 
-// execute creates the scratch dir, then copies, builds, runs and judges; cleanup runs on every path out,
-// a panic included (the panic goes on after it).
+// execute snapshots the gradle root, the install and the real user homes, creates the scratch dir, then copies,
+// builds, runs and judges; cleanup runs on every path out, a panic included (the panic goes on after it).
 func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
+	var ok bool
+	if p.rootTop, ok = h.rootTop(ctx, p.gradleRoot); !ok {
+		row(s, "FAIL", "gradle root is not a git worktree: cannot verify it")
+		return exitEnv
+	}
+	root, err := h.rootStatus(ctx, p.gradleRoot, p.rootTop)
+	if err != nil {
+		row(s, "FAIL", "gradle root: cannot snapshot it: "+err.Error())
+		return exitEnv
+	}
+	p.root = root
 	snap, err := takeSnapshot(p.install.wsl)
 	if err != nil {
 		fmt.Fprintf(s.Err, "%s: run: cannot snapshot the install: %v\n", name, err)
@@ -451,8 +494,9 @@ func (h host) testExe(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 }
 
 // cleanup kills the Windows processes of this run, compares the install with its snapshot, deletes the
-// scratch dir the run created (only that dir, unless --keep-home), then compares the real user homes with
-// theirs. It can only make code worse.
+// scratch dir the run created (only that dir, unless --keep-home), compares the real user homes with theirs,
+// then the gradle root's git status with its own (gradleroot.go), and last writes the run log (diagnostics.go)
+// from the evidence read before the delete. It can only make code worse.
 func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int {
 	worse := func(c int) {
 		if code == exitPass {
@@ -478,6 +522,7 @@ func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int 
 	if p.verifyLow && !checkInstallSysProps(p, s) {
 		worse(exitFail)
 	}
+	ev := gatherEvidence(p) // before the scratch dir goes: the run log is written last, with the final code
 	if p.keepHome {
 		row(s, "PASS", "cleanup: kept "+p.dir.win)
 	} else if err := os.RemoveAll(p.dir.wsl); err != nil {
@@ -492,6 +537,12 @@ func (h host) cleanup(p *plan, snap, users snapshot, s cli.Stdio, code int) int 
 		worse(exitFail)
 	} else {
 		row(s, "PASS", fmt.Sprintf("real user homes unchanged (%d entries checked)", len(users)))
+	}
+	if !h.checkGradleRoot(ctx, p, s) {
+		worse(exitFail)
+	}
+	if !h.writeRunLog(p, ev, code, s) {
+		worse(exitEnv)
 	}
 	return code
 }
