@@ -75,3 +75,14 @@ setup() {
   [ "$status" -eq 2 ] || { echo "$output"; return 1; }
   [[ "$output" == *"--allow-ignored-count needs --allow-ignored-reason <why>"* ]]
 }
+
+@test "RNT10: run refuses --allow-ignored names mixed with --allow-ignored-count, and a name with no reason, with exit 2" {
+  # Mutation: RNT10 -- dropping the mixed-allowance refusal (parseRunAllowance) lets the first run reach the install checks
+  run "$R" run --install 'C:\Niagara\N4' --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA \
+    --allow-ignored BAlphaTest.a --allow-ignored-count 1 --allow-ignored-reason 'needs a live device'
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *'run: --allow-ignored names the methods and --allow-ignored-count counts them: give one, not both'* ]]
+  run "$R" run --install 'C:\Niagara\N4' --gradle-root "$BATS_TEST_TMPDIR" --part ModuleA-rt --module ModuleA --allow-ignored BAlphaTest.a
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  [[ "$output" == *'run: --allow-ignored needs --allow-ignored-reason <why>'* ]]
+}

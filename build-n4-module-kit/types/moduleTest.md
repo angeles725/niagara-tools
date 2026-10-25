@@ -630,6 +630,13 @@ the main Gradle section above).
   2 failures are fixed. `verdict --testng` and `run` FAIL any ignored count unless `--allow-ignored-count <n>
   --allow-ignored-reason <why>` waives exactly n (the reason is printed); more ignored than n, fewer (a stale
   allowance), or a count with no reason (exit 2) is never a pass `[ev: retro r10-rnt-ignored-methods Δ1]`.
+- **A counted allowance misses a swapped disable:** disable one new test and re-enable an old one, and the
+  ignored count still matches. `run` names the ignored methods from the source: every method-level
+  `@Test(enabled = false)` a type of `<part>/moduleTest-include.xml` declares, or inherits from a `srcTest/`
+  superclass, is `<SimpleName>.<method>`; their count must equal the root `ignored`, and `--allow-ignored
+  <Class.method>` (repeatable, with `--allow-ignored-reason`) waives exactly that set, a new or a stale name FAIL. A
+  class-level disable, a non-literal `enabled` or an unreadable registered source is exit 3 before the build; the
+  count pair stays the fallback that skips the source `[ev: retro r10-rnt-ignored-names Δ1]`.
 - **`niagaraTest` is `bin/test`:** the task only execs `<niagara_home>/bin/test <target> [-groups:…] [-output:…]`
   (`RunNiagaraTestTask`, niagara-plugins 7.6.17), so `test.exe <module>` on a scratch COPY of the home (not a
   symlink mirror: Windows sees its links as dangling junctions) runs the same tests without gradle; set

@@ -140,6 +140,8 @@ func parseRun(args []string) (runConfig, error) {
 	fs.Var(verificationFlag{&c.verifyLow}, "module-verification", "")
 	fs.Var(excludeFlag{&c.excludeJars}, "exclude-jar", "")
 	var count, why string
+	var names []string
+	fs.Var(namesFlag{&names}, "allow-ignored", "")
 	fs.StringVar(&count, "allow-ignored-count", "", "")
 	fs.StringVar(&why, "allow-ignored-reason", "", "")
 	if err := fs.Parse(args); err != nil {
@@ -148,7 +150,7 @@ func parseRun(args []string) (runConfig, error) {
 	set := map[string]bool{}
 	fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
 	var err error
-	if c.allow, err = parseAllowance(count, set["allow-ignored-count"], why, set["allow-ignored-reason"]); err != nil {
+	if c.allow, err = parseRunAllowance(count, set["allow-ignored-count"], why, set["allow-ignored-reason"], names); err != nil {
 		return c, fmt.Errorf("run: %v", err)
 	}
 	if fs.NArg() > 0 {
@@ -278,6 +280,14 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 // execute snapshots the gradle root, the install and the real user homes, creates the scratch dir, then copies,
 // builds, runs and judges; cleanup runs on every path out, a panic included (the panic goes on after it).
 func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
+	if p.allow.Count == 0 { // names, or no allowance: the ignored methods are named from the source before the build
+		src, err := disabledInSource(filepath.Join(p.gradleRoot, filepath.FromSlash(strings.ReplaceAll(p.part, ":", "/"))))
+		if err != nil {
+			row(s, "FAIL", "source: "+err.Error())
+			return exitEnv
+		}
+		p.allow.Source, p.allow.Scanned = src, true
+	}
 	var ok bool
 	if p.rootTop, ok = h.rootTop(ctx, p.gradleRoot); !ok {
 		row(s, "FAIL", "gradle root is not a git worktree: cannot verify it")
