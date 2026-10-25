@@ -53,11 +53,11 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
   ORDs (`slot:..`), `$(var)` ORD variables set by a parent `PxInclude`, or tag-based bindings, so one page serves the
   JACE and the Supervisor; icons only from modules (`module://icons/...`); in Hx the `visible` property refreshes
   every 5 s; WebService › Warmup Config speeds the first HxPx page after a restart. [CERT-doc] guides (GD =
-  niagara-help 4.15.6.20 `guides-clean/`) `GD/Graphics/AboutTypesOfPxTargetMediaGraphicsN4-504311E0.txt:11,16-27,37,49`,
-  `GD/Graphics/docGraphics_DevelopingForPortability-FAA1EFED.txt:7,27`,
-  `GD/Graphics/pBasicProcedureForUsingThePxIncludeW-13B8E5FB.txt:12`, `GD/Graphics/aPxView.txt:18`,
-  `GD/Graphics/bajaui-CanvasPane.txt:13`, `GD/Graphics/AboutTag-basedBindingsGraphics-C42EE774.txt:7`,
-  `GD/Graphics/UsingTheVisibilePropertyInHxProfile-16D68DD7.txt:25`, `GD/User/web-WebWarmupConfig.txt:7`. Owed lint:
+  niagara-help 4.15.6.20 `guides-clean/`) `GD/Graphics/AboutTypesOfPxTargetMediaGraphicsN4-504311E0.txt:11,16-27,37,49` "Note: Media values affect the initial contents of",
+  `GD/Graphics/docGraphics_DevelopingForPortability-FAA1EFED.txt:7,27` "Develop Px Views that you can easily use",
+  `GD/Graphics/pBasicProcedureForUsingThePxIncludeW-13B8E5FB.txt:12` "If you are using any bound variables, consider", `GD/Graphics/aPxView.txt:18` "Icon graphics must be linked into your view",
+  `GD/Graphics/bajaui-CanvasPane.txt:13` "Note: It provides support for absolute positioning for", `GD/Graphics/AboutTag-basedBindingsGraphics-C42EE774.txt:7` "Niagara has added support for tag-based bindings. Tag-based",
+  `GD/Graphics/UsingTheVisibilePropertyInHxProfile-16D68DD7.txt:25` "The visible property updates every 5 seconds.", `GD/User/web-WebWarmupConfig.txt:7` "These properties configure what happens when a controller". Owed lint:
   G77 `px-portability`. `[ev: retro devguide415-r2-web-ui-hmi Δ4]`
 - **"How to feed live data" decision matrix — match the serving recipe to the channel:** (a) **Servlet-SPA** → REST-poll (a self-scheduled `setTimeout` loop per § Poll loop reliability + 1 s local tick for JACE-computed fields); no BOX/Fox subscription — the servlet SPA does not use one, by design; (b) **bajaux `@AgentOn` view** → `subscriberMixIn` Fox/BOX subscription (push on value change; B752-G2 still open — treat as P2); (c) **PX page** → `*Binding` handles live data implicitly (no author code); (d) **Query** (alarms, history) → BQL via `BOrd.make(bql).get(cx, null)` → `BITable` (pull, not push). Rule [INFER]: do NOT mix channels (no BOX subscription from a plain servlet, no polling from a PX binding). `[ev: corpus B752 §752.4, B553 §553.1–553.3]`
 - `BWebServlet` subclass; `getServletName()` = the mount prefix → `/<prefix>/`. Registered as a `<type>` in module-include.xml + a palette instance under a Servlets folder.
@@ -195,7 +195,7 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   `[ev: retro devguide415-horizons-authoring-security Δ1]`
 - **4.15 adds an absolute logoff** counted from login that activity cannot reset (`UserService.absoluteLogoffEnabled`,
   default period 7 days, per-user `absoluteLogoffEnabled`); a 24/7 kiosk user needs both flags off or a planned
-  weekly re-login. `[ev: corpus B1344 §1344.3]` [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:15-23`
+  weekly re-login. `[ev: corpus B1344 §1344.3]` [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:15-23` "As of Niagara 4.15, the Absolute Logoff option"
   4.14 has no absolute logoff (not in the 4.14.0.162 decompile, corpus B1344 §1344.3); 4.13 not verified.
   `[ev: retro devguide415-r3-web-session-headers Δ2]` `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
 - **The SPA must survive a session that ends anyway** (absolute logoff, an admin's session invalidation, a
@@ -204,12 +204,12 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   the poll a 200 HTML login page, so test `response.redirected` or a non-JSON `Content-Type`, not only the
   status code; otherwise every tick fails JSON parsing in exactly the silent loop this rule forbids. `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
 - **Kiosk panel user — commissioning checklist** (per display, 4.15.6.20 Touch guide): dedicated user; Auto
-  Logoff Enabled = false (`Touch/SettingUpADisplayUser-EntsecInstall-4CB4BEC4.txt:24`); Allow Concurrent
-  Sessions = false (`Touch/UpdatingTheIntrusionDisplayUserEnts-5053926B.txt:23`); on 4.15 also Absolute Logoff
+  Logoff Enabled = false (`Touch/SettingUpADisplayUser-EntsecInstall-4CB4BEC4.txt:24` "Under Auto Logoff Settings, remove the check mark"); Allow Concurrent
+  Sessions = false (`Touch/UpdatingTheIntrusionDisplayUserEnts-5053926B.txt:23` "For Allow Concurrent Sessions, select false"); on 4.15 also Absolute Logoff
   off or a planned weekly re-login; a role with read (R) and invoke (I) on the app's categories only
-  (`Touch/CreatingARoleToAssignToTheDisplay-CF979AC4.txt:25`); a `.nav` file under Files as the landing page, one
-  per display (`Touch/SettingUpANavigationFileForTheOnscr-504FCDC3.txt:7,12`); the panel's configuration password
-  turned on (default OFF, `Touch/GeneralSettingsTouch-F06218DF.txt:20`). For re-login after a panel reboot,
+  (`Touch/CreatingARoleToAssignToTheDisplay-CF979AC4.txt:25` "Click the cell to assign read (R) and"); a `.nav` file under Files as the landing page, one
+  per display (`Touch/SettingUpANavigationFileForTheOnscr-504FCDC3.txt:7,12` "The onscreen Px view serves as the home"); the panel's configuration password
+  turned on (default OFF, `Touch/GeneralSettingsTouch-F06218DF.txt:20` "Enables (ON) and disables (OFF) the requirement to"). For re-login after a panel reboot,
   prefer client-certificate SSO (`types/security.md` § 3.4). `[ev: retro devguide415-r2-web-ui-hmi Δ6]`
 - **Workbench views** not hosted on a station component report activity through `BFoxProxySession.userActivity()`;
   `NotifyListener.onNotify()` fires with ≤30 s left. [CERT-doc] `niagara-help/devguide-clean/autoLogoffWb.txt:6-46`
@@ -247,8 +247,8 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   server-side (its data needs a timestamp and a non-String value; no live mode, no Delta); a points folder plots only
   its first 10 histories; `file:^charts/defaultOptions.chart` holds shared axis, sampling and time-range defaults.
   Keep the hand-rolled SVG below on the `hmi` panel. [CERT] `webChart-rt.jar!WEB-INF/web.xml` (`/query/*`,
-  `/file/*`), vineflower `WebChartQueryServlet.java:47,95`; [CERT-doc] `GD/WebCharts/AddingDataToAChart-959F4DCC.txt:22,25`,
-  `GD/WebCharts/webChart-ChartWidget.txt:73`, `GD/WebCharts/CreatingADefaultOptionsChartFileWeb-32F441A8.txt:17`
+  `/file/*`), vineflower `WebChartQueryServlet.java:47,95`; [CERT-doc] `GD/WebCharts/AddingDataToAChart-959F4DCC.txt:22,25` "NOTE: When adding a points folder to a",
+  `GD/WebCharts/webChart-ChartWidget.txt:73` "Provides ord for the defaultOption widget. You can", `GD/WebCharts/CreatingADefaultOptionsChartFileWeb-32F441A8.txt:17` "NOTE: The defaultOptions file is used only to"
   (GD as in § ux Px rules). The series-transform servlet path (`/seriesTransformQuery/*` in its jar) is not called
   live yet [INFER] (B1339-G1). `[ev: retro devguide415-r2-web-ui-hmi Δ8]`
 - **Size the SVG chart's `viewBox` to the MEASURED box in real px each render — do not carry a fixed art-board viewBox with `preserveAspectRatio="none"`:** measure `getBoundingClientRect()` (guard width>60) and set `viewBox="0 0 <w> <h>"` so 1 unit = 1px and strokes/axis text stop distorting. [ev: retro dashboardpan-hmi-touch-ux Δ5]
@@ -275,13 +275,13 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   profiles and the KioskService are not supported in Niagara 4, and Mobile profiles are deprecated
   (`frontend-standard.md` § Profiles); `Enable Nav Tree Side Bar` and `Enable View Selection` (default true) hide the
   side bar and the view selector for a panel user; the Hx theme is chosen per profile on the user or prototype
-  (`selectedHxTheme`, default Zebra — `theme.md` § 2). [CERT-doc] `GD/Graphics/AboutKioskProfiles-E920D19F.txt:9`,
-  `GD/User/baja-User.txt:54-66,89`; [CERT] vineflower `hx-wb BHxProfile.java:86`. `[ev: retro devguide415-r2-web-ui-hmi Δ3]`
+  (`selectedHxTheme`, default Zebra — `theme.md` § 2). [CERT-doc] `GD/Graphics/AboutKioskProfiles-E920D19F.txt:9` "Note: Currently, the KioskService and the Kiosk Profiles",
+  `GD/User/baja-User.txt:54-66,89` "drop-down list (defaults to Zebra)"; [CERT] vineflower `hx-wb BHxProfile.java:86`. `[ev: retro devguide415-r2-web-ui-hmi Δ3]`
 - **Coexisting with the Tridium DashboardService (`dashboard-rt`/`-ux`/`-wb`):** a different product from this
   servlet dashboard. It keeps per-user state as `db*.json` under the protected station home
   `file:~stations/<station>/dashboards/<user>`; a `DashboardPane` holds exactly one HTML5 WebWidget (WebChart,
   CircularGauge) and its `Id` (`%ord%;%viewId%;%widgetOrd%;%jsOrd%`) keys each user's saved data — leave it at the
-  default. [CERT-doc] `GD/EngNotes/dashboard-DashboardService.txt:7`, `GD/EngNotes/CreatingADashboard-34B5B646.txt:38`,
+  default. [CERT-doc] `GD/EngNotes/dashboard-DashboardService.txt:7` "The DashboardService must be added to a station's", `GD/EngNotes/CreatingADashboard-34B5B646.txt:38` "NOTE: A Dashboard Pane may contain only one",
   `GD/EngNotes/dashboard-DashboardPane.txt:7,22`. Both may sit in one Services container, so do not name our facade
   service slot `DashboardService` on such a station [INFER]. `[ev: retro devguide415-r2-web-ui-hmi Δ10]`
 

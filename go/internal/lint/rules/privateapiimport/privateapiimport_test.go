@@ -8,8 +8,8 @@ import (
 
 // TestGolden: the G65 contract (ledger.d/2026-10-23-r8-u5-c59-c62.md), one hand-written case per testdata/*.txt:
 // the import, static-import and fully qualified forms WARN; the default allow-list (com.tridium.ndriver.**,
-// com.tridium.driver.util.DrUtil and its members), com.tridiumx, comments and strings are clean; --default-allow off
-// and --allow globs; --strict; test, build and non-part sources skipped; empty roots, usage and a bad option value.
+// com.tridium.driver.util.DrUtil and its members), com.tridiumx, comments and strings are clean; --no-default-allow
+// and --allow globs; --strict; test, build and non-part sources skipped; empty roots, usage and a flag given a value.
 func TestGolden(t *testing.T) { golden.Run(t, Spec(), 11) }
 
 // TestAllowed: an exact entry allows the name and its members; a glob matches the whole name, "*" one segment.

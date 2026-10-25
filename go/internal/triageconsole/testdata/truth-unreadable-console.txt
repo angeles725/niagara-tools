@@ -1,0 +1,15 @@
+-- args --
+--tag
+plant
+a.txt
+d
+-- want --
+exit 3
+-- stderr --
+triage-console: cannot read d/u.txt: Permission denied
+-- @kind --
+truth: hand-written, the bash recorded at 79ca5a2c handed an unreadable console to awk, whose fatal open ("awk: <tmp>/triage.awk:221: fatal: cannot open file ...") skipped the END block: no rows at all and exit 0, a fail-open; the port refuses before any row, exit 3
+-- a.txt --
+WARNING [10:00:00 01-Oct-26 CST][plant] an own row the bash lost
+-- d/u.txt (mode 000) --
+WARNING [10:00:01 01-Oct-26 CST][plant] unreadable

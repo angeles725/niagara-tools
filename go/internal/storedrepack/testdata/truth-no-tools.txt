@@ -1,0 +1,20 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 0
+stored-repack: @DIR@/out.jar  (2 entries, all STORED, signature entries kept: none)
+-- stderr --
+-- @kind --
+truth: no zip or unzip on PATH; the bash exited 2 "missing tool: unzip", Go needs neither tool
+-- @env --
+PATH=@DIR@/no-such-dir
+-- in.jar.spec --
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- a.txt ---
+a
+-- @after out.jar.listing --
+entries 2
+head META-INF/MANIFEST.MF stored size=22 sha256=51b6d211a461039a
+rest a.txt stored size=2 sha256=87428fc522803d31

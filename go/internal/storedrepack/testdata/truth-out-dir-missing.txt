@@ -1,0 +1,14 @@
+-- args --
+in.jar
+nodir/out.jar
+-- want --
+exit 1
+-- stderr --
+stored-repack: cannot write nodir/out.jar: No such file or directory
+-- @kind --
+truth: an output whose directory does not exist is exit 1 with nothing written; the bash's cd failed inside the OUT_ABS substitution, so zip tried to create /out.jar and the script exited 15
+-- in.jar.spec --
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- a.txt ---
+a

@@ -456,7 +456,7 @@ annotated or nested-class stub is caught too. [ev: retro n4-course-handson-ndriv
 
 **A failed poll is not a failed ping** `[ev: retro devguide415-r3-drivers-integration Δ1]` `[ev: corpus B1348 §1348.1]`. The
 4.15.6.20 guide says "in most drivers" a point poll with no response makes the monitor note a ping fail
-(`Drivers/driver-PingMonitor.txt:13`); that is driver policy, not framework behaviour. `BProxyExt.readFail(cause)`
+(`Drivers/driver-PingMonitor.txt:13` "A successful ping response updates an object’s Health"); that is driver policy, not framework behaviour. `BProxyExt.readFail(cause)`
 only records the fault on the point and re-executes it (vineflower driver-rt 4.14.0.162
 `javax/baja/driver/point/BProxyExt.java:463-469`); nothing in driver-rt calls the device's ping from there. Code wins
 for behaviour: in a custom driver, on a transport timeout in the poll path call `device.ping()` (a fresh ping now) or
@@ -846,28 +846,28 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 - **Never enable an export priority our module drives.** Each priority level ticked in a writable export
   descriptor's `bacnetWritable` links that `inN` of the source point to the descriptor; the guide warns "Do not
   select any priority level already linked or in use by the system, otherwise control contention occurs"
-  (`Bacnet/AddandEditExportObjectsWindow-540E5726.txt:27`). Reserve our level (`in8`, `types/logic-authoring.md`
+  (`Bacnet/AddandEditExportObjectsWindow-540E5726.txt:27` "cannot be edited"). Reserve our level (`in8`, `types/logic-authoring.md`
   § Authoring a driver) and list the levels left to remote writers in the module README.
 - **Remote writes run as the station user `BACnet`,** which has no permissions until granted: give it Operator
   write on the category that holds the exported points and a non-blank password
-  (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:7-29`).
+  (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:7-29` "By default, the BACnet driver provides external BACnet").
 - **Exported enums need ordinals 1..n with no gaps.** An `EnumPoint`/`EnumWritable` whose range starts at 0 or
-  has gaps "does not export to BACnet", with no error (`Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`).
+  has gaps "does not export to BACnet", with no error (`Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17` "Multi State Input").
   Import-side non-contiguous ranges: `types/logic-authoring.md` § BEnumRange authoring grammar (its Non-contiguous-ordinal gotcha). Gotcha H5.
 - **The N4 level is the BACnet priority.** A proxy write goes out as `WriteProperty` at the winning N4 level and
   relinquishes the old level (vineflower bacnet-rt 4.14.0.162 `javax/baja/bacnet/point/BBacnetProxyExt.java:528-547`;
   corpus B544 §544.5), so a device program writing at priority 1-7 beats our `in8` in the device's own array.
   A Px virtual-point write goes out at priority 16 unless the ORD carries `;priority=N`
-  (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29`, `Bacnet/VirtualComponentsBACnet-53942D00.txt:59-60`). `[ev: corpus B1327 rows 4-7]`
+  (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29` "By default, in the case of a write", `Bacnet/VirtualComponentsBACnet-53942D00.txt:59-60` "priority=X, which indicates the priority at which the"). `[ev: corpus B1327 rows 4-7]`
 - Owed Go lints G85 `bacnet-export-inN-contention` and G86 `bacnet-export-enum-range` (ledger).
 
 ### 11.2 · MS/TP and COV `[ev: retro devguide415-r2-drivers-protocols Δ6]`
 
 - **COV is a tuning-policy setting:** `Use Cov`, `Cov Subscription Lifetime` (default 15 min) and `Accept
-  Unsolicited Cov` (default false) live on the BACnet tuning policy (`Bacnet/bacnet-BacnetTuningPolicy.txt:24-29`);
-  bind MS/TP and IP devices to separate policies (`Bacnet/AddingATuningPolicyBACnet-4FD602EE.txt:11`).
+  Unsolicited Cov` (default false) live on the BACnet tuning policy (`Bacnet/bacnet-BacnetTuningPolicy.txt:24-29` "Cov Subscription Lifetime");
+  bind MS/TP and IP devices to separate policies (`Bacnet/AddingATuningPolicyBACnet-4FD602EE.txt:11` "Configuring BACnet proxy points to reference different tuning").
 - **Large MS/TP trunks:** a Boolean `skipUpload=true` slot on a `BacnetDevice` skips the device-object upload
-  at station start (`Bacnet/TroubleshootingBACnet-4FF09FBA.txt:27,57-58`); a duplicate Device ID faults the
+  at station start (`Bacnet/TroubleshootingBACnet-4FF09FBA.txt:27,57-58` "Any BacnetDevice with a Boolean slot named Skip"); a duplicate Device ID faults the
   device (`:17`).
 - **Worst-case wait per request = `apduTimeout` × (`numberOfApduRetries` + 1)** — defaults 3000 ms and 3 on
   `BLocalBacnetDevice`; ping and poll threads queue behind it (corpus B1190 §1190.2, live on the PANCCADIA TC500:
@@ -876,14 +876,14 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 ### 11.3 · Modbus data `[ev: retro devguide415-r2-drivers-protocols Δ6]`
 
 - Integer is unsigned 16-bit; Long/Float take two registers; Double and Long 64-bit take four (new in 4.15)
-  (`Modbus/ModbusData-5FD097AE.txt:18,23,28,34,37`).
+  (`Modbus/ModbusData-5FD097AE.txt:18,23,28,34,37` "Integer represents an unsigned 16-bit numeral using a").
 - Byte order for 32/64-bit values is set on the network or the device, default `Order3210` (big-endian)
-  (`Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28`). Modbus carries no type metadata, so a wrong order still
+  (`Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28` "the byte-order used to assemble or receive floating-point"). Modbus carries no type metadata, so a wrong order still
   reads `{ok}` with a zero or absurd value `[INFER]` — check one known value at commissioning. Gotcha H4.
 - Writes are rounded and clamped by data type (Integer 0..65535, Signed Integer -32768..32767; Float and Double
-  not rounded) (`Modbus/ModbusData-5FD097AE.txt:64-79`).
+  not rounded) (`Modbus/ModbusData-5FD097AE.txt:64-79` "The Modbus driver’s NumericWritable proxy points, which write").
 - Wire addresses are zero-based: holding register 108 in a vendor sheet is address 107
-  (`Modbus/ModbusRegisters-5E427D5B.txt:33`).
+  (`Modbus/ModbusRegisters-5E427D5B.txt:33` "Data addressing (at least in decimal and hex").
 - Modbus has no priority array: the 16 N4 levels resolve to one value before the wire (corpus B544 §544.5).
   `[ev: corpus B1327 row 10]`
 
@@ -892,9 +892,9 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 - **Capability overrides are a last resort.** For a BACnet device that claims what it cannot deliver, the
   bacnetUtil children `RpmOverride`, `SegmentationOverride`, `ApduSizeOverride` and `ServicesSupportedOverride`
   correct the claim; the guide calls them "features of last resort", temporary until firmware or network fixes
-  (guide 4.15.6.20 `EngNotes/BACnetOverridingADevice.txt:19`). Record each one in the site runbook.
+  (guide 4.15.6.20 `EngNotes/BACnetOverridingADevice.txt:19` "Device overrides provide temporary solutions to problems that"). Record each one in the site runbook.
 - **Expose bounded queues as diagnostics.** Stock MS/TP diagnostics count queue-full events (`rxQ_full`,
-  `apptxq_overflow`; `EngNotes/bacnetUtil-Tokens.txt:18-20,59-60`). A custom driver should show its own comm or
+  `apptxq_overflow`; `EngNotes/bacnetUtil-Tokens.txt:18-20,59-60` "The number of times that both positions of"). A custom driver should show its own comm or
   write queue depth and overflow count the same way (the spy page in `types/observability.md` § 2, plus a
   read-only transient slot when a dashboard or alarm must see it `[INFER]`) and baseline it per trunk.
   `[ev: corpus B1336 rows 4,6]` Watch-client leases and 503 back-off: `types/cloud-connector.md` § 10.
@@ -927,6 +927,16 @@ only driver test template is the video driver's,
   whose codec srcTest runs with `run-pure-test.sh`. Its `-rt` part needs `api(":alarm-rt")` (BDevice is an alarm
   source, javac stops without it) and its `-wb` part `api(":bajaui-wb")` for the manager's widget base
   `[ev: retro r10-dr2-driver-scaffold Δ1]`.
+- **Verify gate, driver mode.** `toolbelt/verify-module.sh --src <module-dir> <jar>` treats a profile dir as a driver
+  module when a class under its `src` extends a network or device base (`BDeviceNetwork`, `BLoadableNetwork`,
+  `BBasicNetwork`, `BSerialNetwork`, `BNNetwork`; `BDevice`, `BLoadableDevice`, `BBasicDevice`, `BNDevice`), directly or
+  through its own classes, and adds five rows: `driver-scaffold` (lint-driver-scaffold, always on, § 5),
+  `driver-comm-config` (no network or device slot holds a bare `BUdpCommConfig`/`BTcpCommConfig`, § 1.9),
+  `driver-discovery-alive` (every `getDiscoveryObjects` calls `isAlive()`, § 1.11), `driver-server-enabled` (a
+  `BTcpCommConfig` subclass never defaults `serverEnabled` to true, § 1.6) and `driver-manager` (a point manager is
+  `@AgentOn` the driver's point device ext, § 1.6; a `BBasicNetwork` driver ships a manager `@AgentOn` its network or
+  device, PD-01 § 1.3). Any other module prints no driver row. The enum-proxy range (§ 2) is a station facet set at
+  commissioning, so the gate does not check it `[ev: retro r10-dr4-verify-driver Δ1]`.
 - Owed: a station-side loopback example built through the kit loop (DR5).
 
 ---

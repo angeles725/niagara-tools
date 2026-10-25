@@ -100,8 +100,8 @@ with it and serves the write tools ported so far (section 14).
 | S15 | #304 in-doubt matrix | See below |
 | S16 | Switch the default launcher to Go | Python kept one release as fallback |
 
-**Status (server v0.9.5).** S0-S11 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
-#462, #475, #489; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
+**Status (server v0.9.5).** S0-S12 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
+#462, #475, #489, #494; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
 section 13) then changed both servers together.
 `readtools.Register` (`go/internal/mcpn4/readtools/connect.go`) serves all 13 read tools:
 `n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
@@ -109,9 +109,9 @@ section 13) then changed both servers together.
 `n4_px_summary`, `n4_list_batches`, `n4_session_retro_draft`. S10 (section 14) adds the plan
 engine with `n4_set_slot` and `n4_invoke_action`: `--allow-writes` starts the Go server. S11
 (section 15) adds `n4_create_component` and `n4_create_link`, S12 (section 16)
-`n4_remove_component`; `n4_rollback` and `n4_save_station` answer the "not implemented" text
-(section 6) until S13-S14. Under the Go binary the suite runs 662 tests with 365 skipped
-(section 16).
+`n4_remove_component`, S13 (section 17) `n4_rollback` and S14 (section 18) `n4_save_station`:
+every tool is served and none answers the "not implemented" text (section 6). Under the Go
+binary the suite runs 669 tests with 308 skipped, all of them `go_twin` markers (section 18).
 
 **S15 in-doubt matrix.** Each branch gets an explicit Go test plus the black-box Python test,
 driven by `hook` faults and an unwritable state dir:
@@ -220,10 +220,10 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
-| `test_tools_destructive.py` | 101 | 4 | 22 | 28 | 2 | 56 | 45 |
+| `test_tools_destructive.py` | 101 | 4 | 7 | 13 | 2 | 26 | 75 |
 | `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
-| `test_write_parity.py` | 20 | 0 | 0 | 0 | 0 | 0 | 20 |
-| **Total** | **662** | **166** | **49** | **105** | **18** | **338** | **324** |
+| `test_write_parity.py` | 27 | 0 | 0 | 0 | 0 | 0 | 27 |
+| **Total** | **669** | **166** | **34** | **90** | **18** | **308** | **361** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -803,3 +803,138 @@ merges. Left to S13-S15: the rollback's relink and component runs (`_run_relinks
 `_run_components`, `relinks_skipped`, `frozen_children_not_restored`), `_scrub_gap_errors`
 (only a rollback read-back has gaps), the multi-op partial in-doubt record (`_in_doubt_partial`;
 a remove sends one op) and `planned.data["write"]` of the save. Python bugs: none found.
+
+## 17. S13 `n4_rollback`: the journal-driven plan, nested components, relinks and the read-back
+
+**Packages.** `plan` gains what `_execute` and `_process` do for a batch of more than one op.
+`Impl.PlanWith` is a plan that also reads the write state and session (`needs_ctx`); `Impl.Run`
+runs follow-up ops in the same batch after the top ops and returns `Runs`: the frozen children
+echoed as `frozen_children_not_restored`, the relink report the result records as `relinks`, the
+links' inverse (journaled before the tool's own: undoing must remove links before their ends) and
+whether a relink reply was ambiguous (`in_doubt` on the reply and the result). `sendAll` is
+`_send_all`: a failure at op k of a multi-op batch is `_in_doubt_partial` (the sent ops, their
+replies and inverse, or `unknown` when it cannot be built, and an in-doubt `result` record with
+`sent` and `failed_op`, or the sentence that it could not be journaled). `scrubGaps` is
+`_scrub_gap_errors`. Any failure after the intent, not only a panic, is now the batch's in-doubt
+error (S15's "batch id kept"), and `InDoubt` is a `ToolError` to Python's eye.
+`writeops/rollback.go` is `_rollback_plan` over `journal.RollbackTarget` and `EarlierRollbacks`
+(section 12): the recorded station, the inverse split into ops, relink specs (`_relink_spec`) and
+unlinked inputs (`_unlinked_spec`), in the order Python's comprehensions validate them, no
+inverse, no recorded targets, every target under today's scope with its handle unchanged,
+`_unchanged_since`, one add per nested component (`_flatten`, `_own_slots`), the budget (1 batch +
+components + relinks × restored components) and today's scope of every re-created component and
+both ends of every relink. `rollback_values.go` is `_written_values`, `_bson_value`,
+`_unchanged_since` and `_flatten`; `box.IsComponentType` is `is_component_type` with
+`COMPONENT_TYPES`. `rollback_run.go` is `_run_components` (parents first under the parent's new
+handle, each journaled as a `component-intent` before it is sent and counted; a child the fresh
+parent already has is frozen, never re-added, and checked by the read-back) and `_run_relinks`
+(both ends present and in scope, one `relink-intent` before the first `checkLinks`; a station
+error or malformed reply is no verdict, an answer without a verdict or accepted without a name is
+ambiguous), with `_in_doubt_with_created` listing the components that exist now.
+`rollback_readback.go` is `_rollback_inverse`, `_rollback_readback`, `_frozen_check`, `_differs`,
+`_default_v` and `_config_v`. Python's iteration, subscription, attribute and hashing errors of
+odd journal values keep their class and message (`writeops/pyitems.go`).
+
+**Proof.** With the handler stubbed, 23 runnable tests failed under Go (RED): `TestRollback`,
+`TestListBatches`; with the port they pass. 27 rollback tests that were `go_twin` only to read or
+craft the journal through `srv.ctx` or to patch the FakeStation now run black-box on both servers
+(`DestructiveCase.journal` is `safety.Journal(state_dir)`; the journal-patching twins use
+`srv.ctx.write.journal` explicitly). `test_write_parity` gains four rollback scenarios (24 in
+all): rollbacks of every write tool, every journal, station, handle, scope, budget and
+unchanged-since refusal, crafted and unreadable journal records, a token reused, the station root,
+frozen children and their gaps, relinks skipped, refused, ambiguous and malformed, type and
+annotation mismatches, in-doubt component adds, relinks and read-back loads (`fail_nth`), and a
+crafted three-op batch failing at op 1, 2 and 3. Go differential on CPython 3.15:
+`writeops.TestRollbackPlanRunsAndReadbackDifferentialPython` runs 185 cases through the real
+`_IMPLS["n4_rollback"]` plan against a journal file (each side its own copy), the plan as
+`_process` hashes it, `_run_components` and `_run_relinks` as `_execute` calls them (queued sync
+and `checkLinks` replies), `_rollback_inverse` and `_rollback_readback`, and requires the hashed
+plan with its keys and `plan_hash`, the targets, the runs' frozen children, report, inverse,
+ambiguity and write count, the inverse and the read-back, or Python's error class and message,
+byte for byte (44 refusals, 30 internal errors: TypeError, AttributeError, KeyError, ValueError,
+BoxError, SafetyError; 15 runs left in-doubt, 9 runs failing, 18 read-back errors; 17 verified,
+26 mismatch, 26 partial, 2 unverified; 57 with relinks, 8 ambiguous, 55 with frozen children).
+Go twins drive the registered tool on an in-memory station (`writeops/rollback_internal_test.go`:
+journal order and budget, intents that cannot be written, a failing relink load, an unread frozen
+child scrubbed of the secret, a rollback accepted but unverified, today's scope, `_frozen_check`,
+one frozen child echoed) and the engine (`plan/runs_test.go`: the partial in-doubt record, it
+unjournaled, an unexpected failure after the intent). 102 hand mutants of the refusal, binding,
+scope, budget, in-doubt, run, read-back, frozen-check, echo, scrub and registration branches: the
+first run left 17 survivors and four that did not build. Closed: ten by corpus cases and a twin,
+four by value changes for the build failures; four were equivalent and their code removed (a copy
+of an op the plan owns, an `own == 0` note test, the read-back's default relink report and its
+ambiguous test); three stay equivalent, as Python keeps them (the frozen-slot `/` filter of a
+depth-1 load, and the runs' scope checks of a component and a relink end under a target today's
+scope already covers). The other 95 all go RED, none through a build failure (seven only in the
+black-box suite under the binary). Under `MCP_N4_IMPL=go`: 666 tests, 315 skipped (662 / 365
+before; the four new parity tests run under both).
+
+**Known differences.** No byte difference was found. A captured slot's default whose type or
+parent type is an unhashable value is `None` in Go where Python raises `TypeError`, and a
+frozen child's captured `s` that is not a list of dicts is empty to Go or panics into an
+`Exception` where Python iterates it or names `AttributeError`; the server writes neither. The relink runs' scope checks are reached only when
+the station assigns a name today's scope excludes, which a covered target rules out. Left to
+S14-S15: `planned.data["write"]` of the save and the rest of the #304 in-doubt matrix. Python
+bugs: none found.
+
+## 18. S14 `n4_save_station`: the save, config.bog and the poll
+
+**Packages.** `plan.State` gains WriteState's `station_homes` (`StationHomes`, from
+`--station-home NAME=PATH` through `cli.NewWriteState`: the path keeps every `=` after the first,
+the last repeat wins), `save_timeout` and `save_interval` (30 and 0.5 s) and the poll's clock
+(`Sleep`, `Monotonic`). `writeops/save.go` is `_bog_state`, `_save_plan` and `_save_readback`:
+the plan (a `PlanWith`, as Python's `needs_ctx`, which also stands for `planned.data["write"]`)
+is one `invokeAction` save on the session's root handle with no inverse, whole-station (any write
+scope will do), with a note naming `os.path.join(home, "config.bog")` or the missing home, and
+config.bog's state before the save (`st_mtime` as `sec + nsec * 1e-9`, size, sha256; nothing
+when it cannot be read). The read-back is unknown and unverified without a home or a readable
+config.bog before the save, each with its hint; else it reads config.bog every `SaveInterval`
+until it is unreadable, its sha256 changed, its mtime is later or `SaveTimeout` has passed on
+`Monotonic`: unknown and unverified with a hint, persisted and verified, or not persisted and a
+mismatch, with the path and both states as evidence. The engine already promoted `persisted` and
+`evidence` and journals the null reply, so S14 adds no hook. Every tool is now registered.
+
+**Proof.** With the handler stubbed, 7 runnable tests failed under Go (RED): five of
+`TestSaveStation`, the unreadable-after test of `TestWriteBranchDebt` and the parity scenarios;
+with the port they pass. The changed, missing and unreadable-after tests were `go_twin` only to
+set the homes and the poll timing on `srv.ctx`: they now start the server with `--station-home`
+and run black-box on both servers (the first two in `TestSaveStation` through `home_server`).
+The unchanged config.bog and the reply-is-no-proof tests keep their markers: through the command
+line the poll would wait the full 30 s. `test_write_parity` gains three save scenarios (27 in
+all): no station home with every token refusal, no write scope, and a home whose config.bog
+changes on two saves, is missing, becomes unreadable after the save or is edited between the
+dry run and the execution, plus in-doubt sends (HTTP 500 and a station error frame); each side
+has its own home, masked with the config.bog mtime. Go differential on CPython 3.15:
+`writeops.TestSavePlanAndReadbackDifferentialPython` runs 502 cases through the real
+`_IMPLS["n4_save_station"]` plan with the write state `_process` adds, the plan as `_process`
+hashes it and the read-back on a fake clock whose sleeps change config.bog, on the same files
+for both sides, and requires the hashed plan, `plan_hash`, targets, read-back, sleep count and
+clock byte for byte: seven home forms (none, empty, the directory, with one or two trailing
+slashes, a file, a missing directory) against five config.bog kinds (bytes, empty, absent, a
+directory, unreadable) and twelve save effects, mtimes from before 1970 to past 2100 and 1 ns
+or 1 us apart (1 ns is below a double's precision there: the same `st_mtime`), timings that
+accumulate float error, later changes and odd station names, root handles and replies (67
+verified, 9 of them after polling, 69 mismatch, 124 without a home, 228 unreadable before, 14
+unreadable after). Go twins drive the registered tool on an in-memory station with a fake clock
+(`writeops/save_internal_test.go`: the plan, no home, changed, unchanged after the full poll,
+missing, unreadable after, the reply never taken as proof, a change seen on a later poll, the
+state read again when the token executes, the journal) and the command line
+(`cli/station_home_test.go`, the twins of `TestStationHomeFlag`). 57 hand mutants of the path
+join, the config.bog state, the plan, every read-back branch, the poll, the timing defaults, the
+clock, the homes wiring and the registration: the first run left seven survivors and two that
+did not build. Closed: two by corpus cases (the same bytes 1 us earlier, new bytes of the same
+size), two by removing equivalent code (the join of an empty home, which a plan never checks,
+and the planned empty inverse, which the engine lists anyway), the two build failures by value
+changes; three stay equivalent: the open and stat error checks of `_bog_state` (a nil or open
+`*os.File` fails its next call anyway) and the poll's unreadable test before `changed`, which
+reads an unreadable state as changed. The other 54 all go RED in the Go tests, none through a
+build failure (one by hanging the poll). Under `MCP_N4_IMPL=go`: 669 tests, 308 skipped (666 /
+315 before; the three new parity tests run under both).
+
+**Known differences.** No byte difference was found. `_bog_state` stats the path and then opens
+it; Go stats the file it opened, which differs only when config.bog is replaced in between. A
+home holding a NUL byte makes Python's `os.stat` raise `ValueError` (an internal error) where Go
+reads config.bog as unreadable; a command-line argument cannot hold one. A home that is not
+valid UTF-8 is not in the differential. `Monotonic` counts from the process start, not
+`time.monotonic`'s origin; only differences are used and none is written. Left to S15: the rest
+of the #304 in-doubt matrix. Python bugs: none found.

@@ -1,7 +1,7 @@
 // Package cli is the mcp-n4 command line (mcp-n4-kit/mcp_n4/server.py:191-312): argparse's
 // flags, bounded ranges and error text, the start checks main() and Server(...) make, then the
-// stdio loop. With --allow-writes the write state is checked at start and the ported write
-// tools are served (writeops); the others answer that they are not ported yet.
+// stdio loop. With --allow-writes the write state is checked at start and the write tools are
+// served (writeops).
 package cli
 
 import (
@@ -65,7 +65,7 @@ func NewServer(cfg Config) (*jsonrpc.Server, error) {
 	ctx := NewContext(cfg)
 	tools := &readtools.Tools{Ctx: ctx, NewClient: readtools.BoxFactory, ServerVersion: reg.Version}
 	if cfg.AllowWrites {
-		state, err := plan.NewState(cfg.WriteScopes, stateDir(cfg.StateDir), int(cfg.TokenTTL), int(cfg.MaxWrites))
+		state, err := NewWriteState(cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -74,6 +74,20 @@ func NewServer(cfg Config) (*jsonrpc.Server, error) {
 	}
 	readtools.Register(srv, tools)
 	return srv, nil
+}
+
+// NewWriteState is the WriteState Server(...) makes for a cfg Check accepted: its start checks,
+// and the station homes main() passes (NAME -> PATH, the last repeat wins).
+func NewWriteState(cfg Config) (*plan.State, error) {
+	state, err := plan.NewState(cfg.WriteScopes, stateDir(cfg.StateDir), int(cfg.TokenTTL), int(cfg.MaxWrites))
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range cfg.StationHomes {
+		name, path, _ := strings.Cut(item, "=")
+		state.StationHomes[name] = path
+	}
+	return state, nil
 }
 
 type startError struct{ msg string }

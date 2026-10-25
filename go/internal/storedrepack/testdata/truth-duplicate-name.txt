@@ -1,0 +1,17 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 1
+-- stderr --
+stored-repack: in.jar: duplicate entry x.txt
+stored-repack: cannot unzip in.jar
+-- @kind --
+truth: a name held by two entries; the bash failed the same way (unzip asked to replace the file, read EOF and exited 1) with a prompt that names its temp dir as the reason
+-- in.jar.spec --
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- x.txt ---
+1
+--- x.txt ---
+2

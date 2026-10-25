@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · r10-verify-module-truth
@@ -20,3 +20,11 @@ ktssrc, Java through the javasrc stripped view and PropertyScan, and hits are ma
   tolerance chosen and pinned in a golden, never inherited.
 - Δ3 The golden harness has no update flag: a declared-difference golden is copied from the `go test` "got"
   block, so each declared golden is reviewed line by line in its commit.
+
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 "Port byte-identical first, then fix" bullet: a tightened operand checks the format's grammar first (decimal SVG viewBox).
+- Δ2 → same bullet: a float tolerance is chosen, named (`verifymodule` `ratioTolerance`) and pinned, never inherited.
+- Δ3 → `BUILD-LOOP.md` § 5 golden-case bullet: no update flag (verified: `go/internal/lint/rules/golden` declares none), so a declared-difference golden is reviewed line by line.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail2`; log in `ledger.d/2026-10-24-r10-fold-tail2.md`) — Δ1-Δ2 in the `BUILD-LOOP.md` § 5 port bullet; Δ3 in the § 5 golden-case bullet.

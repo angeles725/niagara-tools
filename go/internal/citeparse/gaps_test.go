@@ -35,6 +35,12 @@ func TestCardPathGaps(t *testing.T) {
 		{"a comma after a devguide file", "[ev: devguide security/security.txt:97, :220-222]", []full{{1, Devguide, "security/security.txt", "", "", ":97,220-222"}}},
 		{"`lines a-b` after a file is a line range", "[ev: code themeDistech-ux extracted/hx/theme.css lines 4-16]",
 			[]full{{1, Code, "themeDistech-ux", "extracted/hx/theme.css", "", ":4-16"}}},
+		{"a section range is its two ends", "`types/a.md` § 11.1-11.3, x", []full{{1, Path, "types/a.md", "", "", "§11.1 §11.3"}}},
+		{"a backticked path with spaces", "see `Dir with space/file.md:3` x", []full{{1, Path, "Dir with space/file.md", "", "", ":3"}}},
+		{"a label before a path is not one spaced path", "`code x-rt a/B.java:3` and `FMT …/y.sh:1`", nil},
+		{"a list of sections", "`types/a.md` § 3, § 5.2, § 7 list", []full{{1, Path, "types/a.md", "", "", "§3 §5.2 §7"}}},
+		{"a §§ list of sections", "`types/a.md` §§ 3, 5 list", []full{{1, Path, "types/a.md", "", "", "§3 §5"}}},
+		{"a list of sections in a tag", "[ev: types/a.md § 3, § 5]", []full{{1, Path, "types/a.md", "", "", "§3 §5"}}},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {

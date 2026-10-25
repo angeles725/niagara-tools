@@ -352,6 +352,19 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
   [[ "$output" != *"pct="* ]]
 }
 
+@test "SP-operator-comment: a comment inside a READONLY slot's annotation that mentions OPERATOR flags nothing (issue #459)" {
+  # Mutation: SP-operator-comment -- testing OPERATOR on the raw annotation text (comments kept) reports lockedFlag MISSING.
+  local src="$BATS_TEST_TMPDIR/src"
+  mkdir -p "$src/com/x"
+  printf '%s\n' '@NiagaraProperty(' '  name = "lockedFlag",' '  // Read-only (never OPERATOR-writable).' \
+    '  flags = Flags.SUMMARY | Flags.READONLY' ')' \
+    '@NiagaraProperty(name = "knob", flags = Flags.OPERATOR) // operator knob' > "$src/com/x/BL.java"
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"MISSING knob"* ]]      # anchor: a real OPERATOR slot still fires
+  [[ "$output" != *"MISSING lockedFlag"* ]]
+}
+
 @test "SC-xml-multiline: a <type> tag over two lines is required; a commented-out one is not" {
   # Mutation: SC-xml-multiline -- reading types one line at a time again misses Split and requires Old.
   local d="$BATS_TEST_TMPDIR/m"

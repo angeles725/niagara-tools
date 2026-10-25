@@ -5,8 +5,7 @@ per-slot
 @DIR@/src
 -- want --
 exit 1
-pct=25.0 (per-slot)
-MISSING commentOp
+pct=28.6 (per-slot)
 MISSING crlf
 MISSING flagO
 MISSING noeol

@@ -25,6 +25,8 @@ const (
 	Mem          Kind = "mem"          // Target = memory file name prefix
 	Vineflower   Kind = "vineflower"   // Target = <mod>-<profile>, File = path in its vineflower/ copy
 	Javap        Kind = "javap"        // Target = jar file name
+	Jar          Kind = "jar"          // Target = jar file name, File = the entry in it (`x.jar!entry`)
+	Archive      Kind = "archive"      // Target = path of a zip, File = the entry in it (`x.zip!entry`)
 	Course       Kind = "course"       // Target = path under the dev-course tree (or its course-text)
 	Bitacora     Kind = "bitacora"     // Target = slug of a client bitacora/<date>-<slug>.md
 	Bare         Kind = "bare"         // an ID with no source (OBS-2, WIR-G3, Δn TOKEN)
@@ -44,6 +46,7 @@ type Pointer struct {
 	File     string // Code and Vineflower only
 	Version  string // Help, Vineflower and Javap only
 	Lines    []Range
+	Anchor   string   // a quoted phrase after the lines that must be on or near them
 	Sections []string // corpus § tokens, or the heading of a kit cross-reference
 	Rows     []Range
 	Pages    []Range  // course PDF pages
@@ -61,6 +64,9 @@ func (p Pointer) Locator() string {
 	var parts []string
 	if len(p.Lines) > 0 {
 		parts = append(parts, ":"+FormatRanges(p.Lines))
+	}
+	if p.Anchor != "" {
+		parts = append(parts, `"`+p.Anchor+`"`)
 	}
 	if len(p.Pages) > 0 {
 		parts = append(parts, "p"+FormatRanges(p.Pages))

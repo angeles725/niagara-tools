@@ -1,0 +1,38 @@
+-- args --
+per-slot
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+@DIR@/src
+-- want --
+exit 1
+pct=0.0 (per-slot)
+MISSING endpointUrl
+MISSING knob
+-- stderr --
+-- module-include.xml --
+<types>
+<type name="Thing" class="com.x.BThing"/>
+</types>
+-- module.lexicon --
+Thing.displayName=Thing
+-- src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(
+  name = "lockedFlag",
+  // Read-only (never OPERATOR-writable): only the control logic sets it.
+  type = "boolean",
+  defaultValue = "false",
+  flags = Flags.SUMMARY | Flags.READONLY
+)
+@NiagaraProperty(
+  name = "blockNote",
+  /* not OPERATOR: computed */ type = "double",
+  flags = Flags.READONLY
+)
+@NiagaraProperty(
+  name = "knob",
+  // a plain comment
+  flags = Flags.SUMMARY | Flags.OPERATOR
+)
+@NiagaraProperty(name = "endpointUrl", defaultValue = "http://example.invalid/x", flags = Flags.OPERATOR)
+public class BThing extends BComponent {}

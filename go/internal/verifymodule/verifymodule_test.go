@@ -14,7 +14,7 @@ import (
 )
 
 // TestGolden replays every run recorded from the bash verify-module.sh (testdata/*.txt).
-func TestGolden(t *testing.T) { golden.RunMain(t, Main, 170) }
+func TestGolden(t *testing.T) { golden.RunMain(t, Main, 171) }
 
 // write creates every file of tree under dir; a ".jar" key is a zip of its "|"-separated name=text entries.
 func write(t *testing.T, dir string, tree map[string]string) {
@@ -49,34 +49,6 @@ func runMain(dir string, args ...string) (int, string, string) {
 	var o, e bytes.Buffer
 	code := Main(args, cli.Stdio{Out: &o, Err: &e})
 	return code, strings.ReplaceAll(o.String(), dir, "@DIR@"), strings.ReplaceAll(e.String(), dir, "@DIR@")
-}
-
-// TestUnreadableSource pins VM-walk-locked (a chmod 000 cannot be spelled in a golden): a --src
-// sub-directory the walk cannot enter is named once on stderr however many checks walk it, the rows of
-// the files it did list still print, and the verdict is INCOMPLETE, exit 3. Declared difference: the walk
-// line quotes the path in the C locale ('...', the shared lint.Walk wording) where GNU find under C.UTF-8
-// used curly quotes.
-func TestUnreadableSource(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: chmod 000 does not block reads")
-	}
-	dir := t.TempDir()
-	write(t, dir, map[string]string{
-		"Foo-rt.jar":                   "META-INF/module.xml=<type name=\"A\" class=\"com.x.A\"/>|com/x/A.class=\xca\xfe\xba\xbe\x00\x00\x00\x34",
-		"mod/Foo-rt/src/com/x/A.java":  "String s = \"station:|x\";\n",
-		"mod/Foo-rt/src/locked/L.java": "x\n",
-	})
-	locked := filepath.Join(dir, "mod/Foo-rt/src/locked")
-	if err := os.Chmod(locked, 0); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
-	code, out, stderr := runMain(dir, "--src", "@DIR@/mod", "@DIR@/Foo-rt.jar")
-	want := "verify-module: cannot list every file under @DIR@/mod/Foo-rt/src: find: '@DIR@/mod/Foo-rt/src/locked': Permission denied\n"
-	if code != 3 || stderr != want || !strings.Contains(out, "WARN  ord-literal  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/A.java:1:") ||
-		!strings.Contains(out, "PASS  facets ") || !strings.HasSuffix(out, "-> INCOMPLETE (a --src walk failed)\n") {
-		t.Errorf("exit %d\n%s-- stderr --\n%s", code, out, stderr)
-	}
 }
 
 // TestIntegerOperands: the coverage counts are decimal integers (a leading zero is decimal, 08 is 8) and

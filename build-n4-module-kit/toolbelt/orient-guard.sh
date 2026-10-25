@@ -2,7 +2,7 @@
 # orient-guard.sh — BUILD-LOOP §0.a location guard for Niagara N4 module builds.
 #
 # Asserts that <module-root> is under the sole legal build prefix
-# /home/cristian/modulos_niagara_n4/Cliente/ before any build or file-editing action.
+# $HOME/modulos_niagara_n4/Cliente/ before any build or file-editing action.
 # Paths are canonicalized (symlinks + relative components resolved) before compare.
 #
 # Usage:  orient-guard.sh <module-root>
@@ -13,7 +13,7 @@
 #                                Any other non-empty value is treated as unset (fail-closed).
 #
 # Row format:  PASS|FAIL|WARN  orient-guard  <detail>
-# Exit:        0 (PASS or WARN) · 1 (FAIL) · 3 (usage error)
+# Exit:        0 (PASS or WARN) · 1 (FAIL) · 3 (usage error, or no HOME to derive the default prefix)
 #
 # This script is VCS-free by design. Version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
@@ -22,6 +22,7 @@
 # Mutation: OG2 -- removes the trailing-slash append before compare (ClienteX/ false-positive)
 # Mutation: OG3 -- treats BUILD_N4_CLIENTE_OVERRIDE=0 as =1 (non-1 override bypass)
 # Mutation: OG4 -- skips canonicalization, comparing raw input instead of realpath
+# Mutation: OG10 -- a hardcoded home directory as the default prefix (fails under a temp HOME)
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
@@ -44,9 +45,9 @@ usage_exit() {
 ARG="$1"
 
 # ---------------------------------------------------------------------------
-# Legal prefix — hardcoded, overridable by test seam only (always WARN-loud)
+# Legal prefix — derived from $HOME, overridable by test seam only (always WARN-loud)
 # ---------------------------------------------------------------------------
-readonly DEFAULT_LEGAL_ROOT_PREFIX="/home/cristian/modulos_niagara_n4/Cliente/"
+readonly DEFAULT_LEGAL_ROOT_PREFIX="${HOME:+${HOME%/}/modulos_niagara_n4/Cliente/}"
 
 if [ -n "${BUILD_N4_LEGAL_ROOT_PREFIX:-}" ]; then
   # Test seam is always loud — no silent bypass
@@ -58,6 +59,8 @@ if [ -n "${BUILD_N4_LEGAL_ROOT_PREFIX:-}" ]; then
   esac
   row "WARN" "non-default legal root ${LEGAL_ROOT_PREFIX} (test seam)"
 else
+  # An empty HOME would make the prefix /modulos_niagara_n4/Cliente/: refuse instead of guessing
+  [ -n "$DEFAULT_LEGAL_ROOT_PREFIX" ] || { printf 'orient-guard: HOME is not set; cannot derive the legal root\n' >&2; exit 3; }
   LEGAL_ROOT_PREFIX="${DEFAULT_LEGAL_ROOT_PREFIX}"
 fi
 

@@ -207,7 +207,7 @@ version: 0.31.0                      # current repo VERSION (deferred-lints-2026
 last_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state
 open_issues:
 retro_required: true                 # GATED — deferred-lints close retro filed: retros/2026-10-03-deferred-lints-2026-10-03-close.md (5 deltas, pending)
-retro_pending: true                  # set 2026-10-14 by new-retro.sh for retros/2026-10-14-ws-placement.md (4 deltas); 2026-10-15 adds 24 course/devguide retros (174 deltas), 2026-10-16 adds 5 n4-course-handson retros (30 deltas), 2026-10-21 adds modular-line-efficient-quality (5 deltas), 2026-10-22 t9c-reference-gaps (7 deltas) and course-recordings (8 deltas) were each filed and folded in the same chain; the rest pending fold review, mapped in odd/tasks/kit-improvement-candidates-2026-10-15.md (C01-C93)
+retro_pending: false                 # cleared 2026-10-24 (round-10 fold sweep, branch docs/r10-fold-tail2): every kit retro under retros/ is folded; was set 2026-10-14 by new-retro.sh for retros/2026-10-14-ws-placement.md and kept true through the 2026-10-15..10-24 retro waves
 last_commit: 905d597                  # P7c merge (PR #225); the close/release merge is the v0.30.0 tag
 last_session: the log lines below    # session log, oldest first; generated from ledger.d/
 <!-- /build-state.v1 -->

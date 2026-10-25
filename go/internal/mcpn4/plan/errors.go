@@ -25,10 +25,19 @@ type InDoubt struct{ Msg, BatchID string }
 
 func (e *InDoubt) Error() string { return e.Msg }
 
-// inDoubt is _in_doubt: why is the failure, or a reason text the kit wrote (shown as is).
-func inDoubt(batchID string, why error) *InDoubt {
+// PyType is the class Python raises it as.
+func (e *InDoubt) PyType() string { return "ToolError" }
+
+// inDoubt is _in_doubt of a failure.
+func inDoubt(batchID string, why error) *InDoubt { return InDoubtBecause(batchID, ownWords(why)) }
+
+// InDoubtOf is _in_doubt of a failure of a follow-up run.
+func InDoubtOf(batchID string, why error) *InDoubt { return inDoubt(batchID, why) }
+
+// InDoubtBecause is _in_doubt of a reason text the kit wrote (shown as is).
+func InDoubtBecause(batchID, why string) *InDoubt {
 	return &InDoubt{BatchID: batchID, Msg: "station call failed after the intent was journaled: batch " + batchID +
-		" is in-doubt (the station may or may not have applied it; inspect it before retrying): " + ownWords(why)}
+		" is in-doubt (the station may or may not have applied it; inspect it before retrying): " + why}
 }
 
 // ownWords is str(exc) for the station's or the kit's own errors and the class name otherwise.

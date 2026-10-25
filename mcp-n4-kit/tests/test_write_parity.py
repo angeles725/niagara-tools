@@ -4,8 +4,8 @@ Each scenario runs twice: on the in-process Python server and on the server unde
 (`go_server.make_server`: the Go binary under MCP_N4_IMPL=go), each with its own recording
 FakeStation and state dir. Every reply line, every BOX request body and the bytes of
 `journal.jsonl` and `audit.jsonl` must be equal once the per-run values are masked: the
-station URL and state dir, confirmation tokens, plan hashes, batch and session ids, expiry, timestamps and a
-read's elapsed time.
+station URL, state dir and station home, confirmation tokens, plan hashes, batch and session ids,
+expiry, timestamps, a read's elapsed time and a config.bog mtime.
 Every dry run of the server under test must also hash its plan as Python does:
 `plan_hash == sha256(safety.canonical(plan))`.
 
@@ -34,13 +34,16 @@ MASKS = [(re.compile(r"[0-9]+\.[0-9a-f]{16}\.[0-9a-f]{64}"), "<token>"),
          (re.compile(r"[0-9a-f]{64}"), "<hash>"),
          (re.compile(r"[0-9a-f]{32}"), "<id>"),
          (re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+00:00"), "<ts>"),
-         (re.compile(r'((?:expires_at|elapsed_ms)\\?": )[0-9]+'), r"\1<n>")]
+         (re.compile(r'((?:expires_at|elapsed_ms)\\?": )[0-9]+'), r"\1<n>"),
+         (re.compile(r'(mtime\\?": )[0-9.e+-]+'), r"\1<n>")]
 
 
 class Side:
     """One server, its FakeStation and state dir, and what the scenario saw."""
 
-    def __init__(self, test, impl, **opts):
+    def __init__(self, test, impl, home=None, **opts):
+        """`home` (bytes) starts the server with a station home holding that config.bog,
+        which the FakeStation's save rewrites."""
         self.fake = FakeStation(password=PASSWORD).start()
         test.addCleanup(self.fake.stop)
         self.fake.record()
@@ -50,6 +53,13 @@ class Side:
         self.opts = dict(allow_writes=True, allow_http=True, state_dir=self.state_dir,
                          env={"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": PASSWORD},
                          stations={"FakeStation": self.fake.url}, write_scopes=[FOLDER])
+        self.home = None
+        if home is not None:
+            self.home = os.path.join(tmp.name, "home")
+            os.mkdir(self.home)
+            self.fake.config_path = os.path.join(self.home, "config.bog")
+            self.write_bog(home)
+            self.opts["station_homes"] = {"FakeStation": self.home}
         self.opts.update(opts)
         self.srv = go_server.make_server(impl, **self.opts)
         test.addCleanup(lambda: go_server.close_server(self.srv))
@@ -90,6 +100,10 @@ class Side:
             self.box.set_slot(h, slot, bson)
         return h
 
+    def write_bog(self, content):
+        with open(self.fake.config_path, "wb") as fh:
+            fh.write(content)
+
     def state(self, name):
         path = os.path.join(self.state_dir, name)
         if not os.path.isfile(path):
@@ -101,6 +115,8 @@ class Side:
         if text is None:
             return None
         text = text.replace(self.fake.url, "<url>").replace(self.state_dir, "<state>")
+        if self.home:
+            text = text.replace(self.home, "<home>")
         for pattern, repl in MASKS:
             text = pattern.sub(repl, text)
         return text
@@ -653,3 +669,277 @@ class TestRemoveComponentParity(ParityTestCase):
                 side.fake.hook = None
             side.call("n4_list_batches")
         self.assertSameRun(scenario)
+
+
+def fail_nth(side, key, nth, reply):
+    """A hook: the nth callssc `key` from now on answers `reply` (code, body)."""
+    seen = []
+
+    def hook(frame):
+        sck = [m.get("b", {}).get("sck") for m in frame["m"] if isinstance(m.get("b"), dict)]
+        if key in sck:
+            seen.append(True)
+            if len(seen) == nth:
+                return reply[0], reply[1], {}
+        return None
+    side.fake.hook = hook
+
+
+def craft(side, bid, inverse, targets, station="FakeStation", verdict="verified", **intent):
+    """Journal a batch the server never ran (an intent and its result), through the file."""
+    journal = safety.Journal(side.state_dir)
+    journal.append(dict({"batch_id": bid, "phase": "intent", "tool": "n4_remove_component",
+                         "station_name": station, "ops": [], "inverse_plan": inverse,
+                         "targets": targets}, **intent))
+    journal.append({"batch_id": bid, "phase": "result", "verdict": verdict, "inverse": inverse,
+                    "accepted": None})
+
+
+def writable_group(side, name="Wg"):
+    """remove_group plus a NumericWritable whose frozen proxyExt is configured and a
+    BooleanWritable: frozen children the rollback must not re-add."""
+    nn = remove_group(side, name)
+    gh = side.box.load_tree(FOLDER + "/" + nn, depth=1, **NO_SLEEP)[""]["h"]
+    side.box.add_component(gh, "Sp", "control:NumericWritable")
+    side.box.add_component(gh, "En", "control:BooleanWritable")
+    ext = side.fake.folder.child(nn).child("Sp").child("proxyExt")
+    side.box.sync({"nm": "s", "h": ext.handle, "n": "tuningPolicyName",
+                   "b": {"nm": "p", "t": "baja:String", "v": "Fast"}})
+    sub = side.box.add_component(gh, "Sub", "baja:Folder")["nn"]
+    sub_h = side.box.load_tree(FOLDER + "/%s/%s" % (nn, sub), depth=1, **NO_SLEEP)[""]["h"]
+    side.box.add_component(sub_h, "Deep", "kitControl:NumericConst")
+    return nn
+
+
+def removed(side, nn, **kw):
+    return side.write("n4_remove_component", parent_ord=FOLDER, name=nn, **kw)["batch_id"]
+
+
+class TestRollbackParity(ParityTestCase):
+    def test_rollbacks_of_every_tool_and_every_refusal(self):
+        def scenario(side):
+            side.call("n4_rollback", batch_id="ab" * 16)  # not connected
+            side.connect()
+            for bid in ("f" * 32 + "\n", "F" * 32, "f" * 31, 7, "f" * 32):
+                side.call("n4_rollback", batch_id=bid)
+            created = side.write("n4_create_component", **CREATE)["batch_id"]
+            side.write("n4_rollback", batch_id=created)
+            side.call("n4_rollback", batch_id=created)  # already rolled back
+            last = [json.loads(line) for line in side.state("journal.jsonl").splitlines()][-1]
+            side.call("n4_rollback", batch_id=last["batch_id"])  # a rollback of a rollback
+            h = status_numeric(side)
+            set_id = side.write("n4_set_slot", **SET)["batch_id"]
+            token = side.call("n4_rollback", batch_id=set_id)["confirmation_token"]
+            side.box.set_slot(h, "out", box.bson_status_numeric(4.0))  # changed after the dry run
+            side.call("n4_rollback", batch_id=set_id, dry_run=False, confirmation_token=token)
+            side.box.set_slot(h, "out", box.bson_status_numeric(5.5))
+            side.write("n4_rollback", batch_id=set_id)
+            sp = side.add("Sp", "control:NumericWritable")
+            invoked = side.write("n4_invoke_action", ord=FOLDER + "/Sp", action="set", arg=7.0,
+                                 arg_type="baja:Double")["batch_id"]
+            side.box.set_slot(sp, "fallback", box.bson_status_numeric(3.0))
+            side.call("n4_rollback", batch_id=invoked)  # the fallback changed
+            side.box.set_slot(sp, "fallback", box.bson_status_numeric(7.0))
+            side.write("n4_rollback", batch_id=invoked)
+            active = side.write("n4_invoke_action", ord=FOLDER + "/Sp", action="active")["batch_id"]
+            side.call("n4_rollback", batch_id=active)  # no inverse
+            side.add("Tgt")
+            linked = side.write("n4_create_link", source_ord=CALC, source_slot="out",
+                                target_ord=FOLDER + "/Tgt", target_slot="in10")["batch_id"]
+            side.write("n4_rollback", batch_id=linked)
+            calc = side.write("n4_set_slot", **dict(SET, value=6.5))["batch_id"]
+            side.box.remove_component("3", "Calc")
+            status_numeric(side)  # same ORD, a new component
+            side.call("n4_rollback", batch_id=calc)
+            side.write("n4_rollback", batch_id=removed(side, remove_group(side)))
+            nn = writable_group(side)
+            bid = removed(side, nn)
+            for _ in range(2):
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+            for _ in range(2):  # reused
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_crafted_journal_records(self):
+        def scenario(side):
+            side.connect()
+            side.add("Calc")
+            ok_add = {"nm": "a", "h": "3", "n": "X", "b": {"nm": "p", "t": "baja:Folder"}}
+            cases = [
+                ([{"nm": "v", "h": "3", "n": "x"}], {FOLDER: "3"}, {"station": "OtherStation"}),
+                ([ok_add, {"relink": {"source_path": 1, "source_slot": "out"}}], {FOLDER: "3"}, {}),
+                ([ok_add, {"relink": {"source_path": "a b", "source_slot": "out",
+                                      "target_path": "", "target_slot": "x"}}], {FOLDER: "3"}, {}),
+                ([ok_add, {"unlinked_input": 5}], {FOLDER: "3"}, {}),
+                ([ok_add, {"unlinked_input": {"source_slot": "o", "target_path": "Y",
+                                              "target_slot": "in", "prior": {"v": 1}}}],
+                 {FOLDER: "3"}, {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], {}, {}),
+                ([{"nm": "v", "h": "9", "n": "x"}], {FOLDER: "3"}, {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], [FOLDER], {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], {FOLDER: "4"}, {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], {"station:|slot:/Elsewhere": "3"}, {}),
+                ([], {FOLDER: "3"}, {}),
+                ("ab", {FOLDER: "3"}, {}),
+                (7, {FOLDER: "3"}, {}),
+                ([{"nm": "a", "h": "3", "n": "Y", "b": {"nm": "p", "t": "baja:Folder", "s": [
+                    {"nm": "p", "t": "kitControl:NumericConst", "n": "bad name"}]}}],
+                 {FOLDER: "3"}, {}),
+                ([{"nm": "a", "h": "3", "n": "Z", "b": [1]}], {FOLDER: "3"}, {}),
+                ([{"nm": "a", "h": "3", "n": "W"}], {FOLDER: "3"}, {}),
+                ([{"nm": "s", "h": "3", "n": "q", "b": {"nm": "p", "t": "baja:Double", "v": "1"}}],
+                 {FOLDER: "3"}, {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], {FOLDER: "3"},
+                 {"rollback_of": "cd" * 16}),
+            ]
+            for i, (inverse, targets, kw) in enumerate(cases):
+                bid = "%02x" % i * 16
+                station = kw.pop("station", "FakeStation")
+                craft(side, bid, inverse, targets, station=station, **kw)
+                side.call("n4_rollback", batch_id=bid)
+            for verdict, extra in (("failed", {}), ("failed", {"readback_failed": True})):
+                done = side.write("n4_create_component", **dict(CREATE, name="F"))["batch_id"]
+                journal = safety.Journal(side.state_dir)
+                journal.append({"batch_id": "ee" * 16, "phase": "intent", "rollback_of": done})
+                journal.append(dict({"batch_id": "ee" * 16, "phase": "result", "verdict": verdict,
+                                     "inverse": [], "accepted": [1]}, **extra))
+                side.write("n4_rollback", batch_id=done)
+            with open(os.path.join(side.state_dir, "journal.jsonl"), "ab") as fh:
+                fh.write(b'{"batch_id": [1], "phase": "intent"}\n{"batch_id": "\xff"}\n')
+            side.call("n4_rollback", batch_id="00" * 16)
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_budget_scope_and_station_root(self):
+        def scenario(side):
+            side.connect()
+            side.call("n4_rollback", batch_id=removed(side, remove_group(side)))
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario, max_writes=3)
+
+        def root(side):
+            side.connect()
+            top = side.box.add_component("2", "RootGrp", "baja:Folder")["nn"]
+            top_h = side.box.load_tree("station:|slot:/" + top, depth=1, **NO_SLEEP)[""]["h"]
+            side.box.add_component(top_h, "Src", "kitControl:NumericConst")
+            side.write("n4_rollback", batch_id=side.write(
+                "n4_remove_component", parent_ord="station:|slot:/", name=top)["batch_id"])
+        self.assertSameRun(root, write_scopes=["station:|slot:/"])
+
+    def test_read_back_outcomes_and_in_doubt_runs(self):
+        def scenario(side):
+            side.connect()
+            nn = writable_group(side, "A")
+            bid = removed(side, nn)
+            orig = side.fake._sync
+
+            def drop(name, kind="drop"):
+                def sync(op):
+                    res = orig(op)
+                    if op["nm"] == "a" and op["n"] == name:
+                        node = side.fake.folder.child(nn) if name != nn else side.fake.folder
+                        kid = node.child(name)
+                        if kind == "type":
+                            kid.type = "kitControl:BooleanConst"
+                        elif kind == "ws":
+                            kid.children = [c for c in kid.children if c.name != "wsAnnotation"]
+                        else:
+                            node.children = [c for c in node.children if c.name != name]
+                    return res
+                return sync
+            side.fake._sync = drop("Src")  # a relink end is missing: skipped, mismatch
+            side.write("n4_rollback", batch_id=bid)
+            for name, kind in (("Tgt", "type"), (nn, "ws")):
+                nn2 = remove_group(side, "B" + kind)
+                bid2 = removed(side, nn2)
+                nn = nn2
+                side.fake._sync = drop(name if name != "Tgt" else "Tgt", kind)
+                side.write("n4_rollback", batch_id=bid2)
+            side.fake._sync = orig
+            orig_link = side.fake._check_link
+            for reply in ([{"r": "huh"}], [{"v": False}], [{"v": True}], "junk"):
+                nn = remove_group(side, "L")
+                bid = removed(side, nn)
+                side.fake._check_link = lambda arg, reply=reply: reply
+                side.write("n4_rollback", batch_id=bid)
+            side.fake._check_link = orig_link
+            for key, nth, reply in (("syncTo", 1, (500, b"boom")), ("syncTo", 2, (200, ERROR_FRAME)),
+                                    ("syncTo", 3, (500, b"boom")), ("checkLinks", 1, (500, b"boom")),
+                                    ("checkLinks", 1, (200, ERROR_FRAME))) + tuple(
+                                        ("loadSlots", n, (500, b"boom")) for n in range(1, 12)):
+                nn = remove_group(side, "D")
+                bid = removed(side, nn)
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+                fail_nth(side, key, nth, reply)
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+                side.fake.hook = None
+            three = [{"nm": "a", "h": "3", "n": n, "b": {"nm": "p", "t": "baja:Folder"}}
+                     for n in ("A2", "B2", "C2")]
+            for bid, nth in (("ab" * 16, 2), ("ac" * 16, 1), ("ad" * 16, 3)):  # op nth fails
+                craft(side, bid, three, {FOLDER: "3"})
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+                fail_nth(side, "syncTo", nth, (500, b"boom"))
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+                side.fake.hook = None
+                side.call("n4_rollback", batch_id=bid)  # its rollback is in-doubt now
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+
+def save_and(side, then):
+    """The FakeStation's save, then `then()` (until the next restore)."""
+    orig = side.fake._invoke
+
+    def invoke(arg):
+        out = orig(arg)
+        if arg["a"] == "save":
+            then()
+        return out
+    side.fake._invoke = invoke
+    return orig
+
+
+class TestSaveStationParity(ParityTestCase):
+    """S14: n4_save_station. An unchanged config.bog is polled for the full 30 s on both
+    servers, so the mismatch branch is left to the Go differential."""
+
+    def test_no_home_and_every_token_refusal(self):
+        def scenario(side):
+            side.call("n4_save_station")  # not connected
+            side.connect()
+            token = side.call("n4_save_station").get("confirmation_token")
+            side.call("n4_save_station", dry_run=False, confirmation_token=token)
+            side.call("n4_save_station", dry_run=False, confirmation_token=token)  # spent
+            side.call("n4_save_station", dry_run=False)
+            side.call("n4_save_station", dry_run=False, confirmation_token="1.ab.cd")
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_no_write_scope(self):
+        def scenario(side):
+            side.connect()
+            side.write("n4_save_station")
+        self.assertSameRun(scenario, write_scopes=[])
+
+    def test_changed_missing_and_unreadable_config_bog_and_in_doubt(self):
+        def scenario(side):
+            side.connect()
+            side.write("n4_save_station")  # changed: persisted
+            side.write("n4_save_station")  # the second save changes it again
+            os.remove(side.fake.config_path)
+            side.write("n4_save_station")  # missing before the save
+            side.write_bog(b"bog")
+            orig = save_and(side, lambda: os.remove(side.fake.config_path))
+            side.write("n4_save_station")  # unreadable after the save
+            side.fake._invoke = orig
+            side.write_bog(b"bog")
+            token = side.call("n4_save_station")["confirmation_token"]
+            side.write_bog(b"edited after the dry run")  # read again when it executes
+            side.call("n4_save_station", dry_run=False, confirmation_token=token)
+            for reply in ((500, b"boom"), (200, ERROR_FRAME)):
+                fail_after(side, None, "invokeAction", reply)
+                side.write("n4_save_station")
+                side.fake.hook = None
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario, home=b"bog-before")

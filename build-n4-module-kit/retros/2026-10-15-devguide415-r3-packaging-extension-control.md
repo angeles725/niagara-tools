@@ -11,7 +11,7 @@
 
 ## Evidence
 - dist `[ev: code organized/platform/platform-rt/vineflower/com/tridium/install/installable/DistributionManifest.java:87]` `[ev: code organized/platform/platform-rt/vineflower/com/tridium/platform/daemon/PlatformInstallManager.java:353-356]` `[ev: code organized/platDaemon/platDaemon-wb/vineflower/com/tridium/platDaemon/ui/softwaremanager/CommitCommand.java:74-86]` vs `[ev: niagara-help 4.15.6.20 devguide-clean/distribution.txt:117-119]` `[ev: corpus B1345]`
-- jsonToolkit `[ev: code organized/jsonToolkit/jsonToolkit-rt/vineflower/com/tridiumx/jsonToolkit/outbound/schema/BIJsonProperty.java:15-30]` `[ev: javap /mnt/c/Niagara/Niagara-4.15.6.20/modules/jsonToolkit-rt.jar!…/program/BTypeOverride (doOverride final)]` vs `[ev: niagara-help 4.15.6.20 guides-clean/JsonToolkit/TypeOverrideExample-94E2114D.txt:52]` `[ev: corpus B1350]`
+- jsonToolkit `[ev: code organized/jsonToolkit/jsonToolkit-rt/vineflower/com/tridiumx/jsonToolkit/outbound/schema/BIJsonProperty.java:15-30]` `[ev: javap /mnt/c/Niagara/Niagara-4.15.6.20/modules/jsonToolkit-rt.jar!…/program/BTypeOverride (doOverride final)]` vs `[ev: niagara-help 4.15.6.20 guides-clean/JsonToolkit/TypeOverrideExample-94E2114D.txt:42 "Developers could also override the doOverride(BValue value) method"]` `[ev: corpus B1350]`
 - kitControl `[ev: code niagara-help/versions/4.15.6.20/source/kitControl-rt/com/tridium/kitControl/BInterstartDelayControl.java:63-160]` `[ev: code niagara-help/versions/4.15.6.20/source/kitControl-rt/com/tridium/kitControl/hvac/BLeadLagCycles.java:1116-1124,1187-1200]` `[ev: corpus B1351]`
 
 ## Proposed kit deltas (propose-never-apply)

@@ -118,6 +118,10 @@ unzip -p <jar> META-INF/module.xml | grep baja
 
 `--src` also runs `facets-req` (WARN): an OPERATOR numeric slot without a `facets` key, a setpoint-like slot without a unit, a count-like slot without a precision. `BFacets.makeNumeric(<unit>, <precision>, ...)` satisfies the unit test (it carries a real unit without the literal `UNITS` token) and any `makeNumeric(` satisfies the precision test; a precision-only `makeNumeric(<int>)` still WARNs missing UNITS. Do not hand-rewrite a working `makeNumeric` facet to silence the check. `[ev: retro comppan-fase2-amps-alarms Δ1]`
 
+`--src` on a driver module (a class extending a network or device base) adds the `driver-*` rows: `driver-scaffold`,
+`driver-comm-config`, `driver-discovery-alive`, `driver-server-enabled`, `driver-manager`; the rules and their doctrine
+sections are in `types/driver-authoring.md` § 12. A non-driver module prints none of them. `[ev: retro r10-dr4-verify-driver Δ1]`
+
 Reviewed false positives in the advisory source lints: `lint-arbitrary-ord.sh` WARNs on every `BOrd.make(<variable>)`; when the value is built from a code-controlled internal string (never client input), put `// lint-arbitrary-ord: reviewed <reason>` on the same line or the line directly above the call. The reason is mandatory — a bare marker still WARNs ("reviewed marker without a reason"). The marker records a review; it is not an allowlist for client-supplied ORDs (types/security.md §4). `[ev: retro panccadia-restart-seq-comp-lockout-hours Δ4]`
 
 ## Pre-release real-jar smoke test
@@ -181,13 +185,13 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
   trusted cert, and read the station log for `Skipping element`. `[ev: corpus B1312 §1312.3 C2]`
 - **JACE=MEDIUM vs Win Supervisor=LOW:** the Win Supervisor's `defaults/system.properties` actively sets `niagara.moduleVerificationMode=low`; the JACE-8000 QNX leaves the property commented out, falling back to the N4 code default `medium`. A dev-signed module that loads on the supervisor (LOW) fails on a JACE (MEDIUM) unless the cert is imported into the JACE user trust store. The "JACE enforces the project CA" note above is correct; MEDIUM mode is the reason. Both files add the comment "will be removed in a future release" — treat `medium` as the stable long-term target. [ev: corpus B1004 §1004.2-1004.3]
 - **Read the mode, do not assume it.** The 4.15.6.20 guide still says "the current default verification mode is
-  Low" (`ModuleSign/VerificationModesModuleSigning-182D0E86.txt:17`) while its own roll-out page says Medium from 4.9
-  (`ModuleSign/StagedRoll-outModuleSigning-182E7CC0.txt:11`). Code wins for behaviour: with no property, `Nre` asks
+  Low" (`ModuleSign/VerificationModesModuleSigning-182D0E86.txt:17` "The current default verification mode is Low, but") while its own roll-out page says Medium from 4.9
+  (`ModuleSign/StagedRoll-outModuleSigning-182E7CC0.txt:11` "Niagara 4.9 — Default verification mode is Medium."). Code wins for behaviour: with no property, `Nre` asks
   `ModuleVerificationMode.make`, which returns `medium` for baja ≥ 4.9 (vineflower baja 4.14.0.162 `Nre.java:752-763`;
   decompiled nre-ext 4.14 `ModuleVerificationMode.java:11,28-33`; 4.13 and 4.15 not verified). The authority on a
   given host is `niagara.moduleVerificationMode` in its `system.properties`. `[ev: corpus B1010]`
   `[ev: retro devguide415-r2-packaging-platform-signing Δ6]`
-- **Mode × signature status** (4.15.6.20 `ModuleSign/SignatureStatusesModuleSigning-1F0024B2.txt:9-21`,
+- **Mode × signature status** (4.15.6.20 `ModuleSign/SignatureStatusesModuleSigning-1F0024B2.txt:9-21` "Ok – The module is signed with a",
   `VerificationModesModuleSigning-182D0E86.txt:11-15`):
 
   | Status | low | medium | high |
@@ -201,7 +205,7 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
 
   So timestamp production jars (`niagara.signing.standardtsa`, devguide `security/codeSigning.txt:127-133`).
 - **The Signing Service is not module signing.** It issues CSR-signed TLS certificates for the Fox, Web and
-  platform servers and MQTT client authentication (`SigningService/SupportedComponents-9530B192.txt:9-15`); module,
+  platform servers and MQTT client authentication (`SigningService/SupportedComponents-9530B192.txt:9-15` "Aws Jitp Mqtt Authenticator"); module,
   program-object and robot signatures come from a code-signing certificate. `[ev: corpus B1332 §1332.2]`
 - **Harden the signing profile** `[ev: retro n4-course-build-deps-permissions-signing Δ4]` `[ev: corpus B1234 §1234.6]`:
   - Profile type `RestrictedSigningProfile` (the devguide sample, `codeSigning.txt:37`; plugin 7.6.17 `createProfile`
@@ -213,13 +217,13 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
     `[ev: retro review2-signing-build-route Δ3]`
   - After changing the signing configuration run `:<part>:clean` before `jar`; then check Workbench Tools ›
     Module Info: a green check and, on double-click, the expected signer certificate
-    (`ModuleSign/CheckingModuleSignaturesOnYourLocal-1B6825A0.txt:15-17`). `verify-module.sh`'s `signed` row
+    (`ModuleSign/CheckingModuleSignaturesOnYourLocal-1B6825A0.txt:15-17` "In Workbench, click Tools > Module Info."). `verify-module.sh`'s `signed` row
     proves only that A signature exists, not whose; the signer-identity check is owed (Go lint G22).
     `[ev: retro review2-signing-build-route Δ1]`
   - The profile XML holds the store and key passwords in clear text: never print it, read element names only
     (`grep -o '<[a-zA-Z]*'`), keep it and every `*.p12`/`*.jks`/`*.jceks` outside the repo, and give a delegated
     task its path, never its contents. `[ev: retro review2-signing-build-route Δ2]`
-- **"Unable to load …" at station start** (`ModuleSign/StationFailsWithErrorMessageModuleS-1BDB7827.txt:11-17`):
+- **"Unable to load …" at station start** (`ModuleSign/StationFailsWithErrorMessageModuleS-1BDB7827.txt:11-17` "If a module is installed via non-standard tools."):
   the module was installed by a non-standard tool, its signing certificate was removed from the trust store, or
   the certificate expired and the jar is not timestamped; Software Manager lists the signature errors. A
   third-party jar that cannot be re-signed by its author can be signed with Workbench Tools › Jar Signer Tool

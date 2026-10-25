@@ -56,6 +56,13 @@ func TestReadBinarySections(t *testing.T) {
 	}
 }
 
+// TestBuildJarBadBase64 makes an undecodable base64 jar entry a BuildJar error, never a jar with a short entry.
+func TestBuildJarBadBase64(t *testing.T) {
+	if _, err := BuildJar("--- x (base64) ---\n!!\n"); err == nil {
+		t.Error("BuildJar accepted a bad base64 entry")
+	}
+}
+
 // TestReadBadBase64 makes an undecodable base64 body a Read error, never an empty file.
 func TestReadBadBase64(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "c.txt")

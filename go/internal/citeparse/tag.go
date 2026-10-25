@@ -70,6 +70,10 @@ func (sc *scan) tags(i int) []Pointer {
 		if at < 0 {
 			return out
 		}
+		if end := spanEnd(l, at); end > 0 && !strings.Contains(l[at:end], "]") {
+			sc.masked[i] = l[:at] + strings.Repeat(" ", end-at) + l[end:] // literal code, not a tag
+			continue
+		}
 		open := len("[ev:")
 		if deferred {
 			open = len("[deferred:")
@@ -86,6 +90,18 @@ func (sc *scan) tags(i int) []Pointer {
 			out = append(out, p)
 		}
 	}
+}
+
+// spanEnd is where the code span holding column at closes on line l (0 when at is outside a span, or the
+// span runs on to the next line).
+func spanEnd(l string, at int) int {
+	if strings.Count(l[:at], "`")%2 == 0 {
+		return 0
+	}
+	if end := strings.IndexByte(l[at:], '`'); end >= 0 {
+		return at + end
+	}
+	return 0
 }
 
 // body returns the tag text after the opener at line i column col up to its `]`, joining wrapped lines
@@ -167,6 +183,8 @@ func clause(c string, aliases map[string]string) []Pointer {
 		return corpusClause(c, c)
 	case bareID.MatchString(c):
 		return []Pointer{{Kind: Bare, Target: c, Raw: c}}
+	case (word == "code" || word == "course") && zipEntry.MatchString(rest):
+		return archiveClause(c, rest)
 	case word == "course":
 		return courseClause(c, rest)
 	case word == "bitácora" || word == "bitacora":

@@ -150,14 +150,14 @@ text falls back to the default locale. `[ev: retro review2-signing-build-route �
 The PANCCADIA read/write users talk oBIX (`types/dashboard.md` § Facade contract). Rules for the station side
 (4.15.6.20 guide; encoder read in obixDriver-rt 4.14.0.162 vineflower; other versions not verified):
 - **Licence:** the server needs the `obixDriver` feature with `export=true` and the `web` feature
-  (`Obix/LicenseRequirement-OBIXDriver-9F25675C.txt:9`). Server disabled → HTTP 410 to every request; enabled but
-  unlicensed (fault) → HTTP 500 (`Obix/obixDriver-ObixNetwork.txt:19`).
+  (`Obix/LicenseRequirement-OBIXDriver-9F25675C.txt:9` "To support an oBIX server, the obixDriver license"). Server disabled → HTTP 410 to every request; enabled but
+  unlicensed (fault) → HTTP 500 (`Obix/obixDriver-ObixNetwork.txt:19` "true (default) or false").
 - **External writes to a control point** go through an `ObixExport` descriptor at a priority level the module
-  never drives; a level that is already linked faults the descriptor (`Obix/obixDriver-ObixExport.txt:19-20`).
+  never drives; a level that is already linked faults the descriptor (`Obix/obixDriver-ObixExport.txt:19-20` "Reports the health of this manager view. It").
   `set` (fallback, persists) and `override` (timed) are different writes: pick one on purpose (corpus B607 §607.2).
 - **Watches** are leased: a client polls the watch well inside the lease and re-creates it after a lease expiry;
   the client driver's requested lease is the larger of 2 × interval and interval + safety factor
-  (`Obix/obixDriver-ObixClient.txt:30`). `[ev: corpus B1343]`
+  (`Obix/obixDriver-ObixClient.txt:30` "Watch Safety Factor"). `[ev: corpus B1343]`
 - **HIDDEN is not protection.** The encoder drops a HIDDEN slot from child listings only (`ObixEncoder.java:588-589`);
   a direct request for the slot's path checks `canRead()` alone (`ObixEncoder.java:234-236`). The boundary for the
   read user is categories and permissions, never the flag. `[ev: corpus B1347 §1347.1]`
@@ -280,7 +280,7 @@ A wall panel's session ends by idle auto logoff, by the 4.15 absolute logoff, or
 kiosk-user checklist live in `types/dashboard.md` § Session lifetime. For a panel that must log back in on its
 own after a reboot, prefer client-certificate SSO over a stored password: a `ClientCertAuthScheme` (one ships by
 default) with Auto Attempt Single Sign-On = true and Ignore Auto SSO if User Cookie Present = false
-(4.15.6.20 guide `Touch/SettingUpAuth-1ABCB56A.txt:12,21`). `[ev: retro devguide415-r2-web-ui-hmi Δ7]`
+(4.15.6.20 guide `Touch/SettingUpAuth-1ABCB56A.txt:12,21` "By default, this station comes with one ClientCertAuthScheme."). `[ev: retro devguide415-r2-web-ui-hmi Δ7]`
 `[ev: retro devguide415-r3-web-session-headers Δ2]`
 
 ---
@@ -468,7 +468,7 @@ the filter applies the WebService's Http Header Providers before the servlet run
 Out of the box that is `X-Content-Type-Options: nosniff` (vineflower `BXContentTypeOptionsHeaderProvider.java:38`), the CSP
 provider (`default-src 'self' workbench`, `script-src 'self' workbench 'unsafe-inline' 'unsafe-eval'`,
 vineflower `BCspHeaderProvider.java:66,130`) and `X-Frame-Options` (the guide documents `Sameorigin` as the default, Hx needs
-it, `User/web-HttpHeaderProviders.txt:20`; the provider class default is `deny`, vineflower `BXFrameOptionsHeaderProvider.java:34`,
+it, `User/web-HttpHeaderProviders.txt:20` "X Frame Options"; the provider class default is `deny`, vineflower `BXFrameOptionsHeaderProvider.java:34`,
 so read the station's value at commissioning). `[ev: corpus B1349 C1]` `[ev: corpus B1328 row 9]` `[ev: retro r8-t9i-headers Δ1]`
 `[ev: retro devguide415-r3-web-session-headers Δ3]` `[ev: retro devguide415-r2-web-ui-hmi Δ5]`
 
@@ -480,7 +480,7 @@ so read the station's value at commissioning). `[ev: corpus B1349 C1]` `[ev: cor
   Check the live response, not the source. `[ev: retro our-dashboard-audit-deltas Δ1]`
   `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ13]`
 - **Embedding a station page elsewhere:** never set `X-Frame-Options` to `Any`; the operator adds a CSP
-  `frame-ancestors` directive on the station's CSP provider (`User/web-HttpHeaderProviders.txt:20`). This is a
+  `frame-ancestors` directive on the station's CSP provider (`User/web-HttpHeaderProviders.txt:20` "X Frame Options"). This is a
   commissioning setting, not module code. `[ev: corpus B1349 §1349.1]` `[ev: retro devguide415-r3-web-session-headers Δ5]`
 - **Hx views need the defaults:** `Sameorigin` and the default CSP sources; tightening them breaks Hx views.
 
@@ -592,14 +592,14 @@ If the protocol requires a specific digest algorithm (e.g. a device that mandate
 A station licensed for FIPS 140-2 mode puts the FIPS providers first and removes most non-FIPS algorithms, so a
 module must run unchanged in both modes (4.15.6.20 `Fips/` guide; corpus B1326 rows 1-3):
 - **Never name a provider.** Call `Cipher.getInstance("AES/GCM/NoPadding")`, not `getInstance(alg, "BCFIPS")`:
-  a named provider works in one mode only (`Fips/DevelopersNotes-51FBF6BE.txt:14-20`). The same holds for
+  a named provider works in one mode only (`Fips/DevelopersNotes-51FBF6BE.txt:14-20` "Although, to request a cipher from a specific"). The same holds for
   `MessageDigest`, `Signature`, `Mac` and `KeyStore`. [INFER: the guide shows `Cipher` only]
 - **Legacy algorithms are decrypt-only.** Blowfish, MD5 and MD5withRSA remain only to read old data (decrypt
-  Blowfish, never encrypt); FIPS mode removes most other non-FIPS algorithms from the JCA provider list, so a `getInstance` for one fails `[INFER]` (`Fips/Non-FIPS-compliantAlgorithms-520109A5.txt:7-23`).
+  Blowfish, never encrypt); FIPS mode removes most other non-FIPS algorithms from the JCA provider list, so a `getInstance` for one fails `[INFER]` (`Fips/Non-FIPS-compliantAlgorithms-520109A5.txt:7-23` "Although FIPS mode removes most non-FIPS compliant algorithms").
   New data uses AES and SHA-256 or stronger (§ 9).
 - **Secrets are 14 characters or more:** user passwords, certificate passwords and the system passphrase
-  (`Fips/FIPS1402-51D87C8C.txt:13`). Size the module's machine users (oBIX, station links) for that and plan their
-  change before the FIPS licence is installed (`Fips/UpdatingUserPasswordsFIPS_N4-1E65C4B9.txt:7`).
+  (`Fips/FIPS1402-51D87C8C.txt:13` "Passwords must be at least 14 characters in"). Size the module's machine users (oBIX, station links) for that and plan their
+  change before the FIPS licence is installed (`Fips/UpdatingUserPasswordsFIPS_N4-1E65C4B9.txt:7` "In Niagara 4 FIPS stations, all user passwords").
 - No kit lint checks this yet: owed G80 `jca-named-provider` (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`).
   `[deferred: retro devguide415-r2-security-tags-analytics Δ1]`
 
@@ -623,7 +623,7 @@ Two orthogonal security axes govern a module that makes HTTP calls AND accepts i
 ### 10.1 TLS uses the platform stores `[ev: retro devguide415-r2-security-tags-analytics Δ4]`
 
 Certificates and trust live in the platform: the User Key Store, the System and User Trust Stores, the Allowed
-Hosts exemptions and the `CertManagerService` (4.15.6.20 `StationSecurity/SSLAllowedHostsTab.txt:7-19`; corpus
+Hosts exemptions and the `CertManagerService` (4.15.6.20 `StationSecurity/SSLAllowedHostsTab.txt:7-19` "The Allowed Hosts tab contains security exemptions for"; corpus
 B1326 row 9). A module never ships or loads its own keystore or truststore file and never installs a trust-all
 `TrustManager`; the commissioning step is importing the peer's CA into the station's trust store. A
 station-to-station connection with a bad certificate fails silently, with no approval prompt; the cause is the

@@ -1,0 +1,60 @@
+-- args --
+--site
+--tag
+plant
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:25 01-Oct-26 CST -> 10:00:25 01-Oct-26 CST  WARNING own timed out stays own @ [plant]
+SITE  triage-console  a.txt  comm-timeout  3x 10:00:09 01-Oct-26 CST -> 10:00:24 01-Oct-26 CST  WARNING [net] request timed out (distinct 1)
+SITE  triage-console  a.txt  comm-timeout  1x 10:00:05 01-Oct-26 CST -> 10:00:05 01-Oct-26 CST  WARNING [net] no response from device 3 (distinct 1)
+SITE  triage-console  a.txt  comm-timeout  1x 10:00:10 01-Oct-26 CST -> 10:00:10 01-Oct-26 CST  WARNING [net] read time out (distinct 1)
+SITE  triage-console  a.txt  comm-timeout  1x 10:00:21 01-Oct-26 CST -> 10:00:21 01-Oct-26 CST  SEVERE [net] wrapped (distinct 1)
+SITE  triage-console  a.txt  device-offline  1x 10:00:04 01-Oct-26 CST -> 10:00:04 01-Oct-26 CST  WARNING [net] device 3 is offline after no response (distinct 1)
+SITE  triage-console  a.txt  device-offline  1x 10:00:06 01-Oct-26 CST -> 10:00:06 01-Oct-26 CST  WARNING [net] Ping failed for host (distinct 1)
+SITE  triage-console  a.txt  device-offline  1x 10:00:07 01-Oct-26 CST -> 10:00:07 01-Oct-26 CST  WARNING [net] host unreachable (distinct 1)
+SITE  triage-console  a.txt  device-offline  1x 10:00:08 01-Oct-26 CST -> 10:00:08 01-Oct-26 CST  WARNING [net] node not responding (distinct 1)
+SITE  triage-console  a.txt  device-offline  1x 10:00:22 01-Oct-26 CST -> 10:00:22 01-Oct-26 CST  WARNING [net] wrapped offline header (distinct 1)
+SITE  triage-console  a.txt  duplicate-device-id  1x 10:00:11 01-Oct-26 CST -> 10:00:11 01-Oct-26 CST  WARNING [net] Duplicate nodeId 4 and history overflow (distinct 1)
+SITE  triage-console  a.txt  duplicate-device-id  1x 10:00:12 01-Oct-26 CST -> 10:00:12 01-Oct-26 CST  WARNING [net] duplicate IDS seen (distinct 1)
+SITE  triage-console  a.txt  duplicate-device-id  1x 10:00:14 01-Oct-26 CST -> 10:00:14 01-Oct-26 CST  WARNING [net] duplicate ID (distinct 1)
+SITE  triage-console  a.txt  duplicate-device-id  1x 10:00:15 01-Oct-26 CST -> 10:00:15 01-Oct-26 CST  WARNING [net] id duplicate at start (distinct 1)
+SITE  triage-console  a.txt  duplicate-device-id  1x 10:00:16 01-Oct-26 CST -> 10:00:16 01-Oct-26 CST  WARNING [net] duplicate address 1 (distinct 1)
+SITE  triage-console  a.txt  duplicate-device-id  1x 10:00:17 01-Oct-26 CST -> 10:00:17 01-Oct-26 CST  WARNING [net] Duplicate object-id 2 (distinct 1)
+SITE  triage-console  a.txt  duplicate-device-id  1x 10:00:19 01-Oct-26 CST -> 10:00:19 01-Oct-26 CST  WARNING [net] duplicate é_id accented (distinct 1)
+SITE  triage-console  a.txt  history-flood  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING [hist] History buffer FULL for point 1 (distinct 1)
+SITE  triage-console  a.txt  history-flood  1x 10:00:01 01-Oct-26 CST -> 10:00:01 01-Oct-26 CST  WARNING [hist] history discard 2 records (distinct 1)
+SITE  triage-console  a.txt  history-flood  1x 10:00:02 01-Oct-26 CST -> 10:00:02 01-Oct-26 CST  WARNING [hist] history too many records (distinct 1)
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/triage-console.sh at 79ca5a2c (sha256 c6c6a1526a4252bd8c6f078a6e23702e3f0ea628679e4e2c0903b6ccafae5920)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- a.txt --
+WARNING [10:00:00 01-Oct-26 CST][hist] History buffer FULL for point 1
+WARNING [10:00:01 01-Oct-26 CST][hist] history discard 2 records
+WARNING [10:00:02 01-Oct-26 CST][hist] history too many records
+WARNING [10:00:03 01-Oct-26 CST][hist] history ok
+WARNING [10:00:04 01-Oct-26 CST][net] device 3 is offline after no response
+WARNING [10:00:05 01-Oct-26 CST][net] no response from device 3
+WARNING [10:00:06 01-Oct-26 CST][net] Ping failed for host
+WARNING [10:00:07 01-Oct-26 CST][net] host unreachable
+WARNING [10:00:08 01-Oct-26 CST][net] node not responding
+WARNING [10:00:09 01-Oct-26 CST][net] request timed out
+WARNING [10:00:10 01-Oct-26 CST][net] read time out
+WARNING [10:00:11 01-Oct-26 CST][net] Duplicate nodeId 4 and history overflow
+WARNING [10:00:12 01-Oct-26 CST][net] duplicate IDS seen
+WARNING [10:00:13 01-Oct-26 CST][net] duplicate idsx seen
+WARNING [10:00:14 01-Oct-26 CST][net] duplicate ID
+WARNING [10:00:15 01-Oct-26 CST][net] id duplicate at start
+WARNING [10:00:16 01-Oct-26 CST][net] duplicate address 1
+WARNING [10:00:17 01-Oct-26 CST][net] Duplicate object-id 2
+WARNING [10:00:18 01-Oct-26 CST][net] duplicate id9 glued digit
+WARNING [10:00:19 01-Oct-26 CST][net] duplicate é_id accented
+INFO [10:00:20 01-Oct-26 CST][net] info offline is no row
+SEVERE [10:00:21 01-Oct-26 CST][net] wrapped
+  java.net.SocketTimeoutException: Read timed out
+WARNING [10:00:22 01-Oct-26 CST][net] wrapped offline header
+  java.io.IOException: no response
+WARNING [10:00:23 01-Oct-26 CST][net] request timed out
+WARNING [10:00:24 01-Oct-26 CST][net] request timed out
+WARNING [10:00:25 01-Oct-26 CST][plant] own timed out stays own

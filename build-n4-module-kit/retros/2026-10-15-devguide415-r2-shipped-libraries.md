@@ -13,7 +13,7 @@ afl Δ1 and has Δ7 made `uberjar` the path for external jars; neither covers th
 - `nre` `[ev: niagara-help 4.15.6.20 devguide-clean/build.txt:238,250]` `[ev: niagara-help 4.15.6.20 devguide-clean/upgradingBuild.txt:289]`; okhttp location `unzip -l /mnt/c/Niagara/Niagara-4.15.6.20/modules/net-rt.jar` → 0 okhttp `[ev: corpus B1320 §1320.3]` vs `[ev: code types/cloud-connector.md:61]` `[ev: code types/third-party-libraries.md:167,174]`
 - Wrapper versions (`pom.properties`): Gson 2.13.2, Jackson 2.22.1, Paho 1.2.5, Nimbus 10.6, Joda 2.12.7 `[ev: corpus B1321 §1321.1]` vs `[ev: code types/third-party-libraries.md:30,160]`
 - HttpClient gates `[ev: code organized/httpClient/httpClient-rt/vineflower/com/tridium/httpClient/BHttpClientService.java:88-89]`; API `[ev: code niagara-help/versions/4.15.6.20/source/httpClient-rt/javax/baja/httpClient/IHttpClient.java:23]` `[ev: corpus B1333]`
-- Rdbms `[ev: niagara-help 4.15.6.20 guides-clean/Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:16,46]` vs `[ev: code types/third-party-libraries.md:176]` `[ev: corpus B1340]`; JsonToolkit licence/extension `[ev: corpus B1322]`
+- Rdbms `[ev: niagara-help 4.15.6.20 guides-clean/Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:7,25 "against the database. The RDBMS driver supports four"]` vs `[ev: code types/third-party-libraries.md:176]` `[ev: corpus B1340]`; JsonToolkit licence/extension `[ev: corpus B1322]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |

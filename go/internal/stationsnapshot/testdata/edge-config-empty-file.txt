@@ -1,0 +1,24 @@
+-- args --
+demo
+out
+-- want --
+exit 0
+PASS  station-snap    config.bog  sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 bytes=0
+station-snapshot: 1 file(s) copied; manifest.json written to out
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/station-snapshot.sh at 4d602a9b (sha256 31610a29d4a92fd3b1ecebeb390eef2c9f936e4cc773614628c3fd068326cf68)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- @env --
+PATH=@DIR@/.tools
+-- demo/config.bog --
+-- @after out/config.bog --
+-- @after out/manifest.json --
+{
+  "station": "demo",
+  "ts": "20260102T030405Z",
+  "files": [
+    {"relpath": "config.bog", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "bytes": 0}
+  ],
+  "pointers": [  ]
+}

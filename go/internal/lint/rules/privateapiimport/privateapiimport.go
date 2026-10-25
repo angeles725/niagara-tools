@@ -9,11 +9,10 @@
 // import in a comment or a string is not one. A row is each `import com.tridium.…;`, `import static com.tridium.…;`
 // and fully qualified `com.tridium.` name in code; com.tridiumx. is another prefix. The default allow-list is the
 // NDriver framework the driver wizard generates against (com.tridium.ndriver.** and com.tridium.driver.util.DrUtil,
-// retro n4-course-handson-ndriver Δ8); --default-allow off drops it, --allow <glob> adds to it.
+// retro n4-course-handson-ndriver Δ8); --no-default-allow drops it, --allow <glob> adds to it.
 package privateapiimport
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -28,12 +27,12 @@ const ID = "lint-private-api-import"
 // defaultAllow is the NDriver framework: every NDriver module imports it (the course driver: 60 imports).
 var defaultAllow = []string{"com.tridium.ndriver.**", "com.tridium.driver.util.DrUtil"}
 
-// Spec registers the rule: [--strict] [--allow <glob>]... [--default-allow on|off] <module-root> in any order
+// Spec registers the rule: [--strict] [--allow <glob>]... [--no-default-allow] <module-root> in any order
 // (Mode Valued), WARN rows (exit 1 under --strict), left out of n4lint --all (a module root).
 func Spec() lint.Spec {
 	return lint.Spec{
-		Tree: &rule{}, Mode: lint.Valued, Option: "--default-allow", Options: []string{"--allow"}, ValuedStrict: true, ModuleRoot: true,
-		Usage:      "usage: lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow | --default-allow on|off] <module-root>",
+		Tree: &rule{}, Mode: lint.Valued, Options: []string{"--allow"}, Flags: []string{"--no-default-allow"}, ValuedStrict: true, ModuleRoot: true,
+		Usage:      "usage: lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow] <module-root>",
 		Select:     lint.Selection{Names: []string{"*.java"}, Prune: []string{"srcTest", "test", "build"}},
 		EmptyError: lint.EmptyRow{Msg: emptyMsg},
 	}
@@ -50,15 +49,11 @@ type rule struct {
 func (*rule) ID() string              { return ID }
 func (*rule) Severity() lint.Severity { return lint.Warn }
 
-// Configure reads --default-allow (on, the default, or off) and every --allow glob.
+// Configure reads --no-default-allow and every --allow glob.
 func (*rule) Configure(a lint.Args) (lint.Configured, error) {
 	var pats []string
-	switch a.Option {
-	case "", "on":
+	if !a.Flags["--no-default-allow"] {
 		pats = append(pats, defaultAllow...)
-	case "off":
-	default:
-		return nil, fmt.Errorf("%s: --default-allow takes on or off, not: %s\n", ID, a.Option)
 	}
 	r := &rule{set: true}
 	for _, p := range append(pats, a.Values["--allow"]...) {

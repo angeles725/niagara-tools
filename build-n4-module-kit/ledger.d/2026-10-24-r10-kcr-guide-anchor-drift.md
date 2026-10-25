@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: kit-cite-resolve guides-clean anchors and DRIFT; kit guide citations repointed and anchored -->
+log: 2026-10-24 · quality round 10 → `kit-cite-resolve` reads a quoted anchor right after a pointer's lines (`guide <page>.txt:12 "phrase"` in a tag, `` `G/<page>.txt:12` "phrase" `` in prose) and reports DRIFT when a guides-clean anchor is not on or within 2 lines of a cited line, naming the lines that hold it now (HISTORICAL_DRIFT on a history card; anchors outside guides-clean shown, not checked). Sweep of the kit's guides-clean line citations after the 4.15.6.20 re-render: 161 found, 45 repointed, 158 anchored, 2 left (client-named lines). Kit-wide: no pass→fail row, HISTORICAL_DRIFT 248 → 226. Issue #511. Retro retros/2026-10-24-r10-kcr-guide-anchor-drift.md (pending).

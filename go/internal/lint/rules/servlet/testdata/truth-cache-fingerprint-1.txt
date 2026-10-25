@@ -1,0 +1,76 @@
+declared difference (truth fix, issue #459 cache-nofinger): a max-age that only a fingerprinted request
+receives is no row. The fingerprint is a ?v= (or ?ver= / ?version=) query parameter, read in the then-branch
+of the ternary that picks the Cache-Control value: directly (line 7) or through a boolean parameter of a
+private method that every call in the file passes a getParameter("v") test (lines 12 and 18, called at 3 and
+4). Still WARN: an unconditional max-age (line 21), the max-age in the else-branch (line 24), a condition on
+another parameter (line 27), a boolean parameter of a non-private method (line 30, called at 5), one of a
+private method that one call passes a constant (line 33, called at 4 and 5), one of a private method never
+called (line 36), a then-branch taken when the parameter is absent (line 39), a test or-ed with another
+condition (line 42), one of a private method whose call passes a test inside a ternary (line 45, called at 41),
+and a max-age literal that is no ternary branch, after a fingerprint test (line 48).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  cache-nofinger  BRoomPanel.java:21  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:24  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:27  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:30  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:33  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:36  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:39  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:42  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:45  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  BRoomPanel.java:48  Cache-Control max-age>0 on rc asset without fingerprint
+-- stderr --
+-- m/BRoomPanel.java --
+package com.x;
+public class BRoomPanel extends BWebServlet {
+  void route(HttpServletRequest req, HttpServletResponse resp) { asset(resp, req.getParameter("v") != null);
+    tagged(resp, "a", req.getParameter("ver") != null); constantToo(resp, req.getParameter("v") != null); }
+  void other(HttpServletRequest req, HttpServletResponse resp) { constantToo(resp, true); open(resp, req.getParameter("v") != null); }
+  void direct(HttpServletRequest req, HttpServletResponse resp) {
+    resp.setHeader("Cache-Control", req.getParameter("v") != null ? "public, max-age=3600" : "no-cache");
+  }
+  private void asset(HttpServletResponse resp, boolean fingerprinted) {
+    if (fingerprinted) resp.setContentType("text/css");
+    // a request without ?v= is never cached
+    resp.setHeader("Cache-Control", fingerprinted ? "public, max-age=3600" : "no-cache");
+    resp.setHeader("X-Frame-Options", "SAMEORIGIN");
+  }
+  private void tagged(HttpServletResponse resp, String path,
+      boolean versioned) {
+    resp.setContentType(path);
+    resp.setHeader("Cache-Control", versioned ? "max-age=600" : "no-cache");
+  }
+  void always(HttpServletResponse resp) {
+    resp.setHeader("Cache-Control", "public, max-age=3600");
+  }
+  void inverted(HttpServletRequest req, HttpServletResponse resp) {
+    resp.setHeader("Cache-Control", req.getParameter("v") != null ? "no-cache" : "max-age=60");
+  }
+  void named(HttpServletRequest req, HttpServletResponse resp) {
+    resp.setHeader("Cache-Control", req.getParameter("debug") != null ? "max-age=60" : "no-cache");
+  }
+  void open(HttpServletResponse resp, boolean fingerprinted) {
+    resp.setHeader("Cache-Control", fingerprinted ? "max-age=60" : "no-cache");
+  }
+  private void constantToo(HttpServletResponse resp, boolean fingerprinted) {
+    resp.setHeader("Cache-Control", fingerprinted ? "max-age=60" : "no-cache");
+  }
+  private void uncalled(HttpServletResponse resp, boolean fingerprinted) {
+    resp.setHeader("Cache-Control", fingerprinted ? "max-age=60" : "no-cache");
+  }
+  void absent(HttpServletRequest req, HttpServletResponse resp) {
+    resp.setHeader("Cache-Control", req.getParameter("v") == null ? "max-age=60" : "no-cache");
+  }
+  void either(HttpServletRequest req, HttpServletResponse resp, boolean debug) { mixed(resp, debug ? true : req.getParameter("v") != null);
+    resp.setHeader("Cache-Control", req.getParameter("v") != null || debug ? "max-age=60" : "no-cache");
+  }
+  private void mixed(HttpServletResponse resp, boolean fingerprinted) {
+    resp.setHeader("Cache-Control", fingerprinted ? "max-age=60" : "no-cache");
+  }
+  void notTernary(HttpServletRequest req, HttpServletResponse resp) {
+    resp.setHeader("Cache-Control", choose(req.getParameter("v") != null, "max-age=60"));
+  }
+}

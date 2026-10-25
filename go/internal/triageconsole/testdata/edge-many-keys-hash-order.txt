@@ -1,0 +1,118 @@
+-- args --
+--tag
+plant
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key fa @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ja @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ma @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ea @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ia @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key la @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ha @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ka @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key oa @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key na @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ra @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ua @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key qa @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key xa @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ta @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key pa @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key wa @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key sa @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key za @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key va @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ya @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ab @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key db @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key cb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key gb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key bb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key fb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key eb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ib @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key hb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key lb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ob @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key kb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key nb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key rb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key jb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ub @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key mb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key qb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key tb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key pb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key wb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key sb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key zb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key vb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key yb @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key xb @ [plant]
+FAIL  triage-console  a.txt  2x 10:00:00 01-Oct-26 CST -> 10:00:01 01-Oct-26 CST  WARNING key ba @ [plant]
+FAIL  triage-console  a.txt  2x 10:00:00 01-Oct-26 CST -> 10:00:01 01-Oct-26 CST  WARNING key aa @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key da @ [plant]
+FAIL  triage-console  a.txt  2x 10:00:00 01-Oct-26 CST -> 10:00:01 01-Oct-26 CST  WARNING key ca @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING key ga @ [plant]
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/triage-console.sh at 79ca5a2c (sha256 c6c6a1526a4252bd8c6f078a6e23702e3f0ea628679e4e2c0903b6ccafae5920)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- a.txt --
+WARNING [10:00:00 01-Oct-26 CST][plant] key aa
+WARNING [10:00:00 01-Oct-26 CST][plant] key ab
+WARNING [10:00:00 01-Oct-26 CST][plant] key ba
+WARNING [10:00:00 01-Oct-26 CST][plant] key bb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ca
+WARNING [10:00:00 01-Oct-26 CST][plant] key cb
+WARNING [10:00:00 01-Oct-26 CST][plant] key da
+WARNING [10:00:00 01-Oct-26 CST][plant] key db
+WARNING [10:00:00 01-Oct-26 CST][plant] key ea
+WARNING [10:00:00 01-Oct-26 CST][plant] key eb
+WARNING [10:00:00 01-Oct-26 CST][plant] key fa
+WARNING [10:00:00 01-Oct-26 CST][plant] key fb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ga
+WARNING [10:00:00 01-Oct-26 CST][plant] key gb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ha
+WARNING [10:00:00 01-Oct-26 CST][plant] key hb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ia
+WARNING [10:00:00 01-Oct-26 CST][plant] key ib
+WARNING [10:00:00 01-Oct-26 CST][plant] key ja
+WARNING [10:00:00 01-Oct-26 CST][plant] key jb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ka
+WARNING [10:00:00 01-Oct-26 CST][plant] key kb
+WARNING [10:00:00 01-Oct-26 CST][plant] key la
+WARNING [10:00:00 01-Oct-26 CST][plant] key lb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ma
+WARNING [10:00:00 01-Oct-26 CST][plant] key mb
+WARNING [10:00:00 01-Oct-26 CST][plant] key na
+WARNING [10:00:00 01-Oct-26 CST][plant] key nb
+WARNING [10:00:00 01-Oct-26 CST][plant] key oa
+WARNING [10:00:00 01-Oct-26 CST][plant] key ob
+WARNING [10:00:00 01-Oct-26 CST][plant] key pa
+WARNING [10:00:00 01-Oct-26 CST][plant] key pb
+WARNING [10:00:00 01-Oct-26 CST][plant] key qa
+WARNING [10:00:00 01-Oct-26 CST][plant] key qb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ra
+WARNING [10:00:00 01-Oct-26 CST][plant] key rb
+WARNING [10:00:00 01-Oct-26 CST][plant] key sa
+WARNING [10:00:00 01-Oct-26 CST][plant] key sb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ta
+WARNING [10:00:00 01-Oct-26 CST][plant] key tb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ua
+WARNING [10:00:00 01-Oct-26 CST][plant] key ub
+WARNING [10:00:00 01-Oct-26 CST][plant] key va
+WARNING [10:00:00 01-Oct-26 CST][plant] key vb
+WARNING [10:00:00 01-Oct-26 CST][plant] key wa
+WARNING [10:00:00 01-Oct-26 CST][plant] key wb
+WARNING [10:00:00 01-Oct-26 CST][plant] key xa
+WARNING [10:00:00 01-Oct-26 CST][plant] key xb
+WARNING [10:00:00 01-Oct-26 CST][plant] key ya
+WARNING [10:00:00 01-Oct-26 CST][plant] key yb
+WARNING [10:00:00 01-Oct-26 CST][plant] key za
+WARNING [10:00:00 01-Oct-26 CST][plant] key zb
+WARNING [10:00:01 01-Oct-26 CST][plant] key aa
+WARNING [10:00:01 01-Oct-26 CST][plant] key ba
+WARNING [10:00:01 01-Oct-26 CST][plant] key ca
