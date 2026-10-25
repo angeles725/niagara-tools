@@ -167,3 +167,21 @@ MD
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+# r10 ltf1-marker-reset: a class javadoc above @NiagaraType that names a slot (`status` or {@code status})
+# next to a link keyword marks that slot, although the annotation ends the javadoc's comment block; a READONLY
+# slot the javadoc does not name stays unmarked (setpoint, defrostStart).
+@test "LTF-classdoc: a class javadoc naming a READONLY link target above @NiagaraType -> LTF1 FAIL on that slot" {
+  # Mutation: LTF-classdoc -- clearing the comment block at @NiagaraType loses the slot the class javadoc names
+  run "$LTF" "$FX/classdoc/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"BDash.java:22  LTF1: link-in target \"status\" (class comment)"* ]]
+}
+
+@test "LTF-classdoc-named: a class javadoc marks only the slot named next to its link keyword" {
+  # Mutation: LTF-classdoc-named -- marking every slot of a javadoc with a link keyword FAILs setpoint and defrostStart
+  run "$LTF" "$FX/classdoc/src"
+  [ "$status" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^FAIL')" -eq 1 ]
+  [[ "$output" != *'"setpoint"'* ]] && [[ "$output" != *'"defrostStart"'* ]]
+}
