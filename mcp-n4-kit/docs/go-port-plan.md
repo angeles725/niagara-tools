@@ -1079,6 +1079,11 @@ Under Go: 686 tests, 308 skipped (all `go_twin` markers); under Python: 686, non
   recorded goldens (`go/internal/mcpn4/golden`, `MCP_N4_RECORD=1` re-records while Python exists),
   so they keep their teeth once Python is gone. Part A (token, ord, tiers, bql, files, px,
   readtools) landed in #535; journal, retro, jsonrpc, cli, plan, box and writeops follow.
+  The box live differential (`box.TestLiveDifferential`, 37 HTTP-level cases) is frozen too:
+  `box/testdata/live.golden.jsonl` holds what `go_box.py --live` printed and the requests the
+  station saw from it, and its own record/replay compares Go's output and requests with it. No
+  Go test runs Python unless `MCP_N4_RECORD=1`: `pytarget` is referenced only by `golden`
+  (`golden.go`, `golden_test.go`), `box/live_test.go` (recording) and `pytarget` itself.
 - S17: after the fallback release, remove the Python server, its fallback switches and the
   Python-only test categories.
 
