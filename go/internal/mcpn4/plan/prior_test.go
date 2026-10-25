@@ -4,19 +4,17 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
 )
 
 // pyPrior prints, per inverse, tools_write._hashed_inverse and _link_input_values (or its
-// error).
+// error); its output is recorded in testdata/prior.golden.jsonl.
 const pyPrior = `import json, sys
 from mcp_n4 import tools_write
 for line in sys.stdin:
@@ -41,16 +39,7 @@ var inverses = []string{
 }
 
 func TestHashedInverseAndLinkInputValuesDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
-	cmd := exec.Command(py, "-c", pyPrior)
-	cmd.Dir = kit
-	cmd.Env = append(cmd.Environ(), "PYTHONDONTWRITEBYTECODE=1")
-	cmd.Stdin = strings.NewReader(strings.Join(inverses, "\n") + "\n")
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
+	out := golden.Open(t, "prior").Run(pyPrior, []byte(strings.Join(inverses, "\n")+"\n"))
 	sc := bufio.NewScanner(strings.NewReader(string(out)))
 	n := 0
 	for i := 0; sc.Scan(); i++ {

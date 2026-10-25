@@ -3,13 +3,10 @@ package jsonrpc
 import (
 	"bufio"
 	"encoding/hex"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/golden"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
 )
 
@@ -17,14 +14,13 @@ import (
 // the Python Server(...).handle_line (the in-process read-only server, decoding the bytes as its
 // stdin does) and through HandleLine; the reply bytes must be equal. Tool calls stop at the
 // layers ported in S2 (validation, the session gate), so no station is needed.
-// It skips, naming the Python found, unless that is the target CPython (pytarget.Minor).
+// Python's replies are recorded in testdata/handle-line.golden.jsonl.
 
 const handleLineDriver = `
 import sys
-sys.path.insert(0, sys.argv[2])
 from mcp_n4 import server
 srv = server.Server()
-for line in open(sys.argv[1]):
+for line in sys.stdin:
     raw = bytes.fromhex(line.strip())
     out = srv.handle_line(raw.decode("utf-8", "surrogateescape"))
     print("-" if out is None else out)
@@ -69,31 +65,14 @@ var protocolLines = []string{
 }
 
 func TestDifferentialPython(t *testing.T) {
-	py := pytarget.Python(t)
-	kit, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir := t.TempDir()
+	g := golden.Open(t, "handle-line")
 	lines := append(append([]string{}, protocolLines...), nestedPing(MaxNesting), nestedPing(MaxNesting+1),
 		strings.Repeat(`{"a":`, 100000)+"1"+strings.Repeat("}", 100000)) // past CPython's C stack
 	var in strings.Builder
 	for _, l := range lines {
 		in.WriteString(hex.EncodeToString([]byte(l)) + "\n")
 	}
-	inPath, driver := filepath.Join(dir, "lines.txt"), filepath.Join(dir, "driver.py")
-	if err := os.WriteFile(inPath, []byte(in.String()), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(driver, []byte(handleLineDriver), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	cmd := exec.Command(py, "-I", driver, inPath, kit)
-	cmd.Env = append(os.Environ(), "PYTHONDONTWRITEBYTECODE=1", "PYTHONIOENCODING=utf-8:surrogateescape")
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python3 driver: %v", err)
-	}
+	out := g.Run(handleLineDriver, []byte(in.String()))
 	sc := bufio.NewScanner(strings.NewReader(string(out)))
 	sc.Buffer(nil, 1<<24)
 	s := New(registry.Default())
