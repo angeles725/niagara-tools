@@ -11,7 +11,7 @@
 #                                [--timeout <dur, default 30m>] [--keep-home] [--scratch <dir>]
 #                                [--jdk8 <WSL JDK 8 dir, default /usr/lib/jvm/java-8-openjdk-amd64>]
 #                                [--gradle-user-home <dir, default ~/.gradle>] [--module-verification low]
-#                                [--exclude-jar <glob>]... [--restore-gradle-root]
+#                                [--exclude-jar <glob>]... [--restore-gradle-root] [--log-dir <dir>]
 # Contract: PASS only when the log holds at least one `Total tests run: N` line and every one has N > 0 and
 # `Failures: 0`. FAIL on a summary with 0 tests, failures or no Failures count; a `Failures:` key outside a
 # summary with a count above 0 or a value that is no count; `invalid test target(s)`; `failed signature
@@ -63,6 +63,12 @@
 # modified or deleted, never touches a file already dirty, never deletes an untracked file (it lists them),
 # re-reads the status and prints `gradle root restored: <paths>`; the run stays FAIL. It never cleans, resets or
 # checks out the whole tree (types/moduleTest.md § Running from WSL).
+# Run log: a failed run (exit 1, 3 or 4, once its scratch dir exists) reads, before cleanup deletes the dir, the
+# last 200 stderr and 50 stdout lines of test.exe (each cut at 4 KiB) and the -output: dir listing, and writes them
+# with the runner's rows and the exit status to <UTC timestamp>-<module>.log (0600) under --log-dir (default
+# $XDG_STATE_HOME/run-niagara-test, else ~/.local/state/run-niagara-test, 0700): `diagnostics kept: <path>`. The
+# scratch dir and its copy read <scratch> and <copy> (Windows and /mnt forms, any case), %USERPROFILE% and $HOME
+# <you>; install paths stay. A green run writes one only with --log-dir or --keep-home. Attach the log, not the home.
 #
 # Implementation: go/internal/niagaratest (goldens in its testdata/, hand-written: no bash tool to record from).
 # go/go-tool.sh `go_tool_bin` builds go/bin/run-niagara-test when it is missing or older than a Go source, then
