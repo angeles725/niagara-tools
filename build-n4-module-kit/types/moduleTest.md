@@ -213,7 +213,8 @@ One command runs the module's station tests on a throwaway copy of the install a
 ```bash
 toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-root <client gradle root> \
   --part ModuleA-rt --module ModuleA [--timeout 30m] [--keep-home] [--scratch '<dir under %TEMP%>'] \
-  [--jdk8 /usr/lib/jvm/java-8-openjdk-amd64] [--gradle-user-home ~/.gradle] [--module-verification low]
+  [--jdk8 /usr/lib/jvm/java-8-openjdk-amd64] [--gradle-user-home ~/.gradle] [--module-verification low] \
+  [--exclude-jar '<glob>']...
 ```
 
 - It copies the install into a new dir under `%TEMP%` (robocopy: `bin etc jre lib security defaults`, then the
@@ -258,6 +259,10 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   defaults/system.properties unchanged (sha256 <8hex>)`; a change is FAIL). `low` still rejects a module that
   requests one of the six signature-required permission groups. Without the flag, a rejected signature adds a
   `hint:` row naming it `[ev: retro r10-rnt-module-verification Δ1]`.
+- `--exclude-jar '<glob>'` (repeatable) leaves the matching top-level `modules\*.jar` out of the copy, so a stale
+  jar of the module under test (an old 1.8 `moduleA-ux.jar` in the install) never sits next to the freshly built
+  `moduleA-rt.jar`; the glob is a case-insensitive jar basename of `*` and `?` only, and one matching no jar is FAIL,
+  exit 2, before anything is copied `[ev: retro r10-rnt-exclude-jar Δ1]`.
 
 Fallback, by hand (the route the runner automates):
 

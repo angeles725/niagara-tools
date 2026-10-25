@@ -46,6 +46,7 @@ type runConfig struct {
 	jdk8, gradleUserHome                       string
 	timeout                                    time.Duration
 	keepHome, verifyLow                        bool
+	excludeJars                                []string // --exclude-jar globs, in flag order
 }
 
 // plan is a validated run: the install, %TEMP%, %USERPROFILE%, the scratch parent and, once created, the
@@ -55,6 +56,7 @@ type plan struct {
 	install, temp, profile, parent, dir winDir
 	windows                             bool   // a Windows-side step started: cleanup must look for its processes
 	sysPropsSum                         string // --module-verification low: sha256 of the install's system.properties
+	excluded                            []jarExclusion
 }
 
 func (p *plan) home() winDir        { return winDir{p.dir.wsl + "/home", p.dir.win + `\home`} }
@@ -107,6 +109,7 @@ func parseRun(args []string) (runConfig, error) {
 	fs.DurationVar(&c.timeout, "timeout", defaultTimeout, "")
 	fs.BoolVar(&c.keepHome, "keep-home", false, "")
 	fs.Var(verificationFlag{&c.verifyLow}, "module-verification", "")
+	fs.Var(excludeFlag{&c.excludeJars}, "exclude-jar", "")
 	if err := fs.Parse(args); err != nil {
 		return c, fmt.Errorf("run: %v", err)
 	}
@@ -154,6 +157,17 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	}
 	if info, err := os.Stat(p.install.wsl + "/" + sysPropsRel); cfg.verifyLow && (err != nil || !info.Mode().IsRegular()) {
 		return refuse("--module-verification low: --install %s has no %s to lower in its copy", p.install.win, sysPropsRel)
+	}
+	if len(cfg.excludeJars) > 0 {
+		if p.excluded, err = matchExclusions(p.install.wsl+"/modules", cfg.excludeJars); err != nil {
+			return refuse("--install %s: %v", p.install.win, err)
+		}
+		for _, x := range p.excluded {
+			if len(x.jars) == 0 {
+				row(s, "FAIL", fmt.Sprintf(`copy: --exclude-jar %s matched no jar in %s\modules`, x.glob, p.install.win))
+				return nil, exitUsage
+			}
+		}
 	}
 	if !filepath.IsAbs(cfg.gradleUserHome) {
 		return refuse("--gradle-user-home %q is not an absolute WSL path", cfg.gradleUserHome)
@@ -266,8 +280,8 @@ func (h host) execute(ctx context.Context, p *plan, s cli.Stdio) (code int) {
 }
 
 // copyHome copies the install into <scratch>\home with robocopy: the dirs whole, then the top-level jars of
-// modules\ but those whose module name has a dot (a stray `<name>.77-rt.jar` makes every boot rebuild the
-// registry). The source is only read; licenses travel untouched.
+// modules\ but those an --exclude-jar glob matched and those whose module name has a dot (a stray
+// `<name>.77-rt.jar` makes every boot rebuild the registry). The source is only read; licenses travel untouched.
 func (h host) copyHome(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	p.windows = true
 	src, dst := p.install.win, p.home().win
@@ -286,7 +300,7 @@ func (h host) copyHome(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 	var jars, skipped []string
 	for _, e := range es {
 		n := e.Name()
-		if e.IsDir() || !strings.HasSuffix(n, ".jar") {
+		if e.IsDir() || !strings.HasSuffix(n, ".jar") || isExcluded(p.excluded, n) {
 			continue
 		}
 		if strings.Contains(strings.TrimSuffix(n, ".jar"), ".") || strings.ContainsAny(n, unsafeChars+" ") {
@@ -306,6 +320,9 @@ func (h host) copyHome(ctx context.Context, p *plan, s cli.Stdio) (int, error) {
 			return -1, err
 		}
 		jars = jars[max(n, 1):]
+	}
+	for _, x := range p.excluded {
+		row(s, "PASS", fmt.Sprintf("copy: excluded %s matching %s: %s", plural(len(x.jars), "jar", "jars"), x.glob, listed(x.jars, maxExcludedListed)))
 	}
 	if len(skipped) > 0 {
 		row(s, "PASS", fmt.Sprintf("copy: %s (dotted module name): %s", plural(len(skipped), "jar skipped", "jars skipped"), strings.Join(skipped, " ")))
