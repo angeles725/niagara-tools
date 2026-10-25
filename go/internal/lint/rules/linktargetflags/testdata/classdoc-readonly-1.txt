@@ -1,0 +1,28 @@
+-- args --
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/BDash.java:14  LTF1: link-in target "status" (class comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- root/com/x/BDash.java --
+package com.x;
+import javax.baja.sys.*;
+/**
+ * BDash: a facade. The integrator links control points into {@code status} (display)
+ * and the servlet writes back to {@code setpoint} on operator input.
+ */
+@NiagaraType
+@NiagaraProperty(
+  name = "setpoint",
+  type = "double",
+  defaultValue = "0d",
+  flags = Flags.SUMMARY | Flags.OPERATOR
+)
+@NiagaraProperty(
+  name = "status",
+  type = "double",
+  defaultValue = "0d",
+  flags = Flags.SUMMARY | Flags.READONLY
+)
+public class BDash extends BComponent {
+}
