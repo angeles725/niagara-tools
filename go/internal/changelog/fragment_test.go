@@ -85,7 +85,7 @@ func TestIsBehaviour(t *testing.T) {
 		"build-n4-module-kit/retros/2026-01-01-r.md": false,
 		"build-n4-module-kit/ledger.d/2026-01-01.md": false,
 		"build-n4-module-kit/BUILD-STATE.src.md":     false,
-		"scripts/x.sh":                               false,
+		"scripts/x.sh":                               true,
 		"docs/a.md":                                  false,
 	} {
 		if got := IsBehaviour(p); got != want {

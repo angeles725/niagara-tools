@@ -9,7 +9,7 @@
 ## What happened
 The v0.33.0 release found `CHANGELOG.md` `## [Unreleased]` empty: no PR since v0.32.1 had added an entry, and the
 notes were rebuilt from the merge log. Nothing checked for an entry. The new `scripts/changelog-gate.sh`
-(`go/internal/changelog`) fails a range that changes kit behaviour (`go/`, `build-n4-module-kit/`, `tools/`, minus
+(`go/internal/changelog`) fails a range that changes kit behaviour (`go/`, `build-n4-module-kit/`, `tools/`, `scripts/`, minus
 the retro gate's own bookkeeping exclusions) unless it adds a `changelog.d/` fragment, adds a non-blank line inside
 `## [Unreleased]`, or carries a `Changelog: none (<reason>)` trailer. Fragments follow the `ledger.d/` precedent:
 parallel PRs each add their own file instead of editing the same section. It runs in `.githooks/pre-push` and, unlike
@@ -34,5 +34,5 @@ its `--check`, so a fragment the fold would refuse never merges and no fragment 
 
 ## Follow-ups
 - `tools/` does not exist at the repository root today; the gate counts it so a future top-level `tools/` is covered.
-- `scripts/` is build-relevant for the retro gate but not a behaviour root for this gate (scope as briefed); a
-  `scripts/` change needs no CHANGELOG entry.
+- `scripts/` counts as a behaviour root too, for parity with the retro gate, which treats it as build-relevant
+  (CG-f4).

@@ -113,7 +113,7 @@ live_cite_check() {   # returns 0 to go on; refuses on findings or a tool failur
 live_cite_check
 
 # The changelog gate runs SECOND, before the retro exits below: a range that changes kit behaviour (go/,
-# build-n4-module-kit/, tools/) needs a changelog.d/ fragment, an added `## [Unreleased]` line or a
+# build-n4-module-kit/, tools/, scripts/) needs a changelog.d/ fragment, an added `## [Unreleased]` line or a
 # `Changelog: none (<reason>)` trailer, and a malformed fragment or trailer refuses any range
 # (scripts/changelog-gate.sh; CONTRIBUTING.md § 6.2). ci.yml runs the same gate over origin/main..HEAD.
 bash "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/changelog-gate.sh" --range "$range" || exit 1

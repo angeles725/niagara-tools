@@ -25,7 +25,7 @@ const MaxReasonLen = 120
 // behaviourRoots are the trees whose changes change kit behaviour. notBehaviour are the retro gate's own
 // exclusions inside them (.githooks/pre-push `relevant`): built binaries and the ledger/retro bookkeeping.
 var (
-	behaviourRoots = []string{"go/", "build-n4-module-kit/", "tools/"}
+	behaviourRoots = []string{"go/", "build-n4-module-kit/", "tools/", "scripts/"}
 	notBehaviour   = regexp.MustCompile(`^(go/bin/|build-n4-module-kit/(BUILD-STATE(\.src)?\.md$|ledger\.d/|retros/))`)
 	trailer        = regexp.MustCompile(`^Changelog: none \((.*)\)$`)
 	hunk           = regexp.MustCompile(`^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
@@ -161,7 +161,7 @@ func run(rng string, git gitRunner, s cli.Stdio) int {
 		}
 	}
 	if len(behaviour) == 0 {
-		fmt.Fprintln(s.Out, "changelog-gate: not applicable (no go/, build-n4-module-kit/ or tools/ behaviour change in range)")
+		fmt.Fprintln(s.Out, "changelog-gate: not applicable (no go/, build-n4-module-kit/, tools/ or scripts/ behaviour change in range)")
 		return ExitPass
 	}
 	if len(fragments) > 0 {

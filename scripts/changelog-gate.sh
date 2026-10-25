@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # changelog-gate.sh — fails a range that changes kit behaviour without a CHANGELOG entry (CONTRIBUTING.md § 6.2).
 #
-# Behaviour = a changed path under go/, build-n4-module-kit/ or tools/, except the retro gate's own exclusions
+# Behaviour = a changed path under go/, build-n4-module-kit/, tools/ or scripts/, except the retro gate's own exclusions
 # (go/bin/, build-n4-module-kit/BUILD-STATE(.src).md, ledger.d/, retros/). Tests and docs under those trees
 # count. An entry is ONE of:
 #   - a changelog.d/<YYYY-MM-DD>-<slug>.md fragment added (or edited) in the range: line 1 is a Keep a Changelog

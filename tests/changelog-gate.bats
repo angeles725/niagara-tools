@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 bats_require_minimum_version 1.5.0
 # changelog-gate.bats — scripts/changelog-gate.sh (go/internal/changelog): a range that changes kit behaviour
-# (go/, build-n4-module-kit/, tools/) must carry a CHANGELOG entry: a changelog.d/<YYYY-MM-DD>-<slug>.md
+# (go/, build-n4-module-kit/, tools/, scripts/) must carry a CHANGELOG entry: a changelog.d/<YYYY-MM-DD>-<slug>.md
 # fragment added in the range, or a line added inside CHANGELOG.md's `## [Unreleased]` section, or a
 # `Changelog: none (<reason>)` commit trailer. A malformed fragment or trailer fails the range whatever else it
 # carries. Exits: 0 pass or not applicable · 1 missing entry or malformed fragment/trailer · 3 usage/env.
@@ -106,7 +106,7 @@ Changelog: none ($(printf 'r%.0s' $(seq 1 130)))"
   [ "$status" -eq 1 ]
 }
 
-@test "CG-f: a range touching only files outside go/, build-n4-module-kit/ and tools/ PASSES (not applicable)" {
+@test "CG-f: a range touching only files outside go/, build-n4-module-kit/, tools/ and scripts/ PASSES (not applicable)" {
   printf '# doc changed\n' > "$R/docs/a.md"; commit "docs: a"
   gate
   [ "$status" -eq 0 ]
@@ -123,6 +123,15 @@ Changelog: none ($(printf 'r%.0s' $(seq 1 130)))"
   gate
   [ "$status" -eq 0 ]
   [[ "$output" == *"not applicable"* ]]
+}
+
+@test "CG-f4: scripts/ counts like go/ (parity with the retro gate)" {
+  mkdir -p "$R/scripts"
+  printf 'echo\n' > "$R/scripts/s.sh"
+  commit "feat: s"
+  gate
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"scripts/s.sh"* ]]
 }
 
 @test "CG-f3: build-n4-module-kit/ and tools/ count like go/" {

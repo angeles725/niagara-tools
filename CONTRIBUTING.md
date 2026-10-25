@@ -235,7 +235,7 @@ Before `git commit`:
 - [ ] No `Co-Authored-By` trailers. No AI attribution of any kind.
 - [ ] If `scripts/ng-deploy.sh` flag/exit/env surface changed: `VERSION` bumped,
       `CHANGELOG.md` entry added.
-- [ ] A kit behaviour change (`go/`, `build-n4-module-kit/`, `tools/`) adds a `changelog.d/` fragment (§ 6.2).
+- [ ] A kit behaviour change (`go/`, `build-n4-module-kit/`, `tools/`, `scripts/`) adds a `changelog.d/` fragment (§ 6.2).
 - [ ] If new KB topic added: `docs/GOTCHAS.md` updated, bidirectional links present.
 - [ ] No accidentally committed `.env.local` files (`.gitignore` covers `.env.*` with explicit
       `!.env.local.example` exception — verify `git status` is clean of personal env files).
@@ -292,7 +292,7 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
 
 The same `.githooks/pre-push` (and the `changelog` job of `ci.yml`, over `origin/main..HEAD`, so a clone without
 the hook cannot skip it) runs `scripts/changelog-gate.sh` over the pushed range (`go/internal/changelog`). A range
-that changes kit behaviour, meaning any path under `go/`, `build-n4-module-kit/` or `tools/` except the retro gate's
+that changes kit behaviour, meaning any path under `go/`, `build-n4-module-kit/`, `tools/` or `scripts/` except the retro gate's
 own exclusions (`go/bin/`, `BUILD-STATE(.src).md`, `ledger.d/`, `retros/`), FAILS unless it carries one of these.
 Tests and docs under those trees count as behaviour.
 
