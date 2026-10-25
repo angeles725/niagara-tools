@@ -207,6 +207,31 @@ public void ngTestLinkCheck2() {
 
 ### Running from WSL `[ev: retro testing-parity-btestng Δ1]` `[ev: retro testing-parity-btestng Δ3]` `[ev: retro n4-course-handson-workflow Δ3]`
 
+One command runs the module's station tests on a throwaway copy of the install and judges them
+`[ev: retro r10-run-niagara-test-run Δ1]`:
+
+```bash
+toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-root <client gradle root> \
+  --part ModuleA-rt --module ModuleA [--timeout 30m] [--keep-home] [--scratch '<dir under %TEMP%>']
+```
+
+- It copies the install into a new dir under `%TEMP%` (robocopy: `bin etc jre lib security defaults`, then the
+  top-level `modules\*.jar` without dotted-name strays), builds `:<part>:jar :<part>:moduleTestJar` in WSL against
+  the copy (`-Pniagara_home=<copy>`, a scratch `niagara_user_home`, `user.home` in scratch for the throwaway signing
+  profile, `-PniagaraPluginVersion` from the copy's `etc/m2`), runs `bin\test.exe <module> -v:2 -output:` on it,
+  and judges `testng-results.xml` with `verdict --testng` (stderr as the console log; a non-zero exit with green
+  results is FAIL).
+- It refuses (exit 2) an install under a user home, without `bin/test.exe`, or used by a running `station.exe`,
+  `nre.exe`, `java.exe` or `wb.exe` (by command line or executable path), or with a `stations\*\config.bog.lock`
+  another process holds open; a scratch outside `%TEMP%`; a build home inside the install. The install is never
+  written: a change in its `modules/`, `etc/`, `security/` or top level is FAIL.
+- Cleanup runs on every path: it kills this run's Windows processes by PID (`taskkill /PID <pid> /T /F`), confirms
+  none is left, and deletes only the dir it created (kept with `--keep-home`). Exits: 0 PASS, 1 FAIL, 2 usage or
+  refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout (the run is killed).
+- The first boot of a copy takes about 4.5 min (registry rebuild); later boots 26-80 s.
+
+Fallback, by hand (the route the runner automates):
+
 ```bash
 # Root already on a Windows drive: run in place (cmd.exe inherits the drive-letter cwd).
 cd /mnt/c/<path> && cmd.exe /c "gradlew.bat \
@@ -479,8 +504,8 @@ the main Gradle section above).
   (`test.exe <module> -v:2` or the gradle log) and judge it with `toolbelt/run-niagara-test.sh verdict <log>` (or
   `-` for stdin): PASS (exit 0) only when every `Total tests run: N` has N > 0 and 0 failures; FAIL (exit 1) on
   `invalid test target(s)`, `failed signature validation`, a stray failure count or no summary; never the run's
-  exit code. Phase 1 is the verdict only: run the test yourself (§ Running from WSL; `:clean` first, back up and
-  restore `modules/<part>.jar`) until the runner half of G33 lands. `[ev: retro testing-parity-btestng Δ2]`
+  exit code. `run-niagara-test.sh run` (§ Running from WSL) runs the test and applies this verdict itself.
+  `[ev: retro testing-parity-btestng Δ2]`
   `[ev: retro r10-run-niagara-test-go]`
 - **`test.exe <module> -v:2` prints its `Total tests run` summaries on stderr:** its stdout holds only the
   shutdown thread dumps, so a log of stdout alone has no summary (a console verdict on it is FAIL). Capture

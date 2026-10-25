@@ -14,10 +14,11 @@ import (
 // name is the check column of every row and the prefix of every error.
 const name = "run-niagara-test"
 
-// usage names only the subcommands that exist. Phase 2 (copy the home, build, run test.exe, back up and
-// restore the reference jar) adds its own subcommand here when it lands.
+// usage names every subcommand.
 const usage = `usage: run-niagara-test verdict [<log>|-]
        run-niagara-test verdict --testng <testng-results.xml> [<log>|-]
+       run-niagara-test run --install <dir> --gradle-root <dir> --part <gradle-part> --module <test-module>
+                            [--timeout <dur>] [--keep-home] [--scratch <dir>]
   verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
            or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
            "Total tests run: N" line has N > 0 and 0 failures; a stray Failures count, "invalid test
@@ -29,7 +30,15 @@ const usage = `usage: run-niagara-test verdict [<log>|-]
            root counts match the test-methods; a missing, malformed or over 64 MiB file is FAIL. A <log>,
            when given (- for standard input; capture stderr, 2>&1), is a cross-check: its rejections and
            failure counts fail the run, its missing summary line does not.
-exit: 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
+  run      from WSL, copy the install (X:\... or /mnt/x/...) into a new dir under %TEMP% (or --scratch, under
+           %TEMP%), build :<part>:jar and :moduleTestJar against the copy, run bin\test.exe <module> on it with
+           a scratch niagara_user_home, judge with verdict --testng (stderr as the console log; a non-zero
+           exit with green results is FAIL), then kill this run's processes and delete the dir unless
+           --keep-home. Refused: an install under a user home, without bin/test.exe, or used by a running
+           station; a scratch outside %TEMP%. The install is never written; a change to it is FAIL.
+           --timeout (default 30m) kills the run.
+exit: verdict 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
+      run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, robocopy, gradle, cleanup), 4 timeout
 `
 
 // maxListed is how many failed test-methods get a row of their own; the rest are one "and N more" row.
@@ -52,10 +61,12 @@ func run(args []string, s cli.Stdio, stdin io.Reader) int {
 	}
 	switch args[0] {
 	case "-h", "--help", "help":
-		fmt.Fprint(s.Out, usage)
+		_, _ = io.WriteString(s.Out, usage)
 		return exitPass
 	case "verdict":
 		return verdict(args[1:], s, stdin)
+	case "run":
+		return runCmd(args[1:], s)
 	}
 	return usageError(s, "unknown subcommand: "+args[0])
 }
