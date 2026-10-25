@@ -13,7 +13,9 @@
 #   - a step it can neither run nor skip on purpose (sudo/apt-get, an unknown `uses:` action, a step-level
 #     env:/shell:/if:) is UNCOVERED: --list and the run both stop with exit 2 instead of skipping it silently.
 # --list prints RUN/SKIP per step; --only runs the steps whose name contains <substring>; -j N (default 3)
-# turns `bats tests/*.bats` into `bats -j N tests/*.bats` when GNU parallel is on PATH.
+# turns `bats tests/*.bats` into `bats -j N tests/*.bats`, and CI's `bats -j 4 --no-parallelize-within-files `
+# (four files at a time) into `bats -j N --no-parallelize-within-files `, when GNU parallel is on PATH; without
+# parallel it runs as plain `bats ` (bats refuses --no-parallelize-within-files without -j).
 # The shellcheck tarball is cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/
 # and its sha256 is checked on every use; never installed system-wide, never sudo.
 #
@@ -45,7 +47,7 @@ SKIP_RULES=(
   "actions/checkout@*|the working tree is already checked out"
   "Set up Java 8*|uses the JDK on PATH (CI pins Temurin 8)"
   "Pre-fetch JUnit*|network download into ~/.gradle; run-pure-test.bats needs junit-4.13.2 there (one gradle build fetches it)"
-  "Install bats|uses bats on PATH"
+  "Install bats*|uses bats (and GNU parallel, when on PATH, for -j) on PATH"
   "Install shellcheck*|replaced by the cached, sha256-checked shellcheck ${SC_VER} prepended to PATH"
   "Set up Go*|uses the go on PATH (CI installs the go/go.mod version; local go must exist)"
   "Set up CPython 3.15*|uses python3 on PATH; the Go differentials skip, naming it, unless it is 3.15"
@@ -171,15 +173,16 @@ for i in "${selected[@]}"; do
   if grep -q shellcheck <<< "${BODIES[$i]}"; then provision_shellcheck; break; fi
 done
 
-BATS_ALL='bats tests/*.bats'
-BATS_J="$BATS_ALL"
-if command -v parallel >/dev/null 2>&1; then BATS_J="bats -j $JOBS tests/*.bats"; fi
+BATS_ALL='bats tests/*.bats' BATS_CI_J='bats -j 4 --no-parallelize-within-files '
+BATS_J="$BATS_ALL" BATS_LOCAL_J='bats '
+if command -v parallel >/dev/null 2>&1; then BATS_J="bats -j $JOBS tests/*.bats" BATS_LOCAL_J="bats -j $JOBS --no-parallelize-within-files "; fi
 mkdir -p "$WORK/runner-temp"
 passed=0 failed=0
 cd "$ROOT"
 for i in "${selected[@]}"; do
   printf '== %s\n' "${NAMES[$i]}"
   body="${BODIES[$i]//"$BATS_ALL"/"$BATS_J"}"
+  body="${body//"$BATS_CI_J"/"$BATS_LOCAL_J"}"
   rc=0
   CI=true RUNNER_TEMP="$WORK/runner-temp" bash -e -c "$body" || rc=$?
   if [ "$rc" -eq 0 ]; then printf 'PASS %s\n' "${NAMES[$i]}"; passed=$((passed + 1))
