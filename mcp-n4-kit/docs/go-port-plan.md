@@ -1075,7 +1075,9 @@ Under Go: 686 tests, 308 skipped (all `go_twin` markers); under Python: 686, non
 **What remains.**
 - S16b: the twin debt of section 19 (49 markers, `TWIN_DEBT_CEILING` 49), each to a Go test or
   an explicit `twin=`.
-- S16c: goldens for the Go differential tests that run `python3 -m mcp_n4.server`, so they keep
-  their teeth once Python is gone.
+- S16c: the Go differential tests that execute the kit's Python source through `pytarget` replay
+  recorded goldens (`go/internal/mcpn4/golden`, `MCP_N4_RECORD=1` re-records while Python exists),
+  so they keep their teeth once Python is gone. Part A (token, ord, tiers, bql, files, px,
+  readtools) landed in #535; journal, retro, jsonrpc, cli, plan, box and writeops follow.
 - S17: after the fallback release, remove the Python server, its fallback switches and the
   Python-only test categories.
