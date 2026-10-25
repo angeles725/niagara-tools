@@ -9,7 +9,8 @@ setup_once() { # the member wrappers then find current binaries under the case's
   # shellcheck disable=SC1091  # resolved at runtime
   . "$REPO/go/go-tool.sh"
   # every Go binary a wrapper execs, read from the wrappers (the Go test's memberTools reads the same)
-  for t in $(sed -n 's/.*go_tool_bin "\$GO_DIR" \([A-Za-z0-9-]*\)).*/\1/p' "$TB"/*.sh | sort -u); do
+  # shellcheck disable=SC2016  # $GO_DIR is the literal wrapper text the pattern matches
+  sed -n 's/.*go_tool_bin "\$GO_DIR" \([A-Za-z0-9-]*\)).*/\1/p' "$TB"/*.sh | sort -u | while read -r t; do
     go_tool_bin "$REPO/go" "$t" >/dev/null
   done
 }
