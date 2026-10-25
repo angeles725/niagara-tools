@@ -8,7 +8,8 @@ setup_once() { # the member wrappers then find current binaries under the case's
   local t
   # shellcheck disable=SC1091  # resolved at runtime
   . "$REPO/go/go-tool.sh"
-  for t in n4lint verify-module slot-coverage schema-risk rc-scan lint-bundled-jar-class-version; do
+  # every Go binary a wrapper execs, read from the wrappers (the Go test's memberTools reads the same)
+  for t in $(sed -n 's/.*go_tool_bin "\$GO_DIR" \([A-Za-z0-9-]*\)).*/\1/p' "$TB"/*.sh | sort -u); do
     go_tool_bin "$REPO/go" "$t" >/dev/null
   done
 }

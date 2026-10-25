@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"testing"
 
@@ -35,8 +36,29 @@ func TestGolden(t *testing.T) {
 
 var buildTools sync.Once
 
-// memberTools are the Go binaries the toolbelt member wrappers exec (testdata/setup.sh builds the same).
-var memberTools = []string{"n4lint", "verify-module", "slot-coverage", "schema-risk", "rc-scan", "lint-bundled-jar-class-version"}
+// goToolRe finds the Go binary a toolbelt wrapper execs (testdata/setup.sh greps the same line).
+var goToolRe = regexp.MustCompile(`go_tool_bin "\$GO_DIR" ([A-Za-z0-9-]+)\)`)
+
+// memberTools are the Go binaries the toolbelt wrappers exec, read from the wrappers themselves so a member
+// ported to Go later is built too (a hand list missed triage-console and the case env has no Go toolchain).
+func memberTools(t *testing.T, tb string) []string {
+	t.Helper()
+	scripts, err := filepath.Glob(filepath.Join(tb, "*.sh"))
+	must(t, err)
+	seen := map[string]bool{}
+	var tools []string
+	for _, sc := range scripts {
+		b, err := os.ReadFile(sc)
+		must(t, err)
+		for _, m := range goToolRe.FindAllSubmatch(b, -1) {
+			if n := string(m[1]); !seen[n] {
+				seen[n] = true
+				tools = append(tools, n)
+			}
+		}
+	}
+	return tools
+}
 
 // toolbeltCopy makes dir/toolbelt the toolbelt testdata/setup.sh gives the recording and returns the entries it
 // made. The first call builds the members' Go binaries with the host env.
@@ -44,7 +66,8 @@ func toolbeltCopy(t *testing.T, repo, dir string) []string {
 	t.Helper()
 	buildTools.Do(func() {
 		script := `. go/go-tool.sh && for t in "$@"; do go_tool_bin "$PWD/go" "$t" >/dev/null || exit 1; done`
-		cmd := exec.Command("bash", append([]string{"-c", script, "build"}, memberTools...)...)
+		tools := memberTools(t, filepath.Join(repo, "build-n4-module-kit", "toolbelt"))
+		cmd := exec.Command("bash", append([]string{"-c", script, "build"}, tools...)...)
 		cmd.Dir = repo
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("building the member tools: %v\n%s", err, out)
