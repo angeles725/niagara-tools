@@ -52,6 +52,10 @@
 # what it left out (10 names, then "and N more"). The glob is a case-insensitive jar basename of letters, digits,
 # _ . - * ?; a path separator, .., or a cmd/PowerShell metacharacter is exit 2, and a glob matching no jar is FAIL,
 # exit 2, before anything is copied. The install is never written.
+# Signing-profile gate: a LocalSigningProfile named by niagaraSigningProfile (GRADLE_USER_HOME/gradle.properties,
+# else the gradle root's) with validity - refresh < 32 days is refused (exit 2, both values named, before any copy):
+# the plugin sets a new key's notAfter to day <validity> of the current month and re-mints it when fewer than
+# <refresh> days are left, so every signing re-mints it and the jars fail signature verification (types/moduleTest.md).
 # Gradle-root gate (the Go tool, not this script, reads the worktree; kit-links L2 keeps .sh files git-free):
 # --gradle-root must be a version-controlled worktree (else a FAIL row says it cannot verify it, exit 3, before
 # any copy). Its porcelain status (-z, every untracked file listed), each listed file sha256-hashed

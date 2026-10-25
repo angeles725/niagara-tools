@@ -361,6 +361,11 @@ func TestRunRefusals(t *testing.T) {
 			fx.f.on["preflight"] = func(context.Context, Cmd) (int, error) { return 1, nil }
 			return fx.args()
 		}, "cannot verify that no station uses the install"},
+		{"throwaway signing profile re-mints its key at every signing (30/15)", func(fx *fixture) []string {
+			write(t, filepath.Join(fx.gradle, "gradle.properties"), "niagaraSigningAlias=throwaway\nniagaraSigningProfile=signing/niagara.signing.xml\n")
+			write(t, filepath.Join(fx.gradle, "signing", "niagara.signing.xml"), signingProfileXML("30", "15"))
+			return fx.args()
+		}, "niagara.signing.validity=30, niagara.signing.refresh=15"},
 		{"unsafe character", func(fx *fixture) []string {
 			return replace(fx.args(), `C:\Niagara\N4`, `C:\Niagara\N4&calc`)
 		}, "unsafe character"},

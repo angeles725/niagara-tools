@@ -204,6 +204,11 @@ func (h host) validate(ctx context.Context, cfg runConfig, s cli.Stdio) (*plan, 
 	if !filepath.IsAbs(cfg.gradleUserHome) {
 		return refuse("--gradle-user-home %q is not an absolute WSL path", cfg.gradleUserHome)
 	}
+	// A LocalSigningProfile whose refresh outlasts the key it mints re-mints it at every signing: the jars then
+	// fail signature verification and the NRE drops them (signingprofile.go). Refused before anything is copied.
+	if why := signingProfileRefusal(p.gradleRoot, cfg.gradleUserHome); why != "" {
+		return refuse("%s", why)
+	}
 	for _, v := range []struct {
 		name string
 		dst  *winDir

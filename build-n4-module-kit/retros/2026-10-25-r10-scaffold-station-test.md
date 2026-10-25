@@ -56,6 +56,18 @@ The offline checks also found that the dashboard `-ux` servlet never compiled, o
   with `javax.baja.sys.ModuleNotFoundException: ModuleA at RegistryDatabase.getModules`. Tail copied to
   `~/stationlogs/scf-20261025T092220Z-ModuleA-invalid-target.log`; the kept home (915 MB) was deleted at
   2026-10-25T09:27:38Z.
+- The 30/15 profile came from this session's manual setup only; no kit code writes a signing profile (the runner,
+  scaffold-module.sh and preflight only read or check the root signing block).
+- The plugin's predicate (niagara-plugins 7.6.22, `LocalSigningProfile.kt`, `javap -c -l` in a scratch dir):
+  `generateCert` refuses validity <= refresh (`:373-374`) and builds notAfter with `cal.set(Calendar.DAY_OF_MONTH,
+  validity)` (`:386-388`, bytecode `iconst_5; getValidity; Calendar.set`), so the key ends on day `validity` of the
+  current month, not `validity` days out; `getCertInfo` floors the days left to notAfter and re-mints when they are
+  below `refresh` (`:216-225`). The model reproduces both observed keys exactly: 30 on 25 Oct gives notAfter 30 Oct
+  (5 days left, below 15: re-minted at every signing), 365 gives 30 Sep 2027 (340 days left, above 183).
+- Gate RED, on the merged origin/main runner: `TestRunRefusals/throwaway_signing_profile_re-mints_its_key_at_every_signing_(30/15)`
+  `exit 0, want 2 with "niagara.signing.validity=30, niagara.signing.refresh=15"` and `8 copy/build/run calls after a
+  refusal`. GREEN after `signingprofile.go`. Mutations, each failing the package tests: margin 32 -> 31 (the 214/183 case),
+  the predicate `validity > refresh` (the plugin's own check, which passes 30/15), and the call removed from `validate`.
 - Offline: `jarsigner -verify` on the kept `ModuleA-rt.jar` failed the same way, so the jar was broken at build
   time. The keystore's cert read `Valid from 03:24:06 until Oct 30` (minted at that build). After rewriting the
   profile to 365/183 with a fresh keystore, two consecutive `clean jar moduleTestJar` builds gave `jar verified` for
@@ -81,7 +93,7 @@ The offline checks also found that the dashboard `-ux` servlet never compiled, o
 | Δ1 | The logic and dashboard scaffolds ship a Fox-off station-test fixture and a link-in sample test from `templates/station-test` | `templates/station-test`; `toolbelt/scaffold-module.sh`; `types/moduleTest.md` § Checklist | `[ev: code build-n4-module-kit/toolbelt/scaffold-module.sh]` |
 | Δ2 | LTF1 should read a class javadoc above `@NiagaraType` as heading the property run, or the scaffold convention should put a link-in comment on each link-in slot | `go/internal/lint/rules/linktargetflags/linktargetflags.go`; `toolbelt/lint-link-target-flags.sh` header | `[ev: code go/internal/lint/rules/linktargetflags/linktargetflags.go]` |
 | Δ3 | A FAIL run of `run-niagara-test run` should print the console lines around the rejection (or keep the console log) so one boot is enough to diagnose it | `go/internal/niagaratest/run.go` | `[ev: code go/internal/niagaratest/run.go]` |
-| Δ5 | A throwaway LocalSigningProfile keeps the plugin's validity/refresh (365/183): a refresh at or above the remaining validity re-mints the key at every signing and leaves a signature block no JVM verifies (`cannot verify signature block file`), which the NRE reports only as a missing module | `types/moduleTest.md` § Running from WSL; `types/distribution.md` § Development path | `[ev: retro r10-scaffold-station-test Δ5]` |
+| Δ5 | `run-niagara-test run` refuses (exit 2, before any copy, both values named) a LocalSigningProfile with validity - refresh < 32: the plugin sets a new key's notAfter to day `validity` of the current month and re-mints it when fewer than `refresh` days remain, so such a profile re-mints at every signing and leaves a signature block no JVM verifies, which the NRE reports only as a missing module. A throwaway profile uses the plugin defaults 365/183 | `go/internal/niagaratest/signingprofile.go`; `toolbelt/run-niagara-test.sh` header; `types/moduleTest.md` § Running from WSL | `[ev: code go/internal/niagaratest/signingprofile.go]` |
 | Δ6 | The scaffold's `-ux` servlet overrides `doGet`/`doPost(WebOp)`, never `doService(WebOp)` | `fixtures/MinimalDash` `-ux`; TC-DASH3 | `[ev: code build-n4-module-kit/fixtures/MinimalDash/MinimalDash/MinimalDash-ux/src/com/angeles/MinimalDash/ux/BMinimalDashServlet.java]` |
 | Δ4 | The driver scaffold's station test keeps Fox on a free port, which listens on every interface on the Windows NRE. A loopback-only policy needs the Fox-off fixture instead | `fixtures/MinimalDriver`; `types/driver-authoring.md` § 12.1 | `[ev: retro r10-run-niagara-test-testng Δ4]` |
 
@@ -96,4 +108,4 @@ The offline checks also found that the dashboard `-ux` servlet never compiled, o
 ## Owed
 - The GREEN boot of a scaffolded dashboard module, with a 365/183 throwaway profile (needs a boot approval).
 - Whether a 4.15 station test needs the test module's dependency on `<Mod>-rt` that the signing block drops.
-- Δ2, Δ4 and Δ5 above (Δ3 landed as runner D6, #566).
+- Δ2 and Δ4 above (Δ3 landed as runner D6, #566; Δ5 is the runner gate in this branch).
