@@ -57,7 +57,9 @@ const usage = `usage: run-niagara-test verdict [<log>|-]
            station (a service's unreadable station.exe is attributed through its niagarad service, or
            refused); a scratch outside %TEMP%. The install is never written; a change to it is FAIL. The
            NRE must use the scratch niagara_user_home: a change to a real %USERPROFILE%\Niagara4.*\<brand>
-           registry\ or security\, or no etc\ and security\ in the scratch home, is FAIL. test.exe gets it
+           registry\ or security\, no etc\ and security\ in the scratch home, or no file under it that this
+           boot wrote (new or changed since test.exe started, its mtime between test.exe's start and exit
+           widened by a 2s clock-skew tolerance; a reused home's etc\ is boot 1's), is FAIL. test.exe gets it
            as niagara_user_home through WSLENV (niagara_user_home/w). The build uses the WSL JDK 8
            --jdk8 (default /usr/lib/jvm/java-8-openjdk-amd64, JAVA_HOME and installations.paths) and the
            gradle cache --gradle-user-home (default ~/.gradle). --timeout (default 30m) kills the run.

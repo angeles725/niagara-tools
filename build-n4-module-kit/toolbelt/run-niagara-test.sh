@@ -49,7 +49,9 @@
 # run are killed by PID (taskkill /PID /T /F), the install is compared with its snapshot (any change is FAIL),
 # and the dir the run created is deleted unless --keep-home. Every real C:\Users\<you>\Niagara4.*\<brand>\registry\
 # and security\ is snapshotted before the copy and compared after cleanup: the NRE writing a real user home, or
-# leaving no etc\ and security\ in the scratch niagara_user_home, is FAIL (the runner fails closed). test.exe runs straight from WSL
+# leaving no etc\ and security\ in the scratch niagara_user_home, or no file under it that this boot wrote (new or
+# changed since test.exe started, its mtime in test.exe's start..exit window +-2s clock skew; on --reuse-home the
+# etc\ is boot 1's), is FAIL (the runner fails closed). test.exe runs straight from WSL
 # (cwd the copy) and gets the scratch home as niagara_user_home=<win path> with WSLENV niagara_user_home/w; a
 # cmd.exe `set "…"` does not reach it, as WSL re-quotes its inner quotes. Exits: 0 PASS; 1 FAIL; 2 usage or refused;
 # 3 environment (cmd.exe, worktree status, robocopy, gradle, cleanup); 4 --timeout reached, the run killed. The tool opens no

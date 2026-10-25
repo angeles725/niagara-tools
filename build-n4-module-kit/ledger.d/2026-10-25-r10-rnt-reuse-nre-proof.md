@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: run-niagara-test run proves the NRE wrote into the scratch home on this boot -->
+log: 2026-10-25 · quality round 10 → `run-niagara-test run` (`go/internal/niagaratest/nuhproof.go`) records every regular file under the scratch `nuh/` and the time just before test.exe starts and the time it exits, and FAILs unless some file is new or changed with an mtime in that window ±2 s clock skew; the PASS row names the files. On a `--reuse-home` boot the kept `etc\`/`security\` were boot 1's, so only the real-home snapshot had proved boot 2. Runs on fresh runs too; the real-home snapshot still gates both. Retro retros/2026-10-25-r10-rnt-reuse-nre-proof.md (1Δ, folded). [ev: retro r10-rnt-reuse-nre-proof Δ1]
+open_issue: proven on the fake runner only; the live check is owed on the next client `--reuse-home` run (retro r10-rnt-reuse-nre-proof Δ1).
