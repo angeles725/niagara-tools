@@ -217,7 +217,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_box.py` | 92 | 69 | 0 | 23 | 0 | 92 | 0 |
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
-| `test_go_harness.py` | 32 | 0 | 0 | 0 | 0 | 0 | 32 |
+| `test_go_harness.py` | 34 | 0 | 0 | 0 | 0 | 0 | 34 |
 | `test_list_batches.py` | 6 | 0 | 0 | 0 | 0 | 0 | 6 |
 | `test_live_smoke.py` | 36 | 0 | 0 | 0 | 0 | 0 | 36 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
@@ -230,7 +230,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tools_destructive.py` | 101 | 4 | 7 | 13 | 2 | 26 | 75 |
 | `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
 | `test_write_parity.py` | 31 | 0 | 0 | 0 | 0 | 0 | 31 |
-| **Total** | **686** | **166** | **34** | **90** | **18** | **308** | **378** |
+| **Total** | **688** | **166** | **34** | **90** | **18** | **308** | **380** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -1081,3 +1081,67 @@ Under Go: 686 tests, 308 skipped (all `go_twin` markers); under Python: 686, non
   readtools) landed in #535; journal, retro, jsonrpc, cli, plan, box and writeops follow.
 - S17: after the fallback release, remove the Python server, its fallback switches and the
   Python-only test categories.
+
+## 21. S16b the twin debt
+
+S16b changes no server code: each of the 49 `TWIN_DEBT` markers of section 19 now names a Go
+test, is ported by a box replay scenario, or says why it is Python-only. Two stay listed
+(`TWIN_DEBT_CEILING` 2), blocked on a real difference.
+
+**Python-only markers.** `go_twin(..., python_only="reason")` skips a test under Go with no twin;
+the reason (never empty, never beside a `twin`) lands in `go_server.PYTHON_ONLY`, which
+`unresolved_twins` leaves out, and
+`test_every_python_only_marker_says_why_and_is_neither_twin_nor_debt` checks each one exists and
+is not debt. Removing the exclusion fails two harness tests.
+
+**How the 49 left** (a: an existing Go test, b: a box replay scenario, c: a new Go test,
+d: python_only):
+
+| Markers | a | b | c | d | Still debt |
+|---|---|---|---|---|---|
+| `test_server` (jsonrpc 6, cli 1) | 4 | 0 | 1 | 1 | 1 |
+| `test_box` | 17 | 8 | 11 | 5 | 1 |
+| **Total** | **21** | **8** | **12** | **6** | **2** |
+
+- a: the `session` tests of mode, close, scrub and the failed connect that closes the old session
+  (a Go `Client.Close` has no error to raise; `Context.Close` drops the session before calling
+  it); `box.TestChildrenAndStatusValue`, `TestParseStatusDifferentialPython` (ok and null: Go
+  ports no bits or facets, no caller reads them), `TestTransportFailuresAreBoxErrors` (refused
+  and dropped; the timeout is `TestTimeoutIsPerSocketOperation`), `TestAuthMessageNamesWhatToCheck`,
+  the http/https checks, `TestNonAuthFailureAfterMakeClosesTheSession` (open and the with block),
+  `TestFlattenRefusesMalformedTrees`; `plan.TestARemovalClearsEveryCachedHandle` (the remove tool
+  clears every cached handle, as `tools_write` does);
+  `writeops.TestPlanAndReadbackDifferentialPython` (the set BSON encoders and the partial Status
+  refusal) and
+  `writeops.TestTheResultRecordsTheServerAssignedNameNotThePlannedOne`.
+- b: three reply-shape scenarios now port their test (a poll answering a string, early ops that
+  are no list, nesting past the limit); five new ones send the frames of the `BoxClient` write
+  helpers no tool calls (`add_component` with its annotation, `check_links`, `remove_component`,
+  `save_station`, the station refusing an add that nests a `baja:Folder`). `replay.jsonl` gains
+  five lines and three `ports` values, regenerated with `go_box.py --write`.
+- c: `cli.TestHelpStatesTheSupportedProtocolSetContract` (the protocol contract the help states;
+  the `is_component_type` docstring half goes with Python), and in `box/twins_test.go` the shared
+  component-type rule (three markers), every client read against non-HTTP, short, cut-chunked and
+  over-cap answers (four), a close that swallows any failure of its del, split's other-load flag
+  and the pending-events copy; `TestChildrenAndStatusValue` gains a bare StatusBoolean.
+- d: three Python import side effects (`mcp_n4.server` and `mcp_n4.box` print nothing, the box
+  import makes no network call: a Go binary has no import); the labels of `add_component` and
+  `check_links` and `add_component`'s reply check (helpers no tool calls; Go has none, and the
+  create tool reads `nn` leniently); urllib's redirect handler closing its 3xx response (Go's
+  client refuses redirects itself and closes every body by defer).
+
+**Mutation.** Every new Go test goes RED on a hand mutant and GREEN on restore: the help printed
+as the usage; three table entries and the `module:Type` guard of `IsComponentType`; the
+StatusBoolean default; the BadStatusLine match, the short-body check, the cut-chunk check and the
+Content-Length bound of `http.go`; a `Close` that keeps the sid when its del fails; split
+returning no other-load flag (two mutants); `PendingEvents` returning the live slice. The new
+scenarios: a `syncTo` sent with `ver` 2.0 fails the four that sync, an extra `callssc` field
+fails the save. 17 mutants, no survivor.
+
+**Known differences.** One, reported and not fixed here (S16b changes no server code): the Go
+binary has no SIGINT handling. On Ctrl-C the Python server catches KeyboardInterrupt, deletes the
+station's BOX session and exits 0; the Go binary dies by the signal (exit -2) and leaves the
+session open on the station until it times out. Its two markers stay `TWIN_DEBT`:
+`test_server.TestRobustness.test_serve_exits_cleanly_on_keyboard_interrupt_and_closes` and
+`test_box.TestLockoutSafeOpen.test_interrupt_after_make_still_closes_the_server_session`.
+Under Go: 688 tests, 308 skipped (the two harness tests are new).

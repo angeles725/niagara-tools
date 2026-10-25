@@ -121,12 +121,12 @@ class TestSecurity(BoxTestCase):
             c.open()
         self.assertEqual(self.fake.requests, 1)
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestHTTPRefusedWithoutAllowHTTP")
     def test_http_refused_without_allow_http(self):
         with self.assertRaises(ValueError):
             box.BoxClient("http://127.0.0.1:1", "u", "p")
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestHTTPSAcceptedWithoutFlag")
     def test_https_accepted_without_flag(self):
         box.BoxClient("https://station.example", "u", "p")
 
@@ -136,12 +136,14 @@ class TestSecurity(BoxTestCase):
         self.assertNotIn("s3cr3t-pw", repr(c))
         self.assertNotIn("s3cr3t-pw", str(c))
 
-    @go_server.go_twin("box", "injection")
+    @go_server.go_twin("box", "injection", python_only="a Python import side effect; a Go "
+                       "package has no import-time code path that could reach the network")
     def test_import_makes_no_network_call(self):
         with mock.patch.object(socket.socket, "connect", side_effect=AssertionError("network")):
             importlib.reload(box)
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", python_only="a Python import side effect; a Go binary "
+                       "has no import (its start: cli.TestEofEndsTheServerWithExitZero)")
     def test_import_has_no_side_effects_in_fresh_process(self):
         kit = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         r = subprocess.run([sys.executable, "-c", "import mcp_n4.box"], cwd=kit,
@@ -179,7 +181,7 @@ class TestTransportErrors(BoxTestCase):
         self.assertNotIn("wrong", text)  # never echoes the password
         self.assertEqual(self.fake.requests, 1)
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestAuthMessageNamesWhatToCheck")
     def test_http_403_says_permission_and_no_retry(self):
         self.fake.hook = hook_for("make", 403)
         with self.assertRaises(box.AuthError) as cm:
@@ -201,7 +203,7 @@ class TestTransportErrors(BoxTestCase):
             self.client().open()
         self.assertNotIsInstance(cm.exception, box.AuthError)
 
-    @go_server.go_twin("box", "injection")
+    @go_server.go_twin("box", "injection", twin="box.TestTransportFailuresAreBoxErrors")
     def test_timeout_and_refused_and_oserror_are_boxerror(self):
         for exc in (TimeoutError("timed out"),
                     urllib.error.URLError(ConnectionRefusedError("refused")),
@@ -210,7 +212,7 @@ class TestTransportErrors(BoxTestCase):
             with self.assertRaises(box.BoxError):
                 c.open()
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestTransportFailuresAreBoxErrors")
     def test_connection_refused_for_real(self):
         c = box.BoxClient("http://127.0.0.1:1", "u", "p", allow_http=True, timeout=2)
         with self.assertRaises(box.BoxError):
@@ -421,7 +423,6 @@ def load_event(tree):
     return json.dumps([{"evs": {"ops": [{"nm": "l", "h": "3", "b": tree}]}}])
 
 
-@go_server.go_twin("box", "unit")
 class TestReplyShapes(BoxTestCase):
     """A reply of the wrong shape is a 'malformed BOX reply' BoxError, never data (0.9.2)."""
 
@@ -431,6 +432,7 @@ class TestReplyShapes(BoxTestCase):
         self.assertIs(type(cm.exception), box.BoxError)
         self.assertEqual(str(cm.exception), "malformed BOX reply: " + detail)
 
+    @go_server.go_twin("box", "unit")
     def test_pollchgs_must_answer_a_list_of_events(self):
         c = self.opened()
         for body, kind in (('{"a": 1}', "an object"), ('"ab"', "a string"), ("5", "a number"),
@@ -442,6 +444,7 @@ class TestReplyShapes(BoxTestCase):
             self.fake.hook = poll_hook(body)
             self.assertEqual(c.poll(), [], body)
 
+    @go_server.go_twin("box", "unit", twin="box.TestFlattenRefusesMalformedTrees")
     def test_a_load_tree_of_the_wrong_shape_is_refused(self):
         c = self.opened()
         cases = (
@@ -462,6 +465,7 @@ class TestReplyShapes(BoxTestCase):
                 self.assert_malformed(
                     lambda: c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP), detail)
 
+    @go_server.go_twin("box", "unit")
     def test_an_early_event_whose_ops_are_no_list_is_kept_not_walked(self):
         # The poll before a loadSlots settles the load ops it sees; ops that are no list are
         # kept with their event (as _split does), never iterated as keys or characters.
@@ -474,12 +478,14 @@ class TestReplyShapes(BoxTestCase):
                 self.assertIn("no load event", str(cm.exception))
                 self.assertIn({"evs": {"ops": ops}}, c.drain_pending_events())
 
+    @go_server.go_twin("box", "unit", twin="box.TestFlattenRefusesMalformedTrees")
     def test_a_well_formed_tree_still_loads(self):
         c = self.opened()
         self.fake.hook = poll_hook(load_event({"h": "3", "s": [{"n": "a", "s": [{"n": "b"}]}]}))
         nodes = c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP)
         self.assertEqual(sorted(nodes), ["", "a", "a/b"])
 
+    @go_server.go_twin("box", "unit")
     def test_a_reply_nested_past_the_limit_is_refused(self):
         self.assertEqual(box.MAX_REPLY_NESTING, 1000)
         c = self.opened()
@@ -527,7 +533,7 @@ class TestSession(BoxTestCase):
             self.client().open()
         self.assertEqual(self.fake.sessions, set())
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestNonAuthFailureAfterMakeClosesTheSession")
     def test_with_block_does_not_leak_on_open_failure(self):
         self.fake.hook = hook_for("makessc", 500)
         with self.assertRaises(box.BoxError):
@@ -558,7 +564,8 @@ class TestReadWrite(BoxTestCase):
         self.assertTrue(nodes["Temp"]["h"])
         self.assertEqual(nodes["Temp/wsAnnotation"]["v"], "10,20,8")
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit",
+                       twin="writeops.TestTheResultRecordsTheServerAssignedNameNotThePlannedOne")
     def test_add_component_name_collision_yields_distinct_nn(self):
         c = self.opened()
         first = c.add_component("3", "Dup", "kitControl:NumericConst")
@@ -569,7 +576,8 @@ class TestReadWrite(BoxTestCase):
         self.assertIn(first["nn"], nodes)
         self.assertIn(second["nn"], nodes)
 
-    @go_server.go_twin("box", "injection")
+    @go_server.go_twin("box", "injection", python_only="add_component's reply check; no tool "
+                       "calls it, and create reads nn leniently (_create_component_inverse)")
     def test_add_component_malformed_reply_is_boxerror(self):
         c = self.opened()
         for bad in (None, [], ["x"], "x"):
@@ -696,7 +704,7 @@ class TestReadWrite(BoxTestCase):
         with self.assertRaises(ValueError):
             c.sync([{"nm": "v", "h": "3", "n": "a"}, {"nm": "v", "h": "3", "n": "b"}])
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="writeops.TestPlanAndReadbackDifferentialPython")
     def test_set_slot_rejects_partial_status_by_default(self):
         c = self.opened()
         h = self.add(c, "Temp")
@@ -789,7 +797,7 @@ class TestLockoutSafeOpen(BoxTestCase):
         self.assertEqual(self.deletes(), [])
         self.assertIsNone(c.sid)
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestNonAuthFailureAfterMakeClosesTheSession")
     def test_non_auth_failure_still_cleans_up(self):
         self.track("makessc", 500)
         with self.assertRaises(box.BoxError):
@@ -816,7 +824,7 @@ class TestLockoutSafeOpen(BoxTestCase):
 
 
 class TestHandleCache(BoxTestCase):
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="plan.TestARemovalClearsEveryCachedHandle")
     def test_remove_component_invalidates_child_and_descendants(self):
         c = self.opened()
         self.add(c, "Gone")
@@ -830,7 +838,7 @@ class TestHandleCache(BoxTestCase):
         self.assertIn("station:|slot:/Folder/GoneNot", c._handles)
         self.assertIn("station:|slot:/Folder", c._handles)
 
-    @go_server.go_twin("box", "injection")
+    @go_server.go_twin("box", "injection", twin="plan.TestARemovalClearsEveryCachedHandle")
     def test_remove_component_with_unknown_parent_clears_cache(self):
         c = self.opened()
         self.add(c, "Gone")
@@ -996,8 +1004,9 @@ class TestPendingEvents(BoxTestCase):
         self.assertEqual(self.client().dropped_events, 0)
 
 
-@go_server.go_twin("box", "injection")
 class TestErrorLabelsAndRedirectClose(BoxTestCase):
+    @go_server.go_twin("box", "injection", python_only="the labels of add_component and "
+                       "check_links, BoxClient helpers no server tool calls and Go does not have")
     def test_malformed_reply_keys_use_session_component_key(self):
         c = self.opened()
         with mock.patch.object(c, "sync", return_value=None), \
@@ -1009,6 +1018,8 @@ class TestErrorLabelsAndRedirectClose(BoxTestCase):
             c.check_links("a", "b", "c", "d")
         self.assertEqual(cm.exception.key, "checkLinks")
 
+    @go_server.go_twin("box", "injection", python_only="urllib's redirect handler; Go's client "
+                       "refuses redirects itself and closes every response body by defer")
     def test_redirect_handler_closes_response_before_raising(self):
         fp = mock.Mock()
         with self.assertRaises(box.BoxError):
@@ -1018,7 +1029,7 @@ class TestErrorLabelsAndRedirectClose(BoxTestCase):
 
 
 class TestPureHelpers(unittest.TestCase):
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestChildrenAndStatusValue")
     def test_status_value_applies_type_defaults(self):
         nodes = {
             "sb": {"t": "baja:StatusBoolean"},
@@ -1027,7 +1038,7 @@ class TestPureHelpers(unittest.TestCase):
         self.assertEqual(box.status_value(nodes, "sb"), {"value": "false", "status": "0"})
         self.assertEqual(box.status_value(nodes, "sn"), {"value": "0.0", "status": "0"})
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestChildrenAndStatusValue")
     def test_status_value_reads_present_children(self):
         nodes = {
             "sb": {"t": "baja:StatusBoolean"},
@@ -1044,7 +1055,8 @@ class TestPureHelpers(unittest.TestCase):
                       "", None):
             self.assertFalse(box.is_component_type(type_), type_)
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit",
+                       twin="box.TestIsComponentTypeIsTheSharedStationAddRule")
     def test_driver_address_structs_are_values_not_components(self):
         # F17 (audit 2026-10-03, issue #200): BFlexAddress / BBacnetAddress extend BStruct;
         # the naming heuristic (non-baja -> component) misclassified them.
@@ -1052,7 +1064,8 @@ class TestPureHelpers(unittest.TestCase):
             self.assertIs(box.COMPONENT_TYPES[type_], False, type_)
             self.assertFalse(box.is_component_type(type_), type_)
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit",
+                       twin="box.TestIsComponentTypeIsTheSharedStationAddRule")
     def test_the_type_table_wins_over_the_naming_heuristic(self):
         """B1200-G3: an explicit entry decides; unknown types fall back to the heuristic."""
         self.assertIs(box.COMPONENT_TYPES["control:PriorityLevel"], False)  # BFrozenEnum
@@ -1063,13 +1076,13 @@ class TestPureHelpers(unittest.TestCase):
         self.assertTrue(box.is_component_type("acme:UnknownWidget"))  # fallback
         self.assertFalse(box.is_component_type("baja:RelTime"))  # fallback
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestChildrenAndStatusValue")
     def test_children_lists_direct_children_only(self):
         nodes = {"": {}, "a": {}, "a/b": {}, "c": {}}
         self.assertEqual(sorted(box.children(nodes, "")), ["a", "c"])
         self.assertEqual(sorted(box.children(nodes, "a")), ["b"])
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="box.TestParseStatusDifferentialPython")
     def test_parse_status(self):
         s = box.parse_status("40;activeLevel=e:17@control:PriorityLevel")
         self.assertEqual(s["bits"], 0x40)
@@ -1081,7 +1094,7 @@ class TestPureHelpers(unittest.TestCase):
         self.assertFalse(ok["null"])
         self.assertEqual(ok["facets"], "")
 
-    @go_server.go_twin("box", "unit")
+    @go_server.go_twin("box", "unit", twin="writeops.TestPlanAndReadbackDifferentialPython")
     def test_encoders(self):
         self.assertEqual(box.bson_double(30), {"nm": "p", "t": "baja:Double", "v": "30.0"})
         self.assertEqual(box.bson_bool(True)["v"], "true")

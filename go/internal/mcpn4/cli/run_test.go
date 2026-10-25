@@ -126,3 +126,18 @@ func TestEofEndsTheServerWithExitZero(t *testing.T) {
 		t.Errorf("got %d %q %q", code, out, errOut)
 	}
 }
+
+// The help is where the operator reads the protocol contract (test_server's doc-contract test):
+// the versions spoken, and that a newer one is added only once its semantics are implemented.
+func TestHelpStatesTheSupportedProtocolSetContract(t *testing.T) {
+	t.Parallel()
+	code, out, _ := run([]string{"--help"}, "")
+	flat := strings.Join(strings.Fields(out), " ")
+	for _, want := range []string{"this server speaks 2025-06-18, 2025-03-26 and 2024-11-05",
+		"A client asking for a newer revision is answered with 2025-06-18. Only add a newer revision to " +
+			"that tuple once its semantics (new message shapes, capabilities, required fields) are implemented"} {
+		if code != 0 || !strings.Contains(flat, want) {
+			t.Errorf("--help (exit %d) lacks %q", code, want)
+		}
+	}
+}
