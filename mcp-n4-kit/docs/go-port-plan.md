@@ -1,5 +1,10 @@
 # mcp-n4-kit: Python-to-Go port plan
 
+> **Historical.** The port is complete: since S17 (section 23) the Go binary `go/bin/mcp-n4` is
+> the only mcp-n4 server and the Python server described below is removed. The sections record
+> how the port was planned and proven; commands that select `MCP_N4_IMPL=python` or re-record
+> goldens with `MCP_N4_RECORD=1` no longer work.
+
 This plan ports the mcp-n4 server from Python to Go without changing its observable
 behaviour. It was written against `origin/main` at v0.9.0: the server is about 4.6k lines
 across 9 modules, and the suite has 573 tests across 13 files plus `tests/fake_station.py`.
@@ -219,10 +224,10 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
 | `test_go_harness.py` | 34 | 0 | 0 | 0 | 0 | 0 | 34 |
 | `test_list_batches.py` | 6 | 0 | 0 | 0 | 0 | 0 | 6 |
-| `test_live_smoke.py` | 36 | 0 | 0 | 0 | 0 | 0 | 36 |
+| `test_live_smoke.py` | 37 | 0 | 0 | 0 | 0 | 0 | 37 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
-| `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
+| `test_new_retro.py` | 18 | 0 | 0 | 0 | 0 | 0 | 18 |
 | `test_retro.py` | 36 | 20 | 0 | 1 | 0 | 21 | 15 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 105 | 4 | 14 | 5 | 7 | 30 | 75 |
@@ -230,7 +235,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tools_destructive.py` | 101 | 4 | 7 | 13 | 2 | 26 | 75 |
 | `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
 | `test_write_parity.py` | 31 | 0 | 0 | 0 | 0 | 0 | 31 |
-| **Total** | **692** | **166** | **34** | **90** | **18** | **308** | **384** |
+| **Total** | **694** | **166** | **34** | **90** | **18** | **308** | **386** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -1194,3 +1199,53 @@ close in `Open`, a reply written after the interrupt, no interrupt case in the s
 blocked read hangs), SIGPIPE not ignored (black-box exit -13), no del deadline, the second signal
 ignored, the first signal exiting, the interrupt reported as a loop error, `Close` keeping the sid
 (a double del).
+
+## 23. S17 Python removed
+
+S17 deletes the Python server, its fallback switches and everything that only served or tested
+it. The Go binary is the only server, and no coverage was lost.
+
+**Deleted.**
+- `mcp_n4/` (11 files, 4,961 lines): the server, read and write tools, `safety`, `tiers`, `bql`,
+  `files`, `retro` and its template. `box.py` (807 lines) moved instead: it is
+  `tests/box_client.py`, FakeStation's test-setup BOX client (the black-box tests arrange station
+  state with it next to the binary), minus its unused component-type table. So about 4,150
+  production lines are gone.
+- The 308 tests skipped under Go (every `go_twin` marker resolved to a Go test or a box replay
+  scenario first, `TWIN_DEBT` 0), whole files `test_box`, `test_safety`, `test_auth_latch`;
+  `test_write_parity` (it compared two servers; its scenarios stay covered by the black-box
+  write tests and the writeops goldens); the generators `go_box.py`, `go_registry.py` and
+  `fixtures/journal/generate.py`; the `go_twin`/inventory/unported-skip machinery of
+  `go_server.py`; the `pytarget` package and every record path (`golden`, `box/live_test.go`).
+- Six `python_only` markers had no twin by design (section 21): the three import side effects,
+  `add_component`'s and `check_links`' labels, `add_component`'s reply check, urllib's redirect
+  close.
+
+**Kept, frozen.** Every Go differential replays its golden; `golden.Open` only replays and a
+stale golden says so (nothing can re-record it). `registry.json`, `box/testdata/replay.jsonl` and
+`live.golden.jsonl` and `fixtures/journal/python-written/` are edited by hand from now on. Three
+black-box tests compared the binary with the in-process Python server (the protocol replies, the
+retro draft, `n4_list_batches` on the Python journal); their Python answers were recorded into
+`tests/fixtures/oracles/` before the deletion (`tests/oracle.py`), and the tests compare with
+those. The `retro` refusal targets still name `mcp_n4/tools_write.py`: that text is in the frozen
+goldens and fixtures, so it stays as historical attribution.
+
+**Replaced.**
+- Literals in the black-box suite (server version, protocol set, nesting limit, tool lists,
+  write-engine depths and refusal wording), each checked against the binary's own output, and
+  `tests/state_files.py` for the journal and audit files.
+- `tools/new_retro.py` drafts through `go/cmd/mcp-n4/retro-draft` (`go/bin/retro-draft`;
+  `retro.DraftOn`, `retro.CountDeltas`), pinned byte for byte by a golden recorded from the
+  Python draft before the deletion.
+- `tools/live_smoke.py` joins its ORDs itself and always launches the Go binary; FakeStation
+  carries its component-type table, checked equal to the server's
+  (`box.TestTheFakeStationSharesTheComponentTypeTable`).
+- METHODOLOGY cites each removed test's Go twin; `test_methodology_names` checks they exist.
+
+**Refreshing a golden.** Not possible by recording: there is no Python left. A deliberate
+behaviour change edits the golden (or oracle fixture) by hand in the same commit as the Go
+change, and the PR says why the Python answer no longer holds.
+
+**CI.** The `checks` job no longer runs the suite on Python and no Go test runs or looks for
+`python3` (`MCP_N4_PYTHON` is gone); `mcp-n4-go` builds `go/bin/mcp-n4` and `go/bin/retro-draft`
+and runs the black-box suite: 335 tests, none skipped (692 with 308 skipped before).

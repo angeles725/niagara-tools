@@ -182,8 +182,8 @@ func TestBqlDifferentialPython(t *testing.T) {
 		{"n4_inventory", `{"base": "Drivers"}`, devices, 0, ""},
 	}
 	root := t.TempDir()
-	g.Alias(root, "$STATE_ROOT")                                           // the cases and replies name the state dirs under it
-	g.Mask(regexp.MustCompile(`\\"ts\\": \\"[^"\\]*\\"`), `\"ts\": \"T\"`) // progress stamps, masked below too
+	g.Alias(root, "$STATE_ROOT") // the cases and replies name the state dirs under it
+	// The progress stamps were masked to "T" when the golden was recorded, and are masked below.
 	ts := regexp.MustCompile(`"ts": "[^"]*"`)
 	for i, c := range cases {
 		state := filepath.Join(root, fmt.Sprint(i), "state")

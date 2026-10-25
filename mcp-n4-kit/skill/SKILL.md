@@ -1,6 +1,6 @@
 ---
 name: mcp-n4
-description: "Trigger: read or write a live Niagara N4 station through the mcp_n4 MCP server (BOX JSON) — navigate the component tree, read slots, create components, set values, link, invoke actions, remove, rollback, save. Enforces the dry-run, confirmation-token, write-scope and read-back workflow and the route ladder."
+description: "Trigger: read or write a live Niagara N4 station through the mcp-n4 MCP server (BOX JSON) — navigate the component tree, read slots, create components, set values, link, invoke actions, remove, rollback, save. Enforces the dry-run, confirmation-token, write-scope and read-back workflow and the route ladder."
 license: Apache-2.0
 metadata:
   author: angeles725
@@ -11,7 +11,7 @@ Thin launcher. The real content lives in an EXTERNAL kit (METHODOLOGY, README, s
 
 ## Resolve the kit (do this first)
 
-`KIT` = the `mcp-n4-kit` directory: it holds `METHODOLOGY.md` and `README.md`; the server it launches is the Go binary `$KIT/../go/bin/mcp-n4` (the default since S16), with the Python server `$KIT/mcp_n4/server.py` kept one release as the fallback. Resolve once:
+`KIT` = the `mcp-n4-kit` directory: it holds `METHODOLOGY.md` and `README.md`; the server it launches is the Go binary `$KIT/../go/bin/mcp-n4` (the only server since S17). Resolve once:
 1. `$MCP_N4_KIT` if set and it contains `METHODOLOGY.md`.
 2. Else the default: `/home/cristian/modulos_niagara_n4/niagara-tools/mcp-n4-kit`, the author's checkout on the primary machine (confirm `METHODOLOGY.md` exists). The installed launcher is a copy under `~/.claude/skills/`, so its own location says nothing about the kit; on any other machine or checkout set `MCP_N4_KIT` to the `mcp-n4-kit` directory.
 3. Else STOP searching and say so plainly: "the mcp-n4 kit is not on disk at <path checked>". A checkout on another branch may lack `mcp-n4-kit/`; never switch a shared checkout's branch to get it. Offer the operator one of:
@@ -23,7 +23,7 @@ Then read `$KIT/METHODOLOGY.md` FIRST and follow its session checklist.
 
 ## Register the server
 
-Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering it per project"). Register the server once in the project's `.mcp.json` rather than driving stdio by hand. Launch the Go server `$KIT/../go/bin/mcp-n4` (absolute path; build it with `cd $KIT/../go && go build -o bin/ ./cmd/mcp-n4` if it is missing). Fallback for one release, only when the Go server misbehaves: `python3 -m mcp_n4.server` with `cwd` = `$KIT` and the same flags (the README's fallback example); tell the operator which one runs. The operator, not the model, chooses stations, credential env prefix, TLS policy and timing (`--station NAME=https://…`, `--credential-env`, `--insecure-tls NAME`, `--load-wait`, `--http-timeout`, `--auth-cooldown`), and where each station keeps its `config.bog` (`--station-home NAME=PATH`, so `n4_save_station` can prove persistence). Writes need `--allow-writes` plus at least one `--write-scope`; the default is read-only. A tier B or C station (METHODOLOGY section 5) also needs the operator's `--allow-tier-b NAME` / `--allow-tier-c NAME`, given only after the PoC or probe that tier requires. If no station is configured, stop and tell the operator which flag is missing.
+Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering it per project"). Register the server once in the project's `.mcp.json` rather than driving stdio by hand. Launch the Go server `$KIT/../go/bin/mcp-n4` (absolute path; build it with `cd $KIT/../go && go build -o bin/ ./cmd/mcp-n4` if it is missing). The operator, not the model, chooses stations, credential env prefix, TLS policy and timing (`--station NAME=https://…`, `--credential-env`, `--insecure-tls NAME`, `--load-wait`, `--http-timeout`, `--auth-cooldown`), and where each station keeps its `config.bog` (`--station-home NAME=PATH`, so `n4_save_station` can prove persistence). Writes need `--allow-writes` plus at least one `--write-scope`; the default is read-only. A tier B or C station (METHODOLOGY section 5) also needs the operator's `--allow-tier-b NAME` / `--allow-tier-c NAME`, given only after the PoC or probe that tier requires. If no station is configured, stop and tell the operator which flag is missing.
 
 ## Before acting on an operator's hand edit
 
@@ -58,5 +58,5 @@ Report: kit path, station name and tier, each write as `requested / observed / v
 
 ## References
 
-- `$KIT/METHODOLOGY.md`, `$KIT/README.md`, `$KIT/mcp_n4/`.
+- `$KIT/METHODOLOGY.md`, `$KIT/README.md`, `$KIT/../go/internal/mcpn4/`.
 - Install this launcher: `niagara-tools/scripts/install-skill.sh --skill mcp-n4`.

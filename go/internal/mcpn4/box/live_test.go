@@ -1,7 +1,6 @@
 package box
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -12,20 +11,16 @@ import (
 	"io/fs"
 	"net"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
-// liveCase is one HTTP-level scenario: the Python BoxClient (go_box.py --live) and the Go client
+// liveCase is one HTTP-level scenario: the Python BoxClient (go_box.py --live, until S17) and the Go client
 // run the same ops against the same scriptedStation, one after the other.
 type liveCase struct {
 	name   string
@@ -121,31 +116,17 @@ var liveCases = []liveCase{
 
 // TestLiveDifferential runs every liveCase through Go against a scriptedStation and compares
 // both the result lines and the requests the station saw (method, path, body and every header
-// except User-Agent) with what go_box.py --live printed and sent for the same case. Those are
-// recorded in liveGolden, so the comparison needs no interpreter: with pytarget.RecordEnv=1 the
-// target CPython (pytarget.Minor) runs each case first, Go is compared with that live run, and
-// the golden is rewritten when every case passed. A missing or stale golden fails.
+// except User-Agent) with what the Python BoxClient printed and sent for the same case
+// (go_box.py --live, before S17 removed it). Those are recorded in liveGolden, which is frozen:
+// a missing or stale golden fails.
 func TestLiveDifferential(t *testing.T) {
-	record := os.Getenv(pytarget.RecordEnv) == "1"
-	var py, driver string
-	var recorded []liveRecord
-	if record {
-		py = pytarget.Python(t)
-		var err error
-		driver, err = filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit", "tests", "go_box.py"))
-		if err != nil {
-			t.Fatal(err)
-		}
-	} else {
-		recorded = readLiveGolden(t)
-	}
+	recorded := readLiveGolden(t)
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	refused := ln.Addr().String()
 	ln.Close()
-	recs := make([]liveRecord, len(liveCases))
 	for i, lc := range liveCases {
 		t.Run(lc.name, func(t *testing.T) {
 			answers := &answerLog{}
@@ -166,16 +147,10 @@ func TestLiveDifferential(t *testing.T) {
 			cfgObj := mustObject(t, cfg)
 			cfgObj.Set("url", url)
 			spec, _ := pyjson.Marshal(obj("client", cfgObj, "ops", mustParse(t, lc.ops)), pyjson.Options{})
-			want := liveRecord{Name: lc.name, Spec: alias(string(spec))}
-			if record {
-				want.Stdout, want.Requests = runLivePython(t, py, driver, spec, st, alias)
-				want.Answers = answers.take(lc.delay, alias)
-			} else if i >= len(recorded) || recorded[i].Name != want.Name || recorded[i].Spec != want.Spec {
+			if i >= len(recorded) || recorded[i].Name != lc.name || recorded[i].Spec != alias(string(spec)) {
 				t.Fatalf("golden %s is stale: case %d is not %q with this spec; %s", liveGolden, i+1, lc.name, liveHint)
-			} else {
-				want = recorded[i]
 			}
-			recs[i] = want
+			want := recorded[i]
 			var got []string
 			if c, err := clientFrom(cfgObj, url); err != nil {
 				line, _ := pyjson.Marshal(obj("error", describe(err)), pyjson.Options{})
@@ -195,21 +170,18 @@ func TestLiveDifferential(t *testing.T) {
 			}
 		})
 	}
-	if !record && len(recorded) != len(liveCases) {
+	if len(recorded) != len(liveCases) {
 		t.Errorf("golden %s is stale: %d recorded cases, the test has %d; %s", liveGolden, len(recorded), len(liveCases), liveHint)
-	}
-	if record {
-		t.Cleanup(func() { writeLiveGolden(t, recs) })
 	}
 }
 
 // liveGolden holds one liveRecord per liveCase, in order, one JSON object per line.
 const liveGolden = "testdata/live.golden.jsonl"
 
-var liveHint = "re-record with " + pytarget.RecordEnv + "=1 and CPython " + pytarget.Minor
+const liveHint = "the golden is frozen (the Python BoxClient was removed in S17): restore it"
 
-// liveRecord is what Python did for one case: the spec sent to go_box.py --live (to catch a
-// case edited after recording), the lines it printed and the requests the station saw.
+// liveRecord is what Python did for one case: the spec it was sent (to catch a case edited
+// after recording), the lines it printed and the requests the station saw.
 type liveRecord struct {
 	Name     string        `json:"name"`
 	Spec     string        `json:"spec"`
@@ -282,39 +254,6 @@ func liveRequests(reqs []seen, alias func(string) string) []liveRequest {
 	return out
 }
 
-// runLivePython runs one case through go_box.py --live and returns, as recorded, what it printed
-// and what the station saw; the station's log is then cleared for the Go run.
-func runLivePython(t *testing.T, py, driver string, spec []byte, st *scriptedStation, alias func(string) string) ([]string, []liveRequest) {
-	t.Helper()
-	cmd := exec.Command(py, "-I", driver, "--live")
-	cmd.Stdin = strings.NewReader(string(spec))
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("python3 driver: %v", err)
-	}
-	lines := []string{}
-	sc := bufio.NewScanner(strings.NewReader(string(out)))
-	sc.Buffer(nil, 1<<24)
-	for sc.Scan() {
-		lines = append(lines, alias(sc.Text()))
-	}
-	reqs := liveRequests(st.requests(), alias)
-	st.mu.Lock()
-	st.seen = nil
-	st.mu.Unlock()
-	text := string(out)
-	for _, r := range reqs {
-		text += r.Path + r.Body
-		for _, v := range r.Headers {
-			text += v
-		}
-	}
-	if !utf8.ValidString(text) {
-		t.Fatalf("Python's output or requests are not UTF-8, a JSON golden cannot hold them byte for byte")
-	}
-	return lines, reqs
-}
-
 func readLiveGolden(t *testing.T) []liveRecord {
 	t.Helper()
 	data, err := os.ReadFile(liveGolden)
@@ -334,30 +273,6 @@ func readLiveGolden(t *testing.T) []liveRecord {
 			t.Fatalf("golden %s: record %d: %v", liveGolden, len(recs)+1, err)
 		}
 		recs = append(recs, r)
-	}
-}
-
-// writeLiveGolden saves recs unless a case failed or the test skipped. encoding/json sorts the
-// header keys, so a re-recording is byte-identical.
-func writeLiveGolden(t *testing.T, recs []liveRecord) {
-	if t.Failed() || t.Skipped() {
-		return
-	}
-	for i, r := range recs {
-		if r.Name == "" { // a -run filter left this case out: writing would drop its record
-			t.Fatalf("golden %s not written: case %d (%q) did not run; record every case", liveGolden, i+1, liveCases[i].name)
-		}
-	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	for _, r := range recs {
-		if err := enc.Encode(r); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := os.WriteFile(liveGolden, buf.Bytes(), 0o644); err != nil {
-		t.Fatal(err)
 	}
 }
 

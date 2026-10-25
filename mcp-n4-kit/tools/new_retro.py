@@ -7,30 +7,61 @@ the INDEX row as `pending`. Proposes only: it never edits the kit and never stag
 GitHub issues (do that by hand). Idempotent: an existing retro is never overwritten
 without `--force`. `--dry-run` prints the retro and writes nothing.
 
-Exit codes: 0 ok, 2 usage, 3 refused (exists without --force, bad input, no INDEX).
-Importing this module only prepends the kit directory to `sys.path` (so `mcp_n4` resolves);
-it reads and writes no files. Both outputs are written atomically (temp file + rename).
+The draft comes from the Go binary `retro-draft` (go/cmd/mcp-n4/retro-draft, the Go server's
+own drafting code): `$MCP_N4_RETRO_DRAFT_BIN`, else `go/bin/retro-draft` at the repository root.
+
+Exit codes: 0 ok, 2 usage or no retro-draft binary, 3 refused (exists without --force, bad
+input, no INDEX). Importing this module reads and writes no files. Both outputs are written
+atomically (temp file + rename).
 """
 import argparse
 import datetime
+import json
 import os
 import re
 import stat
+import subprocess
 import sys
 import tempfile
 
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, KIT_DIR)
-
-from mcp_n4 import retro  # noqa: E402
-
+REPO_DIR = os.path.dirname(KIT_DIR)
 DEFAULT_OUT_DIR = os.path.join(KIT_DIR, "retros")
+DEFAULT_BINARY = os.path.join(REPO_DIR, "go", "bin", "retro-draft")
+BINARY_ENV = "MCP_N4_RETRO_DRAFT_BIN"
 _STATION = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 class Refused(Exception):
     pass
+
+
+class NoBinary(Exception):
+    pass
+
+
+def resolve_binary(env=os.environ):
+    """The retro-draft binary: $MCP_N4_RETRO_DRAFT_BIN, else go/bin/retro-draft."""
+    path = env.get(BINARY_ENV) or DEFAULT_BINARY
+    if not (os.path.isfile(path) and os.access(path, os.X_OK)):
+        raise NoBinary("no retro-draft executable at %s: build it (cd go && go build -o bin/ "
+                       "./cmd/mcp-n4/retro-draft) or set %s" % (path, BINARY_ENV))
+    return path
+
+
+def draft(state_dir, station, date, since):
+    """`(markdown, deltas)` from the Go drafter; its refusal (a bad --since) is `Refused`."""
+    argv = [resolve_binary(), "--state-dir", state_dir, "--station", station, "--date", date]
+    if since is not None:
+        argv += ["--since", since]
+    proc = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8")
+    if proc.returncode == 3:
+        raise Refused(proc.stderr.strip().removeprefix("retro-draft: "))
+    if proc.returncode != 0:
+        raise RuntimeError("retro-draft exited %d: %s" % (proc.returncode, proc.stderr.strip()))
+    out = json.loads(proc.stdout)
+    return out["markdown"], out["deltas"]
 
 
 def parse_args(argv=None):
@@ -110,15 +141,11 @@ def run(args, out):
         datetime.date.fromisoformat(date)
     except ValueError:
         raise Refused("--date must be a real calendar date, YYYY-MM-DD") from None
-    try:
-        result = retro.draft(args.state_dir, station=args.station, date=date, since=args.since)
-    except ValueError as exc:
-        raise Refused(str(exc))
-    deltas = retro.count_deltas(result["markdown"])
+    markdown, deltas = draft(args.state_dir, args.station, date, args.since)
     name = "%s-%s-session.md" % (date, args.station)
     row = "| %s | %s | %s | pending | %d |" % (name, args.station, date, deltas)
     if args.dry_run:
-        out.write(result["markdown"] + "\nINDEX row: %s\n" % row)
+        out.write(markdown + "\nINDEX row: %s\n" % row)
         return
     path, index = os.path.join(args.out_dir, name), os.path.join(args.out_dir, "INDEX.md")
     if not os.path.isfile(index):
@@ -127,7 +154,7 @@ def run(args, out):
         raise Refused("%s already exists: pass --force to rewrite it" % path)
     with open(index, encoding="utf-8") as fh:
         new_index = _index_rows(fh.read(), name, row)
-    _atomic_write(path, result["markdown"])
+    _atomic_write(path, markdown)
     _atomic_write(index, new_index)
     out.write("retro  %s  written (%d delta(s), pending)\n" % (path, deltas))
 
@@ -140,6 +167,9 @@ def main(argv=None, out=None):
     except Refused as exc:
         print("new_retro: %s" % exc, file=sys.stderr)
         return 3
+    except NoBinary as exc:
+        print("new_retro: %s" % exc, file=sys.stderr)
+        return 2
     return 0
 
 

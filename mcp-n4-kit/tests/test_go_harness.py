@@ -1,8 +1,7 @@
-"""The Go-port harness itself: impl switch, stdio adapter and FakeStation frame recorder.
+"""The black-box harness itself: the stdio adapter and the FakeStation frame recorder.
 
-These tests run under both implementations: they pin the harness, not the server. The stdio
-adapter is exercised against the Python server launched as a subprocess, so no Go binary is
-needed (docs/go-port-plan.md, slice S0).
+These tests pin the harness, not the server; the Go binary is the process they drive
+(docs/go-port-plan.md, slices S0 and S17).
 """
 import json
 import os
@@ -12,14 +11,10 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import go_box  # noqa: E402
-import go_registry  # noqa: E402
 import go_server  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
-from mcp_n4 import server, tools_read, tools_write  # noqa: E402
 
 PASSWORD = "harness-pw-4242"
-PYTHON_STDIO = [sys.executable, "-m", "mcp_n4.server"]
 
 
 def rpc(method, params=None, id_=1):
@@ -31,44 +26,28 @@ def rpc(method, params=None, id_=1):
     return msg
 
 
-class TestImplSwitch(unittest.TestCase):
-    def test_go_is_the_default_and_python_is_the_fallback(self):
-        self.assertEqual(go_server.resolve_impl({}), "go")
-        self.assertEqual(go_server.resolve_impl({"MCP_N4_IMPL": ""}), "go")
-        self.assertEqual(go_server.resolve_impl({"MCP_N4_IMPL": "python"}), "python")
-
-    def test_python_builds_the_in_process_server(self):
-        srv = go_server.make_server(impl="python")
-        self.addCleanup(go_server.close_server, srv)
-        self.assertIsInstance(srv, server.Server)
-
-    def test_an_unknown_impl_is_refused_with_the_variable_name(self):
-        with self.assertRaises(ValueError) as cm:
-            go_server.make_server(impl="rust")
-        self.assertIn("MCP_N4_IMPL", str(cm.exception))
-
-    def test_go_without_a_binary_fails_loudly_instead_of_passing(self):
-        missing = os.path.join(tempfile.gettempdir(), "no-such-dir-4242", "mcp-n4")
+class TestBinaryResolution(unittest.TestCase):
+    def test_a_missing_binary_fails_loudly_instead_of_passing(self):
         with self.assertRaises(go_server.GoBinaryMissing) as cm:
-            go_server.make_server(impl="go", binary=missing)
-        text = str(cm.exception)
-        self.assertIn(missing, text)
-        self.assertIn("MCP_N4_IMPL=go", text)
-        self.assertIn("MCP_N4_GO_BIN", text)
-        # Not a ValueError: a test expecting a startup refusal must not swallow it.
-        self.assertNotIsInstance(cm.exception, ValueError)
+            go_server.make_server(binary="/no/such/mcp-n4")
+        self.assertIn("/no/such/mcp-n4", str(cm.exception))
+        self.assertIn("go build -o bin/ ./cmd/mcp-n4", str(cm.exception))
+
+    def test_the_default_binary_is_go_bin_at_the_repository_root(self):
+        self.assertEqual(go_server.DEFAULT_BINARY,
+                         os.path.join(go_server.REPO_DIR, "go", "bin", "mcp-n4"))
 
     def test_options_with_no_command_line_form_are_refused(self):
         with self.assertRaises(TypeError) as cm:
-            go_server.GoServer(command=PYTHON_STDIO, client_factory=object)
+            go_server.GoServer(client_factory=object)
         self.assertIn("client_factory", str(cm.exception))
 
 
 class TestGoServerOverStdio(unittest.TestCase):
-    """The adapter speaks the wire protocol; the Python server stands in for the binary."""
+    """The adapter speaks the wire protocol to the binary."""
 
     def start(self, **kw):
-        srv = go_server.GoServer(command=PYTHON_STDIO, cwd=go_server.KIT_DIR, **kw)
+        srv = go_server.GoServer(**kw)
         self.addCleanup(srv.close)
         return srv
 
@@ -91,8 +70,7 @@ class TestGoServerOverStdio(unittest.TestCase):
 
     def test_a_startup_refusal_is_a_value_error_carrying_stderr(self):
         with self.assertRaises(ValueError) as cm:
-            go_server.GoServer(command=PYTHON_STDIO, cwd=go_server.KIT_DIR,
-                               stations={"S": "http://127.0.0.1:9"})
+            go_server.GoServer(stations={"S": "http://127.0.0.1:9"})
         self.assertIn("https", str(cm.exception))
 
     def test_close_is_idempotent_and_a_closed_server_refuses_calls(self):
@@ -114,17 +92,17 @@ class TestGoServerOverStdio(unittest.TestCase):
 
 class TestFrameRecorder(unittest.TestCase):
     def connect(self, fake):
-        srv = server.Server(allow_http=True, stations={"FakeStation": fake.url},
-                            env={"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": PASSWORD})
-        self.addCleanup(srv.ctx.close)
-        res = srv.dispatch(rpc("tools/call", {"name": "n4_connect",
-                                              "arguments": {"station": "FakeStation"}}))
-        self.assertFalse(res["result"].get("isError", False), res)
+        srv = go_server.make_server(allow_http=True, stations={"FakeStation": fake.url},
+                                    env={"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": PASSWORD})
+        self.addCleanup(go_server.close_server, srv)
+        return srv.dispatch(rpc("tools/call", {"name": "n4_connect",
+                                               "arguments": {"station": "FakeStation"}}))
 
     def test_recording_is_off_by_default(self):
         fake = FakeStation(password=PASSWORD).start()
         self.addCleanup(fake.stop)
-        self.connect(fake)
+        res = self.connect(fake)
+        self.assertFalse(res["result"].get("isError", False), res)
         self.assertGreater(fake.requests, 0)
         self.assertIsNone(fake.frames)
 
@@ -144,11 +122,7 @@ class TestFrameRecorder(unittest.TestCase):
         self.addCleanup(fake.stop)
         fake.record()
         fake.hook = lambda frame: (503, b"busy", {})
-        srv = server.Server(allow_http=True, stations={"FakeStation": fake.url},
-                            env={"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": PASSWORD})
-        self.addCleanup(srv.ctx.close)
-        srv.dispatch(rpc("tools/call", {"name": "n4_connect",
-                                        "arguments": {"station": "FakeStation"}}))
+        self.connect(fake)
         self.assertEqual((fake.frames[0]["status"], fake.frames[0]["reply"]), (503, "busy"))
 
     def test_dump_frames_writes_one_json_line_per_frame(self):
@@ -162,166 +136,6 @@ class TestFrameRecorder(unittest.TestCase):
             with open(path, encoding="utf-8") as fh:
                 rows = [json.loads(line) for line in fh]
         self.assertEqual(rows, fake.frames)
-
-
-class TestSkipInventory(unittest.TestCase):
-    """The per-file inventory in docs/go-port-plan.md matches the @go_twin markers."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.ids = go_server.discovered_ids()
-
-    def test_every_marked_test_exists_and_names_a_go_twin(self):
-        ids = set(self.ids)
-        self.assertTrue(go_server.REGISTRY)
-        for module, cls_name, name, twin, category in go_server.REGISTRY:
-            self.assertIn("%s.%s.%s" % (module, cls_name, name), ids)
-            self.assertRegex(twin, r"^[a-z]+\.Test[A-Za-z0-9]+$")
-            self.assertIn(category, go_server.CATEGORIES)
-
-    def test_the_plan_doc_publishes_the_current_inventory(self):
-        with open(go_server.PLAN_DOC, encoding="utf-8") as fh:
-            doc = fh.read()
-        begin = doc.index(go_server.INVENTORY_BEGIN) + len(go_server.INVENTORY_BEGIN)
-        published = doc[begin:doc.index(go_server.INVENTORY_END)].strip()
-        self.assertEqual(published, go_server.inventory_table(self.ids),
-                         "regenerate it with: python3 mcp-n4-kit/tests/go_server.py")
-
-    def test_an_unknown_category_is_refused(self):
-        with self.assertRaises(ValueError):
-            go_server.go_twin("box", "flaky")
-
-    def test_every_go_twin_resolves_to_a_go_test_or_is_listed_debt(self):
-        unresolved = set(go_server.unresolved_twins())
-        self.assertEqual(sorted(unresolved - go_server.TWIN_DEBT), [],
-                         "these go_twin markers name no Go test: fix the twin or add the test")
-        self.assertEqual(sorted(go_server.TWIN_DEBT - unresolved), [],
-                         "these TWIN_DEBT entries resolve or are gone: delete them")
-        self.assertLessEqual(len(go_server.TWIN_DEBT), go_server.TWIN_DEBT_CEILING)
-
-    def test_every_python_only_marker_says_why_and_is_neither_twin_nor_debt(self):
-        self.assertTrue(go_server.PYTHON_ONLY)
-        for test_id, reason in go_server.PYTHON_ONLY.items():
-            self.assertIn(test_id, self.ids)
-            self.assertTrue(reason.strip(), test_id)
-            self.assertNotIn(test_id, go_server.TWIN_DEBT)
-        self.assertFalse(set(go_server.PYTHON_ONLY) & set(go_server.unresolved_twins()))
-
-
-class TestTwinResolution(unittest.TestCase):
-    """A twin resolves only to a real `func TestX` of its package, or a box replay scenario."""
-
-    TESTS = {"plan": {"TestRealOne"}, "box": {"TestBoxed"}}
-
-    def resolves(self, twin, name="test_x", ports=()):
-        return go_server.twin_resolves(("m", "C", name, twin, "unit"), self.TESTS, set(ports))
-
-    def test_a_real_go_test_of_the_named_package_resolves(self):
-        self.assertTrue(self.resolves("plan.TestRealOne"))
-        self.assertTrue(self.resolves("box.TestBoxed"))
-
-    def test_a_missing_name_another_package_or_other_case_does_not(self):
-        for twin in ("plan.TestMissing", "writeops.TestRealOne", "plan.TestRealone"):
-            self.assertFalse(self.resolves(twin), twin)
-
-    def test_only_a_box_twin_resolves_through_a_replay_scenario(self):
-        self.assertTrue(self.resolves("box.TestX", ports={"test_x"}))
-        self.assertFalse(self.resolves("box.TestX", ports={"test_y"}))
-        self.assertFalse(self.resolves("plan.TestX", ports={"test_x"}))
-
-    def test_the_scan_reads_func_test_declarations_of_each_package(self):
-        with tempfile.TemporaryDirectory() as root:
-            os.mkdir(os.path.join(root, "pkg"))
-            with open(os.path.join(root, "pkg", "a_test.go"), "w", encoding="utf-8") as fh:
-                fh.write("package pkg\n\nfunc TestOne(t *testing.T) {}\n"
-                         "func helper(t *testing.T) {}\n// func TestCommented(t *testing.T)\n")
-            with open(os.path.join(root, "pkg", "a.go"), "w", encoding="utf-8") as fh:
-                fh.write("func TestNotATestFile(t *testing.T) {}\n")
-            self.assertEqual(go_server.go_tests(root), {"pkg": {"TestOne"}})
-
-    def test_python_only_needs_a_reason_and_no_twin(self):
-        for kw in ({"python_only": ""}, {"python_only": "  "}, {"python_only": 5},
-                   {"python_only": "why", "twin": "plan.TestX"}):
-            with self.assertRaises(ValueError, msg=repr(kw)):
-                go_server.go_twin("plan", "unit", **kw)
-
-    def test_an_explicit_twin_is_validated_and_names_one_test_only(self):
-        with self.assertRaises(ValueError):
-            go_server.go_twin("plan", "unit", twin="plan.notATest")
-        with self.assertRaises(ValueError):
-            go_server.go_twin("plan", "unit", twin="plan.TestX")(type("C", (), {}))
-
-
-class TestUnportedSkip(unittest.TestCase):
-    """Only the exact unported tool error skips; every other error still fails the test."""
-
-    @staticmethod
-    def tool_error(text):
-        return {"jsonrpc": "2.0", "id": 1,
-                "result": {"content": [{"type": "text", "text": text}], "isError": True}}
-
-    def test_the_unported_tool_error_skips(self):
-        with self.assertRaises(unittest.SkipTest):
-            go_server.skip_if_unported(self.tool_error("n4_connect " + go_server.UNPORTED))
-
-    def test_other_replies_do_not_skip(self):
-        for reply in (self.tool_error("not connected: call n4_connect first"),
-                      self.tool_error(go_server.UNPORTED + " and more"),
-                      {"jsonrpc": "2.0", "id": 1, "error": {"code": -32602,
-                                                            "message": go_server.UNPORTED}},
-                      {"jsonrpc": "2.0", "id": 1, "result": {"structuredContent": {}}},
-                      None, [1]):
-            go_server.skip_if_unported(reply)  # no SkipTest
-
-    def test_an_unported_start_refusal_skips(self):
-        refuse = [sys.executable, "-c", "import sys; sys.stderr.write('mcp_n4.server: "
-                  "--allow-writes %s\\n'); sys.exit(2)" % go_server.UNPORTED]
-        with self.assertRaises(unittest.SkipTest):
-            go_server.GoServer(command=refuse)
-
-
-class TestGoRegistry(unittest.TestCase):
-    """go/internal/mcpn4/registry/registry.json is the Python surface, byte for byte."""
-
-    def test_the_go_registry_matches_the_python_tables(self):
-        with open(go_registry.REGISTRY_FILE, encoding="ascii", newline="") as fh:
-            published = fh.read()
-        self.assertEqual(published, go_registry.registry_text(),
-                         "regenerate it with: python3 mcp-n4-kit/tests/go_registry.py --write")
-
-    def test_it_lists_every_tool_with_its_session_need(self):
-        data = go_registry.registry()
-        self.assertEqual([t["name"] for t in data["write_tools"]],
-                         [t.name for t in tools_write.TOOLS])
-        self.assertEqual(set(t["name"] for t in data["write_tools"]), tools_write.NAMES)
-        self.assertEqual({t["name"]: t["needs_session"] for t in data["read_tools"]},
-                         {t.name: t.needs_session for t in tools_read.TOOLS})
-
-    def test_the_usage_is_the_one_a_flag_error_prints(self):
-        data = go_registry.registry()
-        self.assertTrue(data["cli"]["usage"].startswith("usage: mcp_n4.server [-h]"))
-        self.assertTrue(data["cli"]["help"].startswith(data["cli"]["usage"]))
-
-
-class TestGoBoxReplay(unittest.TestCase):
-    """go/internal/mcpn4/box/testdata/replay.jsonl is what the Python BoxClient does today."""
-
-    def test_the_replay_corpus_matches_the_python_client(self):
-        with open(go_box.REPLAY_FILE, encoding="ascii", newline="") as fh:
-            published = fh.read()
-        self.maxDiff = 2000
-        self.assertEqual(published, go_box.replay_text(),
-                         "regenerate it with: python3 mcp-n4-kit/tests/go_box.py --write")
-
-    def test_every_scenario_ports_a_box_test_or_says_it_pins_more(self):
-        import test_box
-        names = {name for cls in vars(test_box).values() if isinstance(cls, type)
-                 for name in vars(cls) if name.startswith("test")}
-        for scenario in go_box.SCENARIOS:
-            ports = scenario.get("ports", "test_" + scenario["name"])
-            if ports is not None:
-                self.assertIn(ports, names, scenario["name"])
-        self.assertEqual(len({s["name"] for s in go_box.SCENARIOS}), len(go_box.SCENARIOS))
 
 
 if __name__ == "__main__":

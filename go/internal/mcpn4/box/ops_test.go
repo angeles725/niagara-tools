@@ -7,8 +7,9 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// This file is the Go side of the op language of mcp-n4-kit/tests/go_box.py: the same ops, the
-// same result shapes, encoded with pyjson so a result line equals json.dumps of Python's.
+// This file is the Go side of the op language of mcp-n4-kit/tests/go_box.py (removed in S17; its
+// recordings stay frozen in testdata): the same ops, the same result shapes, encoded with pyjson
+// so a result line equals json.dumps of Python's.
 
 func field(o *pyjson.Object, k string) any {
 	v, _ := o.Get(k)

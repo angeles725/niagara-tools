@@ -8,6 +8,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+### Removed — the Python mcp-n4 server
+
+- `mcp-n4-kit/mcp_n4/` (the Python server, `python3 -m mcp_n4.server`) is removed; the Go binary
+  `go/bin/mcp-n4` (`cd go && go build -o bin/ ./cmd/mcp-n4`), the default since v0.32.0, is the only
+  mcp-n4 server. **Migration:** register `go/bin/mcp-n4` with the same flags in `.mcp.json`;
+  `MCP_N4_IMPL=python` and `tools/live_smoke.py --impl python` no longer exist.
+- `tools/new_retro.py` keeps its flags and drafts through the new `go/bin/retro-draft`
+  (`cd go && go build -o bin/ ./cmd/mcp-n4/retro-draft`, or `MCP_N4_RETRO_DRAFT_BIN`).
+- The Python-only tests and the Go-port harness that compared the two servers are gone; the Go
+  differentials replay frozen goldens and no Go test needs Python
+  (mcp-n4-kit/docs/go-port-plan.md section 23).
+
 ---
 
 ## [v0.33.0] - 2026-10-25

@@ -11,7 +11,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
-// fixtureDir is the state dir the Python server wrote (tests/fixtures/journal/generate.py).
+// fixtureDir is the state dir the Python server wrote (frozen: its generator went with the Python
+// server in S17).
 var fixtureDir = filepath.Join("..", "..", "..", "..", "mcp-n4-kit", "tests", "fixtures", "journal", "python-written")
 
 // fixtureBatchIDs are the batch ids of the Python-written journal, in file order.
@@ -27,7 +28,7 @@ func fixtureBatchIDs(t *testing.T) []any {
 	return out
 }
 
-// The batch ids the Python server journaled (tests/fixtures/journal/generate.py).
+// The batch ids the Python server journaled into fixtureDir.
 const (
 	pyCreate     = "46aaed85dca34bc2ad345108c991b481"
 	pyRollback   = "ce96d633fab8445dba"

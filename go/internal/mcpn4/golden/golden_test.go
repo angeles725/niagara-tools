@@ -7,8 +7,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // fakeT records how a replay ends: Fatalf and Skipf stop the goroutine as testing does.
@@ -39,7 +37,6 @@ func (f *fakeT) Fatal(a ...any) { f.Fatalf("%s", fmt.Sprint(a...)) }
 // replay runs calls against a golden holding recorded in the scratch package dir and returns
 // the outcome: "pass", "fail: ..." or "skip: ...".
 func replay(t *testing.T, recorded string, calls func(g *Golden)) string {
-	t.Setenv(pytarget.RecordEnv, "")
 	dir := t.TempDir()
 	t.Chdir(dir)
 	if recorded != "" {
@@ -85,7 +82,7 @@ func TestReplay(t *testing.T) {
 		calls                func(g *Golden)
 	}{
 		{"recorded calls replay in order", rec, "pass", both},
-		{"missing golden fails with the re-record hint", "", "fail: golden testdata/x.golden.jsonl missing: re-record with MCP_N4_RECORD=1", both},
+		{"missing golden fails with the re-record hint", "", "fail: golden testdata/x.golden.jsonl missing: the goldens are frozen", both},
 		{"changed cases are stale", rec, "fail: golden testdata/x.golden.jsonl is stale: call 1 sends other cases (first difference at byte 2)",
 			func(g *Golden) { g.Run("s", []byte("inX")) }},
 		{"changed script is stale", rec, "fail: golden testdata/x.golden.jsonl is stale: call 1 runs a changed script",
