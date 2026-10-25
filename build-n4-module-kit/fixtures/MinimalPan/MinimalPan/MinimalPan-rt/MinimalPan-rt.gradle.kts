@@ -51,6 +51,7 @@ dependencies {
 
   // Test Niagara module dependencies
   moduleTestImplementation(":test-wb")
+  moduleTestImplementation("junit:junit:4.13.2")
 }
 
 tasks.named<Bajadoc>("bajadoc") {
