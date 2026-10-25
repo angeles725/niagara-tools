@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-25 -->
+<!-- last-change-note: quality round 10: go_tool_bin walks only what go build reads, embedded assets included -->
+log: 2026-10-25 · quality round 10 → `go/go-tool.sh` `go_tool_bin` treats as a source every file under `go/` except `bin/`, `testdata/` and `*_test.go`: an edited test file or fixture no longer rebuilds a binary, and an edited `//go:embed` asset (registry.json, usage.txt, unicode.txt, retro.template.md, b795-795.4.csv) now does, which closes an existing staleness gap. The walk is about twice as fast. `tests/go-tool.bats` GT10-GT14 (GT14 fails if a non-test file embeds from `testdata/`). A prebuilt-stamp design was measured and dropped: a fail-safe check stats as many files as the walk. Retro retros/2026-10-25-r10-go-tool-walk-scope.md (pending).
