@@ -296,7 +296,9 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   root is not a git worktree: cannot verify it`, exit 3, before any copy). The runner takes `git status
   --porcelain=v1 -z --untracked-files=all` of it, with a sha256 of every listed file (so a rewrite of a file that
   was already dirty counts), before the copy and again after cleanup; any new, modified, deleted or rewritten path
-  is FAIL (`gradle root changed by the build: <paths>`, 10 names, then "and N more"), else `gradle root unchanged
+  is FAIL (`gradle root changed by the build: <paths>`, 10 names, then "and N more"; when a `*/module-include.xml`
+  changed, the row goes on to name the plugin-version trap below, points at `--restore-gradle-root` and this note,
+  and says whether the restore checked the file out `[ev: retro r10-rnt-d5-trap-row Δ1]`), else `gradle root unchanged
   (<n> tracked changes before, same after)`. `--restore-gradle-root` (opt-in) then checks out (`git
   --literal-pathspecs checkout -- <paths>`) only the files that were clean before and that the build modified or
   deleted, never a file already dirty, never deletes an untracked file (it lists the ones the build created),
