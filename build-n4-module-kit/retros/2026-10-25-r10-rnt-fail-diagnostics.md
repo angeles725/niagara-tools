@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-25 · kit · r10-rnt-fail-diagnostics
@@ -37,3 +37,10 @@ boot was run:
 ## Lessons
 - A cleanup that deletes the scratch dir must first copy out what explains a failure; otherwise the verdict survives and its cause does not.
 - Write the diagnostic log last, from evidence read before the delete, so it carries the final exit code and every cleanup row.
+
+## Fold
+- The run log is code already shipped in the PR that wrote this retro (`go/internal/niagaratest/diagnostics.go`); not re-implemented.
+- Δ1 was cited at merge in `types/moduleTest.md` § Running from WSL (the run-log bullet). No doctrine text added; both lessons are in that bullet. Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-5`; log in `ledger.d/2026-10-25-r10-fold-tail5.md`) — Δ1 in `types/moduleTest.md` § Running from WSL.
