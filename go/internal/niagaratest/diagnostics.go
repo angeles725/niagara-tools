@@ -28,6 +28,9 @@ const (
 	diagMaxEntries  = 200
 )
 
+// evidenceCap bounds each file a failed run keeps beside its log: the testng-results.xml copy and the traces.
+const evidenceCap = 4 << 20
+
 // lineRing is an io.Writer that keeps the last max lines written to it, each cut at lineCap bytes; CR is dropped.
 type lineRing struct {
 	mu           sync.Mutex
@@ -138,6 +141,7 @@ func (s *skipFirstLine) Read(p []byte) (int, error) {
 // evidence is what the run log takes from the scratch dir, read before cleanup deletes it.
 type evidence struct {
 	stderr, stdout, listing []string
+	testng                  testngEvidence // kept beside the log on a failed run only
 }
 
 // gatherEvidence reads the tails of test.exe's streams and lists its -output: dir, every read bounded.
@@ -158,6 +162,7 @@ func gatherEvidence(p *plan) evidence {
 			*f.dst = append([]string{fmt.Sprintf("(last %d of %d lines)", len(lines), total)}, lines...)
 		}
 	}
+	ev.testng = gatherTestNG(p.sub("out/testng/testng-results.xml"))
 	root := p.sub("out/testng")
 	if !isDir(root) {
 		ev.listing = []string{"(no -output: dir)"}
@@ -270,24 +275,37 @@ func (h host) writeRunLog(p *plan, ev evidence, code int, s cli.Stdio) bool {
 	section("test.exe stderr", ev.stderr)
 	section("test.exe stdout", ev.stdout)
 	section("test.exe -output: dir", ev.listing)
+	path, err := createLog(p.logDir, p.module)
+	if err != nil {
+		row(s, "FAIL", "diagnostics: cannot write the run log in "+p.logDir+": "+err.Error())
+		return false
+	}
+	red, kept := h.redactorFor(p), true
+	if code != exitPass {
+		rows, kerr := keepTestNG(ev.testng, strings.TrimSuffix(path.name, ".log"), red)
+		if kerr != nil {
+			rows, kept = append(rows, "cannot keep the testng evidence: "+kerr.Error()), false
+		}
+		section("kept evidence", rows)
+	}
 	name := exitNames[code]
 	if name == "" {
 		name = "unknown"
 	}
 	fmt.Fprintf(&b, "\nexit: %d (%s)\n", code, name)
-	path, err := createLog(p.logDir, p.module)
-	if err == nil {
-		_, err = path.f.WriteString(h.redactorFor(p).apply(b.String()))
-		if cerr := path.f.Close(); err == nil {
-			err = cerr
-		}
+	_, err = path.f.WriteString(red.apply(b.String()))
+	if cerr := path.f.Close(); err == nil {
+		err = cerr
 	}
 	if err != nil {
 		row(s, "FAIL", "diagnostics: cannot write the run log in "+p.logDir+": "+err.Error())
 		return false
 	}
 	row(s, status, label+": "+path.name)
-	return true
+	if !kept {
+		row(s, "FAIL", "diagnostics: cannot keep the testng evidence beside "+path.name)
+	}
+	return kept
 }
 
 type logFile struct {

@@ -78,6 +78,9 @@
 # $XDG_STATE_HOME/run-niagara-test, else ~/.local/state/run-niagara-test, 0700): `diagnostics kept: <path>`. The
 # scratch dir and its copy read <scratch> and <copy> (Windows and /mnt forms, any case), %USERPROFILE% and $HOME
 # <you>; install paths stay. A green run writes one only with --log-dir or --keep-home. Attach the log, not the home.
+# A failed run also keeps <stem>.testng-results.xml (a copy) and <stem>.traces.txt (the whole full-stacktrace of
+# every FAIL test-method) beside the log, redacted the same way, each cut at a line end under 4 MiB with a
+# `(truncated: ...)` row; a missing or unreadable results file is a `testng-results.xml unavailable` row instead.
 #
 # Implementation: go/internal/niagaratest (goldens in its testdata/, hand-written: no bash tool to record from).
 # go/go-tool.sh `go_tool_bin` builds go/bin/run-niagara-test when it is missing or older than a Go source, then

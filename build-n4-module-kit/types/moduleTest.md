@@ -315,6 +315,14 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   `--log-dir` is given or `--keep-home` is on (`run log: <path>`); `--keep-home` keeps the dir as before and
   writes the log too. A run refused or failing before its scratch dir exists prints its reason only
   `[ev: retro r10-rnt-fail-diagnostics Δ1]`.
+- **A failed run keeps testng-results.xml and every failure's whole trace beside its log.** The 200-line stderr
+  tail can start inside a long stack trace, so on exit 1, 3 or 4 the runner also reads `testng-results.xml` before
+  cleanup and writes, next to `<stem>.log`, `<stem>.testng-results.xml` (a copy) and `<stem>.traces.txt` (one
+  `== FAIL <class>.<method> ==` section per FAIL test-method, configuration methods marked `(config)`, holding its
+  `<full-stacktrace>` whole), both 0600 and redacted like the log. Each is cut at a line end under 4 MiB with a
+  `(truncated: ...)` row, so a cut never splits a path the redactor must see whole. A missing or unreadable results
+  file is a `testng-results.xml unavailable: <why>` row in the log's `kept evidence` section; a green run keeps
+  neither file `[ev: retro r10-rnt-fail-evidence Δ1]`.
 - **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13) and 7.6.22 (observed), `:<part>:compileModuleTestJava` appends every
   `@NiagaraType` test class to the PRODUCTION `<part>/module-include.xml`** (never to `moduleTest-include.xml`), and
   it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types (a
