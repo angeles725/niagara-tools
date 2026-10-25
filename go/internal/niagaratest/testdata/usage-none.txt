@@ -55,7 +55,10 @@ usage: run-niagara-test verdict [<log>|-]
            stdout lines of test.exe (each cut at 4 KiB), the -output: dir listing and the exit status, and a
            "diagnostics kept: <path>" row. The scratch dir and its home copy read <scratch> and <copy>, the
            %USERPROFILE% and the WSL home <you>; install paths stay. A green run writes one only with an
-           explicit --log-dir or --keep-home.
+           explicit --log-dir or --keep-home. A failed run also keeps, redacted the same way, beside the
+           log: <stem>.testng-results.xml (a copy) and <stem>.traces.txt (the whole full-stacktrace of every
+           FAIL test-method), each cut at a line end under 4 MiB with a "(truncated: ...)" row; a missing or
+           unreadable results file is a "testng-results.xml unavailable" row in the log instead.
 exit: verdict 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
       run 0 PASS, 1 FAIL, 2 usage or refused, 3 environment (cmd.exe, git, robocopy, gradle, cleanup), 4 timeout
 -- @kind --
