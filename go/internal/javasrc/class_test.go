@@ -48,6 +48,34 @@ func TestClassBody(t *testing.T) {
 	}
 }
 
+// TestAnnotated: an annotation among the modifiers before a type declaration, simple or qualified, with or
+// without arguments (nested annotations and braces included), marks it; one on an earlier member, in a
+// comment or in a string does not, and an annotation names itself only by its last identifier.
+func TestAnnotated(t *testing.T) {
+	for _, tc := range []struct {
+		name, src string
+		want      bool
+	}{
+		{"simple", "@NiagaraType\npublic class BA {}", true},
+		{"with arguments", "@NiagaraType(agent = @AgentOn(types = { \"a:B\" }))\n@NiagaraSingleton\npublic final class BA {}", true},
+		{"qualified, after another annotation", "@Deprecated public @javax.baja.nre.annotations.NiagaraType abstract class BA {}", true},
+		{"none", "public class BA {}", false},
+		{"other annotation", "@NiagaraSingleton\nclass BA {}", false},
+		{"on an earlier member", "@NiagaraType\nint x;\nclass BA {}", false},
+		{"in a comment or a string", "// @NiagaraType\nString s = \"@NiagaraType\";\nclass BA {}", false},
+		{"a prefix of the name", "@NiagaraTypeX\nclass BA {}", false},
+	} {
+		toks := toksOf(tc.src)
+		cs := Classes(toks)
+		if len(cs) != 1 {
+			t.Fatalf("%s: %d classes", tc.name, len(cs))
+		}
+		if got := Annotated(toks, cs[0], "NiagaraType"); got != tc.want {
+			t.Errorf("%s: Annotated = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
 // TestFields: the fields declared directly in a class body, with their modifiers, type and initializer;
 // methods, constructors, initializer blocks and nested types are not fields.
 func TestFields(t *testing.T) {

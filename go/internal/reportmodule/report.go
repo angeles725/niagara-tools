@@ -61,14 +61,18 @@ func (r *report) envFault(label, check, detail string) {
 
 // summary prints the --lint-only floor note (stderr) and the summary line, and returns the exit code:
 // env fault 3 over any FAIL 1 over INCOMPLETE 4, else 0. The verdict text can read ISSUES while the exit is 3.
+// A FAIL with a skipped floor check reads ISSUES (+INCOMPLETE): the bash printed ISSUES alone, hiding that the
+// floor was not run (retro r10-client-gate-retro Δ4).
 func (r *report) summary(artifacts int) int {
 	verdict := "CLEAN"
 	incomplete := r.floorSkip && !r.o.lintOnly
-	if incomplete {
-		verdict = "INCOMPLETE"
-	}
-	if r.hadFail {
+	switch {
+	case r.hadFail && incomplete:
+		verdict = "ISSUES (+INCOMPLETE)"
+	case r.hadFail:
 		verdict = "ISSUES"
+	case incomplete:
+		verdict = "INCOMPLETE"
 	}
 	if r.o.lintOnly && r.floorSkip {
 		fmt.Fprint(r.errw, "report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict\n")

@@ -76,5 +76,7 @@ Running that gate on every head exposed five things the kit does not say yet:
   naming in the repository's own docs and seed tables tells them apart, without a station.
 
 ## Owed
-- Δ1's lint rule and Δ4's summary change are code changes in `toolbelt/lint-structure.sh` /
-  `go/internal/lint` and `go/internal/reportmodule`; they need their own RED-first PRs.
+- Δ1 FOLDED (branch `feat/r10-lint-type-dup`): the `build-verify.md` § Raw gradle bullet, and as code the
+  `type-outside-region` FAIL sub-check of `toolbelt/lint-slotomatic-markers.sh`
+  (`go/internal/lint/rules/slotomaticmarkers`, not lint-structure: it reads the same region markers).
+- Δ4's summary change is a code change in `go/internal/reportmodule`; it needs its own RED-first PR.
