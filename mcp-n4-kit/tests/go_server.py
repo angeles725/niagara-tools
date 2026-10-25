@@ -358,11 +358,9 @@ def unresolved_twins():
 
 #: Markers whose twin resolves to nothing (docs/go-port-plan.md sections 19, 21 and 22). Frozen
 #: and checked both ways: an entry that starts to resolve or disappears must be deleted, and the
-#: list never grows past TWIN_DEBT_CEILING.
-TWIN_DEBT_CEILING = 1
-TWIN_DEBT = frozenset([
-    "test_server.TestRobustness.test_serve_exits_cleanly_on_keyboard_interrupt_and_closes",
-])
+#: list never grows past TWIN_DEBT_CEILING. Empty since S16d.
+TWIN_DEBT_CEILING = 0
+TWIN_DEBT = frozenset()
 
 
 INVENTORY_BEGIN = "<!-- go-skip-inventory:begin -->"
