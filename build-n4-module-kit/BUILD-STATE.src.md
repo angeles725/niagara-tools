@@ -203,7 +203,7 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.32.0                      # current repo VERSION (quality round 10 close, 2026-10-25)
+version: 0.32.1                      # current repo VERSION (mcp-n4 Go signal fix, 2026-10-25)
 last_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state
 open_issues:
 retro_required: true                 # GATED — deferred-lints close retro filed: retros/2026-10-03-deferred-lints-2026-10-03-close.md (5 deltas, pending)
