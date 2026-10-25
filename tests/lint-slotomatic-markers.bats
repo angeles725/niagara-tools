@@ -75,3 +75,27 @@ region() { local f="$1"; shift; { printf 'public class X extends BComponent\n{\n
   run "$SM" --strict "$BATS_TEST_TMPDIR/Mod-rt/src"
   [ "$status" -eq 1 ]
 }
+
+@test "SM7: a @NiagaraType class with a hand-written TYPE beside its region FAILs type-outside-region" {
+  { printf '@NiagaraType\npublic class BDemo extends BComponent\n{\n'
+    printf '%s\n' "$B" "$S" '  public Type getType() { return TYPE; }' \
+      '  public static final Type TYPE = Sys.loadType(BDemo.class);' "$E" \
+      '  public static final Type TYPE = Sys.loadType(BDemo.class);'
+    printf '}\n'; } > "$SRC/BDemo.java"
+  run "$SM" "$BATS_TEST_TMPDIR/Mod-rt/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  type-outside-region  $SRC/BDemo.java:9  hand-written TYPE outside the generated region of BDemo: "* ]]
+}
+
+@test "SM8: TYPE and getType() only inside the region, or a class with no region, are clean" {
+  { printf '@NiagaraType\npublic class BDemo extends BComponent\n{\n'
+    printf '%s\n' "$B" "$S" '  public Type getType() { return TYPE; }' \
+      '  public static final Type TYPE = Sys.loadType(BDemo.class);' "$E"
+    printf '}\n'; } > "$SRC/BDemo.java"
+  { printf '@NiagaraType\npublic class BLab extends BComponent\n{\n'
+    printf '%s\n' '  public static final Type TYPE = Sys.loadType(BLab.class);' '  public Type getType() { return TYPE; }'
+    printf '}\n'; } > "$SRC/BLab.java"
+  run "$SM" "$BATS_TEST_TMPDIR/Mod-rt/src"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

@@ -76,7 +76,8 @@ fuzz corpus:
 
 ## 3. Ordered slices (each ≤ ~400 lines)
 
-Until S16 the Go binary is opt-in only: the MCP config keeps launching Python. Before S10, Go
+Until S16 the Go binary was opt-in only: the MCP config kept launching Python. Since S16
+(section 20) Go is the default and Python the fallback for one release. Before S10, Go
 refused `--allow-writes` with the existing "not in this version" refusal; since S10 it starts
 with it and serves the write tools ported so far (section 14).
 
@@ -98,7 +99,7 @@ with it and serves the write tools ported so far (section 14).
 | S13 | rollback + frozen check + unchanged_since | Rollback tests; prior-value comparisons exercise float repr |
 | S14 | save_station + `.bog` state | Save tests (mtime/sha256 branches 1216-1224) |
 | S15 | #304 in-doubt matrix | See below |
-| S16 | Switch the default launcher to Go | Python kept one release as fallback |
+| S16 | Switch the default launcher to Go (done, section 20) | Python kept one release as fallback |
 
 **Status (server v0.9.5).** S0-S12 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
 #462, #475, #489, #494; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
@@ -112,7 +113,8 @@ engine with `n4_set_slot` and `n4_invoke_action`: `--allow-writes` starts the Go
 `n4_remove_component`, S13 (section 17) `n4_rollback` and S14 (section 18) `n4_save_station`:
 every tool is served and none answers the "not implemented" text (section 6). S15 (section
 19) proves the #304 in-doubt matrix. Under the Go binary the suite runs 679 tests with 308
-skipped, all of them `go_twin` markers, each resolved to a real Go test or listed debt.
+skipped, all of them `go_twin` markers, each resolved to a real Go test or listed debt. S16
+(section 20) makes Go the default server; Python is the fallback for one release.
 
 **S15 in-doubt matrix** (section 19). Each branch gets an explicit Go test plus the black-box
 Python test, driven by `hook` faults and an unwritable state dir (lines of `tools_write.py` at
@@ -159,11 +161,14 @@ check is weaker; or a Go test needs a live station.
 **Running the suite against Go.** `MCP_N4_IMPL` selects the server the tests drive:
 
 ```
-# Python, in-process (the default; no Go binary needed)
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s mcp-n4-kit/tests
-# Go binary over stdio (MCP_N4_GO_BIN, else go/bin/mcp-n4)
-MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests
+# Go binary over stdio (the default since S16; MCP_N4_GO_BIN, else go/bin/mcp-n4)
+python3 -m unittest discover -s mcp-n4-kit/tests
+# Python, in-process (the fallback, kept one release; no Go binary needed)
+MCP_N4_IMPL=python PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s mcp-n4-kit/tests
 ```
+
+Before S16 the default was Python and `MCP_N4_IMPL=go` selected the binary; the slice
+sections below keep that spelling, which still selects Go.
 
 - `tests/go_server.py`: `make_server(**kw)` builds `mcp_n4.server.Server(**kw)` or `GoServer`,
   which maps the same keywords to command-line flags. Each request is followed by a `ping`
@@ -212,9 +217,9 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_box.py` | 92 | 69 | 0 | 23 | 0 | 92 | 0 |
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
-| `test_go_harness.py` | 31 | 0 | 0 | 0 | 0 | 0 | 31 |
+| `test_go_harness.py` | 32 | 0 | 0 | 0 | 0 | 0 | 32 |
 | `test_list_batches.py` | 6 | 0 | 0 | 0 | 0 | 0 | 6 |
-| `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
+| `test_live_smoke.py` | 36 | 0 | 0 | 0 | 0 | 0 | 36 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
@@ -225,7 +230,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tools_destructive.py` | 101 | 4 | 7 | 13 | 2 | 26 | 75 |
 | `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
 | `test_write_parity.py` | 31 | 0 | 0 | 0 | 0 | 0 | 31 |
-| **Total** | **679** | **166** | **34** | **90** | **18** | **308** | **371** |
+| **Total** | **686** | **166** | **34** | **90** | **18** | **308** | **378** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -1043,3 +1048,36 @@ tests, 308 skipped (669 / 308 before; the six harness and four parity tests run 
 
 **Known differences.** No byte difference was found. Python bugs: none found. Left to S16: the
 switch of the default launcher, and the twin debt above.
+
+## 20. S16 Go is the default server
+
+S16 changes no server code: it flips what launches by default.
+
+**What flipped.** `tests/go_server.py` resolves an unset `MCP_N4_IMPL` to `go`
+(`resolve_impl`), so `python3 -m unittest discover -s mcp-n4-kit/tests` drives `go/bin/mcp-n4`;
+a missing binary is `GoBinaryMissing`, never a silent Python run. `tools/live_smoke.py --apply`
+launches the Go binary (`--go-bin`, else `MCP_N4_GO_BIN`, else `go/bin/mcp-n4`; missing is exit 2
+before any station contact), and its fake-station runs follow `MCP_N4_IMPL`, so they cover both
+servers. The README `.mcp.json` example and the skill launcher register the Go binary; the skill
+no longer resolves the kit through `mcp_n4/server.py`.
+
+**Fallback window.** One release: `MCP_N4_IMPL=python` (tests), `--impl python` or
+`MCP_N4_IMPL=python` (live smoke), and the README's labelled Python `.mcp.json` example. The
+mutation check and the `trace` audit measure the Python modules, so they run with
+`MCP_N4_IMPL=python`. Go/no-go criterion 5 (section 4) is that release with no reported
+regression.
+
+**CI.** A separate job `mcp-n4-go` (`timeout-minutes: 15`, job level, which `scripts/ci-local.sh`
+replays) builds `go/bin/mcp-n4` and runs `MCP_N4_IMPL=go python3 -m unittest discover -s
+mcp-n4-kit/tests`; the `checks` job pins `MCP_N4_IMPL=python`. No mutation testing runs in CI.
+Under Go: 686 tests, 308 skipped (all `go_twin` markers); under Python: 686, none skipped.
+
+**What remains.**
+- S16b: the twin debt of section 19 (49 markers, `TWIN_DEBT_CEILING` 49), each to a Go test or
+  an explicit `twin=`.
+- S16c: the Go differential tests that execute the kit's Python source through `pytarget` replay
+  recorded goldens (`go/internal/mcpn4/golden`, `MCP_N4_RECORD=1` re-records while Python exists),
+  so they keep their teeth once Python is gone. Part A (token, ord, tiers, bql, files, px,
+  readtools) landed in #535; journal, retro, jsonrpc, cli, plan, box and writeops follow.
+- S17: after the fallback release, remove the Python server, its fallback switches and the
+  Python-only test categories.

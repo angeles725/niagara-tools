@@ -32,7 +32,12 @@ def rpc(method, params=None, id_=1):
 
 
 class TestImplSwitch(unittest.TestCase):
-    def test_python_is_the_default_and_builds_the_in_process_server(self):
+    def test_go_is_the_default_and_python_is_the_fallback(self):
+        self.assertEqual(go_server.resolve_impl({}), "go")
+        self.assertEqual(go_server.resolve_impl({"MCP_N4_IMPL": ""}), "go")
+        self.assertEqual(go_server.resolve_impl({"MCP_N4_IMPL": "python"}), "python")
+
+    def test_python_builds_the_in_process_server(self):
         srv = go_server.make_server(impl="python")
         self.addCleanup(go_server.close_server, srv)
         self.assertIsInstance(srv, server.Server)

@@ -1,0 +1,14 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/example/BDemoLab.java --
+package com.example;
+
+@NiagaraType
+public class BDemoLab extends BComponent
+{
+  public static final Type TYPE = Sys.loadType(BDemoLab.class);
+  @Override public Type getType() { return TYPE; }
+}
