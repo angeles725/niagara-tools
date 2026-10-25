@@ -9,11 +9,9 @@ with `PYTHONDONTWRITEBYTECODE=1`, so neither the mutated nor the restored run ca
 or leave bytecode. Run it once with the mutation applied (expect RED) and once after
 the restore (expect GREEN).
 
-Usage, from the repo root:
-    MCP_N4_IMPL=python python3 mcp-n4-kit/tools/mutation_check.py -- python3 -m unittest discover -s mcp-n4-kit/tests
-
-(Pin MCP_N4_IMPL=python: since S16 the suite drives the Go server by default, so a Python
-mutation would otherwise never be exercised.)
+Usage, from the repo root (for a mutation of the kit's Python: the test helpers and tools;
+the server is Go since S17, and a Go mutation needs no bytecode care):
+    python3 mcp-n4-kit/tools/mutation_check.py -- python3 -m unittest discover -s mcp-n4-kit/tests
 
 Exit codes: the command's own exit code; 2 on usage errors; 3 when the command cannot be
 launched (missing, not executable): an environment error, never a test result. A launch

@@ -6,8 +6,8 @@ is needed: the client speaks to `POST <station>/box/` with HTTP Basic auth.
 
 ## Status
 
-T1: the stdlib-only BOX client library (`mcp_n4/box.py`) and its tests against
-an in-memory fake station. T2: the stdio MCP server with read-only station tools.
+T1: the stdlib-only BOX client library (then `mcp_n4/box.py`; since S17 the Go server's
+`go/internal/mcpn4/box`) and its tests against an in-memory fake station. T2: the stdio MCP server with read-only station tools.
 T3: guarded write tools (`--allow-writes`). T4: destructive tools, rollback and save. T5: METHODOLOGY and the skill launcher.
 v0.2.0 (retro 2026-10-02): bulk reads with `n4_bql_query` / `n4_inventory`, adaptive load
 polling with `elapsed_ms`, display strings for complex slots, an actionable 401.
@@ -49,16 +49,16 @@ bad line is left out, and the draft's session summary says it is incomplete and 
 Go port status, at v0.9.5 (docs/go-port-plan.md sections 3 and 20): the Go server
 (`go/cmd/mcp-n4`, built to `go/bin/mcp-n4`) serves every read and write tool with the same
 flags, `--allow-writes` included (S0-S14), and the #304 in-doubt matrix is proven on both
-servers (S15). Since S16 it is the default: the `.mcp.json` example below launches it, the
-test suite and `tools/live_smoke.py` drive it unless `MCP_N4_IMPL=python`. The Python server
-(`python3 -m mcp_n4.server`) stays one release as the fallback, then is removed (S17).
+servers (S15). Since S16 it is the default, and since S17 the only server: the Python server
+(`python3 -m mcp_n4.server`) and its `MCP_N4_IMPL=python` switch are removed
+(docs/go-port-plan.md section 23).
 
 ## Methodology and skill
 
 - [METHODOLOGY.md](METHODOLOGY.md): route ladder, safety layers mapped to code and tests,
   live rules, the mandatory session checklist and version tiers. Read it before writing.
-- [docs/go-port-plan.md](docs/go-port-plan.md): the plan for porting the server to Go
-  (package layout, parity strategy, slices S0-S16, go/no-go criteria).
+- [docs/go-port-plan.md](docs/go-port-plan.md): the history of porting the server to Go
+  (package layout, parity strategy, slices S0-S17, go/no-go criteria).
 - [skill/SKILL.md](skill/SKILL.md): the Claude Code skill launcher. Install it with
   (from the repository root; add `--dry-run` to preview, `--force` to overwrite a diverged copy):
 
@@ -69,20 +69,11 @@ scripts/install-skill.sh --skill mcp-n4
 ## Layout
 
 - `METHODOLOGY.md`, `skill/SKILL.md`: see above.
-- `mcp_n4/box.py`: BOX frame, session, `syncTo`, `checkLinks`, `invokeAction`,
-  `pollchgs`, tree loading and status helpers. No side effects at import.
-- `mcp_n4/server.py`: stdio JSON-RPC 2.0 protocol layer and `main()` (the Python fallback;
-  the default server is the Go port in `../go/cmd/mcp-n4`).
-- `mcp_n4/tools_read.py`: the read tool implementations and the session state.
-- `mcp_n4/files.py`: pure station-file helpers (path guard, `/file/` URL, text detection,
-  Px summary parser).
-- `mcp_n4/bql.py`: pure BQL helpers (query guard, ORD composition, CSV parsing, `$xx`
-  decoding, inventory summary).
-- `mcp_n4/safety.py`: confirmation tokens, write scope, journal and audit log.
-- `mcp_n4/tools_write.py`: the write tools and their guard pipeline.
-- `mcp_n4/tiers.py`: version detection (`/obix/about/` productVersion) and the tier write gate.
-- `mcp_n4/retro.py` and `mcp_n4/templates/retro.template.md`: the session retro draft
-  (`n4_session_retro_draft`).
+- The server is the Go module's `go/cmd/mcp-n4` (built to `go/bin/mcp-n4`) over
+  `go/internal/mcpn4/...`: `box` (BOX client), `jsonrpc` and `cli` (stdio protocol and flags),
+  `readtools` and `writeops` (the tools), `safety`, `journal`, `tiers`, `bql`, `files`, `px`,
+  `retro` (the session retro draft and its embedded template).
+- `go/cmd/mcp-n4/retro-draft`: prints the session retro draft for `tools/new_retro.py`.
 - `tools/new_retro.py`: writes the session retro file and its `pending` row in `retros/INDEX.md`.
 - `retros/`: session retros and `INDEX.md`.
 - `tests/test_server.py`: protocol, tool and end-to-end stdio tests.
@@ -90,9 +81,11 @@ scripts/install-skill.sh --skill mcp-n4
 - `tools/mutation_check.py`: runs a mutation-check command with no stale bytecode (see Run
   the tests).
 - `tests/fake_station.py`: fake BOX station on `127.0.0.1` (plain HTTP, tests only).
-- `tests/test_box.py`: unit tests.
-- `tests/go_server.py`, `tests/go_registry.py`, `tests/go_box.py`: the Go-port parity harness
-  (Go by default, `MCP_N4_IMPL=python` for the fallback; docs/go-port-plan.md sections 5-7).
+- `tests/box_client.py`: the stdlib BOX client the tests arrange FakeStation state with (test
+  setup only, not a server).
+- `tests/go_server.py`: the black-box harness that drives `go/bin/mcp-n4` over stdio.
+- `tests/state_files.py`, `tests/oracle.py`: state-file helpers, and the frozen answers of the
+  removed Python server some tests compare with (`tests/fixtures/oracles/`).
 
 Security defaults: `http://` is refused unless `allow_http=True` (tests only),
 the password is never in `repr`, and HTTP 401/403 raises `AuthError` with no
@@ -113,9 +106,6 @@ then:
 MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
   go/bin/mcp-n4 --station MyStation=https://10.0.0.5
 ```
-
-Fallback, removed after one release: the Python server takes the same flags, from
-`mcp-n4-kit/`: `python3 -m mcp_n4.server --station MyStation=https://10.0.0.5`.
 
 The server speaks newline-delimited JSON-RPC 2.0 on stdin/stdout. Credentials are
 read from the environment only (`<prefix>_USER` / `<prefix>_PASSWORD`) and never
@@ -197,22 +187,6 @@ Example MCP client entry (Claude Code `.mcp.json`):
     "n4": {
       "command": "/path/to/niagara-tools/go/bin/mcp-n4",
       "args": ["--station", "MyStation=https://10.0.0.5", "--insecure-tls", "MyStation"],
-      "env": {"MCP_N4_USER": "<user>", "MCP_N4_PASSWORD": "<secret>"}
-    }
-  }
-}
-```
-
-Python fallback (fallback, removed after one release): same flags, launched from the kit.
-
-```json
-{
-  "mcpServers": {
-    "n4": {
-      "command": "python3",
-      "args": ["-m", "mcp_n4.server", "--station", "MyStation=https://10.0.0.5",
-               "--insecure-tls", "MyStation"],
-      "cwd": "/path/to/niagara-tools/mcp-n4-kit",
       "env": {"MCP_N4_USER": "<user>", "MCP_N4_PASSWORD": "<secret>"}
     }
   }
@@ -397,8 +371,7 @@ kitControl thermostat of B1199 inside a scratch folder `McpSmoke`, saves, remove
 folder, rolls the removal back (probe-only: its verdict is recorded but does not gate
 the exit code), removes it again, saves and checks the folder is gone. Without
 `--apply` it only prints the scenario and contacts nothing. It launches the Go server
-(`--go-bin PATH`, else `MCP_N4_GO_BIN`, else `go/bin/mcp-n4`; missing is exit 2);
-`--impl python` or `MCP_N4_IMPL=python` launches the Python fallback instead.
+(`--go-bin PATH`, else `MCP_N4_GO_BIN`, else `go/bin/mcp-n4`; missing is exit 2).
 
 ```
 MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
@@ -430,13 +403,12 @@ from the Go binary `go/bin/retro-draft` (`cd go && go build -o bin/ ./cmd/mcp-n4
 ```
 (cd go && go build -o bin/ ./cmd/mcp-n4 ./cmd/mcp-n4/retro-draft)
 python3 -m unittest discover -s mcp-n4-kit/tests -v
-MCP_N4_IMPL=python python3 -m unittest discover -s mcp-n4-kit/tests -v
+(cd go && go test ./internal/mcpn4/... ./cmd/mcp-n4/...)
 ```
 
-Python 3.10+, stdlib only (no pytest, no MCP SDK). The first run drives the Go binary (the
-default; a missing binary errors, never falls back), the second the Python fallback in-process;
-CI runs both. The mutation check and the untested-branch audit below measure the Python
-modules, so run them with `MCP_N4_IMPL=python`.
+Python 3.10+, stdlib only (no pytest, no MCP SDK). The suite drives the Go binary black-box (a
+missing binary errors, never skips); the Go tests need no Python at all (their Python
+differentials replay frozen goldens). CI runs both.
 
 Test isolation rules:
 
@@ -466,7 +438,7 @@ EOF
   removes every `__pycache__` under the kit and sets `PYTHONDONTWRITEBYTECODE=1`:
 
 ```
-MCP_N4_IMPL=python python3 mcp-n4-kit/tools/mutation_check.py -- \
+python3 mcp-n4-kit/tools/mutation_check.py -- \
   python3 -m unittest discover -s mcp-n4-kit/tests
 ```
 
@@ -482,23 +454,16 @@ MCP_N4_IMPL=python python3 mcp-n4-kit/tools/mutation_check.py -- \
   matches. A plain `cp` stamps the current time, which can fall in the mutant's second.
 
 Untested-branch audit (retro 2026-10-03 D2). Before each minor release (`0.X.0`), list the
-lines the suite never runs, with the stdlib `trace` module (no `coverage` dependency; CI has
-none). From the repo root, about one minute:
-
-```
-MCP_N4_IMPL=python PYTHONDONTWRITEBYTECODE=1 python3 -m trace --count --missing --summary \
-  --coverdir="$(mktemp -d)" --module unittest discover -s mcp-n4-kit/tests
-```
-
-The summary prints a line percentage per `mcp_n4.*` module; in `<coverdir>/mcp_n4.<module>.cover`
-each never-run line is marked `>>>>>>`. Review the marked `raise`, `except` and refusal
-branches first, starting with `tools_write.py` and `safety.py`: each one either gets a
-characterization test or a one-line reason it stays untested in the release PR. The
-percentage is a pointer, not a gate. Delete the coverdir afterwards.
+server lines no test runs with `cd go && go test -coverprofile=cover.out ./internal/mcpn4/... &&
+go tool cover -func=cover.out` (the black-box suite drives a separate binary, so it is not in
+the profile). Review the uncovered `return err` and refusal branches first, in `writeops` and
+`safety`: each one either gets a test or a one-line reason it stays untested in the release
+PR. The percentage is a pointer, not a gate. Delete `cover.out` afterwards.
 
 ## Versioning
 
-- The kit version lives in `mcp_n4/__init__.py` (`__version__`).
+- The kit version is the server version in `go/internal/mcpn4/registry/registry.json`
+  (`server.version`), which `initialize` and `n4_describe_session` report.
 - There is no kit-local changelog. Entries go in the root `CHANGELOG.md` under a heading of
   the form ``### <kind> — `mcp-n4-kit` vX.Y.Z: <summary>`` (kind: Added, Changed, Fixed, ...).
 - When another release is in flight (another writer owns the root `CHANGELOG.md` or
