@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import fake_station  # noqa: E402
 import test_tools_write as ttw  # noqa: E402  (module import: its tests are not re-collected)
 import state_files  # noqa: E402
-from mcp_n4 import box  # noqa: E402
+import box_client as box  # noqa: E402
 
 FOLDER = ttw.FOLDER
 NO_SLEEP = ttw.NO_SLEEP

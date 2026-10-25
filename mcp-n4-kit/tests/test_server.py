@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import go_server  # noqa: E402
 import oracle  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
-from mcp_n4 import box  # noqa: E402
+import box_client as box  # noqa: E402
 
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NO_SLEEP = dict(sleep=lambda s: None)

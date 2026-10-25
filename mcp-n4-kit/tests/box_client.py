@@ -1,7 +1,10 @@
-"""Stdlib-only Niagara BOX JSON client (route R-A, no station module needed).
+"""FakeStation's test-setup BOX client: not a server, and not used by one.
 
-Wire protocol certified live against N4.14 in niagara-research B1199.
-Importing this module has no side effects.
+The black-box tests arrange station state (add components, set slots, link, sync) through this
+stdlib-only Niagara BOX JSON client logged in to the FakeStation, next to the Go server under test.
+It is the Python server's BOX client (mcp_n4/box.py), moved here when S17 removed that server;
+the Go server has its own (go/internal/mcpn4/box). Wire protocol certified live against N4.14 in
+niagara-research B1199. Importing this module has no side effects.
 """
 import base64
 import http.client
@@ -236,50 +239,6 @@ def status_value(nodes, path):
     kids = children(nodes, path)
     return {"value": kids.get("value", {}).get("v", default),
             "status": kids.get("status", {}).get("v", "0")}
-
-
-#: Type contract table (B1200-G3): type spec -> True when the type is a BComponent the
-#: station creates with its own add op, False when it is a slot value (BSimple/BStruct).
-#: An entry here always wins over the naming heuristic below. Each entry is backed by the
-#: type's declaration (`extends`) in the decompiled N4 sources or by a live load:
-#:   baja:Component          BComponent itself
-#:   baja:Folder             BFolder extends BComponent
-#:   baja:UnrestrictedFolder BUnrestrictedFolder extends BFolder (heuristic says value)
-#:   control:NullProxyExt    BNullProxyExt extends BAbstractProxyExt (live: a writable's frozen child)
-#:   control:PriorityLevel   BPriorityLevel extends BFrozenEnum (heuristic says component)
-#:   baja:Link, baja:WsAnnotation  slot values the write tools rely on
-#:   modbusCore:FlexAddress  BFlexAddress extends BStruct (a Modbus proxyExt dataAddress)
-#:   bacnet:BacnetAddress    BBacnetAddress extends BStruct (audit 2026-10-03 F17, issue #200)
-#: The kit has no live contract lookup yet (BOX `reg.loadContract`, B1173): it would need a
-#: new channel certified on a station. Add an entry here when a type is misclassified.
-COMPONENT_TYPES = {
-    "baja:Component": True,
-    "baja:Folder": True,
-    "baja:UnrestrictedFolder": True,
-    "control:NullProxyExt": True,
-    "control:PriorityLevel": False,
-    "baja:Link": False,
-    "baja:WsAnnotation": False,
-    "modbusCore:FlexAddress": False,
-    "bacnet:BacnetAddress": False,
-}
-
-
-def is_component_type(type_):
-    """True when the station must create `type_` with its own add op.
-
-    Shared by the write tools and the test fake. An entry in `COMPONENT_TYPES` decides
-    first. Heuristic fallback for any other type: every type outside the `baja` module
-    is a component (`kitControl:NumericConst`, `control:...`); the other `baja:` types
-    (`Double`, `StatusNumeric`, ...) are plain slot values. The fallback is a naming
-    rule, not a type-registry lookup: a `baja:` component or a non-`baja` value type
-    missing from the table is misclassified, so extend the table when one shows up.
-    """
-    if not isinstance(type_, str) or ":" not in type_:
-        return False
-    if type_ in COMPONENT_TYPES:
-        return COMPONENT_TYPES[type_]
-    return type_.partition(":")[0] != "baja"
 
 
 def _flatten(node, path, out):

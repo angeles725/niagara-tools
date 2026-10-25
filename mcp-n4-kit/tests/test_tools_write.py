@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import go_server  # noqa: E402
 import test_server  # noqa: E402  (module import: its test classes are not re-collected here)
 import state_files  # noqa: E402
-from mcp_n4 import box  # noqa: E402
+import box_client as box  # noqa: E402
 
 WRITE_TOOLS = ["n4_create_component", "n4_set_slot", "n4_invoke_action", "n4_create_link"]
 DESTRUCTIVE_TOOLS = ["n4_remove_component", "n4_rollback", "n4_save_station"]
