@@ -3,8 +3,11 @@ package box
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"net"
@@ -13,6 +16,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -28,7 +32,8 @@ type liveCase struct {
 	client string // the go_box client config as JSON (url added)
 	url    string // instead of the station's (a refused port)
 	answer func(s seen) *reply
-	ops    string // a JSON list of go_box ops
+	delay  time.Duration // how long the station waits before each answer
+	ops    string        // a JSON list of go_box ops
 }
 
 func status(code int, hdr ...string) func(seen) *reply {
@@ -73,10 +78,8 @@ var liveCases = []liveCase{
 	{name: "oversized", client: `{"max_reply_bytes": 64}`, answer: body(200, `{"pad": "`+strings.Repeat("y", 64)+`"}`), ops: openOps},
 	{name: "remote end closes", answer: func(seen) *reply { return &reply{Hang: true} }, ops: openOps},
 	{name: "refused port", url: "refused", ops: openOps},
-	{name: "no answer within the timeout", client: `{"timeout": 0.3}`, answer: func(seen) *reply {
-		time.Sleep(600 * time.Millisecond)
-		return nil
-	}, ops: `[{"op": "open"}]`},
+	{name: "no answer within the timeout", client: `{"timeout": 0.3}`, delay: 600 * time.Millisecond,
+		ops: `[{"op": "open"}]`},
 	{name: "body shorter than its content length", answer: func(seen) *reply {
 		return &reply{Raw: "HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n{\"m\": [{\"b\": 1}]}"}
 	}, ops: `[{"op": "call", "channel": "ssession", "key": "make", "body": {}}, {"op": "about"}, {"op": "get_ord", "ord": "x"}]`},
@@ -145,7 +148,8 @@ func TestLiveDifferential(t *testing.T) {
 	recs := make([]liveRecord, len(liveCases))
 	for i, lc := range liveCases {
 		t.Run(lc.name, func(t *testing.T) {
-			st := newScripted(t, lc.answer)
+			answers := &answerLog{}
+			st := newScripted(t, answers.wrap(lc))
 			url := st.URL
 			if lc.url != "" {
 				url = "http://" + refused
@@ -165,6 +169,7 @@ func TestLiveDifferential(t *testing.T) {
 			want := liveRecord{Name: lc.name, Spec: alias(string(spec))}
 			if record {
 				want.Stdout, want.Requests = runLivePython(t, py, driver, spec, st, alias)
+				want.Answers = answers.take(lc.delay, alias)
 			} else if i >= len(recorded) || recorded[i].Name != want.Name || recorded[i].Spec != want.Spec {
 				t.Fatalf("golden %s is stale: case %d is not %q with this spec; %s", liveGolden, i+1, lc.name, liveHint)
 			} else {
@@ -183,6 +188,11 @@ func TestLiveDifferential(t *testing.T) {
 					strings.Join(want.Stdout, "\n        "))
 			}
 			compareRequests(t, liveRequests(st.requests(), alias), want.Requests)
+			// Go sent Python's requests, so the station must have answered them as recorded; a
+			// case's answer edited without re-recording would compare Go with Python's old run.
+			if got := answers.take(lc.delay, alias); !t.Failed() && want.Answers != "" && got != want.Answers {
+				t.Fatalf("golden %s is stale: the station's answers for %q changed; %s", liveGolden, lc.name, liveHint)
+			}
 		})
 	}
 	if !record && len(recorded) != len(liveCases) {
@@ -205,6 +215,48 @@ type liveRecord struct {
 	Spec     string        `json:"spec"`
 	Stdout   []string      `json:"stdout"`
 	Requests []liveRequest `json:"requests"`
+	Answers  string        `json:"answers"` // answerLog.take of the station's replies to Python
+}
+
+// answerLog records every reply the station sends for a case, the default one included, so the
+// golden can tell when a case's answer (status, headers, body, raw text, hang, delay) changed.
+type answerLog struct {
+	mu   sync.Mutex
+	sent []*reply
+}
+
+// wrap is lc's answer, logged before lc.delay so a reply the client timed out on is logged too.
+func (l *answerLog) wrap(lc liveCase) func(seen) *reply {
+	return func(s seen) *reply {
+		var r *reply
+		if lc.answer != nil {
+			r = lc.answer(s)
+		}
+		if r == nil {
+			r = defaultAnswer(s)
+		}
+		l.mu.Lock()
+		l.sent = append(l.sent, r)
+		l.mu.Unlock()
+		time.Sleep(lc.delay)
+		return r
+	}
+}
+
+// take is the SHA-256 of the delay and the replies logged since the last take, and clears the
+// log. %#v quotes every byte of a body (JSON would turn invalid UTF-8 into U+FFFD) and sorts
+// the header keys; the ports become placeholders.
+func (l *answerLog) take(delay time.Duration, alias func(string) string) string {
+	l.mu.Lock()
+	sent := l.sent
+	l.sent = nil
+	l.mu.Unlock()
+	text := delay.String()
+	for _, r := range sent {
+		text += fmt.Sprintf("\n%#v", *r)
+	}
+	sum := sha256.Sum256([]byte(alias(text)))
+	return hex.EncodeToString(sum[:])
 }
 
 // liveRequest is a seen request as compared: Headers drops User-Agent (Python's names urllib
@@ -290,6 +342,11 @@ func readLiveGolden(t *testing.T) []liveRecord {
 func writeLiveGolden(t *testing.T, recs []liveRecord) {
 	if t.Failed() || t.Skipped() {
 		return
+	}
+	for i, r := range recs {
+		if r.Name == "" { // a -run filter left this case out: writing would drop its record
+			t.Fatalf("golden %s not written: case %d (%q) did not run; record every case", liveGolden, i+1, liveCases[i].name)
+		}
 	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
