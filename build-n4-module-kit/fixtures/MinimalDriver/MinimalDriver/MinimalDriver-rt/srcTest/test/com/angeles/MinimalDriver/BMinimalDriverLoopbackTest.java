@@ -131,11 +131,14 @@ public class BMinimalDriverLoopbackTest
   {
     mock.setAnswering(true);
     int pings = mock.received(MinimalDriverCodec.CMD_PING);
+    // a new device is not down before its first ping, so the proof is a fresh lastOkTime, not !isDown()
+    long lastOk = device.getHealth().getLastOkTime().getMillis();
     device.ping();
     TestHelper.assertWillBeTrue(() -> mock.received(MinimalDriverCodec.CMD_PING) > pings, WAIT_MS,
       "the ping action never reached the mock");
-    TestHelper.assertWillBeTrue(() -> !device.isDown() && !device.getHealth().getDown(), WAIT_MS,
-      () -> "device should be up after an answered ping: " + device.getStatus() + " " + device.getHealth().getLastFailCause());
+    TestHelper.assertWillBeTrue(() -> device.getHealth().getLastOkTime().getMillis() > lastOk, WAIT_MS,
+      () -> "an answered ping should call pingOk: " + device.getStatus() + " " + device.getHealth().getLastFailCause());
+    Assert.assertFalse(device.isDown(), "device should be up after an answered ping");
   }
 
   @Test(priority = 2)
