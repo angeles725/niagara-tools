@@ -2,8 +2,7 @@
 """Live smoke runner for mcp-n4-kit: drives the REAL MCP server over stdio.
 
 Plan only by default (prints the scenario, contacts nothing). With `--apply` it
-starts the Go server `go/bin/mcp-n4 --allow-writes ...` as a subprocess (`--impl python`, or
-`MCP_N4_IMPL=python`, starts the Python fallback `python3 -m mcp_n4.server`) and runs the
+starts the Go server `go/bin/mcp-n4 --allow-writes ...` as a subprocess and runs the
 kitControl thermostat scenario (niagara-research B1199) through the public tool
 interface only: every write is dry run -> confirmation token -> execute -> verdict.
 
@@ -23,9 +22,18 @@ import time
 
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_GO_BIN = os.path.join(os.path.dirname(KIT_DIR), "go", "bin", "mcp-n4")
-sys.path.insert(0, KIT_DIR)
 
-from mcp_n4.box import child_ord  # noqa: E402  (the one ORD join; stdlib-only module)
+
+def child_ord(parent_ord, name):
+    """The ORD of child `name` under `parent_ord`, joined as the server joins it.
+
+    `station:|slot:/` -> `station:|slot:/X`; `station:|slot:/A` -> `station:|slot:/A/X`. The
+    runner joins only plain names under its scratch folder; never produces `//`.
+    """
+    if not name or "/" in name or "|" in name or name == "..":
+        raise ValueError("ORD child name must be one plain slot name, got %r" % (name,))
+    return parent_ord.rstrip("/") + "/" + name
+
 
 SCRATCH = "McpSmoke"
 ROOT_ORD = "station:|slot:/"
@@ -424,8 +432,6 @@ def parse_args(argv):
                    help="how long to wait for the logic outputs to settle (default 5)")
     p.add_argument("--call-timeout", type=float, default=120.0, metavar="SECONDS")
     p.add_argument("--allow-http-for-tests", action="store_true")
-    p.add_argument("--impl", choices=("go", "python"), default=None,
-                   help="server to drive (default: $MCP_N4_IMPL, else go; python is the fallback)")
     p.add_argument("--go-bin", default=None, metavar="PATH",
                    help="Go server binary (default: $MCP_N4_GO_BIN, else go/bin/mcp-n4)")
     return p.parse_args(argv)
@@ -436,20 +442,16 @@ def _pairs(items):
 
 
 def resolve_server(args, env):
-    """Fill args.impl and args.go_bin from the flags, then the environment, then the defaults."""
-    args.impl = args.impl or env.get("MCP_N4_IMPL") or "go"
+    """Fill args.go_bin from the flag, then the environment, then the default."""
     args.go_bin = args.go_bin or env.get("MCP_N4_GO_BIN") or DEFAULT_GO_BIN
-    if args.impl not in ("go", "python"):
-        return "MCP_N4_IMPL=%r: expected go or python" % args.impl
-    if args.impl == "go" and not (os.path.isfile(args.go_bin) and os.access(args.go_bin, os.X_OK)):
-        return ("no executable Go server at %s: build it (cd go && go build -o bin/ ./cmd/mcp-n4), "
-                "pass --go-bin, or run the Python fallback with --impl python" % args.go_bin)
+    if not (os.path.isfile(args.go_bin) and os.access(args.go_bin, os.X_OK)):
+        return ("no executable Go server at %s: build it (cd go && go build -o bin/ ./cmd/mcp-n4) "
+                "or pass --go-bin" % args.go_bin)
     return None
 
 
 def server_argv(args):
-    launcher = [args.go_bin] if args.impl == "go" else [sys.executable, "-m", "mcp_n4.server"]
-    argv = launcher + ["--allow-writes", "--credential-env", args.credential_env]
+    argv = [args.go_bin, "--allow-writes", "--credential-env", args.credential_env]
     for scope in write_scopes():
         argv += ["--write-scope", scope]
     for flag, items in (("--station", args.station), ("--station-home", args.station_home),
