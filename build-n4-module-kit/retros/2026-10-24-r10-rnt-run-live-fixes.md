@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-24 · kit · r10-rnt-run-live-fixes
@@ -54,3 +54,13 @@ RED first, then the fix; no Windows boot was run for this work.
 ## Lessons
 - A knob set is not a knob honoured: check the place the runtime would write without it.
 - An empty field from a privileged process is "unknown", never "not ours"; a guard that skips unknowns fails open.
+
+## Fold
+- D1-D4 are code already shipped in the PR that wrote this retro (`go/internal/niagaratest/run.go`, `userhome.go`, `attribute.go`; `run_sandbox_test.go`); not re-implemented.
+- Δ1 and Δ2 were cited at merge in `types/moduleTest.md` § Running from WSL (Δ2 also in § Known gotchas and `types/driver-authoring.md` § 12.1).
+- Δ3 → the § Running from WSL refusal bullet (`TestRunPreflightAttributesServiceStations`).
+- Δ4 → the § Running from WSL build bullet (`TestRunBuildUsesWSLJDK8`, `TestRunBuildKeepsGradleUserHome`).
+- The D3 cause stays [INFER]; the `WSLENV` probe is the proof the doctrine cites. Nothing owed.
+
+---
+**Status**: FOLDED 2026-10-25 (branch `docs/r10-fold-tail-4`; log in `ledger.d/2026-10-25-r10-fold-tail4.md`) — Δ1-Δ4 in `types/moduleTest.md` § Running from WSL.
