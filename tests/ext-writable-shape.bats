@@ -155,7 +155,8 @@ JAVA
   run "$EW" "$ROOT/Dashboard/DashboardPan/DashboardPan-rt/src"
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
-  [[ "$output" == *"BRoomPanel"* ]] && [[ "$output" == *"setpoint"* ]]
+  [[ "$output" == *"BRoomPanel"* ]]
+  [[ "$output" == *"setpoint"* ]]
   # S22 (C10): per-slot exemption. CompPan-rt is 1 — faultReset (BStatusBoolean SUMMARY|OPERATOR) has NO
   # @NiagaraAction that writes it (the class only has HIDDEN tick/powerOnExpired + ackAlarm, none writing
   # faultReset). ColdRoomPan-rt/DashboardPan-ux stay 0.
@@ -175,7 +176,9 @@ JAVA
   E="$BATS_TEST_TMPDIR/empty"; rm -rf "$E"; mkdir -p "$E"
   run "$EW" "$E"
   [ "$status" -eq 3 ]
-  [[ "$output" == *"ERROR"* ]] && [[ "$output" == *"ext-writable-shape"* ]] && [[ "$output" != *"WARN"* ]]
+  [[ "$output" == *"ERROR"* ]]
+  [[ "$output" == *"ext-writable-shape"* ]]
+  [[ "$output" != *"WARN"* ]]
   N="$BATS_TEST_TMPDIR/nojava"; rm -rf "$N"; mkdir -p "$N/com/x"; printf 'not java\n' > "$N/com/x/README.txt"
   run "$EW" "$N"
   [ "$status" -eq 3 ]

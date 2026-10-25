@@ -45,7 +45,8 @@ kt() { run env -C "$TK" KIT="$TK" "$@"; }   # first vararg is the command (for P
   [ "$(head -1 "$F")" = "<!-- review-status: pending -->" ]
   [ "$(sed -n 2p "$F")" = "<!-- module: kit -->" ]
   [ "$(sed -n 3p "$F")" = "<!-- deltas: 0 -->" ]
-  grep -qiE 'what happened' "$F" && grep -qiE 'evidence' "$F"
+  grep -qiE 'what happened' "$F"
+  grep -qiE 'evidence' "$F"
   grep -qiE 'proposed kit deltas' "$F" && grep -qiE 'lessons' "$F"
 }
 

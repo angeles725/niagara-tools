@@ -138,7 +138,8 @@ _gen_state() {
   [ "$(printf '%s\n' "$output" | grep -c 'CHECK14  WARN')" -eq 1 ]
   [[ "$output" == *"CHECK14  WARN"*"EvaporatorUnit2"*"evapOut"* ]]
   [ "$(printf '%s\n' "$output" | grep -c 'CHECK18  FAIL')" -eq 2 ]
-  [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_1"* ]] && [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_3"* ]]
+  [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_1"* ]]
+  [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_3"* ]]
   for c in CHECK13 CHECK15 CHECK16 CHECK17 CHECK19; do [ "$(printf '%s\n' "$output" | grep -c "$c  FAIL")" -eq 0 ]; done
   MB="${C8_MX60_BOG:-}"; [ -n "$MB" ] && [ -f "$MB" ] || skip "PANCCADIA rows green; set C8_MX60_BOG for the MX60 half"
   case "$MB" in *.xml) ( cd "$(dirname "$MB")" && cp "$(basename "$MB")" "$T/m.xml" ) && ( cd "$T" && zip -q m.bog m.xml ); MB="$T/m.bog";; *) cp "$MB" "$T/m.bog"; MB="$T/m.bog";; esac

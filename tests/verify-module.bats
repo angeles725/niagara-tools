@@ -56,7 +56,8 @@ good_dir() {
   good_dir "$TMPDIR_T/d"; make_module_xml "$TMPDIR_T/d" 4.15 com.x.A
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" --target-version 4.14 "$TMPDIR_T/j.jar"
-  [ "$status" -eq 1 ] && [[ "$output" == *"FAIL  baja"* ]]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  baja"* ]]
   run "$VM" --target-version 4.15 "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
 }
@@ -65,7 +66,8 @@ good_dir() {
   good_dir "$TMPDIR_T/d"; head -c 4000 /dev/zero | tr '\0' a > "$TMPDIR_T/d/rc.txt"   # compressible entry
   make_jar "$TMPDIR_T/defl.jar" "$TMPDIR_T/d"; make_stored_jar "$TMPDIR_T/st.jar" "$TMPDIR_T/d"
   run "$VM" --stored "$TMPDIR_T/defl.jar"
-  [ "$status" -eq 1 ] && [[ "$output" == *"FAIL  stored"* ]]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  stored"* ]]
   run "$VM" --stored "$TMPDIR_T/st.jar"
   [ "$status" -eq 0 ] && [[ "$output" == *"PASS  stored"* ]]
 }
@@ -84,8 +86,12 @@ good_dir() {
   good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"PASS  bytecode"* ]] && [[ "$output" == *"PASS  signed"* ]] && [[ "$output" == *"PASS  types"* ]]
-  [[ "$output" == *"SKIP  baja"* ]] && [[ "$output" == *"SKIP  stored"* ]] && [[ "$output" == *"SKIP  typecount"* ]]
+  [[ "$output" == *"PASS  bytecode"* ]]
+  [[ "$output" == *"PASS  signed"* ]]
+  [[ "$output" == *"PASS  types"* ]]
+  [[ "$output" == *"SKIP  baja"* ]]
+  [[ "$output" == *"SKIP  stored"* ]]
+  [[ "$output" == *"SKIP  typecount"* ]]
   [[ "$output" == *"ALL PASS"* ]]
 }
 
@@ -286,7 +292,8 @@ _pal() { good_dir "$TMPDIR_T/d"; printf '%s\n' "$@" > "$TMPDIR_T/d/module.palett
   printf '<?xml version="1.0"?>\n<bajaObjectGraph version="4.0"/>\n' > "$d/module.palette"  # 0 <p n= entries
   make_jar "$TMPDIR_T/Scaffold-wb.jar" "$d"
   run "$VM" "$TMPDIR_T/Scaffold-wb.jar"
-  [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"wb-scaffold"* ]]
+  [[ "$output" == *"WARN"* ]]
   run "$VM" --strict "$TMPDIR_T/Scaffold-wb.jar"
   [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"FAIL"* ]]
 }

@@ -426,7 +426,9 @@ $_LS15_BLOCK
   # shellcheck disable=SC2016  # the Go source's literal backquotes, not an expansion
   mapfile -t rows < <(sed -n '/^var Parts/,/^}$/p' "$go" |
     sed -n 's/^\t{"\(.*\)", regexp\.MustCompile(`\(.*\)`)},$/\1\t\2/p')
-  [ "${#rows[@]}" -eq "${#SIGN_BLOCK_ERE[@]}" ] && [ "${#rows[@]}" -eq "${#SIGN_BLOCK_NAME[@]}" ] && [ "${#rows[@]}" -eq 4 ]
+  [ "${#rows[@]}" -eq "${#SIGN_BLOCK_ERE[@]}" ]
+  [ "${#rows[@]}" -eq "${#SIGN_BLOCK_NAME[@]}" ]
+  [ "${#rows[@]}" -eq 4 ]
   for k in "${!rows[@]}"; do
     [ "${rows[$k]}" = "${SIGN_BLOCK_NAME[$k]}"$'\t'"${SIGN_BLOCK_ERE[$k]}" ] ||
       { printf 'Parts[%s] = %s\nlib      = %s\t%s\n' "$k" "${rows[$k]}" "${SIGN_BLOCK_NAME[$k]}" "${SIGN_BLOCK_ERE[$k]}"; false; }
