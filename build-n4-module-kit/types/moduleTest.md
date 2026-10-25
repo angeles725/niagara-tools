@@ -83,7 +83,7 @@ added to the production `module-include.xml` — that would ship test code in th
 types → `moduleTestJar` only.  A `moduleTestJar` is built by the Gradle plugin alongside the regular jar
 when this file is present. `[ev: corpus B958 §958.4]`
 
-**Plugin-version trap (gradle plugin 7.3.40, iC-Niagara 4.13):** `:<part>:compileModuleTestJava` runs the
+**Plugin-version trap (gradle plugin 7.3.40, iC-Niagara 4.13, and 7.6.22, observed):** `:<part>:compileModuleTestJava` runs the
 annotation processor against the production `module-include.xml` and appends every `@NiagaraType` class under
 `srcTest/` to it. An ordinary `:<part>:jar` after that ships the test types in the production jar's
 `module.xml`. Run `git status` after every moduleTest compile and revert any new `<type>` line in
@@ -315,9 +315,10 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   `--log-dir` is given or `--keep-home` is on (`run log: <path>`); `--keep-home` keeps the dir as before and
   writes the log too. A run refused or failing before its scratch dir exists prints its reason only
   `[ev: retro r10-rnt-fail-diagnostics Δ1]`.
-- **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13), `:<part>:compileModuleTestJava` appends every
+- **Plugin-version trap: with niagara gradle plugin 7.3.40 (4.13) and 7.6.22 (observed), `:<part>:compileModuleTestJava` appends every
   `@NiagaraType` test class to the PRODUCTION `<part>/module-include.xml`** (never to `moduleTest-include.xml`), and
-  it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types. Check
+  it depends on `:jar`, so a test build silently edits a tracked source file that then ships the test types (a
+  7.6.22 `moduleTestJar` build added 3 test types to the `-rt` and 2 to the `-ux` production file of a client root). Check
   `git status` of the gradle root after any moduleTest compile, by hand or through the runner's gate
   `[ev: retro r10-rnt-gradle-root-gate Δ2]`.
 
