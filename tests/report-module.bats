@@ -160,6 +160,18 @@ setup() {
   [[ "$output" == *"DemoPan-wb  FAIL  type-outside-region  BView.java:8  hand-written TYPE outside the generated region of BView: "* ]]
 }
 
+@test "RM7d: a srcTest/ type in the production module-include.xml surfaces a test-type-in-prod FAIL row and exits 1" {
+  # Mutation: RM7d -- dropping the test-type-in-prod sub-check of lint-agent-on-include-sync reads this module clean
+  local t="$BATS_TEST_TMPDIR/rm7d"
+  mkdir -p "$t/ModuleA-rt/src/com/x" "$t/ModuleA-rt/srcTest/com/x/test"
+  printf 'package com.x;\npublic class BPan {}\n' > "$t/ModuleA-rt/src/com/x/BPan.java"
+  printf 'package com.x.test;\n@NiagaraType\npublic class BModuleATest extends BTestNg {}\n' > "$t/ModuleA-rt/srcTest/com/x/test/BModuleATest.java"
+  printf '<types>\n<type name="Pan" class="com.x.BPan"/>\n<type name="ModuleATest" class="com.x.test.BModuleATest"/>\n</types>\n' > "$t/ModuleA-rt/module-include.xml"
+  run "$RM" --lint-only "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  test-type-in-prod  "*"module-include.xml:3  com.x.test.BModuleATest: test type in the production module-include.xml (source "* ]]
+}
+
 @test "RM8: display class import in a -se artifact surfaces lint-se-display FAIL row and exits 1" {
   # se-display/DemoPan-se/src/com/x/BPanel.java imports javax.swing.JFrame
   run "$RM" --lint-only "$FX/se-display"

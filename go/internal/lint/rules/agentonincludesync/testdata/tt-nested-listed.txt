@@ -1,0 +1,23 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 1
+FAIL  test-type-in-prod  @DIR@/ModuleA/ModuleA-rt/module-include.xml:2  com.x.test.BModuleATest$BHelper: test type in the production module-include.xml (source @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BModuleATest.java) -- move the <type> line to moduleTest-include.xml; compileModuleTestJava appends it here (types/moduleTest.md)
+FAIL  test-type-in-prod  @DIR@/ModuleA/ModuleA-rt/module-include.xml:3  com.x.test.BOther: test type in the production module-include.xml (also listed in @DIR@/ModuleA/ModuleA-rt/moduleTest-include.xml) -- move the <type> line to moduleTest-include.xml; compileModuleTestJava appends it here (types/moduleTest.md)
+-- stderr --
+-- ModuleA/ModuleA-rt/module-include.xml --
+<types>
+  <type name="Helper" class="com.x.test.BModuleATest$BHelper"/>
+  <type name="Other" class="com.x.test.BOther"/>
+</types>
+-- ModuleA/ModuleA-rt/moduleTest-include.xml --
+<types>
+  <type name="Other" class="com.x.test.BOther"/>
+</types>
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BModuleATest.java --
+package com.x.test;
+@NiagaraType
+public class BModuleATest extends BTestNg {
+  @NiagaraType
+  public static class BHelper {}
+}
