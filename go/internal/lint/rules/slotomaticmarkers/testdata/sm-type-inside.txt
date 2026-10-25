@@ -1,0 +1,25 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/example/BDemoOk.java --
+package com.example;
+
+@NiagaraType
+@NiagaraSingleton
+public final class BDemoOk extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.example.BDemoOk(2222222222)1.0$ @*/
+  //region Type
+
+  @Override
+  public Type getType() { return TYPE; }
+  public static final Type TYPE = Sys.loadType(BDemoOk.class);
+
+  //endregion Type
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+
+  public Type getType(int legacy) { return TYPE; }
+}

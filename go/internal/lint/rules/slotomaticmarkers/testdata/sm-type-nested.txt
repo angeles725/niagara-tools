@@ -1,0 +1,47 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/example/BDemoOuter.java --
+package com.example;
+
+@NiagaraType
+public class BDemoOuter extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.example.BDemoOuter(3333333333)1.0$ @*/
+  public Type getType() { return TYPE; }
+  public static final Type TYPE = Sys.loadType(BDemoOuter.class);
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+
+  @NiagaraType
+  public static final class BDemoPart extends BComponent
+  {
+    public static final Type TYPE = Sys.loadType(BDemoPart.class);
+    @Override public Type getType() { return TYPE; }
+  }
+
+  static final class Kind
+  {
+    static final String TYPE = "kind";
+    String getType() { return TYPE; }
+  }
+
+  void run()
+  {
+    String TYPE = "local";
+    Runnable r = new Runnable() { public void run() {} public Type getType() { return null; } };
+  }
+}
+-- src/com/example/DemoPlain.java --
+package com.example;
+
+public class DemoPlain
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.example.DemoPlain(5555555555)1.0$ @*/
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+  public static final Type TYPE = null;
+  public Type getType() { return TYPE; }
+}
