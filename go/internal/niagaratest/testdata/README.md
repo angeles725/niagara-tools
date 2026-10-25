@@ -10,3 +10,9 @@ client log. Real anonymized logs are owed as a follow-up (ledger fragment `r10-r
 
 The parser's line shapes and edges (CRLF, prefixes, malformed numbers, a huge line) are the table of
 `verdict_test.go`; these cases pin only the CLI: its rows, usage, exits and unreadable logs.
+
+The `testng-*` cases pin `verdict --testng`: every `testng-results.xml` is synthetic and anonymized
+(`ModuleA`, `com.example`), built from the element and attribute shapes of a real station-test run of
+`bin\test.exe <module> -v:2 -output:<dir>`, whose console holds no summary line. Its XML edges (total 0,
+malformed or truncated XML, counts that disagree, bad root attributes, the size cap) are the table of
+`testng_test.go`.

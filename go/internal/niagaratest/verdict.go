@@ -26,6 +26,10 @@ const (
 	badSignature  = "failed signature validation"
 )
 
+// noSummary is the reason of a log with no summary line. In --testng mode it is no reason: the console of
+// `test.exe -output:<dir>` never prints one.
+const noSummary = "no test summary (no Total tests run line)"
+
 // Summary is one `Total tests run: N, Failures: F, Skips: S` line. Failures and Skips are -1 when the line
 // has no such count. Line numbers start at 1.
 type Summary struct {
@@ -102,7 +106,7 @@ func Verdict(r io.Reader) Result {
 		return res
 	}
 	if !sawSummary {
-		res.fail(0, "no test summary (no "+strings.TrimSuffix(summaryKey, ":")+" line)")
+		res.fail(0, noSummary)
 	}
 	res.Pass = len(res.Reasons) == 0
 	return res

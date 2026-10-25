@@ -8,7 +8,7 @@ import (
 )
 
 // goldenCases is the exact number of testdata cases: a lost or an extra case fails the run.
-const goldenCases = 9
+const goldenCases = 16
 
 // TestGolden replays the CLI cases of testdata/ (testdata/README.md) through golden.Runner.
 func TestGolden(t *testing.T) {

@@ -3,11 +3,17 @@
 -- want --
 exit 0
 usage: run-niagara-test verdict [<log>|-]
+       run-niagara-test verdict --testng <testng-results.xml> [<log>|-]
   verdict  decide PASS or FAIL from the captured output of a Niagara test run (bin\test.exe <module> -v:2,
            or a gradle niagaraTest log); no <log> or - reads standard input. PASS only when every
            "Total tests run: N" line has N > 0 and 0 failures; a stray Failures count, "invalid test
            target(s)", "failed signature validation", a malformed summary or no summary is FAIL.
            The exit code and BUILD SUCCESSFUL of the run are never read.
+  --testng decide from the TestNG results file of test.exe -output:<dir> instead: its console carries no
+           summary. PASS only when total > 0, failed = 0, skipped = 0, no test-method (config included)
+           has status FAIL and the root counts match the test-methods; a missing, malformed or over
+           64 MiB file is FAIL. A <log>, when given (- for standard input), fails the run on its
+           rejections and failure counts; its missing summary line does not.
 exit: 0 PASS, 1 FAIL, 2 usage, 3 unreadable log
 -- @kind --
 truth: hand-written from the C40 contract (testdata/README.md); there is no bash tool to record from
