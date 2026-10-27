@@ -42,7 +42,7 @@ No delta is rejected.
 ## Tasks
 - [x] T1 · lint-test-types-in-prod: Δ1 tag in `types/moduleTest.md`; Δ2 gate line in `BUILD-LOOP.md` § 5; flip the
   retro to folded. Route: delegated writer (this worker). Checks: fold audit RED→GREEN; sweep; kit-links bats.
-- [ ] T2 · changelog-gate: Δ1 citation in `BUILD-LOOP.md` § 7 (kit-infrastructure close: the CHANGELOG entry);
+- [x] T2 · changelog-gate: Δ1 citation in `BUILD-LOOP.md` § 7 (kit-infrastructure close: the CHANGELOG entry);
   flip to folded. Route: delegated writer. Checks: fold audit RED→GREEN; sweep.
 - [ ] T3 · scaffold-station-test: Δ3 tag in `types/moduleTest.md` § Running from WSL; Δ4 fixture javadoc note +
   tag in `types/driver-authoring.md` § 12.1; Δ6 in the `BUILD-LOOP.md` § 1 skeleton bullet; flip to folded.
@@ -65,7 +65,11 @@ to folded before its citations exist must FAIL it (RED), and the citations make 
   `r10-lint-test-types-in-prod.md Δ1 not cited`, `Δ2 not cited`, `deltas: 759 checked, 2 not cited`, exit 1.
   GREEN after the Δ1 tag (`types/moduleTest.md` plugin-version trap) and the Δ2 bullet (`BUILD-LOOP.md` § 5, before
   the aggregated punch-list): `0 not cited`, exit 0; sweep exit 0. Bats kit-links, kit-libs-signing-pins,
-  kit-p1-control-pins, kit-k15-pins, kit-p1-web-pins: 25/25 ok (`bats -c` 25).
+  kit-p1-control-pins, kit-k15-pins, kit-p1-web-pins: 25/25 ok (`bats -c` 25). Commit 3558a728 (+79/−2).
+- T2 (route: delegated writer, this worker). RED: header flipped alone, the strict fold audit printed
+  `r10-changelog-gate.md Δ1 not cited`, `folded with no [ev: retro …] citation`, `1 uncited`, exit 1 (the
+  `CONTRIBUTING.md` § 6.2 tag is outside the kit corpus). GREEN after the `BUILD-LOOP.md` § 7 kit-infrastructure
+  sub-bullet: `0 uncited`, `0 not cited`, exit 0; sweep exit 0. Bats changelog-gate + kit-links: 33/33 ok.
 
 ## Next step
-T2.
+T3.
