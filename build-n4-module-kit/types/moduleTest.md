@@ -132,6 +132,14 @@ station needs UI services (common in practice) `[INFER]`; the example declares i
 
 `[ev: corpus B958 §958.3]` (the link-validation row); the other rows `[INFER]`.
 
+**Test names follow the module map** (`types/structure.md` § Module map): a pure class `<X>` is tested by
+`<X>Test` in the same package (a `model/` class by `model/<X>Test`); a test that covers a concern rather than one
+class is named for the concern (`<Concern>…Test`, e.g. `DefrostSequenceTest`, `B<MOD>LinkTest` for the station-test
+concern). Every non-plumbing concern row lists at least one test, which `lint-module-map` MM5 checks in a strict module;
+a test listed in no row is an MM6 WARN. Tests named by concern with no row that names their source files are the
+shape the module map exists to stop: the test exists, but nothing says which files it covers.
+`[ev: retro modularity-gaps Δ7]`
+
 **Client parity doctrine — behaviour is tested through real slots** `[ev: retro testing-parity-btestng Δ4]`:
 component behaviour (slot outputs, notify chains, HOA/defrost interplay, links) is a `BTestNgStation` test that drives
 real slots and waits with `TestHelper.assertWillBeTrue` (§ TEST-G2); pure seams keep their WSL JUnit. A

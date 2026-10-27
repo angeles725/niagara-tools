@@ -228,6 +228,56 @@ it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
   declaration not at start of entity"). The emission is owed as G97 `fixture-moduletest-include`.
   `[ev: retro testing-parity-btestng Δ6]`
 
+## Module map — `<module-root>/MODULE-MAP.md` `[ev: retro modularity-module-map Δ1]`
+Every module root (the directory holding the `<MOD>-rt`/`-ux`/`-wb`/`-se` parts, the root `lint-structure.sh`
+takes) carries a map file, `<module-root>/MODULE-MAP.md`: which concern owns which files, which tests cover it, and
+when a change belongs there. A per-file gate cannot say where a change belongs; the map can, and the
+`lint-module-map` lint (`n4lint lint-module-map`) checks it against the tree.
+
+```
+# MODULE-MAP — <MOD>
+
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| control | rt | <MOD>-rt/src/com/<vendor>/<MOD>/model/<MOD>Logic.java; <MOD>-rt/src/com/<vendor>/<MOD>/B<MOD>.java | <MOD>-rt/srcTest/test/com/<vendor>/<MOD>/model/<MOD>LogicTest.java | setpoint or interval behaviour |
+| plumbing | rt | <MOD>-rt/<MOD>-rt.gradle.kts; <MOD>-rt/module-include.xml; <MOD>-rt/module.palette; <MOD>-rt/module.lexicon | — | build or packaging only |
+```
+
+- **Header.** `modularity: strict` (a new module; the scaffold writes it) or `modularity: legacy` plus a non-empty
+  `legacy-reason: <why>` line (an existing module that opts in to the map without the strict rules). The mode lives
+  in the module tree because a lint must decide it from the tree alone: `.deploy-baseline/` appears only at the first
+  deploy, git history is VCS-bound (the lints are VCS-free), and the BUILD-STATE envelope lives in the kit repo (it
+  mirrors the mode for orientation, `BUILD-STATE.src.md` § field doctrine).
+- **Table.** The first table whose header is exactly `Concern | Part | Files | Tests | Change here when`. One row per
+  concern. `Files` and `Tests` hold `;`-separated paths relative to the module root (backticks allowed); `—`, `-` or
+  an empty cell means none. A Java file is listed by its own path, one entry per file. Front-end files under a part's
+  `src/rc/` may be listed by a glob (`<MOD>-ux/src/rc/js/components/**`; `**` is any depth, `*` stays inside one path
+  segment). A glob never lists a `.java` file.
+- **Concerns per type** (start from these; split further when a concern grows): logic → `control` (the pure
+  `model/` class and its B-class adapter), `station-test`, `plumbing`. Dashboard → `control` (rt), `api-routing`
+  (ux: servlet + dispatch and the dispatch test), `frontend` (ux: `src/rc/**`, `srcTest/rc/spec`), `station-test`,
+  `plumbing`. Driver → `codec`, `network-device`, `points` (the -rt point classes and the -wb point manager),
+  `discovery`, `plumbing`. A test may appear in several rows (one station test covers network, points and discovery);
+  a source file may not.
+- **`plumbing`** is the one concern with no test requirement: gradle files, `module-include.xml`,
+  `moduleTest-include.xml`, palette, lexicon, permissions.
+
+| Check | Rule | strict | legacy |
+|---|---|---|---|
+| MM1 | the module root has no `<module-root>/MODULE-MAP.md` | WARN (no other check runs) | — |
+| MM2 | the header has no valid `modularity:` line, a legacy map has no `legacy-reason:`, or there is no table with the five columns | FAIL (no other check runs) | FAIL |
+| MM3 | a listed path does not exist, or a glob matches no file | FAIL | FAIL |
+| MM4 | every `src/**/*.java` and `src/rc/**/*.{js,html,css}` of every `-rt`/`-ux`/`-wb`/`-se` part (minus `vendor/`, `ext/` and `*.min.*`) is in exactly one row's `Files`: unlisted | FAIL | WARN |
+| MM4 | the same file is in two rows | FAIL | FAIL |
+| MM5 | a non-`plumbing` row names no existing `srcTest/` path in `Tests` | FAIL | WARN |
+| MM6 | a `srcTest/**/*.java` file is in no row | WARN | WARN |
+
+Rows: `FAIL|WARN  lint-module-map  <path>  MM<n>: <reason>`. Exit **0** clean or WARN-only · **1** any FAIL · **3**
+usage, a root with no part, or an unreadable file. `report-module.sh` does not run it yet: its member is owed with
+the per-module modularity summary row (feature doc `odd/tasks/modularity-2026-10-27`, task M5).
+
 ## Palette assembly templates `[ev: corpus B746 §746.3]`
 
 A `module.palette` `<p>` entry can nest child `<p>` elements with property overrides to form
