@@ -56,11 +56,11 @@ which file owns a concern. Evidence and host file:line pointers are in the three
 
 ## Tasks
 - [x] M0 · open the campaign: this document and the three pending retros (WU0). Route: delegated writer.
-- [ ] M1 · docs (WU1): module-map Δ1 (MODULE-MAP schema § in `types/structure.md`, METHODOLOGY conformance item),
+- [x] M1 · docs (WU1): module-map Δ1 (MODULE-MAP schema § in `types/structure.md`, METHODOLOGY conformance item),
   module-map Δ4 (agent rule in `skill/SKILL.md`), gaps Δ7 (test naming in `types/moduleTest.md`), module-map Δ5
   (`modularity` field in `BUILD-STATE.src.md`). Route: delegated writer. Checks: strict fold audit; kit-links and
   doc-pin bats.
-- [ ] M2 · Go, test-first (WU2): strict-new Δ1 `lint.ModuleMode(root)` with table tests; module-map Δ3 rule
+- [x] M2 · Go, test-first (WU2): strict-new Δ1 `lint.ModuleMode(root)` with table tests; module-map Δ3 rule
   package `rules/modulemap` (MM1 to MM6), registration, wrapper `toolbelt/lint-module-map.sh`, goldens. Route:
   delegated writer. Checks: `go test`/`go vet` on `./internal/lint/...`; bats `tests/lint-module-map.bats`;
   `gen-lint-index.sh --check`; shellcheck.
@@ -99,5 +99,38 @@ fold audit, generated-index `--check`).
   --date 2026-10-27 --deltas N` (5, 5, 8), which also set the kit envelope's `retro_pending: true` in
   `BUILD-STATE.src.md`, then filled with anonymized evidence.
 
-## Next
-Part 2 starts at M4. Read the delta mapping above; the retros hold the evidence and the targets.
+- M0 committed 68accb9a (+258/−1). Sweep exit 0; strict fold audit 0 uncited / 0 not cited; gen-retro-index --check 0.
+- M1 (route: delegated writer). Commit 8a8ab97f (+67). Bats kit-links, kit-p1-tests/control/web pins, install-skill,
+  check-skill-drift, kit-k15, kit-libs-signing: 56/56 ok; sweep 0; strict fold audit 0 uncited. `skill/SKILL.md`
+  changed (step 1e): reinstall + drift check owed (not run; the installed launcher already drifted before this).
+- M2 (route: delegated writer). RED: `TestMapHeader`, `TestModuleMode`, `TestModularityString` (stubs), then
+  `TestGolden` (14 of 15 cases), `TestUnreadablePart`, `TestMatchGlob`, `TestRootRulesOnAnEmptyRoot` failed. GREEN:
+  `go test ./internal/lint/...` ok, `go vet` ok; bats lint-module-map, lint-empty-root, gen-lint-index, guard-pins,
+  kit-links 49/49 ok; lint-guard-pins MATCH MMB1-MMB3; shellcheck clean; gen-lint-index --check 0. Decision: the
+  type is `lint.Modularity` (`lint.Mode` already names the argument parse mode). Commit: see git log (WU2).
+- Deferred from M2 to M5: the report-module perModule member. 104 of 123 report-module goldens print the
+  lint-structure row and are recorded from the bash report-module at a98c3357; a failRows member adds a row to every
+  one, so it is re-recorded once together with the modularity summary row (modularity-gaps Δ8).
+
+## Next session
+Session stopped at 16:00 CST on 2026-10-27 after WU2; WU3 was not started.
+- M3 (WU3): put a strict `MODULE-MAP.md` in each fixture module root (`fixtures/<T>/<T>/MODULE-MAP.md`; the scaffold's
+  copy + substitution then emits it, and TC3/TC-DASH1/TC-DRV1 diff it); move `MinimalPanLogic` and
+  `MinimalDashLogic` (and their tests) into `…/model/` (public class + method; javadoc links to the B-class become
+  plain text). Gap: moving `MinimalDriverCodec` breaks `go/internal/verifymodule/driver_test.go:17,141,144`, outside
+  part 1's edit surfaces; `MinimalDashDispatch` is package-private by DUX1 and stays put until M4 decides. Driver map:
+  the loopback station test covers network-device, points (with the -wb point manager) and discovery. Bats: a fresh
+  scaffold of every type passes `lint-module-map` with 0 FAIL; a `What the scaffold emits today` bullet tagged
+  module-map Δ2 and strict-new Δ2.
+- M4, M5, M6 as listed under Tasks (M5 now also carries the report-module member of module-map Δ3).
+- M7 · retro D `2026-10-27-modularity-structure` (new, five items):
+  1. `scaffold-module add-concern <Name>` creates the concern folder, a pure class, its test, an adapter stub and the
+     MODULE-MAP row.
+  2. Fixed ROLE folders only (rt `model/`, `adapter/`; ux `route/`, `service/`); concern sub-folders under them have
+     FREE per-module names (e.g. lighting `model/schedules/`, data center `model/cooling/`, UPS `model/battery/`); the
+     kit never fixes concern names. Strict lint: every concern folder has exactly one MODULE-MAP row and vice versa,
+     has tests, and no file sits in two concerns.
+  3. An explicit ux↔rt API contract file plus a contract test on each side.
+  4. `module-map where <file|concern>` plus a runner that runs only that concern's tests.
+  5. A legacy→strict migration guide that EXTENDS `METHODOLOGY.md:83` (opt-in per module, pure extraction first,
+     slot changes last with migration + commissioning).

@@ -276,7 +276,9 @@ modularity: strict
 
 Rows: `FAIL|WARN  lint-module-map  <path>  MM<n>: <reason>`. Exit **0** clean or WARN-only · **1** any FAIL · **3**
 usage, a root with no part, or an unreadable file. `report-module.sh` does not run it yet: its member is owed with
-the per-module modularity summary row (feature doc `odd/tasks/modularity-2026-10-27`, task M5).
+the per-module modularity summary row (feature doc `odd/tasks/modularity-2026-10-27`, task M5). Wrapper:
+`toolbelt/lint-module-map.sh`; rule `go/internal/lint/rules/modulemap`; per-file lints read the mode with
+`lint.ModuleMode` (`go/internal/lint/paths.go`). `[ev: retro modularity-module-map Δ3]` `[ev: retro modularity-strict-new Δ1]`
 
 ## Palette assembly templates `[ev: corpus B746 §746.3]`
 

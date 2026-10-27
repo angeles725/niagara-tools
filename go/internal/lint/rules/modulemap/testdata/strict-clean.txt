@@ -1,0 +1,35 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/MODULE-MAP.md --
+# MODULE-MAP — M
+
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| control | rt | M-rt/src/com/x/M/model/MLogic.java; `M-rt/src/com/x/M/BM.java` | M-rt/srcTest/test/com/x/M/model/MLogicTest.java | setpoint behaviour |
+| frontend | ux | `M-ux/src/rc/**` | M-ux/srcTest/rc/spec/MSpec.js | the page |
+| plumbing | rt, ux | M-rt/module-include.xml; M-ux/module-include.xml | — | build only |
+-- M/M-rt/module-include.xml --
+<types/>
+-- M/M-rt/src/com/x/M/model/MLogic.java --
+class MLogic {}
+-- M/M-rt/src/com/x/M/BM.java --
+class BM {}
+-- M/M-rt/srcTest/test/com/x/M/model/MLogicTest.java --
+class MLogicTest {}
+-- M/M-ux/module-include.xml --
+<types/>
+-- M/M-ux/src/rc/index.html --
+<p>
+-- M/M-ux/src/rc/js/app.js --
+x
+-- M/M-ux/src/rc/js/app.min.js --
+x
+-- M/M-ux/src/rc/vendor/lib.js --
+x
+-- M/M-ux/srcTest/rc/spec/MSpec.js --
+x

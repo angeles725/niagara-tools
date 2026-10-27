@@ -1,0 +1,21 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM5: concern alarms names no existing srcTest path in Tests
+WARN  lint-module-map  @DIR@/M/M-rt/src/B.java  MM4: in no concern (list it in the Files of the concern that owns it)
+WARN  lint-module-map  @DIR@/M/M-ux/src/rc/page.js  MM4: in no concern (list it in the Files of the concern that owns it)
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: legacy
+legacy-reason: predates the module map
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| alarms | rt | M-rt/src/A.java | — | an alarm |
+-- M/M-rt/src/A.java --
+class A {}
+-- M/M-rt/src/B.java --
+class B {}
+-- M/M-ux/src/rc/page.js --
+x

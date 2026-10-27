@@ -1,0 +1,14 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md  MM2: no | Concern | Part | Files | Tests | Change here when | table
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Files |
+|---|---|
+| control | M-rt/src/A.java |
+-- M/M-rt/src/A.java --
+class A {}

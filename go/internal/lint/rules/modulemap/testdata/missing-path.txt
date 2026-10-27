@@ -1,0 +1,26 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:5  MM3: M-rt/src/Gone.java (concern control) does not exist
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:5  MM3: M-rt/srcTest/GoneTest.java (concern control) does not exist
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:5  MM5: concern control names no existing srcTest path in Tests
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM3: M-ux/src/rc/js/** (concern frontend) matches no file (a glob never lists a .java file)
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM3: M-ux/src/rc (concern frontend) is a directory: list its files, or use a src/rc glob
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM3: ../Other/x.js (concern frontend) is not a relative path inside the module root
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM3: /abs/y.js (concern frontend) is not a relative path inside the module root
+FAIL  lint-module-map  @DIR@/M/M-ux/src/rc/index.html  MM4: in no concern (list it in the Files of the concern that owns it)
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| control | rt | M-rt/src/A.java; M-rt/src/Gone.java | M-rt/srcTest/GoneTest.java | the decision |
+| frontend | ux | M-ux/src/rc/js/**; M-ux/src/rc; ../Other/x.js; /abs/y.js | M-ux/srcTest/rc/spec/S.js | the page |
+-- M/M-rt/src/A.java --
+class A {}
+-- M/M-ux/src/rc/index.html --
+<p>
+-- M/M-ux/srcTest/rc/spec/S.js --
+x

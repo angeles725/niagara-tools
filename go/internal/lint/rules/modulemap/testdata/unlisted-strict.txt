@@ -1,0 +1,30 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/M-rt/src/B.java  MM4: in no concern (list it in the Files of the concern that owns it)
+FAIL  lint-module-map  @DIR@/M/M-wb/src/W.java  MM4: in no concern (list it in the Files of the concern that owns it)
+WARN  lint-module-map  @DIR@/M/M-rt/srcTest/BTest.java  MM6: test in no concern (list it in the Tests of the concern it covers)
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| control | rt | M-rt/src/A.java | M-rt/srcTest/ATest.java | the decision |
+-- M/M-rt/src/A.java --
+class A {}
+-- M/M-rt/src/B.java --
+class B {}
+-- M/M-rt/src/notes.txt --
+not a source
+-- M/M-rt/srcTest/ATest.java --
+class ATest {}
+-- M/M-rt/srcTest/BTest.java --
+class BTest {}
+-- M/M-wb/src/W.java --
+class W {}
+-- M/M-rt/build/gen/G.java --
+class G {}
+-- M/docs/D.java --
+class D {}
