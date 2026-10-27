@@ -249,7 +249,7 @@ modularity: strict
   `legacy-reason: <why>` line (an existing module that opts in to the map without the strict rules). The mode lives
   in the module tree because a lint must decide it from the tree alone: `.deploy-baseline/` appears only at the first
   deploy, git history is VCS-bound (the lints are VCS-free), and the BUILD-STATE envelope lives in the kit repo (it
-  mirrors the mode for orientation, `BUILD-STATE.src.md` § field doctrine).
+  mirrors the mode for orientation: the `modularity` field in `BUILD-STATE.src.md`).
 - **Table.** The first table whose header is exactly `Concern | Part | Files | Tests | Change here when`. One row per
   concern. `Files` and `Tests` hold `;`-separated paths relative to the module root (backticks allowed); `—`, `-` or
   an empty cell means none. A Java file is listed by its own path, one entry per file. Front-end files under a part's
