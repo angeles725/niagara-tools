@@ -90,7 +90,7 @@ annotation processor against the production `module-include.xml` and appends eve
 `module-include.xml`. The check catches it: `lint-agent-on-include-sync.sh` sub-check `test-type-in-prod`
 (run by `report-module.sh`) and the `moduletest` row of `verify-module.sh --src` FAIL a production `<type>`
 whose class is declared under the part's `srcTest/` or listed in its `moduleTest-include.xml`.
-`[ev: retro r10-lint-test-types-in-prod]`
+`[ev: retro r10-lint-test-types-in-prod Δ1]`
 
 ---
 
