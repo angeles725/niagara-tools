@@ -984,7 +984,9 @@ Running it from WSL — each step is a failure seen on the way:
   fixture then tolerates only `BTestNgStation`'s exact `Fox service did not start in time` failure, and only while
   the station itself is running; any other setup failure still fails the run. This refines the free-port step
   above, which still works when loopback-only is not required (a module's station-test run on test.exe).
-  `[ev: retro r10-run-niagara-test-testng Δ4]`
+  `[ev: retro r10-run-niagara-test-testng Δ4]` The driver scaffold's loopback test (`fixtures/MinimalDriver`)
+  keeps Fox on a free port, so it listens on every interface; a loopback-only policy takes the Fox-off base that
+  `scaffold-module.sh --type logic|dashboard` emits from `templates/station-test`. `[ev: retro r10-scaffold-station-test Δ4]`
 - **`test.exe` exits -1 when a test fails, 0 when all pass:** `cmd /c "… & echo %ERRORLEVEL%"` showed 0 for failing
   runs because `%ERRORLEVEL%` expands at parse time, before test.exe runs; read `!ERRORLEVEL!` under `cmd /v:on`.
   Judge the run from its output anyway: `Total tests run: N, Failures: F` on stderr, or `testng-results.xml`

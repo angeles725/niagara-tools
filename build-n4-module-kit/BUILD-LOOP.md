@@ -69,7 +69,7 @@ non-skippable check floor (§5) applies to every tier.
 ## 1. Design
 - State the module's job, its profiles (rt/ux/wb), and the slot/endpoint contract in one paragraph.
 - For a dashboard: the facade slots (display link-in + writable config), the servlet routes, the JSON `{v,st}` contract, the HMI resolution.
-- **New module skeleton:** run `toolbelt/scaffold-module.sh <ModuleName> <out-dir>` to emit a pre-slotomatic tree from `fixtures/MinimalPan`; exits 0 ok / 2 usage / 3 env (skeleton missing). [ev: retro campaign7-tool-integration]
+- **New module skeleton:** run `toolbelt/scaffold-module.sh <ModuleName> <out-dir> [--type logic|dashboard|driver]` to emit a pre-slotomatic tree from `fixtures/MinimalPan` (logic, the default), `fixtures/MinimalDash` or `fixtures/MinimalDriver`; exits 0 ok / 2 usage / 3 env (skeleton missing). [ev: retro campaign7-tool-integration] The dashboard `-ux` servlet overrides `doGet`/`doPost(WebOp)`, never `doService(WebOp)`, which is not a `BWebServlet` method and failed `:<Mod>-ux:compileJava` on 4.14 and 4.15 (`types/dashboard.md` override contract; `tests/scaffold-module.bats` TC-DASH3). `[ev: retro r10-scaffold-station-test Δ6]`
 - **Behavior decisions — HARD gate before the first source write of any rt control, protection, automatic action
   or operator-facing UI change:** list every behavior the code must decide that the user has not stated explicitly
   (generate the list from the question catalog in `METHODOLOGY.md` § Domain correctness, not from memory). Each one

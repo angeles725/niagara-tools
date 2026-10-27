@@ -44,7 +44,7 @@ No delta is rejected.
   retro to folded. Route: delegated writer (this worker). Checks: fold audit RED→GREEN; sweep; kit-links bats.
 - [x] T2 · changelog-gate: Δ1 citation in `BUILD-LOOP.md` § 7 (kit-infrastructure close: the CHANGELOG entry);
   flip to folded. Route: delegated writer. Checks: fold audit RED→GREEN; sweep.
-- [ ] T3 · scaffold-station-test: Δ3 tag in `types/moduleTest.md` § Running from WSL; Δ4 fixture javadoc note +
+- [x] T3 · scaffold-station-test: Δ3 tag in `types/moduleTest.md` § Running from WSL; Δ4 fixture javadoc note +
   tag in `types/driver-authoring.md` § 12.1; Δ6 in the `BUILD-LOOP.md` § 1 skeleton bullet; flip to folded.
   Route: delegated writer. Checks: fold audit RED→GREEN; sweep; scaffold-module bats; lint-structure bats.
 
@@ -70,6 +70,14 @@ to folded before its citations exist must FAIL it (RED), and the citations make 
   `r10-changelog-gate.md Δ1 not cited`, `folded with no [ev: retro …] citation`, `1 uncited`, exit 1 (the
   `CONTRIBUTING.md` § 6.2 tag is outside the kit corpus). GREEN after the `BUILD-LOOP.md` § 7 kit-infrastructure
   sub-bullet: `0 uncited`, `0 not cited`, exit 0; sweep exit 0. Bats changelog-gate + kit-links: 33/33 ok.
+  Commit 159cebb5 (+13/−4).
+- T3 (route: delegated writer, this worker). RED: header flipped alone, the strict fold audit printed
+  `r10-scaffold-station-test.md Δ3 not cited`, `Δ4 not cited`, `Δ6 not cited`, `deltas: 766 checked, 3 not cited`,
+  exit 1. GREEN after the Δ3 tag (`types/moduleTest.md` failed-run diagnostics), the Δ4 note + tag
+  (`types/driver-authoring.md` § 12.1 and the `BMinimalDriverLoopbackTest` javadoc) and the Δ6 sentence
+  (`BUILD-LOOP.md` § 1 skeleton bullet, which now also names the three `--type` fixtures): `0 not cited`, exit 0;
+  sweep exit 0. Bats scaffold-module, kit-driver-pins, lint-structure, kit-links, kit-libs-signing-pins,
+  kit-p1-control-pins, kit-k15-pins, kit-p1-web-pins: 89/89 ok (`bats -c` 89).
 
 ## Next step
-T3.
+Close: generator checks, worktree clean, hand back to the parent (push and PR are the user's decision).
