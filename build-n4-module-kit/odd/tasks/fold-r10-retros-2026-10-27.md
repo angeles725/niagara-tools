@@ -77,7 +77,18 @@ to folded before its citations exist must FAIL it (RED), and the citations make 
   (`types/driver-authoring.md` § 12.1 and the `BMinimalDriverLoopbackTest` javadoc) and the Δ6 sentence
   (`BUILD-LOOP.md` § 1 skeleton bullet, which now also names the three `--type` fixtures): `0 not cited`, exit 0;
   sweep exit 0. Bats scaffold-module, kit-driver-pins, lint-structure, kit-links, kit-libs-signing-pins,
-  kit-p1-control-pins, kit-k15-pins, kit-p1-web-pins: 89/89 ok (`bats -c` 89).
+  kit-p1-control-pins, kit-k15-pins, kit-p1-web-pins: 89/89 ok (`bats -c` 89). Commit e5c77239 (+20/−7).
+
+## Verification at close (tip e5c77239)
+- Strict fold audit over fresh `kit-state.sh retro-index`: 407 folded, 407 cited, 0 uncited; 766 deltas checked,
+  0 not cited; exit 0. `sweep-build-state.sh` over fresh kit-state output: exit 0.
+- `gen-retro-index.sh --check`: exit 0. `gen-lint-index.sh --check`: exit 0 (no lint changed).
+- `scripts/changelog-gate.sh --range 6c34e20c..HEAD`: PASS (the `Changelog: none` trailers), exit 0.
+- `.githooks/pre-push` fed the branch range: exit 0 (retro half passes on the `Retro: none (trivial: …)` trailers).
+- Not applicable: `go test` / `go vet` (no Go file touched), shellcheck (no `.sh` touched).
+
+## Checks skipped
+- None of the applicable ones. Full `scripts/ci-local.sh` was not run; the touched-area suites above were.
 
 ## Next step
-Close: generator checks, worktree clean, hand back to the parent (push and PR are the user's decision).
+Push and PR are the user's decision. Engram mirror `odd/fold-r10-retros-2026-10-27/tasks`: pending (owned by the parent session).
