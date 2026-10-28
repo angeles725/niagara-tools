@@ -114,7 +114,9 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
     with a `gradlew.bat` gets a SKIP row (Windows route not checked; chosen over `cmd.exe /c gradlew.bat`, which needs
     a drive-letter cwd and path translation); a full-JDK-8 pin passes before the gradlew check; the 8 hand-updated
     usage goldens are `truth-*` cases. RED TestToolchains (pin-no-gradlew SKIP, no Windows row).
-  - [ ] B12.3 · L17 own module (7078f5f8 R4/R3): the module name from its declaration, not the part directory.
+  - [x] B12.3 · L17 own module (7078f5f8 R4/R3): the module name from the gradle `moduleName` (part dir, else module
+    root, else the dir name; the precedence `lint-logger-name` uses), compared ignoring case. RED goldens
+    l17-module-name-1/-2 (the own `ac:BRoom` unflagged, the dir-named `le:BRoom` flagged instead).
   - [ ] B12.4 · close: follow-ups listed, verification.
 
 ## Acceptance

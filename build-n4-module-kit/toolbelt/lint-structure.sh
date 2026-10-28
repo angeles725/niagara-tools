@@ -48,7 +48,9 @@
 #   L17 FAIL  module.palette (read as XML, comments out) t= that is a dotted Java class name ("Invalid typespec"), or
 #             <symbol>:B<Type> whose symbol's latest m= maps it to this module and whose module-include.xml declares
 #             <Type> and not B<Type> ("Type not found"); a symbol of another module, or never mapped, is not judged
-#             (vendor types may carry the B). WARN an m= that maps
+#             (vendor types may carry the B). "This module" (compared ignoring case) is the moduleName a gradle file
+#             in the part directory declares, else one in the module root, else the part directory name without
+#             its -<part> suffix. WARN an m= that maps
 #             a symbol to a module other than its first m= (the decoder keeps the last mapping) and a palette holding
 #             <p that is not well-formed XML (its specs unchecked). An identical repeated m= is clean
 #             [ev: retro course-coverage Δ20]

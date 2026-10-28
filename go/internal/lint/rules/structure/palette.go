@@ -1,13 +1,46 @@
 package structure
 
 import (
+	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
+
+// gradleModuleName reads a gradle file's moduleName.set("X") or moduleName = "X" (lint-logger-name reads the same).
+var gradleModuleName = regexp.MustCompile(`\bmoduleName\s*(?:\.set\(\s*|=\s*)"([^"]+)"`)
+
+// ownModule is the module a profile directory belongs to, as lint-logger-name resolves it: the moduleName a gradle
+// file (*.gradle.kts or *.gradle, in name order) in the profile directory declares, else one in the module root above
+// it, else the directory name without its last "-<part>" suffix. The directory prefix need not be the module name
+// (a renamed module keeps its old part directories). [ev: retro course-coverage Δ20]
+func (s *scan) ownModule(dir string) string {
+	for _, d := range []string{dir, s.root} {
+		entries, err := os.ReadDir(d)
+		if err != nil {
+			continue
+		}
+		var names []string
+		for _, e := range entries {
+			if n := e.Name(); !e.IsDir() && (strings.HasSuffix(n, ".gradle.kts") || strings.HasSuffix(n, ".gradle")) {
+				names = append(names, n)
+			}
+		}
+		sort.Strings(names)
+		for _, n := range names {
+			for _, ln := range s.lines(d + "/" + n) {
+				if m := gradleModuleName.FindStringSubmatch(ln); m != nil {
+					return m[1]
+				}
+			}
+		}
+	}
+	return partModule(dir[strings.LastIndexByte(dir, '/')+1:])
+}
 
 // typeName reads the name of a module-include.xml <type> element.
 var typeName = regexp.MustCompile(`<type[[:space:]][^>]*\bname="([^"]+)"`)
@@ -31,7 +64,7 @@ func (s *scan) declaredTypes(profiles []string) map[string]bool {
 
 // palette is L17 over one module.palette, read through the shared XML scanner (comments are not elements): a t= that
 // is a dotted Java class name FAILs ("Invalid typespec"), and so does <symbol>:B<Type> when the symbol resolves to
-// THIS module (its latest m=, as the decoder keeps it, names own, the profile directory's module) and the module
+// THIS module (its latest m=, as the decoder keeps it, names own, ignoring case; own is ownModule's) and the module
 // declares <Type> and not B<Type> ("Type not found"). A symbol of another module, or one the palette never maps, is
 // not judged: vendor types can carry the B in their name (jsonToolkit declares a type named BFormatString). An m= that maps a symbol to a module
 // other than its first m= WARNs (the decoder keeps the last mapping, so every later entry resolves in the new module;
@@ -84,7 +117,7 @@ func (s *scan) palette(pal, own string) {
 		case strings.Contains(t, "."):
 			at(lint.Unset, e.Line, `t="`+t+`" is a Java class name, not <symbol>:<Type> (Workbench: "Invalid typespec")`)
 		case !hasSym || s.types[ty]:
-		case strings.HasPrefix(ty, "B") && s.types[ty[1:]] && current[sym] == own:
+		case strings.HasPrefix(ty, "B") && s.types[ty[1:]] && strings.EqualFold(current[sym], own):
 			at(lint.Unset, e.Line, `t="`+t+`" keeps the class's B prefix: the type is `+sym+`:`+ty[1:]+` (Workbench: "Type not found")`)
 		}
 	}

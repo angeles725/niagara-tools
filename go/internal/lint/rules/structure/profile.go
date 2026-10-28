@@ -84,7 +84,7 @@ func (s *scan) profile(dir string) {
 		}
 	}
 	if lint.IsFile(pal) {
-		s.palette(pal, partModule(name))
+		s.palette(pal, s.ownModule(dir))
 	}
 	gradle := s.files(dir, true, "*.gradle.kts")
 	for _, g := range gradle {
