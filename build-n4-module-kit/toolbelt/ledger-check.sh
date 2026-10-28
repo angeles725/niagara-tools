@@ -14,7 +14,8 @@
 #   LC6  a Date that is not a real YYYY-MM-DD date (FAIL)
 #   LC7  a Class that is neither — nor a class of the ledger's own Root-cause classes table (FAIL)
 #   LC8  a Defect found with Root cause or Class left — (FAIL)
-#   LC9  a template placeholder (<...>) left in a Versions row (WARN)
+#   LC9  the template's sample row left in place, or one of its <...> placeholder cells left in a row (WARN; such a
+#        row is still checked by LC4-LC8, only the exact sample row is not)
 # An empty Versions table (a freshly scaffolded ledger) is clean.
 # (the 2026-09-26 version-defect-ledger retro, Δ1)
 #
