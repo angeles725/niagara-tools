@@ -34,8 +34,10 @@
 # keep their own severity: counted apart, never PASS, never FAIL, never change the verdict.
 # [ev: retro alarm-console-design Δ3]
 # Advisory members (deferred-lints-2026-10-03): lint-size.sh, lint-license-isoperational-gate.sh,
-# lint-set-null-ord.sh and lint-ws-placement.sh [ev: retro ws-placement] on <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit
-# of an advisory member is an ERROR row carrying the member's first non-row output line (exit 3), never PASS.
+# lint-set-null-ord.sh and lint-ws-placement.sh [ev: retro ws-placement] on <artifact>/src — their WARN rows are relayed with a PASS verdict row; an
+# exit 1 with a FAIL row (lint-size in a `modularity: strict` module) relays its rows as FAIL with no PASS verdict
+# [ev: retro modularity-strict-new Δ4]; any other non-zero exit of an advisory member is an ERROR row carrying the
+# member's first non-row output line (exit 3), never PASS.
 # lint-agent-on-include-sync.sh <module-root> once per run (FAIL, step 8b): a @NiagaraType @AgentOn type whose
 # module-include.xml <type> line lacks one of its <on type> entries (types/module-wiring.md § 2).
 # lint-slotomatic-markers.sh <artifact>/src (FAIL; a WARN unclosed-region row relayed): a generated region

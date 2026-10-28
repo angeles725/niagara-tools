@@ -4,7 +4,8 @@
 #
 # A BComponent that grows past ~800 hand-written lines, or a pure control method past ~80, is where mixed concerns
 # hide: the decision-logic decomposition retro traced a live defect to a monolithic step() whose counts used
-# different membership rules. Size is a REVIEW QUESTION for new modules, never a hard gate, so every row is WARN.
+# different membership rules. Size is a REVIEW QUESTION, never a hard gate, so every row is WARN -- except in a
+# `modularity: strict` module (Module map modes below), where the class and method rows FAIL.
 # Doctrine: types/logic.md § Composition & organization, METHODOLOGY.md § Conformance rules (size smell); deployed
 # modules are not restructured to meet it (METHODOLOGY.md § Schema / upgrade safety).
 # [ev: retro decision-logic-decomposition Δ2]
@@ -41,6 +42,7 @@
 # Usage:  lint-size.sh [--strict] [--max-class <n>] [--max-method <n>] <src-root>
 #   Defaults: --max-class 800, --max-method 80 (strictly greater than the limit WARNs).
 #   Row:  WARN  lint-size  <file>:<line>  <detail>
+#         FAIL  lint-size  <file>:<line>  <detail>   (a class or method row in a `modularity: strict` module)
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any FAIL (a strict module) or any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 # Empty root: a root with no *.java is `ERROR  lint-size  <root>  no files to scan (K20: wrong path or empty
 # scaffold)` on stdout, exit 3. A bad --max-class/--max-method value prints `lint-size: <flag> needs a

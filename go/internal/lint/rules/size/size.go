@@ -149,6 +149,7 @@ const maxAdapterBranches = 15
 func (r rule) mapped(f *javasrc.File, code []string, gen []bool, sev lint.Severity, name string, line int, baja bool) []lint.Finding {
 	var out []lint.Finding
 	toks := javasrc.Tokens(code)
+	// Token lines (Token.Line, Decl.Line) are 0-based indexes into code and gen; a Finding.Line is 1-based.
 	for _, d := range javasrc.Decls(toks) {
 		if span := toks[d.Body[1]].Line - d.Line + 1; span > r.maxMethod {
 			out = append(out, lint.Finding{Severity: sev, Line: d.Line + 1, Msg: fmt.Sprintf("method %s() in class %s spans %d"+
@@ -172,8 +173,9 @@ func (r rule) mapped(f *javasrc.File, code []string, gen []bool, sev lint.Severi
 	return out
 }
 
-// modelImport is an import of a type in a model package (the adapter's pure peer).
-var modelImport = regexp.MustCompile(`^[[:space:]]*import[[:space:]]+([A-Za-z_][A-Za-z0-9_]*\.)*model\.[A-Za-z_]`)
+// modelImport is an import of a type in a model package (the adapter's pure peer), or a static import of one
+// of its members (`import static com.x.model.Core.step;`).
+var modelImport = regexp.MustCompile(`^[[:space:]]*import[[:space:]]+(static[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*\.)*model\.[A-Za-z_]`)
 
 func importsModel(code []string) bool {
 	for _, c := range code {

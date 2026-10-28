@@ -1,0 +1,83 @@
+-- args --
+--max-class
+1000
+--max-method
+1000
+@DIR@/t/src
+-- want --
+exit 0
+-- stderr --
+-- t/MODULE-MAP.md --
+modularity: legacy
+legacy-reason: deployed before the module map
+-- t/src/com/x/BAtBudget.java --
+package com.x;
+
+import javax.baja.sys.BComponent;
+import com.x.model.Core;
+
+public class BAtBudget extends BComponent
+{
+  public void changed()
+  {
+    if (a0) x();
+    if (a1) x();
+    if (a2) x();
+    if (a3) x();
+    if (a4) x();
+    if (a5) x();
+    if (a6) x();
+    if (a7) x();
+    if (a8) x();
+    if (a9) x();
+    if (a10) x();
+    if (a11) x();
+    if (a12) x();
+    if (a13) x();
+    if (a14) x();
+  }
+}
+-- t/src/com/x/BRegion.java --
+package com.x;
+
+import javax.baja.sys.BComponent;
+import com.x.model.Core;
+
+public class BRegion extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  void gen()
+  {
+    if (g0) x();
+    if (g1) x();
+    if (g2) x();
+    if (g3) x();
+    if (g4) x();
+  }
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+  public void changed()
+  {
+    if (a0) x();
+    if (a1) x();
+    if (a2) x();
+    if (a3) x();
+    if (a4) x();
+    if (a5) x();
+    if (a6) x();
+    if (a7) x();
+    if (a8) x();
+    if (a9) x();
+    if (a10) x();
+    if (a11) x();
+    if (a12) x();
+    if (a13) x();
+    if (a14) x();
+  }
+}
+-- t/src/com/x/model/Core.java --
+package com.x.model;
+
+public final class Core
+{
+  public static int step(int a) { return a; }
+}
