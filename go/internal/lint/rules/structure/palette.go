@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
@@ -16,8 +17,9 @@ var gradleModuleName = regexp.MustCompile(`\bmoduleName\s*(?:\.set\(\s*|=\s*)"([
 
 // ownModule is the module a profile directory belongs to, as lint-logger-name resolves it: the moduleName a gradle
 // file (*.gradle.kts or *.gradle, in name order) in the profile directory declares, else one in the module root above
-// it, else the directory name without its last "-<part>" suffix. The directory prefix need not be the module name
-// (a renamed module keeps its old part directories). [ev: retro course-coverage Δ20]
+// it, else the directory name without its last "-<part>" suffix. A commented-out declaration is not read. The
+// directory prefix need not be the module name (a renamed module keeps its old part directories).
+// [ev: retro course-coverage Δ20]
 func (s *scan) ownModule(dir string) string {
 	for _, d := range []string{dir, s.root} {
 		entries, err := os.ReadDir(d)
@@ -32,7 +34,9 @@ func (s *scan) ownModule(dir string) string {
 		}
 		sort.Strings(names)
 		for _, n := range names {
-			for _, ln := range s.lines(d + "/" + n) {
+			// Mutation: L17-commented-modulename -- reading raw lines lets a commented-out old moduleName win
+			code, _ := javasrc.Strip(s.lines(d + "/" + n)) // Kotlin and Groovy comments are Java's: // and /* */
+			for _, ln := range code {
 				if m := gradleModuleName.FindStringSubmatch(ln); m != nil {
 					return m[1]
 				}
