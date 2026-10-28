@@ -74,6 +74,14 @@ added lines only rows of the two new members (58 `SKIP ... no src/` each, and on
 `fx-md5-cred-warn`, whose fixture calls `getBytes()`), and each summary's counts moved by exactly those rows with its
 verdict unchanged. Under stubs a clean member prints nothing, so the other cases did not move.
 
+Kit backlog B11.6 (2026-10-28) added three per-artifact members: `lint-lexicon-apostrophe` after
+`lint-lexicon-ascii` (on the artifact directory, WARN rows relayed; a clean or lexicon-less artifact prints nothing)
+and `lint-lifecycle-guard` and `lint-intrinsic-lock` after `lint-slot-default-type` (on `src/`, WARN rows relayed),
+none with a verdict row. The 25 cases that moved were re-recorded the same way (a temporary, uncommitted dump hook in
+`golden.Runner`) and a script compared each old and new case: exit line unchanged, every old line kept and in order,
+the added lines only rows of the new members (58 `SKIP ... no src/` for each of the two source lints, no real row),
+and each summary line changed only in its counts, verdict unchanged.
+
 ## Truth cases (`truth-*`)
 
 Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro

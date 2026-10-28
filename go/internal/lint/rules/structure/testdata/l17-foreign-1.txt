@@ -1,0 +1,20 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-structure  Acme-rt/module.palette:7  L17: module.palette t="ac:BRoom" keeps the class's B prefix: the type is ac:Room (Workbench: "Type not found")
+-- stderr --
+-- Mod/Acme-rt/module-include.xml --
+<types><type name="Room" class="com.acme.BRoom"/></types>
+-- Mod/Acme-rt/module.lexicon --
+Room.displayName=Room
+-- Mod/Acme-rt/module.palette --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0">
+<p m="b=baja" t="b:UnrestrictedFolder">
+  <p n="Vendor" m="fo=Foreign" t="fo:BRoom"/>
+  <p n="Unmapped" t="zz:BRoom"/>
+  <p n="Own" m="ac=Acme" t="ac:Room"/>
+  <p n="OwnB" t="ac:BRoom"/>
+</p>
+</bajaObjectGraph>

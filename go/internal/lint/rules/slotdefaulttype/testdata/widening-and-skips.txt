@@ -1,0 +1,16 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-slot-default-type  @DIR@/src/BW.java:8  @NiagaraProperty flag type="boolean" defaultValue="BInteger.make(1)": the default is a BInteger, so Slot-o-Matic's newProperty(flags, BInteger.make(1), ...) stores a BInteger that is not a BBoolean: the type fails to load ("Property default value is of wrong type") (types/structure.md § Slot defaults)
+-- stderr --
+-- src/BW.java --
+@NiagaraProperty(name = "l", type = "long", defaultValue = "BInteger.make(3)")
+@NiagaraProperty(name = "f", type = "float", defaultValue = "BInteger.make(3)")
+@NiagaraProperty(name = "d", type = "double", defaultValue = "BInteger.DEFAULT")
+@NiagaraProperty(name = "fi", type = "float", defaultValue = "7")
+@NiagaraProperty(name = "noDefault", type = "int")
+@NiagaraProperty(name = "noType", defaultValue = "false")
+@NiagaraProperty(name = "bs", type = "BString", defaultValue = "\"x\"")
+@NiagaraProperty(name = "flag", type = "boolean", defaultValue = "BInteger.make(1)")
+class BW {}

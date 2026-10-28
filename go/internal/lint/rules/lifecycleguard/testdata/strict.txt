@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+WARN  lint-lifecycle-guard  @DIR@/src/BA.java:1  LG1 changed() acts with no isRunning() guard: make its first statement if (!isRunning()) return; (types/logic.md § Tridium rt idioms)
+-- stderr --
+-- src/BA.java --
+public class BA extends BComponent { public void changed(Property p, Context cx) { setOut(1); } }

@@ -51,6 +51,8 @@ configFail(LEX.getText("workOrderService.badStatusCode", cx, statusCode));
   B1236 §1236.4, §1236.7). `types/observability.md` § 3 shows the fault-slot side.
 - **MessageFormat.** `getText(key, cx, args…)` formats with `MessageFormat`: `{0}` placeholders, and `''` for one
   apostrophe in an entry read with arguments. [CERT] `V/util/LexiconModule.java:107-113`.
+  Check: `toolbelt/lint-lexicon-apostrophe.sh` (WARN: a value with a `{n}` argument and a single `'`; a value without
+  arguments is not judged). `[ev: corpus B1236 §1236.4]` `[ev: retro course-coverage Δ26]`
 - **Exceptions.** Throw `new LocalizableRuntimeException("<module>", "<key>", new Object[] { … })` (checked:
   `LocalizableException`). Its `getMessage()` was formatted at construction with a `null` Context (VM locale); show it
   to a user with `toString(cx)`. A missing key renders as `<key> {args}`. [CERT]

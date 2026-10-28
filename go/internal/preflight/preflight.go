@@ -1,7 +1,8 @@
 // Package preflight is the BUILD-LOOP §0.b environment preflight of toolbelt/preflight.sh: before a
 // gradle build it checks the paths (win-path), the JDK (jdk8), the Niagara plugin pin (plugin-pin),
 // module jars held by a running station (jar-lock), a sibling checkout at a higher module version
-// (version-drift) and, with --sample, the retarget of a project someone else shipped (sample-*).
+// (version-drift), with --sample the retarget of a project someone else shipped (sample-*) and, with
+// --toolchains, a full JDK 8 among Gradle's toolchains (toolchains).
 // Every check prints one `PASS|FAIL|WARN|SKIP  <check>  <detail>` row and the run continues after a
 // FAIL, so one run shows every problem. A check is one func in the checks list: a new row (BUILD-STATE
 // G95 shared-host) is one more entry.
@@ -26,7 +27,7 @@ const (
 	ExitEnv   = 3 // niagara_home or the gradle root is not a directory
 )
 
-const usage = "usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] [--sample] <niagara_home> <gradle-root>\n"
+const usage = "usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] [--sample] [--toolchains] <niagara_home> <gradle-root>\n"
 
 // quotedVersion is the first "X.Y.Z" string that names a version (plugin pin, defaultModuleVersion).
 var quotedVersion = regexp.MustCompile(`"[0-9]+\.[0-9]+\.[0-9]+"`)
@@ -68,11 +69,12 @@ type run struct {
 	h                   Host
 	jvmDir, plugin      string
 	sample, failed, win bool
+	toolchainsOn        bool
 	nh, gr              string
 }
 
 // checks run in this order after the win-path rows; a check reading the paths returns early on r.win.
-var checks = []func(*run){(*run).jdk8, (*run).pluginPin, (*run).jarLock, (*run).versionDrift, (*run).sampleRows}
+var checks = []func(*run){(*run).jdk8, (*run).pluginPin, (*run).jarLock, (*run).versionDrift, (*run).sampleRows, (*run).toolchains}
 
 // Command is preflight over the host h.
 func Command(h Host) cli.Main {
@@ -124,6 +126,8 @@ func (r *run) parse(args []string) ([]string, bool) {
 			args = args[2:]
 		case a == "--sample":
 			r.sample, args = true, args[1:]
+		case a == "--toolchains":
+			r.toolchainsOn, args = true, args[1:]
 		case a == "--":
 			return args[1:], true
 		case strings.HasPrefix(a, "-"):

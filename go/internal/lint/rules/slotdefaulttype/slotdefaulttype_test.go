@@ -11,4 +11,4 @@ import (
 // literal on a long/double slot is clean (the introspector widens it), and so are a matching literal, a matching
 // B-value (BInteger.make, BString.make) and an expression the rule cannot type (a constant, new BStatusNumeric());
 // comments and multi-line annotations; empty root; usage.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 4) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 5) }

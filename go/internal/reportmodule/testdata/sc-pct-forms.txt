@@ -25,6 +25,8 @@ P1  SKIP  lint-session-store-lazy-evict  no src/
 P1  SKIP  lint-bformat-call  no src/
 P1  SKIP  lint-charset-default  no src/
 P1  SKIP  lint-slot-default-type  no src/
+P1  SKIP  lint-lifecycle-guard  no src/
+P1  SKIP  lint-intrinsic-lock  no src/
 P1  SKIP  lint-service-types  no src/
 P1  SKIP  lint-driver-scaffold  no src/
 P1  SKIP  lint-no-md5-credential-digest  no src/
@@ -55,6 +57,8 @@ P2  SKIP  lint-session-store-lazy-evict  no src/
 P2  SKIP  lint-bformat-call  no src/
 P2  SKIP  lint-charset-default  no src/
 P2  SKIP  lint-slot-default-type  no src/
+P2  SKIP  lint-lifecycle-guard  no src/
+P2  SKIP  lint-intrinsic-lock  no src/
 P2  SKIP  lint-service-types  no src/
 P2  SKIP  lint-driver-scaffold  no src/
 P2  SKIP  lint-no-md5-credential-digest  no src/
@@ -85,6 +89,8 @@ P3  SKIP  lint-session-store-lazy-evict  no src/
 P3  SKIP  lint-bformat-call  no src/
 P3  SKIP  lint-charset-default  no src/
 P3  SKIP  lint-slot-default-type  no src/
+P3  SKIP  lint-lifecycle-guard  no src/
+P3  SKIP  lint-intrinsic-lock  no src/
 P3  SKIP  lint-service-types  no src/
 P3  SKIP  lint-driver-scaffold  no src/
 P3  SKIP  lint-no-md5-credential-digest  no src/
@@ -115,6 +121,8 @@ P4  SKIP  lint-session-store-lazy-evict  no src/
 P4  SKIP  lint-bformat-call  no src/
 P4  SKIP  lint-charset-default  no src/
 P4  SKIP  lint-slot-default-type  no src/
+P4  SKIP  lint-lifecycle-guard  no src/
+P4  SKIP  lint-intrinsic-lock  no src/
 P4  SKIP  lint-service-types  no src/
 P4  SKIP  lint-driver-scaffold  no src/
 P4  SKIP  lint-no-md5-credential-digest  no src/
@@ -145,6 +153,8 @@ P5  SKIP  lint-session-store-lazy-evict  no src/
 P5  SKIP  lint-bformat-call  no src/
 P5  SKIP  lint-charset-default  no src/
 P5  SKIP  lint-slot-default-type  no src/
+P5  SKIP  lint-lifecycle-guard  no src/
+P5  SKIP  lint-intrinsic-lock  no src/
 P5  SKIP  lint-service-types  no src/
 P5  SKIP  lint-driver-scaffold  no src/
 P5  SKIP  lint-no-md5-credential-digest  no src/
@@ -163,7 +173,7 @@ P5  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the dep
 (module)  PASS  lint-vacuous-tests  clean
 (module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 5 artifacts · 21 PASS · 0 FAIL · 2 WARN · 136 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 5 artifacts · 21 PASS · 0 FAIL · 2 WARN · 146 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

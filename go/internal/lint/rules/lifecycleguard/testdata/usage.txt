@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-lifecycle-guard.sh [--strict] <src-root>

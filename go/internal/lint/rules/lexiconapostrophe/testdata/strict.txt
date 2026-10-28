@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/Mod
+-- want --
+exit 1
+WARN  lint-lexicon-apostrophe  @DIR@/Mod/Mod-rt/module.lexicon:1  LX1 msg.full has a MessageFormat argument and a single ' that MessageFormat drops (doesn't renders doesnt): write '' (types/lexicon.md § 3)
+-- stderr --
+-- Mod/Mod-rt/module.lexicon --
+msg.full=The disk doesn't have room for {0}

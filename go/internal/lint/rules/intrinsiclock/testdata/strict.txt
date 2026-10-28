@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+WARN  lint-intrinsic-lock  @DIR@/src/BA.java:1  IL1 synchronized method locks the component, which the framework also locks: lock a private final Object or use Atomic* (types/logic.md § Tridium rt idioms)
+-- stderr --
+-- src/BA.java --
+public class BA extends BComponent { public synchronized void doIt() { n++; } }

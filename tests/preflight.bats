@@ -554,3 +554,23 @@ sample_kts_prepend() {
   [ "$(printf '%s\n' "$output" | grep -c 'version-drift')" -eq 30 ]
   [[ "$output" != *"sibling $TMPDIR_T/d version"* && "$output" != *"sibling $P version"* ]]
 }
+
+# [ev: retro course-coverage Δ25] — --toolchains runs the course's javaToolchains listing in the gradle root.
+@test "PF-toolchains: --toolchains FAILs a listing with only a JRE 8 and PASSes one with a full JDK 8" {
+  cp -r "$GR" "$TMPDIR_T/gr"
+  # shellcheck disable=SC2016
+  # why: $*, $0 and ${FULL_JDK8} must reach the generated fake gradlew unexpanded
+  printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" "$*" > "$(dirname "$0")/gradlew.args"' \
+    'printf " + JRE 1.8.0\n     | Location:  /x/jre8\n     | Language Version:  8\n     | Is JDK:  false\n"' \
+    '[ -z "${FULL_JDK8:-}" ] || printf " + JDK 1.8.0\n     | Location:  /x/jdk8\n     | Language Version:  8\n     | Is JDK:  true\n"' \
+    > "$TMPDIR_T/gr/gradlew"
+  chmod +x "$TMPDIR_T/gr/gradlew"
+  run "$PREFLIGHT" --toolchains --jvm-dir "$JVMDIR" "$NH" "$TMPDIR_T/gr"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  toolchains    gradlew javaToolchains lists no full JDK 8"* ]]
+  [ "$(cat "$TMPDIR_T/gr/gradlew.args")" = "-q -p $TMPDIR_T/gr javaToolchains -Porg.gradle.java.installations.auto-detect=true" ]
+  FULL_JDK8=1 run "$PREFLIGHT" --toolchains --jvm-dir "$JVMDIR" "$NH" "$TMPDIR_T/gr"
+  [[ "$output" == *"PASS  toolchains    full JDK 8 listed by gradlew javaToolchains: /x/jdk8"* ]]
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$TMPDIR_T/gr"
+  [[ "$output" != *"toolchains"* ]]
+}

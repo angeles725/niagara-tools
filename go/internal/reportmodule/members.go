@@ -59,6 +59,8 @@ var perArtifact = []member{
 	{script: "lint-timers", special: (*report).lintTimers},
 	{script: "verify-module", special: (*report).plano},
 	{script: "lint-lexicon-ascii", special: (*report).lexiconASCII},
+	// kit-backlog B11.6: the lexicon-ascii companion; a clean or lexicon-less artifact prints nothing.
+	{script: "lint-lexicon-apostrophe", in: inArtifact, f: warnOnly},
 	{script: "lint-delays", f: failWarn},
 	{script: "lint-demand-scope", f: warnOnly},
 	{script: "lint-silent-protection", f: filter{sel: "FAIL|WARN|ADVISORY"}},
@@ -78,6 +80,9 @@ var perArtifact = []member{
 	// kit-backlog B10.8: the course-coverage source lints (corpus B1417, B1419). No verdict row, as lint-service-types.
 	{script: "lint-charset-default", f: warnOnly},
 	{script: "lint-slot-default-type", f: failOnly},
+	// kit-backlog B11.6: the course-coverage run B source lints (corpus B1242 K3, K4), advisory WARN rows.
+	{script: "lint-lifecycle-guard", f: warnOnly},
+	{script: "lint-intrinsic-lock", f: warnOnly},
 	{script: "lint-service-types", f: failWarn},
 	{script: "lint-driver-scaffold", f: failWarn},
 	{script: "lint-se-display", suffix: "-se", f: failOnly, v: rows},

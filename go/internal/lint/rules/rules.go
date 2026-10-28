@@ -25,9 +25,12 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inertcoordination"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/intrinsiclock"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/jasmineux"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconapostrophe"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lifecycleguard"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/loggername"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
@@ -128,6 +131,9 @@ func All() []lint.Spec {
 		adaptercfgdefault.Spec(),
 		absoluteclaims.Spec(),
 		charsetdefault.Spec(),
+		lifecycleguard.Spec(),
+		intrinsiclock.Spec(),
+		lexiconapostrophe.Spec(),
 		slotdefaulttype.Spec(),
 	}
 }

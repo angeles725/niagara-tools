@@ -32,6 +32,15 @@ setup() {
   [ "$status" -eq 1 ]
 }
 
+@test "CD1-receiver: getBytes() on a String WARNs; a custom class's getBytes() is clean" {
+  # Mutation: CD1-receiver -- dropping the String-receiver test WARNs a custom Packet.getBytes()
+  printf '%s\n' 'package com.acme;' 'class A {' '  byte[] a(Packet p) { return p.getBytes(); }' \
+    '  byte[] b(String s) { return s.getBytes(); }' '}' > "$SRC/com/acme/A.java"
+  run "$L" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-charset-default  $SRC/com/acme/A.java:4  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))" ]
+}
+
 @test "CD2: new String over a byte[] WARNs; over a char[] it is clean" {
   # Mutation: CD2 -- judging new String without the byte-array test WARNs new String(char[])
   printf '%s\n' 'package com.acme;' 'class A {' '  String a(char[] c) { return new String(c); }' \

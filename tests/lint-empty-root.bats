@@ -12,10 +12,11 @@ setup() {
 }
 
 # Documented exceptions (ER5 pins them): lint-jasmine-ux.sh and lint-uberjar-api-conflict.sh are advisory
-# with "Exit: 0 always" (report-module runs the latter on every module root), and lint-lexicon-ascii.sh's
-# LA5 contract is "no *.lexicon files exits 0". lint-structure.sh is out of scope (Go port). lint-manual-labels.sh
+# with "Exit: 0 always" (report-module runs the latter on every module root), lint-lexicon-ascii.sh's
+# LA5 contract is "no *.lexicon files exits 0", and its companion lint-lexicon-apostrophe.sh keeps the same
+# contract (report-module runs it warnOnly on every artifact, go/internal/reportmodule/members.go). lint-structure.sh is out of scope (Go port). lint-manual-labels.sh
 # takes a manual before its ui-dirs (one root argument is its usage error); tests/lint-manual-labels.bats pins it.
-EXEMPT=" lint-jasmine-ux.sh lint-lexicon-ascii.sh lint-manual-labels.sh lint-structure.sh lint-uberjar-api-conflict.sh "
+EXEMPT=" lint-jasmine-ux.sh lint-lexicon-apostrophe.sh lint-lexicon-ascii.sh lint-manual-labels.sh lint-structure.sh lint-uberjar-api-conflict.sh "
 
 # shared_layer_lints: every toolbelt lint-*.sh that sources lib/awk-lint.sh or lib/scan-files.sh, or is an n4lint
 # wrapper (the Go lint engine prints the same ERROR row, go/internal/lint Spec.EmptyError), minus EXEMPT; one basename
@@ -87,7 +88,7 @@ SH
 @test "ER5: the documented exit-0 exceptions stay exit 0 with no output on an empty root" {
   # Mutation: ER5 -- dropping EmptyOK from rules/uberjarapi (lint-uberjar-api-conflict) turns every report-module run ERROR.
   local b
-  for b in lint-jasmine-ux.sh lint-lexicon-ascii.sh lint-uberjar-api-conflict.sh; do
+  for b in lint-jasmine-ux.sh lint-lexicon-apostrophe.sh lint-lexicon-ascii.sh lint-uberjar-api-conflict.sh; do
     run bash "$KIT/toolbelt/$b" "$EMPTY"
     [ "$status" -eq 0 ] && [ -z "$output" ] || { echo "$b: $status $output"; return 1; }
   done

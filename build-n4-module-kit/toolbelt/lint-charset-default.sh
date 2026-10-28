@@ -3,11 +3,14 @@
 #
 # METHODOLOGY.md § rt (components): text bytes name their charset. The platform default is the host's (cp1252 on a
 # Windows station, UTF-8 on a JACE), so code that relies on it writes and reads different bytes per host.
-# Rows: CD1 a no-argument getBytes(); CD2 a new String(...) with one or three arguments whose first argument is a
-# byte array (a name declared byte[] or byte... in the same file, or a getBytes/toByteArray/readAllBytes call);
-# CD3 a one-argument new InputStreamReader / new OutputStreamWriter; CD4 any new FileReader / new FileWriter (Java 8
-# has no charset overload for them). Java is read as tokens (go/internal/javasrc): a comment or a string literal never
-# matches, and a new String over a char[] or a String is not judged. [ev: corpus B1419 §1419.4 c]
+# Rows: CD1 a no-argument getBytes() on a provable String (a string literal, a name or this.<name> the file
+# declares only as String, toString(), String.valueOf/format/join, a parenthesized concatenation with a literal; a
+# custom getBytes() or an unknown receiver is not judged); CD2 a new String(...) with one or three arguments whose
+# first argument is a byte array (a name declared byte[], byte... or C-style byte x[] in the same file and with no
+# other type there, or a getBytes/toByteArray/readAllBytes call); CD3 a one-argument new InputStreamReader / new
+# OutputStreamWriter; CD4 any new FileReader / new FileWriter (Java 8 has no charset overload for them). Java is read
+# as tokens (go/internal/javasrc): a comment or a string literal never matches, and a new String over a char[] or a
+# String is not judged. [ev: corpus B1419 §1419.4 c]
 # [ev: retro course-coverage Δ19]
 #
 # Implementation: rule package go/internal/lint/rules/charsetdefault on the shared engine go/internal/lint
@@ -20,6 +23,7 @@
 #   Exit: 0  clean or WARN-only · 1  any WARN under --strict · 3  usage/env, a root with no *.java
 # Mutation: CD1 -- dropping the no-argument check of getBytes WARNs getBytes(StandardCharsets.UTF_8)
 # Mutation: CD2 -- judging new String without the byte-array test WARNs new String(char[])
+# Mutation: CD1-receiver -- dropping the String-receiver test WARNs a custom Packet.getBytes()
 # Mutation: CD3 -- counting every InputStreamReader argument list as charset-less WARNs new InputStreamReader(in, UTF_8)
 # VCS-free by design.
 set -u

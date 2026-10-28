@@ -4,7 +4,7 @@
 // toolbelt/lint-charset-default.sh is the wrapper and its header is the user-facing contract.
 //
 // A per-file rule over *.java, read as javasrc tokens (comments blanked, a literal one token), so a comment or a
-// string never matches. Rows: CD1 a no-argument getBytes(); CD2 a new String with one or three arguments whose first
+// string never matches. Rows: CD1 a no-argument getBytes() on a provable String (stringReceiver); CD2 a new String with one or three arguments whose first
 // argument is a byte array (a name declared byte[] / byte...[] in the file, or a getBytes / toByteArray /
 // readAllBytes call); CD3 a one-argument InputStreamReader / OutputStreamWriter; CD4 any FileReader / FileWriter
 // (Java 8 has no charset overload for them). A new String over a char[] or a String is not judged.
@@ -12,6 +12,7 @@ package charsetdefault
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
@@ -51,12 +52,14 @@ var byteCalls = map[string]bool{"getBytes": true, "toByteArray": true, "readAllB
 // Check reports each pattern once per occurrence, at the line of its getBytes or new.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	toks := javasrc.Tokens(f.Stripped())
-	bytes := byteNames(toks)
+	decls := declared(toks)
+	bytes, strs := only(decls, "byte[]"), only(decls, "String")
 	var out []lint.Finding
 	add := func(t javasrc.Token, msg string) { out = append(out, lint.Finding{Line: t.Line + 1, Msg: msg}) }
 	for k, t := range toks {
 		switch {
-		case t.Text == "getBytes" && k > 0 && toks[k-1].Text == "." && at(toks, k+1, "(") && at(toks, k+2, ")"):
+		case t.Text == "getBytes" && k > 1 && toks[k-1].Text == "." && at(toks, k+1, "(") && at(toks, k+2, ")") &&
+			stringReceiver(toks, k-2, strs):
 			add(t, cd1)
 		case t.Text == "new" && t.Kind == javasrc.TokIdent:
 			name, open := typeName(toks, k+1)
@@ -154,13 +157,16 @@ func isBytes(arg []javasrc.Token, names map[string]bool) bool {
 	return false
 }
 
-// byteNames are the names the file declares as byte arrays ("byte[] x", "byte... x", "byte x[]") and with no other
-// type anywhere in the file: the scan is file-wide, so a name that is a byte[] in one method and a char[] in another
-// is ambiguous and never judged.
-func byteNames(toks []javasrc.Token) map[string]bool {
-	names := map[string]bool{}
-	for k, t := range toks {
-		if t.Text != "byte" || t.Kind != javasrc.TokIdent {
+// declared maps each name the file declares to the set of its declared types: "<Type> name", "<Type>[] name",
+// "<Type>... name" and the C-style "<Type> name[]" (a [] on either side makes the type "<Type>[]"), each followed by
+// =, ;, ,, ) or :. Both halves of a name's typing read the same forms, so a name typed byte[] in one method and char[]
+// in another (in either declarator style) holds two types. The scan is file-wide: a type is the declared simple name
+// (java.lang.String is String); generic and qualified-by-generic types are not read.
+func declared(toks []javasrc.Token) map[string]map[string]bool {
+	out := map[string]map[string]bool{}
+	for k := 0; k+1 < len(toks); k++ {
+		t := toks[k]
+		if t.Kind != javasrc.TokIdent || notTypes[t.Text] {
 			continue
 		}
 		j, arr := k+1, false
@@ -175,15 +181,38 @@ func byteNames(toks []javasrc.Token) map[string]bool {
 			}
 			break
 		}
-		if j >= len(toks) || toks[j].Kind != javasrc.TokIdent {
+		if j >= len(toks) || toks[j].Kind != javasrc.TokIdent || notTypes[toks[j].Text] {
 			continue
 		}
-		if arr || (at(toks, j+1, "[") && at(toks, j+2, "]")) {
-			names[toks[j].Text] = true
+		name := toks[j].Text
+		for j++; at(toks, j, "[") && at(toks, j+1, "]"); j += 2 {
+			arr = true
+		}
+		if j >= len(toks) {
+			continue
+		}
+		switch toks[j].Text {
+		case "=", ";", ",", ")", ":":
+			typ := t.Text
+			if arr {
+				typ += "[]"
+			}
+			if out[name] == nil {
+				out[name] = map[string]bool{}
+			}
+			out[name][typ] = true
 		}
 	}
-	for n := range otherTyped(toks) {
-		delete(names, n)
+	return out
+}
+
+// only is the set of names whose one declared type is typ.
+func only(decls map[string]map[string]bool, typ string) map[string]bool {
+	names := map[string]bool{}
+	for n, types := range decls {
+		if len(types) == 1 && types[typ] {
+			names[n] = true
+		}
 	}
 	return names
 }
@@ -191,27 +220,63 @@ func byteNames(toks []javasrc.Token) map[string]bool {
 // notTypes are keywords that can stand before a name the way a type does ("return x;", "throw e;").
 var notTypes = map[string]bool{"return": true, "throw": true, "new": true, "case": true, "else": true, "do": true,
 	"assert": true, "yield": true, "goto": true, "package": true, "import": true, "break": true, "continue": true,
-	"this": true, "super": true, "default": true, "byte": true}
+	"this": true, "super": true, "default": true, "instanceof": true}
 
-// otherTyped are the names declared with a type other than byte: "<Type>[ []]* name" followed by =, ;, ,, ) or :.
-func otherTyped(toks []javasrc.Token) map[string]bool {
-	out := map[string]bool{}
-	for k := 0; k+1 < len(toks); k++ {
-		t := toks[k]
-		if t.Kind != javasrc.TokIdent || notTypes[t.Text] {
-			continue
+// stringFactories are String's static methods that return a String (String.valueOf(x).getBytes()).
+var stringFactories = map[string]bool{"valueOf": true, "format": true, "join": true, "copyValueOf": true}
+
+// stringReceiver reports whether the expression that ends at toks[end] (the token before ".getBytes") is provably a
+// String: a string literal; a name, or this.<name>, the file declares only as String; a toString() call; a
+// String.valueOf/format/join/copyValueOf call; or a parenthesized expression holding a string literal and a +. Any
+// other receiver (a custom getBytes(), an unknown method's result, another object's field) is not judged.
+func stringReceiver(toks []javasrc.Token, end int, strs map[string]bool) bool {
+	t := toks[end]
+	switch {
+	case t.Kind == javasrc.TokLiteral:
+		return strings.HasPrefix(t.Text, `"`)
+	case t.Kind == javasrc.TokIdent:
+		if end >= 1 && toks[end-1].Text == "." && !(end >= 2 && toks[end-2].Text == "this") {
+			return false
 		}
-		j := k + 1
-		for at(toks, j, "[") && at(toks, j+1, "]") {
-			j += 2
-		}
-		if j+1 >= len(toks) || toks[j].Kind != javasrc.TokIdent {
-			continue
-		}
-		switch toks[j+1].Text {
-		case "=", ";", ",", ")", ":":
-			out[toks[j].Text] = true
+		return strs[t.Text]
+	case t.Text != ")":
+		return false
+	}
+	open := -1
+	for j, depth := end, 0; j >= 0; j-- {
+		if toks[j].Text == ")" {
+			depth++
+		} else if toks[j].Text == "(" {
+			if depth--; depth == 0 {
+				open = j
+				break
+			}
 		}
 	}
-	return out
+	if open < 1 || toks[open-1].Kind != javasrc.TokIdent {
+		if open < 0 {
+			return false
+		}
+		lit, plus := false, false
+		for j, depth := open+1, 0; j < end; j++ {
+			switch toks[j].Text {
+			case "(", "[", "{":
+				depth++
+			case ")", "]", "}":
+				depth--
+			case "+":
+				plus = plus || depth == 0
+			}
+			lit = lit || (depth == 0 && toks[j].Kind == javasrc.TokLiteral && strings.HasPrefix(toks[j].Text, `"`))
+		}
+		return lit && plus
+	}
+	fn := toks[open-1].Text
+	switch {
+	case fn == "toString" && open+1 == end:
+		return true
+	case stringFactories[fn] && open >= 3 && toks[open-2].Text == "." && toks[open-3].Text == "String":
+		return true
+	}
+	return false
 }

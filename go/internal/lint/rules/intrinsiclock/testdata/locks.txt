@@ -1,0 +1,52 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:5  IL1 synchronized method locks the component, which the framework also locks: lock a private final Object or use Atomic* (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:8  IL2 synchronized (this) locks the component, which the framework also locks: lock a private final Object or use Atomic* (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:11  IL2 synchronized (this) locks the component, which the framework also locks: lock a private final Object or use Atomic* (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:14  IL3 synchronized block nested in another lock: nested locks can deadlock; take one lock at a time (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:16  IL1 synchronized method locks the component, which the framework also locks: lock a private final Object or use Atomic* (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:18  IL3 synchronized block nested in another lock: nested locks can deadlock; take one lock at a time (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/Pool.java:6  IL3 synchronized block nested in another lock: nested locks can deadlock; take one lock at a time (types/logic.md § Tridium rt idioms)
+-- stderr --
+-- src/com/acme/BAcmeCounter.java --
+package com.acme;
+public class BAcmeCounter extends BComponent {
+  private final Object lock = new Object();
+  private final Object other = new Object();
+  public synchronized void bump() { n++; }
+  public static synchronized void reset() { total = 0; }
+  void a() {
+    synchronized (this) { n++; }
+  }
+  void b() {
+    Runnable r = () -> { synchronized (BAcmeCounter.this) { n++; } };
+  }
+  void c() {
+    synchronized (lock) { synchronized (other) { n++; } }
+  }
+  private synchronized
+  void d() {
+    synchronized (lock) { n--; }
+  }
+  void e() {
+    synchronized (lock) { n++; }
+    Object x = new Object() { void f() { synchronized (this) { } } };
+  }
+  // synchronized (this) { }
+  String s = "public synchronized void x() { synchronized (this) {} }";
+}
+-- src/com/acme/Pool.java --
+package com.acme;
+public class Pool {
+  private final Object lock = new Object();
+  synchronized void a() { n++; }
+  void b() { synchronized (this) { n++; } }
+  synchronized void c() { synchronized (lock) { n++; } }
+}
+-- src/com/acme/Buffer.java --
+package com.acme;
+public class Buffer extends BatchQueue {
+  public synchronized void put() { }
+}

@@ -84,7 +84,7 @@ func (s *scan) profile(dir string) {
 		}
 	}
 	if lint.IsFile(pal) {
-		s.palette(pal)
+		s.palette(pal, s.ownModule(dir))
 	}
 	gradle := s.files(dir, true, "*.gradle.kts")
 	for _, g := range gradle {
@@ -184,4 +184,12 @@ func countText(lines []string, text string) int {
 		}
 	}
 	return n
+}
+
+// partModule is the module a part directory belongs to: its name without the last "-<part>" suffix (Acme-rt -> Acme).
+func partModule(part string) string {
+	if i := strings.LastIndex(part, "-"); i > 0 {
+		return part[:i]
+	}
+	return part
 }

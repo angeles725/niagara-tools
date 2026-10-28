@@ -14,7 +14,7 @@ setup() {
   # build.sh sources lib/fs-type.sh (Δ7/Δ2), lib/method-boundary.sh, lib/signing-block.sh and lib/slotomatic-skip.sh
   # relative to its own dir — copy the real libs alongside the copied build.sh so that sibling lookup resolves too.
   mkdir -p "$TMPDIR_T/kit/lib"
-  cp "$KIT"/toolbelt/lib/*.sh "$TMPDIR_T/kit/lib/"
+  cp "$KIT"/toolbelt/lib/*.sh "$KIT"/toolbelt/lib/*.gradle "$TMPDIR_T/kit/lib/"
   # shellcheck disable=SC2016
   # why: $* and ${FAKE_VERIFY_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/verify.args"\nexit "${FAKE_VERIFY_EXIT:-0}"\n' "$TMPDIR_T" > "$TMPDIR_T/kit/verify-module.sh"
@@ -1067,4 +1067,45 @@ _install_gradlew() {
   run "$B_RAW" --profiles rt --no-drift-check "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]
   [ -f "$TMPDIR_T/nh/modules/Foo-rt.jar" ]
+}
+
+# [ev: retro course-coverage Δ22] — --werror compiles every part with -Xlint:all -Werror through a gradle init script.
+@test "BS-werror: --werror hands gradle the init script that adds -Xlint:all -Werror to every JavaCompile" {
+  # Mutation: BS-werror -- dropping the --init-script forward compiles a --werror build without -Werror
+  run "$B" --werror "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  args="$(cat "$TMPDIR_T/gradlew.calls.log")"
+  [[ "$args" == *"--init-script $TMPDIR_T/kit/lib/werror.init.gradle"* ]]
+  grep -q "JavaCompile" "$TMPDIR_T/kit/lib/werror.init.gradle"
+  grep -q "'-Xlint:all', '-Werror'" "$TMPDIR_T/kit/lib/werror.init.gradle"
+}
+
+# [ev: retro kit-backlog-2026-10-27 B12] — a build script or plugin that REPLACES options.compilerArgs after the init
+# script's task-creation action silently dropped -Werror; the args now go on in taskGraph.whenReady (after every
+# project, afterEvaluate and lazy configure action) and only when absent.
+@test "BS-werror-late: the init script adds -Xlint:all -Werror at taskGraph.whenReady, after all build configuration" {
+  # Mutation: BS-werror-late -- an append in a tasks.withType(JavaCompile) creation action is replaced by a later
+  # `options.compilerArgs = [...]` in the build script, so --werror compiles without -Werror and passes
+  local code
+  code="$(grep -v '^[[:space:]]*//' "$KIT/toolbelt/lib/werror.init.gradle")"
+  [[ "$code" == *"gradle.taskGraph.whenReady"* ]]
+  [[ "$code" == *"instanceof JavaCompile"* ]]
+  [[ "$code" == *"compilerArgs.contains("* ]]
+  [[ "$code" != *"tasks.withType(JavaCompile)"* ]]
+}
+
+@test "BS-werror-off: without --werror gradle gets no init script (the default build is unchanged)" {
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" != *"--init-script"* ]]
+}
+
+@test "BS-werror-hint: a failing --werror build exits 30 and names the remedy (fix the warning or a scoped @SuppressWarnings)" {
+  FAKE_GRADLEW_EXIT=1 run "$B" --werror "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 30 ]
+  [[ "$output" == *"--werror"* ]]
+  [[ "$output" == *"@SuppressWarnings"* ]]
+  FAKE_GRADLEW_EXIT=1 run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 30 ]
+  [[ "$output" != *"@SuppressWarnings"* ]]
 }

@@ -1,0 +1,77 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeClean.java:20  LG1 changed() acts with no isRunning() guard: make its first statement if (!isRunning()) return; (types/logic.md § Tridium rt idioms)
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeLogic.java:6  LG1 changed() acts with no isRunning() guard: make its first statement if (!isRunning()) return; (types/logic.md § Tridium rt idioms)
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeLogic.java:10  LG1 added() acts with no isRunning() guard: make its first statement if (!isRunning()) return; (types/logic.md § Tridium rt idioms)
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeLogic.java:14  LG1 removed() acts with no isRunning() guard: make its first statement if (!isRunning()) return; (types/logic.md § Tridium rt idioms)
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeLogic.java:18  LG1 changed() acts with no isRunning() guard: make its first statement if (!isRunning()) return; (types/logic.md § Tridium rt idioms)
+-- stderr --
+-- src/com/acme/BAcmeLogic.java --
+package com.acme;
+import javax.baja.sys.*;
+public class BAcmeLogic extends BComponent {
+  // unguarded: write on every decode
+  @Override
+  public void changed(Property p, Context cx) {
+    if (p == in) setOut(getIn());
+  }
+  @Override
+  public void added(Property p, Context cx) {
+    setSize(getSize() + 1);
+  }
+  @Override
+  public void removed(Property p, BValue old, Context cx) {
+    super.removed(p, old, cx); setSize(getSize() - 1);
+  }
+  class Inner extends BComponent {
+    public void changed(Property p, Context cx) {
+      if (cx == null) return;
+      if (!isRunning()) return;
+      doWork();
+    }
+  }
+}
+-- src/com/acme/BAcmeClean.java --
+package com.acme;
+import javax.baja.sys.*;
+public class BAcmeClean extends BComponent {
+  public void changed(Property p, Context cx) {
+    if (!isRunning()) return;
+    setOut(getIn());
+  }
+  public void added(Property p, Context cx) {
+    super.added(p, cx);
+    if (!isRunning() || cx == Context.decoding) { return; }
+    setSize(getSize() + 1);
+  }
+  public void removed(Property p, BValue old, Context cx) {
+    if (isRunning()) { setSize(getSize() - 1); }
+  }
+  // only the super call: nothing acts
+  public void changed2(Property p, Context cx) { setOut(1); }
+  public void changed(String other) { setOut(2); }
+  Object anon = new BComponent() {
+    public void changed(Property p, Context cx) { setOut(3); }
+  };
+  /* public void changed(Property p, Context cx) { setOut(4); } */
+  String s = "public void added(Property p, Context cx) { setOut(5); }";
+}
+-- src/com/acme/BAcmeSteady.java --
+package com.acme;
+public class BAcmeSteady extends BComponent {
+  public void changed(javax.baja.sys.Property p, javax.baja.sys.Context cx) {
+    if (!Sys.atSteadyState()) return;
+    setOut(getIn());
+  }
+  public void added(Property p, Context cx) {
+    if (this.isRunning() && p == in) setOut(1);
+  }
+}
+-- src/com/acme/BAcmeSuperOnly.java --
+package com.acme;
+public class BAcmeSuperOnly extends BComponent {
+  public void changed(Property p, Context cx) { super.changed(p, cx); }
+  public void added(Property p, Context cx) { }
+}

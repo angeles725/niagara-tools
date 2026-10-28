@@ -25,6 +25,8 @@ DemoPan-rt  SKIP  lint-session-store-lazy-evict  no src/
 DemoPan-rt  SKIP  lint-bformat-call  no src/
 DemoPan-rt  SKIP  lint-charset-default  no src/
 DemoPan-rt  SKIP  lint-slot-default-type  no src/
+DemoPan-rt  SKIP  lint-lifecycle-guard  no src/
+DemoPan-rt  SKIP  lint-intrinsic-lock  no src/
 DemoPan-rt  SKIP  lint-service-types  no src/
 DemoPan-rt  SKIP  lint-driver-scaffold  no src/
 DemoPan-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
@@ -57,7 +59,7 @@ DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract
 (module)  SKIP  lint-logger-name  no *.java under a -rt, -ux, -wb or -se part's src/
 (module)  SKIP  lint-adapter-cfg-default  no *.java under a -rt part's src/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 6 PASS · 2 FAIL · 1 WARN · 44 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 6 PASS · 2 FAIL · 1 WARN · 46 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
