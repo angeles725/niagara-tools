@@ -154,11 +154,22 @@ func TestJSFileSize(t *testing.T) {
 	}
 }
 
-// mapRows runs rc-scan on a module root M under a temp dir holding the map and files (paths relative to M-ux), and
-// returns its exit code and only its fetch-outside-services and js-file-size rows.
+// mapRows writes mapBody as the module map MODULE-MAP.md at a temp module root and files under its artifact dir
+// M-ux (paths relative to M-ux), runs rc-scan on M-ux, and returns the exit code and only the
+// fetch-outside-services and js-file-size rows.
 func mapRows(t *testing.T, mapBody string, files map[string]string, args ...string) (int, string) {
 	t.Helper()
-	root := t.TempDir()
+	return mapRowsUnder(t, "", mapBody, files, args...)
+}
+
+// mapRowsUnder is mapRows with the module root placed under ancestor (a relative path inside the temp dir), so a
+// test can name the directories ABOVE the module.
+func mapRowsUnder(t *testing.T, ancestor, mapBody string, files map[string]string, args ...string) (int, string) {
+	t.Helper()
+	root := filepath.Join(t.TempDir(), ancestor)
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(root, "MODULE-MAP.md"), []byte(mapBody), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -230,5 +241,45 @@ func TestMapChecksSkipThirdParty(t *testing.T) {
 	})
 	if code != 0 || rows != "" {
 		t.Errorf("exit %d rows %q, want 0 and none", code, rows)
+	}
+}
+
+// TestMapAnchorsIgnoreAncestors: the services exemption and the third-party skip read the path below the artifact
+// dir, never the directories above the module: a checkout that happens to sit under rc/js/services/ or rc/vendor/
+// must not exempt or skip the whole module (review R4/R3 of 64cda653).
+func TestMapAnchorsIgnoreAncestors(t *testing.T) {
+	big := strings.Repeat("var v = 1;\n", 401)
+	files := map[string]string{"src/rc/js/pages/home.js": fetchJS, "src/rc/js/pages/big.js": big}
+	want := "FAIL  rc-scan  src/rc/js/pages/big.js:1  js-file-size:"
+	for _, ancestor := range []string{"srv/rc/js/services", "checkout/rc/vendor", "x/rc/ext"} {
+		// Mutation: RC-ancestor -- matching the walked path lets an ancestor named rc/js/services or rc/vendor
+		// exempt or skip every file of the module
+		code, rows := mapRowsUnder(t, ancestor, "modularity: strict\n", files)
+		if code != 1 || !strings.Contains(rows, "src/rc/js/pages/home.js:2  fetch-outside-services:") || !strings.Contains(rows, want) {
+			t.Errorf("under %s: exit %d rows %q, want both pages reported", ancestor, code, rows)
+		}
+	}
+}
+
+// TestThirdParty pins every branch of thirdParty on rc-relative paths, including the rc/ext/ and *.min.js ones
+// the walk already prunes (so a change to the walk cannot turn the map checks on third-party code).
+func TestThirdParty(t *testing.T) {
+	cases := []struct {
+		rel  string
+		want bool
+	}{
+		{"src/rc/vendor/lib/lib.js", true},
+		{"src/rc/ext/tool/tool.js", true},
+		{"src/rc/js/chart.min.js", true},
+		{"vendor/lib.js", true}, // artifact dir = the rc dir itself
+		{"ext/tool.js", true},
+		{"src/rc/js/pages/vendor/x.js", false}, // a vendor/ segment below js/ is the module's own code
+		{"src/rc/js/minify.js", false},
+		{"src/rc/js/pages/home.js", false},
+	}
+	for _, tt := range cases {
+		if got := thirdParty(rcRel(tt.rel)); got != tt.want {
+			t.Errorf("thirdParty(rcRel(%q)) = %v, want %v", tt.rel, got, tt.want)
+		}
 	}
 }

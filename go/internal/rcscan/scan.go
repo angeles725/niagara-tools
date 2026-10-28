@@ -9,7 +9,8 @@ import (
 )
 
 // source is one scanned file: its row path (relative to the artifact dir), its path as walked (rooted at the
-// artifact dir argument, for the module-map checks' anchors), extension and awk records.
+// artifact dir argument), extension and awk records. The module-map checks anchor on rcRel(rel), never on the
+// walked path: the directories above the artifact dir are not the module's layout.
 type source struct {
 	rel, path, ext string
 	lines          []string
@@ -323,7 +324,7 @@ const maxJSLines = 400
 // jsFileSize (module map modes only) reports a .js file of more than maxJSLines lines at its line 1, unless
 // line 1 carries the `rc-scan: allow js-file-size` marker.
 func (s *fileScan) jsFileSize() {
-	if !s.o.mapped() || thirdParty(s.src.path) || s.src.ext != "js" || len(s.src.lines) <= maxJSLines ||
+	if !s.o.mapped() || thirdParty(rcRel(s.src.rel)) || s.src.ext != "js" || len(s.src.lines) <= maxJSLines ||
 		allowedOn(s.src.lines[0], "js-file-size") {
 		return
 	}
@@ -333,9 +334,10 @@ func (s *fileScan) jsFileSize() {
 
 // fetchOutside (module map modes only) reports a fetch( call in JavaScript (a .js file or an inline <script>)
 // outside an rc/js/services/ file: only the services call the network (modularity-gaps Δ2). The exemption is
-// anchored at rc/js/services/: a services/ segment elsewhere (js/pages/services/, rc/services/) is not it.
+// anchored at rc/js/services/ below the artifact dir: a services/ segment elsewhere (js/pages/services/,
+// rc/services/) or above the module is not it.
 func (s *fileScan) fetchOutside() {
-	if !s.o.mapped() || thirdParty(s.src.path) || strings.Contains("/"+s.src.path, "/rc/js/services/") ||
+	if !s.o.mapped() || thirdParty(rcRel(s.src.rel)) || strings.HasPrefix(rcRel(s.src.rel), "js/services/") ||
 		!fetchCall.MatchString(s.line) || s.allowed("fetch-outside-services") {
 		return
 	}
@@ -478,11 +480,25 @@ func (s *fileScan) allowed(id string) bool { return allowedOn(s.line, id) }
 // allowedOn reports an `rc-scan: allow <id>` marker on line.
 func allowedOn(line, id string) bool { return strings.Contains(line, "rc-scan: allow "+id) }
 
-// thirdParty is a file the module does not author and so does not split: under rc/vendor/ (vendored JS is not
-// even scanned; its HTML is) or rc/ext/ (pruned by the walk), or a *.min.js (excluded by the walk). The module-map
-// checks state it themselves so a change to the walk cannot turn them on third-party code.
-func thirdParty(p string) bool {
-	return strings.Contains("/"+p, "/rc/vendor/") || strings.Contains("/"+p, "/rc/ext/") || strings.HasSuffix(p, ".min.js")
+// thirdParty is a file the module does not author and so does not split, given its rc-relative path (rcRel): under
+// vendor/ (vendored JS is not even scanned; its HTML is) or ext/ (pruned by the walk), or a *.min.js (excluded by
+// the walk). The module-map checks state it themselves so a change to the walk cannot turn them on third-party code.
+func thirdParty(rc string) bool {
+	return strings.HasPrefix(rc, "vendor/") || strings.HasPrefix(rc, "ext/") || strings.HasSuffix(rc, ".min.js")
+}
+
+// rcRel is a row path (relative to the artifact dir) made relative to the module's rc/ directory: the part after
+// its first `rc` segment, or the whole path when it has none (the artifact dir argument is the rc dir itself).
+// Only the path below the artifact dir is read, so an ancestor directory named rc/vendor or rc/js/services cannot
+// exempt or skip the module (review of 64cda653, R4/R3).
+func rcRel(rel string) string {
+	if strings.HasPrefix(rel, "rc/") {
+		return rel[len("rc/"):]
+	}
+	if i := strings.Index(rel, "/rc/"); i >= 0 {
+		return rel[i+len("/rc/"):]
+	}
+	return rel
 }
 
 // ordLiteral is the ERE (station:|local:|slot:/)|(^|[|"'`])h:[0-9a-fA-F]+ (a scheme prefix, or a handle ORD

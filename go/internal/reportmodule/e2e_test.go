@@ -35,7 +35,7 @@ func realMembers(t *testing.T, root string, real ...string) (int, string) {
 	return code, o.String() + e.String()
 }
 
-// module writes a module root m (files relative to it) under a temp dir.
+// moduleTree writes a module root m (files relative to it) under a temp dir.
 func moduleTree(t *testing.T, files map[string]string) string {
 	t.Helper()
 	root := filepath.Join(t.TempDir(), "m")
@@ -61,7 +61,7 @@ func TestStrictSizeRelayEndToEnd(t *testing.T) {
 	root := moduleTree(t, map[string]string{"MODULE-MAP.md": e2eMap, "A-rt/src/a/BBig.java": body, "A-rt/srcTest/a/BBigTest.java": "class BBigTest {}\n"})
 	code, out := realMembers(t, root, "lint-size", "lint-module-map")
 	if code != ExitFail || !strings.Contains(out, "A-rt  FAIL  lint-size  ") || strings.Contains(out, "PASS  lint-size") ||
-		!strings.Contains(out, "(module)  PASS  lint-module-map  clean") || !strings.Contains(out, "1 FAIL") || !strings.Contains(out, "->  ISSUES") {
+		!strings.Contains(out, "(module)  PASS  lint-module-map  clean") || !strings.Contains(out, " · 1 FAIL · ") || !strings.Contains(out, "->  ISSUES") {
 		t.Errorf("exit %d, want %d with a relayed lint-size FAIL row and the ISSUES verdict:\n%s", code, ExitFail, out)
 	}
 }

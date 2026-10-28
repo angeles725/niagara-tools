@@ -88,9 +88,22 @@ func toolbeltCopy(t *testing.T, repo, dir string) []string {
 		if _, err := os.Lstat(at); err == nil {
 			continue // the case's own entry
 		}
-		if stubRest && filepath.Ext(name) == ".sh" {
+		switch {
+		case stubRest && filepath.Ext(name) == ".sh":
 			must(t, os.WriteFile(at, []byte("#!/usr/bin/env bash\nexit 0\n"), 0o755))
-		} else {
+		case name == "eslint" && e.IsDir():
+			// Hermetic: toolbelt/eslint/ is linked file by file WITHOUT node_modules/, so a checkout where the pinned
+			// npm tools are installed (CI's bats job, a ci-local replay) runs the same PATH-fallback cases as one
+			// without; a case that needs a kit eslint brings its own toolbelt/eslint.
+			must(t, os.Mkdir(at, 0o755))
+			sub, err := os.ReadDir(filepath.Join(tb, name))
+			must(t, err)
+			for _, f := range sub {
+				if f.Name() != "node_modules" {
+					must(t, os.Symlink(filepath.Join(tb, name, f.Name()), filepath.Join(at, f.Name())))
+				}
+			}
+		default:
 			must(t, os.Symlink(filepath.Join(tb, name), at))
 		}
 		made = append(made, "toolbelt/"+name)

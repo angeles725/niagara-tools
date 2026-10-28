@@ -1,0 +1,15 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| plumbing | rt | M-rt/src/a/model/cooling/Wiring.java; M-rt/src/a/model/schedules/Clock.java | — | build only |
+-- M/M-rt/src/a/model/cooling/Wiring.java --
+class Wiring {}
+-- M/M-rt/src/a/model/schedules/Clock.java --
+class Clock {}

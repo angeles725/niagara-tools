@@ -1,0 +1,22 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM7: concern Cooling has a second row (the first is line 5); one row per concern
+FAIL  lint-module-map  @DIR@/M/M-rt/src/a/model/cooling  MM7: concern folder in 2 rows (Cooling, cooling); one row owns a concern folder
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| cooling | rt | M-rt/src/a/model/cooling/Loop.java | M-rt/srcTest/a/model/cooling/LoopTest.java | a cooling decision |
+| Cooling | rt | M-rt/src/a/model/cooling/Valve.java | M-rt/srcTest/a/model/cooling/ValveTest.java | a valve decision |
+-- M/M-rt/src/a/model/cooling/Loop.java --
+class Loop {}
+-- M/M-rt/src/a/model/cooling/Valve.java --
+class Valve {}
+-- M/M-rt/srcTest/a/model/cooling/LoopTest.java --
+class LoopTest {}
+-- M/M-rt/srcTest/a/model/cooling/ValveTest.java --
+class ValveTest {}

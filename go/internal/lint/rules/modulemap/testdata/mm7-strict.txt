@@ -2,7 +2,7 @@
 @DIR@/M
 -- want --
 exit 1
-FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM7: concern mixed lists files in 2 concern folders (M-rt/src/a/model/cooling, M-rt/src/a/model/schedules); keep one concern folder per row
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM7: concern mixed lists files in concern folders of 2 names (cooling, schedules: M-rt/src/a/model/cooling, M-rt/src/a/model/schedules); keep one concern folder per row
 FAIL  lint-module-map  @DIR@/M/M-rt/src/a/model/cooling  MM7: concern folder in 2 rows (cooling, mixed); one row owns a concern folder
 -- stderr --
 -- M/MODULE-MAP.md --

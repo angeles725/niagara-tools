@@ -12,9 +12,11 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 )
 
-// TestGolden: one case per check and mode (strict-clean, no-map, no-parts, the MM2 header and table shapes,
-// missing-path, unlisted-strict, unlisted-legacy, dup, no-test-strict, java-glob, glob-segment).
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 18) }
+// TestGolden replays every testdata/*.txt case: one per check and mode — strict-clean, no-map, no-parts, the MM2
+// header and table shapes (bad-header, bad-row, empty-table, no-table, legacy-no-reason), missing-path,
+// unlisted-strict, unlisted-legacy, dup, no-test-strict, java-glob, glob-segment, and MM7: mm7-clean, mm7-strict,
+// mm7-legacy, mm7-plumbing (a plumbing row may span concern folders) and mm7-dup-concern (one row per concern).
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 20) }
 
 // strictMap is a one-concern strict map over M-rt/src/A.java and its test.
 const strictMap = "modularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n" +

@@ -28,7 +28,7 @@ func (r *report) modularity(a artifact) {
 	concerns, unlisted, largest := count(sum.Concerns), count(sum.Unlisted), "-"
 	if err != nil {
 		concerns, unlisted, largest = "?", "?", "?"
-	} else if p, n, err := largestClass(a.dir); err != nil && !errors.Is(err, lint.ErrEmptyRoot) {
+	} else if p, n, lerr := largestClass(a.dir); lerr != nil && !errors.Is(lerr, lint.ErrEmptyRoot) {
 		largest = "?"
 	} else if p != "" {
 		largest = fmt.Sprintf("%s (%d hand-written lines)", p, n)

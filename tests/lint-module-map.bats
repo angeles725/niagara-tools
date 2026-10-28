@@ -60,10 +60,17 @@ map() {  # map <mode-lines> <files-cell>
   map 'modularity: strict' 'M-rt/src/A.java; M-rt/src/a/model/cooling/L.java; M-rt/src/a/adapter/cooling/BL.java; M-rt/src/a/model/schedules/P.java'
   run "$LMM" "$M"
   [ "$status" -eq 1 ]
-  [[ "$output" == "FAIL  lint-module-map  $M/MODULE-MAP.md:5  MM7: concern control lists files in 3 concern folders"* ]]
+  # the count is of folder NAMES (cooling, schedules): model/cooling + adapter/cooling are one concern
+  [[ "$output" == "FAIL  lint-module-map  $M/MODULE-MAP.md:5  MM7: concern control lists files in concern folders of 2 names (cooling, schedules: "* ]]
   map 'modularity: strict' 'M-rt/src/A.java; M-rt/src/a/model/cooling/L.java; M-rt/src/a/adapter/cooling/BL.java'
   printf '| schedules | rt | M-rt/src/a/model/schedules/P.java | M-rt/srcTest/ATest.java | a schedule |\n' >> "$M/MODULE-MAP.md"
   run "$LMM" "$M"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+  # the folder-level row: a second row listing a file of the cooling folder
+  printf 'class V {}\n' > "$M/M-rt/src/a/model/cooling/V.java"
+  printf '| valves | rt | M-rt/src/a/model/cooling/V.java | M-rt/srcTest/ATest.java | a valve |\n' >> "$M/MODULE-MAP.md"
+  run "$LMM" "$M"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-module-map  $M/M-rt/src/a/model/cooling  MM7: concern folder in 2 rows (control, valves); one row owns a concern folder"* ]]
 }

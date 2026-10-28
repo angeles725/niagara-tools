@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: IN PROGRESS (B1–B4 + B4b this run; B5–B8 later) · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B4 + B4b DONE (2026-10-27, unpushed on `chore/kit-backlog`); B5–B8 later · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -43,7 +43,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B2 · A5 skill/doc drift. Route: inline (two doc lines).
 - [x] B3 · A6 pre-push every ref + CI npm job + skip allowlist. Route: inline (writer is this session).
 - [x] B4 · A4 sweep-build-state remainder. Route: inline (one Go package).
-- [ ] B4b · review fix-forward. Route: inline.
+- [x] B4b · review fix-forward. Route: inline (scope added by the parent mid-run; extra surfaces authorized).
 - [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later.
 - [ ] B6 · #459 tail + A7-D2 — later.
 - [ ] B7 · A9 — later.
@@ -133,5 +133,61 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   - Real kit (fresh kit-state output): content check exit 0 with no WARN; `--age --strict --today 2026-10-27` 0 pending.
   - Decision: CI's `sweep-retro-debt` step stays non-strict; turning retro debt into a CI failure is the owner's call.
 
-## Next step
-B4b.
+- 2026-10-27 B4b (inline; scope added mid-run by the parent with go/internal/{modulemap,lint/rules/modulemap,rcscan,
+  reportmodule,lint/rules/servlet}, toolbelt/lint-servlet.sh, toolbelt/module-map.sh).
+  - rc-scan (64cda653, R4/R3/R2): anchors and `vendored` now read `rcRel(rel)` (the path below the artifact dir, after
+    its first `rc` segment). RED `TestMapAnchorsIgnoreAncestors`: under `srv/rc/js/services` the page fetch was exempt,
+    under `checkout/rc/vendor` and `x/rc/ext` the whole module reported nothing; `TestThirdParty` covers the rc/ext and
+    *.min.js branches and an rc-dir argument. The vendored skip had the same ancestor flaw (found while fixing).
+    `mapRows` doc comment rewritten (+ `mapRowsUnder`).
+  - add-concern / tests (e9aeb6e8): RED `TestAddConcernRollback` (dirs left, retry refused), `TestAddConcernTmpLeftover`
+    (`/dev/full` symlink as the temp file), `TestTestsCellContainment` (4 entry shapes), `TestTestsStationImportLine`,
+    `TestAddConcernDefaultPackage`; `TestTests` now sets STUB_EXIT with `t.Setenv` (the child reads the process env;
+    `cli.Stdio` only reads single variables, so production keeps inheriting it — recorded instead of a `cmd.Env`
+    that could not enumerate the injected env) and pins exit 3 for a runner exit 3 and a runner that cannot start.
+    `baseMap` comment fixed; the test path is computed once. R2-row-mirror: kept — `mmrule.Row` is the exported
+    read model of the tool and `row` the lint's scan record; one conversion line in `ReadMap`, no behaviour risk.
+  - MM7 (a2708ddf): message counts folder names (`concern folders of 2 names (cooling, schedules: …)`); a second row
+    of one concern name is an MM7 row (decision: reject explicitly rather than re-key `byRow` per row — the tool
+    already treats names as unique, `findRow`); goldens `mm7-plumbing` (passes already: a coverage pin) and
+    `mm7-dup-concern` (RED); TestGolden doc lists every case (20); MMB4 asserts the folder-level row.
+  - lint-servlet header (8b616e55): handler-size severity `WARN/FAIL`; TC-MAP6 exists (`tests/scaffold-module.bats:577`,
+    no skip) and both mutations bite (handler-size check off; strict read as legacy) — pin text names both.
+  - report-module (180112c8): `moduleTree` doc name, `lerr` un-shadowed in `modularity.go`, e2e asserts ` · 1 FAIL · `.
+  - Found on the way (caused by B3): the reportmodule goldens symlinked `toolbelt/eslint` whole, so an installed
+    `node_modules/` (the B3 ci-local npm step) flipped 8 esl-path goldens; `toolbeltCopy` now links it without
+    `node_modules/` (hermetic). Shellcheck SC2015 at `tests/module-map.bats:25,32` fixed.
+  - Observed mutations (restored, `cmp`): MMA-undo-dirs, MMA-tmp, MMT-import, MMT-contain, default-package guard,
+    TC-MAP6 ×2 — each turns its test red. RC-ancestor is the observed RED itself.
+  - Gap: MM7's duplicate-concern rule is not yet in `toolbelt/lint-module-map.sh` (MM7 header line) nor
+    `types/structure.md:298` (outside the surface; open_issue in `ledger.d/2026-10-27-kit-backlog-review-fix-forward.md`).
+
+## Verification (branch close, 2026-10-27)
+- `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
+- bats (21 touched/related suites, `-j 4 --no-parallelize-within-files`): 391 planned, 391 ok after regenerating the
+  local (ignored) BUILD-STATE.md — its stale copy held a bare map-file name from a first draft of a ledger line
+  (kit-links L1); its 4 skips all allowlisted by `scripts/check-bats-skips.sh`.
+- Pinned shellcheck 0.10.0 (`ci-local.sh --only shellcheck`): PASS. `actionlint`: not installed on this host.
+- `gen-lint-index.sh --check`, `gen-retro-index.sh --check`, `gen-build-state.sh --check`, `gen-changelog.sh --check`:
+  valid. Sweep on fresh kit-state output: exit 0. `sweep-fold-audit.sh --strict --exact-stems --deltas-since
+  2026-09-24`: 411/411 cited, 789 deltas 0 not cited.
+- `scripts/changelog-gate.sh --range d982a704..HEAD`: PASS (4 fragments). `.githooks/pre-push` fed
+  `chore/kit-backlog HEAD` over remote `d982a704`: exit 0. `git status --short`: clean.
+- Engram mirror: `odd/kit-backlog-2026-10-27/tasks` (saved at close).
+
+## Next (later blocks, exact scope)
+- **B5 — new Go lints** (each one rule package under `go/internal/lint/rules/<lint>`, a thin `toolbelt/lint-*.sh`, a
+  report-module member or `notInReport`, positive/negative goldens, a guard-pin, INDEX regenerated): G21
+  `permissions-xml` (WARN a non-`<permissions>` root of `module-permissions.xml`, `<req-permission>` without
+  `<purposeKey>`; C47), G34 `structural-tests` (WARN a srcTest class that reads `.java` as text with no BTestNg class;
+  C41), G40 `logger-name` (WARN a logger name other than the exact `moduleName`; C52), G38 `absolute-claims` (report
+  absolute "never"/"forbidden" claims that cite only inference; C51) and G39 `count-retro-deltas` (tool: Δ totals by
+  script; C51).
+- **B6 — issue #459 tail + A7-D2**: rc-scan innerhtml computed-literal rows (retro go-rc-scan Δ3);
+  `lint-vacuous-tests` report-module membership; rc-scan `status-default-ok` (audit A7 D2, advisory first, real-tree
+  smoke counts only). Close #459 only after both #459 items land (owner's call).
+- **B7 — audit A9**: `ledger-check.sh` + scaffold VERSION-LEDGER, T1 test backfill, slotomatic last-comment-line WARN.
+- **B8 — audit A7-D1**: lint for an adapter `@NiagaraProperty defaultValue` that differs from the pure-model Cfg
+  default (advisory first, real-tree smoke counts only).
+- Owed to the parent session: skill reinstall (`scripts/install-skill.sh --force --skill build-n4-module`) and
+  `scripts/check-skill-drift.sh` (FAILed already on d982a704; `skill/SKILL.md` changed again in B2).
