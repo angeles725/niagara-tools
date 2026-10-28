@@ -613,6 +613,10 @@ Still open:
   real defect; revisit if ledgers legitimately carry side tables there).
 - werror R3-werror-unproved-behavior — CLOSED for Gradle 7.6 + JDK 8: B12.1 (probe) and F11 of
   `odd/tasks/kit-followups-rare-cases.md` (real client module); open only for Gradle 4.0.2, which this host lacks.
+- Follow-ups review (review-d3230a1d025d7294, approved, advisory): R3-groovy-strip-untested — `structure/palette.go:37-39`
+  strips Groovy `*.gradle` with the Java lexer and drops its error; no golden covers a single-quoted Groovy string
+  holding `/*`. R3-parenkeyword-partial-coverage — `charsetdefault.go:230-231` keywords other than return/assert
+  untested. R3-deferred-local-class — `intrinsiclock.go:203-211` a local class inside `synchronized` is not pinned.
 - version-drift preflight, when a client module builds from a `<repo>-worktrees/` folder, lists every other worktree
   there (and the worktree's own repo root) as a drifted sibling: 10 bogus WARN rows in the F11 run, exit code unchanged.
 - lint-logger-name reads `moduleName` from raw gradle text (`go/internal/lint/rules/loggername/loggername.go:54`), so

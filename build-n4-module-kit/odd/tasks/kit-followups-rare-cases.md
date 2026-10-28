@@ -42,6 +42,7 @@ by a mutation of the code under test (reverted after). Defect = RED observed fir
 | F9 shared prune | 9680c52e | `lint.PartOutputs()` replaces three copies; `TestPartOutputs` + permissions-xml `group-level-build`; pruning `*/build` or dropping part `build/` fails |
 | F10 backlog | (this commit) | § Follow-ups: closed items dropped with commits; ledger-check LC4, werror remainder, loggername raw moduleName, intrinsic-lock wrapper header kept open |
 | F11 real `--werror` | (this commit) | kit 8040cce9, client A rt module (cold-room controller), Gradle 7.6 wrapper + JDK 1.8.0_504, mirror home: baseline `build.sh` exit 0 (verify-module ALL PASS); `--werror` exit 30, `compileJava FAILED`, javac `warnings found and -Werror specified` on 3 `[cast]` redundant-array-cast warnings the baseline never printed, then the kit remedy message. No kit defect in `--werror`; version-drift sibling noise recorded in the backlog |
+| RDD | — | assess 8040cce9..8b5422b5: medium, `slice_budget_reached`; consent granted; 1-lens reliability review approved and acknowledged (lineage review-d3230a1d025d7294); 3 advisory findings recorded in the backlog |
 
 F9 decision (B9 R4-001/R3-001): a `build/` or `test/` directory not directly under a part (a group-level `build/`)
 stays read. Conservative: no generated source is known to land there, pruning it by name would hide source, and for
