@@ -611,9 +611,10 @@ segments, KCRD2 naming; B12 fixed werror R3, toolchains R4/R3/R2 and L17 R4/R3.
 Still open:
 - ledger-check: a second table with a different header inside `## Versions` FAILs LC4 on each of its rows (kept as a
   real defect; revisit if ledgers legitimately carry side tables there).
-- werror R3-werror-unproved-behavior — CLOSED by B12.1 for Gradle 7.6 + JDK 8 (real run); open only for Gradle 4.0.2,
-  which this host does not have, and for a real client module (`build.sh --werror`, owed since Δ22; tracked as F11 of
-  `odd/tasks/kit-followups-rare-cases.md`).
+- werror R3-werror-unproved-behavior — CLOSED for Gradle 7.6 + JDK 8: B12.1 (probe) and F11 of
+  `odd/tasks/kit-followups-rare-cases.md` (real client module); open only for Gradle 4.0.2, which this host lacks.
+- version-drift preflight, when a client module builds from a `<repo>-worktrees/` folder, lists every other worktree
+  there (and the worktree's own repo root) as a drifted sibling: 10 bogus WARN rows in the F11 run, exit code unchanged.
 - lint-logger-name reads `moduleName` from raw gradle text (`go/internal/lint/rules/loggername/loggername.go:54`), so
   a commented-out old declaration can win there as it did in L17 before 0f0d0066 (by code reading; no test shows it
   yet); not fixed (outside that run's items), same one-line fix (`javasrc.Strip`).
