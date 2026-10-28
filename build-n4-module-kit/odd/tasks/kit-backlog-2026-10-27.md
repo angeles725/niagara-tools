@@ -633,6 +633,11 @@ werror R3, toolchains R4/R3/R2, L17 R4/R3):
   `(` is read as a receiver.
 - werror R3-werror-unproved-behavior — CLOSED by B12.1 for Gradle 7.6 + JDK 8 (real run); open only for Gradle 4.0.2,
   which this host does not have, and for a real client module (`build.sh --werror`, owed since Δ22).
+- B12 review (13e5df19, approved) R4-commented-modulename — `go/internal/lint/rules/structure/palette.go:34-37`:
+  `ownModule` takes the first raw-line `moduleName` match and does not skip comment lines, so a commented-out old
+  declaration can win.
+- B12 review R3-precedence-untested — `palette.go:22`: no golden declares `moduleName` in both the part directory and
+  the module root, so the documented part-over-root precedence is not pinned.
 
 ## Progress / evidence — B10 course coverage run A (2026-10-28)
 Route: inline for every unit (the parent's read-only explorer had mapped each target with path:line; each unit is one
