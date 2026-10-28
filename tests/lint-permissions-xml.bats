@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-# lint-permissions-xml.bats — G21: a module-permissions.xml root other than <permissions> or a group type other than
-# station|workbench|all FAILs; a request without <name>/<purposeKey> and an absolute new File/Paths.get in -rt code
+# lint-permissions-xml.bats — G21: a module-permissions.xml with no root, a root other than <permissions> or a group
+# type other than station|workbench|all FAILs; a request without <name>/<purposeKey> and an absolute new File/Paths.get in -rt code
 # WARN. The rule's golden cases live in go/internal/lint/rules/permissionsxml.
 # [ev: retro n4-course-authoring-files-and-libraries Δ2]
 
@@ -37,6 +37,24 @@ USAGE='usage: lint-permissions-xml.sh [--strict] <module-root>...'
   [ "$output" = "FAIL  lint-permissions-xml  $RT/module-permissions.xml:1  root element <modulePermissions> is not <permissions>: baja reads only <permissions> (NModule), so every request is ignored" ]
 }
 
+@test "PX-noroot: an empty, declaration-only or comment-only module-permissions.xml FAILs, never clean" {
+  # Mutation: PX-noroot -- an empty or comment-only file read as clean grants nothing and FAILs nothing
+  local f
+  for f in '' '<?xml version="1.0" encoding="UTF-8"?>' '<!-- <permissions/> -->'; do
+    printf '%s' "$f" > "$RT/module-permissions.xml"
+    run "$L" --strict "$MOD"
+    [ "$status" -eq 1 ]
+    [ "$output" = "FAIL  lint-permissions-xml  $RT/module-permissions.xml:1  no root element: baja reads only a <permissions> root (NModule), so the file grants nothing" ]
+  done
+}
+
+@test "PX-latin1: an ISO-8859-1 file is decoded, its non-ASCII name printed as UTF-8" {
+  printf '<?xml version="1.0" encoding="ISO-8859-1"?>\n<permissions><niagara-permission-groups type="station">\n<req-permission><name>CAF\311</name></req-permission>\n</niagara-permission-groups></permissions>\n' > "$RT/module-permissions.xml"
+  run "$L" "$MOD"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-permissions-xml  $RT/module-permissions.xml:3  <req-permission> CAFÉ has no <purposeKey> (both <name> and <purposeKey> are required)" ]
+}
+
 @test "PX-type: a group type other than station, workbench or all FAILs" {
   printf '%s\n' '<permissions>' '  <niagara-permission-groups type="daemon"/>' '</permissions>' > "$RT/module-permissions.xml"
   run "$L" "$MOD"
@@ -61,7 +79,7 @@ USAGE='usage: lint-permissions-xml.sh [--strict] <module-root>...'
     '  String s = "new File(\"/etc/passwd\")";' '}' > "$RT/src/com/example/A.java"
   run "$L" "$MOD"
   [ "$status" -eq 0 ]
-  [ "$output" = "WARN  lint-permissions-xml  $RT/src/com/example/A.java:3  new File(\"/tmp/x\") is an absolute path outside the station and user homes: the security manager refuses it without a FILE_WRITE grant (use Sys.getStationHome())" ]
+  [ "$output" = "WARN  lint-permissions-xml  $RT/src/com/example/A.java:3  new File(\"/tmp/x\") is an absolute path outside the station and user homes: the security manager refuses it without a FILE_READ or FILE_WRITE grant for it (use Sys.getStationHome())" ]
 }
 
 @test "PX-parse: a module-permissions.xml that does not parse is exit 3" {

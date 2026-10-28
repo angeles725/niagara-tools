@@ -1,0 +1,17 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-logger-name  @DIR@/M/AcmePan-rt/src/com/acme/build/B.java:1  Logger.getLogger("acme") is not the module name AcmePan or a AcmePan.<child> logger (types/observability.md § 1)
+WARN  lint-logger-name  @DIR@/M/AcmePan-rt/src/com/acme/test/T.java:1  Logger.getLogger("acme") is not the module name AcmePan or a AcmePan.<child> logger (types/observability.md § 1)
+-- stderr --
+-- M/AcmePan-rt/src/com/acme/test/T.java --
+class T { java.util.logging.Logger l = java.util.logging.Logger.getLogger("acme"); }
+-- M/AcmePan-rt/src/com/acme/build/B.java --
+class B { java.util.logging.Logger l = java.util.logging.Logger.getLogger("acme"); }
+-- M/AcmePan-rt/test/X.java --
+class X { java.util.logging.Logger l = java.util.logging.Logger.getLogger("acme"); }
+-- M/AcmePan-rt/build/Y.java --
+class Y { java.util.logging.Logger l = java.util.logging.Logger.getLogger("acme"); }
+-- M/AcmePan-rt/srcTest/Z.java --
+class Z { java.util.logging.Logger l = java.util.logging.Logger.getLogger("acme"); }

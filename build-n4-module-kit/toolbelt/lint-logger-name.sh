@@ -6,9 +6,10 @@
 # A row is each Logger.getLogger("<literal>") whose literal is neither the module name nor <module name>.<child>, and
 # each Logger.getLogger(X.class.getName()). A part's module name is the moduleName.set("X") / moduleName = "X" of a
 # gradle file in the part directory, else in its group directory, else the part directory name without its
-# -rt/-ux/-wb/-se suffix. Scans every *.java under a -rt, -ux, -wb or -se part's src/ of each module root (srcTest/,
-# test/ and build/ are not read); Java is read as tokens (go/internal/javasrc), so a comment or a string is never a
-# call, and a non-literal argument is not judged. [ev: retro n4-course-parity-observability-horizons Δ3]
+# -rt/-ux/-wb/-se suffix. Scans every *.java under a -rt, -ux, -wb or -se part's src/ of each module root (srcTest/
+# and a part's own test/ and build/ are not read; a package named test or build is); Java is read as tokens
+# (go/internal/javasrc), so a comment or a string is never a call, and a non-literal argument is not judged.
+# [ev: retro n4-course-parity-observability-horizons Δ3]
 #
 # Implementation: rule package go/internal/lint/rules/loggername on the shared engine go/internal/lint
 # (go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/n4lint when
@@ -19,6 +20,7 @@
 #   Row:  WARN  lint-logger-name  <file>:<line>  Logger.getLogger("<x>") is not the module name <M> or a <M>.<child> logger (types/observability.md § 1)
 #   Exit: 0  clean or WARN-only · 1  any WARN under --strict · 3  usage/env, a root with no part src/ *.java
 # Mutation: LN1 -- comparing case-insensitively passes a lower-case "minimalpan" logger in module MinimalPan
+# Mutation: LN3 -- pruning every directory named test skips the src/ package com/example/test
 # Mutation: LN2 -- dropping the <module>.<child> exemption WARNs a "MinimalPan.defrost" child logger
 # VCS-free by design.
 set -u

@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/types
+-- want --
+exit 0
+INFO  lint-absolute-claims  @DIR@/types/a.md:1  never: Never block the engine thread. [ev: corpus B9 §9.1]  [ev: corpus B9 §9.1]
+-- stderr --
+-- types/a.md --
+Never block the engine thread. [ev: corpus B9 §9.1]

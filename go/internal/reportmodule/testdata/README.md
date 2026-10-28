@@ -53,8 +53,8 @@ and stderr are unchanged, the only added lines are one `(module)  PASS|SKIP  lin
 `clean` under stubs, 24 SKIP `no *.java under a srcTest/` from the real lint), nothing was removed or reordered
 but the summary line, whose PASS/SKIP counts moved by exactly the added rows and whose verdict is unchanged.
 `truth-vacuous-tests-member` pins the FAIL relay and `truth-vacuous-tests-envfault` the exit-3 env fault (an exit 3
-whose text is not the noSource text is an ERROR row and exit 3; the summary verdict text reads CLEAN there, as for
-every member env fault).
+whose text is not the noSource text is an ERROR row and exit 3; the summary verdict reads INCOMPLETE there, see
+below).
 
 Kit backlog B5.5 (2026-10-27) added four module members: `lint-permissions-xml` (FAIL/WARN, PASS verdict),
 `lint-structural-tests`, `lint-logger-name` and `lint-adapter-cfg-default` (WARN only, no verdict row). The 106 cases
@@ -69,3 +69,13 @@ nothing, so a WARN-only member adds no row there).
 
 Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro
 r10-report-module-go). They were produced through the Go tool after the fix and checked by hand.
+
+### Env-fault verdict (kit backlog run-3 fix-forward)
+
+A member env fault (an `ERROR` row, exit 3) with no FAIL used to print the summary verdict `CLEAN`, as the bash
+tool did, while the run exited 3. The verdict now reads `INCOMPLETE` there (a FAIL still reads `ISSUES`). The ten
+cases that pinned the old word (`adv-exit-reasons`, `esl-kit-relative`, `lint-exit3-error`, `lt-exit3`, `tc-exit3`,
+`truth-sc-no-pct`, `truth-vacuous-tests-envfault`, `vm-args-exit3`, `wp-env-empty`, `wp-env-first-line`) were
+edited and checked by a script that compared each old and new case line by line: the only changed line is the
+summary line, and only its last word, `CLEAN` -> `INCOMPLETE`. Those recorded cases therefore differ from the bash
+recording at `a98c3357` in that word.

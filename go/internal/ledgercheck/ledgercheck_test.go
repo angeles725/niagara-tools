@@ -82,6 +82,10 @@ func TestLedgerCheckCases(t *testing.T) {
 		// Mutation: LC-blank -- stopping at the first non-row line leaves every row after a blank line unchecked
 		{"rows after a blank or comment line are still checked", ledger(good, "", "<!-- 2026 -->", "| Pan | 1.2.1 | 2026-10-02 | installed | x | — | — | — | — | — |"), 1,
 			"FAIL  ledger-check  L.md:10  LC5: status installed is not one of built, packaged, deployed, superseded, do-not-install\n"},
+		// Mutation: LC-reheader -- a repeated header row read as data FAILs LC5/LC6 on the column names
+		{"a repeated header and separator after a blank line are not data rows", ledger(good, "", header, "|---|---|---|---|---|---|---|---|---|---|", good), 0, ""},
+		{"a row after a repeated header is still checked", ledger(good, "", header, "|:---|---:|---|---|---|---|---|---|---|---|", "| Pan | 1.2.1 | 2026-10-02 | installed | x | — | — | — | — | — |"), 1,
+			"FAIL  ledger-check  L.md:11  LC5: status installed is not one of built, packaged, deployed, superseded, do-not-install\n"},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {

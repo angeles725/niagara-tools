@@ -12,6 +12,7 @@ import (
 // notInReport is every lint report-module deliberately does not run, each with why (issue #459: a new lint
 // must be either a member or listed here, never silently skipped).
 var notInReport = map[string]string{
+	"lint-absolute-claims":     "a kit doc report over build-n4-module-kit/types/*.md (METHODOLOGY K33), not a module check",
 	"lint-bacnet-status-flags": "reads a station config.bog, which a module root does not hold",
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",

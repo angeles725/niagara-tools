@@ -4,6 +4,7 @@ package rules
 
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/absoluteclaims"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/adaptercfgdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonincludesync"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
@@ -123,5 +124,6 @@ func All() []lint.Spec {
 		structuraltests.Spec(),
 		loggername.Spec(),
 		adaptercfgdefault.Spec(),
+		absoluteclaims.Spec(),
 	}
 }

@@ -1,0 +1,21 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-adapter-cfg-default  @DIR@/M/M-rt/src/com/acme/build/PanCfg.java:3  PanCfg.limit defaults to 0 but slot limit (BPan.java:4) defaults to 6: a pure test built from new Cfg() runs a configuration the station never starts with -- initialize the field to the slot default
+-- stderr --
+-- M/M-rt/src/com/acme/build/PanCfg.java --
+package com.acme.build;
+final class PanCfg {
+  int limit;
+}
+-- M/M-rt/src/com/acme/test/BPan.java --
+package com.acme.test;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(name = "limit", type = "int", defaultValue = "6")
+public class BPan extends BComponent {
+  void cycle(com.acme.build.PanCfg c) {
+    c.limit = getLimit();
+  }
+}

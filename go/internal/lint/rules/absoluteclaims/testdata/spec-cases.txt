@@ -1,0 +1,24 @@
+-- args --
+@DIR@/types
+-- want --
+exit 0
+INFO  lint-absolute-claims  @DIR@/types/logic.md:3  never: - Never X here. `[ev: corpus B1]`  [ev: corpus B1]
+INFO  lint-absolute-claims  @DIR@/types/logic.md:11  silently: A write silently drops the value and it  [ev: retro r1 Δ1]
+INFO  lint-absolute-claims  @DIR@/types/logic.md:12  always: always throws on a null context. [ev: retro r1 Δ1]  [ev: retro r1 Δ1]
+INFO  lint-absolute-claims  @DIR@/types/logic.md:14  forbidden: - Forbidden: a sleep in a ticket.  -
+-- stderr --
+-- types/logic.md --
+# Logic
+
+- Never X here. `[ev: corpus B1]`
+- Never Y (vineflower baja 4.14.0.162 `Foo.java:12`).
+- Never Z. `[ev: code toolbelt/lint-x.sh:3]`
+- A line with no absolute word. `[ev: corpus B2]`
+- The course never does it,
+  as the lab shows. [ev: course Labs/Lab9/BFoo.java]
+- Nevertheless is not the word never... wait, it is. [ev: devguide x.txt:1]
+
+A write silently drops the value and it
+always throws on a null context. [ev: retro r1 Δ1]
+
+- Forbidden: a sleep in a ticket.

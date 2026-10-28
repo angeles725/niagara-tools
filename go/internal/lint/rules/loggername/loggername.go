@@ -1,15 +1,16 @@
-// Package loggername is lint-logger-name (G40): a java.util.logging logger whose name is not the module's
-// moduleName. types/observability.md § 1 makes the logger name the exact moduleName (or a <moduleName>.<child>
-// logger), the name the DebugService and Logger Configuration list. The contract is the deferred G40 spec
-// (build-n4-module-kit/ledger.d/2026-10-23-r8-p1-process.md, C52); toolbelt/lint-logger-name.sh is the wrapper and
-// its header is the user-facing contract.
+// Package loggername is lint-logger-name (G40): a java.util.logging logger whose name is not the module's moduleName.
+// types/observability.md § 1 makes the logger name the exact moduleName (or a <moduleName>.<child> logger), the name
+// the DebugService and Logger Configuration list. The contract is the deferred G40 spec
+// (build-n4-module-kit/ledger.d/2026-10-23-r8-p1-process.md, C52); toolbelt/lint-logger-name.sh is the wrapper and its
+// header is the user-facing contract.
 //
-// It is a lint.TreeRule over each module root: every *.java under a -rt, -ux, -wb or -se part's src/ (srcTest/, test/
-// and build/ not entered) and every *.gradle / *.gradle.kts. A part's module name is the moduleName.set("X") or
-// moduleName = "X" of a gradle file in the part directory, else of one in the directory above it (the group), else
-// the part directory name without its -rt/-ux/-wb/-se suffix. A row is each Logger.getLogger("<literal>") whose
-// literal is neither the module name nor <module name>.<child>, and each Logger.getLogger(X.class.getName()). Java
-// is read as javasrc tokens, so a comment or a string is never a call; a non-literal argument is not judged.
+// It is a lint.TreeRule over each module root: every *.java under a -rt, -ux, -wb or -se part's src/ (srcTest/ and a
+// part's own test/ and build/ not entered; a package named test or build under src/ is read) and every *.gradle /
+// *.gradle.kts. A part's module name is the moduleName.set("X") or moduleName = "X" of a gradle file in the part
+// directory, else of one in the directory above it (the group), else the part directory name without its
+// -rt/-ux/-wb/-se suffix. A row is each Logger.getLogger("<literal>") whose literal is neither the module name nor
+// <module name>.<child>, and each Logger.getLogger(X.class.getName()). Java is read as javasrc tokens, so a comment or
+// a string is never a call; a non-literal argument is not judged.
 package loggername
 
 import (
@@ -27,9 +28,13 @@ const ID = "lint-logger-name"
 // --strict), left out of n4lint --all (a module root).
 func Spec() lint.Spec {
 	return lint.Spec{Tree: rule{}, Mode: lint.Each, ModuleRoot: true, Usage: "usage: lint-logger-name.sh [--strict] <module-root>...",
-		Select:     lint.Selection{Names: []string{"*.java", "*.gradle", "*.gradle.kts"}, Prune: []string{"srcTest", "test", "build"}},
+		Select:     lint.Selection{Names: []string{"*.java", "*.gradle", "*.gradle.kts"}, Prune: []string{"srcTest"}, PrunePaths: partOutputs},
 		EmptyError: lint.EmptyRow{Msg: "no *.java under a -rt, -ux, -wb or -se part's src/ (wrong path: pass the module root)"}}
 }
+
+// partOutputs are a part's own test/ and build/ directories, never entered. They are pruned by path, not by name: a
+// Java package named test or build under src/ (com/acme/test/) is source and is read (run-3 review R3).
+var partOutputs = []string{"*-rt/test", "*-rt/build", "*-ux/test", "*-ux/build", "*-wb/test", "*-wb/build", "*-se/test", "*-se/build"}
 
 type rule struct{}
 

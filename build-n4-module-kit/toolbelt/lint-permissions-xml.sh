@@ -2,14 +2,17 @@
 # lint-permissions-xml.sh — FAILs a module-permissions.xml the security manager does not read as written; WARNs a
 # request without <name>/<purposeKey> and an absolute file path in -rt code.
 #
-# baja reads only a <permissions> root (NModule): any other root, e.g. the old <modulePermissions/>, silently drops
-# every request, and a <niagara-permission-groups> type other than station, workbench or all is never granted.
+# baja reads only a <permissions> root (NModule): any other root, e.g. the old <modulePermissions/>, or none at all
+# (an empty or comment-only file) silently drops every request, and a <niagara-permission-groups> type other than
+# station, workbench or all is never granted.
 # Each <req-permission>/<opt-permission> needs <name> and <purposeKey>. new File("/…") or Paths.get("/…") in -rt
 # code reaches outside Sys.getStationHome()/getNiagaraSharedUserHome() and needs a file grant. Start from
 # templates/module-permissions.xml (types/structure.md § module-permissions.xml).
-# Scans every module-permissions.xml and every *.java under a -rt part's src/ of each module root (srcTest/, test/
-# and build/ are not read). The XML is parsed, so the template's commented-out requests are not read; Java is read
-# as tokens (go/internal/javasrc), so a comment or a string is never a path. A file that does not parse is exit 3.
+# Scans every module-permissions.xml and every *.java under a -rt part's src/ of each module root (srcTest/ and a
+# part's own test/ and build/ are not read; a package named test or build is). The XML is parsed, so the template's
+# commented-out requests are not read; Java is read as tokens (go/internal/javasrc), so a comment or a string is never
+# a path. ISO-8859-1 and US-ASCII files are decoded; a file that does not parse, or declares another non-UTF-8
+# encoding, is exit 3.
 # [ev: retro n4-course-authoring-files-and-libraries Δ2] [ev: retro devguide415-horizons-authoring-security Δ5]
 #
 # Implementation: rule package go/internal/lint/rules/permissionsxml on the shared engine go/internal/lint
@@ -19,10 +22,12 @@
 #
 # Usage:  lint-permissions-xml.sh [--strict] <module-root>...
 #   Row:  FAIL  lint-permissions-xml  <file>:<line>  root element <x> is not <permissions>: ... | <niagara-permission-groups type="x"> is not station, workbench or all
+#   Row:  FAIL  lint-permissions-xml  <file>:1  no root element: baja reads only a <permissions> root (NModule), so the file grants nothing
 #   Row:  WARN  lint-permissions-xml  <file>:<line>  <req-permission> <NAME> has no <purposeKey> ... | new File("/…") is an absolute path ...
 #   Exit: 0  clean or WARN-only · 1  any FAIL, or any WARN under --strict · 3  usage/env, a file that does not
 #         parse, a root with no module-permissions.xml and no -rt src/ *.java
 # Mutation: PX1 -- accepting any root element passes the old <modulePermissions/> fixture root
+# Mutation: PX-noroot -- an empty or comment-only file read as clean grants nothing and FAILs nothing
 # Mutation: PX2 -- matching raw Java lines (comments and strings kept) WARNs a commented-out new File("/etc/passwd")
 # VCS-free by design.
 set -u

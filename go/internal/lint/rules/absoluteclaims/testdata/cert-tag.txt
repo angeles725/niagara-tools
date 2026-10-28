@@ -1,0 +1,9 @@
+-- args --
+@DIR@/types
+-- want --
+exit 0
+-- stderr --
+-- types/a.md --
+- Never edit inside the generated markers. [ev: CERT-doc via B1231 §1231.3]
+- A javap check: the method always returns null. [ev: javap baja.jar BFoo]
+- Always rebuild. `[ev: corpus B1 §1.2]` `[ev: code go/internal/x/x.go:4]`

@@ -10,4 +10,4 @@ import (
 // module AcmePan, getLogger("AcmePan") and getLogger("AcmePan.defrost") are clean, getLogger("acme")
 // and getLogger(BFoo.class.getName()) WARN; the name comes from the part gradle, else the group gradle, else the part
 // directory; a non-literal argument, a comment and srcTest/ are clean; --strict; empty roots and usage.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 7) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 9) }

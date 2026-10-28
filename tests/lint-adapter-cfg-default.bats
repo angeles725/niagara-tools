@@ -19,6 +19,17 @@ TAIL='a pure test built from new Cfg() runs a configuration the station never st
   [ "$output" = "usage: lint-adapter-cfg-default.sh [--strict] <module-root>..." ]
 }
 
+@test "ACD3: two Cfg classes sharing a field name are matched through the receiver's declared type" {
+  # Mutation: ACD3 -- keying Cfg fields by bare name lets the last-read Cfg hide the other's differing default
+  printf '%s\n' 'package com.example;' 'final class AlphaCfg { int limit; }' > "$SRC/AlphaCfg.java"
+  printf '%s\n' 'package com.example;' 'final class BetaCfg { int limit = 6; }' > "$SRC/BetaCfg.java"
+  printf '%s\n' 'package com.example;' '@NiagaraType' '@NiagaraProperty(name = "limit", type = "int", defaultValue = "6")' \
+    'class BCtl { void f(AlphaCfg a, BetaCfg b) { a.limit = getLimit(); b.limit = getLimit(); } }' > "$SRC/BCtl.java"
+  run "$L" "$MOD"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-adapter-cfg-default  $SRC/AlphaCfg.java:2  AlphaCfg.limit defaults to 0 but slot limit (BCtl.java:3) defaults to 6: $TAIL" ]
+}
+
 @test "ACD1: a BRelTime slot is compared through its getSeconds conversion" {
   # Mutation: ACD1 -- comparing a BRelTime slot in raw milliseconds (no getSeconds conversion) WARNs a 30 s field against BRelTime.makeSeconds(30)
   printf '%s\n' 'package com.example;' 'class Ctl { static class Cfg { long delaySec = 30; } }' > "$SRC/Ctl.java"

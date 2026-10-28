@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-absolute-claims.sh [--strict] <types-dir>...

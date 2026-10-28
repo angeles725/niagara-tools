@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-27 -->
+<!-- last-change-note: kit-backlog B5.8: count-retro-deltas (G39) counts each retro's delta rows against its stated totals -->
+log: 2026-10-27 · kit-backlog B5.8 (G39, C51 / K34) → new tool `count-retro-deltas.sh <retro-file>...` (`go/cmd/count-retro-deltas`, `go/internal/retrodeltas`): per retro, the rows of its delta section (`## Proposed kit deltas`, `## Deltas` or `## Proposed delta table`) vs `**Delta count**`, the `deltas` header and the generated INDEX Deltas cell; a TOTAL line; exit 0/1/3. Named in `BUILD-LOOP.md` § 7 and `METHODOLOGY.md` K34; `tests/count-retro-deltas.bats` CRD1-CRD3. Over the kit's 410 retros at this commit: TOTAL rows=1331, 93 mismatches (74 legacy retros with no `**Delta count**` line, 19 whose stated counts disagree with their rows or with each other).
+open_issue: count-retro-deltas reports 19 kit retros whose `**Delta count**`, `deltas` header or delta rows disagree (and 74 legacy retros with no `**Delta count**` line); reconciling them edits `retros/`, outside the kit-backlog B5 surface (run `toolbelt/count-retro-deltas.sh build-n4-module-kit/retros/20*.md | grep MISMATCH`).

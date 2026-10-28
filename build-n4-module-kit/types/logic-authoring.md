@@ -231,7 +231,7 @@ The CONSUMER side of BQL — used by a dashboard servlet or service method that 
 
 ```java
 BITable<?> t = (BITable<?>) BOrd.make("station:|slot:/|bql:select * from <module:Type> where …")
-    .get(Sys.getStation(), cx);                 // the CALLER's Context, never get(base) / get()
+    .get(Sys.getStation(), cx);                 // the CALLER's Context: a Context-less get() makes BQL ignore the user's read permissions (corpus B1237 §1237.7)
 try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
   while (c.next()) {
     BObject cell = (BObject) c.cell(t.getColumns().get(columnIndex));  // cell(Column), no int overload
@@ -897,7 +897,7 @@ When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable
 
 - **Discovery learn-entry: discovery jobs `extend BSimpleJob`; each discovered entity is a `B<X>LearnEntry extends BStruct`** (fields: deviceName/deviceId or pointName/pointId/pointType) added to a `HIDDEN|READONLY|TRANSIENT BFolder` held on the job itself. The wb manager reads this transient folder after the job completes and builds the real component tree from it. **Rule:** the learn-entry must carry enough state to reconstruct the full device/point representation at instantiation time — device address, type discriminator, and any runtime-fixed config the wizard dialog cannot infer. `[ev: corpus B955 §955.2]`
 
-- **Async write via `CoalesceQueue`:** `write(Context)` posts an `ASYNC` action (`postWrite`) and returns `false` — NEVER block the engine thread in `write()`. Override `post(Action, BValue, Context)` to wrap each incoming action as an `Invocation` and route it to `getWriteHandler().postWork(...)`. The handler is a `BWorker` subclass holding a `CoalesceQueue(1000)` backed by a background `Worker` thread; `CoalesceQueue` collapses duplicate-key pending writes that have not yet been sent, so rapid setpoint changes coalesce instead of flooding the wire. This is the canonical "never block the calling thread" write pattern. `[ev: corpus B955 §955.5]`
+- **Async write via `CoalesceQueue`:** `write(Context)` posts an `ASYNC` action (`postWrite`) and returns `true` ("a write is now pending": finish it with `writeOk`/`writeFail`) — NEVER block the engine thread in `write()`. `[ev: corpus B1239 §1239.9]` Override `post(Action, BValue, Context)` to wrap each incoming action as an `Invocation` and route it to `getWriteHandler().postWork(...)`. The handler is a `BWorker` subclass holding a `CoalesceQueue(1000)` backed by a background `Worker` thread; `CoalesceQueue` collapses duplicate-key pending writes that have not yet been sent, so rapid setpoint changes coalesce instead of flooding the wire. This is the canonical "never block the calling thread" write pattern. `[ev: corpus B955 §955.5]`
 
 - **Value-type-agnostic proxy poll:** in `poll()`, inspect `getParentPoint().getOutStatusValue() instanceof BStatusNumeric|BStatusBoolean|BStatusString|BStatusEnum` to select the matching `readOk(...)` overload. The proxy ext MUST be value-type-agnostic — the parent control point owns the output type; never hardcode a single response type in the proxy ext. A hardcoded type forces a specific control point kind, breaks the generic proxy pattern, and produces type errors silently when the parent is a different point type. `[ev: corpus B955 §955.6]`
 

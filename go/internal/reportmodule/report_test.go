@@ -22,7 +22,8 @@ func TestSummaryVerdictAndExit(t *testing.T) {
 		{"fail and floor skip show both", true, false, true, false, 1, ExitFail, "ISSUES (+INCOMPLETE)", "", ""},
 		{"fail with a --lint-only floor skip", true, false, true, true, 1, ExitFail, "ISSUES", "", "--lint-only"},
 		{"env beats fail, verdict text stays", true, true, false, false, 1, ExitEnv, "ISSUES", "", ""},
-		{"env alone reads CLEAN", false, true, false, false, 1, ExitEnv, "CLEAN", "", ""},
+		{"env alone reads INCOMPLETE, never CLEAN", false, true, false, false, 1, ExitEnv, "INCOMPLETE", "", ""},
+		{"env under --lint-only reads INCOMPLETE", false, true, false, true, 1, ExitEnv, "INCOMPLETE", "", ""},
 	}
 	for _, tt := range tests {
 		var out, errw bytes.Buffer
