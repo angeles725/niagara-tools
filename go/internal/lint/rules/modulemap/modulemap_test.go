@@ -15,8 +15,10 @@ import (
 // TestGolden replays every testdata/*.txt case: one per check and mode — strict-clean, no-map, no-parts, the MM2
 // header and table shapes (bad-header, bad-row, empty-table, no-table, legacy-no-reason), missing-path,
 // unlisted-strict, unlisted-legacy, dup, no-test-strict, java-glob, glob-segment, and MM7: mm7-clean, mm7-strict,
-// mm7-legacy, mm7-plumbing (a plumbing row may span concern folders) and mm7-dup-concern (one row per concern).
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 20) }
+// mm7-legacy, mm7-plumbing (a plumbing row may span concern folders), mm7-dup-concern and mm7-dup-exact (a second
+// row of one concern and part, case-only and exact), mm7-concern-two-parts (one concern, one row per part: clean)
+// and mm7-plumbing-per-part (plumbing rows repeat: clean).
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 23) }
 
 // strictMap is a one-concern strict map over M-rt/src/A.java and its test.
 const strictMap = "modularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n" +

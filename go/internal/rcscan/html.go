@@ -1,6 +1,10 @@
 package rcscan
 
-import "github.com/angeles725/niagara-tools/go/internal/jssrc"
+import (
+	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/jssrc"
+)
 
 // innerHTMLRow decides an innerhtml-server line the line heuristic flagged (an HTML sink and a `+ a.b` /
 // `${a.b` member on the same line, no esc*( call): the row stands when a sink that starts on the line
@@ -82,4 +86,45 @@ func (s *fileScan) safeMember(ts []jssrc.Token, j, pos int) bool {
 	call := k < len(ts) && ts[k].Text == "("
 	return base == "Math" || last == "length" || call && (last == "toFixed" || last == "toPrecision") ||
 		s.literalMember(base, pos, path)
+}
+
+// statusOKMsg is the status-default-ok row text.
+const statusOKMsg = `a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: ` +
+	`trust a value only when st === "ok"`
+
+// statusDefaultOK reports, among the tokens that start on the line, a status read that falls back to "ok":
+// `<x>.st || "ok"`, `?? 'ok'`, `||= "ok"`, `??= "ok"`, where the name before the operator is a status (st,
+// stat, sts, status, or a camelCase name ending in Status). A missing status then reads as healthy, so an
+// unlinked or uncommissioned point shows a trusted value (audit 2026-10-03 A7 D2; the 2026-09-24
+// phase-2 alarms retro, Δ5: `st = p.st || "ok"` showed an unlinked phase flag as active). Text in a string or a comment is no token.
+func (s *fileScan) statusDefaultOK() bool {
+	v := s.js()
+	from, to := v.line(s.nr)
+	ts := v.toks
+	for i := from; i < to; i++ {
+		t := ts[i]
+		if t.Kind != jssrc.Punct || i == 0 || i+1 >= len(ts) {
+			continue
+		}
+		switch t.Text {
+		case "||", "??", "||=", "??=":
+		default:
+			continue
+		}
+		// Mutation: RC-status-name -- any left operand flags `p.name || "ok"`, a label default, not a status
+		if r := ts[i+1]; r.Kind == jssrc.String && asciiLower(r.Text) == "ok" && ts[i-1].Kind == jssrc.Ident && statusName(ts[i-1].Text) {
+			return true
+		}
+	}
+	return false
+}
+
+// statusName reports a name that holds a point status: st, stat, sts, status (any case), or a camelCase name
+// ending in Status (pointStatus).
+func statusName(n string) bool {
+	switch asciiLower(n) {
+	case "st", "stat", "sts", "status":
+		return true
+	}
+	return len(n) > len("Status") && strings.HasSuffix(n, "Status")
 }

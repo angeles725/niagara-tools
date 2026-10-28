@@ -8,12 +8,13 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-// source is one scanned file: its row path (relative to the artifact dir), its path as walked (rooted at the
-// artifact dir argument), extension and awk records. The module-map checks anchor on rcRel(rel), never on the
-// walked path: the directories above the artifact dir are not the module's layout.
+// source is one scanned file: its row path (relative to the artifact dir), its rc-relative path (rcRel of the
+// path below the artifact dir), its path as walked (rooted at the artifact dir argument), extension and awk
+// records. The module-map checks anchor on rc, never on the walked path: the directories above the artifact dir
+// are not the module's layout.
 type source struct {
-	rel, path, ext string
-	lines          []string
+	rel, rc, path, ext string
+	lines              []string
 }
 
 // pat is an awk ERE compiled with gawk's leftmost-longest match, so a match's span (RSTART, RLENGTH) is gawk's,
@@ -263,6 +264,12 @@ func (s *fileScan) checks() {
 		if htmlAssign.MatchString(line) && memberConcat.MatchString(line) && !escCall.MatchString(line) && !s.allowed("innerhtml-server") && s.innerHTMLRow() {
 			s.emit(s.o.sevW(), "innerhtml-server", "member value concatenated into HTML without esc( -- use textContent or esc()")
 		}
+		// advisory (audit A7 D2): WARN under every mode, --strict included, until real trees confirm it
+		// Mutation: RC-status-advisory -- the --strict severity turns an unconfirmed advisory check into a FAIL
+		if strings.Contains(asciiLower(line), "ok") && (strings.Contains(line, "||") || strings.Contains(line, "??")) &&
+			!s.allowed("status-default-ok") && s.statusDefaultOK() {
+			s.emit(lint.Warn, "status-default-ok", statusOKMsg)
+		}
 	}
 	if s.gated && !s.ctxCSS && !s.allowed("disabled-gate") && disables(line) && !s.statedReason() {
 		s.emit(s.o.sevW(), "disabled-gate", gateMsg)
@@ -324,7 +331,7 @@ const maxJSLines = 400
 // jsFileSize (module map modes only) reports a .js file of more than maxJSLines lines at its line 1, unless
 // line 1 carries the `rc-scan: allow js-file-size` marker.
 func (s *fileScan) jsFileSize() {
-	if !s.o.mapped() || thirdParty(rcRel(s.src.rel)) || s.src.ext != "js" || len(s.src.lines) <= maxJSLines ||
+	if !s.o.mapped() || thirdParty(s.src.rc) || s.src.ext != "js" || len(s.src.lines) <= maxJSLines ||
 		allowedOn(s.src.lines[0], "js-file-size") {
 		return
 	}
@@ -337,7 +344,7 @@ func (s *fileScan) jsFileSize() {
 // anchored at rc/js/services/ below the artifact dir: a services/ segment elsewhere (js/pages/services/,
 // rc/services/) or above the module is not it.
 func (s *fileScan) fetchOutside() {
-	if !s.o.mapped() || thirdParty(rcRel(s.src.rel)) || strings.HasPrefix(rcRel(s.src.rel), "js/services/") ||
+	if !s.o.mapped() || thirdParty(s.src.rc) || strings.HasPrefix(s.src.rc, "js/services/") ||
 		!fetchCall.MatchString(s.line) || s.allowed("fetch-outside-services") {
 		return
 	}

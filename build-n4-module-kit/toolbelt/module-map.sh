@@ -16,7 +16,8 @@
 #       files, tests and "change here when".
 #   module-map.sh tests <concern> --root <module-root>
 #       Runs each pure JUnit test of the concern's Tests cell through run-pure-test.sh <part-dir> <fqcn>; a test
-#       with an `import javax.baja…` line (a station test) and a JS spec are printed as skip rows with the reason.
+#       that references javax.baja in code (an import line or a fully qualified name; comments and strings do not
+#       count: a station test) and a JS spec are printed as skip rows with the reason.
 #       A Tests entry that is absolute or leaves the root is refused (exit 3), as lint-module-map MM3 refuses it.
 #   Rows: created <path> · mapped MODULE-MAP.md:<line> <concern> · run <path> <fqcn> · skip <path> <reason>
 #   Exit: 0 ok · 1 refused (add-concern), not listed (where, tests) or a test failed · 2 usage · 3 env (no or

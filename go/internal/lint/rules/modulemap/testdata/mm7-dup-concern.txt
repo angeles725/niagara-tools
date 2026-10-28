@@ -2,8 +2,8 @@
 @DIR@/M
 -- want --
 exit 1
-FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM7: concern Cooling has a second row (the first is line 5); one row per concern
-FAIL  lint-module-map  @DIR@/M/M-rt/src/a/model/cooling  MM7: concern folder in 2 rows (Cooling, cooling); one row owns a concern folder
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM7: concern Cooling has a second rt row (the first is line 5); one row per concern and part
+FAIL  lint-module-map  @DIR@/M/M-rt/src/a/model/cooling  MM7: concern folder in 2 rows (cooling, Cooling); one row owns a concern folder
 -- stderr --
 -- M/MODULE-MAP.md --
 modularity: strict

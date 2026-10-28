@@ -82,3 +82,21 @@ setup() {
   run bash "$CHK" "$TAP" "$REPO/tests/bats-skip-allowlist.txt"
   [ "$status" -eq 1 ]
 }
+
+@test "SK8: a skip whose reason quotes a later ' # skipped' is still read (the last VALID marker splits)" {
+  # Mutation: SK8-last-marker -- taking the last ' # skip' even when a letter follows drops the whole skip line
+  printf '%s\n' '1..1' 'ok 1 a # skip junit jar missing # skipped twice' > "$TAP"
+  run bash "$CHK" "$TAP" "$ALLOW"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"UNLISTED skip: ok 1 a — junit jar missing # skipped twice"* ]]
+}
+
+@test "SK9: every allowlist line is its own pattern (an alternation in one line never spans two)" {
+  # two lines, each anchored on its own: a reason made of the end of one and the start of the other is unlisted
+  printf '%s\n' '^alpha one$' '^beta two$' > "$ALLOW"
+  printf '%s\n' '1..3' 'ok 1 a # skip alpha one' 'ok 2 b # skip beta two' 'ok 3 c # skip one beta' > "$TAP"
+  run bash "$CHK" "$TAP" "$ALLOW"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"UNLISTED skip: ok 3 c — one beta"* ]]
+  [[ "$output" == *"1 of 3 skip(s)"* ]]
+}

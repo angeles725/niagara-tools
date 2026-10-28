@@ -8,7 +8,7 @@ A `gradle :jar` with the default JDK is NOT a valid N4 build: it can use the wro
 |---|---|
 | `toolbelt/verify-module.sh` | **THE verify gate** — run it on the built jars regardless of who built them. |
 | `toolbelt/build.sh` | The recommended WSL build: clean + slotomatic (for every profile that has sources) + jar, then it calls the gate automatically. |
-| `scripts/ng-deploy.sh` | The station DEPLOY wrapper: backup → build → copy → type-count verify (its slotomatic guard is **rt-only**); run `verify-module.sh` on `build/libs` afterwards. |
+| `scripts/ng-deploy.sh` | The station DEPLOY wrapper: backup → build → prechecks (version bump; schema-risk in modes A/C) → type-count verify → `verify-module.sh` gate (modes A/C) → copy; every check runs on `build/libs` before the copy, so a failing one copies nothing. Slotomatic is opt-in (`--with-slotomatic`) in modes A/C: -rt, plus -ux in mode A when -ux is annotated; mode B runs none (run `verify-module.sh` on `build/libs` before a mode-B deploy). |
 
 > A jar that has not passed `toolbelt/verify-module.sh` does not go to a station.
 
@@ -18,7 +18,7 @@ A `gradle :jar` with the default JDK is NOT a valid N4 build: it can use the wro
 
 ## Station deploy: `ng-deploy.sh` (the established wrapper)
 
-Use `niagara-tools/scripts/ng-deploy.sh` — it already does backup → build → (slotomatic) → copy-to-station → verify, and knows the flags:
+Use `niagara-tools/scripts/ng-deploy.sh` — it already does backup → build → (slotomatic) → prechecks → verify + gate → copy-to-station (nothing is copied when a check fails), and knows the flags:
 ```
 scripts/ng-deploy.sh --mode A --with-slotomatic        # rt+ux, regenerate from annotations, deploy+verify
 scripts/ng-deploy.sh --strict-slotomatic               # ABORTS (exit 15) if annotation changes but slotomatic wasn't run
@@ -273,7 +273,7 @@ For any decision/safety logic, "done" means all four layers ran, in order:
 4. **Adversarial pure-logic review BEFORE compile** — a second reader of the pure class catches control-logic defects the gate cannot (the `Long.MIN_VALUE` overflow and the dead-sensor false-fault both compiled and passed the gate). [ev: retro comppan-fase1-staging · T3]
 
 ## Known gap — mode B ignores `--with-slotomatic`
-- **Modes A and C regenerate `-ux` slots when `-ux` is annotated** (`scripts/ng-deploy.sh` lines ~493-500: `run_slotomatic` is called for every profile with sources); **mode B never runs slotomatic** (lines ~552-553). So a `-ux` annotation edit under mode B silently skips regeneration — build with `toolbelt/build.sh` (runs slotomatic for every profile) or with `--mode A --with-slotomatic` instead. Mode B is the exception: slotomatic is skipped for all profiles, not just the runtime profile. [ev: QA audit · ng-deploy.sh]
+- **Only mode A regenerates `-ux` slots, and only when `-ux` is annotated** (`scripts/ng-deploy.sh` `run_slotomatic`: `:<MOD>-ux:slotomatic` is added in mode A when `ux_has_annotations`); **mode C is -rt only and mode B never runs slotomatic** (`main` WARNs and ignores `--with-slotomatic` in mode B). So a `-ux` annotation edit under mode B silently skips regeneration — build with `toolbelt/build.sh` (runs slotomatic for every profile) or with `--mode A --with-slotomatic` instead. Mode B is the exception: slotomatic is skipped for all profiles, not just the runtime profile. [ev: QA audit · ng-deploy.sh]
 
 ## Verify — useful patterns
 - **V1 / Consumer-absence delta proof:** to prove "what changed since X" when same-day timestamps don't discriminate, `grep -c <symbol>` the CONSUMER artifact — 0 hits = genuine delta; present = already consumed. Beats pinning a commit/deploy boundary by date. [ev: retro dashboardpan-2d-to-3d-port-multi-session-coordination-retro Δ1]

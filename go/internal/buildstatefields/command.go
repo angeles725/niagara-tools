@@ -90,15 +90,35 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 	if msg, code := unindexedRetro(retrodir, rows); code != ExitOK {
 		return msg, code
 	}
-	// 3. evidence tags of the ledger fragments
+	// 3. evidence tags of the ledger fragments. The kit root is the retros directory's parent: every kit lays out
+	// <kit>/retros and <kit>/ledger.d side by side (gen-build-state reads ledger.d from the same root); a retrodir
+	// elsewhere has no ledger.d beside it, and ledgerTags then has nothing to check.
 	if msg, code := ledgerTags(abs(retrodir + "/..")); code != ExitOK {
 		return msg, code
 	}
 	return freshness(state, retrodir, index, string(indexText), s)
 }
 
-// unbalancedTag is the FAIL text of an evidence tag left open in a ledger fragment.
-const unbalancedTag = "unbalanced [ev: tag (no closing ] before the next tag or the end of the text)"
+// unbalancedTag is the FAIL text of an evidence tag left open in a ledger fragment, naming its opener.
+func unbalancedTag(opener string) string {
+	return "unbalanced " + opener + " tag (no closing ] before the next tag or the end of the text)"
+}
+
+// nestedOpener is the first [ev: or [deferred: opener in a tag's clause text outside a `code` span ("" for none):
+// an opener there means the tag before it never closed. A quoted `[ev:` is code, as citeparse reads it on a line.
+func nestedOpener(raw string) string {
+	for i := 0; i < len(raw); i++ {
+		if raw[i] != '[' || strings.Count(raw[:i], "`")%2 == 1 {
+			continue
+		}
+		for _, o := range []string{"[ev:", "[deferred:"} {
+			if strings.HasPrefix(raw[i:], o) {
+				return o
+			}
+		}
+	}
+	return ""
+}
 
 // ledgerTags reads every ledger.d/*.md fragment of the kit at root (none: nothing to check) with the shared
 // citeparse scanner (fenced blocks and backticked code are not tags) and FAILs the first evidence tag left
@@ -123,16 +143,19 @@ func ledgerTags(root string) (string, int) {
 			return fmt.Sprintf("cannot read ledger.d/%s: %v", name, err), ExitEnv
 		}
 		for _, p := range citeparse.Card(string(b)) {
+			opener := "[ev:"
+			if p.Deferred {
+				// Mutation: LT3-opener -- a fixed "[ev:" label misnames an open [deferred: tag
+				opener = "[deferred:"
+			}
 			// Mutation: LT1-unterminated -- skipping the unterminated case lets an open [ev: tag through
-			open := p.Kind == citeparse.Unparsed && len(p.Notes) > 0 && p.Notes[0] == "unterminated tag"
+			if p.Unterminated { // Raw already starts with the opener
+				return fmt.Sprintf("ledger.d/%s:%d: %s: %s", name, p.Line, unbalancedTag(opener), strings.TrimSpace(p.Raw)), ExitFail
+			}
 			// Mutation: LT2-nested -- an opener inside the tag text means the previous tag never closed
-			nested := strings.Contains(p.Raw, "[ev:") || strings.Contains(p.Raw, "[deferred:")
-			if open || nested {
-				raw := p.Raw
-				if !open {
-					raw = "[ev: " + raw
-				}
-				return fmt.Sprintf("ledger.d/%s:%d: %s: %s", name, p.Line, unbalancedTag, strings.TrimSpace(raw)), ExitFail
+			// Mutation: LT4-backtick -- a plain substring test FAILs a tag whose text quotes the opener as code
+			if nestedOpener(p.Raw) != "" {
+				return fmt.Sprintf("ledger.d/%s:%d: %s: %s", name, p.Line, unbalancedTag(opener), opener+" "+strings.TrimSpace(p.Raw)), ExitFail
 			}
 		}
 	}

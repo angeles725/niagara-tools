@@ -1,0 +1,20 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| cooling | rt | M-rt/src/a/model/cooling/Loop.java | M-rt/srcTest/a/model/cooling/LoopTest.java | a cooling decision |
+| cooling | ux | M-ux/src/a/service/coolingview/View.java | M-ux/srcTest/a/service/coolingview/ViewTest.java | the cooling view |
+-- M/M-rt/src/a/model/cooling/Loop.java --
+class Loop {}
+-- M/M-rt/srcTest/a/model/cooling/LoopTest.java --
+class LoopTest {}
+-- M/M-ux/src/a/service/coolingview/View.java --
+class View {}
+-- M/M-ux/srcTest/a/service/coolingview/ViewTest.java --
+class ViewTest {}

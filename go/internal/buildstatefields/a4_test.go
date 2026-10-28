@@ -2,6 +2,7 @@ package buildstatefields
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -36,8 +37,14 @@ func TestMainLedgerEvidenceTags(t *testing.T) {
 		// Mutation: LT2-nested -- reading only unterminated tags misses an opener swallowed by the previous tag
 		{"a tag opened inside an open tag FAILs", "log: 2026-09-07 · x [ev: retro demo Δ1 [ev: retro other Δ2]\n",
 			"sweep: ledger.d/2026-09-07-tag.md:3: unbalanced [ev: tag (no closing ] before the next tag or the end of the text): [ev: retro demo Δ1 [ev: retro other Δ2\n", ExitFail},
-		{"an open_issue line is read too", "log: 2026-09-07 · x\nopen_issue: owed [deferred: retro demo Δ2\n",
-			"sweep: ledger.d/2026-09-07-tag.md:4: unbalanced [ev: tag (no closing ] before the next tag or the end of the text): [deferred: retro demo Δ2\n", ExitFail},
+		// Mutation: LT3-opener -- a fixed "[ev:" label misnames an open [deferred: tag
+		{"an open_issue line is read too (deferred opener named)", "log: 2026-09-07 · x\nopen_issue: owed [deferred: retro demo Δ2\n",
+			"sweep: ledger.d/2026-09-07-tag.md:4: unbalanced [deferred: tag (no closing ] before the next tag or the end of the text): [deferred: retro demo Δ2\n", ExitFail},
+		{"a tag opened inside an open deferred tag names the deferred opener", "log: 2026-09-07 · x [deferred: retro demo Δ1 [ev: retro other Δ2]\n",
+			"sweep: ledger.d/2026-09-07-tag.md:3: unbalanced [deferred: tag (no closing ] before the next tag or the end of the text): [deferred: retro demo Δ1 [ev: retro other Δ2\n", ExitFail},
+		// Mutation: LT4-backtick -- a plain substring test FAILs a tag whose text quotes the opener as code
+		{"a backticked opener inside a closed tag is code", "log: 2026-09-07 · x [ev: retro demo Δ1 `[ev:` literal]\n", "", ExitOK},
+		{"a backticked deferred opener inside a closed tag is code", "log: 2026-09-07 · x [ev: retro demo Δ1 `[deferred:`]\n", "", ExitOK},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -99,5 +106,31 @@ func TestMainAgeStrict(t *testing.T) {
 	}
 	if code, _, _ := run("--age", "--today", "2026-09-05", f.retros, f.index); code != ExitOK {
 		t.Errorf("non-strict over the same debt: got exit %d, want 0", code)
+	}
+}
+
+// TestLedgerTagsEnv: a ledger.d/ the sweep cannot list, or a fragment it cannot read, is an environment error
+// (ExitEnv) naming the path, never a clean pass (review R3-ledgertags-coverage of b9709db0).
+func TestLedgerTagsEnv(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a mode-000 file")
+	}
+	root := t.TempDir()
+	dir := filepath.Join(root, "ledger.d")
+	mustMkdir(t, dir)
+	frag := filepath.Join(dir, "2026-09-07-tag.md")
+	writeFile(t, frag, "log: x\n")
+	if err := os.Chmod(frag, 0); err != nil {
+		t.Fatal(err)
+	}
+	if msg, code := ledgerTags(root); code != ExitEnv || !strings.HasPrefix(msg, "cannot read ledger.d/2026-09-07-tag.md: ") {
+		t.Errorf("unreadable fragment: (%q, %d)", msg, code)
+	}
+	if err := os.Chmod(dir, 0o300); err != nil { // searchable, not listable
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755); _ = os.Chmod(frag, 0o644) })
+	if msg, code := ledgerTags(root); code != ExitEnv || !strings.HasPrefix(msg, "cannot list "+dir+": ") {
+		t.Errorf("unlistable ledger.d: (%q, %d)", msg, code)
 	}
 }

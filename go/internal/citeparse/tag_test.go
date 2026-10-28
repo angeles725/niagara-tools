@@ -70,3 +70,20 @@ func TestDeferredFlag(t *testing.T) {
 		t.Fatalf("got %+v", ps)
 	}
 }
+
+// TestCardUnterminatedTyped: an unterminated tag carries the typed Unterminated flag and its opener's Deferred
+// flag, so a caller never matches the free-text note (review R2-003 of b9709db0).
+func TestCardUnterminatedTyped(t *testing.T) {
+	for _, tt := range []struct {
+		text     string
+		deferred bool
+	}{{"a [ev: retro x\n\nnext", false}, {"a [deferred: retro x\n\nnext", true}} {
+		ps := Card(tt.text)
+		if len(ps) != 1 || !ps[0].Unterminated || ps[0].Deferred != tt.deferred {
+			t.Errorf("Card(%q) = %+v", tt.text, ps)
+		}
+	}
+	if ps := Card("a [ev: retro x]"); len(ps) != 1 || ps[0].Unterminated {
+		t.Errorf("a closed tag is flagged: %+v", ps)
+	}
+}

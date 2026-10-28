@@ -1,0 +1,33 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:12  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:13  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:15  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:16  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:17  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:18  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:20  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+-- stderr --
+-- rc/a.js --
+const units = [{ id: "UP-01", name: "Unit A", cap: 4 }, { id: "UP-02", name: "Unit B", cap: 6 }];
+const SCALE = 2;
+function series() { return units.map(u => ({ name: u.name, count: u.cap * SCALE, r: Math.round(u.cap / 3) })); }
+const rows = () => units.map((u, i) => ({ label: u.id + "#" + (i + 1), pct: (u.cap / 10 * 100).toFixed(1) }));
+const caps = units.map(u => u.cap * 2);
+el.innerHTML = series().map(v => '<td>' + v.count + '</td>').join('');
+series().forEach(x => { el.innerHTML += '<i>' + x.r + '</i>'; });
+el.innerHTML = rows().map(w => '<p>' + w.label + ' ' + w.pct).join('');
+for (const v of series()) { el.innerHTML += '<b>' + v.name; }
+el.innerHTML = caps.map(c => '<s>' + c.toString()).join('');
+function mixed() { return units.map(u => ({ count: u.cap + live.count, name: u.name })); }
+el.innerHTML = mixed().map(v => '<td>' + v.count).join('');
+el.innerHTML = data.map(d => ({ count: d.n * 2 })).map(v => '<td>' + v.count).join('');
+function twice() { if (k) { return data; } return units.map(u => ({ c: 1 })); }
+el.innerHTML = twice().map(v => '<td>' + v.c).join('');
+const tw = units.map(u => ({ c: u.cap })); tw[0].c = srv; el.innerHTML = tw.map(v => '<b>' + v.c).join('');
+el.innerHTML = series().map(v => '<td>' + v.missing).join('');
+el.innerHTML = units.map(u => ({ c: `${u.cap}` })).map(v => '<td>' + v.c).join('');
+let NOTK = 3; function loose() { return units.map(u => ({ c: u.cap * NOTK })); }
+el.innerHTML = loose().map(v => '<td>' + v.c).join('');

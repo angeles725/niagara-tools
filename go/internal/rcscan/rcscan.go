@@ -83,9 +83,18 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	var rows []lint.Finding
 	var pages []*source
+	// prefix is how lint.Walk spells the root in front of every walked path: as given, with one "/" added
+	// unless the root already ends in one ("x/" walks to "x/a.js", never "x//a.js"). under (p minus exactly
+	// that prefix) is what the vendored skip and the map anchors read, so a trailing-slash root never makes them
+	// read the whole walked path, ancestors included (review R3-003 of b2e0e430). The row path rel keeps the
+	// bash port's spelling (the walked path for a trailing-slash root, golden edge-legacy-3).
+	prefix := o.root
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
 	for _, p := range files {
-		rel := strings.TrimPrefix(p, o.root+"/")
-		if vendored(rel) {
+		rel, under := strings.TrimPrefix(p, o.root+"/"), strings.TrimPrefix(p, prefix)
+		if vendored(under) {
 			continue
 		}
 		data, err := os.ReadFile(p)
@@ -93,7 +102,7 @@ func Main(args []string, s cli.Stdio) int {
 			fmt.Fprintf(s.Err, "rc-scan: cannot scan %s: %s\n", p, strerror.Text(err))
 			return 3
 		}
-		src := &source{rel: rel, path: p, ext: p[strings.LastIndexByte(p, '.')+1:], lines: records(data)}
+		src := &source{rel: rel, rc: rcRel(under), path: p, ext: p[strings.LastIndexByte(p, '.')+1:], lines: records(data)}
 		rows = append(rows, scanFile(src, o)...)
 		if src.ext != "css" {
 			pages = append(pages, src)

@@ -107,6 +107,7 @@ Exit codes:
   40  copy of jar to STATION_MODULES_DIR failed
   12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
   50  verify failed: type count mismatch, BUILD_ID not found, or verify-module gate failed/missing
+      (every check runs on build/libs before the copy: nothing reaches STATION_MODULES_DIR)
   51  version-bump precheck: the built jar's bytes differ from the deployed jar but its vendorVersion did not change
       (numeric per component, a missing component = 0: 1.3 -> 1.3.0 is NOT a bump)
   52  version-bump precheck cannot verify (a vendorVersion is unreadable, or the two differ in a non-numeric suffix)
@@ -677,10 +678,7 @@ main() {
            precheck_schema "${pre_dir}/${MODULE_NAME}-rt" ;;
     esac
 
-    # Step 4: Copy
-    copy_jars "$MODE"
-
-    # Step 5: Verify
+    # Step 4: Verify the built jars (type count, cache-buster) — on build/libs, BEFORE the copy
     local src_dir
     src_dir="$(dirname "$GRADLEW_PATH")"
     local rt_jar="${src_dir}/${MODULE_NAME}/${MODULE_NAME}-rt/build/libs/${MODULE_NAME}-rt.jar"
@@ -701,7 +699,7 @@ main() {
             ;;
     esac
 
-    # Step 5.5: verify-module gate (default on for mode A/C; --no-gate to skip; mode B has none)
+    # Step 4.5: verify-module gate (default on for mode A/C; --no-gate to skip; mode B has none)
     if [[ "$NO_GATE" -eq 0 ]]; then
         case "$MODE" in
             A) run_gate "$rt_jar" "$ux_jar" ;;
@@ -709,7 +707,11 @@ main() {
         esac
     fi
 
-    # Step 6: Write deploy SHA (after successful verify + gate; silent if git absent)
+    # Step 5: Copy — only after every precheck, verify and the gate passed, so a failing check (exit 12, 50-54)
+    # leaves STATION_MODULES_DIR untouched (kit backlog B5.0).
+    copy_jars "$MODE"
+
+    # Step 6: Write deploy SHA (after successful verify + gate + copy; silent if git absent)
     write_last_deploy_sha
 
     # Step 7: Post-deploy hint

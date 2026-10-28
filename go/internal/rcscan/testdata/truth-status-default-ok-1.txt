@@ -1,0 +1,30 @@
+-- args --
+@DIR@
+--strict
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:1  status-default-ok: a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: trust a value only when st === "ok"
+WARN  rc-scan  rc/a.js:2  status-default-ok: a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: trust a value only when st === "ok"
+WARN  rc-scan  rc/a.js:3  status-default-ok: a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: trust a value only when st === "ok"
+WARN  rc-scan  rc/a.js:4  status-default-ok: a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: trust a value only when st === "ok"
+WARN  rc-scan  rc/a.js:5  status-default-ok: a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: trust a value only when st === "ok"
+WARN  rc-scan  rc/b.html:3  status-default-ok: a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: trust a value only when st === "ok"
+-- stderr --
+-- rc/a.js --
+const st = p.st || "ok";
+const s2 = (point.status ?? 'ok');
+function eq(p) { const s = p.pointStatus || 'OK'; return s; }
+cfg.status = cfg.status || "ok";
+const { st: s3 = "ok" } = p; const tmp = q.st || "ok"; // rc-scan: allow nothing-else
+const shown = p.st === "ok" && typeof p.v === "boolean";
+const label = p.name || "ok";
+const msg = p.st || "unknown";
+const st4 = p.st || "ok"; // rc-scan: allow status-default-ok
+const text = "p.st || 'ok' is the bug";
+// const st5 = p.st || "ok";
+-- rc/b.html --
+<html><body>
+<script>
+const st = p.st || "ok";
+</script>
+</body></html>

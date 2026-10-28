@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-27 -->
+<!-- last-change-note: kit-backlog B5.1c: review fix-forward 3 (sweep ledger tags, pre-push ref names, bats skip allowlist) -->
+log: 2026-10-27 · kit-backlog B5.1c (feature doc `odd/tasks/kit-backlog-2026-10-27.md`; review fix-forward of b9709db0 and 78abca8e) → `go/internal/citeparse` Pointer.Unterminated (typed, with Deferred set on the unterminated pointer); `go/internal/buildstatefields` `ledgerTags` labels the real opener, skips a backticked opener inside a tag body, comments the kit-root assumption (TestMainLedgerEvidenceTags +3 cases, TestLedgerTagsEnv, TestCardUnterminatedTyped); `.githooks/pre-push` names the refused ref (H30) and H32 gates two non-deletion refs; `scripts/check-bats-skips.sh` keeps the last valid ` # skip` marker and passes one `-e` per allowlist line (SK8, SK9).

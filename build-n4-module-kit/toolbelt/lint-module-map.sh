@@ -15,7 +15,9 @@
 #   MM6  a part's srcTest/**/*.java listed in no row (WARN)
 #   MM7  a concern folder (the directory right under a role folder: rt model/ or adapter/; ux route/, service/
 #        or model/; wb and se model/) whose files two rows list, or a non-plumbing row listing files in concern
-#        folders of two names (rt model/battery and adapter/battery are one concern) (FAIL strict, WARN legacy)
+#        folders of two names (rt model/battery and adapter/battery are one concern), or two non-plumbing rows
+#        sharing a concern AND a part, compared case-insensitively (one concern may have one row per part; plumbing
+#        rows may repeat) (FAIL strict, WARN legacy)
 # [ev: retro modularity-module-map Δ3] [ev: retro modularity-structure Δ2]
 #
 # Usage:  lint-module-map.sh <module-root>   (the directory holding the <MOD>-rt/-ux/-wb/-se parts)

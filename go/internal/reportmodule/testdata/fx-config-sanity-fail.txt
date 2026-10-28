@@ -27,8 +27,9 @@ DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract
 (module)  INFO  modularity  mode=none concerns=- unlisted=- largest=DemoPan-rt/src/com/x/BConfig.java (10 hand-written lines)
 (module)  SKIP  lint-write-path  no write-path-matrix.md
 (module)  PASS  lint-bundled-jar-class-version  clean
+(module)  SKIP  lint-vacuous-tests  no *.java under a srcTest/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 17 PASS · 1 FAIL · 2 WARN · 4 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 17 PASS · 1 FAIL · 2 WARN · 5 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

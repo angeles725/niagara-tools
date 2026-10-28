@@ -84,7 +84,7 @@ clean() {
   scaffold logic
   run "$MM" tests station-test --root "$R"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"skip  ModuleA-rt/srcTest/test/com/example/ModuleA/BModuleALinkTest.java  imports javax.baja"* ]]
+  [[ "$output" == *"skip  ModuleA-rt/srcTest/test/com/example/ModuleA/BModuleALinkTest.java  uses javax.baja"* ]]
   [[ "$output" != *"run   "* ]]
   command -v javac >/dev/null 2>&1 || skip "no javac on PATH"
   [ -n "$(find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | head -1)" ] || skip "junit-4.13.2.jar not in ~/.gradle"

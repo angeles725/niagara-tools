@@ -28,8 +28,9 @@ DemoPan-wb  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract
 (module)  SKIP  lint-inline-site-literal  no *.java under a -rt or -ux part's src/ and no *.js under an rc/
 (module)  SKIP  lint-ndriver-static-collection  no *.java under a -rt part's src/
 (module)  SKIP  lint-ndriver-tagless-correlation  no *.java under a -rt part's src/
+(module)  SKIP  lint-vacuous-tests  no *.java under a srcTest/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 16 PASS · 0 FAIL · 2 WARN · 7 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 1 artifact · 16 PASS · 0 FAIL · 2 WARN · 8 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

@@ -180,7 +180,7 @@ func TestTests(t *testing.T) {
 		t.Errorf("runner argv %q", got)
 	}
 	if code, out, _ := run(env, "tests", "station-test", "--root", root); code != 0 ||
-		!strings.Contains(out, "skip  M-rt/srcTest/test/com/v/M/BMLinkTest.java  imports javax.baja") {
+		!strings.Contains(out, "skip  M-rt/srcTest/test/com/v/M/BMLinkTest.java  uses javax.baja") {
 		t.Errorf("station-test: exit %d, no skip row:\n%s", code, out)
 	}
 	if code, out, _ := run(env, "tests", "frontend", "--root", root); code != 0 || !strings.Contains(out, "skip  M-ux/srcTest/rc/spec/MSpec.js  Jasmine browser spec") {
@@ -222,7 +222,11 @@ func TestUsage(t *testing.T) {
 // writeMap replaces the module's map with baseMap plus extra rows (each a full table line).
 func writeMap(t *testing.T, root string, extra ...string) {
 	t.Helper()
-	body := strings.Replace(baseMap, "\n\nTrailing prose.\n", "\n"+strings.Join(extra, "\n")+"\n\nTrailing prose.\n", 1)
+	const anchor = "\n\nTrailing prose.\n" // the rows go right before baseMap's trailing prose
+	if !strings.Contains(baseMap, anchor) {
+		t.Fatalf("writeMap: baseMap has no %q anchor; the extra rows would be dropped silently", anchor)
+	}
+	body := strings.Replace(baseMap, anchor, "\n"+strings.Join(extra, "\n")+anchor, 1)
 	if err := os.WriteFile(filepath.Join(root, lint.MapFile), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -245,6 +249,36 @@ func TestTestsStationImportLine(t *testing.T) {
 	code, out, errs := run(map[string]string{"MODULE_MAP_TOOLBELT": tb}, "tests", "notes", "--root", root)
 	if code != 0 || !strings.Contains(out, "run   M-rt/srcTest/test/com/v/M/model/MNoteTest.java  com.v.M.model.MNoteTest") {
 		t.Errorf("exit %d err %q\n%s", code, errs, out)
+	}
+}
+
+// TestTestsStationFQN: a srcTest class that names a javax.baja type fully qualified in code (no import line) is a
+// station test too; one that names it only in a comment or a string literal is pure (review R4-baja-fqn and
+// R3-fq-baja-run-as-pure of 39d0a155).
+func TestTestsStationFQN(t *testing.T) {
+	cases := []struct{ name, src, want string }{
+		{"import line", "package com.v.M.model;\nimport javax.baja.sys.BComponent;\npublic class MFqTest {}\n", "skip  "},
+		{"fully qualified", "package com.v.M.model;\npublic class MFqTest { javax.baja.sys.BComponent c; }\n", "skip  "},
+		{"spaced qualified", "package com.v.M.model;\npublic class MFqTest { Object o = javax . baja.sys.Sys.getStation(); }\n", "skip  "},
+		{"comment and string only", "package com.v.M.model;\n/* javax.baja.sys.BComponent */ // javax.baja.x\npublic class MFqTest { String s = \"javax.baja.sys\"; }\n", "run   "},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root := module(t)
+			if err := os.WriteFile(filepath.Join(root, "M-rt/srcTest/test/com/v/M/model/MFqTest.java"), []byte(c.src), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			writeMap(t, root, "| fq | rt | — | M-rt/srcTest/test/com/v/M/model/MFqTest.java | a note |")
+			tb := t.TempDir()
+			if err := os.WriteFile(filepath.Join(tb, "run-pure-test.sh"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			// Mutation: MMT-fqn -- an import-only check runs a test that uses javax.baja fully qualified as pure
+			code, out, errs := run(map[string]string{"MODULE_MAP_TOOLBELT": tb}, "tests", "fq", "--root", root)
+			if code != 0 || !strings.Contains(out, c.want+"M-rt/srcTest/test/com/v/M/model/MFqTest.java") {
+				t.Errorf("exit %d err %q, want %q row\n%s", code, errs, c.want, out)
+			}
+		})
 	}
 }
 
@@ -341,11 +375,39 @@ func TestAddConcernDefaultPackage(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	before := tree(t, root)
 	code, _, errs := run(nil, "add-concern", "Battery", "--root", root)
 	if code != 3 || !strings.Contains(errs, "default package") {
 		t.Errorf("exit %d err %q, want 3 naming the default package", code, errs)
 	}
-	if _, err := os.Lstat(filepath.Join(root, "M-rt/src/model")); err == nil {
-		t.Error("a role folder was written")
+	// nothing written: the same files with the same bytes (MODULE-MAP.md unchanged, no .tmp, no folder)
+	if after := tree(t, root); after != before {
+		t.Errorf("the tree changed:\nbefore\n%s\nafter\n%s", before, after)
 	}
+}
+
+// tree lists every path under root with each regular file's bytes, in walk order: two calls compare equal only
+// when nothing was added, removed or rewritten.
+func tree(t *testing.T, root string) string {
+	t.Helper()
+	var b strings.Builder
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(root, p)
+		b.WriteString(rel + "\n")
+		if d.Type().IsRegular() {
+			data, err := os.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			b.WriteString(string(data) + "\n")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b.String()
 }
