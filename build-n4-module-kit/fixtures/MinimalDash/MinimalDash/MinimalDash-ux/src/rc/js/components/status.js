@@ -5,7 +5,7 @@ var MinimalDashStatus = function (el, state) {
   if (state.error) {
     el.textContent = 'error: ' + state.error;
   } else if (state.status) {
-    el.textContent = JSON.stringify(state.status);
+    el.textContent = 'status: ' + state.status.status;
   } else {
     el.textContent = 'loading…';
   }

@@ -19,6 +19,9 @@ var MinimalDashApi = (function () {
     });
   }
   return {
+    // The response fields the front end reads, per route: each must be declared in js/contract.json
+    // (srcTest/rc/spec/MinimalDashContractSpec.js checks it; types/dashboard.md DUX-CONTRACT1).
+    reads: { 'GET /api/status': ['status'] },
     status: function (cfg) { return getJson(cfg, '/status'); }
   };
 }());

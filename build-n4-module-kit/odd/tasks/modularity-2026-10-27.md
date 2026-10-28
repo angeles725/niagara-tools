@@ -265,6 +265,28 @@ fold audit, generated-index `--check`).
   --date 2026-10-27 --deltas 5` (envelope `retro_pending: already true`), filled from the parent's five items;
   review-status pending until M6. Checks: gen-retro-index --check 0. Commit: see WU15 entry.
 
+- WU15 = M7.2 (route: delegated writer). RED: modulemap goldens `mm7-strict`, `mm7-legacy` (no MM7 row;
+  `mm7-clean` passed first as the clean baseline). GREEN: `lint-module-map` MM7 (WARN legacy, FAIL strict): a
+  concern folder (the directory right under a role folder: rt `model/`/`adapter/`, ux `route/`/`service/`/`model/`,
+  wb/se `model/`) listed by two rows, or a non-plumbing row with files in concern folders of two names (rt
+  `model/battery` + `adapter/battery` is one concern). `TestConcernFolder`, bats MMB4 (+ `Mutation: MMB4` pin,
+  mutation-checked: dropping the mm7 call turns MMB4 and 2 goldens red). Commit 14 = 57d41b3f (retro D open), WU15
+  commit a2708ddf `feat(lint): module-map MM7 keeps one row per concern folder` (+224/−2).
+- WU16 = M7.1 + M7.4 (route: delegated writer). RED: `go/internal/modulemap` tests TestAddConcern,
+  TestAddConcernAdapter, TestAddConcernRefuses, TestWhere, TestTests, TestUsage against a stub Main (all FAIL).
+  GREEN: `go/cmd/module-map` + `toolbelt/module-map.sh` (add-concern, where, tests; `scaffold-module.sh
+  add-concern` execs it); `rules/modulemap` exports `ReadMap`/`Row`/`MatchGlob` (one parser). Bats
+  `tests/module-map.bats` 4/4 (MM-TESTS1 ran JUnit, not skipped): a fresh logic and dashboard scaffold plus
+  add-concern (rt, rt --adapter, ux) stay clean under lint-module-map, strict L3 and lint-size. SKILL.md step 1e
+  names the tool (kit-links L5). Commit e9aeb6e8 `feat(toolbelt): module-map add-concern, where and tests`
+  (+942/−5, over the ~400 advisory: one cohesive Go tool, about 330 lines of it tests).
+- WU17 = M7.3 + decision 8 (route: delegated writer). RED: bats TC-MAP7 (`contract.json` missing). GREEN: the
+  MinimalDash fixture emits `ux/route/StatusHandler` (servlet delegates), `rc/js/contract.json`,
+  `StatusHandlerTest` (servlet side) and `srcTest/rc/spec/MinimalDashContractSpec.js` (node consumer side over
+  `MinimalDashApi.reads`); DUX-CONTRACT1 in types/dashboard.md. TC-MAP7 positive controls: renaming the contract
+  field fails the node spec and the JUnit test (both ran). Checks: bats scaffold-module, rc-scan, lint-servlet,
+  lint-jasmine-ux, report-module 177/177; kit-links 0 not ok. Commit: see the next entry.
+
 ## Next session
 Part 3 stopped on 2026-10-27 after WU12 (5d2f2fba) and the part-3 ledger fragment; M0-M5 are done, the three retros
 stay `review-status: pending`. Review candidate: 2e261afb..HEAD (five work units and this bookkeeping, base
