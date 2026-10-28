@@ -51,3 +51,19 @@ map() {  # map <mode-lines> <files-cell>
   [ "$status" -eq 0 ]
   [[ "$output" == "WARN  lint-module-map  $M  MM1: "* ]]
 }
+
+@test "MMB4: a strict row whose files sit in two concern folders FAILs MM7 (rows and folders); model/x with adapter/x is one concern" {
+  mkdir -p "$M/M-rt/src/a/model/cooling" "$M/M-rt/src/a/model/schedules" "$M/M-rt/src/a/adapter/cooling"
+  printf 'class L {}\n' > "$M/M-rt/src/a/model/cooling/L.java"
+  printf 'class P {}\n' > "$M/M-rt/src/a/model/schedules/P.java"
+  printf 'class BL {}\n' > "$M/M-rt/src/a/adapter/cooling/BL.java"
+  map 'modularity: strict' 'M-rt/src/A.java; M-rt/src/a/model/cooling/L.java; M-rt/src/a/adapter/cooling/BL.java; M-rt/src/a/model/schedules/P.java'
+  run "$LMM" "$M"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  lint-module-map  $M/MODULE-MAP.md:5  MM7: concern control lists files in 3 concern folders"* ]]
+  map 'modularity: strict' 'M-rt/src/A.java; M-rt/src/a/model/cooling/L.java; M-rt/src/a/adapter/cooling/BL.java'
+  printf '| schedules | rt | M-rt/src/a/model/schedules/P.java | M-rt/srcTest/ATest.java | a schedule |\n' >> "$M/MODULE-MAP.md"
+  run "$LMM" "$M"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

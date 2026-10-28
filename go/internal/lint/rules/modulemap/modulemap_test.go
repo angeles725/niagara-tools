@@ -14,7 +14,7 @@ import (
 
 // TestGolden: one case per check and mode (strict-clean, no-map, no-parts, the MM2 header and table shapes,
 // missing-path, unlisted-strict, unlisted-legacy, dup, no-test-strict, java-glob, glob-segment).
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 15) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 18) }
 
 // strictMap is a one-concern strict map over M-rt/src/A.java and its test.
 const strictMap = "modularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n" +
@@ -160,6 +160,27 @@ func TestSummarize(t *testing.T) {
 		got, err := Summarize(root)
 		if err != nil || got != tt.want {
 			t.Errorf("%s: Summarize = %+v, %v; want %+v", tt.name, got, err, tt.want)
+		}
+	}
+}
+
+// TestConcernFolder: the concern folder is the directory right under the first role folder of the part's
+// suffix; a file directly in a role folder, outside every role folder, under a foreign role or not Java has none.
+func TestConcernFolder(t *testing.T) {
+	for rel, want := range map[string]string{
+		"M-rt/src/a/model/schedules/Plan.java":     "M-rt/src/a/model/schedules",
+		"M-rt/src/a/model/schedules/day/Day.java":  "M-rt/src/a/model/schedules",
+		"M-rt/src/a/adapter/battery/BCharger.java": "M-rt/src/a/adapter/battery",
+		"M-ux/src/a/ux/route/status/H.java":        "M-ux/src/a/ux/route/status",
+		"M-wb/src/a/model/view/V.java":             "M-wb/src/a/model/view",
+		"M-rt/src/a/model/Logic.java":              "",
+		"M-rt/src/a/BM.java":                       "",
+		"M-rt/src/a/route/x/R.java":                "", // route/ is a ux role folder only
+		"M-ux/src/rc/js/model/x/a.js":              "",
+		"M-rt/srcTest/a/model/x/XTest.java":        "",
+	} {
+		if got := ConcernFolder(rel); got != want {
+			t.Errorf("ConcernFolder(%q) = %q, want %q", rel, got, want)
 		}
 	}
 }

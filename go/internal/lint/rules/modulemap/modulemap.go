@@ -12,6 +12,10 @@
 //	     or in two rows' Files (FAIL)
 //	MM5  a non-plumbing row names no existing srcTest/ path in Tests           FAIL strict, WARN legacy
 //	MM6  a part's srcTest/**/*.java is in no row                               WARN
+//	MM7  a concern folder (the directory right under a role folder: rt model/ or
+//	     adapter/; ux route/, service/ or model/; wb and se model/) has files in
+//	     two rows, or a non-plumbing row lists files in concern folders of two
+//	     names (model/x and adapter/x are one concern)                          FAIL strict, WARN legacy
 package modulemap
 
 import (
@@ -106,6 +110,7 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 			s.add(s.strictSev(), s.mapPath, r.line, "MM5: concern "+r.concern+" names no existing srcTest path in Tests")
 		}
 	}
+	s.mm7(rows, owners)
 	s.mm4(owners)
 	s.mm6(listed)
 	return s.out, nil
@@ -376,6 +381,90 @@ func isSource(rel string) bool {
 		return true
 	}
 	return false
+}
+
+// roleFolders are the fixed role folders of each part suffix (types/structure.md § Module map); the concern
+// folders under them carry any per-module name (modularity-structure Δ2).
+var roleFolders = map[string][]string{
+	"-rt": {"model", "adapter"},
+	"-ux": {"route", "service", "model"},
+	"-wb": {"model"},
+	"-se": {"model"},
+}
+
+// ConcernFolder is the concern folder of a part's src/**/*.java file rel (relative to the module root): the
+// path up to the directory right under the first role-folder segment after src/, or "" for a file that sits
+// in no concern folder (directly in a role folder, or outside every role folder).
+func ConcernFolder(rel string) string {
+	seg := strings.Split(rel, "/")
+	if len(seg) < 4 || seg[1] != "src" || !strings.HasSuffix(rel, ".java") {
+		return ""
+	}
+	var roles []string
+	for suf, r := range roleFolders {
+		if strings.HasSuffix(seg[0], suf) {
+			roles = r
+		}
+	}
+	for i := 2; i < len(seg)-2; i++ {
+		for _, r := range roles {
+			if seg[i] == r {
+				return strings.Join(seg[:i+2], "/")
+			}
+		}
+	}
+	return ""
+}
+
+// mm7 relates concern folders and rows: per non-plumbing row in map order, a row whose Files lie in concern
+// folders of two or more names (one concern may span role folders: rt model/battery and adapter/battery); then per concern folder in path order, a folder whose files two rows list.
+func (s *scan) mm7(rows []row, owners map[string][]string) {
+	byRow := map[string]map[string]bool{}    // concern -> its concern folders
+	byFolder := map[string]map[string]bool{} // concern folder -> the concerns listing its files
+	for f, concerns := range owners {
+		cf := ConcernFolder(f)
+		if cf == "" || !isSource(f) {
+			continue
+		}
+		for _, c := range concerns {
+			if byRow[c] == nil {
+				byRow[c] = map[string]bool{}
+			}
+			byRow[c][cf] = true
+			if byFolder[cf] == nil {
+				byFolder[cf] = map[string]bool{}
+			}
+			byFolder[cf][c] = true
+		}
+	}
+	for _, r := range rows {
+		names := map[string]bool{} // the folders' own names: model/battery and adapter/battery are one concern
+		for cf := range byRow[r.concern] {
+			names[path.Base(cf)] = true
+		}
+		if strings.EqualFold(r.concern, "plumbing") || len(names) < 2 {
+			continue
+		}
+		fs := keys(byRow[r.concern])
+		s.add(s.strictSev(), s.mapPath, r.line, "MM7: concern "+r.concern+" lists files in "+strconv.Itoa(len(fs))+
+			" concern folders ("+strings.Join(fs, ", ")+"); keep one concern folder per row")
+	}
+	for _, cf := range keys(byFolder) {
+		if cs := keys(byFolder[cf]); len(cs) > 1 {
+			s.add(s.strictSev(), s.abs(cf), 0, "MM7: concern folder in "+strconv.Itoa(len(cs))+" rows ("+
+				strings.Join(cs, ", ")+"); one row owns a concern folder")
+		}
+	}
+}
+
+// keys is m's keys in sorted order.
+func keys[V any](m map[string]V) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // mm6 WARNs every srcTest Java file no row lists by its path, in path order.
