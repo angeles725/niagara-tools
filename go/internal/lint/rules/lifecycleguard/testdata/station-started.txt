@@ -2,6 +2,9 @@
 @DIR@/src
 -- want --
 exit 0
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeAnon.java:6  LG2 stationStarted() does startup work and the class has no started(): it runs once at station boot, never for a component added to a running station; move the work to started() (types/logic.md § Tridium rt idioms)
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeAnon.java:15  LG2 stationStarted() does startup work and the class has no started(): it runs once at station boot, never for a component added to a running station; move the work to started() (types/logic.md § Tridium rt idioms)
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeAnonStart.java:7  LG2 stationStarted() does startup work and the class has no started(): it runs once at station boot, never for a component added to a running station; move the work to started() (types/logic.md § Tridium rt idioms)
 WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeService.java:4  LG2 stationStarted() does startup work and the class has no started(): it runs once at station boot, never for a component added to a running station; move the work to started() (types/logic.md § Tridium rt idioms)
 -- stderr --
 -- src/com/acme/BAcmeService.java --
@@ -30,4 +33,31 @@ package com.acme;
 public class BAcmeSuperOnly extends BComponent {
   public void stationStarted() throws Exception { super.stationStarted(); }
   public void stationStarted(int unrelated) { work(); }
+}
+-- src/com/acme/BAcmeAnon.java --
+package com.acme;
+public class BAcmeAnon extends BComponent {
+  public void started() throws Exception { schedule(); }
+  // the outer class's started() does not cover an anonymous body of the same type: LG2
+  Object child = new BAcmeAnon() {
+    public void stationStarted() throws Exception { refresh(); }
+  };
+  // an anonymous body with its own started(): clean
+  Object both = new BComponent() {
+    public void started() throws Exception { schedule(); }
+    public void stationStarted() throws Exception { refresh(); }
+  };
+  // a second anonymous body of that type is another class: the started() above does not cover it, LG2
+  Object other = new BComponent() {
+    public void stationStarted() throws Exception { reload(); }
+  };
+}
+-- src/com/acme/BAcmeAnonStart.java --
+package com.acme;
+public class BAcmeAnonStart extends BComponent {
+  // an anonymous body's started() does not cover the named class of the same type: LG2 below
+  Object child = new BAcmeAnonStart() {
+    public void started() throws Exception { schedule(); }
+  };
+  public void stationStarted() throws Exception { refresh(); }
 }

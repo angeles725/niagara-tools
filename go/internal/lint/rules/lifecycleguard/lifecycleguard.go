@@ -59,10 +59,12 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	toks := javasrc.Tokens(f.Stripped())
 	decls := javasrc.Decls(toks)
 	// started is the set of classes (by enclosing body) that declare a no-argument start callback.
-	started := map[string]bool{}
+	// Mutation: LG2-anon-key -- keying an anonymous body by the type it instantiates lets one anonymous started()
+	// cover a second anonymous body of that type
+	started := map[int]bool{}
 	for _, d := range decls {
 		if startCallbacks[d.Name] && len(d.Params) == 0 {
-			started[owner(d)] = true
+			started[owner(toks, d)] = true
 		}
 	}
 	var out []lint.Finding
@@ -70,7 +72,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		body := toks[d.Body[0]:d.Body[1]]
 		switch {
 		case d.Name == "stationStarted" && len(d.Params) == 0:
-			if acts(body) && !started[owner(d)] {
+			if acts(body) && !started[owner(toks, d)] {
 				out = append(out, lint.Finding{Line: d.Line + 1, Msg: lg2})
 			}
 		case params(d, callbacks[d.Name]):
@@ -82,12 +84,26 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	return out, nil
 }
 
-// owner keys a declaration by its enclosing class; an anonymous body is never another class's started().
-func owner(d javasrc.Decl) string {
-	if d.Anonymous {
-		return "anonymous " + d.Class
+// owner keys a declaration by the opening brace of its enclosing class body, so every class body is its own class:
+// an anonymous body is never another class's started(), whether that class is named or a second anonymous body of
+// the same type. Body[0]-1 is the method's own "{"; the scan walks back over the members before it.
+func owner(toks []javasrc.Token, d javasrc.Decl) int {
+	depth := 0
+	for k := d.Body[0] - 2; k >= 0; k-- {
+		if toks[k].Kind != javasrc.TokPunct {
+			continue
+		}
+		switch toks[k].Text {
+		case "}":
+			depth++
+		case "{":
+			if depth == 0 {
+				return k
+			}
+			depth--
+		}
 	}
-	return d.Class
+	return -1
 }
 
 // params: d's parameter types end with the wanted simple names (javax.baja.sys.Property matches Property).

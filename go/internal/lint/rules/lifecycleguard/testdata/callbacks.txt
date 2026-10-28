@@ -26,7 +26,7 @@ public class BAcmeLogic extends BComponent {
     super.removed(p, old, cx); setSize(getSize() - 1);
   }
   class Inner extends BComponent {
-    public void changed(Property p, Context cx) {
+    public void changed(Property p, Context cx) { // a nested class's callback: LG1, its first if is not the guard
       if (cx == null) return;
       if (!isRunning()) return;
       doWork();
@@ -37,26 +37,26 @@ public class BAcmeLogic extends BComponent {
 package com.acme;
 import javax.baja.sys.*;
 public class BAcmeClean extends BComponent {
-  public void changed(Property p, Context cx) {
+  public void changed(Property p, Context cx) { // the taught guard first: clean
     if (!isRunning()) return;
     setOut(getIn());
   }
-  public void added(Property p, Context cx) {
+  public void added(Property p, Context cx) { // super first, then a guard with || : clean
     super.added(p, cx);
     if (!isRunning() || cx == Context.decoding) { return; }
     setSize(getSize() + 1);
   }
-  public void removed(Property p, BValue old, Context cx) {
+  public void removed(Property p, BValue old, Context cx) { // the work inside the isRunning() if: clean
     if (isRunning()) { setSize(getSize() - 1); }
   }
-  // only the super call: nothing acts
+  // the callback parameters under another name, then the name with other parameters: not callbacks, clean
   public void changed2(Property p, Context cx) { setOut(1); }
   public void changed(String other) { setOut(2); }
-  Object anon = new BComponent() {
+  Object anon = new BComponent() { // an anonymous component's changed() is a callback too: LG1 on the next line
     public void changed(Property p, Context cx) { setOut(3); }
   };
-  /* public void changed(Property p, Context cx) { setOut(4); } */
-  String s = "public void added(Property p, Context cx) { setOut(5); }";
+  /* public void changed(Property p, Context cx) { setOut(4); } */ // commented out: clean
+  String s = "public void added(Property p, Context cx) { setOut(5); }"; // inside a string: clean
 }
 -- src/com/acme/BAcmeSteady.java --
 package com.acme;
