@@ -780,6 +780,9 @@ cursor recipe stays owed (WU-P0-6).
   LEFT: the client parity ticket, (a) `<Type>.displayName` keys, (b) `b:UnrestrictedFolder` palette roots, (d)
   `BDashboardService` private lock (C37 names it), (e) operator text via `LexiconModule.getText` — client follow-ups for
   `Cliente/panccadia-leon`; `toolbelt/kit-ticket.sh` is outside this unit's surface. Owed Go lint G40 `logger-name`.
+  **Lint FOLDED** (2026-10-27, `odd/tasks/kit-backlog-2026-10-27.md` B5.4): Go lint G40 `lint-logger-name`
+  (`go/internal/lint/rules/loggername`, `toolbelt/lint-logger-name.sh`, `tests/lint-logger-name.bats` LN1-LN2),
+  pointed to from `types/observability.md` § 1. LEFT: the client parity ticket (client follow-ups, not kit work).
 
 ### C85 — Root `build.gradle.kts` signing block: template, scaffold and root-aware lint
 - **Sources:** bsw#Δ4 (primary). Extends bdps Δ4 (C48): the lint reads the ROOT `build.gradle.kts` (the wizard folder is the Gradle root project).

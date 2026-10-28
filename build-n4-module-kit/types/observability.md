@@ -17,8 +17,8 @@ private static final Logger LOG = Logger.getLogger("modbusCore");
 **Logger name = the exact `moduleName`**, so the DebugService (Logger Configuration) shows one row per module and an
 integrator can raise one module to FINE. The course follows it in shipped code even where a slide does not:
 `Logger.getLogger("slides")` (`Slide Code/…/BLoggingExample.java:89`) and `Logger.getLogger("training")` (Lab 7
-`BWorkOrderService.java:271`) (corpus B1236). A logger-name check (`Logger.getLogger("<x>")` ≠ `moduleName` → WARN) is
-owed as Go lint G40 `logger-name`. `[ev: retro n4-course-parity-observability-horizons Δ3]`
+`BWorkOrderService.java:271`) (corpus B1236). `toolbelt/lint-logger-name.sh <module-root>` WARNs a `Logger.getLogger("<x>")` that is neither the
+`moduleName` nor a `<moduleName>.<child>` logger, and a `Logger.getLogger(X.class.getName())`. `[ev: retro n4-course-parity-observability-horizons Δ3]`
 
 Default level, raising one category at FINE, and the console's localized level names: `types/diagnostics.md` § 2.
 

@@ -1,0 +1,10 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-logger-name  @DIR@/M/Acme-wb/src/W.java:1  Logger.getLogger("acme") is not the module name Acme or a Acme.<child> logger (types/observability.md § 1)
+-- stderr --
+-- M/Acme-wb/src/W.java --
+class W { java.util.logging.Logger l = java.util.logging.Logger.getLogger("acme"); }
+-- M/Acme-wb/src/X.java --
+class X { java.util.logging.Logger l = java.util.logging.Logger.getLogger("Acme.ui"); }

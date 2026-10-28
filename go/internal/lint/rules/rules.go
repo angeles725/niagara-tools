@@ -26,6 +26,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/loggername"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/manuallabels"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/modulemap"
@@ -119,5 +120,6 @@ func All() []lint.Spec {
 		modulemap.Spec(),
 		permissionsxml.Spec(),
 		structuraltests.Spec(),
+		loggername.Spec(),
 	}
 }
