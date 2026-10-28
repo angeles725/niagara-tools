@@ -1,0 +1,22 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-lexicon-apostrophe  @DIR@/Mod/Mod-rt/module.lexicon:3  LX1 alarm.text has a MessageFormat argument and a single ' that MessageFormat drops (doesn't renders doesnt): write '' (types/lexicon.md § 3)
+WARN  lint-lexicon-apostrophe  @DIR@/Mod/Mod-rt/module.lexicon:4  LX1 room.state has a MessageFormat argument and a single ' that MessageFormat drops (doesn't renders doesnt): write '' (types/lexicon.md § 3)
+WARN  lint-lexicon-apostrophe  @DIR@/Mod/Mod-rt/module.lexicon:9  LX1 wrapped has a MessageFormat argument and a single ' that MessageFormat drops (doesn't renders doesnt): write '' (types/lexicon.md § 3)
+WARN  lint-lexicon-apostrophe  @DIR@/Mod/Mod-ux/lexicon/es/Mod.lexicon:1  LX1 spaced has a MessageFormat argument and a single ' that MessageFormat drops (doesn't renders doesnt): write '' (types/lexicon.md § 3)
+-- stderr --
+-- Mod/Mod-rt/module.lexicon --
+# a comment's apostrophe {0}
+! another comment's {1}
+alarm.text=Room {0} can't reach setpoint
+room.state = {0,number,#.#} isn't cold
+ok.escaped=Room {0} can''t reach setpoint
+ok.noargs=Server response doesn't contain id
+ok.braces=Value '{0}' {1} no
+keyonly
+wrapped=first line {0} \
+  and it's wrapped
+-- Mod/Mod-ux/lexicon/es/Mod.lexicon --
+spaced  :  {0} don't

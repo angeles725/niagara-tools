@@ -16,6 +16,7 @@ var notInReport = map[string]string{
 	"lint-bacnet-status-flags": "reads a station config.bog, which a module root does not hold",
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-intrinsic-lock":      "member wiring lands with the other course-coverage run B lints in kit-backlog B11.6",
+	"lint-lexicon-apostrophe":  "member wiring lands with the other course-coverage run B lints in kit-backlog B11.6",
 	"lint-lifecycle-guard":     "member wiring lands with the other course-coverage run B lints in kit-backlog B11.6",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",
 	"lint-guard-pins":          "a kit meta-check of the toolbelt's own lint headers, run by the kit gates",
