@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-adapter-cfg-default  @DIR@/M  no *.java under a -rt part's src/ (wrong path: pass the module root)
+-- stderr --
+-- M/M-ux/src/U.java --
+class U {}

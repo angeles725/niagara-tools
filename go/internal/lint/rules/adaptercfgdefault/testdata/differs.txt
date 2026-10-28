@@ -1,0 +1,44 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-adapter-cfg-default  @DIR@/M/M-rt/src/com/a/PanControl.java:4  Cfg.maxStarts defaults to 0 but slot maxStarts (BPan.java:5) defaults to 6: a pure test built from new Cfg() runs a configuration the station never starts with -- initialize the field to the slot default
+WARN  lint-adapter-cfg-default  @DIR@/M/M-rt/src/com/a/PanControl.java:5  Cfg.lowLimit defaults to 2.5 but slot lowLimit (BPan.java:6) defaults to 3: a pure test built from new Cfg() runs a configuration the station never starts with -- initialize the field to the slot default
+WARN  lint-adapter-cfg-default  @DIR@/M/M-rt/src/com/a/PanControl.java:6  Cfg.minOnMs defaults to 0 but slot minOn (BPan.java:7) defaults to 60000: a pure test built from new Cfg() runs a configuration the station never starts with -- initialize the field to the slot default
+WARN  lint-adapter-cfg-default  @DIR@/M/M-rt/src/com/a/PanControl.java:7  Cfg.enabled defaults to false but slot enabled (BPan.java:8) defaults to true: a pure test built from new Cfg() runs a configuration the station never starts with -- initialize the field to the slot default
+-- stderr --
+-- M/M-rt/src/com/a/PanControl.java --
+package com.a;
+final class PanControl {
+  static final class Cfg {
+    int maxStarts;
+    double lowLimit = 2.5;
+    long minOnMs;
+    boolean enabled;
+    double same = 1.0;
+    long delaySec = 30;
+    double unread;
+  }
+}
+-- M/M-rt/src/com/a/BPan.java --
+package com.a;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(name = "unrelated", type = "int", defaultValue = "9")
+@NiagaraProperty(name = "maxStarts", type = "int", defaultValue = "6")
+@NiagaraProperty(name = "lowLimit", type = "double", defaultValue = "3d")
+@NiagaraProperty(name = "minOn", type = "BRelTime", defaultValue = "BRelTime.makeMinutes(1)")
+@NiagaraProperty(name = "enabled", type = "boolean", defaultValue = "true")
+@NiagaraProperty(name = "same", type = "double", defaultValue = "1")
+@NiagaraProperty(name = "delay", type = "BRelTime", defaultValue = "BRelTime.makeSeconds(30)")
+@NiagaraProperty(name = "unread", type = "double", defaultValue = "7")
+public class BPan extends BComponent {
+  void cycle(PanControl.Cfg cfg) {
+    cfg.maxStarts = getMaxStarts();
+    cfg.lowLimit  = getLowLimit();
+    cfg.minOnMs   = getMinOn().getMillis();
+    cfg.enabled   = getEnabled();
+    cfg.same      = getSame();
+    cfg.delaySec  = getDelay().getSeconds();
+  }
+}

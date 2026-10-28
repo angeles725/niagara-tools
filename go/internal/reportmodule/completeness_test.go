@@ -12,6 +12,7 @@ import (
 // notInReport is every lint report-module deliberately does not run, each with why (issue #459: a new lint
 // must be either a member or listed here, never silently skipped).
 var notInReport = map[string]string{
+	"lint-adapter-cfg-default": "member wiring and its golden re-record land together in kit-backlog B5.5",
 	"lint-bacnet-status-flags": "reads a station config.bog, which a module root does not hold",
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-logger-name":         "member wiring and its golden re-record land together in kit-backlog B5.5",
