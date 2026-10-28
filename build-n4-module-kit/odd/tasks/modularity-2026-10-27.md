@@ -68,8 +68,8 @@ which file owns a concern. Evidence and host file:line pointers are in the three
   emits one per type); strict-new Δ2 (fixture pure classes into `model/`); bats asserting a fresh scaffold of every
   type passes `lint-module-map` with 0 FAIL. Route: delegated writer. Checks: `tests/scaffold-module.bats`;
   shellcheck.
-- [ ] M4 · strict rules (part 2): strict-new Δ3 (strict L3), Δ4 (strict lint-size), Δ5 (slot wall); gaps Δ1
-  (model import direction), Δ5 (adapter decision budget, WARN).
+- [x] M4 · strict rules (part 2): strict-new Δ3 (strict L3), Δ4 (strict lint-size), Δ5 (slot wall); gaps Δ1
+  (model import direction), Δ5 (adapter decision budget, WARN). Landed as WU6 ba197046 and WU7 b48e9808.
 - [ ] M5 · front end, servlet, report (part 2): gaps Δ2 and Δ3 (rc-scan), Δ4 (dashboard JS skeleton), Δ6 (servlet
   router + handlers), Δ8 (report-module modularity summary).
 - [ ] M6 · close (part 2): flip the three retros to folded, strict fold audit 0 uncited, ledger fragment, CI-local.
@@ -158,27 +158,43 @@ fold audit, generated-index `--check`).
   rule, lint-size and verify-module headers. Tests: `TestSlotWallStrict` (fixture PASS, 16-slot class FAIL in
   strict, WARN without the map); bats TC-MAP4 (every part of fresh scaffolds clean under lint-size; a long
   B-class method FAILs). Decision: the extended method rule applies only under a module map (legacy WARN), so
-  map-less modules stay byte-identical (LSZ4 pins the pure-only rule there).
+  map-less modules stay byte-identical (LSZ4 pins the pure-only rule there). WU7 commit b48e9808
+  `feat(lint): strict size, slot wall and adapter branch budget` (+488/−14).
+
+- Part 2 close checks (on b48e9808 + this document): full `memcap go test ./...` 121 packages ok, one FAIL —
+  `reportmodule TestEveryLintIsAMemberOrListed` (the known WU2 gap above); bats 14 suites 235/235 ok (scaffold-module,
+  lint-module-map, lint-structure, lint-size, verify-module, kit-links, gen-lint-index, guard-pins, kit-p1 control/
+  web/tests pins, permissions-root, commissioning-verify, lint-machine-default-path); shellcheck clean on the five
+  touched wrappers; gen-lint-index and gen-retro-index `--check` 0; strict fold audit 407/407 cited, 766 Δ checked,
+  0 not cited; sweep-build-state 0; `changelog-gate --range e2b0e33e..HEAD` PASS (4 fragments).
 
 ## Next session
-Session stopped at 16:00 CST on 2026-10-27 after WU2; WU3 was not started.
-- M3 (WU3): put a strict `MODULE-MAP.md` in each fixture module root (`fixtures/<T>/<T>/MODULE-MAP.md`; the scaffold's
-  copy + substitution then emits it, and TC3/TC-DASH1/TC-DRV1 diff it); move `MinimalPanLogic` and
-  `MinimalDashLogic` (and their tests) into `…/model/` (public class + method; javadoc links to the B-class become
-  plain text). Gap: moving `MinimalDriverCodec` breaks `go/internal/verifymodule/driver_test.go:17,141,144`, outside
-  part 1's edit surfaces; `MinimalDashDispatch` is package-private by DUX1 and stays put until M4 decides. Driver map:
-  the loopback station test covers network-device, points (with the -wb point manager) and discovery. Bats: a fresh
-  scaffold of every type passes `lint-module-map` with 0 FAIL; a `What the scaffold emits today` bullet tagged
-  module-map Δ2 and strict-new Δ2.
-- M4, M5, M6 as listed under Tasks (M5 now also carries the report-module member of module-map Δ3).
-- M7 · retro D `2026-10-27-modularity-structure` (new, five items):
+Part 2 stopped on 2026-10-27 after WU7 (b48e9808); M0-M4 are done, the three retros stay `review-status: pending`.
+Review candidate: d7cdd7a1..b48e9808 (four work units, base e2b0e33e).
+- First, outside part 2's edit surfaces: add `lint-module-map` to `notInReport` in
+  `go/internal/reportmodule/completeness_test.go` (reason: member owed with the M5 modularity summary row), or land
+  the member itself in M5. `TestEveryLintIsAMemberOrListed` fails on this branch since WU2 (575b4015).
+- Owed from strict-new Δ4 (outside part 2's surfaces): report-module mode-aware — its lint-size member must relay a
+  strict module's FAIL size rows as FAIL (today it relays size rows with a PASS verdict row). Target
+  `go/internal/reportmodule/members.go`; re-record the report-module goldens once, together with M5's rows.
+- M5 · front end, servlet, report: gaps Δ2 (rc-scan `fetch-outside-services`: a `fetch(` outside `js/services/`
+  WARN, FAIL strict) and Δ3 (rc-scan `js-file-size`: a `.js` over about 400 lines WARN, FAIL strict) in
+  `toolbelt/rc-scan.sh` and its Go port, mode from `lint.ModuleMode`; Δ4 (dashboard scaffold JS skeleton under
+  `fixtures/MinimalDash/…/MinimalDash-ux/src/rc/`: `js/config.js`, `js/services/api.js`, `js/store.js`,
+  `js/components/`, `js/pages/`, `js/main.js`; the map's `frontend` glob already covers it, TC-MAP1 must stay
+  clean); Δ6 (servlet = router + one handler class per route group under `ux/route/<Route>Handler`; a handler body
+  over 80 lines inside the servlet WARN, FAIL strict, in `go/internal/lint/rules/servlet`; DUX1 text in
+  `types/dashboard.md`); Δ8 (report-module modularity summary row per module: mode, concerns, unlisted files) plus
+  the `lint-module-map` report-module member (module-map Δ3), one goldens re-record.
+- M7 · retro D `2026-10-27-modularity-structure` (new, five items, unchanged from part 1's list):
   1. `scaffold-module add-concern <Name>` creates the concern folder, a pure class, its test, an adapter stub and the
      MODULE-MAP row.
   2. Fixed ROLE folders only (rt `model/`, `adapter/`; ux `route/`, `service/`); concern sub-folders under them have
-     FREE per-module names (e.g. lighting `model/schedules/`, data center `model/cooling/`, UPS `model/battery/`); the
-     kit never fixes concern names. Strict lint: every concern folder has exactly one MODULE-MAP row and vice versa,
-     has tests, and no file sits in two concerns.
+     FREE per-module names; strict lint: every concern folder has exactly one MODULE-MAP row and vice versa, has
+     tests, and no file sits in two concerns. Strict L3 (WU6) already fixes the role folders for Baja-free classes;
+     `adapter/` for B-classes is not enforced yet.
   3. An explicit ux↔rt API contract file plus a contract test on each side.
   4. `module-map where <file|concern>` plus a runner that runs only that concern's tests.
   5. A legacy→strict migration guide that EXTENDS `METHODOLOGY.md:83` (opt-in per module, pure extraction first,
      slot changes last with migration + commissioning).
+- M6 · close: flip the three retros to folded, strict fold audit 0 uncited, a `ledger.d/` fragment, `ci-local.sh -j 3`.
