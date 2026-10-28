@@ -446,6 +446,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: live 2026-10-16 verify-module.sh on course jars]`, `[ev: live 2026-10-16 verify-module.sh training-rt.jar]`; GitHub issue #260.
 - **Target:** `toolbelt/verify-module.sh` (`check_signed` :213-215, :214, :223, :411, `check_bytecode_major` :202-212), `build-verify.md` § Verify (:96, :103) + § Signing per deploy target (:131), `METHODOLOGY.md:67`, `types/third-party-libraries.md` § packaging paths, `tests/` new bats rows (alias-named `.SF`, >64 KiB listing, multi-release jar).
 - **Lint-able:** yes — the check itself is the fix; mutation "restore the pipe" must turn its bats red. **Fold type:** kit-check fix + bats + doc fix.
+- **Fold status:** FOLDED (7edef596, 2026-10-22; bsw Δ1, Δ2): `toolbelt/verify-module.sh` accepts any alias-named
+  `META-INF/<ALIAS>.SF` signature with its key file and skips multi-release classes, pinned in `tests/verify-module.bats`;
+  issue #260 closed. Recorded by the 2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1.
 
 ### C82 — Palette entry count misses entries whose `n=` is not the first attribute
 - **Sources:** slo#Δ6 (primary). Confirms afl Δ3 (C11) on the root folder type.
@@ -606,6 +609,9 @@ cursor recipe stays owed (WU-P0-6).
   does not write in bash; its contract is in `types/moduleTest.md` § Known gotchas (read the `Total tests run` and
   rejection lines by hand meanwhile) and its full spec is owed as Go tool G33 `run-niagara-test` (ledger fragment
   r8-p1-tests). LEFT: the runner, its `toolbelt/INDEX.md` row and the three log fixtures.
+  **FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): the runner landed as Go tool G33 `go/cmd/run-niagara-test` (`go/internal/niagaratest`;
+  `run`, 16296e05) with its log and TestNG cases in `go/internal/niagaratest/testdata/` (real station-run goldens
+  49c75e62). Nothing of C40 is left; the synthetic `run.log` cases are a test-data note in that README.
 
 ### C41 — moduleTest doctrine, layout and template
 - **Sources:** tpb#Δ4 (primary: station tests for component behaviour, structural tests last resort) · tpb#Δ5 extends (structural-test advisory lint) · tpb#Δ6 extends (`moduleTest-include.xml` template + scaffold) · lex#Δ3 duplicate on the 4.14 layout + extends (BTestNg vs BTestNgStation, mockStatic, FINE assertions, no fixed sleeps)
@@ -622,6 +628,9 @@ cursor recipe stays owed (WU-P0-6).
   **Doc half of the emission FOLDED** (U11, 2026-10-23; tpb Δ6): `types/structure.md` § What the scaffold emits today (copy the
   template by hand; the § PASS state stub is not well-formed XML). The fixture + scaffold emission is owed as G97
   `fixture-moduletest-include` (`ledger.d/2026-10-23-r8-u11-leftovers.md`); the stub-block fix is an owed pointer (P4).
+  **Scaffold half FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): `toolbelt/scaffold-module.sh` emits the station-test skeleton with
+  `moduleTest-include.xml` (f9bc8194) and the MinimalPan/MinimalDash fixtures carry it (8812c1de) — G97 done. LEFT: the
+  structural-test advisory, Go lint G34 `structural-tests` (kit-backlog B5).
 
 ### C42 — Shipped libraries: `bin/ext` first, wrapper modules, version drift
 - **Sources:** shl#Δ1 (primary: `nre("g:a")` no version, catalog table) · shl#Δ3 extends (drift: httpclient 4.5 → 5) · shl#Δ4 extends (wrapper table; commonsLang-rt empty in 4.15) · shl#Δ6 extends (wrapper does not grant its permissions)
@@ -695,6 +704,8 @@ cursor recipe stays owed (WU-P0-6).
   **Doc half of the fixture FOLDED** (U11, 2026-10-23; afl Δ2): `types/structure.md` § What the scaffold emits today — the fixtures'
   `<modulePermissions/>` root is copied into `META-INF/module.xml` as is and never read (baja 4.14.0.162 `NModule.java:442-452`
   reads only `<permissions>`). The fixture replacement is owed as G98 `fixture-permissions`.
+  **Fixture half FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): every fixture `module-permissions.xml` root is `<permissions/>` (5de000e9) —
+  G98 done. LEFT: the lint half, Go lint G21 `permissions-xml` (kit-backlog B5).
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
@@ -748,6 +759,9 @@ cursor recipe stays owed (WU-P0-6).
   U11 (2026-10-23): cex Δ1 still outside the surface; its exact `SOURCES.md` and `corpus-index.md` rows are recorded as owed
   pointer P1 in `ledger.d/2026-10-23-r8-u11-leftovers.md` (then a deferred tag; the fragment now cites `[ev: retro n4-course-as-exemplar-source Δ1]`); hwf Δ1 (copy after a diff) FOLDED in
   `METHODOLOGY.md` § Hands-on work, helper owed G93 `diff-vs-reference`.
+  **cex Δ1 FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): `SOURCES.md` § Exemplar source names the course, and `corpus-index.md`
+  § n4-dev-course holds its rows (B1230–B1258; aaf61de2) — pointer P1 done. LEFT: Go lint G38 `absolute-claims`, Go tool
+  G39 `count-retro-deltas` (kit-backlog B5) and helper G93.
 
 ### C52 — Client parity ticket (course convention wins on five points)
 - **Sources:** poh#Δ3 (primary)
@@ -784,6 +798,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: transcript 2026-10-16 exam P1 FileAlreadyExistsException]`.
 - **Target:** `toolbelt/build.sh` (:255), `BUILD-LOOP.md` § 4 Post-jar copy lock (:131), `build-verify.md` § Raw gradle (:30).
 - **Lint-able:** yes (pattern, bats row). **Fold type:** build.sh fix + bats + doc fix.
+- **Fold status:** FOLDED (af5de781, 2026-10-22; bsw Δ5): `toolbelt/build.sh:362` matches
+  `FileAlreadyExistsException.*modules[/\\].*\.jar` (exit 32), pinned by `tests/build-sh.bats` BS-copy-lock-win (:527);
+  `BUILD-LOOP.md` § 4 Post-jar copy lock. Recorded by the 2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1.
 
 ### C87 — Sample / course project retarget preflight
 - **Sources:** bsw#Δ6 (primary). Extends cex Δ4 (C58), which covers only the missing slot-o-matic region.
@@ -791,6 +808,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `sources/n4-dev-course/course/Labs/Lab11 NDriver/trafficLightServer.zip` (entry `gradle.properties`, lines 5 and 8).
 - **Target:** `toolbelt/preflight.sh` (new check), `build-verify.md` § Build target & plugin version.
 - **Lint-able:** yes. **Fold type:** preflight check + bats + doc line.
+- **Fold status:** FOLDED (0b71fc54, 2026-10-22; bsw Δ6): `preflight.sh --sample` checks a retargeted course or vendor
+  project (`niagara_home`, a placeholder `niagara_user_home`, …), now in Go at `go/internal/preflight/sample.go:45-53`,
+  pinned in `tests/preflight.bats`; `build-verify.md` line. Recorded by the 2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1.
 
 ### C88 — Wizard-stub lint for NDriver modules (silent-success `doPing`)
 - **Sources:** ndh#Δ2 (primary)
@@ -871,6 +891,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Fold status:** DOC FOLDED, LINT OWED (doc: `docs/r8-pointer-lines`, 2026-10-23; bdps Δ3 doc half, has Δ9):
   `types/module-wiring.md` § 4.4 (defs, agents) and § 4.5 (stability labels, private API) + `types/structure.md`
   § Naming pointer. The WARN with the ndh Δ8 allow-list is owed Go lint G65 `private-api-import` (U5).
+  **LINT FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): G65 landed as `toolbelt/lint-private-api-import.sh` over
+  `go/internal/lint/rules/privateapiimport` (NDriver default allow-list, `--allow`), a per-module report member
+  (`go/internal/reportmodule/members.go:115`), folded in a5639149. Nothing of C59 is left.
 
 ### C60 — NDriver section with the correlation rule
 - **Sources:** ord#Δ3 (primary)
@@ -1225,7 +1248,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-authoring-files-and-libraries#Δ5` | types/module-wiring.md §2, toolbelt/verify-module.sh | module-include.xml lifecycle; dangling types | C25 | P0 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ1` | types/module-wiring.md, toolbelt/build.sh | Supertype module rule | C58 | P2 | folded doc (U4 C58); build.sh hint owed G60 |
 | `n4-course-build-deps-permissions-signing#Δ2` | types/structure.md, toolbelt/verify-module.sh | Permission-group roster with triggers | C28 | P0 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | folded doc (`types/module-wiring.md` § 4.5; lint owed G65) |
+| `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | folded (`types/module-wiring.md` § 4.5; lint G65 `lint-private-api-import`, a5639149) |
 | `n4-course-build-deps-permissions-signing#Δ4` | build-verify.md, toolbelt/lint-structure.sh | Signing hardening recipe | C48 | P1 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | folded doc (U4 C58); preflight owed G61 |
 | `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | folded (WU-P0-3) |
@@ -1258,7 +1281,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-threading-jobs-doctrine#Δ5` | types/logic.md, toolbelt/lint-timers.sh | Thread naming/priority hygiene | C37 | P1 | accepted |
 | `n4-course-threading-jobs-doctrine#Δ6` | types/logic-authoring.md | Correct and extend Background jobs | C03 | P0 | folded (WU-P0-1 + lints) |
 | `testing-parity-btestng#Δ1` | types/moduleTest.md, BUILD-LOOP.md:162-165 | Native Windows niagaraTest route | C12 | P0 | accepted |
-| `testing-parity-btestng#Δ2` | toolbelt/run-niagara-test.sh | Runner that refuses 0-test passes | C40 | P1 | accepted |
+| `testing-parity-btestng#Δ2` | toolbelt/run-niagara-test.sh | Runner that refuses 0-test passes | C40 | P1 | folded (G33 `go/cmd/run-niagara-test`) |
 | `testing-parity-btestng#Δ3` | types/moduleTest.md, build-verify.md | Test-jar signing prerequisite | C12 | P0 | accepted |
 | `testing-parity-btestng#Δ4` | types/moduleTest.md, METHODOLOGY.md | Station tests for component behaviour | C41 | P1 | accepted |
 | `testing-parity-btestng#Δ5` | toolbelt/lint-structure.sh | Structural-test advisory lint | C41 | P1 | accepted |
