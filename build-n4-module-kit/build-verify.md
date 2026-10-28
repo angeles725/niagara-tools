@@ -79,6 +79,11 @@ There is no version common to all installs — this table supersedes the earlier
 - **`BVersion.MEETS_MINIMUM` mask = 115** (bits: `LATER|SAME|EQUIVALENT|MORE_SPECIFIC|LESS_SPECIFIC`; excludes `EARLIER=4` and `DIFFERENT=8`) — this is why `<dependency vendorVersion="4.14">` (a minimum floor) is satisfied by 4.15 but NOT by 4.13 and NOT by a different vendor, and why the `--target-version` gate FAILS on a jar stamped above the target. (BVersion.java:58–66.) `[ev: corpus B755 §755.4]`
 
 ## niagara_home on WSL
+A station or NRE command (`station <name>`, `nre`) needs `niagara_home` and the PATH set. On Windows run it from the
+Start-menu **Niagara Console** (`console.exe` sets both); for a non-standard user home `set niagara_user_home=<dir>`
+there first (`nre.dll` reads it into `-Dniagara.user.home`). On Linux source `<sysHome>/bin/.niagara` first.
+`[ev: corpus B1420 §1420.3]` `[ev: corpus B1416 §1416.5 c]` `[ev: retro course-coverage Δ17]`
+
 Building on WSL against `niagara_home=C:\...` breaks the m2 repo (see §Build target & plugin version); and when a `-ux` depends on `-rt`, the plugin's auto-copy of the built jar into a station-locked `modules/` fails. That copy failure is irrelevant — free the lock, or use the already-assembled `build/libs` jar (§Building against a running station: free the lock first, mirror only when you can't); the mirror is only for a live production supervisor.
 
 ## Build location — ext4 vs 9p/drvfs `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ7]`

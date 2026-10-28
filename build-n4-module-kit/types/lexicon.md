@@ -22,6 +22,8 @@ paths are under `niagara-help/versions/4.15.6.20/devguide-clean/` and `niagara-h
   user logs in. A browser session uses `User.language`, then `Accept-Language`, then the station VM default
   (devguide `localization.txt:12-14,96-108`). Station code passes the caller's `Context`; a `null` Context means the
   station VM locale, not the operator's.
+- **Text only.** A lexicon translates display names and messages; it cannot reorder properties (slot order is the
+  type's declaration order). `[ev: corpus B1418 §1418.1]` `[ev: retro course-coverage Δ14]`
 
 ## 2 · Shipping a translation: lexicon modules `[ev: retro devguide415-r2-packaging-platform-signing Δ5]`
 

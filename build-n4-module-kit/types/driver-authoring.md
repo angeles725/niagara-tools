@@ -82,7 +82,8 @@ are under niagara-research `organized/`; `W=webEditors/webEditors-ux/extracted/r
 ### 1.6 · NDriver — comm config, managers and discovery
 
 New drivers are written on NDriver (`com.tridium.ndriver`); Tridium's older driver frameworks are deprecated or slated
-to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
+to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`. Device-specific write permissions (a device PIN or
+password level) are configuration of the proxy ext, not of the point or the network. `[ev: retro course-coverage Δ16]`
 
 - **Client drivers keep `serverEnabled` false.** `BTcpCommConfig.serverEnabled` defaults to `false` in the framework
   `[CERT]` `organized/docSource/docSource-doc/extracted/ndriver-rt/com/tridium/ndriver/datatypes/BTcpCommConfig.java:32-36,94`;
