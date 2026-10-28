@@ -182,6 +182,9 @@ func roleDir(src, role string) (string, error) {
 	if depth < 0 {
 		return "", fail(3, "module-map: no Java source under %s to place the concern beside", src)
 	}
+	if best == "." {
+		return "", fail(3, "module-map: the shallowest Java source under %s is in the default package; move it into a package before adding a concern beside it", src)
+	}
 	if path.Base(best) == role {
 		return best, nil
 	}
@@ -224,9 +227,10 @@ func addConcern(o opts, s cli.Stdio) error {
 	}
 	cls := o.target + "Logic"
 	srcDir := part + "/src/" + rd + "/" + concern
+	test := testRoot + "/" + rd + "/" + concern + "/" + cls + "Test.java"
 	files := map[string]string{
-		srcDir + "/" + cls + ".java":                                  pureClass(pkg, cls, concern),
-		testRoot + "/" + rd + "/" + concern + "/" + cls + "Test.java": pureTest(pkg, cls),
+		srcDir + "/" + cls + ".java": pureClass(pkg, cls, concern),
+		test:                         pureTest(pkg, cls),
 	}
 	order := []string{srcDir + "/" + cls + ".java"}
 	dirs := []string{srcDir}
@@ -238,7 +242,6 @@ func addConcern(o opts, s cli.Stdio) error {
 		order = append(order, adir+"/"+o.target+"Adapter.java")
 		dirs = append(dirs, adir)
 	}
-	test := testRoot + "/" + rd + "/" + concern + "/" + cls + "Test.java"
 	for _, d := range dirs {
 		if _, err := os.Lstat(filepath.Join(o.root, d)); err == nil {
 			return fail(1, "module-map: concern folder %s already exists; nothing written", d)
@@ -251,10 +254,16 @@ func addConcern(o opts, s cli.Stdio) error {
 		concern, o.part, strings.Join(order, "; "), test, concern)
 	last := m.Rows[len(m.Rows)-1].Line
 	lines := append(append(append([]string{}, m.Lines[:last]...), row), m.Lines[last:]...)
-	var written []string
+	// undo removes what this run wrote: its files, then the directories it created, deepest first (os.Remove
+	// leaves a directory that is not empty), so a failed run can be retried as is.
+	var written, created []string
 	undo := func() {
 		for _, f := range written {
 			_ = os.Remove(filepath.Join(o.root, f))
+		}
+		// Mutation: MMA-undo-dirs -- removing only the files leaves the concern folders, and the retry is refused
+		for i := len(created) - 1; i >= 0; i-- {
+			_ = os.Remove(created[i])
 		}
 	}
 	names := make([]string, 0, len(files))
@@ -264,7 +273,7 @@ func addConcern(o opts, s cli.Stdio) error {
 	sort.Strings(names)
 	for _, f := range names {
 		p := filepath.Join(o.root, f)
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		if err := mkdirs(filepath.Dir(p), &created); err != nil {
 			undo()
 			return fail(3, "module-map: %v", err)
 		}
@@ -276,7 +285,7 @@ func addConcern(o opts, s cli.Stdio) error {
 	}
 	mp := filepath.Join(o.root, lint.MapFile)
 	tmp := mp + ".tmp"
-	if err := os.WriteFile(tmp, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+	if err := writeTemp(tmp, []byte(strings.Join(lines, "\n"))); err != nil {
 		undo()
 		return fail(3, "module-map: %v", err)
 	}
@@ -290,6 +299,46 @@ func addConcern(o opts, s cli.Stdio) error {
 	}
 	fmt.Fprintf(s.Out, "mapped   %s:%d  %s (fill its \"Change here when\" cell)\n", lint.MapFile, last+1, concern)
 	return nil
+}
+
+// mkdirs creates dir and its missing parents like os.MkdirAll, appending each directory it created to created,
+// shallowest first.
+func mkdirs(dir string, created *[]string) error {
+	var missing []string
+	for d := dir; ; d = filepath.Dir(d) {
+		if _, err := os.Lstat(d); err == nil {
+			break
+		}
+		missing = append(missing, d)
+		if filepath.Dir(d) == d {
+			break
+		}
+	}
+	for i := len(missing) - 1; i >= 0; i-- {
+		if err := os.Mkdir(missing[i], 0o755); err != nil {
+			return err
+		}
+		*created = append(*created, missing[i])
+	}
+	return nil
+}
+
+// writeTemp writes data to the temp file tmp; when the write or close fails after tmp was opened, it removes tmp,
+// so a failed run leaves no MODULE-MAP.md.tmp. A tmp it could not open is left as it was (not this run's).
+func writeTemp(tmp string, data []byte) error {
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+	if err != nil {
+		return err
+	}
+	_, werr := f.Write(data)
+	if cerr := f.Close(); werr == nil {
+		werr = cerr
+	}
+	if werr != nil {
+		// Mutation: MMA-tmp -- a failed write leaves MODULE-MAP.md.tmp behind
+		_ = os.Remove(tmp)
+	}
+	return werr
 }
 
 func where(o opts, s cli.Stdio) error {
@@ -344,7 +393,11 @@ func lists(cell []string, rel string) bool {
 	return false
 }
 
-var pkgLine = regexp.MustCompile(`(?m)^\s*package\s+([\w.]+)\s*;`)
+var (
+	pkgLine = regexp.MustCompile(`(?m)^\s*package\s+([\w.]+)\s*;`)
+	// bajaImport is an import line of a javax.baja type: what makes a srcTest class a station test.
+	bajaImport = regexp.MustCompile(`(?m)^\s*import\s+(static\s+)?javax\.baja\.`)
+)
 
 func tests(o opts, s cli.Stdio) error {
 	m, err := readMap(o.root)
@@ -373,7 +426,8 @@ func tests(o opts, s cli.Stdio) error {
 		if err != nil {
 			return fail(3, "module-map: %v", err)
 		}
-		if strings.Contains(string(b), "javax.baja") {
+		// Mutation: MMT-import -- a substring match skips a pure test that merely names javax.baja
+		if bajaImport.Match(b) {
 			fmt.Fprintf(s.Out, "skip  %s  imports javax.baja (a station test: run it under moduleTest on a station)\n", f)
 			continue
 		}
@@ -388,6 +442,8 @@ func tests(o opts, s cli.Stdio) error {
 		}
 		part := strings.SplitN(f, "/", 2)[0]
 		fmt.Fprintf(s.Out, "run   %s  %s\n", f, fqcn)
+		// The runner inherits the process environment (Stdio only reads single variables); toolbelt/module-map.sh
+		// exports MODULE_MAP_TOOLBELT into it. Exit 1 is a failed test; any other exit or a failed start is exit 3.
 		cmd := exec.Command(filepath.Join(tb, "run-pure-test.sh"), filepath.Join(o.root, part), fqcn)
 		cmd.Stdout, cmd.Stderr = s.Out, s.Err
 		if err := cmd.Run(); err != nil {
@@ -410,12 +466,17 @@ func tests(o opts, s cli.Stdio) error {
 }
 
 // expand resolves a Tests cell to the files it names, relative to root: an exact entry as written, a glob by
-// matching every regular file under root (dot directories skipped), in path order.
+// matching every regular file under root (dot directories skipped), in path order. An entry that is absolute or
+// leaves root is refused (exit 3), as lint-module-map MM3 refuses it.
 func expand(root string, cell []string) ([]string, error) {
 	var all []string
 	walked := false
 	var out []string
 	for _, e := range cell {
+		// Mutation: MMT-contain -- expanding an entry outside the root runs (or lists) files the map does not own
+		if clean := path.Clean(e); path.IsAbs(e) || clean == ".." || strings.HasPrefix(clean, "../") {
+			return nil, fail(3, "module-map: Tests entry %s is not a relative path inside the module root (lint-module-map MM3)", e)
+		}
 		if !strings.ContainsAny(e, "*?[") {
 			out = append(out, path.Clean(e))
 			continue

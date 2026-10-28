@@ -22,14 +22,14 @@ scaffold() {
 # clean: lint-module-map prints no row, lint-structure no L3 row, lint-size no row on every part.
 clean() {
   run "$KIT/toolbelt/lint-module-map.sh" "$R"
-  [ "$status" -eq 0 ] && [ -z "$output" ] || { echo "module-map: $output"; false; }
+  if [ "$status" -ne 0 ] || [ -n "$output" ]; then echo "module-map: $output"; false; fi
   run "$KIT/toolbelt/lint-structure.sh" "$R"
   [ "$status" -eq 0 ] || { echo "structure: $output"; false; }
   [[ "$output" != *"L3"* ]] || { echo "structure: $output"; false; }
   local p
   for p in "$R"/ModuleA-*/src; do
     run "$KIT/toolbelt/lint-size.sh" "$p"
-    [ "$status" -eq 0 ] && [[ "$output" != *"WARN"* && "$output" != *"FAIL"* ]] || { echo "size $p: $output"; false; }
+    if [ "$status" -ne 0 ] || [[ "$output" == *"WARN"* || "$output" == *"FAIL"* ]]; then echo "size $p: $output"; false; fi
   done
 }
 

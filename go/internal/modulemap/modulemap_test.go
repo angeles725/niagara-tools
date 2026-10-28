@@ -12,7 +12,8 @@ import (
 	mmrule "github.com/angeles725/niagara-tools/go/internal/lint/rules/modulemap"
 )
 
-// baseMap is a strict two-row map over a logic-shaped module (the fixture layout: srcTest/test/<pkg>).
+// baseMap is a strict four-row map (control, frontend, station-test, plumbing) over a logic-shaped module with rt
+// and ux parts (the fixture layout: srcTest/test/<pkg>), followed by prose after the table.
 const baseMap = "# MODULE-MAP — M\n\nmodularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n" +
 	"| control | rt | M-rt/src/com/v/M/model/MLogic.java; M-rt/src/com/v/M/BM.java | M-rt/srcTest/test/com/v/M/model/MLogicTest.java | a control decision |\n" +
 	"| frontend | ux | M-ux/src/rc/js/** | M-ux/srcTest/rc/spec/MSpec.js | the page |\n" +
@@ -185,12 +186,21 @@ func TestTests(t *testing.T) {
 	if code, out, _ := run(env, "tests", "frontend", "--root", root); code != 0 || !strings.Contains(out, "skip  M-ux/srcTest/rc/spec/MSpec.js  Jasmine browser spec") {
 		t.Errorf("frontend: exit %d\n%s", code, out)
 	}
-	env["STUB_EXIT"] = "1"
-	if err := os.WriteFile(filepath.Join(tb, "run-pure-test.sh"), []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	// The runner is a child process: it reads the PROCESS environment, so the stub's exit is set there.
+	t.Setenv("STUB_EXIT", "1")
 	if code, _, _ := run(env, "tests", "control", "--root", root); code != 1 {
 		t.Errorf("a failing test: exit %d, want 1", code)
+	}
+	// Mutation: MMT-env -- reading every runner failure as a failed test hides a runner that could not run
+	t.Setenv("STUB_EXIT", "3")
+	if code, _, errs := run(env, "tests", "control", "--root", root); code != 3 || !strings.Contains(errs, "could not run") {
+		t.Errorf("a runner env error: exit %d err %q, want 3", code, errs)
+	}
+	if err := os.Chmod(filepath.Join(tb, "run-pure-test.sh"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, errs := run(env, "tests", "control", "--root", root); code != 3 || !strings.Contains(errs, "could not run") {
+		t.Errorf("a runner that cannot start: exit %d err %q, want 3", code, errs)
 	}
 	if code, _, _ := run(env, "tests", "nothing", "--root", root); code != 1 {
 		t.Errorf("unknown concern: exit %d, want 1", code)
@@ -206,5 +216,136 @@ func TestUsage(t *testing.T) {
 	}
 	if code, _, _ := run(nil, "where", "x", "--root", t.TempDir()); code != 3 {
 		t.Errorf("no map: exit %d, want 3", code)
+	}
+}
+
+// writeMap replaces the module's map with baseMap plus extra rows (each a full table line).
+func writeMap(t *testing.T, root string, extra ...string) {
+	t.Helper()
+	body := strings.Replace(baseMap, "\n\nTrailing prose.\n", "\n"+strings.Join(extra, "\n")+"\n\nTrailing prose.\n", 1)
+	if err := os.WriteFile(filepath.Join(root, lint.MapFile), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestTestsStationImportLine: a station test is one with an `import javax.baja…` line; a pure test that only
+// mentions javax.baja in a comment or string still runs (review R3-002 of e9aeb6e8).
+func TestTestsStationImportLine(t *testing.T) {
+	root := module(t)
+	pure := "package com.v.M.model;\n// not a station test: javax.baja is only named here\npublic class MNoteTest { String s = \"javax.baja\"; }\n"
+	if err := os.WriteFile(filepath.Join(root, "M-rt/srcTest/test/com/v/M/model/MNoteTest.java"), []byte(pure), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeMap(t, root, "| notes | rt | — | M-rt/srcTest/test/com/v/M/model/MNoteTest.java | a note |")
+	tb := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tb, "run-pure-test.sh"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Mutation: MMT-import -- a substring match skips a pure test that merely names javax.baja
+	code, out, errs := run(map[string]string{"MODULE_MAP_TOOLBELT": tb}, "tests", "notes", "--root", root)
+	if code != 0 || !strings.Contains(out, "run   M-rt/srcTest/test/com/v/M/model/MNoteTest.java  com.v.M.model.MNoteTest") {
+		t.Errorf("exit %d err %q\n%s", code, errs, out)
+	}
+}
+
+// TestTestsCellContainment: a Tests entry that leaves --root (absolute, or .. after cleaning) is refused before
+// any runner starts, as lint-module-map MM3 refuses it (review R1 of e9aeb6e8).
+func TestTestsCellContainment(t *testing.T) {
+	for _, entry := range []string{"../outside/XTest.java", "M-rt/../../outside/XTest.java", "/etc/XTest.java", "../**/*Test.java"} {
+		root := module(t)
+		writeMap(t, root, "| escape | rt | — | "+entry+" | never |")
+		tb := t.TempDir()
+		log := filepath.Join(tb, "ran")
+		if err := os.WriteFile(filepath.Join(tb, "run-pure-test.sh"), []byte("#!/bin/sh\ntouch "+log+"\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		// Mutation: MMT-contain -- expanding an entry outside the root runs (or lists) files the map does not own
+		code, _, errs := run(map[string]string{"MODULE_MAP_TOOLBELT": tb}, "tests", "escape", "--root", root)
+		if code != 3 || !strings.Contains(errs, "is not a relative path inside the module root") {
+			t.Errorf("%s: exit %d err %q, want 3", entry, code, errs)
+		}
+		if _, err := os.Stat(log); err == nil {
+			t.Errorf("%s: the runner started", entry)
+		}
+	}
+}
+
+// TestAddConcernRollback: a failed run removes what it wrote — files and the concern directories it created,
+// deepest first, never a directory that was there before — so the same command can be retried (review R4/R3-001).
+func TestAddConcernRollback(t *testing.T) {
+	root := module(t)
+	before, _ := os.ReadFile(filepath.Join(root, lint.MapFile))
+	tmp := filepath.Join(root, lint.MapFile+".tmp")
+	if err := os.Mkdir(tmp, 0o755); err != nil { // the map write cannot open its temp file
+		t.Fatal(err)
+	}
+	// Mutation: MMA-undo-dirs -- removing only the files leaves the concern folders, and the retry is refused
+	if code, _, errs := run(nil, "add-concern", "Battery", "--root", root, "--adapter"); code != 3 || errs == "" {
+		t.Fatalf("exit %d err %q, want 3", code, errs)
+	}
+	for _, d := range []string{"M-rt/src/com/v/M/model/battery", "M-rt/src/com/v/M/adapter", "M-rt/srcTest/test/com/v/M/model/battery"} {
+		if _, err := os.Lstat(filepath.Join(root, d)); err == nil {
+			t.Errorf("%s left behind", d)
+		}
+	}
+	for _, d := range []string{"M-rt/src/com/v/M/model", "M-rt/srcTest/test/com/v/M/model"} {
+		if !lint.IsDir(filepath.Join(root, d)) {
+			t.Errorf("pre-existing %s removed", d)
+		}
+	}
+	if after, _ := os.ReadFile(filepath.Join(root, lint.MapFile)); !bytes.Equal(before, after) {
+		t.Error("the map changed")
+	}
+	if err := os.Remove(tmp); err != nil {
+		t.Fatal(err)
+	}
+	if code, out, errs := run(nil, "add-concern", "Battery", "--root", root, "--adapter"); code != 0 {
+		t.Errorf("retry: exit %d out %q err %q", code, out, errs)
+	}
+}
+
+// TestAddConcernTmpLeftover: a map write that fails after its temp file was opened removes MODULE-MAP.md.tmp
+// (review R4-tmp-leftover). /dev/full opens and then fails every write with ENOSPC.
+func TestAddConcernTmpLeftover(t *testing.T) {
+	if _, err := os.Stat("/dev/full"); err != nil {
+		t.Skip("no /dev/full on this system")
+	}
+	root := module(t)
+	tmp := filepath.Join(root, lint.MapFile+".tmp")
+	if err := os.Symlink("/dev/full", tmp); err != nil {
+		t.Fatal(err)
+	}
+	// Mutation: MMA-tmp -- a failed write leaves MODULE-MAP.md.tmp behind
+	if code, _, errs := run(nil, "add-concern", "Battery", "--root", root); code != 3 || errs == "" {
+		t.Fatalf("exit %d err %q, want 3", code, errs)
+	}
+	if _, err := os.Lstat(tmp); err == nil {
+		t.Error("MODULE-MAP.md.tmp left behind")
+	}
+}
+
+// TestAddConcernDefaultPackage: when the shallowest Java source sits in the default package (directly in src/),
+// there is no package to place the concern under: refused, nothing written (review R3-004).
+func TestAddConcernDefaultPackage(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "M")
+	for rel, body := range map[string]string{
+		lint.MapFile:              "modularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n| control | rt | M-rt/src/A.java | M-rt/srcTest/ATest.java | x |\n",
+		"M-rt/src/A.java":         "public class A {}\n",
+		"M-rt/srcTest/ATest.java": "public class ATest {}\n",
+	} {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	code, _, errs := run(nil, "add-concern", "Battery", "--root", root)
+	if code != 3 || !strings.Contains(errs, "default package") {
+		t.Errorf("exit %d err %q, want 3 naming the default package", code, errs)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "M-rt/src/model")); err == nil {
+		t.Error("a role folder was written")
 	}
 }
