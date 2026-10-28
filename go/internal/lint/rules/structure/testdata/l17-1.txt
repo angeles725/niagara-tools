@@ -1,0 +1,24 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-structure  Acme-rt/module.palette:4  L17: module.palette t="ac:BRoom" keeps the class's B prefix: the type is ac:Room (Workbench: "Type not found")
+FAIL  lint-structure  Acme-rt/module.palette:5  L17: module.palette t="com.acme.BRoom" is a Java class name, not <symbol>:<Type> (Workbench: "Invalid typespec")
+WARN  lint-structure  Acme-rt/module.palette:7  L17: module.palette m="ac=OtherMod" redeclares symbol ac (first ac=Acme at line 4): every later t="ac:..." resolves in OtherMod
+-- stderr --
+-- Mod/Acme-rt/module-include.xml --
+<types><type name="Room" class="com.acme.BRoom"/><type name="Bacnet" class="com.acme.BBacnet"/></types>
+-- Mod/Acme-rt/module.lexicon --
+Room.displayName=Room
+-- Mod/Acme-rt/module.palette --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0">
+<p m="b=baja" t="b:UnrestrictedFolder">
+  <p n="Room" m="ac=Acme" t="ac:BRoom"/>
+  <p n="Room2" t="com.acme.BRoom"/>
+  <p n="F" t="b:BFolder"/>
+  <p n="Other" m="ac=OtherMod" t="ac:Thing"/>
+  <p n="Room3" m="ac=Acme" t="ac:Room"/>
+  <p n="Bac" t="ac:Bacnet"/>
+</p>
+</bajaObjectGraph>

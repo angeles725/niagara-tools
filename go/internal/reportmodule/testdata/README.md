@@ -65,6 +65,15 @@ by exactly the added rows and its verdict unchanged. Added: `lint-permissions-xm
 `lint-structural-tests` 24 SKIP, `lint-logger-name` 2 SKIP, `lint-adapter-cfg-default` 9 SKIP (a stub prints
 nothing, so a WARN-only member adds no row there).
 
+Kit backlog B10.8 (2026-10-28) added two per-artifact members after `lint-bformat-call`: `lint-charset-default`
+(WARN rows relayed) and `lint-slot-default-type` (FAIL rows relayed), neither with a verdict row. The 26 cases that
+print per-artifact members on an artifact without `src/` or with real sources were re-recorded through the Go tool (a
+temporary, uncommitted dump hook in `golden.Runner` that wrote each replayed stdout) and a script compared each old
+and new case: everything outside `want` unchanged, the exit line unchanged, every old line kept and in order, the
+added lines only rows of the two new members (58 `SKIP ... no src/` each, and one real `WARN ... CD1` in
+`fx-md5-cred-warn`, whose fixture calls `getBytes()`), and each summary's counts moved by exactly those rows with its
+verdict unchanged. Under stubs a clean member prints nothing, so the other cases did not move.
+
 ## Truth cases (`truth-*`)
 
 Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro

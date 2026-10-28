@@ -54,7 +54,7 @@ func hasProfileSuffix(name string) bool {
 	return false
 }
 
-// profile runs the per-profile checks L6, L4, L5, L7, L9, L1/L2, L3 (strict L3/L3b in a strict module) and L11, in
+// profile runs the per-profile checks L6, L4, L5, L17, L7, L9, L1/L2, L3 (strict L3/L3b in a strict module) and L11, in
 // that row order.
 func (s *scan) profile(dir string) {
 	name, rel := dir[strings.LastIndexByte(dir, '/')+1:], s.rel(dir)
@@ -82,6 +82,9 @@ func (s *scan) profile(dir string) {
 		} else if !named() {
 			s.row(lint.Unset, s.rel(pal), "L5: module.palette has no named component entries (empty palette — see B788)")
 		}
+	}
+	if lint.IsFile(pal) {
+		s.palette(pal)
 	}
 	gradle := s.files(dir, true, "*.gradle.kts")
 	for _, g := range gradle {

@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-28 -->
+<!-- last-change-note: kit-backlog B10.7: lint-slot-default-type fails an @NiagaraProperty default of the wrong Java type -->
+log: 2026-10-28 · kit-backlog B10.7 (course coverage run A, L3) → new lint `lint-slot-default-type.sh <src-root>` (`go/internal/lint/rules/slotdefaulttype`): FAIL an `@NiagaraProperty` of type int/long/float/double/boolean/String whose `defaultValue` literal (or `B<Boolean|Integer|Long|Float|Double|String>` value) has a Java type the slot refuses; an int literal on a long/float/double slot is clean (introspection widens it, as Tridium's own `defaultValue = "0"` on double slots shows); other expressions are not judged. `types/structure.md` § Slot defaults; `tests/lint-slot-default-type.bats` SDT1-SDT2. Smoke: 123 client source roots 0 FAIL; Tridium docSource and the whole organized tree 0 FAIL. [ev: retro course-coverage Δ21]

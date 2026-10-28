@@ -1,0 +1,8 @@
+-- args --
+@DIR@/src
+-- want --
+exit 3
+ERROR  lint-slot-default-type  @DIR@/src  no *.java to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- src/module.palette --
+<x/>

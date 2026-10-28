@@ -1,0 +1,20 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Acme-rt/module-include.xml --
+<types><type name="Room" class="com.acme.BRoom"/><type name="BACnetLink" class="com.acme.BBACnetLink"/></types>
+-- Mod/Acme-rt/module.lexicon --
+Room.displayName=Room
+-- Mod/Acme-rt/module.palette --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0">
+<p m="b=baja" t="b:UnrestrictedFolder">
+  <p n="Room" m="ac=Acme" t="ac:Room"/>
+  <p n="Room2" m="ac=Acme" t="ac:Room"/>
+  <p n="Link" t="ac:BACnetLink"/>
+  <!-- <p n="Old" t="com.acme.BRoom"/> -->
+  <p n="Pt" m="kitControl=kitControl" t="kitControl:NumericWritable"/>
+</p>
+</bajaObjectGraph>

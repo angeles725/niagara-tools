@@ -18,6 +18,7 @@ type scan struct {
 	root     string
 	mode     lint.Modularity // the module map's mode: strict turns on strict L3/L3b
 	packages map[string]bool // strict only: every package the module's src/ declares (L3b)
+	types    map[string]bool // every type name the module's module-include.xml files declare (L17)
 	out      []lint.Finding
 	err      error
 }

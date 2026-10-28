@@ -1,0 +1,19 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-charset-default  @DIR@/src/A.java:9  CD2 new String(byte[]) with no charset decodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+-- stderr --
+-- src/A.java --
+class A {
+  String a(java.io.Reader in) throws Exception {
+    char[] buf = new char[8];
+    int n = in.read(buf, 0, 8);
+    return new String(buf, 0, n);
+  }
+  String b(java.io.InputStream in) throws Exception {
+    byte[] buf = new byte[8]; byte[] only = new byte[8];
+    return new String(buf) + new String(only);
+  }
+  String c(byte[] data) { return data.length + ""; }
+}

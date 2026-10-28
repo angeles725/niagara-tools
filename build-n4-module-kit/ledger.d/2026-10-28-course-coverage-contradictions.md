@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-28 -->
+<!-- last-change-note: kit-backlog B10.2: four kit lines the course evidence contradicts, corrected -->
+log: 2026-10-28 · kit-backlog B10.2 (course coverage run A) → `types/logic-authoring.md` (the ~5000-point restart is reported, its cause unconfirmed; bounded worker queues throw `QueueFullException`), `types/driver-authoring.md` § Sizing (COV sensitivity is driver-specific: no COV slot on the base `BTuningPolicy`, BACnet `covPropertyIncrement` default 1.0 for COV-Property only), `types/logic.md` callback thread map (`stopped()` on `Nre:Console` only for quit/Application Director stop), `types/structure.md` Security Manager card (`niagara.security.manager.disable` switches to a logging developer mode, unlicensed it only WARNs). [ev: retro course-coverage Δ1] [ev: retro course-coverage Δ2] [ev: retro course-coverage Δ3] [ev: retro course-coverage Δ4]

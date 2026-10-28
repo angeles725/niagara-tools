@@ -75,6 +75,9 @@ var perArtifact = []member{
 	{script: "lint-inert-coordination", f: warnOnly},
 	{script: "lint-session-store-lazy-evict", f: warnOnly},
 	{script: "lint-bformat-call", f: warnOnly},
+	// kit-backlog B10.8: the course-coverage source lints (corpus B1417, B1419). No verdict row, as lint-service-types.
+	{script: "lint-charset-default", f: warnOnly},
+	{script: "lint-slot-default-type", f: failOnly},
 	{script: "lint-service-types", f: failWarn},
 	{script: "lint-driver-scaffold", f: failWarn},
 	{script: "lint-se-display", suffix: "-se", f: failOnly, v: rows},

@@ -1,0 +1,13 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-structure  Acme-rt/module.palette  L17: module.palette is not well-formed XML (3:1: element <p> opened at 2:3 is never closed) — palette type specs unchecked
+-- stderr --
+-- Mod/Acme-rt/module-include.xml --
+<types><type name="Room" class="com.acme.BRoom"/></types>
+-- Mod/Acme-rt/module.lexicon --
+Room.displayName=Room
+-- Mod/Acme-rt/module.palette --
+<bajaObjectGraph>
+  <p n="Room" m="ac=Acme" t="ac:Room">

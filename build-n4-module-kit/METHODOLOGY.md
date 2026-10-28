@@ -28,6 +28,8 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   `toolbelt/lint-service-types.sh` (FAIL empty/null, WARN no own type). `[ev: corpus B1419 §1419.1]` `[ev: retro course-recordings Δ8]`
 - [ ] **Text bytes name their charset:** `getBytes(StandardCharsets.UTF_8)` / `new String(b, UTF_8)`, never the
   platform default; a written text file ends lines with `System.lineSeparator()`. `[ev: corpus B1419 §1419.4 c]` `[ev: retro course-recordings Δ8]`
+  Check: `toolbelt/lint-charset-default.sh` (WARN: no-argument `getBytes()`, a byte-array `new String` without a
+  charset, a one-argument `InputStreamReader`/`OutputStreamWriter`, any `FileReader`/`FileWriter`). `[ev: retro course-coverage Δ19]`
 - [ ] **One shared helper per concern, before a second copy lands:** logic that already exists in the module, or in a
   sibling module of the same GROUP (parsing, decoding, formatting, status mapping, ORD building), is called or
   extracted into one shared helper, never pasted as a second copy. Review check: a second definition of the same

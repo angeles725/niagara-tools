@@ -150,6 +150,10 @@ Six groups (`REFLECTION`, `ACCESS_CLASS`, `MBEAN_PERMISSION`,
 whose cert the installation trusts, in every `moduleVerificationMode`; without it
 the station drops the group with a WARNING (`Skipping element`).
 
+Install-side limits: every permission a module requests is granted today, with no per-group revocation; the only
+remedy for an unwanted grant is to uninstall the module. Never edit the policy files under `bin/` by hand: that
+breaks the installation signature and the NRE no longer starts. `[ev: corpus B1417 §1417.2]` `[ev: retro course-coverage Δ9]`
+
 → Full signing gate details and `skipModuleValidation` semantics are in
 `build-verify.md §Signing per deploy target`. Do not duplicate here.
 

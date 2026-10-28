@@ -22,6 +22,10 @@ high action-queue peak date a callback or action that held the engine thread; co
   FINE in Services › DebugService (type `baja:LoggingService`, `baja.lexicon:311`) or through `spy:/logSetup`
   (`V/sys/Nre.java:730`). FINE lines then reach the console but not LogHistory (`types/observability.md` § 1,
   `minimumSeverity`).
+- **Two spy pages for "is it loaded, is it logging":** Spy › Log Setup lists every logger the station defined,
+  while the DebugService lists only configured categories; Spy › sysManagers › registryManager lists the installed
+  modules and each module's types (the place to confirm a type registered after a deploy).
+  `[ev: corpus B1418 §1418.2 f]` `[ev: corpus B1417 §1417.3 f]` `[ev: retro course-coverage Δ13]`
 - **Per-frame and per-poll traces go at FINE** behind `isLoggable(Level.FINE)`; INFO in a poll or receive body floods
   the console and LogHistory of every site.
 

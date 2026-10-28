@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-28 -->
+<!-- last-change-note: kit-backlog B10.6: lint-structure L17 checks module.palette type specs -->
+log: 2026-10-28 · kit-backlog B10.6 (course coverage run A, L2) → `lint-structure` L17 (`go/internal/lint/rules/structure/palette.go`) reads each part's `module.palette` as XML: FAIL a dotted Java class name in `t=` and `<symbol>:B<Type>` for a type the module declares as `<Type>`; WARN a later `m=` that maps a symbol to another module and a palette holding `<p` that is not well-formed. An identical repeated `m=` is clean (the decoder keeps one module per symbol) and another module's `B`-prefixed name is not judged (jsonToolkit declares a type named `BFormatString`). `types/structure.md` L17 row; `tests/lint-structure.bats` LS17, LS17-repeat. Smoke: 10 client module roots, 0 L17 rows. [ev: retro course-coverage Δ20]

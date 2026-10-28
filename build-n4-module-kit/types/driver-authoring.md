@@ -82,7 +82,8 @@ are under niagara-research `organized/`; `W=webEditors/webEditors-ux/extracted/r
 ### 1.6 · NDriver — comm config, managers and discovery
 
 New drivers are written on NDriver (`com.tridium.ndriver`); Tridium's older driver frameworks are deprecated or slated
-to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
+to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`. Device-specific write permissions (a device PIN or
+password level) are configuration of the proxy ext, not of the point or the network. `[ev: retro course-coverage Δ16]`
 
 - **Client drivers keep `serverEnabled` false.** `BTcpCommConfig.serverEnabled` defaults to `false` in the framework
   `[CERT]` `organized/docSource/docSource-doc/extracted/ndriver-rt/com/tridium/ndriver/datatypes/BTcpCommConfig.java:32-36,94`;
@@ -400,7 +401,11 @@ a 3-min stale time, course practice `[CERT-a]`). [ev: retro devguide415-r2-drive
 **Sizing.** Keep the poll scheduler's busy time ≤ ~75 % with only the permanent subscriptions running (linked points,
 points with history or alarm extensions). Ship a few named policies (Slow / Normal / Fast, and a no-`writeOnStart`
 variant) and bind them per point; keep `defaultPolicy` for the rest and add a custom one only for a problem point.
-COV sensitivity is a tuning-policy setting, never a display facet. Proxy points have no inputs: put history and alarm
+COV sensitivity is never a display facet, and it is driver-specific: the base `BTuningPolicy` has no COV slot (only
+`minWriteTime`, `maxWriteTime`, `writeOnStart`, `writeOnUp`, `writeOnEnabled`, `staleTime`), so a driver without its
+own policy subclass has no COV knob. BACnet's tuning policy adds `covPropertyIncrement` (default 1.0), which applies
+to COV-Property subscriptions only; ordinary COV uses the remote device's own COV_Increment (or an export descriptor's
+Cov Increment). `[ev: corpus B1420 §1420.7]` `[ev: retro course-coverage Δ2]` Proxy points have no inputs: put history and alarm
 extensions on the SOURCE point, not on the proxy. `[ev: corpus B1337 §1337.1 rows 5-7]` `[ev: corpus B1418 §1418.4]`
 `[ev: corpus B1419 §1419.4 row e]` [ev: retro devguide415-r2-drivers-protocols Δ8]
 

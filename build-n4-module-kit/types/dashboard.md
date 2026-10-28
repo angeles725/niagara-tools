@@ -310,6 +310,7 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 ## Real alarms (Phase B — see corpus B6/B8, chihuahua B166)
 - A `BAlarmSourceExt` can only host on a **control point** (`BNumericPoint`), not a plain `BComponent` → add child points fed from the display slots; attach `BAlarmSourceExt`(`offnormalAlgorithm=BOutOfRangeAlgorithm`, a fault algorithm). Limits configured from the dashboard = writable config slots (per-role-per-room) linked/fed into the algorithm.
 - Read via `GET /api/alarms` = BQL over `station:|alarm:|bql:select * where sourceState='offnormal' or sourceState='fault' order by timestamp desc`. Station needs a `BAlarmService` + `BAlarmClass`.
+- **Count alarm occurrences by record, not by UUID change:** a return-to-normal updates the existing record and keeps its UUID; a new off-normal always creates a new record with a new UUID. The number of occurrences of a source is its number of records. `[ev: corpus B1420 §1420.8]` `[ev: corpus B1419 §1419.2 a]` `[ev: retro course-coverage Δ6]`
 - ACK from a plain servlet is the hard part (chihuahua only got it via BajaScript) — spike `svc.getAlarmDb().getDbConnection(cx).getRecord(BUuid)` → `svc.ackAlarm(live)` (`BAlarmDatabase.java:100`, `AlarmDbConnection.java:176`) before committing.
 
 ## Module packaging (palette + lexicon)
@@ -359,6 +360,8 @@ relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC
   `station:|neql:…|bql:select …` form worked live in the course [CERT-a], but its exact literal is [INFER] until
   run (open gap B1418-G1).
   A query run from the browser moves every row over the network: filter and `limit` in the query, not in the page.
+  The search service, quick search and the sidebar take bare NEQL (no `neql:` prefix), return ORD links and cannot
+  pipe into `|bql`; the chained ORD is the only route to a BQL projection. `[ev: corpus B1419 §1419.2 c]` `[ev: retro course-coverage Δ15]`
   `[ev: corpus B1418 §1418.3]` `[ev: corpus B1419 §1419.2 b]` `[ev: retro course-recordings Δ6]`
 - **Nav tree:** `baja.nav` (a NavRoot) and `getNavChildren()` on Component / NavContainer / ComponentSpace.
   [CERT] `BS/nav.js:28-55`; `BS/baja/nav/NavContainer.js:153`

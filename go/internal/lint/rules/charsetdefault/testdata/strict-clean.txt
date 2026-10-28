@@ -1,0 +1,8 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/A.java --
+class A { byte[] f(String s) { return s.getBytes(java.nio.charset.StandardCharsets.UTF_8); } }

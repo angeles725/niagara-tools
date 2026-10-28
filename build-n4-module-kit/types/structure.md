@@ -52,6 +52,9 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
   type keeps a dangling registration (METHODOLOGY § Schema / upgrade safety). `[ev: corpus B1233 §1233.4]` `[ev: corpus B1417 §1417.3 e]` `[ev: retro course-recordings Δ1]`
 - A hand-authored `META-INF/module.xml` in source is WRONG (L6): it will be overwritten and drifts from the plugin
   output. Edit `module-include.xml`; never the generated manifest. `[ev: corpus B817]`
+- **A class without the `B` prefix can still be a type, but by hand:** the annotation processor emits `<type>` lines
+  only for `B`-prefixed classes, so a non-`B` type needs its `module-include.xml` entry and its slot code written by
+  hand. Keep the `B` prefix. `[ev: corpus B1417 §1417.3 d]` `[ev: retro course-coverage Δ10]`
 - **`module-permissions.xml` — developer source-only permission declaration (JVM sandbox layer):** a module that needs JVM-level capabilities (network access, reflection, JMX) declares SEMANTIC group names in `src/module-permissions.xml` using `<niagara-permission-groups type="…"> / <req-permission> / <name>NETWORK_COMMUNICATION</name> / <purposeKey>…</purposeKey> / <parameters>…`. This is a distinct concern from the RBAC bit checks in `dashboard.md §RBAC` and from `module-include.xml`; it governs what the module's JVM code is ALLOWED to do, not what a station user is allowed to do. [ev: corpus B18 §18.4.1] Six of the groups (REFLECTION, ACCESS_CLASS, MBEAN_PERMISSION, THIRD_PARTY_PERMISSION, PROTECTION_DOMAIN, HSM_SIGNING) also need a signed, trusted module, or the station drops them with a WARNING (`build-verify.md` § Signing per deploy target). [ev: corpus B1312 §1312.3 C1]
 - **Source→runtime inlining:** the Gradle plugin INLINES the source `<permissions>` element (its `<niagara-permission-groups>` children) into the built JAR's `META-INF/module.xml`; the NRE expands each group at load (`NiagaraPermissionGroupFactory.parse`, baja `com/tridium/sys/module/NModule.java:450-452`), and a `<java-permissions>` child is read directly (`:444-447`). There is NO `module-permissions.xml` in a deployed module jar (the only copy in the corpus is the wizard template under `wbutil-wb/rc/`). To inspect deployed grants: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -A20 permissions`. [ev: corpus B18 §18.4.2-18.4.3; B777 §777.4]
 - **Profile scoping** — each `<niagara-permission-groups>` block carries `type="station"`, `"workbench"`, or `"all"`. A `type="workbench"` group is never granted on the station daemon. A permission needed by the NRE MUST be declared under `type="station"` or `"all"`; declaring it only under `type="workbench"` silently leaves the daemon ungrated. Verify the deployed partition: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -B2 'java-permission'`. [ev: corpus B18 §18.4.7]
@@ -71,9 +74,10 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - **Security Manager card** (devguide 4.15.6.20 `security/securityManager.txt`; 4.13/4.14 not verified):
   - Debug: the `security.niagaraPolicy` log at FINE/FINER/FINEST (DebugService or Logger Configuration, `:44`), or
     start with `-@Djava.security.debug=access,failure` (`:58-62`).
-  - Disabling it is development-only: it needs the `smDeveloperMode` licence feature plus
-    `niagara.security.manager.disable` (`:86-98`); from 4.9 the denials are logged to a file while the app runs
-    on (`:112`).
+  - `niagara.security.manager.disable` (`:86-98`) does not turn the security manager off: with the
+    `smDeveloperMode` licence feature it switches to the logging Developer Security Manager (denials are logged to a
+    file while the app runs on, `:112`); without the feature the NRE logs a WARNING and nothing changes. Development
+    only. `[ev: corpus B1417 §1417.2]` `[ev: retro course-coverage Δ4]`
   - File I/O needs no permission under `Sys.getStationHome()` and `Sys.getNiagaraSharedUserHome()` (`:122-124`);
     write there, not to an absolute path.
   - What a module was granted: Spy › securityInfo › Policy Spy (`requestingPermissions.txt:653`); the startup
@@ -116,6 +120,7 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 | L9 | no empty skeleton part — a declared `-wb`/`-ux` with 0 `.java` AND empty palette/lexicon | FAIL | DashboardPan-wb (0 source, empty palette) → **L9 FAIL** |
 | L10 | no absolute HOST paths in a tracked `gradle.properties` (`C:\…` `niagara_home`/`user_home`/`nodeHome`) | FAIL | client `ColdRoomPan`/`CompPan` `gradle.properties` hardcode `C:\Honeywell\…` → **L10 FAIL** (`.deploy-baseline/` pruned) |
 | L11 | a `srcTest` mixing pure-JUnit + Baja (`BTest`/`BTestNg`) declares BOTH `moduleTestImplementation(":test-wb")` AND junit declarations (or splits source sets) | FAIL | ColdRoomPan-rt/CompPan-rt declare only `:test-wb` → **L11 FAIL** |
+| L17 | `module.palette` type specs: a dotted Java class name in `t=`, or `<symbol>:B<Type>` for a type the module declares as `<Type>` | FAIL (a symbol remapped to another module by a later `m=`, a palette holding `<p` that is not well-formed XML: WARN) | `[ev: retro course-coverage Δ20]` |
 
 `[ev: corpus B817]` for every row. Deeper cites B817 carries: lexicon/palette STANDARD ← B780/B759 (§817.4), the
 empty-lexicon/empty-palette AUDIT that fires L4/L5 ← B788; L6 ← B790 §14; L7 ← B784; L8 ← B807; L10/L11 ← B815 §815.12.
@@ -183,6 +188,16 @@ L10 fires when `gradle.properties` gives an absolute host path to `niagara_home`
 ## Slotomatic checksum — use `0`, not `(auto)`
 
 When hand-adding a `@NiagaraProperty` to an already-generated class (outside Slotomatic's auto-region), set the auto-region checksum to the plain integer `0`, NOT the literal placeholder `(auto)`. The `(auto)` text causes a cosmetic Slotomatic parse error (the build still passes but emits a noisy WARNING about an unrecognized checksum token); `0` causes Slotomatic to regenerate the checksum cleanly on the next build. If Slotomatic's region comment shows `/* auto */ (auto)` after a hand-edit, replace it with `/* auto */ 0`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ24]`
+
+## Slot defaults — `defaultValue` has the slot's Java type `[ev: retro course-coverage Δ21]`
+Slot-o-Matic copies `defaultValue` verbatim into `newProperty(flags, <default>, facets)`, and Java picks the
+`newProperty` overload by the literal's own type (`boolean`, `int`, `long`, `float`, `double`, `String` or a
+`BValue`). When the type is introspected, an `int` literal is widened for a `long`/`float`/`double` slot; every other
+mismatch (`type = "int"` with `"false"`, `"boolean"` with `"0"`, `"float"` with `"1.5"`, `"double"` with
+`"BBoolean.TRUE"`) is refused as "Property default value is of wrong type": the module compiles and the type fails at
+runtime (baja `ComplexIntrospector`; the course demo, corpus B1417 §1417.3 row l). Write the literal of the slot's
+type (`0d`, `1.5f`, `0L`, `"\"text\""`) or its `B` value (`BDouble.make(0)`). Check:
+`toolbelt/lint-slot-default-type.sh <src-root>` (FAIL). `[ev: corpus B1417 §1417.3 l]`
 
 ## Slot-o-Matic runs — read the output, recover a failed file `[ev: retro course-recordings Δ5]`
 - **Read the Slot-o-Matic output on every run:** a file it cannot process is logged and skipped, the task still
@@ -403,6 +418,9 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
   name has no alias and fails as `Invalid typespec`; a `B`-prefixed name under a declared alias fails with "Type not
   found". Declare each alias once, `m="<alias>=<module>"` on the first `<p>` that uses it; later entries reuse the
   alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]` `[ev: retro course-recordings Δ2]`
+  `lint-structure.sh` L17 checks the source palette: the class-name and `B`-prefix forms FAIL; a later `m=` that maps
+  the alias to another module WARNs (the decoder keeps one module per alias, `ValueDocDecoder.java:1038-1051`), an
+  identical repeat changes nothing. `[ev: retro course-coverage Δ20]`
 - `verify-module.sh` FAILs (`palette-parse`) an unterminated `<!--`, FAILs (`palette-type`) a `t=` that is a Java class name or whose symbol no `m=` declared,
   and counts as entries only `<p>` elements with `n=` and a non-folder `t=` in any attribute order, skipping
   `v=` overrides — a Workbench-saved palette is no longer reported empty. A check over a framework file reads

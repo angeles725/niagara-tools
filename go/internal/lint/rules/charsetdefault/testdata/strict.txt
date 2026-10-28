@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+WARN  lint-charset-default  @DIR@/src/A.java:1  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+-- stderr --
+-- src/A.java --
+class A { byte[] f(String s) { return s.getBytes(); } }

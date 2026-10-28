@@ -151,12 +151,13 @@ Added by the research fold (PR7). Idiom note: B778 + B782 + B785 are three insta
 | **B1026** | N4 Distribution ND7 — Installer mechanics: `Installer_x64.exe`, overlay-merge sequence, `niagarad`/Service setup | distribution |
 | **B1027** | N4 Distribution ND8 — SDK dev examples (`dev/`) and default security material (`overlay/security/`) — file layout and what is shipped | distribution |
 
-## n4-dev-course — the N4 Developer Certification Course (B1230–B1258)
+## n4-dev-course — the N4 Developer Certification Course (B1230–B1258, B1300–B1354, recordings B1416–B1420)
 
 The Tridium-authored course (N4.15.6.20) digested topic by topic: 29 blocks, a 73-rule checklist (B1242 §1242.3)
 and a ranked "what not to copy" list (B1242 §1242.4). Course files are example code only: mirror them first,
 apply the §1242.4 fixes only as named opt-in changes (`BUILD-LOOP.md` § 0, `SOURCES.md` § Exemplar source).
-`[ev: retro n4-course-as-exemplar-source Δ1]`
+`[ev: retro n4-course-as-exemplar-source Δ1]` The recordings (B1416–B1419) are spoken: read a claim through B1420,
+which checked the open ones against code. `[ev: retro course-coverage Δ18]`
 
 | Block | What it gives the builder | Layer |
 |---|---|---|
@@ -167,6 +168,14 @@ apply the §1242.4 fixes only as named opt-in changes (`BUILD-LOOP.md` § 0, `SO
 | **B1237** | **P0** — ORDs and BQL: the ORD query chain, `BOrd.resolve`/`get`, a custom `BOrdScheme`, the BQL grammar against `bql-rt` code | ord / bql |
 | **B1239** | **P0** — drivers / NDriver: the NMessage/NComm/ILinkLayer model, the Lab 11 driver, and the lab solution's latent defects | driver |
 | **B1230** | The course map (decks 0–10 + bonus, labs 1–11 + bonus) and the N4.15.6.20 developer environment | reference |
+| **B1300** | The developer command set the N4.15 course uses (gradlew and signing tasks, `test.exe`, the `-watch`/`settestargs` loop, `moduleVerificationMode`), each mapped to its code or block, 4.14 vs 4.15 | build / test |
+| **B1302** | Study map: each course deck joined to the official devguide/guide pages, the blocks that deepen it, and where the concept lives (or is missing) in our modules | reference |
+| **B1354** | Verified course exemplars: the live-tested 4.15 certification exam (`BLimiter`, `BHistoryExportService`, a minimal TCP-ping NDriver) and the Review solution, read against the course's own code | exemplar |
+| **B1416** | Recordings Day 1: lifecycle as spoken vs `EngineManager` (links propagate before `started()`), `disabled()` vs `stopped()`, `started()` vs `stationStarted()`, dev-environment recipes | rt / lifecycle |
+| **B1417** | Recordings Day 2: default code signing (`niagara.signing.jceks`), the license-gated security-manager developer mode, modules / types / Slot-o-Matic rules | build / signing |
+| **B1418** | Recordings Day 3: `getHtmlSafeText`, logging and lexicon rules, BQL case rules, the 60 s lease and its stale first read, build recovery | lexicon / ord / test |
+| **B1419** | Recordings Day 4: `getServiceTypes()`, alarms / NEQL / SystemDB, engine watchdog defaults, threads, driver idioms (stale time, NDriver) | rt / alarm / driver |
+| **B1420** | Child gaps of B1416-B1419 worked to code: stale read after `lease()`, COV sensitivity per driver, alarm UUID on return-to-normal, `orientSystemDb` + relation IDs, shutdown thread, Niagara Console environment | rt / driver / reference |
 | **`docs/n4-module-development-course-guide.md`** | How to develop an N4 module as Tridium teaches it (N4.15), every rule linked to its block (B1230–B1258). Lives in `niagara-research/docs/`. | reference |
 
 ---
