@@ -70,8 +70,10 @@ which file owns a concern. Evidence and host file:line pointers are in the three
   shellcheck.
 - [x] M4 · strict rules (part 2): strict-new Δ3 (strict L3), Δ4 (strict lint-size), Δ5 (slot wall); gaps Δ1
   (model import direction), Δ5 (adapter decision budget, WARN). Landed as WU6 ba197046 and WU7 b48e9808.
-- [ ] M5 · front end, servlet, report (part 2): gaps Δ2 and Δ3 (rc-scan), Δ4 (dashboard JS skeleton), Δ6 (servlet
-  router + handlers), Δ8 (report-module modularity summary).
+- [x] M5 · front end, servlet, report (part 3): gaps Δ2 and Δ3 (rc-scan), Δ4 (dashboard JS skeleton), Δ6 (servlet
+  router + handlers), Δ8 (report-module modularity summary), plus the module-map Δ3 report member. Landed as WU9
+  3d5a9798, WU10 62cc8332, WU11 959be0c6 and WU12 5d2f2fba, after the part-2 review fix-forward WU8 2e261afb.
+- [ ] M7 · retro D `2026-10-27-modularity-structure` (five items, see Next session).
 - [ ] M6 · close (part 2): flip the three retros to folded, strict fold audit 0 uncited, ledger fragment, CI-local.
 
 ## Acceptance criteria
@@ -223,26 +225,28 @@ fold audit, generated-index `--check`).
   the large legacy servlets of the audit. DUX1 in `types/dashboard.md` names the router + `ux/route/<Route>Handler`
   split. The fixture servlet keeps its two tiny inline branches (no handler class emitted). Gap: the wrapper header
   `build-n4-module-kit/toolbelt/lint-servlet.sh` (outside this part's edit surfaces) does not list handler-size yet.
+  Checks: `go test` servlet ok (52 goldens unchanged); `go vet` ok; bats scaffold-module 30/30, lint-servlet,
+  guard-pins, gen-lint-index, kit-links, report-module ok; gen-lint-index --check 0. Commit 5d2f2fba
+  `feat(lint): servlet handler-size for the router-plus-handlers split` (+106/−2).
+- Part 3 close checks (on 5d2f2fba + this document and the part-3 ledger fragment): full `memcap go test ./...`
+  122 packages ok, 0 FAIL (`TestEveryLintIsAMemberOrListed` passes: lint-module-map is a member);
+  `go test ./internal/lint/... ./internal/reportmodule/... ./internal/rcscan/... ./internal/verifymodule/...` ok;
+  `go vet` size, modulemap, servlet, reportmodule, rcscan ok; bats 12 suites 340/340 ok (9 env skips: no
+  niagara_home/JDK 8, no acorn/eslint) — scaffold-module, lint-module-map, lint-size, rc-scan, report-module,
+  verify-module, lint-servlet, kit-links, gen-lint-index, guard-pins, lint-vendor-floor, lint-structure;
+  shellcheck clean on lint-size, report-module, rc-scan; gen-lint-index and gen-retro-index `--check` 0; strict
+  fold audit 407 folded / 407 cited / 0 uncited; sweep-build-state 0; `changelog-gate --range fe06e0be..HEAD`
+  PASS (5 fragments).
 
 ## Next session
-Part 2 stopped on 2026-10-27 after WU7 (b48e9808); M0-M4 are done, the three retros stay `review-status: pending`.
-Review candidate: d7cdd7a1..b48e9808 (four work units, base e2b0e33e).
-- First, outside part 2's edit surfaces: add `lint-module-map` to `notInReport` in
-  `go/internal/reportmodule/completeness_test.go` (reason: member owed with the M5 modularity summary row), or land
-  the member itself in M5. `TestEveryLintIsAMemberOrListed` fails on this branch since WU2 (575b4015).
-- Owed from strict-new Δ4 (outside part 2's surfaces): report-module mode-aware — its lint-size member must relay a
-  strict module's FAIL size rows as FAIL (today it relays size rows with a PASS verdict row). Target
-  `go/internal/reportmodule/members.go`; re-record the report-module goldens once, together with M5's rows.
-- M5 · front end, servlet, report: gaps Δ2 (rc-scan `fetch-outside-services`: a `fetch(` outside `js/services/`
-  WARN, FAIL strict) and Δ3 (rc-scan `js-file-size`: a `.js` over about 400 lines WARN, FAIL strict) in
-  `toolbelt/rc-scan.sh` and its Go port, mode from `lint.ModuleMode`; Δ4 (dashboard scaffold JS skeleton under
-  `fixtures/MinimalDash/…/MinimalDash-ux/src/rc/`: `js/config.js`, `js/services/api.js`, `js/store.js`,
-  `js/components/`, `js/pages/`, `js/main.js`; the map's `frontend` glob already covers it, TC-MAP1 must stay
-  clean); Δ6 (servlet = router + one handler class per route group under `ux/route/<Route>Handler`; a handler body
-  over 80 lines inside the servlet WARN, FAIL strict, in `go/internal/lint/rules/servlet`; DUX1 text in
-  `types/dashboard.md`); Δ8 (report-module modularity summary row per module: mode, concerns, unlisted files) plus
-  the `lint-module-map` report-module member (module-map Δ3), one goldens re-record.
-- M7 · retro D `2026-10-27-modularity-structure` (new, five items, unchanged from part 1's list):
+Part 3 stopped on 2026-10-27 after WU12 (5d2f2fba) and the part-3 ledger fragment; M0-M5 are done, the three retros
+stay `review-status: pending`. Review candidate: 2e261afb..HEAD (five work units and this bookkeeping, base
+fe06e0be).
+- First, outside part 3's edit surfaces: document `handler-size` in the `toolbelt/lint-servlet.sh` header (a
+  Checks row: WARN, FAIL in a strict module or under --strict; a `Mutation:` pin for TC-MAP6 or
+  `TestHandlerSize`), then `gen-lint-index.sh --check`.
+- M7 · retro D `2026-10-27-modularity-structure` (new, `toolbelt/new-retro.sh kit modularity-structure --date
+  2026-10-27 --deltas 5`), five items:
   1. `scaffold-module add-concern <Name>` creates the concern folder, a pure class, its test, an adapter stub and the
      MODULE-MAP row.
   2. Fixed ROLE folders only (rt `model/`, `adapter/`; ux `route/`, `service/`); concern sub-folders under them have
@@ -253,4 +257,8 @@ Review candidate: d7cdd7a1..b48e9808 (four work units, base e2b0e33e).
   4. `module-map where <file|concern>` plus a runner that runs only that concern's tests.
   5. A legacy→strict migration guide that EXTENDS `METHODOLOGY.md:83` (opt-in per module, pure extraction first,
      slot changes last with migration + commissioning).
-- M6 · close: flip the three retros to folded, strict fold audit 0 uncited, a `ledger.d/` fragment, `ci-local.sh -j 3`.
+- M6 · close: flip the three retros (modularity-module-map, modularity-strict-new, modularity-gaps) to folded,
+  strict fold audit 0 uncited (every Δ of the three now has an `[ev: retro … Δk]` tag in a kit doc), a
+  `ledger.d/` fragment, `ci-local.sh -j 3`. Decide whether `fetch-outside-services`/`js-file-size` should also
+  WARN with no map (today map modes only, to keep existing rc-scan goldens byte-identical) and whether the
+  scaffold should emit a `ux/route/<Route>Handler` class.
