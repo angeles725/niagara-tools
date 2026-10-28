@@ -340,13 +340,13 @@ Comments:
   not bite — the base itself extends BTestNg — and was replaced. Smoke (12 roots): 10 exit 0 (3 with rows, 7 WARN
   total; spot-checks: `Files.readAllBytes(new File(src, cls + ".java"))` facade-name readers, true positives), 2 exit 3
   (no srcTest Java).
-- 2026-10-27 B5.4 (run 3, inline; commit eb67217f). G40 `lint-logger-name` per `ledger.d/2026-10-23-r8-p1-process.md:5`.
+- 2026-10-27 B5.4 (run 3, inline; commit 0dc0ba69). G40 `lint-logger-name` per `ledger.d/2026-10-23-r8-p1-process.md:5`.
   Decision (spec: "`moduleName` from the group/part gradle"): part gradle `moduleName.set("X")`/`moduleName = "X"`,
   else the gradle file one directory up, else the part directory name minus its suffix. Comparison is exact (case
   matters: the DebugService row is the literal). RED `undefined: Spec`; GREEN 7 goldens; bats LN 5/5; LN1
   (case-insensitive) and LN2 (no child exemption) red. Smoke (12 roots): 11 exit 0, 9 with rows, 26 WARN (lower-case
   module names), 1 exit 3 (no part Java).
-- 2026-10-27 B5.R (run 3, inline; commits 28c8a0a6, 4edf50b3). Fix-forward of the APPROVED run-2 reviews:
+- 2026-10-27 B5.R (run 3, inline; commits e9f3d653, 564d51b3). Fix-forward of the APPROVED run-2 reviews:
   - R1 ledger-check: LC9 is now the template's exact sample row only (read from the template, header and separator
     skipped); any other row with `<...>` runs LC4-LC8, a single placeholder cell WARNs and is still checked; rows after a
     blank/comment/prose line are read to the next heading (decision: keep scanning, not FAIL, as prose between rows is
@@ -375,7 +375,7 @@ Comments:
     must fail the gate).
   - R9 build-verify.md:276: rewritten to mode A only (-ux when annotated), mode C -rt only, mode B never (two WARN
     lines with `--with-slotomatic`); "silently" and "Mode B is the exception" removed.
-- 2026-10-27 B8 (run 3, inline; commit b6c9277f). Audit A7-D1 `lint-adapter-cfg-default`. The audit line names only
+- 2026-10-27 B8 (run 3, inline; commit ccfe6e90). Audit A7-D1 `lint-adapter-cfg-default`. The audit line names only
   "adapter `@NiagaraProperty defaultValue` vs pure-model Cfg default"; decisions recorded for that ambiguity: a Cfg is
   any class named `*Cfg`; the adapter↔field link is an assignment statement `<x>.<field> = get<Slot>();` (optionally
   `.getMillis()`/`.getSeconds()` for a BRelTime slot, converted); the field default is its literal initializer or Java's
@@ -384,7 +384,7 @@ Comments:
   getSeconds conversion) and ACD2 (no-initializer field unjudged) red — a first ACD1 pin (`BRelTime.make(1500)` vs
   1500 ms) could not bite and was replaced. Smoke (12 client module roots): 2 with rows, 24 WARN (fields left at 0/false
   while the slot defaults to a commissioned value), 9 clean, 1 exit 3. Audit A7 ticked in `audit-2026-10-03.md`.
-- 2026-10-27 B5.5 (run 3, inline; commit a583e823). report-module members `lint-permissions-xml` (failWarn, PASS
+- 2026-10-27 B5.5 (run 3, inline; commit fd3a0080). report-module members `lint-permissions-xml` (failWarn, PASS
   verdict), `lint-structural-tests`, `lint-logger-name`, `lint-adapter-cfg-default` (warnOnly), each with its own
   noSource SKIP; removed from `notInReport`; `Scripts()` 56 → 60. RED: 106 goldens failed. Re-record: a temporary,
   uncommitted `GOLDEN_DUMP_TMP` hook in `golden.Runner` (reverted with `git checkout`) dumped the Go tool's output; a
@@ -393,14 +393,14 @@ Comments:
   changed, 0 problems; added permissions-xml 97 PASS + 9 SKIP, structural-tests 24 SKIP, logger-name 2 SKIP,
   adapter-cfg-default 9 SKIP. Mutation RM-new-members-nosource is pinned by those SKIP goldens. Decision: one re-record
   for all four members (B8 ordered before B5.5) instead of one per lint.
-- 2026-10-27 B5.7 (run 3, inline; commit 6809a137). G38 `lint-absolute-claims` per `ledger.d/2026-10-23-r8-p1-process.md:5`.
+- 2026-10-27 B5.7 (run 3, inline; commit 56c87f56). G38 `lint-absolute-claims` per `ledger.d/2026-10-23-r8-p1-process.md:5`.
   Decision (spec is per line, tags often sit on a continuation line): a line's evidence is its claim unit (bullet or
   paragraph). Strong = a `code`/`course`/`devguide`/`CERT`/`javap` tag or a `.java:<n>` cite; one INFO row per line
   (first word). Spec: exit 0 always (INFO never affects the exit), 3 usage/empty root; ModuleRoot so `--all` skips it;
   `notInReport` (kit doc report). RED `undefined: Spec`; GREEN 5 goldens; bats AC 5/5; AC1 (line-only tags) and AC2
   (corpus as strong) red. Kit `types/`: 423 rows (282 never, 58 throws, 44 silently, 34 always, 5 forbidden).
   Order: G38 landed before the sweep because the sweep consumes its report (brief order sweep → G38 swapped).
-- 2026-10-27 B5.6 (run 3; commit e3bc06e2; review delegated to one read-only worker, then spot-checked here). The 287
+- 2026-10-27 B5.6 (run 3; commit 29fc315a; review delegated to one read-only worker, then spot-checked here). The 287
   never/forbidden rows were checked against corpus B1242 §1242.3 (rules 1-73) and §1242.4 (items 1-16): 1 contradicted
   (CoalesceQueue proxy `write()` returned `false`; B1239 §1239.9 quotes the devguide "if the write is enqueued then
   return true" — spot-checked), 2 over-absolute corrected (lexicon keys vs `<Type>.displayName`, B1236 §1236.3; BQL
@@ -409,7 +409,7 @@ Comments:
   `moduleTest-include.xml`, not that cause — inferred), 15 supported, ≈268 outside what the course checklist covers
   (dashboard, browser, field behaviour). Not done: adding the 15 corpus pointers to supported lines (they would not
   change G38's verdict, corpus tags are not strong) — optional follow-up.
-- 2026-10-27 B5.8 (run 3, inline; commit c2ddd92f). G39 `count-retro-deltas` per the spec in the same fragment: Go cmd +
+- 2026-10-27 B5.8 (run 3, inline; commit a23fcef3). G39 `count-retro-deltas` per the spec in the same fragment: Go cmd +
   `internal/retrodeltas` + `toolbelt/count-retro-deltas.sh`, named in BUILD-LOOP §7 and METHODOLOGY K34 (kit-links L5).
   Decisions: the delta section is `## Proposed kit deltas`, `## Deltas` or `## Proposed delta table` (the three headings
   the 410 kit retros use); the INDEX cell is the column headed `Deltas` (some rows carry a note column after it); a value
@@ -483,8 +483,11 @@ Comments:
   exit 0. `sweep-fold-audit.sh --strict --exact-stems --deltas-since 2026-09-24`: 411/411 cited, 789 deltas, 0 not cited.
   `kit-cite-resolve --strict` on types/structure.md, dashboard.md, logic-authoring.md, BUILD-LOOP.md, METHODOLOGY.md:
   LIVE 0, HISTORY 0 findings.
-- `scripts/changelog-gate.sh --range 81ae3347..HEAD` and `.githooks/pre-push` over the branch range: see the run-3
-  report (run after this commit).
+- `scripts/changelog-gate.sh --range 81ae3347..HEAD`: PASS (10 fragments). `.githooks/pre-push` fed `chore/kit-backlog`
+  over 81ae3347: the first pass was refused by `client-guard` (9 lines of the G40 golden and test used a client module
+  name, rule #24 of the private denylist); the 11 run-3 commits were rewritten in place (`git filter-branch
+  --tree-filter`, the name replaced by a generic `AcmePan`; 510ad024 and d4256bc7 unchanged), the backup ref removed,
+  and the SHAs above updated.
 
 ## Backlog close (2026-10-27)
 B1-B8 are DONE on `chore/kit-backlog` (unpushed): B1-B4, B4b, B5.0, B5.1, B6, B7 in runs 1-2; B5.2-B5.8, B5.R and B8 in
