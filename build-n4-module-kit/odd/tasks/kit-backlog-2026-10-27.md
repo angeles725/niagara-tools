@@ -565,5 +565,10 @@ Remaining run-3 review findings, recorded, not fixed (all advisory):
   retro files is not proved by a case.
 - ledger-check: a second table with a different header inside `## Versions` FAILs LC4 on each of its rows (kept as a
   real defect; revisit if ledgers legitimately carry side tables there).
+- B9 review (f8f66cd1, approved) R4-001/R3-001 — `go/internal/lint/rules/permissionsxml/permissionsxml.go:43`: the
+  anchored prune no longer skips a `build/` or `test/` directory that is not directly under a part (for example a
+  group-level `build/`), so generated sources there are now scanned; decide whether to prune those by path too.
+- B9 review R2-001 — `go/internal/lint/rules/adaptercfgdefault/adaptercfgdefault.go:41-43`: the part-output prune list
+  and its comment are copied into three rule packages; move them to one shared helper in `go/internal/lint`.
 Fixed in B9 and dropped from this list: permissions-xml R2 FILE_WRITE wording, loggername R3 module-name precedence
 (pinned) and R3 prune package segments, KCRD2 naming.
