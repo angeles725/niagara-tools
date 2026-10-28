@@ -34,7 +34,7 @@ import com.angeles.MinimalDriver.BMinimalDriverDeviceDiscoveryLeaf;
 import com.angeles.MinimalDriver.BMinimalDriverDeviceDiscoveryPreferences;
 import com.angeles.MinimalDriver.BMinimalDriverNetwork;
 import com.angeles.MinimalDriver.BMinimalDriverProxyExt;
-import com.angeles.MinimalDriver.MinimalDriverCodec;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
 
 /**
  * BMinimalDriverLoopbackTest — the driver's comm stack in a running test station against

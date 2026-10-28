@@ -67,5 +67,5 @@ tasks.named<Jar>("jar") {
 }
 
 tasks.named<Bajadoc>("bajadoc") {
-  includePackage("com.angeles.MinimalDash.ux")
+  includePackage("com.angeles.MinimalDash.ux.route")
 }

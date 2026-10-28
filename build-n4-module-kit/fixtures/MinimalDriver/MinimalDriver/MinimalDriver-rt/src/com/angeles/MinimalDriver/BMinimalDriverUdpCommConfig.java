@@ -11,6 +11,8 @@ import com.tridium.ndriver.comm.IMessageFactory;
 import com.tridium.ndriver.comm.NLinkMessageFactory;
 import com.tridium.ndriver.datatypes.BUdpCommConfig;
 
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
+
 /**
  * BMinimalDriverUdpCommConfig — the network's UDP comm config, subclassed so the stack builds this
  * driver's messages.

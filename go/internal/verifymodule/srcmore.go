@@ -246,13 +246,14 @@ var (
 )
 
 // slotWall counts @NiagaraProperty and finds the class on the javasrc bare view: annotations in a comment
-// are no slots (the bash grepped the raw text; declared difference, truth-java-view).
+// are no slots (the bash grepped the raw text; declared difference, truth-java-view). More than 15 WARNs, and
+// FAILs in a strict module (lint.ModuleMode: modularity: strict in the nearest MODULE-MAP.md).
 func (r *run) slotWall() bool {
 	pd, ok := r.srcDirOrSkip("slot-wall")
 	if !ok {
 		return true
 	}
-	warned := false
+	warned, failed := false, false
 	for _, f := range r.javaFiles(pd + "/src") {
 		v, ok := r.java(f)
 		if !ok {
@@ -268,11 +269,16 @@ func (r *run) slotWall() bool {
 			fields := awkFields(ms[0])
 			class = fields[len(fields)-1]
 		}
-		r.row("WARN", "slot-wall", fmt.Sprintf("%d properties in class %s (%s) — compose into child BComponents (logic.md L21)", count, class, f))
+		if lint.ModuleMode(f) == lint.ModularityStrict { // a strict module (MODULE-MAP.md): the wall is a FAIL
+			r.row("FAIL", "slot-wall", fmt.Sprintf("%d properties in class %s (%s) — compose into child BComponents (logic.md L21; strict module: more than 15 fails)", count, class, f))
+			failed = true
+		} else {
+			r.row("WARN", "slot-wall", fmt.Sprintf("%d properties in class %s (%s) — compose into child BComponents (logic.md L21)", count, class, f))
+		}
 		warned = true
 	}
 	if !warned {
 		r.row("PASS", "slot-wall", "no flat slot wall (>15 @NiagaraProperty per class) under "+pd+"/src")
 	}
-	return true
+	return !failed
 }

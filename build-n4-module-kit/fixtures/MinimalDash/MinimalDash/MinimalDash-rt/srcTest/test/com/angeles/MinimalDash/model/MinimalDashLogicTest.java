@@ -1,7 +1,7 @@
 /*
  * Copyright 2026 Angeles. All Rights Reserved.
  */
-package com.angeles.MinimalDash;
+package com.angeles.MinimalDash.model;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -10,7 +10,7 @@ import static org.junit.Assert.*;
  * Pure JUnit test for {@link MinimalDashLogic}.
  *
  * <p>Zero-Baja, zero-station, runs via {@code toolbelt/run-pure-test.sh} in WSL.
- * Tests the setpoint-validity guard that protects {@link BMinimalDash} from
+ * Tests the setpoint-validity guard that protects BMinimalDash from
  * accepting NaN or infinite values that would propagate to the control module.
  * [ev: build-verify.md §Unit tests; dashboard.md § rt — facade test seam]</p>
  */

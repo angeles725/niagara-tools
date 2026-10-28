@@ -1,0 +1,21 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:5  MM5: concern control names no existing srcTest path in Tests
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:6  MM5: concern codec names no existing srcTest path in Tests
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| control | rt | M-rt/src/A.java | — | the decision |
+| codec | rt | M-rt/src/C.java | M-rt/module-include.xml | a frame |
+| Plumbing | rt | M-rt/module-include.xml | — | build only |
+-- M/M-rt/module-include.xml --
+<types/>
+-- M/M-rt/src/A.java --
+class A {}
+-- M/M-rt/src/C.java --
+class C {}

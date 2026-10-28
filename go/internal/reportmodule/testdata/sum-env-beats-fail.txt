@@ -20,10 +20,12 @@ A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean
+(module)  PASS  lint-module-map  clean
+(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-
 (module)  PASS  lint-write-path  clean
 (module)  PASS  lint-bundled-jar-class-version  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 14 PASS · 1 FAIL · 0 WARN · 4 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 15 PASS · 1 FAIL · 0 WARN · 4 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

@@ -3,10 +3,12 @@
 // user-facing contract and its header documents every check and its mutation pins). Per-file rule: a
 // file is a servlet when a line extends BWebServlet or declares a doGet/doPost/service handler, and every
 // row is read from that one file, in the awk's order: per handler auth, unbounded-set, log-in-handler and
-// api-response-headers; then catch-no-400, input-400, cache-nofinger and csrf-xrw-only over the file.
+// api-response-headers; then catch-no-400, input-400, cache-nofinger and csrf-xrw-only over the file; then
+// handler-size per method over 80 lines (FAIL in a strict module, lint.ModuleMode).
 package servlet
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -61,6 +63,8 @@ const (
 	msgInput    = "parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input"
 	msgCache    = "Cache-Control max-age>0 on rc asset without fingerprint"
 	msgCsrfOnly = "X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]"
+	msgHandler  = "method %s() spans %d lines (> %d) inside the servlet -- move its route group into a" +
+		" ux/route/<Route>Handler class (types/dashboard.md § DUX1)"
 )
 
 // block is the text of the handler body that opens at or after line start (0-based): the lines, each
@@ -259,5 +263,21 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			}
 		}
 	}
+
+	// handler-size (modularity-gaps Δ6): the servlet is a router, each route group's handler its own
+	// ux/route/<Route>Handler class. A method of the servlet file spanning more than maxHandler lines (its name
+	// line to its closing brace; token lines are 0-based, rows 1-based) WARNs, FAILs in a strict module.
+	sev := lint.Unset
+	if lint.ModuleMode(f.Path) == lint.ModularityStrict {
+		sev = lint.Fail
+	}
+	for _, d := range decls {
+		if span := toks[d.Body[1]].Line - d.Line + 1; span > maxHandler {
+			add(sev, "handler-size", d.Line+1, fmt.Sprintf(msgHandler, d.Name, span, maxHandler))
+		}
+	}
 	return out, nil
 }
+
+// maxHandler is the handler body budget inside a servlet (modularity-gaps Δ6).
+const maxHandler = 80

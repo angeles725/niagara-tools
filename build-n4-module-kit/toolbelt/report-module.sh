@@ -34,8 +34,10 @@
 # keep their own severity: counted apart, never PASS, never FAIL, never change the verdict.
 # [ev: retro alarm-console-design Δ3]
 # Advisory members (deferred-lints-2026-10-03): lint-size.sh, lint-license-isoperational-gate.sh,
-# lint-set-null-ord.sh and lint-ws-placement.sh [ev: retro ws-placement] on <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit
-# of an advisory member is an ERROR row carrying the member's first non-row output line (exit 3), never PASS.
+# lint-set-null-ord.sh and lint-ws-placement.sh [ev: retro ws-placement] on <artifact>/src — their WARN rows are relayed with a PASS verdict row; an
+# exit 1 with a FAIL row (lint-size in a `modularity: strict` module) relays its rows as FAIL with no PASS verdict
+# [ev: retro modularity-strict-new Δ4]; any other non-zero exit of an advisory member is an ERROR row carrying the
+# member's first non-row output line (exit 3), never PASS.
 # lint-agent-on-include-sync.sh <module-root> once per run (FAIL, step 8b): a @NiagaraType @AgentOn type whose
 # module-include.xml <type> line lacks one of its <on type> entries (types/module-wiring.md § 2).
 # lint-slotomatic-markers.sh <artifact>/src (FAIL; a WARN unclosed-region row relayed): a generated region
@@ -47,10 +49,16 @@
 # driver lints lint-private-api-import, lint-ndriver-static-collection, lint-ndriver-tagless-correlation (a module
 # with no source they read is a SKIP row). lint-manual-labels is not a member: it needs an operator manual
 # path, which a module root does not name; lint-bacnet-status-flags is not one either: it reads a station bog.
+# Module map (modularity campaign M5): lint-module-map.sh <module-root> once per run after lint-structure (FAIL
+# rows block, WARN rows such as MM1 "no MODULE-MAP.md" do not), then one `(module)  INFO  modularity  mode=<m>
+# concerns=<n> unlisted=<n> largest=<path> (<n> hand-written lines)` row: the map mode (none with no valid map,
+# `-` counts), its concern rows, the part sources in no concern and the largest part class by hand-written lines.
+# INFO is printed and not counted: the row orients, it never changes the verdict.
+# [ev: retro modularity-module-map Δ3] [ev: retro modularity-gaps Δ8]
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only]
-# Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR  <check>  <detail>   (ERROR = member env fault, not counted; exit 3)
+# Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR|INFO  <check>  <detail>   (ERROR = member env fault, not counted; exit 3; INFO = the modularity row, not counted)
 # Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES|INCOMPLETE|ISSUES (+INCOMPLETE)
 # Floor (BUILD-LOOP §5): verify-module (needs a built jar) and schema-risk (needs <artifact>/.deploy-baseline) never
 # read CLEAN when they SKIP — the verdict is INCOMPLETE, exit 4. --first-deploy: the module was never deployed, so

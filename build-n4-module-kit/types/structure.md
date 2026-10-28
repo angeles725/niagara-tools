@@ -103,7 +103,8 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 |---|---|---|---|
 | L1 | every `.java` package is `com.<vendor>.<Module>[.<sub>]`, consistent | FAIL | all four modules PASS |
 | L2 | exactly one public `@NiagaraType` per `.java` file | FAIL | all four PASS |
-| L3 | a pure-model pkg (`…/model/`) with a `srcTest` test per class AND zero `import javax.baja` in it | WARN | chihuahua `wb/model/` isolated ✓; ColdRoomPan/CompPan keep it flat (advisory) |
+| L3 | legacy or no map: a `…/model/` directory holding a `.java` file that imports `javax.baja.*` WARNs once per directory (advisory). Strict (`modularity: strict` in `<module-root>/MODULE-MAP.md`), per file of every `-rt`/`-ux`/`-wb`/`-se` part: a Baja-free class (no `javax.baja`/`com.tridium` import, no `@NiagaraType`) outside a role package FAILs (`-rt`, `-wb`, `-se`: `model/`; `-ux`: `route/`, `service/` or `model/`); a `model/` class importing a `javax.baja` or `com.tridium` type FAILs at the import line; a `model/` class `<C>` with no `<C>Test.java` anywhere under the part's `srcTest/` FAILs | WARN legacy · FAIL strict | chihuahua `wb/model/` isolated ✓; ColdRoomPan/CompPan keep it flat (advisory); client modules A–C have no `model/` in any part, which the legacy row cannot see `[ev: retro modularity-strict-new Δ3]` |
+| L3b | strict only: a `model/` class importing a type of one of the module's own packages that is not a `model` package (any part's `src/`) FAILs at the import line — `model/` depends only on `model/` and libraries | FAIL strict | `[ev: retro modularity-gaps Δ1]` |
 | L4 | `module.lexicon` present AND non-empty (≥1 `key=value`) when ≥1 type is declared | FAIL | chihuahua-rt + -ux lexicons EMPTY → **L4 FAIL** |
 | L5 | `module.palette` present AND non-empty on a component module | FAIL | empty palette = the B788 footgun |
 | L6 | source ships `module-include.xml`, NOT a hand-authored `META-INF/module.xml` | FAIL | plugin generates the manifest |
@@ -227,6 +228,70 @@ it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
   same shape. A comment placed before an `<?xml` declaration is not well-formed XML (expat: "XML or text
   declaration not at start of entity"). The emission is owed as G97 `fixture-moduletest-include`.
   `[ev: retro testing-parity-btestng Δ6]`
+
+- **Every scaffold type emits a strict module map, and its Baja-free classes sit in role packages.**
+  `scaffold-module.sh` copies `<module-root>/MODULE-MAP.md` (`modularity: strict`) from each fixture: logic rows
+  `control`, `station-test`, `plumbing`; dashboard rows `control` (rt), `api-routing` (ux), `frontend` (ux),
+  `station-test`, `plumbing`; driver rows `codec`, `network-device`, `points`, `discovery`, `point-manager` (wb),
+  `plumbing`. The pure classes live in `<MOD>-rt/src/com/<vendor>/<MOD>/model/` (`<MOD>Logic`, the driver's
+  `<MOD>Codec`) with their tests under the same package in `srcTest/test/`; the dashboard's package-private router
+  and its servlet share the ux `route/` package (`com.<vendor>.<MOD>.ux.route`, DUX1 in `types/dashboard.md`). A
+  fresh scaffold of every type passes `lint-module-map` with no row (`tests/scaffold-module.bats` TC-MAP1, TC-MAP2).
+  `[ev: retro modularity-module-map Δ2]` `[ev: retro modularity-strict-new Δ2]`
+
+## Module map — `<module-root>/MODULE-MAP.md` `[ev: retro modularity-module-map Δ1]`
+Every module root (the directory holding the `<MOD>-rt`/`-ux`/`-wb`/`-se` parts, the root `lint-structure.sh`
+takes) carries a map file, `<module-root>/MODULE-MAP.md`: which concern owns which files, which tests cover it, and
+when a change belongs there. A per-file gate cannot say where a change belongs; the map can, and the
+`lint-module-map` lint (`n4lint lint-module-map`) checks it against the tree.
+
+```
+# MODULE-MAP — <MOD>
+
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| control | rt | <MOD>-rt/src/com/<vendor>/<MOD>/model/<MOD>Logic.java; <MOD>-rt/src/com/<vendor>/<MOD>/B<MOD>.java | <MOD>-rt/srcTest/test/com/<vendor>/<MOD>/model/<MOD>LogicTest.java | setpoint or interval behaviour |
+| plumbing | rt | <MOD>-rt/<MOD>-rt.gradle.kts; <MOD>-rt/module-include.xml; <MOD>-rt/module.palette; <MOD>-rt/module.lexicon | — | build or packaging only |
+```
+
+- **Header.** `modularity: strict` (a new module; the scaffold writes it) or `modularity: legacy` plus a non-empty
+  `legacy-reason: <why>` line (an existing module that opts in to the map without the strict rules). The mode lives
+  in the module tree because a lint must decide it from the tree alone: `.deploy-baseline/` appears only at the first
+  deploy, git history is VCS-bound (the lints are VCS-free), and the BUILD-STATE envelope lives in the kit repo (it
+  mirrors the mode for orientation: the `modularity` field in `BUILD-STATE.src.md`).
+- **Table.** The first table whose header is exactly `Concern | Part | Files | Tests | Change here when`. One row per
+  concern. `Files` and `Tests` hold `;`-separated paths relative to the module root (backticks allowed); `—`, `-` or
+  an empty cell means none. A Java file is listed by its own path, one entry per file. Front-end files under a part's
+  `src/rc/` may be listed by a glob (`<MOD>-ux/src/rc/js/components/**`; `**` is any depth, `*` stays inside one path
+  segment). A glob never lists a `.java` file.
+- **Concerns per type** (start from these; split further when a concern grows): logic → `control` (the pure
+  `model/` class and its B-class adapter), `station-test`, `plumbing`. Dashboard → `control` (rt), `api-routing`
+  (ux: servlet + dispatch and the dispatch test), `frontend` (ux: `src/rc/**`, `srcTest/rc/spec`), `station-test`,
+  `plumbing`. Driver → `codec` (the `model/` codec), `network-device`, `points` (the -rt point classes),
+  `discovery`, `point-manager` (the -wb point manager), `plumbing`. A test may appear in several rows (one station
+  test covers network, points, discovery and the point manager); a source file may not.
+- **`plumbing`** is the one concern with no test requirement: gradle files, `module-include.xml`,
+  `moduleTest-include.xml`, palette, lexicon, permissions.
+
+| Check | Rule | strict | legacy |
+|---|---|---|---|
+| MM1 | the module root has no `<module-root>/MODULE-MAP.md` | WARN (no other check runs) | — |
+| MM2 | the header has no valid `modularity:` line, a legacy map has no `legacy-reason:`, or there is no table with the five columns | FAIL (no other check runs) | FAIL |
+| MM3 | a listed path does not exist, is a directory, is absolute or leaves the module root, or a glob matches no file | FAIL | FAIL |
+| MM4 | every `src/**/*.java` and `src/rc/**/*.{js,html,css}` of every `-rt`/`-ux`/`-wb`/`-se` part (minus `vendor/`, `ext/` and `*.min.*`) is in exactly one row's `Files`: unlisted | FAIL | WARN |
+| MM4 | the same file is in two rows | FAIL | FAIL |
+| MM5 | a non-`plumbing` row names no existing `srcTest/` path in `Tests` | FAIL | WARN |
+| MM6 | a `srcTest/**/*.java` file is in no row | WARN | WARN |
+
+Rows: `FAIL|WARN  lint-module-map  <path>  MM<n>: <reason>`. Exit **0** clean or WARN-only · **1** any FAIL · **3**
+usage, a root with no part, an unreadable directory under a part, or an unreadable map file. `report-module.sh` runs it once
+per module after `lint-structure` (a FAIL row fails the report, a WARN row does not), then prints one uncounted
+`(module)  INFO  modularity  mode=<m> concerns=<n> unlisted=<n> largest=<path> (<n> hand-written lines)` row
+`[ev: retro modularity-gaps Δ8]`. Wrapper:
+`toolbelt/lint-module-map.sh`; rule `go/internal/lint/rules/modulemap`; per-file lints read the mode with
+`lint.ModuleMode` (`go/internal/lint/paths.go`). `[ev: retro modularity-module-map Δ3]` `[ev: retro modularity-strict-new Δ1]`
 
 ## Palette assembly templates `[ev: corpus B746 §746.3]`
 

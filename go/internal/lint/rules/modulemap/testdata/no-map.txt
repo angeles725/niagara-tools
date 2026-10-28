@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-module-map  @DIR@/M  MM1: no MODULE-MAP.md (a legacy module: add one with modularity: legacy and legacy-reason:, types/structure.md § Module map)
+-- stderr --
+-- M/M-rt/src/A.java --
+class A {}

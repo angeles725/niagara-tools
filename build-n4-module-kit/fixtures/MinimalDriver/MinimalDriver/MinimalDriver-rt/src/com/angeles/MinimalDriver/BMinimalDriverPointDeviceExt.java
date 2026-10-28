@@ -14,7 +14,8 @@ import com.tridium.ndriver.discover.BNDiscoveryJob;
 import com.tridium.ndriver.discover.BNDiscoveryPreferences;
 import com.tridium.ndriver.point.BNPointDeviceExt;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * BMinimalDriverPointDeviceExt — the device's points extension and point discovery host.

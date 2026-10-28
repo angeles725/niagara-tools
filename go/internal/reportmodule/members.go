@@ -102,6 +102,8 @@ var perModule = []member{
 	{script: "lint-agent-on-include-sync", in: inArtifact, f: failOnly, v: rows},
 	{script: "lint-uberjar-api-conflict", in: inArtifact, f: filter{sel: "WARN", mode: base}},
 	{script: "lint-structure", in: inArtifact, f: failWarn, v: failRows},
+	{script: "lint-module-map", in: inArtifact, f: filter{sel: "FAIL|WARN", mode: base}, v: failRows},
+	{special: (*report).modularity},
 	{script: "lint-write-path", special: (*report).writePath},
 	{script: "lint-bundled-jar-class-version", in: inArtifact, f: filter{sel: "FAIL", mode: base}, v: rows},
 	{script: "lint-duplicate-helper", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt, -ux or -wb part's src/"},
@@ -188,10 +190,11 @@ func (r *report) exitedNoFail(label, check string, code int) {
 }
 
 // advisoryMember is a WARN-only lint run without --strict: exit 0 relays its rows and the passAfterRelay
-// verdict; any other exit is an ERROR row carrying the member's first output line that is neither blank nor
-// one of its own WARN/FAIL/ADVISORY rows, never a silent PASS.
+// verdict; exit 1 with a FAIL row (lint-size in a `modularity: strict` module, whose size rows FAIL) relays its
+// rows, the FAIL ones counted, and adds no PASS verdict; any other exit is an ERROR row carrying the member's
+// first output line that is neither blank nor one of its own WARN/FAIL/ADVISORY rows, never a silent PASS.
 func (r *report) advisoryMember(label, check string, code int, out string) {
-	if code == 0 {
+	if code == 0 || code == 1 && hasFailRow(out) {
 		r.passAfterRelay(label, check, r.relayRows(label, out))
 		return
 	}
@@ -203,6 +206,16 @@ func (r *report) advisoryMember(label, check string, code int, out string) {
 		}
 	}
 	r.envFault(label, check, detail)
+}
+
+// hasFailRow reports whether out holds a `FAIL  <check>  ...` row (the status exactly FAIL).
+func hasFailRow(out string) bool {
+	for _, w := range parseRows(out, failOnly) {
+		if w.st == failed {
+			return true
+		}
+	}
+	return false
 }
 
 // truncated reports a run whose output passed the bound (ok false) as an ERROR row: the rows past the bound, a

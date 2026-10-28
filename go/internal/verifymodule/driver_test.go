@@ -138,7 +138,7 @@ func TestDriverScaffold(t *testing.T) {
 		"      pingOk();")
 	edit(t, dir, fxRt+"BMinimalDriverDevice.java", "    if (!hasAddress())\n    {\n      pingFail(\"ipAddress and udpPort are not set\");\n      return;\n    }\n    try\n    {\n      Frame answer = minimalDriverNetwork().send(peer(), MinimalDriverCodec.CMD_PING, 0, 0);\n      pingOk();\n    }\n    catch (Exception e)\n    {\n      pingFail(String.valueOf(e.getMessage() != null ? e.getMessage() : e));\n    }",
 		"    pingOk();")
-	edit(t, dir, fxRt+"MinimalDriverCodec.java", "package com.angeles.MinimalDriver;", "package com.angeles.MinimalDriver;\n// TODO add poll support")
+	edit(t, dir, fxRt+"model/MinimalDriverCodec.java", "package com.angeles.MinimalDriver.model;", "package com.angeles.MinimalDriver.model;\n// TODO add poll support")
 	rows := driverRows(t, dir)
 	wantRow(t, rows, "FAIL", "driver-scaffold", "BMinimalDriverDevice.java:", "only calls pingOk()")
 	wantRow(t, rows, "WARN", "driver-scaffold", "MinimalDriverCodec.java:", "wizard stub")

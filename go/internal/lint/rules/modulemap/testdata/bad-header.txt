@@ -1,0 +1,14 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:1  MM2: modularity: loose is not strict or legacy
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: loose
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| control | rt | M-rt/src/A.java | — | never |
+-- M/M-rt/src/A.java --
+class A {}

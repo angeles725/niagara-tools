@@ -20,7 +20,8 @@ import com.tridium.ndriver.point.BNProxyExt;
 import com.tridium.ndriver.poll.BINPollable;
 import com.tridium.ndriver.util.SfUtil;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * BMinimalDriverProxyExt — proxies one device register into a numeric control point.

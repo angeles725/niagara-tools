@@ -1,7 +1,7 @@
 /*
  * Copyright 2026 Angeles. All Rights Reserved.
  */
-package com.angeles.MinimalDash.ux;
+package com.angeles.MinimalDash.ux.route;
 
 import org.junit.Test;
 import static org.junit.Assert.*;

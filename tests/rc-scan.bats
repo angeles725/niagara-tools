@@ -422,6 +422,30 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   if [[ "$output" == *"rc/app.js:2  innerhtml-server"* ]]; then return 1; fi
 }
 
+@test "RC37: under a module map, fetch( outside rc/js/services/ and a .js over 400 lines WARN (legacy) and FAIL (strict); no map gives no row" {
+  # Mutation: RC37 -- reading the module map mode as legacy keeps the strict module at WARN and exit 0
+  local T="$BATS_TEST_TMPDIR/rc37" M
+  M="$T/M-ux/src/rc/js"
+  mkdir -p "$M/services" "$M/pages"
+  printf '%s\n' 'return fetch(p, { signal: s });' > "$M/services/api.js"
+  printf '%s\n' '// home page' "fetch('/m/api/y', { signal: s });" > "$M/pages/home.js"
+  for i in $(seq 401); do printf 'var v%s = 1;\n' "$i"; done > "$M/big.js"
+  run "$RS" "$T/M-ux"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ] || { echo "no map: $output"; false; }
+  printf 'modularity: legacy\nlegacy-reason: deployed before the map\n' > "$T/MODULE-MAP.md"
+  run "$RS" "$T/M-ux"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  src/rc/js/pages/home.js:2  fetch-outside-services: "* ]]
+  [[ "$output" == *"WARN  rc-scan  src/rc/js/big.js:1  js-file-size: 401 lines (> 400)"* ]]
+  [[ "$output" != *"src/rc/js/services/api.js:"* ]]
+  printf 'modularity: strict\n' > "$T/MODULE-MAP.md"
+  run "$RS" "$T/M-ux"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  src/rc/js/pages/home.js:2  fetch-outside-services: "* ]]
+  [[ "$output" == *"FAIL  rc-scan  src/rc/js/big.js:1  js-file-size: "* ]]
+}
+
 # Walk contract (lib/scan-files.sh, kept by the Go port's lint.Walk): a sibling *-worktrees checkout is pruned,
 # a symlinked artifact root is followed (find -H) and a dot-named root is walked (find -mindepth 1).
 @test "RS-walk: a *-worktrees copy gives no row; a symlinked and a dot-named root are scanned" {

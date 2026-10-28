@@ -11,7 +11,13 @@
 # Checks:
 #   L1  FAIL  package naming — every .java package is com.<vendor>.*, never javax.baja.*
 #   L2  FAIL  one @NiagaraType per .java file (max one public type per file)
-#   L3  WARN  pure-model package (src/.../model/) has javax.baja.* imports (advisory)
+#   L3  WARN  pure-model package (src/.../model/) has javax.baja.* imports (advisory). In a strict module
+#             (modularity: strict in <module-root>/MODULE-MAP.md) per file of every -rt/-ux/-wb/-se part
+#             instead: FAIL a Baja-free class outside its role package (rt/wb/se model/; ux route/, service/
+#             or model/), a model/ import of javax.baja/com.tridium, a model/ class with no <C>Test.java in
+#             srcTest/ [ev: retro modularity-strict-new Δ3]
+#   L3b FAIL  strict only: a model/ class imports a type of the module's own non-model package
+#             [ev: retro modularity-gaps Δ1]
 #   L4  FAIL  module.lexicon non-empty (>=1 key=value) when >=1 type is declared
 #   L5  FAIL  module.palette non-empty for -rt profile
 #   L6  FAIL  module-include.xml present; no hand-authored META-INF/module.xml in source

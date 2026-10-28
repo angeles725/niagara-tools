@@ -171,3 +171,52 @@ func TestTruth(t *testing.T) {
 		})
 	}
 }
+
+// TestHandlerSize (modularity-gaps Δ6): a servlet method spanning more than 80 lines (its name line to its
+// closing brace) is one handler-size row: WARN with no map or a legacy map (FAIL under --strict), FAIL in a
+// strict module; a method of exactly 80 lines and a long method of a class that is no servlet give none.
+func TestHandlerSize(t *testing.T) {
+	t.Parallel()
+	body := func(n int) string { return strings.Repeat("    x();\n", n) }
+	servlet := "package com.x;\npublic class BS extends BWebServlet {\n  public void doPost(WebOp op) {\n" + body(79) +
+		"  }\n  private void handleRead(WebOp op) {\n" + body(78) + "  }\n}\n"
+	plain := "package com.x;\npublic class Plain {\n  void run() {\n" + body(90) + "  }\n}\n"
+	const row = "  handler-size  com/x/BS.java:3  method doPost() spans 81 lines (> 80) inside the servlet -- move its" +
+		" route group into a ux/route/<Route>Handler class (types/dashboard.md § DUX1)\n"
+	tests := []struct {
+		name, mapBody string
+		strict        bool
+		want          string
+		code          int
+	}{
+		{"no map", "", false, "WARN" + row, 0},
+		{"no map, --strict", "", true, "FAIL" + row, 1},
+		{"legacy", "modularity: legacy\nlegacy-reason: deployed before the map\n", false, "WARN" + row, 0},
+		{"strict module", "modularity: strict\n", false, "FAIL" + row, 1},
+	}
+	for _, tt := range tests {
+		root := t.TempDir()
+		src := filepath.Join(root, "M-ux", "src")
+		if err := os.MkdirAll(filepath.Join(src, "com", "x"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		files := map[string]string{"M-ux/src/com/x/BS.java": servlet, "M-ux/src/com/x/Plain.java": plain}
+		if tt.mapBody != "" {
+			files[lint.MapFile] = tt.mapBody
+		}
+		for rel, b := range files {
+			if err := os.WriteFile(filepath.Join(root, rel), []byte(b), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		args := []string{id, src}
+		if tt.strict {
+			args = append(args, "--strict")
+		}
+		var o, e bytes.Buffer
+		code := lint.Command(Spec())(args, cli.Stdio{Out: &o, Err: &e})
+		if o.String() != tt.want || code != tt.code || e.Len() != 0 {
+			t.Errorf("%s: exit %d %q (stderr %q), want exit %d %q", tt.name, code, o.String(), e.String(), tt.code, tt.want)
+		}
+	}
+}

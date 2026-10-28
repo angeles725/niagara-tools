@@ -28,6 +28,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/manuallabels"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/modulemap"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndriverstaticcollection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndrivertaglesscorrelation"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
@@ -113,5 +114,6 @@ func All() []lint.Spec {
 		bacnetstatusflags.Spec(),
 		vacuoustests.Spec(),
 		batserrexit.Spec(),
+		modulemap.Spec(),
 	}
 }

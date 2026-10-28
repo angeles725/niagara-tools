@@ -38,6 +38,9 @@ DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract
 (module)  FAIL  lint-agent-on-shape  module-include.xml:4  malformed agent-on target (need module:Type): FooService
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  FAIL  lint-structure  DemoPan-rt:  L5: module.palette missing for -rt profile
+(module)  WARN  lint-module-map  agent-on  MM1: no MODULE-MAP.md (a legacy module: add one with modularity: legacy and legacy-reason:, types/structure.md § Module map)
+(module)  PASS  lint-module-map  clean
+(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-
 (module)  SKIP  lint-write-path  no write-path-matrix.md
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  SKIP  lint-duplicate-helper  no *.java under a -rt, -ux or -wb part's src/
@@ -47,7 +50,7 @@ DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract
 (module)  SKIP  lint-ndriver-static-collection  no *.java under a -rt part's src/
 (module)  SKIP  lint-ndriver-tagless-correlation  no *.java under a -rt part's src/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 5 PASS · 2 FAIL · 0 WARN · 37 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 6 PASS · 2 FAIL · 1 WARN · 37 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

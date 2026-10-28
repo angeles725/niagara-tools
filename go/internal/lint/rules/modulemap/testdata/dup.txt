@@ -1,0 +1,23 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/M-rt/src/A.java  MM4: in 2 concerns (control, alarms); list it in one
+FAIL  lint-module-map  @DIR@/M/M-ux/src/rc/js/a.js  MM4: in 2 concerns (frontend, alarms); list it in one
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| control | rt | M-rt/src/A.java | M-rt/srcTest/ATest.java | the decision |
+| frontend | ux | M-ux/src/rc/** | M-ux/srcTest/rc/spec/S.js | the page |
+| alarms | rt, ux | M-rt/src/A.java; M-ux/src/rc/js/a.js; M-ux/src/rc/js/*.js | M-rt/srcTest/ATest.java | an alarm |
+-- M/M-rt/src/A.java --
+class A {}
+-- M/M-rt/srcTest/ATest.java --
+class ATest {}
+-- M/M-ux/src/rc/js/a.js --
+x
+-- M/M-ux/srcTest/rc/spec/S.js --
+x

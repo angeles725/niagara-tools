@@ -1,16 +1,16 @@
 /*
  * Copyright 2026 Angeles. All Rights Reserved.
  */
-package com.angeles.MinimalDriver;
+package com.angeles.MinimalDriver.model;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * Pure JUnit test for {@link MinimalDriverCodec}: zero Baja, runs in WSL with
- * {@code toolbelt/run-pure-test.sh <MinimalDriver-rt> com.angeles.MinimalDriver.MinimalDriverCodecTest}.
+ * {@code toolbelt/run-pure-test.sh <MinimalDriver-rt> com.angeles.MinimalDriver.model.MinimalDriverCodecTest}.
  *
  * <p>Feeds round trips plus truncated, oversized, corrupted and foreign frames, and pins the
  * correlation rule. Each rejection test fails if its check is dropped from the codec.

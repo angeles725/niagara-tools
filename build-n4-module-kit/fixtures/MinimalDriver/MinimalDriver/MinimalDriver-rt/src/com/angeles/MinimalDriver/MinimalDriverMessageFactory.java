@@ -12,7 +12,8 @@ import com.tridium.ndriver.comm.LinkMessage;
 import com.tridium.ndriver.comm.NMessage;
 import com.tridium.ndriver.datatypes.BAddress;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * MinimalDriverMessageFactory — turns one received datagram into a {@link MinimalDriverResponse}.

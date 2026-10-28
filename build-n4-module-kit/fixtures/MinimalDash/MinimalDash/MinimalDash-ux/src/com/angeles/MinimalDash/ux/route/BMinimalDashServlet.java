@@ -1,7 +1,7 @@
 /*
  * Copyright 2026 Angeles. All Rights Reserved.
  */
-package com.angeles.MinimalDash.ux;
+package com.angeles.MinimalDash.ux.route;
 
 import javax.baja.nre.annotations.NiagaraType;
 import javax.baja.sys.Type;

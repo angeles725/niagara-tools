@@ -12,8 +12,8 @@ import (
 func TestScriptsExist(t *testing.T) {
 	t.Parallel()
 	got := Scripts()
-	if len(got) != 54 || got[0] != "verify-module.sh" || got[len(got)-1] != "triage-console.sh" {
-		t.Errorf("Scripts() = %d entries %q...: want the 54 members, verify-module.sh first, triage-console.sh last", len(got), got[:1])
+	if len(got) != 55 || got[0] != "verify-module.sh" || got[len(got)-1] != "triage-console.sh" {
+		t.Errorf("Scripts() = %d entries %q...: want the 55 members, verify-module.sh first, triage-console.sh last", len(got), got[:1])
 	}
 	for _, s := range got {
 		if _, err := os.Stat(filepath.Join("..", "..", "..", "build-n4-module-kit", "toolbelt", s)); err != nil {
@@ -102,5 +102,31 @@ func TestTruncatedMemberIsAnEnvFault(t *testing.T) {
 	want := "A-rt  ERROR  lint-no-system-out  env fault (output over 16 bytes, truncated) -- run lint-no-system-out.sh manually\n"
 	if out.String() != want || !r.hadEnv {
 		t.Errorf("W1: got %q (env %v), want %q", out.String(), r.hadEnv, want)
+	}
+}
+
+// TestAdvisoryMemberStrictFail (strict-new Δ4): lint-size exits 1 with FAIL rows in a strict module; the report
+// relays them as FAIL (no PASS verdict, no env fault), so a strict module's report never reads PASS or ERROR for
+// a size breach. An exit 1 with no FAIL row stays an env fault.
+func TestAdvisoryMemberStrictFail(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		out       string
+		want      string
+		fail, env bool
+	}{
+		{"FAIL rows relay as FAIL", "WARN  lint-size  /x/A.java:2  adapter-branches\nFAIL  lint-size  /x/A.java:6  class A too long",
+			"A  WARN  lint-size  A.java:2  adapter-branches\nA  FAIL  lint-size  A.java:6  class A too long\n", true, false},
+		{"WARN rows only stay an env fault", "WARN  lint-size  /x/A.java:2  long",
+			"A  ERROR  l  env fault (exit 1)\n", false, true},
+	}
+	for _, tt := range tests {
+		var b bytes.Buffer
+		r := &report{out: &b, n: map[string]int{}}
+		r.advisoryMember("A", "l", 1, tt.out)
+		if b.String() != tt.want || r.hadFail != tt.fail || r.hadEnv != tt.env {
+			t.Errorf("%s: %q (fail %v, env %v), want %q (fail %v, env %v)", tt.name, b.String(), r.hadFail, r.hadEnv, tt.want, tt.fail, tt.env)
+		}
 	}
 }

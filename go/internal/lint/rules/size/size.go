@@ -3,7 +3,9 @@
 // its first class, interface or enum declaration, and every method of a pure class (no @NiagaraType, no
 // `extends B<Upper>`) spanning more than --max-method lines WARNs; a slotomatic region that is unclosed,
 // nested or a stray END is its own WARN. Port of the awk in toolbelt/lint-size.sh (the wrapper keeps the user-facing contract
-// and its header documents the rules and their mutation pins).
+// and its header documents the rules and their mutation pins). A file under a module map (lint.ModuleMode) gets
+// the wider method rule of mapped (every class, wrapped signatures) and the adapter-branches WARN; its class and
+// method rows FAIL in a strict module. A file with no map keeps the rules above byte for byte.
 package size
 
 import (
@@ -77,10 +79,18 @@ func (r rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	if name == "" {
 		name, line = "?", 1
 	}
+	mode := lint.ModuleMode(f.Path)
+	sev := lint.Unset // the rule's WARN; a strict module's size rows FAIL
+	if mode == lint.ModularityStrict {
+		sev = lint.Fail
+	}
 	if hand > r.maxClass {
-		out = append(out, lint.Finding{Line: line, Msg: fmt.Sprintf("class %s has %d hand-written lines (> %d, slotomatic"+
+		out = append(out, lint.Finding{Severity: sev, Line: line, Msg: fmt.Sprintf("class %s has %d hand-written lines (> %d, slotomatic"+
 			" regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)",
 			name, hand, r.maxClass)})
+	}
+	if mode != lint.ModularityNone {
+		return append(out, r.mapped(f, code, gen, sev, name, line, baja)...), nil
 	}
 	if baja {
 		return out, nil
@@ -92,6 +102,21 @@ func (r rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 	return out, nil
+}
+
+// HandLines is the class rule's count: f's non-blank lines after comments are blanked, outside every closed
+// slotomatic region (an unclosed or nested region counts as hand-written). report-module's modularity row
+// names the module's largest class by it.
+func HandLines(f *javasrc.File) int {
+	code := f.Stripped()
+	gen, _ := regions(f.Raw, code)
+	n := 0
+	for i, c := range code {
+		if !gen[i] && strings.Trim(c, space) != "" {
+			n++
+		}
+	}
+	return n
 }
 
 // regions marks the lines inside a closed slotomatic region and returns the nested-region, stray-end and
@@ -124,4 +149,54 @@ func regions(raw, code []string) ([]bool, []lint.Finding) {
 			" with no END marker -- its lines are counted as hand-written"})
 	}
 	return gen, out
+}
+
+// branchKeyword is a hand-written decision point the adapter budget counts.
+var branchKeyword = map[string]bool{"if": true, "case": true, "for": true, "while": true, "catch": true}
+
+// maxAdapterBranches is the adapter decision budget (modularity-gaps Δ5): WARN-only until calibrated.
+const maxAdapterBranches = 15
+
+// mapped is the method rule of a module with a MODULE-MAP.md (legacy WARN, strict FAIL): every method and
+// constructor of every class, Baja or pure, measured from its name's line to its closing brace (javasrc.Decls,
+// so a signature wrapped over several lines counts from its first line); then the adapter decision budget, a
+// WARN in both modes: a Baja class that imports a model/ peer and keeps more than 15 hand-written branches.
+func (r rule) mapped(f *javasrc.File, code []string, gen []bool, sev lint.Severity, name string, line int, baja bool) []lint.Finding {
+	var out []lint.Finding
+	toks := javasrc.Tokens(code)
+	// Token lines (Token.Line, Decl.Line) are 0-based indexes into code and gen; a Finding.Line is 1-based.
+	for _, d := range javasrc.Decls(toks) {
+		if span := toks[d.Body[1]].Line - d.Line + 1; span > r.maxMethod {
+			out = append(out, lint.Finding{Severity: sev, Line: d.Line + 1, Msg: fmt.Sprintf("method %s() in class %s spans %d"+
+				" lines (> %d) -- split into named phase methods (types/logic.md § Pure-class extraction)", d.Name, d.Class, span, r.maxMethod)})
+		}
+	}
+	if !baja || !importsModel(code) {
+		return out
+	}
+	branches := 0
+	for _, t := range toks {
+		if t.Kind == javasrc.TokIdent && branchKeyword[t.Text] && !gen[t.Line] {
+			branches++
+		}
+	}
+	if branches > maxAdapterBranches {
+		out = append(out, lint.Finding{Severity: lint.Warn, Line: line, Msg: fmt.Sprintf("adapter-branches: class %s has %d"+
+			" hand-written branches (> %d) beside its model/ peer -- move the decisions into the pure class (types/logic.md"+
+			" § Pure-class extraction)", name, branches, maxAdapterBranches)})
+	}
+	return out
+}
+
+// modelImport is an import of a type in a model package (the adapter's pure peer), or a static import of one
+// of its members (`import static com.x.model.Core.step;`).
+var modelImport = regexp.MustCompile(`^[[:space:]]*import[[:space:]]+(static[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*\.)*model\.[A-Za-z_]`)
+
+func importsModel(code []string) bool {
+	for _, c := range code {
+		if modelImport.MatchString(c) {
+			return true
+		}
+	}
+	return false
 }

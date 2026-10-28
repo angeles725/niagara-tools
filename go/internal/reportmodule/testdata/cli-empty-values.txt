@@ -24,10 +24,12 @@ A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean
+(module)  PASS  lint-module-map  clean
+(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-
 (module)  PASS  lint-write-path  clean
 (module)  PASS  lint-bundled-jar-class-version  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 16 PASS · 0 FAIL · 0 WARN · 3 SKIP · 0 ADVISORY  ->  INCOMPLETE
+report-module: 1 artifact · 17 PASS · 0 FAIL · 0 WARN · 3 SKIP · 0 ADVISORY  ->  INCOMPLETE
 -- stderr --
 -- @kind --
 recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)

@@ -8,7 +8,8 @@ import java.io.OutputStream;
 import com.tridium.ndriver.comm.NMessage;
 import com.tridium.ndriver.datatypes.BIpAddress;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * MinimalDriverRequest — one request on the wire. The byte layout lives in {@link MinimalDriverCodec};

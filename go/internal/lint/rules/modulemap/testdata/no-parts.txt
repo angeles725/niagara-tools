@@ -1,0 +1,10 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-module-map  @DIR@/M  no module parts found (no *-rt, *-ux, *-wb or *-se sub-directory: wrong path or not a module root)
+-- stderr --
+-- M/README.txt --
+notes
+-- M/MODULE-MAP.md --
+modularity: strict

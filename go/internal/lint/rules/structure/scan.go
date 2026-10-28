@@ -15,9 +15,11 @@ import (
 
 // scan is one run over a module root: the rows in report order and the first thing it could not read.
 type scan struct {
-	root string
-	out  []lint.Finding
-	err  error
+	root     string
+	mode     lint.Modularity // the module map's mode: strict turns on strict L3/L3b
+	packages map[string]bool // strict only: every package the module's src/ declares (L3b)
+	out      []lint.Finding
+	err      error
 }
 
 // row adds a finding; sev Unset takes the rule's FAIL.

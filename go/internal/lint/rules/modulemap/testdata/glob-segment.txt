@@ -1,0 +1,23 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/M-ux/src/rc/css/s.css  MM4: in no concern (list it in the Files of the concern that owns it)
+FAIL  lint-module-map  @DIR@/M/M-ux/src/rc/js/pages/p.js  MM4: in no concern (list it in the Files of the concern that owns it)
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| frontend | ux | M-ux/src/rc/js/*.js; M-ux/src/rc/*.html | M-ux/srcTest/rc/spec/S.js | the page |
+-- M/M-ux/src/rc/index.html --
+<p>
+-- M/M-ux/src/rc/js/a.js --
+x
+-- M/M-ux/src/rc/js/pages/p.js --
+x
+-- M/M-ux/src/rc/css/s.css --
+x
+-- M/M-ux/srcTest/rc/spec/S.js --
+x

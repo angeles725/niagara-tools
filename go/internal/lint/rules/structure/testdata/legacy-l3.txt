@@ -1,0 +1,94 @@
+-- args --
+@DIR@/legacy-l3/M
+-- want --
+exit 0
+WARN  lint-structure  M-rt/src/com/x/model  L3: pure-model package contains javax.baja.* imports (advisory; isolate control logic from Baja for testability)
+-- stderr --
+-- legacy-l3/.git/HEAD --
+ref: refs/heads/main
+-- legacy-l3/M/M-rt/module-include.xml --
+<types/>
+-- legacy-l3/M/M-rt/module.palette --
+<p n="X"/>
+-- legacy-l3/M/M-rt/src/com/x/BAdapter.java --
+package com.x;
+
+import javax.baja.sys.BComponent;
+import com.x.model.Core;
+
+public class BAdapter extends BComponent {}
+-- legacy-l3/M/M-rt/src/com/x/Pure.java --
+package com.x;
+
+public final class Pure {}
+-- legacy-l3/M/M-rt/src/com/x/model/Core.java --
+package com.x.model;
+
+import java.util.List;
+import com.x.model.sub.Part;
+
+public final class Core {}
+-- legacy-l3/M/M-rt/src/com/x/model/Leaky.java --
+package com.x.model;
+
+import javax.baja.sys.BComponent;
+import com.tridium.ndriver.comm.NMessage;
+
+public final class Leaky {}
+-- legacy-l3/M/M-rt/src/com/x/model/NoTest.java --
+package com.x.model;
+
+// import javax.baja.sys.BComponent;
+public final class NoTest {}
+-- legacy-l3/M/M-rt/src/com/x/model/Up.java --
+package com.x.model;
+
+import com.x.BAdapter;
+import static com.x.ux.service.Api.call;
+
+public final class Up {}
+-- legacy-l3/M/M-rt/src/com/x/model/sub/Part.java --
+package com.x.model.sub;
+
+public final class Part {}
+-- legacy-l3/M/M-rt/srcTest/test/com/x/model/CoreTest.java --
+class CoreTest {}
+-- legacy-l3/M/M-rt/srcTest/test/com/x/model/LeakyTest.java --
+class LeakyTest {}
+-- legacy-l3/M/M-rt/srcTest/test/com/x/model/UpTest.java --
+class UpTest {}
+-- legacy-l3/M/M-rt/srcTest/test/com/x/model/sub/PartTest.java --
+class PartTest {}
+-- legacy-l3/M/M-ux/module-include.xml --
+<types/>
+-- legacy-l3/M/M-ux/src/com/x/ux/Helper.java --
+package com.x.ux;
+
+public final class Helper {}
+-- legacy-l3/M/M-ux/src/com/x/ux/route/BServlet.java --
+package com.x.ux.route;
+
+import javax.baja.web.BWebServlet;
+
+public class BServlet extends BWebServlet {}
+-- legacy-l3/M/M-ux/src/com/x/ux/route/Router.java --
+package com.x.ux.route;
+
+import java.util.function.Function;
+
+final class Router {}
+-- legacy-l3/M/M-ux/src/com/x/ux/service/Api.java --
+package com.x.ux.service;
+
+public final class Api {}
+-- legacy-l3/M/M-wb/module-include.xml --
+<types/>
+-- legacy-l3/M/M-wb/src/com/x/wb/package-info.java --
+package com.x.wb;
+-- legacy-l3/M/M-wb/src/com/x/wb/route/Thing.java --
+package com.x.wb.route;
+
+public final class Thing {}
+-- legacy-l3/M/MODULE-MAP.md --
+modularity: legacy
+legacy-reason: deployed before the module map

@@ -1,0 +1,70 @@
+-- args --
+--max-class
+20
+--max-method
+10
+@DIR@/t/src
+-- want --
+exit 0
+WARN  lint-size  @DIR@/t/src/com/x/BBig.java:6  class BBig has 29 hand-written lines (> 20, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- t/src/com/x/BBig.java --
+package com.x;
+
+import javax.baja.sys.BComponent;
+import com.x.model.Core;
+
+public class BBig extends BComponent
+{
+  public void changed()
+  {
+    if (a0) x();
+    if (a1) x();
+    if (a2) x();
+    if (a3) x();
+    if (a4) x();
+    if (a5) x();
+    if (a6) x();
+    if (a7) x();
+    if (a8) x();
+    if (a9) x();
+    if (a10) x();
+    if (a11) x();
+    if (a12) x();
+    if (a13) x();
+    if (a14) x();
+    if (a15) x();
+  }
+  void shortOne()
+  {
+    x();
+  }
+}
+-- t/src/com/x/model/Core.java --
+package com.x.model;
+
+public final class Core
+{
+  public static int step(int a,
+      int b,
+      int c)
+  {
+    a++;
+    a++;
+    a++;
+    a++;
+    a++;
+    a++;
+    return a;
+  }
+}
+-- t/src/com/x/model/Huge.java --
+package com.x.model;
+public final class Huge
+{
+  int f0;
+  int f1;
+  int f2;
+  int f3;
+  int f4;
+}

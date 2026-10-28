@@ -38,6 +38,15 @@ diff -r go/internal/reportmodule/testdata /tmp/rm/out   # only the truth-* cases
 checkout's wrappers. The `fx-` cases therefore pin the current lint rows too: a lint change that alters a row
 on those trees is re-recorded with it.
 
+### Re-recorded through the Go tool
+
+The modularity campaign M5 (2026-10-27) added the `lint-module-map` member and the `(module)  INFO  modularity`
+row. The bash tool at `a98c3357` has neither, so the 104 cases that print the module members were re-recorded
+through the Go tool (each case's `want` replaced by the replayed output) and checked by diff: every change is the
+new `lint-module-map` row(s) (`PASS ... clean`, plus the real lint's `WARN ... MM1` row in the `fx-` cases), the new
+INFO row and the summary line's PASS/WARN counts (verdict and exit unchanged). Their `@kind` still names the bash
+recording they started from.
+
 ## Truth cases (`truth-*`)
 
 Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro

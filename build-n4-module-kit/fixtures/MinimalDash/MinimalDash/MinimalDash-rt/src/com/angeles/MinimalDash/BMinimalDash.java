@@ -22,12 +22,12 @@ import javax.baja.sys.Type;
  * flag; a servlet write path must reject non-OPERATOR targets server-side.
  * [ev: dashboard.md — a link-IN display slot is SUMMARY only]</p>
  *
- * <p>The HTTP servlet ({@link com.angeles.MinimalDash.ux.BMinimalDashServlet})
+ * <p>The HTTP servlet ({@link com.angeles.MinimalDash.ux.route.BMinimalDashServlet})
  * walks these slots to serve the browser dashboard. The integrator links control
  * points into {@code status} (display) and the servlet writes back to
  * {@code setpoint} (config) on operator input.</p>
  *
- * <p>All decision logic is in {@link MinimalDashLogic} (zero-Baja, unit-testable).
+ * <p>All decision logic is in {@link com.angeles.MinimalDash.model.MinimalDashLogic} (zero-Baja, unit-testable).
  * [ev: dashboard.md § rt — the facade (no logic)]</p>
  */
 @NiagaraType

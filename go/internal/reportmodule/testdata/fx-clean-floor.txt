@@ -20,10 +20,13 @@ DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean
+(module)  WARN  lint-module-map  clean  MM1: no MODULE-MAP.md (a legacy module: add one with modularity: legacy and legacy-reason:, types/structure.md § Module map)
+(module)  PASS  lint-module-map  clean
+(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=DemoPan-rt/src/com/x/BFoo.java (3 hand-written lines)
 (module)  SKIP  lint-write-path  no write-path-matrix.md
 (module)  PASS  lint-bundled-jar-class-version  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 17 PASS · 0 FAIL · 0 WARN · 4 SKIP · 0 ADVISORY  ->  INCOMPLETE
+report-module: 1 artifact · 18 PASS · 0 FAIL · 1 WARN · 4 SKIP · 0 ADVISORY  ->  INCOMPLETE
 -- stderr --
 -- @kind --
 recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)

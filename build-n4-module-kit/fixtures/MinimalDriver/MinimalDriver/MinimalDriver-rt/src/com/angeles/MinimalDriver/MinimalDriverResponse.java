@@ -5,7 +5,7 @@ package com.angeles.MinimalDriver;
 
 import com.tridium.ndriver.comm.NMessage;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * MinimalDriverResponse — one decoded response frame. Built by {@link MinimalDriverMessageFactory}

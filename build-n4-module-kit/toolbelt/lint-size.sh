@@ -4,7 +4,8 @@
 #
 # A BComponent that grows past ~800 hand-written lines, or a pure control method past ~80, is where mixed concerns
 # hide: the decision-logic decomposition retro traced a live defect to a monolithic step() whose counts used
-# different membership rules. Size is a REVIEW QUESTION for new modules, never a hard gate, so every row is WARN.
+# different membership rules. Size is a REVIEW QUESTION, never a hard gate, so every row is WARN -- except in a
+# `modularity: strict` module (Module map modes below), where the class and method rows FAIL.
 # Doctrine: types/logic.md § Composition & organization, METHODOLOGY.md § Conformance rules (size smell); deployed
 # modules are not restructured to meet it (METHODOLOGY.md § Schema / upgrade safety).
 # [ev: retro decision-logic-decomposition Δ2]
@@ -26,6 +27,14 @@
 #     get the method rule (the BComponent shell is measured by the class rule). Methods come from javasrc.Methods (a
 #     signature whose `(...)` closes on the `{` line, or a `{` alone after it; a signature wrapped over several
 #     lines before `{` is not seen — a false negative, never a false WARN).
+#   - Module map modes (lint.ModuleMode: the nearest <module-root>/MODULE-MAP.md above the file): with NO map the
+#     rules above apply unchanged. With a map the method rule covers every method and constructor of every class
+#     (Baja classes too), measured from the line of its name to its closing brace by javasrc.Decls, so a wrapped
+#     signature counts from its first line; the class and method rows WARN under `modularity: legacy` and FAIL under
+#     `modularity: strict` (exit 1 without --strict). [ev: retro modularity-strict-new Δ4]
+#   - adapter-branches (map modes only, always WARN): a Baja class that imports a model/ type (its pure peer) and
+#     keeps more than 15 hand-written branch keywords (if, case, for, while, catch; slotomatic regions excluded).
+#     [ev: retro modularity-gaps Δ5]
 #   - One row per file for the class rule, named after the first `class`, `interface` or `enum` declaration (truth
 #     fix T3 2026-10-24: the bash lint matched `class` only, so an interface printed `class ?` and an enum took its
 #     nested class's name).
@@ -33,7 +42,8 @@
 # Usage:  lint-size.sh [--strict] [--max-class <n>] [--max-method <n>] <src-root>
 #   Defaults: --max-class 800, --max-method 80 (strictly greater than the limit WARNs).
 #   Row:  WARN  lint-size  <file>:<line>  <detail>
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+#         FAIL  lint-size  <file>:<line>  <detail>   (a class or method row in a `modularity: strict` module)
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any FAIL (a strict module) or any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 # Empty root: a root with no *.java is `ERROR  lint-size  <root>  no files to scan (K20: wrong path or empty
 # scaffold)` on stdout, exit 3. A bad --max-class/--max-method value prints `lint-size: <flag> needs a
 # non-negative integer` and the usage line, exit 3.
