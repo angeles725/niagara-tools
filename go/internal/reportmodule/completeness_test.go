@@ -18,6 +18,7 @@ var notInReport = map[string]string{
 	"lint-guard-pins":          "a kit meta-check of the toolbelt's own lint headers, run by the kit gates",
 	"split-package-check":      "a project-level check across every module of a project, not of one module",
 	"lint-vacuous-tests":       "follow-up: its empty root (no srcTest/) is exit 3, so a member needs a noSource SKIP row in every report golden",
+	"lint-module-map":          "follow-up: a member re-records every report golden that prints the lint-structure row; it lands with the modularity summary row",
 }
 
 // TestEveryLintIsAMemberOrListed (issue #459): every n4lint rule in rules.All() and every
