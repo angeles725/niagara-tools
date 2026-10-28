@@ -26,6 +26,8 @@ setup() {
   # logic + dashboard also get the shared station-test overlay (templates/station-test), which the
   # fixture trees do not carry; TC-ST* pin it against tests/fixtures/scaffold-module/station-test.
   ST_GOLDEN="$BATS_TEST_DIRNAME/fixtures/scaffold-module/station-test"
+  # the client version ledger (odd/VERSION-LEDGER.md, from templates/VERSION-LEDGER.md; pinned by
+  # tests/ledger-check.bats LCB3) is carried by every fixture, so the diffs below compare it byte-for-byte
   ST_EXCLUDE="--exclude=moduleTest-include.xml --exclude=B*StationTestBase.java --exclude=B*LinkTest.java"
   OUT="$BATS_TEST_TMPDIR/out"
   mkdir -p "$OUT"

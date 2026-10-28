@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: B1–B4 + B4b DONE; run 2 (B5.0, B5.1, B6, B7) in progress (2026-10-27, unpushed on `chore/kit-backlog`); B5, B8 later · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B4, B4b, B5.0, B5.1, B6, B7 DONE (2026-10-27, unpushed on `chore/kit-backlog`); B5, B8 next · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -49,8 +49,8 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B5.0 · ng-deploy gate order (safety). Route: inline (one script + its bats + three doc lines; writer is this session).
 - [x] B5.1 · recorded gaps (eslint lockfile/`npm ci`; MM7 duplicate-concern docs). Route: inline.
 - [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later (next run).
-- [ ] B6 · #459 tail + A7-D2 + lint-vacuous-tests report membership. Route: inline (Go packages rcscan, reportmodule).
-- [ ] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
+- [x] B6 · #459 tail + A7-D2 + lint-vacuous-tests report membership. Route: inline (Go packages rcscan, reportmodule).
+- [x] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
 - [ ] B8 · A7-D1 — later.
 
 ## Acceptance
@@ -232,6 +232,101 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   from a sampler that reads unit fields the live mode overwrites — not provable from tokens, kept WARN by decision;
   the open_issue in `ledger.d/2026-10-24-go-rc-scan.md` is closed with that decision.
 
+- 2026-10-27 B6b (run 2, inline; commit 18451068). Audit A7 D2 intent read from the incident it names (the
+  2026-09-24 phase-2 alarms retro, Δ5, and the version-defect ledger 2.6.0 row: `st = p.st || "ok"` showed an unlinked phase
+  flag as active). rc-scan `status-default-ok`: `||`/`??`/`||=`/`??=` + string `"ok"` after a status name (st, stat,
+  sts, status, `*Status`), token-level (strings and comments never match), WARN in every mode. RED golden
+  `truth-status-default-ok-1` (no rows on the base); GREEN; mutations RC-status-name, RC-status-advisory red.
+  Real-tree smoke (24 client -ux trees): 21 × 3 rows, 3 × 0; three spot-checked rows are the incident shape.
+- 2026-10-27 B6c (run 2, inline; commit 4559b1ec). `lint-vacuous-tests` is a per-module report member (failOnly,
+  rows, noSource `no *.java under a srcTest/` — the lint's own exit-3 text, observed on an empty root); removed
+  from `notInReport`; `TestScriptsExist` 55 → 56. RED: 104 goldens failed with the member added. Re-record: the
+  Go tool's output was dumped through a temporary, uncommitted hook in the golden runner (reverted with
+  `git checkout`), and a script compared each old and new `want`: **every golden diff is only the new
+  `(module)  PASS|SKIP  lint-vacuous-tests` row (80 PASS under stubs, 24 SKIP from the real lint) plus the summary
+  PASS/SKIP counts moved by exactly that row; exit codes, stderr and verdicts are unchanged in all 104 cases.** A
+  first write pass lost a `\r` (Python universal newlines; rows-site) and was redone with `newline=''`. New
+  `truth-vacuous-tests-member` pins the FAIL relay; mutation RM-vacuous-nosource → 24 goldens red.
+  `memcap go test ./internal/reportmodule/` ok; bats report-module + rc-scan + kit-links 128/128.
+
+### Issue #459 closing comment (draft, NOT posted — the owner posts it)
+
+```
+All nine shapes and the comments are resolved, each either fixed or decided with evidence:
+
+1. catch-no-400 (re-read fallback) — fixed: aceb724b (#464).
+2. silent-protection — fixed: 317a7c74 (#464); the real FP was an unconditional cap below a closed `if`.
+3. rc-scan innerhtml-server — fixed: a57ca89b (sink's own value), 66e06eda + d1ff5af6 (members of the page's own
+   const literals, #483: 16 -> 6 rows on the reporting page), 0dc0d74a (values computed from those literals by
+   .map / a const arrow / a one-return function). The 6 remaining rows on that page are a `let` filled by an
+   imperative loop from a sampler that reads fields the live mode overwrites: not provable from tokens, kept WARN
+   by decision.
+4. rc-scan disabled-gate — fixed: 8f446ac6 (#483), a literal non-gate title on the disabled element.
+5. rc-scan host-literal in an unselected mode — decided, stays FAIL (e991a8d7): a one-word mode edit makes it live;
+   the page fix is a relative obix base.
+6. null-context-write — fixed: 593128de (#464), station-internal own-child seeding.
+7. rc-scan null-branch / browser-floor on vendored three.js — fixed: 196211a6 (#483), rc/vendor/**/*.js is left to
+   lint-vendor-floor (ancestor-path follow-ups b2e0e430, f04bd0f0); browser-floor stays WARN under
+   --profile unknown by decision (frontend-standard § Profiles).
+8. bql-string-concat — fixed: 53d4df96 (#464), numeric-only concatenation.
+9. arbitrary-ord — fixed: f19a9d1e (guarded, constant-prefixed ord) and 3566d8bf (BAlarmRecord.getSource()), #474.
+
+Also in the issue body: report-module runs the Go-ported lints and the "no failing row" wording — bd1d2a1f (#464);
+lint-vacuous-tests joined the report in 4559b1ec.
+
+Comments:
+- catch-no-400 with an upstream finite guard — decided a true positive under the per-catch contract (a latent
+  silent default in a private helper; one new caller without the guard writes 0); no code change, recorded in
+  retro r10-lint-fp-459 (c0e0f42c, #528). Fix in the module: let the helper throw, or pass it the validated double.
+- cache-nofinger — fixed for a ?v=-conditioned max-age: 62e43586 (#528); a max-age backed only by a build-time
+  token stays WARN (the servlet alone cannot prove the request carries it).
+- slot-coverage per-slot "OPERATOR" read from a comment (named in the tick-off comment) — fixed: ad90770c, with
+  the same shape in lint-config-sanity CS2: 4171d296 (#530).
+```
+
+- 2026-10-27 B7 (run 2, inline). Audit A9 read with its sources (template, the 2026-09-26 version-defect-ledger retro, Δ1).
+  - B7a (ea12be06): `ledger-check` (Go `internal/ledgercheck` + `cmd/ledger-check` + `toolbelt/ledger-check.sh`):
+    LC1-LC9, contract read from `templates/VERSION-LEDGER.md` (sections, Versions header, the "`Status` is one of"
+    vocabulary); `TestTemplateItself` (the template passes with only its sample-row LC9 WARN). RED: package did not
+    build (no `Main`); bats LCB3 not ok (no ledger emitted). GREEN Go + bats LCB1-LCB4. Mutations LC1, LC2, LC5,
+    LC6 (real-date half), LC7, LC8, LC9 each red. Scaffold: `odd/VERSION-LEDGER.md` at the gradle root for every
+    type — the template's own path (one ledger per client repository) — with its sample row dropped.
+    Decision: the brief's "add it to the plumbing row" does not apply: the ledger sits at the gradle root, outside
+    the module root MODULE-MAP.md maps, and lint-module-map reads only part sources; fresh scaffolds of all three
+    types stay clean under lint-module-map, lint-structure, lint-size (module-map.bats, lint-structure.bats) and
+    ledger-check (LCB3). The scaffold byte-equality cases (TC3, TC-K8, TC-DASH1, TC-DRV1) exclude `odd/` as they
+    already exclude the station-test overlay. BUILD-LOOP §7 names the tool (kit-links L5). Commit size 533 lines
+    (Go package + its table test ~400): over the advisory budget, kept as one unit (tool + its only consumer).
+  - "T1 test backfill": no definition exists (audit doc since its first version 41c154ff, retros, ledger.d, the
+    research repo's ODD docs, git history) — nothing invented; recorded as such in the audit doc.
+  - B7b (65137fb6): slotomatic last-comment-line — NOT covered by lint-slotomatic-markers before (it checks stamp
+    counts, unclosed regions and TYPE/getType outside the region; none reads `//` comments above
+    `@NiagaraProperty`). New WARN sub-check `slotomatic-doc-line` (last line of a ≥2-line `//` block continues the
+    line above: previous line ends without . ! ? : ; or last line starts lower-case). RED golden sm-doc-line + bats
+    SM9; mutation SM9 red; a first `//`-in-literal guard was unreachable (its mutation did not bite) and was removed.
+    Real-tree smoke (67 client -rt parts, counts only): 0 in 4, 1-10 in 51, 27-29 in 12; spot-checks are fragments.
+    Fixtures and report-module goldens unchanged.
+
+## Verification (run 2 close, 2026-10-27, tip 65137fb6 + docs)
+- `memcap go test ./...`: 124 packages ok, 0 FAIL (EXIT 0); `gofmt -l .` empty; `go vet` clean on rcscan,
+  reportmodule, ledgercheck, cmd/ledger-check, slotomaticmarkers, lint/rules/modulemap, modulemap,
+  buildstatefields, citeparse.
+- bats (29 suites incl. ng-deploy, rc-scan, report-module, scaffold-module, lint-module-map, module-map,
+  ledger-check, kit-links, lint-slotomatic-markers, ci-local, check-bats-skips, build-retro-sync, doc pins;
+  `-j 4 --no-parallelize-within-files`): 479 planned, 479 ok; `scripts/check-bats-skips.sh` on that TAP: 4 skips,
+  all allowlisted.
+- Pinned shellcheck 0.10.0 (`scripts/ci-local.sh --only shellcheck`): PASS. Guard pins: SM9, LCB1 MATCH.
+- `gen-lint-index.sh --check`, `gen-retro-index.sh --check`, `gen-build-state.sh --check`: valid.
+  `sweep-fold-audit.sh --strict --exact-stems --deltas-since 2026-09-24`: 411/411 cited, 789 deltas 0 not cited,
+  exit 0. `kit-cite-resolve --strict` on skill/SKILL.md, BUILD-LOOP.md, build-verify.md, types/structure.md,
+  types/logic-authoring.md: LIVE 0, HISTORY 0 findings.
+- `scripts/changelog-gate.sh --range b2e0e430..HEAD`: PASS (9 fragments).
+- `.githooks/pre-push` fed `chore/kit-backlog` over b2e0e430: the first pass was refused by `client-guard` (13 new
+  lines named two retro stems that carry client names, rules #5 and #25 of the private denylist). The 6 unpushed
+  commits that added them were rewritten in place (`git filter-branch --tree-filter`, exact-string rewording to a
+  dated retro description; 5512a99f..0dc0d74a unchanged), the backup ref removed, and the SHAs above updated; the
+  two remaining matches are pre-existing tags on edited lines, exempted by client-guard as same-hunk.
+
 ## Verification (branch close, 2026-10-27)
 - `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
 - bats (21 touched/related suites, `-j 4 --no-parallelize-within-files`): 391 planned, 391 ok after regenerating the
@@ -252,12 +347,12 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   `<purposeKey>`; C47), G34 `structural-tests` (WARN a srcTest class that reads `.java` as text with no BTestNg class;
   C41), G40 `logger-name` (WARN a logger name other than the exact `moduleName`; C52), G38 `absolute-claims` (report
   absolute "never"/"forbidden" claims that cite only inference; C51) and G39 `count-retro-deltas` (tool: Δ totals by
-  script; C51).
-- **B6 — issue #459 tail + A7-D2**: rc-scan innerhtml computed-literal rows (retro go-rc-scan Δ3);
-  `lint-vacuous-tests` report-module membership; rc-scan `status-default-ok` (audit A7 D2, advisory first, real-tree
-  smoke counts only). Close #459 only after both #459 items land (owner's call).
-- **B7 — audit A9**: `ledger-check.sh` + scaffold VERSION-LEDGER, T1 test backfill, slotomatic last-comment-line WARN.
+  script; C51). Adding a report member re-records the module-member goldens: reuse the B6c procedure (dump through a
+  temporary, uncommitted runner hook; script-verify only the new row and the counts moved; read with `newline=''`).
 - **B8 — audit A7-D1**: lint for an adapter `@NiagaraProperty defaultValue` that differs from the pure-model Cfg
-  default (advisory first, real-tree smoke counts only).
-- Owed to the parent session: skill reinstall (`scripts/install-skill.sh --force --skill build-n4-module`) and
-  `scripts/check-skill-drift.sh` (FAILed already on d982a704; `skill/SKILL.md` changed again in B2).
+  default (advisory first, WARN in every mode; real-tree smoke counts only), then tick A7 in `audit-2026-10-03.md`.
+- Issue #459: the closing comment above is ready; posting it and closing the issue is the owner's call.
+- Owed outside this branch's surfaces: `go/README.md` rows for `internal/ledgercheck/` + `cmd/ledger-check/`
+  (open_issue in `ledger.d/2026-10-27-kit-backlog-b7a-ledger-check.md`); skill reinstall
+  (`scripts/install-skill.sh --force --skill build-n4-module`) and `scripts/check-skill-drift.sh` (skill/SKILL.md
+  changed again in B5.0).
