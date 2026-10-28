@@ -5,7 +5,7 @@
 # gradle fails with a cryptic error. A FAIL row identifies the problem; the script
 # continues checking the rest so all issues are visible in one run.
 #
-# Usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] [--sample] <niagara_home> <gradle-root>
+# Usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] [--sample] [--toolchains] <niagara_home> <gradle-root>
 #   --jvm-dir <d>   scan this directory for a JDK 8 release (default /usr/lib/jvm, read-only)
 #                   JAVA_HOME is also checked (fallback) — never $HOME
 #   --plugin-version <v>  the niagara plugin version the build will actually use (build.sh forwards its
@@ -14,6 +14,8 @@
 #                   Falls back to $NIAGARA_PLUGIN_VERSION. [ev: retro continuous-fan-post-defrost-delay Δ1]
 #   --sample        the gradle root is a project you did NOT generate (course zip, vendor sample): also run
 #                   the sample-* retarget checks below. Opt-in: client trees keep their own gradle.properties.
+#   --toolchains    the raw or Windows gradlew route (not build.sh, which pins -P...paths=$JAVA8 itself, checked
+#                   by jdk8): also run the toolchains row below. Opt-in: it starts gradle. [ev: retro course-coverage Δ25]
 #   <niagara_home>  Niagara 4 installation root (must not be a Windows-style path)
 #   <gradle-root>   gradle project root containing settings.gradle.kts
 #
@@ -34,6 +36,11 @@
 #               or `allowDefaultProfile = false` plus niagaraSigning { aliases…; signingProfileFile… }
 #               (sample-sign); no shipped build/ directory (sample-build, WARN: delete it).
 #               [ev: retro n4-course-signed-jars-gate-fix Δ6] [ev: retro n4-course-sample-check-precision Δ1]
+#   toolchains  [--toolchains] a 4.15 build needs a full JDK 8 (corpus B1235 §1235.2): gradle.properties
+#               org.gradle.java.installations.paths pinned to one (bin/javac + Java 8) -> PASS without gradle;
+#               else `gradlew -q -p <gradle-root> javaToolchains -Porg.gradle.java.installations.auto-detect=true`
+#               -> PASS on a listed Language Version 8 with Is JDK true, FAIL when none (a JRE 8 or a JDK 17
+#               alone); SKIP when gradlew is not executable or the listing names no toolchain (never a false PASS)
 #
 #   Truth fixes of the Go port: plugin-pin matches the settings version as an exact etc/m2 directory name
 #   (the bash `-path "*V*"` PASSed on any path holding V, niagara_home included), and version-drift reads each
