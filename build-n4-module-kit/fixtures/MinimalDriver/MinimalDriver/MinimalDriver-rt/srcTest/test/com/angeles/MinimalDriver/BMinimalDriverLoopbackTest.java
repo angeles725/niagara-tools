@@ -45,7 +45,9 @@ import com.angeles.MinimalDriver.MinimalDriverCodec;
  * by the request timeout: {@code RESPONSE_TIMEOUT_MS} plus the framework's 1000 ms padding, times
  * {@code RETRY_COUNT + 1} sends, so about 4 s per request; {@link #WAIT_MS} leaves room for a poll and a
  * ping in a row. BTestNgStation.startStation waits for its Fox service, so Fox stays on, but on a free
- * ephemeral port: the default 1911 is taken whenever a station or platform runs on the same host.</p>
+ * ephemeral port: the default 1911 is taken whenever a station or platform runs on the same host. That Fox
+ * port listens on every interface (the Windows NRE never binds Fox to loopback alone); a loopback-only policy
+ * needs the Fox-off station-test base instead (types/driver-authoring.md section 12.1).</p>
  *
  * <p>Methods run in priority order and share one network, device and two points; each test sets the
  * mock's mode first, so a failure does not cascade through the mock.</p>

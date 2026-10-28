@@ -90,7 +90,7 @@ annotation processor against the production `module-include.xml` and appends eve
 `module-include.xml`. The check catches it: `lint-agent-on-include-sync.sh` sub-check `test-type-in-prod`
 (run by `report-module.sh`) and the `moduletest` row of `verify-module.sh --src` FAIL a production `<type>`
 whose class is declared under the part's `srcTest/` or listed in its `moduleTest-include.xml`.
-`[ev: retro r10-lint-test-types-in-prod]`
+`[ev: retro r10-lint-test-types-in-prod Δ1]`
 
 ---
 
@@ -310,7 +310,8 @@ toolbelt/run-niagara-test.sh run --install 'C:\Niagara\Niagara-4.x' --gradle-roo
   and sizes, 200 files at most), then writes `<UTC timestamp>-<module>.log` (mode 0600) under `--log-dir`, default
   `$XDG_STATE_HOME/run-niagara-test`, else `~/.local/state/run-niagara-test` (made 0700), with the runner's own
   rows (the last 500) and the exit status, and prints `FAIL  run-niagara-test  diagnostics kept: <path>`. So a
-  rejection such as `invalid test target(s)` stays explainable after a one-boot run. Before writing, the scratch dir
+  rejection such as `invalid test target(s)` stays explainable after a one-boot run: the console line above the
+  runner's summary named the cause (a jar whose signature no JVM verifies) `[ev: retro r10-scaffold-station-test Δ3]`. Before writing, the scratch dir
   becomes `<scratch>` and its home copy `<copy>` (Windows, forward-slash and `/mnt` forms, any case), and
   `%USERPROFILE%` and the WSL `$HOME` become `<you>`. Install paths stay as they are: they are the user's own and
   needed to diagnose, so check the log before sharing it outside the team. A green run writes no log unless
