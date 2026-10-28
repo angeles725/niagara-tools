@@ -8,10 +8,11 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-// source is one scanned file: its row path (relative to the artifact dir), extension and awk records.
+// source is one scanned file: its row path (relative to the artifact dir), its path as walked (rooted at the
+// artifact dir argument, for the module-map checks' anchors), extension and awk records.
 type source struct {
-	rel, ext string
-	lines    []string
+	rel, path, ext string
+	lines          []string
 }
 
 // pat is an awk ERE compiled with gawk's leftmost-longest match, so a match's span (RSTART, RLENGTH) is gawk's,
@@ -322,7 +323,8 @@ const maxJSLines = 400
 // jsFileSize (module map modes only) reports a .js file of more than maxJSLines lines at its line 1, unless
 // line 1 carries the `rc-scan: allow js-file-size` marker.
 func (s *fileScan) jsFileSize() {
-	if !s.o.mapped() || s.src.ext != "js" || len(s.src.lines) <= maxJSLines || strings.Contains(s.src.lines[0], "rc-scan: allow js-file-size") {
+	if !s.o.mapped() || thirdParty(s.src.path) || s.src.ext != "js" || len(s.src.lines) <= maxJSLines ||
+		allowedOn(s.src.lines[0], "js-file-size") {
 		return
 	}
 	s.emitAt(1, s.o.sevMap(), "js-file-size", fmt.Sprintf("%d lines (> %d) -- split by concern into services/, store,"+
@@ -330,9 +332,11 @@ func (s *fileScan) jsFileSize() {
 }
 
 // fetchOutside (module map modes only) reports a fetch( call in JavaScript (a .js file or an inline <script>)
-// outside an rc/js/services/ file: only the services call the network (modularity-gaps Δ2).
+// outside an rc/js/services/ file: only the services call the network (modularity-gaps Δ2). The exemption is
+// anchored at rc/js/services/: a services/ segment elsewhere (js/pages/services/, rc/services/) is not it.
 func (s *fileScan) fetchOutside() {
-	if !s.o.mapped() || strings.Contains("/"+s.src.rel, "/services/") || !fetchCall.MatchString(s.line) || s.allowed("fetch-outside-services") {
+	if !s.o.mapped() || thirdParty(s.src.path) || strings.Contains("/"+s.src.path, "/rc/js/services/") ||
+		!fetchCall.MatchString(s.line) || s.allowed("fetch-outside-services") {
 		return
 	}
 	s.emit(s.o.sevMap(), "fetch-outside-services", "fetch( outside rc/js/services/ -- call the API through"+
@@ -469,7 +473,17 @@ func (s *fileScan) emitAt(nr int, sev lint.Severity, id, msg string) {
 func (s *fileScan) emit(sev lint.Severity, id, msg string) { s.emitAt(s.nr, sev, id, msg) }
 
 // allowed reports a trailing `rc-scan: allow <id>` marker on the line.
-func (s *fileScan) allowed(id string) bool { return strings.Contains(s.line, "rc-scan: allow "+id) }
+func (s *fileScan) allowed(id string) bool { return allowedOn(s.line, id) }
+
+// allowedOn reports an `rc-scan: allow <id>` marker on line.
+func allowedOn(line, id string) bool { return strings.Contains(line, "rc-scan: allow "+id) }
+
+// thirdParty is a file the module does not author and so does not split: under rc/vendor/ (vendored JS is not
+// even scanned; its HTML is) or rc/ext/ (pruned by the walk), or a *.min.js (excluded by the walk). The module-map
+// checks state it themselves so a change to the walk cannot turn them on third-party code.
+func thirdParty(p string) bool {
+	return strings.Contains("/"+p, "/rc/vendor/") || strings.Contains("/"+p, "/rc/ext/") || strings.HasSuffix(p, ".min.js")
+}
 
 // ordLiteral is the ERE (station:|local:|slot:/)|(^|[|"'`])h:[0-9a-fA-F]+ (a scheme prefix, or a handle ORD
 // at a segment start), matched by hand: the regexp engine is slow on a 100-KB line full of "width:".

@@ -137,7 +137,9 @@ func TestJSFileSize(t *testing.T) {
 		files := map[string]string{"big.js": lines(401), "at-budget.js": lines(400),
 			"allowed.js": "// rc-scan: allow js-file-size (a generated table)\n" + lines(400)}
 		if tt.mapBody != "" {
-			files["../../../../MODULE-MAP.md"] = tt.mapBody
+			if err := os.WriteFile(filepath.Join(root, "MODULE-MAP.md"), []byte(tt.mapBody), 0o644); err != nil {
+				t.Fatal(err)
+			}
 		}
 		for name, body := range files {
 			if err := os.WriteFile(filepath.Join(js, name), []byte(body), 0o644); err != nil {
@@ -149,5 +151,84 @@ func TestJSFileSize(t *testing.T) {
 		if o.String() != tt.want || code != tt.code || e.Len() != 0 {
 			t.Errorf("%s: exit %d %q (stderr %q), want exit %d %q", tt.name, code, o.String(), e.String(), tt.code, tt.want)
 		}
+	}
+}
+
+// mapRows runs rc-scan on a module root M under a temp dir holding the map and files (paths relative to M-ux), and
+// returns its exit code and only its fetch-outside-services and js-file-size rows.
+func mapRows(t *testing.T, mapBody string, files map[string]string, args ...string) (int, string) {
+	t.Helper()
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "MODULE-MAP.md"), []byte(mapBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for rel, body := range files {
+		p := filepath.Join(root, "M-ux", rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var o, e bytes.Buffer
+	code := Main(append([]string{filepath.Join(root, "M-ux")}, args...), cli.Stdio{Out: &o, Err: &e})
+	if e.Len() != 0 {
+		t.Fatalf("stderr %q", e.String())
+	}
+	var keep []string
+	for _, l := range strings.SplitAfter(o.String(), "\n") {
+		if strings.Contains(l, "fetch-outside-services:") || strings.Contains(l, "js-file-size:") {
+			keep = append(keep, l)
+		}
+	}
+	return code, strings.Join(keep, "")
+}
+
+const fetchJS = "var c = new AbortController();\nfetch('/api', { signal: c.signal });\n"
+
+// TestFetchServicesAnchor: only rc/js/services/ is exempt; a services/ segment elsewhere (pages/services/,
+// rc/services/) is a page that calls the network.
+func TestFetchServicesAnchor(t *testing.T) {
+	code, rows := mapRows(t, "modularity: strict\n", map[string]string{
+		"src/rc/js/services/api.js":     fetchJS,
+		"src/rc/js/pages/services/x.js": fetchJS,
+		"src/rc/services/y.js":          fetchJS,
+	})
+	want := "FAIL  rc-scan  src/rc/js/pages/services/x.js:2  fetch-outside-services: fetch( outside rc/js/services/ -- call" +
+		" the API through js/services/api.js (types/frontend-standard.md § Component layout)\n" +
+		"FAIL  rc-scan  src/rc/services/y.js:2  fetch-outside-services: fetch( outside rc/js/services/ -- call" +
+		" the API through js/services/api.js (types/frontend-standard.md § Component layout)\n"
+	if code != 1 || rows != want {
+		t.Errorf("exit %d\n%s\nwant exit 1\n%s", code, rows, want)
+	}
+}
+
+// TestMapLegacyStrictFlag: a legacy map's rows are WARN (exit 0) and become FAIL under --strict (exit 1).
+func TestMapLegacyStrictFlag(t *testing.T) {
+	files := map[string]string{"src/rc/js/pages/home.js": fetchJS}
+	legacy := "modularity: legacy\nlegacy-reason: deployed before the map\n"
+	code, rows := mapRows(t, legacy, files)
+	if code != 0 || !strings.HasPrefix(rows, "WARN  rc-scan  src/rc/js/pages/home.js:2  fetch-outside-services:") {
+		t.Errorf("legacy: exit %d %q", code, rows)
+	}
+	code, rows = mapRows(t, legacy, files, "--strict")
+	if code != 1 || !strings.HasPrefix(rows, "FAIL  rc-scan  src/rc/js/pages/home.js:2  fetch-outside-services:") {
+		t.Errorf("legacy --strict: exit %d %q", code, rows)
+	}
+}
+
+// TestMapChecksSkipThirdParty: vendored (rc/vendor/**, HTML included), rc/ext/** and *.min.js files are third-party
+// code the module does not split: neither map check reports them.
+func TestMapChecksSkipThirdParty(t *testing.T) {
+	big := strings.Repeat("var v = 1;\n", 401) + fetchJS
+	code, rows := mapRows(t, "modularity: strict\n", map[string]string{
+		"src/rc/vendor/lib/lib.js":    big,
+		"src/rc/vendor/lib/demo.html": "<html><script>fetch('/x', { signal: s });</script></html>\n",
+		"src/rc/ext/tool/tool.js":     big,
+		"src/rc/js/chart.min.js":      big,
+	})
+	if code != 0 || rows != "" {
+		t.Errorf("exit %d rows %q, want 0 and none", code, rows)
 	}
 }

@@ -58,12 +58,14 @@
 #   fetch-outside-services  WARN legacy / FAIL strict (module map modes only, see below)  a `fetch(` in
 #                            rc JavaScript (a .js file or an inline <script>) outside an rc/js/services/ file:
 #                            only the services call the network (types/frontend-standard.md § Component layout).
-#                            [ev: retro modularity-gaps Δ2]
+#                            The exemption is anchored at rc/js/services/ (js/pages/services/ or rc/services/ is
+#                            not it). [ev: retro modularity-gaps Δ2]
 #   js-file-size       WARN legacy / FAIL strict (module map modes only)  a .js file over 400 lines, reported at
 #                            its line 1 (the allow marker goes on line 1). [ev: retro modularity-gaps Δ3]
 #   Module map modes: the mode is read with lint.ModuleMode from the nearest <module-root>/MODULE-MAP.md above
 #   <artifact-dir> (types/structure.md § Module map). With no map neither check runs, so a map-less module's
 #   rows are unchanged; `modularity: legacy` WARNs them (FAIL under --strict), `modularity: strict` FAILs them.
+#   Neither check reads third-party code: rc/vendor/** (its HTML included), rc/ext/** and *.min.js.
 #   --strict promotes every WARN row to FAIL.
 #
 # Escape hatch (new checks only): a trailing `rc-scan: allow <check-id>` comment on the flagged line

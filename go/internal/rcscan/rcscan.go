@@ -48,14 +48,16 @@ func (o options) sevFloor() lint.Severity {
 func (o options) sevData() lint.Severity { return pick(!o.legacy || o.strict) }
 
 // sevMap is the severity of a module-map check (fetch-outside-services, js-file-size): FAIL in a strict module,
-// else the WARN check's (FAIL under --strict); mapped is false with no module map, where neither check runs, so a
-// map-less module's rows stay what they were before the checks existed.
+// else the WARN check's (a legacy map: WARN, FAIL under --strict).
 func (o options) sevMap() lint.Severity {
 	if o.mode == lint.ModularityStrict {
 		return lint.Fail
 	}
 	return o.sevW()
 }
+
+// mapped reports a module map above the artifact dir (strict or legacy). With none, neither module-map check
+// runs, so a map-less module's rows stay what they were before the checks existed.
 func (o options) mapped() bool { return o.mode != lint.ModularityNone }
 
 func pick(fail bool) lint.Severity {
@@ -89,7 +91,7 @@ func Main(args []string, s cli.Stdio) int {
 			fmt.Fprintf(s.Err, "rc-scan: cannot scan %s: %s\n", p, strerror.Text(err))
 			return 3
 		}
-		src := &source{rel: strings.TrimPrefix(p, o.root+"/"), ext: p[strings.LastIndexByte(p, '.')+1:], lines: records(data)}
+		src := &source{rel: strings.TrimPrefix(p, o.root+"/"), path: p, ext: p[strings.LastIndexByte(p, '.')+1:], lines: records(data)}
 		rows = append(rows, scanFile(src, o)...)
 		if src.ext != "css" {
 			pages = append(pages, src)
