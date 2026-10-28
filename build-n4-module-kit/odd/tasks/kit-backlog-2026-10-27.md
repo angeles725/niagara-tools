@@ -597,47 +597,28 @@ What is left, and why:
   over d888f5a1: exit 0.
 
 ## Follow-ups (advisory, not scheduled)
-Remaining run-3 review findings, recorded, not fixed (all advisory):
-- rcscan R3-recheck-scalar-untested — `go/internal/rcscan/provenance.go:222-226`: the `recheck()` path for a scalar
-  (non-`.map`) verdict has no test.
-- absoluteclaims R2-001 — `go/internal/lint/rules/absoluteclaims/testdata/spec-cases.txt:19` (readability finding of
-  the run-3 review on that case; wording per the review capture).
-- absoluteclaims R3-table-fence-units — `go/internal/lint/rules/absoluteclaims/absoluteclaims.go:87-99`: how claim units
-  end at Markdown tables and code fences is not pinned by a golden.
-- retrodeltas R3-header-mismatch-unproved — `go/internal/retrodeltas/retrodeltas_test.go`: a mismatch from the deltas
-  header alone is not proved by a case.
-- retrodeltas R3-multi-file-total-unproved — `go/internal/retrodeltas/retrodeltas_test.go`: the TOTAL line over several
-  retro files is not proved by a case.
+Closed by `odd/tasks/kit-followups-rare-cases.md` (2026-10-28) and dropped from this list: rcscan
+R3-recheck-scalar-untested (acca0d9b, pinning); absoluteclaims R2-001 and R3-table-fence-units (40135db5, pinning);
+retrodeltas R3-header-mismatch-unproved and R3-multi-file-total-unproved (0ef0f996, pinning); lifecycleguard R2
+fixture comments and R2/R3 anonymous `owner()` (dcc9b1dd, real defect fixed: two anonymous bodies of one type shared
+an LG2 key); intrinsiclock R2/R3 `<Outer>.this` and R3 deferred body (dcb947af, both real defects fixed);
+lexiconapostrophe R3-001 (08ff5aec, pinning); charsetdefault R2-001/R3 (6a3c4d5e, real defect fixed: `return (s +
+"!").getBytes()` was missed); B12 R4-commented-modulename (0f0d0066, real defect fixed) and R3-precedence-untested
+(0f0d0066, pinning); B9 R2-001 shared prune list (9680c52e, `lint.PartOutputs`); B9 R4-001/R3-001 group-level
+`build/`/`test/` (9680c52e, decided: stays read, pinned by permissions-xml `group-level-build`). Earlier drops: B9
+fixed permissions-xml R2 FILE_WRITE wording, loggername R3 module-name precedence (pinned) and R3 prune package
+segments, KCRD2 naming; B12 fixed werror R3, toolchains R4/R3/R2 and L17 R4/R3.
+Still open:
 - ledger-check: a second table with a different header inside `## Versions` FAILs LC4 on each of its rows (kept as a
   real defect; revisit if ledgers legitimately carry side tables there).
-- B9 review (f8f66cd1, approved) R4-001/R3-001 — `go/internal/lint/rules/permissionsxml/permissionsxml.go:43`: the
-  anchored prune no longer skips a `build/` or `test/` directory that is not directly under a part (for example a
-  group-level `build/`), so generated sources there are now scanned; decide whether to prune those by path too.
-- B9 review R2-001 — `go/internal/lint/rules/adaptercfgdefault/adaptercfgdefault.go:41-43`: the part-output prune list
-  and its comment are copied into three rule packages; move them to one shared helper in `go/internal/lint`.
-Fixed in B9 and dropped from this list: permissions-xml R2 FILE_WRITE wording, loggername R3 module-name precedence
-(pinned) and R3 prune package segments, KCRD2 naming.
-Run-B review findings (approved reviews of 2026-10-28), recorded, not fixed (B12 fixed the three real defects:
-werror R3, toolchains R4/R3/R2, L17 R4/R3):
-- lifecycleguard R2 — `go/internal/lint/rules/lifecycleguard/testdata/callbacks.txt:52-57`: the fixture comments do
-  not say what each case pins.
-- lifecycleguard R2/R3 — `go/internal/lint/rules/lifecycleguard/lifecycleguard.go:86-91`: LG2 on an anonymous class's
-  `owner()` is untested (`lifecycleguard_test.go:9-12` lists no such case).
-- intrinsiclock R2/R3 — `go/internal/lint/rules/intrinsiclock/intrinsiclock.go:97`: IL2 skips `<Outer>.this` inside an
-  anonymous class.
-- intrinsiclock R3 — `go/internal/lint/rules/intrinsiclock/intrinsiclock.go:104-110`: IL3 counts a deferred body (a
-  lambda or anonymous class inside `synchronized`) as a nested lock.
-- lexiconapostrophe R3-001 — `go/internal/lint/rules/lexiconapostrophe/lexiconapostrophe.go:123-131`: the closed-quote
-  true branch is untested.
-- charsetdefault R2-001/R3 — `go/internal/lint/rules/charsetdefault/charsetdefault.go:256-258`: a keyword just before
-  `(` is read as a receiver.
 - werror R3-werror-unproved-behavior — CLOSED by B12.1 for Gradle 7.6 + JDK 8 (real run); open only for Gradle 4.0.2,
-  which this host does not have, and for a real client module (`build.sh --werror`, owed since Δ22).
-- B12 review (13e5df19, approved) R4-commented-modulename — `go/internal/lint/rules/structure/palette.go:34-37`:
-  `ownModule` takes the first raw-line `moduleName` match and does not skip comment lines, so a commented-out old
-  declaration can win.
-- B12 review R3-precedence-untested — `palette.go:22`: no golden declares `moduleName` in both the part directory and
-  the module root, so the documented part-over-root precedence is not pinned.
+  which this host does not have, and for a real client module (`build.sh --werror`, owed since Δ22; tracked as F11 of
+  `odd/tasks/kit-followups-rare-cases.md`).
+- lint-logger-name reads `moduleName` from raw gradle text (`go/internal/lint/rules/loggername/loggername.go:54`), so
+  a commented-out old declaration can win there as it did in L17 before 0f0d0066 (by code reading; no test shows it
+  yet); not fixed (outside that run's items), same one-line fix (`javasrc.Strip`).
+- `toolbelt/lint-intrinsic-lock.sh` header still says only "an anonymous class's this is not judged" and does not name
+  the IL3 lambda / anonymous-method exception that dcb947af added; the header was outside that run's edit surface.
 
 ## Progress / evidence — B10 course coverage run A (2026-10-28)
 Route: inline for every unit (the parent's read-only explorer had mapped each target with path:line; each unit is one
