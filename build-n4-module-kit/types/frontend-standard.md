@@ -174,6 +174,12 @@ rc/
   `[ev: retro dashboard-rc-file-split Δ4]`
 - [both] Serving the split needs no Java change in a DashboardDispatch-style router — verify per module
   (`dashboard.md` § ux — servlet + SPA). `[ev: retro dashboard-rc-file-split Δ3]`
+- [both] A new dashboard starts split: `scaffold-module.sh --type dashboard` emits `rc/index.html` (markup and the
+  ordered `<script src>` list, no inline script) plus `js/config.js`, `js/services/api.js` (the only `fetch`, with
+  the XHR header and an abort timeout), `js/store.js` (poll loop, state, subscribe, reload after `reloadAfterMs`
+  without a good read), `js/components/status.js`, `js/pages/home.js` and `js/main.js` (boot), each a classic
+  script with the DJS1 shim; its `<module-root>/MODULE-MAP.md` lists them in a `frontend-data` row (services,
+  store, config) and a `frontend` row (markup, boot, components, pages). `[ev: retro modularity-gaps Δ4]`
 
 ## Technology choices `[ev: retro dashboard-frontend-standard Δ12]`
 

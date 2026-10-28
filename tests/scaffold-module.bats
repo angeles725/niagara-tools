@@ -544,3 +544,27 @@ st_link_in_flags() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  lint-size  $S/BLong.java:4  method changed() in class BLong spans 84 lines (> 80)"* ]]
 }
+
+@test "TC-MAP5: a fresh dashboard scaffold emits the rc/js skeleton (config, services/api, store, components, pages, main) with fetch only in services/api.js" {
+  # Named mutation: keep the inline poll <script> in index.html -> the fetch( count outside services/ is not 0.
+  run "$SC" ModuleA "$OUT/dashboard" --type dashboard --vendor Example
+  [ "$status" -eq 0 ]
+  RC="$OUT/dashboard/ModuleA/ModuleA/ModuleA-ux/src/rc"
+  for f in js/config.js js/services/api.js js/store.js js/main.js; do
+    [ -f "$RC/$f" ] || { echo "missing $f"; false; }
+  done
+  [ -n "$(find "$RC/js/components" -name '*.js' 2>/dev/null)" ] || { echo "no js/components/*.js"; false; }
+  [ -n "$(find "$RC/js/pages" -name '*.js' 2>/dev/null)" ] || { echo "no js/pages/*.js"; false; }
+  # index.html loads the scripts in order and holds no inline <script> block
+  run grep -c '<script src="js/' "$RC/index.html"
+  [ "$output" -ge 6 ]
+  run grep -E '<script>' "$RC/index.html"
+  [ "$status" -eq 1 ]
+  # the only fetch( call is in services/api.js
+  run grep -rlE '(^|[^A-Za-z0-9_$])fetch[[:space:]]*\(' "$RC"
+  [ "$output" = "$RC/js/services/api.js" ] || { echo "$output"; false; }
+  # rc-scan reports no row on the fresh ux part
+  run "$KIT/toolbelt/rc-scan.sh" "$OUT/dashboard/ModuleA/ModuleA/ModuleA-ux"
+  [ "$status" -eq 0 ] || { echo "$output"; false; }
+  [ -z "$output" ] || { echo "$output"; false; }
+}

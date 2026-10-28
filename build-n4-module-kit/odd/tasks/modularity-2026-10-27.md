@@ -181,6 +181,27 @@ fold audit, generated-index `--check`).
   kit-links 132/132; shellcheck clean; gen-lint-index --check 0. Commit 2e261afb
   `fix(report-module): relay a strict module's size FAIL rows as FAIL` (+194/−13).
 
+- WU9 = M5 part 1, module-map Δ3 (report member) and gaps Δ8 (route: delegated writer). RED:
+  `TestEveryLintIsAMemberOrListed` (lint-module-map removed from `notInReport`), `TestScriptsExist` (55 members),
+  `TestModularityRow` and `TestSummarize` (stubs). GREEN: perModule `lint-module-map` (base-mode rows, failRows
+  verdict) after lint-structure, then the uncounted `(module)  INFO  modularity  mode= concerns= unlisted= largest=`
+  row (`modulemap.Summarize`, `size.HandLines`). The 104 report goldens that print the module members were
+  re-recorded through the Go tool (a temporary, uncommitted rewrite hook in `golden.Runner`) and audited by script:
+  every diff is +1 `PASS lint-module-map clean`, +1 INFO row, +24 real `WARN lint-module-map … MM1` rows in the
+  `fx-` cases, and a summary line whose PASS rose by 1 and WARN by the MM1 rows, with FAIL/SKIP/ADVISORY, verdict
+  and exit unchanged (104/104 OK). Checks: `go test` reportmodule, modulemap, size, lintindex, lint/rules ok;
+  `go vet` ok; bats report-module, lint-module-map, gen-lint-index, guard-pins, kit-links 119/119; shellcheck clean;
+  gen-lint-index --check 0. Commit 3d5a9798 `feat(report-module): run lint-module-map and print a modularity row`
+  (+633/−110, of which ~440 lines are the re-recorded goldens).
+- WU10 = M5 part 2, gaps Δ4 (route: delegated writer). RED: bats TC-MAP5 (`missing js/config.js`). GREEN: the
+  MinimalDash fixture's `rc/` holds `js/config.js`, `js/services/api.js` (the only fetch: XHR header + abort
+  timeout), `js/store.js` (poll, state, subscribe, `location.reload()` after `reloadAfterMs` without a good read),
+  `js/components/status.js`, `js/pages/home.js`, `js/main.js`; `index.html` loads them in order with no inline
+  script; the map's `frontend` row split into `frontend-data` and `frontend`. A fresh dashboard's report-module
+  run loses its two WARN rows (`fetch-no-signal`, `lint-spa-poll-no-recovery`; the latter re-appears when the reload
+  is removed, so the lint still reads store.js). Checks: bats scaffold-module 29/29, lint-vendor-floor, rc-scan,
+  report-module, kit-links ok; `node --check` on every emitted js file ok; ESLint SKIP (not installed here).
+
 ## Next session
 Part 2 stopped on 2026-10-27 after WU7 (b48e9808); M0-M4 are done, the three retros stay `review-status: pending`.
 Review candidate: d7cdd7a1..b48e9808 (four work units, base e2b0e33e).
