@@ -1,0 +1,17 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-charset-default  @DIR@/src/B.java:4  CD2 new String(byte[]) with no charset decodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+-- stderr --
+-- src/A.java --
+class A {
+  String a() { byte buf[] = new byte[2]; return "" + buf.length; }
+  String b() { char buf[] = new char[2]; return new String(buf); }
+}
+-- src/B.java --
+class B {
+  String a() { byte raw[] = new byte[2]; return "" + raw.length; }
+  String b() { char buf[] = new char[2]; return new String(buf); }
+  String c() { return new String(raw); }
+}

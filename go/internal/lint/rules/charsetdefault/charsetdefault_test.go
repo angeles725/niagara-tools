@@ -10,4 +10,4 @@ import (
 // with one or three arguments (the array a declared byte[] or a getBytes/toByteArray/readAllBytes call); CD3 a
 // one-argument InputStreamReader / OutputStreamWriter; CD4 any FileReader / FileWriter. A charset argument, a char[]
 // or String argument, comments and string literals are clean; --strict; the empty root and usage.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 7) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 9) }

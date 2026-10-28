@@ -491,9 +491,9 @@ _ls16_tree() {
   [ "$status" -eq 1 ] && [[ "$output" == *"WARN"*"L10: niagara_home"* ]]
 }
 
-# L17 — module.palette type specs: a dotted class name or a B-prefixed name of a declared type FAILs; another
-# B-prefixed class-like name and a symbol remapped to another module WARN; an identical repeated m= is clean (the
-# decoder keeps one module per symbol). [ev: retro course-coverage Δ20]
+# L17 — module.palette type specs: a dotted class name FAILs, and so does a B-prefixed name of a declared type whose
+# symbol maps to this module; the same name under another module's symbol is not judged; a symbol remapped to another
+# module WARNs; an identical repeated m= is clean (the decoder keeps one module per symbol). [ev: retro course-coverage Δ20]
 _ls17_mod() {
   local m="$1"
   mkdir -p "$m/Acme-rt"
@@ -501,11 +501,12 @@ _ls17_mod() {
   printf 'Room.displayName=Room\n' > "$m/Acme-rt/module.lexicon"
 }
 
-@test "LS17a: t=\"ac:BRoom\" for the declared type Room FAILs L17; t=\"ac:Room\" is clean" {
-  # Mutation: LS17a -- dropping the declared-type lookup turns the B-prefixed own type into a WARN, not the FAIL
+@test "LS17a: t=\"ac:BRoom\" for the declared type Room FAILs L17; t=\"ac:Room\" and another module's fo:BRoom are clean" {
+  # Mutation: LS17a -- dropping the own-module test of the symbol FAILs t="fo:BRoom" of a foreign module too
   M="$BATS_TEST_TMPDIR/Mod"; _ls17_mod "$M"
   printf '%s\n' '<bajaObjectGraph version="4.0">' '<p m="b=baja" t="b:UnrestrictedFolder">' \
-    '  <p n="Room" m="ac=Acme" t="ac:BRoom"/>' '  <p n="Room2" t="ac:Room"/>' '</p>' '</bajaObjectGraph>' > "$M/Acme-rt/module.palette"
+    '  <p n="Room" m="ac=Acme" t="ac:BRoom"/>' '  <p n="Room2" t="ac:Room"/>' '  <p n="V" m="fo=Foreign" t="fo:BRoom"/>' \
+    '</p>' '</bajaObjectGraph>' > "$M/Acme-rt/module.palette"
   run "$LS" "$M"
   [ "$status" -eq 1 ]
   [ "$output" = 'FAIL  lint-structure  Acme-rt/module.palette:3  L17: module.palette t="ac:BRoom" keeps the class'"'"'s B prefix: the type is ac:Room (Workbench: "Type not found")' ]
