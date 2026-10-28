@@ -13,7 +13,7 @@ import (
 )
 
 // TestGolden: every tests/lint-structure.bats run and every edge tree, recorded from the bash lint.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 42) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 44) }
 
 func run(args ...string) (int, string, string) {
 	var o, e bytes.Buffer

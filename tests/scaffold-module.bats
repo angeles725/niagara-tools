@@ -503,3 +503,24 @@ st_link_in_flags() {
     [[ "$output" == *"OK ("* ]]
   done
 }
+
+@test "TC-MAP3: a fresh scaffold of every type passes strict lint-structure L3/L3b (no L3 row), and a stray pure class FAILs" {
+  # Named mutation: report strict L3 only for -rt parts -> the dashboard's ux control below stays silent.
+  for t in logic dashboard driver; do
+    run "$SC" ModuleA "$OUT/$t" --type "$t" --vendor Example
+    [ "$status" -eq 0 ]
+    mkdir -p "$OUT/$t/ModuleA/.git"            # the L10/L14 upward walk stops here
+    run "$KIT/toolbelt/lint-structure.sh" "$OUT/$t/ModuleA/ModuleA"
+    [ "$status" -eq 0 ] || { echo "$t: $output"; false; }
+    [[ "$output" != *"L3"* ]] || { echo "$t: $output"; false; }
+  done
+  # positive controls: a Baja-free class beside the servlet's package, and a model class without its test
+  U="$OUT/dashboard/ModuleA/ModuleA/ModuleA-ux/src/com/example/ModuleA/ux"
+  printf 'package com.example.ModuleA.ux;\npublic final class Stray {}\n' > "$U/Stray.java"
+  printf 'package com.example.ModuleA.model;\npublic final class Lonely {}\n' \
+    > "$OUT/dashboard/ModuleA/ModuleA/ModuleA-rt/src/com/example/ModuleA/model/Lonely.java"
+  run "$KIT/toolbelt/lint-structure.sh" "$OUT/dashboard/ModuleA/ModuleA"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-structure  ModuleA-ux/src/com/example/ModuleA/ux/Stray.java  L3: Baja-free class outside a role package"* ]]
+  [[ "$output" == *"FAIL  lint-structure  ModuleA-rt/src/com/example/ModuleA/model/Lonely.java  L3: model/ class Lonely has no srcTest LonelyTest.java"* ]]
+}

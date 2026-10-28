@@ -54,7 +54,8 @@ func hasProfileSuffix(name string) bool {
 	return false
 }
 
-// profile runs the per-profile checks L6, L4, L5, L7, L9, L1/L2, L3 and L11, in that row order.
+// profile runs the per-profile checks L6, L4, L5, L7, L9, L1/L2, L3 (strict L3/L3b in a strict module) and L11, in
+// that row order.
 func (s *scan) profile(dir string) {
 	name, rel := dir[strings.LastIndexByte(dir, '/')+1:], s.rel(dir)
 	inc, lex, pal, src := dir+"/module-include.xml", dir+"/module.lexicon", dir+"/module.palette", dir+"/src"
@@ -104,7 +105,11 @@ func (s *scan) profile(dir string) {
 			s.row(lint.Unset, s.rel(f), "L2: "+strconv.Itoa(n)+" @NiagaraType annotations in one file (one public type per file)")
 		}
 	}
-	s.pureModel(src, java)
+	if s.mode == lint.ModularityStrict && partRoles(name) != nil {
+		s.strictModel(dir, name, src, java)
+	} else {
+		s.pureModel(src, java)
+	}
 	s.mixedTests(dir, gradle)
 }
 

@@ -133,7 +133,19 @@ fold audit, generated-index `--check`).
   kit-links, lint-module-map, permissions-root: 120/120 ok; `go test` lint, verifymodule, javasrc,
   commissioningverify ok. Known base failure (not this WU, outside the edit surfaces):
   `reportmodule TestEveryLintIsAMemberOrListed` fails since WU2 because `lint-module-map` is neither a member nor in
-  `notInReport` (`go/internal/reportmodule/completeness_test.go`); M5 owns the member.
+  `notInReport` (`go/internal/reportmodule/completeness_test.go`); M5 owns the member. WU5 commit a3e39983
+  `feat(scaffold): emit a strict module map and role packages for every type` (+198/−49).
+- WU6 = M4 part 1, strict-new Δ3 and gaps Δ1 (route: delegated writer). RED: golden `strict-l3` (no strict row
+  emitted); `legacy-l3` recorded from the unchanged lint (one advisory L3 WARN) as the byte-identical baseline.
+  GREEN: `go/internal/lint/rules/structure/strict.go` — in a strict module, per file of each -rt/-ux/-wb/-se part:
+  L3 FAIL for a Baja-free class (no `javax.baja`/`com.tridium` import, no `@NiagaraType`) outside its role package
+  (rt/wb/se `model/`; ux `route/`, `service/`, `model/`), for a `model/` framework import (at the line) and for a
+  `model/` class with no `<C>Test.java` under the part's `srcTest/`; L3b FAIL for a `model/` import of the
+  module's own non-model package. The mode comes from `lint.ModuleMode(root)`; legacy and map-less modules keep
+  `pureModel` unchanged. Docs: `types/structure.md` L3 row aligned with the code plus an L3b row; wrapper header.
+  Bats TC-MAP3: fresh logic/dashboard/driver scaffolds have no L3 row, and a stray ux class and an untested model
+  class FAIL. Checks: `go test ./internal/lint/...` ok (structure golden 44 cases), `go vet` ok; bats
+  lint-structure, gen-lint-index, scaffold-module 83/83 ok; gen-lint-index --check 0.
 
 ## Next session
 Session stopped at 16:00 CST on 2026-10-27 after WU2; WU3 was not started.

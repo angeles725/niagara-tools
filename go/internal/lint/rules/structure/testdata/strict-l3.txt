@@ -1,0 +1,100 @@
+-- args --
+@DIR@/strict-l3/M
+-- want --
+exit 1
+FAIL  lint-structure  M-rt/src/com/x/Pure.java  L3: Baja-free class outside a role package (strict: move it under model/)
+FAIL  lint-structure  M-rt/src/com/x/model/Leaky.java:3  L3: model/ class imports javax.baja.sys.BComponent (strict: a model class imports no javax.baja or com.tridium type)
+FAIL  lint-structure  M-rt/src/com/x/model/Leaky.java:4  L3: model/ class imports com.tridium.ndriver.comm.NMessage (strict: a model class imports no javax.baja or com.tridium type)
+FAIL  lint-structure  M-rt/src/com/x/model/NoTest.java  L3: model/ class NoTest has no srcTest NoTestTest.java (strict: every model class has its pure test)
+FAIL  lint-structure  M-rt/src/com/x/model/Up.java:3  L3b: model/ class imports com.x.BAdapter from the module's non-model package com.x (strict: model/ depends only on model/ and libraries)
+FAIL  lint-structure  M-rt/src/com/x/model/Up.java:4  L3b: model/ class imports com.x.ux.service.Api.call from the module's non-model package com.x.ux.service (strict: model/ depends only on model/ and libraries)
+FAIL  lint-structure  M-ux/src/com/x/ux/Helper.java  L3: Baja-free class outside a role package (strict: move it under route/, service/ or model/)
+FAIL  lint-structure  M-wb/src/com/x/wb/route/Thing.java  L3: Baja-free class outside a role package (strict: move it under model/)
+-- stderr --
+-- strict-l3/.git/HEAD --
+ref: refs/heads/main
+-- strict-l3/M/M-rt/module-include.xml --
+<types/>
+-- strict-l3/M/M-rt/module.palette --
+<p n="X"/>
+-- strict-l3/M/M-rt/src/com/x/BAdapter.java --
+package com.x;
+
+import javax.baja.sys.BComponent;
+import com.x.model.Core;
+
+public class BAdapter extends BComponent {}
+-- strict-l3/M/M-rt/src/com/x/Pure.java --
+package com.x;
+
+public final class Pure {}
+-- strict-l3/M/M-rt/src/com/x/model/Core.java --
+package com.x.model;
+
+import java.util.List;
+import com.x.model.sub.Part;
+
+public final class Core {}
+-- strict-l3/M/M-rt/src/com/x/model/Leaky.java --
+package com.x.model;
+
+import javax.baja.sys.BComponent;
+import com.tridium.ndriver.comm.NMessage;
+
+public final class Leaky {}
+-- strict-l3/M/M-rt/src/com/x/model/NoTest.java --
+package com.x.model;
+
+// import javax.baja.sys.BComponent;
+public final class NoTest {}
+-- strict-l3/M/M-rt/src/com/x/model/Up.java --
+package com.x.model;
+
+import com.x.BAdapter;
+import static com.x.ux.service.Api.call;
+
+public final class Up {}
+-- strict-l3/M/M-rt/src/com/x/model/sub/Part.java --
+package com.x.model.sub;
+
+public final class Part {}
+-- strict-l3/M/M-rt/srcTest/test/com/x/model/CoreTest.java --
+class CoreTest {}
+-- strict-l3/M/M-rt/srcTest/test/com/x/model/LeakyTest.java --
+class LeakyTest {}
+-- strict-l3/M/M-rt/srcTest/test/com/x/model/UpTest.java --
+class UpTest {}
+-- strict-l3/M/M-rt/srcTest/test/com/x/model/sub/PartTest.java --
+class PartTest {}
+-- strict-l3/M/M-ux/module-include.xml --
+<types/>
+-- strict-l3/M/M-ux/src/com/x/ux/Helper.java --
+package com.x.ux;
+
+public final class Helper {}
+-- strict-l3/M/M-ux/src/com/x/ux/route/BServlet.java --
+package com.x.ux.route;
+
+import javax.baja.web.BWebServlet;
+
+public class BServlet extends BWebServlet {}
+-- strict-l3/M/M-ux/src/com/x/ux/route/Router.java --
+package com.x.ux.route;
+
+import java.util.function.Function;
+
+final class Router {}
+-- strict-l3/M/M-ux/src/com/x/ux/service/Api.java --
+package com.x.ux.service;
+
+public final class Api {}
+-- strict-l3/M/M-wb/module-include.xml --
+<types/>
+-- strict-l3/M/M-wb/src/com/x/wb/package-info.java --
+package com.x.wb;
+-- strict-l3/M/M-wb/src/com/x/wb/route/Thing.java --
+package com.x.wb.route;
+
+public final class Thing {}
+-- strict-l3/M/MODULE-MAP.md --
+modularity: strict
