@@ -219,6 +219,19 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
     passed); allowlist lines are passed as one `-e` each (SK9 pins per-line anchoring). check-bats-skips + ci-local
     28/28. Feature-doc B3 note reworded (R2-odd-note).
 
+- 2026-10-27 B6a (run 2, inline). #459 tail (retro go-rc-scan Δ3): `rcscan/provenance.go` computed collections —
+  `.map` over a literal collection with an arrow expression body (object literal → per-field proof, else one
+  scalar), reached directly, through a const arrow (`collFnShape`) or a unique function declaration with exactly one
+  `return`; `computed` accepts literals, operators, `Math.*`, cleared members, computed consts, the iterator index
+  and toFixed/toString-like methods; results cached per call site so `markWrites` dirties them. RED: golden
+  `truth-innerhtml-computed-1` wanted 7 rows, got 12 (lines 6-10 flagged). GREEN `memcap go test ./internal/rcscan/`;
+  bats rc-scan 40/40. Mutations RC-computed-member/-const/-return/-field each red (the -return one only after the
+  fixture's server-data return was moved first — the first version did not bite).
+  Real-tree smoke (11 client -ux trees, total rows, old vs new binary): identical on all 11 (105/61/60/66/66/64/60/
+  45/60/66/60). The six client D rows the ledger named stay: `historyRows` is a `let` filled by an imperative loop
+  from a sampler that reads unit fields the live mode overwrites — not provable from tokens, kept WARN by decision;
+  the open_issue in `ledger.d/2026-10-24-go-rc-scan.md` is closed with that decision.
+
 ## Verification (branch close, 2026-10-27)
 - `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
 - bats (21 touched/related suites, `-j 4 --no-parallelize-within-files`): 391 planned, 391 ok after regenerating the

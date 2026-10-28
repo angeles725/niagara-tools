@@ -15,6 +15,9 @@ type jsView struct {
 	open   []int                      // the opener of each closing bracket
 	binds  map[string][]jssrc.Binding // jssrc.Bindings(toks) by name: a lookup reads one name's list
 	shapes map[int]*shape             // literalMember's resolved bindings, by name token index
+	mapped map[int]*shape             // computed collections, by the token index of their .map name (one tree per call site)
+	fns    map[string][]int           // function declarations by name: the index of each "function" token
+	fnSh   map[int]*shape             // the shape a declared function returns, by its "function" token index
 	marked bool                       // markWrites ran
 }
 
@@ -38,7 +41,12 @@ func (s *fileScan) js() *jsView {
 	for _, b := range jssrc.Bindings(v.toks, v.match) {
 		v.binds[b.Name] = append(v.binds[b.Name], b)
 	}
-	v.shapes = map[int]*shape{}
+	v.shapes, v.mapped, v.fnSh, v.fns = map[int]*shape{}, map[int]*shape{}, map[int]*shape{}, map[string][]int{}
+	for i, t := range v.toks {
+		if t.Kind == jssrc.Ident && t.Text == "function" && i+1 < len(v.toks) && v.toks[i+1].Kind == jssrc.Ident {
+			v.fns[v.toks[i+1].Text] = append(v.fns[v.toks[i+1].Text], i)
+		}
+	}
 	k := 0
 	for n := range v.first {
 		for k < len(v.toks) && v.toks[k].Line < n {
