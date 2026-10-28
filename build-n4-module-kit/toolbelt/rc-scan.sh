@@ -54,6 +54,12 @@
 #                            (retro go-rc-scan Δ3). A let, a call, a loop-built array or a second return proves
 #                            nothing: the row stays.
 #                            [ev: retro dashboard-frontend-standard Δ2]
+#   status-default-ok  WARN  a status read that falls back to "ok" when the status is missing: `p.st || "ok"`,
+#                            `?? 'ok'`, `||= / ??= "ok"` after a status name (st, stat, sts, status, *Status).
+#                            An unlinked or uncommissioned point then shows as healthy (fail-open); trust a value only
+#                            when `st === "ok"` and render an unknown state otherwise. Advisory: WARN under every
+#                            mode, --strict included (audit 2026-10-03 A7 D2).
+#                            (origin: the 2026-09-24 phase-2 alarms retro, Δ5)
 #   datauri-budget     FAIL  a data: URI over 20 KB (20480 chars); WARN with --legacy (a deployed
 #                            module not yet restructured). [ev: retro dashboard-frontend-standard Δ3]
 #   orphan-page        WARN  a <section id="page-<id>"> with no data-page="<id>" nav entry, or a

@@ -264,6 +264,12 @@ func (s *fileScan) checks() {
 		if htmlAssign.MatchString(line) && memberConcat.MatchString(line) && !escCall.MatchString(line) && !s.allowed("innerhtml-server") && s.innerHTMLRow() {
 			s.emit(s.o.sevW(), "innerhtml-server", "member value concatenated into HTML without esc( -- use textContent or esc()")
 		}
+		// advisory (audit A7 D2): WARN under every mode, --strict included, until real trees confirm it
+		// Mutation: RC-status-advisory -- the --strict severity turns an unconfirmed advisory check into a FAIL
+		if strings.Contains(asciiLower(line), "ok") && (strings.Contains(line, "||") || strings.Contains(line, "??")) &&
+			!s.allowed("status-default-ok") && s.statusDefaultOK() {
+			s.emit(lint.Warn, "status-default-ok", statusOKMsg)
+		}
 	}
 	if s.gated && !s.ctxCSS && !s.allowed("disabled-gate") && disables(line) && !s.statedReason() {
 		s.emit(s.o.sevW(), "disabled-gate", gateMsg)
