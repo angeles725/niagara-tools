@@ -69,7 +69,7 @@ setup() {
   # Named mutation: rename doGet back to doService in the fixture -> this test fails.
   run "$SC" ModuleA "$OUT" --type dashboard --vendor Example
   [ "$status" -eq 0 ]
-  V="$OUT/ModuleA/ModuleA/ModuleA-ux/src/com/example/ModuleA/ux/BModuleAServlet.java"
+  V="$OUT/ModuleA/ModuleA/ModuleA-ux/src/com/example/ModuleA/ux/route/BModuleAServlet.java"
   run grep -nE 'void doService\(WebOp' "$V"
   [ "$status" -eq 1 ]
   grep -qE 'public void doGet\(WebOp op\)' "$V"
@@ -139,8 +139,8 @@ setup() {
   M="$OUT/AcmeLink/AcmeLink"
   for f in AcmeLink-rt/AcmeLink-rt.gradle.kts AcmeLink-rt/module-include.xml AcmeLink-rt/module.palette \
            AcmeLink-rt/module.lexicon AcmeLink-rt/module-permissions.xml \
-           AcmeLink-rt/src/com/example/AcmeLink/AcmeLinkCodec.java \
-           AcmeLink-rt/srcTest/test/com/example/AcmeLink/AcmeLinkCodecTest.java \
+           AcmeLink-rt/src/com/example/AcmeLink/model/AcmeLinkCodec.java \
+           AcmeLink-rt/srcTest/test/com/example/AcmeLink/model/AcmeLinkCodecTest.java \
            AcmeLink-wb/AcmeLink-wb.gradle.kts AcmeLink-wb/module-include.xml AcmeLink-wb/module.lexicon \
            AcmeLink-wb/module-permissions.xml; do
     [ -f "$M/$f" ] || { echo "missing: $f"; false; }
@@ -215,7 +215,7 @@ setup() {
   grep -q 'pingFail(' "$S/BAcmeLinkDevice.java"
   grep -q 'CMD_PING' "$S/BAcmeLinkDevice.java"
   # § 12: the codec is Baja-free, so its srcTest runs as pure JUnit
-  run grep -En '^import (javax\.baja|com\.tridium)' "$S/AcmeLinkCodec.java"
+  run grep -En '^import (javax\.baja|com\.tridium)' "$S/model/AcmeLinkCodec.java"
   [ "$status" -eq 1 ]
 }
 
@@ -224,7 +224,7 @@ setup() {
   [ -n "$(find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | head -1)" ] || skip "junit-4.13.2.jar not in ~/.gradle"
   run "$SC" AcmeLink "$OUT" --type driver --vendor Example
   [ "$status" -eq 0 ]
-  run "$KIT/toolbelt/run-pure-test.sh" "$OUT/AcmeLink/AcmeLink/AcmeLink-rt" com.example.AcmeLink.AcmeLinkCodecTest
+  run "$KIT/toolbelt/run-pure-test.sh" "$OUT/AcmeLink/AcmeLink/AcmeLink-rt" com.example.AcmeLink.model.AcmeLinkCodecTest
   [ "$status" -eq 0 ]
   [[ "$output" == *"OK ("* ]]
 }
@@ -234,12 +234,12 @@ setup() {
   [ -n "$(find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | head -1)" ] || skip "junit-4.13.2.jar not in ~/.gradle"
   run "$SC" AcmeLink "$OUT" --type driver --vendor Example
   [ "$status" -eq 0 ]
-  C="$OUT/AcmeLink/AcmeLink/AcmeLink-rt/src/com/example/AcmeLink/AcmeLinkCodec.java"
+  C="$OUT/AcmeLink/AcmeLink/AcmeLink-rt/src/com/example/AcmeLink/model/AcmeLinkCodec.java"
   grep -q 'if (sum != buf\[off + CHECKSUM\]) throw' "$C"
   sed -i '/if (sum != buf\[off + CHECKSUM\]) throw/d' "$C"
   run grep -c 'IllegalArgumentException("bad checksum")' "$C"
   [ "$output" = "0" ]
-  run "$KIT/toolbelt/run-pure-test.sh" "$OUT/AcmeLink/AcmeLink/AcmeLink-rt" com.example.AcmeLink.AcmeLinkCodecTest
+  run "$KIT/toolbelt/run-pure-test.sh" "$OUT/AcmeLink/AcmeLink/AcmeLink-rt" com.example.AcmeLink.model.AcmeLinkCodecTest
   [ "$status" -eq 1 ]
 }
 
@@ -294,8 +294,8 @@ setup() {
   cat > "$P/test/com/example/AcmeLink/Probe.java" <<'JAVA'
 package test.com.example.AcmeLink;
 import java.net.*;
-import com.example.AcmeLink.AcmeLinkCodec;
-import com.example.AcmeLink.AcmeLinkCodec.Frame;
+import com.example.AcmeLink.model.AcmeLinkCodec;
+import com.example.AcmeLink.model.AcmeLinkCodec.Frame;
 public class Probe {
   static Frame ask(DatagramSocket s, int port, Frame req) throws Exception {
     byte[] out = AcmeLinkCodec.encode(req);
@@ -445,5 +445,61 @@ st_link_in_flags() {
     [ "$status" -eq 0 ]
     [[ "$output" != *MISSING* ]]
     [[ "$output" != *READONLY* ]]
+  done
+}
+
+# ---------------------------------------------------------------------------------------------------------
+# Module map (modularity campaign M3): every scaffold type emits a strict MODULE-MAP.md, and the Baja-free
+# classes live in role packages (model/ for rt, route/ for ux). [ev: retro modularity-module-map Δ2]
+# [ev: retro modularity-strict-new Δ2]
+# ---------------------------------------------------------------------------------------------------------
+
+@test "TC-MAP1: a fresh scaffold of every type passes lint-module-map with no row at all (0 FAIL, 0 WARN)" {
+  # Named mutation: drop the control row from the logic fixture map -> MM4 FAIL rows for its files, exit 1.
+  for t in logic dashboard driver; do
+    run "$SC" ModuleA "$OUT/$t" --type "$t" --vendor Example
+    [ "$status" -eq 0 ]
+    root="$OUT/$t/ModuleA/ModuleA"
+    [ -f "$root/MODULE-MAP.md" ] || { echo "no map ($t)"; false; }
+    grep -qx 'modularity: strict' "$root/MODULE-MAP.md"
+    run "$KIT/toolbelt/lint-module-map.sh" "$root"
+    [ "$status" -eq 0 ] || { echo "$t: exit $status"; echo "$output"; false; }
+    [ -z "$output" ] || { echo "$t: $output"; false; }
+  done
+  # positive control: an unlisted source file FAILs, so the lint reached this exact root in strict mode
+  printf 'package com.example.ModuleA.model;\npublic final class Extra {}\n' \
+    > "$OUT/logic/ModuleA/ModuleA/ModuleA-rt/src/com/example/ModuleA/model/Extra.java"
+  run "$KIT/toolbelt/lint-module-map.sh" "$OUT/logic/ModuleA/ModuleA"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-module-map  $OUT/logic/ModuleA/ModuleA/ModuleA-rt/src/com/example/ModuleA/model/Extra.java  MM4: "* ]]
+}
+
+@test "TC-MAP2: the Baja-free fixture classes sit in role packages and their pure tests run there (SKIP without javac or junit)" {
+  run "$SC" ModuleA "$OUT/logic" --type logic --vendor Example
+  [ "$status" -eq 0 ]
+  run "$SC" ModuleA "$OUT/dashboard" --type dashboard --vendor Example
+  [ "$status" -eq 0 ]
+  run "$SC" ModuleA "$OUT/driver" --type driver --vendor Example
+  [ "$status" -eq 0 ]
+  L="$OUT/logic/ModuleA/ModuleA/ModuleA-rt" D="$OUT/dashboard/ModuleA/ModuleA" V="$OUT/driver/ModuleA/ModuleA/ModuleA-rt"
+  grep -q '^package com.example.ModuleA.model;' "$L/src/com/example/ModuleA/model/ModuleALogic.java"
+  grep -q '^package com.example.ModuleA.model;' "$D/ModuleA-rt/src/com/example/ModuleA/model/ModuleALogic.java"
+  grep -q '^package com.example.ModuleA.ux.route;' "$D/ModuleA-ux/src/com/example/ModuleA/ux/route/ModuleADispatch.java"
+  grep -q '^package com.example.ModuleA.model;' "$V/src/com/example/ModuleA/model/ModuleACodec.java"
+  # the ux module-include names the servlet at its route/ package (DUX1: the router stays package-private beside it)
+  grep -q 'class="com.example.ModuleA.ux.route.BModuleAServlet"' "$D/ModuleA-ux/module-include.xml"
+  # no Baja-free class is left in a module root package
+  run find "$L/src/com/example/ModuleA" "$D/ModuleA-rt/src/com/example/ModuleA" "$V/src/com/example/ModuleA" \
+    -maxdepth 1 \( -name '*Logic.java' -o -name '*Codec.java' \)
+  [ -z "$output" ]
+  command -v javac >/dev/null 2>&1 || skip "no javac on PATH"
+  [ -n "$(find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | head -1)" ] || skip "junit-4.13.2.jar not in ~/.gradle"
+  for pair in "$L com.example.ModuleA.model.ModuleALogicTest" \
+              "$D/ModuleA-rt com.example.ModuleA.model.ModuleALogicTest" \
+              "$D/ModuleA-ux com.example.ModuleA.ux.route.ModuleADispatchTest" \
+              "$V com.example.ModuleA.model.ModuleACodecTest"; do
+    run "$KIT/toolbelt/run-pure-test.sh" ${pair% *} ${pair#* }
+    [ "$status" -eq 0 ] || { echo "$pair: $output"; false; }
+    [[ "$output" == *"OK ("* ]]
   done
 }

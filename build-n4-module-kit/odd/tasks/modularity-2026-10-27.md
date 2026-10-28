@@ -64,7 +64,7 @@ which file owns a concern. Evidence and host file:line pointers are in the three
   package `rules/modulemap` (MM1 to MM6), registration, wrapper `toolbelt/lint-module-map.sh`, goldens. Route:
   delegated writer. Checks: `go test`/`go vet` on `./internal/lint/...`; bats `tests/lint-module-map.bats`;
   `gen-lint-index.sh --check`; shellcheck.
-- [ ] M3 · scaffold, test-first (WU3): module-map Δ2 (each fixture carries a strict `MODULE-MAP.md`, so the scaffold
+- [x] M3 · scaffold, test-first (WU3, landed as WU5): module-map Δ2 (each fixture carries a strict `MODULE-MAP.md`, so the scaffold
   emits one per type); strict-new Δ2 (fixture pure classes into `model/`); bats asserting a fresh scaffold of every
   type passes `lint-module-map` with 0 FAIL. Route: delegated writer. Checks: `tests/scaffold-module.bats`;
   shellcheck.
@@ -111,6 +111,29 @@ fold audit, generated-index `--check`).
 - Deferred from M2 to M5: the report-module perModule member. 104 of 123 report-module goldens print the
   lint-structure row and are recorded from the bash report-module at a98c3357; a failRows member adds a row to every
   one, so it is re-recorded once together with the modularity summary row (modularity-gaps Δ8).
+
+- WU3/WU4 review (route: parent). RDD review of 6c34e20c..e2b0e33e APPROVED and acknowledged (lineage
+  review-ed748625ba1a4a02) with five advisory findings, fixed forward in WU4.
+- WU4 (route: delegated writer, part 2). Commit d7cdd7a1 `fix(lint): stop lint-module-map following symlinked
+  directories` (+102/−23). RED: `TestCyclicDirSymlink` (test timeout: the walk looped through two `..` links),
+  `TestSiblingDirAlias` (MM4 FAIL for `alias/B.java`). GREEN: the walk skips a symlinked directory (`e.Type()`
+  is Lstat-based); `TestUnreadableMap` added (passed on first run: the read already failed closed, it was
+  untested). R2-001 (exit-3 contract) and R2-002 (MM3 row) aligned in the wrapper header, the Spec doc comment and
+  `types/structure.md`. Checks: `go test ./internal/lint/rules/modulemap/` ok, `go vet` ok; bats lint-module-map,
+  gen-lint-index, kit-links 37/37 ok; shellcheck clean; gen-lint-index --check 0.
+- WU5 = M3 (route: delegated writer). RED: `TC-MAP1` (no map in a fresh logic scaffold), `TC-MAP2` (no
+  `model/ModuleALogic.java`). GREEN: a strict `MODULE-MAP.md` in each fixture module root (logic: control,
+  station-test, plumbing; dashboard: control, api-routing, frontend, station-test, plumbing; driver: codec,
+  network-device, points, discovery, point-manager, plumbing); `MinimalPanLogic`, `MinimalDashLogic`,
+  `MinimalDriverCodec` and their tests moved to `…/model/` (public); `MinimalDashDispatch`, its test and
+  `BMinimalDashServlet` moved to `…/ux/route/` (DUX1 kept package-private; ux `module-include.xml`, bajadoc
+  package and DUX1 text updated); `go/internal/verifymodule/driver_test.go` follows the codec path. Pins updated:
+  TC-DASH3, TC-DRV2, TC-DRV4, TC-DRV5, TC-DRV6, TC-DRV8. Checks: bats scaffold-module 26/26 (TC-MAP2, TC-DRV5 and
+  TC-DRV8 ran the pure tests, not skipped), lint-structure, commissioning-verify, lint-machine-default-path,
+  kit-links, lint-module-map, permissions-root: 120/120 ok; `go test` lint, verifymodule, javasrc,
+  commissioningverify ok. Known base failure (not this WU, outside the edit surfaces):
+  `reportmodule TestEveryLintIsAMemberOrListed` fails since WU2 because `lint-module-map` is neither a member nor in
+  `notInReport` (`go/internal/reportmodule/completeness_test.go`); M5 owns the member.
 
 ## Next session
 Session stopped at 16:00 CST on 2026-10-27 after WU2; WU3 was not started.

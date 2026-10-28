@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec;
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * MinimalDriverLoopbackDevice — a mock MinimalDriver device for station tests: a UDP socket on

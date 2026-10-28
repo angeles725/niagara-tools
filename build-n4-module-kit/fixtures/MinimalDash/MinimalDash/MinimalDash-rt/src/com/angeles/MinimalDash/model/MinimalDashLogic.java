@@ -1,7 +1,7 @@
 /*
  * Copyright 2026 Angeles. All Rights Reserved.
  */
-package com.angeles.MinimalDash;
+package com.angeles.MinimalDash.model;
 
 /**
  * MinimalDashLogic — zero-Baja, zero-external-dependency pure decision class.
@@ -11,7 +11,7 @@ package com.angeles.MinimalDash;
  * zero-Baja test seam: extract each decision into a pure class, test it standalone.
  * [ev: build-verify.md §Unit tests; dashboard.md § rt — the facade (no logic)]</p>
  */
-final class MinimalDashLogic
+public final class MinimalDashLogic
 {
   private MinimalDashLogic() {}
 
@@ -25,7 +25,7 @@ final class MinimalDashLogic
    * @param value setpoint candidate (from operator input or POST /api/setpoint)
    * @return true when value is finite (not NaN, not +/-infinity)
    */
-  static boolean isValidSetpoint(double value)
+  public static boolean isValidSetpoint(double value)
   {
     return Double.isFinite(value);
   }

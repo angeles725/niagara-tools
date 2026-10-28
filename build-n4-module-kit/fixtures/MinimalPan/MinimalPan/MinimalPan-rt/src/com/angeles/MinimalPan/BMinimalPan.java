@@ -16,6 +16,8 @@ import javax.baja.sys.Property;
 import javax.baja.sys.Sys;
 import javax.baja.sys.Type;
 
+import com.angeles.MinimalPan.model.MinimalPanLogic;
+
 /**
  * BMinimalPan — B790 minimal correct N4 module skeleton.
  *

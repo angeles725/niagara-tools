@@ -1,7 +1,7 @@
 /*
  * Copyright 2026 Angeles. All Rights Reserved.
  */
-package com.angeles.MinimalPan;
+package com.angeles.MinimalPan.model;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -10,7 +10,7 @@ import static org.junit.Assert.*;
  * Pure JUnit test for {@link MinimalPanLogic}.
  *
  * <p>Zero-Baja, zero-station, runs via {@code toolbelt/run-pure-test.sh} in WSL.
- * Tests the interval-validity guard that protects {@link BMinimalPan#arm()} from
+ * Tests the interval-validity guard that protects BMinimalPan.arm() from
  * scheduling a zero- or negative-duration periodic ticket (which would loop at
  * CPU speed or never fire). [ev: build-verify.md §Unit tests; B790 §build-sequence]</p>
  */

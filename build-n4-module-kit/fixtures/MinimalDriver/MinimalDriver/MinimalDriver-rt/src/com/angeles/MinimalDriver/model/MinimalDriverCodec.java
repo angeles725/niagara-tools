@@ -1,7 +1,7 @@
 /*
  * Copyright 2026 Angeles. All Rights Reserved.
  */
-package com.angeles.MinimalDriver;
+package com.angeles.MinimalDriver.model;
 
 import java.util.ArrayList;
 import java.util.List;

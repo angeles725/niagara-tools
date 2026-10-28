@@ -27,7 +27,8 @@ import com.tridium.ndriver.discover.BNDiscoveryJob;
 import com.tridium.ndriver.discover.BNDiscoveryPreferences;
 import com.tridium.ndriver.poll.BNPollScheduler;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * BMinimalDriverNetwork — the NDriver network: owns the UDP comm stack, the poll scheduler and

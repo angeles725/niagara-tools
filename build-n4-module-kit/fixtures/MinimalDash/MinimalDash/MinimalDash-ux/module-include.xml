@@ -1,4 +1,4 @@
 <types>
-  <!--com.angeles.MinimalDash.ux-->
-  <type class="com.angeles.MinimalDash.ux.BMinimalDashServlet" name="MinimalDashServlet"/>
+  <!--com.angeles.MinimalDash.ux.route-->
+  <type class="com.angeles.MinimalDash.ux.route.BMinimalDashServlet" name="MinimalDashServlet"/>
 </types>

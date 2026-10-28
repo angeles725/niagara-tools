@@ -228,6 +228,16 @@ it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
   declaration not at start of entity"). The emission is owed as G97 `fixture-moduletest-include`.
   `[ev: retro testing-parity-btestng Δ6]`
 
+- **Every scaffold type emits a strict module map, and its Baja-free classes sit in role packages.**
+  `scaffold-module.sh` copies `<module-root>/MODULE-MAP.md` (`modularity: strict`) from each fixture: logic rows
+  `control`, `station-test`, `plumbing`; dashboard rows `control` (rt), `api-routing` (ux), `frontend` (ux),
+  `station-test`, `plumbing`; driver rows `codec`, `network-device`, `points`, `discovery`, `point-manager` (wb),
+  `plumbing`. The pure classes live in `<MOD>-rt/src/com/<vendor>/<MOD>/model/` (`<MOD>Logic`, the driver's
+  `<MOD>Codec`) with their tests under the same package in `srcTest/test/`; the dashboard's package-private router
+  and its servlet share the ux `route/` package (`com.<vendor>.<MOD>.ux.route`, DUX1 in `types/dashboard.md`). A
+  fresh scaffold of every type passes `lint-module-map` with no row (`tests/scaffold-module.bats` TC-MAP1, TC-MAP2).
+  `[ev: retro modularity-module-map Δ2]` `[ev: retro modularity-strict-new Δ2]`
+
 ## Module map — `<module-root>/MODULE-MAP.md` `[ev: retro modularity-module-map Δ1]`
 Every module root (the directory holding the `<MOD>-rt`/`-ux`/`-wb`/`-se` parts, the root `lint-structure.sh`
 takes) carries a map file, `<module-root>/MODULE-MAP.md`: which concern owns which files, which tests cover it, and
@@ -258,9 +268,9 @@ modularity: strict
 - **Concerns per type** (start from these; split further when a concern grows): logic → `control` (the pure
   `model/` class and its B-class adapter), `station-test`, `plumbing`. Dashboard → `control` (rt), `api-routing`
   (ux: servlet + dispatch and the dispatch test), `frontend` (ux: `src/rc/**`, `srcTest/rc/spec`), `station-test`,
-  `plumbing`. Driver → `codec`, `network-device`, `points` (the -rt point classes and the -wb point manager),
-  `discovery`, `plumbing`. A test may appear in several rows (one station test covers network, points and discovery);
-  a source file may not.
+  `plumbing`. Driver → `codec` (the `model/` codec), `network-device`, `points` (the -rt point classes),
+  `discovery`, `point-manager` (the -wb point manager), `plumbing`. A test may appear in several rows (one station
+  test covers network, points, discovery and the point manager); a source file may not.
 - **`plumbing`** is the one concern with no test requirement: gradle files, `module-include.xml`,
   `moduleTest-include.xml`, palette, lexicon, permissions.
 

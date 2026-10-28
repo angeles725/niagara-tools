@@ -14,7 +14,8 @@ import com.tridium.ndriver.BNDevice;
 import com.tridium.ndriver.datatypes.BIpAddress;
 import com.tridium.ndriver.util.SfUtil;
 
-import com.angeles.MinimalDriver.MinimalDriverCodec.Frame;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec;
+import com.angeles.MinimalDriver.model.MinimalDriverCodec.Frame;
 
 /**
  * BMinimalDriverDevice — one device on the network, addressed by its own ipAddress and udpPort.
