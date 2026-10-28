@@ -220,8 +220,18 @@ fake_bats() {
   fake_bats 'no plan, no results'
   PATH="$TMPDIR_T/bin:$PATH" run "$CL" --ci-file "$CI" --cache-dir "$TMPDIR_T/cache" --only 'bats (all unit tests)'
   [ "$status" -eq 1 ]
-  fake_bats '1..3' 'ok 1 a' 'not ok 2 b' '# out: ok 9 not a result' 'ok 3 c # skip why'
+  # the skip reason is one tests/bats-skip-allowlist.txt allows (CL18 pins the global SKIP allowlist)
+  fake_bats '1..3' 'ok 1 a' 'not ok 2 b' '# out: ok 9 not a result' 'ok 3 c # skip launcher not installed on this machine'
   PATH="$TMPDIR_T/bin:$PATH" run "$CL" --ci-file "$CI" --cache-dir "$TMPDIR_T/cache" --only 'bats (all unit tests)'
   [ "$status" -eq 0 ]
   [[ "$output" == *"PASS bats (all unit tests)"* ]]
+}
+
+@test "CL18: ci.yml's bats step fails on a skip whose reason the global allowlist does not hold (audit A6)" {
+  # Mutation: CL18 -- dropping the check-bats-skips.sh call lets a suite skip for a new reason and stay green.
+  fake_bats '1..2' 'ok 1 a' 'ok 2 b # skip a reason nobody reviewed'
+  PATH="$TMPDIR_T/bin:$PATH" run "$CL" --ci-file "$CI" --cache-dir "$TMPDIR_T/cache" --only 'bats (all unit tests)'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"UNLISTED skip: ok 2 b — a reason nobody reviewed"* ]]
+  [[ "$output" == *"FAIL bats (all unit tests)"* ]]
 }

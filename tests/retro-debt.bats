@@ -131,3 +131,15 @@ age() { run "$SWEEP" --age --today 2026-09-05 "$RETRODIR" "$INDEX"; }
   [ "${lines[1]}" = "escalated_count=1" ]
   [ "${lines[2]}" = "oldest_age=35" ]
 }
+
+@test "D10: --age --strict exits 1 on escalated debt (same report), 0 when nothing is older than --max-age" {
+  # Mutation: AGE-strict -- ignoring --strict keeps exit 0 over escalated retro debt (Go TestMainAgeStrict)
+  add_row "2026-09-01-recent" pending
+  run "$SWEEP" --age --strict --today 2026-09-05 "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+  add_row "2026-08-05-old" pending
+  run "$SWEEP" --age --strict --today 2026-09-05 "$RETRODIR" "$INDEX"
+  [ "$status" -eq 1 ]
+  [ "${lines[1]}" = "escalated_count=1" ]
+  [[ "$output" == *"--strict: 1 pending retro(s) older than 30 days"* ]]
+}

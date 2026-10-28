@@ -132,6 +132,52 @@ func CheckEnvelopes(text string) string {
 	return ""
 }
 
+// moduleFields are the DECLARED fields every module envelope carries (BUILD-STATE.src.md § How to read), with
+// the shape named in the WARN. The kit's own envelope (module: kit) has no module tree and is exempt.
+var moduleFields = []struct{ key, shape string }{
+	{"module_root", "the module's absolute root"},
+	{"source_of_truth", "<path>@<branch>@<commit> or unknown"},
+}
+
+// EnvelopeWarnings returns one WARN text per module envelope field of moduleFields that is missing or empty
+// (`unknown` is a value), in envelope order (audit A4). Envelopes are read as CheckEnvelopes reads them;
+// call it on a text CheckEnvelopes accepted.
+func EnvelopeWarnings(text string) []string {
+	var warns []string
+	inside := false
+	var fields map[string]string
+	for _, line := range Lines(text) {
+		switch line {
+		case OpenMarker:
+			inside, fields = true, map[string]string{}
+			continue
+		case CloseMarker:
+			if inside && fields["module"] != "kit" {
+				for _, f := range moduleFields {
+					// Mutation: SOT1-warn -- dropping this check lets an envelope lose its source_of_truth silently
+					if fields[f.key] == "" {
+						warns = append(warns, fmt.Sprintf("envelope (%s) has no %s (required for every module: %s)", fields["module"], f.key, f.shape))
+					}
+				}
+			}
+			inside = false
+			continue
+		}
+		if !inside || trimSpace(line) == "" || listItem(line) {
+			continue
+		}
+		key, val, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		if i := strings.IndexByte(val, '#'); i >= 0 {
+			val = val[:i]
+		}
+		fields[key] = trimSpace(val)
+	}
+	return warns
+}
+
 // IndexRow is one data row of retros/INDEX.md.
 type IndexRow struct {
 	File   string // first `*.md` name of the row other than INDEX.md

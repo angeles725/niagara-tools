@@ -12,9 +12,11 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 )
 
-// TestGolden: one case per check and mode (strict-clean, no-map, no-parts, the MM2 header and table shapes,
-// missing-path, unlisted-strict, unlisted-legacy, dup, no-test-strict, java-glob, glob-segment).
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 15) }
+// TestGolden replays every testdata/*.txt case: one per check and mode — strict-clean, no-map, no-parts, the MM2
+// header and table shapes (bad-header, bad-row, empty-table, no-table, legacy-no-reason), missing-path,
+// unlisted-strict, unlisted-legacy, dup, no-test-strict, java-glob, glob-segment, and MM7: mm7-clean, mm7-strict,
+// mm7-legacy, mm7-plumbing (a plumbing row may span concern folders) and mm7-dup-concern (one row per concern).
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 20) }
 
 // strictMap is a one-concern strict map over M-rt/src/A.java and its test.
 const strictMap = "modularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n" +
@@ -148,7 +150,8 @@ func TestSummarize(t *testing.T) {
 		{"two unlisted sources", map[string]string{"M-rt/src/B.java": "class B {}\n", "M-ux/src/rc/app.js": "x\n"},
 			Summary{Mode: lint.ModularityStrict, Concerns: 1, Unlisted: 2}},
 		{"no map", map[string]string{lint.MapFile: ""}, Summary{Mode: lint.ModularityNone, Concerns: -1, Unlisted: -1}},
-		{"no table", map[string]string{lint.MapFile: "modularity: strict\n"}, Summary{Mode: lint.ModularityNone, Concerns: -1, Unlisted: -1}},
+		{"no table: the header's mode, no counts", map[string]string{lint.MapFile: "modularity: strict\n"}, Summary{Mode: lint.ModularityStrict, Concerns: -1, Unlisted: -1}},
+		{"invalid header", map[string]string{lint.MapFile: "modularity: maybe\n"}, Summary{Mode: lint.ModularityNone, Concerns: -1, Unlisted: -1}},
 	}
 	for _, tt := range tests {
 		root := tree(t, tt.extra)
@@ -161,5 +164,84 @@ func TestSummarize(t *testing.T) {
 		if err != nil || got != tt.want {
 			t.Errorf("%s: Summarize = %+v, %v; want %+v", tt.name, got, err, tt.want)
 		}
+	}
+}
+
+// TestConcernFolder: the concern folder is the directory right under the first role folder of the part's
+// suffix; a file directly in a role folder, outside every role folder, under a foreign role or not Java has none.
+func TestConcernFolder(t *testing.T) {
+	for rel, want := range map[string]string{
+		"M-rt/src/a/model/schedules/Plan.java":     "M-rt/src/a/model/schedules",
+		"M-rt/src/a/model/schedules/day/Day.java":  "M-rt/src/a/model/schedules",
+		"M-rt/src/a/adapter/battery/BCharger.java": "M-rt/src/a/adapter/battery",
+		"M-ux/src/a/ux/route/status/H.java":        "M-ux/src/a/ux/route/status",
+		"M-wb/src/a/model/view/V.java":             "M-wb/src/a/model/view",
+		"M-rt/src/a/model/Logic.java":              "",
+		"M-rt/src/a/BM.java":                       "",
+		"M-rt/src/a/route/x/R.java":                "", // route/ is a ux role folder only
+		"M-ux/src/rc/js/model/x/a.js":              "",
+		"M-rt/srcTest/a/model/x/XTest.java":        "",
+	} {
+		if got := ConcernFolder(rel); got != want {
+			t.Errorf("ConcernFolder(%q) = %q, want %q", rel, got, want)
+		}
+	}
+}
+
+// TestSummarizeModeSource: the mode is lint.ModuleMode's (the per-file rules' source): a map above a root that has
+// none gives its mode, with no counts (lint-module-map reads only the root's map).
+func TestSummarizeModeSource(t *testing.T) {
+	t.Parallel()
+	top := t.TempDir()
+	if err := os.WriteFile(filepath.Join(top, lint.MapFile), []byte(strictMap), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(top, "sub", "M")
+	if err := os.MkdirAll(filepath.Join(root, "M-rt", "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Summarize(root)
+	if want := (Summary{Mode: lint.ModularityStrict, Concerns: -1, Unlisted: -1}); err != nil || got != want {
+		t.Errorf("Summarize = %+v, %v; want %+v", got, err, want)
+	}
+}
+
+// TestSummarizeNoParts: a root with a map but no -rt/-ux/-wb/-se part is the lint's empty-root error (exit 3),
+// never unlisted=0.
+func TestSummarizeNoParts(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, lint.MapFile), []byte(strictMap), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Summarize(root); err == nil {
+		t.Errorf("Summarize = %+v, nil; want an error", got)
+	}
+}
+
+// TestPartJava: the Java sources of the parts as the lint walks them: a symlinked part and a symlinked file are
+// in, a symlinked directory inside a part, srcTest and dot directories are out; relative to the root, sorted.
+func TestPartJava(t *testing.T) {
+	t.Parallel()
+	root := tree(t, map[string]string{"M-rt/src/.hidden/H.java": "class H {}\n", "M-rt/src/rc/x.js": "x\n"})
+	ext := t.TempDir()
+	for rel, body := range map[string]string{"src/W.java": "class W {}\n", "lib/L.java": "class L {}\n"} {
+		p := filepath.Join(ext, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for link, target := range map[string]string{"M-wb": ext, "M-rt/src/lib": filepath.Join(ext, "lib"), "M-rt/src/F.java": filepath.Join(ext, "lib", "L.java")} {
+		if err := os.Symlink(target, filepath.Join(root, link)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := PartJava(root)
+	want := []string{"M-rt/src/A.java", "M-rt/src/F.java", "M-wb/src/W.java"}
+	if err != nil || strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("PartJava = %v, %v; want %v", got, err, want)
 	}
 }

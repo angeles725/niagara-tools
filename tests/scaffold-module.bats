@@ -590,3 +590,35 @@ st_link_in_flags() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  handler-size  com/example/ModuleA/ux/route/BModuleAServlet.java:"*"  method handleWrite() spans 83 lines (> 80) inside the servlet"* ]] || { echo "$output"; false; }
 }
+
+@test "TC-MAP7: a fresh dashboard ships the ux-rt contract (rc/js/contract.json), a StatusHandler the servlet delegates to, and a contract test on each side that bites" {
+  run "$SC" ModuleA "$OUT/dashboard" --type dashboard --vendor Example
+  [ "$status" -eq 0 ]
+  mkdir -p "$OUT/dashboard/ModuleA/.git"
+  R="$OUT/dashboard/ModuleA/ModuleA" U="$OUT/dashboard/ModuleA/ModuleA/ModuleA-ux"
+  [ -f "$U/src/rc/js/contract.json" ]
+  [ -f "$U/src/com/example/ModuleA/ux/route/StatusHandler.java" ]
+  grep -q 'StatusHandler.respond()' "$U/src/com/example/ModuleA/ux/route/BModuleAServlet.java"
+  run "$KIT/toolbelt/lint-module-map.sh" "$R"
+  [ "$status" -eq 0 ] && [ -z "$output" ] || { echo "$output"; false; }
+  run "$KIT/toolbelt/lint-servlet.sh" "$U/src" --strict
+  [ "$status" -eq 0 ] || { echo "$output"; false; }
+  run "$KIT/toolbelt/lint-structure.sh" "$R"
+  [ "$status" -eq 0 ] && [[ "$output" != *"L3"* ]] || { echo "$output"; false; }
+  command -v node >/dev/null 2>&1 || skip "no node on PATH"
+  run node "$U/srcTest/rc/spec/ModuleAContractSpec.js"
+  [ "$status" -eq 0 ] || { echo "$output"; false; }
+  # positive control: the contract loses the field the consumer reads -> the JS side fails
+  sed -i 's/"status": "string"/"state": "string"/' "$U/src/rc/js/contract.json"
+  run node "$U/srcTest/rc/spec/ModuleAContractSpec.js"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"field status"* ]]
+  command -v javac >/dev/null 2>&1 || skip "no javac on PATH"
+  [ -n "$(find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | head -1)" ] || skip "junit-4.13.2.jar not in ~/.gradle"
+  # the servlet side reads the same file: its handler no longer produces the contract's field -> RED
+  run "$KIT/toolbelt/run-pure-test.sh" "$U" com.example.ModuleA.ux.route.StatusHandlerTest
+  [ "$status" -eq 1 ]
+  sed -i 's/"state": "string"/"status": "string"/' "$U/src/rc/js/contract.json"
+  run "$KIT/toolbelt/run-pure-test.sh" "$U" com.example.ModuleA.ux.route.StatusHandlerTest
+  [ "$status" -eq 0 ] || { echo "$output"; false; }
+}

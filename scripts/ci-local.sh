@@ -51,6 +51,7 @@ SKIP_RULES=(
   "Install shellcheck*|replaced by the cached, sha256-checked shellcheck ${SC_VER} prepended to PATH"
   "Set up Go*|uses the go on PATH (CI installs the go/go.mod version; local go must exist)"
   "Set up CPython 3.15*|uses python3 on PATH (CI installs 3.15, the reference host's)"
+  "Set up Node.js*|uses node and npm on PATH (CI installs the pinned Node.js; the npm tools step then runs as in CI)"
 )
 
 usage() { printf 'usage: %s [--list] [--only <substring>] [-j N] [--ci-file <path>] [--cache-dir <path>]\n' "$0" >&2; exit 2; }

@@ -13,7 +13,10 @@
 #        (FAIL strict, WARN legacy) or in two rows' Files (FAIL)
 #   MM5  a non-plumbing concern names no existing srcTest/ path in Tests (FAIL strict, WARN legacy)
 #   MM6  a part's srcTest/**/*.java listed in no row (WARN)
-# [ev: retro modularity-module-map Δ3]
+#   MM7  a concern folder (the directory right under a role folder: rt model/ or adapter/; ux route/, service/
+#        or model/; wb and se model/) whose files two rows list, or a non-plumbing row listing files in concern
+#        folders of two names (rt model/battery and adapter/battery are one concern) (FAIL strict, WARN legacy)
+# [ev: retro modularity-module-map Δ3] [ev: retro modularity-structure Δ2]
 #
 # Usage:  lint-module-map.sh <module-root>   (the directory holding the <MOD>-rt/-ux/-wb/-se parts)
 #   Row:  FAIL|WARN  lint-module-map  <path>[:<line>]  MM<n>: <reason>
@@ -27,6 +30,7 @@
 # Mutation: MMB1 -- reporting an unlisted file at WARN in a strict module lets a scaffolded module grow unmapped files
 # Mutation: MMB2 -- dropping the MM3 existence check passes a map that names a deleted file
 # Mutation: MMB3 -- letting a glob list a .java file hides a Java file inside a directory entry
+# Mutation: MMB4 -- dropping the MM7 concern-folder check lets one strict row span two concern folders
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

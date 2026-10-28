@@ -98,7 +98,7 @@ func (r *report) runESLint(a artifact, rc, bin string) {
 	}
 	rl := r.relayRows(a.name, out)
 	if code == 0 {
-		r.passAfterRelay(a.name, "eslint", rl)
+		r.verdictAfterRelay(a.name, "eslint", rl)
 	}
 	if !rl.fail && code == 1 {
 		r.emit(a.name, failed, "eslint", "exit 1 with no parsable row")

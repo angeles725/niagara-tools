@@ -575,6 +575,42 @@ newbranch_repo() { # newbranch_repo <dir> — main + origin/main at commit A; br
   [ "$status" -eq 0 ]
 }
 
+# --- a push of several refs: every ref line is gated, not only the first (audit A6) -------------------
+docs_branch() { # docs_branch <dir> — a branch 'docs' from main that changes only notes.txt (not build-relevant, not a live card)
+  local d="$1"
+  git -C "$d" checkout -q -b docs main
+  echo 'notes' > "$d/notes.txt"
+  git -C "$d" add -A
+  git -C "$d" -c user.name=t -c user.email=t@t commit -q -m "docs: notes"
+  git -C "$d" checkout -q feat
+}
+ZERO=0000000000000000000000000000000000000000
+
+@test "H30: a two-ref push whose SECOND ref is ungated kit work FAILS (every ref line is read)" {
+  # Mutation: H30-first-ref-only -- reading only the first ref line passes the second ref unchecked
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"; docs_branch "$d"
+  local ok bad; ok=$(git -C "$d" rev-parse docs); bad=$(git -C "$d" rev-parse feat)
+  run bash -c "cd '$d' && printf '%s\n' 'refs/heads/docs $ok refs/heads/docs $ZERO' 'refs/heads/feat $bad refs/heads/feat $ZERO' | bash '$HOOK' origin x"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"build-relevant kit files changed"* ]]
+}
+
+@test "H31: a branch deletion on the first ref line does not wave the next ref through" {
+  # Mutation: H31-delete-exits -- the all-zeros local sha ending the hook (exit 0) skips every later ref
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  local bad; bad=$(git -C "$d" rev-parse feat)
+  run bash -c "cd '$d' && printf '%s\n' '(delete) $ZERO refs/heads/old $bad' 'refs/heads/feat $bad refs/heads/feat $ZERO' | bash '$HOOK' origin x"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"build-relevant kit files changed"* ]]
+}
+
+@test "H32: a two-ref push whose refs both pass PASSES (no over-refusal)" {
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"; docs_branch "$d"
+  local ok; ok=$(git -C "$d" rev-parse docs)
+  run bash -c "cd '$d' && printf '%s\n' 'refs/heads/docs $ok refs/heads/docs $ZERO' '(delete) $ZERO refs/heads/old $ok' | bash '$HOOK' origin x"
+  [ "$status" -eq 0 ]
+}
+
 # --- a failing git and the origin/HEAD merge-base fallback (#355 R3-git-failure-refusal-untested) --------
 @test "H22: a failing git diff refuses the push (never an unchecked pass)" {
   # Mutation: H22-diff-refuse -- dropping '|| refuse' leaves changed empty, so nothing is build-relevant and the push passes

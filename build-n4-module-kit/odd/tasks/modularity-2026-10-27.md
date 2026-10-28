@@ -1,4 +1,4 @@
-# Modular modules by default (2026-10-27)
+# Modular modules by default (2026-10-27) — COMPLETE
 
 Locator: `build-n4-module-kit/odd/tasks/modularity-2026-10-27.md` · branch `docs/fold-r10-retros` (on top of the r10
 retro fold, tip db22d23e; base origin/main 6c34e20c) · worktree `niagara-tools-worktrees/fold-r10-retros`.
@@ -14,14 +14,17 @@ A read-only audit of four client modules (A to D, anonymized; this repo is publi
 700 to 1400 hand-written lines, pure cores with 220-line methods, a 3260-line single-file dashboard front end and
 servlets with 28 handlers. The existing gates did not stop it: L3 passes a module with no `model/` package, the
 lint-size method rule skips B-classes and wrapped signatures, the slot wall is a WARN, and nothing tells an agent
-which file owns a concern. Evidence and host file:line pointers are in the three retros below.
+which file owns a concern. Evidence and host file:line pointers are in the four retros below (retro D,
+modularity-structure, added in part 3b).
 
 ## Scope and constraints
-- Part 1 (this worker): M1 to M3. Part 2 (a later worker): M4 to M6.
+- Part 1: M0 to M3 (WU0 to WU5). Part 2: M4 (WU6, WU7) and the part-2 review fix-forward WU8; it stopped after
+  WU8, before M5. Part 3: M5 (WU9 to WU12). Part 3b: M5b, M7 (retro D), the review fix-forward RF and the M6 close
+  (WU13 onward).
 - Allowed edit surfaces are the ones the parent passed (kit docs, the three retros, scaffold and fixtures,
   `go/internal/lint` paths and the new `rules/modulemap`, reportmodule, lintindex, `tests/`, `changelog.d/`).
 - `retros/INDEX.md`, `toolbelt/INDEX.md` and `BUILD-STATE.md` are generated and not committed.
-- The retros stay `review-status: pending` until part 2 finishes; this document cites deltas in plain text only
+- The retros stay `review-status: pending` until the M6 close; this document cites deltas in plain text only
   (never as evidence tags), so it credits nothing in the fold audit by itself.
 - Public repo: no client names, paths, hosts or IPs; client modules are "client module A/B/C/D" with counts only.
 
@@ -31,6 +34,14 @@ which file owns a concern. Evidence and host file:line pointers are in the three
 3. The servlet delta (gaps Δ6) lands after the r10 fold (already done on this branch).
 4. The fixture move (strict-new Δ2) lands with strict L3 (strict-new Δ3).
 5. The adapter decision budget (gaps Δ5) stays WARN until calibrated.
+
+## Settled parent decisions (part 3b)
+6. `fetch-outside-services` and `js-file-size` stay map-only (the legacy rc-scan goldens stay byte-identical);
+   `handler-size` also WARNs with no map (it reaches the large legacy servlets).
+7. "Outside services/" means outside `rc/js/services/` (anchored, not any `/services/` segment).
+8. The dashboard scaffold emits one `ux/route/<Route>Handler` class with the servlet delegating to it, so a fresh
+   dashboard demonstrates the router + handler split (modularity-gaps Δ6) and stays clean under every rule.
+9. Concern names are free per module; the kit fixes only the role folders (structure Δ2).
 
 ## Delta mapping (proposal number → retro and Δ within it)
 | Proposal | Retro (stem) | Δ in retro | Task |
@@ -73,8 +84,20 @@ which file owns a concern. Evidence and host file:line pointers are in the three
 - [x] M5 · front end, servlet, report (part 3): gaps Δ2 and Δ3 (rc-scan), Δ4 (dashboard JS skeleton), Δ6 (servlet
   router + handlers), Δ8 (report-module modularity summary), plus the module-map Δ3 report member. Landed as WU9
   3d5a9798, WU10 62cc8332, WU11 959be0c6 and WU12 5d2f2fba, after the part-2 review fix-forward WU8 2e261afb.
-- [ ] M7 · retro D `2026-10-27-modularity-structure` (five items, see Next session).
-- [ ] M6 · close (part 2): flip the three retros to folded, strict fold audit 0 uncited, ledger fragment, CI-local.
+- [x] M5b · `toolbelt/lint-servlet.sh` header lists `handler-size` and its `Mutation: TC-MAP6` pin (WU13). Route:
+  delegated writer.
+- [x] M7 · retro D `2026-10-27-modularity-structure` (pending until M6), folded in work units:
+  - [x] M7.1 · structure Δ1: `scaffold-module add-concern` (Go `go/cmd/module-map`, shim `toolbelt/module-map.sh`).
+  - [x] M7.2 · structure Δ2: role folders fixed, concern names free; lint-module-map MM7 (WARN legacy, FAIL strict).
+  - [x] M7.3 · structure Δ3: ux↔rt contract file `rc/js/contract.json` plus a contract test on each side, emitted by
+    the dashboard scaffold.
+  - [x] M7.4 · structure Δ4: `module-map where` and `module-map tests`.
+  - [x] M7.5 · structure Δ5: legacy→strict migration guide extending METHODOLOGY.md:83, linked from SKILL.md.
+- [x] RF · review fix-forward of the native RDD reviews of 2e261afb and 959be0c6 (rc-scan R3-001..R3-003, R2
+  findings; report-module R2-001..R2-003, R3 findings). Scope addition by the parent: `go/internal/rcscan/**` and
+  `go/cmd/rc-scan/**` authorized for it.
+- [x] M6 · close: flip the four retros (module-map, strict-new, gaps, structure) to folded, strict fold audit 0
+  uncited, ledger fragment, CHANGELOG fragments, generated-index `--check` 0.
 
 ## Acceptance criteria
 - `lint-module-map` reports MM1 to MM6 as specified, is registered in `rules.All()` and has a toolbelt wrapper
@@ -238,27 +261,95 @@ fold audit, generated-index `--check`).
   fold audit 407 folded / 407 cited / 0 uncited; sweep-build-state 0; `changelog-gate --range fe06e0be..HEAD`
   PASS (5 fragments).
 
+- WU13 = M5b (route: delegated writer, part 3b). Commit 8b616e55 `docs(lint): list servlet handler-size and its
+  mutation pin in the lint-servlet header` (+6). Checks: lint-guard-pins MATCH `TC-MAP6 -> tests/scaffold-module.bats:577`;
+  gen-lint-index --check 0; shellcheck clean; bats lint-servlet, guard-pins, gen-lint-index 0 not ok.
+- WU14 = M7 open (route: delegated writer). Retro D written with `toolbelt/new-retro.sh kit modularity-structure
+  --date 2026-10-27 --deltas 5` (envelope `retro_pending: already true`), filled from the parent's five items;
+  review-status pending until M6. Checks: gen-retro-index --check 0. Commit: see WU15 entry.
+
+- WU15 = M7.2 (route: delegated writer). RED: modulemap goldens `mm7-strict`, `mm7-legacy` (no MM7 row;
+  `mm7-clean` passed first as the clean baseline). GREEN: `lint-module-map` MM7 (WARN legacy, FAIL strict): a
+  concern folder (the directory right under a role folder: rt `model/`/`adapter/`, ux `route/`/`service/`/`model/`,
+  wb/se `model/`) listed by two rows, or a non-plumbing row with files in concern folders of two names (rt
+  `model/battery` + `adapter/battery` is one concern). `TestConcernFolder`, bats MMB4 (+ `Mutation: MMB4` pin,
+  mutation-checked: dropping the mm7 call turns MMB4 and 2 goldens red). WU14 commit 57d41b3f `docs(retro): open modularity-structure retro and the M7 checklist` (+76/−2); WU15
+  commit a2708ddf `feat(lint): module-map MM7 keeps one row per concern folder` (+224/−2).
+- WU16 = M7.1 + M7.4 (route: delegated writer). RED: `go/internal/modulemap` tests TestAddConcern,
+  TestAddConcernAdapter, TestAddConcernRefuses, TestWhere, TestTests, TestUsage against a stub Main (all FAIL).
+  GREEN: `go/cmd/module-map` + `toolbelt/module-map.sh` (add-concern, where, tests; `scaffold-module.sh
+  add-concern` execs it); `rules/modulemap` exports `ReadMap`/`Row`/`MatchGlob` (one parser). Bats
+  `tests/module-map.bats` 4/4 (MM-TESTS1 ran JUnit, not skipped): a fresh logic and dashboard scaffold plus
+  add-concern (rt, rt --adapter, ux) stay clean under lint-module-map, strict L3 and lint-size. SKILL.md step 1e
+  names the tool (kit-links L5). Commit e9aeb6e8 `feat(toolbelt): module-map add-concern, where and tests`
+  (+942/−5, over the ~400 advisory: one cohesive Go tool, about 330 lines of it tests).
+- WU17 = M7.3 + decision 8 (route: delegated writer). RED: bats TC-MAP7 (`contract.json` missing). GREEN: the
+  MinimalDash fixture emits `ux/route/StatusHandler` (servlet delegates), `rc/js/contract.json`,
+  `StatusHandlerTest` (servlet side) and `srcTest/rc/spec/MinimalDashContractSpec.js` (node consumer side over
+  `MinimalDashApi.reads`); DUX-CONTRACT1 in types/dashboard.md. TC-MAP7 positive controls: renaming the contract
+  field fails the node spec and the JUnit test (both ran). Checks: bats scaffold-module, rc-scan, lint-servlet,
+  lint-jasmine-ux, report-module 177/177; kit-links 0 not ok. Commit e6c58ee2 `feat(scaffold): dashboard route
+  handler and a tested ux-rt API contract` (+193/−5).
+
+- WU18 = M7.5 + structure Δ2 docs (route: delegated writer). Docs only (structural check): `types/structure.md`
+  § Module map gains the role-folder / free-concern-name rule with generic examples (lighting `model/schedules/`,
+  data-center `model/cooling/`, UPS `model/battery/` + `adapter/battery/`), the MM7 table row and § Legacy →
+  strict migration (six ordered steps, extends METHODOLOGY.md:83); METHODOLOGY.md:83 and SKILL.md step 1e point to
+  it. Checks: kit-links (L1 caught a bare `MODULE-MAP.md` reference, fixed), kit-p1 pins, install-skill,
+  check-skill-drift: 0 not ok. Commit fdbfe67d `docs(structure): free concern folders under fixed roles and the
+  legacy-to-strict path` (+49/−9).
+
+- RF = review fix-forward (route: delegated writer; scope addition by the parent, `go/internal/rcscan/**` and
+  `go/cmd/rc-scan/**` authorized). Two commits:
+  - RF-a (959be0c6 review): RED `TestFetchServicesAnchor` (a `fetch(` in `js/pages/services/x.js` and
+    `rc/services/y.js` was exempt) and `TestMapChecksSkipThirdParty` (a vendored HTML inline fetch FAILed);
+    `TestMapLegacyStrictFlag` (R3-001) passed first as coverage. GREEN: the exemption is anchored at
+    `rc/js/services/` on the walked path; `thirdParty` (rc/vendor/**, rc/ext/**, *.min.js) skips both map checks;
+    js-file-size reads the allow marker through `allowedOn` (shared with `allowed`); sevMap and mapped documented
+    apart; TestJSFileSize writes the map at the temp root. Checks: `go test` rcscan ok, `go vet` ok; bats rc-scan
+    40/40, scaffold-module 0 not ok; shellcheck, gen-lint-index --check 0. Commit 64cda653 `fix(rc-scan): anchor the
+    services exemption and skip third-party files in map checks` (+117/−12).
+  - RF-b (2e261afb review + 3d5a9798 independent review F1-F6). RED: `TestSummarize` (strict header over no table
+    read `none`), `TestSummarizeModeSource`, `TestSummarizeNoParts`, `TestPartJava`; `TestModularityRow` (a map
+    but no part printed counts), `TestModularityRowSymlinkedPart`, `TestModularityRowUnreadablePart`;
+    `TestAdvisoryStrictRelayIsModeAwareOnly` (build failure: no `modeAware`). GREEN: `Summarize` takes the mode
+    from `lint.ModuleMode` (decision: the same source as the per-file rules; counts stay the root map's), errors
+    with a root map and no part; `PartJava` (the lint's walk) feeds the largest class; `?` documented in the
+    report-module header, `types/structure.md` and the changelog fragment (scoped: an invalid/FAILing map now fails,
+    an unreadable map/part exits 3). Decision R3-advisory-exit1-broadening: the exit-1-with-FAIL relay is LIMITED
+    to the mode-aware member (`member.modeAware`, lint-size only); any other advisory member's exit 1 stays an env
+    fault. `passAfterRelay` renamed `verdictAfterRelay` and documented (no row when a FAIL row was relayed);
+    advisoryMember doc reworded; end-to-end `TestStrictSizeRelayEndToEnd` (strict map, 81-line B-class method:
+    relayed FAIL row, no PASS lint-size row, ISSUES, exit 1; mutation-checked: dropping `modeAware` turns it red)
+    and `TestInvalidMapRelayEndToEnd` (MM2 row relayed, `mode=strict concerns=-`); size_test.go notes the Go-only
+    module-map goldens; part-2 ledger names WU8's feature-doc entry and changelog fragment. Golden decision: a
+    module root with no part and no map keeps `concerns=- unlisted=- largest=-` (the 120 report goldens are
+    unchanged). Consumer check: no repo code parses report-module rows by status (build.sh reads only the exit
+    code), so INFO needs no consumer change. F6: the 3d5a9798 entry is WU9 above; the scope section now names
+    the parts as they ran. Checks: `go test` reportmodule (goldens included), modulemap, size ok; `go vet` ok;
+    shellcheck report-module.sh clean. Commit 180112c8 `fix(report-module): modularity row reads the rules' mode and the
+    lint's file set` (+386/−109).
+
+- M6 = close (route: delegated writer). Every Δ of the four retros is cited by an exact-stem `[ev: retro … Δk]` tag
+  in a kit doc (module-map Δ1-Δ5, strict-new Δ1-Δ5, gaps Δ1-Δ8, structure Δ1-Δ5; none rejected); all four flipped
+  to `review-status: folded`; `BUILD-STATE.src.md` kit `retro_pending: false` (every kit retro is folded); ledger
+  fragment `ledger.d/2026-10-27-modularity-part3b.md`. Commit: the M6 work unit after 180112c8 (see git log).
+
+## Final verification (on the M6 tree)
+- `memcap go test ./...` (from go/): exit 0, 123 packages ok, 0 FAIL (report-module goldens included).
+- `go vet` modulemap (rules and tool), cmd/module-map, rcscan, reportmodule, size: ok.
+- bats -j 4 over scaffold-module, lint-module-map, lint-servlet, report-module, module-map, rc-scan, lint-size,
+  lint-structure, kit-links, guard-pins, gen-lint-index, kit-p1 (control, sign, tests, web) pins, install-skill,
+  check-skill-drift, lint-jasmine-ux, sweep-fold-audit, new-retro-truth, verify-module: 405 ok, 0 not ok (4 env
+  skips).
+- shellcheck lint-servlet, lint-module-map, module-map, scaffold-module, rc-scan, report-module: clean.
+- `gen-lint-index.sh --check` 0; `gen-retro-index.sh --check` 0; lint-guard-pins MATCH for TC-MAP6 and MMB4.
+- CI fold audit over fresh kit-state output (`sweep-fold-audit.sh --strict --exact-stems --deltas-since
+  2026-09-24`): 411 folded, 411 cited, 0 uncited; 789 Δ checked, 0 not cited. `sweep-build-state` exit 0.
+- `scripts/changelog-gate.sh --range aa9d0626..HEAD`: PASS (6 fragments).
+- Owed to the parent (not run here): skill reinstall + `check-skill-drift` (SKILL.md step 1e changed in WU16 and
+  WU18); push, PR and the native review of the part-3b commits.
+
 ## Next session
-Part 3 stopped on 2026-10-27 after WU12 (5d2f2fba) and the part-3 ledger fragment; M0-M5 are done, the three retros
-stay `review-status: pending`. Review candidate: 2e261afb..HEAD (five work units and this bookkeeping, base
-fe06e0be).
-- First, outside part 3's edit surfaces: document `handler-size` in the `toolbelt/lint-servlet.sh` header (a
-  Checks row: WARN, FAIL in a strict module or under --strict; a `Mutation:` pin for TC-MAP6 or
-  `TestHandlerSize`), then `gen-lint-index.sh --check`.
-- M7 · retro D `2026-10-27-modularity-structure` (new, `toolbelt/new-retro.sh kit modularity-structure --date
-  2026-10-27 --deltas 5`), five items:
-  1. `scaffold-module add-concern <Name>` creates the concern folder, a pure class, its test, an adapter stub and the
-     MODULE-MAP row.
-  2. Fixed ROLE folders only (rt `model/`, `adapter/`; ux `route/`, `service/`); concern sub-folders under them have
-     FREE per-module names; strict lint: every concern folder has exactly one MODULE-MAP row and vice versa, has
-     tests, and no file sits in two concerns. Strict L3 (WU6) already fixes the role folders for Baja-free classes;
-     `adapter/` for B-classes is not enforced yet.
-  3. An explicit ux↔rt API contract file plus a contract test on each side.
-  4. `module-map where <file|concern>` plus a runner that runs only that concern's tests.
-  5. A legacy→strict migration guide that EXTENDS `METHODOLOGY.md:83` (opt-in per module, pure extraction first,
-     slot changes last with migration + commissioning).
-- M6 · close: flip the three retros (modularity-module-map, modularity-strict-new, modularity-gaps) to folded,
-  strict fold audit 0 uncited (every Δ of the three now has an `[ev: retro … Δk]` tag in a kit doc), a
-  `ledger.d/` fragment, `ci-local.sh -j 3`. Decide whether `fetch-outside-services`/`js-file-size` should also
-  WARN with no map (today map modes only, to keep existing rc-scan goldens byte-identical) and whether the
-  scaffold should emit a `ux/route/<Route>Handler` class.
+None for this feature: it is COMPLETE. The parent owns the skill reinstall + drift check, the native review of the
+part-3b commits (8b616e55..HEAD) and the push/PR decision.

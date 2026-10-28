@@ -88,8 +88,9 @@ public class BMinimalDashServlet
     if (action instanceof MinimalDashDispatch.RouteAction.Redirect) {
       rsp.sendRedirect(((MinimalDashDispatch.RouteAction.Redirect) action).location);
     } else if (action instanceof MinimalDashDispatch.RouteAction.Equipment) {
-      rsp.setContentType("application/json; charset=UTF-8");
-      rsp.getWriter().write("{\"status\":\"ok\"}");
+      // each route group's answer lives in its own handler class (DUX1); the servlet only routes and writes
+      rsp.setContentType(StatusHandler.CONTENT_TYPE);
+      rsp.getWriter().write(StatusHandler.respond());
     } else if (action instanceof MinimalDashDispatch.RouteAction.StaticResource) {
       String path = ((MinimalDashDispatch.RouteAction.StaticResource) action).path;
       serveStatic(op, path);

@@ -1,0 +1,9 @@
+{
+  "contract": "MinimalDash ux-rt API",
+  "version": 1,
+  "routes": {
+    "GET /api/status": {
+      "fields": { "status": "string" }
+    }
+  }
+}

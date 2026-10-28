@@ -1,0 +1,36 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| schedules | rt | M-rt/src/a/model/schedules/Plan.java; M-rt/src/a/model/schedules/day/Day.java; M-rt/src/a/adapter/BSched.java; M-rt/src/a/BM.java | M-rt/srcTest/a/model/schedules/PlanTest.java | a schedule decision |
+| battery | rt | M-rt/src/a/model/battery/Charge.java; M-rt/src/a/adapter/battery/BCharger.java | M-rt/srcTest/a/model/battery/ChargeTest.java | a battery decision |
+| status | ux | M-ux/src/a/ux/route/status/StatusHandler.java | M-ux/srcTest/a/ux/route/status/StatusHandlerTest.java | the status route |
+| plumbing | rt | M-rt/src/a/model/Shared.java | — | build only |
+-- M/M-rt/src/a/BM.java --
+class BM {}
+-- M/M-rt/src/a/adapter/BSched.java --
+class BSched {}
+-- M/M-rt/src/a/adapter/battery/BCharger.java --
+class BCharger {}
+-- M/M-rt/src/a/model/Shared.java --
+class Shared {}
+-- M/M-rt/src/a/model/battery/Charge.java --
+class Charge {}
+-- M/M-rt/src/a/model/schedules/Plan.java --
+class Plan {}
+-- M/M-rt/src/a/model/schedules/day/Day.java --
+class Day {}
+-- M/M-rt/srcTest/a/model/battery/ChargeTest.java --
+class ChargeTest {}
+-- M/M-rt/srcTest/a/model/schedules/PlanTest.java --
+class PlanTest {}
+-- M/M-ux/src/a/ux/route/status/StatusHandler.java --
+class StatusHandler {}
+-- M/M-ux/srcTest/a/ux/route/status/StatusHandlerTest.java --
+class StatusHandlerTest {}

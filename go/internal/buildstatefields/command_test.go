@@ -57,7 +57,7 @@ func (f fixture) sweep() (int, string, string) { return run(f.state, f.retros, f
 // writeState mirrors tests/build-retro-sync.bats write_state.
 func writeState(required, pending string) string {
 	s := "# BUILD-STATE\n\n<!-- build-state.v1 -->\nschema: build-state.v1\nmodule: DemoPan\nmodule_repo: Cliente/Demo\n" +
-		"module_root: Demo/DemoPan\nretro_required: " + required + "\n"
+		"module_root: Demo/DemoPan\nsource_of_truth: Cliente/Demo@main@abc1234\nretro_required: " + required + "\n"
 	if pending != "OMIT" {
 		s += "retro_pending: " + pending + "\n"
 	}
@@ -86,10 +86,10 @@ func TestMainContent(t *testing.T) {
 		{"S6: a bad review-status", writeState("true", "false"), hand + row("2026-09-04-demo.md", "banana"),
 			map[string]string{"2026-09-04-demo.md": retro("<!-- review-status: banana -->")}, ExitFail, "sweep: INDEX row for 2026-09-04-demo.md has no valid review-status (pending|folded)\n"},
 		{"S8: prose-embedded markers are not envelopes",
-			"## How to read\n- one `<!-- build-state.v1 -->`\n  `<!-- /build-state.v1 -->` per module\n\n<!-- build-state.v1 -->\nmodule: DemoPan\nretro_required: false\nretro_pending: false\n<!-- /build-state.v1 -->\n",
+			"## How to read\n- one `<!-- build-state.v1 -->`\n  `<!-- /build-state.v1 -->` per module\n\n<!-- build-state.v1 -->\nmodule: DemoPan\nmodule_root: Demo/DemoPan\nsource_of_truth: unknown\nretro_required: false\nretro_pending: false\n<!-- /build-state.v1 -->\n",
 			hand, nil, ExitOK, ""},
 		{"S9: a multi-line open_issues list",
-			"<!-- build-state.v1 -->\nmodule: DemoPan\nretro_required: true\nretro_pending: false\nopen_issues:\n  - DefrostController.java has zero pure tests (HIGH).\n  - suction-2 sensor stuck at 130.5342 psi.\nlast_commit: abc1234\n<!-- /build-state.v1 -->\n",
+			"<!-- build-state.v1 -->\nmodule: DemoPan\nmodule_root: Demo/DemoPan\nsource_of_truth: unknown\nretro_required: true\nretro_pending: false\nopen_issues:\n  - DefrostController.java has zero pure tests (HIGH).\n  - suction-2 sensor stuck at 130.5342 psi.\nlast_commit: abc1234\n<!-- /build-state.v1 -->\n",
 			hand + row("2026-09-04-demo.md", "pending"), pendingRetro, ExitOK, ""},
 		{"M1: marker disagrees with the row", writeState("true", "false"), hand + row("2026-09-04-demo.md", "pending"),
 			map[string]string{"2026-09-04-demo.md": retro("<!-- review-status: folded -->")}, ExitFail,
@@ -382,7 +382,7 @@ func TestMainAgeArgs(t *testing.T) {
 		{"no --today", []string{"--age", f.retros, f.index}, ExitEnv, "", "sweep-build-state: --today <YYYY-MM-DD> is required\n"},
 		{"--today without a value", []string{"--age", "--today"}, ExitEnv, "", ageUsageText},
 		{"--max-age without a value", []string{"--age", "--today", "2026-09-05", "--max-age"}, ExitEnv, "", ageUsageText},
-		{"an unknown flag", []string{"--age", "--today", "2026-09-05", "--strict", f.retros, f.index}, ExitEnv, "", ageUsageText},
+		{"an unknown flag", []string{"--age", "--today", "2026-09-05", "--bogus", f.retros, f.index}, ExitEnv, "", ageUsageText},
 		{"one positional", []string{"--age", "--today", "2026-09-05", f.retros}, ExitEnv, "", ageUsageText},
 		{"three positionals", []string{"--age", "--today", "2026-09-05", f.retros, f.index, "x"}, ExitEnv, "", ageUsageText},
 		{"no retros dir", []string{"--age", "--today", "2026-09-05", nope, f.index}, ExitEnv, "", "sweep-build-state: no retros dir: " + nope + "\n"},

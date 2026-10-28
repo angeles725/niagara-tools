@@ -8,7 +8,9 @@ import (
 )
 
 // TestGolden: every tests/lint-size.bats run (LSZ-awkfail and LSZ-finderr aside: TestUnreadable pins them)
-// and every edge tree, recorded from the bash lint-size.sh.
+// and every edge tree, recorded from the bash lint-size.sh; the module-map cases (strict-size, legacy-size,
+// nomap-size, adapter-*: adapter-static-import among them) are Go-only, written after the bash tool was retired
+// to a shim, so they have no bash parity to replay.
 func TestGolden(t *testing.T) { golden.Run(t, Spec(), 51) }
 
 // TestUnreadable: LSZ-awkfail and LSZ-finderr keep awk_lint_run's contract (ContinueOnWalkError).

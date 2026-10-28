@@ -12,6 +12,11 @@
 //	     or in two rows' Files (FAIL)
 //	MM5  a non-plumbing row names no existing srcTest/ path in Tests           FAIL strict, WARN legacy
 //	MM6  a part's srcTest/**/*.java is in no row                               WARN
+//	MM7  a concern folder (the directory right under a role folder: rt model/ or
+//	     adapter/; ux route/, service/ or model/; wb and se model/) has files in
+//	     two rows, or a non-plumbing row lists files in concern folders of two
+//	     names (model/x and adapter/x are one concern), or two rows share a
+//	     concern name (case-insensitive)                                        FAIL strict, WARN legacy
 package modulemap
 
 import (
@@ -47,9 +52,9 @@ var header = []string{"Concern", "Part", "Files", "Tests", "Change here when"}
 
 // row is one concern row of the map.
 type row struct {
-	line         int
-	concern      string
-	files, tests []string
+	line                int
+	concern, part, when string
+	files, tests        []string
 }
 
 // scan is one run over a module root: the findings in report order and the module's files.
@@ -106,6 +111,7 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 			s.add(s.strictSev(), s.mapPath, r.line, "MM5: concern "+r.concern+" names no existing srcTest path in Tests")
 		}
 	}
+	s.mm7(rows, owners)
 	s.mm4(owners)
 	s.mm6(listed)
 	return s.out, nil
@@ -226,7 +232,7 @@ func table(lines []string) ([]row, int, string) {
 		if c[0] == "" {
 			return nil, i + 1, "row has an empty Concern cell"
 		}
-		rows = append(rows, row{line: i + 1, concern: c[0], files: split(c[2]), tests: split(c[3])})
+		rows = append(rows, row{line: i + 1, concern: c[0], part: c[1], when: c[4], files: split(c[2]), tests: split(c[3])})
 	}
 	if len(rows) == 0 {
 		return nil, start + 1, "the table has no concern row"
@@ -378,6 +384,104 @@ func isSource(rel string) bool {
 	return false
 }
 
+// roleFolders are the fixed role folders of each part suffix (types/structure.md § Module map); the concern
+// folders under them carry any per-module name (modularity-structure Δ2).
+var roleFolders = map[string][]string{
+	"-rt": {"model", "adapter"},
+	"-ux": {"route", "service", "model"},
+	"-wb": {"model"},
+	"-se": {"model"},
+}
+
+// ConcernFolder is the concern folder of a part's src/**/*.java file rel (relative to the module root): the
+// path up to the directory right under the first role-folder segment after src/, or "" for a file that sits
+// in no concern folder (directly in a role folder, or outside every role folder).
+func ConcernFolder(rel string) string {
+	seg := strings.Split(rel, "/")
+	if len(seg) < 4 || seg[1] != "src" || !strings.HasSuffix(rel, ".java") {
+		return ""
+	}
+	var roles []string
+	for suf, r := range roleFolders {
+		if strings.HasSuffix(seg[0], suf) {
+			roles = r
+		}
+	}
+	for i := 2; i < len(seg)-2; i++ {
+		for _, r := range roles {
+			if seg[i] == r {
+				return strings.Join(seg[:i+2], "/")
+			}
+		}
+	}
+	return ""
+}
+
+// mm7 relates concern folders and rows. First, per row in map order, a concern name that an earlier row already
+// uses (case-insensitive): the folders below are gathered per concern name, so two rows of one name would merge
+// unseen. Then per non-plumbing row, a row whose Files lie in concern folders of two or more names (one concern
+// may span role folders: rt model/battery and adapter/battery); then per concern folder in path order, a folder
+// whose files two rows list.
+func (s *scan) mm7(rows []row, owners map[string][]string) {
+	first := map[string]int{} // lower-case concern -> the line of its first row
+	for _, r := range rows {
+		k := strings.ToLower(r.concern)
+		if at, dup := first[k]; dup {
+			s.add(s.strictSev(), s.mapPath, r.line, "MM7: concern "+r.concern+" has a second row (the first is line "+
+				strconv.Itoa(at)+"); one row per concern")
+			continue
+		}
+		first[k] = r.line
+	}
+	byRow := map[string]map[string]bool{}    // concern -> its concern folders
+	byFolder := map[string]map[string]bool{} // concern folder -> the concerns listing its files
+	for f, concerns := range owners {
+		cf := ConcernFolder(f)
+		if cf == "" || !isSource(f) {
+			continue
+		}
+		for _, c := range concerns {
+			if byRow[c] == nil {
+				byRow[c] = map[string]bool{}
+			}
+			byRow[c][cf] = true
+			if byFolder[cf] == nil {
+				byFolder[cf] = map[string]bool{}
+			}
+			byFolder[cf][c] = true
+		}
+	}
+	for _, r := range rows {
+		names := map[string]bool{} // the folders' own names: model/battery and adapter/battery are one concern
+		for cf := range byRow[r.concern] {
+			names[path.Base(cf)] = true
+		}
+		if strings.EqualFold(r.concern, "plumbing") || len(names) < 2 {
+			continue
+		}
+		// the count is the one decided on: distinct folder NAMES, not folders (model/x + adapter/x count once)
+		s.add(s.strictSev(), s.mapPath, r.line, "MM7: concern "+r.concern+" lists files in concern folders of "+
+			strconv.Itoa(len(names))+" names ("+strings.Join(keys(names), ", ")+": "+strings.Join(keys(byRow[r.concern]), ", ")+
+			"); keep one concern folder per row")
+	}
+	for _, cf := range keys(byFolder) {
+		if cs := keys(byFolder[cf]); len(cs) > 1 {
+			s.add(s.strictSev(), s.abs(cf), 0, "MM7: concern folder in "+strconv.Itoa(len(cs))+" rows ("+
+				strings.Join(cs, ", ")+"); one row owns a concern folder")
+		}
+	}
+}
+
+// keys is m's keys in sorted order.
+func keys[V any](m map[string]V) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
 // mm6 WARNs every srcTest Java file no row lists by its path, in path order.
 func (s *scan) mm6(listed map[string]bool) {
 	var tests []string
@@ -425,40 +529,33 @@ type Summary struct {
 	Unlisted int // part source files (MM4's set) in no concern's Files; -1 with no valid map
 }
 
-// Summarize reads root's map and parts as CheckRoot does, without judging them: no map, an invalid header or no
-// valid table is ModularityNone with no counts. An unreadable map or part directory is an error.
+// Summarize reads root's map and parts as CheckRoot does, without judging them. The mode is lint.ModuleMode's (the
+// source the per-file rules pick their severity from: the nearest map at or above root, its header's mode even
+// when its table is not valid). The counts are root's own map's (lint-module-map reads only that one): -1 with
+// no map at root (nothing more is read), an invalid header or no valid table. With a map at root, a root with no
+// part (lint-module-map's empty-root exit 3), an unreadable map or an unreadable part directory is an error.
 func Summarize(root string) (Summary, error) {
-	none := Summary{Mode: lint.ModularityNone, Concerns: -1, Unlisted: -1}
-	s := &scan{root: strings.TrimRight(root, "/")}
-	if s.root == "" {
-		s.root = "/"
+	sum := Summary{Mode: lint.ModuleMode(root), Concerns: -1, Unlisted: -1}
+	mapPath := strings.TrimRight(root, "/") + "/" + lint.MapFile
+	if !lint.IsFile(mapPath) {
+		return sum, nil
 	}
-	s.mapPath = s.abs(lint.MapFile)
-	if !lint.IsFile(s.mapPath) {
-		return none, nil
+	s, err := walked(root)
+	if err != nil {
+		return sum, err
 	}
+	s.mapPath = mapPath
 	b, err := os.ReadFile(s.mapPath)
 	if err != nil {
-		return none, errors.New("cannot read " + s.mapPath + ": " + err.Error())
+		return sum, errors.New("cannot read " + s.mapPath + ": " + err.Error())
 	}
 	lines := strings.Split(string(b), "\n")
-	mode, _, problem := lint.MapHeader(lines)
-	if problem != "" {
-		return none, nil
+	if _, _, problem := lint.MapHeader(lines); problem != "" {
+		return sum, nil
 	}
 	rows, _, problem := table(lines)
 	if problem != "" {
-		return none, nil
-	}
-	s.mode = mode
-	parts, err := s.parts()
-	if err != nil {
-		return none, err
-	}
-	for _, p := range parts {
-		if err := s.walk(p); err != nil {
-			return none, err
-		}
+		return sum, nil
 	}
 	owners := map[string][]string{}
 	for _, r := range rows {
@@ -470,5 +567,88 @@ func Summarize(root string) (Summary, error) {
 			unlisted++
 		}
 	}
-	return Summary{Mode: mode, Concerns: len(rows), Unlisted: unlisted}, nil
+	sum.Concerns, sum.Unlisted = len(rows), unlisted
+	return sum, nil
 }
+
+// walked is a scan of root with every part walked: lint.ErrEmptyRoot with no part, an error for an unreadable
+// part directory.
+func walked(root string) (*scan, error) {
+	s := &scan{root: strings.TrimRight(root, "/")}
+	if s.root == "" {
+		s.root = "/"
+	}
+	parts, err := s.parts()
+	if err != nil {
+		return nil, err
+	}
+	if len(parts) == 0 {
+		return nil, lint.ErrEmptyRoot
+	}
+	for _, p := range parts {
+		if err := s.walk(p); err != nil {
+			return nil, err
+		}
+	}
+	return s, nil
+}
+
+// PartJava is every Java source of root's parts (<part>/src/**/*.java) as the lint walks them (a symlinked part or
+// file in, a symlinked directory inside a part out), relative to root and sorted: report-module's largest class
+// reads this set, so its largest and unlisted describe the same files.
+func PartJava(root string) ([]string, error) {
+	s, err := walked(root)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, f := range s.files {
+		if isSource(f) && strings.HasSuffix(f, ".java") {
+			out = append(out, f)
+		}
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// Row is one concern row of a map as the module-map tool reads it (modularity-structure Δ1, Δ4).
+type Row struct {
+	Line                int // 1-based line of the row in MODULE-MAP.md
+	Concern, Part, When string
+	Files, Tests        []string // the cell entries as written (globs unexpanded)
+}
+
+// Map is a module root's parsed MODULE-MAP.md: its mode, its rows and its lines (for a writer that inserts a
+// row after Rows' last line).
+type Map struct {
+	Mode  lint.Modularity
+	Rows  []Row
+	Lines []string
+}
+
+// ReadMap parses root's MODULE-MAP.md with the lint's own header and table reader. A missing or unreadable map is
+// an error; an invalid header or table is an error naming its MM2 problem and line.
+func ReadMap(root string) (Map, error) {
+	p := strings.TrimRight(root, "/") + "/" + lint.MapFile
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return Map{}, errors.New("cannot read " + p + ": " + err.Error())
+	}
+	lines := strings.Split(string(b), "\n")
+	mode, at, problem := lint.MapHeader(lines)
+	if problem == "" {
+		var rows []row
+		rows, at, problem = table(lines)
+		if problem == "" {
+			m := Map{Mode: mode, Lines: lines}
+			for _, r := range rows {
+				m.Rows = append(m.Rows, Row{Line: r.line, Concern: r.concern, Part: r.part, When: r.when, Files: r.files, Tests: r.tests})
+			}
+			return m, nil
+		}
+	}
+	return Map{}, errors.New(p + ":" + strconv.Itoa(at) + ": MM2: " + problem)
+}
+
+// MatchGlob reports whether the map entry pat (a "**"/"*" glob of the Files or Tests cell) matches rel.
+func MatchGlob(pat, rel string) bool { return matchGlob(path.Clean(pat), rel) }
