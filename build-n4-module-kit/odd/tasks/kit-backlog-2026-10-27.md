@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: B1–B9 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8; B9 is the run-3 review fix-forward) · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B9 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8; B9 is the run-3 review fix-forward); B10 (course coverage run A) IN PROGRESS, B11 (run B) owed · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -39,6 +39,8 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 | B6 | Issue #459 tail (rc-scan innerhtml computed-literal rows, go-rc-scan Δ3; lint-vacuous-tests report membership) + audit A7-D2 (rc-scan `status-default-ok`) | run 2 |
 | B7 | Audit A9: `ledger-check.sh` + scaffold VERSION-LEDGER, T1 test backfill, slotomatic last-comment-line WARN | run 2 |
 | B8 | Audit A7-D1: adapter `@NiagaraProperty defaultValue` vs pure-model Cfg default lint | later |
+| B10 | Course coverage run A (retro `course-coverage` Δ1-Δ21): 4 contradictions, doc gaps, corpus-index rows, lints L1 `charset-default`, L2 palette L17, L3 `slot-default-type` | run 4 |
+| B11 | Course coverage run B (retro `course-coverage` Δ22-Δ26): `build.sh --werror`, K4 `isRunning` + `stationStarted` WARN, K3 `synchronized`, K6 `javaToolchains` preflight, K11 MessageFormat `'` | later |
 
 ## Tasks
 - [x] B1 · bookkeeping (docs). Route: inline (docs only, evidence already mapped).
@@ -73,6 +75,19 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   env-fault verdict, permissions-xml no-root / latin-1 / grant wording, adapter-cfg-default (class, name) keying,
   ledger-check repeated header, KCRD2 teeth, plus logger-name precedence pin and the part-only test/build prune.
   Route: inline (each fix is one package + its goldens/bats; writer is this session). Commits df6aaac7, f8f66cd1.
+- [ ] B10 · course coverage run A (retro `retros/2026-10-28-course-coverage.md`, Δ1-Δ21; audit: 70 course topics, 46
+  covered, 12 partial, 10 missing, 2+2 contradictions). Route: inline (the parent's explorer already mapped every
+  target with path:line; each work unit is one doc batch or one rule package + shim + bats; writer is this session).
+  - [ ] B10.1 · retro + this feature doc.
+  - [ ] B10.2 · the four contradictions (Δ1-Δ4).
+  - [ ] B10.3 · doc gaps (Δ5-Δ17), one cited line each.
+  - [ ] B10.4 · `corpus-index.md` n4-dev-course rows (Δ18).
+  - [ ] B10.5 · L1 `lint-charset-default` (Δ19).
+  - [ ] B10.6 · L2 `lint-structure` L17 palette check (Δ20).
+  - [ ] B10.7 · L3 `lint-slot-default-type` (Δ21).
+  - [ ] B10.8 · report-module wiring of L1/L3 (+ golden re-record in its own commit when any golden moves).
+  - [ ] B10.9 · partial fold: the retro records Δ1-Δ21 folded and Δ22-Δ26 owed; it stays `pending`.
+- [ ] B11 · course coverage run B (retro `course-coverage` Δ22-Δ26, specs in its "Owed to run B" section). Route: TBD.
 
 ## Acceptance
 - Each block lands as one or two work-unit commits with RED → GREEN evidence where a deterministic test exists.
