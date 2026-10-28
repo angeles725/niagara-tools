@@ -10,8 +10,9 @@
 #   exit:  0 clean · 1 named integrity violation · 3 usage/env
 #
 # usage (retro-debt aging — E5 contract):
-#   sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age <N>] <retros-dir> <INDEX.md>
-#   exit:  0 always (non-strict); use --strict (not implemented) to exit 1 on escalation
+#   sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age <N>] [--strict] <retros-dir> <INDEX.md>
+#   exit:  0 (non-strict, always); with --strict, 1 when escalated_count > 0 (the same report on stdout, one
+#          `--strict: <n> pending retro(s) older than <N> days` line on stderr) · 3 usage/env
 #   stdout (three lines):
 #     total_pending=<n>
 #     escalated_count=<n>
@@ -26,6 +27,11 @@
 #     inside backticks or indented, is NOT an envelope);
 #   - each envelope carries module + retro_required + retro_pending, both booleans;
 #   - the open_issues: multi-line list is tolerated (list items are not fields);
+#   - WARN (stderr, exit unchanged): a module envelope other than `module: kit` with no or an empty
+#     module_root / source_of_truth (`unknown` is a value) — both are DECLARED for every module (audit A4);
+#   - ledger evidence tags: in a kit with ledger.d/, an `[ev:` or `[deferred:` tag of a fragment left open (no
+#     closing `]` before the next tag or the end of the text) FAILs as `ledger.d/<file>:<line>` — it would
+#     credit a fold it does not name (audit A4; read with go/internal/citeparse, so backticked code is no tag);
 #   - INDEX integrity: every retro file has a row, every row points at a real retro, and every
 #     row's review-status is pending or folded;
 #   - freshness: BUILD-STATE.md and retros/INDEX.md are generated and not committed, so callers
@@ -40,7 +46,8 @@
 # entry point: go/go-tool.sh `go_tool_bin` builds go/bin/sweep-build-state when the binary is missing or
 # older than a Go source, then this script execs it. Needs `go` on PATH to build; no Go toolchain or a
 # failed build is exit 3. [ev: retro go-sweep-build-state]
-# Mutation pins (GRI-sweep, GBS-sweep, D8, D9, BSF-pending) live in the Go source and tests.
+# Mutation pins (GRI-sweep, GBS-sweep, D8, D9, BSF-pending, LT1-unterminated, LT2-nested, SOT1-warn,
+# AGE-strict) live in the Go source and tests.
 set -u
 
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

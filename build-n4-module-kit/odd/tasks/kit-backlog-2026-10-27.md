@@ -42,7 +42,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B1 · bookkeeping (docs). Route: inline (docs only, evidence already mapped).
 - [x] B2 · A5 skill/doc drift. Route: inline (two doc lines).
 - [x] B3 · A6 pre-push every ref + CI npm job + skip allowlist. Route: inline (writer is this session).
-- [ ] B4 · A4 sweep-build-state remainder. Route: inline (one Go package).
+- [x] B4 · A4 sweep-build-state remainder. Route: inline (one Go package).
 - [ ] B4b · review fix-forward. Route: inline.
 - [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later.
 - [ ] B6 · #459 tail + A7-D2 — later.
@@ -113,5 +113,25 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
     `ledger.d/2026-10-27-kit-backlog-a6-ci.md`. Pinned shellcheck 0.10.0 also flags SC2015 at `tests/module-map.bats:25,32`
     (modularity campaign, not this unit) — fixed in B4b.
 
+- 2026-10-27 B4 (inline). Re-verified on this branch: markers balanced + freshness already in
+  `go/internal/buildstatefields` (`CheckEnvelopes`, `freshness`); no ledger tag check, no module-field WARN, `--strict`
+  documented as "not implemented" (`toolbelt/sweep-build-state.sh:14`) and refused as an unknown flag. Intent of the
+  audit's "module_root/source_of_truth WARN": the two DECLARED fields every module envelope must carry
+  (`BUILD-STATE.src.md` § How to read, "required for every module"); `--age --strict` contract from the wrapper header
+  (E5): exit 1 on escalation — clear, so implemented rather than deferred.
+  - Design: the tag check reuses `citeparse.Card` (the scanner kit-cite-resolve and the fold audit use), so a
+    backticked `` `[ev:` `` stays code (one such literal is in `ledger.d/2026-10-24-r10-kcr-false-positives.md`); a tag is
+    unbalanced when citeparse reports it unterminated or its text holds another `[ev:` / `[deferred:` opener. It runs
+    after the INDEX checks, before freshness, only in a ledger.d/ kit.
+  - RED: `TestMainLedgerEvidenceTags` (3 FAIL cases), `TestMainSourceOfTruthWarn` (2 WARN cases),
+    `TestMainAgeStrict` not ok on the base; fixtures `writeState`, S8, S9 gained `module_root` / `source_of_truth`, and
+    the "unknown flag" case of `TestMainAgeArgs` now uses `--bogus`. GREEN: `memcap go test ./internal/buildstatefields/`
+    ok; `go vet` clean; bats D10 (`tests/retro-debt.bats`) + build-retro-sync + sweep-fold-audit + kit-state +
+    kit-links 91/91 ok before D10, D10 ok.
+  - Observed mutations (restored, `cmp`): LT1 unterminated case off, LT2 nested case off, the `ledgerTags` call off,
+    SOT1 field check off, AGE-strict off — each turns its Go test red.
+  - Real kit (fresh kit-state output): content check exit 0 with no WARN; `--age --strict --today 2026-10-27` 0 pending.
+  - Decision: CI's `sweep-retro-debt` step stays non-strict; turning retro debt into a CI failure is the owner's call.
+
 ## Next step
-B4.
+B4b.

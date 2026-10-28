@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/buildstate"
+	"github.com/angeles725/niagara-tools/go/internal/citeparse"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/gen"
 	"github.com/angeles725/niagara-tools/go/internal/retroindex"
@@ -27,7 +28,7 @@ const DefaultMaxAge = 30
 
 const (
 	usageText    = "usage: sweep-build-state.sh <BUILD-STATE.md> <retros-dir> <INDEX.md>\n"
-	ageUsageText = "usage: sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age N] <retros-dir> <INDEX.md>\n"
+	ageUsageText = "usage: sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age N] [--strict] <retros-dir> <INDEX.md>\n"
 )
 
 // Main implements `sweep-build-state <BUILD-STATE.md> <retros-dir> <INDEX.md>` (the content check)
@@ -62,7 +63,8 @@ func Main(args []string, s cli.Stdio) int {
 	return ExitOK
 }
 
-// content runs the four checks in order and returns the first failure.
+// content runs the checks in order (envelopes, INDEX, ledger evidence tags, freshness) and returns the first
+// failure; module-field WARNs go to stderr and never change the exit.
 func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 	// 1. envelope well-formedness
 	text, err := os.ReadFile(state)
@@ -71,6 +73,9 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 	}
 	if msg := CheckEnvelopes(string(text)); msg != "" {
 		return msg, ExitFail
+	}
+	for _, w := range EnvelopeWarnings(string(text)) {
+		fmt.Fprintf(s.Err, "sweep: WARN %s\n", w) // a WARN never changes the exit
 	}
 
 	// 2. INDEX integrity
@@ -85,7 +90,53 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 	if msg, code := unindexedRetro(retrodir, rows); code != ExitOK {
 		return msg, code
 	}
+	// 3. evidence tags of the ledger fragments
+	if msg, code := ledgerTags(abs(retrodir + "/..")); code != ExitOK {
+		return msg, code
+	}
 	return freshness(state, retrodir, index, string(indexText), s)
+}
+
+// unbalancedTag is the FAIL text of an evidence tag left open in a ledger fragment.
+const unbalancedTag = "unbalanced [ev: tag (no closing ] before the next tag or the end of the text)"
+
+// ledgerTags reads every ledger.d/*.md fragment of the kit at root (none: nothing to check) with the shared
+// citeparse scanner (fenced blocks and backticked code are not tags) and FAILs the first evidence tag left
+// open: one the scanner reports unterminated, or one whose text swallows the next `[ev:` / `[deferred:`
+// opener. Either credits a fold the tag does not name (audit A4).
+func ledgerTags(root string) (string, int) {
+	dir := root + "/ledger.d"
+	if !gen.IsDir(dir) {
+		return "", ExitOK
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Sprintf("cannot list %s: %v", dir, err), ExitEnv
+	}
+	for _, e := range entries { // os.ReadDir sorts by name
+		name := e.Name()
+		if !strings.HasSuffix(name, ".md") || e.IsDir() {
+			continue
+		}
+		b, err := os.ReadFile(dir + "/" + name)
+		if err != nil {
+			return fmt.Sprintf("cannot read ledger.d/%s: %v", name, err), ExitEnv
+		}
+		for _, p := range citeparse.Card(string(b)) {
+			// Mutation: LT1-unterminated -- skipping the unterminated case lets an open [ev: tag through
+			open := p.Kind == citeparse.Unparsed && len(p.Notes) > 0 && p.Notes[0] == "unterminated tag"
+			// Mutation: LT2-nested -- an opener inside the tag text means the previous tag never closed
+			nested := strings.Contains(p.Raw, "[ev:") || strings.Contains(p.Raw, "[deferred:")
+			if open || nested {
+				raw := p.Raw
+				if !open {
+					raw = "[ev: " + raw
+				}
+				return fmt.Sprintf("ledger.d/%s:%d: %s: %s", name, p.Line, unbalancedTag, strings.TrimSpace(raw)), ExitFail
+			}
+		}
+	}
+	return "", ExitOK
 }
 
 // indexRows checks every INDEX row against its retro (present, marker in domain and equal to the
@@ -200,7 +251,7 @@ func abs(path string) string {
 // age implements the --age report: total pending rows (dispositioned 0-delta rows excluded), how
 // many are older than --max-age days, and the oldest age, from each row's filename date.
 func age(args []string, s cli.Stdio) int {
-	today, maxAge, args, ok := parseAgeFlags(args)
+	today, maxAge, strict, args, ok := parseAgeFlags(args)
 	if !ok {
 		fmt.Fprint(s.Err, ageUsageText)
 		return ExitEnv
@@ -245,18 +296,26 @@ func age(args []string, s cli.Stdio) int {
 	} else {
 		fmt.Fprintf(s.Out, "oldest_age=%d\n", oldest)
 	}
+	// Mutation: AGE-strict -- ignoring --strict keeps exit 0 over escalated retro debt
+	if strict && escalated > 0 {
+		fmt.Fprintf(s.Err, "sweep-build-state: --strict: %d pending retro(s) older than %d days\n", escalated, limit)
+		return ExitFail
+	}
 	return ExitOK
 }
 
-// parseAgeFlags reads the --age flags (--today, --max-age, a closing --) and returns the operands
-// after them; ok is false on an unknown flag or a flag missing its value.
-func parseAgeFlags(args []string) (today, maxAge string, rest []string, ok bool) {
+// parseAgeFlags reads the --age flags (--today, --max-age, --strict, a closing --) and returns the
+// operands after them; ok is false on an unknown flag or a flag missing its value.
+func parseAgeFlags(args []string) (today, maxAge string, strict bool, rest []string, ok bool) {
 	maxAge = strconv.Itoa(DefaultMaxAge)
 	for len(args) > 0 {
 		switch a := args[0]; {
+		case a == "--strict":
+			strict = true
+			args = args[1:]
 		case a == "--today" || a == "--max-age":
 			if len(args) < 2 {
-				return "", "", nil, false
+				return "", "", false, nil, false
 			}
 			if a == "--today" {
 				today = args[1]
@@ -265,14 +324,14 @@ func parseAgeFlags(args []string) (today, maxAge string, rest []string, ok bool)
 			}
 			args = args[2:]
 		case a == "--":
-			return today, maxAge, args[1:], true
+			return today, maxAge, strict, args[1:], true
 		case strings.HasPrefix(a, "-"):
-			return "", "", nil, false
+			return "", "", false, nil, false
 		default:
-			return today, maxAge, args, true
+			return today, maxAge, strict, args, true
 		}
 	}
-	return today, maxAge, args, true
+	return today, maxAge, strict, args, true
 }
 
 // pendingAges counts the INDEX's pending rows (dispositioned 0-delta rows excluded), how many were

@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-27 -->
+<!-- last-change-note: kit-backlog B4 (audit A4): sweep-build-state ledger tags, module-field WARN, --age --strict -->
+log: 2026-10-27 · kit-backlog B4 = audit 2026-10-03 A4 remainder (feature doc `odd/tasks/kit-backlog-2026-10-27.md`) → `go/internal/buildstatefields`: the content check reads every `ledger.d/*.md` with `go/internal/citeparse` and FAILs an evidence tag left open, unterminated or swallowing the next opener (LT1/LT2); `EnvelopeWarnings` prints a stderr WARN for a module envelope with no or an empty `module_root` / `source_of_truth` (SOT1, exit unchanged, `module: kit` exempt); `--age --strict` exits 1 on escalated retro debt (AGE-strict; Go `TestMainAgeStrict`, bats `tests/retro-debt.bats` D10). The real kit: content check clean, `--age --strict` 0 pending. CI's retro-debt step stays non-strict (making the debt a CI failure is an owner decision).
