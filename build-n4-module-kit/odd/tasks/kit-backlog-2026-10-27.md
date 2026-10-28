@@ -232,13 +232,13 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   from a sampler that reads unit fields the live mode overwrites — not provable from tokens, kept WARN by decision;
   the open_issue in `ledger.d/2026-10-24-go-rc-scan.md` is closed with that decision.
 
-- 2026-10-27 B6b (run 2, inline; commit 8796bb03). Audit A7 D2 intent read from the incident it names (the
+- 2026-10-27 B6b (run 2, inline; commit 18451068). Audit A7 D2 intent read from the incident it names (the
   2026-09-24 phase-2 alarms retro, Δ5, and the version-defect ledger 2.6.0 row: `st = p.st || "ok"` showed an unlinked phase
   flag as active). rc-scan `status-default-ok`: `||`/`??`/`||=`/`??=` + string `"ok"` after a status name (st, stat,
   sts, status, `*Status`), token-level (strings and comments never match), WARN in every mode. RED golden
   `truth-status-default-ok-1` (no rows on the base); GREEN; mutations RC-status-name, RC-status-advisory red.
   Real-tree smoke (24 client -ux trees): 21 × 3 rows, 3 × 0; three spot-checked rows are the incident shape.
-- 2026-10-27 B6c (run 2, inline; commit 36ed1f85). `lint-vacuous-tests` is a per-module report member (failOnly,
+- 2026-10-27 B6c (run 2, inline; commit 4559b1ec). `lint-vacuous-tests` is a per-module report member (failOnly,
   rows, noSource `no *.java under a srcTest/` — the lint's own exit-3 text, observed on an empty root); removed
   from `notInReport`; `TestScriptsExist` 55 → 56. RED: 104 goldens failed with the member added. Re-record: the
   Go tool's output was dumped through a temporary, uncommitted hook in the golden runner (reverted with
@@ -272,7 +272,7 @@ All nine shapes and the comments are resolved, each either fixed or decided with
 9. arbitrary-ord — fixed: f19a9d1e (guarded, constant-prefixed ord) and 3566d8bf (BAlarmRecord.getSource()), #474.
 
 Also in the issue body: report-module runs the Go-ported lints and the "no failing row" wording — bd1d2a1f (#464);
-lint-vacuous-tests joined the report in 36ed1f85.
+lint-vacuous-tests joined the report in 4559b1ec.
 
 Comments:
 - catch-no-400 with an upstream finite guard — decided a true positive under the per-catch contract (a latent
@@ -285,7 +285,7 @@ Comments:
 ```
 
 - 2026-10-27 B7 (run 2, inline). Audit A9 read with its sources (template, the 2026-09-26 version-defect-ledger retro, Δ1).
-  - B7a (18df4ff5): `ledger-check` (Go `internal/ledgercheck` + `cmd/ledger-check` + `toolbelt/ledger-check.sh`):
+  - B7a (ea12be06): `ledger-check` (Go `internal/ledgercheck` + `cmd/ledger-check` + `toolbelt/ledger-check.sh`):
     LC1-LC9, contract read from `templates/VERSION-LEDGER.md` (sections, Versions header, the "`Status` is one of"
     vocabulary); `TestTemplateItself` (the template passes with only its sample-row LC9 WARN). RED: package did not
     build (no `Main`); bats LCB3 not ok (no ledger emitted). GREEN Go + bats LCB1-LCB4. Mutations LC1, LC2, LC5,
@@ -299,7 +299,7 @@ Comments:
     (Go package + its table test ~400): over the advisory budget, kept as one unit (tool + its only consumer).
   - "T1 test backfill": no definition exists (audit doc since its first version 41c154ff, retros, ledger.d, the
     research repo's ODD docs, git history) — nothing invented; recorded as such in the audit doc.
-  - B7b (9c50601f): slotomatic last-comment-line — NOT covered by lint-slotomatic-markers before (it checks stamp
+  - B7b (65137fb6): slotomatic last-comment-line — NOT covered by lint-slotomatic-markers before (it checks stamp
     counts, unclosed regions and TYPE/getType outside the region; none reads `//` comments above
     `@NiagaraProperty`). New WARN sub-check `slotomatic-doc-line` (last line of a ≥2-line `//` block continues the
     line above: previous line ends without . ! ? : ; or last line starts lower-case). RED golden sm-doc-line + bats
@@ -307,7 +307,7 @@ Comments:
     Real-tree smoke (67 client -rt parts, counts only): 0 in 4, 1-10 in 51, 27-29 in 12; spot-checks are fragments.
     Fixtures and report-module goldens unchanged.
 
-## Verification (run 2 close, 2026-10-27, tip 9c50601f + docs)
+## Verification (run 2 close, 2026-10-27, tip 65137fb6 + docs)
 - `memcap go test ./...`: 124 packages ok, 0 FAIL (EXIT 0); `gofmt -l .` empty; `go vet` clean on rcscan,
   reportmodule, ledgercheck, cmd/ledger-check, slotomaticmarkers, lint/rules/modulemap, modulemap,
   buildstatefields, citeparse.
@@ -321,6 +321,11 @@ Comments:
   exit 0. `kit-cite-resolve --strict` on skill/SKILL.md, BUILD-LOOP.md, build-verify.md, types/structure.md,
   types/logic-authoring.md: LIVE 0, HISTORY 0 findings.
 - `scripts/changelog-gate.sh --range b2e0e430..HEAD`: PASS (9 fragments).
+- `.githooks/pre-push` fed `chore/kit-backlog` over b2e0e430: the first pass was refused by `client-guard` (13 new
+  lines named two retro stems that carry client names, rules #5 and #25 of the private denylist). The 6 unpushed
+  commits that added them were rewritten in place (`git filter-branch --tree-filter`, exact-string rewording to a
+  dated retro description; 5512a99f..0dc0d74a unchanged), the backup ref removed, and the SHAs above updated; the
+  two remaining matches are pre-existing tags on edited lines, exempted by client-guard as same-hunk.
 
 ## Verification (branch close, 2026-10-27)
 - `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
