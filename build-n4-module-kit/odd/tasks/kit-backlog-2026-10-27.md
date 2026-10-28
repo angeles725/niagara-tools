@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: B1–B8 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8) · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B9 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8; B9 is the run-3 review fix-forward) · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -69,6 +69,10 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
 - [x] B8 · A7-D1 `lint-adapter-cfg-default` (adapter `@NiagaraProperty defaultValue` vs pure-model Cfg default;
   WARN, advisory). Route: inline. Ordered BEFORE B5.5 so one golden re-record covers every new module member.
+- [x] B9 · fix-forward of the APPROVED run-3 native reviews (scope added by the parent after run 3): report-module
+  env-fault verdict, permissions-xml no-root / latin-1 / grant wording, adapter-cfg-default (class, name) keying,
+  ledger-check repeated header, KCRD2 teeth, plus logger-name precedence pin and the part-only test/build prune.
+  Route: inline (each fix is one package + its goldens/bats; writer is this session). Commits df6aaac7, f8f66cd1.
 
 ## Acceptance
 - Each block lands as one or two work-unit commits with RED → GREEN evidence where a deterministic test exists.
@@ -422,6 +426,38 @@ Comments:
   BUILD-STATE carried into a kit-links L1 dangling reference — reworded `<retro-file>`; `tests/lint-absolute-claims.bats`
   SC2016 (backticks of a Markdown fixture) annotated for the pinned shellcheck.
 
+- 2026-10-27 B9 (run-3 review fix-forward, inline; commits df6aaac7, f8f66cd1).
+  - report-module (e9f3d653 R4): a member env fault with no FAIL read verdict CLEAN while exiting 3. Decision: the
+    verdict word is the existing `INCOMPLETE` (a member did not run; a FAIL still reads `ISSUES`, exit precedence
+    unchanged). RED: `truth-vacuous-tests-envfault` with INCOMPLETE failed. Nine more goldens had the same contradiction
+    (adv-exit-reasons, esl-kit-relative, lint-exit3-error, lt-exit3, tc-exit3, truth-sc-no-pct, vm-args-exit3,
+    wp-env-empty, wp-env-first-line); a script compared each old/new case line by line: 10 files, the only changed line
+    is the summary line and only its last word CLEAN -> INCOMPLETE. `sum-error-not-counted` and `wp-no-matrix` hold an
+    ERROR-like text but exit 0 (no env fault) and stay CLEAN. Unit case "env alone" now INCOMPLETE (+ a --lint-only case).
+  - ledger-check (e9f3d653 R3/R4): a header row repeated in the Versions section is skipped like the first header;
+    separator rows were already skipped anywhere. RED 2 cases (LC5/6/7 on the column names) → GREEN. A second table
+    with another header still FAILs LC4 on its rows (kept: a foreign table inside Versions is a real defect).
+  - KCRD2 (564d51b3): asserts the resolver file exists, exit 0, the resolved `[deferred]` MISSING_FILE row and its count.
+    RED: the old test passed with the resolver path pointed at a missing script (exit 127); the new one fails. Renamed to
+    what it checks (the old name claimed "no finding" while the pointer is MISSING_FILE).
+  - permissions-xml (510ad024 R3, R4-001, R2): no root element (empty, declaration-only, comment-only) → FAIL at line 1
+    (same severity as a wrong root: the file grants nothing), golden `no-root` + bats PX-noroot (guard pin); ISO-8859-1 /
+    US-ASCII decoded byte → rune (no golang.org/x), any other declared encoding exit 3 naming it (TestLatin1Decoded RED:
+    "invalid UTF-8"; bats PX-latin1); the absolute-path row says "without a FILE_READ or FILE_WRITE grant for it".
+  - adapter-cfg-default (ccfe6e90 R2/R3): fields keyed by (Cfg class qualified name, field), slots by (owner class,
+    slot); the receiver's type is its `T x` declaration (field, local or parameter) in the link's top-level class,
+    matched short, nested-qualified or package-qualified; the slot is the one on a class enclosing the statement, else
+    the part's only slot of that name (inherited); anything unresolved or ambiguous is not judged (no row). RED goldens
+    `same-field-two-cfgs`, `same-slot-two-components` (row missed by walk order); bats ACD3 (guard pin).
+  - logger-name (0dc0ba69 R3): part gradle vs group gradle disagreement pinned (`part-over-group`, part wins — passed
+    as is). The `test`/`build` prune by NAME was a real bug: a Java package `com/acme/test` under src/ was skipped
+    (logger-name exit 3 on such a part). The three B5 module lints now prune `srcTest` by name and only a part's own
+    `<part>-{rt,ux,wb,se}/{test,build}` by path; goldens `package-named-test` (logger-name, permissions-xml) and
+    `package-named-build` (adapter-cfg-default) RED under the old prune; bats LN3 (guard pin). The package-qualified
+    receiver case surfaced a resolution gap in the new adapter matching, fixed before commit.
+  - Smoke (9 client module roots, old binary at d888f5a1 vs new): adapter-cfg-default 24 rows, logger-name 24,
+    permissions-xml 1 — byte-identical outputs.
+
 ## Verification (run 2 close, 2026-10-27, tip 65137fb6 + docs)
 - `memcap go test ./...`: 124 packages ok, 0 FAIL (EXIT 0); `gofmt -l .` empty; `go vet` clean on rcscan,
   reportmodule, ledgercheck, cmd/ledger-check, slotomaticmarkers, lint/rules/modulemap, modulemap,
@@ -503,3 +539,31 @@ What is left, and why:
 - The four new module lints are WARN/advisory (G21 FAILs per its spec); promoting any of them to FAIL is a later decision
   once their real-tree counts settle.
 
+## Verification (B9 close, 2026-10-27, tip f8f66cd1)
+- `memcap go test ./...`: 130 packages ok, EXIT 0; `go vet ./...` exit 0; `gofmt -l .` empty.
+- RED per GREEN: listed per fix under Progress B9.
+- bats `-j 4 --no-parallelize-within-files` report-module, ledger-check, kit-cite-resolve-deferred, lint-permissions-xml,
+  lint-adapter-cfg-default, lint-logger-name, guard-pins, gen-lint-index: 128/128 ok; `check-bats-skips.sh` 2 skips, all
+  allowlisted. `lint-guard-pins.sh --strict <repo>`: exit 0, 365 MATCH (PX-noroot, LN3, ACD3 included).
+- `gen-lint-index.sh --check`, `gen-retro-index.sh --check`, `gen-build-state.sh --check`: exit 0.
+  `sweep-fold-audit.sh --strict --exact-stems --deltas-since 2026-09-24 retros/INDEX.md <kit>`: 411/411 cited, 789
+  deltas, 0 not cited. `scripts/ci-local.sh --only shellcheck`: PASS.
+- `scripts/changelog-gate.sh --range d888f5a1..HEAD`: PASS (2 fragments). `.githooks/pre-push` fed `chore/kit-backlog`
+  over d888f5a1: exit 0.
+
+## Follow-ups (advisory, not scheduled)
+Remaining run-3 review findings, recorded, not fixed (all advisory):
+- rcscan R3-recheck-scalar-untested — `go/internal/rcscan/provenance.go:222-226`: the `recheck()` path for a scalar
+  (non-`.map`) verdict has no test.
+- absoluteclaims R2-001 — `go/internal/lint/rules/absoluteclaims/testdata/spec-cases.txt:19` (readability finding of
+  the run-3 review on that case; wording per the review capture).
+- absoluteclaims R3-table-fence-units — `go/internal/lint/rules/absoluteclaims/absoluteclaims.go:87-99`: how claim units
+  end at Markdown tables and code fences is not pinned by a golden.
+- retrodeltas R3-header-mismatch-unproved — `go/internal/retrodeltas/retrodeltas_test.go`: a mismatch from the deltas
+  header alone is not proved by a case.
+- retrodeltas R3-multi-file-total-unproved — `go/internal/retrodeltas/retrodeltas_test.go`: the TOTAL line over several
+  retro files is not proved by a case.
+- ledger-check: a second table with a different header inside `## Versions` FAILs LC4 on each of its rows (kept as a
+  real defect; revisit if ledgers legitimately carry side tables there).
+Fixed in B9 and dropped from this list: permissions-xml R2 FILE_WRITE wording, loggername R3 module-name precedence
+(pinned) and R3 prune package segments, KCRD2 naming.
