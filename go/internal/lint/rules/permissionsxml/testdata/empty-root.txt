@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-permissions-xml  @DIR@/M  no module-permissions.xml and no *.java under a -rt part's src/ (wrong path: pass the module root)
+-- stderr --
+-- M/M-ux/src/rc/app.js --
+var x = 1;

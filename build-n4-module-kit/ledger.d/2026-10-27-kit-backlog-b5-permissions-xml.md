@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-27 -->
+<!-- last-change-note: kit-backlog B5.2: lint-permissions-xml (G21) checks module-permissions.xml roots, group types, requests and absolute -rt paths -->
+log: 2026-10-27 · kit-backlog B5.2 (G21, C47 lint half) → new lint `lint-permissions-xml.sh <module-root>...` (`go/internal/lint/rules/permissionsxml`): FAIL a `module-permissions.xml` root other than `<permissions>` and a `<niagara-permission-groups>` type other than station/workbench/all; WARN a `<req-permission>`/`<opt-permission>` without `<name>` or `<purposeKey>` and a `new File("/…")`/`Paths.get("/…")` in `-rt` src/; a file that does not parse is exit 3. `types/structure.md` § module-permissions.xml points to it; `tests/lint-permissions-xml.bats` PX1-PX2. [ev: retro n4-course-authoring-files-and-libraries Δ2]

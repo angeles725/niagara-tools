@@ -706,6 +706,9 @@ cursor recipe stays owed (WU-P0-6).
   reads only `<permissions>`). The fixture replacement is owed as G98 `fixture-permissions`.
   **Fixture half FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): every fixture `module-permissions.xml` root is `<permissions/>` (5de000e9) —
   G98 done. LEFT: the lint half, Go lint G21 `permissions-xml` (kit-backlog B5).
+  **Lint half FOLDED** (2026-10-27, `odd/tasks/kit-backlog-2026-10-27.md` B5.2): Go lint G21 `lint-permissions-xml`
+  (`go/internal/lint/rules/permissionsxml`, `toolbelt/lint-permissions-xml.sh`, `tests/lint-permissions-xml.bats` PX1-PX2),
+  pointed to from `types/structure.md` § module-permissions.xml. C47 is FOLDED.
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)

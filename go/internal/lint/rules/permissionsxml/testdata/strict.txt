@@ -1,0 +1,11 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 1
+WARN  lint-permissions-xml  @DIR@/M/M-rt/module-permissions.xml:2  <req-permission> REFLECTION has no <purposeKey> (both <name> and <purposeKey> are required)
+-- stderr --
+-- M/M-rt/module-permissions.xml --
+<permissions><niagara-permission-groups type="station">
+<req-permission><name>REFLECTION</name></req-permission>
+</niagara-permission-groups></permissions>

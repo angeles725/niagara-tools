@@ -1,0 +1,14 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-permissions-xml  @DIR@/M/M-rt/module-permissions.xml:2  root element <modulePermissions> is not <permissions>: baja reads only <permissions> (NModule), so every request is ignored
+FAIL  lint-permissions-xml  @DIR@/M/M-wb/module-permissions.xml:1  root element <permission> is not <permissions>: baja reads only <permissions> (NModule), so every request is ignored
+-- stderr --
+-- M/M-rt/module-permissions.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<modulePermissions/>
+-- M/M-wb/module-permissions.xml --
+<permission>
+  <niagara-permission-groups type="station"/>
+</permission>
