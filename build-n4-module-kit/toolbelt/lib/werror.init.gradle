@@ -1,10 +1,21 @@
 // werror.init.gradle: the gradle init script `build.sh --werror` passes with --init-script. Every JavaCompile task
 // of every project compiles with all javac lint warnings on and any warning an error, as vendors that build with
 // -Werror do. The remedy for a warning is to fix it, or a scoped @SuppressWarnings on the smallest declaration that
-// holds an unavoidable one (METHODOLOGY.md "Compiles warning-clean"). Groovy and `tasks.withType(...) { }` so the
-// same file runs on Gradle 4.0.2 (4.12 and older) and Gradle 7.x. [ev: corpus B1419 §1419.4 b]
-allprojects {
-    tasks.withType(JavaCompile) {
-        options.compilerArgs.addAll(['-Xlint:all', '-Werror'])
+// holds an unavoidable one (METHODOLOGY.md "Compiles warning-clean"). [ev: corpus B1419 §1419.4 b]
+//
+// The args go on in taskGraph.whenReady, after every project's build script, afterEvaluate hook and lazy configure
+// action: an append at task creation (tasks.withType(...) { }) is lost when a build script or plugin later REPLACES
+// the list (`options.compilerArgs = [...]`), and --werror then passes on a module full of warnings. They are added
+// only when absent, so a build that already passes them is unchanged. whenReady runs before the up-to-date check, so
+// a compile that was up to date without --werror recompiles with it. Groovy, and only API that Gradle 4.0.2 (4.12
+// and older) and Gradle 7.x share. Proven on Gradle 7.6 + JDK 8 against a build script that replaces compilerArgs.
+// [ev: retro course-coverage Δ22]
+gradle.taskGraph.whenReady { graph ->
+    graph.allTasks.findAll { it instanceof JavaCompile }.each { JavaCompile task ->
+        ['-Xlint:all', '-Werror'].each { String arg ->
+            if (!task.options.compilerArgs.contains(arg)) {
+                task.options.compilerArgs.add(arg)
+            }
+        }
     }
 }

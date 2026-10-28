@@ -1080,6 +1080,20 @@ _install_gradlew() {
   grep -q "'-Xlint:all', '-Werror'" "$TMPDIR_T/kit/lib/werror.init.gradle"
 }
 
+# [ev: retro kit-backlog-2026-10-27 B12] — a build script or plugin that REPLACES options.compilerArgs after the init
+# script's task-creation action silently dropped -Werror; the args now go on in taskGraph.whenReady (after every
+# project, afterEvaluate and lazy configure action) and only when absent.
+@test "BS-werror-late: the init script adds -Xlint:all -Werror at taskGraph.whenReady, after all build configuration" {
+  # Mutation: BS-werror-late -- an append in a tasks.withType(JavaCompile) creation action is replaced by a later
+  # `options.compilerArgs = [...]` in the build script, so --werror compiles without -Werror and passes
+  local code
+  code="$(grep -v '^[[:space:]]*//' "$KIT/toolbelt/lib/werror.init.gradle")"
+  [[ "$code" == *"gradle.taskGraph.whenReady"* ]]
+  [[ "$code" == *"instanceof JavaCompile"* ]]
+  [[ "$code" == *"compilerArgs.contains("* ]]
+  [[ "$code" != *"tasks.withType(JavaCompile)"* ]]
+}
+
 @test "BS-werror-off: without --werror gradle gets no init script (the default build is unchanged)" {
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]

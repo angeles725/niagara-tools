@@ -104,6 +104,16 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
     `x[]` declarators on both halves of the byte/char guard; slot-default-type goldens for the widening skip and
     the other skip branch.
   - [x] B11.8 · close: cite every Δ, retro `folded`, ledger open_issue DONE, strict fold audit, verification.
+- [ ] B12 · fix-forward of three real defects from the APPROVED run-B reviews (9995edd9, faebf598, 7078f5f8); every
+  other run-B finding is listed under "Follow-ups". Route: inline (three bounded units, each one script or rule plus
+  its test; the defects were mapped by the reviews; writer is this session).
+  - [x] B12.1 · `--werror` (9995edd9 R3): the init script appended the args at task creation, so a build script that
+    replaces `options.compilerArgs` dropped them; now at `taskGraph.whenReady`, only when absent. RED bats
+    BS-werror-late + a real Gradle 7.6 / JDK 8 probe (old script exit 0 on raw types, new exit 1).
+  - [ ] B12.2 · `preflight --toolchains` (faebf598 R4/R3/R2): POSIX gradlew row only; the Windows route is a SKIP or
+    `cmd.exe /c gradlew.bat`; a full-JDK-8 pin passes before the gradlew check; usage-golden `@kind` text.
+  - [ ] B12.3 · L17 own module (7078f5f8 R4/R3): the module name from its declaration, not the part directory.
+  - [ ] B12.4 · close: follow-ups listed, verification.
 
 ## Acceptance
 - Each block lands as one or two work-unit commits with RED → GREEN evidence where a deterministic test exists.

@@ -42,8 +42,12 @@ J8=/usr/lib/jvm/java-8-openjdk-amd64            # confirm: ls /usr/lib/jvm
 - **Reference sources (course labs, vendor samples) arrive WITHOUT the generated region — run `:<part>:slotomatic` before `:<part>:jar`:** 0 of the 47 course lab `.java` files carry a `BEGIN BAJA AUTO GENERATED` region, and the course's own loop is transcribe → `gradlew slotomatic` → fix the errors → `gradlew jar`. `jar` alone compiles classes that lack the generated `TYPE`/accessors `[INFER]`; `build.sh` already runs slotomatic first. The IDE stays red until slot-o-matic runs and every supertype module is a dependency (`types/module-wiring.md` § 1.1). Never pre-write empty markers (METHODOLOGY K15). `[ev: course Labs/Lab Instructions.pdf p81]` `[ev: retro n4-course-as-exemplar-source Δ4]`
 - **The complement: a source that HAS the generated region must not also hand-write `TYPE`/`getType()` outside it.** Slot-o-Matic writes both into the region, so a `@NiagaraType` class carrying a hand-written `static final Type TYPE` or `getType()` beside the region fails `compileJava` with `variable TYPE is already defined` after `slotomatic` runs. A module only ever built without slotomatic hides it. Delete the hand-written pair and keep the generated region. `lint-slotomatic-markers.sh` FAILs it as `type-outside-region` (run by `report-module.sh`). `[ev: retro r10-client-gate-retro Δ1]`
 - **Warning-clean proof: `toolbelt/build.sh --werror`** adds `-Xlint:all -Werror` to every `JavaCompile` through
-  `--init-script toolbelt/lib/werror.init.gradle` (Gradle 4.0.2 and 7.x), off by default, so a module that some vendors
-  build with `-Werror` stays warning-clean; the fix is the warning, or a scoped `@SuppressWarnings`. `[ev: corpus B1419 §1419.4 b]`
+  `--init-script toolbelt/lib/werror.init.gradle`, off by default, so a module that some vendors build with `-Werror`
+  stays warning-clean; the fix is the warning, or a scoped `@SuppressWarnings`. `[ev: corpus B1419 §1419.4 b]` The args
+  go on at `taskGraph.whenReady` and only when absent, so a build script or plugin that replaces `options.compilerArgs`
+  cannot drop them. Proven on Gradle 7.6 + JDK 8 (a build script that sets `options.compilerArgs = [...]`: raw-type
+  warnings fail the build; a clean source passes; an up-to-date compile recompiles); Gradle 4.0.2 is not run here, the
+  script uses only API both share.
   `[ev: retro course-coverage Δ22]`
 - On WSL, `gradle.properties` may pin a Windows JDK path (`C:\Program Files\Zulu\zulu-8`) — that breaks WSL (`Illegal character ... C:\`). Override with `-Porg.gradle.java.installations.paths=$J8`. On Windows the pinned Zulu 8 is correct.
 - **`build.sh`↔`gradle.properties` JDK split:** `toolbelt/build.sh` line 74 sets
