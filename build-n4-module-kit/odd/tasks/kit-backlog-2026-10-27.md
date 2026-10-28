@@ -40,7 +40,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 
 ## Tasks
 - [x] B1 · bookkeeping (docs). Route: inline (docs only, evidence already mapped).
-- [ ] B2 · A5 skill/doc drift. Route: inline (two doc lines).
+- [x] B2 · A5 skill/doc drift. Route: inline (two doc lines).
 - [ ] B3 · A6 pre-push every ref + CI npm job + skip allowlist. Route: inline (writer is this session).
 - [ ] B4 · A4 sweep-build-state remainder. Route: inline (one Go package).
 - [ ] B4b · review fix-forward. Route: inline.
@@ -73,5 +73,18 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   r10-run-niagara-test-go (G33 phase 2), r10-run-niagara-test-run (first live run), r8-u5-c59-c62 (C59 doc half).
   Checks: register no-loss proof PASS (missing=0); `gen-build-state.sh --check` valid.
 
+- 2026-10-27 B2 (inline). `scripts/ng-deploy.sh` read on this branch: annotation guard + opt-in slotomatic in modes A/C
+  only (`:642-657`; -ux slotomatic in mode A when -ux is annotated, `:528-535`), version-bump precheck in every mode and
+  schema-risk in A/C before the copy (`:668-678`; exits 51/52/54, 12/53), verify-module gate after the copy in A/C
+  (`:704-710`, exit 50, `--no-gate`). `skill/SKILL.md:37` and `BUILD-LOOP.md` §4 (:129) said "backup → build → copy →
+  verify; slotomatic guard rt-only"; §5 (:216) listed exits 51/52 without 54. All three now name the gate and prechecks.
+  Checks: the 10 suites that read BUILD-LOOP.md or skill/SKILL.md, 107/107 ok; `kit-cite-resolve --strict` on both
+  cards LIVE 0 / HISTORY 0. `scripts/check-skill-drift.sh` FAILs (installed launcher differs) — it already failed on
+  d982a704; the reinstall (`scripts/install-skill.sh --force --skill build-n4-module`) is owed to the parent session.
+  Gaps outside the surface: `build-verify.md:11` still says "its slotomatic guard is **rt-only**; run verify-module.sh
+  afterwards", and `build-verify.md:276` says modes A and C regenerate -ux slots (mode C is -rt only, `ng-deploy.sh:532`).
+  Finding: the gate runs AFTER the copy, so a gate FAIL leaves the new jar in the station's modules dir (exit 50 but
+  the copy happened) — a candidate for a later ng-deploy fix, not in this brief.
+
 ## Next step
-B1.
+B3.
