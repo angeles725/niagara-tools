@@ -1,0 +1,30 @@
+# Global bats SKIP allowlist (audit A6) — read by scripts/check-bats-skips.sh in the CI bats job.
+# One extended regular expression per line, matched against the WHOLE skip reason. A skip whose reason matches
+# no line fails CI. Add a line only for a skip that is legitimate on a GitHub runner, and say why above it.
+# The CI bats job installs Java 8, JUnit, bats, GNU parallel, Go, CPython and the pinned npm tools
+# (toolbelt/eslint/package.json), so "no javac", "junit not in ~/.gradle", "eslint not installed" and
+# "acorn not installed" are deliberately NOT here: one of them in CI means a setup step broke.
+
+# Campaign close gates: run only at a campaign close, by an explicit env switch.
+^campaign-[0-9]+ close gate — run with C[0-9]+_CLOSE=1 at close$
+^C[0-9]+ close gate — set C[0-9]+_CLOSE=1 to run$
+^C[0-9]+_[A-Z_]+ not set \(set to fixed-tree [A-Za-z0-9-]+/src dir to run\)$
+
+# Real-tree smokes over client checkouts and station bogs: never on a runner (the repository is public).
+^client read tree not on this machine \(set C[0-9]+_CLIENT_ROOT\)$
+^client [A-Za-z0-9]+ tree not on this machine$
+^no client module root \(set C[0-9]+_[A-Z_]+ to a [0-9a-f]+ [A-Za-z0-9/]+ root\)$
+^[A-Za-z0-9-]+ src not on this machine \(set C[0-9]+_CLIENT_ROOT\)$
+^[A-Za-z0-9-]+ rc not on this machine \(local-only real smoke\)$
+^[A-Za-z0-9]+ bog not on this machine( \(set C[0-9]+_[A-Z0-9_]+\))?$
+
+# Local-only evidence: a Niagara install, a browser, the installed skill launcher.
+^no niagara_home/JDK 8 for the real round-trip \(local-only bless evidence, never a fake PASS\)$
+^no Chrome \(set KIT_CHROME or PUPPETEER_EXECUTABLE_PATH\)$
+^launcher not installed on this machine$
+
+# The complement of the npm install: with the pinned eslint under toolbelt/eslint the PATH fallback is unreachable.
+^the pinned eslint is installed under toolbelt/eslint; the PATH fallback is not reached$
+
+# A guard over a retired mechanism (every awk_lint_each lint is ported to Go).
+^no awk_lint_each lint left \(all ported to n4lint\)$

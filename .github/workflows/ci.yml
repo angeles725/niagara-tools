@@ -139,6 +139,32 @@ jobs:
         with:
           python-version: "3.15"
 
+      # The pinned npm tools of the kit's JS lints (audit A6): toolbelt/eslint/package.json pins eslint and acorn to
+      # exact versions; with them installed the report-module ESLint rows and the lint-vendor-floor acorn tests run
+      # instead of skipping. npm's download cache is keyed on that package.json (no lockfile is committed yet: the
+      # direct pins are exact, the transitive tree resolves fresh; the step below fails if a direct pin drifts).
+      - name: Set up Node.js 24.19.0 (npm cache keyed on toolbelt/eslint/package.json)
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: build-n4-module-kit/toolbelt/eslint/package.json
+
+      - name: Install the pinned npm tools (eslint + acorn from toolbelt/eslint/package.json; installed versions asserted)
+        run: |
+          npm install --prefix build-n4-module-kit/toolbelt/eslint --no-audit --no-fund
+          # Every direct devDependency must resolve to exactly its pinned version.
+          node -e '
+            const dir = "build-n4-module-kit/toolbelt/eslint";
+            const pins = require("./" + dir + "/package.json").devDependencies;
+            let bad = 0;
+            for (const [name, want] of Object.entries(pins)) {
+              const got = require("./" + dir + "/node_modules/" + name + "/package.json").version;
+              console.log(name + " " + got + (got === want ? "" : " (pinned " + want + ")"));
+              if (got !== want) bad = 1;
+            }
+            process.exit(bad);'
+
       # The toolbelt wrappers build go/bin on demand; build it once so the parallel suites do not race to.
       - name: Pre-build go/bin (the binaries the bats suites exec through the toolbelt wrappers)
         run: cd go && go build -o bin/ ./cmd/...
@@ -160,6 +186,9 @@ jobs:
             printf 'ERROR: bats reported %s results for a TAP plan of %s tests\n' "$got" "${plan:-missing}" >&2
             exit 1
           fi
+          # Global SKIP allowlist (audit A6): every `# skip <reason>` must match a line of tests/bats-skip-allowlist.txt,
+          # so no suite can start skipping for a new, unreviewed reason and still read green.
+          bash scripts/check-bats-skips.sh "$TAP" tests/bats-skip-allowlist.txt
 
       - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
         run: |

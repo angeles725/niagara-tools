@@ -41,7 +41,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 ## Tasks
 - [x] B1 · bookkeeping (docs). Route: inline (docs only, evidence already mapped).
 - [x] B2 · A5 skill/doc drift. Route: inline (two doc lines).
-- [ ] B3 · A6 pre-push every ref + CI npm job + skip allowlist. Route: inline (writer is this session).
+- [x] B3 · A6 pre-push every ref + CI npm job + skip allowlist. Route: inline (writer is this session).
 - [ ] B4 · A4 sweep-build-state remainder. Route: inline (one Go package).
 - [ ] B4b · review fix-forward. Route: inline.
 - [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later.
@@ -86,5 +86,32 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   Finding: the gate runs AFTER the copy, so a gate FAIL leaves the new jar in the station's modules dir (exit 50 but
   the copy happened) — a candidate for a later ng-deploy fix, not in this brief.
 
+- 2026-10-27 B3 (inline). Re-verified: `.githooks/pre-push:49-51` read only the first ref line, and a branch
+  deletion on that line exited 0 for the whole push. Design: the per-ref body is `gate_ref() ( … )` (a subshell, so
+  its `exit`s end one ref's gate), looped over every stdin line; the first failing ref's status stops the push.
+  - RED (real scratch repos): H30 (second ref ungated kit work) and H31 (deletion first, bad ref second) exit 0 on the
+    base; H32 (two passing refs) stays green. GREEN: build-retro-sync + pre-push-* + changelog-gate + install-hooks +
+    fail-open-idioms 94/94 ok. A first H30 draft changed README.md, a live doctrine card, which tripped the live-cite
+    working-tree check; the fixture uses `notes.txt`.
+  - CI: the bats job sets up Node.js 24.19.0 (`actions/setup-node@v5`, npm cache keyed on
+    `toolbelt/eslint/package.json`) and installs eslint 10.11.0 + acorn 8.18.0 (the exact pins already in that
+    package.json), asserting each installed version. The same step through `scripts/ci-local.sh --only` installed and
+    asserted both locally. `ci-local.sh` gains a SKIP rule for the Node.js setup step (node on PATH).
+  - Global SKIP allowlist: new `scripts/check-bats-skips.sh` + `tests/bats-skip-allowlist.txt` (whole-reason EREs,
+    client-tree reasons written as generic shapes), called at the end of the CI bats step; routed in BUILD-LOOP §7
+    (kit-links L12). The 77 skip lines of the last main CI run (job 121205121598) replayed through it: 70 allowlisted,
+    the 7 unlisted are exactly the acorn/eslint skips the npm install removes. RED: SK1-SK7 not ok (no script);
+    GREEN 7/7. CL17's "full run" fixture now skips for an allowlisted reason; new CL18 (unlisted skip fails the step).
+  - Observed mutations (restored, `cmp`): check call dropped from ci.yml → CL18; `-x` dropped → SK3 (after SK3 got an
+    unanchored allowlist line — the first version did not bite because its pattern carried `^…$`); unlisted branch
+    disabled → SK2; ERE validation disabled → SK6; plan check disabled → SK5.
+  - With the npm tools installed: report-module + lint-vendor-floor + scaffold-module + ci-local + check-bats-skips
+    141 tests, 140 ok before the CL17 fixture fix, then all ok; their 4 local skips all allowlisted.
+  - `actionlint`: not installed on this host (ci.yml parsed by `ci-steps` through `ci-local.sh --list`, 0 UNCOVERED).
+  - Gap: `build-n4-module-kit/toolbelt/eslint/.gitignore` (outside the surface) still says CI never installs these
+    tools; the lockfile + `npm ci` switch it names is recorded as an open_issue in
+    `ledger.d/2026-10-27-kit-backlog-a6-ci.md`. Pinned shellcheck 0.10.0 also flags SC2015 at `tests/module-map.bats:25,32`
+    (modularity campaign, not this unit) — fixed in B4b.
+
 ## Next step
-B3.
+B4.

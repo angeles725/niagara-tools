@@ -689,6 +689,10 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
     SC2015 that CI failed in PR #273 (`CONTRIBUTING.md` § 6). `[ev: retro r8-t22-retro-deltas Δ4]`
     Its shellcheck step covers `.githooks/*` with `scripts/`, `toolbelt/` and `tests/`, so a hook is never checked by
     hand. `[ev: retro ledger-generated-not-committed Δ3]`
+    Its bats step installs the pinned npm tools first (`toolbelt/eslint/package.json`) and ends with
+    **`scripts/check-bats-skips.sh <bats.tap> tests/bats-skip-allowlist.txt`**: a test that skips for a reason no
+    allowlist line matches fails the run (exit 1), so a lost tool install or a guard that now always skips cannot
+    read green. A new legitimate CI skip gets its own commented allowlist line in the same PR (audit A6).
   - **Shared host:** when other sessions run on the same machine, cap test parallelism at `-j 3` (at load 28 a
     wider run made `verify-module.bats` flake). GNU `parallel` children inherit an open `flock` fd and hold the
     lock after the parent exits: start a locked parallel run with `setsid` and stop it with `kill -- -<PGID>`.

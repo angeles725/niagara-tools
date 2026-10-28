@@ -23,7 +23,7 @@
 # ignored, so an early-exiting grep made printf report "write error: Broken pipe" (tests H29).
 # Client-identifier guard, before every other check: niagara-go `client-guard` (the first step below).
 #
-# stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
+# stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref; every line is gated.
 set -u
 
 toplevel=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
@@ -46,134 +46,145 @@ else
   echo "pre-push: client-guard not installed and no client denylist; client-identifier check skipped" >&2
 fi
 
-# range from the first ref line; fields 1/3 (refs) are unused
-read -r _ lsha _ rsha <<<"$pushed" || exit 0
-[ -n "${lsha:-}" ] || exit 0
-[[ "$lsha" =~ ^0+$ ]] && exit 0   # deleting a remote branch: nothing is pushed, nothing to gate
-refuse() { echo "pre-push: $1; refusing to push unchecked" >&2; exit 1; }
-# the content half: ledger + index coherence (one call shape for every exit). BUILD-STATE.md and the two
-# INDEX.md files are not committed, so they are generated from the committed sources (the lint index
-# only validated) into a temp dir and swept there; any generator violation fails it. Returns sweep's (or the generator's) exit code.
-run_sweep() {
-  local t rc
-  t=$(mktemp -d) || refuse "mktemp failed"
-  bash "$kit/toolbelt/kit-state.sh" build-state "$kit" > "$t/BUILD-STATE.md" \
-    && bash "$kit/toolbelt/kit-state.sh" retro-index "$kit" > "$t/INDEX.md" \
-    && bash "$kit/toolbelt/kit-state.sh" lint-index "$kit" > /dev/null \
-    && bash "$sweep" "$t/BUILD-STATE.md" "$kit/retros" "$t/INDEX.md"
-  rc=$?
-  rm -rf "$t"
-  return "$rc"
-}
-if [[ "${rsha:-}" =~ ^0*$ ]]; then
-  # A new remote branch: gate everything since it left main. Diffing the lone $lsha would compare it with
-  # the WORKING TREE (empty after a clean commit) and pass every new branch unchecked.
-  base=$(git merge-base origin/main "$lsha" 2>/dev/null || git merge-base origin/HEAD "$lsha" 2>/dev/null) || base=""
-  [ -n "$base" ] || refuse "cannot find where $lsha left origin/main (git fetch origin first)"
-  range="$base..$lsha"
-else
-  range="$rsha..$lsha"
-fi
+# Every ref line is gated (audit A6): one push can carry several refs (`git push origin a b`, `--all`,
+# `--tags`), and a gate that read only the first line let every later ref through unchecked. Each ref runs
+# gate_ref in its own subshell, so an `exit` in it ends that ref's gate only; the first ref that fails stops
+# the push with its status. Fields 1/3 (the ref names) are unused.
+gate_ref() (   # gate_ref <local sha> <remote sha>
+  lsha=$1 rsha=$2
+  [[ "$lsha" =~ ^0+$ ]] && exit 0   # deleting a remote branch: nothing is pushed, nothing to gate
+  refuse() { echo "pre-push: $1; refusing to push unchecked" >&2; exit 1; }
+  # the content half: ledger + index coherence (one call shape for every exit). BUILD-STATE.md and the two
+  # INDEX.md files are not committed, so they are generated from the committed sources (the lint index
+  # only validated) into a temp dir and swept there; any generator violation fails it. Returns sweep's (or the generator's) exit code.
+  run_sweep() {
+    local t rc
+    t=$(mktemp -d) || refuse "mktemp failed"
+    bash "$kit/toolbelt/kit-state.sh" build-state "$kit" > "$t/BUILD-STATE.md" \
+      && bash "$kit/toolbelt/kit-state.sh" retro-index "$kit" > "$t/INDEX.md" \
+      && bash "$kit/toolbelt/kit-state.sh" lint-index "$kit" > /dev/null \
+      && bash "$sweep" "$t/BUILD-STATE.md" "$kit/retros" "$t/INDEX.md"
+    rc=$?
+    rm -rf "$t"
+    return "$rc"
+  }
+  if [[ "${rsha:-}" =~ ^0*$ ]]; then
+    # A new remote branch: gate everything since it left main. Diffing the lone $lsha would compare it with
+    # the WORKING TREE (empty after a clean commit) and pass every new branch unchecked.
+    base=$(git merge-base origin/main "$lsha" 2>/dev/null || git merge-base origin/HEAD "$lsha" 2>/dev/null) || base=""
+    [ -n "$base" ] || refuse "cannot find where $lsha left origin/main (git fetch origin first)"
+    range="$base..$lsha"
+  else
+    range="$rsha..$lsha"
+  fi
 
-changed=$(git diff --name-only "$range") || refuse "git diff $range failed"
-log=$(git log --format=%B "$range") || refuse "git log $range failed"
+  changed=$(git diff --name-only "$range") || refuse "git diff $range failed"
+  log=$(git log --format=%B "$range") || refuse "git log $range failed"
 
-# The live-doctrine citation gate runs FIRST: the early exits below waive retro bookkeeping, never this.
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via the hook path
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/lib/live-doctrine-set.sh" \
-  || refuse "cannot load scripts/lib/live-doctrine-set.sh"
-live_cite_check() {   # returns 0 to go on; refuses on findings or a tool failure
-  grep -qE "$LIVE_DOCTRINE_RE|$LIVE_CITE_TOOL_RE" <<<"$changed" || return 0
-  local tree out rc absent
-  local -a cards
-  tree=$(git ls-tree -r --name-only "$lsha") || refuse "git ls-tree $lsha failed"
-  mapfile -t cards < <(live_doctrine_files <<<"$tree")
-  [ "${#cards[@]}" -ge 1 ] || return 0
-  # the resolver reads the working tree: it must hold the pushed bytes of every path it reads or runs
-  git diff --quiet "$lsha" -- "${cards[@]}" go/internal/citeparse go/internal/citeresolve go/cmd/kit-cite-resolve \
-      build-n4-module-kit/toolbelt/kit-cite-resolve.sh \
-    || refuse "the working tree differs from the pushed $lsha on the live doctrine set or the resolver (check out the pushed commit)"
-  out=$(cd "$toplevel" && bash build-n4-module-kit/toolbelt/kit-cite-resolve.sh --kit build-n4-module-kit \
-          --format tsv --strict "${cards[@]}" 2>&1)
-  rc=$?
-  case $rc in
-    0) return 0 ;;
-    1) awk -F'\t' 'NF >= 7 && $6 !~ /^(RESOLVED|HISTORICAL_DRIFT|UNVERIFIABLE_KIND|SKIPPED_TEMPLATE)$/ && ++n <= 20' \
-         <<<"$out" >&2
-       refuse "live doctrine has unresolved pointers (kit-cite-resolve --strict; rows above, first 20)" ;;
-    3) # a research/modules/clients/memory root absent on this machine is the one named skip
-       absent=$(sed -nE '/^kit-cite-resolve: cannot read (research|modules|clients|memory) root (.*): no such file or directory$/{s//\1 \2/p;q}' <<<"$out")
-       if [ -n "$absent" ]; then
-         echo "pre-push: live cite check SKIPPED — roots absent ($absent)" >&2; return 0
-       fi ;;
-  esac
-  tail -5 <<<"$out" >&2
-  refuse "kit-cite-resolve failed (exit $rc; above), a tool failure is not a zero result"
-}
-live_cite_check
+  # The live-doctrine citation gate runs FIRST: the early exits below waive retro bookkeeping, never this.
+  # shellcheck disable=SC1091  # sibling lib, resolved at runtime via the hook path
+  . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/lib/live-doctrine-set.sh" \
+    || refuse "cannot load scripts/lib/live-doctrine-set.sh"
+  live_cite_check() {   # returns 0 to go on; refuses on findings or a tool failure
+    grep -qE "$LIVE_DOCTRINE_RE|$LIVE_CITE_TOOL_RE" <<<"$changed" || return 0
+    local tree out rc absent
+    local -a cards
+    tree=$(git ls-tree -r --name-only "$lsha") || refuse "git ls-tree $lsha failed"
+    mapfile -t cards < <(live_doctrine_files <<<"$tree")
+    [ "${#cards[@]}" -ge 1 ] || return 0
+    # the resolver reads the working tree: it must hold the pushed bytes of every path it reads or runs
+    git diff --quiet "$lsha" -- "${cards[@]}" go/internal/citeparse go/internal/citeresolve go/cmd/kit-cite-resolve \
+        build-n4-module-kit/toolbelt/kit-cite-resolve.sh \
+      || refuse "the working tree differs from the pushed $lsha on the live doctrine set or the resolver (check out the pushed commit)"
+    out=$(cd "$toplevel" && bash build-n4-module-kit/toolbelt/kit-cite-resolve.sh --kit build-n4-module-kit \
+            --format tsv --strict "${cards[@]}" 2>&1)
+    rc=$?
+    case $rc in
+      0) return 0 ;;
+      1) awk -F'\t' 'NF >= 7 && $6 !~ /^(RESOLVED|HISTORICAL_DRIFT|UNVERIFIABLE_KIND|SKIPPED_TEMPLATE)$/ && ++n <= 20' \
+           <<<"$out" >&2
+         refuse "live doctrine has unresolved pointers (kit-cite-resolve --strict; rows above, first 20)" ;;
+      3) # a research/modules/clients/memory root absent on this machine is the one named skip
+         absent=$(sed -nE '/^kit-cite-resolve: cannot read (research|modules|clients|memory) root (.*): no such file or directory$/{s//\1 \2/p;q}' <<<"$out")
+         if [ -n "$absent" ]; then
+           echo "pre-push: live cite check SKIPPED — roots absent ($absent)" >&2; return 0
+         fi ;;
+    esac
+    tail -5 <<<"$out" >&2
+    refuse "kit-cite-resolve failed (exit $rc; above), a tool failure is not a zero result"
+  }
+  live_cite_check
 
-# The changelog gate runs SECOND, before the retro exits below: a range that changes kit behaviour (go/,
-# build-n4-module-kit/, tools/, scripts/) needs a changelog.d/ fragment, an added `## [Unreleased]` line or a
-# `Changelog: none (<reason>)` trailer, and a malformed fragment or trailer refuses any range
-# (scripts/changelog-gate.sh; CONTRIBUTING.md § 6.2). ci.yml runs the same gate over origin/main..HEAD.
-bash "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/changelog-gate.sh" --range "$range" || exit 1
+  # The changelog gate runs SECOND, before the retro exits below: a range that changes kit behaviour (go/,
+  # build-n4-module-kit/, tools/, scripts/) needs a changelog.d/ fragment, an added `## [Unreleased]` line or a
+  # `Changelog: none (<reason>)` trailer, and a malformed fragment or trailer refuses any range
+  # (scripts/changelog-gate.sh; CONTRIBUTING.md § 6.2). ci.yml runs the same gate over origin/main..HEAD.
+  bash "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/changelog-gate.sh" --range "$range" || exit 1
 
-# build-relevant = kit files EXCEPT BUILD-STATE.src.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
-# go/** except the built go/bin/ (the toolbelt wrappers exec the Go tools, so a go/ change changes lint
-# behavior like a toolbelt script change). [ev: retro go-javasrc-scanner Δ1]
-relevant=$(grep -E '^(build-n4-module-kit/|scripts/|go/)' <<<"$changed" \
-  | grep -vE '^go/bin/' \
-  | grep -vE '^build-n4-module-kit/BUILD-STATE(\.src)?\.md$' \
-  | grep -vE '^build-n4-module-kit/ledger\.d/' \
-  | grep -vE '^build-n4-module-kit/retros/' || true)
-# ledger data = the files sweep checks. The two early exits below waive the retro bookkeeping only, never
-# the coherence of ledger data the range changes. [ev: retro r10-path-keyed-gates-skip-data]
-has_ledger_data=$(grep -cE '^build-n4-module-kit/(BUILD-STATE(\.src)?\.md|ledger\.d/|retros/)' <<<"$changed" || true)
-pass_early() {   # exit 0, after sweep when the range changed ledger data
-  [ "${has_ledger_data:-0}" -ge 1 ] || exit 0
-  run_sweep && exit 0
-  local rc=$?
-  echo "pre-push: ledger data in range is incoherent (BUILD-STATE.src.md, ledger.d/ or retros/; sweep-build-state.sh above); refusing to push" >&2
-  exit "$rc"
-}
-[ -n "$relevant" ] || pass_early   # nothing build-relevant → only the content half of changed ledger data
+  # build-relevant = kit files EXCEPT BUILD-STATE.src.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
+  # go/** except the built go/bin/ (the toolbelt wrappers exec the Go tools, so a go/ change changes lint
+  # behavior like a toolbelt script change). [ev: retro go-javasrc-scanner Δ1]
+  relevant=$(grep -E '^(build-n4-module-kit/|scripts/|go/)' <<<"$changed" \
+    | grep -vE '^go/bin/' \
+    | grep -vE '^build-n4-module-kit/BUILD-STATE(\.src)?\.md$' \
+    | grep -vE '^build-n4-module-kit/ledger\.d/' \
+    | grep -vE '^build-n4-module-kit/retros/' || true)
+  # ledger data = the files sweep checks. The two early exits below waive the retro bookkeeping only, never
+  # the coherence of ledger data the range changes. [ev: retro r10-path-keyed-gates-skip-data]
+  has_ledger_data=$(grep -cE '^build-n4-module-kit/(BUILD-STATE(\.src)?\.md|ledger\.d/|retros/)' <<<"$changed" || true)
+  pass_early() {   # exit 0, after sweep when the range changed ledger data
+    [ "${has_ledger_data:-0}" -ge 1 ] || exit 0
+    run_sweep && exit 0
+    local rc=$?
+    echo "pre-push: ledger data in range is incoherent (BUILD-STATE.src.md, ledger.d/ or retros/; sweep-build-state.sh above); refusing to push" >&2
+    exit "$rc"
+  }
+  [ -n "$relevant" ] || pass_early   # nothing build-relevant → only the content half of changed ledger data
 
-# trivial waiver short-circuits the retro bookkeeping (not the content half of changed ledger data)
-if grep -qE 'Retro: none \(trivial:' <<<"$log"; then pass_early; fi
+  # trivial waiver short-circuits the retro bookkeeping (not the content half of changed ledger data)
+  if grep -qE 'Retro: none \(trivial:' <<<"$log"; then pass_early; fi
 
-# a ledger update = a ledger.d/ fragment or a BUILD-STATE.src.md edit (BUILD-STATE.md is generated from them)
-has_state=$(grep -cE '^build-n4-module-kit/(BUILD-STATE\.src\.md|ledger\.d/[^/]+\.md)$' <<<"$changed" || true)
-has_retro=$(grep -E '^build-n4-module-kit/retros/[^/]+\.md$' <<<"$changed" | grep -vE '/INDEX\.md$' | sed -n 1p || true)
-# a full promotion flips a retro header pending -> folded in range (the generated INDEX row follows it):
-# the -pending and +folded header lines must sit in the SAME file's diff, so deleting one pending retro and
-# adding another one born folded is not a flip.
-patch=$(git diff "$range" -- 'build-n4-module-kit/retros/*.md') || refuse "git diff $range -- retros failed"
-has_flip=$(awk '
-  /^diff --git / { file = $0; next }
-  /^-<!-- review-status: pending/ { pend[file] = 1 }
-  /^\+<!-- review-status: folded/ { fold[file] = 1 }
-  END { for (f in pend) if (f in fold) { print 1; exit } print 0 }' <<<"$patch")
+  # a ledger update = a ledger.d/ fragment or a BUILD-STATE.src.md edit (BUILD-STATE.md is generated from them)
+  has_state=$(grep -cE '^build-n4-module-kit/(BUILD-STATE\.src\.md|ledger\.d/[^/]+\.md)$' <<<"$changed" || true)
+  has_retro=$(grep -E '^build-n4-module-kit/retros/[^/]+\.md$' <<<"$changed" | grep -vE '/INDEX\.md$' | sed -n 1p || true)
+  # a full promotion flips a retro header pending -> folded in range (the generated INDEX row follows it):
+  # the -pending and +folded header lines must sit in the SAME file's diff, so deleting one pending retro and
+  # adding another one born folded is not a flip.
+  patch=$(git diff "$range" -- 'build-n4-module-kit/retros/*.md') || refuse "git diff $range -- retros failed"
+  has_flip=$(awk '
+    /^diff --git / { file = $0; next }
+    /^-<!-- review-status: pending/ { pend[file] = 1 }
+    /^\+<!-- review-status: folded/ { fold[file] = 1 }
+    END { for (f in pend) if (f in fold) { print 1; exit } print 0 }' <<<"$patch")
 
-# promotion exit (§7 third exit) — folding already-filed lessons into the core. Valid ONLY when it
-# carries a STRUCTURAL ANCHOR proving it is a real promotion: an in-range retro header flip pending ->
-# folded (a full promotion; its generated INDEX row flips with it), OR an in-range ledger update (a
-# PARTIAL promotion folds content but its source retro stays pending, so it flips nothing — it stamps the
-# owed open_issue as an `open_issue:` line of a ledger.d/ fragment).
-# The trailer alone is NOT a blanket escape: with NEITHER anchor it falls through to the FAIL below.
-# Either anchored path still runs sweep for ledger coherence.
-if grep -qE 'Retro: promotion \(folds' <<<"$log" \
-   && { [ "$has_flip" -eq 1 ] || [ "${has_state:-0}" -ge 1 ]; }; then
-  run_sweep
-  exit $?
-fi
+  # promotion exit (§7 third exit) — folding already-filed lessons into the core. Valid ONLY when it
+  # carries a STRUCTURAL ANCHOR proving it is a real promotion: an in-range retro header flip pending ->
+  # folded (a full promotion; its generated INDEX row flips with it), OR an in-range ledger update (a
+  # PARTIAL promotion folds content but its source retro stays pending, so it flips nothing — it stamps the
+  # owed open_issue as an `open_issue:` line of a ledger.d/ fragment).
+  # The trailer alone is NOT a blanket escape: with NEITHER anchor it falls through to the FAIL below.
+  # Either anchored path still runs sweep for ledger coherence.
+  if grep -qE 'Retro: promotion \(folds' <<<"$log" \
+     && { [ "$has_flip" -eq 1 ] || [ "${has_state:-0}" -ge 1 ]; }; then
+    run_sweep
+    exit $?
+  fi
 
-if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ]; then
-  # content half: the generated ledger + index must actually cohere
-  run_sweep
-  exit $?
-fi
+  if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ]; then
+    # content half: the generated ledger + index must actually cohere
+    run_sweep
+    exit $?
+  fi
 
-echo "pre-push: build-relevant kit files changed without a ledger.d/ fragment (or a BUILD-STATE.src.md edit) + a pending retro," >&2
-echo "          and no 'Retro: none (trivial: <reason>)' trailer." >&2
-echo "          See BUILD-LOOP.md §7." >&2
-exit 1
+  echo "pre-push: build-relevant kit files changed without a ledger.d/ fragment (or a BUILD-STATE.src.md edit) + a pending retro," >&2
+  echo "          and no 'Retro: none (trivial: <reason>)' trailer." >&2
+  echo "          See BUILD-LOOP.md §7." >&2
+  exit 1
+)
+mapfile -t ref_lines <<<"$pushed"
+for ref_line in "${ref_lines[@]}"; do
+  read -r _ lsha _ rsha <<<"$ref_line" || continue
+  [ -n "${lsha:-}" ] || continue
+  gate_ref "$lsha" "${rsha:-}" || exit $?
+done
+exit 0
