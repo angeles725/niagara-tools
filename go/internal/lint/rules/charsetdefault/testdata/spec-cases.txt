@@ -1,0 +1,44 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:9  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:10  CD2 new String(byte[]) with no charset decodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:11  CD2 new String(byte[]) with no charset decodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:12  CD2 new String(byte[]) with no charset decodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:13  CD3 new InputStreamReader(in) with no charset uses the platform default: pass StandardCharsets.UTF_8 as the second argument (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:14  CD3 new OutputStreamWriter(out) with no charset uses the platform default: pass StandardCharsets.UTF_8 as the second argument (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:15  CD4 new FileReader has no charset parameter on Java 8: use new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8) or Files.newBufferedReader(path, StandardCharsets.UTF_8) (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:16  CD4 new FileWriter has no charset parameter on Java 8: use new OutputStreamWriter(new FileOutputStream(f), StandardCharsets.UTF_8) or Files.newBufferedWriter(path, StandardCharsets.UTF_8) (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/com/acme/io/Codec.java:17  CD3 new InputStreamReader(in) with no charset uses the platform default: pass StandardCharsets.UTF_8 as the second argument (METHODOLOGY.md § rt (components))
+-- stderr --
+-- src/com/acme/io/Codec.java --
+package com.acme.io;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+class Codec {
+  private final byte[] raw = new byte[4];
+  void f(String s, InputStream in, OutputStream out, File file, byte... more) throws Exception {
+    byte[] b = s.getBytes(StandardCharsets.UTF_8);
+    char[] c = s.toCharArray();
+    byte[] d = s.getBytes();
+    String a1 = new String(b);
+    String a2 = new String(raw, 0, 2);
+    String a3 = new String(s.getBytes(StandardCharsets.UTF_8));
+    Reader r1 = new InputStreamReader(in);
+    Writer w1 = new OutputStreamWriter(out);
+    Reader r2 = new FileReader(file);
+    Writer w2 = new FileWriter(file, true);
+    Reader r3 = new java.io.InputStreamReader(new BufferedInputStream(in, 4096));
+    String ok1 = new String(b, StandardCharsets.UTF_8);
+    String ok2 = new String(raw, 0, 2, "UTF-8");
+    String ok3 = new String(c);
+    String ok4 = new String(c, 0, 1);
+    String ok5 = new String(s);
+    Reader ok6 = new InputStreamReader(in, StandardCharsets.UTF_8);
+    Writer ok7 = new OutputStreamWriter(out, "UTF-8");
+    // byte[] x = s.getBytes(); new FileReader(file);
+    String lit = "new String(b) s.getBytes() new FileWriter(f)";
+    int n = more.length;
+  }
+}

@@ -14,6 +14,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/changedhotwrite"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/charsetdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
@@ -125,5 +126,6 @@ func All() []lint.Spec {
 		loggername.Spec(),
 		adaptercfgdefault.Spec(),
 		absoluteclaims.Spec(),
+		charsetdefault.Spec(),
 	}
 }

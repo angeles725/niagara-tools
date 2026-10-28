@@ -1,0 +1,17 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-charset-default  @DIR@/src/A.java:4  CD2 new String(byte[]) with no charset decodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/A.java:5  CD2 new String(byte[]) with no charset decodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/A.java:6  CD2 new String(byte[]) with no charset decodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+-- stderr --
+-- src/A.java --
+class A {
+  byte buf[] = new byte[2];
+  String f(java.io.ByteArrayOutputStream bos, byte... v) {
+    String x = new String(v);
+    String y = new String(buf);
+    return new String(bos.toByteArray()) + x + y;
+  }
+}
