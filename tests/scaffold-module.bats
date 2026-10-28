@@ -524,3 +524,23 @@ st_link_in_flags() {
   [[ "$output" == *"FAIL  lint-structure  ModuleA-ux/src/com/example/ModuleA/ux/Stray.java  L3: Baja-free class outside a role package"* ]]
   [[ "$output" == *"FAIL  lint-structure  ModuleA-rt/src/com/example/ModuleA/model/Lonely.java  L3: model/ class Lonely has no srcTest LonelyTest.java"* ]]
 }
+
+@test "TC-MAP4: every part of a fresh scaffold passes lint-size with no row, and a long B-class method FAILs in the strict module" {
+  # Named mutation: keep the method rule pure-class-only in a strict module -> the BComponent control below passes.
+  for t in logic dashboard driver; do
+    run "$SC" ModuleA "$OUT/$t" --type "$t" --vendor Example
+    [ "$status" -eq 0 ]
+    for src in "$OUT/$t"/ModuleA/ModuleA/*/src; do
+      run "$KIT/toolbelt/lint-size.sh" "$src"
+      [ "$status" -eq 0 ] || { echo "$src: $output"; false; }
+      [ -z "$output" ] || { echo "$src: $output"; false; }
+    done
+  done
+  S="$OUT/logic/ModuleA/ModuleA/ModuleA-rt/src/com/example/ModuleA"
+  { printf 'package com.example.ModuleA;\npublic class BLong extends BComponent\n{\n  public void changed()\n  {\n'
+    for _ in $(seq 81); do printf '    x();\n'; done
+    printf '  }\n}\n'; } > "$S/BLong.java"
+  run "$KIT/toolbelt/lint-size.sh" "$OUT/logic/ModuleA/ModuleA/ModuleA-rt/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-size  $S/BLong.java:4  method changed() in class BLong spans 84 lines (> 80)"* ]]
+}

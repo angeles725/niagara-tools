@@ -32,7 +32,8 @@
 #               comment. Entries: palette_scan below.
 #   subscription-leak a TypeSubscriber subclass with no stopped() override — unsubscribeAll() is never
 #               called; typeSubscriptionMap holds strong refs, leaking until station restart — WARN.    [--src]
-#   slot-wall   more than 15 @NiagaraProperty on one class (flat slot wall) — WARN.              [--src]
+#   slot-wall   more than 15 @NiagaraProperty on one class (flat slot wall) — WARN; FAIL in a strict  [--src]
+#               module (modularity: strict in the nearest MODULE-MAP.md, lint.ModuleMode).
 #
 # Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict] <jar>...
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is

@@ -145,7 +145,20 @@ fold audit, generated-index `--check`).
   `pureModel` unchanged. Docs: `types/structure.md` L3 row aligned with the code plus an L3b row; wrapper header.
   Bats TC-MAP3: fresh logic/dashboard/driver scaffolds have no L3 row, and a stray ux class and an untested model
   class FAIL. Checks: `go test ./internal/lint/...` ok (structure golden 44 cases), `go vet` ok; bats
-  lint-structure, gen-lint-index, scaffold-module 83/83 ok; gen-lint-index --check 0.
+  lint-structure, gen-lint-index, scaffold-module 83/83 ok; gen-lint-index --check 0. WU6 commit ba197046
+  `feat(lint): strict L3 role packages and L3b model import direction` (+437/−10).
+- WU7 = M4 part 2, strict-new Δ4 and Δ5, gaps Δ5 (route: delegated writer). RED: size goldens `strict-size` and
+  `legacy-size` (no FAIL rows, no B-class or wrapped-signature method row, no adapter row) and verifymodule golden
+  `strict-slotwall` (WARN and ALL PASS where FAIL and exit 1 were wanted); `nomap-size` recorded from the unchanged
+  lint as the byte-identical baseline (it shows the old rule measures a wrapped signature from its `{` line: 9
+  lines, no row, where the decl rule counts 12 from the name; the goldens run with `--max-class 20 --max-method 10`
+  to stay small). GREEN: `size.mapped` (javasrc.Decls over every class, legacy WARN / strict
+  FAIL, `adapter-branches` WARN for a Baja class importing a `model.` type with > 15 branch keywords);
+  `slotWall` FAILs (and fails the gate) in a strict module. Docs: `types/logic.md` § Composition, METHODOLOGY size
+  rule, lint-size and verify-module headers. Tests: `TestSlotWallStrict` (fixture PASS, 16-slot class FAIL in
+  strict, WARN without the map); bats TC-MAP4 (every part of fresh scaffolds clean under lint-size; a long
+  B-class method FAILs). Decision: the extended method rule applies only under a module map (legacy WARN), so
+  map-less modules stay byte-identical (LSZ4 pins the pure-only rule there).
 
 ## Next session
 Session stopped at 16:00 CST on 2026-10-27 after WU2; WU3 was not started.

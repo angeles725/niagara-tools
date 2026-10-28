@@ -9,7 +9,7 @@ import (
 
 // TestGolden: every tests/lint-size.bats run (LSZ-awkfail and LSZ-finderr aside: TestUnreadable pins them)
 // and every edge tree, recorded from the bash lint-size.sh.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 46) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 49) }
 
 // TestUnreadable: LSZ-awkfail and LSZ-finderr keep awk_lint_run's contract (ContinueOnWalkError).
 func TestUnreadable(t *testing.T) {
