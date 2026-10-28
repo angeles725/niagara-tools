@@ -1,0 +1,16 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:5  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+-- stderr --
+-- rc/a.js --
+const units = [{ id: "UP-01", cap: 4 }];
+const caps = units.map(u => u.cap * 2);
+caps[0].x = 1;
+units[0].cap = srv;
+el.innerHTML = caps.map(c => '<s>' + c.toString()).join('');
+const lits = [{ cap: 3 }];
+const twice = lits.map(u => u.cap * 2);
+twice[0].y = 1;
+el.innerHTML = twice.map(c => '<s>' + c.toString()).join('');
