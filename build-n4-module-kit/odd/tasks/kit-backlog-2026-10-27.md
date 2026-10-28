@@ -49,7 +49,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B5.0 · ng-deploy gate order (safety). Route: inline (one script + its bats + three doc lines; writer is this session).
 - [x] B5.1 · recorded gaps (eslint lockfile/`npm ci`; MM7 duplicate-concern docs). Route: inline.
 - [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later (next run).
-- [ ] B6 · #459 tail + A7-D2 + lint-vacuous-tests report membership. Route: inline (Go packages rcscan, reportmodule).
+- [x] B6 · #459 tail + A7-D2 + lint-vacuous-tests report membership. Route: inline (Go packages rcscan, reportmodule).
 - [ ] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
 - [ ] B8 · A7-D1 — later.
 
@@ -231,6 +231,58 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   45/60/66/60). The six client D rows the ledger named stay: `historyRows` is a `let` filled by an imperative loop
   from a sampler that reads unit fields the live mode overwrites — not provable from tokens, kept WARN by decision;
   the open_issue in `ledger.d/2026-10-24-go-rc-scan.md` is closed with that decision.
+
+- 2026-10-27 B6b (run 2, inline; commit 8796bb03). Audit A7 D2 intent read from the incident it names (the
+  2026-09-24 phase-2 alarms retro, Δ5, and the version-defect ledger 2.6.0 row: `st = p.st || "ok"` showed an unlinked phase
+  flag as active). rc-scan `status-default-ok`: `||`/`??`/`||=`/`??=` + string `"ok"` after a status name (st, stat,
+  sts, status, `*Status`), token-level (strings and comments never match), WARN in every mode. RED golden
+  `truth-status-default-ok-1` (no rows on the base); GREEN; mutations RC-status-name, RC-status-advisory red.
+  Real-tree smoke (24 client -ux trees): 21 × 3 rows, 3 × 0; three spot-checked rows are the incident shape.
+- 2026-10-27 B6c (run 2, inline; commit 36ed1f85). `lint-vacuous-tests` is a per-module report member (failOnly,
+  rows, noSource `no *.java under a srcTest/` — the lint's own exit-3 text, observed on an empty root); removed
+  from `notInReport`; `TestScriptsExist` 55 → 56. RED: 104 goldens failed with the member added. Re-record: the
+  Go tool's output was dumped through a temporary, uncommitted hook in the golden runner (reverted with
+  `git checkout`), and a script compared each old and new `want`: **every golden diff is only the new
+  `(module)  PASS|SKIP  lint-vacuous-tests` row (80 PASS under stubs, 24 SKIP from the real lint) plus the summary
+  PASS/SKIP counts moved by exactly that row; exit codes, stderr and verdicts are unchanged in all 104 cases.** A
+  first write pass lost a `\r` (Python universal newlines; rows-site) and was redone with `newline=''`. New
+  `truth-vacuous-tests-member` pins the FAIL relay; mutation RM-vacuous-nosource → 24 goldens red.
+  `memcap go test ./internal/reportmodule/` ok; bats report-module + rc-scan + kit-links 128/128.
+
+### Issue #459 closing comment (draft, NOT posted — the owner posts it)
+
+```
+All nine shapes and the comments are resolved, each either fixed or decided with evidence:
+
+1. catch-no-400 (re-read fallback) — fixed: aceb724b (#464).
+2. silent-protection — fixed: 317a7c74 (#464); the real FP was an unconditional cap below a closed `if`.
+3. rc-scan innerhtml-server — fixed: a57ca89b (sink's own value), 66e06eda + d1ff5af6 (members of the page's own
+   const literals, #483: 16 -> 6 rows on the reporting page), 0dc0d74a (values computed from those literals by
+   .map / a const arrow / a one-return function). The 6 remaining rows on that page are a `let` filled by an
+   imperative loop from a sampler that reads fields the live mode overwrites: not provable from tokens, kept WARN
+   by decision.
+4. rc-scan disabled-gate — fixed: 8f446ac6 (#483), a literal non-gate title on the disabled element.
+5. rc-scan host-literal in an unselected mode — decided, stays FAIL (e991a8d7): a one-word mode edit makes it live;
+   the page fix is a relative obix base.
+6. null-context-write — fixed: 593128de (#464), station-internal own-child seeding.
+7. rc-scan null-branch / browser-floor on vendored three.js — fixed: 196211a6 (#483), rc/vendor/**/*.js is left to
+   lint-vendor-floor (ancestor-path follow-ups b2e0e430, f04bd0f0); browser-floor stays WARN under
+   --profile unknown by decision (frontend-standard § Profiles).
+8. bql-string-concat — fixed: 53d4df96 (#464), numeric-only concatenation.
+9. arbitrary-ord — fixed: f19a9d1e (guarded, constant-prefixed ord) and 3566d8bf (BAlarmRecord.getSource()), #474.
+
+Also in the issue body: report-module runs the Go-ported lints and the "no failing row" wording — bd1d2a1f (#464);
+lint-vacuous-tests joined the report in 36ed1f85.
+
+Comments:
+- catch-no-400 with an upstream finite guard — decided a true positive under the per-catch contract (a latent
+  silent default in a private helper; one new caller without the guard writes 0); no code change, recorded in
+  retro r10-lint-fp-459 (c0e0f42c, #528). Fix in the module: let the helper throw, or pass it the validated double.
+- cache-nofinger — fixed for a ?v=-conditioned max-age: 62e43586 (#528); a max-age backed only by a build-time
+  token stays WARN (the servlet alone cannot prove the request carries it).
+- slot-coverage per-slot "OPERATOR" read from a comment (named in the tick-off comment) — fixed: ad90770c, with
+  the same shape in lint-config-sanity CS2: 4171d296 (#530).
+```
 
 ## Verification (branch close, 2026-10-27)
 - `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
