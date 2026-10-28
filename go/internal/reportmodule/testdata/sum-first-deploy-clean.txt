@@ -24,8 +24,9 @@ A-rt  SKIP  schema-risk  N/A (--first-deploy: never deployed, no baseline to dif
 (module)  PASS  lint-write-path  clean
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  PASS  lint-vacuous-tests  clean
+(module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 18 PASS · 0 FAIL · 0 WARN · 3 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 1 artifact · 19 PASS · 0 FAIL · 0 WARN · 3 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 -- @kind --
 recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)

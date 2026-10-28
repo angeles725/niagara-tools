@@ -50,8 +50,12 @@ DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract
 (module)  SKIP  lint-ndriver-static-collection  no *.java under a -rt part's src/
 (module)  SKIP  lint-ndriver-tagless-correlation  no *.java under a -rt part's src/
 (module)  SKIP  lint-vacuous-tests  no *.java under a srcTest/
+(module)  SKIP  lint-permissions-xml  no module-permissions.xml and no *.java under a -rt part's src/
+(module)  SKIP  lint-structural-tests  no *.java under a srcTest/
+(module)  SKIP  lint-logger-name  no *.java under a -rt, -ux, -wb or -se part's src/
+(module)  SKIP  lint-adapter-cfg-default  no *.java under a -rt part's src/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 7 PASS · 1 FAIL · 1 WARN · 38 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 7 PASS · 1 FAIL · 1 WARN · 42 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

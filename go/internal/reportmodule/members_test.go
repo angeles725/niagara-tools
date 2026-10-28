@@ -12,8 +12,8 @@ import (
 func TestScriptsExist(t *testing.T) {
 	t.Parallel()
 	got := Scripts()
-	if len(got) != 56 || got[0] != "verify-module.sh" || got[len(got)-1] != "triage-console.sh" {
-		t.Errorf("Scripts() = %d entries %q...: want the 56 members, verify-module.sh first, triage-console.sh last", len(got), got[:1])
+	if len(got) != 60 || got[0] != "verify-module.sh" || got[len(got)-1] != "triage-console.sh" {
+		t.Errorf("Scripts() = %d entries %q...: want the 60 members, verify-module.sh first, triage-console.sh last", len(got), got[:1])
 	}
 	for _, s := range got {
 		if _, err := os.Stat(filepath.Join("..", "..", "..", "build-n4-module-kit", "toolbelt", s)); err != nil {

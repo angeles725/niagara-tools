@@ -63,8 +63,9 @@ B  PASS  schema-risk  verdict=SAFE
 (module)  PASS  lint-write-path  clean
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  PASS  lint-vacuous-tests  clean
+(module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 8 PASS · 0 FAIL · 0 WARN · 52 SKIP · 0 ADVISORY  ->  INCOMPLETE
+report-module: 2 artifacts · 9 PASS · 0 FAIL · 0 WARN · 52 SKIP · 0 ADVISORY  ->  INCOMPLETE
 -- stderr --
 -- @kind --
 recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)

@@ -118,6 +118,12 @@ var perModule = []member{
 	// a module with no srcTest/ *.java has nothing to judge: its exit 3 is a SKIP row, never an env fault
 	// Mutation: RM-vacuous-nosource -- dropping noSource turns every test-less module's report into an env fault
 	{script: "lint-vacuous-tests", in: inArtifact, f: failOnly, v: rows, noSource: "no *.java under a srcTest/"},
+	// kit-backlog B5.5: the run-3 module lints. A module without their sources SKIPs, never an env fault.
+	// Mutation: RM-new-members-nosource -- dropping noSource turns a module with no permissions file or -rt Java into an env fault
+	{script: "lint-permissions-xml", in: inArtifact, f: failWarn, v: failRows, noSource: "no module-permissions.xml and no *.java under a -rt part's src/"},
+	{script: "lint-structural-tests", in: inArtifact, f: warnOnly, noSource: "no *.java under a srcTest/"},
+	{script: "lint-logger-name", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt, -ux, -wb or -se part's src/"},
+	{script: "lint-adapter-cfg-default", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt part's src/"},
 }
 
 // Scripts lists every toolbelt member the report runs, as script file names (lint-timers.sh, ...), each once

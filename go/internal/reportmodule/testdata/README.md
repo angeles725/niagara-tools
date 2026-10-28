@@ -56,6 +56,15 @@ but the summary line, whose PASS/SKIP counts moved by exactly the added rows and
 whose text is not the noSource text is an ERROR row and exit 3; the summary verdict text reads CLEAN there, as for
 every member env fault).
 
+Kit backlog B5.5 (2026-10-27) added four module members: `lint-permissions-xml` (FAIL/WARN, PASS verdict),
+`lint-structural-tests`, `lint-logger-name` and `lint-adapter-cfg-default` (WARN only, no verdict row). The 106 cases
+that print the module members were re-recorded through the Go tool (a temporary, uncommitted dump hook in
+`golden.Runner`) and a script compared each old and new `want`: exit and stderr unchanged in every case, every line
+that is not a new member row or the summary unchanged and in order, the summary's PASS/FAIL/WARN/SKIP counts moved
+by exactly the added rows and its verdict unchanged. Added: `lint-permissions-xml` 97 PASS + 9 SKIP,
+`lint-structural-tests` 24 SKIP, `lint-logger-name` 2 SKIP, `lint-adapter-cfg-default` 9 SKIP (a stub prints
+nothing, so a WARN-only member adds no row there).
+
 ## Truth cases (`truth-*`)
 
 Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro
