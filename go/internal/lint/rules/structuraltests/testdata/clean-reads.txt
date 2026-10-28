@@ -1,0 +1,14 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/srcTest/test/com/example/FixtureTest.java --
+package test.com.example;
+import java.nio.file.*;
+// the old version read Paths.get("src/BPan.java") as text
+public class FixtureTest {
+  String json = new String(Files.readAllBytes(Paths.get("srcTest/fixture.json")));
+  String name = "BPan.java";
+}

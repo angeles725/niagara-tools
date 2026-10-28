@@ -1,0 +1,15 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-structural-tests  @DIR@/M/M-ux/srcTest/test/com/example/UxShapeTest.java:3  reads "src/com/example/BUx.java" as text and M-ux/srcTest has no BTestNg or BTestNgStation class: test the behaviour in a station test (types/moduleTest.md)
+-- stderr --
+-- M/M-rt/srcTest/test/com/example/BRtTest.java --
+package test.com.example;
+public class BRtTest extends com.tridium.testng.BTestNgStation {}
+-- M/M-ux/srcTest/test/com/example/UxShapeTest.java --
+package test.com.example;
+public class UxShapeTest {
+  String s = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("src/com/example/BUx.java")));
+}

@@ -1,0 +1,17 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/srcTest/test/com/example/SourceShapeTest.java --
+package test.com.example;
+public class SourceShapeTest {
+  String s = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("src/BPan.java")));
+}
+-- M/M-rt/srcTest/test/com/example/BBaseTest.java --
+package test.com.example;
+public abstract class BBaseTest extends com.tridium.testng.BTestNg {}
+-- M/M-rt/srcTest/test/com/example/BPanTest.java --
+package test.com.example;
+public class BPanTest extends BBaseTest {}

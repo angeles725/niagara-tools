@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-structural-tests  @DIR@/M  no *.java under a srcTest/
+-- stderr --
+-- M/M-rt/src/com/example/A.java --
+class A {}

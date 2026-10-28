@@ -1,0 +1,21 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/srcTest/test/com/example/SourceShapeTest.java --
+package test.com.example;
+import java.nio.file.*;
+public class SourceShapeTest {
+  @org.testng.annotations.Test
+  public void hasGuard() throws Exception {
+    String src = new String(Files.readAllBytes(Paths.get("src/com/example/BPan.java")));
+    org.testng.Assert.assertTrue(src.contains("if"));
+  }
+}
+-- M/M-rt/srcTest/test/com/example/BPanStationTest.java --
+package test.com.example;
+import com.tridium.testng.BTestNgStation;
+public class BPanStationTest extends BTestNgStation {
+}

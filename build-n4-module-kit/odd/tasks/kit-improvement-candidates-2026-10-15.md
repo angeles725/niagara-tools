@@ -631,6 +631,9 @@ cursor recipe stays owed (WU-P0-6).
   **Scaffold half FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): `toolbelt/scaffold-module.sh` emits the station-test skeleton with
   `moduleTest-include.xml` (f9bc8194) and the MinimalPan/MinimalDash fixtures carry it (8812c1de) — G97 done. LEFT: the
   structural-test advisory, Go lint G34 `structural-tests` (kit-backlog B5).
+  **Advisory FOLDED** (2026-10-27, `odd/tasks/kit-backlog-2026-10-27.md` B5.3): Go lint G34 `lint-structural-tests`
+  (`go/internal/lint/rules/structuraltests`, `toolbelt/lint-structural-tests.sh`, `tests/lint-structural-tests.bats`
+  ST1-ST2), pointed to from `types/moduleTest.md`. C41 is FOLDED except the `[INFER]` older-layout discovery question.
 
 ### C42 — Shipped libraries: `bin/ext` first, wrapper modules, version drift
 - **Sources:** shl#Δ1 (primary: `nre("g:a")` no version, catalog table) · shl#Δ3 extends (drift: httpclient 4.5 → 5) · shl#Δ4 extends (wrapper table; commonsLang-rt empty in 4.15) · shl#Δ6 extends (wrapper does not grant its permissions)

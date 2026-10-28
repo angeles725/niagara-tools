@@ -49,6 +49,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/spapoll"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/splitpackage"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structuraltests"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
@@ -117,5 +118,6 @@ func All() []lint.Spec {
 		batserrexit.Spec(),
 		modulemap.Spec(),
 		permissionsxml.Spec(),
+		structuraltests.Spec(),
 	}
 }

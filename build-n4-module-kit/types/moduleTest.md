@@ -145,8 +145,10 @@ component behaviour (slot outputs, notify chains, HOA/defrost interplay, links) 
 real slots and waits with `TestHelper.assertWillBeTrue` (§ TEST-G2); pure seams keep their WSL JUnit. A
 source-structural test (reading a `.java` file as text) is the last resort, kept only where no station route exists,
 and its header names the station test that replaces it or says why none can. Pilot: the ColdRoomPan-rt
-`BTestNgStation` suite, 6 tests, five production mutations observed biting (§ Running from WSL). The advisory that flags
-a structural test in a part with no `BTestNg` class is owed as Go lint G34 `structural-tests`.
+`BTestNgStation` suite, 6 tests, five production mutations observed biting (§ Running from WSL).
+`toolbelt/lint-structural-tests.sh <module-root>` WARNs (FAIL under `--strict`) a `srcTest` read of a `.java` path
+(`Files.readAllBytes`/`readAllLines`/`readString`/`lines`, `Paths.get`/`Path.of`) in a part whose `srcTest` has no
+`BTestNg`/`BTestNgStation` class.
 `[ev: retro testing-parity-btestng Δ5]`
 
 **Which base class** (course suite, corpus B1252 §1252.3.2; base classes in docSource 4.14.0.162 `test-wb`)
