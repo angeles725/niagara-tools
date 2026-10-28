@@ -1,4 +1,4 @@
-# Modular modules by default (2026-10-27)
+# Modular modules by default (2026-10-27) — COMPLETE
 
 Locator: `build-n4-module-kit/odd/tasks/modularity-2026-10-27.md` · branch `docs/fold-r10-retros` (on top of the r10
 retro fold, tip db22d23e; base origin/main 6c34e20c) · worktree `niagara-tools-worktrees/fold-r10-retros`.
@@ -86,7 +86,7 @@ modularity-structure, added in part 3b).
   3d5a9798, WU10 62cc8332, WU11 959be0c6 and WU12 5d2f2fba, after the part-2 review fix-forward WU8 2e261afb.
 - [x] M5b · `toolbelt/lint-servlet.sh` header lists `handler-size` and its `Mutation: TC-MAP6` pin (WU13). Route:
   delegated writer.
-- [ ] M7 · retro D `2026-10-27-modularity-structure` (pending until M6), folded in work units:
+- [x] M7 · retro D `2026-10-27-modularity-structure` (pending until M6), folded in work units:
   - [x] M7.1 · structure Δ1: `scaffold-module add-concern` (Go `go/cmd/module-map`, shim `toolbelt/module-map.sh`).
   - [x] M7.2 · structure Δ2: role folders fixed, concern names free; lint-module-map MM7 (WARN legacy, FAIL strict).
   - [x] M7.3 · structure Δ3: ux↔rt contract file `rc/js/contract.json` plus a contract test on each side, emitted by
@@ -96,7 +96,7 @@ modularity-structure, added in part 3b).
 - [x] RF · review fix-forward of the native RDD reviews of 2e261afb and 959be0c6 (rc-scan R3-001..R3-003, R2
   findings; report-module R2-001..R2-003, R3 findings). Scope addition by the parent: `go/internal/rcscan/**` and
   `go/cmd/rc-scan/**` authorized for it.
-- [ ] M6 · close: flip the four retros (module-map, strict-new, gaps, structure) to folded, strict fold audit 0
+- [x] M6 · close: flip the four retros (module-map, strict-new, gaps, structure) to folded, strict fold audit 0
   uncited, ledger fragment, CHANGELOG fragments, generated-index `--check` 0.
 
 ## Acceptance criteria
@@ -327,29 +327,29 @@ fold audit, generated-index `--check`).
     unchanged). Consumer check: no repo code parses report-module rows by status (build.sh reads only the exit
     code), so INFO needs no consumer change. F6: the 3d5a9798 entry is WU9 above; the scope section now names
     the parts as they ran. Checks: `go test` reportmodule (goldens included), modulemap, size ok; `go vet` ok;
-    shellcheck report-module.sh clean. Commit: see the next entry.
+    shellcheck report-module.sh clean. Commit 180112c8 `fix(report-module): modularity row reads the rules' mode and the
+    lint's file set` (+386/−109).
+
+- M6 = close (route: delegated writer). Every Δ of the four retros is cited by an exact-stem `[ev: retro … Δk]` tag
+  in a kit doc (module-map Δ1-Δ5, strict-new Δ1-Δ5, gaps Δ1-Δ8, structure Δ1-Δ5; none rejected); all four flipped
+  to `review-status: folded`; `BUILD-STATE.src.md` kit `retro_pending: false` (every kit retro is folded); ledger
+  fragment `ledger.d/2026-10-27-modularity-part3b.md`. Commit: the M6 work unit after 180112c8 (see git log).
+
+## Final verification (on the M6 tree)
+- `memcap go test ./...` (from go/): exit 0, 123 packages ok, 0 FAIL (report-module goldens included).
+- `go vet` modulemap (rules and tool), cmd/module-map, rcscan, reportmodule, size: ok.
+- bats -j 4 over scaffold-module, lint-module-map, lint-servlet, report-module, module-map, rc-scan, lint-size,
+  lint-structure, kit-links, guard-pins, gen-lint-index, kit-p1 (control, sign, tests, web) pins, install-skill,
+  check-skill-drift, lint-jasmine-ux, sweep-fold-audit, new-retro-truth, verify-module: 405 ok, 0 not ok (4 env
+  skips).
+- shellcheck lint-servlet, lint-module-map, module-map, scaffold-module, rc-scan, report-module: clean.
+- `gen-lint-index.sh --check` 0; `gen-retro-index.sh --check` 0; lint-guard-pins MATCH for TC-MAP6 and MMB4.
+- CI fold audit over fresh kit-state output (`sweep-fold-audit.sh --strict --exact-stems --deltas-since
+  2026-09-24`): 411 folded, 411 cited, 0 uncited; 789 Δ checked, 0 not cited. `sweep-build-state` exit 0.
+- `scripts/changelog-gate.sh --range aa9d0626..HEAD`: PASS (6 fragments).
+- Owed to the parent (not run here): skill reinstall + `check-skill-drift` (SKILL.md step 1e changed in WU16 and
+  WU18); push, PR and the native review of the part-3b commits.
 
 ## Next session
-Part 3 stopped on 2026-10-27 after WU12 (5d2f2fba) and the part-3 ledger fragment; M0-M5 are done, the three retros
-stay `review-status: pending`. Review candidate: 2e261afb..HEAD (five work units and this bookkeeping, base
-fe06e0be).
-- First, outside part 3's edit surfaces: document `handler-size` in the `toolbelt/lint-servlet.sh` header (a
-  Checks row: WARN, FAIL in a strict module or under --strict; a `Mutation:` pin for TC-MAP6 or
-  `TestHandlerSize`), then `gen-lint-index.sh --check`.
-- M7 · retro D `2026-10-27-modularity-structure` (new, `toolbelt/new-retro.sh kit modularity-structure --date
-  2026-10-27 --deltas 5`), five items:
-  1. `scaffold-module add-concern <Name>` creates the concern folder, a pure class, its test, an adapter stub and the
-     MODULE-MAP row.
-  2. Fixed ROLE folders only (rt `model/`, `adapter/`; ux `route/`, `service/`); concern sub-folders under them have
-     FREE per-module names; strict lint: every concern folder has exactly one MODULE-MAP row and vice versa, has
-     tests, and no file sits in two concerns. Strict L3 (WU6) already fixes the role folders for Baja-free classes;
-     `adapter/` for B-classes is not enforced yet.
-  3. An explicit ux↔rt API contract file plus a contract test on each side.
-  4. `module-map where <file|concern>` plus a runner that runs only that concern's tests.
-  5. A legacy→strict migration guide that EXTENDS `METHODOLOGY.md:83` (opt-in per module, pure extraction first,
-     slot changes last with migration + commissioning).
-- M6 · close: flip the three retros (modularity-module-map, modularity-strict-new, modularity-gaps) to folded,
-  strict fold audit 0 uncited (every Δ of the three now has an `[ev: retro … Δk]` tag in a kit doc), a
-  `ledger.d/` fragment, `ci-local.sh -j 3`. Decide whether `fetch-outside-services`/`js-file-size` should also
-  WARN with no map (today map modes only, to keep existing rc-scan goldens byte-identical) and whether the
-  scaffold should emit a `ux/route/<Route>Handler` class.
+None for this feature: it is COMPLETE. The parent owns the skill reinstall + drift check, the native review of the
+part-3b commits (8b616e55..HEAD) and the push/PR decision.
