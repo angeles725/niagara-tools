@@ -261,7 +261,7 @@ Distilled from a docSource survey of control-rt/kitControl-rt (BControlPoint, BQ
   | Callback | Thread (4.14) |
   |---|---|
   | `started()`, `descendantsStarted()`, `stationStarted()`, `atSteadyState()` | `main` (bootstrap) |
-  | `stopped()`, `descendantsStopped()` | `Nre:Console` (`com/tridium/sys/Console.java:41`) |
+  | `stopped()`, `descendantsStopped()` | `Nre:Console` for a console `quit` or an Application Director stop (`com/tridium/sys/Console.java:41`); a platform reboot or rename stops the station on the platform service thread instead — do not assume a thread name in `stopped()` `[ev: corpus B1420 §1420.10]` `[ev: retro course-coverage Δ3]` |
   | `Clock` tickets, ASYNC actions, control-point execute, alarm/history extensions | `Nre:Engine` (`com/tridium/sys/engine/EngineManager.java:560`) |
   | `changed()`/`added()` from a Workbench edit, plain actions from Workbench | `Fox:Dispatcher:<hash>` of that session |
   | the same from a browser or servlet | a Jetty thread |

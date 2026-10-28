@@ -71,9 +71,10 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - **Security Manager card** (devguide 4.15.6.20 `security/securityManager.txt`; 4.13/4.14 not verified):
   - Debug: the `security.niagaraPolicy` log at FINE/FINER/FINEST (DebugService or Logger Configuration, `:44`), or
     start with `-@Djava.security.debug=access,failure` (`:58-62`).
-  - Disabling it is development-only: it needs the `smDeveloperMode` licence feature plus
-    `niagara.security.manager.disable` (`:86-98`); from 4.9 the denials are logged to a file while the app runs
-    on (`:112`).
+  - `niagara.security.manager.disable` (`:86-98`) does not turn the security manager off: with the
+    `smDeveloperMode` licence feature it switches to the logging Developer Security Manager (denials are logged to a
+    file while the app runs on, `:112`); without the feature the NRE logs a WARNING and nothing changes. Development
+    only. `[ev: corpus B1417 §1417.2]` `[ev: retro course-coverage Δ4]`
   - File I/O needs no permission under `Sys.getStationHome()` and `Sys.getNiagaraSharedUserHome()` (`:122-124`);
     write there, not to an absolute path.
   - What a module was granted: Spy › securityInfo › Policy Spy (`requestingPermissions.txt:653`); the startup
