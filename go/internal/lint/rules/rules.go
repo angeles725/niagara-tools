@@ -26,6 +26,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/loggername"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/manuallabels"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/modulemap"
@@ -34,6 +35,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/permissionsxml"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/privateapiimport"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
@@ -48,6 +50,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/spapoll"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/splitpackage"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structuraltests"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
@@ -115,5 +118,8 @@ func All() []lint.Spec {
 		vacuoustests.Spec(),
 		batserrexit.Spec(),
 		modulemap.Spec(),
+		permissionsxml.Spec(),
+		structuraltests.Spec(),
+		loggername.Spec(),
 	}
 }

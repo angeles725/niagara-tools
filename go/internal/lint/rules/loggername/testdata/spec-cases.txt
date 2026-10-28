@@ -1,0 +1,25 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-logger-name  @DIR@/M/AcmePan-rt/src/com/example/BFoo.java:4  Logger.getLogger("acme") is not the module name AcmePan or a AcmePan.<child> logger (types/observability.md § 1)
+WARN  lint-logger-name  @DIR@/M/AcmePan-rt/src/com/example/BFoo.java:5  Logger.getLogger(BFoo.class.getName()) names a class, not the module AcmePan (types/observability.md § 1)
+-- stderr --
+-- M/AcmePan-rt/AcmePan-rt.gradle.kts --
+niagaraModule {
+  moduleName.set("AcmePan")
+}
+-- M/AcmePan-rt/src/com/example/BFoo.java --
+package com.example;
+import java.util.logging.Logger;
+public class BFoo {
+  static final Logger A = Logger.getLogger("acme");
+  static final Logger B = Logger.getLogger(BFoo.class.getName());
+  static final Logger C = Logger.getLogger("AcmePan");
+  static final Logger D = java.util.logging.Logger.getLogger("AcmePan.defrost");
+  // static final Logger E = Logger.getLogger("old");
+  static final Logger F = Logger.getLogger(NAME);
+  String s = "Logger.getLogger(\"x\")";
+}
+-- M/AcmePan-rt/srcTest/test/com/example/T.java --
+class T { java.util.logging.Logger l = java.util.logging.Logger.getLogger("t"); }

@@ -1,0 +1,11 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-structural-tests  @DIR@/M/M-rt/srcTest/test/com/example/ShapeTest.java:3  reads "../M-rt/src/BPan.java" as text and M-rt/srcTest has no BTestNg or BTestNgStation class: test the behaviour in a station test (types/moduleTest.md)
+-- stderr --
+-- M/M-rt/srcTest/test/com/example/ShapeTest.java --
+package test.com.example;
+public class ShapeTest {
+  String s = java.nio.file.Files.readString(java.nio.file.Path.of("../M-rt/src/BPan.java"));
+}

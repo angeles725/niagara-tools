@@ -61,6 +61,9 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
   MANAGE_EXECUTION requests as in course `Labs/Lab9 Multithreaded/module-permissions.xml`, plus a commented `<opt-permission>`).
   `<name>` and `<purposeKey>` are both required; `purposeKey` may be a lexicon key of the module, else the text is
   shown as-is (devguide 4.15.6.20 `security/requestingPermissions.txt:40-80`). `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
+- **Check it with `toolbelt/lint-permissions-xml.sh <module-root>`**: FAIL a root other than `<permissions>` or a
+  group `type` other than `station`/`workbench`/`all`; WARN a request without `<name>` or `<purposeKey>` and a
+  `new File("/…")`/`Paths.get("/…")` in `-rt` code (outside `Sys.getStationHome()`). `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
 - **When a privileged call fails** with `AccessControlException`: read the `java.*` permission it names, find the
   group that grants it in devguide `security/requestingPermissions.txt`, add the request, rebuild. For a feature
   that can run without it, request it as `<opt-permission>` and catch `AccessControlException` where it is used

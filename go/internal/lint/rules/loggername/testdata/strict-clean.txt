@@ -1,0 +1,10 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/Acme-rt/Acme-rt.gradle.kts --
+niagaraModule { moduleName.set("Acme") }
+-- M/Acme-rt/src/A.java --
+class A { java.util.logging.Logger l = java.util.logging.Logger.getLogger("Acme"); }

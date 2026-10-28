@@ -1,0 +1,10 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+-- stderr --
+lint-permissions-xml: cannot parse @DIR@/M/M-rt/module-permissions.xml: XML syntax error on line 3: element <niagara-permission-groups> closed by </permissions>
+-- M/M-rt/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="station">
+</permissions>

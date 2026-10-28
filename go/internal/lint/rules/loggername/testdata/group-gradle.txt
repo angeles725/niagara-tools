@@ -1,0 +1,12 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-logger-name  @DIR@/M/Pan-ux/src/U.java:1  Logger.getLogger("Pan") is not the module name DashPan or a DashPan.<child> logger (types/observability.md § 1)
+-- stderr --
+-- M/build.gradle.kts --
+subprojects { niagaraModule { moduleName = "DashPan" } }
+-- M/Pan-ux/build.gradle.kts --
+dependencies { }
+-- M/Pan-ux/src/U.java --
+class U { java.util.logging.Logger l = java.util.logging.Logger.getLogger("Pan"); }

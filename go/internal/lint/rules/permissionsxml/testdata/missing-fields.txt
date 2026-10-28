@@ -1,0 +1,24 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-permissions-xml  @DIR@/M/M-rt/module-permissions.xml:3  <req-permission> NETWORK_COMMUNICATION has no <purposeKey> (both <name> and <purposeKey> are required)
+WARN  lint-permissions-xml  @DIR@/M/M-rt/module-permissions.xml:6  <opt-permission> has no <name> (both <name> and <purposeKey> are required)
+WARN  lint-permissions-xml  @DIR@/M/M-rt/module-permissions.xml:9  <req-permission> has no <name> or <purposeKey> (both <name> and <purposeKey> are required)
+-- stderr --
+-- M/M-rt/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="station">
+    <req-permission>
+      <name>NETWORK_COMMUNICATION</name>
+    </req-permission>
+    <opt-permission>
+      <purposeKey>time.purpose</purposeKey>
+    </opt-permission>
+    <req-permission/>
+    <req-permission>
+      <name>REFLECTION</name>
+      <purposeKey>reflection.purpose</purposeKey>
+    </req-permission>
+  </niagara-permission-groups>
+</permissions>

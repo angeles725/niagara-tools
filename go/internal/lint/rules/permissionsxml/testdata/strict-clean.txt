@@ -1,0 +1,10 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/module-permissions.xml --
+<permissions/>
+-- M/M-rt/src/com/example/A.java --
+class A { java.io.File f = new java.io.File(Sys.getStationHome(), "a"); }

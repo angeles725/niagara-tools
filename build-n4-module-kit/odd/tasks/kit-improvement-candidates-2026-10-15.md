@@ -631,6 +631,9 @@ cursor recipe stays owed (WU-P0-6).
   **Scaffold half FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): `toolbelt/scaffold-module.sh` emits the station-test skeleton with
   `moduleTest-include.xml` (f9bc8194) and the MinimalPan/MinimalDash fixtures carry it (8812c1de) — G97 done. LEFT: the
   structural-test advisory, Go lint G34 `structural-tests` (kit-backlog B5).
+  **Advisory FOLDED** (2026-10-27, `odd/tasks/kit-backlog-2026-10-27.md` B5.3): Go lint G34 `lint-structural-tests`
+  (`go/internal/lint/rules/structuraltests`, `toolbelt/lint-structural-tests.sh`, `tests/lint-structural-tests.bats`
+  ST1-ST2), pointed to from `types/moduleTest.md`. C41 is FOLDED except the `[INFER]` older-layout discovery question.
 
 ### C42 — Shipped libraries: `bin/ext` first, wrapper modules, version drift
 - **Sources:** shl#Δ1 (primary: `nre("g:a")` no version, catalog table) · shl#Δ3 extends (drift: httpclient 4.5 → 5) · shl#Δ4 extends (wrapper table; commonsLang-rt empty in 4.15) · shl#Δ6 extends (wrapper does not grant its permissions)
@@ -706,6 +709,9 @@ cursor recipe stays owed (WU-P0-6).
   reads only `<permissions>`). The fixture replacement is owed as G98 `fixture-permissions`.
   **Fixture half FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): every fixture `module-permissions.xml` root is `<permissions/>` (5de000e9) —
   G98 done. LEFT: the lint half, Go lint G21 `permissions-xml` (kit-backlog B5).
+  **Lint half FOLDED** (2026-10-27, `odd/tasks/kit-backlog-2026-10-27.md` B5.2): Go lint G21 `lint-permissions-xml`
+  (`go/internal/lint/rules/permissionsxml`, `toolbelt/lint-permissions-xml.sh`, `tests/lint-permissions-xml.bats` PX1-PX2),
+  pointed to from `types/structure.md` § module-permissions.xml. C47 is FOLDED.
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
@@ -774,6 +780,9 @@ cursor recipe stays owed (WU-P0-6).
   LEFT: the client parity ticket, (a) `<Type>.displayName` keys, (b) `b:UnrestrictedFolder` palette roots, (d)
   `BDashboardService` private lock (C37 names it), (e) operator text via `LexiconModule.getText` — client follow-ups for
   `Cliente/panccadia-leon`; `toolbelt/kit-ticket.sh` is outside this unit's surface. Owed Go lint G40 `logger-name`.
+  **Lint FOLDED** (2026-10-27, `odd/tasks/kit-backlog-2026-10-27.md` B5.4): Go lint G40 `lint-logger-name`
+  (`go/internal/lint/rules/loggername`, `toolbelt/lint-logger-name.sh`, `tests/lint-logger-name.bats` LN1-LN2),
+  pointed to from `types/observability.md` § 1. LEFT: the client parity ticket (client follow-ups, not kit work).
 
 ### C85 — Root `build.gradle.kts` signing block: template, scaffold and root-aware lint
 - **Sources:** bsw#Δ4 (primary). Extends bdps Δ4 (C48): the lint reads the ROOT `build.gradle.kts` (the wizard folder is the Gradle root project).

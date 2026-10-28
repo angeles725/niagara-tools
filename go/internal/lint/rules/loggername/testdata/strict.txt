@@ -1,0 +1,11 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 1
+WARN  lint-logger-name  @DIR@/M/Acme-rt/src/A.java:1  Logger.getLogger("AcmeX") is not the module name Acme or a Acme.<child> logger (types/observability.md § 1)
+-- stderr --
+-- M/Acme-rt/Acme-rt.gradle.kts --
+niagaraModule { moduleName.set("Acme") }
+-- M/Acme-rt/src/A.java --
+class A { java.util.logging.Logger l = java.util.logging.Logger.getLogger("AcmeX"); }

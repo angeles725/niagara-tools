@@ -1,0 +1,57 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/module-permissions.xml --
+<!--
+  module-permissions.xml template for a kit module part (src/ beside module-include.xml).
+  Shape: the devkit-wb 4.14.0.162 wizard template (gradle/includes/niagara/module-permissions.xml.vm:1-19),
+  the course Labs/Lab9 file and devguide 4.15.6.20 security/requestingPermissions.txt:40-80.
+  Rules (types/structure.md § module-permissions.xml):
+  - the root is <permissions>; each request carries <name> and <purposeKey> (both required; purposeKey may be a
+    lexicon key of this module);
+  - type="station" for the running station, "workbench" for Workbench, "all" for both;
+  - request only what the code uses, scope hosts/ports, and use <opt-permission> + catch AccessControlException
+    for a feature that can degrade;
+  - REFLECTION and five other groups need a signed, trusted module (build-verify.md § Signing per deploy target).
+  Uncomment only the requests this part needs; delete the rest.
+-->
+<permissions>
+  <niagara-permission-groups type="all">
+    <!-- Permissions needed by both the station and Workbench. -->
+  </niagara-permission-groups>
+  <niagara-permission-groups type="workbench">
+    <!-- Permissions needed only by Workbench. A station never receives these. -->
+  </niagara-permission-groups>
+  <niagara-permission-groups type="station">
+    <!-- Sockets/HTTP from module code (no signature needed). Scope hosts and ports.
+    <req-permission>
+      <name>NETWORK_COMMUNICATION</name>
+      <purposeKey>networkComm.purpose</purposeKey>
+      <parameters>
+        <parameter name="hosts" value="HOST"/>
+        <parameter name="ports" value="PORT"/>
+      </parameters>
+    </req-permission>
+    -->
+    <!-- Jackson databind or any setAccessible (needs a signed, trusted module).
+    <req-permission>
+      <name>REFLECTION</name>
+      <purposeKey>reflection.purpose</purposeKey>
+    </req-permission>
+    -->
+    <!-- shutdownNow()/interrupt() on the module's own threads at stop.
+    <req-permission>
+      <name>MANAGE_EXECUTION</name>
+      <purposeKey>manageExecution.purpose</purposeKey>
+    </req-permission>
+    -->
+    <!-- A feature that can run without the grant: catch AccessControlException where it is used.
+    <opt-permission>
+      <name>SET_SYSTEM_TIME</name>
+      <purposeKey>setSystemTime.purpose</purposeKey>
+    </opt-permission>
+    -->
+  </niagara-permission-groups>
+</permissions>
