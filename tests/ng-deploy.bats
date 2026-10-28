@@ -895,3 +895,49 @@ STUB
     [ "$status" -eq 52 ]
     [[ "$output" == *"not comparable"* ]]
 }
+
+# ===========================================================================
+# kit-backlog B5.0 — every gate and precheck runs on build/libs BEFORE the copy: a failing type-count verify,
+# cache-buster check or verify-module gate leaves STATION_MODULES_DIR untouched (before the fix the gate and the
+# verify ran after copy_jars, so an exit 50 still left the new jar installed).
+# ===========================================================================
+@test "NG-order-gate: a failing verify-module gate copies nothing to the station (mode A and C)" {
+    # Mutation: NG-order-gate -- running the gate after copy_jars installs a jar the gate rejected.
+    _gate_env; _fake_gate 1
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 50 ]
+    [ -f "$TMPDIR_T/gate.args" ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+    [ ! -e "$TMPDIR_T/modules/test-ux.jar" ]
+    [[ "$output" != *"copy ok"* ]]
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 50 ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+}
+
+@test "NG-order-verify: a failing type-count verify or cache-buster check copies nothing (mode A and B)" {
+    # Mutation: NG-order-verify -- verifying the type count after copy_jars installs a jar with the wrong types.
+    _gate_env; _fake_gate 0
+    FAKE_UNZIP_TYPES=99 run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 50 ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+    [ ! -e "$TMPDIR_T/modules/test-ux.jar" ]
+    BUILD_ID=b42 run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode B
+    [ "$status" -eq 50 ]
+    [[ "$output" == *"?v=b42"* ]]
+    [ ! -e "$TMPDIR_T/modules/test-ux.jar" ]
+}
+
+@test "NG-order-pass: with every gate green the jars are copied after the gate ran" {
+    _gate_env; _fake_gate 0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    [ -e "$TMPDIR_T/modules/test-rt.jar" ]
+    [ -e "$TMPDIR_T/modules/test-ux.jar" ]
+    # the gate line precedes the copy line
+    local gate_line copy_line
+    gate_line="$(printf '%s\n' "$output" | grep -n 'gate ok' | cut -d: -f1)"
+    copy_line="$(printf '%s\n' "$output" | grep -n 'copy ok' | cut -d: -f1)"
+    [ -n "$gate_line" ] && [ -n "$copy_line" ]
+    [ "$gate_line" -lt "$copy_line" ]
+}

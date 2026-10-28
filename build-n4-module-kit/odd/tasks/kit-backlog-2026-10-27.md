@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: B1–B4 + B4b DONE (2026-10-27, unpushed on `chore/kit-backlog`); B5–B8 later · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B4 + B4b DONE; run 2 (B5.0, B5.1, B6, B7) in progress (2026-10-27, unpushed on `chore/kit-backlog`); B5, B8 later · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -33,9 +33,11 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 | B3 | Audit A6: pre-push gates every ref; CI installs the pinned npm tools; global bats SKIP allowlist | yes |
 | B4 | Audit A4 remainder: unbalanced `[ev:` in ledger.d (FAIL), module_root/source_of_truth WARN, `--age --strict` | yes |
 | B4b | Review fix-forward of the approved modularity reviews (rc-scan, add-concern, MM7, lint-servlet header, report-module) | yes |
+| B5.0 | Safety: `scripts/ng-deploy.sh` runs every precheck, the type-count verify and the verify-module gate on `build/libs` BEFORE the copy (a failing check copies nothing); docs: skill/SKILL.md:37, BUILD-LOOP §4/§5, build-verify.md:11/:21/:276 | run 2 |
+| B5.1 | Recorded gaps: `toolbelt/eslint` lockfile + `npm ci` in CI + `.gitignore` claim; MM7 duplicate-concern rule in `toolbelt/lint-module-map.sh` header and `types/structure.md`; close both ledger open_issues | run 2 |
 | B5 | New lints G21 `permissions-xml`, G34 `structural-tests`, G40 `logger-name`, G38 `absolute-claims` (+ G39 `count-retro-deltas`) | later |
-| B6 | Issue #459 tail (rc-scan innerhtml computed-literal rows, go-rc-scan Δ3; lint-vacuous-tests report membership) + audit A7-D2 (rc-scan `status-default-ok`) | later |
-| B7 | Audit A9: `ledger-check.sh` + scaffold VERSION-LEDGER, T1 test backfill, slotomatic last-comment-line WARN | later |
+| B6 | Issue #459 tail (rc-scan innerhtml computed-literal rows, go-rc-scan Δ3; lint-vacuous-tests report membership) + audit A7-D2 (rc-scan `status-default-ok`) | run 2 |
+| B7 | Audit A9: `ledger-check.sh` + scaffold VERSION-LEDGER, T1 test backfill, slotomatic last-comment-line WARN | run 2 |
 | B8 | Audit A7-D1: adapter `@NiagaraProperty defaultValue` vs pure-model Cfg default lint | later |
 
 ## Tasks
@@ -44,9 +46,11 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B3 · A6 pre-push every ref + CI npm job + skip allowlist. Route: inline (writer is this session).
 - [x] B4 · A4 sweep-build-state remainder. Route: inline (one Go package).
 - [x] B4b · review fix-forward. Route: inline (scope added by the parent mid-run; extra surfaces authorized).
-- [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later.
-- [ ] B6 · #459 tail + A7-D2 — later.
-- [ ] B7 · A9 — later.
+- [ ] B5.0 · ng-deploy gate order (safety). Route: inline (one script + its bats + three doc lines; writer is this session).
+- [ ] B5.1 · recorded gaps (eslint lockfile/`npm ci`; MM7 duplicate-concern docs). Route: inline.
+- [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later (next run).
+- [ ] B6 · #459 tail + A7-D2 + lint-vacuous-tests report membership. Route: inline (Go packages rcscan, reportmodule).
+- [ ] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
 - [ ] B8 · A7-D1 — later.
 
 ## Acceptance
