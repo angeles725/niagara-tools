@@ -84,12 +84,12 @@ which file owns a concern. Evidence and host file:line pointers are in the three
 - [x] M5b · `toolbelt/lint-servlet.sh` header lists `handler-size` and its `Mutation: TC-MAP6` pin (WU13). Route:
   delegated writer.
 - [ ] M7 · retro D `2026-10-27-modularity-structure` (pending until M6), folded in work units:
-  - [ ] M7.1 · structure Δ1: `scaffold-module add-concern` (Go `go/cmd/module-map`, shim `toolbelt/module-map.sh`).
-  - [ ] M7.2 · structure Δ2: role folders fixed, concern names free; lint-module-map MM7 (WARN legacy, FAIL strict).
-  - [ ] M7.3 · structure Δ3: ux↔rt contract file `rc/js/contract.json` plus a contract test on each side, emitted by
+  - [x] M7.1 · structure Δ1: `scaffold-module add-concern` (Go `go/cmd/module-map`, shim `toolbelt/module-map.sh`).
+  - [x] M7.2 · structure Δ2: role folders fixed, concern names free; lint-module-map MM7 (WARN legacy, FAIL strict).
+  - [x] M7.3 · structure Δ3: ux↔rt contract file `rc/js/contract.json` plus a contract test on each side, emitted by
     the dashboard scaffold.
-  - [ ] M7.4 · structure Δ4: `module-map where` and `module-map tests`.
-  - [ ] M7.5 · structure Δ5: legacy→strict migration guide extending METHODOLOGY.md:83, linked from SKILL.md.
+  - [x] M7.4 · structure Δ4: `module-map where` and `module-map tests`.
+  - [x] M7.5 · structure Δ5: legacy→strict migration guide extending METHODOLOGY.md:83, linked from SKILL.md.
 - [ ] RF · review fix-forward of the native RDD reviews of 2e261afb and 959be0c6 (rc-scan R3-001..R3-003, R2
   findings; report-module R2-001..R2-003, R3 findings). Scope addition by the parent: `go/internal/rcscan/**` and
   `go/cmd/rc-scan/**` authorized for it.
@@ -270,7 +270,7 @@ fold audit, generated-index `--check`).
   concern folder (the directory right under a role folder: rt `model/`/`adapter/`, ux `route/`/`service/`/`model/`,
   wb/se `model/`) listed by two rows, or a non-plumbing row with files in concern folders of two names (rt
   `model/battery` + `adapter/battery` is one concern). `TestConcernFolder`, bats MMB4 (+ `Mutation: MMB4` pin,
-  mutation-checked: dropping the mm7 call turns MMB4 and 2 goldens red). Commit 14 = 57d41b3f (retro D open), WU15
+  mutation-checked: dropping the mm7 call turns MMB4 and 2 goldens red). WU14 commit 57d41b3f `docs(retro): open modularity-structure retro and the M7 checklist` (+76/−2); WU15
   commit a2708ddf `feat(lint): module-map MM7 keeps one row per concern folder` (+224/−2).
 - WU16 = M7.1 + M7.4 (route: delegated writer). RED: `go/internal/modulemap` tests TestAddConcern,
   TestAddConcernAdapter, TestAddConcernRefuses, TestWhere, TestTests, TestUsage against a stub Main (all FAIL).
@@ -285,7 +285,15 @@ fold audit, generated-index `--check`).
   `StatusHandlerTest` (servlet side) and `srcTest/rc/spec/MinimalDashContractSpec.js` (node consumer side over
   `MinimalDashApi.reads`); DUX-CONTRACT1 in types/dashboard.md. TC-MAP7 positive controls: renaming the contract
   field fails the node spec and the JUnit test (both ran). Checks: bats scaffold-module, rc-scan, lint-servlet,
-  lint-jasmine-ux, report-module 177/177; kit-links 0 not ok. Commit: see the next entry.
+  lint-jasmine-ux, report-module 177/177; kit-links 0 not ok. Commit e6c58ee2 `feat(scaffold): dashboard route
+  handler and a tested ux-rt API contract` (+193/−5).
+
+- WU18 = M7.5 + structure Δ2 docs (route: delegated writer). Docs only (structural check): `types/structure.md`
+  § Module map gains the role-folder / free-concern-name rule with generic examples (lighting `model/schedules/`,
+  data-center `model/cooling/`, UPS `model/battery/` + `adapter/battery/`), the MM7 table row and § Legacy →
+  strict migration (six ordered steps, extends METHODOLOGY.md:83); METHODOLOGY.md:83 and SKILL.md step 1e point to
+  it. Checks: kit-links (L1 caught a bare `MODULE-MAP.md` reference, fixed), kit-p1 pins, install-skill,
+  check-skill-drift: 0 not ok. Commit: see the next entry.
 
 ## Next session
 Part 3 stopped on 2026-10-27 after WU12 (5d2f2fba) and the part-3 ledger fragment; M0-M5 are done, the three retros

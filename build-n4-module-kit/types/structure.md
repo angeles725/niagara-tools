@@ -274,6 +274,17 @@ modularity: strict
   test covers network, points, discovery and the point manager); a source file may not.
 - **`plumbing`** is the one concern with no test requirement: gradle files, `module-include.xml`,
   `moduleTest-include.xml`, palette, lexicon, permissions.
+- **Role folders are fixed; concern names are free.** The kit fixes only the role folders of each part: rt
+  `model/` (pure decisions) and `adapter/` (B-class adapters); ux `route/` (servlet, router, route handlers) and
+  `service/` (ux-side services), plus `model/` for ux pure logic; wb and se `model/`. Under a role folder, a
+  module groups a grown concern in a sub-folder named for its own domain, never a kit vocabulary: a lighting module
+  has `model/schedules/`, a data-center cooling module `model/cooling/`, a UPS module `model/battery/` and
+  `adapter/battery/`. A class may also sit directly in a role folder (the scaffold's single-concern layout). MM7
+  keeps folders and rows aligned: each concern folder belongs to exactly one row, and a non-plumbing row's files
+  sit in at most one concern name (`model/battery/` and `adapter/battery/` are one concern). `module-map.sh
+  add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]` (or `scaffold-module.sh add-concern`)
+  writes a new concern's folder, pure class, test and row in one step; `module-map.sh where <file|concern>` and
+  `module-map.sh tests <concern>` read the map back. `[ev: retro modularity-structure Δ2]`
 
 | Check | Rule | strict | legacy |
 |---|---|---|---|
@@ -284,6 +295,7 @@ modularity: strict
 | MM4 | the same file is in two rows | FAIL | FAIL |
 | MM5 | a non-`plumbing` row names no existing `srcTest/` path in `Tests` | FAIL | WARN |
 | MM6 | a `srcTest/**/*.java` file is in no row | WARN | WARN |
+| MM7 | a concern folder's files are in two rows, or a non-`plumbing` row lists files in concern folders of two names | FAIL | WARN |
 
 Rows: `FAIL|WARN  lint-module-map  <path>  MM<n>: <reason>`. Exit **0** clean or WARN-only · **1** any FAIL · **3**
 usage, a root with no part, an unreadable directory under a part, or an unreadable map file. `report-module.sh` runs it once
@@ -292,6 +304,26 @@ per module after `lint-structure` (a FAIL row fails the report, a WARN row does 
 `[ev: retro modularity-gaps Δ8]`. Wrapper:
 `toolbelt/lint-module-map.sh`; rule `go/internal/lint/rules/modulemap`; per-file lints read the mode with
 `lint.ModuleMode` (`go/internal/lint/paths.go`). `[ev: retro modularity-module-map Δ3]` `[ev: retro modularity-strict-new Δ1]`
+
+### Legacy → strict migration (opt-in per module) `[ev: retro modularity-structure Δ5]`
+This EXTENDS the METHODOLOGY.md rule that existing deployed modules are not restructured to meet the new-module
+rules (`METHODOLOGY.md` § Schema / upgrade safety, "EXISTING working/deployed modules are NOT restructured"): nothing here
+runs unless a restructure of that module is explicitly requested, and each step keeps that rule's safety-invariant
+suite green UNCHANGED. Steps, in order, each its own work unit:
+
+1. **Map as legacy.** Write `<module-root>/MODULE-MAP.md` with `modularity: legacy` and a `legacy-reason:`, listing today's files
+   per concern (MM4/MM5 stay WARN). No code moves.
+2. **Pin the behaviour.** Land the safety-invariant suite over the existing pure core (or a source-structural test
+   when there is none), proven to bite (against the pre-fix commit or an OBSERVED mutation).
+3. **Extract pure logic** into `model/<concern>/` classes with their `<Class>Test`, called from the unchanged
+   B-class: no slot is added, removed, renamed or retyped, so the `.bog` and every link are untouched.
+4. **Split per concern.** Move adapters to `adapter/<concern>/` and handlers to `ux/route/`, one map row per concern
+   folder (MM7), until `lint-module-map` has no row.
+5. **Flip to strict.** Change the header to `modularity: strict` only when the strict lints already pass: strict L3,
+   lint-size and the slot wall FAIL from then on.
+6. **Recompose slots last, if at all.** A slot change is a schema change: it needs a persisted-slot migration plan
+   (the METHODOLOGY.md saved-data survival matrix, a `vendorVersion` bump, a `config.bog` backup) and its own
+   commissioning; it is never folded into steps 1 to 5.
 
 ## Palette assembly templates `[ev: corpus B746 §746.3]`
 
