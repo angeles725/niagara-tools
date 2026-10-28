@@ -59,7 +59,7 @@ func TestParseRows(t *testing.T) {
 	}
 }
 
-func TestPassAfterRelay(t *testing.T) {
+func TestVerdictAfterRelay(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		rl   relay
@@ -74,8 +74,8 @@ func TestPassAfterRelay(t *testing.T) {
 	for _, tt := range tests {
 		var b bytes.Buffer
 		r := &report{out: &b, n: map[string]int{}}
-		if r.passAfterRelay("A", "c", tt.rl); b.String() != tt.want {
-			t.Errorf("passAfterRelay(%+v) = %q, want %q", tt.rl, b.String(), tt.want)
+		if r.verdictAfterRelay("A", "c", tt.rl); b.String() != tt.want {
+			t.Errorf("verdictAfterRelay(%+v) = %q, want %q", tt.rl, b.String(), tt.want)
 		}
 	}
 }

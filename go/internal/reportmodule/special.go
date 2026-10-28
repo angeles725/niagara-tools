@@ -334,7 +334,7 @@ func (r *report) rcScan(a artifact) {
 		r.envFault(a.name, "rc-scan", "env fault (exit 3)")
 		return
 	}
-	r.passAfterRelay(a.name, "rc-scan", r.relayRows(a.name, out))
+	r.verdictAfterRelay(a.name, "rc-scan", r.relayRows(a.name, out))
 }
 
 // vendorFloor is §5.19c: lint-vendor-floor on src/rc when src/rc/vendor/ is a directory: exit 0/1 relays, exit
@@ -350,7 +350,7 @@ func (r *report) vendorFloor(a artifact) {
 	}
 	switch code {
 	case 0, 1:
-		r.passAfterRelay(a.name, "vendor-floor", r.relayRows(a.name, out))
+		r.verdictAfterRelay(a.name, "vendor-floor", r.relayRows(a.name, out))
 	case 4:
 		why := "unavailable"
 		for _, ln := range strings.Split(out, "\n") { // sed 's/.*unavailable: /unavailable: /p' | head -1

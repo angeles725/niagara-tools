@@ -301,7 +301,10 @@ Rows: `FAIL|WARN  lint-module-map  <path>  MM<n>: <reason>`. Exit **0** clean or
 usage, a root with no part, an unreadable directory under a part, or an unreadable map file. `report-module.sh` runs it once
 per module after `lint-structure` (a FAIL row fails the report, a WARN row does not), then prints one uncounted
 `(module)  INFO  modularity  mode=<m> concerns=<n> unlisted=<n> largest=<path> (<n> hand-written lines)` row
-`[ev: retro modularity-gaps Δ8]`. Wrapper:
+`[ev: retro modularity-gaps Δ8]`: `mode` is `lint.ModuleMode`'s (the header's mode even over a broken table),
+`concerns`/`unlisted` are `-` with no valid map at the root; with a map there, every value but the mode is `?`
+when the root has no part or the map or a part could not be read (with none, an unreadable part makes `largest`
+`?`); the `lint-module-map` row reports the fault. Wrapper:
 `toolbelt/lint-module-map.sh`; rule `go/internal/lint/rules/modulemap`; per-file lints read the mode with
 `lint.ModuleMode` (`go/internal/lint/paths.go`). `[ev: retro modularity-module-map Δ3]` `[ev: retro modularity-strict-new Δ1]`
 

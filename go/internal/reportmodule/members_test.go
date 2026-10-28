@@ -64,7 +64,7 @@ func TestAdvisoryMemberReason(t *testing.T) {
 	for _, tt := range tests {
 		var b bytes.Buffer
 		r := &report{out: &b, n: map[string]int{}}
-		r.advisoryMember("A", "l", tt.code, tt.out)
+		r.advisoryMember("A", "l", tt.code, tt.out, false)
 		if b.String() != tt.want || r.hadEnv != (tt.code != 0) {
 			t.Errorf("advisoryMember(%d) = %q (env %v), want %q", tt.code, b.String(), r.hadEnv, tt.want)
 		}
@@ -124,9 +124,29 @@ func TestAdvisoryMemberStrictFail(t *testing.T) {
 	for _, tt := range tests {
 		var b bytes.Buffer
 		r := &report{out: &b, n: map[string]int{}}
-		r.advisoryMember("A", "l", 1, tt.out)
+		r.advisoryMember("A", "l", 1, tt.out, true)
 		if b.String() != tt.want || r.hadFail != tt.fail || r.hadEnv != tt.env {
 			t.Errorf("%s: %q (fail %v, env %v), want %q (fail %v, env %v)", tt.name, b.String(), r.hadFail, r.hadEnv, tt.want, tt.fail, tt.env)
+		}
+	}
+}
+
+// TestAdvisoryStrictRelayIsModeAwareOnly: the exit-1-with-FAIL relay is limited to the mode-aware member
+// (lint-size, whose rows FAIL in a strict module); another advisory member exiting 1 with a FAIL row is broken,
+// not strict, and stays an env fault.
+func TestAdvisoryStrictRelayIsModeAwareOnly(t *testing.T) {
+	t.Parallel()
+	var b bytes.Buffer
+	r := &report{out: &b, n: map[string]int{}}
+	r.advisoryMember("A", "l", 1, "FAIL  l  /x/A.java:6  broken", false)
+	if want := "A  ERROR  l  env fault (exit 1)\n"; b.String() != want || r.hadFail || !r.hadEnv {
+		t.Errorf("not mode-aware: %q (fail %v, env %v), want %q as an env fault", b.String(), r.hadFail, r.hadEnv, want)
+	}
+	for _, list := range [][]member{perArtifact, perModule} {
+		for _, m := range list {
+			if m.modeAware != (m.script == "lint-size") {
+				t.Errorf("member %s: modeAware %v, want true only for lint-size", m.script, m.modeAware)
+			}
 		}
 	}
 }

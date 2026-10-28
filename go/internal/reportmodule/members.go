@@ -35,8 +35,11 @@ type member struct {
 	f        filter
 	v        verdict
 	advisory bool
-	noSource string
-	special  func(r *report, a artifact)
+	// modeAware: an advisory member whose rows FAIL in a `modularity: strict` module (lint-size), so its exit 1
+	// with a FAIL row is relayed as FAIL; any other advisory member's exit 1 is an env fault.
+	modeAware bool
+	noSource  string
+	special   func(r *report, a artifact)
 }
 
 // artifact is what a member runs on: a profile artifact (its directory name labels the rows) or, for the
@@ -89,7 +92,7 @@ var perArtifact = []member{
 	{script: "lint-wb-threading", suffix: "-wb", f: filter{mode: swap, keep: "WARN"}},
 	{script: "lint-no-md5-credential-digest", f: warnOnly, v: rows},
 	{script: "lint-wb-file-chooser", suffix: "-wb", f: warnOnly},
-	{script: "lint-size", advisory: true},
+	{script: "lint-size", advisory: true, modeAware: true},
 	{script: "lint-license-isoperational-gate", advisory: true},
 	{script: "lint-set-null-ord", advisory: true},
 	{script: "lint-ws-placement", advisory: true},
@@ -159,7 +162,7 @@ func (r *report) step(a artifact, m member) {
 	}
 	switch {
 	case m.advisory:
-		r.advisoryMember(a.name, m.script, code, out)
+		r.advisoryMember(a.name, m.script, code, out, m.modeAware)
 	case m.noSource != "" && code == 3 && strings.Contains(out, m.noSource):
 		r.emit(a.name, skip, m.script, m.noSource)
 	default:
@@ -189,13 +192,14 @@ func (r *report) exitedNoFail(label, check string, code int) {
 	r.emit(label, failed, check, fmt.Sprintf("exited %d with no FAIL row (crash or unexpected output) -- run %s.sh manually", code, check))
 }
 
-// advisoryMember is a WARN-only lint run without --strict: exit 0 relays its rows and the passAfterRelay
-// verdict; exit 1 with a FAIL row (lint-size in a `modularity: strict` module, whose size rows FAIL) relays its
-// rows, the FAIL ones counted, and adds no PASS verdict; any other exit is an ERROR row carrying the member's
-// first output line that is neither blank nor one of its own WARN/FAIL/ADVISORY rows, never a silent PASS.
-func (r *report) advisoryMember(label, check string, code int, out string) {
-	if code == 0 || code == 1 && hasFailRow(out) {
-		r.passAfterRelay(label, check, r.relayRows(label, out))
+// advisoryMember is a lint run without --strict whose rows do not fail the report by themselves: exit 0 relays its
+// rows and then the verdictAfterRelay row (PASS, as its rows are WARN/ADVISORY). A mode-aware member (lint-size,
+// whose rows FAIL in a `modularity: strict` module) exiting 1 with a FAIL row relays its rows, the FAIL ones
+// counted, and adds no PASS row. Any other exit is an ERROR row carrying the member's first output line that is
+// neither blank nor one of its own WARN/FAIL/ADVISORY rows, never a silent PASS.
+func (r *report) advisoryMember(label, check string, code int, out string, modeAware bool) {
+	if code == 0 || modeAware && code == 1 && hasFailRow(out) {
+		r.verdictAfterRelay(label, check, r.relayRows(label, out))
 		return
 	}
 	detail := fmt.Sprintf("env fault (exit %d)", code)

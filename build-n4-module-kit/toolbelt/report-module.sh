@@ -35,7 +35,8 @@
 # [ev: retro alarm-console-design Δ3]
 # Advisory members (deferred-lints-2026-10-03): lint-size.sh, lint-license-isoperational-gate.sh,
 # lint-set-null-ord.sh and lint-ws-placement.sh [ev: retro ws-placement] on <artifact>/src — their WARN rows are relayed with a PASS verdict row; an
-# exit 1 with a FAIL row (lint-size in a `modularity: strict` module) relays its rows as FAIL with no PASS verdict
+# exit 1 with a FAIL row from the mode-aware member (lint-size, in a `modularity: strict` module; no other advisory
+# member) relays its rows as FAIL with no PASS verdict
 # [ev: retro modularity-strict-new Δ4]; any other non-zero exit of an advisory member is an ERROR row carrying the
 # member's first non-row output line (exit 3), never PASS.
 # lint-agent-on-include-sync.sh <module-root> once per run (FAIL, step 8b): a @NiagaraType @AgentOn type whose
@@ -51,9 +52,12 @@
 # path, which a module root does not name; lint-bacnet-status-flags is not one either: it reads a station bog.
 # Module map (modularity campaign M5): lint-module-map.sh <module-root> once per run after lint-structure (FAIL
 # rows block, WARN rows such as MM1 "no MODULE-MAP.md" do not), then one `(module)  INFO  modularity  mode=<m>
-# concerns=<n> unlisted=<n> largest=<path> (<n> hand-written lines)` row: the map mode (none with no valid map,
-# `-` counts), its concern rows, the part sources in no concern and the largest part class by hand-written lines.
-# INFO is printed and not counted: the row orients, it never changes the verdict.
+# concerns=<n> unlisted=<n> largest=<path> (<n> hand-written lines)` row: the mode the per-file rules apply
+# (lint.ModuleMode: the nearest map's header, so a strict header over a broken table still reads strict; none with
+# no map or an invalid header), the root map's concern rows and part sources in no concern (`-` with no valid map
+# at the root) and the largest part class by hand-written lines over the same files lint-module-map walks. With a
+# map at the root, every value but the mode is `?` when the root has no part or the map or a part could not be
+# read; with none, an unreadable part makes `largest` `?` (lint-module-map's own row reports the fault, exit 3). INFO is printed and not counted: the row orients, it never changes the verdict.
 # [ev: retro modularity-module-map Δ3] [ev: retro modularity-gaps Δ8]
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]

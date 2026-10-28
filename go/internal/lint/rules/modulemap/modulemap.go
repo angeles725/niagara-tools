@@ -514,40 +514,33 @@ type Summary struct {
 	Unlisted int // part source files (MM4's set) in no concern's Files; -1 with no valid map
 }
 
-// Summarize reads root's map and parts as CheckRoot does, without judging them: no map, an invalid header or no
-// valid table is ModularityNone with no counts. An unreadable map or part directory is an error.
+// Summarize reads root's map and parts as CheckRoot does, without judging them. The mode is lint.ModuleMode's (the
+// source the per-file rules pick their severity from: the nearest map at or above root, its header's mode even
+// when its table is not valid). The counts are root's own map's (lint-module-map reads only that one): -1 with
+// no map at root (nothing more is read), an invalid header or no valid table. With a map at root, a root with no
+// part (lint-module-map's empty-root exit 3), an unreadable map or an unreadable part directory is an error.
 func Summarize(root string) (Summary, error) {
-	none := Summary{Mode: lint.ModularityNone, Concerns: -1, Unlisted: -1}
-	s := &scan{root: strings.TrimRight(root, "/")}
-	if s.root == "" {
-		s.root = "/"
+	sum := Summary{Mode: lint.ModuleMode(root), Concerns: -1, Unlisted: -1}
+	mapPath := strings.TrimRight(root, "/") + "/" + lint.MapFile
+	if !lint.IsFile(mapPath) {
+		return sum, nil
 	}
-	s.mapPath = s.abs(lint.MapFile)
-	if !lint.IsFile(s.mapPath) {
-		return none, nil
+	s, err := walked(root)
+	if err != nil {
+		return sum, err
 	}
+	s.mapPath = mapPath
 	b, err := os.ReadFile(s.mapPath)
 	if err != nil {
-		return none, errors.New("cannot read " + s.mapPath + ": " + err.Error())
+		return sum, errors.New("cannot read " + s.mapPath + ": " + err.Error())
 	}
 	lines := strings.Split(string(b), "\n")
-	mode, _, problem := lint.MapHeader(lines)
-	if problem != "" {
-		return none, nil
+	if _, _, problem := lint.MapHeader(lines); problem != "" {
+		return sum, nil
 	}
 	rows, _, problem := table(lines)
 	if problem != "" {
-		return none, nil
-	}
-	s.mode = mode
-	parts, err := s.parts()
-	if err != nil {
-		return none, err
-	}
-	for _, p := range parts {
-		if err := s.walk(p); err != nil {
-			return none, err
-		}
+		return sum, nil
 	}
 	owners := map[string][]string{}
 	for _, r := range rows {
@@ -559,7 +552,48 @@ func Summarize(root string) (Summary, error) {
 			unlisted++
 		}
 	}
-	return Summary{Mode: mode, Concerns: len(rows), Unlisted: unlisted}, nil
+	sum.Concerns, sum.Unlisted = len(rows), unlisted
+	return sum, nil
+}
+
+// walked is a scan of root with every part walked: lint.ErrEmptyRoot with no part, an error for an unreadable
+// part directory.
+func walked(root string) (*scan, error) {
+	s := &scan{root: strings.TrimRight(root, "/")}
+	if s.root == "" {
+		s.root = "/"
+	}
+	parts, err := s.parts()
+	if err != nil {
+		return nil, err
+	}
+	if len(parts) == 0 {
+		return nil, lint.ErrEmptyRoot
+	}
+	for _, p := range parts {
+		if err := s.walk(p); err != nil {
+			return nil, err
+		}
+	}
+	return s, nil
+}
+
+// PartJava is every Java source of root's parts (<part>/src/**/*.java) as the lint walks them (a symlinked part or
+// file in, a symlinked directory inside a part out), relative to root and sorted: report-module's largest class
+// reads this set, so its largest and unlisted describe the same files.
+func PartJava(root string) ([]string, error) {
+	s, err := walked(root)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, f := range s.files {
+		if isSource(f) && strings.HasSuffix(f, ".java") {
+			out = append(out, f)
+		}
+	}
+	sort.Strings(out)
+	return out, nil
 }
 
 // Row is one concern row of a map as the module-map tool reads it (modularity-structure Δ1, Δ4).

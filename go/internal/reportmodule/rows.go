@@ -188,9 +188,10 @@ func (r *report) relayRows(label, out string) relay {
 	return r.memberRows(label, out, filter{sel: "FAIL|WARN|ADVISORY"})
 }
 
-// passAfterRelay is the member verdict row after relayRows: nothing when a FAIL row was relayed, PASS "clean"
-// when no WARN or ADVISORY row was either, else PASS "no failing row (N WARN[, M ADVISORY] row(s) above)".
-func (r *report) passAfterRelay(label, check string, rl relay) {
+// verdictAfterRelay is the member verdict row after relayRows: no row at all when a FAIL row was relayed (the
+// FAIL rows are the verdict), PASS "clean" when no WARN or ADVISORY row was either, else PASS "no failing row
+// (N WARN[, M ADVISORY] row(s) above)".
+func (r *report) verdictAfterRelay(label, check string, rl relay) {
 	n := rl.warn + rl.adv
 	switch {
 	case rl.fail:

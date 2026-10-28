@@ -14,14 +14,17 @@ A read-only audit of four client modules (A to D, anonymized; this repo is publi
 700 to 1400 hand-written lines, pure cores with 220-line methods, a 3260-line single-file dashboard front end and
 servlets with 28 handlers. The existing gates did not stop it: L3 passes a module with no `model/` package, the
 lint-size method rule skips B-classes and wrapped signatures, the slot wall is a WARN, and nothing tells an agent
-which file owns a concern. Evidence and host file:line pointers are in the three retros below.
+which file owns a concern. Evidence and host file:line pointers are in the four retros below (retro D,
+modularity-structure, added in part 3b).
 
 ## Scope and constraints
-- Part 1 (this worker): M1 to M3. Part 2 (a later worker): M4 to M6.
+- Part 1: M0 to M3 (WU0 to WU5). Part 2: M4 (WU6, WU7) and the part-2 review fix-forward WU8; it stopped after
+  WU8, before M5. Part 3: M5 (WU9 to WU12). Part 3b: M5b, M7 (retro D), the review fix-forward RF and the M6 close
+  (WU13 onward).
 - Allowed edit surfaces are the ones the parent passed (kit docs, the three retros, scaffold and fixtures,
   `go/internal/lint` paths and the new `rules/modulemap`, reportmodule, lintindex, `tests/`, `changelog.d/`).
 - `retros/INDEX.md`, `toolbelt/INDEX.md` and `BUILD-STATE.md` are generated and not committed.
-- The retros stay `review-status: pending` until part 2 finishes; this document cites deltas in plain text only
+- The retros stay `review-status: pending` until the M6 close; this document cites deltas in plain text only
   (never as evidence tags), so it credits nothing in the fold audit by itself.
 - Public repo: no client names, paths, hosts or IPs; client modules are "client module A/B/C/D" with counts only.
 
@@ -90,7 +93,7 @@ which file owns a concern. Evidence and host file:line pointers are in the three
     the dashboard scaffold.
   - [x] M7.4 · structure Δ4: `module-map where` and `module-map tests`.
   - [x] M7.5 · structure Δ5: legacy→strict migration guide extending METHODOLOGY.md:83, linked from SKILL.md.
-- [ ] RF · review fix-forward of the native RDD reviews of 2e261afb and 959be0c6 (rc-scan R3-001..R3-003, R2
+- [x] RF · review fix-forward of the native RDD reviews of 2e261afb and 959be0c6 (rc-scan R3-001..R3-003, R2
   findings; report-module R2-001..R2-003, R3 findings). Scope addition by the parent: `go/internal/rcscan/**` and
   `go/cmd/rc-scan/**` authorized for it.
 - [ ] M6 · close: flip the four retros (module-map, strict-new, gaps, structure) to folded, strict fold audit 0
@@ -293,7 +296,38 @@ fold audit, generated-index `--check`).
   data-center `model/cooling/`, UPS `model/battery/` + `adapter/battery/`), the MM7 table row and § Legacy →
   strict migration (six ordered steps, extends METHODOLOGY.md:83); METHODOLOGY.md:83 and SKILL.md step 1e point to
   it. Checks: kit-links (L1 caught a bare `MODULE-MAP.md` reference, fixed), kit-p1 pins, install-skill,
-  check-skill-drift: 0 not ok. Commit: see the next entry.
+  check-skill-drift: 0 not ok. Commit fdbfe67d `docs(structure): free concern folders under fixed roles and the
+  legacy-to-strict path` (+49/−9).
+
+- RF = review fix-forward (route: delegated writer; scope addition by the parent, `go/internal/rcscan/**` and
+  `go/cmd/rc-scan/**` authorized). Two commits:
+  - RF-a (959be0c6 review): RED `TestFetchServicesAnchor` (a `fetch(` in `js/pages/services/x.js` and
+    `rc/services/y.js` was exempt) and `TestMapChecksSkipThirdParty` (a vendored HTML inline fetch FAILed);
+    `TestMapLegacyStrictFlag` (R3-001) passed first as coverage. GREEN: the exemption is anchored at
+    `rc/js/services/` on the walked path; `thirdParty` (rc/vendor/**, rc/ext/**, *.min.js) skips both map checks;
+    js-file-size reads the allow marker through `allowedOn` (shared with `allowed`); sevMap and mapped documented
+    apart; TestJSFileSize writes the map at the temp root. Checks: `go test` rcscan ok, `go vet` ok; bats rc-scan
+    40/40, scaffold-module 0 not ok; shellcheck, gen-lint-index --check 0. Commit 64cda653 `fix(rc-scan): anchor the
+    services exemption and skip third-party files in map checks` (+117/−12).
+  - RF-b (2e261afb review + 3d5a9798 independent review F1-F6). RED: `TestSummarize` (strict header over no table
+    read `none`), `TestSummarizeModeSource`, `TestSummarizeNoParts`, `TestPartJava`; `TestModularityRow` (a map
+    but no part printed counts), `TestModularityRowSymlinkedPart`, `TestModularityRowUnreadablePart`;
+    `TestAdvisoryStrictRelayIsModeAwareOnly` (build failure: no `modeAware`). GREEN: `Summarize` takes the mode
+    from `lint.ModuleMode` (decision: the same source as the per-file rules; counts stay the root map's), errors
+    with a root map and no part; `PartJava` (the lint's walk) feeds the largest class; `?` documented in the
+    report-module header, `types/structure.md` and the changelog fragment (scoped: an invalid/FAILing map now fails,
+    an unreadable map/part exits 3). Decision R3-advisory-exit1-broadening: the exit-1-with-FAIL relay is LIMITED
+    to the mode-aware member (`member.modeAware`, lint-size only); any other advisory member's exit 1 stays an env
+    fault. `passAfterRelay` renamed `verdictAfterRelay` and documented (no row when a FAIL row was relayed);
+    advisoryMember doc reworded; end-to-end `TestStrictSizeRelayEndToEnd` (strict map, 81-line B-class method:
+    relayed FAIL row, no PASS lint-size row, ISSUES, exit 1; mutation-checked: dropping `modeAware` turns it red)
+    and `TestInvalidMapRelayEndToEnd` (MM2 row relayed, `mode=strict concerns=-`); size_test.go notes the Go-only
+    module-map goldens; part-2 ledger names WU8's feature-doc entry and changelog fragment. Golden decision: a
+    module root with no part and no map keeps `concerns=- unlisted=- largest=-` (the 120 report goldens are
+    unchanged). Consumer check: no repo code parses report-module rows by status (build.sh reads only the exit
+    code), so INFO needs no consumer change. F6: the 3d5a9798 entry is WU9 above; the scope section now names
+    the parts as they ran. Checks: `go test` reportmodule (goldens included), modulemap, size ok; `go vet` ok;
+    shellcheck report-module.sh clean. Commit: see the next entry.
 
 ## Next session
 Part 3 stopped on 2026-10-27 after WU12 (5d2f2fba) and the part-3 ledger fragment; M0-M5 are done, the three retros
