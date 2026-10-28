@@ -1,0 +1,33 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-lifecycle-guard  @DIR@/src/com/acme/BAcmeService.java:4  LG2 stationStarted() does startup work and the class has no started(): it runs once at station boot, never for a component added to a running station; move the work to started() (types/logic.md § Tridium rt idioms)
+-- stderr --
+-- src/com/acme/BAcmeService.java --
+package com.acme;
+public class BAcmeService extends BAbstractService {
+  @Override
+  public void stationStarted() throws Exception {
+    super.stationStarted();
+    openSocket();
+  }
+}
+-- src/com/acme/BAcmeBoth.java --
+package com.acme;
+public class BAcmeBoth extends BComponent {
+  public void started() throws Exception { schedule(); }
+  public void stationStarted() throws Exception { refresh(); }
+}
+-- src/com/acme/BAcmeSvc.java --
+package com.acme;
+public class BAcmeSvc extends BAbstractService {
+  public void serviceStarted() throws Exception { open(); }
+  public void stationStarted() throws Exception { refresh(); }
+}
+-- src/com/acme/BAcmeSuperOnly.java --
+package com.acme;
+public class BAcmeSuperOnly extends BComponent {
+  public void stationStarted() throws Exception { super.stationStarted(); }
+  public void stationStarted(int unrelated) { work(); }
+}
