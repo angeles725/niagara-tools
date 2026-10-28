@@ -51,9 +51,9 @@ var header = []string{"Concern", "Part", "Files", "Tests", "Change here when"}
 
 // row is one concern row of the map.
 type row struct {
-	line         int
-	concern      string
-	files, tests []string
+	line                int
+	concern, part, when string
+	files, tests        []string
 }
 
 // scan is one run over a module root: the findings in report order and the module's files.
@@ -231,7 +231,7 @@ func table(lines []string) ([]row, int, string) {
 		if c[0] == "" {
 			return nil, i + 1, "row has an empty Concern cell"
 		}
-		rows = append(rows, row{line: i + 1, concern: c[0], files: split(c[2]), tests: split(c[3])})
+		rows = append(rows, row{line: i + 1, concern: c[0], part: c[1], when: c[4], files: split(c[2]), tests: split(c[3])})
 	}
 	if len(rows) == 0 {
 		return nil, start + 1, "the table has no concern row"
@@ -561,3 +561,45 @@ func Summarize(root string) (Summary, error) {
 	}
 	return Summary{Mode: mode, Concerns: len(rows), Unlisted: unlisted}, nil
 }
+
+// Row is one concern row of a map as the module-map tool reads it (modularity-structure Δ1, Δ4).
+type Row struct {
+	Line                int // 1-based line of the row in MODULE-MAP.md
+	Concern, Part, When string
+	Files, Tests        []string // the cell entries as written (globs unexpanded)
+}
+
+// Map is a module root's parsed MODULE-MAP.md: its mode, its rows and its lines (for a writer that inserts a
+// row after Rows' last line).
+type Map struct {
+	Mode  lint.Modularity
+	Rows  []Row
+	Lines []string
+}
+
+// ReadMap parses root's MODULE-MAP.md with the lint's own header and table reader. A missing or unreadable map is
+// an error; an invalid header or table is an error naming its MM2 problem and line.
+func ReadMap(root string) (Map, error) {
+	p := strings.TrimRight(root, "/") + "/" + lint.MapFile
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return Map{}, errors.New("cannot read " + p + ": " + err.Error())
+	}
+	lines := strings.Split(string(b), "\n")
+	mode, at, problem := lint.MapHeader(lines)
+	if problem == "" {
+		var rows []row
+		rows, at, problem = table(lines)
+		if problem == "" {
+			m := Map{Mode: mode, Lines: lines}
+			for _, r := range rows {
+				m.Rows = append(m.Rows, Row{Line: r.line, Concern: r.concern, Part: r.part, When: r.when, Files: r.files, Tests: r.tests})
+			}
+			return m, nil
+		}
+	}
+	return Map{}, errors.New(p + ":" + strconv.Itoa(at) + ": MM2: " + problem)
+}
+
+// MatchGlob reports whether the map entry pat (a "**"/"*" glob of the Files or Tests cell) matches rel.
+func MatchGlob(pat, rel string) bool { return matchGlob(path.Clean(pat), rel) }

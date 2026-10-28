@@ -22,6 +22,11 @@
 #
 # Exit: 0 ok · 2 usage or invalid ModuleName or unknown --type · 3 env (skeleton missing,
 #        out-dir not creatable, or <out-dir>/<ModuleName> already exists)
+#
+# Add a concern to an emitted (or any mapped) module:
+#   scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]
+# execs toolbelt/module-map.sh add-concern with the same arguments (its header has the contract and exits).
+# [ev: retro modularity-structure Δ1]
 set -u
 
 ################################################################
@@ -35,7 +40,15 @@ _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ################################################################
 usage() {
   printf 'usage: scaffold-module.sh <ModuleName> <out-dir> [--vendor <v>] [--target-version <x.y>] [--plugin-version <v>] [--type <logic|dashboard|driver>]\n' >&2
+  printf '       scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]\n' >&2
 }
+
+################################################################
+# add-concern: the module-map tool owns it (Go, go/internal/modulemap)
+################################################################
+if [ "${1:-}" = "add-concern" ]; then
+  exec "${_SCRIPT_DIR}/module-map.sh" "$@"
+fi
 
 ################################################################
 # Argument parsing
