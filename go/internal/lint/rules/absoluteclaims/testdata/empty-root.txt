@@ -1,0 +1,8 @@
+-- args --
+@DIR@/types
+-- want --
+exit 3
+ERROR  lint-absolute-claims  @DIR@/types  no *.md under the root (wrong path: pass build-n4-module-kit/types)
+-- stderr --
+-- types/a.txt --
+x
