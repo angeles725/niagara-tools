@@ -32,15 +32,11 @@ const ID = "lint-permissions-xml"
 // any FAIL, and on a WARN under --strict), left out of n4lint --all (a module root).
 func Spec() lint.Spec {
 	return lint.Spec{Tree: rule{}, Mode: lint.Each, ModuleRoot: true, Usage: "usage: lint-permissions-xml.sh [--strict] <module-root>...",
-		Select:     lint.Selection{Names: []string{"*.java", "module-permissions.xml"}, Prune: []string{"srcTest"}, PrunePaths: partOutputs},
+		Select:     lint.Selection{Names: []string{"*.java", "module-permissions.xml"}, Prune: []string{"srcTest"}, PrunePaths: lint.PartOutputs()},
 		EmptyError: lint.EmptyRow{Msg: emptyMsg}}
 }
 
 const emptyMsg = "no module-permissions.xml and no *.java under a -rt part's src/ (wrong path: pass the module root)"
-
-// partOutputs are a part's own test/ and build/ directories, never entered. They are pruned by path, not by name: a
-// Java package named test or build under src/ (com/acme/test/) is source and is read (run-3 review R3).
-var partOutputs = []string{"*-rt/test", "*-rt/build", "*-ux/test", "*-ux/build", "*-wb/test", "*-wb/build", "*-se/test", "*-se/build"}
 
 type rule struct{}
 

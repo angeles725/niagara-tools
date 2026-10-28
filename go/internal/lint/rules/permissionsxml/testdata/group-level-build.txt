@@ -1,0 +1,18 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-permissions-xml  @DIR@/M/build/resources/module-permissions.xml:2  <niagara-permission-groups type="daemon"> is not station, workbench or all
+-- stderr --
+-- M/M-rt/src/com/acme/A.java --
+class A { }
+-- M/build/resources/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="daemon"/>
+</permissions>
+-- M/build/generated/C.java --
+class C { java.io.File f = new java.io.File("/tmp/x"); }
+-- M/M-rt/build/resources/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="daemon"/>
+</permissions>

@@ -13,7 +13,8 @@ import (
 // req-permission or opt-permission without <name> or <purposeKey> WARNs; new File("/…") and Paths.get("/…") in -rt
 // src/ WARN while new File(Sys.getStationHome(), …), a comment, a string and srcTest/ are clean; --strict; a
 // malformed file is exit 3; an empty, declaration-only or comment-only file (no root element) FAILs; empty roots and
-// usage.
+// usage. group-level-build: a part's own build/ is never read (lint.PartOutputs), a group-level build/ is (its
+// module-permissions.xml is judged), and Java outside -rt src/ is not judged wherever it stands.
 func TestGolden(t *testing.T) { golden.Run(t, Spec(), 12) }
 
 // TestLatin1Decoded (run-3 review R4-001): an ISO-8859-1 (or US-ASCII) declared file is decoded, so a non-ASCII
