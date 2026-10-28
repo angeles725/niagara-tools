@@ -283,3 +283,33 @@ func TestThirdParty(t *testing.T) {
 		}
 	}
 }
+
+// TestRootTrailingSlash: with the artifact dir given with a trailing slash (or as a ./-relative path) the vendored
+// skip still reads the path below it, never the walked path (review R3-003 of b2e0e430: TrimPrefix(p, root+"/")
+// missed "x/" + "/", rel fell back to the whole walked path, and its first "/rc/" was the ancestor's). Row paths
+// keep the bash port's spelling (golden edge-legacy-3).
+func TestRootTrailingSlash(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "rc", "M-ux") // an ancestor named rc: the walked path holds "/rc/" twice
+	for rel, body := range map[string]string{
+		"src/rc/vendor/lib/lib.js": "var u = \"station:|slot:/a\";\n",
+		"src/rc/js/pages/home.js":  "var u = \"station:|slot:/a\";\n",
+	} {
+		p := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Chdir(filepath.Dir(dir))
+	for _, root := range []string{dir + "/", "M-ux/", "./M-ux"} {
+		var o, e bytes.Buffer
+		// Mutation: RC-root-slash -- classifying the row path reads the walked path for "x/" and misses vendor/
+		Main([]string{root}, cli.Stdio{Out: &o, Err: &e})
+		out := o.String()
+		if e.Len() != 0 || strings.Contains(out, "vendor/lib") || !strings.Contains(out, "src/rc/js/pages/home.js:1  ord-literal:") {
+			t.Errorf("root %q: stderr %q rows\n%s", root, e.String(), out)
+		}
+	}
+}

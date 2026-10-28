@@ -9,7 +9,7 @@
 //	    prints the concern that lists the file (or the named concern): its part, files, tests and "change here when"
 //	tests <concern> --root <module-root>
 //	    runs the concern's pure JUnit tests through run-pure-test.sh (found in $MODULE_MAP_TOOLBELT) and names
-//	    each station test (a javax.baja import) and JS spec it skips
+//	    each station test (a javax.baja import or fully qualified name in code) and JS spec it skips
 //
 // Exit: 0 ok · 1 refused (add-concern), not found (where, tests) or a test failed (tests) · 2 usage · 3 env
 // (no or invalid map, no such part, a write or the runner failing to start or reporting an env error).
@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	mmrule "github.com/angeles725/niagara-tools/go/internal/lint/rules/modulemap"
 )
@@ -255,11 +256,12 @@ func addConcern(o opts, s cli.Stdio) error {
 	last := m.Rows[len(m.Rows)-1].Line
 	lines := append(append(append([]string{}, m.Lines[:last]...), row), m.Lines[last:]...)
 	// undo removes what this run wrote: its files, then the directories it created, deepest first (os.Remove
-	// leaves a directory that is not empty), so a failed run can be retried as is.
+	// leaves a directory that is not empty), so a failed run can be retried as is. Both lists hold the same
+	// convention: OS paths joined under o.root (mkdirs records created that way), never map-relative names.
 	var written, created []string
 	undo := func() {
-		for _, f := range written {
-			_ = os.Remove(filepath.Join(o.root, f))
+		for _, p := range written {
+			_ = os.Remove(p)
 		}
 		// Mutation: MMA-undo-dirs -- removing only the files leaves the concern folders, and the retry is refused
 		for i := len(created) - 1; i >= 0; i-- {
@@ -281,7 +283,7 @@ func addConcern(o opts, s cli.Stdio) error {
 			undo()
 			return fail(3, "module-map: %v", err)
 		}
-		written = append(written, f)
+		written = append(written, p)
 	}
 	mp := filepath.Join(o.root, lint.MapFile)
 	tmp := mp + ".tmp"
@@ -395,9 +397,23 @@ func lists(cell []string, rel string) bool {
 
 var (
 	pkgLine = regexp.MustCompile(`(?m)^\s*package\s+([\w.]+)\s*;`)
-	// bajaImport is an import line of a javax.baja type: what makes a srcTest class a station test.
-	bajaImport = regexp.MustCompile(`(?m)^\s*import\s+(static\s+)?javax\.baja\.`)
+	// bajaRef is a javax.baja reference in code (an import line or a fully qualified name, spaces around the dots
+	// allowed): what makes a srcTest class a station test. It is matched on code with comments and literal text
+	// blanked (stationTest), so a mention in a comment or a string never counts.
+	bajaRef = regexp.MustCompile(`\bjavax\s*\.\s*baja\s*\.`)
 )
+
+// stationTest: the Java source b references a javax.baja type in code (import or fully qualified), read with
+// comments blanked (javasrc.Strip) and literal text masked (javasrc.MaskLiterals).
+func stationTest(b []byte) bool {
+	code, _ := javasrc.Strip(strings.Split(string(b), "\n"))
+	for _, ln := range javasrc.MaskLiterals(code) {
+		if bajaRef.MatchString(ln) {
+			return true
+		}
+	}
+	return false
+}
 
 func tests(o opts, s cli.Stdio) error {
 	m, err := readMap(o.root)
@@ -427,8 +443,9 @@ func tests(o opts, s cli.Stdio) error {
 			return fail(3, "module-map: %v", err)
 		}
 		// Mutation: MMT-import -- a substring match skips a pure test that merely names javax.baja
-		if bajaImport.Match(b) {
-			fmt.Fprintf(s.Out, "skip  %s  imports javax.baja (a station test: run it under moduleTest on a station)\n", f)
+		// Mutation: MMT-fqn -- an import-only check runs a test that uses javax.baja fully qualified as pure
+		if stationTest(b) {
+			fmt.Fprintf(s.Out, "skip  %s  uses javax.baja (a station test: run it under moduleTest on a station)\n", f)
 			continue
 		}
 		pm := pkgLine.FindSubmatch(b)
@@ -474,11 +491,12 @@ func expand(root string, cell []string) ([]string, error) {
 	var out []string
 	for _, e := range cell {
 		// Mutation: MMT-contain -- expanding an entry outside the root runs (or lists) files the map does not own
-		if clean := path.Clean(e); path.IsAbs(e) || clean == ".." || strings.HasPrefix(clean, "../") {
+		clean := path.Clean(e)
+		if path.IsAbs(e) || clean == ".." || strings.HasPrefix(clean, "../") {
 			return nil, fail(3, "module-map: Tests entry %s is not a relative path inside the module root (lint-module-map MM3)", e)
 		}
 		if !strings.ContainsAny(e, "*?[") {
-			out = append(out, path.Clean(e))
+			out = append(out, clean)
 			continue
 		}
 		if !walked {

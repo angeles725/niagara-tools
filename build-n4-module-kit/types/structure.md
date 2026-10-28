@@ -262,7 +262,7 @@ modularity: strict
   deploy, git history is VCS-bound (the lints are VCS-free), and the BUILD-STATE envelope lives in the kit repo (it
   mirrors the mode for orientation: the `modularity` field in `BUILD-STATE.src.md`).
 - **Table.** The first table whose header is exactly `Concern | Part | Files | Tests | Change here when`. One row per
-  concern. `Files` and `Tests` hold `;`-separated paths relative to the module root (backticks allowed); `—`, `-` or
+  concern and part (a concern with rt and ux code has one row per part; `plumbing` rows may repeat). `Files` and `Tests` hold `;`-separated paths relative to the module root (backticks allowed); `—`, `-` or
   an empty cell means none. A Java file is listed by its own path, one entry per file. Front-end files under a part's
   `src/rc/` may be listed by a glob (`<MOD>-ux/src/rc/js/components/**`; `**` is any depth, `*` stays inside one path
   segment). A glob never lists a `.java` file.
@@ -295,7 +295,7 @@ modularity: strict
 | MM4 | the same file is in two rows | FAIL | FAIL |
 | MM5 | a non-`plumbing` row names no existing `srcTest/` path in `Tests` | FAIL | WARN |
 | MM6 | a `srcTest/**/*.java` file is in no row | WARN | WARN |
-| MM7 | a concern folder's files are in two rows, or a non-`plumbing` row lists files in concern folders of two names | FAIL | WARN |
+| MM7 | a concern folder's files are in two rows, or a non-`plumbing` row lists files in concern folders of two names, or two non-`plumbing` rows share a concern and a part (case-insensitive; one row per part is fine) | FAIL | WARN |
 
 Rows: `FAIL|WARN  lint-module-map  <path>  MM<n>: <reason>`. Exit **0** clean or WARN-only · **1** any FAIL · **3**
 usage, a root with no part, an unreadable directory under a part, or an unreadable map file. `report-module.sh` runs it once

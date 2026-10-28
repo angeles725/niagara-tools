@@ -15,8 +15,8 @@
 //	MM7  a concern folder (the directory right under a role folder: rt model/ or
 //	     adapter/; ux route/, service/ or model/; wb and se model/) has files in
 //	     two rows, or a non-plumbing row lists files in concern folders of two
-//	     names (model/x and adapter/x are one concern), or two rows share a
-//	     concern name (case-insensitive)                                        FAIL strict, WARN legacy
+//	     names (model/x and adapter/x are one concern), or two non-plumbing rows
+//	     share a concern and a part (case-insensitive; one row per part is fine)  FAIL strict, WARN legacy
 package modulemap
 
 import (
@@ -52,7 +52,7 @@ var header = []string{"Concern", "Part", "Files", "Tests", "Change here when"}
 
 // row is one concern row of the map.
 type row struct {
-	line                int
+	idx, line           int // idx: the row's position in the table (the key owners records)
 	concern, part, when string
 	files, tests        []string
 }
@@ -102,8 +102,8 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 			return nil, err
 		}
 	}
-	owners := map[string][]string{} // source file -> the concerns whose Files list it
-	listed := map[string]bool{}     // every exact entry of any cell
+	owners := map[string][]int{} // source file -> the rows (idx) whose Files list it
+	listed := map[string]bool{}  // every exact entry of any cell
 	for _, r := range rows {
 		s.entries(r, r.files, owners, listed)
 		tests := s.entries(r, r.tests, nil, listed)
@@ -112,7 +112,7 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 		}
 	}
 	s.mm7(rows, owners)
-	s.mm4(owners)
+	s.mm4(rows, owners)
 	s.mm6(listed)
 	return s.out, nil
 }
@@ -232,7 +232,7 @@ func table(lines []string) ([]row, int, string) {
 		if c[0] == "" {
 			return nil, i + 1, "row has an empty Concern cell"
 		}
-		rows = append(rows, row{line: i + 1, concern: c[0], part: c[1], when: c[4], files: split(c[2]), tests: split(c[3])})
+		rows = append(rows, row{idx: len(rows), line: i + 1, concern: c[0], part: c[1], when: c[4], files: split(c[2]), tests: split(c[3])})
 	}
 	if len(rows) == 0 {
 		return nil, start + 1, "the table has no concern row"
@@ -288,14 +288,14 @@ func split(cell string) []string {
 
 // entries checks one cell of r (MM3) and returns how many of its entries name an existing file under a srcTest/
 // directory (MM5 counts them for the Tests cell). Exact entries go into listed; with owners set (the Files
-// cell), every source file an entry lists records r's concern, once per row.
-func (s *scan) entries(r row, cell []string, owners map[string][]string, listed map[string]bool) int {
+// cell), every source file an entry lists records r's idx, once per row.
+func (s *scan) entries(r row, cell []string, owners map[string][]int, listed map[string]bool) int {
 	tests := 0
 	mine := map[string]bool{}
 	own := func(f string) {
 		if owners != nil && !mine[f] {
 			mine[f] = true
-			owners[f] = append(owners[f], r.concern)
+			owners[f] = append(owners[f], r.idx)
 		}
 	}
 	for _, e := range cell {
@@ -341,7 +341,7 @@ func (s *scan) entries(r row, cell []string, owners map[string][]string, listed 
 func inSrcTest(rel string) bool { return strings.Contains("/"+rel, "/srcTest/") }
 
 // mm4 checks every source file of the parts against the concerns that list it, in path order.
-func (s *scan) mm4(owners map[string][]string) {
+func (s *scan) mm4(rows []row, owners map[string][]int) {
 	var srcs []string
 	for _, f := range s.files {
 		if isSource(f) {
@@ -354,7 +354,7 @@ func (s *scan) mm4(owners map[string][]string) {
 		case len(o) == 0:
 			s.add(s.strictSev(), s.abs(f), 0, "MM4: in no concern (list it in the Files of the concern that owns it)")
 		case len(o) > 1:
-			s.add(lint.Fail, s.abs(f), 0, "MM4: in "+strconv.Itoa(len(o))+" concerns ("+strings.Join(o, ", ")+"); list it in one")
+			s.add(lint.Fail, s.abs(f), 0, "MM4: in "+strconv.Itoa(len(o))+" concerns ("+strings.Join(concerns(rows, o), ", ")+"); list it in one")
 		}
 	}
 }
@@ -417,59 +417,80 @@ func ConcernFolder(rel string) string {
 	return ""
 }
 
-// mm7 relates concern folders and rows. First, per row in map order, a concern name that an earlier row already
-// uses (case-insensitive): the folders below are gathered per concern name, so two rows of one name would merge
-// unseen. Then per non-plumbing row, a row whose Files lie in concern folders of two or more names (one concern
-// may span role folders: rt model/battery and adapter/battery); then per concern folder in path order, a folder
-// whose files two rows list.
-func (s *scan) mm7(rows []row, owners map[string][]string) {
-	first := map[string]int{} // lower-case concern -> the line of its first row
+// mm7 relates concern folders and rows. First, per non-plumbing row in map order, a (concern, part) pair that an
+// earlier row already uses, compared case-insensitively: one concern may have one row per part (rt and ux rows of
+// battery are two rows of one concern), never two rows in one part; plumbing may repeat. Then per non-plumbing row,
+// a row whose Files lie in concern folders of two or more names (one concern may span role folders: rt
+// model/battery and adapter/battery); then per concern folder in path order, a folder whose files two rows list.
+// Folders are gathered per row, never per concern name, so rows of one concern in two parts stay apart.
+func (s *scan) mm7(rows []row, owners map[string][]int) {
+	first := map[string]int{} // lower-case concern + part -> the line of its first row
 	for _, r := range rows {
-		k := strings.ToLower(r.concern)
+		if isPlumbing(r) {
+			continue
+		}
+		k := strings.ToLower(r.concern) + "\x00" + strings.ToLower(r.part)
 		if at, dup := first[k]; dup {
-			s.add(s.strictSev(), s.mapPath, r.line, "MM7: concern "+r.concern+" has a second row (the first is line "+
-				strconv.Itoa(at)+"); one row per concern")
+			s.add(s.strictSev(), s.mapPath, r.line, "MM7: concern "+r.concern+" has a second "+r.part+" row (the first is line "+
+				strconv.Itoa(at)+"); one row per concern and part")
 			continue
 		}
 		first[k] = r.line
 	}
-	byRow := map[string]map[string]bool{}    // concern -> its concern folders
-	byFolder := map[string]map[string]bool{} // concern folder -> the concerns listing its files
-	for f, concerns := range owners {
+	byRow := map[int]map[string]bool{}    // row idx -> its concern folders
+	byFolder := map[string]map[int]bool{} // concern folder -> the rows listing its files
+	for f, idxs := range owners {
 		cf := ConcernFolder(f)
 		if cf == "" || !isSource(f) {
 			continue
 		}
-		for _, c := range concerns {
-			if byRow[c] == nil {
-				byRow[c] = map[string]bool{}
+		for _, i := range idxs {
+			if byRow[i] == nil {
+				byRow[i] = map[string]bool{}
 			}
-			byRow[c][cf] = true
+			byRow[i][cf] = true
 			if byFolder[cf] == nil {
-				byFolder[cf] = map[string]bool{}
+				byFolder[cf] = map[int]bool{}
 			}
-			byFolder[cf][c] = true
+			byFolder[cf][i] = true
 		}
 	}
 	for _, r := range rows {
 		names := map[string]bool{} // the folders' own names: model/battery and adapter/battery are one concern
-		for cf := range byRow[r.concern] {
+		for cf := range byRow[r.idx] {
 			names[path.Base(cf)] = true
 		}
-		if strings.EqualFold(r.concern, "plumbing") || len(names) < 2 {
+		if isPlumbing(r) || len(names) < 2 {
 			continue
 		}
 		// the count is the one decided on: distinct folder NAMES, not folders (model/x + adapter/x count once)
 		s.add(s.strictSev(), s.mapPath, r.line, "MM7: concern "+r.concern+" lists files in concern folders of "+
-			strconv.Itoa(len(names))+" names ("+strings.Join(keys(names), ", ")+": "+strings.Join(keys(byRow[r.concern]), ", ")+
+			strconv.Itoa(len(names))+" names ("+strings.Join(keys(names), ", ")+": "+strings.Join(keys(byRow[r.idx]), ", ")+
 			"); keep one concern folder per row")
 	}
 	for _, cf := range keys(byFolder) {
-		if cs := keys(byFolder[cf]); len(cs) > 1 {
-			s.add(s.strictSev(), s.abs(cf), 0, "MM7: concern folder in "+strconv.Itoa(len(cs))+" rows ("+
-				strings.Join(cs, ", ")+"); one row owns a concern folder")
+		if len(byFolder[cf]) > 1 {
+			idxs := make([]int, 0, len(byFolder[cf]))
+			for i := range byFolder[cf] {
+				idxs = append(idxs, i)
+			}
+			sort.Ints(idxs) // map order
+			s.add(s.strictSev(), s.abs(cf), 0, "MM7: concern folder in "+strconv.Itoa(len(idxs))+" rows ("+
+				strings.Join(concerns(rows, idxs), ", ")+"); one row owns a concern folder")
 		}
 	}
+}
+
+// isPlumbing: r is a plumbing row (any case), which may span concern folders and repeat.
+func isPlumbing(r row) bool { return strings.EqualFold(r.concern, "plumbing") }
+
+// concerns is the concern names of the rows idxs, in the order given (a name repeats when two rows share it).
+func concerns(rows []row, idxs []int) []string {
+	out := make([]string, 0, len(idxs))
+	for _, i := range idxs {
+		out = append(out, rows[i].concern)
+	}
+	return out
 }
 
 // keys is m's keys in sorted order.
@@ -557,7 +578,7 @@ func Summarize(root string) (Summary, error) {
 	if problem != "" {
 		return sum, nil
 	}
-	owners := map[string][]string{}
+	owners := map[string][]int{}
 	for _, r := range rows {
 		s.entries(r, r.files, owners, map[string]bool{})
 	}

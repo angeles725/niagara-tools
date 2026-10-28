@@ -46,8 +46,8 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B3 · A6 pre-push every ref + CI npm job + skip allowlist. Route: inline (writer is this session).
 - [x] B4 · A4 sweep-build-state remainder. Route: inline (one Go package).
 - [x] B4b · review fix-forward. Route: inline (scope added by the parent mid-run; extra surfaces authorized).
-- [ ] B5.0 · ng-deploy gate order (safety). Route: inline (one script + its bats + three doc lines; writer is this session).
-- [ ] B5.1 · recorded gaps (eslint lockfile/`npm ci`; MM7 duplicate-concern docs). Route: inline.
+- [x] B5.0 · ng-deploy gate order (safety). Route: inline (one script + its bats + three doc lines; writer is this session).
+- [x] B5.1 · recorded gaps (eslint lockfile/`npm ci`; MM7 duplicate-concern docs). Route: inline.
 - [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later (next run).
 - [ ] B6 · #459 tail + A7-D2 + lint-vacuous-tests report membership. Route: inline (Go packages rcscan, reportmodule).
 - [ ] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
@@ -181,6 +181,27 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   (`tests/ci-local.bats`: lockfile tracked, `npm ci … --ignore-scripts`, cache key, not ignored, lock pins = package.json
   pins) not ok on the base; GREEN ci-local 19/19; `npm_config_offline=true scripts/ci-local.sh --only 'Install the
   pinned npm tools'` PASS. Ledger open_issue in `2026-10-27-kit-backlog-a6-ci.md` closed DONE.
+
+- 2026-10-27 B5.1b (run 2, inline; scope added mid-run by the parent: fix-forward of the APPROVED reviews of
+  78abca8e, b9709db0, 39d0a155, b2e0e430; extra surfaces .githooks/pre-push, go/internal/buildstatefields,
+  go/internal/citeparse). Items 1, 2, 7, 8 here; items 3, 4, 6 in the next unit; item 5 landed in B5.1a.
+  - MM7 rule (decided by the parent): a duplicate is the same (concern, part) pair, case-insensitive; plumbing exempt.
+    `byRow`/`byFolder` now key on the row index (owners records row idx), so rt and ux rows of one concern no longer
+    merge their folders. RED on the base code (swapped in, restored): mm7-concern-two-parts, mm7-plumbing-per-part
+    (false FAILs), mm7-dup-exact / mm7-dup-concern (message). GREEN `memcap go test ./internal/lint/rules/modulemap/`.
+    Docs (gap b): `toolbelt/lint-module-map.sh` MM7 header, `types/structure.md` table rule ("one row per concern and
+    part") + MM7 row; ledger open_issue of `2026-10-27-kit-backlog-review-fix-forward.md` closed DONE.
+  - module-map station tests: `stationTest` = `\bjavax\s*\.\s*baja\s*\.` on `javasrc.Strip` + `MaskLiterals` code.
+    RED `TestTestsStationFQN` (fully qualified, spaced qualified ran as pure); comment+string case stays `run`;
+    skip reason now `uses javax.baja` (pins in modulemap_test.go and `tests/module-map.bats:87`).
+  - module-map small: undo paths are all OS paths under the root; `expand` cleans once; `writeMap` (test) fatals on a
+    missing anchor; default-package test compares a full tree dump (mutation: guard off → "the tree changed").
+  - rc-scan root: `TestRootTrailingSlash` (root under an ancestor named `rc`; `x/`, `M-ux/`, `./M-ux`) RED for both
+    trailing-slash roots (vendor/lib.js reported). Fix classifies on `under` (p minus the Walk prefix) via a new
+    `source.rc`; row paths keep the bash port's walked spelling — golden `edge-legacy-3` pins `@DIR@/rc/a.js` for an
+    `@DIR@/` argument, so normalising the row path was rejected (decision: parity golden wins). Mutation
+    `vendored(rel)` → red.
+  - bats: lint-module-map, module-map, rc-scan, scaffold-module, report-module 155/155 ok.
 
 ## Verification (branch close, 2026-10-27)
 - `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
