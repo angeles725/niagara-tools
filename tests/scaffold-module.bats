@@ -567,4 +567,9 @@ st_link_in_flags() {
   run "$KIT/toolbelt/rc-scan.sh" "$OUT/dashboard/ModuleA/ModuleA/ModuleA-ux"
   [ "$status" -eq 0 ] || { echo "$output"; false; }
   [ -z "$output" ] || { echo "$output"; false; }
+  # positive control: the fresh module is strict, so a page that fetches FAILs rc-scan fetch-outside-services
+  printf '%s\n' "fetch(MinimalDashConfig.apiBase, { signal: s });" >> "$RC/js/pages/home.js"
+  run "$KIT/toolbelt/rc-scan.sh" "$OUT/dashboard/ModuleA/ModuleA/ModuleA-ux"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  src/rc/js/pages/home.js:"*"  fetch-outside-services: "* ]]
 }

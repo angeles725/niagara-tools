@@ -200,7 +200,17 @@ fold audit, generated-index `--check`).
   script; the map's `frontend` row split into `frontend-data` and `frontend`. A fresh dashboard's report-module
   run loses its two WARN rows (`fetch-no-signal`, `lint-spa-poll-no-recovery`; the latter re-appears when the reload
   is removed, so the lint still reads store.js). Checks: bats scaffold-module 29/29, lint-vendor-floor, rc-scan,
-  report-module, kit-links ok; `node --check` on every emitted js file ok; ESLint SKIP (not installed here).
+  report-module, kit-links ok; `node --check` on every emitted js file ok; ESLint SKIP (not installed here). Commit 62cc8332 `feat(scaffold): emit a split rc/js skeleton for
+  dashboards` (+165/−19).
+- WU11 = M5 part 3, gaps Δ2 and Δ3 (route: delegated writer). RED: rcscan goldens `modmap-legacy`, `modmap-strict`
+  (no rows; `modmap-none` passed first as the map-less byte-identical baseline), `TestJSFileSize` (the 401-line
+  file case generated in Go, not stored as a golden), bats RC37 and the TC-MAP5
+  positive control (a page fetch stayed exit 0). GREEN: `go/internal/rcscan` reads `lint.ModuleMode(root)`; under a
+  map `fetch-outside-services` (a `fetch(` in a .js file or an inline script outside `rc/js/services/`) and
+  `js-file-size` (> 400 lines, at line 1) WARN legacy (FAIL under --strict) and FAIL strict; no map runs neither.
+  Decision: "outside services/" follows the retro's `js/services/` wording rather than only `services/api.js`, so
+  a module may split services per domain. Mutation-checked: budget 399, dropping the allow marker and a strict
+  module read as legacy each turn a golden red. Shim contract unchanged (same args, exits; two new row ids).
 
 ## Next session
 Part 2 stopped on 2026-10-27 after WU7 (b48e9808); M0-M4 are done, the three retros stay `review-status: pending`.

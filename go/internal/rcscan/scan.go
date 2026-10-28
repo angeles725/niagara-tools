@@ -168,6 +168,7 @@ func scanFile(src *source, o options) []lint.Finding {
 			s.isAsync[assignS.ReplaceAllString(declP.ReplaceAllString(m, ""), "")] = true
 		}
 	}
+	s.jsFileSize()
 	for i, line := range src.lines {
 		s.nr, s.line = i+1, line
 		s.blocks() // before the comment skip, so every line counts
@@ -254,6 +255,7 @@ func (s *fileScan) checks() {
 	}
 	if s.ctxJS {
 		s.floorRow(s.jsTokens(line))
+		s.fetchOutside()
 		s.fetch()
 		s.interval()
 		if htmlAssign.MatchString(line) && memberConcat.MatchString(line) && !escCall.MatchString(line) && !s.allowed("innerhtml-server") && s.innerHTMLRow() {
@@ -312,6 +314,29 @@ func asciiLower(s string) string {
 		}
 	}
 	return string(b)
+}
+
+// maxJSLines is the js-file-size budget (modularity-gaps Δ3): a .js file over it is split by concern.
+const maxJSLines = 400
+
+// jsFileSize (module map modes only) reports a .js file of more than maxJSLines lines at its line 1, unless
+// line 1 carries the `rc-scan: allow js-file-size` marker.
+func (s *fileScan) jsFileSize() {
+	if !s.o.mapped() || s.src.ext != "js" || len(s.src.lines) <= maxJSLines || strings.Contains(s.src.lines[0], "rc-scan: allow js-file-size") {
+		return
+	}
+	s.emitAt(1, s.o.sevMap(), "js-file-size", fmt.Sprintf("%d lines (> %d) -- split by concern into services/, store,"+
+		" components/ and pages/ files (types/frontend-standard.md § Component layout)", len(s.src.lines), maxJSLines))
+}
+
+// fetchOutside (module map modes only) reports a fetch( call in JavaScript (a .js file or an inline <script>)
+// outside an rc/js/services/ file: only the services call the network (modularity-gaps Δ2).
+func (s *fileScan) fetchOutside() {
+	if !s.o.mapped() || strings.Contains("/"+s.src.rel, "/services/") || !fetchCall.MatchString(s.line) || s.allowed("fetch-outside-services") {
+		return
+	}
+	s.emit(s.o.sevMap(), "fetch-outside-services", "fetch( outside rc/js/services/ -- call the API through"+
+		" js/services/api.js (types/frontend-standard.md § Component layout)")
 }
 
 // fetch reads a fetch( call's argument list (up to 15 lines) for a signal; the 3 lines before it count

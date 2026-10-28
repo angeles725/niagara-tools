@@ -55,6 +55,15 @@
 #                            when the tree uses section#page-* at all). [ev: retro dashboard-frontend-standard Δ5]
 #   inline-block-size  WARN  an inline <script> (no src) or <style> block over 300 lines in an
 #                            .html file — split per DJS1. [ev: retro dashboard-rc-file-split Δ6]
+#   fetch-outside-services  WARN legacy / FAIL strict (module map modes only, see below)  a `fetch(` in
+#                            rc JavaScript (a .js file or an inline <script>) outside an rc/js/services/ file:
+#                            only the services call the network (types/frontend-standard.md § Component layout).
+#                            [ev: retro modularity-gaps Δ2]
+#   js-file-size       WARN legacy / FAIL strict (module map modes only)  a .js file over 400 lines, reported at
+#                            its line 1 (the allow marker goes on line 1). [ev: retro modularity-gaps Δ3]
+#   Module map modes: the mode is read with lint.ModuleMode from the nearest <module-root>/MODULE-MAP.md above
+#   <artifact-dir> (types/structure.md § Module map). With no map neither check runs, so a map-less module's
+#   rows are unchanged; `modularity: legacy` WARNs them (FAIL under --strict), `modularity: strict` FAILs them.
 #   --strict promotes every WARN row to FAIL.
 #
 # Escape hatch (new checks only): a trailing `rc-scan: allow <check-id>` comment on the flagged line
@@ -89,6 +98,7 @@
 # Mutation: RC34 -- ignoring a stated non-gate title reason WARNs the wiring-disabled control (RC34 sees app.js:2)
 # Mutation: RC35 -- matching the member anywhere on the line again WARNs the spec.unit line (RC35 sees app.js:2)
 # Mutation: RC36 -- dropping literal provenance WARNs the units.map(u => u.name) line (RC36 sees app.js:2)
+# Mutation: RC37 -- reading the module map mode as legacy keeps the strict module at WARN and exit 0
 # Mutation: RS-walk -- dropping the *-worktrees prune reports the x-worktrees copy's ORD literal (RS-walk)
 # Mutation: RS-unreadable -- skipping a file the scan cannot read (the awk's fatal-and-continue) passes clean
 #

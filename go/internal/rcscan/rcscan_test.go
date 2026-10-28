@@ -112,3 +112,42 @@ func TestHandMatchers(t *testing.T) {
 		}
 	}
 }
+
+// TestJSFileSize (modularity-gaps Δ3): under a module map a .js file over 400 lines is one row at its line 1
+// (WARN legacy, FAIL strict); exactly 400 lines, an allow marker on line 1 and a map-less module give none.
+func TestJSFileSize(t *testing.T) {
+	t.Parallel()
+	lines := func(n int) string { return strings.Repeat("var v = 1;\n", n) }
+	const row = "  rc-scan  src/rc/js/big.js:1  js-file-size: 401 lines (> 400) -- split by concern into services/, store," +
+		" components/ and pages/ files (types/frontend-standard.md § Component layout)\n"
+	tests := []struct {
+		name, mapBody, want string
+		code                int
+	}{
+		{"no map", "", "", 0},
+		{"legacy", "modularity: legacy\nlegacy-reason: deployed before the map\n", "WARN" + row, 0},
+		{"strict", "modularity: strict\n", "FAIL" + row, 1},
+	}
+	for _, tt := range tests {
+		root := t.TempDir()
+		js := filepath.Join(root, "M-ux", "src", "rc", "js")
+		if err := os.MkdirAll(js, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		files := map[string]string{"big.js": lines(401), "at-budget.js": lines(400),
+			"allowed.js": "// rc-scan: allow js-file-size (a generated table)\n" + lines(400)}
+		if tt.mapBody != "" {
+			files["../../../../MODULE-MAP.md"] = tt.mapBody
+		}
+		for name, body := range files {
+			if err := os.WriteFile(filepath.Join(js, name), []byte(body), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		var o, e bytes.Buffer
+		code := Main([]string{filepath.Join(root, "M-ux")}, cli.Stdio{Out: &o, Err: &e})
+		if o.String() != tt.want || code != tt.code || e.Len() != 0 {
+			t.Errorf("%s: exit %d %q (stderr %q), want exit %d %q", tt.name, code, o.String(), e.String(), tt.code, tt.want)
+		}
+	}
+}

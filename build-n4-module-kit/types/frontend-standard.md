@@ -306,6 +306,11 @@ To preview pages in UxMedia without rewriting them: system property `niagara.pre
 (FAIL over 20 KB; WARN with `--legacy` for a deployed module not yet restructured), `orphan-page`
 (§ 1 layout shell) and `inline-block-size` (DJS1 split, over 300 lines). A false positive is
 silenced on its line with `rc-scan: allow <check-id>` plus a reason.
+Under a module map (`types/structure.md` § Module map) two structure checks join them, WARN in a
+`modularity: legacy` module and FAIL in a `modularity: strict` (new) one; a module with no map gets neither:
+`fetch-outside-services`, a `fetch(` in rc JavaScript (a `.js` file or an inline `<script>`) outside an
+`rc/js/services/` file `[ev: retro modularity-gaps Δ2]`, and `js-file-size`, a `.js` file over 400 lines (the
+allow marker goes on its line 1) `[ev: retro modularity-gaps Δ3]`.
 `toolbelt/lint-spa-poll-no-recovery.sh` gates the success-time watchdog (`dashboard.md` § Poll loop
 reliability). `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
 `[ev: retro dashboard-frontend-standard Δ5]` `[ev: retro dashboard-rc-file-split Δ6]`

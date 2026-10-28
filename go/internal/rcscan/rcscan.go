@@ -36,6 +36,7 @@ type options struct {
 	root           string
 	strict, legacy bool
 	profile        string
+	mode           lint.Modularity // the module map mode above root (lint.ModuleMode); none runs no map check
 }
 
 // sevW is the severity of a WARN check (FAIL under --strict); sevFloor that of browser-floor (FAIL under
@@ -45,6 +46,17 @@ func (o options) sevFloor() lint.Severity {
 	return pick(o.strict || o.profile == "hmi" || o.profile == "both")
 }
 func (o options) sevData() lint.Severity { return pick(!o.legacy || o.strict) }
+
+// sevMap is the severity of a module-map check (fetch-outside-services, js-file-size): FAIL in a strict module,
+// else the WARN check's (FAIL under --strict); mapped is false with no module map, where neither check runs, so a
+// map-less module's rows stay what they were before the checks existed.
+func (o options) sevMap() lint.Severity {
+	if o.mode == lint.ModularityStrict {
+		return lint.Fail
+	}
+	return o.sevW()
+}
+func (o options) mapped() bool { return o.mode != lint.ModularityNone }
 
 func pick(fail bool) lint.Severity {
 	if fail {
@@ -60,6 +72,7 @@ func Main(args []string, s cli.Stdio) int {
 		fmt.Fprint(s.Err, msg)
 		return 3
 	}
+	o.mode = lint.ModuleMode(o.root)
 	files, err := lint.Walk(o.root, sel)
 	if err != nil {
 		fmt.Fprintf(s.Err, "rc-scan: cannot list every file under %s: %s\n", o.root, err)

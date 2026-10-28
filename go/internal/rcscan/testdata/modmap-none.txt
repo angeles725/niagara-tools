@@ -1,0 +1,19 @@
+-- args --
+@DIR@/M-ux
+-- want --
+exit 0
+-- stderr --
+-- M-ux/src/rc/index.html --
+<html><body>
+<script>
+  fetch('/m/api/x', { signal: s });
+</script>
+</body></html>
+-- M-ux/src/rc/js/pages/home.js --
+// a page
+fetch('/m/api/y', { signal: s });
+var ok = 1; fetch('/m/api/z', { signal: s }); // rc-scan: allow fetch-outside-services
+-- M-ux/src/rc/js/services/api.js --
+function get(p) {
+  return fetch(p, { signal: s });
+}
