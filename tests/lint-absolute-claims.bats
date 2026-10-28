@@ -18,6 +18,7 @@ setup() {
 
 @test "AC1: a code tag on the bullet's continuation line clears every line of the bullet" {
   # Mutation: AC1 -- reading the tags of the line alone lists a bullet whose code tag sits on its continuation line
+  # shellcheck disable=SC2016  # the backticks are Markdown code spans of the fixture, not command substitution
   printf '%s\n' '- Never call X from a ticket,' '  it blocks the engine. `[ev: code toolbelt/lint-timers.sh:10]`' > "$T/a.md"
   run "$L" --strict "$T"
   [ "$status" -eq 0 ]

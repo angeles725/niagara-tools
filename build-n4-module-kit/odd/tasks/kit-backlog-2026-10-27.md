@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: B1–B4, B4b, B5.0, B5.1, B6, B7 DONE (2026-10-27, unpushed on `chore/kit-backlog`); B5, B8 next · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B8 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8) · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -48,10 +48,27 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B4b · review fix-forward. Route: inline (scope added by the parent mid-run; extra surfaces authorized).
 - [x] B5.0 · ng-deploy gate order (safety). Route: inline (one script + its bats + three doc lines; writer is this session).
 - [x] B5.1 · recorded gaps (eslint lockfile/`npm ci`; MM7 duplicate-concern docs). Route: inline.
-- [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later (next run).
+- [x] B5 · G21 / G34 / G40 / G38 (+G39) new lints + C51 sweep — run 3, split below (IDs continue after the run-2
+  B5.0/B5.1 so no stable ID is reused; the brief's "B5.1–B5.6" maps to B5.2–B5.8).
+  - [x] B5.2 · G21 `lint-permissions-xml` (C47). Route: inline (one rule package + shim + bats; writer is this session).
+  - [x] B5.3 · G34 `lint-structural-tests` (C41). Route: inline.
+  - [x] B5.4 · G40 `lint-logger-name` (C52). Route: inline.
+  - [x] B5.R · fix-forward of the APPROVED run-2 native reviews (scope added by the parent mid-run 3; extra surfaces
+    rcscan, ledgercheck, citeparse, slotomaticmarkers, check-bats-skips, build-verify.md): R1 ledger-check LC9
+    fail-open + rows after a blank line + `TestMain` rename; R2 rc-scan provenance (object() progress guard,
+    `declared` shadowing, `mapped` cache order, `literalName` iterator param, names); R3 check-bats-skips last line
+    without newline; R4 slotomatic-doc-line blank `//` separator + noise re-check; R5 citeparse unterminated
+    `[deferred:` consumers; R6 status-default-ok `||=`/`??=` goldens; R7 report-module truth case kind; R8 CL19 node
+    skip; R9 build-verify.md:276 mode-A sentences. Route: inline.
+  - [x] B5.5 · report-module wiring of the new module lints (G21, G34, G40, D1) + golden re-record, its own commit.
+    Route: inline (one member table edit + script-verified re-record).
+  - [x] B5.6 · C51 one-time "never"/"forbidden" sweep of `types/*.md` (docs commit). Route: inline.
+  - [x] B5.7 · G38 `lint-absolute-claims` (C51; kit doc report, `notInReport`). Route: inline.
+  - [x] B5.8 · G39 `count-retro-deltas` tool (C51; Go cmd + toolbelt wrapper). Route: inline.
 - [x] B6 · #459 tail + A7-D2 + lint-vacuous-tests report membership. Route: inline (Go packages rcscan, reportmodule).
 - [x] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
-- [ ] B8 · A7-D1 — later.
+- [x] B8 · A7-D1 `lint-adapter-cfg-default` (adapter `@NiagaraProperty defaultValue` vs pure-model Cfg default;
+  WARN, advisory). Route: inline. Ordered BEFORE B5.5 so one golden re-record covers every new module member.
 
 ## Acceptance
 - Each block lands as one or two work-unit commits with RED → GREEN evidence where a deterministic test exists.
@@ -306,6 +323,104 @@ Comments:
     SM9; mutation SM9 red; a first `//`-in-literal guard was unreachable (its mutation did not bite) and was removed.
     Real-tree smoke (67 client -rt parts, counts only): 0 in 4, 1-10 in 51, 27-29 in 12; spot-checks are fragments.
     Fixtures and report-module goldens unchanged.
+- 2026-10-27 B5.2 (run 3, inline; commit 510ad024). G21 `lint-permissions-xml` per the spec in
+  `ledger.d/2026-10-23-r8-p1-sign.md:5`: TreeRule over each module root (Mode Each, ModuleRoot), selecting
+  `module-permissions.xml` + `*.java` (srcTest/test/build pruned; Java only from `-rt/src/`). XML parsed with
+  encoding/xml (CharsetReader passthrough for ISO-8859-1/US-ASCII), so the template's commented requests are not read.
+  RED: `undefined: Spec`; GREEN 10 goldens; bats PX 7/7; mutations PX1 (accept any root) and PX2 (raw Java lines)
+  each red. Decision: a file that does not parse is exit 3 (spec: "3 usage/unreadable"). Real-tree smoke (12 client
+  module roots, counts only): 10 clean, 1 FAIL (the pre-#380 `<modulePermissions>` root, a true positive), 1 exit 3
+  (a module with no `-rt` part and no permissions file). Temporarily in `notInReport` until B5.5.
+- 2026-10-27 B5.3 (run 3, inline; commit d4256bc7). G34 `lint-structural-tests` per `ledger.d/2026-10-23-r8-p1-tests.md:5`:
+  TreeRule (Mode Each, ModuleRoot, StrictFails = the spec's "FAIL under --strict") over `*/srcTest/*` Java, grouped
+  by part. Decision (spec ambiguity "reads a `.java` path"): a row is a literal ending `.java"` inside the arguments of
+  `Files.readAllBytes|readAllLines|readString|lines` or `Paths.get|Path.of` — a `.java` name elsewhere in the file is
+  not a read (spec case "a test reading a `.json` fixture → clean"). RED `undefined: Spec`; GREEN 8 goldens; bats ST
+  5/5; ST1 (accept only BTestNgStation) and ST2 (any `.java` literal) red. A first ST1 pin (local abstract base) did
+  not bite — the base itself extends BTestNg — and was replaced. Smoke (12 roots): 10 exit 0 (3 with rows, 7 WARN
+  total; spot-checks: `Files.readAllBytes(new File(src, cls + ".java"))` facade-name readers, true positives), 2 exit 3
+  (no srcTest Java).
+- 2026-10-27 B5.4 (run 3, inline; commit eb67217f). G40 `lint-logger-name` per `ledger.d/2026-10-23-r8-p1-process.md:5`.
+  Decision (spec: "`moduleName` from the group/part gradle"): part gradle `moduleName.set("X")`/`moduleName = "X"`,
+  else the gradle file one directory up, else the part directory name minus its suffix. Comparison is exact (case
+  matters: the DebugService row is the literal). RED `undefined: Spec`; GREEN 7 goldens; bats LN 5/5; LN1
+  (case-insensitive) and LN2 (no child exemption) red. Smoke (12 roots): 11 exit 0, 9 with rows, 26 WARN (lower-case
+  module names), 1 exit 3 (no part Java).
+- 2026-10-27 B5.R (run 3, inline; commits 28c8a0a6, 4edf50b3). Fix-forward of the APPROVED run-2 reviews:
+  - R1 ledger-check: LC9 is now the template's exact sample row only (read from the template, header and separator
+    skipped); any other row with `<...>` runs LC4-LC8, a single placeholder cell WARNs and is still checked; rows after a
+    blank/comment/prose line are read to the next heading (decision: keep scanning, not FAIL, as prose between rows is
+    legal Markdown). `TestMain` → `TestLedgerCheckCases`. RED 3 cases → GREEN; bats ledger-check ok.
+  - R2 rc-scan provenance: progress guard in `object()` (RED: the new truth case hung, `go test -timeout 30s` panic);
+    `declared` only when `jssrc.Lookup` finds no local binding; `recheck()` at the end of `markWrites` re-takes every
+    cached `.map` verdict (fixpoint; verdicts only narrow); `literalName` index param only on a literal-array receiver
+    (Map.forEach key → not literal); `numericMethods` → `literalMethods`, `mapped(name…)` → `mapped(mapAt…)`. Truth
+    `truth-innerhtml-computed-2` (3 rows); mutations RC-mapped-order, RC-declared-shadow, RC-index-receiver each red.
+    Client -ux smoke (34 trees): 69 innerhtml-server rows before and after, 0 timeouts.
+  - R3 check-bats-skips: `while read -r p || [ -n "$p" ]`; SK10 RED → GREEN.
+  - R4 slotomatic-doc-line: blank `//` separator and an indented list-item last line skipped (SM10 RED via mutation).
+    Re-check of intent: Slot-o-Matic keeps the last comment line only, and spot-checks of the hits are real fragments,
+    so the rule stays; smoke over 78 client -rt parts before 7×0 8×1 6×2 13×3 11×4 6×5 1×9 14×10 6×27 6×29, after
+    7×0 8×1 6×2 13×3 11×4 6×5 15×9 6×27 6×28 (76 unique hits). Decision: still noisy and cosmetic → the row is
+    ADVISORY (no exit effect, `--strict` included; report-module's failWarn filter no longer relays it).
+  - R5 citeparse consumers: only `buildstatefields` (checks `Unterminated` before anything) and `citeresolve`
+    (appends a "deferred" note, never skips) read `Deferred`; neither skips first. New `tests/kit-cite-resolve-deferred.bats`
+    KCRD1-2 runs the real resolver: an unterminated `[deferred:` tag is an UNPARSED strict finding (exit 1). A Go test in
+    `go/internal/citeresolve/` was outside the surfaces, so the pin is the bats file.
+  - R6 status-default-ok: `truth-status-default-ok-2` (`||=` and `??=` flagged; non-status name and non-"ok" default clean).
+  - R7 report-module: new `truth-vacuous-tests-envfault` (exit 3 non-noSource text → `(module) ERROR lint-vacuous-tests
+    env fault (exit 3)`, exit 3; the summary verdict text reads CLEAN, as in every existing member env-fault golden);
+    the member case's @kind narrowed; Cases 121 → 122.
+  - R8 CL19: `command -v node || skip "node not installed"`; NOT allowlisted (CI's bats job runs setup-node, so a CI skip
+    must fail the gate).
+  - R9 build-verify.md:276: rewritten to mode A only (-ux when annotated), mode C -rt only, mode B never (two WARN
+    lines with `--with-slotomatic`); "silently" and "Mode B is the exception" removed.
+- 2026-10-27 B8 (run 3, inline; commit b6c9277f). Audit A7-D1 `lint-adapter-cfg-default`. The audit line names only
+  "adapter `@NiagaraProperty defaultValue` vs pure-model Cfg default"; decisions recorded for that ambiguity: a Cfg is
+  any class named `*Cfg`; the adapter↔field link is an assignment statement `<x>.<field> = get<Slot>();` (optionally
+  `.getMillis()`/`.getSeconds()` for a BRelTime slot, converted); the field default is its literal initializer or Java's
+  0/false; computed initializers, multi-declarator fields, other right-hand sides and unevaluable defaults are not
+  judged; WARN in every mode (advisory first). RED `undefined: Spec`; GREEN 6 goldens; bats ACD 4/4; ACD1 (raw ms, no
+  getSeconds conversion) and ACD2 (no-initializer field unjudged) red — a first ACD1 pin (`BRelTime.make(1500)` vs
+  1500 ms) could not bite and was replaced. Smoke (12 client module roots): 2 with rows, 24 WARN (fields left at 0/false
+  while the slot defaults to a commissioned value), 9 clean, 1 exit 3. Audit A7 ticked in `audit-2026-10-03.md`.
+- 2026-10-27 B5.5 (run 3, inline; commit a583e823). report-module members `lint-permissions-xml` (failWarn, PASS
+  verdict), `lint-structural-tests`, `lint-logger-name`, `lint-adapter-cfg-default` (warnOnly), each with its own
+  noSource SKIP; removed from `notInReport`; `Scripts()` 56 → 60. RED: 106 goldens failed. Re-record: a temporary,
+  uncommitted `GOLDEN_DUMP_TMP` hook in `golden.Runner` (reverted with `git checkout`) dumped the Go tool's output; a
+  script replaced each `want` (read/written with `newline=''`) and checked every case: exit and stderr identical, all
+  non-member lines unchanged and in order, summary counts moved by exactly the added rows, verdict unchanged — 106
+  changed, 0 problems; added permissions-xml 97 PASS + 9 SKIP, structural-tests 24 SKIP, logger-name 2 SKIP,
+  adapter-cfg-default 9 SKIP. Mutation RM-new-members-nosource is pinned by those SKIP goldens. Decision: one re-record
+  for all four members (B8 ordered before B5.5) instead of one per lint.
+- 2026-10-27 B5.7 (run 3, inline; commit 6809a137). G38 `lint-absolute-claims` per `ledger.d/2026-10-23-r8-p1-process.md:5`.
+  Decision (spec is per line, tags often sit on a continuation line): a line's evidence is its claim unit (bullet or
+  paragraph). Strong = a `code`/`course`/`devguide`/`CERT`/`javap` tag or a `.java:<n>` cite; one INFO row per line
+  (first word). Spec: exit 0 always (INFO never affects the exit), 3 usage/empty root; ModuleRoot so `--all` skips it;
+  `notInReport` (kit doc report). RED `undefined: Spec`; GREEN 5 goldens; bats AC 5/5; AC1 (line-only tags) and AC2
+  (corpus as strong) red. Kit `types/`: 423 rows (282 never, 58 throws, 44 silently, 34 always, 5 forbidden).
+  Order: G38 landed before the sweep because the sweep consumes its report (brief order sweep → G38 swapped).
+- 2026-10-27 B5.6 (run 3; commit e3bc06e2; review delegated to one read-only worker, then spot-checked here). The 287
+  never/forbidden rows were checked against corpus B1242 §1242.3 (rules 1-73) and §1242.4 (items 1-16): 1 contradicted
+  (CoalesceQueue proxy `write()` returned `false`; B1239 §1239.9 quotes the devguide "if the write is enqueued then
+  return true" — spot-checked), 2 over-absolute corrected (lexicon keys vs `<Type>.displayName`, B1236 §1236.3; BQL
+  `get()` comment, B1237 §1237.7), 1 proposed change NOT applied (`types/moduleTest.md` test types leaking into
+  module-include.xml "because of the package layout": B1236 §1236.5 shows the course layout and a shipped
+  `moduleTest-include.xml`, not that cause — inferred), 15 supported, ≈268 outside what the course checklist covers
+  (dashboard, browser, field behaviour). Not done: adding the 15 corpus pointers to supported lines (they would not
+  change G38's verdict, corpus tags are not strong) — optional follow-up.
+- 2026-10-27 B5.8 (run 3, inline; commit c2ddd92f). G39 `count-retro-deltas` per the spec in the same fragment: Go cmd +
+  `internal/retrodeltas` + `toolbelt/count-retro-deltas.sh`, named in BUILD-LOOP §7 and METHODOLOGY K34 (kit-links L5).
+  Decisions: the delta section is `## Proposed kit deltas`, `## Deltas` or `## Proposed delta table` (the three headings
+  the 410 kit retros use); the INDEX cell is the column headed `Deltas` (some rows carry a note column after it); a value
+  not stated prints `-` and is a mismatch; no INDEX.md beside a retro is exit 3. RED `undefined: Main`; GREEN 9 unit
+  cases; bats CRD 3/3. Kit retros: TOTAL rows=1331, files=410, 93 mismatches (74 legacy without `**Delta count**`, 19
+  real disagreements) → open_issue in `ledger.d/2026-10-27-kit-backlog-b5-count-retro-deltas.md` (retros/ is outside the
+  surface). Also: `go/README.md` rows for `internal/ledgercheck/` + `cmd/ledger-check/` (owed open_issue closed in
+  place) and the `toolbelt/ledger-check.sh` LC9 header line for the narrowed rule.
+- 2026-10-27 run-3 close fixes (final docs commit): the G39 ledger fragment named `<retro.md>`, which the generated
+  BUILD-STATE carried into a kit-links L1 dangling reference — reworded `<retro-file>`; `tests/lint-absolute-claims.bats`
+  SC2016 (backticks of a Markdown fixture) annotated for the pinned shellcheck.
 
 ## Verification (run 2 close, 2026-10-27, tip 65137fb6 + docs)
 - `memcap go test ./...`: 124 packages ok, 0 FAIL (EXIT 0); `gofmt -l .` empty; `go vet` clean on rcscan,
@@ -356,3 +471,32 @@ Comments:
   (open_issue in `ledger.d/2026-10-27-kit-backlog-b7a-ledger-check.md`); skill reinstall
   (`scripts/install-skill.sh --force --skill build-n4-module`) and `scripts/check-skill-drift.sh` (skill/SKILL.md
   changed again in B5.0).
+
+## Verification (run 3 close, 2026-10-27)
+- `memcap go test ./...`: 130 packages ok, 0 FAIL (EXIT 0); `gofmt -l .` empty; `go vet` clean on lint/..., reportmodule,
+  rcscan, ledgercheck, retrodeltas, cmd/count-retro-deltas.
+- bats (27 touched/related suites, `-j 4 --no-parallelize-within-files`, TAP): 344 planned, 344 ok after the L1 fix;
+  `scripts/check-bats-skips.sh` on that TAP: 4 skips, all allowlisted.
+- Pinned shellcheck 0.10.0 (`scripts/ci-local.sh --only shellcheck`): PASS (after the SC2016 annotation). Guard pins:
+  PX1-2, ST1-2, LN1-2, ACD1-2, AC1-2, SM9-10 MATCH.
+- `gen-lint-index.sh --check`, `gen-retro-index.sh --check`, `gen-build-state.sh --check`: valid. Fresh kit-state sweep:
+  exit 0. `sweep-fold-audit.sh --strict --exact-stems --deltas-since 2026-09-24`: 411/411 cited, 789 deltas, 0 not cited.
+  `kit-cite-resolve --strict` on types/structure.md, dashboard.md, logic-authoring.md, BUILD-LOOP.md, METHODOLOGY.md:
+  LIVE 0, HISTORY 0 findings.
+- `scripts/changelog-gate.sh --range 81ae3347..HEAD` and `.githooks/pre-push` over the branch range: see the run-3
+  report (run after this commit).
+
+## Backlog close (2026-10-27)
+B1-B8 are DONE on `chore/kit-backlog` (unpushed): B1-B4, B4b, B5.0, B5.1, B6, B7 in runs 1-2; B5.2-B5.8, B5.R and B8 in
+run 3 (commits 510ad024..HEAD). Audit `audit-2026-10-03.md` A7 is closed; A9 closed in run 2.
+What is left, and why:
+- 19 kit retros whose delta rows, `**Delta count**` and `deltas` header disagree, and 74 legacy retros without a Delta
+  count line (`count-retro-deltas` output): reconciling them edits `retros/`, outside this backlog's surfaces (open_issue).
+- C51: the 15 corpus pointers for supported absolute claims (optional) and helper G93 `diff-vs-reference`; the
+  `types/moduleTest.md` leak cause stays as written until certified evidence exists.
+- C41: whether 4.14+ tooling still discovers the older test layout stays `[INFER]`.
+- C52: the client parity ticket items are client follow-ups, not kit work.
+- From run 2, unchanged: posting issue #459's closing comment (owner), the skill reinstall + `check-skill-drift.sh`.
+- The four new module lints are WARN/advisory (G21 FAILs per its spec); promoting any of them to FAIL is a later decision
+  once their real-tree counts settle.
+
