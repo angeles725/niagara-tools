@@ -69,6 +69,7 @@
 # read CLEAN when they SKIP — the verdict is INCOMPLETE, exit 4. --first-deploy: the module was never deployed, so
 # schema-risk has no baseline to diff (N/A, not a floor gap). --lint-only: a punch-list run that is not the floor
 # (no jar expected); floor SKIPs stay rows and are named on stderr. [ev: retro change-tier-time-budgets Δ3]
+# A member env fault (an ERROR row, exit 3) with no FAIL reads INCOMPLETE, never CLEAN (kit-backlog run-3 fix).
 # Mutation: RM-floor -- dropping the floor-SKIP verdict reads a run that checked neither floor member as CLEAN
 # Mutation: RM-floor-schema -- --first-deploy ignored keeps a never-deployed module INCOMPLETE forever
 # Mutation: RM-n4lint -- dropping a Go-ported member's invocation loses its rows from the report

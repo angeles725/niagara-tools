@@ -19,8 +19,13 @@ setup() {
   [[ "$output" == *"strict findings: LIVE 1, HISTORY 0"* ]]
 }
 
-@test "KCRD2: a closed [deferred: tag with no finding is not reported as unterminated" {
+@test "KCRD2: a closed [deferred: tag resolves as its pointer (marked deferred), never as unterminated, exit 0" {
+  # Mutation: KCRD2-vacuous -- asserting only the absence of "unterminated" passes on a missing resolver (exit 127)
+  [ -f "$R" ]
   printf '%s\n' '# t' '' 'A claim. [deferred: retro x Δ1]' > "$D/doc/t.md"
   run bash "$R" "${ROOTS[@]}" "$D/doc/t.md"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'\t3\tretro\tx\tΔ1\tMISSING_FILE\t'*'[deferred]'* ]]
+  [[ "$output" == *"kit-cite-resolve: 1 pointers: MISSING_FILE 1"* ]]
   [[ "$output" != *"unterminated"* ]]
 }

@@ -15,6 +15,9 @@
 //	LC9  a template placeholder left in a Versions row: the template's sample row       WARN
 //	     (not checked further), or a cell equal to its placeholder cell (still checked)
 //
+// The header row (first, or repeated after a blank line) and every separator row of the Versions section are not data
+// rows.
+//
 // Rows: "<FAIL|WARN>  ledger-check  <file>[:<line>]  LC<n>: <reason>". Exit 0 clean or WARN-only, 1 any FAIL, 3
 // usage, an unreadable ledger, or a template that cannot be read or holds no Versions table or Status sentence.
 package ledgercheck
@@ -233,8 +236,9 @@ func check(c contract, file string, lines []string) []string {
 	}
 	for _, i := range versionRows(lines) {
 		r := cells(lines[i])
-		if i == at || separator(r) {
-			continue
+		// Mutation: LC-reheader -- a repeated header row read as data FAILs LC5/LC6 on the column names
+		if i == at || separator(r) || sameCells(r, c.header) {
+			continue // the header (first or repeated after a blank line) and every separator row are not data
 		}
 		n := i + 1
 		if len(r) != len(c.header) {
