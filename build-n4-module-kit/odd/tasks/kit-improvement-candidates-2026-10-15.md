@@ -768,6 +768,12 @@ cursor recipe stays owed (WU-P0-6).
   **cex Δ1 FOLDED** (2026-10-27 bookkeeping, `odd/tasks/kit-backlog-2026-10-27.md` B1): `SOURCES.md` § Exemplar source names the course, and `corpus-index.md`
   § n4-dev-course holds its rows (B1230–B1258; aaf61de2) — pointer P1 done. LEFT: Go lint G38 `absolute-claims`, Go tool
   G39 `count-retro-deltas` (kit-backlog B5) and helper G93.
+  **Sweep + G38 + G39 FOLDED** (2026-10-27, `odd/tasks/kit-backlog-2026-10-27.md` B5.6-B5.8): `lint-absolute-claims`
+  (G38) lists 287 never/forbidden lines citing only inference; the one-time sweep checked them against corpus B1242
+  §1242.3/§1242.4 and corrected three (`types/logic-authoring.md` CoalesceQueue `write()` returns `true`; the
+  Context-less BQL `get()` comment; `types/dashboard.md` lexicon keys vs `<Type>.displayName`); the rest are SUPPORTED
+  (15) or outside what the course checklist covers. `count-retro-deltas` (G39) counts delta rows by script. LEFT:
+  helper G93.
 
 ### C52 — Client parity ticket (course convention wins on five points)
 - **Sources:** poh#Δ3 (primary)

@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-27 -->
+<!-- last-change-note: kit-backlog B5.6: one-time sweep of absolute claims in types/ against the course checklist -->
+log: 2026-10-27 · kit-backlog B5.6 (C51 one-time sweep, METHODOLOGY K33) → the 287 never/forbidden rows `lint-absolute-claims` lists for `types/*.md` were checked against corpus B1242 §1242.3 (rules 1-73) and §1242.4 (items 1-16): 1 contradicted (`types/logic-authoring.md` CoalesceQueue `write()` now returns `true`, B1239 §1239.9), 2 over-absolute corrected (`types/dashboard.md` lexicon keys name the `<Type>.displayName` exception, B1236 §1236.3; `types/logic-authoring.md` BQL `get()` comment, B1237 §1237.7), 1 proposed correction to `types/moduleTest.md` not applied (its cause is inferred, not certified), 15 supported, the rest outside the checklist's scope. [ev: retro n4-course-as-exemplar-source Δ3]
