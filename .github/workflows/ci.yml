@@ -141,18 +141,18 @@ jobs:
 
       # The pinned npm tools of the kit's JS lints (audit A6): toolbelt/eslint/package.json pins eslint and acorn to
       # exact versions; with them installed the report-module ESLint rows and the lint-vendor-floor acorn tests run
-      # instead of skipping. npm's download cache is keyed on that package.json (no lockfile is committed yet: the
-      # direct pins are exact, the transitive tree resolves fresh; the step below fails if a direct pin drifts).
-      - name: Set up Node.js 24.19.0 (npm cache keyed on toolbelt/eslint/package.json)
+      # instead of skipping. The committed package-lock.json pins the whole tree; `npm ci` installs exactly it (and
+      # fails when it disagrees with package.json); npm's download cache is keyed on that lockfile.
+      - name: Set up Node.js 24.19.0 (npm cache keyed on toolbelt/eslint/package-lock.json)
         uses: actions/setup-node@v5
         with:
           node-version: "24.19.0"
           cache: npm
-          cache-dependency-path: build-n4-module-kit/toolbelt/eslint/package.json
+          cache-dependency-path: build-n4-module-kit/toolbelt/eslint/package-lock.json
 
-      - name: Install the pinned npm tools (eslint + acorn from toolbelt/eslint/package.json; installed versions asserted)
+      - name: Install the pinned npm tools (npm ci from toolbelt/eslint/package-lock.json; installed versions asserted)
         run: |
-          npm install --prefix build-n4-module-kit/toolbelt/eslint --no-audit --no-fund
+          npm ci --prefix build-n4-module-kit/toolbelt/eslint --ignore-scripts --no-audit --no-fund
           # Every direct devDependency must resolve to exactly its pinned version.
           node -e '
             const dir = "build-n4-module-kit/toolbelt/eslint";

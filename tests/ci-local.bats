@@ -235,3 +235,27 @@ fake_bats() {
   [[ "$output" == *"UNLISTED skip: ok 2 b — a reason nobody reviewed"* ]]
   [[ "$output" == *"FAIL bats (all unit tests)"* ]]
 }
+
+@test "CL19: CI installs the npm tools with npm ci from the committed lockfile, which pins package.json's exact versions" {
+  # Mutation: CL19 -- `npm install` in CI (or an ignored lockfile) resolves the transitive tree fresh on every run.
+  local dir="$ROOT/build-n4-module-kit/toolbelt/eslint"
+  run git -C "$ROOT" ls-files --error-unmatch build-n4-module-kit/toolbelt/eslint/package-lock.json
+  [ "$status" -eq 0 ]
+  # lifecycle scripts stay disabled: a dependency's install script never runs in CI
+  grep -qE '^[[:space:]]+npm ci --prefix build-n4-module-kit/toolbelt/eslint --ignore-scripts( |$)' "$CI"
+  run grep -qE '^[[:space:]]+npm install --prefix build-n4-module-kit/toolbelt/eslint' "$CI"
+  [ "$status" -ne 0 ]
+  grep -qE 'cache-dependency-path: build-n4-module-kit/toolbelt/eslint/package-lock.json' "$CI"
+  run grep -qx 'package-lock.json' "$dir/.gitignore"
+  [ "$status" -ne 0 ]
+  # the lockfile's root and resolved versions match the exact pins of package.json
+  run node -e '
+    const d = process.argv[1], pkg = require(d + "/package.json"), lock = require(d + "/package-lock.json");
+    let bad = 0;
+    for (const [n, v] of Object.entries(pkg.devDependencies)) {
+      if (lock.packages[""].devDependencies[n] !== v) { console.log("root " + n); bad = 1; }
+      if ((lock.packages["node_modules/" + n] || {}).version !== v) { console.log("resolved " + n); bad = 1; }
+    }
+    process.exit(bad);' "$dir"
+  [ "$status" -eq 0 ]
+}

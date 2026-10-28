@@ -166,6 +166,22 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   - Gap: MM7's duplicate-concern rule is not yet in `toolbelt/lint-module-map.sh` (MM7 header line) nor
     `types/structure.md:298` (outside the surface; open_issue in `ledger.d/2026-10-27-kit-backlog-review-fix-forward.md`).
 
+- 2026-10-27 B5.0 (run 2, inline; commit 5512a99f). Re-read on b2e0e430: `main` ran `copy_jars` (Step 4) before
+  `verify_jar`/`verify_cachebuster` (Step 5) and `run_gate` (Step 5.5); the version/schema prechecks were already before
+  the copy. Fix: verify + cache-buster + gate run on `build/libs` before `copy_jars`; usage exit 50 says nothing is
+  copied. RED (bats, stubbed gradlew/unzip/gate, no station): NG-order-gate (mode A+C gate exit 1 left
+  `modules/test-rt.jar`), NG-order-verify (type-count 99 and a missing `?v=` left jars), NG-order-pass (`gate ok` printed
+  after `copy ok`) — 3/3 not ok on the base. GREEN: `tests/ng-deploy.bats` 51/51; 15 doc-pin suites (kit-links,
+  check-skill-drift, install-skill, kit-p1-*, pre-push-live-cite, …) 224/224 ok. Docs: skill/SKILL.md:37,
+  BUILD-LOOP.md:129 (§4) and :216 (§5), build-verify.md:11, :21, :276 (mode C no longer claimed to regenerate -ux).
+- 2026-10-27 B5.1a (run 2, inline). Lockfile: the `package-lock.json` the B3 local install wrote (lockfileVersion 3,
+  77 packages, all on registry.npmjs.org, 0 `hasInstallScript`) committed; `npm ci --offline` in a scratch copy
+  installed eslint 10.11.0 + acorn 8.18.0 (no network). CI step: `npm ci --ignore-scripts` (parent fix-forward item 5,
+  78abca8e R1-001), cache keyed on the lockfile; `.gitignore` and package.json description rewritten. RED CL19
+  (`tests/ci-local.bats`: lockfile tracked, `npm ci … --ignore-scripts`, cache key, not ignored, lock pins = package.json
+  pins) not ok on the base; GREEN ci-local 19/19; `npm_config_offline=true scripts/ci-local.sh --only 'Install the
+  pinned npm tools'` PASS. Ledger open_issue in `2026-10-27-kit-backlog-a6-ci.md` closed DONE.
+
 ## Verification (branch close, 2026-10-27)
 - `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
 - bats (21 touched/related suites, `-j 4 --no-parallelize-within-files`): 391 planned, 391 ok after regenerating the
