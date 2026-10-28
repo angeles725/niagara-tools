@@ -98,8 +98,10 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	return out, nil
 }
 
-// docLines is the slotomatic-doc-line rows: per @NiagaraProperty annotation in code, the `//` comment block
-// directly above it, when it has two or more lines and its last line is not a standalone sentence.
+// docLines is the slotomatic-doc-line rows (ADVISORY: a fragment Javadoc is cosmetic, and the real-tree smoke
+// found it in most client parts): per @NiagaraProperty annotation in code, the `//` comment block directly above
+// it, when it has two or more lines and its last line continues the one before it. A blank `//` line before the
+// last (a paragraph break) and an indented last line (a list item) are not continuations.
 func docLines(f *javasrc.File) []lint.Finding {
 	code := f.Stripped()
 	var out []lint.Finding
@@ -115,9 +117,13 @@ func docLines(f *javasrc.File) []lint.Finding {
 			continue
 		}
 		last, prev := comment(f.Raw[i-1]), comment(f.Raw[i-2])
+		// Mutation: SM10-doc-blank -- reading an empty separator line as unpunctuated flags every paragraph-broken block
+		if prev == "" || listItem(f.Raw[i-1]) {
+			continue
+		}
 		// Mutation: SM9-doc-line -- reading only a lower-case start passes a last line that finishes the line above
-		if !strings.ContainsAny(prev[len(prev)-min(1, len(prev)):], ".!?:;") || startsLower(last) {
-			out = append(out, lint.Finding{Check: "slotomatic-doc-line", Severity: lint.Warn, Line: i, Msg: docMsg})
+		if !strings.ContainsAny(prev[len(prev)-1:], ".!?:;") || startsLower(last) {
+			out = append(out, lint.Finding{Check: "slotomatic-doc-line", Severity: lint.Advisory, Line: i, Msg: docMsg})
 		}
 	}
 	return out
@@ -126,6 +132,11 @@ func docLines(f *javasrc.File) []lint.Finding {
 // comment is a `//` line's text, trimmed.
 func comment(raw string) string {
 	return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(raw), "//"))
+}
+
+// listItem: a `//` line whose text is indented past one space after the slashes (`//   a -> b`), an item of a list.
+func listItem(raw string) bool {
+	return strings.HasPrefix(strings.TrimPrefix(strings.TrimSpace(raw), "//"), "  ")
 }
 
 // startsLower: s starts with a lower-case ASCII letter.

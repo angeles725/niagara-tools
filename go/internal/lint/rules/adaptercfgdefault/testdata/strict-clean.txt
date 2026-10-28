@@ -1,0 +1,13 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/src/C.java --
+class C { static class Cfg { int n = 2; long tMs = 1500L; } }
+-- M/M-rt/src/BA.java --
+@NiagaraType
+@NiagaraProperty(name = "n", type = "int", defaultValue = "2")
+@NiagaraProperty(name = "t", type = "BRelTime", defaultValue = "BRelTime.make(1500)")
+class BA { void f(C.Cfg c) { c.n = getN(); c.tMs = getT().getMillis(); } }

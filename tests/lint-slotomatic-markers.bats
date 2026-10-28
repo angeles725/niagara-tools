@@ -100,7 +100,7 @@ region() { local f="$1"; shift; { printf 'public class X extends BComponent\n{\n
   [ -z "$output" ]
 }
 
-@test "SM9: a multi-line // comment above @NiagaraProperty whose last line continues the line above WARNs slotomatic-doc-line" {
+@test "SM9: a multi-line // comment above @NiagaraProperty whose last line continues the line above is an ADVISORY slotomatic-doc-line row" {
   # Slot-o-Matic keeps only the LAST comment line as the slot's Javadoc (the 2026-09-24 phase-2 alarms retro, Δ7).
   { printf '@NiagaraType\n'
     printf '%s\n' '// Over-amperage limit shared by all 3' '// compressors. 0 (default) = disabled.' \
@@ -110,7 +110,18 @@ region() { local f="$1"; shift; { printf 'public class X extends BComponent\n{\n
       'public class BPanel extends BComponent' '{' '}'; } > "$SRC/BPanel.java"
   run "$SM" "$BATS_TEST_TMPDIR/Mod-rt/src"
   [ "$status" -eq 0 ]
-  [ "$output" = "WARN  slotomatic-doc-line  $SRC/BPanel.java:3  the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)" ]
+  [ "$output" = "ADVISORY  slotomatic-doc-line  $SRC/BPanel.java:3  the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)" ]
   run "$SM" --strict "$BATS_TEST_TMPDIR/Mod-rt/src"
-  [ "$status" -eq 1 ]
+  [ "$status" -eq 0 ]
+}
+
+@test "SM10: a blank // separator before the last comment line is a paragraph break, not a continuation" {
+  # Mutation: SM10 -- reading an empty separator line as unpunctuated flags every paragraph-broken comment block
+  { printf '@NiagaraType\n'
+    printf '%s\n' '// Fan delay before the heaters start' '//' '// Seconds; 0 disables it.' \
+      '@NiagaraProperty(name = "fanDelay", type = "int", defaultValue = "0")' \
+      'public class BPanel extends BComponent' '{' '}'; } > "$SRC/BPanel.java"
+  run "$SM" --strict "$BATS_TEST_TMPDIR/Mod-rt/src"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

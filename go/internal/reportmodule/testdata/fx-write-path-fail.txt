@@ -53,8 +53,10 @@ docs  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  FAIL  lint-write-path  DemoPan-rt:  slot setpoint: no matrix row
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  SKIP  lint-vacuous-tests  no *.java under a srcTest/
+(module)  PASS  lint-permissions-xml  clean
+(module)  SKIP  lint-structural-tests  no *.java under a srcTest/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 18 PASS · 1 FAIL · 1 WARN · 30 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 2 artifacts · 19 PASS · 1 FAIL · 1 WARN · 31 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

@@ -25,8 +25,10 @@ DemoPan-rt  FAIL  schema-risk  verdict=OUTAGE
 (module)  SKIP  lint-write-path  no write-path-matrix.md
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  SKIP  lint-vacuous-tests  no *.java under a srcTest/
+(module)  PASS  lint-permissions-xml  clean
+(module)  SKIP  lint-structural-tests  no *.java under a srcTest/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 14 PASS · 3 FAIL · 1 WARN · 5 SKIP · 0 ADVISORY  ->  ISSUES (+INCOMPLETE)
+report-module: 1 artifact · 15 PASS · 3 FAIL · 1 WARN · 6 SKIP · 0 ADVISORY  ->  ISSUES (+INCOMPLETE)
 -- stderr --
 -- @kind --
 recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)

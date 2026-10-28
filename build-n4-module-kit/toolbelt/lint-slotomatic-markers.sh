@@ -19,9 +19,11 @@
 # a local, an anonymous class and a comment or literal mention are not members of the annotated class.
 # [ev: retro r10-client-gate-retro Δ1]
 # A `//` comment block of two or more lines directly above a @NiagaraProperty whose LAST line continues the line
-# before it (that line ends with no . ! ? : or ;, or the last line starts lower-case) WARNs slotomatic-doc-line:
-# Slot-o-Matic keeps only the last line as the slot's generated Javadoc, so a fragment is all the slot documents
-# (types/logic-authoring.md § `@NiagaraProperty` source comment; the 2026-09-24 phase-2 alarms retro, Δ7).
+# before it (that line ends with no . ! ? : or ;, or the last line starts lower-case) is an ADVISORY
+# slotomatic-doc-line row (no exit effect, --strict included): Slot-o-Matic keeps only the last line as the slot's
+# generated Javadoc, so a fragment is all the slot documents (types/logic-authoring.md § `@NiagaraProperty` source
+# comment; the 2026-09-24 phase-2 alarms retro, Δ7). A blank `//` line before the last one (a paragraph break) and
+# an indented last line (a list item) are not continuations.
 # Fix: delete the BEGIN/END markers and rerun `:<part>:slotomatic --info`, read it for `Could not process`.
 # [ev: retro n4-course-handson-slotomatic-authoring Δ1] [ev: retro r8-t9i-k15 Δ1]
 #
@@ -34,7 +36,7 @@
 #   Row:  FAIL  lint-slotomatic-markers  <file>:<begin-line>  generated region holds <n> /*@ $...$ @*/ stamp lines, ...
 #   Row:  WARN  unclosed-region  <file>:<begin-line>  BEGIN BAJA AUTO GENERATED CODE with no END marker after it ...
 #   Row:  FAIL  type-outside-region  <file>:<member-line>  hand-written TYPE|getType() outside the generated region of <class>: ...
-#   Row:  WARN  slotomatic-doc-line  <file>:<last-comment-line>  the last line of the // comment above @NiagaraProperty continues ...
+#   Row:  ADVISORY  slotomatic-doc-line  <file>:<last-comment-line>  the last line of the // comment above @NiagaraProperty continues ...
 #   Exit: 0  clean (or WARN only) · 1  any FAIL, or a WARN under --strict · 3  usage/env, a root with no *.java or a sub-directory find cannot enter
 # Mutation: SM1 -- dropping the stamp count check passes an empty BEGIN/END region clean
 # Mutation: SM2 -- checking only for a missing stamp (n == 0) passes a region with two stamps
@@ -42,6 +44,7 @@
 # Mutation: SM7 -- treating every TYPE member as inside the region passes a hand-written TYPE beside it
 # Mutation: SM8 -- treating every member as outside the region FAILs the generated pair inside it
 # Mutation: SM9 -- reading only a lower-case start passes a last comment line that finishes the line above it
+# Mutation: SM10 -- reading an empty separator line as unpunctuated flags every paragraph-broken comment block
 # VCS-free by design.
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

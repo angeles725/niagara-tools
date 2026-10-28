@@ -4,6 +4,7 @@ package rules
 
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/adaptercfgdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonincludesync"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/arbitraryord"
@@ -121,5 +122,6 @@ func All() []lint.Spec {
 		permissionsxml.Spec(),
 		structuraltests.Spec(),
 		loggername.Spec(),
+		adaptercfgdefault.Spec(),
 	}
 }

@@ -1,0 +1,20 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:6  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:8  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:9  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+-- stderr --
+-- rc/a.js --
+const lits = [{ n: 1 }, { n: 2 }];
+const units = [{ id: "UP-01", cap: 4 }];
+const rows = units.map(u => ({ c: u.cap }));
+rows[0].x = 1;
+units[0].cap = srv;
+el.innerHTML = rows.map(v => '<b>' + v.c).join('');
+function series() { return lits.map(u => ({ n: 1 })); }
+{ const series = () => data; el.innerHTML = series().map(v => '<td>' + v.n).join(''); }
+srvMap.forEach((v, k) => { el.innerHTML = lits.map(u => ({ c: k })).map(w => '<b>' + w.c).join(''); });
+lits.forEach((v, k) => { el.innerHTML = lits.map(u => ({ c: k })).map(w => '<b>' + w.c).join(''); });
+el.innerHTML = lits.map(u => ({ ; c: 1 })).map(w => '<b>' + w.c).join('');

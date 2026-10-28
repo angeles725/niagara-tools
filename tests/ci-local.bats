@@ -248,7 +248,9 @@ fake_bats() {
   grep -qE 'cache-dependency-path: build-n4-module-kit/toolbelt/eslint/package-lock.json' "$CI"
   run grep -qx 'package-lock.json' "$dir/.gitignore"
   [ "$status" -ne 0 ]
-  # the lockfile's root and resolved versions match the exact pins of package.json
+  # the lockfile's root and resolved versions match the exact pins of package.json. CI's bats job sets up node, so
+  # this skip is deliberately NOT in tests/bats-skip-allowlist.txt: a CI run that reaches it fails the skip gate.
+  command -v node >/dev/null || skip "node not installed"
   run node -e '
     const d = process.argv[1], pkg = require(d + "/package.json"), lock = require(d + "/package-lock.json");
     let bad = 0;

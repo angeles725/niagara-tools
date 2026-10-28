@@ -1,0 +1,26 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/src/com/a/Ctl.java --
+package com.a;
+class Ctl {
+  static class Cfg { int a; long b; double c = SCALE * 2; int d; }
+}
+-- M/M-rt/src/com/a/BCtl.java --
+package com.a;
+@NiagaraType
+// @NiagaraProperty(name = "d", type = "int", defaultValue = "5")
+@NiagaraProperty(name = "a", type = "BStatusNumeric", defaultValue = "new BStatusNumeric()")
+@NiagaraProperty(name = "b", type = "BRelTime", defaultValue = "BRelTime.makeSeconds(5)")
+@NiagaraProperty(name = "c", type = "double", defaultValue = "4")
+public class BCtl extends BComponent {
+  void cycle(Ctl.Cfg cfg) {
+    cfg.a = getA().getValue();
+    cfg.b = getB().getMillis() / 1000 * 0 + compute();
+    cfg.c = getC();
+    cfg.d = getD();
+  }
+}

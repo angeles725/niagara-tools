@@ -2,8 +2,8 @@
 @DIR@/src
 -- want --
 exit 0
-WARN  slotomatic-doc-line  @DIR@/src/com/a/BPanel.java:6  the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)
-WARN  slotomatic-doc-line  @DIR@/src/com/a/BPanel.java:15  the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)
+ADVISORY  slotomatic-doc-line  @DIR@/src/com/a/BPanel.java:6  the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)
+ADVISORY  slotomatic-doc-line  @DIR@/src/com/a/BPanel.java:15  the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)
 -- stderr --
 -- src/com/a/BPanel.java --
 package com.a;
@@ -22,6 +22,14 @@ package com.a;
 // Pressure fallback: when the transducer reads invalid
 // Uses the switch instead.
 @NiagaraProperty(name = "pressureFallback", type = "boolean", defaultValue = "true")
+// Fan delay before the defrost heaters start
+//
+// Seconds; 0 disables it.
+@NiagaraProperty(name = "fanDelay", type = "int", defaultValue = "0")
+// Links:
+//   Defrost.skipped  -> Room.defrostSkipped
+//   Defrost.reason   -> Room.skipReason
+@NiagaraProperty(name = "links", type = "int", defaultValue = "0")
 @NiagaraProperty(name = "noComment", type = "int", defaultValue = "0")
 public class BPanel extends BComponent
 {

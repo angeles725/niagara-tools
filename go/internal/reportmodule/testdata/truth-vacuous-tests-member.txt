@@ -41,12 +41,13 @@ A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  PASS  lint-write-path  clean
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  FAIL  trivially-true  ATest.java:4  ATest.t: every assertion is literal
+(module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 6 PASS · 1 FAIL · 0 WARN · 31 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 7 PASS · 1 FAIL · 0 WARN · 31 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
-truth: lint-vacuous-tests is a module member (kit-backlog B6): its FAIL rows are relayed and fail the report; its exit 3 with any other text than "no *.java under a srcTest/" is an env fault, never a SKIP
+truth: lint-vacuous-tests is a module member (kit-backlog B6): its FAIL rows are relayed and fail the report (its exit-3 env fault: truth-vacuous-tests-envfault)
 -- m/A-rt (dir) --
 -- toolbelt/.stub-rest --
 -- toolbelt/lint-vacuous-tests.sh (mode 755) --

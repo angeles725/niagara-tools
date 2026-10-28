@@ -1,0 +1,13 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 1
+WARN  lint-adapter-cfg-default  @DIR@/M/M-rt/src/C.java:1  Cfg.n defaults to 1 but slot n (BA.java:2) defaults to 2: a pure test built from new Cfg() runs a configuration the station never starts with -- initialize the field to the slot default
+-- stderr --
+-- M/M-rt/src/C.java --
+class C { static class Cfg { int n = 1; } }
+-- M/M-rt/src/BA.java --
+@NiagaraType
+@NiagaraProperty(name = "n", type = "int", defaultValue = "2")
+class BA { void f(C.Cfg c) { c.n = getN(); } }
