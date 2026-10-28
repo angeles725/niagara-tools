@@ -684,7 +684,7 @@ operator's view, so decide it at first authoring. The pair-order WARN is owed Go
 
 slotomatic builds the generated Javadoc of a `@NiagaraProperty` / `newProperty(...)` field from the `//` comment block directly above the declaration, but keeps ONLY the LAST line of a multi-line block — every earlier line is discarded. A three-line comment whose last line is a sentence fragment ("compressors. 0 (default) = disabled, same convention as …") becomes a mid-sentence, near-meaningless Javadoc; it recurred on several slots in one feature before being recognized as structural.
 
-**Authoring rule:** write the LAST line of any multi-line source comment above a `@NiagaraProperty` as a complete, standalone sentence (what the slot is, its unit, what `0`/default means) — it is the only line slotomatic keeps. Put longer rationale ABOVE it, or in the class doc, knowing it will not reach the generated Javadoc. Check the regenerated AUTO region after slotomatic runs. `[ev: retro comppan-fase2-amps-alarms Δ7]`
+**Authoring rule:** write the LAST line of any multi-line source comment above a `@NiagaraProperty` as a complete, standalone sentence (what the slot is, its unit, what `0`/default means) — it is the only line slotomatic keeps. Put longer rationale ABOVE it, or in the class doc, knowing it will not reach the generated Javadoc. Check the regenerated AUTO region after slotomatic runs; `toolbelt/lint-slotomatic-markers.sh` WARNs `slotomatic-doc-line` on a block whose last line continues the line before it (a report-module member, so every build shows it). `[ev: retro comppan-fase2-amps-alarms Δ7]`
 
 ## BFacets key reference card `[ev: corpus B1106]`
 

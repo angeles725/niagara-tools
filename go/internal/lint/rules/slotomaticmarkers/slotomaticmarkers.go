@@ -16,6 +16,13 @@
 // duplicate and compileJava fails ("variable TYPE is already defined"). A class with no region is left to
 // the build-verify.md "Reference sources" rule (run slotomatic first); a nested type, a local variable, an
 // anonymous class and a mention in a comment or a literal are not members of the annotated class.
+//
+// Sub-check slotomatic-doc-line (WARN, audit 2026-10-03 A9; the 2026-09-24 phase-2 alarms retro, Δ7): Slot-o-Matic
+// builds a @NiagaraProperty's generated Javadoc from the `//` comment block directly above the annotation but
+// keeps only its LAST line. A block of two or more lines whose last line continues the line before it (that line
+// ends with no . ! ? : or ;, or the last line starts with a lower-case letter) leaves a mid-sentence fragment as
+// the slot's Javadoc. A one-line comment and a block whose last line stands alone are no row; an annotation
+// quoted in a comment or a literal is not one (read on the comment-stripped line).
 package slotomaticmarkers
 
 import (
@@ -48,6 +55,9 @@ func (rule) Severity() lint.Severity { return lint.Fail }
 const msg = "generated region holds %d /*@ $...$ @*/ stamp lines, Slot-o-Matic needs exactly 1: it logs" +
 	" \"Could not process <file>: Found multiple metadata blocks\", skips the file and the build stays green" +
 	" -- delete the BEGIN/END markers and rerun :<part>:slotomatic"
+
+const docMsg = "the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic" +
+	" keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)"
 
 const dupMsg = "hand-written %s outside the generated region of %s: Slot-o-Matic writes its own there, so" +
 	" compileJava fails (%s is already defined) -- delete the hand-written one and keep the region"
@@ -82,10 +92,44 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	}
 	if len(regions) > 0 {
 		out = append(out, outsideRegion(javasrc.Tokens(f.Stripped()), regions)...)
-		sort.SliceStable(out, func(a, b int) bool { return out[a].Line < out[b].Line })
 	}
+	out = append(out, docLines(f)...)
+	sort.SliceStable(out, func(a, b int) bool { return out[a].Line < out[b].Line })
 	return out, nil
 }
+
+// docLines is the slotomatic-doc-line rows: per @NiagaraProperty annotation in code, the `//` comment block
+// directly above it, when it has two or more lines and its last line is not a standalone sentence.
+func docLines(f *javasrc.File) []lint.Finding {
+	code := f.Stripped()
+	var out []lint.Finding
+	for i, ln := range code {
+		if !strings.HasPrefix(strings.TrimSpace(ln), "@NiagaraProperty") {
+			continue
+		}
+		top := i
+		for top > 0 && strings.HasPrefix(strings.TrimSpace(f.Raw[top-1]), "//") {
+			top--
+		}
+		if i-top < 2 {
+			continue
+		}
+		last, prev := comment(f.Raw[i-1]), comment(f.Raw[i-2])
+		// Mutation: SM9-doc-line -- reading only a lower-case start passes a last line that finishes the line above
+		if !strings.ContainsAny(prev[len(prev)-min(1, len(prev)):], ".!?:;") || startsLower(last) {
+			out = append(out, lint.Finding{Check: "slotomatic-doc-line", Severity: lint.Warn, Line: i, Msg: docMsg})
+		}
+	}
+	return out
+}
+
+// comment is a `//` line's text, trimmed.
+func comment(raw string) string {
+	return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(raw), "//"))
+}
+
+// startsLower: s starts with a lower-case ASCII letter.
+func startsLower(s string) bool { return s != "" && s[0] >= 'a' && s[0] <= 'z' }
 
 // outsideRegion is the type-outside-region rows: for each @NiagaraType class that owns a region (the
 // innermost class whose body holds the region's BEGIN line), its static TYPE fields and no-argument

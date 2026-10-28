@@ -1,0 +1,29 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  slotomatic-doc-line  @DIR@/src/com/a/BPanel.java:6  the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)
+WARN  slotomatic-doc-line  @DIR@/src/com/a/BPanel.java:15  the last line of the // comment above @NiagaraProperty continues the line before it: Slot-o-Matic keeps only that line for the generated Javadoc -- make it a complete sentence (types/logic-authoring.md)
+-- stderr --
+-- src/com/a/BPanel.java --
+package com.a;
+
+@NiagaraType
+// Over-amperage alarm limit, shared by the three compressors. One limit for all 3
+// compressors. 0 (default) = disabled.
+// compressors. 0 (default) = disabled, same convention as the other limits.
+@NiagaraProperty(name = "overAmpsLimit", type = "double", defaultValue = "0")
+// Longer rationale goes first.
+// Suction low limit in psig; 0 (default) disables it.
+@NiagaraProperty(name = "suctionLowLimit", type = "double", defaultValue = "0")
+// Discharge high limit in psig.
+// @NiagaraProperty(name = "quoted") in a comment is no annotation
+@NiagaraProperty(name = "dischargeHighLimit", type = "double", defaultValue = "0")
+// Pressure fallback: when the transducer reads invalid
+// Uses the switch instead.
+@NiagaraProperty(name = "pressureFallback", type = "boolean", defaultValue = "true")
+@NiagaraProperty(name = "noComment", type = "int", defaultValue = "0")
+public class BPanel extends BComponent
+{
+  String s = "// a fake comment\n// in a literal";
+}
