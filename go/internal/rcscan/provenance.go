@@ -131,7 +131,9 @@ func (s *fileScan) eval(a, b int) *shape {
 		return nil
 	}
 	sh := s.resolve(ts[a].Text, a)
-	if sh == nil && a+1 < b && ts[a+1].Text == "(" && ts[a+1].Kind == jssrc.Punct {
+	// a function declaration only when no local binding shadows its name (`const series = () => data`)
+	// Mutation: RC-declared-shadow -- falling back past a local binding clears the shadowing const's server data
+	if sh == nil && a+1 < b && ts[a+1].Text == "(" && ts[a+1].Kind == jssrc.Punct && jssrc.Lookup(v.binds[ts[a].Text], ts[a].Text, a) == nil {
 		sh = s.declared(ts[a].Text, a)
 	}
 	for k := a + 1; k < b && sh != nil; {
@@ -161,18 +163,19 @@ func (s *fileScan) eval(a, b int) *shape {
 	return sh
 }
 
-// mapped is the collection that `<literal collection>.map(<callback>)` computes, the .map name at ts[name] and
+// mapped is the collection that `<literal collection>.map(<callback>)` computes, the map token at ts[mapAt] and
 // its "(" at ts[lp] (issue #459 tail, retro go-rc-scan Δ3: a client-D page renders `series()`, a map over its own
 // `units`). The callback is an arrow with an expression body: an object literal `u => ({ k: <expr>, ... })` gives
 // one object whose field k is literal text when <expr> is computed only from the page's literals (s.computed),
 // unknown otherwise; any other body gives one scalar when it is computed so. The result is cached per call site,
-// so markWrites and every reader see one tree (a write `tw[0].c = srv` dirties it for all).
-func (s *fileScan) mapped(name, lp int) *shape {
+// so markWrites and every reader see one tree (a write `tw[0].c = srv` dirties it for all). A verdict taken while
+// markWrites is still marking can be stale; markWrites re-checks every site once all writes are marked (recheck).
+func (s *fileScan) mapped(mapAt, lp int) *shape {
 	v := s.js()
-	if sh, seen := v.mapped[name]; seen {
+	if sh, seen := v.mapped[mapAt]; seen {
 		return sh
 	}
-	v.mapped[name] = nil
+	v.mapped[mapAt] = nil
 	ts, m := v.toks, v.match
 	var sh *shape
 	from, to := lp+1, m[lp]
@@ -187,12 +190,49 @@ func (s *fileScan) mapped(name, lp int) *shape {
 		body := arrow + 1
 		if ts[body].Text == "(" && m[body] == to-1 && ts[body+1].Text == "{" && m[body+1] == to-2 {
 			sh = &shape{kind: collShape, trees: []*lit{{arr: true, elems: []*lit{s.object(body + 1)}}}}
+			v.sites = append(v.sites, site{sh.trees[0], body + 1, -1})
 		} else if s.computed(body, to, map[int]bool{}) {
 			sh = &shape{kind: collShape, trees: []*lit{{arr: true, elems: []*lit{{}}}}}
+			v.sites = append(v.sites, site{sh.trees[0], body, to})
 		}
 	}
-	v.mapped[name] = sh
+	v.mapped[mapAt] = sh
 	return sh
+}
+
+// site is one cached .map result: its array tree and the callback body it was computed from (an object literal
+// opened at from when to is -1, else the scalar expression [from, to)).
+type site struct {
+	tree     *lit
+	from, to int
+}
+
+// recheck re-takes, once every write is marked, each cached .map verdict that markWrites itself may have taken
+// before a later write dirtied what it reads: a field or scalar no longer computed from literals turns unknown.
+// A verdict only ever narrows, so it repeats until nothing changes.
+func (s *fileScan) recheck() {
+	v := s.js()
+	for changed := true; changed; {
+		changed = false
+		for _, st := range v.sites {
+			el := st.tree.elems[0]
+			if el == nil {
+				continue
+			}
+			if st.to >= 0 {
+				if !s.computed(st.from, st.to, map[int]bool{}) {
+					st.tree.elems[0], changed = nil, true
+				}
+				continue
+			}
+			fresh := s.object(st.from)
+			for k, f := range el.fields {
+				if f != nil && fresh.fields[k] == nil {
+					el.fields[k], changed = nil, true
+				}
+			}
+		}
+	}
 }
 
 // object is the object literal opened at ts[open] with each `key: <expr>` field literal text (a scalar) when
@@ -208,7 +248,12 @@ func (s *fileScan) object(open int) *lit {
 			continue
 		}
 		if !(j+1 < end && ts[j+1].Text == ":" && ts[j].Kind != jssrc.Template && ts[j].Kind != jssrc.Punct) {
-			j = jssrc.Expr(ts, j)
+			// Mutation: RC-object-progress -- a token that starts no expression (`({ ; c: 1 })`) loops forever
+			if n := jssrc.Expr(ts, j); n > j {
+				j = n
+			} else {
+				j++
+			}
 			continue
 		}
 		key, n := ts[j].Text, jssrc.Expr(ts, j+2)
@@ -223,8 +268,8 @@ func (s *fileScan) object(open int) *lit {
 	return o
 }
 
-// numericMethods are the methods whose result, called on literal text, is literal text too.
-var numericMethods = map[string]bool{"toFixed": true, "toPrecision": true, "toString": true, "toUpperCase": true,
+// literalMethods are the number and string methods whose result, called on literal text, is literal text too.
+var literalMethods = map[string]bool{"toFixed": true, "toPrecision": true, "toString": true, "toUpperCase": true,
 	"toLowerCase": true, "trim": true, "padStart": true, "padEnd": true}
 
 // computedOps are the operators an expression computed from literals may use.
@@ -235,7 +280,7 @@ var computedOps = map[string]bool{"+": true, "-": true, "*": true, "/": true, "%
 // computed reports that ts[a:b] is computed only from the page's own literals: number and string literals
 // (a template with no substitution), arithmetic, comparison and logic operators, Math.* calls, a member that
 // literalMember clears (`u.cap` of a literal element), a const bound to such an expression, the index parameter
-// of an iterator callback, and a literal-preserving method (numericMethods) on such a value. Anything else (a
+// of an iterator callback, and a literal-preserving method (literalMethods) on such a value. Anything else (a
 // name it cannot bind, a let, a call, an index, a template with a substitution) is not proven: false.
 // seen guards the const chain against a cycle.
 func (s *fileScan) computed(a, b int, seen map[int]bool) bool {
@@ -251,7 +296,7 @@ func (s *fileScan) computed(a, b int, seen map[int]bool) bool {
 		case t.Kind == jssrc.Punct && computedOps[t.Text]:
 		case t.Kind == jssrc.Punct && t.Text == ".":
 			// a method on the value before it: only one that keeps literal text literal
-			if k+2 >= b || ts[k+1].Kind != jssrc.Ident || !numericMethods[ts[k+1].Text] || ts[k+2].Text != "(" {
+			if k+2 >= b || ts[k+1].Kind != jssrc.Ident || !literalMethods[ts[k+1].Text] || ts[k+2].Text != "(" {
 				return false
 			}
 			k++
@@ -284,7 +329,8 @@ func (s *fileScan) computed(a, b int, seen map[int]bool) bool {
 
 // literalName reports a bare name at stream index pos that holds a value computed from literals: a const whose
 // initializer is computed, or the index parameter (the second) of a map / forEach / filter / find / some /
-// every / flatMap callback, a number.
+// every / flatMap callback whose receiver is a literal array (a number; Map.prototype.forEach's second parameter
+// is a key, and a receiver the scan cannot prove an array proves nothing).
 func (s *fileScan) literalName(name string, pos int, seen map[int]bool) bool {
 	v := s.js()
 	b := jssrc.Lookup(v.binds[name], name, pos)
@@ -297,8 +343,21 @@ func (s *fileScan) literalName(name string, pos int, seen map[int]bool) bool {
 		return b.Const && s.computed(b.Init[0], b.Init[1], seen)
 	case b.Kind == jssrc.Param:
 		ts, f := v.toks, b.Fn
-		return b.Index == 1 && f >= 3 && ts[f-1].Text == "(" && ts[f-2].Kind == jssrc.Ident && iterators[ts[f-2].Text] &&
-			ts[f-2].Text != "sort" && ts[f-3].Text == "."
+		if !(b.Index == 1 && f >= 3 && ts[f-1].Text == "(" && ts[f-2].Kind == jssrc.Ident && iterators[ts[f-2].Text] &&
+			ts[f-2].Text != "sort" && ts[f-3].Text == ".") {
+			return false
+		}
+		// Mutation: RC-index-receiver -- any receiver's second callback parameter clears a Map key as a literal
+		c := s.eval(v.chainStart(f-3), f-3)
+		if c == nil || c.kind != collShape {
+			return false
+		}
+		for _, t := range c.trees {
+			if t == nil || !t.arr {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }
@@ -421,4 +480,6 @@ func (s *fileScan) markWrites() {
 			}
 		}
 	}
+	// Mutation: RC-mapped-order -- a .map verdict taken mid-marking keeps a field a later write dirtied literal
+	s.recheck()
 }

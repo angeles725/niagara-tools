@@ -52,7 +52,9 @@ members were re-recorded the same way and checked by a script that compared each
 and stderr are unchanged, the only added lines are one `(module)  PASS|SKIP  lint-vacuous-tests ...` row (80 PASS
 `clean` under stubs, 24 SKIP `no *.java under a srcTest/` from the real lint), nothing was removed or reordered
 but the summary line, whose PASS/SKIP counts moved by exactly the added rows and whose verdict is unchanged.
-`truth-vacuous-tests-member` pins the FAIL relay.
+`truth-vacuous-tests-member` pins the FAIL relay and `truth-vacuous-tests-envfault` the exit-3 env fault (an exit 3
+whose text is not the noSource text is an ERROR row and exit 3; the summary verdict text reads CLEAN there, as for
+every member env fault).
 
 ## Truth cases (`truth-*`)
 

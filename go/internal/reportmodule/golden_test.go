@@ -24,7 +24,7 @@ func TestGolden(t *testing.T) {
 	repo, err := filepath.Abs("../../..")
 	must(t, err)
 	golden.Runner{
-		Cases: 121,
+		Cases: 122,
 		Subst: map[string]string{"@REPO@": repo},
 		Setup: func(t *testing.T, dir string, env map[string]string) []string {
 			env[ToolbeltEnv] = filepath.Join(dir, "toolbelt")

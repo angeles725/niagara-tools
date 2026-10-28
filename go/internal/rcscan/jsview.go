@@ -15,7 +15,8 @@ type jsView struct {
 	open   []int                      // the opener of each closing bracket
 	binds  map[string][]jssrc.Binding // jssrc.Bindings(toks) by name: a lookup reads one name's list
 	shapes map[int]*shape             // literalMember's resolved bindings, by name token index
-	mapped map[int]*shape             // computed collections, by the token index of their .map name (one tree per call site)
+	mapped map[int]*shape             // computed collections, by the token index of their map token (one tree per call site)
+	sites  []site                     // every cached .map result, re-checked once markWrites has marked every write
 	fns    map[string][]int           // function declarations by name: the index of each "function" token
 	fnSh   map[int]*shape             // the shape a declared function returns, by its "function" token index
 	marked bool                       // markWrites ran

@@ -12,7 +12,8 @@
 //	LC6  a Date that is not a real YYYY-MM-DD date                                      FAIL
 //	LC7  a Class that is neither — nor a class of the ledger's Root-cause classes table FAIL
 //	LC8  a Defect found with Root cause or Class left —                                 FAIL
-//	LC9  a template placeholder (<...>) left in a Versions row                          WARN
+//	LC9  a template placeholder left in a Versions row: the template's sample row       WARN
+//	     (not checked further), or a cell equal to its placeholder cell (still checked)
 //
 // Rows: "<FAIL|WARN>  ledger-check  <file>[:<line>]  LC<n>: <reason>". Exit 0 clean or WARN-only, 1 any FAIL, 3
 // usage, an unreadable ledger, or a template that cannot be read or holds no Versions table or Status sentence.
@@ -42,10 +43,11 @@ type contract struct {
 	sections []string // the template's `## ` headings, in order
 	header   []string // the Versions table header cells
 	statuses []string // the Status vocabulary
+	sample   []string // the template's sample Versions row, whose <...> cells are placeholders
 }
 
 var (
-	placeholder = regexp.MustCompile(`<[^<>|]+>`)
+	placeholder = regexp.MustCompile(`^<[^<>|]+>$`)
 	backticked  = regexp.MustCompile("`([^`]+)`")
 	isoDate     = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 )
@@ -114,6 +116,13 @@ func readContract(path string) (contract, error) {
 	}
 	if len(c.header) == 0 {
 		return contract{}, errors.New("template has no Versions table: " + path)
+	}
+	for _, r := range versionRows(lines) {
+		if sameCells(cells(lines[r]), c.header) || separator(cells(lines[r])) {
+			continue
+		}
+		c.sample = cells(lines[r])
+		break
 	}
 	const lead = "`Status` is one of"
 	if i := strings.Index(text, lead); i >= 0 {
@@ -222,9 +231,9 @@ func check(c contract, file string, lines []string) []string {
 	for i, h := range c.header {
 		col[h] = i
 	}
-	for i := at + 1; i < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[i]), "|"); i++ {
+	for _, i := range versionRows(lines) {
 		r := cells(lines[i])
-		if separator(r) {
+		if i == at || separator(r) {
 			continue
 		}
 		n := i + 1
@@ -233,10 +242,14 @@ func check(c contract, file string, lines []string) []string {
 			continue
 		}
 		get := func(h string) string { return r[col[h]] }
-		if placeholder.MatchString(lines[i]) {
-			// Mutation: LC9-placeholder -- the template's sample row left in place reads as a real version
+		// Mutation: LC9-placeholder -- the template's sample row left in place reads as a real version
+		if sameCells(r, c.sample) {
 			add("WARN", n, "LC9: template placeholder left in the row (replace or delete it)")
 			continue
+		}
+		// Mutation: LC9-failopen -- skipping every row with angle-bracket text leaves a real row unchecked
+		if c.placeholderCell(r) {
+			add("WARN", n, "LC9: template placeholder left in the row (replace or delete it)")
 		}
 		if get("Module") == "" || get("Version") == "" {
 			add("FAIL", n, "LC4: empty Module or Version cell")
@@ -259,6 +272,39 @@ func check(c contract, file string, lines []string) []string {
 		}
 	}
 	return out
+}
+
+// versionRows is the index of every table line of the Versions section, header included: a blank, comment or prose
+// line between rows does not end the table, only the next heading does.
+func versionRows(lines []string) []int {
+	var out []int
+	in := false
+	for i, l := range lines {
+		switch t := strings.TrimSpace(l); {
+		case t == "## Versions":
+			in = true
+		case in && strings.HasPrefix(l, "#"):
+			return out
+		// Mutation: LC-blank -- stopping at the first non-row line leaves every row after a blank line unchecked
+		case in && strings.HasPrefix(t, "|"):
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// placeholderCell reports a cell that is still the template sample row's <...> placeholder of its column.
+func (c contract) placeholderCell(r []string) bool {
+	for i, x := range r {
+		if i < len(c.sample) && x == c.sample[i] && placeholder.MatchString(x) {
+			return true
+		}
+	}
+	return false
+}
+
+func sameCells(a, b []string) bool {
+	return len(b) > 0 && strings.Join(a, "|") == strings.Join(b, "|")
 }
 
 func contains(xs []string, x string) bool {

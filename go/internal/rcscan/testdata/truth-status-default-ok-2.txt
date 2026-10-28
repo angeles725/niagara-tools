@@ -1,0 +1,16 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:1  browser-floor: ||= above the Chromium 83 panel floor
+WARN  rc-scan  rc/a.js:1  status-default-ok: a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: trust a value only when st === "ok"
+WARN  rc-scan  rc/a.js:2  browser-floor: ??= above the Chromium 83 panel floor
+WARN  rc-scan  rc/a.js:2  status-default-ok: a missing status read as "ok" (fail-open) -- render an unknown state when the status is absent: trust a value only when st === "ok"
+WARN  rc-scan  rc/a.js:3  browser-floor: ||= above the Chromium 83 panel floor
+WARN  rc-scan  rc/a.js:4  browser-floor: ??= above the Chromium 83 panel floor
+-- stderr --
+-- rc/a.js --
+p.st ||= "ok";
+point.status ??= 'OK';
+p.name ||= "ok";
+p.st ??= "unknown";

@@ -37,7 +37,8 @@ func run(t *testing.T, body string, args ...string) (int, string, string) {
 
 const good = "| Pan | 1.2.0 | 2026-10-01 | deployed | first cut | — | — | — | — | — |"
 
-func TestMain(t *testing.T) {
+// TestLedgerCheckCases: one case per rule; TestMain is the testing package's reserved entry point, so not this name.
+func TestLedgerCheckCases(t *testing.T) {
 	cases := []struct {
 		name, body string
 		code       int
@@ -72,6 +73,15 @@ func TestMain(t *testing.T) {
 		// Mutation: LC9-placeholder -- the template's sample row left in place reads as a real version
 		{"the template's placeholder row", ledger("| <Module> | <x.y.z> | <YYYY-MM-DD> | built | <one line> | — | — | — | — | — |"), 0,
 			"WARN  ledger-check  L.md:7  LC9: template placeholder left in the row (replace or delete it)\n"},
+		// Mutation: LC9-failopen -- skipping every row with angle-bracket text leaves a real row unchecked
+		{"a real row with angle-bracket text is still checked", ledger("| Pan | 1.2.0 | 2026-10-01 | installed | adds <List> cache | — | — | — | — | — |"), 1,
+			"FAIL  ledger-check  L.md:7  LC5: status installed is not one of built, packaged, deployed, superseded, do-not-install\n"},
+		{"one placeholder cell left WARNs and the row is still checked", ledger("| Pan | <x.y.z> | 2026-10-01 | built | x | — | — | 9 | — | — |"), 1,
+			"WARN  ledger-check  L.md:7  LC9: template placeholder left in the row (replace or delete it)\n" +
+				"FAIL  ledger-check  L.md:7  LC7: class 9 is not in the Root-cause classes table\n"},
+		// Mutation: LC-blank -- stopping at the first non-row line leaves every row after a blank line unchecked
+		{"rows after a blank or comment line are still checked", ledger(good, "", "<!-- 2026 -->", "| Pan | 1.2.1 | 2026-10-02 | installed | x | — | — | — | — | — |"), 1,
+			"FAIL  ledger-check  L.md:10  LC5: status installed is not one of built, packaged, deployed, superseded, do-not-install\n"},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {

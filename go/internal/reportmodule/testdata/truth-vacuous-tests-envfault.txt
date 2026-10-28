@@ -1,0 +1,54 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 3
+A-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-rt  SKIP  lint-lexicon-ascii  no *.lexicon under A-rt
+A-rt  SKIP  lint-delays  no src/
+A-rt  SKIP  lint-demand-scope  no src/
+A-rt  SKIP  lint-silent-protection  no src/
+A-rt  SKIP  lint-link-target-flags  no src/
+A-rt  SKIP  lint-ext-writable-shape  no src/
+A-rt  SKIP  lint-no-system-out  no src/
+A-rt  SKIP  lint-slotomatic-markers  no src/
+A-rt  SKIP  lint-clock-zero-floor  no src/
+A-rt  SKIP  lint-null-context-write  no src/
+A-rt  SKIP  lint-bql-string-concat  no src/
+A-rt  SKIP  lint-arbitrary-ord  no src/
+A-rt  SKIP  lint-persist-hot-write  no src/
+A-rt  SKIP  lint-changed-hot-write  no src/
+A-rt  SKIP  lint-inert-coordination  no src/
+A-rt  SKIP  lint-session-store-lazy-evict  no src/
+A-rt  SKIP  lint-bformat-call  no src/
+A-rt  SKIP  lint-service-types  no src/
+A-rt  SKIP  lint-driver-scaffold  no src/
+A-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
+A-rt  SKIP  lint-recovery-path  no src/
+A-rt  SKIP  lint-config-sanity  no src/
+A-rt  SKIP  lint-status-parity  no src/
+A-rt  SKIP  lint-no-md5-credential-digest  no src/
+A-rt  SKIP  lint-size  no src/
+A-rt  SKIP  lint-license-isoperational-gate  no src/
+A-rt  SKIP  lint-set-null-ord  no src/
+A-rt  SKIP  lint-ws-placement  no src/
+A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-module-map  clean
+(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(module)  ERROR  lint-vacuous-tests  env fault (exit 3)
+(run)  SKIP  triage-console  no --console-dir
+report-module: 1 artifact · 6 PASS · 0 FAIL · 0 WARN · 31 SKIP · 0 ADVISORY  ->  CLEAN
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+truth: lint-vacuous-tests exit 3 with any other text than "no *.java under a srcTest/" (an unparseable source) is an ERROR env-fault row, never a SKIP (kit-backlog B6; review fix-forward of 4559b1ec)
+-- m/A-rt (dir) --
+-- toolbelt/.stub-rest --
+-- toolbelt/lint-vacuous-tests.sh (mode 755) --
+#!/usr/bin/env bash
+printf "lint-vacuous-tests: cannot scan /x/m/A-rt/srcTest/a/ATest.java: unbalanced braces\n" >&2; exit 3
