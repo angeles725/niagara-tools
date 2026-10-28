@@ -26,8 +26,9 @@ grep -qE '^1\.\.[0-9]+$' "$tap" || die3 "no 1..N plan in $tap (bats did not run)
 # One pattern per allowlist line, each passed as its own `-e` (never one newline-joined string that grep would
 # split implicitly), so the line a reason must match is exactly one line of the file.
 pattern_args=()
-while IFS= read -r p; do
+while IFS= read -r p || [ -n "$p" ]; do
   [[ "$p" =~ ^[[:space:]]*(#|$) ]] && continue   # comment and blank lines
+  # Mutation: SK10-last-line -- a plain `while read` drops a final line with no newline
   # Mutation: SK6-bad-ere -- a pattern grep rejects (exit 2) would otherwise never match and hide nothing
   grep -qE -- "$p" </dev/null; [ $? -le 1 ] || die3 "allowlist line is not a valid ERE: $p"
   pattern_args+=(-e "$p")

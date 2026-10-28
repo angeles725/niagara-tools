@@ -100,3 +100,12 @@ setup() {
   [[ "$output" == *"UNLISTED skip: ok 3 c — one beta"* ]]
   [[ "$output" == *"1 of 3 skip(s)"* ]]
 }
+
+@test "SK10: an allowlist whose last line has no trailing newline still allows that line" {
+  # Mutation: SK10-last-line -- a plain `while read` drops a final line with no newline, so its skip reads UNLISTED
+  printf '%s' '^junit jar missing$' > "$ALLOW"
+  printf '%s\n' '1..1' 'ok 1 a # skip junit jar missing' > "$TAP"
+  run bash "$CHK" "$TAP" "$ALLOW"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"1 skip(s), all allowlisted"* ]]
+}
