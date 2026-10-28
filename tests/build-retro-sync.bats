@@ -593,6 +593,9 @@ ZERO=0000000000000000000000000000000000000000
   run bash -c "cd '$d' && printf '%s\n' 'refs/heads/docs $ok refs/heads/docs $ZERO' 'refs/heads/feat $bad refs/heads/feat $ZERO' | bash '$HOOK' origin x"
   [ "$status" -eq 1 ]
   [[ "$output" == *"build-relevant kit files changed"* ]]
+  # Mutation: H30-ref-name -- a refusal that does not name its ref leaves a multi-ref push guessing which one failed
+  [[ "$output" == *"pre-push: refused refs/heads/feat -> refs/heads/feat (exit 1)"* ]]
+  [[ "$output" != *"refused refs/heads/docs"* ]]
 }
 
 @test "H31: a branch deletion on the first ref line does not wave the next ref through" {
@@ -604,11 +607,16 @@ ZERO=0000000000000000000000000000000000000000
   [[ "$output" == *"build-relevant kit files changed"* ]]
 }
 
-@test "H32: a two-ref push whose refs both pass PASSES (no over-refusal)" {
+@test "H32: a two-ref push whose refs both pass PASSES (no over-refusal; both refs gated, neither a deletion)" {
   local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"; docs_branch "$d"
-  local ok; ok=$(git -C "$d" rev-parse docs)
-  run bash -c "cd '$d' && printf '%s\n' 'refs/heads/docs $ok refs/heads/docs $ZERO' '(delete) $ZERO refs/heads/old $ok' | bash '$HOOK' origin x"
+  git -C "$d" checkout -q -b docs2 docs
+  echo 'more' >> "$d/notes.txt"
+  git -C "$d" -c user.name=t -c user.email=t@t commit -qam "docs: more notes"
+  git -C "$d" checkout -q feat
+  local ok ok2; ok=$(git -C "$d" rev-parse docs); ok2=$(git -C "$d" rev-parse docs2)
+  run bash -c "cd '$d' && printf '%s\n' 'refs/heads/docs $ok refs/heads/docs $ZERO' 'refs/heads/docs2 $ok2 refs/heads/docs2 $ZERO' | bash '$HOOK' origin x"
   [ "$status" -eq 0 ]
+  [[ "$output" != *refused* ]]
 }
 
 # --- a failing git and the origin/HEAD merge-base fallback (#355 R3-git-failure-refusal-untested) --------

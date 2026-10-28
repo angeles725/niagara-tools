@@ -82,7 +82,7 @@ func (sc *scan) tags(i int) []Pointer {
 		if !ok {
 			sc.masked[i] = l[:at]
 			out = append(out, Pointer{Line: i + 1, Kind: Unparsed, Target: strings.TrimSpace(l[at:]), Raw: l[at:],
-				Notes: []string{"unterminated tag"}})
+				Notes: []string{"unterminated tag"}, Deferred: deferred, Unterminated: true})
 			continue
 		}
 		for _, p := range Clauses(body, sc.aliases) {

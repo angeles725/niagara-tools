@@ -49,7 +49,7 @@ fi
 # Every ref line is gated (audit A6): one push can carry several refs (`git push origin a b`, `--all`,
 # `--tags`), and a gate that read only the first line let every later ref through unchecked. Each ref runs
 # gate_ref in its own subshell, so an `exit` in it ends that ref's gate only; the first ref that fails stops
-# the push with its status. Fields 1/3 (the ref names) are unused.
+# the push with its status, after one line naming the refused local -> remote ref (fields 1/3).
 gate_ref() (   # gate_ref <local sha> <remote sha>
   lsha=$1 rsha=$2
   [[ "$lsha" =~ ^0+$ ]] && exit 0   # deleting a remote branch: nothing is pushed, nothing to gate
@@ -183,8 +183,13 @@ gate_ref() (   # gate_ref <local sha> <remote sha>
 )
 mapfile -t ref_lines <<<"$pushed"
 for ref_line in "${ref_lines[@]}"; do
-  read -r _ lsha _ rsha <<<"$ref_line" || continue
+  read -r lref lsha rref rsha <<<"$ref_line" || continue
   [ -n "${lsha:-}" ] || continue
-  gate_ref "$lsha" "${rsha:-}" || exit $?
+  # the refusal names its ref: in a multi-ref push the reason lines above alone do not say which ref failed
+  gate_ref "$lsha" "${rsha:-}" || {
+    rc=$?
+    echo "pre-push: refused ${lref:-?} -> ${rref:-?} (exit $rc)" >&2
+    exit "$rc"
+  }
 done
 exit 0

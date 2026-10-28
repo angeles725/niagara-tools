@@ -56,7 +56,10 @@ type Pointer struct {
 	Tokens   []string // words that must appear in the cited file
 	Notes    []string // locator text the tool does not check
 	Deferred bool     // read from a [deferred: …] tag
-	Raw      string   // the clause as written
+	// Unterminated: an Unparsed pointer for a tag with no closing ] within its wrap window (Raw is the opener
+	// and the rest of its line); the typed form of the "unterminated tag" note.
+	Unterminated bool
+	Raw          string // the clause as written
 }
 
 // Locator renders the parsed locator: line ranges, sections, rows, claims, rules, delta and tokens.

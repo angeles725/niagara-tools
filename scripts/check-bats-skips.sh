@@ -23,28 +23,35 @@ for f in "$tap" "$allow"; do
 done
 grep -qE '^1\.\.[0-9]+$' "$tap" || die3 "no 1..N plan in $tap (bats did not run)"
 
-patterns=$(grep -vE '^[[:space:]]*(#|$)' "$allow" || true)
+# One pattern per allowlist line, each passed as its own `-e` (never one newline-joined string that grep would
+# split implicitly), so the line a reason must match is exactly one line of the file.
+pattern_args=()
 while IFS= read -r p; do
-  [ -n "$p" ] || continue
+  [[ "$p" =~ ^[[:space:]]*(#|$) ]] && continue   # comment and blank lines
   # Mutation: SK6-bad-ere -- a pattern grep rejects (exit 2) would otherwise never match and hide nothing
   grep -qE -- "$p" </dev/null; [ $? -le 1 ] || die3 "allowlist line is not a valid ERE: $p"
-done <<<"$patterns"
+  pattern_args+=(-e "$p")
+done <"$allow"
 
 skips=0 unlisted=0
-# A skip line is `ok N <name> # skip[ <reason>]`; the LAST ' # skip' splits name and reason.
+# A skip line is `ok N <name> # skip[ <reason>]`; the LAST ' # skip' that is a marker (followed by a blank or
+# the line end, never ' # skipped') splits name and reason, so a reason quoting ' # skipped' keeps its line.
 while IFS=$'\t' read -r test reason; do
   skips=$((skips + 1))
   # Mutation: SK3-unanchored -- dropping -x matches a pattern anywhere inside a longer reason
-  if [ -z "$patterns" ] || ! grep -qxE -e "$patterns" <<<"$reason"; then
+  if [ "${#pattern_args[@]}" -eq 0 ] || ! grep -qxE "${pattern_args[@]}" <<<"$reason"; then
     unlisted=$((unlisted + 1))
     printf 'UNLISTED skip: %s — %s\n' "$test" "${reason:-(no reason)}"
   fi
 done < <(awk '/^ok [0-9]+ / {
-             i = 0; s = $0
-             while ((j = index(substr(s, i + 1), " # skip")) > 0) i += j
+             i = 0; k = 0; s = $0
+             # Mutation: SK8-last-marker -- taking the last " # skip" even when a letter follows drops the skip line
+             while ((j = index(substr(s, k + 1), " # skip")) > 0) {
+               k += j; c = substr(s, k + 7, 1)
+               if (c == "" || c == " ") i = k
+             }
              if (i == 0) next
              rest = substr(s, i + 7)
-             if (rest != "" && substr(rest, 1, 1) != " ") next
              sub(/^ /, "", rest)
              printf "%s\t%s\n", substr(s, 1, i - 1), rest
            }' "$tap")

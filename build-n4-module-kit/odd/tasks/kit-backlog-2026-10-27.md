@@ -115,7 +115,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   - Gap: `build-n4-module-kit/toolbelt/eslint/.gitignore` (outside the surface) still says CI never installs these
     tools; the lockfile + `npm ci` switch it names is recorded as an open_issue in
     `ledger.d/2026-10-27-kit-backlog-a6-ci.md`. Pinned shellcheck 0.10.0 also flags SC2015 at `tests/module-map.bats:25,32`
-    (modularity campaign, not this unit) — fixed in B4b.
+    (modularity campaign, not this unit); B3 left them, the later B4b unit fixed them (its entry below).
 
 - 2026-10-27 B4 (inline). Re-verified on this branch: markers balanced + freshness already in
   `go/internal/buildstatefields` (`CheckEnvelopes`, `freshness`); no ledger tag check, no module-field WARN, `--strict`
@@ -202,6 +202,22 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
     `@DIR@/` argument, so normalising the row path was rejected (decision: parity golden wins). Mutation
     `vendored(rel)` → red.
   - bats: lint-module-map, module-map, rc-scan, scaffold-module, report-module 155/155 ok.
+
+- 2026-10-27 B5.1c (run 2, inline; parent fix-forward items 3, 4, 6).
+  - buildstatefields (b9709db0 R2-001/R2-002/R3-nested-deferred-mislabel/R3-nested-false-positive/R2-003/
+    R3-ledgertags-coverage/R2-005): `citeparse.Pointer` gains a typed `Unterminated` flag (and the unterminated
+    pointer now carries its opener's `Deferred`); `ledgerTags` reads the flag, names the real opener in label and
+    text (`unbalancedTag(opener)`), and `nestedOpener` ignores an opener inside a backticked span. RED: deferred
+    label (open and nested) and both backticked-opener cases not ok on the base (4 subtests); GREEN. New
+    `TestLedgerTagsEnv` (unreadable fragment, unlistable ledger.d → ExitEnv naming the path; coverage, green on the
+    base) and `citeparse.TestCardUnterminatedTyped`. The `retrodir/..` kit-root assumption is commented.
+  - pre-push (78abca8e R4, R3-h32): the ref loop prints `pre-push: refused <local ref> -> <remote ref> (exit N)`
+    before exiting; H30 asserts it names feat and not docs (RED on the base); H32 pushes two passing non-deletion
+    refs (docs, docs2). Hook suites (build-retro-sync, pre-push-live-cite, changelog-gate, install-hooks) 86/86.
+  - check-bats-skips (R2-last-skip-marker-drops-line, R2-multiline-pattern-implicit): the awk keeps the last
+    ` # skip` that is followed by a blank or the line end (SK8, RED on the base: the line was dropped and the run
+    passed); allowlist lines are passed as one `-e` each (SK9 pins per-line anchoring). check-bats-skips + ci-local
+    28/28. Feature-doc B3 note reworded (R2-odd-note).
 
 ## Verification (branch close, 2026-10-27)
 - `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
