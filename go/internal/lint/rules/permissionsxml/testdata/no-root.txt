@@ -1,0 +1,16 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-permissions-xml  @DIR@/M/A-rt/module-permissions.xml:1  no root element: baja reads only a <permissions> root (NModule), so the file grants nothing
+FAIL  lint-permissions-xml  @DIR@/M/B-rt/module-permissions.xml:1  no root element: baja reads only a <permissions> root (NModule), so the file grants nothing
+FAIL  lint-permissions-xml  @DIR@/M/C-wb/module-permissions.xml:1  no root element: baja reads only a <permissions> root (NModule), so the file grants nothing
+-- stderr --
+-- M/A-rt/module-permissions.xml --
+-- M/B-rt/module-permissions.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+-- M/C-wb/module-permissions.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- <permissions>
+  <niagara-permission-groups type="station"/>
+</permissions> -->

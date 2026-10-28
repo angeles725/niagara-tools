@@ -1,0 +1,13 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-logger-name  @DIR@/M/AcmePan-rt/src/R.java:2  Logger.getLogger("GroupPan") is not the module name AcmePan or a AcmePan.<child> logger (types/observability.md § 1)
+-- stderr --
+-- M/build.gradle.kts --
+subprojects { niagaraModule { moduleName = "GroupPan" } }
+-- M/AcmePan-rt/build.gradle.kts --
+niagaraModule { moduleName.set("AcmePan") }
+-- M/AcmePan-rt/src/R.java --
+class R { java.util.logging.Logger a = java.util.logging.Logger.getLogger("AcmePan");
+  java.util.logging.Logger b = java.util.logging.Logger.getLogger("GroupPan"); }

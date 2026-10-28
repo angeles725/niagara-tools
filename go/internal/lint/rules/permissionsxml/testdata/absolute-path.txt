@@ -2,8 +2,8 @@
 @DIR@/M
 -- want --
 exit 0
-WARN  lint-permissions-xml  @DIR@/M/M-rt/src/com/example/BLog.java:5  new File("/tmp/x") is an absolute path outside the station and user homes: the security manager refuses it without a FILE_WRITE grant (use Sys.getStationHome())
-WARN  lint-permissions-xml  @DIR@/M/M-rt/src/com/example/BLog.java:6  Paths.get("/var/log/a.txt") is an absolute path outside the station and user homes: the security manager refuses it without a FILE_WRITE grant (use Sys.getStationHome())
+WARN  lint-permissions-xml  @DIR@/M/M-rt/src/com/example/BLog.java:5  new File("/tmp/x") is an absolute path outside the station and user homes: the security manager refuses it without a FILE_READ or FILE_WRITE grant for it (use Sys.getStationHome())
+WARN  lint-permissions-xml  @DIR@/M/M-rt/src/com/example/BLog.java:6  Paths.get("/var/log/a.txt") is an absolute path outside the station and user homes: the security manager refuses it without a FILE_READ or FILE_WRITE grant for it (use Sys.getStationHome())
 -- stderr --
 -- M/M-rt/src/com/example/BLog.java --
 package com.example;

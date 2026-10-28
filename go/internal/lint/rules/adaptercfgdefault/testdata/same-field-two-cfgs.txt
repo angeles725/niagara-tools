@@ -1,0 +1,44 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-adapter-cfg-default  @DIR@/M/M-rt/src/com/a/AlphaCfg.java:3  AlphaCfg.maxStarts defaults to 0 but slot maxStarts (BPan.java:4) defaults to 6: a pure test built from new Cfg() runs a configuration the station never starts with -- initialize the field to the slot default
+-- stderr --
+-- M/M-rt/src/com/a/AlphaCfg.java --
+package com.a;
+final class AlphaCfg {
+  int maxStarts;
+}
+-- M/M-rt/src/com/a/BetaCfg.java --
+package com.a;
+final class BetaCfg {
+  int maxStarts = 6;
+}
+-- M/M-rt/src/com/a/BPan.java --
+package com.a;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(name = "maxStarts", type = "int", defaultValue = "6")
+public class BPan extends BComponent {
+  private final AlphaCfg alpha = new AlphaCfg();
+  void cycle(BetaCfg beta) {
+    alpha.maxStarts = getMaxStarts();
+    beta.maxStarts = getMaxStarts();
+  }
+}
+-- M/M-rt/src/com/a/BBase.java --
+package com.a;
+import javax.baja.sys.*;
+public abstract class BBase extends BComponent {
+  protected AlphaCfg inherited;
+}
+-- M/M-rt/src/com/a/BPan2.java --
+package com.a;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(name = "maxStarts", type = "int", defaultValue = "6")
+public class BPan2 extends BBase {
+  void cycle() {
+    inherited.maxStarts = getMaxStarts();
+  }
+}

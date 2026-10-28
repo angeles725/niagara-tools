@@ -43,6 +43,17 @@ setup() {
   [ "$output" = "WARN  lint-logger-name  $SRC/A.java:4  Logger.getLogger(A.class.getName()) names a class, not the module MinimalPan (types/observability.md § 1)" ]
 }
 
+@test "LN3: a Java package named test under src/ is read; the part's own test/ is not" {
+  # Mutation: LN3 -- pruning every directory named test skips the src/ package com/example/test
+  local T="$MOD/MinimalPan-rt/src/com/example/test"
+  mkdir -p "$T" "$MOD/MinimalPan-rt/test"
+  printf '%s\n' 'package com.example.test;' 'class A { java.util.logging.Logger l = java.util.logging.Logger.getLogger("minimalpan"); }' > "$T/A.java"
+  cp "$T/A.java" "$MOD/MinimalPan-rt/test/B.java"
+  run "$L" "$MOD"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-logger-name  $T/A.java:2  Logger.getLogger(\"minimalpan\") is not the module name MinimalPan or a MinimalPan.<child> logger (types/observability.md § 1)" ]
+}
+
 @test "LN-K20: a root with no part src/ *.java is the ERROR row, exit 3" {
   E="$BATS_TEST_TMPDIR/Empty"; mkdir -p "$E/tools"; printf 'class T {}\n' > "$E/tools/T.java"
   run "$L" "$E"
