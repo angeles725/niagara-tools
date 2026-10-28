@@ -103,6 +103,8 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - [ ] **Compiles warning-clean:** some vendors build with `-Werror`, so a module with javac warnings fails their
   build. An unavoidable unchecked cast (`(BITable<T>) ord.get()`) gets `@SuppressWarnings("unchecked")` on the
   smallest declaration that holds it. `[ev: corpus B1419 §1419.4 b]` `[ev: retro course-recordings Δ8]`
+  Check: `toolbelt/build.sh --werror` compiles every part with `-Xlint:all -Werror` (opt-in, a gradle init script);
+  a warning fails the build with exit 30. `[ev: retro course-coverage Δ22]`
 - [ ] Tests: unit-test the pure-Java model (e.g. a pure router) with JUnit — `niagaraTest` does not run in WSL.
 - [ ] `toolbelt/verify-module.sh` passed on the built jars.
 - [ ] **The non-skippable floor ran** (`BUILD-LOOP.md` §5) — even under an explicit speed request — and any OTHER skipped check is listed with its reason under `## Checks skipped` in the feature doc.

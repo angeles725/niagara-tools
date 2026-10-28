@@ -4,7 +4,8 @@
 # Deploying to a station is ng-deploy.sh's job (backup -> build -> copy -> type-count verify).
 #
 # Usage: build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] [--ui-profile P] [--legacy]
-#                 [--gradle-prop k=v]... [--no-preflight] [--no-report] [--no-drift-check] [--install-into-home]
+#                 [--gradle-prop k=v]... [--werror] [--no-preflight] [--no-report] [--no-drift-check]
+#                 [--install-into-home]
 #                 <module-root> <MOD> [niagara_home]
 #   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/ (the GROUP dir). When neither it nor
 #                   an ancestor holds ./gradlew (the REPO root was passed), the error lists every gradle root
@@ -22,6 +23,9 @@
 #   --gradle-prop k=v  repeatable; forwarded to gradlew as -Pk=v (e.g. niagaraSigningAlias=..., niagaraSigningProfile=...
 #                   for the signing block); a missing k=v or an empty key exits 2 before gradle. The env route
 #                   ORG_GRADLE_PROJECT_<k>=<v> reaches providers.gradleProperty(...) too. [ev: retro r8-buildsh-316-308]
+#   --werror        opt in: every JavaCompile runs with -Xlint:all -Werror (gradle --init-script lib/werror.init.gradle),
+#                   as vendors that build with -Werror do; a warning fails the build (exit 30, remedy printed: fix it,
+#                   or a scoped @SuppressWarnings). Off by default. [ev: retro course-coverage Δ22]
 #   --no-preflight  skip environment preflight (useful for inner rebuild loops when env is known-good)
 #   --no-report     skip report-module punch-list at the end (useful for quick inner rebuild loops)
 #   --first-deploy  forwarded to report-module.sh: a never-deployed module has no baseline for schema-risk
@@ -73,7 +77,7 @@ set -euo pipefail
 # usage: print the leading comment block (line 2 up to the first non-comment line), never code.
 usage() { awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; }
 PROFILES=""; TARGET=""; PLUGIN="${NIAGARA_PLUGIN_VERSION:-}"; UI_PROFILE=""; LEGACY=0
-SKIP_PREFLIGHT=0; SKIP_REPORT=0; SKIP_DRIFT_CHECK=0; FIRST_DEPLOY=0; INTO_HOME=0; GPROPS=()
+SKIP_PREFLIGHT=0; SKIP_REPORT=0; SKIP_DRIFT_CHECK=0; FIRST_DEPLOY=0; INTO_HOME=0; GPROPS=(); WERROR=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --profiles)       [ $# -ge 2 ] || { usage >&2; exit 2; }; PROFILES="$2"; shift 2 ;;
@@ -90,6 +94,7 @@ while [ $# -gt 0 ]; do
       [[ $# -ge 2 && "$2" == [!=]*=* ]] || { echo "build.sh: --gradle-prop needs k=v (got: ${2:-nothing})" >&2; exit 2; }
       GPROPS+=("-P$2"); shift 2 ;;
     --legacy)       LEGACY=1;         shift ;;
+    --werror)       WERROR=1;         shift ;;
     --no-preflight) SKIP_PREFLIGHT=1; shift ;;
     --no-report)    SKIP_REPORT=1;    shift ;;
     --no-drift-check) SKIP_DRIFT_CHECK=1; shift ;;
@@ -233,6 +238,7 @@ fi
 GARGS=(-Pniagara_home="$NIAGARA_HOME" -Porg.gradle.java.installations.paths="$J8")
 [ -z "$PLUGIN" ] || GARGS+=(-PniagaraPluginVersion="$PLUGIN")
 [ ${#GPROPS[@]} -eq 0 ] || GARGS+=("${GPROPS[@]}")
+[ "$WERROR" -eq 0 ] || GARGS+=(--init-script "$HERE/lib/werror.init.gradle")
 
 # Mirror user.home isolation [ev: retro r8-mirror-userhome Δ1]: org.gradle.jvmargs=-Duser.home never reaches an
 # already-running daemon, so the signing plugin's default profile (user.home/.tridium/security) would read the
@@ -396,6 +402,11 @@ else
     else
       echo "  Rerun :<part>:slotomatic --info and read its output for 'Could not process' (METHODOLOGY K15)." >&2
     fi
+  fi
+  if [ "$WERROR" -eq 1 ]; then
+    echo "build.sh: --werror build: javac warnings are errors (-Xlint:all -Werror). Fix each warning, or put a scoped" >&2
+    echo "  @SuppressWarnings(\"<lint>\") on the smallest declaration that holds an unavoidable one (METHODOLOGY.md" >&2
+    echo "  \"Compiles warning-clean\"); rebuild without --werror to tell a warning from a real compile error." >&2
   fi
   echo "build.sh: gradle failed" >&2; rm -f "$GLOG" "$GSTAMP"; exit 30
 fi

@@ -87,7 +87,23 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   - [x] B10.7 · L3 `lint-slot-default-type` (Δ21).
   - [x] B10.8 · report-module wiring of L1/L3 (+ golden re-record in its own commit when any golden moves).
   - [x] B10.9 · partial fold: the retro records Δ1-Δ21 folded and Δ22-Δ26 owed; it stays `pending`.
-- [ ] B11 · course coverage run B (retro `course-coverage` Δ22-Δ26, specs in its "Owed to run B" section). Route: TBD.
+- [ ] B11 · course coverage run B (retro `course-coverage` Δ22-Δ26, specs in its "Owed to run B" section). Route:
+  inline (each unit is one shell flag, one rule package + shim + bats, or one preflight check; the specs and targets
+  were already mapped by the retro; writer is this session).
+  - [ ] B11.1 · Δ22 `build.sh --werror` (opt-in `-Xlint:all -Werror` through a gradle init script; bats with the
+    fake gradlew).
+  - [ ] B11.2 · Δ23 K4 lint: `changed`/`added`/`removed` with no leading `isRunning()` guard; `stationStarted()`
+    startup work with no `started()` (WARN, advisory; smoke client + Tridium before settling severity).
+  - [ ] B11.3 · Δ24 K3 lint: `synchronized` methods / `synchronized (this)` in Niagara (`B`-type) classes (WARN).
+  - [ ] B11.4 · Δ25 K6 preflight `toolchains` row: `gradlew -q javaToolchains` lists a full JDK 8 for a 4.15+
+    target (`--target-version`, forwarded by `build.sh`).
+  - [ ] B11.5 · Δ26 K11 lint: a lexicon value with `{n}` arguments and a lone `'` (MessageFormat drops it; WARN).
+  - [ ] B11.6 · report-module wiring of the new module lints (+ golden re-record in its own commit when any moves).
+  - [ ] B11.7 · fix-forward of the APPROVED run-A reviews (scope added by the parent mid-run): L17 B-prefix FAIL only
+    for a symbol of THIS module (+ LS17a note, bats header); CD1 only on a provable String receiver, C-style
+    `x[]` declarators on both halves of the byte/char guard; slot-default-type goldens for the widening skip and
+    the other skip branch.
+  - [ ] B11.8 · close: cite every Δ, retro `folded`, ledger open_issue DONE, strict fold audit, verification.
 
 ## Acceptance
 - Each block lands as one or two work-unit commits with RED → GREEN evidence where a deterministic test exists.

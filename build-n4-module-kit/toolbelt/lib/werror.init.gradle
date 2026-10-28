@@ -1,0 +1,10 @@
+// werror.init.gradle: the gradle init script `build.sh --werror` passes with --init-script. Every JavaCompile task
+// of every project compiles with all javac lint warnings on and any warning an error, as vendors that build with
+// -Werror do. The remedy for a warning is to fix it, or a scoped @SuppressWarnings on the smallest declaration that
+// holds an unavoidable one (METHODOLOGY.md "Compiles warning-clean"). Groovy and `tasks.withType(...) { }` so the
+// same file runs on Gradle 4.0.2 (4.12 and older) and Gradle 7.x. [ev: corpus B1419 §1419.4 b]
+allprojects {
+    tasks.withType(JavaCompile) {
+        options.compilerArgs.addAll(['-Xlint:all', '-Werror'])
+    }
+}
