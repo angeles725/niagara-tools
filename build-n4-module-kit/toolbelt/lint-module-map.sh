@@ -8,7 +8,7 @@
 # files may be listed by a glob (`**` any depth, `*` inside one segment); a glob never lists a .java file.
 #   MM1  no MODULE-MAP.md at the root (WARN; nothing else runs)
 #   MM2  no valid modularity: header, or no Concern | Part | Files | Tests | Change here when table (FAIL; nothing else runs)
-#   MM3  a listed path does not exist, is a directory or leaves the root, or a glob matches no file (FAIL)
+#   MM3  a listed path does not exist, is a directory, is absolute or leaves the root, or a glob matches no file (FAIL)
 #   MM4  a part's src/**/*.java or src/rc/**/*.{js,html,css} (minus vendor/, ext/, *.min.*) in no row's Files
 #        (FAIL strict, WARN legacy) or in two rows' Files (FAIL)
 #   MM5  a non-plumbing concern names no existing srcTest/ path in Tests (FAIL strict, WARN legacy)
@@ -17,8 +17,8 @@
 #
 # Usage:  lint-module-map.sh <module-root>   (the directory holding the <MOD>-rt/-ux/-wb/-se parts)
 #   Row:  FAIL|WARN  lint-module-map  <path>[:<line>]  MM<n>: <reason>
-#   Exit: 0  clean or WARN-only · 1  any FAIL · 3  usage, a root with no -rt/-ux/-wb/-se part (ERROR row), or an
-#         unreadable directory under a part
+#   Exit: 0  clean or WARN-only · 1  any FAIL · 3  usage, a root with no -rt/-ux/-wb/-se part (ERROR row), an
+#         unreadable directory under a part, or an unreadable map file
 # Implementation: rule package go/internal/lint/rules/modulemap on the shared engine go/internal/lint (walker,
 # parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
 # go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-module-map <args>`.

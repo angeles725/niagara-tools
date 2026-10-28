@@ -5,7 +5,7 @@
 //
 //	MM1  no MODULE-MAP.md at the root                                          WARN (nothing else runs)
 //	MM2  no valid modularity: header, or no five-column concern table          FAIL (nothing else runs)
-//	MM3  a listed path does not exist, is a directory or leaves the root,
+//	MM3  a listed path does not exist, is a directory, is absolute or leaves the root,
 //	     or a glob matches no file                                             FAIL
 //	MM4  a part's src/**/*.java or src/rc/**/*.{js,html,css} (minus vendor/,
 //	     ext/, *.min.*) is in no row's Files (FAIL strict, WARN legacy)
@@ -30,7 +30,8 @@ const ID = "lint-module-map"
 
 // Spec registers the rule with the contract of toolbelt/lint-module-map.sh: one <module-root> (later arguments
 // ignored, no flag parsed); rows "<sev>  lint-module-map  <path>[:<line>]  MM<n>: <reason>"; exit 0 clean or
-// WARN-only, 1 on any FAIL, 3 on a usage error, a root with no part or an unreadable directory.
+// WARN-only, 1 on any FAIL, 3 on a usage error, a root with no part, an unreadable directory under a part or an
+// unreadable map file.
 func Spec() lint.Spec {
 	return lint.Spec{Root: rule{}, Mode: lint.Raw, Usage: "usage: lint-module-map.sh <module-root>", BarePathRow: true,
 		EmptyError: lint.EmptyRow{Msg: "no module parts found (no *-rt, *-ux, *-wb or *-se sub-directory: wrong path or not a module root)"}}
@@ -161,7 +162,8 @@ func (s *scan) parts() ([]string, error) {
 }
 
 // walk adds every file under the part to s.files (relative to the root), skipping dot directories and the
-// part's build/ output. An unreadable directory fails the scan closed.
+// part's build/ output. A symlinked directory is not descended (its files are listed under their real path, and
+// a link back up the tree cannot loop); a symlinked file is listed. An unreadable directory fails the scan closed.
 func (s *scan) walk(part string) error {
 	var visit func(rel string) error
 	visit = func(rel string) error {
@@ -172,6 +174,9 @@ func (s *scan) walk(part string) error {
 		for _, e := range entries {
 			n, child := e.Name(), rel+"/"+e.Name()
 			if strings.HasPrefix(n, ".") || child == part+"/build" {
+				continue
+			}
+			if e.Type()&os.ModeSymlink != 0 && lint.IsDir(s.abs(child)) {
 				continue
 			}
 			if lint.IsDir(s.abs(child)) {

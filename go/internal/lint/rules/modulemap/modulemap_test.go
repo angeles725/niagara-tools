@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -15,14 +16,19 @@ import (
 // missing-path, unlisted-strict, unlisted-legacy, dup, no-test-strict, java-glob, glob-segment).
 func TestGolden(t *testing.T) { golden.Run(t, Spec(), 15) }
 
-// TestUnreadablePart: a part sub-directory the walk cannot read fails the scan closed (exit 3, the reason on
-// stderr) instead of reading its files as absent (no MM4 row, never a clean pass).
-func TestUnreadablePart(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: chmod 000 does not block reads")
-	}
+// strictMap is a one-concern strict map over M-rt/src/A.java and its test.
+const strictMap = "modularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n" +
+	"| control | rt | M-rt/src/A.java | M-rt/srcTest/ATest.java | the decision |\n"
+
+// tree writes a module root M under a temp dir: the strict map, A.java and ATest.java plus the extra files.
+func tree(t *testing.T, extra map[string]string) string {
+	t.Helper()
 	root := filepath.Join(t.TempDir(), "M")
-	write := func(rel, body string) {
+	files := map[string]string{lint.MapFile: strictMap, "M-rt/src/A.java": "class A {}\n", "M-rt/srcTest/ATest.java": "class ATest {}\n"}
+	for k, v := range extra {
+		files[k] = v
+	}
+	for rel, body := range files {
 		p := filepath.Join(root, rel)
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			t.Fatal(err)
@@ -31,19 +37,79 @@ func TestUnreadablePart(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(lint.MapFile, "modularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n"+
-		"| control | rt | M-rt/src/A.java | M-rt/srcTest/ATest.java | the decision |\n")
-	write("M-rt/src/A.java", "class A {}\n")
-	write("M-rt/srcTest/ATest.java", "class ATest {}\n")
+	return root
+}
+
+// run is the wrapper's command on root: exit code, stdout, stderr.
+func run(root string) (int, string, string) {
+	var o, e bytes.Buffer
+	code := lint.Command(Spec())([]string{ID, root}, cli.Stdio{Out: &o, Err: &e})
+	return code, o.String(), e.String()
+}
+
+// TestUnreadablePart: a part sub-directory the walk cannot read fails the scan closed (exit 3, the reason on
+// stderr) instead of reading its files as absent (no MM4 row, never a clean pass).
+func TestUnreadablePart(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	root := tree(t, nil)
 	locked := filepath.Join(root, "M-rt", "src", "locked")
 	if err := os.Mkdir(locked, 0); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
-	var o, e bytes.Buffer
-	code := lint.Command(Spec())([]string{ID, root}, cli.Stdio{Out: &o, Err: &e})
-	if code != 3 || o.Len() != 0 || !bytes.Contains(e.Bytes(), []byte(locked)) {
-		t.Errorf("exit %d out %q err %q, want 3, no row and the locked path on stderr", code, o.String(), e.String())
+	code, out, errs := run(root)
+	if code != 3 || out != "" || !strings.Contains(errs, locked) {
+		t.Errorf("exit %d out %q err %q, want 3, no row and the locked path on stderr", code, out, errs)
+	}
+}
+
+// TestUnreadableMap: an existing MODULE-MAP.md the lint cannot read fails closed (exit 3, the map path on
+// stderr), never an MM1 "no map" WARN or a clean pass.
+func TestUnreadableMap(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	root := tree(t, nil)
+	m := filepath.Join(root, lint.MapFile)
+	if err := os.Chmod(m, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(m, 0o644) })
+	code, out, errs := run(root)
+	if code != 3 || out != "" || !strings.Contains(errs, m) {
+		t.Errorf("exit %d out %q err %q, want 3, no row and the map path on stderr", code, out, errs)
+	}
+}
+
+// TestCyclicDirSymlink: a directory symlink that points back up the part is not descended (no ELOOP exit 3,
+// no exponential walk): the module stays clean.
+func TestCyclicDirSymlink(t *testing.T) {
+	root := tree(t, nil)
+	src := filepath.Join(root, "M-rt", "src")
+	for _, n := range []string{"loop", "loop2"} { // two links: the old walk grew exponentially
+		if err := os.Symlink("..", filepath.Join(src, n)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if code, out, errs := run(root); code != 0 || out != "" || errs != "" {
+		t.Errorf("exit %d out %q err %q, want a clean exit 0", code, out, errs)
+	}
+}
+
+// TestSiblingDirAlias: a symlinked sibling directory does not list its target's files a second time (no
+// spurious MM4 unlisted or duplicate row): only the real path counts.
+func TestSiblingDirAlias(t *testing.T) {
+	root := tree(t, map[string]string{
+		lint.MapFile:          strictMap + "| codec | rt | M-rt/src/pkg/B.java | M-rt/srcTest/ATest.java | the frame |\n",
+		"M-rt/src/pkg/B.java": "class B {}\n",
+	})
+	if err := os.Symlink("pkg", filepath.Join(root, "M-rt", "src", "alias")); err != nil {
+		t.Fatal(err)
+	}
+	if code, out, errs := run(root); code != 0 || out != "" || errs != "" {
+		t.Errorf("exit %d out %q err %q, want a clean exit 0", code, out, errs)
 	}
 }
 

@@ -268,14 +268,14 @@ modularity: strict
 |---|---|---|---|
 | MM1 | the module root has no `<module-root>/MODULE-MAP.md` | WARN (no other check runs) | — |
 | MM2 | the header has no valid `modularity:` line, a legacy map has no `legacy-reason:`, or there is no table with the five columns | FAIL (no other check runs) | FAIL |
-| MM3 | a listed path does not exist, or a glob matches no file | FAIL | FAIL |
+| MM3 | a listed path does not exist, is a directory, is absolute or leaves the module root, or a glob matches no file | FAIL | FAIL |
 | MM4 | every `src/**/*.java` and `src/rc/**/*.{js,html,css}` of every `-rt`/`-ux`/`-wb`/`-se` part (minus `vendor/`, `ext/` and `*.min.*`) is in exactly one row's `Files`: unlisted | FAIL | WARN |
 | MM4 | the same file is in two rows | FAIL | FAIL |
 | MM5 | a non-`plumbing` row names no existing `srcTest/` path in `Tests` | FAIL | WARN |
 | MM6 | a `srcTest/**/*.java` file is in no row | WARN | WARN |
 
 Rows: `FAIL|WARN  lint-module-map  <path>  MM<n>: <reason>`. Exit **0** clean or WARN-only · **1** any FAIL · **3**
-usage, a root with no part, or an unreadable file. `report-module.sh` does not run it yet: its member is owed with
+usage, a root with no part, an unreadable directory under a part, or an unreadable map file. `report-module.sh` does not run it yet: its member is owed with
 the per-module modularity summary row (feature doc `odd/tasks/modularity-2026-10-27`, task M5). Wrapper:
 `toolbelt/lint-module-map.sh`; rule `go/internal/lint/rules/modulemap`; per-file lints read the mode with
 `lint.ModuleMode` (`go/internal/lint/paths.go`). `[ev: retro modularity-module-map Δ3]` `[ev: retro modularity-strict-new Δ1]`
