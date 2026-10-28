@@ -20,13 +20,16 @@ DemoPan-wb  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean
+(module)  WARN  lint-module-map  wb-file-chooser-warn  MM1: no MODULE-MAP.md (a legacy module: add one with modularity: legacy and legacy-reason:, types/structure.md § Module map)
+(module)  PASS  lint-module-map  clean
+(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=DemoPan-wb/src/com/x/BChooser.java (5 hand-written lines)
 (module)  SKIP  lint-write-path  no write-path-matrix.md
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  SKIP  lint-inline-site-literal  no *.java under a -rt or -ux part's src/ and no *.js under an rc/
 (module)  SKIP  lint-ndriver-static-collection  no *.java under a -rt part's src/
 (module)  SKIP  lint-ndriver-tagless-correlation  no *.java under a -rt part's src/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 15 PASS · 0 FAIL · 1 WARN · 7 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 1 artifact · 16 PASS · 0 FAIL · 2 WARN · 7 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

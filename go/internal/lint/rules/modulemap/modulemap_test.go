@@ -134,3 +134,32 @@ func TestMatchGlob(t *testing.T) {
 		}
 	}
 }
+
+// TestSummarize (modularity-gaps Δ8): the counts report-module's modularity row prints: the mode, the map's
+// concern rows and the part source files in no concern; a module with no valid map has neither count (-1).
+func TestSummarize(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		extra map[string]string
+		want  Summary
+	}{
+		{"strict, every file listed", nil, Summary{Mode: lint.ModularityStrict, Concerns: 1, Unlisted: 0}},
+		{"two unlisted sources", map[string]string{"M-rt/src/B.java": "class B {}\n", "M-ux/src/rc/app.js": "x\n"},
+			Summary{Mode: lint.ModularityStrict, Concerns: 1, Unlisted: 2}},
+		{"no map", map[string]string{lint.MapFile: ""}, Summary{Mode: lint.ModularityNone, Concerns: -1, Unlisted: -1}},
+		{"no table", map[string]string{lint.MapFile: "modularity: strict\n"}, Summary{Mode: lint.ModularityNone, Concerns: -1, Unlisted: -1}},
+	}
+	for _, tt := range tests {
+		root := tree(t, tt.extra)
+		if tt.extra != nil && tt.extra[lint.MapFile] == "" && len(tt.extra) == 1 {
+			if err := os.Remove(filepath.Join(root, lint.MapFile)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		got, err := Summarize(root)
+		if err != nil || got != tt.want {
+			t.Errorf("%s: Summarize = %+v, %v; want %+v", tt.name, got, err, tt.want)
+		}
+	}
+}

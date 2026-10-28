@@ -104,6 +104,21 @@ func (r rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	return out, nil
 }
 
+// HandLines is the class rule's count: f's non-blank lines after comments are blanked, outside every closed
+// slotomatic region (an unclosed or nested region counts as hand-written). report-module's modularity row
+// names the module's largest class by it.
+func HandLines(f *javasrc.File) int {
+	code := f.Stripped()
+	gen, _ := regions(f.Raw, code)
+	n := 0
+	for i, c := range code {
+		if !gen[i] && strings.Trim(c, space) != "" {
+			n++
+		}
+	}
+	return n
+}
+
 // regions marks the lines inside a closed slotomatic region and returns the nested-region, stray-end and
 // unclosed-region rows; an unclosed or nested region's lines stay hand-written (fail closed). A marker
 // is one in a comment: on the raw line and gone from its Strip line (code), so a string literal quoting

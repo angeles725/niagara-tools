@@ -49,10 +49,16 @@
 # driver lints lint-private-api-import, lint-ndriver-static-collection, lint-ndriver-tagless-correlation (a module
 # with no source they read is a SKIP row). lint-manual-labels is not a member: it needs an operator manual
 # path, which a module root does not name; lint-bacnet-status-flags is not one either: it reads a station bog.
+# Module map (modularity campaign M5): lint-module-map.sh <module-root> once per run after lint-structure (FAIL
+# rows block, WARN rows such as MM1 "no MODULE-MAP.md" do not), then one `(module)  INFO  modularity  mode=<m>
+# concerns=<n> unlisted=<n> largest=<path> (<n> hand-written lines)` row: the map mode (none with no valid map,
+# `-` counts), its concern rows, the part sources in no concern and the largest part class by hand-written lines.
+# INFO is printed and not counted: the row orients, it never changes the verdict.
+# [ev: retro modularity-module-map Δ3] [ev: retro modularity-gaps Δ8]
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only]
-# Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR  <check>  <detail>   (ERROR = member env fault, not counted; exit 3)
+# Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR|INFO  <check>  <detail>   (ERROR = member env fault, not counted; exit 3; INFO = the modularity row, not counted)
 # Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES|INCOMPLETE|ISSUES (+INCOMPLETE)
 # Floor (BUILD-LOOP §5): verify-module (needs a built jar) and schema-risk (needs <artifact>/.deploy-baseline) never
 # read CLEAN when they SKIP — the verdict is INCOMPLETE, exit 4. --first-deploy: the module was never deployed, so

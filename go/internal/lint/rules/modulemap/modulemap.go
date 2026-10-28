@@ -417,3 +417,58 @@ func matchSegs(p, r []string) bool {
 	ok, err := path.Match(p[0], r[0])
 	return err == nil && ok && matchSegs(p[1:], r[1:])
 }
+
+// Summary is a module's modularity at a glance: report-module's modularity row (modularity-gaps Δ8).
+type Summary struct {
+	Mode     lint.Modularity
+	Concerns int // rows of the map's table; -1 with no valid map
+	Unlisted int // part source files (MM4's set) in no concern's Files; -1 with no valid map
+}
+
+// Summarize reads root's map and parts as CheckRoot does, without judging them: no map, an invalid header or no
+// valid table is ModularityNone with no counts. An unreadable map or part directory is an error.
+func Summarize(root string) (Summary, error) {
+	none := Summary{Mode: lint.ModularityNone, Concerns: -1, Unlisted: -1}
+	s := &scan{root: strings.TrimRight(root, "/")}
+	if s.root == "" {
+		s.root = "/"
+	}
+	s.mapPath = s.abs(lint.MapFile)
+	if !lint.IsFile(s.mapPath) {
+		return none, nil
+	}
+	b, err := os.ReadFile(s.mapPath)
+	if err != nil {
+		return none, errors.New("cannot read " + s.mapPath + ": " + err.Error())
+	}
+	lines := strings.Split(string(b), "\n")
+	mode, _, problem := lint.MapHeader(lines)
+	if problem != "" {
+		return none, nil
+	}
+	rows, _, problem := table(lines)
+	if problem != "" {
+		return none, nil
+	}
+	s.mode = mode
+	parts, err := s.parts()
+	if err != nil {
+		return none, err
+	}
+	for _, p := range parts {
+		if err := s.walk(p); err != nil {
+			return none, err
+		}
+	}
+	owners := map[string][]string{}
+	for _, r := range rows {
+		s.entries(r, r.files, owners, map[string]bool{})
+	}
+	unlisted := 0
+	for _, f := range s.files {
+		if isSource(f) && len(owners[f]) == 0 {
+			unlisted++
+		}
+	}
+	return Summary{Mode: mode, Concerns: len(rows), Unlisted: unlisted}, nil
+}

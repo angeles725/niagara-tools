@@ -168,6 +168,19 @@ fold audit, generated-index `--check`).
   touched wrappers; gen-lint-index and gen-retro-index `--check` 0; strict fold audit 407/407 cited, 766 Δ checked,
   0 not cited; sweep-build-state 0; `changelog-gate --range e2b0e33e..HEAD` PASS (4 fragments).
 
+- WU8 = part-2 review fix-forward, part 3 (route: delegated writer). RED: `TestAdvisoryMemberStrictFail` (an exit-1
+  lint-size with FAIL rows printed `ERROR env fault (exit 1)`, the rows hidden) and size golden
+  `adapter-static-import` (no `adapter-branches` row for `import static …model.Core.step;`); `adapter-boundary`
+  (exactly 15 branches, and branch keywords inside a slotomatic region) passed on first run as a near-miss pin and
+  was mutation-checked (budget 14 and dropping the region test both turn it red). GREEN: `advisoryMember` relays an
+  exit 1 with a FAIL row as FAIL rows (R4-001, strict-new Δ4); `modelImport` accepts `import static`; size.go states
+  the 0-based token / 1-based row line bases (R2-004); lint-size header FAIL row (R2-003); types/logic.md and
+  METHODOLOGY size bullets consistent (R2-002); part-2 ledger open_issue current (R2-001), and its bare
+  `<module-root>/MODULE-MAP.md` reference fixed (it failed kit-links L1 in a materialized BUILD-STATE.md). Checks:
+  `go test` size, reportmodule ok; `go vet` ok; bats lint-size, report-module, guard-pins, gen-lint-index,
+  kit-links 132/132; shellcheck clean; gen-lint-index --check 0. Commit 2e261afb
+  `fix(report-module): relay a strict module's size FAIL rows as FAIL` (+194/−13).
+
 ## Next session
 Part 2 stopped on 2026-10-27 after WU7 (b48e9808); M0-M4 are done, the three retros stay `review-status: pending`.
 Review candidate: d7cdd7a1..b48e9808 (four work units, base e2b0e33e).

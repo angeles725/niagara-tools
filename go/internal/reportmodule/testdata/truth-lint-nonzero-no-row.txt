@@ -20,10 +20,12 @@ A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  FAIL  lint-structure  exited 1 with no FAIL row (crash or unexpected output) -- run lint-structure.sh manually
+(module)  PASS  lint-module-map  clean
+(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-
 (module)  FAIL  lint-write-path  exited 2 with no FAIL row (crash or unexpected output) -- run lint-write-path.sh manually
 (module)  PASS  lint-bundled-jar-class-version  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 12 PASS · 5 FAIL · 0 WARN · 3 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 13 PASS · 5 FAIL · 0 WARN · 3 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

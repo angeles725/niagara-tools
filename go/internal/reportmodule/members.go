@@ -102,6 +102,8 @@ var perModule = []member{
 	{script: "lint-agent-on-include-sync", in: inArtifact, f: failOnly, v: rows},
 	{script: "lint-uberjar-api-conflict", in: inArtifact, f: filter{sel: "WARN", mode: base}},
 	{script: "lint-structure", in: inArtifact, f: failWarn, v: failRows},
+	{script: "lint-module-map", in: inArtifact, f: filter{sel: "FAIL|WARN", mode: base}, v: failRows},
+	{special: (*report).modularity},
 	{script: "lint-write-path", special: (*report).writePath},
 	{script: "lint-bundled-jar-class-version", in: inArtifact, f: filter{sel: "FAIL", mode: base}, v: rows},
 	{script: "lint-duplicate-helper", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt, -ux or -wb part's src/"},
