@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: B1–B4 + B4b DONE; run 2 (B5.0, B5.1, B6, B7) in progress (2026-10-27, unpushed on `chore/kit-backlog`); B5, B8 later · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B4, B4b, B5.0, B5.1, B6, B7 DONE (2026-10-27, unpushed on `chore/kit-backlog`); B5, B8 next · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -50,7 +50,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 - [x] B5.1 · recorded gaps (eslint lockfile/`npm ci`; MM7 duplicate-concern docs). Route: inline.
 - [ ] B5 · G21 / G34 / G40 / G38 (+G39) new lints — later (next run).
 - [x] B6 · #459 tail + A7-D2 + lint-vacuous-tests report membership. Route: inline (Go packages rcscan, reportmodule).
-- [ ] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
+- [x] B7 · A9 ledger-check + scaffold VERSION-LEDGER + T1 + slotomatic last-comment-line. Route: inline.
 - [ ] B8 · A7-D1 — later.
 
 ## Acceptance
@@ -284,6 +284,44 @@ Comments:
   the same shape in lint-config-sanity CS2: 4171d296 (#530).
 ```
 
+- 2026-10-27 B7 (run 2, inline). Audit A9 read with its sources (template, the 2026-09-26 version-defect-ledger retro, Δ1).
+  - B7a (18df4ff5): `ledger-check` (Go `internal/ledgercheck` + `cmd/ledger-check` + `toolbelt/ledger-check.sh`):
+    LC1-LC9, contract read from `templates/VERSION-LEDGER.md` (sections, Versions header, the "`Status` is one of"
+    vocabulary); `TestTemplateItself` (the template passes with only its sample-row LC9 WARN). RED: package did not
+    build (no `Main`); bats LCB3 not ok (no ledger emitted). GREEN Go + bats LCB1-LCB4. Mutations LC1, LC2, LC5,
+    LC6 (real-date half), LC7, LC8, LC9 each red. Scaffold: `odd/VERSION-LEDGER.md` at the gradle root for every
+    type — the template's own path (one ledger per client repository) — with its sample row dropped.
+    Decision: the brief's "add it to the plumbing row" does not apply: the ledger sits at the gradle root, outside
+    the module root MODULE-MAP.md maps, and lint-module-map reads only part sources; fresh scaffolds of all three
+    types stay clean under lint-module-map, lint-structure, lint-size (module-map.bats, lint-structure.bats) and
+    ledger-check (LCB3). The scaffold byte-equality cases (TC3, TC-K8, TC-DASH1, TC-DRV1) exclude `odd/` as they
+    already exclude the station-test overlay. BUILD-LOOP §7 names the tool (kit-links L5). Commit size 533 lines
+    (Go package + its table test ~400): over the advisory budget, kept as one unit (tool + its only consumer).
+  - "T1 test backfill": no definition exists (audit doc since its first version 41c154ff, retros, ledger.d, the
+    research repo's ODD docs, git history) — nothing invented; recorded as such in the audit doc.
+  - B7b (9c50601f): slotomatic last-comment-line — NOT covered by lint-slotomatic-markers before (it checks stamp
+    counts, unclosed regions and TYPE/getType outside the region; none reads `//` comments above
+    `@NiagaraProperty`). New WARN sub-check `slotomatic-doc-line` (last line of a ≥2-line `//` block continues the
+    line above: previous line ends without . ! ? : ; or last line starts lower-case). RED golden sm-doc-line + bats
+    SM9; mutation SM9 red; a first `//`-in-literal guard was unreachable (its mutation did not bite) and was removed.
+    Real-tree smoke (67 client -rt parts, counts only): 0 in 4, 1-10 in 51, 27-29 in 12; spot-checks are fragments.
+    Fixtures and report-module goldens unchanged.
+
+## Verification (run 2 close, 2026-10-27, tip 9c50601f + docs)
+- `memcap go test ./...`: 124 packages ok, 0 FAIL (EXIT 0); `gofmt -l .` empty; `go vet` clean on rcscan,
+  reportmodule, ledgercheck, cmd/ledger-check, slotomaticmarkers, lint/rules/modulemap, modulemap,
+  buildstatefields, citeparse.
+- bats (29 suites incl. ng-deploy, rc-scan, report-module, scaffold-module, lint-module-map, module-map,
+  ledger-check, kit-links, lint-slotomatic-markers, ci-local, check-bats-skips, build-retro-sync, doc pins;
+  `-j 4 --no-parallelize-within-files`): 479 planned, 479 ok; `scripts/check-bats-skips.sh` on that TAP: 4 skips,
+  all allowlisted.
+- Pinned shellcheck 0.10.0 (`scripts/ci-local.sh --only shellcheck`): PASS. Guard pins: SM9, LCB1 MATCH.
+- `gen-lint-index.sh --check`, `gen-retro-index.sh --check`, `gen-build-state.sh --check`: valid.
+  `sweep-fold-audit.sh --strict --exact-stems --deltas-since 2026-09-24`: 411/411 cited, 789 deltas 0 not cited,
+  exit 0. `kit-cite-resolve --strict` on skill/SKILL.md, BUILD-LOOP.md, build-verify.md, types/structure.md,
+  types/logic-authoring.md: LIVE 0, HISTORY 0 findings.
+- `scripts/changelog-gate.sh --range b2e0e430..HEAD`: PASS (9 fragments).
+
 ## Verification (branch close, 2026-10-27)
 - `memcap go test ./...`: 123 packages ok, 0 FAIL; `gofmt -l .` empty; `go vet` clean on the six touched packages.
 - bats (21 touched/related suites, `-j 4 --no-parallelize-within-files`): 391 planned, 391 ok after regenerating the
@@ -304,12 +342,12 @@ Comments:
   `<purposeKey>`; C47), G34 `structural-tests` (WARN a srcTest class that reads `.java` as text with no BTestNg class;
   C41), G40 `logger-name` (WARN a logger name other than the exact `moduleName`; C52), G38 `absolute-claims` (report
   absolute "never"/"forbidden" claims that cite only inference; C51) and G39 `count-retro-deltas` (tool: Δ totals by
-  script; C51).
-- **B6 — issue #459 tail + A7-D2**: rc-scan innerhtml computed-literal rows (retro go-rc-scan Δ3);
-  `lint-vacuous-tests` report-module membership; rc-scan `status-default-ok` (audit A7 D2, advisory first, real-tree
-  smoke counts only). Close #459 only after both #459 items land (owner's call).
-- **B7 — audit A9**: `ledger-check.sh` + scaffold VERSION-LEDGER, T1 test backfill, slotomatic last-comment-line WARN.
+  script; C51). Adding a report member re-records the module-member goldens: reuse the B6c procedure (dump through a
+  temporary, uncommitted runner hook; script-verify only the new row and the counts moved; read with `newline=''`).
 - **B8 — audit A7-D1**: lint for an adapter `@NiagaraProperty defaultValue` that differs from the pure-model Cfg
-  default (advisory first, real-tree smoke counts only).
-- Owed to the parent session: skill reinstall (`scripts/install-skill.sh --force --skill build-n4-module`) and
-  `scripts/check-skill-drift.sh` (FAILed already on d982a704; `skill/SKILL.md` changed again in B2).
+  default (advisory first, WARN in every mode; real-tree smoke counts only), then tick A7 in `audit-2026-10-03.md`.
+- Issue #459: the closing comment above is ready; posting it and closing the issue is the owner's call.
+- Owed outside this branch's surfaces: `go/README.md` rows for `internal/ledgercheck/` + `cmd/ledger-check/`
+  (open_issue in `ledger.d/2026-10-27-kit-backlog-b7a-ledger-check.md`); skill reinstall
+  (`scripts/install-skill.sh --force --skill build-n4-module`) and `scripts/check-skill-drift.sh` (skill/SKILL.md
+  changed again in B5.0).
