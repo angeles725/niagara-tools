@@ -36,6 +36,8 @@ docs  SKIP  lint-changed-hot-write  no src/
 docs  SKIP  lint-inert-coordination  no src/
 docs  SKIP  lint-session-store-lazy-evict  no src/
 docs  SKIP  lint-bformat-call  no src/
+docs  SKIP  lint-charset-default  no src/
+docs  SKIP  lint-slot-default-type  no src/
 docs  SKIP  lint-service-types  no src/
 docs  SKIP  lint-driver-scaffold  no src/
 docs  SKIP  lint-no-md5-credential-digest  no src/
@@ -56,7 +58,7 @@ docs  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  PASS  lint-permissions-xml  clean
 (module)  SKIP  lint-structural-tests  no *.java under a srcTest/
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 19 PASS · 1 FAIL · 1 WARN · 31 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 2 artifacts · 19 PASS · 1 FAIL · 1 WARN · 33 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

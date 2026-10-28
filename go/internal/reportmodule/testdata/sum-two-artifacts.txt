@@ -34,6 +34,8 @@ B-ux  SKIP  lint-changed-hot-write  no src/
 B-ux  SKIP  lint-inert-coordination  no src/
 B-ux  SKIP  lint-session-store-lazy-evict  no src/
 B-ux  SKIP  lint-bformat-call  no src/
+B-ux  SKIP  lint-charset-default  no src/
+B-ux  SKIP  lint-slot-default-type  no src/
 B-ux  SKIP  lint-service-types  no src/
 B-ux  SKIP  lint-driver-scaffold  no src/
 B-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
@@ -55,7 +57,7 @@ B-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  PASS  lint-vacuous-tests  clean
 (module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 18 PASS · 0 FAIL · 0 WARN · 33 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 2 artifacts · 18 PASS · 0 FAIL · 0 WARN · 35 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

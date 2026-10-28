@@ -23,6 +23,8 @@ A-dup  SKIP  lint-changed-hot-write  no src/
 A-dup  SKIP  lint-inert-coordination  no src/
 A-dup  SKIP  lint-session-store-lazy-evict  no src/
 A-dup  SKIP  lint-bformat-call  no src/
+A-dup  SKIP  lint-charset-default  no src/
+A-dup  SKIP  lint-slot-default-type  no src/
 A-dup  SKIP  lint-service-types  no src/
 A-dup  SKIP  lint-driver-scaffold  no src/
 A-dup  SKIP  lint-no-md5-credential-digest  no src/
@@ -50,6 +52,8 @@ A-env  SKIP  lint-changed-hot-write  no src/
 A-env  SKIP  lint-inert-coordination  no src/
 A-env  SKIP  lint-session-store-lazy-evict  no src/
 A-env  SKIP  lint-bformat-call  no src/
+A-env  SKIP  lint-charset-default  no src/
+A-env  SKIP  lint-slot-default-type  no src/
 A-env  SKIP  lint-service-types  no src/
 A-env  SKIP  lint-driver-scaffold  no src/
 A-env  SKIP  lint-no-md5-credential-digest  no src/
@@ -79,6 +83,8 @@ A-facade  SKIP  lint-changed-hot-write  no src/
 A-facade  SKIP  lint-inert-coordination  no src/
 A-facade  SKIP  lint-session-store-lazy-evict  no src/
 A-facade  SKIP  lint-bformat-call  no src/
+A-facade  SKIP  lint-charset-default  no src/
+A-facade  SKIP  lint-slot-default-type  no src/
 A-facade  SKIP  lint-service-types  no src/
 A-facade  SKIP  lint-driver-scaffold  no src/
 A-facade  SKIP  lint-no-md5-credential-digest  no src/
@@ -107,6 +113,8 @@ A-full  SKIP  lint-changed-hot-write  no src/
 A-full  SKIP  lint-inert-coordination  no src/
 A-full  SKIP  lint-session-store-lazy-evict  no src/
 A-full  SKIP  lint-bformat-call  no src/
+A-full  SKIP  lint-charset-default  no src/
+A-full  SKIP  lint-slot-default-type  no src/
 A-full  SKIP  lint-service-types  no src/
 A-full  SKIP  lint-driver-scaffold  no src/
 A-full  SKIP  lint-no-md5-credential-digest  no src/
@@ -135,6 +143,8 @@ A-na  SKIP  lint-changed-hot-write  no src/
 A-na  SKIP  lint-inert-coordination  no src/
 A-na  SKIP  lint-session-store-lazy-evict  no src/
 A-na  SKIP  lint-bformat-call  no src/
+A-na  SKIP  lint-charset-default  no src/
+A-na  SKIP  lint-slot-default-type  no src/
 A-na  SKIP  lint-service-types  no src/
 A-na  SKIP  lint-driver-scaffold  no src/
 A-na  SKIP  lint-no-md5-credential-digest  no src/
@@ -161,6 +171,8 @@ A-onlyxml  SKIP  lint-changed-hot-write  no src/
 A-onlyxml  SKIP  lint-inert-coordination  no src/
 A-onlyxml  SKIP  lint-session-store-lazy-evict  no src/
 A-onlyxml  SKIP  lint-bformat-call  no src/
+A-onlyxml  SKIP  lint-charset-default  no src/
+A-onlyxml  SKIP  lint-slot-default-type  no src/
 A-onlyxml  SKIP  lint-service-types  no src/
 A-onlyxml  SKIP  lint-driver-scaffold  no src/
 A-onlyxml  SKIP  lint-no-md5-credential-digest  no src/
@@ -189,6 +201,8 @@ A-part  SKIP  lint-changed-hot-write  no src/
 A-part  SKIP  lint-inert-coordination  no src/
 A-part  SKIP  lint-session-store-lazy-evict  no src/
 A-part  SKIP  lint-bformat-call  no src/
+A-part  SKIP  lint-charset-default  no src/
+A-part  SKIP  lint-slot-default-type  no src/
 A-part  SKIP  lint-service-types  no src/
 A-part  SKIP  lint-driver-scaffold  no src/
 A-part  SKIP  lint-no-md5-credential-digest  no src/
@@ -217,6 +231,8 @@ A-partnomiss  SKIP  lint-changed-hot-write  no src/
 A-partnomiss  SKIP  lint-inert-coordination  no src/
 A-partnomiss  SKIP  lint-session-store-lazy-evict  no src/
 A-partnomiss  SKIP  lint-bformat-call  no src/
+A-partnomiss  SKIP  lint-charset-default  no src/
+A-partnomiss  SKIP  lint-slot-default-type  no src/
 A-partnomiss  SKIP  lint-service-types  no src/
 A-partnomiss  SKIP  lint-driver-scaffold  no src/
 A-partnomiss  SKIP  lint-no-md5-credential-digest  no src/
@@ -235,7 +251,7 @@ A-partnomiss  SKIP  schema-risk  no .deploy-baseline (floor check not run; extra
 (module)  PASS  lint-vacuous-tests  clean
 (module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 8 artifacts · 22 PASS · 2 FAIL · 3 WARN · 203 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 8 artifacts · 22 PASS · 2 FAIL · 3 WARN · 219 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
