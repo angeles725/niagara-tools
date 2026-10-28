@@ -104,7 +104,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
     `x[]` declarators on both halves of the byte/char guard; slot-default-type goldens for the widening skip and
     the other skip branch.
   - [x] B11.8 · close: cite every Δ, retro `folded`, ledger open_issue DONE, strict fold audit, verification.
-- [ ] B12 · fix-forward of three real defects from the APPROVED run-B reviews (9995edd9, faebf598, 7078f5f8); every
+- [x] B12 · fix-forward of three real defects from the APPROVED run-B reviews (9995edd9, faebf598, 7078f5f8); every
   other run-B finding is listed under "Follow-ups". Route: inline (three bounded units, each one script or rule plus
   its test; the defects were mapped by the reviews; writer is this session).
   - [x] B12.1 · `--werror` (9995edd9 R3): the init script appended the args at task creation, so a build script that
@@ -117,7 +117,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   - [x] B12.3 · L17 own module (7078f5f8 R4/R3): the module name from the gradle `moduleName` (part dir, else module
     root, else the dir name; the precedence `lint-logger-name` uses), compared ignoring case. RED goldens
     l17-module-name-1/-2 (the own `ac:BRoom` unflagged, the dir-named `le:BRoom` flagged instead).
-  - [ ] B12.4 · close: follow-ups listed, verification.
+  - [x] B12.4 · close: follow-ups listed, verification.
 
 ## Acceptance
 - Each block lands as one or two work-unit commits with RED → GREEN evidence where a deterministic test exists.
@@ -617,6 +617,22 @@ Remaining run-3 review findings, recorded, not fixed (all advisory):
   and its comment are copied into three rule packages; move them to one shared helper in `go/internal/lint`.
 Fixed in B9 and dropped from this list: permissions-xml R2 FILE_WRITE wording, loggername R3 module-name precedence
 (pinned) and R3 prune package segments, KCRD2 naming.
+Run-B review findings (approved reviews of 2026-10-28), recorded, not fixed (B12 fixed the three real defects:
+werror R3, toolchains R4/R3/R2, L17 R4/R3):
+- lifecycleguard R2 — `go/internal/lint/rules/lifecycleguard/testdata/callbacks.txt:52-57`: the fixture comments do
+  not say what each case pins.
+- lifecycleguard R2/R3 — `go/internal/lint/rules/lifecycleguard/lifecycleguard.go:86-91`: LG2 on an anonymous class's
+  `owner()` is untested (`lifecycleguard_test.go:9-12` lists no such case).
+- intrinsiclock R2/R3 — `go/internal/lint/rules/intrinsiclock/intrinsiclock.go:97`: IL2 skips `<Outer>.this` inside an
+  anonymous class.
+- intrinsiclock R3 — `go/internal/lint/rules/intrinsiclock/intrinsiclock.go:104-110`: IL3 counts a deferred body (a
+  lambda or anonymous class inside `synchronized`) as a nested lock.
+- lexiconapostrophe R3-001 — `go/internal/lint/rules/lexiconapostrophe/lexiconapostrophe.go:123-131`: the closed-quote
+  true branch is untested.
+- charsetdefault R2-001/R3 — `go/internal/lint/rules/charsetdefault/charsetdefault.go:256-258`: a keyword just before
+  `(` is read as a receiver.
+- werror R3-werror-unproved-behavior — CLOSED by B12.1 for Gradle 7.6 + JDK 8 (real run); open only for Gradle 4.0.2,
+  which this host does not have, and for a real client module (`build.sh --werror`, owed since Δ22).
 
 ## Progress / evidence — B10 course coverage run A (2026-10-28)
 Route: inline for every unit (the parent's read-only explorer had mapped each target with path:line; each unit is one
@@ -709,3 +725,17 @@ the run-A native reviews were fixed forward. What remains, deliberately:
   types/structure.md): LIVE 0, HISTORY 0.
 - `scripts/changelog-gate.sh --range 122208f9..HEAD`: PASS (7 fragments).
 
+## Verification (B12 close, 2026-10-28, commits 80d85f3a f9935b20 13e5df19 + this close)
+- Real Gradle 7.6 + JDK 8 (`~/.gradle/wrapper/dists/gradle-7.6-bin`, `/usr/lib/jvm/java-8-openjdk-amd64`, offline,
+  throwaway project in the session scratchpad, removed after; no Niagara home touched): a build.gradle that sets
+  `options.compilerArgs = ['-encoding', 'UTF-8']` and raw-type source — old init script exit 0, new exit 1
+  (`warnings found and -Werror specified`); clean source exit 0; a compile up to date without `--werror`
+  recompiles and fails with it.
+- RED then GREEN: bats BS-werror-late; TestToolchains (pin with no gradlew, gradlew.bat row); structure goldens
+  l17-module-name-1/-2. Mutations: no gradlew.bat row, `==` instead of EqualFold: each fails its test.
+- `memcap go test ./...`: 135 packages ok, EXIT 0; `go vet ./...` 0; `gofmt -l .` empty.
+- bats build-sh + preflight 130/130, guard-pins + kit-links + lint-structure 58/58; `check-bats-skips.sh` on both
+  TAPs: 0 skips; `scripts/ci-local.sh --only shellcheck` PASS; `lint-guard-pins.sh --strict .` exit 0.
+- `gen-lint-index.sh`, `gen-retro-index.sh`, `gen-build-state.sh --check` exit 0; `sweep-fold-audit.sh --strict
+  --exact-stems --deltas-since 2026-09-24`: 412/412 cited, 815 deltas, 0 not cited; `kit-cite-resolve --strict`
+  build-verify.md, types/structure.md: LIVE 0, HISTORY 0; `changelog-gate.sh --range 0c139d60..HEAD` PASS.
