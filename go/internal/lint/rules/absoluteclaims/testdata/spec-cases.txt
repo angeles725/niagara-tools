@@ -3,9 +3,9 @@
 -- want --
 exit 0
 INFO  lint-absolute-claims  @DIR@/types/logic.md:3  never: - Never X here. `[ev: corpus B1]`  [ev: corpus B1]
-INFO  lint-absolute-claims  @DIR@/types/logic.md:11  silently: A write silently drops the value and it  [ev: retro r1 Δ1]
-INFO  lint-absolute-claims  @DIR@/types/logic.md:12  always: always throws on a null context. [ev: retro r1 Δ1]  [ev: retro r1 Δ1]
-INFO  lint-absolute-claims  @DIR@/types/logic.md:14  forbidden: - Forbidden: a sleep in a ticket.  -
+INFO  lint-absolute-claims  @DIR@/types/logic.md:12  silently: A write silently drops the value and it  [ev: retro r1 Δ1]
+INFO  lint-absolute-claims  @DIR@/types/logic.md:13  always: always throws on a null context. [ev: retro r1 Δ1]  [ev: retro r1 Δ1]
+INFO  lint-absolute-claims  @DIR@/types/logic.md:15  forbidden: - Forbidden: a sleep in a ticket.  -
 -- stderr --
 -- types/logic.md --
 # Logic
@@ -16,7 +16,8 @@ INFO  lint-absolute-claims  @DIR@/types/logic.md:14  forbidden: - Forbidden: a s
 - A line with no absolute word. `[ev: corpus B2]`
 - The course never does it,
   as the lab shows. [ev: course Labs/Lab9/BFoo.java]
-- Nevertheless is not the word never... wait, it is. [ev: devguide x.txt:1]
+- Nevertheless, a word that only starts with an absolute one, is no claim. `[ev: corpus B3]`
+- The devguide never allows it. [ev: devguide x.txt:1]
 
 A write silently drops the value and it
 always throws on a null context. [ev: retro r1 Δ1]

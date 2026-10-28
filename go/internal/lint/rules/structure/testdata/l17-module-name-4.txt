@@ -1,0 +1,24 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-structure  Legacy-rt/module.palette:4  L17: module.palette t="ac:BRoom" keeps the class's B prefix: the type is ac:Room (Workbench: "Type not found")
+-- stderr --
+-- Mod/build.gradle.kts --
+moduleName = "Legacy"
+-- Mod/Legacy-rt/build.gradle.kts --
+niagaraModule {
+  moduleName.set("Acme")
+}
+-- Mod/Legacy-rt/module-include.xml --
+<types><type name="Room" class="com.acme.BRoom"/></types>
+-- Mod/Legacy-rt/module.lexicon --
+Room.displayName=Room
+-- Mod/Legacy-rt/module.palette --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0">
+<p m="b=baja" t="b:UnrestrictedFolder">
+  <p n="OwnB" m="ac=acme" t="ac:BRoom"/>
+  <p n="DirName" m="le=Legacy" t="le:BRoom"/>
+</p>
+</bajaObjectGraph>

@@ -8,6 +8,9 @@ WARN  lint-charset-default  @DIR@/src/A.java:10  CD1 getBytes() with no charset 
 WARN  lint-charset-default  @DIR@/src/A.java:11  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
 WARN  lint-charset-default  @DIR@/src/A.java:12  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
 WARN  lint-charset-default  @DIR@/src/A.java:13  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/B.java:3  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/B.java:4  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
+WARN  lint-charset-default  @DIR@/src/B.java:5  CD1 getBytes() with no charset encodes with the platform default: pass StandardCharsets.UTF_8 (METHODOLOGY.md § rt (components))
 -- stderr --
 -- src/A.java --
 class A {
@@ -36,4 +39,13 @@ class A {
 class Packet {
   String name;
   byte[] getBytes() { return new byte[0]; }
+}
+-- src/B.java --
+class B {
+  byte[] g(String s) {
+    if (s == null) return ("none" + s).getBytes();
+    assert (s + "!").getBytes().length > 0;
+    return (s + "!").getBytes();
+  }
+  byte[] h(String s) { return label(s + "!").getBytes(); }
 }

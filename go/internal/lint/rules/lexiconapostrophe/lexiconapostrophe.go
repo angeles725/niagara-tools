@@ -125,6 +125,7 @@ func loneApostrophe(v string) bool {
 			return true
 		}
 		quoted := v[j+1 : j+1+end]
+		// Mutation: LX-closed-quote -- treating every closed quote as deliberate passes 'OK', '{ 0}' and '{0} x'
 		if !strings.ContainsAny(quoted, "{}") || strings.ContainsAny(quoted, " \t") {
 			return true
 		}

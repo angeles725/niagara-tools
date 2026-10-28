@@ -66,10 +66,12 @@ func Main(args []string, s cli.Stdio) int {
 		verdict := "OK"
 		// Mutation: CRD-count -- ignoring the Delta count line passes a retro that declares 3 and lists 2
 		// Mutation: CRD-index -- skipping the INDEX row passes a generated index that says 1
+		// Mutation: CRD-header -- dropping the header from the comparison passes a retro whose header alone says 3
 		if n := strconv.Itoa(rows); count != n || header != n || index != n {
 			verdict = "MISMATCH"
 			mismatches++
 		}
+		// Mutation: CRD-total -- keeping only the last retro's rows prints TOTAL rows=1
 		total += rows
 		fmt.Fprintf(s.Out, "%s  rows=%d  count=%s  header=%s  index=%s  %s\n", p, rows, count, header, index, verdict)
 	}

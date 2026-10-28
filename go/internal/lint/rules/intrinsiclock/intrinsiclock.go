@@ -7,10 +7,11 @@
 // A per-file rule over *.java, read as javasrc tokens (comments blanked, a literal one token). A Niagara class is a
 // named class whose own name or superclass name is B followed by an upper-case letter (BFoo, extends BComponent;
 // Buffer and BatchQueue are not). Rows: IL1 a synchronized instance method of a Niagara class; IL2 a
-// synchronized (this) or synchronized (<Class>.this) block whose this is a Niagara class (an anonymous class's this
-// is its own object, not judged); IL3 a synchronized block inside another synchronized block or synchronized method,
-// in any class (the course rule: never nest locks). A static synchronized method locks the Class object and is not
-// judged.
+// synchronized (this) or synchronized (<Class>.this) block whose this is a Niagara class (an anonymous class's plain
+// this is its own object, not judged; <Class>.this inside it is judged); IL3 a synchronized block inside another
+// synchronized block or synchronized method, in any class (the course rule: never nest locks), unless a lambda body
+// or an anonymous class's method lies between them: that body runs later, not under the outer lock. A static
+// synchronized method locks the Class object and is not judged.
 package intrinsiclock
 
 import (
@@ -94,16 +95,17 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			continue
 		}
 		blocks = append(blocks, block{k, region{closeParen + 1, closeBrace}})
-		if d, ok := enclosing(decls, k); ok && !d.Anonymous && thisOf(toks[k+2:closeParen], d.Class, nb) {
+		if d, ok := enclosing(decls, k); thisOf(toks[k+2:closeParen], d, ok, nb) {
 			out = append(out, lint.Finding{Line: t.Line + 1, Msg: il2})
 		}
 	}
 	for _, b := range blocks {
 		held = append(held, b.r)
 	}
+	deferred := deferredBodies(toks, decls)
 	for _, b := range blocks {
 		for _, r := range held {
-			if r.from <= b.at && b.at < r.to {
+			if r.from <= b.at && b.at < r.to && !runsLater(deferred, r, b.at) {
 				out = append(out, lint.Finding{Line: toks[b.at].Line + 1, Msg: il3})
 				break
 			}
@@ -184,13 +186,47 @@ func enclosing(decls []javasrc.Decl, k int) (javasrc.Decl, bool) {
 	return best, found
 }
 
-// thisOf: the lock expression is this (the enclosing class) or <Name>.this, and that class is a Niagara class.
-func thisOf(expr []javasrc.Token, class string, nb map[string]bool) bool {
+// thisOf: the lock expression is this or <Name>.this, and the object it names is a Niagara class. A plain this in
+// an anonymous class body (d.Anonymous) is that anonymous object and is not judged; <Name>.this names its class
+// wherever it stands, an anonymous body included.
+func thisOf(expr []javasrc.Token, d javasrc.Decl, inDecl bool, nb map[string]bool) bool {
 	switch {
 	case len(expr) == 1 && expr[0].Text == "this":
-		return nb[class]
+		return inDecl && !d.Anonymous && nb[d.Class]
 	case len(expr) == 3 && expr[1].Text == "." && expr[2].Text == "this":
+		// Mutation: IL2-outer-this-anon -- judging only non-anonymous bodies skips BFoo.this in an anonymous class
 		return nb[expr[0].Text]
+	}
+	return false
+}
+
+// deferredBodies are the bodies that run later, not where they are written: each block lambda body (its "{" after
+// "->") and each method body of an anonymous class. A lock taken inside one is not held under a lock around it.
+func deferredBodies(toks []javasrc.Token, decls []javasrc.Decl) []region {
+	var out []region
+	for _, d := range decls {
+		if d.Anonymous {
+			out = append(out, region{d.Body[0], d.Body[1]})
+		}
+	}
+	for k := 0; k+2 < len(toks); k++ {
+		if toks[k].Text == "-" && toks[k+1].Text == ">" && toks[k+2].Text == "{" && toks[k].Kind == javasrc.TokPunct {
+			if end := match(toks, k+2, "{", "}"); end >= 0 {
+				out = append(out, region{k + 2, end})
+			}
+		}
+	}
+	return out
+}
+
+// runsLater: a deferred body that starts inside lock region r holds token at, so the code at at does not run under r.
+// The strict r.from < d.from keeps an anonymous synchronized method's own lock: its body is both r and d.
+func runsLater(deferred []region, r region, at int) bool {
+	for _, d := range deferred {
+		// Mutation: IL3-deferred -- a lambda or anonymous method inside synchronized counts as a nested lock again
+		if r.from < d.from && d.to <= r.to && d.from <= at && at < d.to {
+			return true
+		}
 	}
 	return false
 }

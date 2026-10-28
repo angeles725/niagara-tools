@@ -60,6 +60,9 @@ func TestCountRetroDeltas(t *testing.T) {
 		// Mutation: CRD-heading -- reading only "## Proposed kit deltas" counts 0 rows in a retro headed "## Deltas"
 		{"a delta section headed ## Deltas", map[string]string{"r.md": strings.Replace(retro("2", "2", two...), "## Proposed kit deltas (propose-never-apply)", "## Deltas", 1), "INDEX.md": index + "| r.md | kit | 2026-10-27 | pending | 2 |\n"}, 0,
 			"r.md  rows=2  count=2  header=2  index=2  OK\nTOTAL  rows=2  files=1  mismatches=0\n", ""},
+		// Mutation: CRD-header -- dropping the header from the comparison passes a retro whose header alone says 3
+		{"only the deltas header disagrees", map[string]string{"r.md": retro("3", "2", two...), "INDEX.md": index + "| r.md | kit | 2026-10-27 | pending | 2 |\n"}, 1,
+			"r.md  rows=2  count=2  header=3  index=2  MISMATCH\nTOTAL  rows=2  files=1  mismatches=1\n", ""},
 		{"no INDEX row for the retro", map[string]string{"r.md": retro("2", "2", two...), "INDEX.md": index}, 1,
 			"r.md  rows=2  count=2  header=2  index=-  MISMATCH\nTOTAL  rows=2  files=1  mismatches=1\n", ""},
 		{"no INDEX.md beside the retro", map[string]string{"r.md": retro("2", "2", two...)}, 3, "", "no INDEX.md"},
@@ -72,6 +75,40 @@ func TestCountRetroDeltas(t *testing.T) {
 				t.Errorf("got (%d, %q, %q), want (%d, %q, ~%q)", code, out, errs, tc.code, tc.out, tc.errHas)
 			}
 		})
+	}
+}
+
+// TestTotalOverSeveralRetros: the TOTAL line sums the rows of every retro given, counts the files, and counts each
+// mismatching retro once; mismatches among agreeing retros are exit 1. Retros in two directories each read their own
+// INDEX.md (d.md's row exists only in other/INDEX.md, and says 2 there).
+// Mutation: CRD-total -- keeping only the last retro's rows prints TOTAL rows=1
+func TestTotalOverSeveralRetros(t *testing.T) {
+	one := []string{"| Δ1 | a | b | c |"}
+	three := []string{"| Δ1 | a | b | c |", "| Δ2 | d | e | f |", "| 3 | g | h | i |"}
+	d := setup(t, map[string]string{
+		"a.md":     retro("1", "1", one...),
+		"b.md":     retro("3", "3", three...),
+		"c.md":     retro("1", "2", one...),
+		"INDEX.md": index + "| a.md | kit | 2026-10-27 | pending | 1 |\n| b.md | kit | 2026-10-27 | pending | 3 |\n| c.md | kit | 2026-10-27 | pending | 1 |\n",
+	})
+	sub := filepath.Join(d, "other")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for n, b := range map[string]string{"d.md": retro("1", "1", one...), "INDEX.md": index + "| d.md | kit | 2026-10-27 | pending | 2 |\n"} {
+		if err := os.WriteFile(filepath.Join(sub, n), []byte(b), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	code, out, errs := run(filepath.Join(d, "a.md"), filepath.Join(d, "b.md"), filepath.Join(d, "c.md"), filepath.Join(sub, "d.md"))
+	out = strings.ReplaceAll(out, d+"/", "")
+	want := "a.md  rows=1  count=1  header=1  index=1  OK\n" +
+		"b.md  rows=3  count=3  header=3  index=3  OK\n" +
+		"c.md  rows=1  count=2  header=1  index=1  MISMATCH\n" +
+		"other/d.md  rows=1  count=1  header=1  index=2  MISMATCH\n" +
+		"TOTAL  rows=6  files=4  mismatches=2\n"
+	if code != 1 || out != want || errs != "" {
+		t.Errorf("got (%d, %q, %q), want (1, %q, \"\")", code, out, errs, want)
 	}
 }
 

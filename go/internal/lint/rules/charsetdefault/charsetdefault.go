@@ -225,6 +225,11 @@ var notTypes = map[string]bool{"return": true, "throw": true, "new": true, "case
 // stringFactories are String's static methods that return a String (String.valueOf(x).getBytes()).
 var stringFactories = map[string]bool{"valueOf": true, "format": true, "join": true, "copyValueOf": true}
 
+// parenKeyword are the keywords that can stand right before a parenthesized expression ("return (s + x)"): the
+// "(" after one opens an expression, not a call's argument list.
+var parenKeyword = map[string]bool{"return": true, "throw": true, "case": true, "assert": true, "yield": true,
+	"else": true, "do": true}
+
 // stringReceiver reports whether the expression that ends at toks[end] (the token before ".getBytes") is provably a
 // String: a string literal; a name, or this.<name>, the file declares only as String; a toString() call; a
 // String.valueOf/format/join/copyValueOf call; or a parenthesized expression holding a string literal and a +. Any
@@ -253,7 +258,8 @@ func stringReceiver(toks []javasrc.Token, end int, strs map[string]bool) bool {
 			}
 		}
 	}
-	if open < 1 || toks[open-1].Kind != javasrc.TokIdent {
+	// Mutation: CD-keyword-paren -- reading return/throw/assert before "(" as a method name skips (s + "!").getBytes()
+	if open < 1 || toks[open-1].Kind != javasrc.TokIdent || parenKeyword[toks[open-1].Text] {
 		if open < 0 {
 			return false
 		}

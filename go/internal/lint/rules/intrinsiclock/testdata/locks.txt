@@ -8,6 +8,9 @@ WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:11  IL2 synchron
 WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:14  IL3 synchronized block nested in another lock: nested locks can deadlock; take one lock at a time (types/logic.md § Tridium rt idioms)
 WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:16  IL1 synchronized method locks the component, which the framework also locks: lock a private final Object or use Atomic* (types/logic.md § Tridium rt idioms)
 WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeCounter.java:18  IL3 synchronized block nested in another lock: nested locks can deadlock; take one lock at a time (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeDeferred.java:6  IL2 synchronized (this) locks the component, which the framework also locks: lock a private final Object or use Atomic* (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeDeferred.java:12  IL3 synchronized block nested in another lock: nested locks can deadlock; take one lock at a time (types/logic.md § Tridium rt idioms)
+WARN  lint-intrinsic-lock  @DIR@/src/com/acme/BAcmeDeferred.java:13  IL3 synchronized block nested in another lock: nested locks can deadlock; take one lock at a time (types/logic.md § Tridium rt idioms)
 WARN  lint-intrinsic-lock  @DIR@/src/com/acme/Pool.java:6  IL3 synchronized block nested in another lock: nested locks can deadlock; take one lock at a time (types/logic.md § Tridium rt idioms)
 -- stderr --
 -- src/com/acme/BAcmeCounter.java --
@@ -49,4 +52,21 @@ public class Pool {
 package com.acme;
 public class Buffer extends BatchQueue {
   public synchronized void put() { }
+}
+-- src/com/acme/BAcmeDeferred.java --
+package com.acme;
+public class BAcmeDeferred extends BComponent {
+  private final Object lock = new Object();
+  private final Object other = new Object();
+  void a() { // <Outer>.this inside an anonymous class is the component: IL2
+    Object x = new Object() { void f() { synchronized (BAcmeDeferred.this) { n++; } } };
+  }
+  void b() {
+    synchronized (lock) {
+      Runnable r = () -> { synchronized (other) { n++; } }; // a lambda body runs later, not under lock: clean
+      Object y = new Object() { public void run() { synchronized (other) { } } }; // an anonymous method too: clean
+      Object z = new Object() { synchronized void g() { synchronized (other) { } } }; // nested in g's own lock: IL3
+      Runnable w = () -> { synchronized (other) { synchronized (lock) { } } }; // nested inside the lambda: IL3
+    }
+  }
 }
