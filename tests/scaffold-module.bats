@@ -573,3 +573,20 @@ st_link_in_flags() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  rc-scan  src/rc/js/pages/home.js:"*"  fetch-outside-services: "* ]]
 }
+
+@test "TC-MAP6: a fresh dashboard servlet has no handler-size row, and a servlet method over 80 lines FAILs in the strict module" {
+  # Named mutation: read the module map mode as legacy in lint-servlet -> the long handler below stays WARN, exit 0.
+  run "$SC" ModuleA "$OUT/dashboard" --type dashboard --vendor Example
+  [ "$status" -eq 0 ]
+  UX="$OUT/dashboard/ModuleA/ModuleA/ModuleA-ux/src"
+  run "$KIT/toolbelt/lint-servlet.sh" "$UX"
+  [[ "$output" != *"handler-size"* ]] || { echo "$output"; false; }
+  S="$UX/com/example/ModuleA/ux/route/BModuleAServlet.java"
+  { head -n -1 "$S"
+    printf '  private void handleWrite(WebOp op)\n  {\n'
+    for _ in $(seq 80); do printf '    op.getRequest();\n'; done
+    printf '  }\n}\n'; } > "$S.new" && mv "$S.new" "$S"
+  run "$KIT/toolbelt/lint-servlet.sh" "$UX"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  handler-size  com/example/ModuleA/ux/route/BModuleAServlet.java:"*"  method handleWrite() spans 83 lines (> 80) inside the servlet"* ]] || { echo "$output"; false; }
+}

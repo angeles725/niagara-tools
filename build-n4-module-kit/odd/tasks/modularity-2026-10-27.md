@@ -211,6 +211,18 @@ fold audit, generated-index `--check`).
   Decision: "outside services/" follows the retro's `js/services/` wording rather than only `services/api.js`, so
   a module may split services per domain. Mutation-checked: budget 399, dropping the allow marker and a strict
   module read as legacy each turn a golden red. Shim contract unchanged (same args, exits; two new row ids).
+  Checks: `go test` rcscan, reportmodule ok; `go vet` ok; bats rc-scan 40/40, scaffold-module, guard-pins,
+  gen-lint-index, kit-links, report-module ok; shellcheck clean; gen-lint-index --check 0. Commit 959be0c6
+  `feat(rc-scan): fetch-outside-services and js-file-size under a module map` (+204/−1).
+- WU12 = M5 part 4, gaps Δ6 (route: delegated writer). RED: `TestHandlerSize` (no row in any mode) and bats
+  TC-MAP6 (a strict fresh dashboard with an 83-line servlet method exited 0). GREEN: `lint-servlet` `handler-size`:
+  a method of a servlet file spanning more than 80 lines (name line to closing brace, javasrc.Decls) WARNs with no
+  map or a legacy map (FAIL under --strict) and FAILs in a strict module. Decision: unlike lint-size's mapped rule
+  and the rc-scan checks (map modes only, because a no-map WARN would change existing goldens), handler-size also
+  WARNs with no map: every lint-servlet golden stays byte-identical (52/52), and it is the one rule that reaches
+  the large legacy servlets of the audit. DUX1 in `types/dashboard.md` names the router + `ux/route/<Route>Handler`
+  split. The fixture servlet keeps its two tiny inline branches (no handler class emitted). Gap: the wrapper header
+  `build-n4-module-kit/toolbelt/lint-servlet.sh` (outside this part's edit surfaces) does not list handler-size yet.
 
 ## Next session
 Part 2 stopped on 2026-10-27 after WU7 (b48e9808); M0-M4 are done, the three retros stay `review-status: pending`.
