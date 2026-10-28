@@ -45,7 +45,16 @@
 #             One predicate with run-niagara-test (go/internal/signingprofile). A named profile that does not exist
 #             WARNs (margin unchecked); one that is not a properties XML file or holds a non-integer day count is
 #             exit 3 [ev: retro r10-signing-margin-lint Δ1]
+#   L17 FAIL  module.palette (read as XML, comments out) t= that is a dotted Java class name ("Invalid typespec"), or
+#             <symbol>:B<Type> where the module's module-include.xml declares <Type> and not B<Type> ("Type not
+#             found"); another module's B-prefixed name is not judged (vendor types may carry the B). WARN an m= that maps
+#             a symbol to a module other than its first m= (the decoder keeps the last mapping) and a palette holding
+#             <p that is not well-formed XML (its specs unchecked). An identical repeated m= is clean
+#             [ev: retro course-coverage Δ20]
 #   (L8 signed-jar check is in verify-module.sh)
+#
+# Mutation: LS17a -- dropping the declared-type lookup turns the B-prefixed own type into a WARN, not the FAIL
+# Mutation: LS17b -- comparing every repeated m= instead of a different module WARNs the identical repeat
 #
 # Usage:  lint-structure.sh <module-root>
 #

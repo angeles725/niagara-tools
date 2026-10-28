@@ -490,3 +490,35 @@ _ls16_tree() {
   assert_symroot_same "$FX/client-gradleprops" "$LS" "$FX/client-gradleprops"
   [ "$status" -eq 1 ] && [[ "$output" == *"WARN"*"L10: niagara_home"* ]]
 }
+
+# L17 — module.palette type specs: a dotted class name or a B-prefixed name of a declared type FAILs; another
+# B-prefixed class-like name and a symbol remapped to another module WARN; an identical repeated m= is clean (the
+# decoder keeps one module per symbol). [ev: retro course-coverage Δ20]
+_ls17_mod() {
+  local m="$1"
+  mkdir -p "$m/Acme-rt"
+  printf '<types><type name="Room" class="com.acme.BRoom"/></types>\n' > "$m/Acme-rt/module-include.xml"
+  printf 'Room.displayName=Room\n' > "$m/Acme-rt/module.lexicon"
+}
+
+@test "LS17a: t=\"ac:BRoom\" for the declared type Room FAILs L17; t=\"ac:Room\" is clean" {
+  # Mutation: LS17a -- dropping the declared-type lookup turns the B-prefixed own type into a WARN, not the FAIL
+  M="$BATS_TEST_TMPDIR/Mod"; _ls17_mod "$M"
+  printf '%s\n' '<bajaObjectGraph version="4.0">' '<p m="b=baja" t="b:UnrestrictedFolder">' \
+    '  <p n="Room" m="ac=Acme" t="ac:BRoom"/>' '  <p n="Room2" t="ac:Room"/>' '</p>' '</bajaObjectGraph>' > "$M/Acme-rt/module.palette"
+  run "$LS" "$M"
+  [ "$status" -eq 1 ]
+  [ "$output" = 'FAIL  lint-structure  Acme-rt/module.palette:3  L17: module.palette t="ac:BRoom" keeps the class'"'"'s B prefix: the type is ac:Room (Workbench: "Type not found")' ]
+}
+
+@test "LS17b: the MinimalDriver fixture repeats m=\"md=MinimalDriver\" and gets no L17 row; a remap WARNs" {
+  # Mutation: LS17b -- comparing every repeated m= instead of a different module WARNs the identical repeat
+  run "$LS" "$KIT/fixtures/MinimalDriver/MinimalDriver"
+  [[ "$output" != *"L17"* ]]
+  M="$BATS_TEST_TMPDIR/Mod"; _ls17_mod "$M"
+  printf '%s\n' '<bajaObjectGraph version="4.0">' '<p m="b=baja" t="b:UnrestrictedFolder">' \
+    '  <p n="Room" m="ac=Acme" t="ac:Room"/>' '  <p n="X" m="ac=Other" t="ac:X"/>' '</p>' '</bajaObjectGraph>' > "$M/Acme-rt/module.palette"
+  run "$LS" "$M"
+  [ "$status" -eq 0 ]
+  [ "$output" = 'WARN  lint-structure  Acme-rt/module.palette:4  L17: module.palette m="ac=Other" redeclares symbol ac (first ac=Acme at line 3): every later t="ac:..." resolves in Other' ]
+}

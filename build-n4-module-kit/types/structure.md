@@ -120,6 +120,7 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 | L9 | no empty skeleton part — a declared `-wb`/`-ux` with 0 `.java` AND empty palette/lexicon | FAIL | DashboardPan-wb (0 source, empty palette) → **L9 FAIL** |
 | L10 | no absolute HOST paths in a tracked `gradle.properties` (`C:\…` `niagara_home`/`user_home`/`nodeHome`) | FAIL | client `ColdRoomPan`/`CompPan` `gradle.properties` hardcode `C:\Honeywell\…` → **L10 FAIL** (`.deploy-baseline/` pruned) |
 | L11 | a `srcTest` mixing pure-JUnit + Baja (`BTest`/`BTestNg`) declares BOTH `moduleTestImplementation(":test-wb")` AND junit declarations (or splits source sets) | FAIL | ColdRoomPan-rt/CompPan-rt declare only `:test-wb` → **L11 FAIL** |
+| L17 | `module.palette` type specs: a dotted Java class name in `t=`, or `<symbol>:B<Type>` for a type the module declares as `<Type>` | FAIL (a symbol remapped to another module by a later `m=`, a palette holding `<p` that is not well-formed XML: WARN) | `[ev: retro course-coverage Δ20]` |
 
 `[ev: corpus B817]` for every row. Deeper cites B817 carries: lexicon/palette STANDARD ← B780/B759 (§817.4), the
 empty-lexicon/empty-palette AUDIT that fires L4/L5 ← B788; L6 ← B790 §14; L7 ← B784; L8 ← B807; L10/L11 ← B815 §815.12.
@@ -407,6 +408,9 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
   name has no alias and fails as `Invalid typespec`; a `B`-prefixed name under a declared alias fails with "Type not
   found". Declare each alias once, `m="<alias>=<module>"` on the first `<p>` that uses it; later entries reuse the
   alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]` `[ev: retro course-recordings Δ2]`
+  `lint-structure.sh` L17 checks the source palette: the class-name and `B`-prefix forms FAIL; a later `m=` that maps
+  the alias to another module WARNs (the decoder keeps one module per alias, `ValueDocDecoder.java:1038-1051`), an
+  identical repeat changes nothing. `[ev: retro course-coverage Δ20]`
 - `verify-module.sh` FAILs (`palette-parse`) an unterminated `<!--`, FAILs (`palette-type`) a `t=` that is a Java class name or whose symbol no `m=` declared,
   and counts as entries only `<p>` elements with `n=` and a non-folder `t=` in any attribute order, skipping
   `v=` overrides — a Workbench-saved palette is no longer reported empty. A check over a framework file reads
