@@ -1,0 +1,40 @@
+-- args --
+@DIR@/types
+-- want --
+exit 0
+INFO  lint-absolute-claims  @DIR@/types/tables.md:11  never: | a ticket never sleeps | `[ev: corpus B2]` |  [ev: corpus B2] [ev: retro r1 Δ1]
+INFO  lint-absolute-claims  @DIR@/types/tables.md:12  always: | a check always runs | `[ev: retro r1 Δ1]` |  [ev: corpus B2] [ev: retro r1 Δ1]
+INFO  lint-absolute-claims  @DIR@/types/tables.md:16  never: // never null here  -
+INFO  lint-absolute-claims  @DIR@/types/tables.md:17  always: x.always();  -
+INFO  lint-absolute-claims  @DIR@/types/tables.md:28  throws: throws on a bad slot  -
+-- stderr --
+-- types/tables.md --
+# Tables and fences
+
+A paragraph with no tag runs on into the table under it,
+| Rule | Note |
+|---|---|
+| a write never blocks | `[ev: corpus B1]` |
+| the station always restarts | `[ev: devguide x.txt:1]` |
+
+| Rule | Note |
+|---|---|
+| a ticket never sleeps | `[ev: corpus B2]` |
+| a check always runs | `[ev: retro r1 Δ1]` |
+
+- A bullet runs into the fence under it:
+```java
+// never null here
+x.always();
+```
+
+```java
+// silently ignored
+```
+[ev: code toolbelt/x.sh:3]
+
+- A bullet before a fence that a blank line splits off.
+
+```
+throws on a bad slot
+```
