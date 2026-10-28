@@ -25,6 +25,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inertcoordination"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/intrinsiclock"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/jasmineux"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
@@ -130,6 +131,7 @@ func All() []lint.Spec {
 		absoluteclaims.Spec(),
 		charsetdefault.Spec(),
 		lifecycleguard.Spec(),
+		intrinsiclock.Spec(),
 		slotdefaulttype.Spec(),
 	}
 }
