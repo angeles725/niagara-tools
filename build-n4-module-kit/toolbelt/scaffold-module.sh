@@ -15,6 +15,8 @@
 #                    driver    — NDriver -rt (UDP comm config subclass, codec, discovery) + -wb point manager
 #                                (MinimalDriver fixture; types/driver-authoring.md § 1.6-§ 1.11, § 5, § 12)
 #
+# Every type also gets the client version ledger <out-dir>/<ModuleName>/odd/VERSION-LEDGER.md (templates/, its
+# sample row dropped; check it with ledger-check.sh).
 # The emitted tree is pre-slotomatic. Run build.sh to generate the AUTO region and build the jar.
 # The root build.gradle.kts carries the signing block (templates/signing-root.gradle.kts, issue #266):
 # set niagaraSigningAlias and niagaraSigningProfile as gradle properties before the first build.
@@ -226,6 +228,20 @@ if [ -n "$LINK_IN_SLOTS" ]; then
       "$src" > "$dst"
   done < <(find "$ST_ROOT" -type f -print0)
 fi
+
+################################################################
+# Client version ledger (every type): templates/VERSION-LEDGER.md as <gradle-root>/odd/VERSION-LEDGER.md, the path
+# the template names (BUILD-LOOP.md §0 reads it, §7 gates a close on its rows), with the template's sample row
+# dropped so the first real build adds the first row; toolbelt/ledger-check.sh passes it clean.
+# (the 2026-09-26 version-defect-ledger retro, Δ1)
+################################################################
+LEDGER_TPL="${_SCRIPT_DIR}/../templates/VERSION-LEDGER.md"
+if [ ! -f "$LEDGER_TPL" ]; then
+  printf 'scaffold-module: version-ledger template not found: %s\n' "$LEDGER_TPL" >&2
+  exit 3
+fi
+mkdir -p "${DEST}/odd"
+grep -v '^| <Module> | <x\.y\.z> |' "$LEDGER_TPL" > "${DEST}/odd/VERSION-LEDGER.md"
 
 # Preserve executable bit on gradlew (binary copy loses the chmod recorded in git)
 chmod +x "${DEST}/gradlew"

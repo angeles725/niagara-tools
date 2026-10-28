@@ -26,7 +26,9 @@ setup() {
   # logic + dashboard also get the shared station-test overlay (templates/station-test), which the
   # fixture trees do not carry; TC-ST* pin it against tests/fixtures/scaffold-module/station-test.
   ST_GOLDEN="$BATS_TEST_DIRNAME/fixtures/scaffold-module/station-test"
-  ST_EXCLUDE="--exclude=moduleTest-include.xml --exclude=B*StationTestBase.java --exclude=B*LinkTest.java"
+  # the station-test overlay and the client version ledger (odd/, from templates/VERSION-LEDGER.md; pinned by
+  # tests/ledger-check.bats LCB3) are emitted from templates, not from the fixture
+  ST_EXCLUDE="--exclude=moduleTest-include.xml --exclude=B*StationTestBase.java --exclude=B*LinkTest.java --exclude=odd"
   OUT="$BATS_TEST_TMPDIR/out"
   mkdir -p "$OUT"
 }
@@ -128,7 +130,7 @@ setup() {
 @test "TC-DRV1: --type driver emits the MinimalDriver tree byte-equal to the bundled fixture (diff -r, minus build/.gradle)" {
   run "$SC" MinimalDriver "$OUT" --type driver
   [ "$status" -eq 0 ]
-  run diff -r --exclude=build --exclude=.gradle "$OUT/MinimalDriver" "$FIXTURE_DRV"
+  run diff -r --exclude=build --exclude=.gradle --exclude=odd "$OUT/MinimalDriver" "$FIXTURE_DRV"
   [ "$status" -eq 0 ]
 }
 
