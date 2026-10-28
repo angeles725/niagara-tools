@@ -938,6 +938,7 @@ STUB
     local gate_line copy_line
     gate_line="$(printf '%s\n' "$output" | grep -n 'gate ok' | cut -d: -f1)"
     copy_line="$(printf '%s\n' "$output" | grep -n 'copy ok' | cut -d: -f1)"
-    [ -n "$gate_line" ] && [ -n "$copy_line" ]
+    [ -n "$gate_line" ]
+    [ -n "$copy_line" ]
     [ "$gate_line" -lt "$copy_line" ]
 }
