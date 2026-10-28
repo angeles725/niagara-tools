@@ -189,6 +189,16 @@ L10 fires when `gradle.properties` gives an absolute host path to `niagara_home`
 
 When hand-adding a `@NiagaraProperty` to an already-generated class (outside Slotomatic's auto-region), set the auto-region checksum to the plain integer `0`, NOT the literal placeholder `(auto)`. The `(auto)` text causes a cosmetic Slotomatic parse error (the build still passes but emits a noisy WARNING about an unrecognized checksum token); `0` causes Slotomatic to regenerate the checksum cleanly on the next build. If Slotomatic's region comment shows `/* auto */ (auto)` after a hand-edit, replace it with `/* auto */ 0`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ24]`
 
+## Slot defaults — `defaultValue` has the slot's Java type `[ev: retro course-coverage Δ21]`
+Slot-o-Matic copies `defaultValue` verbatim into `newProperty(flags, <default>, facets)`, and Java picks the
+`newProperty` overload by the literal's own type (`boolean`, `int`, `long`, `float`, `double`, `String` or a
+`BValue`). When the type is introspected, an `int` literal is widened for a `long`/`float`/`double` slot; every other
+mismatch (`type = "int"` with `"false"`, `"boolean"` with `"0"`, `"float"` with `"1.5"`, `"double"` with
+`"BBoolean.TRUE"`) is refused as "Property default value is of wrong type": the module compiles and the type fails at
+runtime (baja `ComplexIntrospector`; the course demo, corpus B1417 §1417.3 row l). Write the literal of the slot's
+type (`0d`, `1.5f`, `0L`, `"\"text\""`) or its `B` value (`BDouble.make(0)`). Check:
+`toolbelt/lint-slot-default-type.sh <src-root>` (FAIL). `[ev: corpus B1417 §1417.3 l]`
+
 ## Slot-o-Matic runs — read the output, recover a failed file `[ev: retro course-recordings Δ5]`
 - **Read the Slot-o-Matic output on every run:** a file it cannot process is logged and skipped, the task still
   succeeds, and the build fails later (or not at all) in `compileJava`. `[ev: corpus B1417 §1417.3 s]`

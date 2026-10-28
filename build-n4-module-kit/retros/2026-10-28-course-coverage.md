@@ -29,8 +29,11 @@ whose specs come from corpus B1242 §1242.7 (K3, K4, K6, K11) and B1419 §1419.4
 - `@NiagaraProperty` defaults: Slot-o-Matic copies `defaultValue` verbatim into `newProperty(flags, <default>, …)`
   (client source: `newProperty(Flags.SUMMARY | Flags.OPERATOR, 2d, null)`), Java overload resolution then picks
   `newProperty(int, boolean|int|long|float|double|String|BValue, …)` by the literal's static type
-  (`organized/baja/baja/vineflower/javax/baja/sys/BComplex.java:690-750`), and every typed getter casts
-  (`organized/baja/baja/vineflower/com/tridium/sys/schema/ComplexSlotMap.java:411-464`).
+  (`organized/baja/baja/vineflower/javax/baja/sys/BComplex.java:690-750`); type introspection widens a `BInteger`
+  default for a `long`/`float`/`double` slot and refuses any other mismatch with "Property default value is of wrong
+  type" (`organized/baja/baja/vineflower/com/tridium/sys/schema/ComplexIntrospector.java:199-237`). Tridium's own
+  source writes `type = "double", defaultValue = "0"` (alarm-rt `BOutOfRangeFaultAlgorithm`), which that widening
+  makes legal; a first draft of the lint that FAILed int-on-double flagged 356 vendor rows and was corrected.
 - Palette module symbols: the decoder keeps one module per symbol and a later `m=` with the same symbol replaces it
   (`organized/baja/baja/vineflower/javax/baja/io/ValueDocDecoder.java:1038-1051`), so an identical repeated
   `m="x=Mod"` changes nothing and a different module under the same symbol retargets every later entry.
@@ -60,7 +63,7 @@ whose specs come from corpus B1242 §1242.7 (K3, K4, K6, K11) and B1419 §1419.4
 | Δ18 | `corpus-index.md` § n4-dev-course: rows for B1300, B1302, B1354 and B1416-B1420 | `corpus-index.md` § n4-dev-course | `[ev: corpus B1420]` |
 | Δ19 | New lint `lint-charset-default` (WARN): no-argument `getBytes()`, a byte-array `new String(…)` without a charset, a one-argument `InputStreamReader`/`OutputStreamWriter`, any `FileReader`/`FileWriter` (Java 8 has no charset overload) | `toolbelt/lint-charset-default.sh`; `METHODOLOGY.md` | `[ev: corpus B1419 §1419.4 c]` |
 | Δ20 | `lint-structure` L17 over each `module.palette`: FAIL a dotted class name in `t=` and a `B`-prefixed type the module declares without it; WARN a symbol redeclared for a different module (an identical repeated `m=` is clean: the decoder keeps one module per symbol) | `go/internal/lint/rules/structure`; `types/structure.md` | `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` |
-| Δ21 | New lint `lint-slot-default-type` (FAIL): an `@NiagaraProperty` of type `int`/`long`/`float`/`double`/`boolean`/`String` whose `defaultValue` literal has another Java type (Slot-o-Matic copies it verbatim, overload resolution stores the wrong value, the getter throws `ClassCastException`) | `toolbelt/lint-slot-default-type.sh`; `types/structure.md` | `[ev: corpus B1417 §1417.3 l]` |
+| Δ21 | New lint `lint-slot-default-type` (FAIL): an `@NiagaraProperty` of type `int`/`long`/`float`/`double`/`boolean`/`String` whose `defaultValue` literal has a Java type the slot refuses (Slot-o-Matic copies it verbatim, overload resolution stores that type, introspection widens only an `int` for `long`/`float`/`double` and refuses the rest: the type fails at runtime) | `toolbelt/lint-slot-default-type.sh`; `types/structure.md` | `[ev: corpus B1417 §1417.3 l]` |
 | Δ22 | `build.sh --werror`: compile with `-Werror` (and `-Xlint` warnings on) as an opt-in, so a module that some vendors build warning-clean stays so | `toolbelt/build.sh`; `build-verify.md` | `[ev: corpus B1419 §1419.4 b]` |
 | Δ23 | K4 lint: a `changed`/`added`/`removed` override without an `isRunning()` guard as its first statement WARNs; and a startup body in `stationStarted()` with no `started()` counterpart WARNs (it never runs for a component added to a running station) | new Go lint; `types/logic.md` | `[ev: corpus B1242 §1242.7]` `[ev: corpus B1416 §1416.3]` |
 | Δ24 | K3 lint: `synchronized` methods and `synchronized (this)` blocks in `BComponent` subclasses WARN (lock a `private final Object` or use `Atomic*`) | new Go lint; `types/logic.md` | `[ev: corpus B1242 §1242.7]` |
@@ -89,5 +92,6 @@ it cites:
 ## Lessons
 - A spoken course claim is a lead, not a rule: two of the four contradictions copied a recording's explanation
   ("overflowed a queue and restarted") that the code does not support. Cite the child-gap block that checked it.
-- An exact lint can come straight from an overload table: when a generator copies a literal into a call, the
-  literal's Java type decides the stored value, and the mismatch is decidable from source alone.
+- An exact lint can come straight from an overload table, but only after reading the consumer too: the overload
+  table alone said "int on double fails", the introspector widens it, and the vendor source proved the widening.
+  Smoke every new FAIL rule on Tridium's own source before trusting it.

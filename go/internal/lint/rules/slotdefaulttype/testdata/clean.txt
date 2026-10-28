@@ -1,0 +1,12 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/A.java --
+@NiagaraProperty(name = "amps", type = "double", defaultValue = "2d", flags = Flags.SUMMARY | Flags.OPERATOR,
+  facets = @Facet("BFacets.makeNumeric(BUnit.getUnit(\"ampere\"), BInteger.make(1), BDouble.make(0d), null)"))
+@NiagaraProperty(name = "st", type = "BStatusNumeric", defaultValue = "new BStatusNumeric()")
+@NiagaraProperty(name = "secs", type = "int", defaultValue = "60")
+@NiagaraProperty(name = "en", type = "boolean", defaultValue = "false")
+class A {}

@@ -18,6 +18,7 @@ var notInReport = map[string]string{
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",
 	"lint-guard-pins":          "a kit meta-check of the toolbelt's own lint headers, run by the kit gates",
+	"lint-slot-default-type":   "member wiring lands with the other course-coverage lints in kit-backlog B10.8",
 	"split-package-check":      "a project-level check across every module of a project, not of one module",
 }
 

@@ -1,0 +1,45 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-slot-default-type  @DIR@/src/com/acme/BRoom.java:4  @NiagaraProperty count type="int" defaultValue="false": the default is a boolean, so Slot-o-Matic's newProperty(flags, false, ...) stores a BBoolean that is not a BInteger: the type fails to load ("Property default value is of wrong type") (types/structure.md § Slot defaults)
+FAIL  lint-slot-default-type  @DIR@/src/com/acme/BRoom.java:5  @NiagaraProperty on type="boolean" defaultValue="0": the default is an int, so Slot-o-Matic's newProperty(flags, 0, ...) stores a BInteger that is not a BBoolean: the type fails to load ("Property default value is of wrong type") (types/structure.md § Slot defaults)
+FAIL  lint-slot-default-type  @DIR@/src/com/acme/BRoom.java:7  @NiagaraProperty gain type="double" defaultValue="BBoolean.TRUE": the default is a BBoolean, so Slot-o-Matic's newProperty(flags, BBoolean.TRUE, ...) stores a BBoolean that is not a BDouble: the type fails to load ("Property default value is of wrong type") (types/structure.md § Slot defaults)
+FAIL  lint-slot-default-type  @DIR@/src/com/acme/BRoom.java:9  @NiagaraProperty label type="String" defaultValue="0": the default is an int, so Slot-o-Matic's newProperty(flags, 0, ...) stores a BInteger that is not a BString: the type fails to load ("Property default value is of wrong type") (types/structure.md § Slot defaults)
+FAIL  lint-slot-default-type  @DIR@/src/com/acme/BRoom.java:10  @NiagaraProperty ratio type="float" defaultValue="1.5": the default is a double, so Slot-o-Matic's newProperty(flags, 1.5, ...) stores a BDouble that is not a BFloat: the type fails to load ("Property default value is of wrong type") (types/structure.md § Slot defaults)
+FAIL  lint-slot-default-type  @DIR@/src/com/acme/BRoom.java:24  @NiagaraProperty multi type="int" defaultValue="2d": the default is a double, so Slot-o-Matic's newProperty(flags, 2d, ...) stores a BDouble that is not a BInteger: the type fails to load ("Property default value is of wrong type") (types/structure.md § Slot defaults)
+-- stderr --
+-- src/com/acme/BRoom.java --
+package com.acme;
+import javax.baja.nre.annotations.*;
+import javax.baja.sys.*;
+@NiagaraProperty(name = "count", type = "int", defaultValue = "false")
+@NiagaraProperty(name = "on", type = "boolean", defaultValue = "0")
+@NiagaraProperty(name = "limit", type = "double", defaultValue = "0")
+@NiagaraProperty(name = "gain", type = "double", defaultValue = "BBoolean.TRUE")
+@NiagaraProperty(name = "total", type = "long", defaultValue = "0")
+@NiagaraProperty(name = "label", type = "String", defaultValue = "0")
+@NiagaraProperty(name = "ratio", type = "float", defaultValue = "1.5")
+@NiagaraProperty(name = "okInt", type = "int", defaultValue = "-60")
+@NiagaraProperty(name = "okHex", type = "int", defaultValue = "0x1F")
+@NiagaraProperty(name = "okLong", type = "long", defaultValue = "0L")
+@NiagaraProperty(name = "okFloat", type = "float", defaultValue = "1.5f")
+@NiagaraProperty(name = "okDouble", type = "double", defaultValue = "0d")
+@NiagaraProperty(name = "okDouble2", type = "double", defaultValue = "1e3")
+@NiagaraProperty(name = "okBool", type = "boolean", defaultValue = "true")
+@NiagaraProperty(name = "okStr", type = "String", defaultValue = "\"room\"")
+@NiagaraProperty(name = "okBStr", type = "String", defaultValue = "BString.make(\"\")")
+@NiagaraProperty(name = "okBInt", type = "int", defaultValue = "BInteger.make(3)")
+@NiagaraProperty(name = "okConst", type = "int", defaultValue = "DEFAULT_COUNT")
+@NiagaraProperty(name = "okStatus", type = "BStatusNumeric", defaultValue = "false")
+// @NiagaraProperty(name = "commented", type = "int", defaultValue = "false")
+@NiagaraProperty(
+  name = "multi",
+  type = "int",
+  defaultValue = "2d",
+  flags = Flags.SUMMARY
+)
+public class BRoom extends BComponent {
+  static final int DEFAULT_COUNT = 3;
+  String s = "@NiagaraProperty(name = \"x\", type = \"int\", defaultValue = \"false\")";
+}

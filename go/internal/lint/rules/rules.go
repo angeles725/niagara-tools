@@ -49,6 +49,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/size"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/slotdefaulttype"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/slotomaticmarkers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/spapoll"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/splitpackage"
@@ -127,5 +128,6 @@ func All() []lint.Spec {
 		adaptercfgdefault.Spec(),
 		absoluteclaims.Spec(),
 		charsetdefault.Spec(),
+		slotdefaulttype.Spec(),
 	}
 }
