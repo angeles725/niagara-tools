@@ -70,6 +70,20 @@ whose specs come from corpus B1242 §1242.7 (K3, K4, K6, K11) and B1419 §1419.4
 | Δ25 | K6 preflight: run `gradlew -q javaToolchains` and fail when no full JDK 8 is listed for a 4.15 target | `toolbelt/preflight.sh` (`go/internal/preflight`) | `[ev: corpus B1242 §1242.7]` |
 | Δ26 | K11 lint: a single `'` in a lexicon value that code reads with arguments (MessageFormat drops it; write `''`) WARNs, as a `lint-lexicon-ascii` companion | `toolbelt/lint-lexicon-ascii.sh` sibling | `[ev: corpus B1242 §1242.7]` |
 
+## Status
+PARTIALLY FOLDED (run A, branch `chore/kit-backlog`, 2026-10-28); the header stays `pending` until run B folds
+Δ22-Δ26.
+- Δ1-Δ4: c5cd9a08 (`types/logic-authoring.md`, `types/driver-authoring.md` § Sizing, `types/logic.md` callback
+  thread map, `types/structure.md` Security Manager card).
+- Δ5-Δ17: 6ae82b23 (the doc targets in the table above).
+- Δ18: 92b19b05 (`corpus-index.md` § n4-dev-course).
+- Δ19: 74031e4c (`lint-charset-default`), report member 3bfa156c.
+- Δ20: ea65724b (`lint-structure` L17). Narrowed from the audit's proposal on evidence: an identical repeated `m=`
+  is clean (our fixtures do it; the decoder re-registers the symbol) and another module's `B`-prefixed name is not
+  judged (jsonToolkit declares a type named `BFormatString`); only a remap to another module WARNs.
+- Δ21: 323184d3 (`lint-slot-default-type`, `types/structure.md` § Slot defaults), report member 3bfa156c.
+- Δ22-Δ26: owed, below.
+
 ## Owed to run B
 Run B (`odd/tasks/kit-backlog-2026-10-27.md` B11) owes Δ22-Δ26. Exact specs, from corpus B1242 §1242.7 and the blocks
 it cites:

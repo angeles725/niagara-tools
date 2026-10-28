@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: B1–B9 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8; B9 is the run-3 review fix-forward); B10 (course coverage run A) IN PROGRESS, B11 (run B) owed · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B9 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8; B9 is the run-3 review fix-forward); B10 (course coverage run A) DONE 2026-10-28, B11 (run B) owed · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -39,7 +39,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 | B6 | Issue #459 tail (rc-scan innerhtml computed-literal rows, go-rc-scan Δ3; lint-vacuous-tests report membership) + audit A7-D2 (rc-scan `status-default-ok`) | run 2 |
 | B7 | Audit A9: `ledger-check.sh` + scaffold VERSION-LEDGER, T1 test backfill, slotomatic last-comment-line WARN | run 2 |
 | B8 | Audit A7-D1: adapter `@NiagaraProperty defaultValue` vs pure-model Cfg default lint | later |
-| B10 | Course coverage run A (retro `course-coverage` Δ1-Δ21): 4 contradictions, doc gaps, corpus-index rows, lints L1 `charset-default`, L2 palette L17, L3 `slot-default-type` | run 4 |
+| B10 | Course coverage run A (retro `course-coverage` Δ1-Δ21): 4 contradictions, doc gaps, corpus-index rows, lints L1 `charset-default`, L2 palette L17, L3 `slot-default-type` | run 4 (done) |
 | B11 | Course coverage run B (retro `course-coverage` Δ22-Δ26): `build.sh --werror`, K4 `isRunning` + `stationStarted` WARN, K3 `synchronized`, K6 `javaToolchains` preflight, K11 MessageFormat `'` | later |
 
 ## Tasks
@@ -75,18 +75,18 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   env-fault verdict, permissions-xml no-root / latin-1 / grant wording, adapter-cfg-default (class, name) keying,
   ledger-check repeated header, KCRD2 teeth, plus logger-name precedence pin and the part-only test/build prune.
   Route: inline (each fix is one package + its goldens/bats; writer is this session). Commits df6aaac7, f8f66cd1.
-- [ ] B10 · course coverage run A (retro `retros/2026-10-28-course-coverage.md`, Δ1-Δ21; audit: 70 course topics, 46
+- [x] B10 · course coverage run A (retro `retros/2026-10-28-course-coverage.md`, Δ1-Δ21; audit: 70 course topics, 46
   covered, 12 partial, 10 missing, 2+2 contradictions). Route: inline (the parent's explorer already mapped every
   target with path:line; each work unit is one doc batch or one rule package + shim + bats; writer is this session).
-  - [ ] B10.1 · retro + this feature doc.
-  - [ ] B10.2 · the four contradictions (Δ1-Δ4).
-  - [ ] B10.3 · doc gaps (Δ5-Δ17), one cited line each.
-  - [ ] B10.4 · `corpus-index.md` n4-dev-course rows (Δ18).
-  - [ ] B10.5 · L1 `lint-charset-default` (Δ19).
-  - [ ] B10.6 · L2 `lint-structure` L17 palette check (Δ20).
-  - [ ] B10.7 · L3 `lint-slot-default-type` (Δ21).
-  - [ ] B10.8 · report-module wiring of L1/L3 (+ golden re-record in its own commit when any golden moves).
-  - [ ] B10.9 · partial fold: the retro records Δ1-Δ21 folded and Δ22-Δ26 owed; it stays `pending`.
+  - [x] B10.1 · retro + this feature doc.
+  - [x] B10.2 · the four contradictions (Δ1-Δ4).
+  - [x] B10.3 · doc gaps (Δ5-Δ17), one cited line each.
+  - [x] B10.4 · `corpus-index.md` n4-dev-course rows (Δ18).
+  - [x] B10.5 · L1 `lint-charset-default` (Δ19).
+  - [x] B10.6 · L2 `lint-structure` L17 palette check (Δ20).
+  - [x] B10.7 · L3 `lint-slot-default-type` (Δ21).
+  - [x] B10.8 · report-module wiring of L1/L3 (+ golden re-record in its own commit when any golden moves).
+  - [x] B10.9 · partial fold: the retro records Δ1-Δ21 folded and Δ22-Δ26 owed; it stays `pending`.
 - [ ] B11 · course coverage run B (retro `course-coverage` Δ22-Δ26, specs in its "Owed to run B" section). Route: TBD.
 
 ## Acceptance
@@ -587,3 +587,37 @@ Remaining run-3 review findings, recorded, not fixed (all advisory):
   and its comment are copied into three rule packages; move them to one shared helper in `go/internal/lint`.
 Fixed in B9 and dropped from this list: permissions-xml R2 FILE_WRITE wording, loggername R3 module-name precedence
 (pinned) and R3 prune package segments, KCRD2 naming.
+
+## Progress / evidence — B10 course coverage run A (2026-10-28)
+Route: inline for every unit (the parent's read-only explorer had mapped each target with path:line; each unit is one
+doc batch or one rule package + shim + bats, writer is this session). Retro `retros/2026-10-28-course-coverage.md`
+(pending, 26 deltas; audit counts 70 topics / 46 covered / 12 partial / 10 missing / 2+2 contradictions).
+| Unit | Commit | Evidence |
+|---|---|---|
+| B10.1 retro + feature doc | 9637f758 | `gen-retro-index.sh --check` valid; row `pending 26` |
+| B10.2 contradictions (Δ1-Δ4) | c5cd9a08 | `kit-cite-resolve --strict` on the 4 docs: LIVE 0 |
+| B10.3 doc gaps (Δ5-Δ17) | 6ae82b23 | `kit-cite-resolve --strict` on the 10 docs: LIVE 0. Targets moved from the brief where the kit had a better home: copy/paste id → `types/logic.md` § Flags; relation IDs / SystemDB → `types/logic-authoring.md` (the kit has no tagging § in structure.md); restart rule → `BUILD-LOOP.md` § 6 (deploy) |
+| B10.4 corpus-index (Δ18) | 92b19b05 | B1300, B1302, B1354, B1416-B1420 rows; strict cite LIVE 0 |
+| B10.5 L1 `lint-charset-default` (Δ19) | 74031e4c | RED undefined Spec → GREEN 7 goldens; bats CD 6/6; mutations CD1-CD3 red. Smoke: 20 client module src roots 0 WARN, 1 K20 ERROR (empty `-wb/src`); first smoke found a false positive (a name typed `byte[]` in one method and `char[]` in another), fixed before the commit; vendor spot check (baja, web-rt) rows all real |
+| B10.6 L2 `lint-structure` L17 (Δ20) | ea65724b | RED l17-1, l17-malformed-1 → GREEN 47 goldens; bats lint-structure 38/38; mutations LS17a, LS17b red. Smoke: 10 client module roots 0 L17 rows; 729 vendor palettes: one real type named `BFormatString` → the foreign-module B-prefix WARN was dropped |
+| B10.7 L3 `lint-slot-default-type` (Δ21) | 323184d3 | RED undefined Spec → GREEN 4 goldens; bats SDT 5/5; mutations SDT1, SDT2 red. Smoke: 123 client source roots 0 FAIL; docSource + the whole organized tree 0 FAIL (a first draft FAILed 356 vendor int-on-double rows; ComplexIntrospector widens them, so the rule was corrected) |
+| B10.8 report-module members | 3bfa156c | 26 goldens re-recorded and script-checked (only new member rows + summary counts; verdict/exit/stderr identical); bats report-module 75/75 |
+| B10.9 partial fold | this commit | retro § Status lists Δ1-Δ21 by commit, Δ22-Δ26 owed; header stays `pending` |
+
+Decisions (recorded, not asked): L1 and L3 report members carry no verdict row (as `lint-service-types`), so a clean
+pass adds no golden churn; L17 identical `m=` repeats stay clean (decoder evidence) although the brief listed them.
+
+## Verification (B10 close, 2026-10-28)
+- `memcap go test ./...`: 132 packages ok, EXIT 0; `go vet ./...` exit 0; `gofmt -l .` empty.
+- bats `-j 4 --no-parallelize-within-files` lint-charset-default, lint-slot-default-type, lint-structure,
+  report-module, guard-pins, gen-lint-index, kit-links: 164/164 ok; `check-bats-skips.sh` 2 skips, all allowlisted.
+- `lint-guard-pins.sh --strict`: exit 0 (CD1-3, LS17a/b, SDT1-2 MATCH). `scripts/ci-local.sh --only shellcheck`: PASS.
+- `gen-lint-index.sh`, `gen-retro-index.sh`, `gen-build-state.sh --check`: exit 0. `sweep-fold-audit.sh --strict
+  --exact-stems --deltas-since 2026-09-24`: 411/411 cited, 789 deltas, 0 not cited (the new retro is pending).
+- `kit-cite-resolve --strict` on every edited doc: LIVE 0, HISTORY 0.
+- `scripts/changelog-gate.sh --range 81db90d8..HEAD`: PASS (7 fragments).
+
+## Next (B11, run B)
+Δ22-Δ26 of `retros/2026-10-28-course-coverage.md` § Owed to run B: `build.sh --werror`, K4 `isRunning` guard +
+`stationStarted`-only WARN, K3 `synchronized`, K6 `javaToolchains` preflight, K11 MessageFormat `'`. Then flip the
+retro to `folded`.
