@@ -110,8 +110,10 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   - [x] B12.1 · `--werror` (9995edd9 R3): the init script appended the args at task creation, so a build script that
     replaces `options.compilerArgs` dropped them; now at `taskGraph.whenReady`, only when absent. RED bats
     BS-werror-late + a real Gradle 7.6 / JDK 8 probe (old script exit 0 on raw types, new exit 1).
-  - [ ] B12.2 · `preflight --toolchains` (faebf598 R4/R3/R2): POSIX gradlew row only; the Windows route is a SKIP or
-    `cmd.exe /c gradlew.bat`; a full-JDK-8 pin passes before the gradlew check; usage-golden `@kind` text.
+  - [x] B12.2 · `preflight --toolchains` (faebf598 R4/R3/R2): the row checks the POSIX gradlew route only; a root
+    with a `gradlew.bat` gets a SKIP row (Windows route not checked; chosen over `cmd.exe /c gradlew.bat`, which needs
+    a drive-letter cwd and path translation); a full-JDK-8 pin passes before the gradlew check; the 8 hand-updated
+    usage goldens are `truth-*` cases. RED TestToolchains (pin-no-gradlew SKIP, no Windows row).
   - [ ] B12.3 · L17 own module (7078f5f8 R4/R3): the module name from its declaration, not the part directory.
   - [ ] B12.4 · close: follow-ups listed, verification.
 

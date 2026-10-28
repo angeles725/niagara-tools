@@ -37,12 +37,15 @@ const fullJDK8 = `
 
 // TestToolchains: the opt-in --toolchains row (K6): a full JDK 8 listed by gradlew javaToolchains passes; a JRE 8
 // or a JDK 17 alone fails; gradle.properties paths pinned to a full JDK 8 passes without running gradle; no
-// executable gradlew, or a listing with no toolchain, is SKIP with its reason; without the flag there is no row.
+// executable gradlew, or a listing with no toolchain, is SKIP with its reason (a pin passes with no gradlew at all);
+// a root with a gradlew.bat gets a second SKIP row saying the Windows route is not checked, a root without one does
+// not; without the flag there is no row.
 func TestToolchains(t *testing.T) {
 	d := t.TempDir()
 	mk(t, d, "nh/", "gr/gradlew", "pin/gradlew", "pin/gradle.properties=org.gradle.java.installations.paths="+d+"/jdk8\n",
-		"jdk8/release=JAVA_VERSION=\"1.8.0_402\"\n", "jdk8/bin/javac", "nogw/")
-	for _, g := range []string{d + "/gr/gradlew", d + "/pin/gradlew"} {
+		"jdk8/release=JAVA_VERSION=\"1.8.0_402\"\n", "jdk8/bin/javac", "nogw/",
+		"pinnogw/gradle.properties=org.gradle.java.installations.paths="+d+"/jdk8\n", "win/gradlew", "win/gradlew.bat")
+	for _, g := range []string{d + "/gr/gradlew", d + "/pin/gradlew", d + "/win/gradlew"} {
 		if err := os.Chmod(g, 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -57,6 +60,8 @@ func TestToolchains(t *testing.T) {
 		{"nothing listed", "gr", "FAILURE: Build failed with an exception.\n", "SKIP  " + pre + "gradlew javaToolchains listed no toolchain (gradle failed or printed nothing)", true, true},
 		{"paths pinned", "pin", "", "PASS  " + pre + "org.gradle.java.installations.paths pins a full JDK 8: " + d + "/jdk8 (gradle.properties)", true, false},
 		{"no gradlew", "nogw", "", "SKIP  " + pre + "no executable gradlew in " + d + "/nogw", true, false},
+		{"paths pinned, no gradlew", "pinnogw", "", "PASS  " + pre + "org.gradle.java.installations.paths pins a full JDK 8: " + d + "/jdk8 (gradle.properties)", true, false},
+		{"windows route present", "win", gradle76 + fullJDK8, "SKIP  " + pre + winRouteSkip, true, true},
 	} {
 		f := &fakeHost{out: map[string]string{"/gradlew": c.listing}}
 		args := []string{"--jvm-dir", d + "/none", d + "/nh", d + "/" + c.gr}
@@ -80,7 +85,11 @@ func TestToolchains(t *testing.T) {
 			t.Errorf("%s: gradle ran %v, want %v", c.name, ran, c.ranGradle)
 		}
 	}
-	f := &fakeHost{out: map[string]string{"/gradlew": gradle76}}
+	f := &fakeHost{out: map[string]string{"/gradlew": gradle76 + fullJDK8}}
+	if _, out, _ := pf(f.host(), nil, "--toolchains", "--jvm-dir", d+"/none", d+"/nh", d+"/gr"); strings.Contains(out, "gradlew.bat") {
+		t.Errorf("no gradlew.bat in the root, got a Windows-route row:\n%s", out)
+	}
+	f = &fakeHost{out: map[string]string{"/gradlew": gradle76}}
 	if _, out, _ := pf(f.host(), nil, "--jvm-dir", d+"/none", d+"/nh", d+"/gr"); strings.Contains(out, "toolchains") {
 		t.Errorf("no --toolchains, got a toolchains row:\n%s", out)
 	}

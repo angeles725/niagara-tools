@@ -8,27 +8,32 @@ import (
 )
 
 // toolchains is the opt-in --toolchains row (corpus B1242 §1242.7 K6, from B1235 §1235.2): a 4.15 build needs a full
-// JDK 8, and the raw or Windows gradlew route picks it from Gradle's toolchains, not from build.sh's -P paths (which
-// the jdk8 row checks). gradle.properties org.gradle.java.installations.paths pinned to a full JDK 8 (bin/javac and
-// a 1.8 release or java -version) passes without starting gradle; otherwise the course command
-// `gradlew -q javaToolchains -Porg.gradle.java.installations.auto-detect=true` runs in the gradle root (-p) and a
-// listed toolchain with Language Version 8 and Is JDK true passes. A listing without one fails; no executable
-// gradlew, or a listing with no toolchain at all (gradle failed), is SKIP, never a false PASS.
+// JDK 8, and the raw gradlew route picks it from Gradle's toolchains, not from build.sh's -P paths (which the jdk8
+// row checks). The row checks the WSL/POSIX route only. gradle.properties org.gradle.java.installations.paths pinned
+// to a full JDK 8 (bin/javac and a 1.8 release or java -version) passes without starting gradle, gradlew or not;
+// otherwise the course command `gradlew -q javaToolchains -Porg.gradle.java.installations.auto-detect=true` runs in
+// the gradle root (-p) and a listed toolchain with Language Version 8 and Is JDK true passes. A listing without one
+// fails; no executable gradlew, or a listing with no toolchain at all (gradle failed), is SKIP, never a false PASS.
+// The POSIX gradlew auto-detects the WSL JDKs, not the Windows JDKs gradlew.bat sees, so a root that carries a
+// gradlew.bat gets a second SKIP row saying the Windows route is not checked, whatever the first row said.
 func (r *run) toolchains() {
 	if !r.toolchainsOn || r.win {
 		return
 	}
 	const check = "toolchains"
-	gw := r.gr + "/gradlew"
-	if syscall.Access(gw, 1) != nil {
-		r.row("SKIP", check, "no executable gradlew in "+r.gr)
-		return
+	if lint.IsFile(r.gr + "/gradlew.bat") {
+		defer r.row("SKIP", check, winRouteSkip)
 	}
 	for _, p := range strings.Split(prop(r.gr+"/gradle.properties", "org.gradle.java.installations.paths"), ",") {
 		if p = strings.TrimSpace(p); p != "" && r.fullJDK8(p) {
 			r.row("PASS", check, "org.gradle.java.installations.paths pins a full JDK 8: "+p+" (gradle.properties)")
 			return
 		}
+	}
+	gw := r.gr + "/gradlew"
+	if syscall.Access(gw, 1) != nil {
+		r.row("SKIP", check, "no executable gradlew in "+r.gr)
+		return
 	}
 	listed := parseToolchains(string(r.h.output(gw, []string{"-q", "-p", r.gr, "javaToolchains", "-Porg.gradle.java.installations.auto-detect=true"}, true)))
 	if len(listed) == 0 {
@@ -77,3 +82,7 @@ func parseToolchains(out string) []map[string]string {
 	}
 	return all
 }
+
+// winRouteSkip is the second row for a root that also carries gradlew.bat: neither a POSIX pin nor the POSIX
+// gradlew's listing says which JDK gradlew.bat finds on Windows.
+const winRouteSkip = "gradlew.bat (the Windows route) is not checked: the row above checks the WSL route (a POSIX pin, or the POSIX gradlew, which lists the WSL JDKs); on Windows run gradlew.bat -q javaToolchains -Porg.gradle.java.installations.auto-detect=true"
