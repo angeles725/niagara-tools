@@ -32,6 +32,14 @@ which file owns a concern. Evidence and host file:line pointers are in the three
 4. The fixture move (strict-new Δ2) lands with strict L3 (strict-new Δ3).
 5. The adapter decision budget (gaps Δ5) stays WARN until calibrated.
 
+## Settled parent decisions (part 3b)
+6. `fetch-outside-services` and `js-file-size` stay map-only (the legacy rc-scan goldens stay byte-identical);
+   `handler-size` also WARNs with no map (it reaches the large legacy servlets).
+7. "Outside services/" means outside `rc/js/services/` (anchored, not any `/services/` segment).
+8. The dashboard scaffold emits one `ux/route/<Route>Handler` class with the servlet delegating to it, so a fresh
+   dashboard demonstrates the router + handler split (modularity-gaps Δ6) and stays clean under every rule.
+9. Concern names are free per module; the kit fixes only the role folders (structure Δ2).
+
 ## Delta mapping (proposal number → retro and Δ within it)
 | Proposal | Retro (stem) | Δ in retro | Task |
 |---|---|---|---|
@@ -73,8 +81,20 @@ which file owns a concern. Evidence and host file:line pointers are in the three
 - [x] M5 · front end, servlet, report (part 3): gaps Δ2 and Δ3 (rc-scan), Δ4 (dashboard JS skeleton), Δ6 (servlet
   router + handlers), Δ8 (report-module modularity summary), plus the module-map Δ3 report member. Landed as WU9
   3d5a9798, WU10 62cc8332, WU11 959be0c6 and WU12 5d2f2fba, after the part-2 review fix-forward WU8 2e261afb.
-- [ ] M7 · retro D `2026-10-27-modularity-structure` (five items, see Next session).
-- [ ] M6 · close (part 2): flip the three retros to folded, strict fold audit 0 uncited, ledger fragment, CI-local.
+- [x] M5b · `toolbelt/lint-servlet.sh` header lists `handler-size` and its `Mutation: TC-MAP6` pin (WU13). Route:
+  delegated writer.
+- [ ] M7 · retro D `2026-10-27-modularity-structure` (pending until M6), folded in work units:
+  - [ ] M7.1 · structure Δ1: `scaffold-module add-concern` (Go `go/cmd/module-map`, shim `toolbelt/module-map.sh`).
+  - [ ] M7.2 · structure Δ2: role folders fixed, concern names free; lint-module-map MM7 (WARN legacy, FAIL strict).
+  - [ ] M7.3 · structure Δ3: ux↔rt contract file `rc/js/contract.json` plus a contract test on each side, emitted by
+    the dashboard scaffold.
+  - [ ] M7.4 · structure Δ4: `module-map where` and `module-map tests`.
+  - [ ] M7.5 · structure Δ5: legacy→strict migration guide extending METHODOLOGY.md:83, linked from SKILL.md.
+- [ ] RF · review fix-forward of the native RDD reviews of 2e261afb and 959be0c6 (rc-scan R3-001..R3-003, R2
+  findings; report-module R2-001..R2-003, R3 findings). Scope addition by the parent: `go/internal/rcscan/**` and
+  `go/cmd/rc-scan/**` authorized for it.
+- [ ] M6 · close: flip the four retros (module-map, strict-new, gaps, structure) to folded, strict fold audit 0
+  uncited, ledger fragment, CHANGELOG fragments, generated-index `--check` 0.
 
 ## Acceptance criteria
 - `lint-module-map` reports MM1 to MM6 as specified, is registered in `rules.All()` and has a toolbelt wrapper
@@ -237,6 +257,13 @@ fold audit, generated-index `--check`).
   shellcheck clean on lint-size, report-module, rc-scan; gen-lint-index and gen-retro-index `--check` 0; strict
   fold audit 407 folded / 407 cited / 0 uncited; sweep-build-state 0; `changelog-gate --range fe06e0be..HEAD`
   PASS (5 fragments).
+
+- WU13 = M5b (route: delegated writer, part 3b). Commit 8b616e55 `docs(lint): list servlet handler-size and its
+  mutation pin in the lint-servlet header` (+6). Checks: lint-guard-pins MATCH `TC-MAP6 -> tests/scaffold-module.bats:577`;
+  gen-lint-index --check 0; shellcheck clean; bats lint-servlet, guard-pins, gen-lint-index 0 not ok.
+- WU14 = M7 open (route: delegated writer). Retro D written with `toolbelt/new-retro.sh kit modularity-structure
+  --date 2026-10-27 --deltas 5` (envelope `retro_pending: already true`), filled from the parent's five items;
+  review-status pending until M6. Checks: gen-retro-index --check 0. Commit: see WU15 entry.
 
 ## Next session
 Part 3 stopped on 2026-10-27 after WU12 (5d2f2fba) and the part-3 ledger fragment; M0-M5 are done, the three retros
