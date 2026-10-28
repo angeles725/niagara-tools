@@ -115,6 +115,9 @@ var perModule = []member{
 	{script: "lint-private-api-import", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt, -ux, -wb or -se part's src/"},
 	{script: "lint-ndriver-static-collection", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt part's src/"},
 	{script: "lint-ndriver-tagless-correlation", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt part's src/"},
+	// a module with no srcTest/ *.java has nothing to judge: its exit 3 is a SKIP row, never an env fault
+	// Mutation: RM-vacuous-nosource -- dropping noSource turns every test-less module's report into an env fault
+	{script: "lint-vacuous-tests", in: inArtifact, f: failOnly, v: rows, noSource: "no *.java under a srcTest/"},
 }
 
 // Scripts lists every toolbelt member the report runs, as script file names (lint-timers.sh, ...), each once

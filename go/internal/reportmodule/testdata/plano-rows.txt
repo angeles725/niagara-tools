@@ -41,8 +41,9 @@ B-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-
 (module)  PASS  lint-write-path  clean
 (module)  PASS  lint-bundled-jar-class-version  clean
+(module)  PASS  lint-vacuous-tests  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 25 PASS · 1 FAIL · 0 WARN · 11 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 2 artifacts · 26 PASS · 1 FAIL · 0 WARN · 11 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

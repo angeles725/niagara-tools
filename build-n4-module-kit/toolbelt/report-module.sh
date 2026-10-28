@@ -47,8 +47,9 @@
 # lint-session-store-lazy-evict, lint-bformat-call (WARN), lint-service-types and lint-driver-scaffold (FAIL/WARN)
 # on <artifact>/src; lint-wb-external-ord-value on a -wb src/; lint-spa-poll-no-recovery on a -ux src/rc/; once
 # per run on <module-root>: lint-duplicate-helper, lint-machine-default-path, lint-inline-site-literal and the
-# driver lints lint-private-api-import, lint-ndriver-static-collection, lint-ndriver-tagless-correlation (a module
-# with no source they read is a SKIP row). lint-manual-labels is not a member: it needs an operator manual
+# driver lints lint-private-api-import, lint-ndriver-static-collection, lint-ndriver-tagless-correlation, then
+# lint-vacuous-tests (FAIL rows block; kit backlog B6) (a module with no source they read, for lint-vacuous-tests no
+# srcTest/ *.java, is a SKIP row). lint-manual-labels is not a member: it needs an operator manual
 # path, which a module root does not name; lint-bacnet-status-flags is not one either: it reads a station bog.
 # Module map (modularity campaign M5): lint-module-map.sh <module-root> once per run after lint-structure (FAIL
 # rows block, WARN rows such as MM1 "no MODULE-MAP.md" do not), then one `(module)  INFO  modularity  mode=<m>

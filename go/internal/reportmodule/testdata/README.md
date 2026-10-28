@@ -47,6 +47,13 @@ new `lint-module-map` row(s) (`PASS ... clean`, plus the real lint's `WARN ... M
 INFO row and the summary line's PASS/WARN counts (verdict and exit unchanged). Their `@kind` still names the bash
 recording they started from.
 
+Kit backlog B6 (2026-10-27) added the `lint-vacuous-tests` module member. The 104 cases that print the module
+members were re-recorded the same way and checked by a script that compared each old and new `want`: the exit
+and stderr are unchanged, the only added lines are one `(module)  PASS|SKIP  lint-vacuous-tests ...` row (80 PASS
+`clean` under stubs, 24 SKIP `no *.java under a srcTest/` from the real lint), nothing was removed or reordered
+but the summary line, whose PASS/SKIP counts moved by exactly the added rows and whose verdict is unchanged.
+`truth-vacuous-tests-member` pins the FAIL relay.
+
 ## Truth cases (`truth-*`)
 
 Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro

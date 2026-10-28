@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-27 -->
+<!-- last-change-note: kit-backlog B6c: lint-vacuous-tests is a report-module member (#459 follow-up) -->
+log: 2026-10-27 · kit-backlog B6c (feature doc `odd/tasks/kit-backlog-2026-10-27.md`; issue #459 report-module completeness) → `go/internal/reportmodule/members.go` adds `lint-vacuous-tests` to the per-module members (failOnly, rows, noSource `no *.java under a srcTest/`), removed from `notInReport` in `completeness_test.go`; 104 goldens re-recorded through the Go tool and checked by script (only the new PASS/SKIP row and the summary counts moved, exit, stderr and verdict unchanged; testdata/README.md); `truth-vacuous-tests-member` pins the FAIL relay; mutation RM-vacuous-nosource (noSource dropped) turns 24 goldens red. `toolbelt/report-module.sh` header names it.
