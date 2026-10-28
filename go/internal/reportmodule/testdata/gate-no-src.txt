@@ -23,6 +23,8 @@ A-rt  SKIP  lint-session-store-lazy-evict  no src/
 A-rt  SKIP  lint-bformat-call  no src/
 A-rt  SKIP  lint-charset-default  no src/
 A-rt  SKIP  lint-slot-default-type  no src/
+A-rt  SKIP  lint-lifecycle-guard  no src/
+A-rt  SKIP  lint-intrinsic-lock  no src/
 A-rt  SKIP  lint-service-types  no src/
 A-rt  SKIP  lint-driver-scaffold  no src/
 A-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
@@ -55,6 +57,8 @@ B-ux  SKIP  lint-session-store-lazy-evict  no src/
 B-ux  SKIP  lint-bformat-call  no src/
 B-ux  SKIP  lint-charset-default  no src/
 B-ux  SKIP  lint-slot-default-type  no src/
+B-ux  SKIP  lint-lifecycle-guard  no src/
+B-ux  SKIP  lint-intrinsic-lock  no src/
 B-ux  SKIP  lint-service-types  no src/
 B-ux  SKIP  lint-driver-scaffold  no src/
 B-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
@@ -86,6 +90,8 @@ C-wb  SKIP  lint-session-store-lazy-evict  no src/
 C-wb  SKIP  lint-bformat-call  no src/
 C-wb  SKIP  lint-charset-default  no src/
 C-wb  SKIP  lint-slot-default-type  no src/
+C-wb  SKIP  lint-lifecycle-guard  no src/
+C-wb  SKIP  lint-intrinsic-lock  no src/
 C-wb  SKIP  lint-service-types  no src/
 C-wb  SKIP  lint-driver-scaffold  no src/
 C-wb  SKIP  lint-wb-external-ord-value  no src/
@@ -117,6 +123,8 @@ D-se  SKIP  lint-session-store-lazy-evict  no src/
 D-se  SKIP  lint-bformat-call  no src/
 D-se  SKIP  lint-charset-default  no src/
 D-se  SKIP  lint-slot-default-type  no src/
+D-se  SKIP  lint-lifecycle-guard  no src/
+D-se  SKIP  lint-intrinsic-lock  no src/
 D-se  SKIP  lint-service-types  no src/
 D-se  SKIP  lint-driver-scaffold  no src/
 D-se  SKIP  lint-se-display  no src/
@@ -146,6 +154,8 @@ E  SKIP  lint-session-store-lazy-evict  no src/
 E  SKIP  lint-bformat-call  no src/
 E  SKIP  lint-charset-default  no src/
 E  SKIP  lint-slot-default-type  no src/
+E  SKIP  lint-lifecycle-guard  no src/
+E  SKIP  lint-intrinsic-lock  no src/
 E  SKIP  lint-service-types  no src/
 E  SKIP  lint-driver-scaffold  no src/
 E  SKIP  lint-no-md5-credential-digest  no src/
@@ -164,7 +174,7 @@ E  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the depl
 (module)  PASS  lint-vacuous-tests  clean
 (module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 5 artifacts · 8 PASS · 0 FAIL · 0 WARN · 152 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 5 artifacts · 8 PASS · 0 FAIL · 0 WARN · 162 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

@@ -24,6 +24,8 @@ A  SKIP  lint-session-store-lazy-evict  no src/
 A  SKIP  lint-bformat-call  no src/
 A  SKIP  lint-charset-default  no src/
 A  SKIP  lint-slot-default-type  no src/
+A  SKIP  lint-lifecycle-guard  no src/
+A  SKIP  lint-intrinsic-lock  no src/
 A  SKIP  lint-service-types  no src/
 A  SKIP  lint-driver-scaffold  no src/
 A  SKIP  lint-no-md5-credential-digest  no src/
@@ -53,6 +55,8 @@ B  SKIP  lint-session-store-lazy-evict  no src/
 B  SKIP  lint-bformat-call  no src/
 B  SKIP  lint-charset-default  no src/
 B  SKIP  lint-slot-default-type  no src/
+B  SKIP  lint-lifecycle-guard  no src/
+B  SKIP  lint-intrinsic-lock  no src/
 B  SKIP  lint-service-types  no src/
 B  SKIP  lint-driver-scaffold  no src/
 B  SKIP  lint-no-md5-credential-digest  no src/
@@ -71,7 +75,7 @@ B  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the depl
 (module)  PASS  lint-vacuous-tests  clean
 (module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 10 PASS · 0 FAIL · 0 WARN · 55 SKIP · 0 ADVISORY  ->  INCOMPLETE
+report-module: 2 artifacts · 10 PASS · 0 FAIL · 0 WARN · 59 SKIP · 0 ADVISORY  ->  INCOMPLETE
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

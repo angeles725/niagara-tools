@@ -23,6 +23,8 @@ A-clean  SKIP  lint-session-store-lazy-evict  no src/
 A-clean  SKIP  lint-bformat-call  no src/
 A-clean  SKIP  lint-charset-default  no src/
 A-clean  SKIP  lint-slot-default-type  no src/
+A-clean  SKIP  lint-lifecycle-guard  no src/
+A-clean  SKIP  lint-intrinsic-lock  no src/
 A-clean  SKIP  lint-service-types  no src/
 A-clean  SKIP  lint-driver-scaffold  no src/
 A-clean  SKIP  lint-no-md5-credential-digest  no src/
@@ -51,6 +53,8 @@ A-deep  SKIP  lint-session-store-lazy-evict  no src/
 A-deep  SKIP  lint-bformat-call  no src/
 A-deep  SKIP  lint-charset-default  no src/
 A-deep  SKIP  lint-slot-default-type  no src/
+A-deep  SKIP  lint-lifecycle-guard  no src/
+A-deep  SKIP  lint-intrinsic-lock  no src/
 A-deep  SKIP  lint-service-types  no src/
 A-deep  SKIP  lint-driver-scaffold  no src/
 A-deep  SKIP  lint-no-md5-credential-digest  no src/
@@ -79,6 +83,8 @@ A-env  SKIP  lint-session-store-lazy-evict  no src/
 A-env  SKIP  lint-bformat-call  no src/
 A-env  SKIP  lint-charset-default  no src/
 A-env  SKIP  lint-slot-default-type  no src/
+A-env  SKIP  lint-lifecycle-guard  no src/
+A-env  SKIP  lint-intrinsic-lock  no src/
 A-env  SKIP  lint-service-types  no src/
 A-env  SKIP  lint-driver-scaffold  no src/
 A-env  SKIP  lint-no-md5-credential-digest  no src/
@@ -109,6 +115,8 @@ A-fail  SKIP  lint-session-store-lazy-evict  no src/
 A-fail  SKIP  lint-bformat-call  no src/
 A-fail  SKIP  lint-charset-default  no src/
 A-fail  SKIP  lint-slot-default-type  no src/
+A-fail  SKIP  lint-lifecycle-guard  no src/
+A-fail  SKIP  lint-intrinsic-lock  no src/
 A-fail  SKIP  lint-service-types  no src/
 A-fail  SKIP  lint-driver-scaffold  no src/
 A-fail  SKIP  lint-no-md5-credential-digest  no src/
@@ -137,6 +145,8 @@ A-none  SKIP  lint-session-store-lazy-evict  no src/
 A-none  SKIP  lint-bformat-call  no src/
 A-none  SKIP  lint-charset-default  no src/
 A-none  SKIP  lint-slot-default-type  no src/
+A-none  SKIP  lint-lifecycle-guard  no src/
+A-none  SKIP  lint-intrinsic-lock  no src/
 A-none  SKIP  lint-service-types  no src/
 A-none  SKIP  lint-driver-scaffold  no src/
 A-none  SKIP  lint-no-md5-credential-digest  no src/
@@ -165,6 +175,8 @@ A-toodeep  SKIP  lint-session-store-lazy-evict  no src/
 A-toodeep  SKIP  lint-bformat-call  no src/
 A-toodeep  SKIP  lint-charset-default  no src/
 A-toodeep  SKIP  lint-slot-default-type  no src/
+A-toodeep  SKIP  lint-lifecycle-guard  no src/
+A-toodeep  SKIP  lint-intrinsic-lock  no src/
 A-toodeep  SKIP  lint-service-types  no src/
 A-toodeep  SKIP  lint-driver-scaffold  no src/
 A-toodeep  SKIP  lint-no-md5-credential-digest  no src/
@@ -183,7 +195,7 @@ A-toodeep  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract 
 (module)  PASS  lint-vacuous-tests  clean
 (module)  PASS  lint-permissions-xml  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 6 artifacts · 10 PASS · 2 FAIL · 0 WARN · 165 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 6 artifacts · 10 PASS · 2 FAIL · 0 WARN · 177 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
