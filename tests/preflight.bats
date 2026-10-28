@@ -558,6 +558,8 @@ sample_kts_prepend() {
 # [ev: retro course-coverage Δ25] — --toolchains runs the course's javaToolchains listing in the gradle root.
 @test "PF-toolchains: --toolchains FAILs a listing with only a JRE 8 and PASSes one with a full JDK 8" {
   cp -r "$GR" "$TMPDIR_T/gr"
+  # shellcheck disable=SC2016
+  # why: $*, $0 and ${FULL_JDK8} must reach the generated fake gradlew unexpanded
   printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" "$*" > "$(dirname "$0")/gradlew.args"' \
     'printf " + JRE 1.8.0\n     | Location:  /x/jre8\n     | Language Version:  8\n     | Is JDK:  false\n"' \
     '[ -z "${FULL_JDK8:-}" ] || printf " + JDK 1.8.0\n     | Location:  /x/jdk8\n     | Language Version:  8\n     | Is JDK:  true\n"' \

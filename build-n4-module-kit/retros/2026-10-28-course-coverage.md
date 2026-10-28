@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 26 -->
 # 2026-10-28 · kit · course-coverage
@@ -71,21 +71,31 @@ whose specs come from corpus B1242 §1242.7 (K3, K4, K6, K11) and B1419 §1419.4
 | Δ26 | K11 lint: a single `'` in a lexicon value that code reads with arguments (MessageFormat drops it; write `''`) WARNs, as a `lint-lexicon-ascii` companion | `toolbelt/lint-lexicon-ascii.sh` sibling | `[ev: corpus B1242 §1242.7]` |
 
 ## Status
-PARTIALLY FOLDED (run A, branch `chore/kit-backlog`, 2026-10-28); the header stays `pending` until run B folds
-Δ22-Δ26.
+FOLDED (run A and run B, branch `chore/kit-backlog`, 2026-10-28).
 - Δ1-Δ4: c5cd9a08 (`types/logic-authoring.md`, `types/driver-authoring.md` § Sizing, `types/logic.md` callback
   thread map, `types/structure.md` Security Manager card).
 - Δ5-Δ17: 6ae82b23 (the doc targets in the table above).
 - Δ18: 92b19b05 (`corpus-index.md` § n4-dev-course).
-- Δ19: 74031e4c (`lint-charset-default`), report member 3bfa156c.
+- Δ19: 74031e4c (`lint-charset-default`), report member 3bfa156c; review fix-forward 7078f5f8 (CD1 only on a
+  provable String receiver, C-style declarators on both halves of the byte/char guard).
 - Δ20: ea65724b (`lint-structure` L17). Narrowed from the audit's proposal on evidence: an identical repeated `m=`
   is clean (our fixtures do it; the decoder re-registers the symbol) and another module's `B`-prefixed name is not
-  judged (jsonToolkit declares a type named `BFormatString`); only a remap to another module WARNs.
-- Δ21: 323184d3 (`lint-slot-default-type`, `types/structure.md` § Slot defaults), report member 3bfa156c.
-- Δ22-Δ26: owed, below.
+  judged (jsonToolkit declares a type named `BFormatString`); only a remap to another module WARNs. Review
+  fix-forward 7078f5f8: the B-prefix FAIL needs the symbol mapped to this module.
+- Δ21: 323184d3 (`lint-slot-default-type`, `types/structure.md` § Slot defaults), report member 3bfa156c; widening
+  and skip-branch goldens 7078f5f8.
+- Δ22: 9995edd9 (`build.sh --werror`, `toolbelt/lib/werror.init.gradle`; `METHODOLOGY.md`, `build-verify.md`).
+- Δ23: bffc8512 (`lint-lifecycle-guard` LG1-LG2, WARN advisory: 2273 LG1 + 45 LG2 on Tridium's own tree;
+  `types/logic.md` callback contract), report member 5b89ee0f. Closes ledger G29.
+- Δ24: d100ffb7 (`lint-intrinsic-lock` IL1-IL3, WARN: 1827 IL1 on Tridium's own tree, so not the FAIL the ledger's
+  G30 proposed; `types/logic.md` mutual exclusion), report member 5b89ee0f. Closes ledger G30.
+- Δ25: faebf598 (`preflight.sh --toolchains`, opt-in, for the raw and Windows gradlew route; `build.sh` pins the
+  JDK itself and does not forward it; `build-verify.md` § Raw gradle). Closes ledger G61.
+- Δ26: 6b330384 (`lint-lexicon-apostrophe`; "read with arguments" approximated by a `{n}` argument in the value),
+  report member 5b89ee0f.
 
-## Owed to run B
-Run B (`odd/tasks/kit-backlog-2026-10-27.md` B11) owes Δ22-Δ26. Exact specs, from corpus B1242 §1242.7 and the blocks
+## Owed to run B (folded, see § Status)
+Run B (`odd/tasks/kit-backlog-2026-10-27.md` B11) owed Δ22-Δ26. Exact specs, from corpus B1242 §1242.7 and the blocks
 it cites:
 - **Δ22 (#64)**: `build.sh --werror` adds `-Werror` to the Java compile of every part (plus the `-Xlint` set the
   build uses), off by default; a module that builds warning-clean keeps doing so. Source: B1419 §1419.4 row b

@@ -1,6 +1,6 @@
 # ODD feature — Kit backlog 2026-10-27: bookkeeping, audit A4/A5/A6 remainder, review fix-forward
 
-**Status**: B1–B9 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8; B9 is the run-3 review fix-forward); B10 (course coverage run A) DONE 2026-10-28, B11 (run B) owed · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
+**Status**: B1–B9 DONE (2026-10-27, unpushed on `chore/kit-backlog`; run 3 closed B5.2–B5.8, B5.R and B8; B9 is the run-3 review fix-forward); B10 (course coverage run A) DONE 2026-10-28, B11 (run B) DONE 2026-10-28 · **Created**: 2026-10-27 · **Branch**: `chore/kit-backlog`
 (from d982a704, the closed modularity campaign; its own PR) · **Repo**: angeles725/niagara-tools (PUBLIC — generic names only)
 
 ## Objective
@@ -40,7 +40,7 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
 | B7 | Audit A9: `ledger-check.sh` + scaffold VERSION-LEDGER, T1 test backfill, slotomatic last-comment-line WARN | run 2 |
 | B8 | Audit A7-D1: adapter `@NiagaraProperty defaultValue` vs pure-model Cfg default lint | later |
 | B10 | Course coverage run A (retro `course-coverage` Δ1-Δ21): 4 contradictions, doc gaps, corpus-index rows, lints L1 `charset-default`, L2 palette L17, L3 `slot-default-type` | run 4 (done) |
-| B11 | Course coverage run B (retro `course-coverage` Δ22-Δ26): `build.sh --werror`, K4 `isRunning` + `stationStarted` WARN, K3 `synchronized`, K6 `javaToolchains` preflight, K11 MessageFormat `'` | later |
+| B11 | Course coverage run B (retro `course-coverage` Δ22-Δ26): `build.sh --werror`, K4 `isRunning` + `stationStarted` WARN, K3 `synchronized`, K6 `javaToolchains` preflight, K11 MessageFormat `'` | run 5 (done) |
 
 ## Tasks
 - [x] B1 · bookkeeping (docs). Route: inline (docs only, evidence already mapped).
@@ -87,23 +87,23 @@ Out: push, PR, GitHub writes (issue #459 stays open), skill reinstall (owed to t
   - [x] B10.7 · L3 `lint-slot-default-type` (Δ21).
   - [x] B10.8 · report-module wiring of L1/L3 (+ golden re-record in its own commit when any golden moves).
   - [x] B10.9 · partial fold: the retro records Δ1-Δ21 folded and Δ22-Δ26 owed; it stays `pending`.
-- [ ] B11 · course coverage run B (retro `course-coverage` Δ22-Δ26, specs in its "Owed to run B" section). Route:
+- [x] B11 · course coverage run B (retro `course-coverage` Δ22-Δ26, specs in its "Owed to run B" section). Route:
   inline (each unit is one shell flag, one rule package + shim + bats, or one preflight check; the specs and targets
   were already mapped by the retro; writer is this session).
-  - [ ] B11.1 · Δ22 `build.sh --werror` (opt-in `-Xlint:all -Werror` through a gradle init script; bats with the
+  - [x] B11.1 · Δ22 `build.sh --werror` (opt-in `-Xlint:all -Werror` through a gradle init script; bats with the
     fake gradlew).
-  - [ ] B11.2 · Δ23 K4 lint: `changed`/`added`/`removed` with no leading `isRunning()` guard; `stationStarted()`
+  - [x] B11.2 · Δ23 K4 lint: `changed`/`added`/`removed` with no leading `isRunning()` guard; `stationStarted()`
     startup work with no `started()` (WARN, advisory; smoke client + Tridium before settling severity).
-  - [ ] B11.3 · Δ24 K3 lint: `synchronized` methods / `synchronized (this)` in Niagara (`B`-type) classes (WARN).
-  - [ ] B11.4 · Δ25 K6 preflight `toolchains` row: `gradlew -q javaToolchains` lists a full JDK 8 for a 4.15+
+  - [x] B11.3 · Δ24 K3 lint: `synchronized` methods / `synchronized (this)` in Niagara (`B`-type) classes (WARN).
+  - [x] B11.4 · Δ25 K6 preflight `toolchains` row: `gradlew -q javaToolchains` lists a full JDK 8 for a 4.15+
     target (`--target-version`, forwarded by `build.sh`).
-  - [ ] B11.5 · Δ26 K11 lint: a lexicon value with `{n}` arguments and a lone `'` (MessageFormat drops it; WARN).
-  - [ ] B11.6 · report-module wiring of the new module lints (+ golden re-record in its own commit when any moves).
-  - [ ] B11.7 · fix-forward of the APPROVED run-A reviews (scope added by the parent mid-run): L17 B-prefix FAIL only
+  - [x] B11.5 · Δ26 K11 lint: a lexicon value with `{n}` arguments and a lone `'` (MessageFormat drops it; WARN).
+  - [x] B11.6 · report-module wiring of the new module lints (+ golden re-record in its own commit when any moves).
+  - [x] B11.7 · fix-forward of the APPROVED run-A reviews (scope added by the parent mid-run): L17 B-prefix FAIL only
     for a symbol of THIS module (+ LS17a note, bats header); CD1 only on a provable String receiver, C-style
     `x[]` declarators on both halves of the byte/char guard; slot-default-type goldens for the widening skip and
     the other skip branch.
-  - [ ] B11.8 · close: cite every Δ, retro `folded`, ledger open_issue DONE, strict fold audit, verification.
+  - [x] B11.8 · close: cite every Δ, retro `folded`, ledger open_issue DONE, strict fold audit, verification.
 
 ## Acceptance
 - Each block lands as one or two work-unit commits with RED → GREEN evidence where a deterministic test exists.
@@ -637,3 +637,61 @@ pass adds no golden churn; L17 identical `m=` repeats stay clean (decoder eviden
 Δ22-Δ26 of `retros/2026-10-28-course-coverage.md` § Owed to run B: `build.sh --werror`, K4 `isRunning` guard +
 `stationStarted`-only WARN, K3 `synchronized`, K6 `javaToolchains` preflight, K11 MessageFormat `'`. Then flip the
 retro to `folded`.
+
+## Progress / evidence — B11 course coverage run B (2026-10-28)
+Route: inline for every unit (each is one shell flag, one rule package + shim + bats, or one preflight check; the
+retro's "Owed to run B" section and the ledger's G29/G30/G61 specs mapped every target; writer is this session).
+B11.7 was added by the parent mid-run (fix-forward of the APPROVED run-A native reviews).
+| Unit | Commit | Evidence |
+|---|---|---|
+| B11.1 Δ22 `build.sh --werror` | 9995edd9 | RED bats BS-werror* (no `lib/*.gradle` to copy) → GREEN bats build-sh 89/89; mutation BS-werror red |
+| B11.2 Δ23 `lint-lifecycle-guard` | bffc8512 | RED undefined Spec → GREEN 5 goldens; bats LG 5/5; mutations LG1, LG2 red. Smoke: 20 client src roots 1 LG1 (real), 1 K20 ERROR; Tridium organized 2273 LG1 + 45 LG2 of about 5400 callbacks (first smoke counted `serviceStarted` services and `Sys.atSteadyState()` guards: both accepted before the commit) → WARN advisory |
+| B11.3 Δ24 `lint-intrinsic-lock` | d100ffb7 | RED undefined Spec, then a nested block at a synchronized method's first token missed → GREEN 4 goldens; bats IL 6/6; mutations IL1-IL3 red. Smoke: client 15 IL1 (`BDashboardService` and three more services); Tridium 1827 IL1, 253 IL2, 579 IL3 → WARN (G30 had proposed FAIL) |
+| B11.4 Δ25 `preflight.sh --toolchains` | faebf598 | RED `TestToolchains` rows missing → GREEN `go test ./internal/preflight` (8 goldens carry the new usage line); bats preflight 40/40 incl. PF-toolchains |
+| B11.5 Δ26 `lint-lexicon-apostrophe` | 6b330384 | RED undefined Spec, then Mode Raw refused `--strict` → GREEN 4 goldens; bats LX 4/4; mutations LX1, LX1-noargs red. Smoke: Cliente 18 lexicons 0 rows; Tridium 1297 lexicons 409 rows (French `l'`, `doesn't`), real by the rule |
+| B11.6 report-module members | 5b89ee0f | RED 25 goldens → re-recorded through a temporary uncommitted dump hook, script-checked (only 58 `SKIP no src/` rows per source lint + summary SKIP counts; exit lines and verdicts identical); bats report-module 75/75 |
+| B11.7 run-A review fix-forward | 7078f5f8 | RED l17-foreign-1 (3 false FAILs), charset receiver (6 false CD1), c-style-declarator (a false CD2) → GREEN; slot-default-type widening-and-skips golden (each skip branch mutation-proven); bats 50/50; mutations LS17a, CD1, CD1-receiver, CD2, CD3 red. Tridium CD1 2750 → 1085; report-module goldens unchanged |
+| B11.8 close | this commit | retro `folded`; ledger open_issue DONE; strict fold audit 412/412 cited, 815 deltas 0 not cited |
+
+Decisions (recorded, not asked):
+- Δ22: the flag is `-Xlint:all -Werror` through a Groovy init script (runs on Gradle 4.0.2 and 7.x); it was never
+  run on a real module here, so the warning set a real Slot-o-Matic module hits (`-Xlint:processing`, `serial`) is
+  unmeasured: first real `--werror` build owes that evidence.
+- Δ23: guard = an `if` whose condition calls `isRunning()` or `Sys.atSteadyState()` as the first statement after
+  super calls; start counterparts of LG2 are `started()`, `serviceStarted()` and `descendantsStarted()`. WARN only.
+- Δ24: "BComponent subclass" read as the ledger's G30 definition (own or superclass name `B` + upper case), static
+  synchronized methods and an anonymous class's `this` not judged; nested locks (G30's second rule) included as IL3.
+- Δ25: opt-in `--toolchains`, not forwarded by `build.sh` (which pins `paths=$JAVA8`, checked by `jdk8`); a pinned
+  full JDK 8 in `gradle.properties` passes without starting gradle (G61 case). The parser follows Gradle 7.6's
+  report layout; it was not run against a real gradle in this session.
+- Δ26: "a key that code reads with arguments" approximated by a `{n}` argument in the value; a deliberate
+  blank-free quote holding a brace (`'{'`) is clean.
+
+## Course coverage close (2026-10-28)
+Retro `retros/2026-10-28-course-coverage.md` is folded: all 26 deltas landed (Δ1-Δ21 run A, Δ22-Δ26 run B), and
+the run-A native reviews were fixed forward. What remains, deliberately:
+- Owed evidence, not code: a real `build.sh --werror` run on a client module (Δ22) and a real `gradlew -q
+  javaToolchains` run on a 4.15 host (Δ25).
+- Left to the research corpus (the kit carries a cited line or a check, the corpus holds the depth): the open child
+  gaps B1420-G2 (the restart at about 5000 points), B1232-G1 (whether a decode into the BOG space fires
+  `added()`), B1238-G2 (live thread map); course topics that are explanation, not build guidance (BQL/NEQL
+  semantics, alarm routing internals, driver-framework walkthroughs) stay in B1416-B1420 and are reached through
+  `corpus-index.md` § n4-dev-course.
+- The vendor rates of LG1 and IL1-IL3 keep both lints advisory; a client-only severity (FAIL in our modules) is a
+  possible follow-up once the 16 client rows are fixed.
+
+## Verification (B11 close, 2026-10-28)
+- `memcap go test ./...`: 135 packages ok, EXIT 0; `go vet ./...` exit 0; `gofmt -l .` empty.
+- bats `-j 4 --no-parallelize-within-files` lint-lifecycle-guard, lint-intrinsic-lock, lint-lexicon-apostrophe,
+  lint-charset-default, lint-structure, lint-slot-default-type, guard-pins, gen-lint-index, kit-links: 105/105 after
+  the L1 fix below (first run 104/105: three new ledger fragments named another fragment by bare file name, fixed
+  to `ledger.d/<file>`); build-sh, report-module, preflight, kit-links: 217/217; `check-bats-skips.sh` on both TAPs:
+  0 and 2 skips, all allowlisted.
+- `lint-guard-pins.sh --strict`: exit 0 (LG1-2, IL1-3, LX1, LX1-noargs, CD1-receiver MATCH). `scripts/ci-local.sh
+  --only shellcheck`: PASS (after a SC2016 directive on the PF-toolchains fake gradlew).
+- `gen-lint-index.sh`, `gen-retro-index.sh`, `gen-build-state.sh --check`: exit 0. `sweep-fold-audit.sh --strict
+  --exact-stems --deltas-since 2026-09-24`: 412/412 cited, 815 deltas, 0 not cited.
+- `kit-cite-resolve --strict` on every edited doc (METHODOLOGY.md, build-verify.md, types/logic.md, types/lexicon.md,
+  types/structure.md): LIVE 0, HISTORY 0.
+- `scripts/changelog-gate.sh --range 122208f9..HEAD`: PASS (7 fragments).
+
