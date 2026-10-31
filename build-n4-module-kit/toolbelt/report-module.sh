@@ -51,6 +51,9 @@
 # lint-vacuous-tests (FAIL rows block; kit backlog B6) (a module with no source they read, for lint-vacuous-tests no
 # srcTest/ *.java, is a SKIP row). lint-manual-labels is not a member: it needs an operator manual
 # path, which a module root does not name; lint-bacnet-status-flags is not one either: it reads a station bog.
+# Reference port (retro reference-port-parity Δ2): lint-port-parity.sh <module-root> once per run, only when the module
+# has a .port-parity file (no row otherwise); its FAIL rows (an unwaived reference absence, a waiver with no decision:)
+# block and its WARN rows (stale waivers) do not.
 # Module map (modularity campaign M5): lint-module-map.sh <module-root> once per run after lint-structure (FAIL
 # rows block, WARN rows such as MM1 "no MODULE-MAP.md" do not), then one `(module)  INFO  modularity  mode=<m>
 # concerns=<n> unlisted=<n> largest=<path> (<n> hand-written lines)` row: the mode the per-file rules apply

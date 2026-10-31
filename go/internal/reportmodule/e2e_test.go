@@ -79,3 +79,28 @@ func TestInvalidMapRelayEndToEnd(t *testing.T) {
 		t.Errorf("exit %d, want %d with the MM2 row relayed and mode=strict:\n%s", code, ExitFail, out)
 	}
 }
+
+// TestPortParityRelayEndToEnd (retro reference-port-parity Δ2): a module that declares a reference port in
+// .port-parity gets lint-port-parity's FAIL row for an unwaived absence, the ISSUES verdict and exit 1; a module
+// without the file gets no lint-port-parity row at all (most modules port nothing).
+func TestPortParityRelayEndToEnd(t *testing.T) {
+	if testing.Short() {
+		t.Skip("runs toolbelt members as subprocesses")
+	}
+	t.Parallel()
+	root := moduleTree(t, map[string]string{
+		"../ref/ui.js":      "function renderLevels() {}\nfunction renderEquipment() {}\n",
+		"A-ux/src/rc/ui.js": "function renderLevels() {}\n",
+		".port-parity":      "ref: ../ref\nport: A-ux/src/rc\n",
+	})
+	code, out := realMembers(t, root, "lint-port-parity")
+	if code != ExitFail || !strings.Contains(out, "(module)  FAIL  lint-port-parity  ui.js:2  missing function renderEquipment") ||
+		!strings.Contains(out, "->  ISSUES") {
+		t.Errorf("exit %d, output:\n%s", code, out)
+	}
+	must(t, os.Remove(filepath.Join(root, ".port-parity")))
+	code, out = realMembers(t, root, "lint-port-parity")
+	if code != 0 || strings.Contains(out, "lint-port-parity") {
+		t.Errorf("no .port-parity: exit %d, output:\n%s", code, out)
+	}
+}

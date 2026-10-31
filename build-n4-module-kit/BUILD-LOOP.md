@@ -12,6 +12,13 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
   "what not to copy" fixes (niagara-research corpus B1242 §1242.4) only as named, opt-in changes. The N4 Developer
   course is a primary exemplar source: blocks B1230-B1258, synthesis B1242. `[ev: retro n4-course-as-exemplar-source Δ2]`
 - Copying a reference file whole (diff first) and work on a laptop running Workbench: `METHODOLOGY.md` § Hands-on work.
+- **A reference port runs port-parity before hand-off; every absence needs a decision reference.** A module that
+  ports a reference frontend (a viewer, a prototype, an earlier dashboard) declares it in `<module-root>/.port-parity`
+  (`ref: <reference dir>`, optional `port: <dir>`) and lists each reference file, DOM id or named function the port
+  leaves out as `<file|id|function> <name> -- <reason> [decision: <ref>]` (`rename: <ref> -> <port>` for a renamed
+  file). `toolbelt/lint-port-parity.sh <module-root>` FAILs an unwaived absence and a waiver with no `decision:`;
+  `report-module.sh` runs it on every module that has the file. A design table saying "same" is not a check.
+  `[ev: retro reference-port-parity Δ1]` `[ev: retro reference-port-parity Δ2]`
 - Pick the module type (SKILL.md decision table) → load `types/<type>.md`.
 - **Read the client's version ledger before the first write of a new session on that client:** `odd/VERSION-LEDGER.md` in the client repository (scaffold: `templates/VERSION-LEDGER.md`). Check its `Class` column against the classes the new work is likely to hit — the template's "Root-cause classes" table maps typical new work to classes and is the only copy of that map — and read those rows' prevention deltas first. Verify a candidate against the CLIENT's own history, not just this session's. No ledger yet → create it from the template at this session's close. `[ev: retro panccadia-version-defect-ledger Δ2]`
 

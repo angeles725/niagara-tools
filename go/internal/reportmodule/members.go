@@ -132,6 +132,8 @@ var perModule = []member{
 	{script: "lint-structural-tests", in: inArtifact, f: warnOnly, noSource: "no *.java under a srcTest/"},
 	{script: "lint-logger-name", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt, -ux, -wb or -se part's src/"},
 	{script: "lint-adapter-cfg-default", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt part's src/"},
+	// retro reference-port-parity Δ2: only a module that declares a reference port (.port-parity) is checked.
+	{script: "lint-port-parity", special: (*report).portParity},
 }
 
 // Scripts lists every toolbelt member the report runs, as script file names (lint-timers.sh, ...), each once
@@ -255,4 +257,20 @@ func (r *report) haveSrc(a artifact, check string) bool {
 	}
 	r.emit(a.name, skip, check, "no src/")
 	return false
+}
+
+// portParity runs lint-port-parity on a module that declares the reference frontend it ports
+// (<module-root>/.port-parity) and relays its FAIL and WARN rows (PASS "clean" with no FAIL row). A module
+// without the file gets no row: most modules port nothing, and a SKIP row on every report would be noise.
+func (r *report) portParity(a artifact) {
+	const check = "lint-port-parity"
+	// Mutation: RM-port-parity-gate -- dropping the .port-parity gate makes every module's report an env fault
+	if !isFile(a.dir + "/.port-parity") {
+		return
+	}
+	out, code, ok := r.x.member(check, a.dir)
+	if r.truncated(a.name, check, check+".sh", ok) {
+		return
+	}
+	r.lintRows(a.name, check, code, out, failWarn, failRows)
 }

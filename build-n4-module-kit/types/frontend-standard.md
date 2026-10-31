@@ -261,6 +261,11 @@ written for the panel):
   block that reassigns the prototype's global functions. The simulation mode survives only as a mock
   service selected by `config.js`. Complements the "module is the SKELETON" rule in `dashboard.md`
   § Extending an existing dashboard.
+- [both] A port of a reference frontend runs port-parity before hand-off; every absence needs a decision
+  reference. Declare the reference in `<module-root>/.port-parity` (`ref:` header) and waive each dropped file,
+  DOM id or function with `[decision: <ref>]` (the user's decision, e.g. `W5` or `user 2026-10-13`);
+  `toolbelt/lint-port-parity.sh` and `report-module.sh` FAIL anything else, so a view cannot disappear between
+  the reference and the port unseen. `[ev: retro reference-port-parity Δ1]` `[ev: retro reference-port-parity Δ3]`
 
 ## UI API changes across NRE versions `[ev: retro t9c-reference-gaps Δ3]`
 

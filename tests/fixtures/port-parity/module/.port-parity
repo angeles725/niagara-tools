@@ -1,0 +1,9 @@
+# Port parity: the reference viewer this module ports, and every reference feature the port leaves out.
+ref: ../reference
+port: src/rc
+
+rename: update-banner.js -> banner.js -- file renamed in the port
+id equipmentView -- the equipment view moved to its own module [decision: W5]
+id eqPanel -- part of the equipment view [decision: W5]
+function renderEquipment -- part of the equipment view [decision: W5]
+function eqHistory -- part of the equipment view [decision: W5]
