@@ -192,6 +192,10 @@ open_issues:
   - RDD - inventory/EX slice (6735dc2..13cac94) unreviewed (lens_context_budget_exceeded); wire-sheet slice approved (review-5482bccbb3d7ca27) with 6 advisory WARNINGs; T5 review in progress.
   - Port-parity waivers to add once the kit gate lands - Horarios (W5), simulator files (no-sim rule), update banner (BD7), noModel (BD8).
   - Lexicon has only dotted AhuPanel./VavPanel. keys - Workbench shows friendly slot names, not the Spanish labels.
+retro_required: true
+retro_pending: true
+last_commit: e33b76a
+last_session: 2026-10-31 · n4-copia: N4 reference viewer + 13 VAV, untagged AHU names, EX removed, per-row wire sheet + Reacomodar, equipment view restored on every level (1.4.0 -> 1.4.1 installed); retro 2026-10-31-client-e-dashboard-n4-copia (18 deltas)
 <!-- /build-state.v1 -->
 
 ## chihuahua (reference exemplar — not built from this kit)
