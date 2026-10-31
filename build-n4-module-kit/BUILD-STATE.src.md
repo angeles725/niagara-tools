@@ -167,6 +167,33 @@ last_commit: unknown               # client repo; not committed this session
 last_session: 2026-09-16 · created from DashboardPan exemplar (B1015); rt+ux green @4.14, 3D SPA wired to /api/equipment; next: real point wiring + deploy
 <!-- /build-state.v1 -->
 
+## ClientEDashboard — client-E BAS dashboard (rt facade + ux SPA + 3D, COB/EGL levels)
+
+<!-- build-state.v1 -->
+module: ClientEDashboard
+module_repo: client trees/client E/dashboard
+module_root: <client-E module root>
+source_of_truth: client trees/client E/dashboard@feat/client-e-dashboard-n4-copia@e33b76a   # local git, no remote
+type: dashboard
+profiles: rt,ux
+ui_profile: lan
+modularity: legacy                 # ClientEDashboard/MODULE-MAP.md added 2026-10-30 (11 concerns, 0 unlisted)
+target_version: 4.15                # Niagara 4.15.6.20
+plugin_version: 7.6.22
+last_build: 2026-10-31             # kit-main c9164303 build.sh --plugin-version 7.6.22 --target-version 4.15 --ui-profile lan on mirror n41562 (vendorVersion 1.4.1); build/libs signed by the mirror throwaway key, deploy copies re-signed with the user dev key (77:80)
+bytecode_major: 52
+signed: yes
+verify_gate: pass                  # 2026-10-31 · verify-module 28 PASS / 0 FAIL / 26 WARN; report-module 0 FAIL (INCOMPLETE: no .deploy-baseline); schema-risk vs 1.4.0 rt SAFE ux SAFE
+deployed: yes                      # 1.4.1 on the local 4.15.6.20 station the local test station, 2026-10-31
+target_station: local 4.15.6.20 (the local test station)
+pure_tests: node 241 + JUnit rt/ux (all GREEN 2026-10-31); go test levelgen ok
+open_issues:
+  - Live checks pending on 1.4.1 - sync, delete EX_* and AHU_SinTag_* by hand, Reacomodar twice (second run moved=0 proves the wixelHeight assumption), equipment view per level, VAV_401/AHU_14A write + read-back, reset pulse.
+  - RDD - inventory/EX slice (6735dc2..13cac94) unreviewed (lens_context_budget_exceeded); wire-sheet slice approved (review-5482bccbb3d7ca27) with 6 advisory WARNINGs; T5 review in progress.
+  - Port-parity waivers to add once the kit gate lands - Horarios (W5), simulator files (no-sim rule), update banner (BD7), noModel (BD8).
+  - Lexicon has only dotted AhuPanel./VavPanel. keys - Workbench shows friendly slot names, not the Spanish labels.
+<!-- /build-state.v1 -->
+
 ## chihuahua (reference exemplar — not built from this kit)
 
 <!-- build-state.v1 -->
