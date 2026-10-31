@@ -1,11 +1,15 @@
 package portparity
 
-import "fmt"
+import (
+	"fmt"
+	"path"
+)
 
 // Severities of a finding.
 const (
 	Fail = "FAIL"
 	Warn = "WARN"
+	Info = "INFO"
 )
 
 // Finding is one row of the report: a missing item (Site in the reference tree) or a waiver problem (Site
@@ -24,9 +28,11 @@ type Counts struct {
 	RefIDs   int `json:"ref_ids"`
 	RefFuncs int `json:"ref_functions"`
 	Missing  int `json:"missing"`
-	Waived   int `json:"waived"`
+	Waived   int `json:"waived"`   // explicit and cascaded
+	Cascaded int `json:"cascaded"` // waived via a file waiver (INFO rows)
 	Fail     int `json:"fail"`
 	Warn     int `json:"warn"`
+	Info     int `json:"info"`
 }
 
 // Result is a check's findings, missing items first (Missing order), then waiver rows in line order.
@@ -38,8 +44,9 @@ type Result struct {
 // Failed reports whether any finding is a FAIL.
 func (r Result) Failed() bool { return r.Counts.Fail > 0 }
 
-// Check judges every reference item the port lacks against wf. A missing item a waiver names is waived;
-// any other is a FAIL. Each waiver adds at most one row: malformed (FAIL), no decision reference (FAIL:
+// Check judges every reference item the port lacks against wf. A missing item a waiver names is waived; an
+// id or function that only file-waived reference files define is waived via that file (an INFO row); any
+// other is a FAIL. Each waiver adds at most one row: malformed (FAIL), no decision reference (FAIL:
 // dropping a reference feature needs a recorded user decision), a rename whose target the port lacks
 // (FAIL), or stale, matching no missing item (WARN). waiverPath labels the waiver rows.
 func Check(ref, port Tree, wf WaiverFile, waiverPath string) Result {
@@ -59,12 +66,27 @@ func Check(ref, port Tree, wf WaiverFile, waiverPath string) Result {
 			byKey[key(k, w.Name)] = w
 		}
 	}
+	// File waivers with a decision cascade to the ids and functions only their file defines.
+	waivedFiles := map[string]bool{}
+	for _, w := range wf.Waivers {
+		if w.Problem == "" && w.Kind == KindFile && w.Decision != "" {
+			waivedFiles[w.Name] = true
+		}
+	}
 	for _, it := range Missing(ref, port) {
 		res.Counts.Missing++
 		// Mutation: PP-waiver-match -- ignoring waivers FAILs every waived absence (the clean fixture exits 1)
 		if w := byKey[key(it.Kind, it.Name)]; w != nil {
 			used[w.Line] = true
 			res.Counts.Waived++
+			continue
+		}
+		// Mutation: PP-cascade-shared -- cascading a name another reference file also defines hides that file's drop
+		if f := onlyIn(ref.Defs[it.Kind][it.Name], waivedFiles); f != "" {
+			res.Counts.Waived++
+			res.Counts.Cascaded++
+			res.add(Finding{Info, it.Site(), it.Kind, it.Name,
+				fmt.Sprintf("%s %s waived via file %s (defined only in that reference file)", it.Kind, it.Name, f)})
 			continue
 		}
 		res.add(Finding{Fail, it.Site(), it.Kind, it.Name,
@@ -88,13 +110,29 @@ func Check(ref, port Tree, wf WaiverFile, waiverPath string) Result {
 	return res
 }
 
+// onlyIn returns the waived file basename when every defining file of a name has that one basename, else "".
+func onlyIn(defs []string, waived map[string]bool) string {
+	base := ""
+	for _, d := range defs {
+		b := path.Base(d)
+		if !waived[b] || base != "" && b != base {
+			return ""
+		}
+		base = b
+	}
+	return base
+}
+
 func key(k Kind, name string) string { return string(k) + "\x00" + name }
 
 func (r *Result) add(f Finding) {
 	r.Findings = append(r.Findings, f)
-	if f.Severity == Fail {
+	switch f.Severity {
+	case Fail:
 		r.Counts.Fail++
-	} else {
+	case Warn:
 		r.Counts.Warn++
+	default:
+		r.Counts.Info++
 	}
 }

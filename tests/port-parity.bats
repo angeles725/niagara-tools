@@ -12,10 +12,13 @@ setup() {
   cp -r "$FX" "$W"
 }
 
-@test "PP1: every absence waived with a decision is clean (exit 0, summary line, no row)" {
+@test "PP1: every absence waived with a decision is clean (exit 0, two cascade INFO rows, then the summary line)" {
   run "$PP" "$W/module"
   [ "$status" -eq 0 ]
-  [ "$output" = "port-parity: 3 files, 4 ids, 4 functions in the reference; 5 missing, 5 waived, 0 FAIL, 0 WARN" ]
+  [ "${#lines[@]}" -eq 3 ]
+  [[ "${lines[0]}" == "INFO  "* ]]
+  [[ "${lines[1]}" == "INFO  "* ]]
+  [ "${lines[2]}" = "port-parity: 4 files, 5 ids, 5 functions in the reference; 8 missing, 8 waived, 0 FAIL, 0 WARN" ]
 }
 
 @test "PP-drop-waiver: removing one waiver line flips exit 0 to 1 and names the unwaived function" {
@@ -38,7 +41,31 @@ setup() {
   printf 'function renderLevels -- not dropped [decision: W6]\n' >> "$W/module/.port-parity"
   run "$PP" "$W/module"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"WARN  lint-port-parity  .port-parity:10  stale waiver: function renderLevels matches no missing item (remove the line)"* ]]
+  [[ "$output" == *"WARN  lint-port-parity  .port-parity:11  stale waiver: function renderLevels matches no missing item (remove the line)"* ]]
+}
+
+@test "PP-cascade: a file waiver waives what only that file defines, as INFO rows" {
+  run "$PP" "$W/module"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"INFO  lint-port-parity  js/sim.js:1  function simTick waived via file sim.js (defined only in that reference file)"* ]]
+  [[ "$output" == *"INFO  lint-port-parity  js/sim.js:6  id simPanel waived via file sim.js (defined only in that reference file)"* ]]
+}
+
+@test "PP-cascade-shared: a name the waived file shares with another reference file is not cascaded" {
+  # Mutation: PP-cascade-shared -- cascading a name another reference file also defines hides that file's drop
+  sed -i '/^function eqHistory /d' "$W/module/.port-parity"
+  run "$PP" "$W/module"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-port-parity  js/sim.js:5  missing function eqHistory (in the reference, not in the port, no waiver)"* ]]
+}
+
+@test "PP-drop-file-waiver: removing the file waiver line flips exit 0 to 1 for the file and what it defined" {
+  # Mutation: PP-drop-file-waiver -- a cascade that does not need the file waiver stays exit 0 here
+  sed -i '/^file sim.js /d' "$W/module/.port-parity"
+  run "$PP" "$W/module"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-port-parity  js/sim.js:1  missing file sim.js"* ]]
+  [[ "$output" == *"FAIL  lint-port-parity  js/sim.js:1  missing function simTick"* ]]
 }
 
 @test "PP-rename: dropping the rename line FAILs the reference file the port renamed" {
@@ -51,8 +78,8 @@ setup() {
 @test "PP-flags: --ref/--port without waivers FAILs every absence, JSON on --format json" {
   run "$PP" --ref "$W/reference" --port "$W/module/src/rc" --format json
   [ "$status" -eq 1 ]
-  [[ "$output" == *'"missing": 5'* ]]
-  [[ "$output" == *'"fail": 5'* ]]
+  [[ "$output" == *'"missing": 8'* ]]
+  [[ "$output" == *'"fail": 8'* ]]
 }
 
 @test "PP-env: a module with no .port-parity is exit 3 naming the file (report-module SKIPs it)" {

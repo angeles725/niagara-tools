@@ -48,6 +48,9 @@ func (it Item) Site() string { return fmt.Sprintf("%s:%d", it.Path, it.Line) }
 type Tree struct {
 	Root              string
 	Files, IDs, Funcs map[string]Item
+	// Defs lists, per id or function name, every root-relative file that defines it (walk order, each once):
+	// a file waiver cascades only to a name no other reference file defines.
+	Defs map[Kind]map[string][]string
 }
 
 var (
@@ -87,7 +90,8 @@ func extract(text string) (ids, funcs []match) {
 // dot-directories and *.min.js skipped). A root that is not a directory, an unreadable file or a root
 // with no such file is an error: an empty scan would make every reference item look waived or absent.
 func Scan(root string) (Tree, error) {
-	t := Tree{Root: root, Files: map[string]Item{}, IDs: map[string]Item{}, Funcs: map[string]Item{}}
+	t := Tree{Root: root, Files: map[string]Item{}, IDs: map[string]Item{}, Funcs: map[string]Item{},
+		Defs: map[Kind]map[string][]string{KindID: {}, KindFunction: {}}}
 	if st, err := os.Stat(root); err != nil {
 		return t, err
 	} else if !st.IsDir() {
@@ -118,8 +122,8 @@ func Scan(root string) (Tree, error) {
 		}
 		text := string(b)
 		ids, funcs := extract(text)
-		add(t.IDs, KindID, ids, text, rel)
-		add(t.Funcs, KindFunction, funcs, text, rel)
+		add(t.IDs, t.Defs[KindID], KindID, ids, text, rel)
+		add(t.Funcs, t.Defs[KindFunction], KindFunction, funcs, text, rel)
 		return nil
 	})
 	if err != nil {
@@ -131,11 +135,15 @@ func Scan(root string) (Tree, error) {
 	return t, nil
 }
 
-// add records each match not seen before (first occurrence wins) with its 1-based line.
-func add(into map[string]Item, k Kind, ms []match, text, rel string) {
+// add records each match not seen before (first occurrence wins) with its 1-based line, and rel as a
+// defining file of each name.
+func add(into map[string]Item, defs map[string][]string, k Kind, ms []match, text, rel string) {
 	for _, m := range ms {
 		if _, ok := into[m.name]; !ok {
 			into[m.name] = Item{k, m.name, rel, 1 + strings.Count(text[:m.at], "\n")}
+		}
+		if d := defs[m.name]; len(d) == 0 || d[len(d)-1] != rel {
+			defs[m.name] = append(d, rel)
 		}
 	}
 }

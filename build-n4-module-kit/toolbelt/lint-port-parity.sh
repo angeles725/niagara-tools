@@ -15,10 +15,15 @@
 #   FAIL  lint-port-parity  <ref-file>:<line>  missing <kind> <name> (in the reference, not in the port, no waiver)
 #   FAIL  lint-port-parity  .port-parity:<n>  waiver <kind> <name> has no [decision: <ref>] (...)
 #   FAIL  lint-port-parity  .port-parity:<n>  malformed waiver (...) · rename target <f> is not a file of the port
+#   INFO  lint-port-parity  <ref-file>:<line>  <kind> <name> waived via file <f> (defined only in that reference file):
+#         a `file` waiver with a decision also waives every id and function only that reference file defines; a
+#         name another, non-waived reference file also defines is still a FAIL row. INFO rows never fail.
 #   WARN  lint-port-parity  .port-parity:<n>  stale waiver: <kind> <name> matches no missing item (remove the line)
 # then one `port-parity: <n> files, <n> ids, <n> functions in the reference; ...` summary line (not a row).
 # Mutation: PP-drop-waiver -- a gate that ignores missing items stays exit 0 when one waiver line is removed
 # Mutation: PP-no-decision -- accepting a reason alone lets a reference feature drop with no recorded decision
+# Mutation: PP-cascade-shared -- cascading a name another reference file also defines hides that file's drop
+# Mutation: PP-drop-file-waiver -- a cascade that does not need the file waiver stays exit 0 when the file line is removed
 #
 # Usage: lint-port-parity.sh [--format text|json] <module-root>
 # Usage: lint-port-parity.sh --ref <dir> --port <dir> [--waivers <file>] [--format text|json]
