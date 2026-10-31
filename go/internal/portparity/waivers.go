@@ -5,12 +5,14 @@ import (
 	"strings"
 )
 
-// Waiver is one line of a parity file: `<kind> <name> -- <reason> [decision: <ref>]`, or
-// `rename: <ref-file> -> <port-file>` (a file the port carries under another basename; optional
-// ` -- <reason>`). Problem is set, and the other fields empty, for a line that matches neither shape.
+// Waiver is one line of a parity file: `<kind> <name> -- <reason> [decision: <ref>]`, or a rename:
+// `rename: <ref-file> -> <port-file>` (a file under another basename; optional ` -- <reason>`), or
+// `rename: <function|id> <ref> -> <port> -- <reason>` (the behaviour kept under another name; the reason is
+// required, checked by Check). Problem is set, and the other fields empty, for a line that matches no shape.
 type Waiver struct {
 	Line             int
 	Kind             Kind
+	Of               Kind // a rename's item kind: KindFile, KindID or KindFunction
 	Name, To         string
 	Reason, Decision string
 	Problem          string
@@ -23,11 +25,11 @@ type WaiverFile struct {
 	Waivers   []Waiver
 }
 
-const shape = `malformed waiver (want "<file|id|function> <name> -- <reason> [decision: <ref>]" or "rename: <ref> -> <port>"): `
+const shape = `malformed waiver (want "<file|id|function> <name> -- <reason> [decision: <ref>]" or "rename: [function|id] <ref> -> <port> -- <reason>"): `
 
 var (
 	headerRe   = regexp.MustCompile(`^(ref|port):\s*(.*)$`)
-	renameRe   = regexp.MustCompile(`^rename:\s*(\S+)\s*->\s*(\S+)(?:\s+--\s+(.*))?$`)
+	renameRe   = regexp.MustCompile(`^rename:\s*(?:(id|function)\s+)?(\S+)\s*->\s*(\S+)(?:\s+--\s+(.*))?$`)
 	waiverRe   = regexp.MustCompile(`^(file|id|function)\s+(\S+)\s+--\s+(.*)$`)
 	decisionRe = regexp.MustCompile(`\[decision:\s*([^\]]*)\]`)
 )
@@ -50,7 +52,11 @@ func ParseWaivers(text string) WaiverFile {
 			continue
 		}
 		if m := renameRe.FindStringSubmatch(line); m != nil {
-			wf.Waivers = append(wf.Waivers, Waiver{Line: n, Kind: KindRename, Name: m[1], To: m[2], Reason: strings.TrimSpace(m[3])})
+			of := KindFile
+			if m[1] != "" {
+				of = Kind(m[1])
+			}
+			wf.Waivers = append(wf.Waivers, Waiver{Line: n, Kind: KindRename, Of: of, Name: m[2], To: m[3], Reason: strings.TrimSpace(m[4])})
 			continue
 		}
 		m := waiverRe.FindStringSubmatch(line)

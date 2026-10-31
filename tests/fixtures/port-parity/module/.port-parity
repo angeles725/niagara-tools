@@ -8,3 +8,4 @@ id eqPanel -- part of the equipment view [decision: W5]
 function renderEquipment -- part of the equipment view [decision: W5]
 function eqHistory -- part of the equipment view [decision: W5]
 file sim.js -- the simulator is not shipped [decision: W7]
+rename: function drawLevelTitle -> levelTitle -- renamed in the port

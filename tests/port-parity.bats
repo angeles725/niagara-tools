@@ -12,13 +12,14 @@ setup() {
   cp -r "$FX" "$W"
 }
 
-@test "PP1: every absence waived with a decision is clean (exit 0, two cascade INFO rows, then the summary line)" {
+@test "PP1: every absence waived with a decision is clean (exit 0, three INFO rows, then the summary line)" {
   run "$PP" "$W/module"
   [ "$status" -eq 0 ]
-  [ "${#lines[@]}" -eq 3 ]
+  [ "${#lines[@]}" -eq 4 ]
   [[ "${lines[0]}" == "INFO  "* ]]
   [[ "${lines[1]}" == "INFO  "* ]]
-  [ "${lines[2]}" = "port-parity: 4 files, 5 ids, 5 functions in the reference; 8 missing, 8 waived, 0 FAIL, 0 WARN" ]
+  [[ "${lines[2]}" == "INFO  "* ]]
+  [ "${lines[3]}" = "port-parity: 4 files, 5 ids, 6 functions in the reference; 9 missing, 9 waived, 0 FAIL, 0 WARN" ]
 }
 
 @test "PP-drop-waiver: removing one waiver line flips exit 0 to 1 and names the unwaived function" {
@@ -41,7 +42,7 @@ setup() {
   printf 'function renderLevels -- not dropped [decision: W6]\n' >> "$W/module/.port-parity"
   run "$PP" "$W/module"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"WARN  lint-port-parity  .port-parity:11  stale waiver: function renderLevels matches no missing item (remove the line)"* ]]
+  [[ "$output" == *"WARN  lint-port-parity  .port-parity:12  stale waiver: function renderLevels matches no missing item (remove the line)"* ]]
 }
 
 @test "PP-cascade: a file waiver waives what only that file defines, as INFO rows" {
@@ -75,11 +76,32 @@ setup() {
   [[ "$output" == *"FAIL  lint-port-parity  js/update-banner.js:1  missing file update-banner.js"* ]]
 }
 
+@test "PP-rename-fn: a function renamed in the port passes as INFO renamed to <port>" {
+  run "$PP" "$W/module"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"INFO  lint-port-parity  js/ui.js:11  function drawLevelTitle renamed to levelTitle (renamed in the port)"* ]]
+}
+
+@test "PP-rename-target: a function rename whose target the port lacks FAILs" {
+  # Mutation: PP-rename-target -- accepting a rename whose target is absent hides a dropped function or id
+  sed -i 's/^rename: function drawLevelTitle -> levelTitle /rename: function drawLevelTitle -> noSuchTitle /' "$W/module/.port-parity"
+  run "$PP" "$W/module"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-port-parity  .port-parity:11  rename target function noSuchTitle is not in the port"* ]]
+}
+
+@test "PP-rename-reason: a function rename without -- <reason> FAILs" {
+  sed -i 's/^rename: function drawLevelTitle -> levelTitle -- renamed in the port$/rename: function drawLevelTitle -> levelTitle/' "$W/module/.port-parity"
+  run "$PP" "$W/module"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-port-parity  .port-parity:11  rename function drawLevelTitle -> levelTitle has no -- <reason>"* ]]
+}
+
 @test "PP-flags: --ref/--port without waivers FAILs every absence, JSON on --format json" {
   run "$PP" --ref "$W/reference" --port "$W/module/src/rc" --format json
   [ "$status" -eq 1 ]
-  [[ "$output" == *'"missing": 8'* ]]
-  [[ "$output" == *'"fail": 8'* ]]
+  [[ "$output" == *'"missing": 9'* ]]
+  [[ "$output" == *'"fail": 9'* ]]
 }
 
 @test "PP-env: a module with no .port-parity is exit 3 naming the file (report-module SKIPs it)" {

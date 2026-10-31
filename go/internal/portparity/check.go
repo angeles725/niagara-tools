@@ -47,7 +47,8 @@ func (r Result) Failed() bool { return r.Counts.Fail > 0 }
 // Check judges every reference item the port lacks against wf. A missing item a waiver names is waived; an
 // id or function that only file-waived reference files define is waived via that file (an INFO row); any
 // other is a FAIL. Each waiver adds at most one row: malformed (FAIL), no decision reference (FAIL:
-// dropping a reference feature needs a recorded user decision), a rename whose target the port lacks
+// dropping a reference feature needs a recorded user decision), a rename whose target the port lacks or (for a
+// function or id rename, which passes as an INFO row "renamed to <port>") without a reason
 // (FAIL), or stale, matching no missing item (WARN). waiverPath labels the waiver rows.
 func Check(ref, port Tree, wf WaiverFile, waiverPath string) Result {
 	res := Result{Counts: Counts{RefFiles: len(ref.Files), RefIDs: len(ref.IDs), RefFuncs: len(ref.Funcs)}}
@@ -60,7 +61,7 @@ func Check(ref, port Tree, wf WaiverFile, waiverPath string) Result {
 		}
 		k := w.Kind
 		if k == KindRename {
-			k = KindFile
+			k = w.Of
 		}
 		if _, dup := byKey[key(k, w.Name)]; !dup {
 			byKey[key(k, w.Name)] = w
@@ -77,8 +78,14 @@ func Check(ref, port Tree, wf WaiverFile, waiverPath string) Result {
 		res.Counts.Missing++
 		// Mutation: PP-waiver-match -- ignoring waivers FAILs every waived absence (the clean fixture exits 1)
 		if w := byKey[key(it.Kind, it.Name)]; w != nil {
+			// a broken rename is not waived: its waiver row FAILs instead of a second row for the item
 			used[w.Line] = true
-			res.Counts.Waived++
+			if w.Kind != KindRename || w.Of == KindFile {
+				res.Counts.Waived++
+			} else if renameOK(port, *w) {
+				res.Counts.Waived++
+				res.add(Finding{Info, it.Site(), it.Kind, it.Name, fmt.Sprintf("%s %s renamed to %s (%s)", it.Kind, it.Name, w.To, w.Reason)})
+			}
 			continue
 		}
 		// Mutation: PP-cascade-shared -- cascading a name another reference file also defines hides that file's drop
@@ -97,8 +104,15 @@ func Check(ref, port Tree, wf WaiverFile, waiverPath string) Result {
 		switch {
 		case w.Problem != "":
 			res.add(Finding{Fail, site, "", "", w.Problem})
-		case w.Kind == KindRename && port.Files[w.To].Name == "":
+		case w.Kind == KindRename && w.Of == KindFile && port.Files[w.To].Name == "":
 			res.add(Finding{Fail, site, w.Kind, w.Name, fmt.Sprintf("rename target %s is not a file of the port", w.To)})
+		case w.Kind == KindRename && w.Of != KindFile && w.Reason == "":
+			res.add(Finding{Fail, site, w.Of, w.Name, fmt.Sprintf("rename %s %s -> %s has no -- <reason> (say why the port renamed it)", w.Of, w.Name, w.To)})
+		// Mutation: PP-rename-target -- accepting a rename whose target is absent hides a dropped function or id
+		case w.Kind == KindRename && w.Of != KindFile && !renameOK(port, w):
+			res.add(Finding{Fail, site, w.Of, w.Name, fmt.Sprintf("rename target %s %s is not in the port", w.Of, w.To)})
+		case w.Kind == KindRename && w.Of != KindFile && !used[w.Line] && inPort(port, w.Of, w.Name):
+			res.add(Finding{Warn, site, w.Of, w.Name, fmt.Sprintf("stale rename: %s %s is still in the port (remove the line)", w.Of, w.Name)})
 		// Mutation: PP-no-decision -- accepting a waiver without [decision: ...] lets a feature drop silently
 		case w.Kind != KindRename && w.Decision == "":
 			res.add(Finding{Fail, site, w.Kind, w.Name, fmt.Sprintf(
@@ -108,6 +122,18 @@ func Check(ref, port Tree, wf WaiverFile, waiverPath string) Result {
 		}
 	}
 	return res
+}
+
+// renameOK reports whether a function or id rename has its target in the port as the same kind and a reason.
+func renameOK(port Tree, w Waiver) bool { return w.Reason != "" && inPort(port, w.Of, w.To) }
+
+func inPort(port Tree, k Kind, name string) bool {
+	m := port.Funcs
+	if k == KindID {
+		m = port.IDs
+	}
+	_, ok := m[name]
+	return ok
 }
 
 // onlyIn returns the waived file basename when every defining file of a name has that one basename, else "".

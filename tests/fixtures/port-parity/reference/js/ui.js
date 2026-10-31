@@ -7,3 +7,7 @@ function renderEquipment(eq) {
 }
 
 const eqHistory = (eq) => eq.history || [];
+
+function drawLevelTitle(level) {
+  return level.name;
+}

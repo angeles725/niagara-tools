@@ -16,7 +16,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
   ports a reference frontend (a viewer, a prototype, an earlier dashboard) declares it in `<module-root>/.port-parity`
   (`ref: <reference dir>`, optional `port: <dir>`) and lists each reference file, DOM id or named function the port
   leaves out as `<file|id|function> <name> -- <reason> [decision: <ref>]` (`rename: <ref> -> <port>` for a renamed
-  file; a `file` waiver also covers the ids and functions only that file defines). `toolbelt/lint-port-parity.sh <module-root>` FAILs an unwaived absence and a waiver with no `decision:`;
+  file, `rename: function|id <ref> -> <port> -- <reason>` for a renamed function or id; a `file` waiver also covers the ids and functions only that file defines). `toolbelt/lint-port-parity.sh <module-root>` FAILs an unwaived absence and a waiver with no `decision:`;
   `report-module.sh` runs it on every module that has the file. A design table saying "same" is not a check.
   `[ev: retro reference-port-parity Δ1]` `[ev: retro reference-port-parity Δ2]`
 - Pick the module type (SKILL.md decision table) → load `types/<type>.md`.

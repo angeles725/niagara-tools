@@ -78,7 +78,7 @@ func TestCheck(t *testing.T) {
 			"FAIL .port-parity:1 rename target nope.js is not a file of the port",
 		}, true},
 		{"a malformed line FAILs", allWaived + "everything is fine\n", []string{
-			`FAIL .port-parity:4 malformed waiver (want "<file|id|function> <name> -- <reason> [decision: <ref>]" or "rename: <ref> -> <port>"): everything is fine`,
+			`FAIL .port-parity:4 malformed waiver (want "<file|id|function> <name> -- <reason> [decision: <ref>]" or "rename: [function|id] <ref> -> <port> -- <reason>"): everything is fine`,
 		}, true},
 	}
 	for _, tt := range tests {

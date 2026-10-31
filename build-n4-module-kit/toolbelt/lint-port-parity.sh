@@ -8,6 +8,8 @@
 #   port: <port dir>                 optional; default the module root
 #   <file|id|function> <name> -- <reason> [decision: <ref, e.g. W5 / user 2026-10-13>]
 #   rename: <reference file> -> <port file> [-- <reason>]
+#   rename: <function|id> <ref name> -> <port name> -- <reason>   (behaviour kept under another name; the port
+#           must have <port name> as the same kind; several renames may share one target; no decision needed)
 # Items per tree (.js .mjs .html .css; vendor/, node_modules/, data/, dot-dirs and *.min.js skipped): file
 # basenames, DOM ids (id="x", also inside JS strings) and named functions (function f, const f = ... =>).
 #
@@ -18,11 +20,15 @@
 #   INFO  lint-port-parity  <ref-file>:<line>  <kind> <name> waived via file <f> (defined only in that reference file):
 #         a `file` waiver with a decision also waives every id and function only that reference file defines; a
 #         name another, non-waived reference file also defines is still a FAIL row. INFO rows never fail.
+#   INFO  lint-port-parity  <ref-file>:<line>  <kind> <name> renamed to <port name> (<reason>)
+#   FAIL  lint-port-parity  .port-parity:<n>  rename target <kind> <name> is not in the port · rename ... has no -- <reason>
+#   WARN  lint-port-parity  .port-parity:<n>  stale rename: <kind> <name> is still in the port (remove the line)
 #   WARN  lint-port-parity  .port-parity:<n>  stale waiver: <kind> <name> matches no missing item (remove the line)
 # then one `port-parity: <n> files, <n> ids, <n> functions in the reference; ...` summary line (not a row).
 # Mutation: PP-drop-waiver -- a gate that ignores missing items stays exit 0 when one waiver line is removed
 # Mutation: PP-no-decision -- accepting a reason alone lets a reference feature drop with no recorded decision
 # Mutation: PP-cascade-shared -- cascading a name another reference file also defines hides that file's drop
+# Mutation: PP-rename-target -- accepting a rename whose target is absent hides a dropped function or id
 # Mutation: PP-drop-file-waiver -- a cascade that does not need the file waiver stays exit 0 when the file line is removed
 #
 # Usage: lint-port-parity.sh [--format text|json] <module-root>
