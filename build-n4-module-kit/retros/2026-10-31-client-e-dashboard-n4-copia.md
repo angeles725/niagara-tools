@@ -1,10 +1,10 @@
 <!-- review-status: pending -->
 <!-- module: ClientEDashboard -->
-<!-- deltas: 18 -->
+<!-- deltas: 22 -->
 # 2026-10-31 · ClientEDashboard · client-e-dashboard-n4-copia
 
 **Session**: ClientEDashboard feat/client-e-dashboard-n4-copia (v1.4.0 -> 1.4.1): N4 viewer from the reference, inventory merge, EX removal, wire-sheet relayout, equipment view restored
-**Delta count**: 18
+**Delta count**: 22
 
 ## What happened
 A live test of ClientEDashboard 1.3.0 on a local 4.15.6.20 station surfaced five defects that no gate caught: (a) the 30-oct
@@ -44,6 +44,10 @@ pasar esto"). The fixes shipped as 1.4.0/1.4.1; RDD could not review the invento
 | Δ16 | Two sessions of the same resumed conversation worked one module branch (a closed terminal window left the first alive in tmux); add a per-module session lock (`.build-n4.lock` with session name + pid, checked at orient-guard) and name a single owner | `BUILD-LOOP.md` § `0.a Orient from BUILD-STATE (before touching anything)` | `[ev: 0ea3508]` |
 | Δ17 | port-parity's first real run gave 20 false FAILs for names defined only in already-waived files; a `file` waiver now cascades to ids/functions only that file defines (fixed in the gate, c9f7bad2) | `types/frontend-standard.md` § `2. Structure and organization` | `[ev: bc48630]` |
 | Δ18 | A design that says "port of X" must ship a `.port-parity` declaration; today a module without the file is silently unchecked by lint-port-parity | `BUILD-LOOP.md` § `1. Design` | `[ev: bc48630]` |
+| Δ19 | rc-scan rule: no `stopPropagation`/`stopImmediatePropagation` in a 3D viewer's pointer handlers; a stopped pointerup leaves OrbitControls holding its pointer, so the camera follows the mouse after an overlay closes | `types/frontend-standard.md` § `2. Structure and organization` | `[ev: da14b03]` |
+| Δ20 | Before the build, offer the user a running localhost preview (`preview.py --scenario mixed --can-write`) to accept a UI fix; acceptance there costs minutes instead of a station restart | `BUILD-LOOP.md` § `3. Preview (UI types) — BEFORE compiling` | `[ev: da14b03]` |
+| Δ21 | A port-parity rename becomes stale (WARN) once the function is ported under its reference name; drop the line in the same commit as the port | `types/frontend-standard.md` § `2. Structure and organization` | `[ev: c0bd191]` |
+| Δ22 | Stop a background preview by its task id or recorded PID, never by a full-command-line pattern kill (that pattern also matches the calling shell's own command line; a hook refused it) | `BUILD-LOOP.md` § `3. Preview (UI types) — BEFORE compiling` | `[ev: da14b03]` |
 
 ## Lessons
 - A reference port is complete only when every reference feature is present or waived by a recorded user decision.
@@ -53,4 +57,4 @@ pasar esto"). The fixes shipped as 1.4.0/1.4.1; RDD could not review the invento
 - A data decision and its UI consequence are two decisions.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-31-client-e-dashboard-n4-copia.md | ClientEDashboard | 2026-10-31 | pending | 18 |`
+**Status**: PENDING — INDEX row generated from the header: `| 2026-10-31-client-e-dashboard-n4-copia.md | ClientEDashboard | 2026-10-31 | pending | 22 |`
