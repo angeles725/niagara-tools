@@ -119,8 +119,8 @@ func TestPlanAndReadbackDifferentialPython(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if string(got) != sc.Text() {
-			t.Errorf("case %d %s:\n go     %s\n python %s", i, cases[i], got, sc.Text())
+		if want := declared(sc.Text()); string(got) != want {
+			t.Errorf("case %d %s:\n go     %s\n python %s", i, cases[i], got, want)
 		}
 		kinds[outcome(sc.Text())]++
 	}
@@ -130,6 +130,14 @@ func TestPlanAndReadbackDifferentialPython(t *testing.T) {
 			t.Errorf("no case reaches %s", k)
 		}
 	}
+}
+
+// declared applies the declared differences from the frozen Python goldens to one recorded line.
+// declared difference: n4_set_slot also writes baja:Format and baja:RelTime (S10, after the
+// port), so the unknown value_type refusal lists them; every other byte is still compared.
+func declared(line string) string {
+	const python = "baja:StatusNumeric, baja:StatusBoolean\""
+	return strings.ReplaceAll(line, python, "baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime\"")
 }
 
 // outcome classifies a Python result line, so the corpus provably reaches every branch class.

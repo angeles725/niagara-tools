@@ -9,8 +9,10 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
-// ValueTypes is VALUE_TYPES: the value types n4_set_slot writes.
-var ValueTypes = []string{"baja:Double", "baja:Boolean", "baja:String", "baja:StatusNumeric", "baja:StatusBoolean"}
+// ValueTypes is VALUE_TYPES: the value types n4_set_slot writes. baja:Format and baja:RelTime
+// were added after the Python port (S10); the differential declares that difference.
+var ValueTypes = []string{"baja:Double", "baja:Boolean", "baja:String", "baja:StatusNumeric", "baja:StatusBoolean",
+	"baja:Format", "baja:RelTime"}
 
 // statusKind maps a Status type to the type of its value child.
 var statusKind = map[string]string{"baja:StatusNumeric": "baja:Double", "baja:StatusBoolean": "baja:Boolean"}
@@ -61,6 +63,8 @@ func Coerce(valueType string, value, status any) (any, error) {
 			return nil, ToolError("value must be a string for baja:String")
 		}
 		norm = value
+	case "baja:Format", "baja:RelTime":
+		return coerceSimple(valueType, value)
 	default:
 		return nil, valueTypeError()
 	}
@@ -98,7 +102,7 @@ func ToBSON(valueType string, norm any) *pyjson.Object {
 	case "baja:Boolean":
 		return bsonBool(norm)
 	}
-	return obj("nm", "p", "t", "baja:String", "v", norm)
+	return obj("nm", "p", "t", plainType(valueType), "v", norm)
 }
 
 func bsonDouble(f float64) *pyjson.Object {
