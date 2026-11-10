@@ -1,0 +1,23 @@
+{"history:NumericIntervalHistoryExt": {"c": [], "p": "history:IntervalHistoryExt"},
+ "history:IntervalHistoryExt": {"c": [
+   {"st": "p", "n": "interval", "dn": "Interval", "x": "min=r:1",
+    "v": {"nm": "p", "t": "baja:RelTime", "v": "900000", "d": "15 minutes"}}],
+  "p": "history:HistoryExt"},
+ "history:HistoryExt": {"c": [
+   {"st": "p", "n": "status", "dn": "Status", "f": "rt", "v": {"nm": "p", "t": "baja:Status", "v": "0", "d": "{ok}"}},
+   {"st": "p", "n": "enabled", "dn": "Enabled", "f": "o", "v": {"nm": "p", "t": "baja:Boolean", "v": "false", "d": "false"}},
+   {"st": "p", "n": "historyName", "dn": "History Name", "v": {"nm": "p", "t": "baja:Format", "v": "%parent.name%", "d": "%parent.name%"}},
+   {"st": "p", "n": "historyConfig", "dn": "History Config", "v": {"nm": "p", "t": "history:HistoryConfig", "d": ""}},
+   {"st": "a", "n": "enable", "dn": "Enable"}],
+  "p": "baja:PointExtension"},
+ "baja:PointExtension": {},
+ "history:HistoryConfig": {"c": [
+   {"st": "p", "n": "historyName", "dn": "History Name", "f": "rh", "v": {"nm": "p", "t": "baja:String", "v": "", "d": ""}},
+   {"st": "p", "n": "interval", "dn": "Interval", "f": "rA", "v": {"nm": "p", "t": "history:CollectionInterval", "v": "irregular", "d": "Irregular"}}],
+  "p": "baja:Struct"},
+ "baja:Struct": {},
+ "control:NumericPoint": {"c": [
+   {"st": "p", "n": "out", "dn": "Out", "v": {"nm": "p", "t": "baja:StatusNumeric", "d": "0.0 {ok}",
+    "s": [{"nm": "p", "n": "status", "t": "baja:Status", "v": "0"}]}}],
+  "p": "baja:Component"},
+ "baja:Component": {}}
