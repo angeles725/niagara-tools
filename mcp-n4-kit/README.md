@@ -249,8 +249,8 @@ is reported under `unknown`, never as dangling.
 ## Writing safely
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
-and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_set_slot`,
-`n4_invoke_action`, `n4_create_link`, plus the destructive class
+and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`,
+`n4_set_slot`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_rollback` and
 `n4_save_station`. Example:
 
@@ -330,6 +330,13 @@ Tool rules:
   `n4_save_station`.
 - `n4_create_component` follows a station rename on collision (the inverse and the
   read-back use the assigned name).
+- `n4_add_history(points, history_name, interval_ms)` adds one interval history
+  extension per point (1 to 50), created already configured (`historyName`,
+  `interval`, `enabled`, default true) in one batch under one confirmation token.
+  It refuses a point that already has a child named `ext_name` and, when the
+  pattern only uses `%name%` / `%parent...name%` tokens, a history name that would
+  repeat across the batch. The inverse removes every extension; the read-back
+  compares each one. Capacity stays at the default (500 records, Roll).
 
 Destructive tools use the same pipeline:
 
