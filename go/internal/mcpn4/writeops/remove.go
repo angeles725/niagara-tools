@@ -27,7 +27,7 @@ func removeScope(args *pyjson.Object) []any {
 // removePlan is _remove_plan.
 func removePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	nameArg, _ := args.Get("name")
-	nm, err := plan.Name("name", nameArg)
+	nm, err := plan.ExistingName("name", nameArg)
 	if err != nil {
 		return nil, err
 	}

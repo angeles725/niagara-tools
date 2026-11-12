@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
@@ -74,6 +75,22 @@ func Name(label string, value any) (string, error) {
 			pyjson.Repr(value))
 	}
 	return s, nil
+}
+
+// escapedNamePattern is a slot name as a station stores it: letters, digits, underscore and
+// SlotPath escapes ($ and two hex digits, e.g. $20 for a space).
+var escapedNamePattern = regexp.MustCompile(`^(?:[A-Za-z0-9_]|\$[0-9A-Fa-f]{2})+$`)
+
+// ExistingName is Name for a slot that already exists on the station: it also accepts the
+// station's escapes, so a component named with a space ("Numeric$20Writable40001") can be read,
+// copied or removed. New names stay plain (Name).
+func ExistingName(label string, value any) (string, error) {
+	s, ok := value.(string)
+	if ok && (namePattern.MatchString(s) || escapedNamePattern.MatchString(s)) {
+		return s, nil
+	}
+	// The refusal keeps Name's wording so the Python oracle comparison still matches it.
+	return Name(label, value)
 }
 
 // Handle is _handle: load ord and return its handle and nodes; no handle is a refusal.

@@ -42,7 +42,7 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		return nil, err
 	}
 	nameArg, _ := args.Get("name")
-	source, err := plan.Name("name", nameArg)
+	source, err := plan.ExistingName("name", nameArg)
 	if err != nil {
 		return nil, err
 	}
