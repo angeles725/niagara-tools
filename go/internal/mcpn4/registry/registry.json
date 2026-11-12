@@ -577,7 +577,7 @@
       "description": "Slot name, or a path of slot names separated by / for a nested slot; must be listed by the station or declared by its type"
      },
      "value": {
-      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes), a whole number for Integer (Java int range), or for Simple the encoded string of the type (an enum tag such as signedIntegerType or modbus, a Facets string such as units=u:celsius;...|precision=i:1, a LinearConversion scale;offset such as 0.1;0.0). A struct such as a Modbus FlexAddress is set through its child slots (dataAddress/addressFormat, dataAddress/address)"
+      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes), a whole number for Integer (Java int range), or for Simple the encoded string of the type (a whole number is sent as its decimal string, e.g. a Modbus address 40014 on dataAddress/address) (an enum tag such as signedInteger or modbus, a Facets string such as units=u:celsius;...|precision=i:1, a LinearConversion scale;offset such as 0.1;0.0). A struct such as a Modbus FlexAddress is set through its child slots (dataAddress/addressFormat, dataAddress/address)"
      },
      "value_type": {
       "type": "string",

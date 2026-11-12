@@ -14,14 +14,19 @@ import (
 // 300000).
 //
 // A baja:Integer is a whole number in the Java int range, sent as its decimal string. A
-// baja:Simple is any string: the encoded form of the slot's type (an enum's tag, a Facets or a
+// baja:Simple is any string (a whole number is taken as its decimal string): the encoded form of the slot's type (an enum's tag, a Facets or a
 // LinearConversion string), checked by the station's decodeFromString.
 func coerceSimple(valueType string, value any) (any, error) {
 	switch valueType {
 	case "baja:Simple":
+		if n, ok := value.(pyjson.Number); ok { // an MCP client may send "40014" as a number
+			if i, isInt := n.BigInt(); isInt {
+				return i.String(), nil
+			}
+		}
 		s, ok := value.(string)
 		if !ok {
-			return nil, ToolError("value must be a string (the encoded form, e.g. an enum tag) for baja:Simple")
+			return nil, ToolError("value must be a string or a whole number (the encoded form, e.g. an enum tag) for baja:Simple")
 		}
 		return s, nil
 	case "baja:Integer":

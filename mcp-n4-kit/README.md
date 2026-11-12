@@ -326,12 +326,14 @@ Tool rules:
   e.g. `300000` for a 5-minute history `interval`), `baja:Integer` (a whole number in
   the Java int range, e.g. a Modbus `deviceAddress`) and `baja:Simple`: any other simple,
   given as its encoded string and sent under the slot's own type (an enum tag such as
-  `signedIntegerType` for `dataType`, a Facets string) or under `simple_type` when the
+  `signedInteger` for `dataType`, a Facets string) or under `simple_type` when the
   value replaces the type (`driver:LinearConversion` with `0.1;0.0` for a proxy
   `conversion`; the rollback restores the old type, and the read-back checks the type).
   A struct is refused as a Simple: set its children, e.g. a Modbus address through
   `proxyExt/dataAddress/addressFormat` (`modbus`) and `proxyExt/dataAddress/address`
-  (`40005`, a `baja:String`).
+  (`40005`: send it as `baja:Simple`, which also takes a whole number, because an MCP
+  client may turn the string "40005" into a number). Enum tags come from the type's
+  range, e.g. Modbus `DataTypeEnum` is `integerType`, `signedInteger`, `floatType`.
 - `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto` and `ping`. `set`
   restores the previous `fallback` as its inverse; the others have none and the plan
   says so. `ping` on a driver network, device or point device ext asks the driver to

@@ -75,9 +75,9 @@ func TestAnIntegerValueOutsideTheJavaIntRangeOrNotWholeIsRefused(t *testing.T) {
 
 // An enum (or any other simple) keeps the slot's own type: the value is its encoded form, the tag.
 func TestASimpleValueKeepsTheSlotTypeAndSendsTheEncodedForm(t *testing.T) {
-	op, inv, notes, rb := mbPlanAndReadback(t, mbSet("dataType", "signedIntegerType", "baja:Simple"),
-		mbNodes("dataType", obj("t", "modbusCore:DataTypeEnum", "v", "signedIntegerType")))
-	if want := `{"nm": "s", "h": "9", "n": "dataType", "b": {"nm": "p", "t": "modbusCore:DataTypeEnum", "v": "signedIntegerType"}}`; op != want {
+	op, inv, notes, rb := mbPlanAndReadback(t, mbSet("dataType", "signedInteger", "baja:Simple"),
+		mbNodes("dataType", obj("t", "modbusCore:DataTypeEnum", "v", "signedInteger")))
+	if want := `{"nm": "s", "h": "9", "n": "dataType", "b": {"nm": "p", "t": "modbusCore:DataTypeEnum", "v": "signedInteger"}}`; op != want {
 		t.Errorf("op\n got  %s\n want %s", op, want)
 	}
 	if want := `{"nm": "s", "h": "9", "n": "dataType", "b": {"nm": "p", "t": "modbusCore:DataTypeEnum", "v": "integerType"}}`; inv != want {
@@ -86,7 +86,7 @@ func TestASimpleValueKeepsTheSlotTypeAndSendsTheEncodedForm(t *testing.T) {
 	if notes != `[]` {
 		t.Errorf("notes = %s, want none", notes)
 	}
-	if got := js(t, rb); got != `["signedIntegerType", "reply", "signedIntegerType", "verified"]` {
+	if got := js(t, rb); got != `["signedInteger", "reply", "signedInteger", "verified"]` {
 		t.Errorf("readback = %s", got)
 	}
 }
@@ -124,7 +124,7 @@ func TestASimpleWriteRefusesBadInputBeforeOrAfterLoading(t *testing.T) {
 		args *pyjson.Object
 		want string
 	}{
-		{mbSet("dataType", pyjson.IntLiteral("2"), "baja:Simple"), "value must be a string (the encoded form, e.g. an enum tag) for baja:Simple"},
+		{mbSet("dataType", true, "baja:Simple"), "value must be a string or a whole number (the encoded form, e.g. an enum tag) for baja:Simple"},
 		{mbSet("dataType", "x", "baja:Simple", "simple_type", "Linear"), "simple_type must be a type spec module:Type, got 'Linear'"},
 		{mbSet("dataType", "x", "baja:String", "simple_type", "driver:LinearConversion"), "simple_type only applies to baja:Simple"},
 		{mbSet("dataAddress", "modbus:40005", "baja:Simple"), "slot 'dataAddress' is a struct (modbusCore:FlexAddress); set its child slots, e.g. dataAddress/addressFormat"},
@@ -146,5 +146,22 @@ func TestTheAddressOfAModbusFlexAddressIsSetThroughItsChildSlot(t *testing.T) {
 	}
 	if rb[3] != "verified" {
 		t.Errorf("readback = %v", rb)
+	}
+}
+
+// An MCP client may turn a numeric-looking string into a JSON number: baja:Simple takes a whole
+// number as its decimal string, so a Modbus register address "40014" is still sent as text.
+func TestASimpleWholeNumberIsSentAsItsDecimalString(t *testing.T) {
+	op, _, _, rb := mbPlanAndReadback(t, mbSet("dataAddress/address", pyjson.IntLiteral("40014"), "baja:Simple"),
+		mbNodes("dataAddress/address", obj("t", "baja:String", "v", "40014")))
+	if want := `{"nm": "s", "h": "9", "n": "dataAddress/address", "b": {"nm": "p", "t": "baja:String", "v": "40014"}}`; op != want {
+		t.Errorf("op\n got  %s\n want %s", op, want)
+	}
+	if rb[3] != "verified" {
+		t.Errorf("readback = %v", rb)
+	}
+	c := &loads{nodes: obj(mb, mbNodes())}
+	if _, err := writeops.SetSlot.Plan(c, mbSet("dataAddress/address", pyjson.FloatNumber(1.5), "baja:Simple")); err == nil {
+		t.Errorf("a fractional number was accepted")
 	}
 }

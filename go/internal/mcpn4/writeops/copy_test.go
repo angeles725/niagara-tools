@@ -19,7 +19,7 @@ func gwTree() *pyjson.Object {
 	ext := obj("nm", "p", "n", "proxyExt", "h", "31", "t", "modbusCore:ModbusClientNumericProxyExt", "s", []any{
 		obj("nm", "p", "n", "status", "t", "baja:Status", "v", "14"),
 		obj("nm", "p", "n", "readValue", "t", "baja:StatusNumeric", "s", []any{obj("nm", "p", "n", "value", "v", "0.0")}),
-		obj("nm", "p", "n", "dataType", "t", "modbusCore:DataTypeEnum", "v", "signedIntegerType"),
+		obj("nm", "p", "n", "dataType", "t", "modbusCore:DataTypeEnum", "v", "signedInteger"),
 		addr})
 	point := obj("nm", "p", "n", "Setpoint", "h", "30", "t", "control:NumericWritable", "s", []any{
 		obj("nm", "p", "n", "out", "t", "baja:StatusNumeric", "s", []any{obj("nm", "p", "n", "value", "v", "0.0")}),
@@ -59,7 +59,7 @@ func TestACopyAddsTheConfiguredSubtreeOncePerNewNameWithoutRuntimeSlots(t *testi
 		`{"nm": "p", "t": "control:NumericWritable", "n": "Setpoint", "s": [` +
 		`{"nm": "p", "t": "baja:StatusNumeric", "n": "fallback", "s": [{"nm": "p", "n": "value", "v": "200.0"}]}, ` +
 		`{"nm": "p", "t": "modbusCore:ModbusClientNumericProxyExt", "n": "proxyExt", "s": [` +
-		`{"nm": "p", "t": "modbusCore:DataTypeEnum", "n": "dataType", "v": "signedIntegerType"}, ` +
+		`{"nm": "p", "t": "modbusCore:DataTypeEnum", "n": "dataType", "v": "signedInteger"}, ` +
 		`{"nm": "p", "t": "modbusCore:FlexAddress", "n": "dataAddress", "s": [` +
 		`{"nm": "p", "t": "modbusCore:AddressFormatEnum", "n": "addressFormat", "v": "modbus"}, ` +
 		`{"nm": "p", "t": "baja:String", "n": "address", "v": "40005"}]}]}]}]}]}}`
