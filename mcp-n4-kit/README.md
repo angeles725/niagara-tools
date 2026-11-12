@@ -339,7 +339,10 @@ Tool rules:
   `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
 - `n4_create_component` follows a station rename on collision (the inverse and the
-  read-back use the assigned name).
+  read-back use the assigned name). With `proxy_ext` (a type spec such as
+  `modbusCore:ModbusClientNumericProxyExt`) the point is created with that driver
+  extension in the same add, so a read-only field register is a `control:NumericPoint`
+  that never writes; the read-back checks the extension type.
 - `n4_add_history(points, history_name, interval_ms)` adds one interval history
   extension per point (1 to 50), created already configured (`historyName`,
   `interval`, `enabled`, default true) in one batch under one confirmation token.

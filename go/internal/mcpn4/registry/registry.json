@@ -424,6 +424,10 @@
       "type": "object",
       "description": "Optional {x, y, w} wire sheet annotation (integers; w defaults to 8)"
      },
+     "proxy_ext": {
+      "type": "string",
+      "description": "Optional driver proxy extension type spec (e.g. modbusCore:ModbusClientNumericProxyExt) to create a point with; configure its address afterwards with n4_set_slot"
+     },
      "dry_run": {
       "type": "boolean",
       "default": true,
