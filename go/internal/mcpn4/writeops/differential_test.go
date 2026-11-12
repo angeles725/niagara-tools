@@ -133,11 +133,14 @@ func TestPlanAndReadbackDifferentialPython(t *testing.T) {
 }
 
 // declared applies the declared differences from the frozen Python goldens to one recorded line.
-// declared difference: n4_set_slot also writes baja:Format and baja:RelTime (S10, after the
+// declared difference: n4_set_slot also writes baja:Format and baja:RelTime (S10), and
+// baja:Integer and baja:Simple (Modbus writes, 2026-11-12) (after the
 // port), so the unknown value_type refusal lists them; every other byte is still compared.
 func declared(line string) string {
 	const python = "baja:StatusNumeric, baja:StatusBoolean\""
-	return strings.ReplaceAll(line, python, "baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime\"")
+	line = strings.ReplaceAll(line, python, "baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime, baja:Integer, baja:Simple\"")
+	// declared difference: n4_invoke_action also allows ping (Modbus writes, 2026-11-12).
+	return strings.ReplaceAll(line, "(allowed: set, active, inactive, auto)", "(allowed: set, active, inactive, auto, ping)")
 }
 
 // outcome classifies a Python result line, so the corpus provably reaches every branch class.

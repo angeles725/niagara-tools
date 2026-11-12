@@ -12,7 +12,26 @@ import (
 // string: a Format is its pattern ("%parent.name%"); a RelTime is a whole number of
 // milliseconds, 0 to 2^63-1 (BRelTime.encodeToString is String.valueOf(ms), 5 minutes is
 // 300000).
+//
+// A baja:Integer is a whole number in the Java int range, sent as its decimal string. A
+// baja:Simple is any string: the encoded form of the slot's type (an enum's tag, a Facets or a
+// LinearConversion string), checked by the station's decodeFromString.
 func coerceSimple(valueType string, value any) (any, error) {
+	switch valueType {
+	case "baja:Simple":
+		s, ok := value.(string)
+		if !ok {
+			return nil, ToolError("value must be a string (the encoded form, e.g. an enum tag) for baja:Simple")
+		}
+		return s, nil
+	case "baja:Integer":
+		n, ok := value.(pyjson.Number)
+		i, isInt := n.BigInt()
+		if !ok || !isInt || i.Cmp(big.NewInt(math.MinInt32)) < 0 || i.Cmp(big.NewInt(math.MaxInt32)) > 0 {
+			return nil, ToolError("value must be a whole number from -2147483648 to 2147483647 for baja:Integer")
+		}
+		return i.String(), nil
+	}
 	if valueType == "baja:Format" {
 		s, ok := value.(string)
 		if !ok {
@@ -30,7 +49,7 @@ func coerceSimple(valueType string, value any) (any, error) {
 
 // plainType is the BSON type of a plain (not Status) slot whose value is a string.
 func plainType(valueType string) string {
-	if valueType == "baja:Format" || valueType == "baja:RelTime" {
+	if valueType == "baja:Format" || valueType == "baja:RelTime" || valueType == "baja:Integer" {
 		return valueType
 	}
 	return "baja:String"

@@ -322,10 +322,20 @@ Tool rules:
   (e.g. a history extension's `enabled=false`) can be set. A dynamic slot, an action or
   a name no type declares is still refused. Value types: `baja:Double`, `baja:Boolean`,
   `baja:String`, `baja:StatusNumeric`, `baja:StatusBoolean`, `baja:Format` (pattern
-  string, e.g. a history ext `historyName`) and `baja:RelTime` (whole milliseconds,
-  e.g. `300000` for a 5-minute history `interval`).
-- `n4_invoke_action` allows only `set`, `active`, `inactive` and `auto`. `set` restores
-  the previous `fallback` as its inverse; the others have none and the plan says so.
+  string, e.g. a history ext `historyName`), `baja:RelTime` (whole milliseconds,
+  e.g. `300000` for a 5-minute history `interval`), `baja:Integer` (a whole number in
+  the Java int range, e.g. a Modbus `deviceAddress`) and `baja:Simple`: any other simple,
+  given as its encoded string and sent under the slot's own type (an enum tag such as
+  `signedIntegerType` for `dataType`, a Facets string) or under `simple_type` when the
+  value replaces the type (`driver:LinearConversion` with `0.1;0.0` for a proxy
+  `conversion`; the rollback restores the old type, and the read-back checks the type).
+  A struct is refused as a Simple: set its children, e.g. a Modbus address through
+  `proxyExt/dataAddress/addressFormat` (`modbus`) and `proxyExt/dataAddress/address`
+  (`40005`, a `baja:String`).
+- `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto` and `ping`. `set`
+  restores the previous `fallback` as its inverse; the others have none and the plan
+  says so. `ping` on a driver network, device or point device ext asks the driver to
+  check the device and changes no setting.
   `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
 - `n4_create_component` follows a station rename on collision (the inverse and the
