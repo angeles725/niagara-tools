@@ -148,3 +148,23 @@ func TestACopyReadBackChecksEveryCopyUnderItsAssignedName(t *testing.T) {
 		t.Errorf("verdict with Gw4 missing = %q, want mismatch", v)
 	}
 }
+
+// absoluteAddress is derived by the driver and is not copied either.
+// A load lists actions (upload, download) and frozen slots at their default (regType) by name
+// only, without a type; a copy leaves them out, because an add op without a type is not a value
+// and the copy gets those slots from its type anyway.
+func TestACopyLeavesOutChildrenTheLoadListsWithoutAType(t *testing.T) {
+	tree := gwTree()
+	kids, _ := tree.Get("s")
+	tree.Set("s", append(kids.([]any), obj("nm", "p", "n", "upload"), obj("nm", "p", "n", "download"),
+		obj("nm", "p", "n", "absoluteAddress", "t", "modbusCore:FlexAddress", "s", []any{
+			obj("nm", "p", "n", "address", "t", "baja:String", "v", "40005")})))
+	p, err := writeops.CopyComponent.Plan(copyClient(tree), copyArgs("Gw3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := js(t, p.Ops[0]); strings.Contains(got, `"upload"`) || strings.Contains(got, `"download"`) ||
+		strings.Contains(got, "absoluteAddress") {
+		t.Errorf("a typeless child was copied: %s", got)
+	}
+}

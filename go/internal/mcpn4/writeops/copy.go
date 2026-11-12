@@ -25,8 +25,10 @@ const (
 
 // copyRuntimeSlots are slots the driver or the control engine computes; a copy starts without
 // them so it never shows the source's state (a down status, a failed ping) as its own.
+// absoluteAddress is a Modbus proxy's read-only transient address (flags 3), derived by the driver
+// from dataAddress (modbusCore BModbusClientProxyExt).
 var copyRuntimeSlots = map[string]bool{"status": true, "health": true, "faultCause": true,
-	"readValue": true, "writeValue": true}
+	"readValue": true, "writeValue": true, "absoluteAddress": true}
 
 type copyData struct {
 	parent     any
@@ -132,7 +134,9 @@ func treeDepth(node *pyjson.Object) int {
 	return deepest
 }
 
-// stripRuntime is body without copyRuntimeSlots, at every level.
+// stripRuntime is body without copyRuntimeSlots, at every level, and without children the load
+// lists by name only (nameOnly) (actions such as upload, frozen slots at their default such as regType):
+// an add op child without a type is not a value, and the copy's type supplies those slots.
 func stripRuntime(body *pyjson.Object) *pyjson.Object {
 	out := pyjson.NewObject()
 	for _, k := range body.Keys() {
@@ -144,7 +148,7 @@ func stripRuntime(body *pyjson.Object) *pyjson.Object {
 		kept := []any{}
 		for _, c := range v.([]any) {
 			kid := c.(*pyjson.Object)
-			if n, _ := get(kid, "n").(string); !copyRuntimeSlots[n] {
+			if n, _ := get(kid, "n").(string); !copyRuntimeSlots[n] && !nameOnly(kid) {
 				kept = append(kept, stripRuntime(kid))
 			}
 		}
@@ -153,6 +157,12 @@ func stripRuntime(body *pyjson.Object) *pyjson.Object {
 		}
 	}
 	return out
+}
+
+// nameOnly is a loaded child with no type, value or children: an action or a frozen slot at its
+// default, listed by name only.
+func nameOnly(kid *pyjson.Object) bool {
+	return get(kid, "t") == nil && get(kid, "v") == nil && get(kid, "s") == nil
 }
 
 // copyInverse removes each copy under the name its reply assigned ("nn"), else the requested one.
