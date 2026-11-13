@@ -168,3 +168,33 @@ func TestACopyLeavesOutChildrenTheLoadListsWithoutAType(t *testing.T) {
 		t.Errorf("a typeless child was copied: %s", got)
 	}
 }
+
+// An alarm extension's state slots are runtime: timeInCurrentState ticks every few seconds, so
+// copying it made every dry run a different plan and the confirmation token never matched
+// (client A, 2026-11-13). alarmState, ackedTransitions and the transition timestamps are the
+// source's alarm history, not configuration. Config such as offnormalAlgorithm/alarmValue stays.
+func TestACopyLeavesOutAlarmExtensionState(t *testing.T) {
+	tree := gwTree()
+	kids, _ := tree.Get("s")
+	tree.Set("s", append(kids.([]any), obj("nm", "p", "n", "AlarmExt", "t", "alarm:AlarmSourceExt", "s", []any{
+		obj("nm", "p", "n", "timeInCurrentState", "t", "baja:RelTime", "v", "30018"),
+		obj("nm", "p", "n", "alarmState", "t", "alarm:AlarmState", "v", "offnormal"),
+		obj("nm", "p", "n", "ackedTransitions", "t", "alarm:AlarmTransitionBits", "v", "0"),
+		obj("nm", "p", "n", "toOffnormalTimes", "t", "alarm:AlarmTimestamps", "v", "x"),
+		obj("nm", "p", "n", "toFaultTimes", "t", "alarm:AlarmTimestamps", "v", "x"),
+		obj("nm", "p", "n", "offnormalAlgorithm", "t", "alarm:BooleanChangeOfStateAlgorithm", "s", []any{
+			obj("nm", "p", "n", "alarmValue", "t", "baja:Boolean", "v", "true")})})))
+	p, err := writeops.CopyComponent.Plan(copyClient(tree), copyArgs("Gw3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := js(t, p.Ops[0])
+	for _, n := range []string{"timeInCurrentState", "alarmState", "ackedTransitions", "toOffnormalTimes", "toFaultTimes"} {
+		if strings.Contains(got, `"`+n+`"`) {
+			t.Errorf("runtime slot %s was copied: %s", n, got)
+		}
+	}
+	if !strings.Contains(got, `"alarmValue"`) || !strings.Contains(got, "BooleanChangeOfStateAlgorithm") {
+		t.Errorf("alarm configuration was dropped: %s", got)
+	}
+}

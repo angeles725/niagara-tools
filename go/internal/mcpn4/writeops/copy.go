@@ -26,9 +26,14 @@ const (
 // copyRuntimeSlots are slots the driver or the control engine computes; a copy starts without
 // them so it never shows the source's state (a down status, a failed ping) as its own.
 // absoluteAddress is a Modbus proxy's read-only transient address (flags 3), derived by the driver
-// from dataAddress (modbusCore BModbusClientProxyExt).
+// from dataAddress (modbusCore BModbusClientProxyExt). An alarm extension's state is runtime too
+// (alarm BAlarmSourceExt): timeInCurrentState ticks, so copying it changed the plan between the
+// dry run and the execution; alarmState, ackedTransitions and the transition timestamps are the
+// source's alarm history.
 var copyRuntimeSlots = map[string]bool{"status": true, "health": true, "faultCause": true,
-	"readValue": true, "writeValue": true, "absoluteAddress": true}
+	"readValue": true, "writeValue": true, "absoluteAddress": true,
+	"timeInCurrentState": true, "alarmState": true, "ackedTransitions": true,
+	"toOffnormalTimes": true, "toFaultTimes": true}
 
 type copyData struct {
 	parent     any
