@@ -23,7 +23,7 @@ func (b *build) resolveInputs() int {
 	}
 	root, ok := absolute(o.root)
 	if !ok {
-		b.warn(msgRootUnresolved)
+		b.warn(msgRootUnresolved, o.root)
 		return ExitEnv
 	}
 	b.root = root

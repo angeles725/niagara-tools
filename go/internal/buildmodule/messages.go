@@ -13,7 +13,7 @@ const (
 // Inputs.
 const (
 	msgRootNotFound   = "build.sh: module root not found: %s"
-	msgRootUnresolved = "build.sh: cannot resolve module root: " // the bash tool names no path here
+	msgRootUnresolved = "build.sh: cannot enter module root: %s" // the path as typed
 	msgGradlewNotExec = "build.sh: %[1]s/gradlew exists but is not executable (a fresh VCS worktree of a repo that stores it 100644)\n" +
 		"  fix: chmod +x %[1]s/gradlew"
 	msgNoGradlew  = "build.sh: no executable ./gradlew in %s or any ancestor (the module needs the gradle wrapper)"
