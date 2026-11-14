@@ -101,7 +101,7 @@ func TestACopyLeavesOutAFrozenSlotItsContractDeclaresTransient(t *testing.T) {
 // (d) The declared flags decide a frozen slot: an integrator who clears a runtime slot's instance
 // flags does not make it configuration. (Before #618 review this test pinned the opposite rule,
 // instance flags first; flags an integrator sets are now configuration, see copy_integrator_test.go.)
-func TestACopyUsesInstanceFlagsOverTheContract(t *testing.T) {
+func TestACopyDecidesAFrozenSlotByItsDeclaredFlags(t *testing.T) {
 	tree := gwTree()
 	child(tree, "health").Set("f", "")
 	_, op, notes := copyPlanOf(t, tree)
@@ -146,13 +146,52 @@ func TestACopyRefusesWhenItCannotReadTheTypes(t *testing.T) {
 	}
 }
 
-// One registry call per plan covers every type the copy evaluates.
+// One registry call per plan covers every type the copy evaluates. The station answers only the
+// specs it is asked for and their supertypes, so a plan that asked for too few types would need a
+// second call or be refused.
 func TestACopyLoadsItsTypesInOneRegistryCall(t *testing.T) {
-	c := copyClient(t, gwTree())
+	c := &asked{typed: copyClient(t, gwTree())}
 	if _, err := writeops.CopyComponent.Plan(c, copyArgs("Gw3")); err != nil {
 		t.Fatal(err)
 	}
 	if len(c.calls) != 1 {
 		t.Errorf("calls = %v, want one", c.calls)
 	}
+}
+
+// A registry reply that is not an object is refused, naming a type the copy needed.
+func TestACopyRefusesAMalformedRegistryReply(t *testing.T) {
+	c := copyClient(t, gwTree())
+	c.types = []any{}
+	_, err := writeops.CopyComponent.Plan(c, copyArgs("Gw3"))
+	if err == nil || !strings.Contains(err.Error(), "the station did not describe type ") {
+		t.Errorf("err = %v", err)
+	}
+}
+
+// asked answers like the station: only the requested specs and their supertype chain.
+type asked struct{ *typed }
+
+func (a *asked) LoadTypes(specs []string) (any, error) {
+	all, _ := a.typed.LoadTypes(specs)
+	src, out := all.(*pyjson.Object), pyjson.NewObject()
+	for _, s := range specs {
+		for s != "" {
+			if _, held := out.Get(s); held {
+				break
+			}
+			e, ok := src.Get(s)
+			if !ok {
+				break
+			}
+			out.Set(s, e)
+			s = ""
+			if o, ok := e.(*pyjson.Object); ok {
+				if p, ok := o.Get("p"); ok {
+					s, _ = p.(string)
+				}
+			}
+		}
+	}
+	return out, nil
 }

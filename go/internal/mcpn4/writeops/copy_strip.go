@@ -127,7 +127,7 @@ func stripTree(ct *plan.Contracts, node *pyjson.Object, typ, path string, out *[
 // stripReason says whether kid (declared by slot, nil for a dynamic slot) is left out, the flags
 // that decided it, and whether it is a frozen slot declared readonly-only (its value is lost).
 func stripReason(kid, slot *pyjson.Object) (flags string, strip, readonly bool) {
-	instance, hasInstance := get(kid, "f").(string)
+	instance, _ := get(kid, "f").(string) // an absent "f" is ""
 	if slot == nil {
 		return instance, strings.ContainsAny(instance, dynamicStrip), false
 	}
@@ -136,7 +136,7 @@ func stripReason(kid, slot *pyjson.Object) (flags string, strip, readonly bool) 
 		readonly = !strings.ContainsAny(declared, "td") && !strings.Contains(instance, "t")
 		return declared, true, readonly
 	}
-	if hasInstance && strings.Contains(instance, "t") {
+	if strings.Contains(instance, "t") {
 		return instance, true, false
 	}
 	return "", false, false
