@@ -513,6 +513,52 @@
    "needs_session": false
   },
   {
+   "name": "n4_copy_component",
+   "description": "Copy one configured component (e.g. a Modbus device with its points and their addresses) under the same parent once per new name, in one batch under one confirmation token (1 to 30 copies). The copy holds the type, plain slots and child components up to 6 levels deep; runtime slots (status, health, out, read and write values) and links are not copied, and a deeper source is refused. Change what differs per copy afterwards (e.g. deviceAddress with n4_set_slot). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "parent_ord": {
+      "type": "string",
+      "description": "ORD of the parent that holds the source and receives the copies"
+     },
+     "name": {
+      "type": "string",
+      "description": "Slot name of the source child under parent_ord"
+     },
+     "new_names": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1,
+      "maxItems": 30,
+      "description": "Distinct plain slot names, one per copy (the station may rename on collision)"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "parent_ord",
+     "name",
+     "new_names"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_set_slot",
    "description": "Set one slot to a value. Status slots are always written whole (value and status). A slot the station omits because it holds its type default is typed from the station's type definition (registry channel), so a default-valued property such as a history extension's enabled, historyName or interval can be set. A nested slot is a path from ord (grp/sp). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {

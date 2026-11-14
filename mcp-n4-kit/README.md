@@ -250,7 +250,7 @@ is reported under `unknown`, never as dangling.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`,
-`n4_set_slot`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_set_slot`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_rollback` and
 `n4_save_station`. Example:
 
@@ -347,6 +347,14 @@ Tool rules:
   pattern only uses `%name%` / `%parent...name%` tokens, a history name that would
   repeat across the batch. The inverse removes every extension; the read-back
   compares each one. Capacity stays at the default (500 records, Roll).
+- `n4_copy_component(parent_ord, name, new_names)` adds the configuration of one
+  child again under each new name (1 to 30) in one batch under one confirmation
+  token: type, plain slots and child components up to 6 levels deep (a Modbus
+  device down to its point addresses). Runtime slots (`status`, `health`,
+  `faultCause`, `out`, `readValue`, `writeValue`) and links are not copied; the plan
+  counts the links left behind, and a deeper source is refused. Change what differs
+  per copy afterwards (e.g. `deviceAddress` with `n4_set_slot`). The inverse removes
+  every copy under its assigned name; the read-back checks each copy's type.
 
 Destructive tools use the same pipeline:
 
