@@ -7,7 +7,6 @@ import (
 
 // TestSlowMountWarning: a gradle root or niagara_home on a 9p/drvfs mount warns and the build goes on.
 func TestSlowMountWarning(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		name   string
 		mounts func(f *fixture) string
@@ -38,7 +37,6 @@ func TestSlowMountWarning(t *testing.T) {
 
 // TestPreflight: it runs first with the plugin override; any failure of it is exit 10 before gradle.
 func TestPreflight(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		name, exit string
 		flags      []string

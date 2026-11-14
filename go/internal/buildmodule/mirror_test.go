@@ -9,7 +9,6 @@ import (
 // and the real maven repository, and runs gradle without a daemon; whitespace in a value JAVA_TOOL_OPTIONS
 // would carry is refused before gradle.
 func TestMirrorIsolation(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		name     string
 		env      map[string]string
@@ -58,7 +57,6 @@ func TestMirrorIsolation(t *testing.T) {
 }
 
 func TestMirrorPathWithWhitespaceIsRefused(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	home := f.dir + "/n h"
 	f.mkdir(home + "/" + m2Repository)
@@ -70,7 +68,6 @@ func TestMirrorPathWithWhitespaceIsRefused(t *testing.T) {
 }
 
 func TestNoIsolationOutsideAMirror(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	f.env["HOME"] = "/ho me"
 	f.wants("a real home", f.build(), ExitOK)
@@ -82,7 +79,6 @@ func TestNoIsolationOutsideAMirror(t *testing.T) {
 // TestDevKeyWarning: a signing profile in the mirror user home means the jar was signed with a throwaway
 // key, unless the root's uncommented code turns the default profile off.
 func TestDevKeyWarning(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		name, root string // root build.gradle.kts ("" none)
 		profile    string // "before" the build, created "during" it, or "" never

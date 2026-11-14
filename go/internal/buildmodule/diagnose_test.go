@@ -8,7 +8,6 @@ import (
 // TestGradleFailures: what the log of a failed run shows decides the exit code and the advice; the gate
 // never runs.
 func TestGradleFailures(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		name, gradlew string // what the fake gradlew does
 		flags         []string
@@ -42,7 +41,6 @@ func TestGradleFailures(t *testing.T) {
 
 // TestGradleOutputGoesToStdoutInOrder: gradle's stdout and stderr are one stream, on the chain's stdout.
 func TestGradleOutputGoesToStdoutInOrder(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	f.does("gradlew", `for i in 1 2 3; do echo "out $i"; echo "err $i" >&2; done`)
 	f.wants("order", f.build("--no-preflight", "--profiles", "rt"), ExitOK)
@@ -55,7 +53,6 @@ func TestGradleOutputGoesToStdoutInOrder(t *testing.T) {
 // TestCopyLockNamesTheJarsBuiltThisRun: only a build/libs jar newer than the start of the run is the
 // artifact of record.
 func TestCopyLockNamesTheJarsBuiltThisRun(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	f.write(f.built("ux"), "stale")
 	f.does("gradlew", `sleep 0.05; mkdir -p "`+f.root+`/Foo/Foo-rt/build/libs"; printf jar > "`+f.built("rt")+`"; echo "FileAlreadyExistsException: nh/modules/Foo-rt.jar"; exit 1`)
@@ -66,7 +63,6 @@ func TestCopyLockNamesTheJarsBuiltThisRun(t *testing.T) {
 // TestSlotomaticSkipInAPassingRun: a skipped file fails the chain although gradle passed, the pre-build jar
 // is put back, and the gate does not run.
 func TestSlotomaticSkipInAPassingRun(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	f.jar(f.deployed("rt"), "1.0.0", "old")
 	before := f.read(f.deployed("rt"))

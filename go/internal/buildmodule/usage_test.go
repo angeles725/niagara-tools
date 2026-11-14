@@ -13,7 +13,6 @@ const (
 )
 
 func TestUsageIsTheHeaderOfTheInvokedScript(t *testing.T) {
-	t.Parallel()
 	if got := scriptHeader(fixtureScript); got != fixtureUsage {
 		t.Errorf("header %q, want %q", got, fixtureUsage)
 	}
@@ -23,7 +22,6 @@ func TestUsageIsTheHeaderOfTheInvokedScript(t *testing.T) {
 }
 
 func TestUsageOfAnUnreadableScriptSaysSo(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	if err := os.Remove(f.kit + "/" + scriptName); err != nil {
 		t.Fatal(err)
@@ -36,7 +34,6 @@ func TestUsageOfAnUnreadableScriptSaysSo(t *testing.T) {
 
 // TestTheRealScriptHasAUsage: the shipped launcher keeps a header the tool can print.
 func TestTheRealScriptHasAUsage(t *testing.T) {
-	t.Parallel()
 	script, err := os.ReadFile("../../../build-n4-module-kit/toolbelt/" + scriptName)
 	if err != nil {
 		t.Fatal(err)

@@ -5,7 +5,6 @@ import (
 )
 
 func TestUsageAndFlagErrors(t *testing.T) {
-	t.Parallel()
 	const usageOnStderr = true
 	cases := []struct {
 		name   string
@@ -48,7 +47,6 @@ func TestUsageAndFlagErrors(t *testing.T) {
 }
 
 func TestHelpPrintsTheUsageOnStdout(t *testing.T) {
-	t.Parallel()
 	for _, args := range [][]string{{"--help"}, {"-h"}, {"--legacy", "--profiles", "rt", "--help", "root"}} {
 		f := newFixture(t)
 		if code := f.run(args...); code != ExitOK || f.out != fixtureUsage || f.err != "" {
@@ -59,7 +57,6 @@ func TestHelpPrintsTheUsageOnStdout(t *testing.T) {
 
 // TestFlagsReachTheCommands: every flag ends up in the arguments of the command it is for.
 func TestFlagsReachTheCommands(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	code := f.build("--profiles", "rt,ux", "--target-version", "4.13", "--plugin-version", "7.6.17", "--ui-profile", "hmi",
 		"--legacy", "--first-deploy", "--gradle-prop", "a=b", "--gradle-prop", "k=", "--werror")
@@ -76,7 +73,6 @@ func TestFlagsReachTheCommands(t *testing.T) {
 }
 
 func TestFlagsAfterThePositionalsArePositionals(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	f.wants("flag after the positionals", f.run(f.root, "Foo", "--legacy"), ExitEnv, "build.sh: not a niagara_home (no etc/m2/repository): --legacy")
 }

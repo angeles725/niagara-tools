@@ -8,7 +8,6 @@ import (
 
 // TestProfileSelection: which profiles gradle builds.
 func TestProfileSelection(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		name     string
 		setup    func(f *fixture)

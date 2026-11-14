@@ -9,7 +9,6 @@ import (
 // TestPluginVersion: the override wins; else the module's own pin is detected and announced; the version
 // gradle will use is checked against etc/m2 (a warning only).
 func TestPluginVersion(t *testing.T) {
-	t.Parallel()
 	const notInM2 = "not found under"
 	cases := []struct {
 		name                 string
@@ -67,7 +66,6 @@ func argValue(call, prefix string) string {
 // TestPluginFilesGrepCannotRead: the rows GNU grep printed for the module's gradle files are kept — a file
 // that cannot be read, and a match in a file holding a NUL byte — and neither yields a version.
 func TestPluginFilesGrepCannotRead(t *testing.T) {
-	t.Parallel()
 	const pin = "niagaraPluginVersion=7.6.22\n"
 	f := newFixture(t)
 	f.write(f.root+"/gradle.properties", pin+"\x00\n")

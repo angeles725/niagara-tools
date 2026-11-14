@@ -8,7 +8,6 @@ import (
 
 // TestInputFaults: every input the chain cannot run with is exit 10 with its own message, before any command.
 func TestInputFaults(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		name  string
 		setup func(f *fixture) (args []string)
@@ -82,7 +81,6 @@ func TestInputFaults(t *testing.T) {
 
 // TestGradleRootIsFoundAbove: a module dir below the gradle root builds there, with the module paths kept.
 func TestGradleRootIsFoundAbove(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	f.mkdir(f.root + "/group")
 	if err := os.Rename(f.root+"/Foo", f.root+"/group/Foo"); err != nil {
@@ -100,7 +98,6 @@ func TestGradleRootIsFoundAbove(t *testing.T) {
 // TestNiagaraHomeComesFromTheEnvironment: an absent or empty third argument takes $niagara_home; a mirror
 // needs no opt-in.
 func TestNiagaraHomeComesFromTheEnvironment(t *testing.T) {
-	t.Parallel()
 	for _, third := range [][]string{nil, {""}} {
 		f := newFixture(t)
 		f.write(f.home+"/"+mirrorMarker, "")
@@ -138,7 +135,6 @@ func TestHostToolFailuresEndTheChain(t *testing.T) {
 }
 
 func TestAModuleRootThatCannotBeEnteredIsRefused(t *testing.T) {
-	t.Parallel()
 	if os.Geteuid() == 0 {
 		t.Skip("running as root: every directory can be entered")
 	}

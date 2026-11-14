@@ -12,6 +12,10 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/fstype"
 )
 
+// The tests of this package are serial on purpose: each writes stub scripts and then runs them, and a
+// parallel test that forks while a script is still open for writing makes its exec fail with "text file
+// busy" (ETXTBSY). Do not add t.Parallel() here.
+//
 // fixture is a throwaway build: a toolbelt of stub scripts, a module root "Foo" (rt and ux with sources, wb
 // a scaffold) with a fake gradlew, a niagara_home and a JDK directory. gradle is never run.
 type fixture struct {

@@ -8,7 +8,6 @@ import (
 
 // TestDriftVerdict: changed shipped bytes need a changed vendorVersion; what cannot be compared fails closed.
 func TestDriftVerdict(t *testing.T) {
-	t.Parallel()
 	const same, changed = "payload", "NEW payload"
 	cases := []struct {
 		name           string
@@ -54,7 +53,6 @@ func TestDriftVerdict(t *testing.T) {
 
 // TestDriftGateScope: no deployed jar, no built jar or --no-drift-check leave nothing to compare.
 func TestDriftGateScope(t *testing.T) {
-	t.Parallel()
 	for name, setup := range map[string]func(f *fixture) []string{
 		"no deployed jar": func(f *fixture) []string { f.jar(f.built("rt"), "1.0.0", "new"); return nil },
 		"no built jar":    func(f *fixture) []string { f.jar(f.deployed("rt"), "1.0.0", "old"); return nil },
@@ -75,7 +73,6 @@ func TestDriftGateScope(t *testing.T) {
 // TestDriftOutranksCannotVerify: with one profile drifted and another unverifiable the run is a drift (51),
 // and both rows are printed.
 func TestDriftOutranksCannotVerify(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	f.jar(f.deployed("rt"), "", "old")
 	f.jar(f.built("rt"), "1.0", "new")
@@ -109,7 +106,6 @@ func TestUnlistableJarCannotBeVerified(t *testing.T) {
 // TestFailedRestoreSaysWhatModulesHolds: a restore that fails names cp's reason and tells a modules/ jar
 // that is still the pre-build one from one that is not.
 func TestFailedRestoreSaysWhatModulesHolds(t *testing.T) {
-	t.Parallel()
 	if os.Geteuid() == 0 {
 		t.Skip("running as root: a read-only jar does not block the copy")
 	}

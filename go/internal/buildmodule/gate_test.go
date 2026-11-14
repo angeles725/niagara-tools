@@ -8,7 +8,6 @@ import (
 
 // TestGateAndReport: the verify gate's and report-module's exit statuses map to the chain's exit code.
 func TestGateAndReport(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		name                 string
 		gateExit, reportExit string
@@ -45,7 +44,6 @@ func TestGateAndReport(t *testing.T) {
 
 // TestGateArgumentsWithoutFlags: the gate gets the sources and every built jar, report-module the sources.
 func TestGateArgumentsWithoutFlags(t *testing.T) {
-	t.Parallel()
 	f := newFixture(t)
 	f.wants("default", f.build(), ExitOK)
 	if want := "verify-module.sh <--src> <" + f.root + "/Foo> <" + f.built("rt") + "> <" + f.built("ux") + ">"; f.call(gateScript) != want {
@@ -58,7 +56,6 @@ func TestGateArgumentsWithoutFlags(t *testing.T) {
 
 // TestAMissingToolIsReported: a script the chain cannot start ends as bash's status for it does.
 func TestAMissingToolIsReported(t *testing.T) {
-	t.Parallel()
 	for script, code := range map[string]int{preflightScript: ExitEnv, reportScript: ExitGate} {
 		f := newFixture(t)
 		path := f.kit + "/" + script
