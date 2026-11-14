@@ -2,22 +2,21 @@ package prepush
 
 import (
 	"io"
-	"os/exec"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/gitcmd"
 )
 
 // gitOut runs `git <args>` in the process directory and returns its stdout without the trailing
 // newlines and whether it exited 0. Git's stderr goes to errTo; nil drops it. A git that cannot be
 // started is a failure like any other.
 //
-// It is not go/internal/gitcmd: that runner starts `git -C <dir> …`, and the hook's tests script git
-// with a fake that reads the subcommand as its first argument (tests/build-retro-sync.bats,
-// tests/pre-push-live-cite.bats), as the bash hook called it. The hook runs where git started it.
+// It starts git through go/internal/gitcmd with no directory, so no `-C <dir>` comes first: the hook
+// runs where git started it, and its tests script git with a fake that reads the subcommand as its
+// first argument (tests/build-retro-sync.bats, tests/pre-push-live-cite.bats).
 func gitOut(errTo io.Writer, args ...string) (string, bool) {
-	cmd := exec.Command("git", args...)
-	cmd.Stderr = errTo
-	out, err := cmd.Output()
-	return strings.TrimRight(string(out), "\n"), err == nil
+	res := gitcmd.Command{Stderr: errTo}.Run(args...)
+	return strings.TrimRight(res.Stdout, "\n"), res.OK()
 }
 
 // gitOK runs `git <args>` for its exit status alone.

@@ -3,7 +3,6 @@ package kitresolve
 import (
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 
@@ -22,21 +21,13 @@ func topLevel(kit string) (string, bool) {
 	return strings.TrimRight(out, "\n"), ok
 }
 
+// noPrompt keeps git from asking for credentials on a terminal.
+const noPrompt = "GIT_TERMINAL_PROMPT=0"
+
 // fetch runs `git fetch -q origin main` with no credential prompt and reports whether it succeeded;
 // its output is dropped (the caller prints the offline WARN).
 func (r repo) fetch() bool {
-	const prompt = "GIT_TERMINAL_PROMPT"
-	old, was := os.LookupEnv(prompt)
-	os.Setenv(prompt, "0")
-	defer func() {
-		if was {
-			os.Setenv(prompt, old)
-		} else {
-			os.Unsetenv(prompt)
-		}
-	}()
-	_, ok := gitcmd.Run(r.top, nil, "fetch", "-q", "origin", "main")
-	return ok
+	return gitcmd.Command{Dir: r.top, Env: []string{noPrompt}}.Run("fetch", "-q", "origin", "main").OK()
 }
 
 // hasFreshRef reports whether origin/main exists locally.
