@@ -20,37 +20,26 @@
 #   G-A  <mirror_dir> must not be the source install, live inside it, or contain it.        -> exit 20
 #   G-B  an existing non-empty <mirror_dir> is wiped ONLY if it holds the .niagara-mirror marker
 #        this script writes (source path + date); anything else is refused.                  -> exit 20
-# Exit: 0 mirror ready · 1 usage / not a niagara_home · 20 guard refused
-set -euo pipefail
-MARK=.niagara-mirror
-usage() { echo "usage: mirror-niagara-home.sh <source_niagara_home> <mirror_dir> [exclude-jar ...]" >&2; exit 1; }
-[ $# -ge 2 ] || usage
-src="$1"; mir="$2"; shift 2
-[ -d "$src/etc/m2/repository" ] || { echo "not a niagara_home (no etc/m2/repository): $src" >&2; exit 1; }
-src_abs="$(cd "$src" && pwd -P)"
-mir_parent="$(dirname "$mir")"
-if [ -e "$mir" ]; then mir_abs="$(cd "$mir" && pwd -P)"
-else mkdir -p "$mir_parent"; mir_abs="$(cd "$mir_parent" && pwd -P)/$(basename "$mir")"; fi
-# G-A: source protection (equal, inside, or containing)
-case "$mir_abs/" in "$src_abs/"*) echo "refusing: mirror dir is the source install or inside it: $mir" >&2; exit 20 ;; esac
-case "$src_abs/" in "$mir_abs/"*) echo "refusing: mirror dir contains the source install: $mir" >&2; exit 20 ;; esac
-# G-B: wipe protection
-if [ -e "$mir" ]; then
-  [ -d "$mir" ] || { echo "refusing: $mir exists and is not a directory" >&2; exit 20; }
-  if [ -n "$(ls -A "$mir")" ] && [ ! -f "$mir/$MARK" ]; then
-    echo "refusing to wipe $mir: non-empty and not a mirror made by this script (no $MARK)" >&2; exit 20
-  fi
-  rm -rf "$mir"
-fi
-mkdir -p "$mir/modules"
-printf 'source=%s\ncreated=%s\n' "$src_abs" "$(date +%Y-%m-%dT%H:%M:%S)" > "$mir/$MARK"
-for x in "$src"/*; do b=$(basename "$x"); [ "$b" = modules ] && continue; ln -s "$x" "$mir/$b"; done
-n=0
-for j in "$src"/modules/*.jar; do
-  [ -e "$j" ] || continue          # empty modules/ -> the glob stays literal
-  b=$(basename "$j"); skip=0
-  for e in "$@"; do [ "$b" = "$e" ] && skip=1; done
-  [ "$skip" = 1 ] && continue
-  ln -s "$j" "$mir/modules/$b"; n=$((n+1))
-done
-echo "mirror ready: $mir  ($n jars linked, modules/ writable, excluded: ${*:-none})"
+# Exit: 0 mirror ready · 1 usage / not a niagara_home / a step failed · 3 no Go toolchain · 20 guard refused
+#
+# Truth fixes of the Go port (each was a "mirror ready" or a bare shell error in the bash tool):
+#   a relative <source_niagara_home> is refused (exit 1) before anything is wiped: the links hold the source
+#     as given, so every one of them dangled from inside the mirror;
+#   a source, or its modules/, that cannot be listed is exit 1 (the bash globs stayed literal: 0 jars, "ready");
+#   a <mirror_dir> that exists and is not a directory gets the G-B refusal (exit 20) the bash tool never
+#     reached (its `cd` failed first, exit 1).
+# The source is listed before the old mirror is wiped, so a refusal leaves the old mirror whole.
+#
+# Implementation: the Go module at <repo>/go (go/cmd/mirror-niagara-home, go/internal/mirrorhome). This script
+# is only the launcher: go/go-tool.sh `go_tool_bin` builds go/bin/mirror-niagara-home when the binary is missing
+# or older than a Go source, then this script execs it. No Go toolchain or a failed build is exit 3.
+set -u
+
+# readlink -f: resolve a symlinked copy of this file to the real kit, so ../../go exists.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'mirror-niagara-home: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" mirror-niagara-home)" || exit 3
+exec "$BIN" "$@"
