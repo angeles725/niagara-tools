@@ -35,7 +35,8 @@ that is slice S0.
 | `writeops` | `tools_write.py:217-1240` (create, set, invoke, link, remove/snapshot/relink, rollback/frozen, save) |
 
 `tools/*.py` (`mutation_check.py`, `live_smoke.py`, `new_retro.py`) stay Python: they are dev
-tooling, not the server.
+tooling, not the server. (Since ported: `live_smoke.py` is `go/cmd/mcp-n4/live-smoke` since
+2026-11-14.)
 
 ## 2. Parity strategy
 
@@ -206,7 +207,8 @@ over stdio.
 | `injection` | Replaces behaviour in-process (mock/patch, clock, `client_factory`, opener, custom tools) |
 | `in-process` | Uses an entry point with no wire form (`parse_args`, `main`, `serve`, `_validate`, docstrings, the Python `TOOLS` table, an in-process `Server`) |
 
-`test_live_smoke.py`, `test_mutation_check.py`, `test_new_retro.py` and
+`test_live_smoke.py` (ported 2026-11-14 to the Go tests of `go/internal/mcpn4/livesmoke`),
+`test_mutation_check.py`, `test_new_retro.py` and
 `test_methodology_names.py` cover dev tooling that stays Python, and `test_go_harness.py` covers
 the harness itself: they run unchanged under both implementations. Several `in-process` tests
 (start refusals, `TestRobustness` id handling) can move to `make_server` in the slice that ports
@@ -224,7 +226,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
 | `test_go_harness.py` | 34 | 0 | 0 | 0 | 0 | 0 | 34 |
 | `test_list_batches.py` | 6 | 0 | 0 | 0 | 0 | 0 | 6 |
-| `test_live_smoke.py` | 37 | 0 | 0 | 0 | 0 | 0 | 37 |
+| `test_live_smoke.py` (ported to Go 2026-11-14) | 37 | 0 | 0 | 0 | 0 | 0 | 37 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | `test_new_retro.py` | 18 | 0 | 0 | 0 | 0 | 0 | 18 |
@@ -1061,6 +1063,7 @@ S16 changes no server code: it flips what launches by default.
 **What flipped.** `tests/go_server.py` resolves an unset `MCP_N4_IMPL` to `go`
 (`resolve_impl`), so `python3 -m unittest discover -s mcp-n4-kit/tests` drives `go/bin/mcp-n4`;
 a missing binary is `GoBinaryMissing`, never a silent Python run. `tools/live_smoke.py --apply`
+(ported 2026-11-14 to `go/bin/live-smoke --apply`, whose default server is the sibling `mcp-n4`)
 launches the Go binary (`--go-bin`, else `MCP_N4_GO_BIN`, else `go/bin/mcp-n4`; missing is exit 2
 before any station contact), and its fake-station runs follow `MCP_N4_IMPL`, so they cover both
 servers. The README `.mcp.json` example and the skill launcher register the Go binary; the skill
@@ -1237,7 +1240,10 @@ goldens and fixtures, so it stays as historical attribution.
 - `tools/new_retro.py` drafts through `go/cmd/mcp-n4/retro-draft` (`go/bin/retro-draft`;
   `retro.DraftOn`, `retro.CountDeltas`), pinned byte for byte by a golden recorded from the
   Python draft before the deletion.
-- `tools/live_smoke.py` joins its ORDs itself and always launches the Go binary; FakeStation
+- `tools/live_smoke.py` (ported 2026-11-14 to `go/cmd/mcp-n4/live-smoke`; its tests drive the
+  Go fake station `go/internal/mcpn4/readtools/readtoolstest/boxstation`, which takes its
+  component-type rule from `box.IsComponentType`) joins its ORDs itself
+  and always launches the Go binary; FakeStation
   carries its component-type table, checked equal to the server's
   (`box.TestTheFakeStationSharesTheComponentTypeTable`).
 - METHODOLOGY cites each removed test's Go twin; `test_methodology_names` checks they exist.

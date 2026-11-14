@@ -77,7 +77,7 @@ scripts/install-skill.sh --skill mcp-n4
   session retro file and its `pending` row in `retros/INDEX.md`.
 - `retros/`: session retros and `INDEX.md`.
 - `tests/test_server.py`: protocol, tool and end-to-end stdio tests.
-- `tools/live_smoke.py`: the live smoke runner (see Live smoke test).
+- `go/cmd/mcp-n4/live-smoke`: the live smoke runner (see Live smoke test).
 - `tools/mutation_check.py`: runs a mutation-check command with no stale bytecode (see Run
   the tests).
 - `tests/fake_station.py`: fake BOX station on `127.0.0.1` (plain HTTP, tests only).
@@ -406,17 +406,20 @@ Destructive tools use the same pipeline:
 
 ## Live smoke test
 
-`tools/live_smoke.py` drives the real server over stdio (not the library) through the
+`go/bin/live-smoke` (built from `go/cmd/mcp-n4/live-smoke`; formerly `tools/live_smoke.py`)
+drives the real server over stdio (not the library) through the
 public tool interface: every write is dry run, token, execute, verdict. It runs the
 kitControl thermostat of B1199 inside a scratch folder `McpSmoke`, saves, removes the
 folder, rolls the removal back (probe-only: its verdict is recorded but does not gate
 the exit code), removes it again, saves and checks the folder is gone. Without
 `--apply` it only prints the scenario and contacts nothing. It launches the Go server
-(`--go-bin PATH`, else `MCP_N4_GO_BIN`, else `go/bin/mcp-n4`; missing is exit 2).
+(`--go-bin PATH`, else `MCP_N4_GO_BIN`, else the `mcp-n4` next to `live-smoke`, that is
+`go/bin/mcp-n4`; missing is exit 2).
 
 ```
+(cd go && go build -o bin/ ./cmd/mcp-n4 ./cmd/mcp-n4/live-smoke)
 MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
-  python3 mcp-n4-kit/tools/live_smoke.py --apply \
+  go/bin/live-smoke --apply \
     --station <NAME>=https://<host> --station-home <NAME>=<station home dir> \
     --report smoke-report.json
 ```
