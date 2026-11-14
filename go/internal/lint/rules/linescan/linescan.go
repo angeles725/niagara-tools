@@ -1,5 +1,5 @@
 // Package linescan holds the line helpers shared by the rules ported from the line-matching bash lints
-// (awk_lint_each and awk_lint_strip_run in toolbelt/lib/awk-lint.sh): the row text they print and the
+// (awk_lint_each and awk_lint_strip_run in the former toolbelt/lib/awk-lint.sh): the row text they print and the
 // code view they match. A rule that matches lines uses these, never a private copy.
 package linescan
 

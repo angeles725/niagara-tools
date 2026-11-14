@@ -1,0 +1,27 @@
+check-client-source.sh — is this module root the declared SOURCE OF TRUTH checkout?
+
+Sessions built and read from the wrong client checkout for weeks because "where is the current
+source" lived only in session memory. BUILD-STATE.md now declares, per module,
+  source_of_truth: <path>@<branch>@<commit>      (or `unknown`)
+and this helper compares a module root against it. It is the version-control half of the build
+preflight: toolbelt scripts never call version control (kit-links L2), so it lives in scripts/ and
+BUILD-LOOP.md §0.b runs it next to toolbelt/preflight.sh. Local refs only — never fetches (no network).
+[ev: retro client-source-of-truth Δ1] [ev: retro client-source-of-truth Δ2]
+
+Usage:
+  check-client-source.sh [--declared <path>@<branch>@<commit>|unknown] <module-root>
+  check-client-source.sh --build-state <BUILD-STATE.md> --module <MOD> <module-root>
+
+Checks (rows: PASS|WARN|FAIL  source-of-truth  <detail>):
+  WARN  module root not inside a git work tree (it cannot answer "which commit is on the station")
+  WARN  source_of_truth undeclared or `unknown` (honest, but unchecked)
+  FAIL  detached HEAD
+  FAIL  the work tree is not the declared <path> (its top level does not end in /<path>)
+  FAIL  the checked-out branch is not the declared <branch>
+  FAIL  the declared <commit> is not in this checkout, or HEAD is BEHIND it (stale checkout)
+  PASS  HEAD at the declared commit, or ahead of it (new local work — update the field at close)
+  WARN  HEAD behind its upstream tracking ref as of the LAST fetch (count named; nothing fetched)
+  A <branch> or <commit> of `unknown` skips that comparison.
+
+Exit: 0 no FAIL · 1 any FAIL · 2 usage (incl. a malformed declared value) · 3 environment
+      (module root missing, BUILD-STATE file missing, git absent)

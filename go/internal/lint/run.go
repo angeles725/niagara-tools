@@ -25,7 +25,7 @@ import (
 // others are held and printed after it, each with its own stderr lines in place. An incomplete walk
 // stops every spec that does not set ContinueOnWalkError (no rows from that root or any later one; the
 // run ends once no spec is left) and the others scan the files listed. An incomplete walk or
-// an unreadable file is reported on stderr when it happens with the texts of toolbelt/lib/awk-lint.sh,
+// an unreadable file is reported on stderr when it happens with the texts of the former toolbelt/lib/awk-lint.sh,
 // a file a per-file rule could not analyze as "cannot scan <path>: <rule>: <error>", a TreeRule error as
 // its own text, and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else
 // 1 when a FAIL row was printed or a WARN/FAIL row was printed under a.Strict, else 0 (PASS, ADVISORY

@@ -9,7 +9,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
-// Selection is which files under a root a rule reads, as toolbelt/lib/scan-files.sh selects them.
+// Selection is which files under a root a rule reads, as the former bash lib toolbelt/lib/scan-files.sh selected them.
 type Selection struct {
 	Names []string // find -name patterns, any of which selects a regular file
 	Prune []string // sub-directory names never entered (dot and *-worktrees sub-directories never are)
@@ -80,7 +80,7 @@ func findPath(pattern, s string) bool {
 }
 
 // WalkError is a directory the walk could not read; its text is the line GNU find printed for it
-// under LC_ALL=C (exported by toolbelt/lib/awk-lint.sh), path quoted as strerror.FindQuote spells it.
+// under LC_ALL=C (which the former toolbelt/lib/awk-lint.sh exported), path quoted as strerror.FindQuote spells it.
 type WalkError struct {
 	Path string
 	Err  error

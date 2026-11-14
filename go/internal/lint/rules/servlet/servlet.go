@@ -28,7 +28,7 @@ func Spec() lint.Spec {
 		Select:      lint.Selection{Names: []string{"*.java"}},
 		StrictFails: true,
 		RelPaths:    true,
-		// The K20 row of lib/scan-files.sh scan_files_nonempty_or_exit, which the bash lint printed.
+		// The K20 row of the former lib/scan-files.sh scan_files_nonempty_or_exit, which the bash lint printed.
 		EmptyError: lint.EmptyRow{Msg: "no files to scan (K20: wrong path or empty scaffold)"},
 	}
 }

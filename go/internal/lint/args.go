@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Mode is how a lint takes its arguments; each one is an awk_lint_parse arity of toolbelt/lib/awk-lint.sh,
+// Mode is how a lint takes its arguments; each one is an awk_lint_parse arity of the former bash lib toolbelt/lib/awk-lint.sh,
 // so a ported lint keeps the argument contract of the bash lint it replaces.
 type Mode int
 

@@ -26,124 +26,17 @@
 #
 # Exit: 0 no FAIL · 1 any FAIL · 2 usage (incl. a malformed declared value) · 3 environment
 #       (module root missing, BUILD-STATE file missing, git absent)
+#
+# Implementation: the Go module at <repo>/go (go/internal/checkclientsource; -h prints its usage.txt, the text of
+# the header above). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
+# go/bin/check-client-source when the binary is missing or older than a Go source, then this script execs it.
+# Needs `go` on PATH to build; no Go toolchain or a failed build is exit 3.
 set -u
 
-DECLARED=""
-HAVE_DECLARED=0
-BUILD_STATE=""
-MODULE=""
-FAILED=0
-
-usage_exit() {
-  printf 'usage: check-client-source.sh [--declared <path>@<branch>@<commit>|unknown] <module-root>\n' >&2
-  printf '       check-client-source.sh --build-state <BUILD-STATE.md> --module <MOD> <module-root>\n' >&2
-  exit 2
-}
-
-row() {
-  printf '%-4s  source-of-truth  %s\n' "$1" "$2"
-  case "$1" in FAIL) FAILED=1 ;; esac
-}
-
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --declared)    [ $# -ge 2 ] || usage_exit; DECLARED="$2"; HAVE_DECLARED=1; shift 2 ;;
-    --build-state) [ $# -ge 2 ] || usage_exit; BUILD_STATE="$2"; shift 2 ;;
-    --module)      [ $# -ge 2 ] || usage_exit; MODULE="$2"; shift 2 ;;
-    -h|--help)     sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    --) shift; break ;;
-    -*) usage_exit ;;
-    *) break ;;
-  esac
-done
-[ $# -eq 1 ] || usage_exit
-ROOT="$1"
-[ -d "$ROOT" ] || { printf 'check-client-source: module root not found: %s\n' "$ROOT" >&2; exit 3; }
-command -v git >/dev/null 2>&1 || { printf 'check-client-source: git not found in PATH\n' >&2; exit 3; }
-
-# ---------------------------------------------------------------------------
-# Resolve the declared value: --declared wins; else the module's build-state.v1 envelope.
-# ---------------------------------------------------------------------------
-if [ "$HAVE_DECLARED" -eq 0 ] && [ -n "$BUILD_STATE" ]; then
-  [ -n "$MODULE" ] || usage_exit
-  [ -f "$BUILD_STATE" ] || { printf 'check-client-source: BUILD-STATE not found: %s\n' "$BUILD_STATE" >&2; exit 3; }
-  DECLARED="$(awk -v mod="$MODULE" '
-    /^<!-- build-state\.v1 -->/   { inenv = 1; cur = ""; next }
-    /^<!-- \/build-state\.v1 -->/ { inenv = 0; next }
-    inenv && /^module:/           { v = $0; sub(/^module:[[:space:]]*/, "", v); sub(/[[:space:]]*#.*$/, "", v); cur = v; next }
-    inenv && cur == mod && /^source_of_truth:/ {
-      v = $0; sub(/^source_of_truth:[[:space:]]*/, "", v); sub(/[[:space:]]*#.*$/, "", v); print v; exit
-    }' "$BUILD_STATE")"
-fi
-
-DECL_PATH=""; DECL_BRANCH="unknown"; DECL_COMMIT="unknown"
-case "$DECLARED" in
-  "")      ;;
-  unknown) ;;
-  *@*@*)
-    DECL_PATH="${DECLARED%%@*}"
-    _rest="${DECLARED#*@}"
-    DECL_BRANCH="${_rest%%@*}"
-    DECL_COMMIT="${_rest#*@}"
-    case "$DECL_COMMIT" in *@*) usage_exit ;; esac
-    if [ -z "$DECL_PATH" ] || [ -z "$DECL_BRANCH" ] || [ -z "$DECL_COMMIT" ]; then usage_exit; fi
-    ;;
-  *) printf 'check-client-source: malformed source_of_truth (want <path>@<branch>@<commit> or unknown): %s\n' "$DECLARED" >&2
-     exit 2 ;;
-esac
-
-# ---------------------------------------------------------------------------
-# Work-tree checks
-# ---------------------------------------------------------------------------
-if [ "$(git -C "$ROOT" rev-parse --is-inside-work-tree 2>/dev/null)" != "true" ]; then
-  row WARN "$ROOT is not inside a git work tree — it cannot answer which commit is deployed; put the module in a repository"
-  exit 0
-fi
-TOP="$(git -C "$ROOT" rev-parse --show-toplevel)"
-HEAD_SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
-BRANCH="$(git -C "$ROOT" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
-
-if [ -z "$BRANCH" ]; then
-  row FAIL "detached HEAD at ${HEAD_SHA:-?} in $TOP — check out the source-of-truth branch before building"
-fi
-
-if [ -z "$DECL_PATH" ]; then
-  if [ -z "$DECLARED" ]; then
-    row WARN "source_of_truth undeclared for this module — record <path>@<branch>@<commit> in its BUILD-STATE.src.md envelope"
-  else
-    row WARN "source_of_truth is unknown — honest, but this checkout ($TOP) is unchecked"
-  fi
-else
-  case "$TOP" in
-    */"${DECL_PATH#/}"|"${DECL_PATH%/}") ;;
-    *) row FAIL "work tree $TOP is not the declared source of truth $DECL_PATH — build from the declared checkout" ;;
-  esac
-  if [ -n "$BRANCH" ] && [ "$DECL_BRANCH" != "unknown" ] && [ "$BRANCH" != "$DECL_BRANCH" ]; then
-    row FAIL "checked-out branch $BRANCH is not the declared source-of-truth branch $DECL_BRANCH"
-  fi
-  if [ "$DECL_COMMIT" != "unknown" ]; then
-    DECL_SHA="$(git -C "$ROOT" rev-parse --verify --quiet "${DECL_COMMIT}^{commit}" 2>/dev/null || true)"
-    if [ -z "$DECL_SHA" ]; then
-      row FAIL "declared commit $DECL_COMMIT is not in this checkout — a stale clone (fetch it) or the wrong tree"
-    elif [ "$DECL_SHA" = "$HEAD_SHA" ]; then
-      row PASS "$TOP at the declared commit $DECL_COMMIT${BRANCH:+ on $BRANCH}"
-    elif git -C "$ROOT" merge-base --is-ancestor "$DECL_SHA" HEAD 2>/dev/null; then
-      row PASS "$TOP is ahead of the declared commit $DECL_COMMIT (new local work) — update source_of_truth at close"
-    else
-      row FAIL "HEAD ${HEAD_SHA:0:12} is behind or diverged from the declared commit $DECL_COMMIT — stale checkout"
-    fi
-  elif [ "$FAILED" -eq 0 ]; then
-    row PASS "$TOP${BRANCH:+ on $BRANCH} matches the declared path/branch (commit unknown)"
-  fi
-fi
-
-# Behind the upstream tracking ref as of the last fetch (no network): advisory only.
-if [ -n "$BRANCH" ]; then
-  _behind="$(git -C "$ROOT" rev-list --count "HEAD..@{upstream}" 2>/dev/null || true)"
-  if [ -n "$_behind" ] && [ "$_behind" -gt 0 ]; then
-    row WARN "$BRANCH is behind its upstream tracking ref by $_behind commit(s) as of the last fetch — pull before building"
-  fi
-fi
-
-[ "$FAILED" -eq 0 ] || exit 1
-exit 0
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'check-client-source: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" check-client-source)" || exit 3
+exec "$BIN" "$@"
