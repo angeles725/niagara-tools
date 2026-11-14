@@ -21,14 +21,16 @@ const (
 )
 
 // stationSaveChain is the call as tokens: comments are blank in the stripped view and a string is one
-// literal token, so neither is a call, and the chain may span lines.
+// literal token, so neither is a call, and the chain may span lines. Only this literal form is counted: a
+// statically imported getStation() or a station kept in a variable is not seen, so a PASS is a floor,
+// not a proof; the live check of BUILD-LOOP § 6.b (one "Saved" line per write) is the proof.
 var stationSaveChain = []string{"Sys", ".", "getStation", "(", ")", ".", "save", "("}
 
 // stationSaveLine is the 1-based line of the first Sys.getStation().save( call in toks, or 0.
 func stationSaveLine(toks []javasrc.Token) int {
 	for i := 0; i+len(stationSaveChain) <= len(toks); i++ {
 		if chainAt(toks[i:], stationSaveChain) {
-			return toks[i].Line + 1
+			return toks[i].Line + 1 // javasrc.Token.Line is 0-based
 		}
 	}
 	return 0
@@ -55,6 +57,7 @@ func (r *run) stationSave() bool {
 	for _, f := range r.javaFiles(pd + "/src") {
 		v, ok := r.java(f)
 		if !ok {
+			// r.java already ended the run (exit 3, the unreadable file named), as in every source check.
 			return true
 		}
 		if ln := stationSaveLine(javasrc.Tokens(v.code)); ln > 0 {
