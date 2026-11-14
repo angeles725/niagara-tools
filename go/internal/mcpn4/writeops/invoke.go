@@ -9,8 +9,10 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
-// AllowedActions is ALLOWED_ACTIONS: the actions n4_invoke_action may call in this version.
-var AllowedActions = []string{"set", "active", "inactive", "auto"}
+// AllowedActions is ALLOWED_ACTIONS: the actions n4_invoke_action may call in this version. ping
+// (a driver network, device or point device ext checks its device; no setting changes) was added
+// after the Python port; the differential declares that difference.
+var AllowedActions = []string{"set", "active", "inactive", "auto", "ping"}
 
 // InvokeAction is n4_invoke_action: set (its previous fallback is the inverse) or a state
 // change (no inverse, unverified).
@@ -79,8 +81,11 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		if hasArg || hasArgType {
 			return nil, plan.ToolError("action " + pyjson.StrRepr(action) + " takes no arg")
 		}
-		return &plan.Planned{Ops: []any{invokeOp(arg)}, Inverse: []any{}, Targets: targets,
-			Notes: []any{"no inverse: " + action + " changes the control state and is not restored automatically"}}, nil
+		note := "no inverse: " + action + " changes the control state and is not restored automatically"
+		if action == "ping" {
+			note = "no inverse: ping only asks the driver to check the device and changes no setting"
+		}
+		return &plan.Planned{Ops: []any{invokeOp(arg)}, Inverse: []any{}, Targets: targets, Notes: []any{note}}, nil
 	}
 	fbType, err := fallbackType(nodes)
 	if err != nil {
