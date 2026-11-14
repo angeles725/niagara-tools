@@ -223,7 +223,7 @@ GRADLEW
 
 # ================= Δ7 (retro panccadia-defrost-sequencing-hmi-reload-deltas) =================
 # Build-location precheck: WARN (non-fatal) when gradle-root or niagara_home is on a WSL
-# 9p/drvfs mount. N4_FSTYPE_MOUNTS_FILE (toolbelt/lib/fs-type.sh) overrides `df -T` with a
+# 9p/drvfs mount. N4_FSTYPE_MOUNTS_FILE (go/internal/fstype) overrides `df -T` with a
 # /proc/mounts-formatted fixture so these tests never depend on the host's real mounts.
 
 @test "BS-9p-warn-root: gradle-root on a 9p/drvfs mount -> WARN (non-fatal), build still proceeds" {

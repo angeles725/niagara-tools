@@ -1,6 +1,7 @@
-// Package signblock is the one Go table of the root signing-block requirements: toolbelt/lib/signing-block.sh
-// SIGN_BLOCK_NAME and SIGN_BLOCK_ERE, entry by entry and in order (TestPartsMatchTheShellTable and
-// tests/lint-structure.bats LS15-sync keep them equal). Lint-structure L15 and preflight sample-sign read it.
+// Package signblock is the one table of the root signing-block requirements, with the entries and order of
+// the retired shell table toolbelt/lib/signing-block.sh (TestPartsAreTheTable pins each one;
+// tests/lint-structure.bats LS15-sync fails on a second copy). Lint-structure L15, preflight sample-sign and
+// build-module read it.
 // Parts[0] (allowDefaultProfile off) stops the signing plugin's default-profile fallback: without it a missing
 // profile or a failed HSM/token login signs with the self-signed default key (issue #266).
 package signblock

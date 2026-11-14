@@ -1,6 +1,7 @@
 // Package javasrc is a small Java source scanner: it blanks comments and finds method bodies by
-// brace depth. It is the Go port of the kit's awk lib build-n4-module-kit/toolbelt/lib/method-boundary.sh
-// (mb_strip + mb_parse) and keeps its results exactly; TestDifferentialAwk runs both on the same inputs.
+// brace depth. It is the Go port of the kit's retired awk lib toolbelt/lib/method-boundary.sh (mb_strip +
+// mb_parse) and keeps its results; while the lib existed both ran on the same inputs and agreed byte for
+// byte, and the package's own cases are now the reference.
 //
 // Semantics carried over from the awk lib (its invariants I1-I6):
 //   - Strip blanks // and /* */ comments, carries block-comment and text-block state across lines and
@@ -14,8 +15,7 @@
 //     it, not the deepest block its first line opens (`void x() { if (a) {` ends where x's brace closes; mb_parse
 //     ended it with the if); and the same backward scan also names a signature
 //     wrapped over several lines whose last line holds ") {" (`void m(int a,` / `    int b) {`); mb_parse
-//     missed that method, a false negative for every method-scoped lint. TestDifferentialAwk's inputs do
-//     not hold that shape; the bash lints still on mb_parse keep the old behaviour.
+//     missed that method, a false negative for every method-scoped lint.
 //
 // Scanning is byte-wise: every character the rules test is ASCII, so multi-byte UTF-8 text passes
 // through unchanged, as it does in awk.
