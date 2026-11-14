@@ -14,70 +14,20 @@
 #       hook that setting .githooks would silently stop
 #
 # git IS used here on purpose: this lives under scripts/, not toolbelt/ (kit-links L2).
-set -euo pipefail
+#
+# Implementation: the Go module at <repo>/go (go/internal/hookinstall). This wrapper is the stable entry point:
+# go/go-tool.sh `go_tool_bin` builds go/bin/install-client-hooks when the binary is missing or older than a Go
+# source, then this script execs it. The kit recorded in the client clone is the checkout holding the invoked
+# path (never resolved through a symlink), as it always was. Needs `go` on PATH to build; no Go toolchain or a
+# failed build is exit 3. Anything that cannot be checked (the hooks path, the default hooks directory, the
+# existing hook) is exit 3 with nothing changed; a file operation that fails is exit 1 and a git command that
+# fails ends with git's own status.
+set -u
 
-usage() { printf 'usage: install-client-hooks.sh [--force] <client-repo>\n' >&2; exit 2; }
-FORCE=0
-REPO_ARG=""
-for arg in "$@"; do
-  case "$arg" in
-    --force) FORCE=1 ;;
-    -h|--help) printf 'usage: install-client-hooks.sh [--force] <client-repo>\n'; exit 0 ;;
-    -*) printf 'install-client-hooks: unknown option: %s\n' "$arg" >&2; usage ;;
-    *) [ -z "$REPO_ARG" ] || usage; REPO_ARG="$arg" ;;
-  esac
-done
-[ -n "$REPO_ARG" ] || usage
-
-KIT_TOOLBELT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../build-n4-module-kit/toolbelt" && pwd)"
-TEMPLATE="$KIT_TOOLBELT/../templates/client-pre-push"
-[ -f "$TEMPLATE" ] || { printf 'install-client-hooks: template missing: %s\n' "$TEMPLATE" >&2; exit 2; }
-
-[ -d "$REPO_ARG" ] || { printf 'install-client-hooks: not a directory: %s\n' "$REPO_ARG" >&2; exit 2; }
-if [ "$(git -C "$REPO_ARG" rev-parse --is-inside-work-tree 2>/dev/null || true)" != "true" ]; then
-  printf 'install-client-hooks: not a git work tree: %s\n' "$REPO_ARG" >&2
-  exit 2
-fi
-TOP="$(git -C "$REPO_ARG" rev-parse --show-toplevel)"
-HOOK="$TOP/.githooks/pre-push"
-
-# The EFFECTIVE hooksPath (local, global or system): a local .githooks would shadow any of them.
-current="$(git -C "$TOP" config --get core.hooksPath 2>/dev/null || true)"
-if [ -n "$current" ] && [ "$current" != ".githooks" ] && [ "$FORCE" -eq 0 ]; then
-  printf 'install-client-hooks: REFUSING — core.hooksPath is already "%s"; nothing changed. Re-run with --force.\n' "$current" >&2
-  exit 3
-fi
-# With no hooksPath, git runs the default hooks directory; setting .githooks would silently stop every active hook
-# there (e.g. a Git LFS pre-push). Refuse and name them, unless --force.
-if [ -z "$current" ] && [ "$FORCE" -eq 0 ]; then
-  # --git-path (git >= 2.5) prints the path relative to TOP; --path-format=absolute would need git >= 2.31.
-  hooks_dir="$(git -C "$TOP" rev-parse --git-path hooks)"
-  case "$hooks_dir" in /*) ;; *) hooks_dir="$TOP/$hooks_dir" ;; esac
-  active=""
-  if [ -d "$hooks_dir" ]; then
-    for h in "$hooks_dir"/*; do
-      if [ ! -f "$h" ] || [ ! -x "$h" ]; then continue; fi
-      case "$h" in *.sample) continue ;; esac
-      active="$active ${h##*/}"
-    done
-  fi
-  if [ -n "$active" ]; then
-    printf 'install-client-hooks: REFUSING — active hooks in %s would stop running:%s; nothing changed.\n' "$hooks_dir" "$active" >&2
-    printf '                      Move them into .githooks/ (or chain them) and re-run with --force.\n' >&2
-    exit 3
-  fi
-fi
-if [ -e "$HOOK" ] && ! cmp -s "$TEMPLATE" "$HOOK" && [ "$FORCE" -eq 0 ]; then
-  printf 'install-client-hooks: REFUSING — %s exists and differs from the kit template; nothing changed. Re-run with --force.\n' "$HOOK" >&2
-  exit 3
-fi
-
-mkdir -p "$TOP/.githooks"
-if ! cmp -s "$TEMPLATE" "$HOOK" 2>/dev/null; then
-  cp "$TEMPLATE" "$HOOK"
-fi
-chmod +x "$HOOK"
-git -C "$TOP" config --local core.hooksPath .githooks
-git -C "$TOP" config --local n4kit.toolbelt "$KIT_TOOLBELT"
-printf 'install-client-hooks: %s/.githooks/pre-push active (split-package-check --strict on every push).\n' "$TOP"
-printf '                      Commit .githooks/pre-push; each new clone re-runs this installer once.\n'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'install-client-hooks: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" install-client-hooks)" || exit 3
+INSTALL_TOOLS_LAUNCHER="$SCRIPT_DIR/install-client-hooks.sh" exec "$BIN" "$@"

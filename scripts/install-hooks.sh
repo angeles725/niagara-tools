@@ -15,47 +15,21 @@
 #
 # git IS used here on purpose: this is NOT a toolbelt/ check script, so the kit-links L2 rule
 # ("no toolbelt script invokes git") does not apply — the installer lives under scripts/.
-set -euo pipefail
+#
+# Exit: 0 done · 2 unknown argument or not a git repository · 3 refused (a custom core.hooksPath without --force,
+#       or one that cannot be read) or no Go toolchain · else the exit status of the git command or of the
+#       .githooks/post-merge that failed
+#
+# Implementation: the Go module at <repo>/go (go/internal/hookinstall). This wrapper is the stable entry point:
+# go/go-tool.sh `go_tool_bin` builds go/bin/install-hooks when the binary is missing or older than a Go source,
+# then this script execs it in the caller's working directory (the repository being configured).
+# Needs `go` on PATH to build; no Go toolchain or a failed build is exit 3.
+set -u
 
-HOOKS_DIR=".githooks"
-MODE="install"
-FORCE=0
-for arg in "$@"; do
-  case "$arg" in
-    --uninstall) MODE="uninstall" ;;
-    --force)     FORCE=1 ;;
-    -h|--help)   printf 'Usage: install-hooks.sh [--force] [--uninstall]\n'; exit 0 ;;
-    *) printf 'install-hooks: unknown arg: %s\n' "$arg" >&2; exit 2 ;;
-  esac
-done
-
-# must be inside a git work tree
-git rev-parse --git-dir > /dev/null 2>&1 || { printf 'install-hooks: not a git repository\n' >&2; exit 2; }
-
-current="$(git config --local --get core.hooksPath 2>/dev/null || true)"
-
-if [ "$MODE" = "uninstall" ]; then
-  if [ "$current" = "$HOOKS_DIR" ]; then
-    git config --local --unset core.hooksPath
-    printf 'install-hooks: deactivated — core.hooksPath unset (default hooks restored).\n'
-  else
-    printf 'install-hooks: core.hooksPath is not %s (it is "%s"); left untouched.\n' "$HOOKS_DIR" "$current"
-  fi
-  exit 0
-fi
-
-# install — never silently clobber a user's own hooks configuration
-if [ -n "$current" ] && [ "$current" != "$HOOKS_DIR" ] && [ "$FORCE" -eq 0 ]; then
-  printf 'install-hooks: REFUSING — core.hooksPath is already set to a custom value "%s".\n' "$current" >&2
-  printf '              Your hooks are left untouched. Re-run with --force to override.\n' >&2
-  exit 3
-fi
-
-git config --local core.hooksPath "$HOOKS_DIR"
-printf 'install-hooks: activated — core.hooksPath = %s; live: the retro-enforcement pre-push gate and the\n' "$HOOKS_DIR"
-printf '              kit-state regenerate hooks (post-merge, post-checkout, post-rewrite, post-commit).\n'
-# materialize the generated kit state now (the hook never fails; it warns and removes stale files)
-top="$(git rev-parse --show-toplevel)"
-if [ -x "$top/$HOOKS_DIR/post-merge" ]; then (cd "$top" && "./$HOOKS_DIR/post-merge"); fi
-printf '              Undo with: scripts/install-hooks.sh --uninstall\n'
-exit 0
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'install-hooks: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" install-hooks)" || exit 3
+exec "$BIN" "$@"
