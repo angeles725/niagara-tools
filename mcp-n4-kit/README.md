@@ -73,8 +73,8 @@ scripts/install-skill.sh --skill mcp-n4
   `go/internal/mcpn4/...`: `box` (BOX client), `jsonrpc` and `cli` (stdio protocol and flags),
   `readtools` and `writeops` (the tools), `safety`, `journal`, `tiers`, `bql`, `files`, `px`,
   `retro` (the session retro draft and its embedded template).
-- `go/cmd/mcp-n4/retro-draft`: prints the session retro draft for `tools/new_retro.py`.
-- `tools/new_retro.py`: writes the session retro file and its `pending` row in `retros/INDEX.md`.
+- `go/cmd/mcp-n4/retro-draft`: prints the session retro draft, and with `--write` writes the
+  session retro file and its `pending` row in `retros/INDEX.md`.
 - `retros/`: session retros and `INDEX.md`.
 - `tests/test_server.py`: protocol, tool and end-to-end stdio tests.
 - `tools/live_smoke.py`: the live smoke runner (see Live smoke test).
@@ -427,11 +427,12 @@ the rest and removes the folder it created. Exit 0 only when every required step
 
 Every session ends with a retro that proposes kit deltas (never applies them). The read-only
 tool `n4_session_retro_draft` (both modes) drafts it from the server's audit and journal;
-`python3 tools/new_retro.py --station NAME --state-dir DIR [--since TS] [--dry-run]` writes
-`retros/YYYY-MM-DD-<station>-session.md` and a `pending` row in `retros/INDEX.md`. It refuses to
-overwrite without `--force`. Nothing is staged as a GitHub issue automatically. The draft comes
-from the Go binary `go/bin/retro-draft` (`cd go && go build -o bin/ ./cmd/mcp-n4/retro-draft`;
-`MCP_N4_RETRO_DRAFT_BIN` names another), the server's own drafting code.
+`go/bin/retro-draft --write --station NAME --state-dir DIR [--since TS] [--dry-run]` (build it with
+`cd go && go build -o bin/ ./cmd/mcp-n4/retro-draft`) writes
+`retros/YYYY-MM-DD-<station>-session.md` and a `pending` row in `retros/INDEX.md`, both atomically.
+It refuses to overwrite without `--force`; `--out-dir` names another retros directory and
+`--date` another day (default today, UTC). Nothing is staged as a GitHub issue automatically.
+The draft is the server's own drafting code (`go/internal/mcpn4/retro`).
 
 ## Run the tests
 

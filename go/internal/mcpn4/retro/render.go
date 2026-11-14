@@ -147,7 +147,7 @@ func render(candidates []*pyjson.Object, station, date string, audit, views []*p
 	return text, nil
 }
 
-// CountDeltas is retro.count_deltas, the INDEX row's delta count of tools/new_retro.py: the
+// CountDeltas is retro.count_deltas, the INDEX row's delta count of retro-draft --write: the
 // table rows under "## Proposed kit deltas"; an honesty line counts as zero.
 func CountDeltas(markdown string) int {
 	m := regexp.MustCompile(`(?ms)^## Proposed kit deltas\n(.*?)(?:^## |\z)`).FindStringSubmatch(markdown)

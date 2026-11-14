@@ -37,7 +37,7 @@ Before step 5 (and before relying on anything the operator wrote by hand or says
 4. After approval, repeat with `dry_run=false` and the `confirmation_token`.
 5. Read the verdict; `n4_find_dangling_outputs`; `n4_save_station` with persistence evidence.
 6. Keep every `batch_id` (`n4_list_batches` lists them, newest first).
-7. Close with the session retro: call `n4_session_retro_draft` (or run `$KIT/tools/new_retro.py --station NAME --state-dir DIR`), review the candidate deltas, keep or edit them (or leave the honesty line `no new deltas`). Propose, never apply; stage issues only by hand.
+7. Close with the session retro: call `n4_session_retro_draft` (or run `$KIT/../go/bin/retro-draft --write --station NAME --state-dir DIR`), review the candidate deltas, keep or edit them (or leave the honesty line `no new deltas`). Propose, never apply; stage issues only by hand.
 
 ## Hard Rules (non-negotiable)
 
@@ -54,7 +54,7 @@ Before step 5 (and before relying on anything the operator wrote by hand or says
 - History extensions: use `n4_add_history` (one dry run and one token for up to 50 points, created already configured and enabled). By hand, the recipe is `n4_create_component` `history:NumericIntervalHistoryExt` under the point (it is created DISABLED, `BHistoryExt.enabled` default false), then `n4_set_slot` `historyName` (`baja:Format`, unique per device: the default `%parent.name%` collides across devices with equal point names, e.g. `S%parent.parent.parent.name%_%parent.name%`), `interval` (`baja:RelTime`, ms; the top-level ext slot, not `historyConfig/interval`), and last `enabled=true`. `[ev: external retro niagara-research client A 2026-11-10]`
 - Never contact a station the operator did not configure and authorize.
 - If the harness permission classifier blocks a live write, surface it to the operator and stop; never route around it (no other tool, subagent or peer session).
-- Close with the session retro (`n4_session_retro_draft` / `tools/new_retro.py`): proposed kit deltas, never applied unprompted; never stage issues automatically.
+- Close with the session retro (`n4_session_retro_draft` / `retro-draft --write`): proposed kit deltas, never applied unprompted; never stage issues automatically.
 
 ## Output Contract
 

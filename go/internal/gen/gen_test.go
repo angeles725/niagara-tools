@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -124,8 +125,27 @@ func TestFileWrite(t *testing.T) {
 	if b, _ := os.ReadFile(path); err != nil || string(b) != "a\nb\n" || st.Mode().Perm() != 0o600 {
 		t.Errorf("target is %q with mode %v, want the content and the old mode 0600", b, st.Mode().Perm())
 	}
-	if matches, _ := filepath.Glob(path + ".tmp.*"); len(matches) != 0 {
-		t.Errorf("temporary files left behind: %v", matches)
+	if es, _ := os.ReadDir(filepath.Dir(path)); len(es) != 1 {
+		t.Errorf("temporary files left behind: %d entries next to %s", len(es), path)
+	}
+}
+
+// TestFileWriteGroupWritableTarget pins what an existing group-writable target becomes.
+// Not parallel: it sets the process umask.
+func TestFileWriteGroupWritableTarget(t *testing.T) {
+	old := syscall.Umask(0o022)
+	defer syscall.Umask(old)
+	path := filepath.Join(t.TempDir(), "OUT.md")
+	write(t, path, "old\n")
+	if err := os.Chmod(path, 0o664); err != nil {
+		t.Fatal(err)
+	}
+	_, _, s := stdio("")
+	if code := file(path).Write(s); code != ExitOK {
+		t.Fatalf("exit %d", code)
+	}
+	if st, _ := os.Stat(path); st.Mode().Perm() != 0o664 {
+		t.Errorf("mode %o, want 0664 (an existing target keeps its exact mode)", st.Mode().Perm())
 	}
 }
 
