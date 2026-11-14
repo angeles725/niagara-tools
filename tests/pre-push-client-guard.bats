@@ -8,6 +8,9 @@ bats_require_minimum_version 1.5.0
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   HOOK="$REPO/.githooks/pre-push"
+  # the hook is a launcher over go/bin/pre-push: make it current here, where `go` is on PATH (hook() narrows PATH)
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime
+  (. "$REPO/go/go-tool.sh" && go_tool_bin "$REPO/go" pre-push >/dev/null)
   FAKEBIN="$BATS_TEST_TMPDIR/bin"; mkdir -p "$FAKEBIN"
   cat > "$FAKEBIN/git" <<'GIT'
 #!/usr/bin/env bash
