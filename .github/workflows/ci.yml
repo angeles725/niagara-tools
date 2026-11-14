@@ -46,7 +46,22 @@ jobs:
         with:
           python-version: "3.15"
 
+      # The vendorfloor tests drive node + acorn (the lint-vendor-floor driver). Without these two steps they skip
+      # and only the bats job exercises the real driver; KIT_REQUIRE_JS_TOOLS turns a missing tool into a failure.
+      # The bats job asserts the installed versions against the pins.
+      - name: Set up Node.js 24.19.0 (npm cache keyed on toolbelt/eslint/package-lock.json)
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: build-n4-module-kit/toolbelt/eslint/package-lock.json
+
+      - name: Install the pinned npm tools (npm ci from toolbelt/eslint/package-lock.json)
+        run: npm ci --prefix build-n4-module-kit/toolbelt/eslint --ignore-scripts --no-audit --no-fund
+
       - name: Go gofmt + vet + test (go/)
+        env:
+          KIT_REQUIRE_JS_TOOLS: "1"
         run: |
           cd go
           # The assignment fails the step when gofmt itself fails; a non-empty list fails it too.

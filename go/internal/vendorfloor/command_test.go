@@ -23,12 +23,22 @@ func callWith(apis APIs, vars map[string]string, args ...string) (code int, out,
 	return code, o.String(), e.String()
 }
 
+// missingTool skips the test, or fails it when KIT_REQUIRE_JS_TOOLS is set (CI sets it, so a broken node or
+// acorn setup cannot turn these tests into silent skips).
+func missingTool(t *testing.T, reason string) {
+	t.Helper()
+	if os.Getenv("KIT_REQUIRE_JS_TOOLS") != "" {
+		t.Fatalf("KIT_REQUIRE_JS_TOOLS is set and %s", reason)
+	}
+	t.Skip(reason)
+}
+
 // needNode skips the test when node is not installed and returns the environment that finds it.
 func needNode(t *testing.T) map[string]string {
 	t.Helper()
 	node, err := exec.LookPath("node")
 	if err != nil {
-		t.Skip("node not installed: the acorn driver cannot run")
+		missingTool(t, "node not installed: the acorn driver cannot run")
 	}
 	return map[string]string{"KIT_NODE": node}
 }
@@ -45,7 +55,7 @@ func needAcorn(t *testing.T) map[string]string {
 	case isDir(toolbelt + bundledAcorn):
 		vars["LINT_VENDOR_FLOOR_TOOLBELT"] = toolbelt
 	case exec.Command(vars["KIT_NODE"], "-e", `require.resolve("acorn")`).Run() != nil:
-		t.Skip("acorn not installed (npm install --prefix build-n4-module-kit/toolbelt/eslint, or set KIT_ACORN)")
+		missingTool(t, "acorn not installed (npm install --prefix build-n4-module-kit/toolbelt/eslint, or set KIT_ACORN)")
 	}
 	return vars
 }
