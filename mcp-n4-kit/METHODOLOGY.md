@@ -106,7 +106,11 @@ the tier, after the identity check and before the budget, scope and token:
 
 - Tier A: unchanged.
 - Tier B: an execution is refused unless the operator started the server with
-  `--allow-tier-b NAME` for that station, after a PoC matched the build.
+  `--allow-tier-b NAME` for that station, after a PoC matched the build. The PoC is a full
+  `live-smoke --apply --allow-tier-b NAME` on a scratch or laboratory station of the SAME
+  build, never on the station the work is for: every required step `verified` and the scratch
+  folder gone. Builds it has passed on: 4.15.6.20 (2026-11-14, 22 steps, the rollback of a
+  nested subtree included).
 - Tier C: an execution is refused unless the operator started the server with
   `--allow-tier-c NAME`, after `reg.loadContract`, `loadRoot` and a harmless scratch
   write succeeded. The server has no probe tool; the opt-in records that the probe ran.

@@ -79,6 +79,7 @@ scripts/install-skill.sh --skill mcp-n4
 - `go/internal/mcpn4/blackbox`: the Go black-box harness (the real server over stdio against
   the `boxstation` fake) and the protocol, connect, read-tool, tier and end-to-end stdio tests.
 - `go/cmd/mcp-n4/live-smoke`: the live smoke runner (see Live smoke test).
+- `go/cmd/mcp-n4/n4call`: the bench client (see Bench client).
 - `go/internal/mcpn4/readtools/readtoolstest/boxstation`: the fake BOX station on `127.0.0.1`
   (plain HTTP, tests only).
 - `tests/fixtures/`: recorded station answers (BQL CSVs, a Px view), a journal the Python server
@@ -412,7 +413,10 @@ folder, rolls the removal back (probe-only: its verdict is recorded but does not
 the exit code), removes it again, saves and checks the folder is gone. Without
 `--apply` it only prints the scenario and contacts nothing. It launches the Go server
 (`--go-bin PATH`, else `MCP_N4_GO_BIN`, else the `mcp-n4` next to `live-smoke`, that is
-`go/bin/mcp-n4`; missing is exit 2).
+`go/bin/mcp-n4`; missing is exit 2). On a station that is not tier A (METHODOLOGY section 5) pass the
+operator's `--allow-tier-b NAME` or `--allow-tier-c NAME`: the runner hands it to the server and
+never adds one itself. A step that does not verify prints its reason under its line. `--report`
+needs an existing directory (exit 2 before anything runs).
 
 ```
 (cd go && go build -o bin/ ./cmd/mcp-n4 ./cmd/mcp-n4/live-smoke)
@@ -429,6 +433,22 @@ scratch folder plus the station root (needed to create and remove the folder). T
 runner refuses to run if `McpSmoke` already exists. After a failed required step it skips
 the rest and removes the folder it created. Exit 0 only when every required step is
 `verified`; the JSON report lists each step, its verdict and `batch_id`.
+
+## Bench client
+
+`go/bin/n4call` (built from `go/cmd/mcp-n4/n4call`) calls tools on a server it starts over
+stdio, for a live probe on a station that is not registered in the agent's MCP configuration:
+
+```
+go/bin/n4call --calls calls.jsonl -- go/bin/mcp-n4 --station <NAME>=https://<host> ...
+```
+
+Each line of the file is `{"tool": NAME, "args": {...}}`; with `"write": true` the call is sent
+with `dry_run=true` and then executed with the `confirmation_token` it returned
+(`--dry-run-only` stops after the dry run). Output is one JSON line per request (`tool`,
+`phase`, `error`, `result`); credential values are masked; the run stops with exit 1 at the
+first tool error. The server command line after `--` is the operator's: scopes, tier opt-ins
+and station homes are whatever it names, n4call adds nothing.
 
 ## Session retros
 
