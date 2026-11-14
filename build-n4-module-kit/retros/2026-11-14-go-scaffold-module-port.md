@@ -15,27 +15,27 @@ bash tool reported success over a broken result, which the port refuses instead.
 - The bash tool passed `--vendor`, `--target-version` and `--plugin-version` to sed as REPLACEMENT text. An
   unescaped `|`, a newline, a trailing `\` or `\1`-`\9` made sed fail about 45 times; the tool left a broken tree
   and exited 0. The port exits 2 with one line and writes nothing (4 rows), and refuses the GNU-only case
-  escapes (2 rows). `[ev: e3b3e3ca]`
+  escapes (2 rows). `[ev: 8ea57144]`
 - The replacement semantics sed accepted are reproduced on purpose, so `--vendor 'A&B'` still yields
-  `AAngelesB`: `&` expands to the replaced token. `go/internal/scaffoldmodule/sedrhs.go`. `[ev: e3b3e3ca]`
+  `AAngelesB`: `&` expands to the replaced token. `go/internal/scaffoldmodule/sedrhs.go`. `[ev: 8ea57144]`
 - A read-only out-dir made the bash tool print 49 errors and exit 0 with "emitted"; the port exits 3 (1 row).
-  `[ev: e3b3e3ca]`
+  `[ev: 8ea57144]`
 - Under `bats --jobs 4` the three `PF-jarlock-*` cases of `tests/preflight.bats` failed; the file alone passed
-  40 of 40 twice. `[ev: 7466327d]`
+  40 of 40 twice. `[ev: 4159818f]`
 
 - The lowercased `--vendor` value becomes a directory name of the emitted Java package
   (`go/internal/scaffoldmodule/subst.go`, fixturePathRules), so a value with `/` or `..` writes outside the
-  module root; the bash tool did the same through sed on paths. `[ev: e3b3e3ca]`
+  module root; the bash tool did the same through sed on paths. `[ev: 8ea57144]`
 - A write fault mid-copy leaves the partial tree in place (the next run then refuses with "already exists"), and
-  no Go test injects that fault: only the differential row covers it. `[ev: e3b3e3ca]`
+  no Go test injects that fault: only the differential row covers it. `[ev: 8ea57144]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | Option values are literal text: `--vendor 'A&B'` emits `A&B`, and a value with `|`, `\` or a newline is either emitted as typed or refused by name; the sed-replacement emulation (`sedrhs.go`) is deleted with its tests | `go/internal/scaffoldmodule` (subst, sedrhs) · `toolbelt/scaffold-module.sh` header | `[ev: e3b3e3ca]` |
-| Δ2 | The `PF-jarlock-*` cases are safe under a parallel bats run (own lock path and port per case), or the file declares itself serial; the parallel batch rule names the file meanwhile | `tests/preflight.bats` · `CONTRIBUTING.md` parallel batch rules | `[ev: 7466327d]` |
-| Δ3 | `--vendor` is validated before anything is written: its lowercased form must be one Java package segment (no `/`, `..`, whitespace or leading digit), else exit 2 naming the value | `go/internal/scaffoldmodule` (args, name) | `[ev: e3b3e3ca]` |
-| Δ4 | A failed emit removes the partial `<out-dir>/<ModuleName>` it created (and says so), with a Go test that injects the write fault | `go/internal/scaffoldmodule/command.go` · `copytree.go` | `[ev: e3b3e3ca]` |
+| Δ1 | Option values are literal text: `--vendor 'A&B'` emits `A&B`, and a value with `|`, `\` or a newline is either emitted as typed or refused by name; the sed-replacement emulation (`sedrhs.go`) is deleted with its tests | `go/internal/scaffoldmodule` (subst, sedrhs) · `toolbelt/scaffold-module.sh` header | `[ev: 8ea57144]` |
+| Δ2 | The `PF-jarlock-*` cases are safe under a parallel bats run (own lock path and port per case), or the file declares itself serial; the parallel batch rule names the file meanwhile | `tests/preflight.bats` · `CONTRIBUTING.md` parallel batch rules | `[ev: 4159818f]` |
+| Δ3 | `--vendor` is validated before anything is written: its lowercased form must be one Java package segment (no `/`, `..`, whitespace or leading digit), else exit 2 naming the value | `go/internal/scaffoldmodule` (args, name) | `[ev: 8ea57144]` |
+| Δ4 | A failed emit removes the partial `<out-dir>/<ModuleName>` it created (and says so), with a Go test that injects the write fault | `go/internal/scaffoldmodule/command.go` · `copytree.go` | `[ev: 8ea57144]` |
 
 ## Lessons
 - A script that pipes user text into sed's replacement side has a second, undocumented input language.
