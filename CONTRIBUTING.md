@@ -112,6 +112,11 @@ over shared `go/internal/` packages (`internal/cli` holds the injectable stdio).
 - Third tool, `toolbelt/gen-build-state.sh` → `go/internal/buildstate`: generates `BUILD-STATE.md` from
   `BUILD-STATE.src.md` + `build-n4-module-kit/ledger.d/` (§ 6.1). `[ev: retro ledger-fragments]` The reader
   command over the generators is `toolbelt/kit-state.sh` → `go/internal/kitstate` (§ 6.1).
+- The install and bootstrap scripts of `scripts/` (`install-skill.sh`, `check-skill-drift.sh`, `kit-resolve.sh`,
+  `install-hooks.sh`, `install-client-hooks.sh`) are launchers too. A launcher whose command must know where the
+  script lives (the repository it installs from, its header as the `--help` text) passes its own path in
+  `INSTALL_TOOLS_LAUNCHER`; the usage text is never copied into Go. `install-skill.sh` keeps the `SKILLS` table as
+  data (Go reads that line from the script). They are run for their effect or their stdout, never sourced.
 
 Tool-authoring rules for a Go tool or port (what to port and the lint stack: `build-n4-module-kit/BUILD-LOOP.md`
 § 5 "Kit tooling doctrine"):
