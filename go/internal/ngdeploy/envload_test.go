@@ -22,8 +22,31 @@ func TestAMissingEnvFileIsToleratedAndTheEnvironmentIsUsed(t *testing.T) {
 		t.Setenv(k, v)
 	}
 	f.noEnvFile = true
-	for _, file := range []string{f.dir + "/absent", f.modules} { // a directory is skipped as an absent file is
+	for _, file := range []string{f.dir + "/absent", f.dir + "/absent/below", f.env + "/below", "/dev/null"} {
 		f.want(f.run("--env-file", file, "--no-backup", "--no-deploy", "--mode", "C"), ExitOK, "[ng-deploy] build ok\n")
+		if f.err != warnNoBackup {
+			t.Errorf("%s: stderr %q", file, f.err)
+		}
+	}
+}
+
+// A directory is not "no env file": the operator named the wrong path, and the deploy would run on the
+// ambient environment alone.
+func TestAnEnvFileThatIsADirectoryIsRefused(t *testing.T) {
+	f := newFixture(t)
+	for k, v := range map[string]string{"MODULE_NAME": "demo", "GRADLEW_PATH": f.src + "/gradlew", "NIAGARA_HOME": "/n", "NIAGARA_USER_HOME": "/u",
+		"JAVA_HOME": "/j", "STATION_MODULES_DIR": f.modules, "EXPECTED_RT_TYPES": "9"} {
+		t.Setenv(k, v)
+	}
+	f.noEnvFile = true
+	code := f.run("--env-file", f.modules, "--no-backup", "--no-deploy", "--mode", "C")
+	if code != ExitEnv || f.out != "" || f.err != "[ng-deploy] ERROR env file "+f.modules+" is a directory\n" || f.calls() != "" {
+		t.Errorf("--env-file <directory>: exit %d, stdout %q, stderr %q, calls %q", code, f.out, f.err, f.calls())
+	}
+	f.mkdir(f.work + "/.env.local") // the default path is checked the same way
+	code = f.run("--no-backup", "--no-deploy", "--mode", "C")
+	if code != ExitEnv || f.out != "" || f.err != "[ng-deploy] ERROR env file .env.local is a directory\n" || f.calls() != "" {
+		t.Errorf(".env.local is a directory: exit %d, stdout %q, stderr %q, calls %q", code, f.out, f.err, f.calls())
 	}
 }
 

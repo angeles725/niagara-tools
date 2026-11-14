@@ -87,7 +87,7 @@ var cannotDetect = map[string]struct {
 }{
 	"no git":        {func(f *fixture) { os.Remove(f.bin + "/git") }, "[ng-deploy] NOTICE: git not found; skipping annotation change detection\n"},
 	"no repository": {func(f *fixture) { f.t.Setenv("FAKE_GIT_NOREPO", "1") }, "[ng-deploy] NOTICE: not a git repository; skipping annotation change detection\n"},
-	"diff fails":    {func(f *fixture) { f.t.Setenv("FAKE_GIT_DIFF_EXIT", "128") }, ""},
+	"diff fails":    {func(f *fixture) { f.t.Setenv("FAKE_GIT_DIFF_EXIT", "128") }, "[ng-deploy] NOTICE: git diff HEAD~1..HEAD failed (exit 128); skipping annotation change detection\n"},
 	"unreadable baseline": {func(f *fixture) {
 		f.write(f.work+"/.last-deploy-sha", recordedCommit+"\n")
 		f.chmod(f.work+"/.last-deploy-sha", 0o000)
@@ -140,5 +140,15 @@ func TestTheDiffStartsAtTheLastDeployedCommitWhenItIsOne(t *testing.T) {
 		if !strings.HasPrefix(f.calls(), tc.want+"gradlew") || f.err != warnNoBackup {
 			t.Errorf("%s: stderr %q, calls %q", tc.name, f.err, f.calls())
 		}
+	}
+}
+
+// A diff that fails after showing an annotation change is still a change: the warning, not the notice.
+func TestAFailedDiffThatShowedAChangeStillWarns(t *testing.T) {
+	f := newFixture(t)
+	f.write(f.dir+"/do/git", "case \"$1\" in diff) echo '+@NiagaraType'; exit 2 ;; rev-parse) echo "+recordedCommit+" ;; esac\n")
+	f.want(f.run("--no-backup", "--no-deploy"), ExitOK)
+	if f.err != warnNoBackup+annotationWarning {
+		t.Errorf("stderr %q", f.err)
 	}
 }

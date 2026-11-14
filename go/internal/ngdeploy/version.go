@@ -12,8 +12,14 @@ import (
 // vendorVersion went up: Software Manager and the module cache key on the version, not the bytes. The
 // comparison is vendorversion.Cmp (numeric per component, a missing one is 0: 1.3 is 1.3.0). The same
 // version is exit 51, a lower one exit 54, and a version that cannot be read or ordered exit 52. A jar
-// with no deployed counterpart, or with the same bytes, is not checked.
+// with no deployed counterpart, or with the same bytes, is not checked. A build that passed and left no jar
+// is exit 52 before any jar is compared: there is nothing to verify, and nothing to deploy.
 func (d *deploy) precheckVersion() int {
+	for _, built := range d.builtJars() {
+		if is, err := regular(built); err == nil && !is {
+			return d.fail(ExitVersionUnknown, msgVersionNoJar, basename(built), built)
+		}
+	}
 	for _, built := range d.builtJars() {
 		name := basename(built)
 		deployed := d.station + "/" + name

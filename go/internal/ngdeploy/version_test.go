@@ -78,3 +78,25 @@ func TestVersionPrecheckRefusesAJarItCannotCheck(t *testing.T) {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
 }
+
+// A build that passed and left no jar is refused before any jar is compared, deployed or not.
+func TestVersionPrecheckRefusesABuildThatLeftNoJar(t *testing.T) {
+	for name, arrange := range map[string]func(f *fixture){
+		"nothing deployed": func(*fixture) {},
+		"an older deploy":  func(f *fixture) { f.deployed() },
+		"a directory":      func(f *fixture) { f.mkdir(f.builtJar("ux")) },
+	} {
+		f := newFixture(t)
+		f.remove(f.builtJar("ux"))
+		arrange(f)
+		before := f.read(f.deployedJar("rt"))
+		code := f.run("--no-backup")
+		want := warnNoBackup + "[ng-deploy] ERROR version-bump precheck cannot verify demo-ux.jar: the build left no jar at " + f.builtJar("ux") + "\n"
+		if code != ExitVersionUnknown || f.err != want || !strings.HasSuffix(f.out, "[ng-deploy] build ok\n") {
+			t.Errorf("%s: exit %d, stdout %q, stderr %q", name, code, f.out, f.err)
+		}
+		if strings.Contains(f.calls(), "unzip") || strings.Contains(f.calls(), "sr.sh") || f.read(f.deployedJar("rt")) != before || f.exists(f.work+"/.last-deploy-sha") {
+			t.Errorf("%s: the deploy went past the precheck:\n%s", name, f.calls())
+		}
+	}
+}

@@ -55,13 +55,17 @@ func (d *deploy) detectAnnotationChanges() detection {
 	}
 	base, known := d.baseline()
 	var diff bytes.Buffer
-	failed := d.run(&diff, io.Discard, "git", "diff", base+"..HEAD", "--", diffPathspec) != 0
+	status := d.run(&diff, io.Discard, "git", "diff", base+"..HEAD", "--", diffPathspec)
 	for _, line := range strings.Split(diff.String(), "\n") {
 		if annotationChange.MatchString(line) {
 			return changed
 		}
 	}
-	if failed || !known {
+	if status != 0 {
+		d.warn(noticeDiffFailed, base, status)
+		return unchecked
+	}
+	if !known {
 		return unchecked
 	}
 	return noChange

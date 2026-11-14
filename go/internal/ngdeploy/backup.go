@@ -9,7 +9,8 @@ import (
 
 // backup archives what the deploy is about to replace, unless --no-backup (a warning says so). The default
 // is lightweight: only this module's own rt, ux and wb jars that are deployed. --full-backup or FULL_BACKUP=1
-// archives the whole modules directory. After a backup the older ones are purged (purge.go).
+// archives the whole modules directory. After a backup the older ones are purged (purge.go); a purge that
+// fails is exit 21 with the new backup in place, before anything is built.
 func (d *deploy) backup() int {
 	if d.isOn(optNoBackup) {
 		d.warn(warnBackupSkipped)
@@ -46,7 +47,9 @@ func (d *deploy) archive() int {
 	if d.run(d.s.Out, io.Discard, "tar", append([]string{"-czf", name, "-C", from}, members...)...) != 0 {
 		return d.fail(ExitBackup, msgBackupFailed, name)
 	}
-	d.purgeBackups()
+	if failed, err := d.purgeBackups(); err != nil {
+		return d.fail(ExitPurge, msgPurgeFailed, name, failed, strerror.Text(err))
+	}
 	d.say(msgBackupOK, name)
 	return proceed
 }
