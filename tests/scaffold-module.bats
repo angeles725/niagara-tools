@@ -17,6 +17,16 @@
 #   - emit module.xml instead of module-include.xml -> TC3 fails (B793 correction #3).
 #   - drop the stopped() cancel in the emitted component -> TC4 lint-timers FAILs locally.
 
+# Build the Go binary once with the caller's environment: TC-K8 runs the launcher under HOME=/nonexistent,
+# where an on-demand `go build` has no build cache and fails.
+setup_file() {
+  local root
+  root="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via root
+  . "$root/go/go-tool.sh"
+  go_tool_bin "$root/go" scaffold-module >/dev/null
+}
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   SC="$KIT/toolbelt/scaffold-module.sh"
