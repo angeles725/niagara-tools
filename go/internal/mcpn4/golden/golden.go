@@ -1,8 +1,10 @@
 // Package golden holds the mcp-n4 Python differentials as recorded goldens, so they keep
 // comparing the Go port with the kit's Python now that Python is gone (removed in S17). A
 // differential feeds its helper script the cases on stdin and compares the Go side with what the
-// script printed when it was recorded: testdata/<name>.golden.jsonl. The goldens are frozen: the
-// Python they were recorded from no longer exists, so none can be re-recorded or extended.
+// script printed when it was recorded: testdata/<name>.golden.jsonl. The Python they were recorded
+// from no longer exists, so none can be re-recorded: the goldens are Go-owned. An intended change
+// of Go output is made by editing the golden's stdout by hand in the same commit as the code, and
+// that commit names the change (first: 2026-11-14, the retro header names `retro-draft --write`).
 // Replay is strict, like box/testdata/replay.jsonl: each call must send the recorded script
 // and stdin byte for byte, in order, and no recorded call may be left over. A missing golden
 // fails: a differential that silently stopped comparing would look like one that passed.
