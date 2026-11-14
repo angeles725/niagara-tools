@@ -10,3 +10,4 @@ Retros only propose: the kit is changed by a human, never by the retro.
 | 2026-10-02-customer-remote-01-session.md | customer-remote-01 | 2026-10-02 | folded 2026-10-02 · kit b13747e | 8 |
 | 2026-10-02-tests-and-tier-gate.md | kit-dev | 2026-10-02 | folded 2026-10-02 · kit 41602cf | 3 |
 | 2026-10-03-hardening-audit.md | kit-dev | 2026-10-03 | folded 2026-10-03 · kit 031e210 | 3 |
+| 2026-11-10-client-a-history-rollout-session.md | client-a-jace | 2026-11-10 | pending | 8 |
