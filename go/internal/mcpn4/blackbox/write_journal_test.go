@@ -74,7 +74,7 @@ func TestAReadBackThatRaisesAnythingElseIsFailedNotACrash(t *testing.T) {
 func TestAuditRecordsPlannedExecutedAndRefusedCalls(t *testing.T) {
 	r := verifiedRig(t)
 	r.Srv.RunWrite("n4_create_component", createPump)
-	r.Srv.Err("n4_create_component", with(createPump, Args{"parent_ord": "station:|slot:/", "name": "X"}))
+	r.Srv.Err("n4_create_component", withArgs(createPump, Args{"parent_ord": "station:|slot:/", "name": "X"}))
 	lines := r.Lines("audit.jsonl")
 	if len(lines) != 3 {
 		t.Fatalf("audit = %v", lines)

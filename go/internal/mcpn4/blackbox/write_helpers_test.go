@@ -40,7 +40,7 @@ func verifiedRig(t *testing.T) *Rig {
 }
 
 // with is args with the extra keys set (dict(args, **extra)).
-func with(args Args, extra Args) Args {
+func withArgs(args Args, extra Args) Args {
 	out := Args{}
 	for k, v := range args {
 		out[k] = v
@@ -175,7 +175,7 @@ func journalPhasesOnDisk(stateDir string) []any {
 func callNaN(t *testing.T, s *Server, tool string, args Args, nanKey string) map[string]any {
 	t.Helper()
 	const mark = "__nan_placeholder__"
-	line := RPC("tools/call", Args{"name": tool, "arguments": with(args, Args{nanKey: mark})}, 1)
+	line := RPC("tools/call", Args{"name": tool, "arguments": withArgs(args, Args{nanKey: mark})}, 1)
 	line = strings.Replace(line, `"`+mark+`"`, "NaN", 1)
 	if !strings.Contains(line, "NaN") {
 		t.Fatalf("no NaN in %s", line)

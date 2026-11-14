@@ -76,7 +76,7 @@ func TestWriteWithoutASessionIsRefused(t *testing.T) {
 
 func TestOutOfScopeParentIsRefused(t *testing.T) {
 	r := verifiedRig(t)
-	text := r.Srv.Err("n4_create_component", with(createPump, Args{"parent_ord": "station:|slot:/"}))
+	text := r.Srv.Err("n4_create_component", withArgs(createPump, Args{"parent_ord": "station:|slot:/"}))
 	if !strings.Contains(text, "outside the write scope") || len(r.Children()) != 0 {
 		t.Errorf("refusal = %s, children %v", text, r.Children())
 	}

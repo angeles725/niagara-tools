@@ -47,7 +47,7 @@ func TestHappyPathIsVerifiedAndInverseRemovesTheLink(t *testing.T) {
 
 func TestBadSlotNamesAreRefused(t *testing.T) {
 	r, _, tgt, args := linkRig(t)
-	r.Srv.Err("n4_create_link", with(args, Args{"target_slot": "in 10"}))
+	r.Srv.Err("n4_create_link", withArgs(args, Args{"target_slot": "in 10"}))
 	if hasChild(r, tgt.Handle, "Link") {
 		t.Error("Tgt has a Link")
 	}

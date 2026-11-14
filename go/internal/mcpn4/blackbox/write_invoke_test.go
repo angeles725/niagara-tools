@@ -36,7 +36,7 @@ func TestActionsOutsideTheAllowlistAreRefused(t *testing.T) {
 
 func TestSetHappyPathVerifiesFallbackAndInverseRestoresIt(t *testing.T) {
 	r, c, ord, inv := spRig(t, nil)
-	args := with(setSeven, Args{"ord": ord})
+	args := withArgs(setSeven, Args{"ord": ord})
 	plan := r.Srv.Dry("n4_invoke_action", args)
 	ops, _ := Dig(plan, "plan", "ops").([]any)
 	wantArg := map[string]any{"h": c.Handle, "a": "set", "b": map[string]any{"nm": "p", "t": "baja:Double", "v": "7.0"}}
@@ -95,7 +95,7 @@ func TestSetReadBackMismatchIsReported(t *testing.T) {
 			n.Child("fallback").Child("value").Value = "1.0"
 		}
 	})
-	args := with(setSeven, Args{"ord": ord})
+	args := withArgs(setSeven, Args{"ord": ord})
 	plan := r.Srv.Dry("n4_invoke_action", args)
 	r.Station.Do(func(*boxstation.Station) { lying = true })
 	out := r.Srv.OK("n4_invoke_action", Execute(args, plan["confirmation_token"]))

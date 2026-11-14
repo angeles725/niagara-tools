@@ -33,7 +33,7 @@ func TestAnExplicitRefusalIsAFailedResultWithAnEmptyInverse(t *testing.T) {
 func TestVTrueWithoutALinkNameIsAmbiguousAndFindsTheLinkByItsSlots(t *testing.T) {
 	r, _, tgt, args := linkRig(t)
 	r.Station.SetFaults(boxstation.Faults{CheckLink: func(_ *boxstation.Station, arg map[string]any, orig func(map[string]any) any) any {
-		reply := with(orig(arg).([]any)[0].(map[string]any), Args{"s": nil})
+		reply := withArgs(orig(arg).([]any)[0].(map[string]any), Args{"s": nil})
 		return []any{reply}
 	}})
 	out := r.Srv.RunWrite("n4_create_link", args)

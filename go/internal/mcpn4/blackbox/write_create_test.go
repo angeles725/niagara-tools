@@ -11,7 +11,7 @@ import (
 
 func TestHappyPathIsVerifiedWithAnnotation(t *testing.T) {
 	r := verifiedRig(t)
-	out := r.Srv.RunWrite("n4_create_component", with(createPump,
+	out := r.Srv.RunWrite("n4_create_component", withArgs(createPump,
 		Args{"wire_sheet": Args{"x": 4, "y": 6, "w": 10}}))
 	wantObserved := map[string]any{"name": "Pump", "type": "kitControl:NumericConst", "wsAnnotation": "4,6,10"}
 	wantInverse := []any{map[string]any{"nm": "v", "h": "3", "n": "Pump"}}
@@ -39,7 +39,7 @@ func TestBadNameOrTypeIsRefused(t *testing.T) {
 	r := verifiedRig(t)
 	for _, bad := range []Args{{"name": "../x"}, {"name": "a b"}, {"name": ""}, {"type": "NoModule"},
 		{"type": "a:b:c"}} {
-		r.Srv.Err("n4_create_component", with(createPump, bad))
+		r.Srv.Err("n4_create_component", withArgs(createPump, bad))
 	}
 	if len(r.Children()) != 0 {
 		t.Errorf("children %v", r.Children())
@@ -49,7 +49,7 @@ func TestBadNameOrTypeIsRefused(t *testing.T) {
 func TestBadWireSheetIsRefused(t *testing.T) {
 	r := verifiedRig(t)
 	for _, ws := range []Args{{"x": 1}, {"x": "a", "y": 1}, {"x": 1, "y": 2, "w": true}} {
-		r.Srv.Err("n4_create_component", with(createPump, Args{"name": "P", "wire_sheet": ws}))
+		r.Srv.Err("n4_create_component", withArgs(createPump, Args{"name": "P", "wire_sheet": ws}))
 	}
 }
 
@@ -66,7 +66,7 @@ func TestCreateComponentReadBackMismatchIsReportedNotRaised(t *testing.T) {
 			pump.Children = kept
 		}
 	}})
-	out := r.Srv.RunWrite("n4_create_component", with(createPump, Args{"wire_sheet": Args{"x": 1, "y": 2}}))
+	out := r.Srv.RunWrite("n4_create_component", withArgs(createPump, Args{"wire_sheet": Args{"x": 1, "y": 2}}))
 	id, _ := out["batch_id"].(string)
 	if out["verdict"] != "mismatch" || !batchIDPattern.MatchString(id) {
 		t.Errorf("out = %v", out)

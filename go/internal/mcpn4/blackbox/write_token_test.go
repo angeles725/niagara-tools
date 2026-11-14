@@ -43,7 +43,7 @@ func TestDryRunIsTheDefaultAndSendsNoMutation(t *testing.T) {
 
 func TestExecuteWithoutATokenIsRefused(t *testing.T) {
 	r := verifiedRig(t)
-	text := r.Srv.Err("n4_create_component", with(createPump, Args{"dry_run": false}))
+	text := r.Srv.Err("n4_create_component", withArgs(createPump, Args{"dry_run": false}))
 	if !strings.Contains(text, "confirmation_token") || len(r.Children()) != 0 {
 		t.Errorf("refusal = %s, children %v", text, r.Children())
 	}
@@ -75,7 +75,7 @@ func TestATamperedTokenIsRefused(t *testing.T) {
 func TestArgsChangedAfterTheTokenWasIssuedAreRefused(t *testing.T) {
 	r := verifiedRig(t)
 	token := pumpToken(t, r)
-	text := r.Srv.Err("n4_create_component", Execute(with(createPump, Args{"name": "Other"}), token))
+	text := r.Srv.Err("n4_create_component", Execute(withArgs(createPump, Args{"name": "Other"}), token))
 	if !strings.Contains(text, "does not match") || len(r.Children()) != 0 {
 		t.Errorf("refusal = %s, children %v", text, r.Children())
 	}
@@ -127,8 +127,8 @@ func TestATokenFromStationACannotExecuteOnStationB(t *testing.T) {
 func TestWritesBeyondTheSessionBudgetAreRefused(t *testing.T) {
 	r := writeRig(t, func(o *Options) { o.MaxWrites = 1 })
 	r.ConnectVerified()
-	r.Srv.RunWrite("n4_create_component", with(createPump, Args{"name": "A"}))
-	text := r.Srv.Err("n4_create_component", with(createPump, Args{"name": "B"}))
+	r.Srv.RunWrite("n4_create_component", withArgs(createPump, Args{"name": "A"}))
+	text := r.Srv.Err("n4_create_component", withArgs(createPump, Args{"name": "B"}))
 	if !strings.Contains(text, "budget") || !reflect.DeepEqual(r.Children(), []string{"A"}) {
 		t.Errorf("refusal = %s, children %v", text, r.Children())
 	}
@@ -139,9 +139,9 @@ func TestWritesBeyondTheSessionBudgetAreRefused(t *testing.T) {
 func TestReconnectingKeepsTheProcessBudget(t *testing.T) {
 	r := writeRig(t, func(o *Options) { o.MaxWrites = 1 })
 	r.ConnectVerified()
-	r.Srv.RunWrite("n4_create_component", with(createPump, Args{"name": "A"}))
+	r.Srv.RunWrite("n4_create_component", withArgs(createPump, Args{"name": "A"}))
 	r.ConnectVerified()
-	text := r.Srv.Err("n4_create_component", with(createPump, Args{"name": "B"}))
+	text := r.Srv.Err("n4_create_component", withArgs(createPump, Args{"name": "B"}))
 	if !strings.Contains(text, "write budget exhausted") || !strings.Contains(text, "server process") ||
 		!reflect.DeepEqual(r.Children(), []string{"A"}) {
 		t.Errorf("refusal = %s, children %v", text, r.Children())

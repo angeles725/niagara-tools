@@ -90,9 +90,9 @@ func TestBadValuesTypesAndStatusAreRefused(t *testing.T) {
 		{"value": 1, "value_type": "baja:String"},
 		{"value": 1.0, "value_type": "baja:Int"},
 		{"value": 1.0, "value_type": "baja:StatusNumeric", "status": "zz"}} {
-		r.Srv.Err("n4_set_slot", with(base, bad))
+		r.Srv.Err("n4_set_slot", withArgs(base, bad))
 	}
-	nan := callNaN(t, r.Srv, "n4_set_slot", with(base, Args{"value_type": "baja:Double"}), "value")
+	nan := callNaN(t, r.Srv, "n4_set_slot", withArgs(base, Args{"value_type": "baja:Double"}), "value")
 	if nan["isError"] != true {
 		t.Errorf("NaN: %v", nan)
 	}
