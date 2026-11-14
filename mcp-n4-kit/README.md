@@ -76,7 +76,9 @@ scripts/install-skill.sh --skill mcp-n4
 - `go/cmd/mcp-n4/retro-draft`: prints the session retro draft, and with `--write` writes the
   session retro file and its `pending` row in `retros/INDEX.md`.
 - `retros/`: session retros and `INDEX.md`.
-- `tests/test_server.py`: protocol, tool and end-to-end stdio tests.
+- `go/internal/mcpn4/blackbox`: the Go black-box harness (the real server over stdio against
+  the `boxstation` fake) and the protocol, connect, read-tool, tier and end-to-end stdio tests.
+- `tests/test_server.py`: the shared base classes of the remaining Python tool tests.
 - `go/cmd/mcp-n4/live-smoke`: the live smoke runner (see Live smoke test).
 - `tools/mutation_check.py`: runs a mutation-check command with no stale bytecode (see Run
   the tests).

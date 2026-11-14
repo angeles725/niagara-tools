@@ -41,6 +41,7 @@ func (st *Station) dispatch(channel, key string, body map[string]any) (any, erro
 	}
 	switch key {
 	case "make":
+		st.sessions["sess-1"] = true
 		return "sess-1", nil
 	case "makessc":
 		return map[string]any{"isReadonly": false}, nil
@@ -52,6 +53,8 @@ func (st *Station) dispatch(channel, key string, body map[string]any) (any, erro
 		}
 		return events, nil
 	case "del":
+		id, _ := body["id"].(string)
+		delete(st.sessions, id)
 		return nil, nil
 	case "callssc":
 		sck, _ := body["sck"].(string)
