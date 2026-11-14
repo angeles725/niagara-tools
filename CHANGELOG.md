@@ -14,7 +14,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
   `providers.gradleProperty("niagaraPluginVersion").getOrElse("X")` (and `gradleProperty(...)`): the old pattern
   stopped at the `)` after the property name, so no version was detected and gradle fell back to its own default.
   The detected value is the `getOrElse` argument, no longer the first number on the line (a name such as
-  `niagaraPluginVersion10x` gave `10`). Retro `2026-11-14-go-build-module-port` Δ1.
+  `niagaraPluginVersion10x` gave `10`). A one-digit default such as `getOrElse("7")` is not a
+  version: the line does not match, so a settings file holding a NUL byte no longer prints a binary-file row for it. Retro `2026-11-14-go-build-module-port` Δ1.
 
 ### Changed — build-module names the module root it cannot enter
 

@@ -93,6 +93,13 @@ func TestPluginFilesGrepCannotRead(t *testing.T) {
 	if strings.Contains(f.call("gradlew"), "-PniagaraPluginVersion") {
 		t.Errorf("a version was read from a binary file: %s", f.call("gradlew"))
 	}
+	// A one-digit default is not a pin, so that line does not match at all: no binary-file row either.
+	f = newFixture(t)
+	f.write(f.root+"/settings.gradle.kts", `val niagaraPluginVersion = props.getOrElse("7")`+"\n\x00\n")
+	f.wants("binary file, one-digit default", f.build("--no-preflight"), ExitOK)
+	if strings.Contains(f.err, "binary file matches") || strings.Contains(f.call("gradlew"), "-PniagaraPluginVersion") {
+		t.Errorf("a one-digit default matched: %q %s", f.err, f.call("gradlew"))
+	}
 
 	if os.Geteuid() == 0 {
 		t.Skip("running as root: every file is readable")
