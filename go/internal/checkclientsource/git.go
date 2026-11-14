@@ -2,9 +2,10 @@ package checkclientsource
 
 import (
 	"io"
-	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/gitcmd"
 )
 
 // checkout runs git from a module root. Every call reads local refs only; nothing is fetched.
@@ -13,13 +14,11 @@ type checkout struct {
 	stderr io.Writer // where git's own diagnostics go when a call does not silence them
 }
 
-// git runs `git -C <dir> <args>` and returns its stdout without the final newlines, and whether it
+// git runs git from the module root and returns its stdout without the final newlines, and whether it
 // exited 0. Git's stderr goes to errTo (nil drops it).
 func (c checkout) git(errTo io.Writer, args ...string) (string, bool) {
-	cmd := exec.Command("git", append([]string{"-C", c.dir}, args...)...)
-	cmd.Stderr = errTo
-	out, err := cmd.Output()
-	return strings.TrimRight(string(out), "\n"), err == nil
+	out, ok := gitcmd.Run(c.dir, errTo, args...)
+	return strings.TrimRight(out, "\n"), ok
 }
 
 // insideWorkTree reports whether the module root sits in a git work tree.

@@ -2,8 +2,9 @@ package checkinstalledline
 
 import (
 	"io"
-	"os/exec"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/gitcmd"
 )
 
 // repository runs git in one checkout. Every call reads local objects only; nothing is fetched.
@@ -12,13 +13,9 @@ type repository struct {
 	stderr io.Writer // where git's own diagnostics go when a call does not silence them
 }
 
-// git runs `git -C <dir> <args>` and returns its stdout and whether it exited 0. Git's stderr goes to
-// errTo (nil drops it).
+// git runs git in the repository; its stderr goes to errTo (nil drops it).
 func (r repository) git(errTo io.Writer, args ...string) (string, bool) {
-	cmd := exec.Command("git", append([]string{"-C", r.dir}, args...)...)
-	cmd.Stderr = errTo
-	out, err := cmd.Output()
-	return string(out), err == nil
+	return gitcmd.Run(r.dir, errTo, args...)
 }
 
 // isCommit reports whether ref names a commit of the repository.
