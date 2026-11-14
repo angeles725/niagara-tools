@@ -89,7 +89,7 @@ sudo apt-get install -y bats shellcheck
 brew install bats-core shellcheck
 ```
 
-Check: `bats --version` prints `Bats 1.x` and `bats tests/ng-deploy.bats` reports 26 cases.
+Check: `bats --version` prints `Bats 1.x` and `bats tests/ng-deploy.bats` reports 51 cases.
 
 ### 2.2 Go module (`go/`)
 
@@ -175,7 +175,7 @@ SemVer surface; losing MAJOR/MINOR/PATCH semantics would silently break consumer
 
 `scripts/ng-deploy.sh` is a launcher over `go/cmd/ng-deploy` (`go/internal/ngdeploy`, § 2.2): its flags, exit codes and
 env variables are listed in `go/internal/ngdeploy/usage.txt`, and its env file is read as plain `KEY=value`
-assignments (`go/internal/envfile`), never sourced.
+assignments with `$NAME`, `${NAME}` and `~` expanded (`go/internal/envfile`), never sourced.
 
 Bump rules for `scripts/ng-deploy.sh` (the public API surface):
 

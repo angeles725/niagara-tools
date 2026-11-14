@@ -36,8 +36,8 @@ func TestTheDefaultEnvFileIsDotEnvLocalInTheWorkingDirectory(t *testing.T) {
 
 // Declared difference from the bash tool, which sourced the file: anything but a plain assignment is refused.
 func TestAnEnvFileLineThatIsNotAPlainAssignmentIsRefusedWithFileAndLine(t *testing.T) {
-	for name, line := range map[string]string{"substitution": "TOKEN=hunter2$(date)", "expansion": "NIAGARA_USER_HOME=$HOME/hunter2",
-		"command": "echo hunter2", "tilde": "X=~/hunter2"} {
+	for name, line := range map[string]string{"substitution": "TOKEN=hunter2$(date)", "default form": "X=${HOME:-hunter2}",
+		"command": "echo hunter2", "another user's home": "X=~root/hunter2", "shell parameter": "X=hunter2$1"} {
 		f := newFixture(t)
 		f.write(f.env, f.read(f.env)+line+"\n")
 		code := f.run("--no-backup")
@@ -47,6 +47,35 @@ func TestAnEnvFileLineThatIsNotAPlainAssignmentIsRefusedWithFileAndLine(t *testi
 		if strings.Contains(f.err, "hunter2") || f.calls() != "" {
 			t.Errorf("%s: the refusal quoted the line or ran a command: %q %q", name, f.err, f.calls())
 		}
+	}
+}
+
+// The env file sees what it saw when bash sourced it: its own earlier lines, the option globals of the
+// deploy (as the flags left them), the script's own variables and the environment.
+func TestAnEnvFileExpandsPlainVariablesAsBashDid(t *testing.T) {
+	f := newFixture(t)
+	t.Setenv("HOME", "/hm")
+	t.Setenv("AMBIENT", "from env")
+	f.write(f.env, f.read(f.env)+"BASE=/n4\nNIAGARA_USER_HOME=\"${BASE}/user $AMBIENT\"\nNIAGARA_HOME=~/niagara\nJAVA_HOME='$BASE'\n"+
+		"FILEKEY=$MODE:$KEEP_N:$FIRST_DEPLOY:${SCRIPT_DIR}\n")
+	f.want(f.run("--no-backup", "--no-deploy", "--mode", "C", "--keep", "7"), ExitOK)
+	want := "gradlew <-Pniagara_home=/hm/niagara> <-Pniagara_user_home=/n4/user from env> <-Porg.gradle.java.installations.paths=$BASE> <:demo-rt:clean> <:demo-rt:jar>\n"
+	if !strings.HasSuffix(f.calls(), want) {
+		t.Errorf("calls:\n%s", f.calls())
+	}
+	if !strings.Contains(f.envLog(), "FILEKEY=[C:7:1:"+f.dir+"/repo/scripts]") {
+		t.Errorf("gradlew saw:\n%s", f.envLog())
+	}
+}
+
+// The bash tool sourced the file under set -u and stopped with exit 1 "unbound variable".
+func TestAnEnvFileVariableThatIsNotSetIsRefusedNamingIt(t *testing.T) {
+	f := newFixture(t)
+	f.write(f.env, f.read(f.env)+"TOKEN=hunter2$NOT_SET_ANYWHERE\n")
+	code := f.run("--no-backup")
+	want := "[ng-deploy] ERROR env file " + f.env + ": line 10: NOT_SET_ANYWHERE is not set (the file is read as under bash's set -u: an unset variable stops the read)\n"
+	if code != ExitEnv || f.out != "" || f.err != want || f.calls() != "" {
+		t.Errorf("exit %d, stdout %q, stderr %q, calls %q", code, f.out, f.err, f.calls())
 	}
 }
 

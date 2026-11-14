@@ -6,7 +6,7 @@ in a WSL + Windows station environment. Not a Niagara module — pure bash and d
 ## What this is
 
 A tooling repo that lives next to your consumer modules (e.g. `chihuahua`).
-It provides `scripts/ng-deploy.sh`, a single bash wrapper that automates the
+It provides `scripts/ng-deploy.sh`, a single launcher (over the Go command `go/cmd/ng-deploy`) that automates the
 backup → build → copy → verify cycle for any Niagara N4 module jar, and a
 knowledge base of cross-project gotchas discovered across multiple N4 projects.
 

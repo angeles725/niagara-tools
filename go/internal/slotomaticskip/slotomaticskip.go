@@ -1,6 +1,7 @@
 // Package slotomaticskip is the one Go detector of a source file Slot-o-Matic skipped (METHODOLOGY K15):
-// toolbelt/lib/slotomatic-skip.sh slotomatic_skip_scan, which scripts/ng-deploy.sh sources until it is
-// ported. TestMatchesTheShellLib keeps the two from disagreeing.
+// the detector build-module and ng-deploy read. No script sources its bash counterpart
+// toolbelt/lib/slotomatic-skip.sh (slotomatic_skip_scan) any more; while that lib exists,
+// TestMatchesTheShellLib keeps the two from disagreeing.
 //
 // Slot-o-Matic logs "Could not process <path>.java: <msg>" and, at the end, "The following files failed to
 // compile:" with one "  <path>.java[: <msg>]" line per file, all at WARNING level, and the gradle task still
