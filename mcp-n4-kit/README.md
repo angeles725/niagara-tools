@@ -20,10 +20,10 @@ station session, plain-ORD write scope, authentication-failure latch (`--auth-co
 v0.6.0: `n4_bql_query` `output_file`, duplicate and localized CSV headers.
 v0.7.0: `n4_list_batches`, `snapshot_truncated`, `--load-wait` / `--http-timeout`.
 v0.7.1: the write budget is per server process; docs drift fixed.
-v0.7.2 (retro 2026-10-03): `tools/mutation_check.py` (mutation checks without stale bytecode), a
-stdlib untested-branch audit, explicit per-PR review of medium units.
-v0.7.3: `tools/mutation_check.py` exits 3 (environment error) when the command cannot be
-launched, so a failed launch is never read as a RED.
+v0.7.2 (retro 2026-10-03): mutation checks without stale bytecode (a Python helper, retired
+with the Python tests; the Go rule is in METHODOLOGY section 8), an untested-branch audit,
+explicit per-PR review of medium units.
+v0.7.3: the mutation helper exits 3 when its command cannot be launched (helper retired in T9).
 v0.8.1: a failed write keeps its batch id, a partial batch reports what was sent and its inverse, BOX replies capped at 32 MB.
 v0.9.0: station file reads and Px views: `n4_read_file`, `n4_list_px_views`, `n4_px_summary`.
 v0.9.1: read truth fixes: `n4_find_dangling_outputs` resolves slot-path link sources and reports
@@ -448,57 +448,22 @@ The draft is the server's own drafting code (`go/internal/mcpn4/retro`).
 ## Run the tests
 
 ```
-(cd go && go build -o bin/ ./cmd/mcp-n4 ./cmd/mcp-n4/retro-draft)
-python3 -m unittest discover -s mcp-n4-kit/tests -v
-(cd go && go test ./internal/mcpn4/... ./cmd/mcp-n4/...)
+(cd go && go test -count=1 ./internal/mcpn4/... ./cmd/mcp-n4/...)
 ```
 
-Python 3.10+, stdlib only (no pytest, no MCP SDK). The suite drives the Go binary black-box (a
-missing binary errors, never skips); the Go tests need no Python at all (their Python
-differentials replay frozen goldens). CI runs both.
+The whole suite is Go. `go/internal/mcpn4/blackbox` drives the real server as a separate process
+over stdio against the `boxstation` fake (the test binary re-executes itself as the server, so
+no prebuilt `go/bin` is needed). CI runs it in the `go` job (`go test -count=1 ./...`).
 
 Test isolation rules:
 
-- Replace a module or object attribute only through `mock.patch` (or `mock.patch.object`)
-  with `addCleanup(patcher.stop)`, or inside a `with` block / context manager that restores
-  it. Never assign the attribute directly: the replacement leaks into later tests and stays
-  hidden while the suite runs in file order. `DestructiveCase.patch(obj, attr, new)` in
-  `tests/test_tools_destructive.py` is the reference helper.
-- Before merging a test-heavy change, also run the suite in a shuffled order with a few
-  seeds (for example 1, 7 and 42), from the repo root:
-
-```
-python3 - 42 <<'EOF'
-import random, sys, unittest
-def flat(s):
-    for t in s:
-        yield from (flat(t) if isinstance(t, unittest.TestSuite) else [t])
-tests = list(flat(unittest.defaultTestLoader.discover("mcp-n4-kit/tests")))
-random.Random(int(sys.argv[1])).shuffle(tests)
-sys.exit(not unittest.TextTestRunner().run(unittest.TestSuite(tests)).wasSuccessful())
-EOF
-```
-- Run mutation checks without bytecode. A mutation restored with a plain copy within the
-  same second, with the same file size, can leave a `__pycache__` `.pyc` that still matches
-  the source's recorded mtime and size: the "restored" code keeps running the mutant
-  (retro 2026-10-03 D1). Run both the mutated and the restored run through the helper, which
-  removes every `__pycache__` under the kit and sets `PYTHONDONTWRITEBYTECODE=1`:
-
-```
-python3 mcp-n4-kit/tools/mutation_check.py -- \
-  python3 -m unittest discover -s mcp-n4-kit/tests
-```
-
-  Exit codes: the command's own code; 2 on usage errors; 3 when the command cannot be
-  launched (missing or not executable). Exit 3 with a `mutation_check: cannot launch` line on
-  stderr is an environment error, not a RED: the mutation was not tested.
-
-  By hand: `find mcp-n4-kit -name __pycache__ -prune -exec rm -rf {} +` after each restore
-  and `PYTHONDONTWRITEBYTECODE=1` on each run. Clearing the caches is the reliable route.
-  If you restore from a saved copy, make both copies with `cp -p` (save:
-  `cp -p file.py file.py.orig`; restore: `cp -p file.py.orig file.py`): the restored file then
-  carries the original file's mtime, not the mutant's, so a stale mutant `.pyc` no longer
-  matches. A plain `cp` stamps the current time, which can fall in the mutant's second.
+- Restore anything a test replaces (a package variable, an environment variable, a station
+  hook) with `t.Cleanup` or `t.Setenv`, never by hand at the end of the test: a failing test
+  would leave the replacement in place for the next one.
+- Before merging a test-heavy change, also run the suite in a shuffled order with a few seeds,
+  for example `go test -count=1 -shuffle=1 ./internal/mcpn4/...` with 1, 7 and 42.
+- Mutation checks follow METHODOLOGY section 8 (`go test -count=1` on both runs,
+  `git diff --exit-code` on the mutated file before reading GREEN).
 
 Untested-branch audit (retro 2026-10-03 D2). Before each minor release (`0.X.0`), list the
 server lines no test runs with `cd go && go test -coverprofile=cover.out ./internal/mcpn4/... &&
