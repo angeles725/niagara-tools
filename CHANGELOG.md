@@ -8,6 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+### Fixed — build-module detects the scaffold's plugin-version default
+
+- `build-module` now reads the `niagaraPluginVersion` default from the form the scaffold emits,
+  `providers.gradleProperty("niagaraPluginVersion").getOrElse("X")` (and `gradleProperty(...)`): the old pattern
+  stopped at the `)` after the property name, so no version was detected and gradle fell back to its own default.
+  The detected value is the `getOrElse` argument, no longer the first number on the line (a name such as
+  `niagaraPluginVersion10x` gave `10`). Retro `2026-11-14-go-build-module-port` Δ1.
+
 ### Changed — build-module names the module root it cannot enter
 
 - A module root that exists but cannot be entered now ends with `build.sh: cannot enter module root: <path as typed>`

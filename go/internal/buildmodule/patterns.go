@@ -35,10 +35,10 @@ var (
 	settingsPluginVersion = regexp.MustCompile(`gradlePluginVersion[[:space:]]*:[[:space:]]*String[[:space:]]*=[[:space:]]*"([0-9][^"]*)"`)
 	// propertiesPlugin is a niagaraPluginVersion line of gradle.properties.
 	propertiesPlugin = regexp.MustCompile(`^[[:space:]]*niagaraPluginVersion[[:space:]]*=`)
-	// settingsPluginDefault is the niagaraPluginVersion default of settings.gradle.kts; versionNumber is
-	// the first run of two or more digits and dots inside it.
-	settingsPluginDefault = regexp.MustCompile(`niagaraPluginVersion[^)]*getOrElse\("[0-9][0-9.]*"\)`)
-	versionNumber         = regexp.MustCompile(`[0-9][0-9.]+`)
+	// settingsPluginDefault is the niagaraPluginVersion default of settings.gradle.kts: the getOrElse("X")
+	// argument (two or more digits and dots) after the name, the scaffold's
+	// providers.gradleProperty("niagaraPluginVersion").getOrElse("X") form included.
+	settingsPluginDefault = regexp.MustCompile(`niagaraPluginVersion(?:"\))?[^)]*getOrElse\("([0-9][0-9.]+)"\)`)
 )
 
 // Gradle log classifiers. Each matches one line.
