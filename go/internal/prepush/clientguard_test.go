@@ -88,3 +88,25 @@ func TestClientGuardThatCannotBeStartedRefusesNamingIt(t *testing.T) {
 	}
 	r.push("(delete) "+zeroSha+" refs/heads/a aaaa").want(t, 1, "pre-push: cannot run "+guard+": ")
 }
+
+// A denylist that cannot be examined (its directory denies search) counts as present: an internal
+// error never lets a push go unchecked.
+func TestNoClientGuardWithAnUnexaminableDenylistRefuses(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	r := newRepo(t)
+	dir := filepath.Join(t.TempDir(), "locked")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("NIAGARA_CLIENT_DENYLIST", filepath.Join(dir, "client-denylist.txt"))
+	if err := os.Chmod(dir, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o700) })
+	res := r.push("(delete) " + zeroSha + " refs/heads/a aaaa")
+	if res.code != 1 || !strings.Contains(res.err, "a client denylist exists; refusing to push unchecked") {
+		t.Errorf("exit %d, stderr %q: an unexaminable denylist let the push go on", res.code, res.err)
+	}
+}

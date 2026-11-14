@@ -2,6 +2,7 @@ package prepush
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"strings"
@@ -10,7 +11,7 @@ import (
 // clientGuard is the client-identifier guard, before every other check: niagara-go's client-guard
 // refuses a push whose added lines or commit messages match the private client denylist. It gets the
 // hook arguments and every ref line. Without client-guard on PATH the push goes on only when this
-// machine has no denylist either. It returns 0 to go on.
+// machine has no denylist either (a denylist that cannot be examined counts as present). It returns 0 to go on.
 func (h hook) clientGuard(args []string, pushed string) int {
 	// A PATH entry relative to the current directory still names the guard, as it did for the shell.
 	if guard, err := exec.LookPath(clientGuardTool); err == nil || errors.Is(err, exec.ErrDot) {
@@ -23,7 +24,8 @@ func (h hook) clientGuard(args []string, pushed string) int {
 		}
 		return 0
 	}
-	if _, err := os.Stat(h.denylistPath()); err == nil {
+	// Only "no such file" means this machine has no denylist; one that cannot be examined counts as present.
+	if _, err := os.Stat(h.denylistPath()); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		printf(h.s.Err, msgGuardMissing)
 		return 1
 	}
