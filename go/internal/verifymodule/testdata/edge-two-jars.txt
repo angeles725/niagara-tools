@@ -23,6 +23,7 @@ SKIP  transient-operator  @DIR@/rc0.jar  no --src
 SKIP  compact3-import  @DIR@/rc0.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/rc0.jar  no --src
 SKIP  slot-wall  @DIR@/rc0.jar  no --src
+SKIP  station-save  @DIR@/rc0.jar  no --src
 PASS  bytecode   @DIR@/rc.jar  2 classes, all major 52
 PASS  signed     @DIR@/rc.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
 PASS  types      @DIR@/rc.jar  1 declared types resolve to classes
@@ -42,7 +43,8 @@ SKIP  transient-operator  @DIR@/rc.jar  no --src
 SKIP  compact3-import  @DIR@/rc.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/rc.jar  no --src
 SKIP  slot-wall  @DIR@/rc.jar  no --src
-verify-module: 7 passed, 1 failed, 28 skipped, 2 warned -> FAILED
+SKIP  station-save  @DIR@/rc.jar  no --src
+verify-module: 7 passed, 1 failed, 30 skipped, 2 warned -> FAILED
 -- stderr --
 -- rc.jar (jar) --
 --- META-INF/ (stored) ---

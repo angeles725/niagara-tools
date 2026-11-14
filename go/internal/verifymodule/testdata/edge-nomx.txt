@@ -25,7 +25,8 @@ PASS  transient-operator  @DIR@/Nomx-wb.jar  no TRANSIENT+OPERATOR slot combinat
 SKIP  compact3-import  @DIR@/Nomx-wb.jar  not an -rt or -ux jar
 PASS  subscription-leak  @DIR@/Nomx-wb.jar  no TypeSubscriber without stopped() under @DIR@/mod/Nomx-wb/src
 PASS  slot-wall  @DIR@/Nomx-wb.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Nomx-wb/src
-verify-module: 10 passed, 2 failed, 6 skipped, 0 warned -> FAILED
+PASS  station-save  @DIR@/Nomx-wb.jar  no class calls Sys.getStation().save() under @DIR@/mod/Nomx-wb/src
+verify-module: 11 passed, 2 failed, 6 skipped, 0 warned -> FAILED
 -- stderr --
 -- Nomx-wb.jar (jar) --
 --- META-INF/ (stored) ---

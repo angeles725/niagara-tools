@@ -22,7 +22,8 @@ PASS  transient-operator  @DIR@/Foo-rt.jar  no TRANSIENT+OPERATOR slot combinati
 PASS  compact3-import  @DIR@/Foo-rt.jar  no Compact3 non-safe imports under @DIR@/mod/Foo-rt/src
 PASS  subscription-leak  @DIR@/Foo-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod/Foo-rt/src
 PASS  slot-wall  @DIR@/Foo-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Foo-rt/src
-verify-module: 12 passed, 0 failed, 5 skipped, 1 warned -> ALL PASS
+PASS  station-save  @DIR@/Foo-rt.jar  no class calls Sys.getStation().save() under @DIR@/mod/Foo-rt/src
+verify-module: 13 passed, 0 failed, 5 skipped, 1 warned -> ALL PASS
 -- stderr --
 -- Foo-rt.jar (jar) --
 --- META-INF/ (stored) ---

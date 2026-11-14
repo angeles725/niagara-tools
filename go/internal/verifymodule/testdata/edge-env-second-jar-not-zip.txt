@@ -21,6 +21,7 @@ SKIP  transient-operator  @DIR@/a.jar  no --src
 SKIP  compact3-import  @DIR@/a.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/a.jar  no --src
 SKIP  slot-wall  @DIR@/a.jar  no --src
+SKIP  station-save  @DIR@/a.jar  no --src
 -- stderr --
 verify-module: not a zip: @DIR@/bad.jar
 -- a.jar (jar) --

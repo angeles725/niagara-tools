@@ -21,7 +21,8 @@ SKIP  transient-operator  @DIR@/byte.jar  no --src
 SKIP  compact3-import  @DIR@/byte.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/byte.jar  no --src
 SKIP  slot-wall  @DIR@/byte.jar  no --src
-verify-module: 2 passed, 1 failed, 15 skipped, 0 warned -> FAILED
+SKIP  station-save  @DIR@/byte.jar  no --src
+verify-module: 2 passed, 1 failed, 16 skipped, 0 warned -> FAILED
 -- stderr --
 -- byte.jar (jar) --
 --- META-INF/ (stored) ---

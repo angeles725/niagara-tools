@@ -22,7 +22,8 @@ PASS  transient-operator  @DIR@/Two-rt.jar  no TRANSIENT+OPERATOR slot combinati
 PASS  compact3-import  @DIR@/Two-rt.jar  no Compact3 non-safe imports under @DIR@/mod/Two-rt/src
 PASS  subscription-leak  @DIR@/Two-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod/Two-rt/src
 PASS  slot-wall  @DIR@/Two-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Two-rt/src
-verify-module: 10 passed, 2 failed, 5 skipped, 1 warned -> FAILED
+PASS  station-save  @DIR@/Two-rt.jar  no class calls Sys.getStation().save() under @DIR@/mod/Two-rt/src
+verify-module: 11 passed, 2 failed, 5 skipped, 1 warned -> FAILED
 -- stderr --
 -- Two-rt.jar (jar) --
 --- META-INF/ (stored) ---

@@ -21,7 +21,8 @@ SKIP  transient-operator  @DIR@/Bad-wb.jar  no --src
 SKIP  compact3-import  @DIR@/Bad-wb.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/Bad-wb.jar  no --src
 SKIP  slot-wall  @DIR@/Bad-wb.jar  no --src
-verify-module: 4 passed, 2 failed, 13 skipped, 0 warned -> FAILED
+SKIP  station-save  @DIR@/Bad-wb.jar  no --src
+verify-module: 4 passed, 2 failed, 14 skipped, 0 warned -> FAILED
 -- stderr --
 -- Bad-wb.jar (jar) --
 --- META-INF/ (stored) ---

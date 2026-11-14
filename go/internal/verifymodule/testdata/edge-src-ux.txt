@@ -51,7 +51,8 @@ WARN  subscription-leak  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/Sub.java: 
 WARN  subscription-leak  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/y/Sub3.java: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart
 WARN  slot-wall  @DIR@/Foo-ux.jar  16 properties in class Wall (@DIR@/mod/Foo-ux/src/com/x/Wall.java) — compose into child BComponents (logic.md L21)
 WARN  slot-wall  @DIR@/Foo-ux.jar  16 properties in class NoClass (@DIR@/mod/Foo-ux/src/com/x/inner/NoClass.java) — compose into child BComponents (logic.md L21)
-verify-module: 5 passed, 1 failed, 5 skipped, 34 warned -> FAILED
+PASS  station-save  @DIR@/Foo-ux.jar  no class calls Sys.getStation().save() under @DIR@/mod/Foo-ux/src
+verify-module: 6 passed, 1 failed, 5 skipped, 34 warned -> FAILED
 -- stderr --
 -- Foo-ux.jar (jar) --
 --- META-INF/ (stored) ---

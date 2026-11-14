@@ -25,7 +25,8 @@ SKIP  transient-operator  @DIR@/Foo-rt.jar  no @DIR@/mod/Foo-rt/src
 SKIP  compact3-import  @DIR@/Foo-rt.jar  no @DIR@/mod/Foo-rt/src
 SKIP  subscription-leak  @DIR@/Foo-rt.jar  no @DIR@/mod/Foo-rt/src
 SKIP  slot-wall  @DIR@/Foo-rt.jar  no @DIR@/mod/Foo-rt/src
-verify-module: 3 passed, 2 failed, 13 skipped, 0 warned -> FAILED
+SKIP  station-save  @DIR@/Foo-rt.jar  no @DIR@/mod/Foo-rt/src
+verify-module: 3 passed, 2 failed, 14 skipped, 0 warned -> FAILED
 -- stderr --
 -- Foo-rt.jar (jar) --
 --- META-INF/ (stored) ---

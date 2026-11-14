@@ -20,7 +20,8 @@ SKIP  transient-operator  @DIR@/orph.jar  no --src
 SKIP  compact3-import  @DIR@/orph.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/orph.jar  no --src
 SKIP  slot-wall  @DIR@/orph.jar  no --src
-verify-module: 2 passed, 1 failed, 15 skipped, 0 warned -> FAILED
+SKIP  station-save  @DIR@/orph.jar  no --src
+verify-module: 2 passed, 1 failed, 16 skipped, 0 warned -> FAILED
 -- stderr --
 -- orph.jar (jar) --
 --- META-INF/ (stored) ---

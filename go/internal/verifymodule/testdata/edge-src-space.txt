@@ -22,7 +22,8 @@ PASS  transient-operator  @DIR@/Spc-rt.jar  no TRANSIENT+OPERATOR slot combinati
 PASS  compact3-import  @DIR@/Spc-rt.jar  no Compact3 non-safe imports under @DIR@/mod with space/Spc-rt/src
 PASS  subscription-leak  @DIR@/Spc-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod with space/Spc-rt/src
 PASS  slot-wall  @DIR@/Spc-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod with space/Spc-rt/src
-verify-module: 11 passed, 0 failed, 5 skipped, 2 warned -> ALL PASS
+PASS  station-save  @DIR@/Spc-rt.jar  no class calls Sys.getStation().save() under @DIR@/mod with space/Spc-rt/src
+verify-module: 12 passed, 0 failed, 5 skipped, 2 warned -> ALL PASS
 -- stderr --
 -- Spc-rt.jar (jar) --
 --- META-INF/ (stored) ---

@@ -20,7 +20,8 @@ SKIP  transient-operator  @DIR@/Scaffold-wb.jar  no --src
 SKIP  compact3-import  @DIR@/Scaffold-wb.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/Scaffold-wb.jar  no --src
 SKIP  slot-wall  @DIR@/Scaffold-wb.jar  no --src
-verify-module: 3 passed, 1 failed, 13 skipped, 1 warned -> FAILED
+SKIP  station-save  @DIR@/Scaffold-wb.jar  no --src
+verify-module: 3 passed, 1 failed, 14 skipped, 1 warned -> FAILED
 -- stderr --
 -- Scaffold-wb.jar (jar) --
 --- META-INF/ (stored) ---

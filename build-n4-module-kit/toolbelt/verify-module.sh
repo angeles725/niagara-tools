@@ -34,6 +34,11 @@
 #               called; typeSubscriptionMap holds strong refs, leaking until station restart — WARN.    [--src]
 #   slot-wall   more than 15 @NiagaraProperty on one class (flat slot wall) — WARN; FAIL in a strict  [--src]
 #               module (modularity: strict in the nearest MODULE-MAP.md, lint.ModuleMode).
+#   station-save the classes under src that call Sys.getStation().save(), each at file:line: none or one
+#               PASS, two or more WARN. One operator change is ONE station save per station, so a
+#               second requester is reported before deploy (types/logic.md § Restart & persistence);
+#               never a FAIL, also under --strict: an existing module keeps building. A call in a
+#               comment or a string is no call (javasrc tokens). [ev: retro double-station-save Δ3]  [--src]
 #
 # Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict] <jar>...
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is
