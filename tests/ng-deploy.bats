@@ -109,9 +109,6 @@ FIRST_DEPLOY=1
 ENVEOF
 
     cd "$TMPDIR_T" || return 1
-    # BATS_TEST_MODE is set per-test: =1 when sourcing functions directly,
-    # =0 (or unset) when running the full script as a subprocess.
-    export BATS_TEST_MODE=0
 }
 
 teardown() {
@@ -251,60 +248,8 @@ ENVEOF
     [[ "$output" == *"ux"* ]]
 }
 
-# ---------------------------------------------------------------------------
-# Test 10: verify_jar match returns 0
-# ---------------------------------------------------------------------------
-@test "verify_jar match returns 0" {
-    # Source the script functions only (BATS_TEST_MODE=1 suppresses main)
-    # TMPDIR_T is exported so inner shell can reference it; PATH prepend done inside
-    FAKE_UNZIP_TYPES=9 BATS_TEST_MODE=1 \
-    run bash -c "
-        export PATH=\"\${TMPDIR_T}/fakebin:\${PATH}\"
-        source '$SCRIPT'
-        verify_jar 'fake.jar' 9
-    "
-    [ "$status" -eq 0 ]
-}
-
-# ---------------------------------------------------------------------------
-# Test 11: verify_jar mismatch exits 50
-# ---------------------------------------------------------------------------
-@test "verify_jar mismatch exits 50" {
-    FAKE_UNZIP_TYPES=8 BATS_TEST_MODE=1 \
-    run bash -c "
-        export PATH=\"\${TMPDIR_T}/fakebin:\${PATH}\"
-        source '$SCRIPT'
-        verify_jar 'fake.jar' 9
-    "
-    [ "$status" -eq 50 ]
-}
-
-# ---------------------------------------------------------------------------
-# Test 12: verify_cachebuster skipped when BUILD_ID unset
-# ---------------------------------------------------------------------------
-@test "verify_cachebuster skipped when BUILD_ID unset" {
-    BATS_TEST_MODE=1 \
-    run bash -c "
-        export PATH=\"\${TMPDIR_T}/fakebin:\${PATH}\"
-        unset BUILD_ID
-        source '$SCRIPT'
-        verify_cachebuster 'fake-ux.jar'
-    "
-    [ "$status" -eq 0 ]
-}
-
-# ---------------------------------------------------------------------------
-# Test 13: verify_cachebuster exits 50 when BUILD_ID set and not found
-# ---------------------------------------------------------------------------
-@test "verify_cachebuster exits 50 when BUILD_ID set and not found" {
-    BUILD_ID=abc123 FAKE_UNZIP_TYPES=0 FAKE_INDEX_HTML=1 FAKE_BUILD_ID=WRONG BATS_TEST_MODE=1 \
-    run bash -c "
-        export PATH=\"\${TMPDIR_T}/fakebin:\${PATH}\"
-        source '$SCRIPT'
-        verify_cachebuster 'fake-ux.jar'
-    "
-    [ "$status" -eq 50 ]
-}
+# Tests 10-13 (verify_jar and verify_cachebuster called on their own) are Go tests now:
+# go/internal/ngdeploy/verify_single_jar_test.go.
 
 # ---------------------------------------------------------------------------
 # Test 14: --no-deploy stops after build
@@ -398,7 +343,7 @@ ENVEOF
 
 # ---------------------------------------------------------------------------
 # T19b: slotomatic exits 0 but skipped a file (K15) → exit 15, file named, sin build
-# The shared detector (toolbelt/lib/slotomatic-skip.sh) reads the captured slotomatic output.
+# The shared detector (go/internal/slotomaticskip) reads the captured slotomatic output.
 # [ev: retro r10-slotomatic-skip-fail-open Δ1]
 # Named mutation: drop the slotomatic_skip_scan call in run_slotomatic -> T19b exits 0 and builds.
 # ---------------------------------------------------------------------------
@@ -684,87 +629,9 @@ ENVEOF
     [ "$status" -ne 0 ]
 }
 
-# ---------------------------------------------------------------------------
-# Campaign 3 C3-PR3 (RED-first) — lesson B8 (ng-deploy-type-count)
-# A real module.xml wraps N <type .../> in a <types> element. verify_jar counts with
-# grep "<type" (NO space), which ALSO matches the <types> wrapper → off-by-one (found N+1),
-# so a correct jar fails "expected N, found N+1". Fix: grep "<type " (WITH a space).
-# Bite: put a <types> wrapper in the fake unzip output; a fixed count matches, the buggy one over-counts.
-# ---------------------------------------------------------------------------
-@test "verify_jar counts <type entries, NOT the <types> wrapper (lesson B8, off-by-one)" {
-    # fake unzip that emits the real shape: a <types> wrapper around 3 <type .../> entries
-    cat > "$TMPDIR_T/fakebin/unzip" <<'STUB'
-#!/usr/bin/env bash
-echo '<types>'
-for i in 1 2 3; do printf '<type name="FakeType%s"/>\n' "$i"; done
-echo '</types>'
-exit 0
-STUB
-    chmod +x "$TMPDIR_T/fakebin/unzip"
-    BATS_TEST_MODE=1 run bash -c "
-        export PATH=\"\${TMPDIR_T}/fakebin:\${PATH}\"
-        source '$SCRIPT'
-        verify_jar 'fake.jar' 3
-    "
-    [ "$status" -eq 0 ]   # 3 real <type entries; the <types> wrapper must NOT be counted (buggy grep finds 4 → exit 50)
-}
-
-# ---------------------------------------------------------------------------
-# Campaign 3 C3-PR3 — lesson B10 (ng-deploy-backup-liviano-y-autopurga)
-# Promoted rule: lightweight backup DEFAULT (module's own jars only) + keep-N autopurge,
-# with --no-backup (opt-in, gate removed above) and --full-backup (old whole-dir) as flags.
-# NOTE: setup() fakes `tar` to a no-op; these tests set a REAL PATH so backup actually
-# archives + is listable (the suite's other backup tests assert the message/argv, not contents).
-# ---------------------------------------------------------------------------
-
-@test "backup DEFAULT is lightweight — only the module's own jars, NOT a sibling module's jar (B10 i)" {
-    mkdir -p "$TMPDIR_T/modules"
-    : > "$TMPDIR_T/modules/test-rt.jar"; : > "$TMPDIR_T/modules/test-ux.jar"
-    : > "$TMPDIR_T/modules/Other-rt.jar"      # a sibling module's jar — must NOT be in the backup
-    BATS_TEST_MODE=1 run bash -c "
-        export PATH=/usr/bin:/bin:/usr/local/bin
-        export MODULE_NAME=test STATION_MODULES_DIR='$TMPDIR_T/modules'
-        cd '$TMPDIR_T'
-        source '$SCRIPT'
-        backup
-        tar tzf _backups/test-pre-*.tar.gz
-    "
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"test-rt.jar"* ]]
-    [[ "$output" == *"test-ux.jar"* ]]
-    [[ "$output" != *"Other-rt.jar"* ]]          # RED today: whole-dir tar includes the sibling
-}
-
-@test "backup auto-purges to keep-N (default 3) — 5 backups collapse to the 3 newest, oldest gone (B10 ii)" {
-    mkdir -p "$TMPDIR_T/modules" "$TMPDIR_T/_backups"; : > "$TMPDIR_T/modules/test-rt.jar"
-    for n in 1 2 3 4; do touch -t "2026010${n}0000.00" "$TMPDIR_T/_backups/test-pre-2026010${n}-000000.tar.gz"; done
-    BATS_TEST_MODE=1 run bash -c "
-        export PATH=/usr/bin:/bin:/usr/local/bin
-        export MODULE_NAME=test STATION_MODULES_DIR='$TMPDIR_T/modules'
-        cd '$TMPDIR_T'
-        source '$SCRIPT'
-        backup                                   # the 5th; purge should keep only the 3 newest
-        ls _backups/test-pre-*.tar.gz | wc -l
-    "
-    [ "$status" -eq 0 ]
-    [ "$(printf '%s' "$output" | tail -1 | tr -d ' ')" -eq 3 ]                 # RED today: no purge → 5 remain
-    [ ! -e "$TMPDIR_T/_backups/test-pre-20260101-000000.tar.gz" ]             # oldest purged
-}
-
-@test "--full-backup restores the whole-modules-dir backup (a sibling jar IS included) (B10 iv)" {
-    mkdir -p "$TMPDIR_T/modules"
-    : > "$TMPDIR_T/modules/test-rt.jar"; : > "$TMPDIR_T/modules/Other-rt.jar"
-    BATS_TEST_MODE=1 run bash -c "
-        export PATH=/usr/bin:/bin:/usr/local/bin
-        export MODULE_NAME=test STATION_MODULES_DIR='$TMPDIR_T/modules' FULL_BACKUP=1
-        cd '$TMPDIR_T'
-        source '$SCRIPT'
-        backup
-        tar tzf _backups/test-pre-*.tar.gz
-    "
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"test-rt.jar"* ]] && [[ "$output" == *"Other-rt.jar"* ]]  # full = sibling included (guard; bites if --full-backup ignored)
-}
+# Lesson B8 (the <types> wrapper is not a type entry) and lesson B10 (lightweight backup by default, keep-N
+# purge, --full-backup) are Go tests now: go/internal/ngdeploy/verify_single_jar_test.go and
+# backup_archive_test.go, which read the archive the host's tar wrote.
 
 # ===========================================================================
 # audit-2026-10-03 A2 — ng-deploy fails closed: a missing verify-module gate blocks (exit 50); a mode A/C deploy

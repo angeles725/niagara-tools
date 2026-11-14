@@ -6,9 +6,8 @@
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
 // file), config.go (required settings and paths), backup.go and purge.go, annotations.go (the slotomatic
 // reminder), slotomatic.go, build.go, version.go and schema.go (the two prechecks), verify.go, gate.go,
-// copy.go (copy, deploy record, reminder), steps.go (single steps for a sourcing test). The data lives
-// apart: exit.go, messages.go, patterns.go, usage.txt. Every command goes through proc.go. This file only
-// composes them.
+// copy.go (copy, deploy record, reminder). The data lives apart: exit.go, messages.go, patterns.go, usage.txt.
+// Every command goes through proc.go. This file only composes them.
 package ngdeploy
 
 import (
@@ -19,12 +18,9 @@ import (
 )
 
 // ScriptEnv is the path of the invoked ng-deploy.sh: VERSION and the default verify-module and schema-risk
-// tools are found from its directory. StepEnv, when set, names the single step to run (steps.go). The
-// launcher sets them; neither is handed on to the commands the deploy runs.
-const (
-	ScriptEnv = "NG_DEPLOY_SCRIPT"
-	StepEnv   = "NG_DEPLOY_STEP"
-)
+// tools are found from its directory. The launcher sets it; it is not handed on to the commands the deploy
+// runs.
+const ScriptEnv = "NG_DEPLOY_SCRIPT"
 
 // deploy is one run: what the phases before decided, for the phases after.
 type deploy struct {
@@ -57,13 +53,8 @@ var phases = []func(*deploy) int{
 // Main implements ng-deploy.sh; usage.txt carries the usage text and the exit codes.
 func Main(args []string, s cli.Stdio) int {
 	d := &deploy{s: s, scriptDir: dirname(s.Env(ScriptEnv)), fileEnv: map[string]string{}}
-	step := s.Env(StepEnv)
 	os.Unsetenv(ScriptEnv)
-	os.Unsetenv(StepEnv)
 	d.raw = d.defaults()
-	if step != "" {
-		return d.runStep(step, args)
-	}
 	if code := d.parseArgs(args); code != proceed {
 		return code
 	}

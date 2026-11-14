@@ -18,8 +18,6 @@ const (
 	msgEnvFileOwned  = "env file %s: line %d: %s is set by ng-deploy and cannot be assigned"
 	msgNotSwitch     = "%s must be 0 or 1"
 	msgKeep          = "KEEP_N (--keep) must be a whole number of backups, 1 or more"
-	msgUnknownStep   = "unknown step: %s"
-	msgStepUsage     = "step usage: %s"
 
 	// required settings
 	msgRequired        = "%s is required but not set"
