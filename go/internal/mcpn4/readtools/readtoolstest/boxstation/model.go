@@ -48,8 +48,13 @@ type Station struct {
 	AfterAdd    func(st *Station, node *Node)
 	AfterInvoke func(st *Station, action string, node *Node)
 	URL         string
+	// Hook, when set, sees every authorized BOX frame before the station answers it, with the
+	// station unlocked (it may block). A non-zero status is sent as the whole answer instead.
+	Hook func(frame map[string]any) (status int, body []byte)
 
 	mu       sync.Mutex
+	version  string // what GET /obix/about/ reports; "" answers 404
+	sessions map[string]bool
 	root     *Node
 	byHandle map[string]*Node
 	next     int
@@ -60,7 +65,8 @@ type Station struct {
 
 // New is a station named name with the login user / password and the Folder component.
 func New(user, password, name string) *Station {
-	st := &Station{User: user, Password: password, next: 0x10, byHandle: map[string]*Node{}}
+	st := &Station{User: user, Password: password, next: 0x10, byHandle: map[string]*Node{},
+		version: ProductVersion, sessions: map[string]bool{}}
 	st.root = &Node{Type: "baja:Station", Handle: "2"}
 	st.byHandle["2"] = st.root
 	st.root.Children = append(st.root.Children, &Node{Name: "stationName", Type: "baja:String", Value: name})
