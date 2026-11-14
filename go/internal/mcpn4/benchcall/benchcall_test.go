@@ -141,14 +141,28 @@ func TestAMalformedCallLineIsRefusedWithItsLineNumberBeforeTheServerStarts(t *te
 
 func TestNoCredentialValueReachesTheOutput(t *testing.T) {
 	b := newBench(t)
-	echo := `{"tool":"n4_read_slots","args":{"ord":"station:|slot:/` + password + `"}}` + "\n"
-	_, _, errOut := b.run(connect + echo)
-	var out bytes.Buffer
-	file := filepath.Join(b.dir, "calls.jsonl")
-	exe, _ := os.Executable()
-	Main([]string{"--calls", file, "--", exe, "--station", "Lab=" + b.fake.URL, "--allow-http-for-tests", "--credential-env", "MCP_N4",
-		"--state-dir", filepath.Join(b.dir, "state2")}, cli.Stdio{Out: &out, Err: &out}, b.env)
-	if strings.Contains(out.String()+errOut, password) || strings.Contains(out.String()+errOut, user) {
-		t.Errorf("a credential value leaked:\n%s%s", out.String(), errOut)
+	echo := `{"tool":"n4_read_slots","args":{"ord":"station:|slot:/` + password + user + `"}}` + "\n"
+	code, lines, errOut := b.run(connect + echo)
+	if code != 1 || len(lines) != 2 {
+		t.Fatalf("exit %d, %d lines: the echoing call did not run\n%s", code, len(lines), errOut)
+	}
+	text, _ := json.Marshal(lines)
+	if !strings.Contains(string(text), "***") {
+		t.Errorf("the refusal that echoes the ord shows no mask: %s", text)
+	}
+	if all := string(text) + errOut; strings.Contains(all, password) || strings.Contains(all, user) {
+		t.Errorf("a credential value leaked:\n%s", all)
+	}
+}
+
+func TestTheCredentialPrefixIsReadInBothFlagForms(t *testing.T) {
+	env := []string{"LAB_USER=u1", "LAB_PASSWORD=p1", "MCP_N4_PASSWORD=other", "LAB_EMPTY="}
+	for _, server := range [][]string{{"srv", "--credential-env", "LAB"}, {"srv", "--credential-env=LAB"}} {
+		if got := strings.Join(secretsOf(server, env), ","); got != "u1,p1" {
+			t.Errorf("%v: secrets %q", server, got)
+		}
+	}
+	if got := strings.Join(secretsOf([]string{"srv"}, env), ","); got != "other" {
+		t.Errorf("default prefix: secrets %q", got)
 	}
 }

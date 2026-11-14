@@ -3,6 +3,7 @@ package benchcall
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -93,13 +94,15 @@ func secretsOf(server, environ []string) []string {
 	for i, a := range server {
 		if a == "--credential-env" && i+1 < len(server) {
 			prefix = server[i+1]
+		} else if v, ok := strings.CutPrefix(a, "--credential-env="); ok {
+			prefix = v
 		}
 	}
 	var out []string
 	for _, kv := range environ {
 		for _, name := range []string{prefix + "_USER=", prefix + "_PASSWORD="} {
-			if len(kv) > len(name) && kv[:len(name)] == name {
-				out = append(out, kv[len(name):])
+			if v, ok := strings.CutPrefix(kv, name); ok && v != "" {
+				out = append(out, v)
 			}
 		}
 	}
