@@ -3,8 +3,8 @@
 # module group already installed: every GROUP build.gradle.kts carrying defaultModuleVersion("X") at <installed-ref>
 # must exist on <branch> with a version >= X. A fix branch must start from the installed line; run this with the
 # installed ref before building (BUILD-LOOP.md). It lives in scripts/ because toolbelt scripts never call version
-# control (kit-links L2); the read and the compare follow the shared lib/vendor-version.sh (fragment rule): the Go
-# copy in go/internal/vendorversion/version.go is pinned to that lib by TestMatchesTheShellLib.
+# control (kit-links L2); the read and the compare are the shared Go package go/internal/vendorversion
+# (fragment rule: one comparator for build, deploy and this guard).
 # Local refs only — never fetches. [ev: retro r10-installed-line-guard Δ1]
 #
 # Rows: ok|DOWNGRADE|INCOMPARABLE <file> <installed> -> <branch>  ·  MISSING <file> <installed>

@@ -38,9 +38,9 @@ assert_timer_finding() {
 # A comment line that names the idiom (lint-structure.sh explains why it avoids it) is not a use; exit 1 = none.
 strip_idiom_rows() { grep -nHE '\$\{(BASH_SOURCE(\[0\])?|0)%' "$@" | grep -vE '^[^:]*:[0-9]+:[[:space:]]*#'; }
 
-@test "SD3: no toolbelt script or lib derives its directory by a suffix strip of BASH_SOURCE or \$0" {
-  # Mutation: SD3 -- reintroducing one \${BASH_SOURCE[0]%/*} in any toolbelt/*.sh or lib/*.sh names it here
-  run strip_idiom_rows "$TOOLBELT"/*.sh "$TOOLBELT"/lib/*.sh
+@test "SD3: no toolbelt script derives its directory by a suffix strip of BASH_SOURCE or \$0" {
+  # Mutation: SD3 -- reintroducing one \${BASH_SOURCE[0]%/*} in any toolbelt/*.sh names it here (toolbelt/lib holds no shell since its last libs moved to Go)
+  run strip_idiom_rows "$TOOLBELT"/*.sh
   [ "$status" -eq 1 ]
   [ -z "$output" ]
 }

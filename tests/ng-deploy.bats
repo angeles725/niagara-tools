@@ -345,7 +345,7 @@ ENVEOF
 # T19b: slotomatic exits 0 but skipped a file (K15) → exit 15, file named, sin build
 # The shared detector (go/internal/slotomaticskip) reads the captured slotomatic output.
 # [ev: retro r10-slotomatic-skip-fail-open Δ1]
-# Named mutation: drop the slotomatic_skip_scan call in run_slotomatic -> T19b exits 0 and builds.
+# Named mutation: drop the slotomaticskip.ScanFile call of the slotomatic step -> T19b exits 0 and builds.
 # ---------------------------------------------------------------------------
 @test "T19b: slotomatic that skipped a file exits 15, names it, and does not build" {
     export FAKE_GRADLEW_STDOUT="WARNING: Could not process /x/src/BHmiStatus.java: Found multiple metadata blocks"
@@ -722,7 +722,7 @@ STUB
     [ "$status" -eq 52 ]
 }
 
-# R10 shared compare (build-n4-module-kit/toolbelt/lib/vendor-version.sh vv_cmp, the same helper build.sh's drift
+# R10 shared compare (go/internal/vendorversion Cmp, the same helper build.sh's drift
 # gate uses): the built version must be numerically HIGHER than the deployed one. 1.3 -> 1.3.0 is the same version
 # (exit 51), a lower version is a downgrade (exit 54), and a differing non-numeric suffix cannot be ordered (exit 52).
 @test "NG-version-trailing-zero: 1.3 -> 1.3.0 with changed bytes is not a bump (exit 51)" {
@@ -736,7 +736,7 @@ STUB
 }
 
 @test "NG-version-downgrade: a LOWER vendorVersion (1.4 -> 1.3, 1.10 -> 1.9) is refused as a downgrade (exit 54); 1.3 -> 1.4 deploys" {
-    # Mutation: NG-version-downgrade -- dropping the vv_cmp -1 branch counts a downgrade as a bump (exit 0).
+    # Mutation: NG-version-downgrade -- dropping the Cmp -1 branch counts a downgrade as a bump (exit 0).
     _gate_env; _fake_gate 0
     printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
     local pair

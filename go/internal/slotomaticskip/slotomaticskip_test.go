@@ -2,13 +2,12 @@ package slotomaticskip
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// logs are gradle logs and the rows Scan reports; TestMatchesTheShellLib replays them on the bash lib.
+// logs are gradle logs and the rows Scan reports (the cases of the retired bash lib).
 var logs = []struct {
 	name, log string
 	want      []string
@@ -90,42 +89,6 @@ func TestScanFileStatusFollowsTheRows(t *testing.T) {
 		}
 		if rows, status := ScanFile(p); status != want || strings.Join(rows, "\n") != strings.Join(c.want, "\n") {
 			t.Errorf("%s: rows %q status %d, want %q status %d", c.name, rows, status, c.want, want)
-		}
-	}
-}
-
-// TestMatchesTheShellLib pins this package to toolbelt/lib/slotomatic-skip.sh while that lib exists (no
-// script sources it any more): slotomatic_skip_scan must print the same rows with the same status for every
-// log above.
-func TestMatchesTheShellLib(t *testing.T) {
-	t.Parallel()
-	lib, err := filepath.Abs("../../../build-n4-module-kit/toolbelt/lib/slotomatic-skip.sh")
-	if err != nil {
-		t.Fatal(err)
-	}
-	d := t.TempDir()
-	bash := func(log string) (string, int) {
-		out, err := exec.Command("bash", "-c", `. "$1"; slotomatic_skip_scan "$2"`, "_", lib, log).Output()
-		code := 0
-		if ee, ok := err.(*exec.ExitError); ok {
-			code = ee.ExitCode()
-		} else if err != nil {
-			t.Fatalf("bash slotomatic_skip_scan: %v", err)
-		}
-		return strings.TrimRight(string(out), "\n"), code
-	}
-	paths := []string{filepath.Join(d, "missing.log"), d}
-	for i, c := range logs {
-		p := filepath.Join(d, "log"+string(rune('a'+i)))
-		if err := os.WriteFile(p, []byte(c.log), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		paths = append(paths, p)
-	}
-	for _, p := range paths {
-		rows, status := ScanFile(p)
-		if out, code := bash(p); out != strings.Join(rows, "\n") || code != int(status) {
-			t.Errorf("%s: slotomatic_skip_scan = %q status %d, ScanFile = %q status %d", p, out, code, strings.Join(rows, "\n"), status)
 		}
 	}
 }
