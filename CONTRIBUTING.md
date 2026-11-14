@@ -259,7 +259,8 @@ promotion with a structural anchor (a retro header flipped `pending` → `folded
 The hook file is a launcher: the gate itself is the Go command `go/cmd/pre-push` (`go/internal/prepush`), built on
 demand by `go/go-tool.sh` like every wrapper (§ 2.2), so the first push after a Go source change pays one
 `go build`, and each worktree runs the gate of its own tree. A push is refused, never let through unchecked,
-when Go is not installed or the build fails. The command runs the pushed tree's `kit-state.sh`,
+when Go is not installed or the build fails. It is refused too, with git's error, when `git rev-parse
+--show-toplevel` fails; only a bare repository (no work tree to gate) passes, named in a one-line notice. The command runs the pushed tree's `kit-state.sh`,
 `sweep-build-state.sh` and `kit-cite-resolve.sh`, and the changelog gate in process.
 
 `build-n4-module-kit/BUILD-STATE.md`, `build-n4-module-kit/retros/INDEX.md` and

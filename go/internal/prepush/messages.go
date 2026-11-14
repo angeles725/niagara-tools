@@ -6,6 +6,12 @@ import (
 )
 
 // Every line the hook prints of its own, word for word what the bash hook printed.
+// The hook's work-tree check (run.go noWorkTree).
+const (
+	msgBareRepo   = "pre-push: bare repository %s: no work tree, nothing to gate\n"
+	msgNoToplevel = "git rev-parse --show-toplevel failed: %s"
+)
+
 const (
 	refusal = "pre-push: %s; refusing to push unchecked\n"
 

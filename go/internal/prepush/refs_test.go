@@ -113,15 +113,29 @@ func TestFailingGitLogRefuses(t *testing.T) {
 	r.push(r.update(sha)).want(t, 1, "pre-push: git log "+r.base+".."+sha+" failed; refusing to push unchecked")
 }
 
-// Outside a work tree the bash hook left at once with status 0 and no output; git never runs a
-// pre-push hook there, and the port keeps that exit.
-func TestOutsideAWorkTreeExitsZeroSilently(t *testing.T) {
+// Outside a work tree there is nothing the hook can check: `git rev-parse --show-toplevel` failing refuses
+// the push with git's own error, never a silent pass.
+func TestOutsideAWorkTreeRefusesWithTheGitError(t *testing.T) {
 	r := newRepo(t)
 	sha := ungatedKitWork(r)
 	t.Chdir(t.TempDir())
 	t.Setenv("GIT_CEILING_DIRECTORIES", os.TempDir())
 	res := r.push(r.update(sha))
-	if res.code != 0 || res.out != "" || res.err != "" {
-		t.Errorf("exit %d, stdout %q, stderr %q; want 0 and no output", res.code, res.out, res.err)
+	if res.code != 1 || !strings.Contains(res.err, "pre-push: git rev-parse --show-toplevel failed: fatal: not a git repository") ||
+		!strings.HasSuffix(res.err, "; refusing to push unchecked\n") {
+		t.Errorf("exit %d, stderr %q; want 1 and the git error in the refusal", res.code, res.err)
+	}
+}
+
+// A bare repository has no work tree to gate: the push goes on, and a one-line notice says why.
+func TestABareRepositoryIsNamedInANotice(t *testing.T) {
+	r := newRepo(t)
+	sha := ungatedKitWork(r)
+	bare := t.TempDir() + "/bare.git"
+	r.run("init", "-q", "--bare", bare)
+	t.Chdir(bare)
+	res := r.push(r.update(sha))
+	if res.code != 0 || res.out != "" || res.err != "pre-push: bare repository "+bare+": no work tree, nothing to gate\n" {
+		t.Errorf("exit %d, stdout %q, stderr %q; want 0 and the one-line notice", res.code, res.out, res.err)
 	}
 }
