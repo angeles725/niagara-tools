@@ -42,14 +42,14 @@ func TestEmitLogicDefaults(t *testing.T) {
 func TestEmitOptions(t *testing.T) {
 	tb := newKit(t)
 	out := t.TempDir()
-	r := run(t, tb, "Foo", out, "--vendor", "Élan Co", "--target-version", "4.15", "--plugin-version", "8.0.1")
+	r := run(t, tb, "Foo", out, "--vendor", "Acme_2", "--target-version", "4.15", "--plugin-version", "8.0.1")
 	if r.code != 0 || r.err != "" {
 		t.Fatalf("code=%d err=%q", r.code, r.err)
 	}
 	got := tree(t, filepath.Join(out, "Foo"))
 	wantFile(t, got, "settings.gradle.kts", "plugin 8.0.1 target 4.15 root Foo\nno final newline 7x6y17 4x14")
-	wantFile(t, got, "Foo/Foo-rt/src/com/Élan co/Foo/BFoo.java",
-		"package com.Élan co.Foo;\n// Copyright Élan Co. Foo-rt fooTimer f=a f:b\n")
+	wantFile(t, got, "Foo/Foo-rt/src/com/acme_2/Foo/BFoo.java",
+		"package com.acme_2.Foo;\n// Copyright Acme_2. Foo-rt fooTimer f=a f:b\n")
 	wantFile(t, got, "gradlew", "#!/bin/sh\n# MinimalPan Angeles 4.14\n") // wrapper scripts are never rewritten
 }
 

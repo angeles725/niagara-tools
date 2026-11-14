@@ -34,6 +34,16 @@ func TestUsageAndNameErrors(t *testing.T) {
 		{"underscore", []string{"Cold_Room", "OUT"}, "scaffold-module: ModuleName must contain only alphanumeric characters: Cold_Room\n"},
 		{"slash", []string{"Cold/Room", "OUT"}, "scaffold-module: ModuleName must contain only alphanumeric characters: Cold/Room\n"},
 		{"non-ASCII inside", []string{"Cañon", "OUT"}, "scaffold-module: ModuleName must contain only alphanumeric characters: Cañon\n"},
+		{"vendor slash", []string{"Foo", "OUT", "--vendor", "a/b"}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): a/b\n"},
+		{"vendor dot-dot", []string{"Foo", "OUT", "--vendor", ".."}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): ..\n"},
+		{"vendor dot", []string{"Foo", "OUT", "--vendor", "a.b"}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): a.b\n"},
+		{"vendor space", []string{"Foo", "OUT", "--vendor", "Ac me"}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): Ac me\n"},
+		{"vendor newline", []string{"Foo", "OUT", "--vendor", "Acme\n"}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): Acme\n\n"},
+		{"vendor digit first", []string{"Foo", "OUT", "--vendor", "1acme"}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): 1acme\n"},
+		{"vendor empty", []string{"Foo", "OUT", "--vendor", ""}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): \n"},
+		{"vendor non-ASCII", []string{"Foo", "OUT", "--vendor", "Añil"}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): Añil\n"},
+		{"vendor ampersand", []string{"Foo", "OUT", "--vendor", "A&B"}, "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): A&B\n"},
+		{"name is checked before the vendor", []string{"1bad", "OUT", "--vendor", "a/b"}, "scaffold-module: ModuleName must start with an uppercase letter: 1bad\n"},
 	}
 	tb := newKit(t)
 	for _, c := range cases {
@@ -60,13 +70,14 @@ func TestUsageAndNameErrors(t *testing.T) {
 func TestOptionValues(t *testing.T) {
 	tb := newKit(t)
 	out := t.TempDir()
-	r := run(t, tb, "Foo", out, "--type", "driver", "--vendor", "--type", "--type", "logic")
+	r := run(t, tb, "Foo", out, "--type", "driver", "--target-version", "--type", "--type", "logic")
 	if r.code != 0 {
 		t.Fatalf("code=%d err=%q", r.code, r.err)
 	}
 	got := tree(t, filepath.Join(out, "Foo"))
-	wantFile(t, got, "Foo/Foo-rt/src/com/--type/Foo/BFoo.java",
-		"package com.--type.Foo;\n// Copyright --type. Foo-rt fooTimer f=a f:b\n")
+	wantFile(t, got, "settings.gradle.kts", "plugin 7.6.17 target --type root Foo\nno final newline 7x6y17 4x14")
+	wantFile(t, got, "Foo/Foo-rt/src/com/angeles/Foo/BFoo.java", // logic: the last --type won
+		"package com.angeles.Foo;\n// Copyright Angeles. Foo-rt fooTimer f=a f:b\n")
 }
 
 // Without the launcher's variable the fixtures cannot be found: env fault, never a guess.

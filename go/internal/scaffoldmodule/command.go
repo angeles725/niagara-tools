@@ -67,6 +67,9 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 	if f := checkName(o.module); f != nil {
 		return "", f
 	}
+	if f := checkVendor(o.vendor); f != nil {
+		return "", f
+	}
 	n, f := newNames(o, typ)
 	if f != nil {
 		return "", f

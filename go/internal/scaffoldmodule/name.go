@@ -14,6 +14,22 @@ func checkName(name string) *failure {
 	return nil
 }
 
+// checkVendor enforces the --vendor rule: lowercased, it names the vendor's Java package directory, so it
+// must be one package segment: an ASCII letter or _ first, then ASCII letters, digits or _ (no /, ., space,
+// leading digit or non-ASCII byte, which would emit a broken or escaping package path).
+func checkVendor(vendor string) *failure {
+	lower := asciiLower(vendor)
+	if lower == "" || !(lower[0] == '_' || lower[0] >= 'a' && lower[0] <= 'z') {
+		return failf(ExitUsage, vendorSegment, vendor)
+	}
+	for i := 0; i < len(lower); i++ {
+		if !isAlnum(lower[i]) && lower[i] != '_' {
+			return failf(ExitUsage, vendorSegment, vendor)
+		}
+	}
+	return nil
+}
+
 func isAlnum(c byte) bool {
 	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9'
 }
