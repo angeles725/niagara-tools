@@ -42,12 +42,10 @@ func TestWithSlotomaticSilencesTheWarning(t *testing.T) {
 	}
 }
 
-// Kept from the bash tool: strict mode aborts even when --with-slotomatic is given.
 func TestStrictModeAbortsOnAnnotationChanges(t *testing.T) {
 	for name, strict := range map[string]func(f *fixture) []string{
-		"flag":            func(*fixture) []string { return []string{"--strict-slotomatic"} },
-		"variable":        func(*fixture) []string { t.Setenv("SLOTOMATIC_DETECTION", "strict"); return nil },
-		"with slotomatic": func(*fixture) []string { return []string{"--strict-slotomatic", "--with-slotomatic"} },
+		"flag":     func(*fixture) []string { return []string{"--strict-slotomatic"} },
+		"variable": func(*fixture) []string { t.Setenv("SLOTOMATIC_DETECTION", "strict"); return nil },
 	} {
 		f := newFixture(t)
 		t.Setenv("FAKE_GIT_DIFF", "+@NiagaraProperty")
@@ -150,5 +148,32 @@ func TestAFailedDiffThatShowedAChangeStillWarns(t *testing.T) {
 	f.want(f.run("--no-backup", "--no-deploy"), ExitOK)
 	if f.err != warnNoBackup+annotationWarning {
 		t.Errorf("stderr %q", f.err)
+	}
+}
+
+// Strict mode asks for slotomatic: a run that is about to regenerate the slots satisfies it, whether the
+// detection found a change or could not run.
+func TestStrictModeIsSatisfiedByWithSlotomatic(t *testing.T) {
+	slotomaticRan := "gradlew" + gradleProps + " <:demo-rt:slotomatic>\n"
+	for name, strict := range map[string]func(f *fixture) []string{
+		"flag":     func(*fixture) []string { return []string{"--strict-slotomatic"} },
+		"variable": func(*fixture) []string { t.Setenv("SLOTOMATIC_DETECTION", "strict"); return nil },
+	} {
+		f := newFixture(t)
+		t.Setenv("FAKE_GIT_DIFF", "+@NiagaraProperty")
+		args := append([]string{"--no-backup", "--no-deploy", "--mode", "C", "--with-slotomatic"}, strict(f)...)
+		f.want(f.run(args...), ExitOK, "[ng-deploy] slotomatic: running :demo-rt:slotomatic\n[ng-deploy] slotomatic ok\n[ng-deploy] build: mode C")
+		if f.err != warnNoBackup || !strings.HasPrefix(f.calls(), gitDiffCalls+slotomaticRan) {
+			t.Errorf("%s: stderr %q, calls %q", name, f.err, f.calls())
+		}
+		os.Unsetenv("SLOTOMATIC_DETECTION")
+	}
+	for name, tc := range cannotDetect {
+		f := newFixture(t)
+		tc.arrange(f)
+		f.want(f.run("--no-backup", "--no-deploy", "--mode", "C", "--strict-slotomatic", "--with-slotomatic"), ExitOK, "[ng-deploy] slotomatic ok\n")
+		if f.err != warnNoBackup+tc.notice || !strings.Contains(f.calls(), slotomaticRan) {
+			t.Errorf("%s: stderr %q, calls %q", name, f.err, f.calls())
+		}
 	}
 }

@@ -23,7 +23,8 @@ var owned = map[string]bool{"SCRIPT_DIR": true, "VERSION_FILE": true, "SCRIPT_VE
 // value of the file.
 func (d *deploy) loadEnvFile() int {
 	path := d.raw[optEnvFile]
-	assignments, found, err := envfile.Load(path, d.shellVariable)
+	var crLines []int
+	assignments, found, err := envfile.Load(path, d.shellVariable, envfile.TrimCR(&crLines))
 	var syntax *envfile.SyntaxError
 	switch {
 	case err == nil && !found && isDir(path):
@@ -37,6 +38,9 @@ func (d *deploy) loadEnvFile() int {
 		if owned[a.Key] {
 			return d.fail(ExitEnv, msgEnvFileOwned, path, a.Line, a.Key)
 		}
+	}
+	if len(crLines) > 0 { // a CRLF file: the values are used without the carriage return
+		d.warn(warnEnvFileCR, path, len(crLines), crLines[0])
 	}
 	for _, a := range assignments {
 		d.fileEnv[a.Key] = a.Value

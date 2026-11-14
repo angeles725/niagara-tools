@@ -19,9 +19,10 @@ const (
 
 // remindSlotomatic warns when Java annotations changed since the last deploy and --with-slotomatic was not
 // given; in strict mode (--strict-slotomatic or SLOTOMATIC_DETECTION=strict) a change aborts the deploy,
-// and so does a detection that could not run (under bash that passed like "no change").
+// and so does a detection that could not run (under bash that passed like "no change"). --with-slotomatic
+// satisfies strict mode: the slots are about to be regenerated.
 func (d *deploy) remindSlotomatic() int {
-	strict := d.isOn(optStrictSlot) || d.env("SLOTOMATIC_DETECTION") == detectionStrict
+	strict := (d.isOn(optStrictSlot) || d.env("SLOTOMATIC_DETECTION") == detectionStrict) && !d.isOn(optWithSlot)
 	switch d.detectAnnotationChanges() {
 	case changed:
 		if strict {

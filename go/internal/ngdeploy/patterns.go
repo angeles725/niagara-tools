@@ -30,8 +30,9 @@ const (
 	// lastDeployFile records the commit of the last deploy, in the working directory.
 	lastDeployFile = ".last-deploy-sha"
 	// backupDir holds the backups, in the working directory; backupStamp is the time layout of their names.
-	backupDir   = "_backups"
-	backupStamp = "20060102-150405"
+	backupDir    = "_backups"
+	backupStamp  = "20060102-150405"
+	backupSuffix = ".tar.gz"
 	// moduleXML and indexHTML are the jar members the verify step reads.
 	moduleXML = "META-INF/module.xml"
 	indexHTML = "rc/index.html"

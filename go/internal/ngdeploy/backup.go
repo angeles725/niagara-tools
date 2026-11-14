@@ -2,6 +2,8 @@ package ngdeploy
 
 import (
 	"io"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
@@ -19,9 +21,25 @@ func (d *deploy) backup() int {
 	return d.archive()
 }
 
-// archive writes _backups/<MODULE>-pre-<time>.tar.gz in the working directory. A tar that fails is exit 20.
+// clock is the time a backup is named after; a test replaces it.
+var clock = time.Now
+
+// backupName is _backups/<MODULE>-pre-<time>.tar.gz, or with -2, -3... before the suffix when a backup of
+// the same second is already there: tar would write over it.
+func (d *deploy) backupName() string {
+	base := backupDir + "/" + d.module + "-pre-" + clock().Format(backupStamp)
+	name := base + backupSuffix
+	for n := 2; ; n++ {
+		if _, err := os.Lstat(name); err != nil {
+			return name
+		}
+		name = base + "-" + strconv.Itoa(n) + backupSuffix
+	}
+}
+
+// archive writes the backup in the working directory. A tar that fails is exit 20.
 func (d *deploy) archive() int {
-	name := backupDir + "/" + d.module + "-pre-" + time.Now().Format(backupStamp) + ".tar.gz"
+	name := d.backupName()
 	if code := d.show("mkdir", "-p", backupDir); code != 0 {
 		return code
 	}

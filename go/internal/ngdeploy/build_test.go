@@ -6,7 +6,8 @@ import (
 	"testing"
 )
 
-// Kept from the bash tool: the task list of the build line is joined with newlines (its IFS).
+// The build line names the tasks on one line, joined by spaces (the bash tool joined them with its IFS, a
+// newline); gradlew still gets them one argument each.
 func TestBuildRunsTheGradleTasksOfTheMode(t *testing.T) {
 	for mode, tasks := range map[string][]string{
 		"A": {":demo-rt:clean", ":demo-ux:clean", ":demo-rt:jar", ":demo-ux:jar"},
@@ -16,7 +17,7 @@ func TestBuildRunsTheGradleTasksOfTheMode(t *testing.T) {
 		f := newFixture(t)
 		t.Setenv("SLOTOMATIC_DETECTION", "off")
 		f.want(f.run("--no-backup", "--no-deploy", "--mode", mode), ExitOK)
-		wantOut := "[ng-deploy] build: mode " + mode + " — " + strings.Join(tasks, "\n") + "\n[ng-deploy] build ok\n[ng-deploy] no-deploy: jars in build/libs/\n"
+		wantOut := "[ng-deploy] build: mode " + mode + " — " + strings.Join(tasks, " ") + "\n[ng-deploy] build ok\n[ng-deploy] no-deploy: jars in build/libs/\n"
 		wantCall := "gradlew" + gradleProps + " <" + strings.Join(tasks, "> <") + ">\n"
 		if f.out != wantOut || f.calls() != wantCall {
 			t.Errorf("mode %s: stdout %q, calls %q", mode, f.out, f.calls())
@@ -26,7 +27,7 @@ func TestBuildRunsTheGradleTasksOfTheMode(t *testing.T) {
 
 func TestTheDefaultModeIsA(t *testing.T) {
 	f := newFixture(t)
-	f.want(f.run("--no-backup", "--no-deploy"), ExitOK, "[ng-deploy] build: mode A — :demo-rt:clean\n:demo-ux:clean\n:demo-rt:jar\n:demo-ux:jar\n")
+	f.want(f.run("--no-backup", "--no-deploy"), ExitOK, "[ng-deploy] build: mode A — :demo-rt:clean :demo-ux:clean :demo-rt:jar :demo-ux:jar\n[ng-deploy] build ok\n")
 }
 
 func TestAFailedBuildExits30(t *testing.T) {
