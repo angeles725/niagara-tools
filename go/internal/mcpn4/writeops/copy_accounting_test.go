@@ -7,9 +7,9 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// A copy never loses a source child in silence: every child the station loaded is in the add op,
-// or named in the plan notes (it or an ancestor), or bare (name only: no type, value, children or
-// flags, so the copy's type supplies it). The lost-flags defect found on a live 4.15 station was a
+// A copy never loses a source child in silence: every child the station loaded is in the add op
+// with the flags the source has, or is an entry of the plan's "Not copied" note (it or an
+// ancestor), or bare (name only: no type, value, children or flags, so the copy's type supplies it). The lost-flags defect found on a live 4.15 station was a
 // child in none of the three.
 
 func kidsOfNode(node *pyjson.Object) []*pyjson.Object {
@@ -44,14 +44,32 @@ func namedKid(node *pyjson.Object, n string) *pyjson.Object {
 	return nil
 }
 
-// unaccounted lists the paths of source children that are neither copied, listed nor bare.
-func unaccounted(source, body *pyjson.Object, path, notes string, out *[]string) {
+// notCopied is the set of paths the plan's "Not copied (...): path (flags), ..." note lists.
+func notCopied(notes []any) map[string]bool {
+	listed := map[string]bool{}
+	for _, n := range notes {
+		text, _ := n.(string)
+		_, items, found := strings.Cut(text, "): ")
+		if !strings.HasPrefix(text, "Not copied (") || !found {
+			continue
+		}
+		for _, item := range strings.Split(items, ", ") {
+			if at := strings.LastIndex(item, " ("); at > 0 {
+				listed[item[:at]] = true
+			}
+		}
+	}
+	return listed
+}
+
+// unaccounted lists the source children that are neither copied with their flags, listed nor bare.
+func unaccounted(source, body *pyjson.Object, path string, listed map[string]bool, out *[]string) {
 	for _, kid := range kidsOfNode(source) {
 		p := nodeName(kid)
 		if path != "" {
 			p = path + "/" + p
 		}
-		if strings.Contains(notes, p+" (") || bare(kid) {
+		if listed[p] || bare(kid) {
 			continue
 		}
 		var copied *pyjson.Object
@@ -62,9 +80,14 @@ func unaccounted(source, body *pyjson.Object, path, notes string, out *[]string)
 			*out = append(*out, p)
 			continue
 		}
-		unaccounted(kid, copied, p, notes, out)
+		if want, got := flagsOf(kid), flagsOf(copied); want != got {
+			*out = append(*out, p+" (flags "+got+", source "+want+")")
+		}
+		unaccounted(kid, copied, p, listed, out)
 	}
 }
+
+func flagsOf(node *pyjson.Object) string { f, _ := node.Get("f"); s, _ := f.(string); return s }
 
 func TestACopyAccountsForEverySourceChild(t *testing.T) {
 	shapes := map[string]func(tree *pyjson.Object){
@@ -89,12 +112,23 @@ func TestACopyAccountsForEverySourceChild(t *testing.T) {
 	for label, shape := range shapes {
 		tree := gwTree()
 		shape(tree)
-		p, _, notes := copyPlanOf(t, tree)
+		p, _, _ := copyPlanOf(t, tree)
+		if len(p.Ops) == 0 {
+			t.Errorf("%s: the plan has no op", label)
+			continue
+		}
 		op, _ := p.Ops[0].(*pyjson.Object)
-		b, _ := op.Get("b")
-		body, _ := b.(*pyjson.Object)
+		var body *pyjson.Object
+		if op != nil {
+			b, _ := op.Get("b")
+			body, _ = b.(*pyjson.Object)
+		}
+		if body == nil {
+			t.Errorf("%s: the add op has no body", label)
+			continue
+		}
 		var lost []string
-		unaccounted(tree, body, "", notes, &lost)
+		unaccounted(tree, body, "", notCopied(p.Notes), &lost)
 		if len(lost) > 0 {
 			t.Errorf("%s: neither copied, listed nor bare: %v", label, lost)
 		}

@@ -57,6 +57,8 @@ var links = []link{{"Temp", "out", "Compare", "inA"}, {"Setpoint", "out", "Compa
 
 // ProbeOnly lists the steps whose verdict is recorded but does not gate the exit code. None today:
 // the rollback of the removed folder verified on a live 4.15.6.20 station and is required since.
+// The probe machinery (the row field, the report key, the plan line) is kept on purpose for the
+// next step that has to be tried live before it may fail a run.
 var ProbeOnly = []string{}
 
 // WriteScopes is the scratch folder plus the root.
