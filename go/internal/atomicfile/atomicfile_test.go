@@ -151,3 +151,48 @@ func TestMissingDirectoryIsAnError(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNotExist", err)
 	}
 }
+
+// An existing target with mode 000 keeps it: 0 is a mode, not "no target".
+func TestAnExistingModeZeroTargetStaysModeZero(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a mode-000 file")
+	}
+	p := filepath.Join(t.TempDir(), "f")
+	if err := os.WriteFile(p, []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(p, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := Write(p, []byte("new")); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := os.Stat(p); st.Mode().Perm() != 0 {
+		t.Errorf("mode = %o, want 000", st.Mode().Perm())
+	}
+}
+
+// The temporary copy of a private target is never wider than the target while it is written.
+func TestTheTempOfAPrivateTargetIsNeverWider(t *testing.T) {
+	withUmask(t, 0o022)
+	t.Cleanup(func() { writeData = writeAll })
+	p := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(p, []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var seen os.FileMode
+	writeData = func(f *os.File, data []byte) error {
+		st, err := f.Stat()
+		if err != nil {
+			return err
+		}
+		seen = st.Mode().Perm()
+		return writeAll(f, data)
+	}
+	if err := Write(p, []byte("new")); err != nil {
+		t.Fatal(err)
+	}
+	if seen&^0o600 != 0 {
+		t.Errorf("temp mode while writing = %o, wider than the 0600 target", seen)
+	}
+}

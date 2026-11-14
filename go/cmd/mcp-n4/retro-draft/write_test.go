@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -246,5 +247,19 @@ func TestDefaultOutDirIsTheKitRetrosNextToTheBinary(t *testing.T) {
 	want := filepath.Join(filepath.Dir(exe), "..", "..", "mcp-n4-kit", "retros")
 	if got := defaultOutDir(); got != want {
 		t.Errorf("defaultOutDir = %q, want %q", got, want)
+	}
+}
+
+// Without --date the write mode dates the retro today in UTC, not in local time.
+func TestTheDefaultDateIsTodayInUTC(t *testing.T) {
+	k := newKit(t)
+	now := time.Date(2026, 11, 14, 23, 30, 0, 0, time.FixedZone("UTC-6", -6*3600)) // 2026-11-15 UTC
+	var out, errOut bytes.Buffer
+	o := writeOpts{stateDir: k.state, station: "LLM", outDir: k.out}
+	if code := writeRetro(o, now, cli.Stdio{Out: &out, Err: &errOut}); code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut.String())
+	}
+	if _, err := os.Stat(filepath.Join(k.out, "2026-11-15-LLM-session.md")); err != nil {
+		t.Errorf("not dated today in UTC: %v (files %v)", err, k.ls())
 	}
 }
