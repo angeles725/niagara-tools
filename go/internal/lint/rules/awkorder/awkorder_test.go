@@ -4,15 +4,28 @@ import (
 	"math/rand"
 	"os/exec"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
+
+// verifiedGawk is the gawk versions whose `for (k in a)` order Order was checked against (str_array.c
+// hashing and table growth). A newer gawk may hash differently: the ubuntu-latest image 20261021
+// ships one whose order differs from 39 keys on, so the differential runs only on these versions.
+var verifiedGawk = regexp.MustCompile(`^GNU Awk 5\.[0-2]\.`)
 
 // TestOrderDifferential checks Order against gawk's own `for (k in a)` order, table growth included.
 func TestOrderDifferential(t *testing.T) {
 	gawk, err := exec.LookPath("gawk")
 	if err != nil {
 		t.Skip("gawk not installed")
+	}
+	ver, err := exec.Command(gawk, "--version").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first := strings.SplitN(string(ver), "\n", 2)[0]; !verifiedGawk.MatchString(first) {
+		t.Skipf("%s: Order emulates gawk 5.0-5.2; the differential is not verified for this version", first)
 	}
 	rnd := rand.New(rand.NewSource(1))
 	const first, rest = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789"

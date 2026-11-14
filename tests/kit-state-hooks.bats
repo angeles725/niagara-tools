@@ -130,7 +130,9 @@ private_go() {
     if [ -e "$d/go" ]; then
       for f in "$d"/*; do
         case "${f##*/}" in go | gofmt) continue ;; esac
-        [ -e "$NOGO/${f##*/}" ] || ln -s "$f" "$NOGO/${f##*/}"
+        # -L too: a dangling symlink (the 20261021 runner image ships grub-ntldr-img as one) fails -e,
+        # and the same name from a second PATH directory would then hit "ln: File exists".
+        [ -e "$NOGO/${f##*/}" ] || [ -L "$NOGO/${f##*/}" ] || ln -s "$f" "$NOGO/${f##*/}"
       done
     else
       nogo_path="$nogo_path:$d"
