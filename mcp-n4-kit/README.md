@@ -409,8 +409,8 @@ Destructive tools use the same pipeline:
 drives the real server over stdio (not the library) through the
 public tool interface: every write is dry run, token, execute, verdict. It runs the
 kitControl thermostat of B1199 inside a scratch folder `McpSmoke`, saves, removes the
-folder, rolls the removal back (probe-only: its verdict is recorded but does not gate
-the exit code), removes it again, saves and checks the folder is gone. Without
+folder, rolls the removal back (a required step: a rollback that does not verify fails the
+run), removes it again, saves and checks the folder is gone. Without
 `--apply` it only prints the scenario and contacts nothing. It launches the Go server
 (`--go-bin PATH`, else `MCP_N4_GO_BIN`, else the `mcp-n4` next to `live-smoke`, that is
 `go/bin/mcp-n4`; missing is exit 2). On a station that is not tier A (METHODOLOGY section 5) pass the

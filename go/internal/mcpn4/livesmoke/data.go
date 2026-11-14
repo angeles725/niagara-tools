@@ -55,9 +55,9 @@ var components = []component{{"Temp", numeric, 1, 1}, {"Setpoint", numeric, 1, 6
 var links = []link{{"Temp", "out", "Compare", "inA"}, {"Setpoint", "out", "Compare", "inB"},
 	{"Compare", "out", "Cooling", "in10"}}
 
-// ProbeOnly lists the steps whose verdict is recorded but does not gate the exit code.
-var ProbeOnly = []string{"n4_rollback of the folder removal re-creates a nested subtree: the T4 claim " +
-	"not yet proven live; its verdict is recorded but does not gate the exit code"}
+// ProbeOnly lists the steps whose verdict is recorded but does not gate the exit code. None today:
+// the rollback of the removed folder verified on a live 4.15.6.20 station and is required since.
+var ProbeOnly = []string{}
 
 // WriteScopes is the scratch folder plus the root.
 //
