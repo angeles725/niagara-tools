@@ -36,7 +36,7 @@ func (s *Scenario) plan() []row {
 		row{name: "read outputs == false", tool: "n4_read_slots", fn: s.expectOutputs(false)},
 		row{name: "save (folder present)", tool: "n4_save_station", fn: s.Save(true)},
 		row{name: "remove folder", tool: "n4_remove_component", fn: s.remove(true)},
-		row{name: "rollback folder removal", tool: "n4_rollback", fn: s.rollback, optional: true, probe: true},
+		row{name: "rollback folder removal", tool: "n4_rollback", fn: s.rollback},
 		row{name: "remove folder (again)", tool: "n4_remove_component", fn: s.removeAgain, optional: true},
 		row{name: "save (folder removed)", tool: "n4_save_station", fn: s.Save(false)},
 		row{name: "folder absent", tool: "n4_navigate", fn: s.folderAbsent})
@@ -64,6 +64,8 @@ func PlanText() string {
 	for i, r := range PlanRows() {
 		lines = append(lines, fmt.Sprintf("%2d. %-42s %s", i+1, r[0], r[1]))
 	}
-	lines = append(lines, "", "probe-only (not required): "+strings.Join(ProbeOnly, "; "))
+	if len(ProbeOnly) > 0 {
+		lines = append(lines, "", "probe-only (not required): "+strings.Join(ProbeOnly, "; "))
+	}
 	return strings.Join(lines, "\n") + "\n"
 }

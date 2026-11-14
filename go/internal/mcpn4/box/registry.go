@@ -10,7 +10,7 @@ const RegistryChannel = "reg"
 // object with "c", the frozen slots that type itself declares (each {st, n, f?, v: the default
 // value in BSON}), and "p", its supertype. Common baja types answer {} (box-rt
 // RegistryEncoderVisitor.doVisit, ContractEncoderVisitor.encodeComplex). Types do not change
-// within a station session, so every entry of each reply is kept per client: a request whose
+// within a station session, so every entry of each reply is kept until the next Open: a request whose
 // specs are all kept is answered without a call. The answer holds every kept type (at least the
 // requested specs the station described and their dependencies); a reply that is not an object
 // is returned as it came. It reads type definitions only, never a component.

@@ -93,30 +93,29 @@ func TestEveryWriteStepDoesDryRunThenTokenThenExecute(t *testing.T) {
 	}
 }
 
-func TestReportDeclaresTheProbeOnlyRollbackStep(t *testing.T) {
+// The rollback of the removed folder (a nested subtree with its links) was probe-only until it
+// verified on a live 4.15.6.20 station; it now gates the exit code like every other step.
+func TestTheRollbackStepIsRequiredAndNothingIsProbeOnly(t *testing.T) {
 	r := newRunner(t)
-	r.run(r.argv(true))
+	_, out, _ := r.run(r.argv(true))
 	rep := r.report()
-	var probes []map[string]any
+	var rollback map[string]any
 	for _, s := range steps(rep) {
 		if s["probe"] == true {
-			probes = append(probes, s)
+			t.Errorf("probe step left: %v", s["name"])
+		}
+		if s["tool"] == "n4_rollback" {
+			rollback = s
 		}
 	}
-	if len(probes) != 1 || probes[0]["tool"] != "n4_rollback" || probes[0]["required"] != false {
-		t.Fatalf("probe steps: %v", probes)
+	if rollback == nil || rollback["required"] != true || rollback["verdict"] != "verified" {
+		t.Fatalf("rollback step: %v", rollback)
 	}
-	joined := ""
-	for _, p := range rep["probe_only"].([]any) {
-		joined += p.(string) + " "
-	}
-	if !strings.Contains(joined, "rollback") {
+	if list, ok := rep["probe_only"].([]any); !ok || len(list) != 0 {
 		t.Errorf("probe_only = %v", rep["probe_only"])
 	}
-	switch probes[0]["verdict"] {
-	case "verified", "mismatch", "failed", "unverified":
-	default:
-		t.Errorf("probe verdict %v", probes[0]["verdict"])
+	if strings.Contains(out, "probe-only") || strings.Contains(PlanText(), "probe-only") {
+		t.Error("the plan or the run still announces a probe-only step")
 	}
 }
 
