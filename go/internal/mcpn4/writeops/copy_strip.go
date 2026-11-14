@@ -4,28 +4,25 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// stripFlags are the slot flags a copy leaves out (baja Flags letters): r readonly, t transient,
-// d default-on-clone (the platform's own clone skips such a frozen slot, ComplexSlotMap.newCopy)
-// and R remove-on-clone (ComponentSlotMap.newCopy skips such a dynamic slot).
-const stripFlags = "rtdR"
-
-const notCopiedNote = "Not copied (flags r readonly, t transient, d default-on-clone, R remove-on-clone): "
-
-// strippedNode is a node the copy leaves out: its path below the source and its effective flags;
-// readonly marks a readonly-only slot holding a value off its declared default.
-type strippedNode struct {
-	path, flags string
-	readonly    bool
-}
+// What a copy leaves out, by slot flags (baja Flags letters). A flag an integrator sets is
+// configuration and is copied with the slot; only runtime state is left out:
+//   - a frozen slot by its DECLARED flags: r readonly, t transient, d default-on-clone (the
+//     platform's own clone skips a frozen d slot, ComplexSlotMap.newCopy); also when its instance
+//     flags hold t, since a transient slot is never persisted;
+//   - a dynamic slot only by its instance flags t or R remove-on-clone (ComponentSlotMap.newCopy
+//     skips a dynamic R slot).
+const (
+	frozenStrip  = "rtd"
+	dynamicStrip = "tR"
+)
 
 // copyContracts holds the contracts of every type the copy evaluates (each node with children),
-// read in one registry call; a client without the registry channel, or a type the station does
-// not describe, is refused.
+// read in one registry call; a client without the registry channel, a type the station does not
+// describe or a malformed child is refused.
 func copyContracts(c plan.Client, root *pyjson.Object) (*plan.Contracts, error) {
 	tl, ok := c.(plan.TypeLoader)
 	if !ok {
@@ -33,18 +30,26 @@ func copyContracts(c plan.Client, root *pyjson.Object) (*plan.Contracts, error) 
 			"leave runtime slots out; this client cannot read them")
 	}
 	ct, specs := plan.NewContracts(tl), []string{}
-	collectTypes(root, &specs)
+	if err := collectTypes(root, "", &specs); err != nil {
+		return nil, err
+	}
 	return ct, typeRefusal(ct.Load(specs))
 }
 
-func collectTypes(node *pyjson.Object, specs *[]string) {
-	kids, _ := get(node, "s").([]any)
+func collectTypes(node *pyjson.Object, path string, specs *[]string) error {
+	kids, err := childObjects(node, path)
+	if err != nil {
+		return err
+	}
 	if t, ok := get(node, "t").(string); ok && len(kids) > 0 {
 		*specs = append(*specs, t)
 	}
 	for _, k := range kids {
-		collectTypes(k.(*pyjson.Object), specs)
+		if err := collectTypes(k, joinPath(path, name(k)), specs); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func typeRefusal(err error) error {
@@ -56,7 +61,8 @@ func typeRefusal(err error) error {
 }
 
 // configured is the copy body of a loaded root: the nodes stripTree keeps, snapshot to CopyDepth
-// (links recorded apart), without name-only children; with the nodes left out, in tree order.
+// (links recorded apart), without name-only children, each kept node carrying its own flags;
+// with the nodes left out, in tree order.
 func configured(ct *plan.Contracts, root *pyjson.Object) (*pyjson.Object, []strippedNode, *snapshot, error) {
 	var out []strippedNode
 	typ, _ := get(root, "t").(string)
@@ -69,138 +75,69 @@ func configured(ct *plan.Contracts, root *pyjson.Object) (*pyjson.Object, []stri
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return dropNameOnly(body), out, s, nil
+	body = dropNameOnly(body)
+	carryFlags(kept, body)
+	return body, out, s, nil
 }
 
-// stripTree is node (of type typ) without each child whose effective flags hold one of
-// stripFlags, with its subtree, at every level; children listed by name only are left out
-// silently. A frozen child without "t" is evaluated as the type of its declared default.
+// stripTree is node (of type typ) without each child stripReason leaves out, with its subtree,
+// at every level; children listed by name only are left out silently. A frozen child without "t"
+// is evaluated as the type of its declared default.
 func stripTree(ct *plan.Contracts, node *pyjson.Object, typ, path string, out *[]strippedNode) (*pyjson.Object, error) {
+	kids, err := childObjects(node, path)
+	if err != nil {
+		return nil, err
+	}
 	res := pyjson.NewObject()
 	for _, k := range node.Keys() {
-		v, _ := node.Get(k)
-		if k != "s" {
+		if v, _ := node.Get(k); k != "s" {
 			res.Set(k, v)
+		}
+	}
+	kept := []any{}
+	for _, kid := range kids {
+		if nameOnly(kid) {
 			continue
 		}
-		kept := []any{}
-		for _, c := range v.([]any) {
-			kid := c.(*pyjson.Object)
-			if nameOnly(kid) {
-				continue
-			}
-			flags, slot, err := ct.Flags(typ, kid)
-			if err != nil {
-				return nil, err
-			}
-			p, def := joinPath(path, name(kid)), asObj(get(slot, "v"))
-			if strings.ContainsAny(flags, stripFlags) {
-				readonly := !strings.ContainsAny(flags, "tdR") && !sameValue(kid, def)
-				*out = append(*out, strippedNode{p, flags, readonly})
-				continue
-			}
-			kt, ok := get(kid, "t").(string)
-			if !ok {
-				kt, _ = get(def, "t").(string)
-			}
-			stripped, err := stripTree(ct, kid, kt, p, out)
-			if err != nil {
-				return nil, err
-			}
-			kept = append(kept, stripped)
+		slot, err := ct.Declared(typ, kid)
+		if err != nil {
+			return nil, err
 		}
-		if len(kept) > 0 {
-			res.Set("s", kept)
+		p, def := joinPath(path, name(kid)), asObj(get(slot, "v"))
+		if flags, strip, readonly := stripReason(kid, slot); strip {
+			*out = append(*out, strippedNode{p, flags, readonly && !sameValue(kid, def)})
+			continue
 		}
+		kt, ok := get(kid, "t").(string)
+		if !ok {
+			kt, _ = get(def, "t").(string)
+		}
+		stripped, err := stripTree(ct, kid, kt, p, out)
+		if err != nil {
+			return nil, err
+		}
+		kept = append(kept, stripped)
+	}
+	if len(kept) > 0 {
+		res.Set("s", kept)
 	}
 	return res, nil
 }
 
-// sameValue is a node equal to the declared default: its value, and each child's by name.
-func sameValue(node, def *pyjson.Object) bool {
-	if def == nil || !box.PyEqual(get(node, "v"), get(def, "v")) {
-		return false
+// stripReason says whether kid (declared by slot, nil for a dynamic slot) is left out, the flags
+// that decided it, and whether it is a frozen slot declared readonly-only (its value is lost).
+func stripReason(kid, slot *pyjson.Object) (flags string, strip, readonly bool) {
+	instance, hasInstance := get(kid, "f").(string)
+	if slot == nil {
+		return instance, strings.ContainsAny(instance, dynamicStrip), false
 	}
-	names := map[string]bool{}
-	for _, o := range []*pyjson.Object{node, def} {
-		kids, _ := get(o, "s").([]any)
-		for _, k := range kids {
-			names[name(k.(*pyjson.Object))] = true
-		}
+	declared, _ := get(slot, "f").(string)
+	if strings.ContainsAny(declared, frozenStrip) {
+		readonly = !strings.ContainsAny(declared, "td") && !strings.Contains(instance, "t")
+		return declared, true, readonly
 	}
-	for n := range names {
-		a, b := kidNamed(node, n), kidNamed(def, n)
-		if a == nil || b == nil || !sameValue(a, b) {
-			return false
-		}
+	if hasInstance && strings.Contains(instance, "t") {
+		return instance, true, false
 	}
-	return true
-}
-
-// strippedNotes is one note listing every stripped node, then one per readonly-only slot whose
-// value is lost; none when nothing was stripped.
-func strippedNotes(list []strippedNode) []any {
-	if len(list) == 0 {
-		return nil
-	}
-	items, notes := []string{}, []any{}
-	for _, s := range list {
-		items = append(items, s.path+" ("+s.flags+")")
-	}
-	notes = append(notes, notCopiedNote+strings.Join(items, ", "))
-	for _, s := range list {
-		if s.readonly {
-			notes = append(notes, "readonly slot holds a non-default value and is not copied: "+s.path)
-		}
-	}
-	return notes
-}
-
-// dropNameOnly is body without children left with no type, value or children, at every level:
-// an add op child without a type is not a value, and the copy's type supplies those slots.
-func dropNameOnly(body *pyjson.Object) *pyjson.Object {
-	out := pyjson.NewObject()
-	for _, k := range body.Keys() {
-		v, _ := body.Get(k)
-		if k != "s" {
-			out.Set(k, v)
-			continue
-		}
-		kept := []any{}
-		for _, c := range v.([]any) {
-			if kid := dropNameOnly(c.(*pyjson.Object)); !nameOnly(kid) {
-				kept = append(kept, kid)
-			}
-		}
-		if len(kept) > 0 {
-			out.Set("s", kept)
-		}
-	}
-	return out
-}
-
-// nameOnly is a loaded child with no type, value or children: an action or a frozen slot at its
-// default, listed by name only.
-func nameOnly(kid *pyjson.Object) bool {
-	return get(kid, "t") == nil && get(kid, "v") == nil && get(kid, "s") == nil
-}
-
-func joinPath(path, n string) string {
-	if path == "" {
-		return n
-	}
-	return path + "/" + n
-}
-
-func asObj(v any) *pyjson.Object { o, _ := v.(*pyjson.Object); return o }
-
-// kidNamed is node's child named n; nil when absent.
-func kidNamed(node *pyjson.Object, n string) *pyjson.Object {
-	kids, _ := get(node, "s").([]any)
-	for _, k := range kids {
-		if o, ok := k.(*pyjson.Object); ok && name(o) == n {
-			return o
-		}
-	}
-	return nil
+	return "", false, false
 }

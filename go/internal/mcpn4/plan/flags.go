@@ -66,22 +66,14 @@ func (c *Contracts) Slot(typeSpec, name string) (*pyjson.Object, error) {
 	return walkDeclared(entry, typeSpec, func(slot *pyjson.Object) bool { return field(slot, "n") == name })
 }
 
-// Flags are the effective flags (Flags.encodeToString letters) of child, a loaded child node of a
-// parent typed parentType, and the contract slot that declares it (nil for a dynamic slot). The
-// station writes "f" only when the instance flags differ from the declared ones, or on a dynamic
-// slot with flags (box-rt ValueDocEncoder), so: child's own "f" when present, else the declared
-// slot's "f" (missing: no flags), else none.
-func (c *Contracts) Flags(parentType string, child *pyjson.Object) (string, *pyjson.Object, error) {
-	var slot *pyjson.Object
-	if name, ok := field(child, "n").(string); ok && parentType != "" {
-		var err error
-		if slot, err = c.Slot(parentType, name); err != nil {
-			return "", nil, err
-		}
+// Declared is the contract slot that declares child, a loaded child node of a parent typed
+// parentType (nil for a dynamic slot or an untyped parent). Its "f" holds the declared flags as
+// Flags.encodeToString letters; the station writes a node's own "f" only when its instance flags
+// differ from those, or on a dynamic slot with flags (box-rt ValueDocEncoder).
+func (c *Contracts) Declared(parentType string, child *pyjson.Object) (*pyjson.Object, error) {
+	name, ok := field(child, "n").(string)
+	if !ok || parentType == "" {
+		return nil, nil
 	}
-	if f, ok := field(child, "f").(string); ok {
-		return f, slot, nil
-	}
-	f, _ := field(slot, "f").(string)
-	return f, slot, nil
+	return c.Slot(parentType, name)
 }

@@ -38,7 +38,8 @@ func copyReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, 
 	}
 	requested, observed, verdict := []any{}, []any{}, "verified"
 	for i := range d.names {
-		nn, _ := get(inverse[i].(*pyjson.Object), "n").(string)
+		inv, _ := inverse[i].(*pyjson.Object)
+		nn, _ := get(inv, "n").(string)
 		requested = append(requested, obj("name", nn, "type", d.sourceType))
 		var t any
 		diffs := []any{"(copy not found)"}
@@ -80,26 +81,39 @@ func copyDifferences(c plan.Client, parentOrd, nn string, want *pyjson.Object) (
 	return out, nil
 }
 
-// diffTree appends the path of each node whose type or value differs between want and got, of
-// each child of want that got lacks and of each child got holds beyond want, matched by name.
+// diffTree appends the path of each node whose type, value or flags differ between want and got,
+// of each child of want that got lacks and of each child got holds beyond want, matched by name.
 func diffTree(want, got *pyjson.Object, path string, out *[]any) {
-	if path != "" && (!box.PyEqual(get(want, "t"), get(got, "t")) || !box.PyEqual(get(want, "v"), get(got, "v"))) {
-		*out = append(*out, path)
-		return
+	if path != "" {
+		for _, k := range []string{"t", "v", "f"} {
+			if !box.PyEqual(get(want, k), get(got, k)) {
+				*out = append(*out, path)
+				return
+			}
+		}
 	}
-	wantKids, _ := get(want, "s").([]any)
-	for _, k := range wantKids {
-		w := k.(*pyjson.Object)
+	for _, w := range objects(get(want, "s")) {
 		if g := kidNamed(got, name(w)); g != nil {
 			diffTree(w, g, joinPath(path, name(w)), out)
 		} else {
 			*out = append(*out, joinPath(path, name(w)))
 		}
 	}
-	gotKids, _ := get(got, "s").([]any)
-	for _, k := range gotKids {
-		if g := k.(*pyjson.Object); kidNamed(want, name(g)) == nil {
+	for _, g := range objects(get(got, "s")) {
+		if kidNamed(want, name(g)) == nil {
 			*out = append(*out, joinPath(path, name(g)))
 		}
 	}
+}
+
+// objects is the objects of a child list (configured bodies hold nothing else).
+func objects(list any) []*pyjson.Object {
+	raw, _ := list.([]any)
+	out := []*pyjson.Object{}
+	for _, k := range raw {
+		if o, ok := k.(*pyjson.Object); ok {
+			out = append(out, o)
+		}
+	}
+	return out
 }

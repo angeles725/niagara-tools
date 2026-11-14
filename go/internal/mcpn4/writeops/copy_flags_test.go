@@ -98,18 +98,17 @@ func TestACopyLeavesOutAFrozenSlotItsContractDeclaresTransient(t *testing.T) {
 	}
 }
 
-// (d) Instance flags win over the contract: a dynamic R slot and a frozen slot made readonly are
-// left out; a declared readonly slot whose instance flags were cleared is copied.
+// (d) The declared flags decide a frozen slot: an integrator who clears a runtime slot's instance
+// flags does not make it configuration. (Before #618 review this test pinned the opposite rule,
+// instance flags first; flags an integrator sets are now configuration, see copy_integrator_test.go.)
 func TestACopyUsesInstanceFlagsOverTheContract(t *testing.T) {
 	tree := gwTree()
 	child(tree, "health").Set("f", "")
-	addKids(tree, obj("nm", "p", "n", "Tag", "t", "baja:String", "v", "x", "f", "R"),
-		obj("nm", "p", "n", "enabled", "t", "baja:Boolean", "v", "false", "f", "r"))
 	_, op, notes := copyPlanOf(t, tree)
-	if strings.Contains(op, `"Tag"`) || strings.Contains(op, `"enabled"`) || !strings.Contains(op, `"health"`) {
+	if strings.Contains(op, `"health"`) {
 		t.Errorf("op = %s", op)
 	}
-	if !strings.Contains(notes, "Tag (R), enabled (r)") || strings.Contains(notes, "health (") {
+	if !strings.Contains(notes, "health (rd)") {
 		t.Errorf("notes = %s", notes)
 	}
 }

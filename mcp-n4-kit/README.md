@@ -355,10 +355,12 @@ Tool rules:
 - `n4_copy_component(parent_ord, name, new_names)` adds the configuration of one
   child again under each new name (1 to 30) in one batch under one confirmation
   token: type, plain slots and child components up to 6 levels deep (a Modbus
-  device down to its point addresses). Slots whose flags are readonly, transient,
-  default-on-clone or remove-on-clone (`r`, `t`, `d`, `R`, read from the station's
-  type definitions through the registry channel) are not copied: the plan notes list
-  each one with its flags and call out a readonly slot holding a non-default value.
+  device down to its point addresses). Runtime slots are left out by their flags, read
+  from the station's type definitions through the registry channel: a frozen slot
+  declared readonly, transient or default-on-clone (`r`, `t`, `d`) or made transient,
+  and a dynamic slot flagged transient or remove-on-clone (`t`, `R`). Flags an
+  integrator set otherwise travel with the copy. The plan notes list each slot left
+  out with its flags and call out a readonly slot holding a non-default value.
   Links are not copied either; the plan counts the links left behind, and a deeper
   source is refused, as is a station whose type definitions cannot be read. Change
   what differs per copy afterwards (e.g. `deviceAddress` with `n4_set_slot`). The
