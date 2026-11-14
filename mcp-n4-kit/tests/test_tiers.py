@@ -23,6 +23,7 @@ MUTATING = [
     ("n4_remove_component", {"parent_ord": FOLDER, "name": "X"}),
     ("n4_rollback", {"batch_id": "0" * 32}),
     ("n4_save_station", {}),
+    ("n4_add_history", {"points": [FOLDER], "history_name": "%name%", "interval_ms": 60000}),
 ]
 
 
