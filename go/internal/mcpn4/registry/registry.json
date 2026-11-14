@@ -424,6 +424,10 @@
       "type": "object",
       "description": "Optional {x, y, w} wire sheet annotation (integers; w defaults to 8)"
      },
+     "proxy_ext": {
+      "type": "string",
+      "description": "Optional driver proxy extension type spec (e.g. modbusCore:ModbusClientNumericProxyExt) to create a point with; configure its address afterwards with n4_set_slot"
+     },
      "dry_run": {
       "type": "boolean",
       "default": true,
@@ -448,6 +452,117 @@
    "needs_session": false
   },
   {
+   "name": "n4_add_history",
+   "description": "Add one interval history extension per point, already configured: historyName (baja:Format pattern), interval (ms) and enabled, in one batch under one confirmation token (1 to 50 points). Refuses a point that already has a child named ext_name and, when the pattern only uses %name%/%parent...name% tokens, a history name that would repeat. Capacity stays at the extension default (500 records, Roll). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "points": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Point ORDs (1 to 50), each gets one extension"
+     },
+     "history_name": {
+      "type": "string",
+      "description": "baja:Format pattern for the history name, unique per device, e.g. S%parent.parent.parent.name%_%parent.name%"
+     },
+     "interval_ms": {
+      "type": "integer",
+      "description": "Sampling interval in milliseconds (300000 is 5 minutes)"
+     },
+     "ext_name": {
+      "type": "string",
+      "default": "NumericInterval",
+      "description": "Slot name of the extension under each point"
+     },
+     "ext_type": {
+      "type": "string",
+      "default": "history:NumericIntervalHistoryExt",
+      "enum": [
+       "history:NumericIntervalHistoryExt",
+       "history:BooleanIntervalHistoryExt",
+       "history:EnumIntervalHistoryExt",
+       "history:StringIntervalHistoryExt"
+      ],
+      "description": "Interval history extension type"
+     },
+     "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Start collecting at once (true) or leave disabled"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "points",
+     "history_name",
+     "interval_ms"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_copy_component",
+   "description": "Copy one configured component (e.g. a Modbus device with its points and their addresses) under the same parent once per new name, in one batch under one confirmation token (1 to 30 copies). The copy holds the type, plain slots and child components up to 6 levels deep; runtime slots (status, health, out, read and write values, a Modbus absoluteAddress), actions and slots the station lists by name only, and links are not copied; a deeper source is refused. The source may carry station escapes (Numeric$20Writable40001); new names are plain. Change what differs per copy afterwards (e.g. deviceAddress with n4_set_slot). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "parent_ord": {
+      "type": "string",
+      "description": "ORD of the parent that holds the source and receives the copies"
+     },
+     "name": {
+      "type": "string",
+      "description": "Slot name of the source child under parent_ord"
+     },
+     "new_names": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1,
+      "maxItems": 30,
+      "description": "Distinct plain slot names, one per copy (the station may rename on collision)"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "parent_ord",
+     "name",
+     "new_names"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_set_slot",
    "description": "Set one slot to a value. Status slots are always written whole (value and status). A slot the station omits because it holds its type default is typed from the station's type definition (registry channel), so a default-valued property such as a history extension's enabled, historyName or interval can be set. A nested slot is a path from ord (grp/sp). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
@@ -462,11 +577,11 @@
       "description": "Slot name, or a path of slot names separated by / for a nested slot; must be listed by the station or declared by its type"
      },
      "value": {
-      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes)"
+      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes), a whole number for Integer (Java int range), or for Simple the encoded string of the type (a whole number is sent as its decimal string, e.g. a Modbus address 40014 on dataAddress/address) (an enum tag such as signedInteger or modbus, a Facets string such as units=u:celsius;...|precision=i:1, a LinearConversion scale;offset such as 0.1;0.0). A struct such as a Modbus FlexAddress is set through its child slots (dataAddress/addressFormat, dataAddress/address)"
      },
      "value_type": {
       "type": "string",
-      "description": "One of baja:Double, baja:Boolean, baja:String, baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime",
+      "description": "One of baja:Double, baja:Boolean, baja:String, baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime, baja:Integer, baja:Simple",
       "enum": [
        "baja:Double",
        "baja:Boolean",
@@ -474,8 +589,14 @@
        "baja:StatusNumeric",
        "baja:StatusBoolean",
        "baja:Format",
-       "baja:RelTime"
+       "baja:RelTime",
+       "baja:Integer",
+       "baja:Simple"
       ]
+     },
+     "simple_type": {
+      "type": "string",
+      "description": "Only with baja:Simple: the type spec module:Type to send the value as when it replaces the slot's current type (e.g. driver:LinearConversion for a proxy conversion); default: the slot's own type"
      },
      "status": {
       "type": "string",
@@ -509,7 +630,7 @@
   },
   {
    "name": "n4_invoke_action",
-   "description": "Invoke a control action. Only set, active, inactive, auto are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Invoke a control action. Only set, active, inactive, auto, and ping (a driver network, device or point device ext checks its device; no setting changes) are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {

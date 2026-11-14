@@ -10,9 +10,11 @@ import (
 )
 
 // ValueTypes is VALUE_TYPES: the value types n4_set_slot writes. baja:Format and baja:RelTime
-// were added after the Python port (S10); the differential declares that difference.
+// were added after the Python port (S10); baja:Integer and baja:Simple (any other simple, sent as
+// its encoded string under the slot's type or simple_type) after that; the differential declares
+// those differences.
 var ValueTypes = []string{"baja:Double", "baja:Boolean", "baja:String", "baja:StatusNumeric", "baja:StatusBoolean",
-	"baja:Format", "baja:RelTime"}
+	"baja:Format", "baja:RelTime", "baja:Integer", "baja:Simple"}
 
 // statusKind maps a Status type to the type of its value child.
 var statusKind = map[string]string{"baja:StatusNumeric": "baja:Double", "baja:StatusBoolean": "baja:Boolean"}
@@ -63,7 +65,7 @@ func Coerce(valueType string, value, status any) (any, error) {
 			return nil, ToolError("value must be a string for baja:String")
 		}
 		norm = value
-	case "baja:Format", "baja:RelTime":
+	case "baja:Format", "baja:RelTime", "baja:Integer", "baja:Simple":
 		return coerceSimple(valueType, value)
 	default:
 		return nil, valueTypeError()

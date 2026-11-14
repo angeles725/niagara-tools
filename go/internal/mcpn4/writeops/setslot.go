@@ -15,7 +15,12 @@ import (
 // SetSlot is n4_set_slot: one slot, a Status slot always whole (value and status).
 var SetSlot = plan.Impl{ScopeOrds: ordArg, Plan: setSlotPlan, Readback: setSlotReadback}
 
-type setSlotData struct{ requested any }
+// setSlotData carries what the read-back compares: the requested value and, for baja:Simple, the
+// type the slot must hold afterwards.
+type setSlotData struct {
+	requested any
+	wireType  string
+}
 
 func ordArg(args *pyjson.Object) []any { return []any{str(args, "ord")} }
 
@@ -53,6 +58,13 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if !hasStatus {
 		status = "0"
 	}
+	simpleType := str(args, "simple_type")
+	if _, given := args.Get("simple_type"); given && valueType != "baja:Simple" {
+		return nil, plan.ToolError("simple_type only applies to baja:Simple")
+	}
+	if simpleType != "" && !typeSpec.MatchString(simpleType) {
+		return nil, plan.ToolError("simple_type must be a type spec module:Type, got " + pyjson.StrRepr(simpleType))
+	}
 	value, _ := args.Get("value")
 	requested, err := plan.Coerce(valueType, value, status)
 	if err != nil {
@@ -72,8 +84,20 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 			"cannot read its type and refuses. Check the name with n4_read_slots; if the slot exists at its " +
 			"default, set it once in Workbench (or through an action such as `set`) and plan again")
 	}
-	if t, _ := node.Get("t"); t != valueType {
-		return nil, plan.ToolError("slot " + pyjson.StrRepr(slot) + " is " + pyjson.Str(t) + ", not " + valueType)
+	t, _ := node.Get("t")
+	slotType := pyjson.Str(t)
+	notes := []any{}
+	wireType := ""
+	if valueType == "baja:Simple" {
+		if wireType, err = simpleWireType(nodes, slot, slotType, simpleType); err != nil {
+			return nil, err
+		}
+		if wireType != slotType {
+			notes = append(notes, "the value type "+slotType+" is replaced by "+wireType+
+				"; the rollback restores "+slotType)
+		}
+	} else if slotType != valueType {
+		return nil, plan.ToolError("slot " + pyjson.StrRepr(slot) + " is " + slotType + ", not " + valueType)
 	}
 	previous, err := plan.Observe(nodes, slot, valueType)
 	if err != nil {
@@ -81,10 +105,43 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	}
 	targets := pyjson.NewObject()
 	targets.Set(ordText, h)
+	op, inverse := plan.ToBSON(valueType, requested), plan.ToBSON(valueType, previous)
+	if valueType == "baja:Simple" {
+		op, inverse = simpleBSON(wireType, requested), simpleBSON(slotType, previous)
+	}
 	return &plan.Planned{
-		Ops:     []any{setOp(h, slot, plan.ToBSON(valueType, requested))},
-		Inverse: []any{setOp(h, slot, plan.ToBSON(valueType, previous))},
-		Notes:   []any{}, Targets: targets, Data: setSlotData{requested}}, nil
+		Ops:     []any{setOp(h, slot, op)},
+		Inverse: []any{setOp(h, slot, inverse)},
+		Notes:   notes, Targets: targets, Data: setSlotData{requested, wireType}}, nil
+}
+
+// simpleWireType is the type a baja:Simple value is sent as: simple_type when given, else the
+// slot's own type. A struct (a slot with child slots, such as a Modbus FlexAddress) and a Status
+// type are refused: their children are written one by one, a Status whole by its own value type.
+func simpleWireType(nodes *pyjson.Object, slot, slotType, simpleType string) (string, error) {
+	for _, k := range nodes.Keys() {
+		if strings.HasPrefix(k, slot+"/") {
+			return "", plan.ToolError("slot " + pyjson.StrRepr(slot) + " is a struct (" + slotType +
+				"); set its child slots, e.g. " + k)
+		}
+	}
+	wire := slotType
+	if simpleType != "" {
+		wire = simpleType
+	}
+	if plan.IsStatusType(wire) || plan.IsStatusType(slotType) {
+		return "", plan.ToolError("baja:Simple does not write Status types; use baja:StatusNumeric or baja:StatusBoolean")
+	}
+	return wire, nil
+}
+
+// simpleBSON is the BOX body of an encoded simple of type t.
+func simpleBSON(t string, encoded any) *pyjson.Object {
+	o := pyjson.NewObject()
+	o.Set("nm", "p")
+	o.Set("t", t)
+	o.Set("v", encoded)
+	return o
 }
 
 func known(valueType string) bool {
@@ -122,8 +179,16 @@ func setSlotReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replie
 	if err != nil {
 		return nil, nil, nil, "", err
 	}
-	requested := p.Data.(setSlotData).requested
-	return requested, replies[0], observed, verdict(observed, requested), nil
+	data := p.Data.(setSlotData)
+	v := verdict(observed, data.requested)
+	if data.wireType != "" {
+		if n := box.Node(nodes, slot); n != nil {
+			if t, _ := n.Get("t"); pyjson.Str(t) != data.wireType {
+				v = "mismatch"
+			}
+		}
+	}
+	return data.requested, replies[0], observed, v, nil
 }
 
 func verdict(observed, requested any) string {

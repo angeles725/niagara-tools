@@ -249,8 +249,8 @@ is reported under `unknown`, never as dangling.
 ## Writing safely
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
-and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_set_slot`,
-`n4_invoke_action`, `n4_create_link`, plus the destructive class
+and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`,
+`n4_copy_component`, `n4_set_slot`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_rollback` and
 `n4_save_station`. Example:
 
@@ -322,14 +322,44 @@ Tool rules:
   (e.g. a history extension's `enabled=false`) can be set. A dynamic slot, an action or
   a name no type declares is still refused. Value types: `baja:Double`, `baja:Boolean`,
   `baja:String`, `baja:StatusNumeric`, `baja:StatusBoolean`, `baja:Format` (pattern
-  string, e.g. a history ext `historyName`) and `baja:RelTime` (whole milliseconds,
-  e.g. `300000` for a 5-minute history `interval`).
-- `n4_invoke_action` allows only `set`, `active`, `inactive` and `auto`. `set` restores
-  the previous `fallback` as its inverse; the others have none and the plan says so.
+  string, e.g. a history ext `historyName`), `baja:RelTime` (whole milliseconds,
+  e.g. `300000` for a 5-minute history `interval`), `baja:Integer` (a whole number in
+  the Java int range, e.g. a Modbus `deviceAddress`) and `baja:Simple`: any other simple,
+  given as its encoded string and sent under the slot's own type (an enum tag such as
+  `signedInteger` for `dataType`, a Facets string) or under `simple_type` when the
+  value replaces the type (`driver:LinearConversion` with `0.1;0.0` for a proxy
+  `conversion`; the rollback restores the old type, and the read-back checks the type).
+  A struct is refused as a Simple: set its children, e.g. a Modbus address through
+  `proxyExt/dataAddress/addressFormat` (`modbus`) and `proxyExt/dataAddress/address`
+  (`40005`: send it as `baja:Simple`, which also takes a whole number, because an MCP
+  client may turn the string "40005" into a number). Enum tags come from the type's
+  range, e.g. Modbus `DataTypeEnum` is `integerType`, `signedInteger`, `floatType`.
+- `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto` and `ping`. `set`
+  restores the previous `fallback` as its inverse; the others have none and the plan
+  says so. `ping` on a driver network, device or point device ext asks the driver to
+  check the device and changes no setting.
   `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
 - `n4_create_component` follows a station rename on collision (the inverse and the
-  read-back use the assigned name).
+  read-back use the assigned name). With `proxy_ext` (a type spec such as
+  `modbusCore:ModbusClientNumericProxyExt`) the point is created with that driver
+  extension in the same add, so a read-only field register is a `control:NumericPoint`
+  that never writes; the read-back checks the extension type.
+- `n4_add_history(points, history_name, interval_ms)` adds one interval history
+  extension per point (1 to 50), created already configured (`historyName`,
+  `interval`, `enabled`, default true) in one batch under one confirmation token.
+  It refuses a point that already has a child named `ext_name` and, when the
+  pattern only uses `%name%` / `%parent...name%` tokens, a history name that would
+  repeat across the batch. The inverse removes every extension; the read-back
+  compares each one. Capacity stays at the default (500 records, Roll).
+- `n4_copy_component(parent_ord, name, new_names)` adds the configuration of one
+  child again under each new name (1 to 30) in one batch under one confirmation
+  token: type, plain slots and child components up to 6 levels deep (a Modbus
+  device down to its point addresses). Runtime slots (`status`, `health`,
+  `faultCause`, `out`, `readValue`, `writeValue`) and links are not copied; the plan
+  counts the links left behind, and a deeper source is refused. Change what differs
+  per copy afterwards (e.g. `deviceAddress` with `n4_set_slot`). The inverse removes
+  every copy under its assigned name; the read-back checks each copy's type.
 
 Destructive tools use the same pipeline:
 

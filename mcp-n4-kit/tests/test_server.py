@@ -27,8 +27,7 @@ READ_TOOLS = ["n4_connect", "n4_describe_session", "n4_navigate", "n4_read_slots
               "n4_list_links", "n4_find_dangling_outputs", "n4_bql_query", "n4_inventory",
               "n4_read_file", "n4_list_px_views", "n4_px_summary", "n4_list_batches",
               "n4_session_retro_draft"]
-WRITE_TOOLS = ["n4_create_component", "n4_create_link", "n4_invoke_action",
-               "n4_remove_component", "n4_rollback", "n4_save_station", "n4_set_slot"]
+WRITE_TOOLS = ["n4_add_history", "n4_copy_component", "n4_create_component", "n4_create_link", "n4_invoke_action", "n4_remove_component", "n4_rollback", "n4_save_station", "n4_set_slot"]
 
 
 def rpc(method, params=None, id_=1):
