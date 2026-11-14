@@ -32,8 +32,9 @@ func childObjects(node *pyjson.Object, path string) ([]*pyjson.Object, error) {
 	return out, nil
 }
 
-// dropNameOnly is body without children left with no type, value or children, at every level:
-// an add op child without a type is not a value, and the copy's type supplies those slots.
+// dropNameOnly is body without children left with no type, value, children or flags, at every
+// level: such a child is not a value and the copy's type supplies those slots. A child kept for
+// its flags alone travels as name plus "f".
 func dropNameOnly(body *pyjson.Object) *pyjson.Object {
 	out := pyjson.NewObject()
 	for _, k := range body.Keys() {
@@ -58,10 +59,12 @@ func dropNameOnly(body *pyjson.Object) *pyjson.Object {
 	return out
 }
 
-// nameOnly is a loaded child with no type, value or children: an action or a frozen slot at its
-// default, listed by name only.
+// nameOnly is a loaded child with no type, value, children or flags: an action or a frozen slot at
+// its default, listed by name only. A frozen slot at its default value that carries instance flags
+// ("f") is configuration an integrator set, not a name-only child: the copy keeps it for its flags.
 func nameOnly(kid *pyjson.Object) bool {
-	return get(kid, "t") == nil && get(kid, "v") == nil && get(kid, "s") == nil
+	_, flagged := kid.Get("f")
+	return !flagged && get(kid, "t") == nil && get(kid, "v") == nil && get(kid, "s") == nil
 }
 
 // carryFlags sets on each child of body the instance flags ("f") of the loaded node it was taken

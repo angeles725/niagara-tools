@@ -75,9 +75,8 @@ func configured(ct *plan.Contracts, root *pyjson.Object) (*pyjson.Object, []stri
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	body = dropNameOnly(body)
-	carryFlags(kept, body)
-	return body, out, s, nil
+	carryFlags(kept, body) // before dropNameOnly: a slot kept for its flags alone is not name-only
+	return dropNameOnly(body), out, s, nil
 }
 
 // stripTree is node (of type typ) without each child stripReason leaves out, with its subtree,
