@@ -24,8 +24,7 @@ pg_scan() {
 }
 
 @test "PG1: no pipefail kit script pipes printf/echo into grep -q" {
-  run pg_scan "$ROOT"/scripts/*.sh "$ROOT"/scripts/lib/*.sh "$ROOT"/build-n4-module-kit/toolbelt/*.sh \
-    "$ROOT"/build-n4-module-kit/toolbelt/lib/*.sh
+  run pg_scan "$ROOT"/scripts/*.sh "$ROOT"/scripts/lib/*.sh "$ROOT"/build-n4-module-kit/toolbelt/*.sh
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

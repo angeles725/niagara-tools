@@ -43,7 +43,7 @@
 #   that snapshot but the module's own vendorVersion did not change, the build FAILs (exit 51) — Software
 #   Manager compares versions, not bytes, and would silently report "Up to Date" and skip installing the fix.
 #   The version may be X.Y or X.Y.Z and compares numerically per component, missing = 0 (1.3 == 1.3.0), via
-#   lib/vendor-version.sh (shared with scripts/ng-deploy.sh). A LOWER version than the deployed jar WARNs
+#   go/internal/vendorversion (shared with scripts/ng-deploy.sh). A LOWER version than the deployed jar WARNs
 #   ("vendorVersion went down") and passes: a deliberate rollback is legitimate.
 #   A jar the gate cannot read (not a zip, no entry, a duplicate entry name, an entry failing its CRC) or a changed jar whose own vendorVersion cannot be
 #   read FAILs closed with exit 52 ("cannot verify"), never a silent pass.
@@ -65,7 +65,7 @@
 #   dev key) is a WARN on every build. [ev: retro r8-mirror-userhome Δ1, retro r8-buildsh-316-308]
 # Slot-o-Matic skip (exit 34): Slot-o-Matic logs a file it could not process ("Could not process <file>.java: …")
 #   at WARNING level and gradle still ends BUILD SUCCESSFUL; the jar then carries stale generated code. A passing
-#   run whose log names a skipped file (lib/slotomatic-skip.sh) FAILs, the pre-build modules/ jar is restored
+#   run whose log names a skipped file (go/internal/slotomaticskip) FAILs, the pre-build modules/ jar is restored
 #   like a drift FAIL, and the gate is not run (METHODOLOGY K15). [ev: retro r10-slotomatic-skip-fail-open Δ1]
 # Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
 #   without --install-into-home, no profile) ·

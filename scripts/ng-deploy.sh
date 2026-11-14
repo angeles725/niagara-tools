@@ -21,18 +21,4 @@ NG_DEPLOY_GO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)/
 NG_DEPLOY_BIN="$(go_tool_bin "$NG_DEPLOY_GO" ng-deploy)" || exit 3
 NG_DEPLOY_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 export NG_DEPLOY_SCRIPT
-
-# Run as a command: the binary is the whole tool.
-if [[ "${BATS_TEST_MODE:-0}" -eq 0 ]]; then
-    exec "$NG_DEPLOY_BIN" "$@"
-fi
-
-# Sourced with BATS_TEST_MODE=1 (tests/ng-deploy.bats): nothing runs, and the steps a test calls on their own
-# are offered as functions over the same binary (go/internal/ngdeploy/steps.go). Each reads its settings from
-# the environment and, like the functions it replaces, ends the calling shell when the step fails.
-ng_deploy_step() {
-    NG_DEPLOY_STEP="$1" "$NG_DEPLOY_BIN" "${@:2}" || exit $?
-}
-verify_jar() { ng_deploy_step verify_jar "$@"; }
-verify_cachebuster() { ng_deploy_step verify_cachebuster "$@"; }
-backup() { ng_deploy_step backup "$@"; }
+exec "$NG_DEPLOY_BIN" "$@"

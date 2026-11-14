@@ -1,7 +1,7 @@
-// Package vendorversion is the one Go reader and comparator of a module's version: toolbelt/lib/vendor-version.sh
-// (vv_module_version, vv_source_version, vv_cmp), which scripts/ng-deploy.sh sources until it is ported.
-// TestMatchesTheShellLib keeps the two from disagreeing. Consumers: build-module (deployed-baseline drift
-// gate) and check-installed-line (downgrade guard).
+// Package vendorversion is the one Go reader and comparator of a module's version: the retired bash lib
+// toolbelt/lib/vendor-version.sh (vv_module_version, vv_source_version, vv_cmp) answered the same way.
+// Consumers: build-module (deployed-baseline drift gate), ng-deploy (version precheck) and
+// check-installed-line (downgrade guard).
 package vendorversion
 
 import (

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// moduleXMLs are META-INF/module.xml texts; TestMatchesTheShellLib replays them on vv_module_version.
+// moduleXMLs are META-INF/module.xml texts (the cases the retired vv_module_version answered).
 var moduleXMLs = []struct{ name, xml, want string }{
 	{"the root tag's own version, not the baja floor", `<module name="X" vendor="V" vendorVersion="1.3"><dependencies><dependency name="baja" vendorVersion="4.13"/></dependencies></module>`, "1.3"},
 	{"three parts and a suffix", `<module name="X" vendorVersion="2.10.2-rc"></module>`, "2.10.2-rc"},

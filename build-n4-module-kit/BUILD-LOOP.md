@@ -156,7 +156,7 @@ Safe combinations: `clean slotomatic jar` — the only correct kit build (`build
 
 **Post-jar copy lock (exit 32):** the plugin's LAST step copies the new jar into `<niagara_home>/modules/`; a Windows-side process (Workbench, a station) holding the old jar open on a `/mnt/c` mount makes that copy fail with `FileAlreadyExistsException` — invisible to `preflight.sh`'s jar-lock scan, which SKIPs 9p/drvfs mounts by design. `build.sh` recognizes the signature, exits 32 (not an opaque 30), and names each `build/libs/<jar>` rebuilt THIS run as the artifact of record (a profile gradle never reached is flagged "not rebuilt"). The verify gate did NOT run: either close the holder and re-run, or run `verify-module.sh` on the `build/libs` jar before any deploy. `[ev: retro panccadia-restart-seq-comp-lockout-hours Δ3]` The classifier is route-independent: the Windows `gradlew.bat` route's backslash paths and Kotlin message (`Tried to overwrite the destination, but failed to delete it`) also exit 32. Always run QUALIFIED tasks (`:<MOD>-<part>:jar`) — a bare `gradlew jar` builds every subproject and fails on an unrelated jar the station holds; on Windows identify the holder with `tasklist` (`station.exe`, `wb.exe`): leftover `java.exe` processes are Gradle daemons (`gradlew --stop`). `[ev: retro n4-course-signed-jars-gate-fix Δ5]`
 
-**Slot-o-Matic skip (exit 34):** gradle ended BUILD SUCCESSFUL but Slot-o-Matic logged `Could not process <file>.java` for a generated region whose stamp count is not exactly one, so the jar carries stale generated code. `build.sh` prints one `FAIL slotomatic-skip <path> (<reason>)` row per file (`toolbelt/lib/slotomatic-skip.sh`), restores the pre-build `modules/` jar and skips the gate. Fix: delete that file's generated region and re-run (METHODOLOGY K15). `[ev: retro r10-slotomatic-skip-fail-open Δ1]`
+**Slot-o-Matic skip (exit 34):** gradle ended BUILD SUCCESSFUL but Slot-o-Matic logged `Could not process <file>.java` for a generated region whose stamp count is not exactly one, so the jar carries stale generated code. `build.sh` prints one `FAIL slotomatic-skip <path> (<reason>)` row per file (`go/internal/slotomaticskip`), restores the pre-build `modules/` jar and skips the gate. Fix: delete that file's generated region and re-run (METHODOLOGY K15). `[ev: retro r10-slotomatic-skip-fail-open Δ1]`
 
 ### 4.b Test layer — BTestNg station-lifecycle tests `[ev: corpus B815]`
 
@@ -332,8 +332,8 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     and the one walker that parses each file once; each lint is `internal/lint/rules/<lint>/` (the rule and its
     tests); `cmd/<tool>/` stays a thin `main.go`, as in `go/cmd/gen-retro-index` and `go/cmd/check-facets-card`
     (PRs #288, #296). Adding a lint is one rule file plus its registration — never a copied walker, formatter or
-    stripper. Bash follows the same rule: reuse `toolbelt/lib/*` (`vendor-version.sh`,
-    `slotomatic-skip.sh`) instead of a private copy; the walk and the lint skeleton have no bash lib any more
+    stripper. The version comparator and the Slot-o-Matic skip detector follow the same rule: one Go package each
+    (`go/internal/vendorversion`, `go/internal/slotomaticskip`), never a private copy; no bash lib is left
     (`lint.Walk` and the runner in `go/internal/lint` hold them). `[ev: retro r8-t22-retro-deltas Δ9]` A scanner helper only one
     rule needs stays in that rule; the second rule that needs it moves it into `javasrc` with a test.
     `[ev: retro go-lint-session-store Δ2]` `internal/lintheader`

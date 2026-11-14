@@ -15,7 +15,7 @@ setup() {
   # build.sh takes lib/werror.init.gradle relative to its own dir — copy the real lib/ alongside the linked
   # build.sh so that sibling lookup resolves too.
   mkdir -p "$TMPDIR_T/kit/lib"
-  cp "$KIT"/toolbelt/lib/*.sh "$KIT"/toolbelt/lib/*.gradle "$TMPDIR_T/kit/lib/"
+  cp "$KIT"/toolbelt/lib/*.gradle "$TMPDIR_T/kit/lib/"
   # shellcheck disable=SC2016
   # why: $* and ${FAKE_VERIFY_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/verify.args"\nexit "${FAKE_VERIFY_EXIT:-0}"\n' "$TMPDIR_T" > "$TMPDIR_T/kit/verify-module.sh"
@@ -367,10 +367,10 @@ _mkjar_ver() {
   [ "$status" -eq 51 ]
 }
 
-# R10 shared compare (lib/vendor-version.sh vv_cmp): a LOWER vendorVersion than the deployed jar is a WARN row,
+# R10 shared compare (go/internal/vendorversion Cmp): a LOWER vendorVersion than the deployed jar is a WARN row,
 # not a FAIL — a deliberate rollback is legitimate — and the build still passes. A differing non-numeric suffix
 # is "incomparable" and keeps the gate's earlier reading: a changed version, no FAIL and no WARN.
-# Mutation: BS-drift-downgrade -- dropping the vv_cmp -1 branch loses the WARN row (the run still exits 0).
+# Mutation: BS-drift-downgrade -- dropping the Cmp -1 branch loses the WARN row (the run still exits 0).
 @test "BS-drift-downgrade: changed bytes with a LOWER vendorVersion (1.4 -> 1.3, 1.10 -> 1.9) -> WARN 'vendorVersion went down', exit 0" {
   mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
   for pair in 1.4:1.3 1.10:1.9; do
@@ -989,7 +989,7 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
 # BS-slotomatic-skip-on-success: the same skip when compileJava still PASSES (a stale region with two stamps keeps the
 # old generated slots compiling) — gradle ends BUILD SUCCESSFUL with a jar built from stale generated code. build.sh
 # must not pass it: exit 34, every skipped file named once, the K15 recovery. [ev: retro r10-slotomatic-skip-fail-open Δ1]
-# Named mutation: delete the success-branch slotomatic_skip_scan call in build.sh -> BS-slotomatic-skip-on-success
+# Named mutation: delete the success-branch slotomaticskip.ScanFile call of the build -> BS-slotomatic-skip-on-success
 # exits 0 (the build passes the skip through).
 _mk_gradlew_skip_success() {
   printf '#!/usr/bin/env bash\necho "WARNING: Could not process /x/src/com/a/BHmiStatus.java: Found multiple metadata blocks"\necho "WARNING: The following files failed to compile: "\necho "WARNING:   /x/src/com/a/BHmiStatus.java: Found multiple metadata blocks"\necho "BUILD SUCCESSFUL in 4s"\n%s\nexit 0\n' "${1:-}" > "$ROOT/gradlew"

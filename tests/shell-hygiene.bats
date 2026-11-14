@@ -15,7 +15,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 
 @test "SH1: no kit script has an unquoted \$ or & in a pattern-substitution replacement" {
   run python3 "$CHECK" "$ROOT"/scripts/*.sh "$ROOT"/scripts/lib/*.sh "$ROOT"/build-n4-module-kit/toolbelt/*.sh \
-    "$ROOT"/build-n4-module-kit/toolbelt/lib/*.sh "$ROOT"/tests/helpers/*.bash
+    "$ROOT"/tests/helpers/*.bash
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

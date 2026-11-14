@@ -1,22 +1,24 @@
 package vendorversion
 
 import (
-	"os/exec"
-	"path/filepath"
-	"strings"
 	"testing"
 )
 
-// versionPairs are the compare cases; TestCmpMatchesTheShellLib replays them on the bash comparator.
+// versionPairs are the compare cases (those the retired bash comparator answered).
 var versionPairs = []struct {
 	a, b string
-	want string // what vv_cmp prints
+	want string // what the retired vv_cmp printed
 }{
 	{"2.9.2", "2.10.0", "-1"}, {"2.10.0", "2.9.2", "1"}, {"2.8.0", "2.8.0", "0"},
 	{"1.10", "1.9", "1"}, {"1.3", "1.3.0", "0"}, {"1.03", "1.3", "0"}, {"1.3", "1.3.1", "-1"},
 	{"2.10.0-rc", "2.10.0", "incomparable"}, {"1.3-rc", "1.3-rc", "0"}, {"1.4-rc", "1.3-rc", "1"},
 	{"", "1.0", "incomparable"}, {"1.0", "", "incomparable"}, {"v1.0", "v1.0", "incomparable"},
 	{"1.2.", "1.2.", "0"}, {"7", "007", "0"}, {"12345678901234567890", "12345678901234567891", "-1"},
+	// the cases of the retired tests/vendor-version.bats that the rows above did not hold
+	{"1.3.0", "1.3", "0"}, {"1.3", "1.4", "-1"}, {"2.10.2", "2.10.10", "-1"}, {"2.10.10", "2.10.2", "1"},
+	{"1.3.1", "1.3", "1"}, {"1.3-rc", "1.3.0-rc", "0"}, {"1.3-rc", "1.4-rc", "-1"},
+	{"1.3-rc", "1.3", "incomparable"}, {"1.4", "1.3-beta", "incomparable"}, {"", "1.3", "incomparable"},
+	{"1.3", "", "incomparable"}, {"abc", "abc", "incomparable"},
 }
 
 func cmpText(a, b string) string {
@@ -37,6 +39,9 @@ func TestCmp(t *testing.T) {
 }
 
 var sourceTexts = []struct{ name, text, want string }{
+	{"comments, a commented call, then two calls", "niagaraModule {\n  // defaultModuleVersion sets the \"vendorVersion\" attribute on all modules\n" +
+		"  // defaultModuleVersion(\"9.9.9\")\n  defaultModuleVersion( \"2.10.0\" )\n  defaultModuleVersion(\"1.0.0\")\n}\n", "2.10.0"},
+	{"a build file with no call", "plugins { id(\"x\") }\n", ""},
 	{"the call", "niagaraModule {\n  defaultModuleVersion(\"2.10.0\")\n}\n", "2.10.0"},
 	{"a comment naming it is skipped", "  // defaultModuleVersion sets \"vendorVersion\"\n\tdefaultModuleVersion( \"1.3\" )\n", "1.3"},
 	{"the first call wins", "defaultModuleVersion(\"1.0\")\ndefaultModuleVersion(\"2.0\")\n", "1.0"},
@@ -52,45 +57,6 @@ func TestSourceVersion(t *testing.T) {
 	for _, c := range sourceTexts {
 		if got := SourceVersion(c.text); got != c.want {
 			t.Errorf("%s: SourceVersion = %q, want %q", c.name, got, c.want)
-		}
-	}
-}
-
-// TestMatchesTheShellLib pins this package to toolbelt/lib/vendor-version.sh, the reader and comparator
-// ng-deploy.sh still sources: vv_cmp, vv_source_version and vv_module_version must answer every case the
-// same way, so the Go tools and the bash gate never disagree on a version.
-func TestMatchesTheShellLib(t *testing.T) {
-	t.Parallel()
-	lib, err := filepath.Abs("../../../build-n4-module-kit/toolbelt/lib/vendor-version.sh")
-	if err != nil {
-		t.Fatal(err)
-	}
-	bash := func(script string, stdin string, args ...string) string {
-		cmd := exec.Command("bash", append([]string{"-c", `. "$1"; shift; ` + script, "_", lib}, args...)...)
-		cmd.Stdin = strings.NewReader(stdin)
-		out, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("bash %s: %v", script, err)
-		}
-		return strings.TrimRight(string(out), "\n")
-	}
-	for _, p := range versionPairs {
-		if p.a == "12345678901234567890" {
-			continue // beyond awk's exact integers; Cmp compares the digits exactly
-		}
-		if got := bash(`vv_cmp "$1" "$2"`, "", p.a, p.b); got != cmpText(p.a, p.b) {
-			t.Errorf("vv_cmp %q %q = %s, Cmp = %s", p.a, p.b, got, cmpText(p.a, p.b))
-		}
-	}
-	for _, c := range sourceTexts {
-		if got := bash(`vv_source_version`, c.text); got != SourceVersion(c.text) {
-			t.Errorf("%s: vv_source_version = %q, SourceVersion = %q", c.name, got, SourceVersion(c.text))
-		}
-	}
-	for _, c := range moduleXMLs {
-		jar := writeJar(t, c.xml)
-		if got := bash(`vv_module_version "$1"`, "", jar); got != ModuleVersion(jar) {
-			t.Errorf("%s: vv_module_version = %q, ModuleVersion = %q", c.name, got, ModuleVersion(jar))
 		}
 	}
 }
