@@ -404,14 +404,17 @@ $_LS15_BLOCK
   [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: could not scan"* ]]
 }
 
-@test "LS15-sync: build.sh takes lib/signing-block.sh; the Go signblock.Parts equals it" {
+@test "LS15-sync: build-module takes signblock.Parts; the Go signblock.Parts equals lib/signing-block.sh" {
   # Mutation: LS15-sync -- re-inline a copy of the ERE table in preflight.sh, build.sh or a Go package, or change, drop or reorder
   # an entry (pattern or row name) of the Go signblock.Parts -> this fails.
   lib="$KIT/toolbelt/lib/signing-block.sh"
   grep -q '^SIGN_BLOCK_ERE=(' "$lib"
-  grep -q 'SIGN_BLOCK_ERE\[0\]' "$KIT/toolbelt/build.sh"
-  grep -q 'lib/signing-block.sh"' "$KIT/toolbelt/build.sh"
-  # preflight.sh is the Go wrapper (sample-sign reads signblock.Parts); neither script re-inlines the table.
+  # build.sh is the launcher of go/cmd/build-module: its dev-key WARN reads entry [0] of the Go table and the
+  # package compiles no signing-block pattern of its own.
+  grep -q 'signblock\.Parts\[0\]' "$KIT/../go/internal/buildmodule/diagnose.go"
+  run grep -rnE 'MustCompile\(.*(allowDefaultProfile|niagaraSigning|aliases|signingProfileFile)' "$KIT/../go/internal/buildmodule" --include='*.go'
+  [ -z "$output" ] || { printf 'buildmodule compiles its own signing-block pattern:\n%s\n' "$output"; false; }
+  # preflight.sh and build.sh are Go wrappers (their packages read signblock.Parts); neither script re-inlines the table.
   for f in preflight.sh build.sh; do
     run grep -q 'allowDefaultProfile\[\[:space:\]\]' "$KIT/toolbelt/$f"
     [ "$status" -ne 0 ]
