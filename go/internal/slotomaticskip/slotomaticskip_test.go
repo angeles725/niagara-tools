@@ -73,8 +73,9 @@ func TestScanFile(t *testing.T) {
 	}
 }
 
-// TestMatchesTheShellLib pins this package to toolbelt/lib/slotomatic-skip.sh, which scripts/ng-deploy.sh
-// still sources: slotomatic_skip_scan must print the same rows with the same status for every log above.
+// TestMatchesTheShellLib pins this package to toolbelt/lib/slotomatic-skip.sh while that lib exists (no
+// script sources it any more): slotomatic_skip_scan must print the same rows with the same status for every
+// log above.
 func TestMatchesTheShellLib(t *testing.T) {
 	t.Parallel()
 	lib, err := filepath.Abs("../../../build-n4-module-kit/toolbelt/lib/slotomatic-skip.sh")

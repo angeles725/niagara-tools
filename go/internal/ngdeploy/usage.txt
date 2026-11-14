@@ -1,0 +1,61 @@
+Usage: ng-deploy.sh [OPTIONS]
+
+Deploy a Niagara N4 module jar to a station modules directory.
+
+Options:
+  --mode <A|B|C>           Build mode (default: A)
+                             A = rt + ux jars (both)
+                             B = ux jar only  (JS/CSS/Java servlet changes)
+                             C = rt jar only  (Java BComponent changes)
+  --env-file <PATH>        Source env from PATH instead of .env.local
+  --no-deploy              Build only; do not copy or verify (jars stay in build/libs/)
+  --no-backup              Skip the backup step (opt-in; prints a one-line rollback WARN).
+                             No companion flag required — the default backup is a safe
+                             lightweight one, so skipping it is a plain choice.
+  --full-backup            Back up the WHOLE modules dir (every sibling module), old behavior.
+                             Default is lightweight: only this module's own -rt/-ux/-wb jars.
+  --keep <N>               Backups to retain per module (default 3); older ones auto-purged.
+  --i-know-what-im-doing   Accepted no-op (kept for backward compatibility; --no-backup no longer gates)
+  --with-slotomatic        Run :MODULE-rt:slotomatic (and :MODULE-ux:slotomatic when -ux is annotated) BEFORE build_jars (opt-in; ignored on mode B)
+  --strict-slotomatic      Abort with exit 15 if annotation changes detected without --with-slotomatic
+  --no-gate                Skip the verify-module.sh gate (default: on for mode A/C). Without
+                             --no-gate a MISSING gate binary blocks the deploy (exit 50).
+  --first-deploy           The module was never deployed: skip the schema-risk precheck (no
+                             baseline to diff). Same as FIRST_DEPLOY=1 in the env file
+                             (an exported FIRST_DEPLOY in the shell is ignored).
+  --accept-lossy           Proceed on a schema-risk LOSSY verdict (an OUTAGE always blocks).
+  --help                   Print this help and exit 0
+  --version                Print SCRIPT_VERSION and exit 0
+
+Required env vars (from .env.local or --env-file):
+  MODULE_NAME, GRADLEW_PATH, NIAGARA_HOME, NIAGARA_USER_HOME,
+  JAVA_HOME, STATION_MODULES_DIR
+  EXPECTED_RT_TYPES  (required for mode A or C)
+  EXPECTED_UX_TYPES  (required for mode A or B)
+
+Required for mode A or C unless --first-deploy:
+  SCHEMA_BASELINE_DIR  — the DEPLOYED -rt source baseline (module-include.xml + *.java), diffed by
+                         schema-risk.sh against the -rt module dir before the copy (build-verify.md
+                         § Schema-risk deploy workflow)
+
+Optional:
+  BUILD_ID             — when set, verifies index.html in ux jar contains ?v=$BUILD_ID
+  SLOTOMATIC_DETECTION — warn|strict|off (default: warn); controls annotation-change heuristic
+  FULL_BACKUP=1        — same as --full-backup (whole modules dir)
+  KEEP_N               — same as --keep N (backups to retain per module; default 3)
+
+Exit codes:
+  0   success (or --help)
+  10  missing required env var or invalid path
+  15  slotomatic failed or skipped a file (METHODOLOGY K15), or annotation changes detected in strict mode
+  20  backup failed (tar returned non-zero)
+  30  build (gradlew) returned non-zero
+  40  copy of jar to STATION_MODULES_DIR failed
+  12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
+  50  verify failed: type count mismatch, BUILD_ID not found, or verify-module gate failed/missing
+      (every check runs on build/libs before the copy: nothing reaches STATION_MODULES_DIR)
+  51  version-bump precheck: the built jar's bytes differ from the deployed jar but its vendorVersion did not change
+      (numeric per component, a missing component = 0: 1.3 -> 1.3.0 is NOT a bump)
+  52  version-bump precheck cannot verify (a vendorVersion is unreadable, or the two differ in a non-numeric suffix)
+  53  schema-risk precheck: verdict OUTAGE, LOSSY without --accept-lossy, or a schema-risk env fault
+  54  version-bump precheck: the built jar's vendorVersion is LOWER than the deployed jar's (a downgrade)

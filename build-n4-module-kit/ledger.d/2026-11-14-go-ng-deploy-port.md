@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-14 -->
+<!-- last-change-note: ng-deploy.sh is a launcher over go/cmd/ng-deploy; the env file is read, not sourced -->
+log: 2026-11-14 · all-Go pass, wave 3 → `scripts/ng-deploy.sh` is a launcher over `go/cmd/ng-deploy` (`go/internal/ngdeploy`, one file per phase; `go/internal/envfile` reads the operator env file as plain assignments with `$NAME`, `${NAME}` and a leading `~` expanded as bash did, and refuses anything bash would have run). Differential against the bash original over 237 cases: 191 identical, 46 declared; four false successes are exit 10 now (`--keep` 0, negative, empty or non-numeric; a zero-padded expected type count; an invalid `MODE` in the env file) and "could not check" refuses. `toolbelt/lib/fs-type.sh` is deleted (no caller).
+open_issue: retro go-ng-deploy-port Δ1-Δ8 pending (flags win over the env file; all-or-nothing copy; `.last-deploy-sha` validated; every silent exit gets its ERROR line; cosmetic and timing defects; sourced bats cases move to Go; the two unsourced libs go; the release bumps VERSION)
