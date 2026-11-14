@@ -99,14 +99,14 @@ const (
 // Deployed-baseline drift gate. %s after "verify" / "WARN —" is the module-profile name.
 const (
 	msgCannotVerify = "build.sh: FAIL — drift gate cannot verify %s: %s."
-	whyUnlistable   = "cannot list the jar content (unzip missing or failing, or an unreadable jar)"
+	whyUnlistable   = "cannot read the jar content (not a readable zip, no entry, a duplicate entry name, or an entry that fails its CRC)"
 	whyNoVersion    = "shipped bytes changed but the module's own vendorVersion is unreadable (old='%s' new='%s')"
 	msgWentDown     = "build.sh: WARN — %[1]s vendorVersion went down (%[2]s -> %[3]s) versus the deployed jar; fine for a deliberate rollback, otherwise bump defaultModuleVersion above %[2]s."
 	msgDrift        = "build.sh: FAIL — %[1]s shipped bytes changed but vendorVersion is still %[2]s.\n" +
 		"  Software Manager compares versions, not bytes — it will report \"Up to Date\" and SKIP installing this jar.\n" +
 		"  Bump defaultModuleVersion(\"%[2]s\") in %[1]s's build.gradle.kts (patch for a fix, minor for a feature), then rebuild."
 	msgDriftDetected   = "build.sh: deployed-baseline drift detected — bump the version above, then rebuild (or --no-drift-check if this niagara_home is not the deploy target)."
-	msgDriftUnverified = "build.sh: deployed-baseline drift gate could not verify the jar(s) above — fix the cause (install unzip, check module.xml), or --no-drift-check if this niagara_home is not the deploy target."
+	msgDriftUnverified = "build.sh: deployed-baseline drift gate could not verify the jar(s) above — fix the cause (a damaged jar, an unreadable module.xml), or --no-drift-check if this niagara_home is not the deploy target."
 )
 
 // Verify gate and report-module.

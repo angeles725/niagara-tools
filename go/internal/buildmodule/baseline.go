@@ -1,10 +1,12 @@
 package buildmodule
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -51,31 +53,54 @@ func (b *build) snapshotBaseline() int {
 	return proceed
 }
 
-// contentHash is a deterministic hash of the CONTENT of every jar entry outside META-INF/, in bytewise name
-// order. META-INF/* (module.xml buildMillis, MANIFEST.MF, signatures) is excluded on purpose: those bytes
-// change on every rebuild even when nothing shipped changed. ok is false when the jar cannot be listed
-// (unzip missing or failing, an unreadable or empty jar): two empty listings would hash EQUAL and the gate
-// would silently pass, so an unlistable jar is "cannot verify", never "unchanged". A jar holding only
-// META-INF entries lists fine and hashes its (empty) payload (#226).
+// contentHash is a deterministic hash of every jar entry outside META-INF/, in bytewise name order: its name,
+// its size and its bytes, so bytes moved between entries or a renamed entry change the hash. META-INF/*
+// (module.xml buildMillis, MANIFEST.MF, signatures) is excluded on purpose: those bytes change on every
+// rebuild even when nothing shipped changed. ok is false when the jar is not a readable zip, holds no entry,
+// holds two entries under one name, or one of its entries cannot be read in full (a CRC or decompression error): two unreadable jars would
+// hash EQUAL and the gate would silently pass, so that is "cannot verify", never "unchanged". A jar holding
+// only META-INF entries reads fine and hashes its (empty) payload (#226).
 func (b *build) contentHash(jar string) (hash string, ok bool) {
-	listing, listed := b.output("unzip", "-Z1", jar)
-	names := strings.TrimRight(string(listing), "\n")
-	if !listed || names == "" {
+	zr, err := zip.OpenReader(jar)
+	if err != nil {
 		return "", false
 	}
-	var payload []string
-	for _, name := range strings.Split(names, "\n") {
-		if !strings.HasPrefix(name, "META-INF/") {
-			payload = append(payload, name)
+	defer zr.Close()
+	if len(zr.File) == 0 {
+		return "", false
+	}
+	var payload []*zip.File
+	seen := map[string]bool{}
+	for _, entry := range zr.File {
+		if seen[entry.Name] {
+			return "", false // two entries under one name: which one ships is the reader's choice
+		}
+		seen[entry.Name] = true
+		if !strings.HasPrefix(entry.Name, "META-INF/") {
+			payload = append(payload, entry)
 		}
 	}
-	sort.Strings(payload)
+	sort.SliceStable(payload, func(i, j int) bool { return payload[i].Name < payload[j].Name })
 	sum := sha256.New()
-	for _, name := range payload {
-		content, _ := b.output("unzip", "-p", jar, name) // an entry unzip cannot print adds what it did print
-		sum.Write(content)
+	for _, entry := range payload {
+		fmt.Fprintf(sum, "%s\x00%d\x00", entry.Name, entry.UncompressedSize64)
+		if !hashEntry(sum, entry) {
+			return "", false
+		}
 	}
 	return hex.EncodeToString(sum.Sum(nil)), true
+}
+
+// hashEntry adds the bytes of one entry to sum; false when they cannot be read in full (archive/zip checks
+// the CRC and the size at the end of the entry).
+func hashEntry(sum io.Writer, entry *zip.File) bool {
+	r, err := entry.Open()
+	if err != nil {
+		return false
+	}
+	defer r.Close()
+	_, err = io.Copy(sum, r)
+	return err == nil
 }
 
 // copyPreserving is `cp -p src dst`: cp's exit status (0 copied) and, on failure, what cp printed — or why

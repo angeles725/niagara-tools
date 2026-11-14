@@ -45,7 +45,7 @@
 #   The version may be X.Y or X.Y.Z and compares numerically per component, missing = 0 (1.3 == 1.3.0), via
 #   lib/vendor-version.sh (shared with scripts/ng-deploy.sh). A LOWER version than the deployed jar WARNs
 #   ("vendorVersion went down") and passes: a deliberate rollback is legitimate.
-#   A jar the gate cannot list (unzip missing/failing) or a changed jar whose own vendorVersion cannot be
+#   A jar the gate cannot read (not a zip, no entry, a duplicate entry name, an entry failing its CRC) or a changed jar whose own vendorVersion cannot be
 #   read FAILs closed with exit 52 ("cannot verify"), never a silent pass.
 #   Retry-safe: gradle's :jar step already overwrote the deployed jar by the time this FAILs, so the gate
 #   backs up the pre-build jar and restores it into modules/ on FAIL — a bare re-run then still sees the
