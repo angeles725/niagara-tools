@@ -1,4 +1,4 @@
-<!-- review-status: folded -->
+<!-- review-status: pending -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-11-14 · kit · double-station-save
@@ -51,4 +51,4 @@ number of modules that see it. On a controller that is duplicated flash wear and
   must read it.
 
 ---
-**Status**: FOLDED 2026-11-14 (branch `phaseb/double-save`; log in `ledger.d/2026-11-14-double-station-save-applied.md`) — Δ1 in `types/logic.md` § Restart & persistence and `types/dashboard.md` § Facade contract & commissioning links; Δ2 in `fixtures/MinimalPan` (`model/ConfigSaveScheduler`, `ConfigSaveSchedulerTest`); Δ3 in `go/internal/verifymodule/stationsave.go` and `BUILD-LOOP.md` § 6.b item 10. The checklist file Δ2 names does not exist in the kit: the checklist line is in `types/logic.md`.
+**Status**: PENDING — INDEX row generated from the header: `| 2026-11-14-double-station-save.md | kit | 2026-11-14 | pending | 3 |`
