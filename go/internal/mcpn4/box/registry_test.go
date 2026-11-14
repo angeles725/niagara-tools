@@ -111,3 +111,35 @@ func TestLoadTypesCachesNeitherAMalformedReplyNorAFailedCall(t *testing.T) {
 		t.Errorf("reply = %s", reply)
 	}
 }
+
+// The kept types belong to one station session: Open starts a new one (the station may have
+// restarted with another module set), so it forgets them and the next request asks again.
+func TestOpenForgetsTheKeptTypes(t *testing.T) {
+	calls := 0
+	st := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		v, _ := pyjson.Unmarshal(body)
+		n, _ := v.(*pyjson.Object).Get("n")
+		calls++
+		if calls == 2 { // the session make of Open: refused, which is enough to start over
+			http.Error(w, "down", http.StatusServiceUnavailable)
+			return
+		}
+		w.Write([]byte(`{"p":"box","v":"2.3","n":` + n.(pyjson.Number).String() +
+			`,"m":[{"r":0,"t":"rt","c":"reg","k":"loadTypes","b":{"a:B":{"c":[],"p":"a:A"}}}]}`))
+	}))
+	t.Cleanup(st.Close)
+	c := newClient(t, st.URL, nil)
+	if _, err := c.LoadTypes([]string{"a:B"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Open(); err == nil {
+		t.Fatal("the refused session make did not fail Open")
+	}
+	if _, err := c.LoadTypes([]string{"a:B"}); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 3 {
+		t.Errorf("station calls = %d, want 3: the types kept before Open were answered from the cache", calls)
+	}
+}

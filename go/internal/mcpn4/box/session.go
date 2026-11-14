@@ -32,6 +32,7 @@ func (c *Client) Poll() ([]any, error) {
 // closes the server session (best effort) unless it is an AuthError, which only drops the
 // local sid: one more rejected login counts toward the 5-in-30-s lockout.
 func (c *Client) Open() (any, error) {
+	c.types = nil // a new session: the station may have restarted with another module set
 	sid, err := c.Call(Channel, "make", obj())
 	if err != nil {
 		return nil, err
