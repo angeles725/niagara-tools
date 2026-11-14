@@ -1,4 +1,4 @@
-package checkinstalledline
+package vendorversion
 
 import (
 	"os/exec"
@@ -57,8 +57,8 @@ func TestSourceVersion(t *testing.T) {
 }
 
 // TestMatchesTheShellLib pins this package to toolbelt/lib/vendor-version.sh, the reader and comparator
-// build.sh and ng-deploy.sh still source: vv_cmp and vv_source_version must answer every case above the
-// same way, so the Go guard and the bash gates never disagree on a version.
+// ng-deploy.sh still sources: vv_cmp, vv_source_version and vv_module_version must answer every case the
+// same way, so the Go tools and the bash gate never disagree on a version.
 func TestMatchesTheShellLib(t *testing.T) {
 	t.Parallel()
 	lib, err := filepath.Abs("../../../build-n4-module-kit/toolbelt/lib/vendor-version.sh")
@@ -85,6 +85,12 @@ func TestMatchesTheShellLib(t *testing.T) {
 	for _, c := range sourceTexts {
 		if got := bash(`vv_source_version`, c.text); got != SourceVersion(c.text) {
 			t.Errorf("%s: vv_source_version = %q, SourceVersion = %q", c.name, got, SourceVersion(c.text))
+		}
+	}
+	for _, c := range moduleXMLs {
+		jar := writeJar(t, c.xml)
+		if got := bash(`vv_module_version "$1"`, "", jar); got != ModuleVersion(jar) {
+			t.Errorf("%s: vv_module_version = %q, ModuleVersion = %q", c.name, got, ModuleVersion(jar))
 		}
 	}
 }

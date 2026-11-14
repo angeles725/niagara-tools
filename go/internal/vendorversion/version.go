@@ -1,12 +1,14 @@
-package checkinstalledline
+// Package vendorversion is the one Go reader and comparator of a module's version: toolbelt/lib/vendor-version.sh
+// (vv_module_version, vv_source_version, vv_cmp), which scripts/ng-deploy.sh sources until it is ported.
+// TestMatchesTheShellLib keeps the two from disagreeing. Consumers: build-module (deployed-baseline drift
+// gate) and check-installed-line (downgrade guard).
+package vendorversion
 
 import (
 	"regexp"
 	"strings"
 )
 
-// The Go side of toolbelt/lib/vendor-version.sh (vv_source_version, vv_cmp), which build.sh and
-// ng-deploy.sh still source; TestMatchesTheShellLib keeps the two from disagreeing.
 var (
 	// sourceCall is an uncommented `defaultModuleVersion("X")` call at the start of a line.
 	sourceCall = regexp.MustCompile(`^[ \t\v\f\r]*defaultModuleVersion\([ \t\v\f\r]*"([^"]*)"`)

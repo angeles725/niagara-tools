@@ -1,7 +1,7 @@
 // Package checkinstalledline refuses a client branch that would silently downgrade a module group that is
 // already installed (scripts/check-installed-line.sh): every GROUP build.gradle.kts carrying
 // defaultModuleVersion("X") at the installed ref must exist on the branch with a version >= X.
-// git.go reads the repository (local refs only, never a fetch), version.go reads and compares a version;
+// git.go reads the repository (local refs only, never a fetch), internal/vendorversion reads and compares a version;
 // this file only composes them. [ev: retro r10-installed-line-guard Δ1]
 package checkinstalledline
 
@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/vendorversion"
 )
 
 // Exit codes of check-installed-line (unchanged from the bash tool).
@@ -38,12 +39,12 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	code, groups := ExitOK, 0
 	for _, file := range repo.filesNaming(installed, "defaultModuleVersion(", "*build.gradle.kts") {
-		want := SourceVersion(repo.show(installed, file))
+		want := vendorversion.SourceVersion(repo.show(installed, file))
 		if want == "" {
 			continue // the file names the call (a comment) without making it: not a group
 		}
 		groups++
-		text, refused := row(file, want, SourceVersion(repo.show(branch, file)))
+		text, refused := row(file, want, vendorversion.SourceVersion(repo.show(branch, file)))
 		fmt.Fprintln(s.Out, text)
 		if refused {
 			code = ExitRefused
@@ -64,7 +65,7 @@ func row(file, want, got string) (text string, refused bool) {
 		return "MISSING " + file + " " + want, true
 	}
 	status := "ok"
-	switch c, comparable := Cmp(got, want); {
+	switch c, comparable := vendorversion.Cmp(got, want); {
 	case !comparable:
 		// Mutation: ILG-incomparable -- reading an incomparable pair as ok passes 2.10.0 -> 2.10.0-rc
 		status = "INCOMPARABLE"

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/angeles725/niagara-tools/go/internal/fstype"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
@@ -18,7 +19,7 @@ func (r *run) jarLock() {
 	if r.win {
 		return
 	}
-	if t := r.fsType(r.nh); t == "9p" || t == "drvfs" {
+	if fstype.IsWindowsMount(r.fsType(r.nh)) {
 		r.row("SKIP", "jar-lock", "niagara_home is on a 9p/drvfs mount (WSL) — lsof cannot see a Windows-side lock here")
 		return
 	}
@@ -50,41 +51,15 @@ func (r *run) jarLock() {
 	}
 }
 
-// fsType is lib/fs-type.sh fs_type_for: the filesystem type of path from the longest mountpoint string
-// prefix in $N4_FSTYPE_MOUNTS_FILE (a /proc/mounts-format file tests pass), else `df -T -- <path>`.
+// fsType is the filesystem type of path (fstype.For); df is found on PATH as bash finds it.
 func (r *run) fsType(path string) string {
-	mf := r.s.Env("N4_FSTYPE_MOUNTS_FILE")
-	if mf == "" || !lint.IsFile(mf) {
-		df, ok := lookPath("df", r.s.Env("PATH")) // found as bash finds it; none prints nothing
+	return fstype.For(path, r.s.Env(fstype.MountsEnv), func() []byte {
+		df, ok := lookPath("df", r.s.Env("PATH"))
 		if !ok {
-			return ""
+			return nil
 		}
-		return field(line(r.h.output(df, []string{"-T", "--", path}, false), 1), 1)
-	}
-	b, _ := os.ReadFile(mf)
-	best, typ := 0, ""
-	for _, ln := range strings.Split(string(b), "\n") {
-		if mp := field(ln, 1); mp != "" && strings.HasPrefix(path, mp) && len(mp) > best {
-			best, typ = len(mp), field(ln, 2)
-		}
-	}
-	return typ
-}
-
-// line is line i (0-based) of out, "" past its end.
-func line(out []byte, i int) string {
-	if ls := strings.Split(string(out), "\n"); i < len(ls) {
-		return ls[i]
-	}
-	return ""
-}
-
-// field is awk's $(i+1) under the default FS (runs of blanks and tabs, leading ones skipped).
-func field(s string, i int) string {
-	if f := strings.FieldsFunc(s, func(c rune) bool { return c == ' ' || c == '\t' }); i < len(f) {
-		return f[i]
-	}
-	return ""
+		return r.h.output(df, []string{"-T", "--", path}, false)
+	})
 }
 
 // lookPath is bash's `command -v name` over path: the first executable regular file dir/name (an

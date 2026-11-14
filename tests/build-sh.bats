@@ -9,10 +9,11 @@ load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
 setup() {
   TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
-  # copy build.sh next to a stub gate so the sibling lookup resolves to the stub
-  mkdir -p "$TMPDIR_T/kit"; cp "$KIT/toolbelt/build.sh" "$TMPDIR_T/kit/build.sh"
-  # build.sh sources lib/fs-type.sh (Δ7/Δ2), lib/method-boundary.sh, lib/signing-block.sh and lib/slotomatic-skip.sh
-  # relative to its own dir — copy the real libs alongside the copied build.sh so that sibling lookup resolves too.
+  # link build.sh next to a stub gate so the sibling lookup resolves to the stub: the launcher follows the link
+  # to find the Go module (../../go) and takes its siblings from the directory of the invoked path (this one).
+  mkdir -p "$TMPDIR_T/kit"; ln -s "$KIT/toolbelt/build.sh" "$TMPDIR_T/kit/build.sh"
+  # build.sh takes lib/werror.init.gradle relative to its own dir — copy the real lib/ alongside the linked
+  # build.sh so that sibling lookup resolves too.
   mkdir -p "$TMPDIR_T/kit/lib"
   cp "$KIT"/toolbelt/lib/*.sh "$KIT"/toolbelt/lib/*.gradle "$TMPDIR_T/kit/lib/"
   # shellcheck disable=SC2016
