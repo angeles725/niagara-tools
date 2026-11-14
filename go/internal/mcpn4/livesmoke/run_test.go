@@ -160,7 +160,10 @@ func TestAStepMismatchExitsNonzeroSkipsTheRestAndCleansUp(t *testing.T) {
 			break
 		}
 	}
-	if at < 0 || all[at]["name"] != "read outputs == true" || all[at]["verdict"] != "mismatch" {
+	if at < 0 {
+		t.Fatal("no required step failed")
+	}
+	if all[at]["name"] != "read outputs == true" || all[at]["verdict"] != "mismatch" {
 		t.Fatalf("first failed required step: %v", all[at])
 	}
 	skipped := false

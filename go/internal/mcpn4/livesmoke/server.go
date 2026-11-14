@@ -44,6 +44,9 @@ func ResolveServer(a *Args, getenv func(string) string) string {
 		return "no executable Go server at " + a.GoBin + ": build it (cd go && go build -o bin/ ./cmd/mcp-n4) " +
 			"or pass --go-bin"
 	}
+	if abs, err := filepath.Abs(a.GoBin); err == nil {
+		a.GoBin = abs // exec looks a bare name up on PATH; the file checked above is the one in the working directory
+	}
 	return ""
 }
 
