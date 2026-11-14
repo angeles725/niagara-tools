@@ -1,6 +1,6 @@
 // Package lint is the engine of the kit's Java lints: one Rule interface, one Finding type and row
-// formatter, one argument parser (the parse modes of toolbelt/lib/awk-lint.sh), one fail-closed file
-// walker (toolbelt/lib/scan-files.sh) and one runner that reads and scans each file once for every
+// formatter, one argument parser (the parse modes of the former bash lib lib/awk-lint.sh), one fail-closed file
+// walker (the walk of the former lib/scan-files.sh; both libs are removed) and one runner that reads and scans each file once for every
 // selected rule. A rule lives in its own package under rules/ and holds only its check; see go/README.md.
 package lint
 

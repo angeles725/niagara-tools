@@ -2,7 +2,7 @@
 # lint-fork-per-line.bats — structural guard: no toolbelt/lint-*.sh forks a process per input line.
 # A `printf '%s' "$line" | grep` (or sed/awk/cut/tr/od/wc/head/tail, or `grep … <<< "$line"`) inside a
 # `while read` loop costs a clone and an exec per record: 35-97 s on a client tree, against 0.13-1.25 s for
-# one awk per file (toolbelt/lib/awk-lint.sh awk_lint_each). The scanner below reports a fork whose input is
+# one awk per file (or a Go lint rule, go/internal/lint). The scanner below reports a fork whose input is
 # the read variable of any enclosing `while read` loop. Every `while read` record counts as a line, so a
 # per-FILE loop that forks on its loop variable is reported too; rewrite it with parameter expansion.
 # Known forks present when the guard landed are frozen in fixtures/lint-fork-per-line/baseline.txt (a
@@ -119,7 +119,7 @@ FORK $FIX/planted.sh:11 f"
        END { for (k in n) print k, n[k] }' "$TMPDIR_T/rows" | sort > "$TMPDIR_T/actual"
   grep -v '^#' "$FIX/baseline.txt" | sort > "$TMPDIR_T/expected"
   if ! diff "$TMPDIR_T/expected" "$TMPDIR_T/actual"; then
-    echo "per-line fork set changed: port a new fork to awk_lint_each / Go; delete the row of a fixed one" >&2
+    echo "per-line fork set changed: port a new fork to Go (one awk per file at most); delete the row of a fixed one" >&2
     grep '^FORK' "$TMPDIR_T/rows" >&2
     return 1
   fi
