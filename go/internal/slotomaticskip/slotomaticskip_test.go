@@ -3,6 +3,7 @@ package slotomaticskip
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -79,7 +80,7 @@ func TestScanFileStatusFollowsTheRows(t *testing.T) {
 	t.Parallel()
 	d := t.TempDir()
 	for i, c := range logs {
-		p := filepath.Join(d, "log"+string(rune('a'+i)))
+		p := filepath.Join(d, "log"+strconv.Itoa(i))
 		if err := os.WriteFile(p, []byte(c.log), 0o644); err != nil {
 			t.Fatal(err)
 		}

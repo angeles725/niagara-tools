@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// versionPairs are the compare cases; TestCmpMatchesTheShellLib replays them on the bash comparator.
+// versionPairs are the compare cases (those the retired bash comparator answered).
 var versionPairs = []struct {
 	a, b string
 	want string // what the retired vv_cmp printed
