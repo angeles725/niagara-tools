@@ -67,13 +67,10 @@ func (b *build) pinnedPlugin() string {
 		return version
 	}
 	return b.grepFirst(b.root+"/settings.gradle.kts", everyMatch, func(line string) (string, bool) {
-		calls := settingsPluginDefault.FindAllString(line, -1)
-		for _, call := range calls {
-			if v := versionNumber.FindString(call); v != "" {
-				return v, true
-			}
+		if m := settingsPluginDefault.FindStringSubmatch(line); m != nil {
+			return m[1], true
 		}
-		return "", len(calls) > 0
+		return "", false
 	})
 }
 

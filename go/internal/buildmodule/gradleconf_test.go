@@ -21,8 +21,9 @@ func TestPluginVersion(t *testing.T) {
 		{"gradle.properties", "# c\n  niagaraPluginVersion = 7.6.22  \r\nniagaraPluginVersion=1.0\n", "", nil, "7.6.22", true, false},
 		{"what follows the last = of the line", "niagaraPluginVersion=7.6.17 # was a=7.3.40\n", "", nil, "7.3.40", true, false},
 		{"the settings default", "", `val niagaraPluginVersion: String = props.getOrElse("7.6.17")` + "\n", nil, "7.6.17", true, false},
-		{"a ) before getOrElse is not the default", "", `val v = gradleProperty("niagaraPluginVersion").getOrElse("7.6.17")` + "\n", nil, "", false, false},
-		{"the first number of the matched call", "", `val niagaraPluginVersion10x = props.getOrElse("7.6.17")` + "\n", nil, "10", true, false},
+		{"the gradleProperty form", "", `val v = gradleProperty("niagaraPluginVersion").getOrElse("7.6.17")` + "\n", nil, "7.6.17", true, false},
+		{"the providers.gradleProperty form", "", `  val gradlePluginVersion: String = providers.gradleProperty("niagaraPluginVersion").getOrElse("7.6.17")` + "\n", nil, "7.6.17", true, false},
+		{"the getOrElse argument, not a number in the name", "", `val niagaraPluginVersion10x = props.getOrElse("7.6.17")` + "\n", nil, "7.6.17", true, false},
 		{"an empty property falls back to settings", "niagaraPluginVersion=\n", `val niagaraPluginVersion = props.getOrElse("7.3.40")` + "\n", nil, "7.3.40", true, false},
 		{"a one-digit default is not a version", "", `val niagaraPluginVersion = props.getOrElse("7")` + "\n", nil, "", false, false},
 		{"the override wins over the pin", "niagaraPluginVersion=7.6.22\n", "", []string{"--plugin-version", "7.6.17"}, "7.6.17", false, false},
@@ -53,6 +54,23 @@ func TestPluginVersion(t *testing.T) {
 	}
 }
 
+// TestPluginVersionScaffoldSettings: the settings.gradle.kts the scaffold emits (the kit fixtures) pins its
+// plugin through providers.gradleProperty("niagaraPluginVersion").getOrElse(default); that default is detected.
+func TestPluginVersionScaffoldSettings(t *testing.T) {
+	for _, module := range []string{"MinimalPan", "MinimalDriver", "MinimalDash"} {
+		settings, err := os.ReadFile("../../../build-n4-module-kit/fixtures/" + module + "/settings.gradle.kts")
+		if err != nil {
+			t.Fatal(err)
+		}
+		f := newFixture(t)
+		f.write(f.root+"/settings.gradle.kts", string(settings))
+		f.wants(module, f.build(), ExitOK)
+		if got := argValue(f.call("gradlew"), "-PniagaraPluginVersion="); got != "7.6.17" {
+			t.Errorf("%s: gradle got plugin %q, want the scaffold default 7.6.17", module, got)
+		}
+	}
+}
+
 // argValue is the text after prefix in the first <prefix...> argument of a logged call, "" when absent.
 func argValue(call, prefix string) string {
 	_, rest, ok := strings.Cut(call, "<"+prefix)
@@ -74,6 +92,13 @@ func TestPluginFilesGrepCannotRead(t *testing.T) {
 		"grep: "+f.root+"/gradle.properties: binary file matches\ngrep: "+f.root+"/settings.gradle.kts: binary file matches\n")
 	if strings.Contains(f.call("gradlew"), "-PniagaraPluginVersion") {
 		t.Errorf("a version was read from a binary file: %s", f.call("gradlew"))
+	}
+	// A one-digit default is not a pin, so that line does not match at all: no binary-file row either.
+	f = newFixture(t)
+	f.write(f.root+"/settings.gradle.kts", `val niagaraPluginVersion = props.getOrElse("7")`+"\n\x00\n")
+	f.wants("binary file, one-digit default", f.build("--no-preflight"), ExitOK)
+	if strings.Contains(f.err, "binary file matches") || strings.Contains(f.call("gradlew"), "-PniagaraPluginVersion") {
+		t.Errorf("a one-digit default matched: %q %s", f.err, f.call("gradlew"))
 	}
 
 	if os.Geteuid() == 0 {
