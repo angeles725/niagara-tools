@@ -7,7 +7,8 @@ import "strings"
 const rawHelp = `
 usage: live-smoke [-h] [--apply] [--station NAME=URL]
                   [--station-home NAME=PATH] [--credential-env PREFIX]
-                  [--insecure-tls NAME] [--state-dir STATE_DIR]
+                  [--insecure-tls NAME] [--allow-tier-b NAME]
+                  [--allow-tier-c NAME] [--state-dir STATE_DIR]
                   [--report PATH] [--settle SECONDS] [--call-timeout SECONDS]
                   [--allow-http-for-tests] [--go-bin PATH]
 
@@ -21,6 +22,10 @@ options:
   --credential-env PREFIX
                         env var prefix holding <PREFIX>_USER/<PREFIX>_PASSWORD
   --insecure-tls NAME
+  --allow-tier-b NAME   passed to the server: the operator's opt-in for a tier B
+                        station (METHODOLOGY section 5)
+  --allow-tier-c NAME   passed to the server: the operator's opt-in for a tier C
+                        station
   --state-dir STATE_DIR
   --report PATH         also write the JSON report
   --settle SECONDS      how long to wait for the logic outputs to settle

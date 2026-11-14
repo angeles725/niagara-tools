@@ -75,3 +75,36 @@ func TestACopyReadBackComparesSlotFlags(t *testing.T) {
 		t.Errorf("flags changed: %s %s", verdict, observed)
 	}
 }
+
+// (l2) Found live on a 4.15 station: a frozen slot at its default VALUE with an integrator's flag
+// arrives with a name and "f" only. It is not a name-only child: the add op carries its flags.
+func TestACopyKeepsTheFlagsOfAFrozenSlotAtItsDefaultValue(t *testing.T) {
+	tree := gwTree()
+	addKids(tree, obj("nm", "p", "n", "enabled", "f", "h"))
+	_, op, notes := copyPlanOf(t, tree)
+	if want := `{"nm": "p", "n": "enabled", "f": "h"}`; !strings.Contains(op, want) {
+		t.Errorf("op %s\n lacks %s", op, want)
+	}
+	if strings.Contains(notes, "enabled") {
+		t.Errorf("notes = %s", notes)
+	}
+}
+
+// (l3) A slot listed by name alone (no flags) is still left to the copy's type.
+func TestACopyStillLeavesOutASlotListedByNameAlone(t *testing.T) {
+	tree := gwTree()
+	addKids(tree, obj("nm", "p", "n", "enabled"))
+	if _, op, _ := copyPlanOf(t, tree); strings.Contains(op, `"enabled"`) {
+		t.Errorf("op = %s", op)
+	}
+}
+
+// (l4) A frozen slot at its default value that an integrator made transient is left out and listed.
+func TestACopyLeavesOutADefaultValuedFrozenSlotMadeTransient(t *testing.T) {
+	tree := gwTree()
+	addKids(tree, obj("nm", "p", "n", "enabled", "f", "t"))
+	_, op, notes := copyPlanOf(t, tree)
+	if strings.Contains(op, `"enabled"`) || !strings.Contains(notes, "enabled (t)") {
+		t.Errorf("op = %s\nnotes = %s", op, notes)
+	}
+}
