@@ -4,6 +4,15 @@
 # must not swallow a JUnit failure), a passing one must exit 0, and a missing/broken
 # environment must report the right exit code. All fixtures are tiny → sub-second.
 
+# The script is the launcher of go/cmd/run-pure-test: build the binary once, with the real environment, so a test
+# that changes HOME never has to (P6 runs it under an empty HOME).
+setup_file() {
+  ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via ROOT
+  . "$ROOT/go/go-tool.sh"
+  go_tool_bin "$ROOT/go" run-pure-test >/dev/null
+}
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   RUN="$KIT/toolbelt/run-pure-test.sh"

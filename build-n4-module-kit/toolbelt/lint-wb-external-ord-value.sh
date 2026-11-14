@@ -26,7 +26,7 @@
 # Usage:  lint-wb-external-ord-value.sh [--strict] <wb-src-root>
 #   Scans *.java under <wb-src-root> (dot and *-worktrees dirs pruned). Comments are stripped and
 #   method boundaries are found with the shared PEAK-depth parser (go/internal/javasrc Strip/Methods,
-#   the port of toolbelt/lib/method-boundary.sh mb_strip/mb_parse -- never re-implement a
+#   the port of the retired awk lib's mb_strip/mb_parse -- never re-implement a
 #   parallel parser in a rule). Per METHOD:
 #     1. a candidate ORD-resolve line: `<ident>Ord()<opt-space>.get(` (e.g.
 #        `getTargetOrd().get(`) or `<ident>Ord<opt-space>.get(` / a bare `ord.get(` (e.g.

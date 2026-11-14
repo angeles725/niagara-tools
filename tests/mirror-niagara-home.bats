@@ -4,6 +4,15 @@
 
 load helpers/n4-fixtures
 
+# The script is the launcher of go/cmd/mirror-niagara-home: build the binary once, with the real environment, so a test
+# that changes HOME never has to (no test pays the build).
+setup_file() {
+  ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via ROOT
+  . "$ROOT/go/go-tool.sh"
+  go_tool_bin "$ROOT/go" mirror-niagara-home >/dev/null
+}
+
 setup() {
   TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"

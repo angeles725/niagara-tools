@@ -12,7 +12,7 @@
 # [ev: code javax/baja/sys/BComplex.java:386-390]
 #
 # Structural rules (comments blanked by go/internal/javasrc Strip; scope = one method from javasrc Methods, the
-# ports of lib/method-boundary.sh mb_strip/mb_parse):
+# ports of the retired awk lib mb_strip/mb_parse):
 #   SNO1 direct  — `set<Name>(… x.getSlotPathOrd())` / `set(<prop>, x.getSlotPathOrd(), …)`: the getSlotPathOrd()
 #                  call is itself an argument (followed by `,` or `)`). Guarded when the call line, or an earlier
 #                  line of the same method, compares the SAME receiver's getSlotPathOrd() with null (`!= null` /

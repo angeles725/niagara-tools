@@ -1,13 +1,45 @@
 package javasrc
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 // benchCopies repeats the repo's Java corpus to make one large input (about 20k lines).
 const benchCopies = 8
+
+func repoRoot(t testing.TB) string {
+	t.Helper()
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// javaFiles lists every *.java under the roots that exist, in walk order.
+func javaFiles(t testing.TB, roots ...string) []string {
+	t.Helper()
+	var files []string
+	for _, root := range roots {
+		if _, err := os.Stat(root); err != nil {
+			continue
+		}
+		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+			if err == nil && !d.IsDir() && strings.HasSuffix(p, ".java") {
+				files = append(files, p)
+			}
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return files
+}
 
 func benchLines(b *testing.B) []string {
 	root := repoRoot(b)

@@ -2,7 +2,7 @@
 # lib/slotomatic-skip.sh — shared detector for a source file Slot-o-Matic skipped (METHODOLOGY K15).
 # Sourced only (never invoked directly) by toolbelt/build.sh (both gradle branches) and scripts/ng-deploy.sh
 # (run_slotomatic). Fragment rule: edit THIS shared fragment, never re-implement the skip scan in a consumer —
-# mirrors lib/method-boundary.sh's fragment rule.
+# the fragment rule of every toolbelt/lib file.
 #
 # Since build.sh and ng-deploy.sh became launchers over Go, no script sources this file: the detector in use is
 # go/internal/slotomaticskip. tests/slotomatic-skip.bats and that package's TestMatchesTheShellLib still run it, and

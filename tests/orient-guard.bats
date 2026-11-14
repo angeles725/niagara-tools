@@ -20,6 +20,15 @@ bats_require_minimum_version 1.5.0
 #   OG3: BUILD_N4_CLIENTE_OVERRIDE=0 treated as =1 (bypass without override)
 #   OG4: canonicalization skipped (raw input compared)
 
+# The script is the launcher of go/cmd/orient-guard: build the binary once, with the real environment, so a test
+# that changes HOME never has to (OG10c runs it without HOME).
+setup_file() {
+  ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via ROOT
+  . "$ROOT/go/go-tool.sh"
+  go_tool_bin "$ROOT/go" orient-guard >/dev/null
+}
+
 setup() {
   TMPDIR_T="$(mktemp -d)"
   # Portable legal prefix via the test seam

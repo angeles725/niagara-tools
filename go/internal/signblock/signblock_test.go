@@ -1,38 +1,56 @@
 package signblock
 
 import (
-	"os"
-	"regexp"
 	"strings"
 	"testing"
 )
 
-// TestPartsMatchTheShellTable pins Parts to toolbelt/lib/signing-block.sh entry by entry: the bash build.sh
-// dev-key WARN reads the shell table, lint-structure L15 and preflight sample-sign read Parts.
-func TestPartsMatchTheShellTable(t *testing.T) {
-	b, err := os.ReadFile("../../../build-n4-module-kit/toolbelt/lib/signing-block.sh")
-	if err != nil {
-		t.Fatal(err)
+// TestPartsAreTheTable pins Parts entry by entry and in order: the names the rows print and the patterns,
+// as the retired shell table (toolbelt/lib/signing-block.sh SIGN_BLOCK_NAME and SIGN_BLOCK_ERE) held them.
+// Build-module's dev-key WARN reads entry 0; lint-structure L15 and preflight sample-sign read them all.
+func TestPartsAreTheTable(t *testing.T) {
+	want := [][2]string{
+		{"allowDefaultProfile.set(false) (or = false)", `allowDefaultProfile[[:space:]]*(\.set\([[:space:]]*false[[:space:]]*\)|=[[:space:]]*false([^[:alnum:]_]|$))`},
+		{"niagaraSigning {", `niagaraSigning[[:space:]]*\{`},
+		{"aliases", `(^|[^[:alnum:]_])aliases([^[:alnum:]_]|$)`},
+		{"signingProfileFile", `signingProfileFile`},
 	}
-	quoted := regexp.MustCompile(`'([^']*)'`)
-	array := func(name string) []string {
-		m := regexp.MustCompile(`(?s)\n` + name + `=\((.*?)\)\n`).FindSubmatch(b)
-		if m == nil {
-			t.Fatalf("no %s=( … ) in signing-block.sh", name)
-		}
-		var out []string
-		for _, q := range quoted.FindAllSubmatch(m[1], -1) {
-			out = append(out, string(q[1]))
-		}
-		return out
-	}
-	eres, names := array("SIGN_BLOCK_ERE"), array("SIGN_BLOCK_NAME")
-	if len(eres) != len(Parts) || len(names) != len(Parts) {
-		t.Fatalf("shell table has %d EREs and %d names, Parts %d entries", len(eres), len(names), len(Parts))
+	if len(Parts) != len(want) {
+		t.Fatalf("Parts has %d entries, want %d", len(Parts), len(want))
 	}
 	for k, p := range Parts {
-		if p.Name != names[k] || p.Re.String() != eres[k] {
-			t.Errorf("Parts[%d] = %q %q, shell %q %q", k, p.Name, p.Re, names[k], eres[k])
+		if p.Name != want[k][0] || p.Re.String() != want[k][1] {
+			t.Errorf("Parts[%d] = %q %q, want %q %q", k, p.Name, p.Re, want[k][0], want[k][1])
+		}
+	}
+}
+
+// TestPartsMatchCode: what each pattern accepts and what it must not (the cases the shell table's consumers
+// were tested with: both spellings of the switch, a name that only contains another).
+func TestPartsMatchCode(t *testing.T) {
+	cases := []struct {
+		part int
+		line string
+		want bool
+	}{
+		{0, "allowDefaultProfile.set(false)", true},
+		{0, "allowDefaultProfile . set( false )", false},
+		{0, "allowDefaultProfile  .set( false )", true},
+		{0, "allowDefaultProfile = false", true},
+		{0, "allowDefaultProfile=false;", true},
+		{0, "allowDefaultProfile = falsey", false},
+		{0, "allowDefaultProfile.set(true)", false},
+		{1, "niagaraSigning {", true},
+		{1, "niagaraSigning{", true},
+		{1, "niagaraSigning", false},
+		{2, "aliases.set(listOf(\"k\"))", true},
+		{2, "my_aliases", false},
+		{2, "aliases2", false},
+		{3, "signingProfileFile.set(file(\"p\"))", true},
+	}
+	for _, c := range cases {
+		if got := Parts[c.part].Re.MatchString(c.line); got != c.want {
+			t.Errorf("%s on %q = %v, want %v", Parts[c.part].Name, c.line, got, c.want)
 		}
 	}
 }
