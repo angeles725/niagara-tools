@@ -331,8 +331,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     and the one walker that parses each file once; each lint is `internal/lint/rules/<lint>/` (the rule and its
     tests); `cmd/<tool>/` stays a thin `main.go`, as in `go/cmd/gen-retro-index` and `go/cmd/check-facets-card`
     (PRs #288, #296). Adding a lint is one rule file plus its registration — never a copied walker, formatter or
-    stripper. Bash follows the same rule: reuse `toolbelt/lib/*` (`scan-files.sh`, `awk-lint.sh`,
-    `method-boundary.sh`) instead of a private copy. `[ev: retro r8-t22-retro-deltas Δ9]` A scanner helper only one
+    stripper. Bash follows the same rule: reuse `toolbelt/lib/*` (`method-boundary.sh`, `vendor-version.sh`,
+    `slotomatic-skip.sh`) instead of a private copy; the walk and the lint skeleton have no bash lib any more
+    (`lint.Walk` and the runner in `go/internal/lint` hold them). `[ev: retro r8-t22-retro-deltas Δ9]` A scanner helper only one
     rule needs stays in that rule; the second rule that needs it moves it into `javasrc` with a test.
     `[ev: retro go-lint-session-store Δ2]` `internal/lintheader`
     `Lines` is the one reader of a lint header (its leading run of `#` and blank lines, no line cap: the former
@@ -364,8 +365,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     invocations into data shows that grep and an unchanged `gen-*.sh --check`. `[ev: retro r10-dedupe-pins-measured-cuts Δ2]`
   - **No fork per input line.** A shell `while read` loop whose body pipes `printf`/`echo` of the record into
     `grep`/`sed`/`awk` (or reads it with `<<<`) costs a clone and an exec per line: 35-97 s on a client tree
-    against 0.13-1.25 s for one awk per file with byte-identical output. Use `toolbelt/lib/awk-lint.sh`
-    `awk_lint_each` (or Go). `tests/lint-fork-per-line.bats` scans every `toolbelt/lint-*.sh` and fails on a fork
+    against 0.13-1.25 s for one awk per file with byte-identical output. Write the lint as a Go rule on
+    `go/internal/lint` (the shared runner reads each file once; line helpers in `rules/linescan`); a bash script
+    that must stay runs one awk per file. `tests/lint-fork-per-line.bats` scans every `toolbelt/lint-*.sh` and fails on a fork
     not in its frozen baseline (`tests/fixtures/lint-fork-per-line/baseline.txt`); a fixed fork deletes its
     baseline row, a new one is never added there. `[ev: retro r8-t22-retro-deltas Δ2]` `[ev: retro line-loop-lint-forks Δ1]`
     The same class covers a fork per ITEM over a listing captured once: `for jar in …; do printf "$LSOF_OUT" |
@@ -508,22 +510,24 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[deferred: retro go-lint-lexicon-ascii Δ2]`. Moving the Python `str` helpers (`internal/htmltext/unicode.go`) to
     their own package waits for a second consumer (one today): `[deferred: retro go-lint-manual-labels Δ4]`
   - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
-    with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
+    with the Go engine's walker (`lint.Walk` in `go/internal/lint`, which the shared runner calls), because `find` read
     through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
-    check: `grep -n 'find "' toolbelt/*.sh` outside `lib/`. A new bash lint never pastes the parse/walk/exit
-    skeleton: a per-file awk lint writes only its header, `awk_lint_parse`, its `main.awk` and `awk_lint_run`; a
-    flagless line-loop lint opens with `awk_lint_parse <name> raw` and `awk_lint_list`, and ends with
-    `awk_lint_exit` (`toolbelt/lib/awk-lint.sh` header); its own `scan_files` call or `had_err` tail is a finding.
-    `[ev: retro awk-lint-skeleton Δ1]` `[ev: retro awk-lint-line-loops Δ1]` `scan_files` never prunes its start point
-    (`-mindepth 1`); the Go lint-structure still does (`dotName`, kept for byte identity, so `lint-structure.sh .`
-    skips L10), owed. Its list is newline-separated, so a path holding a newline becomes two missing paths; NUL
-    separation is owed (needs code: `lib/scan-files.sh` and its `while read` callers). `[ev: retro go-lint-structure Δ2]`
+    check: `grep -n 'find "' toolbelt/*.sh` outside `lib/`. A new lint never pastes the parse/walk/exit
+    skeleton: it is a Go rule under `go/internal/lint/rules/<lint>/` that declares its `lint.Spec` (argument
+    `Mode`, `Select`, `EmptyError`) and leaves parsing, the walk and the exit code to the shared runner; a private
+    walk or exit tail is a finding. The bash skeleton these rules were first written for (`awk_lint_parse`,
+    `awk_lint_run`, `awk_lint_list`, `awk_lint_exit`) is removed with its lib.
+    `[ev: retro awk-lint-skeleton Δ1]` `[ev: retro awk-lint-line-loops Δ1]` `lint.Walk` never prunes its start point
+    (as `find -mindepth 1`); the Go lint-structure still does (`dotName`, kept for byte identity, so `lint-structure.sh .`
+    skips L10), owed. The bash list was newline-separated, so a path holding a newline became two missing paths; the NUL
+    separation that was owed is closed by the removal of `lib/scan-files.sh` and its `while read` callers
+    (changelog fragment `2026-11-13-remove-dead-bash-lint-libs`): `lint.Walk` returns a Go slice. `[ev: retro go-lint-structure Δ2]`
     `[deferred: retro go-e2-tiny-lints Δ2]` A root with no input files is an ERROR (exit 3), never a
     silent pass (35 of 40 lints exited 0 on an empty root, 2026-10-22; Go engine switch `lint.Spec.EmptyError`,
     owed item G50; the four bash lints with a private empty-root row are Go rules with `EmptyError` now, and
     lint-vendor-floor exits 0 on an rc dir with no `vendor/` by its header). `[ev: retro r9-m1-walkers Δ1]` A walk
     follows a symlinked root like `find -H` (Go: `os.Stat` on the root), never a symlink below it and never `-L`
-    (`tests/scan-files.bats` SF10, SF11). `[ev: retro symlink-root-walk Δ1]` A per-file read fails closed too:
+    (`go/internal/lint` `TestWalkOrderAndSelection`, mutation WALK-symroot). `[ev: retro symlink-root-walk Δ1]` A per-file read fails closed too:
     `grep … "$f" 2>/dev/null || true` reads an unreadable file as no hit and `xargs awk` splits a path on
     whitespace: the slot-coverage and schema-risk ports exit on an unreadable input now `[ev: retro go-schema-risk Δ2]`;
     verify-module's `--src` reads stay owed (phase B). `[deferred: retro r9-m1-walkers Δ2]` Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
