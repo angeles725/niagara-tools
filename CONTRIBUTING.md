@@ -173,6 +173,10 @@ consumers (e.g. chihuahua): pin to a specific tag (`v0.2.0`), not a range, until
 CalVer is explicitly rejected: the `ng-deploy.sh` flag/exit-code/env-var API surface IS a
 SemVer surface; losing MAJOR/MINOR/PATCH semantics would silently break consumer pinning.
 
+`scripts/ng-deploy.sh` is a launcher over `go/cmd/ng-deploy` (`go/internal/ngdeploy`, § 2.2): its flags, exit codes and
+env variables are listed in `go/internal/ngdeploy/usage.txt`, and its env file is read as plain `KEY=value`
+assignments (`go/internal/envfile`), never sourced.
+
 Bump rules for `scripts/ng-deploy.sh` (the public API surface):
 
 | Change | Bump |
