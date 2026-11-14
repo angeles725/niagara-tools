@@ -14,7 +14,7 @@ func (h hook) retroGate(rng string, changed []string, log string) int {
 	if trivialTrailer.MatchString(log) {
 		return h.passEarly(c)
 	}
-	patch, ok := gitOut(h.s.Err, "diff", rng, "--", retroPatchPathspec)
+	patch, ok := gitOut(h.s.Err, "diff", "--no-renames", rng, "--", retroPatchPathspec) // a rename would put two retros in one file diff
 	if !ok {
 		return refuse(h.s.Err, msgPatchFailed, rng)
 	}

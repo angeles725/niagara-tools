@@ -1,6 +1,9 @@
 package prepush
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // promotionRepo holds a pending retro in the base commit, so a range can flip its header.
 func promotionRepo(t *testing.T) *repo {
@@ -61,4 +64,16 @@ func TestFailingRetroPatchDiffRefuses(t *testing.T) {
 	sha := r.change("feat: change"+noChangelog, kitFile, "echo\n")
 	r.tool("git", `[ "$1" = diff ] && [ "$2" != --name-only ] && [ "$2" != --quiet ] && exit 128; exec `+r.git+` "$@"`)
 	r.push(r.update(sha)).want(t, 1, "pre-push: git diff "+r.base+".."+sha+" -- retros failed; refusing to push unchecked")
+}
+
+// A pending retro deleted and a similar one added folded is a rename to git's default diff, which would
+// show the two headers in one file's diff; the flip is read with rename detection off, so it is no flip.
+func TestPendingRetroDeletedAndSimilarFoldedAddedIsNoFlip(t *testing.T) {
+	body := strings.Repeat("a lesson line that both retros share, long enough for rename detection\n", 20)
+	r := newRepo(t)
+	r.base = r.change("docs: retro", retro, pending+body)
+	r.run("rm", "-q", retro)
+	sha := r.change("docs: fold"+promotion+noChangelog, kitFile, "echo\n",
+		"build-n4-module-kit/retros/2026-09-05-new.md", folded+body)
+	r.push(r.update(sha)).want(t, 1, "build-relevant kit files changed")
 }
