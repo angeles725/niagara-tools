@@ -9,27 +9,30 @@ import (
 
 // The command line is read as argparse read it: each row is one refusal or one accepted spelling.
 func TestParseArgsRefusalsAndSpellings(t *testing.T) {
-	refused := map[string][]string{
-		"unrecognized arguments: extra":                                                                {"--apply", "extra"},
-		"unrecognized arguments: --nope":                                                               {"--nope"},
-		"unrecognized arguments: -x":                                                                   {"-x"},
-		"argument --station: expected one argument":                                                    {"--station"},
-		"argument --station: expected one argument (an option follows)":                                {"--station", "--apply"},
-		"argument --apply: ignored explicit argument 'yes'":                                            {"--apply=yes"},
-		"argument -h/--help: ignored explicit argument 'x'":                                            {"--help=x"},
-		"argument --settle: invalid float value: 'soon'":                                               {"--settle", "soon"},
-		"ambiguous option: --allow could match --allow-tier-b, --allow-tier-c, --allow-http-for-tests": {"--allow", "Lab"},
-		"ambiguous option: --s=1 could match --station, --station-home, --state-dir, --settle":         {"--s=1"},
+	refused := []struct {
+		argv []string
+		want string
+	}{
+		{[]string{"--apply", "extra"}, "unrecognized arguments: extra"},
+		{[]string{"--nope"}, "unrecognized arguments: --nope"},
+		{[]string{"-x"}, "unrecognized arguments: -x"},
+		{[]string{"--station"}, "argument --station: expected one argument"},
+		{[]string{"--station", "--apply"}, "argument --station: expected one argument"},
+		{[]string{"--apply=yes"}, "argument --apply: ignored explicit argument 'yes'"},
+		{[]string{"--help=x"}, "argument -h/--help: ignored explicit argument 'x'"},
+		{[]string{"--settle", "soon"}, "argument --settle: invalid float value: 'soon'"},
+		{[]string{"--allow", "Lab"}, "ambiguous option: --allow could match --allow-tier-b, --allow-tier-c, --allow-http-for-tests"},
+		{[]string{"--s=1"}, "ambiguous option: --s=1 could match --station, --station-home, --state-dir, --settle"},
 	}
-	for want, argv := range refused {
-		_, err := ParseArgs(argv)
+	for _, row := range refused {
+		_, err := ParseArgs(row.argv)
 		var usage *UsageError
 		if !errors.As(err, &usage) || err == errHelp {
-			t.Errorf("%v: err = %v, want a usage error", argv, err)
+			t.Errorf("%v: err = %v, want a usage error", row.argv, err)
 			continue
 		}
-		if msg := usage.Msg; msg != want && msg+" (an option follows)" != want {
-			t.Errorf("%v:\n got  %s\n want %s", argv, msg, want)
+		if usage.Msg != row.want {
+			t.Errorf("%v:\n got  %s\n want %s", row.argv, usage.Msg, row.want)
 		}
 	}
 	for _, argv := range [][]string{{"-h"}, {"--help"}, {"--he"}, {"-hx"}, {"--apply", "-h", "--nope"}} {
@@ -64,6 +67,10 @@ func TestResolveServerMakesARelativeGoBinAbsolute(t *testing.T) {
 	want, _ := filepath.Abs("mcp-n4")
 	if a.GoBin != want {
 		t.Errorf("GoBin = %s, want %s", a.GoBin, want)
+	}
+	fromEnv := &Args{}
+	if problem := ResolveServer(fromEnv, func(k string) string { return map[string]string{"MCP_N4_GO_BIN": "mcp-n4"}[k] }); problem != "" || fromEnv.GoBin != want {
+		t.Errorf("from MCP_N4_GO_BIN: GoBin = %s, problem = %q, want %s", fromEnv.GoBin, problem, want)
 	}
 	missing := &Args{GoBin: "absent"}
 	if problem := ResolveServer(missing, func(string) string { return "" }); problem != "no executable Go server at absent: build it (cd go && go build -o bin/ ./cmd/mcp-n4) or pass --go-bin" {
