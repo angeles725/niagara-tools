@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 bats_require_minimum_version 1.5.0
 # The live-doctrine citation gate of .githooks/pre-push: a range that changes a live build-n4-module card
-# (scripts/lib/live-doctrine-set.sh) or the resolver itself runs kit-cite-resolve --strict on the live set of
+# (go/internal/prepush/paths.go) or the resolver itself runs kit-cite-resolve --strict on the live set of
 # the pushed tree, before every early exit. 1 = findings → refuse; 3 with a research/modules/clients/memory
 # root absent → a named SKIPPED line and the push proceeds; any other non-zero → refuse fail-closed.
 # Hermetic: git is a fakebin and the resolver is a stub in a fixture toplevel (no research roots read).

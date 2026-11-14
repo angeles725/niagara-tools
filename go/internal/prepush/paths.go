@@ -53,8 +53,8 @@ const (
 )
 
 // The live doctrine set: the cards whose every evidence pointer must resolve under `kit-cite-resolve
-// --strict`, and the resolver itself (a change to it re-checks the set). The same two patterns are
-// defined for shell callers in scripts/lib/live-doctrine-set.sh; paths_test.go fails when they differ.
+// --strict`, and the resolver itself (a change to it re-checks the set). These two patterns are the
+// only definition (doctrine_test.go pins which paths they take); no shell copy exists.
 var (
 	liveDoctrine = regexp.MustCompile(`^(build-n4-module-kit/(types/[^/]+|METHODOLOGY|BUILD-LOOP|ORCHESTRATION|SOURCES|build-verify|corpus-index|README|skill/SKILL|toolbelt/INDEX)\.md|go/README\.md|CONTRIBUTING\.md|README\.md)$`)
 	liveCiteTool = regexp.MustCompile(`^(go/internal/(citeparse|citeresolve)/|go/cmd/kit-cite-resolve/|build-n4-module-kit/toolbelt/kit-cite-resolve\.sh$)`)
