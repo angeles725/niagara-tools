@@ -401,8 +401,10 @@ Destructive tools use the same pipeline:
   `--write-scope` is enforced on every ORD the batch touched, and each recorded
   handle must still belong to its ORD. Before restoring a slot or fallback it reads
   the slot and refuses when it no longer holds what the batch wrote (a later change is
-  never overwritten; restore it by hand with `n4_set_slot`). Inverses: remove a created
-  component or link, restore a slot or fallback, re-create a removed component from its
+  never overwritten; restore it by hand with `n4_set_slot`). The flags an
+  `n4_set_flags` batch set are checked the same way and restored by a set-flags op,
+  verified by reading the slot back. Inverses: remove a created
+  component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
   `relinks: {restored, skipped}`). A frozen child (e.g. a writable's `proxyExt`) is
   never re-added: the read-back compares it with the snapshot and lists any

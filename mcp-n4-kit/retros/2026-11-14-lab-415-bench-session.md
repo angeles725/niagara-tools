@@ -1,5 +1,5 @@
 <!-- review-status: pending -->
-<!-- Marker lifecycle: the maintainer flips 'pending' above to 'folded <date> · kit <sha>' once the proposed deltas are reviewed and applied (or dismissed) in the kit. Deltas 1-5 and 8 below were applied in the same pass under the operator's standing instruction for this bench; 7 followed in the next pass, 6 in part (its runtime half stays proposed); 9 stays proposed. -->
+<!-- Marker lifecycle: the maintainer flips 'pending' above to 'folded <date> · kit <sha>' once the proposed deltas are reviewed and applied (or dismissed) in the kit. Deltas 1-5 and 8 below were applied in the same pass under the operator's standing instruction for this bench; 7 followed in the next pass, 6 in part (its runtime half stays proposed); 9 was applied later against the in-repo fake station only and is not yet proven on a live station. -->
 # Retro — lab-415 · 2026-11-14 · mcp-n4 bench session on a laboratory station
 
 > Written by hand from the session's `audit.jsonl` and `journal.jsonl` (20 audit entries, 10 verified batches)
@@ -27,7 +27,7 @@
 | 6 | The copy verdict compares the copy with the SOURCE configuration, not only with the planned add op: the read-back already compares type, value and flags (`diffTree`), but a slot the plan itself dropped is missing from both sides, so the loss of delta 5 could not surface. A source child that is neither in the add op nor in the plan notes is a difference. PARTIAL: applied as a plan invariant (`copy_accounting_test.go`: every source child is copied, listed in the notes or bare; it fails when the flag guard of delta 5 is removed); the runtime verdict still compares the read-back with the plan, so comparing it with the source stays proposed | `go/internal/mcpn4/writeops/copy_readback.go` · `METHODOLOGY.md · section 2` | the batch of delta 5 reported `"differences": []` | defect | high |
 | 7 | The rollback of a removed nested subtree stops being probe-only in `live-smoke`: it gates the exit code, and the plan text no longer says "not yet proven live". APPLIED | `go/internal/mcpn4/livesmoke` (scenario, plan) · `README.md · Live smoke test` | step `rollback folder removal`: verified, `relinks: {restored: 3, skipped: 0}` on 4.15.6.20 | doctrine | medium |
 | 8 | Section 5 says what the tier B PoC is in practice (a full `live-smoke --apply` on a scratch or laboratory station of the same build) and lists the builds it has passed on, starting with 4.15.6.20. APPLIED in this pass | `METHODOLOGY.md · section 5` | report of the run: `ok: true`, 22 verified | doctrine | medium |
-| 9 | A flags tool (`n4_set_flags`, dry run and token like every write) so an integrator flag can be set, proven and repaired without Workbench; today a flag specimen needs an offline edit of `config.bog` with the station stopped | `README.md · Writing safely` | the specimen for delta 5 was made by stopping the station and editing the bog | tool | low |
+| 9 | A flags tool (`n4_set_flags`, dry run and token like every write) so an integrator flag can be set, proven and repaired without Workbench; today a flag specimen needs an offline edit of `config.bog` with the station stopped. APPLIED (`n4_set_flags`: plan with both flag sets, exact inverse, read-back verdict, rollback); not yet proven on a live station | `go/internal/mcpn4/writeops/setflags.go` · `README.md · Writing safely` | the specimen for delta 5 was made by stopping the station and editing the bog | tool | low |
 
 ## Already covered (dedupe)
 
@@ -37,7 +37,7 @@
 
 ## Honest verdict
 
-Seven deltas applied, one applied in part (6) and one proposed (9). The one that matters most is 5 with 6: the tool reported `verified`
+Eight deltas applied (9 against the fake station only, not yet proven on a live station) and one applied in part (6). The one that matters most is 5 with 6: the tool reported `verified`
 over a copy that had lost configuration, and nothing in the audit could show it.
 
 INDEX row: | 2026-11-14-lab-415-bench-session.md | lab-415 | 2026-11-14 | pending | 9 |
