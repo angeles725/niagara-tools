@@ -6,60 +6,24 @@
 # TAP of a bats run and fails when any `# skip <reason>` matches no line of the allowlist.
 #
 # Usage:  check-bats-skips.sh <bats.tap> <allowlist>
-#   allowlist: one extended regular expression per line, matched against the WHOLE reason (grep -xE);
+#   allowlist: one POSIX extended regular expression per line, matched against the WHOLE reason;
 #   `#` lines and blank lines are ignored; a skip with no reason is the empty string. The committed list is
 #   tests/bats-skip-allowlist.txt — add a line only for a skip that is legitimate on a CI runner, with a
 #   comment saying why.
 # Rows:   UNLISTED skip: <ok N test name> — <reason>   (one per unlisted skip, stdout)
 # Exit:   0 every skip is allowlisted · 1 an unlisted skip · 3 usage, an unreadable TAP or allowlist, a TAP
 #         with no `1..N` plan (bats never ran), or an allowlist line that is not a valid ERE
+#
+# Implementation: the Go module at <repo>/go (go/internal/checkbatsskips). This wrapper is the stable entry
+# point: go/go-tool.sh `go_tool_bin` builds go/bin/check-bats-skips when the binary is missing or older than a
+# Go source, then this script execs it. Needs `go` on PATH to build; no Go toolchain or a failed build is exit 3.
+# The patterns are Go POSIX EREs: a GNU grep extension (a back-reference, \w, \<) is an invalid line, exit 3.
 set -u
 
-die3() { printf 'check-bats-skips: %s\n' "$1" >&2; exit 3; }
-[ $# -eq 2 ] || die3 "usage: check-bats-skips.sh <bats.tap> <allowlist>"
-tap=$1 allow=$2
-for f in "$tap" "$allow"; do
-  if [ ! -f "$f" ] || [ ! -r "$f" ]; then die3 "cannot read $f"; fi
-done
-grep -qE '^1\.\.[0-9]+$' "$tap" || die3 "no 1..N plan in $tap (bats did not run)"
-
-# One pattern per allowlist line, each passed as its own `-e` (never one newline-joined string that grep would
-# split implicitly), so the line a reason must match is exactly one line of the file.
-pattern_args=()
-while IFS= read -r p || [ -n "$p" ]; do
-  [[ "$p" =~ ^[[:space:]]*(#|$) ]] && continue   # comment and blank lines
-  # Mutation: SK10-last-line -- a plain `while read` drops a final line with no newline
-  # Mutation: SK6-bad-ere -- a pattern grep rejects (exit 2) would otherwise never match and hide nothing
-  grep -qE -- "$p" </dev/null; [ $? -le 1 ] || die3 "allowlist line is not a valid ERE: $p"
-  pattern_args+=(-e "$p")
-done <"$allow"
-
-skips=0 unlisted=0
-# A skip line is `ok N <name> # skip[ <reason>]`; the LAST ' # skip' that is a marker (followed by a blank or
-# the line end, never ' # skipped') splits name and reason, so a reason quoting ' # skipped' keeps its line.
-while IFS=$'\t' read -r test reason; do
-  skips=$((skips + 1))
-  # Mutation: SK3-unanchored -- dropping -x matches a pattern anywhere inside a longer reason
-  if [ "${#pattern_args[@]}" -eq 0 ] || ! grep -qxE "${pattern_args[@]}" <<<"$reason"; then
-    unlisted=$((unlisted + 1))
-    printf 'UNLISTED skip: %s — %s\n' "$test" "${reason:-(no reason)}"
-  fi
-done < <(awk '/^ok [0-9]+ / {
-             i = 0; k = 0; s = $0
-             # Mutation: SK8-last-marker -- taking the last " # skip" even when a letter follows drops the skip line
-             while ((j = index(substr(s, k + 1), " # skip")) > 0) {
-               k += j; c = substr(s, k + 7, 1)
-               if (c == "" || c == " ") i = k
-             }
-             if (i == 0) next
-             rest = substr(s, i + 7)
-             sub(/^ /, "", rest)
-             printf "%s\t%s\n", substr(s, 1, i - 1), rest
-           }' "$tap")
-
-if [ "$unlisted" -gt 0 ]; then
-  printf 'check-bats-skips: %d of %d skip(s) match no line of %s\n' "$unlisted" "$skips" "$allow" >&2
-  exit 1
-fi
-printf 'check-bats-skips: %d skip(s), all allowlisted\n' "$skips"
-exit 0
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'check-bats-skips: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" check-bats-skips)" || exit 3
+exec "$BIN" "$@"
