@@ -316,9 +316,14 @@ Tool rules:
 
 - `n4_set_slot` writes Status slots whole (value plus status) and refuses a path
   ending in `/value` or `/status`. A nested slot (`grp/sp`) is loaded one level deeper
-  so its previous value is the real one. The slot must already be listed by the station;
-  a plain slot at its type default is omitted by the station and is refused (the
-  refusal says so and routes to `n4_read_slots`, or to setting it once in Workbench).
+  so its previous value is the real one. A plain slot at its type default is omitted by
+  the station's load; the tool then reads the slot's declared type and default from the
+  station's type registry (BOX `reg`/`loadTypes`, walking supertypes), so such a slot
+  (e.g. a history extension's `enabled=false`) can be set. A dynamic slot, an action or
+  a name no type declares is still refused. Value types: `baja:Double`, `baja:Boolean`,
+  `baja:String`, `baja:StatusNumeric`, `baja:StatusBoolean`, `baja:Format` (pattern
+  string, e.g. a history ext `historyName`) and `baja:RelTime` (whole milliseconds,
+  e.g. `300000` for a 5-minute history `interval`).
 - `n4_invoke_action` allows only `set`, `active`, `inactive` and `auto`. `set` restores
   the previous `fallback` as its inverse; the others have none and the plan says so.
   `emergency*`, `save` and `restart` are refused; saving has its own tool,

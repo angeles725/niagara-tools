@@ -302,6 +302,10 @@ class FakeStation:
         return {"v": "2.3", "p": "box", "n": frame.get("n"), "m": replies}
 
     def _dispatch(self, channel, key, body):
+        if channel == "reg" and key == "loadTypes":
+            # The registry channel (box-rt BRegistryChannel): the fake's slots are all dynamic,
+            # so no requested type declares a frozen slot; common baja types answer {} too.
+            return {spec: {} for spec in body["t"]}
         if channel != "ssession":
             raise ValueError("unknown channel %s" % channel)
         if key == "make":
