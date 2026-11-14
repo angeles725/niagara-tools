@@ -127,6 +127,7 @@ make_tree() {
   mkdir -p "$TREE/scripts" "$TREE/build-n4-module-kit/skill" "$TREE/mcp-n4-kit/skill"
   cp "$SCRIPT" "$TREE/scripts/install-skill.sh"
   cp -r "$REPO_ROOT/scripts/lib" "$TREE/scripts/lib"
+  ln -s "$REPO_ROOT/go" "$TREE/go"   # the launcher execs the Go command of the module next to scripts/
   printf 'stub build skill\n' > "$TREE/build-n4-module-kit/skill/SKILL.md"
   printf 'stub mcp skill\n' > "$TREE/mcp-n4-kit/skill/SKILL.md"
   TSCRIPT="$TREE/scripts/install-skill.sh"

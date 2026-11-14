@@ -34,168 +34,29 @@
 #   3   Environment error (tracked source missing, no sha256 tool, target directory not creatable,
 #       kit-state failed: the launcher is installed but the kit state is not).
 #
-# shellcheck disable=SC2006  # not used; POSIX $() throughout
+# Implementation: the Go module at <repo>/go (go/internal/skillinstall). This wrapper is the stable entry point
+# and keeps two things: the SKILLS table below (data: Go reads that line from this file, for this script and for
+# check-skill-drift.sh) and the up-front sha256 tool check of the contract above (exit 3 before anything else,
+# also before a usage error; the digests themselves are computed in Go). go/go-tool.sh `go_tool_bin` builds
+# go/bin/install-skill when the binary is missing or older than a Go source, then this script execs it.
+# Needs `go` on PATH to build; no Go toolchain or a failed build is exit 3.
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via SCRIPT_DIR
 . "$SCRIPT_DIR/lib/sha256.sh" || exit 3
 
 # The one place that names the skills: "<name>:<tracked launcher, relative to the repo>".
-# The usage text, the error messages and the lookup below are all derived from it.
+# The usage text, the error messages and the lookup are all derived from it (go/internal/skillinstall/table.go).
+# shellcheck disable=SC2034  # data, read from this file by the Go command
 SKILLS="build-n4-module:build-n4-module-kit/skill/SKILL.md mcp-n4:mcp-n4-kit/skill/SKILL.md"
-SKILL_NAMES=""
-for entry in $SKILLS; do
-  SKILL_NAMES="${SKILL_NAMES:+$SKILL_NAMES|}${entry%%:*}"
-done
-USAGE="usage: install-skill.sh [--skill <$SKILL_NAMES>] [--home <dir>] [--dry-run] [--force]"
 
-# ---------------------------------------------------------------------------
-# Argument parsing
-# ---------------------------------------------------------------------------
-SKILL="build-n4-module"
-HOME_DIR=""
-DRY_RUN=0
-FORCE=0
+sha256_require 'install-skill' || exit 3
 
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --home)
-      shift
-      [ $# -ge 1 ] || { printf 'install-skill: --home requires an argument\n' >&2; exit 2; }
-      HOME_DIR="$1"
-      shift
-      ;;
-    --skill)
-      shift
-      [ $# -ge 1 ] || { printf 'install-skill: --skill requires an argument\n' >&2; exit 2; }
-      SKILL="$1"
-      shift
-      ;;
-    --dry-run)  DRY_RUN=1; shift ;;
-    --force)    FORCE=1;   shift ;;
-    --)         shift; break ;;
-    -*)
-      printf 'install-skill: unknown option: %s\n' "$1" >&2
-      printf '%s\n' "$USAGE" >&2
-      exit 2
-      ;;
-    *)
-      printf 'install-skill: unexpected argument: %s\n' "$1" >&2
-      printf '%s\n' "$USAGE" >&2
-      exit 2
-      ;;
-  esac
-done
-
-# Default home: $HOME (but never used as a path resolution strategy in tests)
-[ -n "$HOME_DIR" ] || HOME_DIR="$HOME"
-
-# ---------------------------------------------------------------------------
-# Resolve the skill to its tracked source
-# ---------------------------------------------------------------------------
-TRACKED=""
-for entry in $SKILLS; do
-  if [ "${entry%%:*}" = "$SKILL" ]; then
-    TRACKED="$REPO_ROOT/${entry#*:}"
-  fi
-done
-if [ -z "$TRACKED" ]; then
-  printf 'install-skill: unknown skill: %s (expected %s)\n' "$SKILL" "${SKILL_NAMES//|/ or }" >&2
-  printf '%s\n' "$USAGE" >&2
-  exit 2
-fi
-
-# ---------------------------------------------------------------------------
-# Validate tracked source
-# ---------------------------------------------------------------------------
-if [ ! -f "$TRACKED" ]; then
-  printf 'install-skill: tracked source not found: %s\n' "$TRACKED" >&2
-  exit 3
-fi
-
-# The kit checkout whose generated state a build-n4-module install materializes.
-KIT_DIR=""
-if [ "$SKILL" = build-n4-module ]; then
-  if [ -n "${BUILD_N4_KIT:-}" ] && [ -f "$BUILD_N4_KIT/METHODOLOGY.md" ]; then KIT_DIR="$BUILD_N4_KIT"
-  else KIT_DIR="$REPO_ROOT/build-n4-module-kit"; fi
-fi
-
-# materialize: run the kit's kit-state --write (it prints each path written); exit 3 when it fails.
-materialize() {
-  [ -n "$KIT_DIR" ] || return 0
-  if [ ! -f "$KIT_DIR/toolbelt/kit-state.sh" ]; then
-    printf 'install-skill: no toolbelt/kit-state.sh in %s; generated kit state not materialized\n' "$KIT_DIR" >&2
-    return 0
-  fi
-  bash "$KIT_DIR/toolbelt/kit-state.sh" --write "$KIT_DIR" || {
-    printf 'install-skill: kit-state --write failed in %s; the launcher is installed, the kit state is not\n' "$KIT_DIR" >&2
-    exit 3
-  }
-}
-
-TARGET_DIR="$HOME_DIR/.claude/skills/$SKILL"
-TARGET="$TARGET_DIR/SKILL.md"
-
-sha256_require 'install-skill' || exit 3   # up front: an exit inside $( ) cannot stop us
-tracked_sha=$(sha256_of "$TRACKED")
-
-# ---------------------------------------------------------------------------
-# Dry-run mode: report without writing
-# ---------------------------------------------------------------------------
-if [ "$DRY_RUN" -eq 1 ]; then
-  if [ -f "$TARGET" ]; then
-    target_sha=$(sha256_of "$TARGET")
-    if [ "$tracked_sha" = "$target_sha" ]; then
-      printf 'install-skill: [dry-run] already current: %s\n' "$TARGET"
-    else
-      printf 'install-skill: [dry-run] would update (diverged): %s\n' "$TARGET"
-      printf '  tracked sha256: %s\n' "$tracked_sha"
-      printf '  current sha256: %s\n' "$target_sha"
-    fi
-  else
-    printf 'install-skill: [dry-run] would install to: %s\n' "$TARGET"
-  fi
-  [ -z "$KIT_DIR" ] || printf 'install-skill: [dry-run] would run kit-state --write in: %s\n' "$KIT_DIR"
-  exit 0
-fi
-
-# ---------------------------------------------------------------------------
-# Check if already current
-# ---------------------------------------------------------------------------
-if [ -f "$TARGET" ]; then
-  target_sha=$(sha256_of "$TARGET")
-  if [ "$tracked_sha" = "$target_sha" ]; then
-    printf 'install-skill: already current: %s\n' "$TARGET"
-    materialize
-    exit 0
-  fi
-  # Diverged
-  if [ "$FORCE" -eq 0 ]; then
-    printf 'install-skill: installed copy diverges from tracked source\n' >&2
-    printf '  tracked:  %s\n' "$TRACKED" >&2
-    printf '  installed: %s\n' "$TARGET" >&2
-    printf '  tracked sha256:   %s\n' "$tracked_sha" >&2
-    printf '  installed sha256: %s\n' "$target_sha" >&2
-    printf 'Re-run with --force to overwrite.\n' >&2
-    exit 1
-  fi
-  printf 'install-skill: --force: overwriting diverged copy\n'
-fi
-
-# ---------------------------------------------------------------------------
-# Create target directory
-# ---------------------------------------------------------------------------
-if ! mkdir -p "$TARGET_DIR" 2>/dev/null; then
-  printf 'install-skill: cannot create target directory: %s\n' "$TARGET_DIR" >&2
-  exit 3
-fi
-
-# ---------------------------------------------------------------------------
-# Install
-# ---------------------------------------------------------------------------
-cp "$TRACKED" "$TARGET"
-printf 'install-skill: installed %s\n' "$TARGET"
-materialize
-exit 0
+# The repository is the one holding the invoked path (never resolved through a symlink), as it always was.
+GO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'install-skill: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" install-skill)" || exit 3
+INSTALL_TOOLS_LAUNCHER="$SCRIPT_DIR/${0##*/}" exec "$BIN" "$@"
