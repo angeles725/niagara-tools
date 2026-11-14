@@ -14,7 +14,10 @@ import (
 type Node struct {
 	Name, Type, Handle string
 	Value              any // nil when the node has no value
-	Children           []*Node
+	// Flags are the slot's flags as letters in the station's order (set by a set-flags op); every
+	// slot of the fake is dynamic, so a load carries them only when there are any.
+	Flags    string
+	Children []*Node
 }
 
 // Child is the direct child named name, nil when absent.
@@ -144,7 +147,8 @@ func (st *Station) fill(n *Node, b map[string]any) {
 	}
 }
 
-// serialize is a node as a BOX body to depth, omitting slots at their type default.
+// serialize is a node as a BOX body to depth, omitting slots at their type default that have no
+// flags.
 func serialize(n *Node, depth int, isRoot bool) map[string]any {
 	out := map[string]any{"nm": "p", "t": n.Type}
 	if !isRoot {
@@ -156,10 +160,13 @@ func serialize(n *Node, depth int, isRoot bool) map[string]any {
 	if n.Value != nil {
 		out["v"] = n.Value
 	}
+	if n.Flags != "" {
+		out["f"] = n.Flags
+	}
 	if depth > 0 {
 		var kids []any
 		for _, c := range n.Children {
-			if d, ok := defaults[c.Type]; ok && c.Value == d {
+			if d, ok := defaults[c.Type]; ok && c.Value == d && c.Flags == "" {
 				continue
 			}
 			kids = append(kids, serialize(c, depth-1, false))
