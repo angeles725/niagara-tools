@@ -77,13 +77,13 @@ Default mode is read-only: write tools exist only with `--allow-writes`
 8. `n4_save_station` and report `persisted` with its `evidence`; `unknown` is not success.
 9. Keep every `batch_id` in the report so the human can ask for `n4_rollback`.
 10. Write the session retro: call `n4_session_retro_draft` (or run
-    `python3 tools/new_retro.py --station NAME --state-dir DIR`, which writes
+    `go/bin/retro-draft --write --station NAME --state-dir DIR`, which writes
     `retros/YYYY-MM-DD-<station>-session.md` and its `pending` INDEX row; `--dry-run`
     prints only). Review the evidence-backed candidates, keep or edit the deltas and
     drop the noise; with no friction the honest result is `no new deltas; ...`.
     Propose, never apply: the kit is changed by a human, and GitHub issues are staged
-    only by hand. Enforced by `TestRetroStepIsDocumented` and the `test_retro.py` /
-    `test_new_retro.py` suites.
+    only by hand. Enforced by `TestRetroStepIsDocumented`, the `test_retro.py` suite and
+    the Go tests of `go/cmd/mcp-n4/retro-draft`.
 
 Never put credentials in tool arguments or chat.
 
