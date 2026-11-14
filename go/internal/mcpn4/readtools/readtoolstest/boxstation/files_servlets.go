@@ -10,10 +10,10 @@ import (
 	"testing"
 )
 
-// This file adds the station's GET servlets to the fake, as the kit's FakeStation serves them
-// (mcp-n4-kit/tests/fake_station.py): GET /file/<path> (FileServlet) and GET /ord/<ORD> (a BQL
-// table as CSV). Servlets listens on its own address in front of a Station; every other request
-// (BOX POSTs, GET /obix/about/) is the station's own answer.
+// This file adds the station's GET servlets to the fake, as a station serves them: GET
+// /file/<path> (FileServlet) and GET /ord/<ORD> (a BQL table as CSV). Servlets listens on its
+// own address in front of a Station; every other request (BOX POSTs, GET /obix/about/) is the
+// station's own answer.
 
 // File is a station file: its bytes and content type, or, when Status is not 0, that HTTP status
 // instead (e.g. 403 for a permission denial).

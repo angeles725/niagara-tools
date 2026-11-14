@@ -25,11 +25,9 @@ type faults struct {
 	raw       func(frame map[string]any) (int, []byte) // a non-zero HTTP status replaces the answer
 }
 
-// install makes f the station's hook; under the station lock, so the serving goroutines see it.
+// install makes f the station's hook (SetHook installs it under the station lock).
 func (f *faults) install(st *boxstation.Station) {
-	st.Do(func(*boxstation.Station) {
-		st.Hook = func(frame map[string]any) (int, []byte) { return f.answer(st, frame) }
-	})
+	st.SetHook(func(frame map[string]any) (int, []byte) { return f.answer(st, frame) })
 }
 
 func (f *faults) set(fn func(f *faults)) {

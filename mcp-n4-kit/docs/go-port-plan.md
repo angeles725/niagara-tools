@@ -4,6 +4,12 @@
 > the only mcp-n4 server and the Python server described below is removed. The sections record
 > how the port was planned and proven; commands that select `MCP_N4_IMPL=python` or re-record
 > goldens with `MCP_N4_RECORD=1` no longer work.
+>
+> **T9 (2026-11-14).** The last Python tools and tests were retired: `tools/mutation_check.py`
+> and every file under `tests/*.py` are deleted, the whole suite is Go
+> (`go/internal/mcpn4/blackbox` and the package tests), and CI runs it with `go test -count=1`.
+> Commands below that run `python3 -m unittest` or a `tests/*.py` script no longer work. The
+> mutation-check rule is now METHODOLOGY section 8.
 
 This plan ports the mcp-n4 server from Python to Go without changing its observable
 behaviour. It was written against `origin/main` at v0.9.0: the server is about 4.6k lines

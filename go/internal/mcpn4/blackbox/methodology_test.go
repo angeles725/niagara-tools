@@ -1,6 +1,7 @@
 package blackbox
 
-// Every test METHODOLOGY.md cites exists (port of mcp-n4-kit/tests/test_methodology_names.py).
+// Every test METHODOLOGY.md cites exists and is a Go test (port of the kit's former Python
+// methodology-names test).
 
 import (
 	"bufio"
@@ -9,48 +10,29 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strings"
 	"testing"
 )
 
 var (
-	pyCite  = regexp.MustCompile(`\btest_[a-z0-9_]+\b`)
-	pyDef   = regexp.MustCompile(`(?m)^\s*def (test_[a-z0-9_]+)\(`)
-	goCite  = regexp.MustCompile("`([a-z]+)\\.(Test[A-Za-z0-9]+)(?:/([a-z0-9_]+))?`")
-	cutDotP = ".py"
+	pyCite = regexp.MustCompile(`\btest_[a-z0-9_]+(\.py)?\b`)
+	goCite = regexp.MustCompile("`([a-z]+)\\.(Test[A-Za-z0-9]+)(?:/([a-z0-9_]+))?`")
 )
 
-func TestEveryPythonTestNameCitedInMethodologyExists(t *testing.T) {
-	text := kitDoc(t, "METHODOLOGY.md")
-	cited := map[string]bool{}
-	for _, loc := range pyCite.FindAllStringIndex(text, -1) {
-		if !strings.HasPrefix(text[loc[1]:], cutDotP) { // a file name, not a test
-			cited[text[loc[0]:loc[1]]] = true
+// TestMethodologyCitesNoPythonTest: the kit's tests are Go since T9 retired the Python suite, so a `test_name` or
+// `test_file.py` in METHODOLOGY.md can only be a stale citation; cite the Go twin
+// (`pkg.TestName`, checked by TestEveryGoTestCitedInMethodologyExists) instead.
+func TestMethodologyCitesNoPythonTest(t *testing.T) {
+	seen := map[string]bool{}
+	var cited []string
+	for _, name := range pyCite.FindAllString(kitDoc(t, "METHODOLOGY.md"), -1) {
+		if !seen[name] {
+			seen[name] = true
+			cited = append(cited, name)
 		}
 	}
-	files, _ := filepath.Glob(filepath.Join(kitDir, "tests", "test_*.py"))
-	defined := map[string]bool{}
-	for _, path := range files {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, m := range pyDef.FindAllStringSubmatch(string(data), -1) {
-			defined[m[1]] = true
-		}
-	}
-	if len(cited) == 0 {
-		t.Fatal("METHODOLOGY.md cites no Python tests: the gate would be vacuous")
-	}
-	var missing []string
-	for name := range cited {
-		if !defined[name] {
-			missing = append(missing, name)
-		}
-	}
-	sort.Strings(missing)
-	if len(missing) != 0 {
-		t.Errorf("METHODOLOGY.md cites Python tests that do not exist: %v", missing)
+	sort.Strings(cited)
+	if len(cited) != 0 {
+		t.Errorf("METHODOLOGY.md cites Python tests (the suite is Go; cite the Go twin): %v", cited)
 	}
 }
 

@@ -8,9 +8,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
 )
 
-// Go twin of test_tools_destructive.TestPlannedDataGuards (go_twin("plan", "injection")): a plan
-// with no private data and no targets (Python: data that is not a dict) still executes, and its
-// intent records empty targets.
+// A plan with no private data and no targets (the retired Python suite's "data that is not a
+// dict" guard) still executes, and its intent records empty targets.
 func TestAPlanWhoseDataIsNotADictStillExecutes(t *testing.T) {
 	r := newRig(t)
 	impl := writeops.CreateComponent

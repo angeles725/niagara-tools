@@ -13,8 +13,8 @@ import (
 
 // TestRepliesAreTheBytesThePythonServerWrites compares tools/list (every schema), errors and odd
 // ids, byte for byte, with what the Python server wrote; testdata/protocol.json is the frozen
-// recording (mcp-n4-kit/tests/fixtures/oracles/protocol.json, recorded before S17 removed that
-// server; it cannot be re-recorded).
+// recording (recorded before S17 removed that server; it cannot be re-recorded; its former kit
+// copy, tests/fixtures/oracles/protocol.json, was deleted in T9).
 func TestRepliesAreTheBytesThePythonServerWrites(t *testing.T) {
 	data, err := os.ReadFile("testdata/protocol.json")
 	if err != nil {

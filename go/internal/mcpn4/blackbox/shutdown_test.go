@@ -65,7 +65,7 @@ func TestSigintAfterMakeStillDeletesTheStationSession(t *testing.T) {
 	st, p := liveProc(t)
 	reached, release := make(chan struct{}), make(chan struct{})
 	t.Cleanup(func() { close(release) })
-	st.Hook = func(frame map[string]any) (int, []byte) {
+	st.SetHook(func(frame map[string]any) (int, []byte) {
 		if msgs, _ := frame["m"].([]any); len(msgs) > 0 && msgs[0].(map[string]any)["k"] == "makessc" {
 			close(reached)
 			select {
@@ -74,7 +74,7 @@ func TestSigintAfterMakeStillDeletesTheStationSession(t *testing.T) {
 			}
 		}
 		return 0, nil
-	}
+	})
 	sendConnect(t, p)
 	select {
 	case <-reached:

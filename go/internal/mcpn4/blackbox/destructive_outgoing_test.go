@@ -92,8 +92,14 @@ func TestTheScanResultIsCoveredByThePlanHash(t *testing.T) {
 	args := removeArgs(nn)
 	args["link_scan_ord"] = Folder
 	scanned := d.Srv.Dry("n4_remove_component", args)
-	if plain["plan_hash"] == nil || plain["plan_hash"] == scanned["plan_hash"] {
-		t.Errorf("plan hashes %v and %v", plain["plan_hash"], scanned["plan_hash"])
+	if plain["plan_hash"] == nil {
+		t.Fatalf("the plain dry run has no plan_hash: %v", plain)
+	}
+	if scanned["plan_hash"] == nil {
+		t.Fatalf("the scanned dry run has no plan_hash: %v", scanned)
+	}
+	if plain["plan_hash"] == scanned["plan_hash"] {
+		t.Errorf("the scan result does not change the plan hash: both %v", plain["plan_hash"])
 	}
 }
 

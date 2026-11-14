@@ -1,7 +1,6 @@
 // Package boxstation is an in-memory fake Niagara BOX station served over plain HTTP on
-// 127.0.0.1: the Go port of mcp-n4-kit/tests/fake_station.py (FakeStation) for black-box tests
-// that drive the real mcp-n4 binary. It serves BOX POST frames (ssession and reg channels) and
-// GET /obix/about/; /file/ and /ord/ answer 404.
+// 127.0.0.1 for black-box tests that drive the real mcp-n4 binary. It serves BOX POST frames
+// (ssession and reg channels) and GET /obix/about/; /file/ and /ord/ answer 404.
 package boxstation
 
 import (
@@ -48,11 +47,10 @@ type Station struct {
 	AfterAdd    func(st *Station, node *Node)
 	AfterInvoke func(st *Station, action string, node *Node)
 	URL         string
-	// Hook, when set, sees every authorized BOX frame before the station answers it, with the
-	// station unlocked (it may block). A non-zero status is sent as the whole answer instead.
-	Hook func(frame map[string]any) (status int, body []byte)
 
-	mu       sync.Mutex
+	mu sync.Mutex
+	// hook is guarded by mu; see SetHook.
+	hook     func(frame map[string]any) (status int, body []byte)
 	version  string // what GET /obix/about/ reports; "" answers 404
 	sessions map[string]bool
 	root     *Node
@@ -72,6 +70,13 @@ func New(user, password, name string) *Station {
 	st.root.Children = append(st.root.Children, &Node{Name: "stationName", Type: "baja:String", Value: name})
 	st.Component(st.root, "Folder", "baja:Folder", "3")
 	return st
+}
+
+// SetHook makes hook see every authorized BOX frame before the station answers it; nil removes
+// it. The hook is installed under the station lock and runs with the station unlocked (it may
+// block). A non-zero status is sent as the whole answer instead.
+func (st *Station) SetHook(hook func(frame map[string]any) (status int, body []byte)) {
+	st.Do(func(*Station) { st.hook = hook })
 }
 
 // Root is the station root (lock with Do while the station serves).

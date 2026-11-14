@@ -7,7 +7,8 @@ import (
 	"testing"
 )
 
-// The Go twins of test_tools_destructive.TestStationHomeFlag.
+// The --station-home flag (the retired Python suite's TestStationHomeFlag); the save tool's use
+// of it is pinned black-box in blackbox/destructive_save_test.go.
 
 func TestFlagIsRepeatableAndDefaultsEmpty(t *testing.T) {
 	t.Parallel()
