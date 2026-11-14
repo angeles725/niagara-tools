@@ -19,49 +19,21 @@
 # EXIT: 0 tests passed · 1 a test FAILED (the bite) · 2 usage · 3 environment
 #   (no JDK / junit not in the gradle cache — run one gradle build to fetch it — or the test does not
 #   compile: a compile error is never reported as the exit-1 bite). [ev: audit-2026-10-03 A1]
+#   A JDK without `java` on PATH is exit 127, as a shell reports a missing command.
+#
+# Go port: with several copies of a jar under ~/.gradle the first in name order is used (find's directory
+# order chose it before, so the pick depended on the filesystem).
+#
+# Implementation: the Go module at <repo>/go (go/cmd/run-pure-test, go/internal/puretest). This script is only
+# the launcher: go/go-tool.sh `go_tool_bin` builds go/bin/run-pure-test when the binary is missing or older
+# than a Go source, then this script execs it. No Go toolchain or a failed build is also exit 3.
+set -u
 
-set -euo pipefail
-
-die() { printf '%s\n' "run-pure-test: $2" >&2; exit "$1"; }
-
-[ $# -eq 2 ] || die 2 "usage: run-pure-test.sh <module-rt-dir> <pkg.TestClass>"
-rt=$1
-testfqcn=$2
-
-[ -d "$rt" ] || die 3 "module-rt-dir not found: $rt"
-command -v javac >/dev/null 2>&1 || die 3 "javac not on PATH (need a JDK 8)"
-
-# JUnit 4.13.2 + Hamcrest 1.3 live in the Gradle cache/dist, not the repo or the N4 install.
-# `|| true`: with `set -e -o pipefail`, find exits non-zero when ~/.gradle is absent
-# (empty-cache path) and would abort HERE, before the actionable die 3 below — swallow it
-# so the missing-jar case reports its real message instead of a bare exit 1.
-JU=$(find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | head -1) || true
-HC=$(find "$HOME/.gradle" -name 'hamcrest-core-1.3.jar' 2>/dev/null | head -1) || true
-[ -n "$JU" ] || die 3 "junit-4.13.2.jar not in ~/.gradle — run one './gradlew :<mod>-rt:compileTestJava' to fetch it"
-[ -n "$HC" ] || die 3 "hamcrest-core-1.3.jar not in ~/.gradle — run one gradle build to fetch it"
-
-pkgpath=${testfqcn%.*}; pkgpath=${pkgpath//.//}
-testsimple=${testfqcn##*.}
-
-# The test source root is either srcTest/test/ (the ColdRoomPan/CompPan/DashboardPan
-# layout, package under an extra test/ segment) or srcTest/ directly. Detect it.
-testroot=""
-for cand in "$rt/srcTest/test" "$rt/srcTest"; do
-  if [ -f "$cand/$pkgpath/$testsimple.java" ]; then testroot=$cand; break; fi
-done
-[ -n "$testroot" ] || die 3 "test source not found: $rt/srcTest[/test]/$pkgpath/$testsimple.java"
-
-tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
-
-# -sourcepath pulls in the pure sibling classes the test references, compiled together
-# so package-private members stay reachable. Nothing is written under $rt.
-# A compile error is an environment/setup failure (exit 3), never exit 1: exit 1 is reserved for a JUnit
-# failure, the RED a test-first step looks for, and a test that does not compile proves nothing.
-if ! javac -source 8 -target 8 -nowarn -cp "$JU" \
-  -sourcepath "$rt/src:$testroot" \
-  -d "$tmp" "$testroot/$pkgpath/$testsimple.java"; then
-  die 3 "$testfqcn does not compile (javac failed above) — fix the test or the pure sources; a compile error is not a RED"
-fi
-
-( cd "$rt" && java -cp "$tmp:$JU:$HC" org.junit.runner.JUnitCore "$testfqcn" )
+# readlink -f: resolve a symlinked copy of this file to the real kit, so ../../go exists.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'run-pure-test: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" run-pure-test)" || exit 3
+exec "$BIN" "$@"
