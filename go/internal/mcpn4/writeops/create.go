@@ -19,8 +19,9 @@ var CreateComponent = plan.Impl{ScopeOrds: func(args *pyjson.Object) []any { ret
 var typeSpec = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*:[A-Za-z][A-Za-z0-9_]*\n?$`)
 
 type createData struct {
-	parentH any
-	ws      any // the wsAnnotation value, or nil
+	parentH  any
+	ws       any    // the wsAnnotation value, or nil
+	proxyExt string // the requested proxyExt type, or "" (added after the Python port)
 }
 
 // wireSheet is _wire_sheet: the wsAnnotation slot of {x, y, w} (w defaults to 8), or nil.
@@ -65,14 +66,21 @@ func createPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
+	proxyExt := str(args, "proxy_ext")
+	if _, given := args.Get("proxy_ext"); given && !typeSpec.MatchString(proxyExt) {
+		return nil, plan.ToolError("proxy_ext must be a type spec module:Type, got " + pyjson.StrRepr(proxyExt))
+	}
 	parentOrd := str(args, "parent_ord")
 	h, _, err := plan.Handle(c, parentOrd, 1)
 	if err != nil {
 		return nil, err
 	}
-	slots, data := []any{}, createData{parentH: h}
+	slots, data := []any{}, createData{parentH: h, proxyExt: proxyExt}
 	if ws != nil {
 		slots, data.ws = []any{ws}, get(ws, "v")
+	}
+	if proxyExt != "" { // a point created with its driver extension (e.g. a Modbus read-only point)
+		slots = append(slots, obj("nm", "p", "n", "proxyExt", "t", proxyExt))
 	}
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, h)
@@ -99,7 +107,11 @@ func createInverse(p *plan.Planned, replies []any) ([]any, error) {
 
 func createReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, inverse []any) (any, any, any, string, error) {
 	nn := get(inverse[0].(*pyjson.Object), "n")
-	requested := obj("name", nn, "type", str(args, "type"), "wsAnnotation", p.Data.(createData).ws)
+	d := p.Data.(createData)
+	requested := obj("name", nn, "type", str(args, "type"), "wsAnnotation", d.ws)
+	if d.proxyExt != "" {
+		requested.Set("proxyExt", d.proxyExt)
+	}
 	nodes, err := c.LoadTree(str(args, "parent_ord"), 2, box.LoadOptions{})
 	if err != nil {
 		return nil, nil, nil, "", err
@@ -110,7 +122,11 @@ func createReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies
 		return nil, nil, nil, "", unhashable(nn)
 	case string:
 		if n := box.Node(nodes, name); n != nil {
-			observed = obj("name", nn, "type", get(n, "t"), "wsAnnotation", get(box.Node(nodes, name+"/wsAnnotation"), "v"))
+			o := obj("name", nn, "type", get(n, "t"), "wsAnnotation", get(box.Node(nodes, name+"/wsAnnotation"), "v"))
+			if d.proxyExt != "" {
+				o.Set("proxyExt", get(box.Node(nodes, name+"/proxyExt"), "t"))
+			}
+			observed = o
 		}
 	}
 	accepted, err := first(replies[0])

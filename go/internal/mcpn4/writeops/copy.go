@@ -25,8 +25,15 @@ const (
 
 // copyRuntimeSlots are slots the driver or the control engine computes; a copy starts without
 // them so it never shows the source's state (a down status, a failed ping) as its own.
+// absoluteAddress is a Modbus proxy's read-only transient address (flags 3), derived by the driver
+// from dataAddress (modbusCore BModbusClientProxyExt). An alarm extension's state is runtime too
+// (alarm BAlarmSourceExt): timeInCurrentState ticks, so copying it changed the plan between the
+// dry run and the execution; alarmState, ackedTransitions and the transition timestamps are the
+// source's alarm history.
 var copyRuntimeSlots = map[string]bool{"status": true, "health": true, "faultCause": true,
-	"readValue": true, "writeValue": true}
+	"readValue": true, "writeValue": true, "absoluteAddress": true,
+	"timeInCurrentState": true, "alarmState": true, "ackedTransitions": true,
+	"toOffnormalTimes": true, "toFaultTimes": true}
 
 type copyData struct {
 	parent     any
@@ -42,7 +49,7 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		return nil, err
 	}
 	nameArg, _ := args.Get("name")
-	source, err := plan.Name("name", nameArg)
+	source, err := plan.ExistingName("name", nameArg)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +139,9 @@ func treeDepth(node *pyjson.Object) int {
 	return deepest
 }
 
-// stripRuntime is body without copyRuntimeSlots, at every level.
+// stripRuntime is body without copyRuntimeSlots, at every level, and without children the load
+// lists by name only (nameOnly) (actions such as upload, frozen slots at their default such as regType):
+// an add op child without a type is not a value, and the copy's type supplies those slots.
 func stripRuntime(body *pyjson.Object) *pyjson.Object {
 	out := pyjson.NewObject()
 	for _, k := range body.Keys() {
@@ -144,7 +153,7 @@ func stripRuntime(body *pyjson.Object) *pyjson.Object {
 		kept := []any{}
 		for _, c := range v.([]any) {
 			kid := c.(*pyjson.Object)
-			if n, _ := get(kid, "n").(string); !copyRuntimeSlots[n] {
+			if n, _ := get(kid, "n").(string); !copyRuntimeSlots[n] && !nameOnly(kid) {
 				kept = append(kept, stripRuntime(kid))
 			}
 		}
@@ -153,6 +162,12 @@ func stripRuntime(body *pyjson.Object) *pyjson.Object {
 		}
 	}
 	return out
+}
+
+// nameOnly is a loaded child with no type, value or children: an action or a frozen slot at its
+// default, listed by name only.
+func nameOnly(kid *pyjson.Object) bool {
+	return get(kid, "t") == nil && get(kid, "v") == nil && get(kid, "s") == nil
 }
 
 // copyInverse removes each copy under the name its reply assigned ("nn"), else the requested one.

@@ -19,7 +19,7 @@ func gwTree() *pyjson.Object {
 	ext := obj("nm", "p", "n", "proxyExt", "h", "31", "t", "modbusCore:ModbusClientNumericProxyExt", "s", []any{
 		obj("nm", "p", "n", "status", "t", "baja:Status", "v", "14"),
 		obj("nm", "p", "n", "readValue", "t", "baja:StatusNumeric", "s", []any{obj("nm", "p", "n", "value", "v", "0.0")}),
-		obj("nm", "p", "n", "dataType", "t", "modbusCore:DataTypeEnum", "v", "signedIntegerType"),
+		obj("nm", "p", "n", "dataType", "t", "modbusCore:DataTypeEnum", "v", "signedInteger"),
 		addr})
 	point := obj("nm", "p", "n", "Setpoint", "h", "30", "t", "control:NumericWritable", "s", []any{
 		obj("nm", "p", "n", "out", "t", "baja:StatusNumeric", "s", []any{obj("nm", "p", "n", "value", "v", "0.0")}),
@@ -59,7 +59,7 @@ func TestACopyAddsTheConfiguredSubtreeOncePerNewNameWithoutRuntimeSlots(t *testi
 		`{"nm": "p", "t": "control:NumericWritable", "n": "Setpoint", "s": [` +
 		`{"nm": "p", "t": "baja:StatusNumeric", "n": "fallback", "s": [{"nm": "p", "n": "value", "v": "200.0"}]}, ` +
 		`{"nm": "p", "t": "modbusCore:ModbusClientNumericProxyExt", "n": "proxyExt", "s": [` +
-		`{"nm": "p", "t": "modbusCore:DataTypeEnum", "n": "dataType", "v": "signedIntegerType"}, ` +
+		`{"nm": "p", "t": "modbusCore:DataTypeEnum", "n": "dataType", "v": "signedInteger"}, ` +
 		`{"nm": "p", "t": "modbusCore:FlexAddress", "n": "dataAddress", "s": [` +
 		`{"nm": "p", "t": "modbusCore:AddressFormatEnum", "n": "addressFormat", "v": "modbus"}, ` +
 		`{"nm": "p", "t": "baja:String", "n": "address", "v": "40005"}]}]}]}]}]}}`
@@ -146,5 +146,55 @@ func TestACopyReadBackChecksEveryCopyUnderItsAssignedName(t *testing.T) {
 	c.nodes.Set(net, obj("", obj("h", "10"), "Gw3", obj("t", "modbusAsync:ModbusAsyncDevice")))
 	if _, _, _, v, _ := writeops.CopyComponent.Readback(c, args, p, replies, inverse); v != "mismatch" {
 		t.Errorf("verdict with Gw4 missing = %q, want mismatch", v)
+	}
+}
+
+// absoluteAddress is derived by the driver and is not copied either.
+// A load lists actions (upload, download) and frozen slots at their default (regType) by name
+// only, without a type; a copy leaves them out, because an add op without a type is not a value
+// and the copy gets those slots from its type anyway.
+func TestACopyLeavesOutChildrenTheLoadListsWithoutAType(t *testing.T) {
+	tree := gwTree()
+	kids, _ := tree.Get("s")
+	tree.Set("s", append(kids.([]any), obj("nm", "p", "n", "upload"), obj("nm", "p", "n", "download"),
+		obj("nm", "p", "n", "absoluteAddress", "t", "modbusCore:FlexAddress", "s", []any{
+			obj("nm", "p", "n", "address", "t", "baja:String", "v", "40005")})))
+	p, err := writeops.CopyComponent.Plan(copyClient(tree), copyArgs("Gw3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := js(t, p.Ops[0]); strings.Contains(got, `"upload"`) || strings.Contains(got, `"download"`) ||
+		strings.Contains(got, "absoluteAddress") {
+		t.Errorf("a typeless child was copied: %s", got)
+	}
+}
+
+// An alarm extension's state slots are runtime: timeInCurrentState ticks every few seconds, so
+// copying it made every dry run a different plan and the confirmation token never matched
+// (client A, 2026-11-13). alarmState, ackedTransitions and the transition timestamps are the
+// source's alarm history, not configuration. Config such as offnormalAlgorithm/alarmValue stays.
+func TestACopyLeavesOutAlarmExtensionState(t *testing.T) {
+	tree := gwTree()
+	kids, _ := tree.Get("s")
+	tree.Set("s", append(kids.([]any), obj("nm", "p", "n", "AlarmExt", "t", "alarm:AlarmSourceExt", "s", []any{
+		obj("nm", "p", "n", "timeInCurrentState", "t", "baja:RelTime", "v", "30018"),
+		obj("nm", "p", "n", "alarmState", "t", "alarm:AlarmState", "v", "offnormal"),
+		obj("nm", "p", "n", "ackedTransitions", "t", "alarm:AlarmTransitionBits", "v", "0"),
+		obj("nm", "p", "n", "toOffnormalTimes", "t", "alarm:AlarmTimestamps", "v", "x"),
+		obj("nm", "p", "n", "toFaultTimes", "t", "alarm:AlarmTimestamps", "v", "x"),
+		obj("nm", "p", "n", "offnormalAlgorithm", "t", "alarm:BooleanChangeOfStateAlgorithm", "s", []any{
+			obj("nm", "p", "n", "alarmValue", "t", "baja:Boolean", "v", "true")})})))
+	p, err := writeops.CopyComponent.Plan(copyClient(tree), copyArgs("Gw3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := js(t, p.Ops[0])
+	for _, n := range []string{"timeInCurrentState", "alarmState", "ackedTransitions", "toOffnormalTimes", "toFaultTimes"} {
+		if strings.Contains(got, `"`+n+`"`) {
+			t.Errorf("runtime slot %s was copied: %s", n, got)
+		}
+	}
+	if !strings.Contains(got, `"alarmValue"`) || !strings.Contains(got, "BooleanChangeOfStateAlgorithm") {
+		t.Errorf("alarm configuration was dropped: %s", got)
 	}
 }

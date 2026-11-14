@@ -424,6 +424,10 @@
       "type": "object",
       "description": "Optional {x, y, w} wire sheet annotation (integers; w defaults to 8)"
      },
+     "proxy_ext": {
+      "type": "string",
+      "description": "Optional driver proxy extension type spec (e.g. modbusCore:ModbusClientNumericProxyExt) to create a point with; configure its address afterwards with n4_set_slot"
+     },
      "dry_run": {
       "type": "boolean",
       "default": true,
@@ -514,7 +518,7 @@
   },
   {
    "name": "n4_copy_component",
-   "description": "Copy one configured component (e.g. a Modbus device with its points and their addresses) under the same parent once per new name, in one batch under one confirmation token (1 to 30 copies). The copy holds the type, plain slots and child components up to 6 levels deep; runtime slots (status, health, out, read and write values) and links are not copied, and a deeper source is refused. Change what differs per copy afterwards (e.g. deviceAddress with n4_set_slot). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Copy one configured component (e.g. a Modbus device with its points and their addresses) under the same parent once per new name, in one batch under one confirmation token (1 to 30 copies). The copy holds the type, plain slots and child components up to 6 levels deep; runtime slots (status, health, out, read and write values, a Modbus absoluteAddress), actions and slots the station lists by name only, and links are not copied; a deeper source is refused. The source may carry station escapes (Numeric$20Writable40001); new names are plain. Change what differs per copy afterwards (e.g. deviceAddress with n4_set_slot). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -573,7 +577,7 @@
       "description": "Slot name, or a path of slot names separated by / for a nested slot; must be listed by the station or declared by its type"
      },
      "value": {
-      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes), a whole number for Integer (Java int range), or for Simple the encoded string of the type (an enum tag such as signedIntegerType or modbus, a Facets string such as units=u:celsius;...|precision=i:1, a LinearConversion scale;offset such as 0.1;0.0). A struct such as a Modbus FlexAddress is set through its child slots (dataAddress/addressFormat, dataAddress/address)"
+      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes), a whole number for Integer (Java int range), or for Simple the encoded string of the type (a whole number is sent as its decimal string, e.g. a Modbus address 40014 on dataAddress/address) (an enum tag such as signedInteger or modbus, a Facets string such as units=u:celsius;...|precision=i:1, a LinearConversion scale;offset such as 0.1;0.0). A struct such as a Modbus FlexAddress is set through its child slots (dataAddress/addressFormat, dataAddress/address)"
      },
      "value_type": {
       "type": "string",
