@@ -134,3 +134,20 @@ func TestACopyAccountsForEverySourceChild(t *testing.T) {
 		}
 	}
 }
+
+// The check itself is pinned: a body that drops a child, or keeps it without the source's flags,
+// is reported; an entry of the Not copied note and a bare child are not.
+func TestTheAccountingCheckReportsALostChildAndALostFlag(t *testing.T) {
+	source := obj("s", []any{
+		obj("n", "kept", "t", "baja:String", "v", "x", "f", "h"),
+		obj("n", "gone", "t", "baja:String", "v", "y"),
+		obj("n", "listed", "t", "baja:String", "v", "z", "f", "rt"),
+		obj("n", "plain"),
+	})
+	body := obj("s", []any{obj("n", "kept", "t", "baja:String", "v", "x")})
+	var lost []string
+	unaccounted(source, body, "", notCopied([]any{"Not copied (flags r readonly): listed (rt)"}), &lost)
+	if got := strings.Join(lost, "; "); got != "kept (flags , source h); gone" {
+		t.Errorf("reported %q, want the lost flag of kept and the lost child gone", got)
+	}
+}
