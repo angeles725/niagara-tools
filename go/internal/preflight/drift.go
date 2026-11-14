@@ -5,6 +5,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/findwalk"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
@@ -43,9 +44,9 @@ func (r *run) versionDrift() {
 // directory find cannot read is reported on stderr as find words it, and the walk goes on.
 func (r *run) treeVersion(dir string) string {
 	var kts []string
-	findWalk(dir, true, 3, func(e entry) bool {
-		if ok, _ := path.Match("*.gradle.kts", e.name); ok {
-			kts = append(kts, e.path)
+	findwalk.Walk(dir, true, 3, func(e findwalk.Entry) bool {
+		if ok, _ := path.Match("*.gradle.kts", e.Name); ok {
+			kts = append(kts, e.Path)
 		}
 		return true
 	}, func(p string, err error) {

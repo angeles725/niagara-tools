@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/findwalk"
 	"github.com/angeles725/niagara-tools/go/internal/signblock"
 )
 
@@ -93,16 +94,16 @@ func ktsCode(file string) []string {
 // symlink, find -H issue #329; dot directories pruned, a build/ not entered), sorted, space-joined.
 func shippedBuildDirs(gr string) string {
 	var dirs []string
-	findWalk(gr, true, 3, func(e entry) bool {
+	findwalk.Walk(gr, true, 3, func(e findwalk.Entry) bool {
 		switch {
-		case e.depth == 0:
+		case e.Depth == 0:
 			return true
-		case !e.dir:
+		case !e.Dir:
 			return false
-		case strings.HasPrefix(e.name, "."):
+		case strings.HasPrefix(e.Name, "."):
 			return false
-		case e.name == "build":
-			dirs = append(dirs, e.path)
+		case e.Name == "build":
+			dirs = append(dirs, e.Path)
 			return false
 		}
 		return true

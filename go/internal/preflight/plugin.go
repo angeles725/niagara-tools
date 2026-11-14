@@ -3,9 +3,9 @@ package preflight
 import (
 	"bytes"
 	"os"
-	"path"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/findwalk"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
@@ -20,7 +20,7 @@ func (r *run) pluginPin() {
 	}
 	m2 := r.nh + "/etc/m2"
 	if r.plugin != "" {
-		if hasDir(m2, r.plugin) {
+		if findwalk.HasDir(m2, r.plugin) {
 			r.row("PASS", "plugin-pin", "plugin "+r.plugin+" (from --plugin-version) found in niagara_home/etc/m2")
 		} else {
 			r.row("FAIL", "plugin-pin", "plugin "+r.plugin+" (from --plugin-version) missing from "+m2+" — pick the version this install ships")
@@ -37,7 +37,7 @@ func (r *run) pluginPin() {
 	switch {
 	case ver == "":
 		r.row("FAIL", "plugin-pin", "cannot determine plugin version from "+settings)
-	case hasDir(m2, ver):
+	case findwalk.HasDir(m2, ver):
 		r.row("PASS", "plugin-pin", "plugin "+ver+" found in niagara_home/etc/m2")
 	default:
 		r.row("FAIL", "plugin-pin", "plugin "+ver+" missing from "+m2+" — copy from Niagara install")
@@ -50,16 +50,4 @@ func grepText(b []byte) string {
 		return ""
 	}
 	return string(b)
-}
-
-// hasDir is `find <root> -type d -name <name> | grep -q .`: a directory under root, root included, whose
-// name matches the pattern name.
-func hasDir(root, name string) bool {
-	found := false
-	findWalk(root, false, 1<<30, func(e entry) bool {
-		ok, _ := path.Match(name, e.name)
-		found = found || (e.dir && ok)
-		return !found
-	}, nil)
-	return found
 }
