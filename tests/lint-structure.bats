@@ -404,11 +404,11 @@ $_LS15_BLOCK
   [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: could not scan"* ]]
 }
 
-@test "LS15-sync: build-module takes signblock.Parts; the Go signblock.Parts equals lib/signing-block.sh" {
-  # Mutation: LS15-sync -- re-inline a copy of the ERE table in preflight.sh, build.sh or a Go package, or change, drop or reorder
-  # an entry (pattern or row name) of the Go signblock.Parts -> this fails.
-  lib="$KIT/toolbelt/lib/signing-block.sh"
-  grep -q '^SIGN_BLOCK_ERE=(' "$lib"
+@test "LS15-sync: build-module takes signblock.Parts; go/internal/signblock holds the one signing-block table" {
+  # Mutation: LS15-sync -- re-inline a copy of the ERE table in preflight.sh, build.sh or a Go package, or drop an entry of
+  # the Go signblock.Parts -> this fails. (A changed or reordered entry fails go/internal/signblock TestPartsAreTheTable,
+  # which pins every name and pattern since the shell table toolbelt/lib/signing-block.sh was retired.)
+  [ ! -e "$KIT/toolbelt/lib/signing-block.sh" ]
   # build.sh is the launcher of go/cmd/build-module: its dev-key WARN reads entry [0] of the Go table and the
   # package compiles no signing-block pattern of its own.
   grep -q 'signblock\.Parts\[0\]' "$KIT/../go/internal/buildmodule/diagnose.go"
@@ -419,23 +419,16 @@ $_LS15_BLOCK
     run grep -q 'allowDefaultProfile\[\[:space:\]\]' "$KIT/toolbelt/$f"
     [ "$status" -ne 0 ]
   done
-  # The Go table (go/internal/signblock, read by lint-structure L15 and the preflight port) holds the same
-  # entries in the same order; no other Go package may keep a copy.
-  # shellcheck disable=SC1090
-  . "$lib"
+  # The Go table (go/internal/signblock, read by lint-structure L15, the preflight port and build-module) is the
+  # only one: no other Go source may keep a copy (the package's own test repeats it to pin it).
   go="$KIT/../go/internal/signblock/signblock.go"
-  run grep -rlF 'allowDefaultProfile[[:space:]]' "$KIT/../go/internal" --include='*.go'
+  run grep -rlF 'allowDefaultProfile[[:space:]]' "$KIT/../go/internal" --include='*.go' --exclude='signblock_test.go'
   [ "$output" = "$go" ] || { printf 'Go copies of the table outside signblock:\n%s\n' "$output"; false; }
   # shellcheck disable=SC2016  # the Go source's literal backquotes, not an expansion
   mapfile -t rows < <(sed -n '/^var Parts/,/^}$/p' "$go" |
     sed -n 's/^\t{"\(.*\)", regexp\.MustCompile(`\(.*\)`)},$/\1\t\2/p')
-  [ "${#rows[@]}" -eq "${#SIGN_BLOCK_ERE[@]}" ]
-  [ "${#rows[@]}" -eq "${#SIGN_BLOCK_NAME[@]}" ]
   [ "${#rows[@]}" -eq 4 ]
-  for k in "${!rows[@]}"; do
-    [ "${rows[$k]}" = "${SIGN_BLOCK_NAME[$k]}"$'\t'"${SIGN_BLOCK_ERE[$k]}" ] ||
-      { printf 'Parts[%s] = %s\nlib      = %s\t%s\n' "$k" "${rows[$k]}" "${SIGN_BLOCK_NAME[$k]}" "${SIGN_BLOCK_ERE[$k]}"; false; }
-  done
+  [[ "${rows[0]}" == 'allowDefaultProfile.set(false) (or = false)'$'\t'* ]]
 }
 
 # ---------------------------------------------------------------------------

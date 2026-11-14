@@ -2,12 +2,14 @@ package javasrc
 
 import (
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
 
-// The cases port tests/method-boundary.bats (MB1-MB9) and add edge cases; every input here is also
-// run through the awk lib by TestDifferentialAwk, so the expected values are awk's, not a guess.
+// The cases port the bats suite of the retired awk lib toolbelt/lib/method-boundary.sh (MB1-MB9, MB-e2e)
+// and add edge cases. While that lib existed every input here was also run through it under awk, mawk and
+// gawk --posix, and the dumps were equal byte for byte: the expected values are awk's, not a guess.
 
 type stripCase struct {
 	name     string
@@ -81,6 +83,26 @@ func TestStripEndState(t *testing.T) {
 	}
 	if _, got := Strip(nil); got != Closed {
 		t.Errorf("Strip(nil) state = %d, want Closed", got)
+	}
+}
+
+// MB-e2e: a class after a "/*" string keeps its code lines (805 here); read as a comment opener, the string
+// blanked the 801 lines after it and every lint on top of Strip failed open.
+// Mutation: MB-lit -- drop the literal state from Strip and this counts 3.
+func TestStripKeepsTheClassAfterACommentOpenerInAString(t *testing.T) {
+	src := []string{"package com.x;", "public class Glob {", `  String g = "/*";`}
+	for i := 1; i <= 801; i++ {
+		src = append(src, "  int f"+strconv.Itoa(i)+";")
+	}
+	stripped, state := Strip(append(src, "}"))
+	code := 0
+	for _, ln := range stripped {
+		if strings.TrimSpace(ln) != "" {
+			code++
+		}
+	}
+	if code != 805 || state != Closed || len(stripped) != 805 {
+		t.Errorf("%d code lines of %d, state %d; want 805 of 805, Closed", code, len(stripped), state)
 	}
 }
 
@@ -207,7 +229,7 @@ var methodsCases = []methodsCase{
 }
 
 // goOnlyMethodsCases are the declared differences of Methods from mb_parse (package doc): TestMethods runs
-// them, TestDifferentialAwk does not feed them to the awk lib.
+// them; they were never among the inputs compared with the awk lib.
 var goOnlyMethodsCases = []methodsCase{
 	{"a body ends where its own brace closes, not the deepest block of its first line", `class B {
   void x() { if (a) {
