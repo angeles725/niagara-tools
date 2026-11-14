@@ -60,10 +60,11 @@ jobs:
         run: npm ci --prefix build-n4-module-kit/toolbelt/eslint --ignore-scripts --no-audit --no-fund
 
       - name: Go gofmt + vet + test (go/)
-        env:
-          KIT_REQUIRE_JS_TOOLS: "1"
         run: |
           cd go
+          # A missing node or acorn fails the vendorfloor tests instead of skipping them (set here, not as step env:
+          # ci-local replays the run text only).
+          export KIT_REQUIRE_JS_TOOLS=1
           # The assignment fails the step when gofmt itself fails; a non-empty list fails it too.
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
