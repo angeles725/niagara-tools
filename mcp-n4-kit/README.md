@@ -83,8 +83,7 @@ scripts/install-skill.sh --skill mcp-n4
   (plain HTTP, tests only).
 - `tests/fixtures/`: recorded station answers (BQL CSVs, a Px view), a journal the Python server
   wrote, and the frozen answers of the removed Python server (`oracles/`) that Go tests read.
-- `tests/fake_station.py`: the retired Python fake station, kept only while
-  `box.TestTheFakeStationSharesTheComponentTypeTable` reads its `COMPONENT_TYPES` table.
+  The kit has no Python code left.
 
 Security defaults: `http://` is refused unless `allow_http=True` (tests only),
 the password is never in `repr`, and HTTP 401/403 raises `AuthError` with no
