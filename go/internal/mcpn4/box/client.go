@@ -60,6 +60,7 @@ type Client struct {
 	dropped          int
 	loadsOutstanding int
 	handles          handleCache
+	types            *pyjson.Object // LoadTypes: every type entry the station sent, by spec
 }
 
 // New is BoxClient(...): it refuses an http:// URL unless AllowHTTP, and any other scheme,

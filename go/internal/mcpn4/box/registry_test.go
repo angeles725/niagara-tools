@@ -41,3 +41,33 @@ func TestLoadTypesSendsOneRegistryFrameWithContracts(t *testing.T) {
 		t.Errorf("reply = %s", reply)
 	}
 }
+
+// Types do not change within a session: a request whose specs are all cached (requested before or
+// sent as a dependency) is answered without a second registry call.
+func TestLoadTypesAnswersCachedSpecsWithoutASecondCall(t *testing.T) {
+	calls := 0
+	st := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		v, _ := pyjson.Unmarshal(body)
+		n, _ := v.(*pyjson.Object).Get("n")
+		calls++
+		w.Write([]byte(`{"p":"box","v":"2.3","n":` + n.(pyjson.Number).String() +
+			`,"m":[{"r":0,"t":"rt","c":"reg","k":"loadTypes","b":{"a:B":{"c":[],"p":"a:A"},"a:A":{}}}]}`))
+	}))
+	t.Cleanup(st.Close)
+	c := newClient(t, st.URL, nil)
+	if _, err := c.LoadTypes([]string{"a:B"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := c.LoadTypes([]string{"a:A", "a:B"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Errorf("calls = %d, want 1", calls)
+	}
+	reply, _ := pyjson.Marshal(got, pyjson.Options{})
+	if string(reply) != `{"a:B": {"c": [], "p": "a:A"}, "a:A": {}}` {
+		t.Errorf("reply = %s", reply)
+	}
+}

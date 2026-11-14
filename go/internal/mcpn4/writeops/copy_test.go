@@ -1,6 +1,7 @@
 package writeops_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -33,12 +34,29 @@ func gwTree() *pyjson.Object {
 		points})
 }
 
-func copyClient(tree *pyjson.Object, parentKids ...any) *loads {
+// copyClient loads tree as the device Gw under net and answers the registry channel with the
+// contracts of testdata/copy-contracts.json (the real flags of each slot).
+func copyClient(t *testing.T, tree *pyjson.Object, parentKids ...any) *typed {
+	t.Helper()
 	parent := obj("", obj("h", "10", "t", "modbusAsync:ModbusAsyncNetwork"), "Gw", obj("h", "20", "t", "modbusAsync:ModbusAsyncDevice"))
 	for i := 0; i < len(parentKids); i += 2 {
 		parent.Set(parentKids[i].(string), parentKids[i+1])
 	}
-	return &loads{nodes: obj(net, parent, net+"/Gw", obj("", tree))}
+	return &typed{loads: loads{nodes: obj(net, parent, net+"/Gw", obj("", tree))}, types: fixture(t, "copy-contracts.json")}
+}
+
+// fixture is testdata/name parsed.
+func fixture(t *testing.T, name string) any {
+	t.Helper()
+	data, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := pyjson.Unmarshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v
 }
 
 func copyArgs(names ...any) *pyjson.Object {
@@ -46,7 +64,7 @@ func copyArgs(names ...any) *pyjson.Object {
 }
 
 func TestACopyAddsTheConfiguredSubtreeOncePerNewNameWithoutRuntimeSlots(t *testing.T) {
-	p, err := writeops.CopyComponent.Plan(copyClient(gwTree()), copyArgs("Gw3", "Gw4"))
+	p, err := writeops.CopyComponent.Plan(copyClient(t, gwTree()), copyArgs("Gw3", "Gw4"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +100,7 @@ func TestACopyRefusesBadNamesAndAMissingSource(t *testing.T) {
 		{copyArgs("Gw"), "a child named 'Gw' already exists under " + net},
 		{obj("parent_ord", net, "name", "Ghost", "new_names", []any{"X"}), "component 'Ghost' not found under " + net},
 	} {
-		if _, err := writeops.CopyComponent.Plan(copyClient(gwTree()), tc.args); err == nil || err.Error() != tc.want {
+		if _, err := writeops.CopyComponent.Plan(copyClient(t, gwTree()), tc.args); err == nil || err.Error() != tc.want {
 			t.Errorf("%s: err = %v, want %q", js(t, tc.args), err, tc.want)
 		}
 	}
@@ -100,7 +118,7 @@ func TestACopyRefusesASubtreeDeeperThanItCanCapture(t *testing.T) {
 	}
 	kids, _ := tree.Get("s")
 	tree.Set("s", append(kids.([]any), deep))
-	_, err := writeops.CopyComponent.Plan(copyClient(tree), copyArgs("Gw3"))
+	_, err := writeops.CopyComponent.Plan(copyClient(t, tree), copyArgs("Gw3"))
 	if err == nil || !strings.Contains(err.Error(), "deeper than the copy depth") {
 		t.Errorf("err = %v", err)
 	}
@@ -113,7 +131,7 @@ func TestACopyNotesThatLinksAreNotCopied(t *testing.T) {
 	tree.Set("s", append(kids.([]any), obj("nm", "p", "n", "Link", "t", "baja:Link", "s", []any{
 		obj("nm", "p", "n", "sourceOrd", "v", "h:30"), obj("nm", "p", "n", "sourceSlotName", "v", "out"),
 		obj("nm", "p", "n", "targetSlotName", "v", "x")})))
-	p, err := writeops.CopyComponent.Plan(copyClient(tree), copyArgs("Gw3"))
+	p, err := writeops.CopyComponent.Plan(copyClient(t, tree), copyArgs("Gw3"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +145,7 @@ func TestACopyNotesThatLinksAreNotCopied(t *testing.T) {
 
 // The read-back finds each copy under its assigned name with the source type; a missing copy is a mismatch.
 func TestACopyReadBackChecksEveryCopyUnderItsAssignedName(t *testing.T) {
-	c := copyClient(gwTree())
+	c := copyClient(t, gwTree())
 	args := copyArgs("Gw3", "Gw4")
 	p, err := writeops.CopyComponent.Plan(c, args)
 	if err != nil {
@@ -140,6 +158,8 @@ func TestACopyReadBackChecksEveryCopyUnderItsAssignedName(t *testing.T) {
 	}
 	c.nodes.Set(net, obj("", obj("h", "10"), "Gw", obj("t", "modbusAsync:ModbusAsyncDevice"),
 		"Gw3", obj("t", "modbusAsync:ModbusAsyncDevice"), "Gw4", obj("t", "modbusAsync:ModbusAsyncDevice")))
+	c.nodes.Set(net+"/Gw3", obj("", gwTree()))
+	c.nodes.Set(net+"/Gw4", obj("", gwTree()))
 	if _, _, _, v, err := writeops.CopyComponent.Readback(c, args, p, replies, inverse); err != nil || v != "verified" {
 		t.Errorf("verdict = %q, %v", v, err)
 	}
@@ -156,10 +176,11 @@ func TestACopyReadBackChecksEveryCopyUnderItsAssignedName(t *testing.T) {
 func TestACopyLeavesOutChildrenTheLoadListsWithoutAType(t *testing.T) {
 	tree := gwTree()
 	kids, _ := tree.Get("s")
-	tree.Set("s", append(kids.([]any), obj("nm", "p", "n", "upload"), obj("nm", "p", "n", "download"),
-		obj("nm", "p", "n", "absoluteAddress", "t", "modbusCore:FlexAddress", "s", []any{
-			obj("nm", "p", "n", "address", "t", "baja:String", "v", "40005")})))
-	p, err := writeops.CopyComponent.Plan(copyClient(tree), copyArgs("Gw3"))
+	tree.Set("s", append(kids.([]any), obj("nm", "p", "n", "upload"), obj("nm", "p", "n", "download")))
+	// absoluteAddress lives on the proxy extension, whose type declares it readonly and transient.
+	addKids(under(tree, "points/Setpoint/proxyExt"), obj("nm", "p", "n", "absoluteAddress", "t", "modbusCore:FlexAddress", "s", []any{
+		obj("nm", "p", "n", "address", "t", "baja:String", "v", "40005")}))
+	p, err := writeops.CopyComponent.Plan(copyClient(t, tree), copyArgs("Gw3"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +190,7 @@ func TestACopyLeavesOutChildrenTheLoadListsWithoutAType(t *testing.T) {
 	}
 }
 
-// An alarm extension's state slots are runtime: timeInCurrentState ticks every few seconds, so
+// An alarm extension's state slots are runtime (their contract flags, testdata/copy-contracts.json): timeInCurrentState ticks every few seconds, so
 // copying it made every dry run a different plan and the confirmation token never matched
 // (client A, 2026-11-13). alarmState, ackedTransitions and the transition timestamps are the
 // source's alarm history, not configuration. Config such as offnormalAlgorithm/alarmValue stays.
@@ -184,7 +205,7 @@ func TestACopyLeavesOutAlarmExtensionState(t *testing.T) {
 		obj("nm", "p", "n", "toFaultTimes", "t", "alarm:AlarmTimestamps", "v", "x"),
 		obj("nm", "p", "n", "offnormalAlgorithm", "t", "alarm:BooleanChangeOfStateAlgorithm", "s", []any{
 			obj("nm", "p", "n", "alarmValue", "t", "baja:Boolean", "v", "true")})})))
-	p, err := writeops.CopyComponent.Plan(copyClient(tree), copyArgs("Gw3"))
+	p, err := writeops.CopyComponent.Plan(copyClient(t, tree), copyArgs("Gw3"))
 	if err != nil {
 		t.Fatal(err)
 	}

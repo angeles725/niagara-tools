@@ -15,7 +15,7 @@ func TestACopyReadsASourceWhoseNameHasStationEscapes(t *testing.T) {
 	tree := obj("h", "40", "t", "control:NumericWritable", "s", []any{
 		obj("nm", "p", "n", "fallback", "t", "baja:StatusNumeric", "s", []any{obj("nm", "p", "n", "value", "v", "0.0")})})
 	parent := obj("", obj("h", "10", "t", "baja:Folder"), src, obj("h", "40", "t", "control:NumericWritable"))
-	c := &loads{nodes: obj(net, parent, net+"/"+src, obj("", tree))}
+	c := &typed{loads: loads{nodes: obj(net, parent, net+"/"+src, obj("", tree))}, types: fixture(t, "copy-contracts.json")}
 	p, err := writeops.CopyComponent.Plan(c, obj("parent_ord", net, "name", src, "new_names", []any{"FanSpeed"}))
 	if err != nil {
 		t.Fatal(err)

@@ -11,7 +11,8 @@ import (
 
 // CopyComponent is n4_copy_component: the configuration of one child of parent_ord (type, plain
 // slots and child components, CopyDepth levels deep) added again under each new name, all in one
-// batch under one confirmation token. Runtime slots and links are not copied. The inverse removes
+// batch under one confirmation token. Slots flagged readonly, transient, default-on-clone or
+// remove-on-clone (stripFlags) and links are not copied; the plan lists them. The inverse removes
 // every copy under the name the station assigned.
 var CopyComponent = plan.Impl{ScopeOrds: copyScope, Plan: copyPlan, Inverse: copyInverse, Readback: copyReadback}
 
@@ -23,22 +24,11 @@ const (
 	maxCopies = 30
 )
 
-// copyRuntimeSlots are slots the driver or the control engine computes; a copy starts without
-// them so it never shows the source's state (a down status, a failed ping) as its own.
-// absoluteAddress is a Modbus proxy's read-only transient address (flags 3), derived by the driver
-// from dataAddress (modbusCore BModbusClientProxyExt). An alarm extension's state is runtime too
-// (alarm BAlarmSourceExt): timeInCurrentState ticks, so copying it changed the plan between the
-// dry run and the execution; alarmState, ackedTransitions and the transition timestamps are the
-// source's alarm history.
-var copyRuntimeSlots = map[string]bool{"status": true, "health": true, "faultCause": true,
-	"readValue": true, "writeValue": true, "absoluteAddress": true,
-	"timeInCurrentState": true, "alarmState": true, "ackedTransitions": true,
-	"toOffnormalTimes": true, "toFaultTimes": true}
-
 type copyData struct {
 	parent     any
 	sourceType any
 	names      []string
+	body       *pyjson.Object // the configured subtree each copy must hold
 }
 
 func copyScope(args *pyjson.Object) []any { return []any{str(args, "parent_ord")} }
@@ -80,20 +70,21 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		return nil, plan.ToolError(pyjson.StrRepr(source) + " is deeper than the copy depth (" +
 			strconv.Itoa(CopyDepth) + " levels): a copy would miss part of it; copy a smaller component")
 	}
-	s := &snapshot{handles: map[string]string{}}
-	body, err := s.take(root, "", CopyDepth)
+	ct, err := copyContracts(c, root)
 	if err != nil {
 		return nil, err
 	}
-	body = stripRuntime(body)
+	body, stripped, s, err := configured(ct, root)
+	if err != nil {
+		return nil, err
+	}
 	ops, inverse := []any{}, []any{}
 	for _, n := range names {
 		ops = append(ops, obj("nm", "a", "h", parentH, "n", n, "b", body))
 		inverse = append(inverse, obj("nm", "v", "h", parentH, "n", n))
 	}
-	notes := []any{"Each copy starts without runtime slots (status, health, out, read and write values); " +
-		"the driver fills them once the copy runs.",
-		"The station may rename on collision; the real inverse uses the assigned name."}
+	notes := append(strippedNotes(stripped),
+		"The station may rename on collision; the real inverse uses the assigned name.")
 	if len(s.links) > 0 {
 		notes = append(notes, strconv.Itoa(len(s.links))+" link(s) inside "+pyjson.StrRepr(source)+
 			" are not copied: create them on each copy with n4_create_link")
@@ -101,7 +92,7 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, parentH)
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: targets,
-		Data: copyData{parentH, get(root, "t"), names}}, nil
+		Data: copyData{parentH, get(root, "t"), names, body}}, nil
 }
 
 // copyNames validates new_names: 1 to maxCopies distinct plain slot names.
@@ -137,76 +128,4 @@ func treeDepth(node *pyjson.Object) int {
 		}
 	}
 	return deepest
-}
-
-// stripRuntime is body without copyRuntimeSlots, at every level, and without children the load
-// lists by name only (nameOnly) (actions such as upload, frozen slots at their default such as regType):
-// an add op child without a type is not a value, and the copy's type supplies those slots.
-func stripRuntime(body *pyjson.Object) *pyjson.Object {
-	out := pyjson.NewObject()
-	for _, k := range body.Keys() {
-		v, _ := body.Get(k)
-		if k != "s" {
-			out.Set(k, v)
-			continue
-		}
-		kept := []any{}
-		for _, c := range v.([]any) {
-			kid := c.(*pyjson.Object)
-			if n, _ := get(kid, "n").(string); !copyRuntimeSlots[n] && !nameOnly(kid) {
-				kept = append(kept, stripRuntime(kid))
-			}
-		}
-		if len(kept) > 0 {
-			out.Set("s", kept)
-		}
-	}
-	return out
-}
-
-// nameOnly is a loaded child with no type, value or children: an action or a frozen slot at its
-// default, listed by name only.
-func nameOnly(kid *pyjson.Object) bool {
-	return get(kid, "t") == nil && get(kid, "v") == nil && get(kid, "s") == nil
-}
-
-// copyInverse removes each copy under the name its reply assigned ("nn"), else the requested one.
-func copyInverse(p *plan.Planned, replies []any) ([]any, error) {
-	d := p.Data.(copyData)
-	out := []any{}
-	for i := range replies {
-		nn := any(d.names[i])
-		if first, ok := replies[i].([]any); ok && len(first) > 0 {
-			if reply, ok := first[0].(*pyjson.Object); ok {
-				if v, ok := reply.Get("nn"); ok {
-					nn = v
-				}
-			}
-		}
-		out = append(out, obj("nm", "v", "h", d.parent, "n", nn))
-	}
-	return out, nil
-}
-
-// copyReadback finds every copy under its assigned name with the source's type.
-func copyReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, inverse []any) (any, any, any, string, error) {
-	d := p.Data.(copyData)
-	_, nodes, err := plan.Handle(c, str(args, "parent_ord"), 1)
-	if err != nil {
-		return nil, nil, nil, "", err
-	}
-	requested, observed, verdict := []any{}, []any{}, "verified"
-	for i := range d.names {
-		nn, _ := get(inverse[i].(*pyjson.Object), "n").(string)
-		requested = append(requested, obj("name", nn, "type", d.sourceType))
-		var t any
-		if n := box.Node(nodes, nn); n != nil {
-			t = get(n, "t")
-		}
-		observed = append(observed, obj("name", nn, "type", t))
-		if !box.PyEqual(t, d.sourceType) {
-			verdict = "mismatch"
-		}
-	}
-	return requested, replies, observed, verdict, nil
 }
