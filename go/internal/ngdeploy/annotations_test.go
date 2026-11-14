@@ -89,7 +89,7 @@ var cannotDetect = map[string]struct {
 	"no repository": {func(f *fixture) { f.t.Setenv("FAKE_GIT_NOREPO", "1") }, "[ng-deploy] NOTICE: not a git repository; skipping annotation change detection\n"},
 	"diff fails":    {func(f *fixture) { f.t.Setenv("FAKE_GIT_DIFF_EXIT", "128") }, ""},
 	"unreadable baseline": {func(f *fixture) {
-		f.write(f.work+"/.last-deploy-sha", "cafe01\n")
+		f.write(f.work+"/.last-deploy-sha", recordedCommit+"\n")
 		f.chmod(f.work+"/.last-deploy-sha", 0o000)
 	}, ""},
 }
@@ -118,11 +118,17 @@ func TestStrictModeRefusesWhenDetectionCannotRun(t *testing.T) {
 	}
 }
 
+// recordedCommit is a .last-deploy-sha as a deploy writes it: the full object name git rev-parse HEAD prints.
+const recordedCommit = "cafe01cafe01cafe01cafe01cafe01cafe01cafe"
+
 func TestTheDiffStartsAtTheLastDeployedCommitWhenItIsOne(t *testing.T) {
+	fromRecord := "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <" + recordedCommit + "^{commit}>\ngit <diff> <" + recordedCommit + "..HEAD> <--> <*/src/com/**/*.java>\n"
+	sha256 := strings.Repeat("0123456789abcdef", 4)
 	for _, tc := range []struct{ name, file, catFile, want string }{
-		{"a commit", "cafe01\n", "", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <cafe01^{commit}>\ngit <diff> <cafe01..HEAD> <--> <*/src/com/**/*.java>\n"},
-		{"trailing blank lines", "cafe01\n\n\n", "", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <cafe01^{commit}>\ngit <diff> <cafe01..HEAD> <--> <*/src/com/**/*.java>\n"},
-		{"not a commit", "cafe01\n", "1", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <cafe01^{commit}>\ngit <diff> <HEAD~1..HEAD> <--> <*/src/com/**/*.java>\n"},
+		{"a commit", recordedCommit + "\n", "", fromRecord},
+		{"trailing blank lines", recordedCommit + "\n\n\n", "", fromRecord},
+		{"a sha-256 commit", sha256 + "\n", "", strings.ReplaceAll(fromRecord, recordedCommit, sha256)},
+		{"not a commit", recordedCommit + "\n", "1", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <" + recordedCommit + "^{commit}>\ngit <diff> <HEAD~1..HEAD> <--> <*/src/com/**/*.java>\n"},
 		{"an empty file", "", "", gitDiffCalls},
 	} {
 		f := newFixture(t)
@@ -131,8 +137,8 @@ func TestTheDiffStartsAtTheLastDeployedCommitWhenItIsOne(t *testing.T) {
 			t.Setenv("FAKE_GIT_CAT_FILE_EXIT", tc.catFile)
 		}
 		f.want(f.run("--no-backup", "--no-deploy"), ExitOK)
-		if !strings.HasPrefix(f.calls(), tc.want+"gradlew") {
-			t.Errorf("%s: calls %q", tc.name, f.calls())
+		if !strings.HasPrefix(f.calls(), tc.want+"gradlew") || f.err != warnNoBackup {
+			t.Errorf("%s: stderr %q, calls %q", tc.name, f.err, f.calls())
 		}
 	}
 }

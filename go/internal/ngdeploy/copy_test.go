@@ -48,37 +48,15 @@ func TestAFailedCopyExits40NamingTheJar(t *testing.T) {
 	}
 }
 
+// A deploy that could record its commit is unchanged: the full object name git printed, one line, exit 0.
 func TestADeployRecordsTheDeployedCommit(t *testing.T) {
 	f := newFixture(t)
-	f.write(f.work+"/.last-deploy-sha", "older\n")
-	t.Setenv("FAKE_GIT_HEAD", "abc123")
+	f.write(f.work+"/.last-deploy-sha", strings.Repeat("0", 40)+"\n") // the record of an older deploy
+	t.Setenv("FAKE_GIT_HEAD", recordedCommit)
 	f.want(f.run("--no-backup", "--mode", "C"), ExitOK)
-	if got := f.read(f.work + "/.last-deploy-sha"); got != "abc123\n" || !strings.HasSuffix(f.calls(), "git <rev-parse> <HEAD>\n") {
-		t.Errorf(".last-deploy-sha %q, calls:\n%s", got, f.calls())
+	if got := f.read(f.work + "/.last-deploy-sha"); got != recordedCommit+"\n" || !strings.HasSuffix(f.calls(), "git <rev-parse> <HEAD>\n") || f.err != warnNoBackup {
+		t.Errorf(".last-deploy-sha %q, stderr %q, calls:\n%s", got, f.err, f.calls())
 	}
-}
-
-// Kept from the bash tool: the record is not critical, so a git that fails or is absent, or a file that
-// cannot be written, leaves the deploy a success.
-func TestADeployWithoutACommitToRecordStillSucceeds(t *testing.T) {
-	f := newFixture(t)
-	t.Setenv("FAKE_GIT_HEAD_EXIT", "128")
-	f.want(f.run("--no-backup", "--mode", "C"), ExitOK, "[ng-deploy] copy ok\n")
-	if f.exists(f.work + "/.last-deploy-sha") {
-		t.Error("a failed git rev-parse wrote .last-deploy-sha")
-	}
-	f = newFixture(t)
-	if err := os.Remove(f.bin + "/git"); err != nil {
-		t.Fatal(err)
-	}
-	f.want(f.run("--no-backup", "--mode", "C"), ExitOK, "[ng-deploy] station restart required")
-	if f.exists(f.work + "/.last-deploy-sha") {
-		t.Error("a deploy without git wrote .last-deploy-sha")
-	}
-	f = newFixture(t)
-	f.mkdir(f.work + "/.last-deploy-sha")
-	f.want(f.run("--no-backup", "--mode", "C"), ExitOK, "[ng-deploy] station restart required",
-		"err:ng-deploy.sh: "+f.work+"/.last-deploy-sha: Is a directory\n")
 }
 
 func TestAFailedCheckDoesNotRecordTheCommit(t *testing.T) {

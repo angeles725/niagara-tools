@@ -68,8 +68,9 @@ func (d *deploy) detectAnnotationChanges() detection {
 }
 
 // baseline is the commit the last deploy recorded in .last-deploy-sha when git knows it as a commit, else
-// HEAD~1. known is false when a record is there but cannot be read: the diff then starts at HEAD~1 as
-// under bash, and may miss older changes.
+// HEAD~1. known is false when a record is there but cannot be read, or holds something other than a full
+// object name (a notice says so, and the text never reaches git, which would read a leading "-" as an
+// option): the diff then starts at HEAD~1 and may miss older changes.
 func (d *deploy) baseline() (base string, known bool) {
 	is, err := regular(lastDeployFile)
 	if err != nil || !is {
@@ -79,8 +80,14 @@ func (d *deploy) baseline() (base string, known bool) {
 	if err != nil {
 		return fallbackBaseline, false
 	}
-	if candidate := strings.TrimRight(string(text), "\n"); candidate != "" &&
-		d.run(io.Discard, io.Discard, "git", "cat-file", "-e", candidate+"^{commit}") == 0 {
+	candidate := strings.TrimRight(string(text), "\n")
+	switch {
+	case candidate == "":
+		return fallbackBaseline, true
+	case !objectName.MatchString(candidate):
+		d.warn(noticeBadRecord, lastDeployFile, fallbackBaseline)
+		return fallbackBaseline, false
+	case d.run(io.Discard, io.Discard, "git", "cat-file", "-e", candidate+"^{commit}") == 0:
 		return candidate, true
 	}
 	return fallbackBaseline, true

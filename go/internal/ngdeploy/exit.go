@@ -1,6 +1,6 @@
 package ngdeploy
 
-// Exit codes of ng-deploy.sh (unchanged from the bash tool; its usage text lists them).
+// Exit codes of ng-deploy.sh; usage.txt lists them for the operator. The bash tool had all but 21 and 41.
 const (
 	ExitOK             = 0  // deployed, built with --no-deploy, or --help / --version
 	ExitFault          = 1  // a step the deploy cannot go on without failed (the backup directory, a jar with no type entry)
@@ -10,6 +10,7 @@ const (
 	ExitBackup         = 20 // the backup failed
 	ExitBuild          = 30 // gradlew failed
 	ExitCopy           = 40 // a jar could not be copied to the station
+	ExitRecord         = 41 // the jars were copied, but the deployed commit could not be read or recorded
 	ExitVerify         = 50 // type count, cache-buster or verify-module gate
 	ExitVersionSame    = 51 // changed jar bytes under an unchanged vendorVersion
 	ExitVersionUnknown = 52 // the version-bump precheck cannot verify
