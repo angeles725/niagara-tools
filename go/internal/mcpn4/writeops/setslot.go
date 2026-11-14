@@ -62,6 +62,9 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
+	if nodes, err = plan.Resolve(c, nodes, slot); err != nil {
+		return nil, err
+	}
 	node := box.Node(nodes, slot)
 	if node == nil {
 		return nil, plan.ToolError("slot " + pyjson.StrRepr(slot) + " not found on " + ordText + ". The station " +
@@ -110,6 +113,9 @@ func setSlotReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replie
 	slot, valueType := str(args, "slot"), str(args, "value_type")
 	_, nodes, err := plan.Handle(c, str(args, "ord"), slotDepth(slot))
 	if err != nil {
+		return nil, nil, nil, "", err
+	}
+	if nodes, err = plan.Resolve(c, nodes, slot); err != nil {
 		return nil, nil, nil, "", err
 	}
 	observed, err := plan.Observe(nodes, slot, valueType)

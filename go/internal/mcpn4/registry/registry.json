@@ -449,7 +449,7 @@
   },
   {
    "name": "n4_set_slot",
-   "description": "Set one slot to a value. Status slots are always written whole (value and status). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Set one slot to a value. Status slots are always written whole (value and status). A slot the station omits because it holds its type default is typed from the station's type definition (registry channel), so a default-valued property such as a history extension's enabled, historyName or interval can be set. A nested slot is a path from ord (grp/sp). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -459,20 +459,22 @@
      },
      "slot": {
       "type": "string",
-      "description": "Slot name; must exist"
+      "description": "Slot name, or a path of slot names separated by / for a nested slot; must be listed by the station or declared by its type"
      },
      "value": {
-      "description": "New value (number, boolean or string by value_type)"
+      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes)"
      },
      "value_type": {
       "type": "string",
-      "description": "One of baja:Double, baja:Boolean, baja:String, baja:StatusNumeric, baja:StatusBoolean",
+      "description": "One of baja:Double, baja:Boolean, baja:String, baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime",
       "enum": [
        "baja:Double",
        "baja:Boolean",
        "baja:String",
        "baja:StatusNumeric",
-       "baja:StatusBoolean"
+       "baja:StatusBoolean",
+       "baja:Format",
+       "baja:RelTime"
       ]
      },
      "status": {
