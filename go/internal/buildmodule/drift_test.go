@@ -86,23 +86,6 @@ func TestDriftOutranksCannotVerify(t *testing.T) {
 	}
 }
 
-// TestUnlistableJarCannotBeVerified: with an unzip that fails, or lists nothing, the jars are never "equal".
-func TestUnlistableJarCannotBeVerified(t *testing.T) {
-	for name, unzip := range map[string]string{"unzip fails": "exit 9", "unzip lists nothing": "exit 0"} {
-		f := newFixture(t)
-		f.jar(f.deployed("rt"), "1.0.0", "same")
-		f.jar(f.built("rt"), "1.0.0", "same")
-		f.write(f.dir+"/bin/unzip", "#!/usr/bin/env bash\n"+unzip+"\n")
-		if err := os.Chmod(f.dir+"/bin/unzip", 0o755); err != nil {
-			t.Fatal(err)
-		}
-		t.Setenv("PATH", f.dir+"/bin:"+os.Getenv("PATH"))
-		f.wants(name, f.build(), ExitDriftUnknown,
-			"build.sh: FAIL — drift gate cannot verify Foo-rt: cannot list the jar content (unzip missing or failing, or an unreadable jar).\n",
-			"build.sh: deployed-baseline drift gate could not verify the jar(s) above")
-	}
-}
-
 // TestFailedRestoreSaysWhatModulesHolds: a restore that fails names cp's reason and tells a modules/ jar
 // that is still the pre-build one from one that is not.
 func TestFailedRestoreSaysWhatModulesHolds(t *testing.T) {

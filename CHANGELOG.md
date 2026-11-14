@@ -8,6 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+### Fixed — the build-module drift gate hashes entry names and sizes, and refuses an unreadable entry
+
+- The deployed-baseline content hash now covers each non-META-INF entry's name and size as well as its bytes,
+  so bytes moved between entries or a renamed entry at an unchanged vendorVersion are drift (exit 51), no longer
+  a silent pass. An entry that fails its CRC or cannot be decompressed makes the gate "cannot verify" (exit 52);
+  before, the bytes `unzip -p` did print were hashed and two equally damaged jars passed. The jar is read with
+  Go's archive/zip, so the gate no longer runs `unzip`; the "cannot verify" reason now reads `cannot read the jar
+  content (not a readable zip, no entry, or an entry that fails its CRC)`. Retro
+  `2026-11-14-go-build-module-port` Δ5 (and the zip-listing part of Δ3).
+
 ### Fixed — build-module detects the scaffold's plugin-version default
 
 - `build-module` now reads the `niagaraPluginVersion` default from the form the scaffold emits,
