@@ -143,7 +143,7 @@ func TestAModuleRootThatCannotBeEnteredIsRefused(t *testing.T) {
 	if err := os.Chmod(f.dir+"/locked", 0); err != nil {
 		t.Fatal(err)
 	}
-	if code := f.run("--install-into-home", f.dir+"/locked", "Foo", f.home); code != ExitEnv || f.err != "build.sh: cannot resolve module root: \n" {
+	if code := f.run("--install-into-home", f.dir+"/locked", "Foo", f.home); code != ExitEnv || f.err != "build.sh: cannot enter module root: "+f.dir+"/locked\n" {
 		t.Errorf("exit %d stderr %q", code, f.err)
 	}
 }
