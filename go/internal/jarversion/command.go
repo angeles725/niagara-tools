@@ -41,7 +41,7 @@ func Main(args []string, s cli.Stdio) int {
 }
 
 // scan prints one FAIL row per jar with a Java 9+ sampled class and returns ExitFail when it printed any.
-// A jar that cannot be checked in full is named on stderr ("cannot scan", as lib/awk-lint.sh words it)
+// A jar that cannot be checked in full is named on stderr ("cannot scan", as the former lib/awk-lint.sh worded it)
 // and sets scanErr; the scan goes on.
 func scan(jars []string, s cli.Stdio) (code int, scanErr bool) {
 	code = ExitOK

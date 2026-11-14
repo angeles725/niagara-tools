@@ -414,7 +414,7 @@ func TestRunUnlistableDirMixed(t *testing.T) {
 }
 
 // TestWalkErrorText pins the bytes GNU find 4.9 prints for a directory it cannot read under LC_ALL=C
-// (awk-lint.sh): always quoted; \' and \\; C escapes for \a \b \f \n \r \t \v; 3-digit octal for any
+// (the former awk-lint.sh): always quoted; \' and \\; C escapes for \a \b \f \n \r \t \v; 3-digit octal for any
 // other control byte and every byte from 0x80. Every row was measured on real directories.
 func TestWalkErrorText(t *testing.T) {
 	for path, want := range map[string]string{

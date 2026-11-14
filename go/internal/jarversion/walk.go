@@ -8,7 +8,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
-// ListJars lists the regular files named *.jar under root the way lib/scan-files.sh does with
+// ListJars lists the regular files named *.jar under root the way the former bash lib lib/scan-files.sh did with
 // `find -H <root> -mindepth 1 \( -type d \( -name '.*' -o -name build \) -prune \) -o -type f -name '*.jar' -print`
 // (LC_ALL=C sort): every sub-directory named build or starting with a dot is pruned (the root
 // itself never is), a symlinked root is followed (issue #329) but symlinks below it are neither listed
