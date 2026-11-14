@@ -57,7 +57,7 @@ func (b *build) snapshotBaseline() int {
 // its size and its bytes, so bytes moved between entries or a renamed entry change the hash. META-INF/*
 // (module.xml buildMillis, MANIFEST.MF, signatures) is excluded on purpose: those bytes change on every
 // rebuild even when nothing shipped changed. ok is false when the jar is not a readable zip, holds no entry,
-// or one of its entries cannot be read in full (a CRC or decompression error): two unreadable jars would
+// holds two entries under one name, or one of its entries cannot be read in full (a CRC or decompression error): two unreadable jars would
 // hash EQUAL and the gate would silently pass, so that is "cannot verify", never "unchanged". A jar holding
 // only META-INF entries reads fine and hashes its (empty) payload (#226).
 func (b *build) contentHash(jar string) (hash string, ok bool) {
@@ -70,7 +70,12 @@ func (b *build) contentHash(jar string) (hash string, ok bool) {
 		return "", false
 	}
 	var payload []*zip.File
+	seen := map[string]bool{}
 	for _, entry := range zr.File {
+		if seen[entry.Name] {
+			return "", false // two entries under one name: which one ships is the reader's choice
+		}
+		seen[entry.Name] = true
 		if !strings.HasPrefix(entry.Name, "META-INF/") {
 			payload = append(payload, entry)
 		}

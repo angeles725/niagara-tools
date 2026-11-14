@@ -99,7 +99,7 @@ const (
 // Deployed-baseline drift gate. %s after "verify" / "WARN —" is the module-profile name.
 const (
 	msgCannotVerify = "build.sh: FAIL — drift gate cannot verify %s: %s."
-	whyUnlistable   = "cannot read the jar content (not a readable zip, no entry, or an entry that fails its CRC)"
+	whyUnlistable   = "cannot read the jar content (not a readable zip, no entry, a duplicate entry name, or an entry that fails its CRC)"
 	whyNoVersion    = "shipped bytes changed but the module's own vendorVersion is unreadable (old='%s' new='%s')"
 	msgWentDown     = "build.sh: WARN — %[1]s vendorVersion went down (%[2]s -> %[3]s) versus the deployed jar; fine for a deliberate rollback, otherwise bump defaultModuleVersion above %[2]s."
 	msgDrift        = "build.sh: FAIL — %[1]s shipped bytes changed but vendorVersion is still %[2]s.\n" +

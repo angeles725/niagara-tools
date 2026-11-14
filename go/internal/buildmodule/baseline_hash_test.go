@@ -44,7 +44,8 @@ func TestContentHashCoversNamesAndSizes(t *testing.T) {
 }
 
 // TestUnreadableEntryCannotBeVerified: an entry whose bytes fail their CRC is "cannot verify" (exit 52), even
-// when the deployed jar is the same damaged file; a file that is not a zip, or a zip with no entry, too.
+// when the deployed jar is the same damaged file; a file that is not a zip, a zip with no entry, or one with
+// two entries under one name (unzip -p printed both; which one a class loader reads is its choice), too.
 func TestUnreadableEntryCannotBeVerified(t *testing.T) {
 	damaged := func(f *fixture, path string) {
 		raw := f.jarOf(path, "1.0.0", [2]string{"com/x/A.class", "payload"})
@@ -61,6 +62,9 @@ func TestUnreadableEntryCannotBeVerified(t *testing.T) {
 		"an entry fails its CRC": damaged,
 		"not a zip":              func(f *fixture, path string) { f.write(path, "not a jar\n") },
 		"no entry at all":        empty,
+		"two entries under one name": func(f *fixture, path string) {
+			f.jarOf(path, "1.0.0", [2]string{"com/x/A.class", "one"}, [2]string{"com/x/A.class", "two"})
+		},
 	} {
 		f := newFixture(t)
 		make(f, f.deployed("rt"))
