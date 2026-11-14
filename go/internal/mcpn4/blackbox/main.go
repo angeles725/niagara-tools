@@ -1,6 +1,6 @@
 // Package blackbox drives the real mcp-n4 server as a separate process over stdio, against a
-// boxstation fake: the Go port of the kit's Python black-box harness (mcp-n4-kit/tests/
-// go_server.py). The process is the test binary itself: a package that uses the harness calls
+// boxstation fake: the kit's black-box harness (it replaced the Python one, retired in T9).
+// The process is the test binary itself: a package that uses the harness calls
 // Main from its TestMain, and the harness re-executes the test binary with a marker that makes
 // it run the server's main (mcpcli.Main) instead of the tests. No prebuilt go/bin is needed.
 //

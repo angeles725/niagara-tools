@@ -78,16 +78,13 @@ scripts/install-skill.sh --skill mcp-n4
 - `retros/`: session retros and `INDEX.md`.
 - `go/internal/mcpn4/blackbox`: the Go black-box harness (the real server over stdio against
   the `boxstation` fake) and the protocol, connect, read-tool, tier and end-to-end stdio tests.
-- `tests/test_server.py`: the shared base classes of the remaining Python tool tests.
 - `go/cmd/mcp-n4/live-smoke`: the live smoke runner (see Live smoke test).
-- `tools/mutation_check.py`: runs a mutation-check command with no stale bytecode (see Run
-  the tests).
-- `tests/fake_station.py`: fake BOX station on `127.0.0.1` (plain HTTP, tests only).
-- `tests/box_client.py`: the stdlib BOX client the tests arrange FakeStation state with (test
-  setup only, not a server).
-- `tests/go_server.py`: the black-box harness that drives `go/bin/mcp-n4` over stdio.
-- `tests/state_files.py`, `tests/oracle.py`: state-file helpers, and the frozen answers of the
-  removed Python server some tests compare with (`tests/fixtures/oracles/`).
+- `go/internal/mcpn4/readtools/readtoolstest/boxstation`: the fake BOX station on `127.0.0.1`
+  (plain HTTP, tests only).
+- `tests/fixtures/`: recorded station answers (BQL CSVs, a Px view), a journal the Python server
+  wrote, and the frozen answers of the removed Python server (`oracles/`) that Go tests read.
+- `tests/fake_station.py`: the retired Python fake station, kept only while
+  `box.TestTheFakeStationSharesTheComponentTypeTable` reads its `COMPONENT_TYPES` table.
 
 Security defaults: `http://` is refused unless `allow_http=True` (tests only),
 the password is never in `repr`, and HTTP 401/403 raises `AuthError` with no

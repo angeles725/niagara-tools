@@ -1,7 +1,8 @@
 package readtools_test
 
-// Go twin of test_tools_destructive.TestListBatches.test_it_is_read_only_and_works_without_a_session
-// (go_server.go_twin("readtools", "internals")), plus the Python-written journal through the tool.
+// n4_list_batches is read-only and needs no session, plus the Python-written journal through the
+// tool; black-box: blackbox.TestBatchesItNeedsNoSessionAndNoJournalListsNothing and
+// blackbox/batches_python_journal_test.go.
 
 import (
 	"os"

@@ -108,7 +108,8 @@ func unreadableJournal(t *testing.T, extra string) *Journal {
 	return New(dir)
 }
 
-// The journal check of test_tools_destructive.TestRollback.test_a_journal_line_whose_batch_is_unknown_refuses_every_rollback (that tool test runs under Go once n4_rollback is ported).
+// The journal check under blackbox.TestAJournalLineWhoseBatchIsUnknownRefusesEveryRollback: here
+// every batch (idA, idB, idC) is refused, not only the one the line names in rollback_of.
 func TestAJournalLineWhoseBatchIsUnknownRefusesEveryRollback(t *testing.T) {
 	j := unreadableJournal(t, "{\"batch_id\": \"\xff\"}\n{\"batch_id\": [1], \"phase\": \"intent\", \"rollback_of\": \""+idA+"\"}\n")
 	for _, id := range []string{idA, idB, idC} {
@@ -124,7 +125,7 @@ func TestAJournalLineWhoseBatchIsUnknownRefusesEveryRollback(t *testing.T) {
 	}
 }
 
-// The journal check of test_tools_destructive.TestRollback.test_an_unreadable_line_of_another_batch_does_not_block_a_rollback (that tool test runs under Go once n4_rollback is ported).
+// The journal check under blackbox.TestAnUnreadableLineOfAnotherBatchDoesNotBlockARollback.
 func TestAnUnreadableLineOfAnotherBatchDoesNotBlockARollback(t *testing.T) {
 	j := unreadableJournal(t, `{"batch_id": [1], "phase": "intent", "rollback_of": "`+idB+`"}`+"\n"+
 		`{"batch_id": "`+idC+`", "phase": "component-intent", "ops": 7}`+"\n")
