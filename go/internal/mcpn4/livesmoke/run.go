@@ -17,7 +17,8 @@ const prog = "live-smoke"
 // Main runs the command: plan only unless --apply. environ is the environment the server is
 // started with and the one credentials and MCP_N4_GO_BIN are read from. Exit 0 plan printed or
 // every required step verified; 1 a run that did not verify (or a report that cannot be
-// written); 2 usage.
+// written); 2 usage, which includes a --report whose directory does not exist (checked before
+// the server starts, so a run never ends with its report lost).
 func Main(argv []string, s cli.Stdio, environ []string) int {
 	a, err := ParseArgs(argv)
 	if errors.Is(err, errHelp) {
@@ -41,6 +42,10 @@ func Main(argv []string, s cli.Stdio, environ []string) int {
 	}
 	getenv := lookupIn(environ)
 	if problem := ResolveServer(a, getenv); problem != "" {
+		fmt.Fprintf(s.Err, "%s: %s\n", prog, problem)
+		return 2
+	}
+	if problem := reportProblem(a.Report); problem != "" {
 		fmt.Fprintf(s.Err, "%s: %s\n", prog, problem)
 		return 2
 	}

@@ -12,6 +12,7 @@ import (
 type Args struct {
 	Apply, AllowHTTPForTests               bool
 	Stations, StationHomes, InsecureTLS    []string // NAME=URL, NAME=PATH, NAME; in order
+	AllowTierB, AllowTierC                 []string // station names the operator opted in, in order
 	CredentialEnv, StateDir, Report, GoBin string
 	Settle, CallTimeout                    float64
 }
@@ -51,6 +52,8 @@ var options = []option{
 	{names: []string{"--station-home"}, value: true, set: func(a *Args, v string) error { a.StationHomes = append(a.StationHomes, v); return nil }},
 	{names: []string{"--credential-env"}, value: true, set: func(a *Args, v string) error { a.CredentialEnv = v; return nil }},
 	{names: []string{"--insecure-tls"}, value: true, set: func(a *Args, v string) error { a.InsecureTLS = append(a.InsecureTLS, v); return nil }},
+	{names: []string{"--allow-tier-b"}, value: true, set: func(a *Args, v string) error { a.AllowTierB = append(a.AllowTierB, v); return nil }},
+	{names: []string{"--allow-tier-c"}, value: true, set: func(a *Args, v string) error { a.AllowTierC = append(a.AllowTierC, v); return nil }},
 	{names: []string{"--state-dir"}, value: true, set: func(a *Args, v string) error { a.StateDir = v; return nil }},
 	{names: []string{"--report"}, value: true, set: func(a *Args, v string) error { a.Report = v; return nil }},
 	{names: []string{"--settle"}, value: true, set: floatSetter(func(a *Args) *float64 { return &a.Settle })},

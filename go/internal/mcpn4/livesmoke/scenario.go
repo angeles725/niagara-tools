@@ -59,6 +59,9 @@ func (s *Scenario) step(name, tool string, fn stepFn, required, probe bool) *pyj
 	}
 	verdict, _ := entry.Get("verdict")
 	s.log(fmt.Sprintf("%-9s %s", pyjson.Str(verdict), name))
+	if line := reasonLine(entry); line != "" {
+		s.log(line)
+	}
 	return entry
 }
 

@@ -48,7 +48,8 @@ func ResolveServer(a *Args, getenv func(string) string) string {
 }
 
 // ServerArgv is the server command line: writes allowed, scoped to WriteScopes, with the
-// station, home, TLS, state-dir and HTTP flags passed through in order.
+// station, home, TLS, tier opt-in, state-dir and HTTP flags passed through in order. A tier opt-in is
+// the operator's alone: none is ever added here.
 func ServerArgv(a *Args) []string {
 	argv := []string{a.GoBin, "--allow-writes", "--credential-env", a.CredentialEnv}
 	for _, scope := range WriteScopes() {
@@ -57,7 +58,8 @@ func ServerArgv(a *Args) []string {
 	for _, group := range []struct {
 		flag  string
 		items []string
-	}{{"--station", a.Stations}, {"--station-home", a.StationHomes}, {"--insecure-tls", a.InsecureTLS}} {
+	}{{"--station", a.Stations}, {"--station-home", a.StationHomes}, {"--insecure-tls", a.InsecureTLS},
+		{"--allow-tier-b", a.AllowTierB}, {"--allow-tier-c", a.AllowTierC}} {
 		for _, it := range group.items {
 			argv = append(argv, group.flag, it)
 		}
