@@ -527,11 +527,11 @@
       "description": "Slot name, or a path of slot names separated by / for a nested slot; must be listed by the station or declared by its type"
      },
      "value": {
-      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes)"
+      "description": "New value by value_type: a number (Double, StatusNumeric), true/false (Boolean, StatusBoolean), a string (String; Format takes its pattern, e.g. %parent.name%), or a whole number of milliseconds for RelTime (300000 is 5 minutes), a whole number for Integer (Java int range), or for Simple the encoded string of the type (an enum tag such as signedIntegerType or modbus, a Facets string such as units=u:celsius;...|precision=i:1, a LinearConversion scale;offset such as 0.1;0.0). A struct such as a Modbus FlexAddress is set through its child slots (dataAddress/addressFormat, dataAddress/address)"
      },
      "value_type": {
       "type": "string",
-      "description": "One of baja:Double, baja:Boolean, baja:String, baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime",
+      "description": "One of baja:Double, baja:Boolean, baja:String, baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime, baja:Integer, baja:Simple",
       "enum": [
        "baja:Double",
        "baja:Boolean",
@@ -539,8 +539,14 @@
        "baja:StatusNumeric",
        "baja:StatusBoolean",
        "baja:Format",
-       "baja:RelTime"
+       "baja:RelTime",
+       "baja:Integer",
+       "baja:Simple"
       ]
+     },
+     "simple_type": {
+      "type": "string",
+      "description": "Only with baja:Simple: the type spec module:Type to send the value as when it replaces the slot's current type (e.g. driver:LinearConversion for a proxy conversion); default: the slot's own type"
      },
      "status": {
       "type": "string",
@@ -574,7 +580,7 @@
   },
   {
    "name": "n4_invoke_action",
-   "description": "Invoke a control action. Only set, active, inactive, auto are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Invoke a control action. Only set, active, inactive, auto, and ping (a driver network, device or point device ext checks its device; no setting changes) are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
