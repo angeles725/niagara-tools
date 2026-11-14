@@ -6,6 +6,7 @@ package gen
 
 import (
 	"fmt"
+	"github.com/angeles725/niagara-tools/go/internal/atomicfile"
 	"io"
 	"os"
 	"os/exec"
@@ -85,31 +86,12 @@ type File struct {
 
 // Write writes f atomically and returns the exit code: ExitOK and "<tool>: wrote <path>", or ExitEnv.
 func (f File) Write(s cli.Stdio) int {
-	if err := writeAtomic(f.Path, f.Content); err != nil {
+	if err := atomicfile.Write(f.Path, []byte(f.Content)); err != nil {
 		fmt.Fprintf(s.Err, "%s: cannot write %s: %v\n", f.Tool, f.Path, err)
 		return ExitEnv
 	}
 	fmt.Fprintf(s.Out, "%s: wrote %s\n", f.Tool, f.Path)
 	return ExitOK
-}
-
-// writeAtomic replaces path through a temporary file in its directory, so a failed write never
-// leaves a truncated file behind.
-func writeAtomic(path, content string) error {
-	mode := os.FileMode(0o644)
-	if st, err := os.Stat(path); err == nil {
-		mode = st.Mode().Perm()
-	}
-	tmp := fmt.Sprintf("%s.tmp.%d", path, os.Getpid())
-	if err := os.WriteFile(tmp, []byte(content), mode); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
 }
 
 // ShowDiff writes `diff - <path>` (generated vs committed, POSIX normal format) to w; it is

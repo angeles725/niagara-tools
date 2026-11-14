@@ -144,8 +144,8 @@ func TestFileWriteGroupWritableTarget(t *testing.T) {
 	if code := file(path).Write(s); code != ExitOK {
 		t.Fatalf("exit %d", code)
 	}
-	if st, _ := os.Stat(path); st.Mode().Perm() != 0o644 {
-		t.Errorf("mode %o, want 0644 (the umask masks the old mode)", st.Mode().Perm())
+	if st, _ := os.Stat(path); st.Mode().Perm() != 0o664 {
+		t.Errorf("mode %o, want 0664 (an existing target keeps its exact mode)", st.Mode().Perm())
 	}
 }
 
