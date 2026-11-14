@@ -179,7 +179,7 @@ func goDraft(t *testing.T, dir string, st sessionState) string {
 	return string(b)
 }
 
-func TestDraftDifferentialPython(t *testing.T) {
+func TestDraftMatchesTheRecordedDrafts(t *testing.T) {
 	g := golden.Open(t, "draft")
 	fixture, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit", "tests", "fixtures", "journal", "python-written"))
 	states := sessionStates()

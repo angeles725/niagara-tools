@@ -62,9 +62,10 @@ func writeState(t *testing.T, audit, journal string) string {
 	return dir
 }
 
-// TestDraftIsNewRetroPythonDraft replays what the Python new_retro.py drafted for the same state
-// dirs (testdata/draft.golden.jsonl): the markdown and the delta count, byte for byte.
-func TestDraftIsNewRetroPythonDraft(t *testing.T) {
+// TestDraftMatchesTheRecordedDrafts replays the drafts recorded from the Python new_retro.py for
+// the same state dirs (testdata/draft.golden.jsonl, Go-owned since, see package golden): the
+// markdown and the delta count, byte for byte.
+func TestDraftMatchesTheRecordedDrafts(t *testing.T) {
 	g := golden.Open(t, "draft")
 	fixture, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit", "tests", "fixtures", "journal", "python-written"))
 	if err != nil {
