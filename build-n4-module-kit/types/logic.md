@@ -69,6 +69,41 @@ dispatches on `in`, `min` and `max` only (`:154-159`), which is the callback con
 | Commands, running state, faults, timers | none — keep TRANSIENT, reset in `stopped()` | cold start |
 
 - **Operator writes must reach `config.bog` — request a DEBOUNCED station save; never rely on the platform auto-save:** on any `OPERATOR`, non-`TRANSIENT` property change of a running component at steady state, request `Sys.getStation().save()` through a pure policy (`ConfigSavePolicy`: is this property an operator, persisted config slot? is the component running and at steady state?) plus ONE pending save ticket (`ConfigSaveScheduler`: a burst of writes re-arms or coalesces into a single save, never one save per write). Exclude accumulators and computed outputs — those are checkpointed on their own cadence (see `types/issues-and-gotchas.md` §I2), and saving on every cycle is the hot-write flood. [ev: retro panccadia-persistent-config-hoa Δ2] `[ev: corpus B402]`
+- **The debounced save is per STATION, not per component: one operator change yields at most ONE station save,
+  however many modules observe it.** A station has one `config.bog` and a save writes all of it; a debounce only
+  coalesces what goes through the same instance, so "one ticket" per owner is N saves per change (a control module
+  and its dashboard module each requested a save for the same change, and five of seven operator changes wrote
+  `config.bog` twice, 2 s apart: duplicated flash wear on a controller and a second save for no gain). The
+  mechanism, in this order: `[ev: retro double-station-save Δ1]`
+  1. **The component that OWNS the persisted slot requests the save.** It holds the one `ConfigSaveScheduler` and
+     the module's one `Sys.getStation().save()` call site.
+  2. **A module that only forwards or mirrors an operator write requests none for that write.** A dashboard facade
+     whose slot is linked into the control slot is such a module (`types/dashboard.md` § Facade contract &
+     commissioning links).
+  3. **Where two owners can both fire for one change, the ticket skips its save when a station save STARTED after
+     the change it covers.** The ticket compares the time of its last covered change against the time the last
+     station save started and saves unless that start is strictly later. It fails toward saving: equal stamps, an
+     unknown save time and a clock that stepped back all save. The start time is station-wide, so it must be read
+     from the station and never from a field of the module: the save runs as a `StationSaveJob*` child of
+     `Services/JobService` that carries `startTime` and `jobState`, and a save requested while one is running
+     returns without saving, so a ticket that fires during a save it is not covered by re-arms instead of calling
+     `save()`. `[ev: corpus B1176 §1176.1]` `[ev: corpus B1191 §1191.1]` No job after a restart means "unknown":
+     save.
+- **Do not write a scheduler: copy the kit's ONE reference and its test.** `ConfigSaveScheduler` (with
+  `ConfigSaveDecision`) is a Baja-free class in
+  `fixtures/MinimalPan/MinimalPan/MinimalPan-rt/src/com/angeles/MinimalPan/model/`, with the pure policy test
+  `ConfigSaveSchedulerTest` beside the fixture's other pure test (`toolbelt/run-pure-test.sh <Module>-rt
+  <pkg>.model.ConfigSaveSchedulerTest`): a burst is one save; two owners and one change are one save; a later
+  change still saves; a change during a running save is saved after it; equal or backward stamps never lose a
+  save. `scaffold-module.sh --type logic` copies both into a new control module; the dashboard fixture ships
+  none, by rule 2. The class comment shows the adapter wiring (the ticket, `Clock.millis()`, the one `save()`
+  call, the save-job read); the adapter is Baja code, so pin its order with a source-structural test. A module
+  that already carries its own copy replaces it with the reference when it is next touched for persistence, in
+  place (an existing module is fixed in place, never restructured: `METHODOLOGY.md`). Checklist line for any
+  module that persists operator config: "one save requester, the slot owner; reference scheduler with its test;
+  `station-save` row read; one `Saved` line per change in the station log". `verify-module.sh --src` prints the
+  `station-save` row (the classes that call `Sys.getStation().save()`, each at file:line: none or one PASS, two
+  or more WARN) and `BUILD-LOOP.md` § 6.b item 10 is the live check. `[ev: retro double-station-save Δ2]` `[ev: retro double-station-save Δ3]`
 - **A persisted accumulator survives a CRASH restart only through a file-backed backup:** back it up via `BIFile`/`BFileSpace` at `file:^<module>/<instance>-<name>.json` (`file:^` resolves to `<station>/shared/`); no `module-permissions.xml` change is needed — `BajaFileUtil`/`BIFile`/`BFileSpace` wrap the sensitive operations in `AccessController.doPrivileged` and the default grant set covers them. Write on a coarse periodic ticket PLUS the state-change edges (never every scan); seed by max-merging the file against the live slot (`hours = max(slot, file)`), so a missing/corrupt file never loses data and a stale file never wins. Max-merge is valid ONLY for a monotonic accumulator — never copy it into an operator-config backup (next bullets). [ev: retro panccadia-restart-seq-comp-lockout-hours Δ5] `[ev: corpus B289]` `[ev: corpus B38 §38.4.2]` `[ev: corpus B635]`
 - **Atomic file replace must be Windows-safe — a three-candidate `dest`/`.bak`/`.tmp` protocol, never "delete dest, then move tmp":** `BFileSpace.move()` is backed by `File.renameTo()`, which overwrites an existing destination on POSIX but REFUSES (returns false / throws) on Windows; deleting `dest` before the move leaves a window with ZERO valid copies if the station dies in between. Protocol: write `.tmp`; clear a STALE `.bak` (Windows also refuses an existing `.bak` destination); rename `dest` → `.bak`; move `.tmp` → `dest`; best-effort delete `.bak` only after a successful move; on a failed move, best-effort restore `.bak` → `dest` and KEEP `.tmp` (never delete on failure). Every reader considers all three candidates, never only the resolved `dest`. Test fakes for this protocol model Windows rename-refuses-existing-destination semantics — a POSIX-overwrite fake gives false confidence. [ev: retro panccadia-restart-seq-comp-lockout-hours Δ6]
 - **Operator-config backups are NOT monotonic — restore by RECENCY with an explicit revision, never "any valid candidate" or a max-merge:** every backup record carries a `revision`; the restore picks the valid candidate with the highest revision, candidate order `dest` > `.tmp` > `.bak` as the tie-break. Implement the choice as a pure helper (`selectForRestore(candidates) → candidate`) with JUnit over every candidate combination; a max-merge copied from an hours-style backup silently resurrects an OLDER, larger setpoint. Checklist line for any config backup: "restore rule = revision/recency, pure selector tested". [ev: retro comppan-pressure-staging Δ2]
