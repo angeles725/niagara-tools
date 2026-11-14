@@ -1,6 +1,6 @@
-// Package fstype is the one Go detector of the filesystem type backing a path (toolbelt/lib/fs-type.sh
-// fs_type_for), for the WSL 9p/drvfs gates of preflight (jar-lock) and build-module (build location).
-// TestMatchesTheShellLib keeps it equal to the bash lib while that lib exists.
+// Package fstype is the one detector of the filesystem type backing a path, for the WSL 9p/drvfs gates of
+// preflight (jar-lock) and build-module (build location). It replaced the bash lib toolbelt/lib/fs-type.sh
+// (fs_type_for, is_9p_or_drvfs); its tests keep the answers that lib gave.
 package fstype
 
 import (

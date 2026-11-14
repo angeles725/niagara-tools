@@ -4,6 +4,10 @@
 # (version-bump precheck) and scripts/check-installed-line.sh (installed-line downgrade guard). Fragment rule: edit THIS shared fragment, never re-implement the read or the compare in
 # a consumer — mirrors lib/slotomatic-skip.sh's fragment rule (follow-up to kit #437).
 #
+# Since build.sh, ng-deploy.sh and check-installed-line.sh became launchers over Go, no script sources this file: the
+# reader and the comparator in use are go/internal/vendorversion. tests/vendor-version.bats and that package's
+# TestMatchesTheShellLib still run it, and build.sh's usage text, BUILD-LOOP.md and build-verify.md still name it.
+#
 # vv_module_version <jar> — prints the MODULE's own vendorVersion: the one on the <module ...> root tag of
 #   META-INF/module.xml, NOT a <dependency name="baja" vendorVersion="..."/> floor (METHODOLOGY.md "two version
 #   concepts"). Two OR more numeric components (Niagara accepts an X.Y module version, chihuahua "1.3"), plus any

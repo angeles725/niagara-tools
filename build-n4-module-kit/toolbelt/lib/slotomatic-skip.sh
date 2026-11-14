@@ -4,6 +4,10 @@
 # (run_slotomatic). Fragment rule: edit THIS shared fragment, never re-implement the skip scan in a consumer —
 # mirrors lib/method-boundary.sh's fragment rule.
 #
+# Since build.sh and ng-deploy.sh became launchers over Go, no script sources this file: the detector in use is
+# go/internal/slotomaticskip. tests/slotomatic-skip.bats and that package's TestMatchesTheShellLib still run it, and
+# build.sh's usage text, BUILD-LOOP.md and METHODOLOGY.md K15 still name it.
+#
 # Why: Slot-o-Matic throws "Found multiple metadata blocks" for a generated region whose /*@ ... @*/ stamp count
 # is not exactly one (devkit-wb vineflower JavaUnit.java:265-272). Compiler.process (Compiler.java:240-246) logs
 # "Could not process <path>.java: <msg>", counts the failure and returns; Slotomatic.printResults
