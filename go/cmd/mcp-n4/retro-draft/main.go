@@ -1,61 +1,63 @@
-// Command retro-draft prints the mcp-n4 session retro draft of a state dir as one JSON object,
-// {"markdown": ..., "deltas": N}: what the n4_session_retro_draft tool drafts, for a station and
-// date the caller names. mcp-n4-kit/tools/new_retro.py runs it and writes the retro and its INDEX
-// row; the Go server's retro package does the drafting, so the two never differ.
+// Command retro-draft drafts the mcp-n4 session retro of a state dir: what the
+// n4_session_retro_draft tool drafts, for a station and date the caller names.
 //
-// Usage: retro-draft --state-dir DIR --station NAME --date YYYY-MM-DD [--since ISO-8601]
+// Draft mode prints one JSON object, {"markdown": ..., "deltas": N}:
 //
-// Exit: 0 the draft on stdout; 2 usage; 3 a --since that is no timestamp (its message on stderr,
-// after "retro-draft: "); 1 a state dir the draft cannot read.
+//	retro-draft --state-dir DIR --station NAME --date YYYY-MM-DD [--since ISO-8601]
+//
+// Exit: 0 the draft on stdout; 2 usage; 3 a --since that is no timestamp (its message on
+// stderr, after "retro-draft: "); 1 a state dir the draft cannot read.
+//
+// Write mode (formerly mcp-n4-kit/tools/new_retro.py) writes YYYY-MM-DD-<station>-session.md
+// into the retros directory and its pending row into INDEX.md, both atomically. It proposes
+// only: it never edits the kit and never stages issues. An existing retro is never
+// overwritten without --force; --dry-run prints the retro and its row and writes nothing:
+//
+//	retro-draft --write --state-dir DIR --station NAME [--date YYYY-MM-DD] [--since ISO-8601]
+//	            [--out-dir DIR] [--force] [--dry-run]
+//
+// --date defaults to today (UTC) and --out-dir to the kit's mcp-n4-kit/retros. Exit: 0
+// written or printed; 2 usage; 3 refused (bad station, date or --since, no INDEX.md, the
+// retro exists without --force); 1 an I/O error.
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/retro"
 )
+
+const usage = "usage: retro-draft --state-dir DIR --station NAME --date YYYY-MM-DD [--since ISO-8601]\n" +
+	"       retro-draft --write --state-dir DIR --station NAME [--date YYYY-MM-DD] [--since ISO-8601]\n" +
+	"                   [--out-dir DIR] [--force] [--dry-run]"
 
 func main() { cli.Run(run) }
 
 func run(args []string, s cli.Stdio) int {
 	fs := flag.NewFlagSet("retro-draft", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	stateDir := fs.String("state-dir", "", "the server's journal/audit directory")
-	station := fs.String("station", "", "the station name the draft names")
-	date := fs.String("date", "", "the draft's date, YYYY-MM-DD")
-	since := fs.String("since", "", "ISO-8601 timestamp; only newer entries count")
-	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || *stateDir == "" || *station == "" || *date == "" {
-		fmt.Fprintln(s.Err, "usage: retro-draft --state-dir DIR --station NAME --date YYYY-MM-DD [--since ISO-8601]")
+	o := writeOpts{}
+	fs.StringVar(&o.stateDir, "state-dir", "", "the server's journal/audit directory")
+	fs.StringVar(&o.station, "station", "", "the station name the draft names")
+	fs.StringVar(&o.date, "date", "", "the draft's date, YYYY-MM-DD")
+	fs.StringVar(&o.since, "since", "", "ISO-8601 timestamp; only newer entries count")
+	write := fs.Bool("write", false, "write the retro and its INDEX row")
+	fs.StringVar(&o.outDir, "out-dir", "", "retros directory with INDEX.md (write mode)")
+	fs.BoolVar(&o.force, "force", false, "overwrite an existing retro (write mode)")
+	fs.BoolVar(&o.dryRun, "dry-run", false, "print only; write nothing (write mode)")
+	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || o.stateDir == "" || o.station == "" ||
+		(!*write && (o.date == "" || o.outDir != "" || o.force || o.dryRun)) {
+		fmt.Fprintln(s.Err, usage)
 		return 2
 	}
-	out, err := retro.DraftOn(*stateDir, *station, *date, *since)
-	var ve *pyjson.ValueError
-	var typed interface{ PyType() string }
-	switch {
-	case errors.As(err, &ve):
-		fmt.Fprintln(s.Err, "retro-draft: "+ve.Msg)
-		return 3
-	case errors.As(err, &typed):
-		fmt.Fprintln(s.Err, "retro-draft: internal error ("+typed.PyType()+")")
-		return 1
-	case err != nil:
-		fmt.Fprintln(s.Err, "retro-draft: "+err.Error())
-		return 1
+	if *write {
+		if o.outDir == "" {
+			o.outDir = defaultOutDir()
+		}
+		return writeRetro(o, time.Now(), s)
 	}
-	markdown, _ := out.Get("markdown")
-	reply := pyjson.NewObject()
-	reply.Set("markdown", markdown)
-	reply.Set("deltas", int64(retro.CountDeltas(markdown.(string))))
-	b, err := pyjson.Marshal(reply, pyjson.Options{})
-	if err != nil {
-		fmt.Fprintln(s.Err, "retro-draft: "+err.Error())
-		return 1
-	}
-	fmt.Fprintln(s.Out, string(b))
-	return 0
+	return printDraft(o, s)
 }
