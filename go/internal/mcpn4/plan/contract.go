@@ -16,25 +16,50 @@ const maxSupertypes = 32
 // action, a misspelled name) or the station's answer is not of the documented shape.
 func DeclaredDefault(tl TypeLoader, typeSpec, name string) (*pyjson.Object, error) {
 	var types *pyjson.Object
+	entry := func(spec string) (*pyjson.Object, bool, error) {
+		if e, ok := lookup(types, spec); ok {
+			return e, true, nil
+		}
+		reply, err := tl.LoadTypes([]string{spec})
+		if err != nil {
+			return nil, false, err
+		}
+		types, _ = reply.(*pyjson.Object)
+		e, ok := lookup(types, spec)
+		return e, ok, nil
+	}
+	slot, err := walkDeclared(entry, typeSpec, func(slot *pyjson.Object) bool {
+		_, typed := field(asObject(field(slot, "v")), "t").(string)
+		return field(slot, "n") == name && typed
+	})
+	if slot == nil {
+		return nil, err
+	}
+	return asObject(field(slot, "v")), nil
+}
+
+// walkDeclared is the one walk up a type's contracts: typeSpec, then each supertype ("p"), at
+// most maxSupertypes, and the first property slot ({st: "p", n, f?, v}) of a contract "c" that
+// match accepts; nil when none does or entry stops the walk (ok false: a type it cannot answer).
+func walkDeclared(entry func(spec string) (*pyjson.Object, bool, error), typeSpec string,
+	match func(slot *pyjson.Object) bool) (*pyjson.Object, error) {
 	for i := 0; i < maxSupertypes && typeSpec != ""; i++ {
-		entry, ok := lookup(types, typeSpec)
-		if !ok {
-			reply, err := tl.LoadTypes([]string{typeSpec})
-			if err != nil {
-				return nil, err
-			}
-			types, _ = reply.(*pyjson.Object)
-			if entry, ok = lookup(types, typeSpec); !ok {
-				return nil, nil
+		e, ok, err := entry(typeSpec)
+		if err != nil || !ok {
+			return nil, err
+		}
+		slots, _ := field(e, "c").([]any)
+		for _, s := range slots {
+			if slot, ok := s.(*pyjson.Object); ok && field(slot, "st") == "p" && match(slot) {
+				return slot, nil
 			}
 		}
-		if v := declared(entry, name); v != nil {
-			return v, nil
-		}
-		typeSpec, _ = field(entry, "p").(string)
+		typeSpec, _ = field(e, "p").(string)
 	}
 	return nil, nil
 }
+
+func asObject(v any) *pyjson.Object { o, _ := v.(*pyjson.Object); return o }
 
 func lookup(types *pyjson.Object, spec string) (*pyjson.Object, bool) {
 	if types == nil {
@@ -43,22 +68,6 @@ func lookup(types *pyjson.Object, spec string) (*pyjson.Object, bool) {
 	v, _ := types.Get(spec)
 	entry, ok := v.(*pyjson.Object)
 	return entry, ok
-}
-
-// declared is the BSON default of property name in one type's own contract "c".
-func declared(entry *pyjson.Object, name string) *pyjson.Object {
-	slots, _ := field(entry, "c").([]any)
-	for _, s := range slots {
-		slot, ok := s.(*pyjson.Object)
-		if !ok || field(slot, "st") != "p" || field(slot, "n") != name {
-			continue
-		}
-		v, _ := field(slot, "v").(*pyjson.Object)
-		if _, typed := field(v, "t").(string); typed {
-			return v
-		}
-	}
-	return nil
 }
 
 func field(o *pyjson.Object, k string) any {

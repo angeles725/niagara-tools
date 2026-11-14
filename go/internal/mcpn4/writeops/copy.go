@@ -11,7 +11,8 @@ import (
 
 // CopyComponent is n4_copy_component: the configuration of one child of parent_ord (type, plain
 // slots and child components, CopyDepth levels deep) added again under each new name, all in one
-// batch under one confirmation token. Runtime slots and links are not copied. The inverse removes
+// batch under one confirmation token. Slots flagged readonly, transient, default-on-clone or
+// remove-on-clone (stripFlags) and links are not copied; the plan lists them. The inverse removes
 // every copy under the name the station assigned.
 var CopyComponent = plan.Impl{ScopeOrds: copyScope, Plan: copyPlan, Inverse: copyInverse, Readback: copyReadback}
 
@@ -27,6 +28,7 @@ type copyData struct {
 	parent     any
 	sourceType any
 	names      []string
+	body       *pyjson.Object // the configured subtree each copy must hold
 }
 
 func copyScope(args *pyjson.Object) []any { return []any{str(args, "parent_ord")} }
@@ -68,20 +70,21 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		return nil, plan.ToolError(pyjson.StrRepr(source) + " is deeper than the copy depth (" +
 			strconv.Itoa(CopyDepth) + " levels): a copy would miss part of it; copy a smaller component")
 	}
-	s := &snapshot{handles: map[string]string{}}
-	body, err := s.take(root, "", CopyDepth)
+	ct, err := copyContracts(c, root)
 	if err != nil {
 		return nil, err
 	}
-	body = stripRuntime(body)
+	body, stripped, s, err := configured(ct, root)
+	if err != nil {
+		return nil, err
+	}
 	ops, inverse := []any{}, []any{}
 	for _, n := range names {
 		ops = append(ops, obj("nm", "a", "h", parentH, "n", n, "b", body))
 		inverse = append(inverse, obj("nm", "v", "h", parentH, "n", n))
 	}
-	notes := []any{"Each copy starts without runtime slots (status, health, out, read and write values); " +
-		"the driver fills them once the copy runs.",
-		"The station may rename on collision; the real inverse uses the assigned name."}
+	notes := append(strippedNotes(stripped),
+		"The station may rename on collision; the real inverse uses the assigned name.")
 	if len(s.links) > 0 {
 		notes = append(notes, strconv.Itoa(len(s.links))+" link(s) inside "+pyjson.StrRepr(source)+
 			" are not copied: create them on each copy with n4_create_link")
@@ -89,7 +92,7 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, parentH)
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: targets,
-		Data: copyData{parentH, get(root, "t"), names}}, nil
+		Data: copyData{parentH, get(root, "t"), names, body}}, nil
 }
 
 // copyNames validates new_names: 1 to maxCopies distinct plain slot names.
