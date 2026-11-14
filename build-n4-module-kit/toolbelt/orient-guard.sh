@@ -23,76 +23,22 @@
 # Mutation: OG3 -- treats BUILD_N4_CLIENTE_OVERRIDE=0 as =1 (non-1 override bypass)
 # Mutation: OG4 -- skips canonicalization, comparing raw input instead of realpath
 # Mutation: OG10 -- a hardcoded home directory as the default prefix (fails under a temp HOME)
-set -euo pipefail
+#
+# Truth fix of the Go port: a path that cannot be resolved (a missing directory before the last component,
+# a path through a file, a link loop) is still compared as given, but it no longer PASSes on its text alone:
+# what does resolve of it must stay under the prefix too. The bash tool PASSed <prefix>/New/../../elsewhere.
+# The path is always resolved by the tool itself (realpath on PATH is not needed).
+#
+# Implementation: the Go module at <repo>/go (go/cmd/orient-guard, go/internal/orientguard). This script is
+# only the launcher: go/go-tool.sh `go_tool_bin` builds go/bin/orient-guard when the binary is missing or older
+# than a Go source, then this script execs it. No Go toolchain or a failed build is exit 3.
+set -u
 
-# ---------------------------------------------------------------------------
-# Row emitter (matches preflight.sh convention)
-# ---------------------------------------------------------------------------
-row() {
-  printf '%-4s  %-12s  %s\n' "$1" "orient-guard" "$2"
-}
-
-usage_exit() {
-  printf 'usage: orient-guard.sh <module-root>\n' >&2
-  exit 3
-}
-
-# ---------------------------------------------------------------------------
-# Argument check
-# ---------------------------------------------------------------------------
-[ $# -eq 1 ] || usage_exit
-
-ARG="$1"
-
-# ---------------------------------------------------------------------------
-# Legal prefix — derived from $HOME, overridable by test seam only (always WARN-loud)
-# ---------------------------------------------------------------------------
-readonly DEFAULT_LEGAL_ROOT_PREFIX="${HOME:+${HOME%/}/modulos_niagara_n4/Cliente/}"
-
-if [ -n "${BUILD_N4_LEGAL_ROOT_PREFIX:-}" ]; then
-  # Test seam is always loud — no silent bypass
-  LEGAL_ROOT_PREFIX="${BUILD_N4_LEGAL_ROOT_PREFIX}"
-  # Append trailing slash if missing
-  case "$LEGAL_ROOT_PREFIX" in
-    */) ;;
-    *)  LEGAL_ROOT_PREFIX="${LEGAL_ROOT_PREFIX}/" ;;
-  esac
-  row "WARN" "non-default legal root ${LEGAL_ROOT_PREFIX} (test seam)"
-else
-  # An empty HOME would make the prefix /modulos_niagara_n4/Cliente/: refuse instead of guessing
-  [ -n "$DEFAULT_LEGAL_ROOT_PREFIX" ] || { printf 'orient-guard: HOME is not set; cannot derive the legal root\n' >&2; exit 3; }
-  LEGAL_ROOT_PREFIX="${DEFAULT_LEGAL_ROOT_PREFIX}"
-fi
-
-# ---------------------------------------------------------------------------
-# Canonicalize the argument (resolve symlinks, relative components)
-# ---------------------------------------------------------------------------
-if command -v realpath > /dev/null 2>&1; then
-  CANON="$(realpath "$ARG" 2>/dev/null)" || {
-    # realpath fails if path does not exist; fall back to cd -P for existing dirs
-    CANON="$(cd -P "$ARG" 2>/dev/null && pwd -P)" || CANON="$ARG"
-  }
-else
-  CANON="$(cd -P "$ARG" 2>/dev/null && pwd -P)" || CANON="$ARG"
-fi
-
-# Append trailing slash for prefix compare (prevents ClienteX/ false-positive)
-CANON_SLASH="${CANON%/}/"
-
-# ---------------------------------------------------------------------------
-# Prefix check
-# ---------------------------------------------------------------------------
-if [[ "$CANON_SLASH" == "${LEGAL_ROOT_PREFIX}"* ]]; then
-  row "PASS" "$CANON"
-  exit 0
-fi
-
-# Outside legal prefix — check override
-if [ "${BUILD_N4_CLIENTE_OVERRIDE:-}" = "1" ]; then
-  row "WARN" "non-standard path: $CANON"
-  exit 0
-fi
-
-# Fail-closed: unset, empty, or any non-'1' value → FAIL
-row "FAIL" "$CANON — must be under ${DEFAULT_LEGAL_ROOT_PREFIX}; set BUILD_N4_CLIENTE_OVERRIDE=1 to override"
-exit 1
+# readlink -f: resolve a symlinked copy of this file to the real kit, so ../../go exists.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'orient-guard: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" orient-guard)" || exit 3
+exec "$BIN" "$@"
