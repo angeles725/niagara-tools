@@ -247,6 +247,12 @@ build-relevant kit files unless it also records continuity (a ledger update — 
 `BUILD-STATE.src.md` edit — + a pending retro), carries a `Retro: none (trivial: <reason>)` trailer, or is a
 promotion with a structural anchor (a retro header flipped `pending` → `folded`, **or** a ledger update).
 
+The hook file is a launcher: the gate itself is the Go command `go/cmd/pre-push` (`go/internal/prepush`), built on
+demand by `go/go-tool.sh` like every wrapper (§ 2.2), so the first push after a Go source change pays one
+`go build`, and each worktree runs the gate of its own tree. A push is refused, never let through unchecked,
+when Go is not installed or the build fails. The command runs the pushed tree's `kit-state.sh`,
+`sweep-build-state.sh` and `kit-cite-resolve.sh`, and the changelog gate in process.
+
 `build-n4-module-kit/BUILD-STATE.md`, `build-n4-module-kit/retros/INDEX.md` and
 `build-n4-module-kit/toolbelt/INDEX.md` are GENERATED and NOT committed (`.gitignore`), so two PRs that each
 add a ledger fragment, a retro or a lint never conflict on them. Read them with
@@ -261,8 +267,8 @@ change for the kit block's `last_change:` line, `open_issues:` items and session
 and PR, so a malformed header or fragment fails closed. `[ev: retro ledger-generated-not-committed]`
 The gate's content half (`sweep-build-state.sh` over fresh kit-state output) runs on every pushed range that
 changes `retros/`, `ledger.d/` or `BUILD-STATE.src.md`, including a range with no other build-relevant file
-and one under a `Retro: none (trivial: …)` trailer, and refuses an incoherent one (`.githooks/pre-push`,
-`pass_early`). `[ev: retro r10-path-keyed-gates-skip-data Δ1]`
+and one under a `Retro: none (trivial: …)` trailer, and refuses an incoherent one (`go/internal/prepush`
+`retro.go`, `passEarly`). `[ev: retro r10-path-keyed-gates-skip-data Δ1]`
 
 Retro citation tags name the retro by its stem, the filename without the `YYYY-MM-DD-` prefix and `.md`:
 `[ev: retro <stem> Δn]` and `[deferred: retro <stem> Δn]`. `toolbelt/sweep-fold-audit.sh` matches the stem
@@ -291,7 +297,8 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
 ### 6.2 The changelog gate
 
 The same `.githooks/pre-push` (and the `changelog` job of `ci.yml`, over `origin/main..HEAD`, so a clone without
-the hook cannot skip it) runs `scripts/changelog-gate.sh` over the pushed range (`go/internal/changelog`). A range
+the hook cannot skip it, through `scripts/changelog-gate.sh`) runs the changelog gate over the pushed range
+(`go/internal/changelog`; the hook calls it in process). A range
 that changes kit behaviour, meaning any path under `go/`, `build-n4-module-kit/`, `tools/` or `scripts/` except the retro gate's
 own exclusions (`go/bin/`, `BUILD-STATE(.src).md`, `ledger.d/`, `retros/`), FAILS unless it carries one of these.
 Tests and docs under those trees count as behaviour.
