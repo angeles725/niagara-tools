@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-14 -->
+<!-- last-change-note: orient-guard, mirror-niagara-home and run-pure-test are launchers over Go commands -->
+log: 2026-11-14 · all-Go pass, wave 3 → `toolbelt/orient-guard.sh`, `mirror-niagara-home.sh` and `run-pure-test.sh` are launchers over `go/cmd/<name>` (`go/internal/orientguard`, `mirrorhome`, `puretest`). Differential against the bash originals over 133 cases: 116 identical, 17 declared; eight false successes are refusals now (a path that leaves the legal prefix through `..`, a dangling link or a link loop; a mirror built from a relative, unlistable or unreadable source). `lib/method-boundary.sh` and `lib/signing-block.sh` are deleted with the awk oracle test; `go/internal/javasrc` and `signblock` are the only implementations.
+open_issue: retro go-toolbelt-small-port Δ1-Δ5 pending (guard judges new nested paths and names the compared prefix; mirror guards before creating; run-pure-test default package and symlinked cache; bats prebuild lint; oversized doctrine lines)
