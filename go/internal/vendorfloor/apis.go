@@ -35,7 +35,8 @@ var Default = APIs{
 }
 
 // Validate reports a method name held by both Member and Qualified: one call would print two rows.
-// Mutation: VF-disjoint -- dropping this check lets a name in both MEMBER and QUALIFIED double-report.
+// The command runs it before every scan (TestSharedMethodNameIsAnEnvFault) and TestDefaultTableIsDisjoint
+// holds the shipped table to it.
 func (a APIs) Validate() error {
 	for _, q := range sortedKeys(a.Qualified) {
 		if m := method(q); has(a.Member, m) {

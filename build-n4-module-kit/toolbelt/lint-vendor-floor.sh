@@ -33,7 +33,6 @@
 # Mutation: VF3 -- treat a missing node as a clean pass (exit 0) so VF3 no longer sees exit 4
 # Mutation: VF5 -- parse at ecmaVersion latest so the ??= fixture parses and VF5 exits 0
 # Mutation: VF6 -- drop the API table so the replaceAll/hasOwn/findLast rows vanish
-# Mutation: VF-disjoint -- dropping the startup table check lets a name in both MEMBER and QUALIFIED double-report
 # Mutation: VF9 -- tokenize as a module only so a sloppy script's API calls after a legacy octal vanish
 #
 # Implementation: the Go module at <repo>/go (go/internal/vendorfloor). The Go command owns the

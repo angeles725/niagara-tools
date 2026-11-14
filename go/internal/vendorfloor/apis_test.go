@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// The shipped table must be valid: without this, a shared name added to Default is only noticed at run time.
 func TestDefaultTableIsDisjoint(t *testing.T) {
 	t.Parallel()
 	if err := Default.Validate(); err != nil {
