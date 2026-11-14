@@ -66,6 +66,20 @@ func (c *Contracts) Slot(typeSpec, name string) (*pyjson.Object, error) {
 	return walkDeclared(entry, typeSpec, func(slot *pyjson.Object) bool { return field(slot, "n") == name })
 }
 
+// AnySlot is Slot for a slot of any kind: the contract slot named name (a property, an action or
+// a topic) that typeSpec or one of its supertypes declares, nil when none does. Its "f" holds the
+// declared flags; the station leaves "f" out when they are none (box-rt ContractEncoderVisitor).
+func (c *Contracts) AnySlot(typeSpec, name string) (*pyjson.Object, error) {
+	entry := func(spec string) (*pyjson.Object, bool, error) {
+		if err := c.Load([]string{spec}); err != nil {
+			return nil, false, err
+		}
+		e, ok := lookup(c.types, spec)
+		return e, ok, nil
+	}
+	return walkSlots(entry, typeSpec, func(slot *pyjson.Object) bool { return field(slot, "n") == name })
+}
+
 // Declared is the contract slot that declares child, a loaded child node of a parent typed
 // parentType (nil for a dynamic slot or an untyped parent). Its "f" holds the declared flags as
 // Flags.encodeToString letters; the station writes a node's own "f" only when its instance flags

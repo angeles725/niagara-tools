@@ -7,7 +7,9 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-const notCopiedNote = "Not copied (flags r readonly, t transient, d default-on-clone, R remove-on-clone): "
+// notCopiedNote opens the note listing what a copy leaves out; it names the flags that decide it
+// (frozenStrip, then dynamicStrip) from flagTable.
+var notCopiedNote = "Not copied (flags " + namedFlags(canonicalFlags(frozenStrip+dynamicStrip)) + "): "
 
 // strippedNode is a node the copy leaves out: its path below the source and the flags that
 // decided it; readonly marks a frozen slot declared readonly-only holding a value off its default.
