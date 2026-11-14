@@ -36,7 +36,7 @@ the generic-delegation default row is team practice `[ev: ~/.claude/agents/ mode
 **research-sdd investigation lanes** (the corpus-block authoring that feeds the pipeline) run on **opus** — that
 is a heavier reasoning task than gentle-SDD's `sdd-research` PHASE (sonnet), which only collects external
 evidence. Do not conflate the two: `sdd-research` = a sonnet sub-agent phase; a research-sdd lane = an opus
-authoring session. (the gentle-SDD agent file `sdd-research.md` declared model sonnet when this was written; a home-directory agent file is not a kit pointer, and that one is no longer installed [INFER]) (opus for research-sdd lanes is campaign-8 team practice
+authoring session. (the gentle-SDD `sdd-research` agent definition declared model sonnet when this was written; a home-directory agent file is not a kit pointer, and that one is no longer installed [INFER]) (opus for research-sdd lanes is campaign-8 team practice
 with no written record [INFER])
 
 ## 3. Delegation triggers
