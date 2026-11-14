@@ -4,6 +4,10 @@ package blackbox
 // test_tiers.TestTierB.test_every_mutating_tool_is_gated). The tool list and each tool's
 // arguments come from the server's own tools/list, so a new write tool is covered with no edit
 // here.
+//
+// Out of reach by design: a tool listed with readOnlyHint true (and named in readTools) whose
+// schema is write-shaped is taken at its word and not called here. The guard trusts the
+// annotation; whether a read tool really writes is the business of that tool's own tests.
 
 import (
 	"slices"

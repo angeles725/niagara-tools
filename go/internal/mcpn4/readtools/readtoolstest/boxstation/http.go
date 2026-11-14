@@ -54,8 +54,10 @@ func (st *Station) serve(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if st.Hook != nil {
-		if status, body := st.Hook(frame); status != 0 {
+	var hook func(map[string]any) (int, []byte)
+	st.Do(func(*Station) { hook = st.hook })
+	if hook != nil { // called unlocked: a hook may block or take the lock itself
+		if status, body := hook(frame); status != 0 {
 			w.Header().Set("Content-Length", fmt.Sprint(len(body)))
 			w.WriteHeader(status)
 			_, _ = w.Write(body)
