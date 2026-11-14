@@ -1,0 +1,4 @@
+### Changed — .githooks/pre-push is a launcher over go/cmd/pre-push
+- The push gate (client-identifier guard, live-doctrine citation gate, changelog gate, retro and ledger gate with the `Retro:` / `Changelog:` trailers, content sweep) runs in Go (`go/internal/prepush`) with the same decisions and messages. The hook builds `go/bin/pre-push` on first use; without a Go toolchain, or when the build fails, the push is refused.
+- A client denylist that exists but cannot be examined now refuses the push when `client-guard` is not on PATH; the bash hook treated it as absent and went on unchecked.
+- A `client-guard` that cannot be started and a sweep whose temporary directory cannot be created are reported as `pre-push: cannot run <tool>: <error>` instead of the shell's own line; the decision is unchanged.
