@@ -92,3 +92,21 @@ func TestCommandAGitThatCannotBeStarted(t *testing.T) {
 		t.Errorf("Run = %q, %v; want \"\", false", out, ok)
 	}
 }
+
+// TestCommandAGitEndedByASignalIsStartedWithNoExitCode: a git that a signal ended was started, has no
+// exit code and is not OK, so a caller can tell it from a git that is missing and from one that exited.
+func TestCommandAGitEndedByASignalIsStartedWithNoExitCode(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(dir+"/git", []byte("#!/bin/sh\nkill -KILL $$\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	res := Command{}.Run("status")
+	if res.OK() || !res.Started() || res.Exit != NotExited {
+		t.Errorf("Run = %+v; want not ok, started, Exit NotExited", res)
+	}
+	t.Setenv("PATH", t.TempDir())
+	if res := (Command{}).Run("status"); res.OK() || res.Started() || res.Exit != NotExited {
+		t.Errorf("no git on PATH: Run = %+v; want not ok, not started, Exit NotExited", res)
+	}
+}
