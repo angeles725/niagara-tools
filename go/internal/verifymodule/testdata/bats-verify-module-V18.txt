@@ -21,7 +21,8 @@ SKIP  transient-operator  @DIR@/j.jar  no --src
 SKIP  compact3-import  @DIR@/j.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/j.jar  no --src
 SKIP  slot-wall  @DIR@/j.jar  no --src
-verify-module: 4 passed, 0 failed, 14 skipped, 1 warned -> ALL PASS
+SKIP  station-save  @DIR@/j.jar  no --src
+verify-module: 4 passed, 0 failed, 15 skipped, 1 warned -> ALL PASS
 -- stderr --
 -- j.jar (jar) --
 --- META-INF/ (stored) ---

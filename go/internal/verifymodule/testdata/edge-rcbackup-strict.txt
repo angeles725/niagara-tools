@@ -23,7 +23,8 @@ SKIP  transient-operator  @DIR@/rc.jar  no --src
 SKIP  compact3-import  @DIR@/rc.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/rc.jar  no --src
 SKIP  slot-wall  @DIR@/rc.jar  no --src
-verify-module: 3 passed, 2 failed, 14 skipped, 0 warned -> FAILED
+SKIP  station-save  @DIR@/rc.jar  no --src
+verify-module: 3 passed, 2 failed, 15 skipped, 0 warned -> FAILED
 -- stderr --
 -- rc.jar (jar) --
 --- META-INF/ (stored) ---

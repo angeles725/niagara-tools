@@ -44,7 +44,7 @@ var checks = []check{
 	(*run).bytecode, (*run).signed, (*run).types, (*run).baja, (*run).storedCheck, (*run).typeCount,
 	(*run).facets, (*run).facetPresence, (*run).ordLiteral, (*run).rcBackup, (*run).palette, (*run).wbScaffold,
 	(*run).phantomDep, (*run).moduleTest, (*run).crossModuleType, (*run).transientOperator,
-	(*run).compact3Imports, (*run).subscriptionLeak, (*run).slotWall,
+	(*run).compact3Imports, (*run).subscriptionLeak, (*run).slotWall, (*run).stationSave,
 	(*run).driver,
 }
 

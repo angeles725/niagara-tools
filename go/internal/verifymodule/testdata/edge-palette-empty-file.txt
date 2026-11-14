@@ -20,7 +20,8 @@ SKIP  transient-operator  @DIR@/E-wb.jar  no --src
 SKIP  compact3-import  @DIR@/E-wb.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/E-wb.jar  no --src
 SKIP  slot-wall  @DIR@/E-wb.jar  no --src
-verify-module: 4 passed, 0 failed, 13 skipped, 1 warned -> ALL PASS
+SKIP  station-save  @DIR@/E-wb.jar  no --src
+verify-module: 4 passed, 0 failed, 14 skipped, 1 warned -> ALL PASS
 -- stderr --
 -- E-wb.jar (jar) --
 --- META-INF/ (stored) ---

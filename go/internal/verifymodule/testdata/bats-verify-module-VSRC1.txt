@@ -20,7 +20,8 @@ SKIP  transient-operator  @DIR@/Foo-rt.jar  no --src
 SKIP  compact3-import  @DIR@/Foo-rt.jar  no --src
 SKIP  subscription-leak  @DIR@/Foo-rt.jar  no --src
 SKIP  slot-wall  @DIR@/Foo-rt.jar  no --src
-verify-module: 3 passed, 0 failed, 15 skipped, 0 warned -> ALL PASS
+SKIP  station-save  @DIR@/Foo-rt.jar  no --src
+verify-module: 3 passed, 0 failed, 16 skipped, 0 warned -> ALL PASS
 -- stderr --
 -- Foo-rt.jar (jar) --
 --- META-INF/ (stored) ---

@@ -22,7 +22,8 @@ SKIP  transient-operator  @DIR@/emx.jar  no --src
 SKIP  compact3-import  @DIR@/emx.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/emx.jar  no --src
 SKIP  slot-wall  @DIR@/emx.jar  no --src
-verify-module: 2 passed, 2 failed, 14 skipped, 0 warned -> FAILED
+SKIP  station-save  @DIR@/emx.jar  no --src
+verify-module: 2 passed, 2 failed, 15 skipped, 0 warned -> FAILED
 -- stderr --
 -- emx.jar (jar) --
 --- META-INF/ (stored) ---

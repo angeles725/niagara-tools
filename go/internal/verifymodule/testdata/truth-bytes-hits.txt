@@ -24,7 +24,8 @@ WARN  transient-operator  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/B.java:3:
 WARN  compact3-import  @DIR@/Foo-ux.jar  @DIR@/mod/Foo-ux/src/com/x/B.java:2:import java.awt.Color;
 PASS  subscription-leak  @DIR@/Foo-ux.jar  no TypeSubscriber without stopped() under @DIR@/mod/Foo-ux/src
 PASS  slot-wall  @DIR@/Foo-ux.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Foo-ux/src
-verify-module: 7 passed, 1 failed, 7 skipped, 4 warned -> FAILED
+PASS  station-save  @DIR@/Foo-ux.jar  no class calls Sys.getStation().save() under @DIR@/mod/Foo-ux/src
+verify-module: 8 passed, 1 failed, 7 skipped, 4 warned -> FAILED
 -- stderr --
 -- Foo-ux.jar (jar) --
 --- META-INF/MANIFEST.MF (stored) ---

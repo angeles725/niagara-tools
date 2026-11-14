@@ -21,7 +21,8 @@ SKIP  transient-operator  @DIR@/N-wb.jar  no --src
 SKIP  compact3-import  @DIR@/N-wb.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/N-wb.jar  no --src
 SKIP  slot-wall  @DIR@/N-wb.jar  no --src
-verify-module: 4 passed, 1 failed, 13 skipped, 1 warned -> FAILED
+SKIP  station-save  @DIR@/N-wb.jar  no --src
+verify-module: 4 passed, 1 failed, 14 skipped, 1 warned -> FAILED
 -- stderr --
 -- N-wb.jar (jar) --
 --- META-INF/ (stored) ---

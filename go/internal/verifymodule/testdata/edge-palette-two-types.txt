@@ -20,7 +20,8 @@ SKIP  transient-operator  @DIR@/T-ux.jar  no --src
 SKIP  compact3-import  @DIR@/T-ux.jar  no --src
 SKIP  subscription-leak  @DIR@/T-ux.jar  no --src
 SKIP  slot-wall  @DIR@/T-ux.jar  no --src
-verify-module: 3 passed, 0 failed, 14 skipped, 1 warned -> ALL PASS
+SKIP  station-save  @DIR@/T-ux.jar  no --src
+verify-module: 3 passed, 0 failed, 15 skipped, 1 warned -> ALL PASS
 -- stderr --
 -- T-ux.jar (jar) --
 --- META-INF/ (stored) ---

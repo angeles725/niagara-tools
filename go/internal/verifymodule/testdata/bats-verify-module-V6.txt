@@ -21,7 +21,8 @@ SKIP  transient-operator  @DIR@/defl.jar  no --src
 SKIP  compact3-import  @DIR@/defl.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/defl.jar  no --src
 SKIP  slot-wall  @DIR@/defl.jar  no --src
-verify-module: 3 passed, 1 failed, 14 skipped, 0 warned -> FAILED
+SKIP  station-save  @DIR@/defl.jar  no --src
+verify-module: 3 passed, 1 failed, 15 skipped, 0 warned -> FAILED
 -- stderr --
 -- defl.jar (jar) --
 --- META-INF/ (stored) ---

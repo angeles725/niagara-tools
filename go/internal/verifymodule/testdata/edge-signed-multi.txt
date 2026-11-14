@@ -20,7 +20,8 @@ SKIP  transient-operator  @DIR@/sig.jar  no --src
 SKIP  compact3-import  @DIR@/sig.jar  not an -rt or -ux jar
 SKIP  subscription-leak  @DIR@/sig.jar  no --src
 SKIP  slot-wall  @DIR@/sig.jar  no --src
-verify-module: 3 passed, 0 failed, 15 skipped, 0 warned -> ALL PASS
+SKIP  station-save  @DIR@/sig.jar  no --src
+verify-module: 3 passed, 0 failed, 16 skipped, 0 warned -> ALL PASS
 -- stderr --
 -- sig.jar (jar) --
 --- META-INF/ (stored) ---

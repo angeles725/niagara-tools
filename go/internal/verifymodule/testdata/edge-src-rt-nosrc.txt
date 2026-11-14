@@ -22,7 +22,8 @@ SKIP  transient-operator  @DIR@/Bar-rt.jar  no @DIR@/mod/Bar-rt/src
 SKIP  compact3-import  @DIR@/Bar-rt.jar  no @DIR@/mod/Bar-rt/src
 SKIP  subscription-leak  @DIR@/Bar-rt.jar  no @DIR@/mod/Bar-rt/src
 SKIP  slot-wall  @DIR@/Bar-rt.jar  no @DIR@/mod/Bar-rt/src
-verify-module: 4 passed, 0 failed, 14 skipped, 0 warned -> ALL PASS
+SKIP  station-save  @DIR@/Bar-rt.jar  no @DIR@/mod/Bar-rt/src
+verify-module: 4 passed, 0 failed, 15 skipped, 0 warned -> ALL PASS
 -- stderr --
 -- Bar-rt.jar (jar) --
 --- META-INF/ (stored) ---

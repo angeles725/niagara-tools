@@ -588,6 +588,42 @@ KTS
   [[ "$output" != *"WARN  slot-wall"* ]]
 }
 
+# ---------------------------------------------------------------------------
+# STSAVE — station-save: the classes under <profile>/src that call Sys.getStation().save(), each at
+# file:line. One config.bog per station: one operator change is ONE station save, so a second requester is
+# reported before deploy (types/logic.md § Restart & persistence). 0 or 1 PASS, 2 or more one WARN; never a
+# FAIL, with or without --strict, so an existing module keeps building. Cases: go/internal/verifymodule
+# stationsave_test.go (comment, string, split across lines).
+# Named mutation: match the raw lines instead of the javasrc tokens -> STSAVE2 counts the comment and WARNs.
+# [ev: retro double-station-save Δ3]
+stsave_src() {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  printf '<types/>\n' > "$TMPDIR_T/mod/Foo-rt/moduleTest-include.xml"   # moduletest PASSes, so --strict can exit 0
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  printf 'class Saver {\n  void tick() {\n    Sys.getStation().save();\n  }\n}\n' > "$TMPDIR_T/mod/Foo-rt/src/com/x/Saver.java"
+}
+
+@test "STSAVE1: two classes that request a station save WARN station-save and name both (exit 0, also --strict)" {
+  stsave_src; src="$TMPDIR_T/mod/Foo-rt/src/com/x"
+  printf 'class Other {\n  void t() { Sys.getStation().save(); }\n}\n' > "$src/Other.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  station-save  $TMPDIR_T/Foo-rt.jar  2 classes call Sys.getStation().save(): $src/Other.java:2, $src/Saver.java:3 "* ]]
+  [[ "$output" == *"reported, never a FAIL"* ]]
+  run "$VM" --strict --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  station-save"* ]]
+}
+
+@test "STSAVE2: one requester is a PASS row that names it; a call in a comment is not a second one" {
+  stsave_src; src="$TMPDIR_T/mod/Foo-rt/src/com/x"
+  printf 'class Doc {\n  // SAVE -> Sys.getStation().save();\n  String s = "Sys.getStation().save()";\n}\n' > "$src/Doc.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qxF "$(vsrc_row PASS station-save "$TMPDIR_T/Foo-rt.jar" "1 class calls Sys.getStation().save(): $src/Saver.java:3")"
+}
+
 # ---- facets-req: BFacets.makeNumeric conveys a unit/precision without the UNITS/PRECISION token ----
 # [ev: retro comppan-fase2-amps-alarms Δ1] — a real `overAmpsLimit` slot faceted with
 # BFacets.makeNumeric(BUnit.getUnit("ampere"), ...) WARNed "missing UNITS" on every run.
@@ -682,7 +718,7 @@ vsrc_row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; }
   run "$VM" "$j"
   [ "$status" -eq 0 ]
   for c in typecount facets facets-req ord-literal phantom-dep moduletest cross-module-type \
-           transient-operator compact3-import subscription-leak slot-wall; do
+           transient-operator compact3-import subscription-leak slot-wall station-save; do
     row=$(vsrc_row SKIP "$c" "$j" "no --src")
     printf '%s\n' "$output" | grep -qxF "$row" || { echo "missing row: $row"; return 1; }
   done
@@ -695,7 +731,7 @@ vsrc_row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; }
   run "$VM" --src "$TMPDIR_T/mod" "$j"
   [ "$status" -eq 0 ]
   for c in facets facets-req ord-literal cross-module-type transient-operator compact3-import \
-           subscription-leak slot-wall; do
+           subscription-leak slot-wall station-save; do
     row=$(vsrc_row SKIP "$c" "$j" "no $pd/src")
     printf '%s\n' "$output" | grep -qxF "$row" || { echo "missing row: $row"; return 1; }
   done
@@ -719,13 +755,14 @@ vsrc_row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; }
     printf '  @NiagaraProperty(name = "t", type = "double", flags = Flags.TRANSIENT | Flags.OPERATOR)\n'
     printf '  @NiagaraProperty(name = "f", type = "org.other.Foreign")\n'
     for i in $(seq 1 16); do printf '  @NiagaraProperty(name = "p%s", type = "boolean")\n' "$i"; done
+    printf '  void s() { Sys.getStation().save(); }\n'
     printf '}\n'
   } > "$src/.deploy-baseline/com/x/Stale.java"
   run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
   [ "$status" -eq 0 ]
   [[ "$output" != *"deploy-baseline"* ]]
   for c in facets facets-req ord-literal cross-module-type transient-operator compact3-import \
-           subscription-leak slot-wall; do
+           subscription-leak slot-wall station-save; do
     printf '%s\n' "$output" | grep -qE "^PASS  $c " || { echo "no PASS row for $c"; return 1; }
   done
 }
