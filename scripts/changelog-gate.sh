@@ -12,7 +12,8 @@
 #     at most 120 characters).
 # A malformed fragment or `Changelog:` line fails the range even when it changes no behaviour (fail closed).
 # git IS used (by the Go binary): this is a scripts/ helper, not a toolbelt/ script (kit-links L2).
-# Run by .githooks/pre-push over the pushed range and by ci.yml over origin/main..HEAD.
+# Run by ci.yml over origin/main..HEAD; the Go pre-push gate (.githooks/pre-push) runs the same check in process
+# over the pushed range.
 #
 # Implementation: go/internal/changelog, built on demand by go/go-tool.sh `go_tool_bin`.
 # Usage:  changelog-gate.sh --range <base>..<head>     (run inside the repository)

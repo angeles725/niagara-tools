@@ -102,7 +102,7 @@ push() { # push <changed paths...>: the range changes these files
   [ -s "$STUB_CALLS" ]
 }
 
-@test "LC8: a non-build-relevant live file (root README.md) is checked before the pass_early exit" {
+@test "LC8: a non-build-relevant live file (root README.md) is checked before the early-pass exit" {
   STUB_RC=1 push README.md
   [ "$status" -eq 1 ]
 }
