@@ -26,6 +26,15 @@ REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"  # no git: works 
 SCRIPT="$REPO_ROOT/scripts/install-skill.sh"
 TRACKED="$REPO_ROOT/build-n4-module-kit/skill/SKILL.md"
 
+# Build the Go binaries once with the caller's environment: the cases run the launcher under
+# HOME=/nonexistent, where an on-demand `go build` has no build cache and fails (exit 3).
+setup_file() {
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via REPO_ROOT
+  . "$REPO_ROOT/go/go-tool.sh"
+  go_tool_bin "$REPO_ROOT/go" install-skill >/dev/null
+  go_tool_bin "$REPO_ROOT/go" kit-state >/dev/null
+}
+
 setup() {
   TEST_HOME="$BATS_TEST_TMPDIR/home"
   mkdir -p "$TEST_HOME"
