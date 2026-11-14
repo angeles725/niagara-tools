@@ -18,7 +18,7 @@
 #   2. Every ref line of stdin is gated; the first ref that fails stops the push with its status, after one
 #      line naming the refused local -> remote ref. A deleted ref pushes nothing; a new remote branch is
 #      gated since it left origin/main (else origin/HEAD), and refused when that base cannot be found.
-#   3. Live-doctrine citation gate: a range that changes a live card (scripts/lib/live-doctrine-set.sh) or
+#   3. Live-doctrine citation gate: a range that changes a live card (go/internal/prepush/paths.go) or
 #      the resolver runs `kit-cite-resolve --strict` on the pushed live set. Findings (exit 1) or any tool
 #      failure refuse; only exit 3 naming an absent research/modules/clients/memory root skips, with a named
 #      stderr line. It is local-only: GitHub runners hold none of those roots, so ci.yml cannot run it.

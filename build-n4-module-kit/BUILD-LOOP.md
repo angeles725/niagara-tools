@@ -755,5 +755,5 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
     developer machine) runs in the local hook, before every early exit. Its one skip matches the tool's exact
     message for an absent input and prints a named stderr line; every other non-zero exit refuses, the same exit
     code for another cause included. The pre-push live cite check (`kit-cite-resolve --strict` on
-    `scripts/lib/live-doctrine-set.sh`) skips only on `cannot read <research|modules|clients|memory> root …: no such
+    `go/internal/prepush/paths.go`) skips only on `cannot read <research|modules|clients|memory> root …: no such
     file or directory`. `[ev: retro r10-live-cite-prepush-gate Δ1]`
