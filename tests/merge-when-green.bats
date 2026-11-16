@@ -21,6 +21,8 @@ setup() {
   cat > "$GHS/bin/gh" <<'GH'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$GHS/calls"
+# GitHub with no lag: once a merge call succeeded, the PR reads as merged (unless the case scripts the views)
+case "$*" in "pr view"*) [ -f "$GHS/merged" ] && [ ! -f "$GHS/no-lagless" ] && { cat "$GHS/merged.json"; exit 0; } ;; esac
 for key in pr_view pr_merge api_compare api_checks run_view run_rerun; do
   case "$key:$*" in
     pr_view:"pr view"*|pr_merge:"pr merge"*|run_view:"run view"*|run_rerun:"run rerun"*) ;;
@@ -31,7 +33,9 @@ for key in pr_view pr_merge api_compare api_checks run_view run_rerun; do
   f="$GHS/$key.$n"; [ -f "$f" ] || f="$(ls "$GHS/$key".[0-9]* 2>/dev/null | sort -t. -k2 -n | tail -n 1)"
   [ -n "$f" ] || { echo "stub gh: no reply for $*" >&2; exit 9; }
   if [ -f "$f.rc" ]; then cat "$f" >&2; exit "$(cat "$f.rc")"; fi
-  cat "$f"; exit 0
+  cat "$f"
+  case "$*" in "pr merge"*) : > "$GHS/merged" ;; esac
+  exit 0
 done
 echo "stub gh: unexpected call $*" >&2; exit 9
 GH
@@ -39,6 +43,8 @@ GH
   reply pr_view "{\"state\":\"OPEN\",\"isDraft\":false,\"headRefOid\":\"$HEAD_SHA\",\"baseRefName\":\"main\"}"
   reply api_compare '{"behind_by":0}'
   reply pr_merge ''
+  MERGED_JSON="{\"state\":\"MERGED\",\"isDraft\":false,\"headRefOid\":\"$HEAD_SHA\",\"baseRefName\":\"main\",\"mergeCommit\":{\"oid\":\"9999999999999999999999999999999999999999\"}}"
+  printf '%s\n' "$MERGED_JSON" > "$GHS/merged.json"
 }
 
 reply() { local key="$1" i=0; shift; for r in "$@"; do i=$((i + 1)); printf '%s\n' "$r" > "$GHS/$key.$i"; done; }
@@ -50,7 +56,7 @@ mwg() { PATH="$GHS/bin:$PATH" run "$MWG" 5 --interval 0s --timeout 1m; }
   reply api_checks "{\"check_runs\":[$(check 1 go in_progress '')]}" "{\"check_runs\":[$(check 1 go completed success)]}"
   mwg
   [ "$status" -eq 0 ]
-  [[ "$output" == *"merged #5 at $HEAD_SHA (--rebase)"* ]]
+  [[ "$output" == *"merged #5 at $HEAD_SHA (--rebase), merge commit 9999999999999999999999999999999999999999"* ]]
   grep -qx "pr merge 5 --rebase --match-head-commit $HEAD_SHA" "$GHS/calls"
   grep -q "commits/$HEAD_SHA/check-runs" "$GHS/calls"
 }
@@ -113,4 +119,45 @@ mwg() { PATH="$GHS/bin:$PATH" run "$MWG" 5 --interval 0s --timeout 1m; }
     ran=$((ran + 1))
   done
   [ "$ran" -ge 1 ]
+}
+
+# fail_once <key> <stderr text> — the first reply to <key> is that gh error (exit 1), the later ones as scripted.
+fail_once() {
+  local key="$1" n=0 i
+  while [ -f "$GHS/$key.$((n + 1))" ]; do n=$((n + 1)); done
+  for ((i = n; i >= 1; i--)); do mv "$GHS/$key.$i" "$GHS/$key.$((i + 1))"; done
+  printf '%s\n' "$2" > "$GHS/$key.1"
+  printf '1\n' > "$GHS/$key.1.rc"
+}
+
+@test "MWG7: a network error is printed and retried, never hidden" {
+  # Mutation: MWG7 -- dropping withRetries ends the wait with exit 3 on the first unreachable network.
+  reply api_checks "{\"check_runs\":[$(check 1 go completed success)]}"
+  fail_once api_checks 'Post "https://api.github.com/graphql": dial tcp 140.82.112.6:443: connect: network is unreachable'
+  mwg
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"network is unreachable"* ]]
+  [[ "$output" == *"a network error; retry 1/3"* ]]
+  [ "$(grep -c "check-runs" "$GHS/calls")" -eq 2 ]
+}
+
+@test "MWG8: a merge call that fails while GitHub merged anyway is a success, read from the PR state" {
+  # Mutation: MWG8 -- deciding on the merge call's exit reports a refusal for a PR that is merged.
+  : > "$GHS/no-lagless"
+  reply api_checks "{\"check_runs\":[$(check 1 go completed success)]}"
+  reply pr_view "{\"state\":\"OPEN\",\"isDraft\":false,\"headRefOid\":\"$HEAD_SHA\",\"baseRefName\":\"main\"}" "$MERGED_JSON"
+  fail_once pr_merge 'read tcp 10.0.0.2:51000->140.82.112.6:443: read: connection reset by peer'
+  mwg
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"connection reset by peer"* ]]
+  [[ "$output" == *"merge commit 9999999999999999999999999999999999999999"* ]]
+}
+
+@test "MWG9: a PR already merged at start is a success naming its merge commit, and nothing is merged again" {
+  reply pr_view "$MERGED_JSON"
+  mwg
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"#5 is already merged at $HEAD_SHA, merge commit 9999999999999999999999999999999999999999"* ]]
+  run grep -c "pr merge" "$GHS/calls"
+  [ "$output" = 0 ]
 }

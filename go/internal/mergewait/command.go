@@ -12,10 +12,13 @@ import (
 )
 
 const usage = `usage: merge-when-green <pr> [--rebase|--squash|--merge] [--repo <owner/name>]
-                        [--interval <duration>] [--timeout <duration>] [--log-lines <n>]
+                        [--interval <duration>] [--timeout <duration>] [--log-lines <n>] [--retries <n>]
 Wait for the CI checks of the PR's exact head commit, then merge that commit (gh pr merge
 --match-head-commit). Default --rebase (CONTRIBUTING.md § 8: linear history), --interval 30s,
---timeout 60m, --log-lines 20.
+--timeout 60m, --log-lines 20, --retries 3. Every gh error is printed; one that never reached GitHub
+(network unreachable, DNS, TLS handshake) is sent again up to --retries times, --interval apart. After
+the merge call the PR state decides: MERGED at the checked head is success (with its merge commit),
+whatever the call returned; a PR already merged at start is success too.
 Exit: 0 merged; 1 a check failed (its log tail printed); 2 usage; 3 gh missing or a gh call failed;
       4 the PR is a draft; 5 the branch lacks the current base (rebase first); 6 the PR is not open
       or its head moved; 7 timed out; 8 gh pr merge refused.
@@ -47,7 +50,7 @@ func Main(args []string, s cli.Stdio) int {
 }
 
 func parse(args []string, s cli.Stdio) (c Config, repo string, ok bool) {
-	c = Config{Method: "rebase", Interval: 30 * time.Second, Timeout: 60 * time.Minute, LogLines: 20}
+	c = Config{Method: "rebase", Interval: 30 * time.Second, Timeout: 60 * time.Minute, LogLines: 20, Retries: 3}
 	bad := func(format string, a ...any) (Config, string, bool) {
 		fmt.Fprintf(s.Err, msgPrefix+format+"\n%s", append(a, usage)...)
 		return c, "", false
@@ -82,6 +85,13 @@ func parse(args []string, s cli.Stdio) (c Config, repo string, ok bool) {
 			} else {
 				c.Timeout = d
 			}
+		case "--retries":
+			v, has := value()
+			n, err := strconv.Atoi(v)
+			if !has || err != nil || n < 0 {
+				return bad("--retries needs a number, 0 or more")
+			}
+			c.Retries = n
 		case "--log-lines":
 			v, has := value()
 			n, err := strconv.Atoi(v)

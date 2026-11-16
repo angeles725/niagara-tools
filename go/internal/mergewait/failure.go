@@ -43,7 +43,7 @@ func (c Config) logTail(r checkRun) []string {
 		fmt.Fprintf(c.Err, msgNoLog, "not a GitHub Actions job")
 		return nil
 	}
-	out, err := c.Gh("run", "view", "--job", job, "--log-failed")
+	out, err := c.Gh("run", "view", "--job", job, "--log-failed") // every error is printed by withRetries
 	if err != nil {
 		out, err = c.Gh("run", "view", "--job", job, "--log-failed")
 	}

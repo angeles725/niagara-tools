@@ -7,10 +7,15 @@
 //   - the branch must contain the current base branch (rebase or update first, then run it again);
 //   - a draft is never green (its checks may be skipped), so a draft is refused;
 //   - a check that failed on a transient download error (a 429, a 5xx, a reset connection) is re-run once;
-//   - a failed check is reported with the last lines of its log.
+//   - a failed check is reported with the last lines of its log;
+//   - every gh error is printed; a network error (connect, DNS, TLS handshake) is retried a bounded number
+//     of times, and after the merge call the PR state is read again: MERGED at the checked head is the
+//     success, whatever the merge call returned (a session script once reported "OPEN" for a merge that
+//     had gone through, its gh stderr hidden).
 //
 // outcome.go holds the exit codes and messages, gh.go the gh calls and replies, checks.go how check runs
-// are judged, transient.go the transient-failure patterns, wait.go the loop, command.go the flags.
+// are judged, transient.go the transient-failure patterns, retry.go the gh retries, wait.go the loop,
+// settle.go the state read that decides a merge, command.go the flags.
 package mergewait
 
 // Exit codes, one per outcome.
@@ -40,6 +45,11 @@ const (
 	msgRerun     = msgPrefix + "check %q failed on a transient download error (%s); re-running its failed jobs once\n"
 	msgNotGreen  = msgPrefix + "the checks of %.12s completed with no success (every one skipped or neutral); nothing merged\n"
 	msgTimeout   = msgPrefix + "the checks of %.12s did not finish in %s; nothing merged\n"
-	msgMergeFail = msgPrefix + "gh pr merge refused #%s at %.12s (above); nothing merged\n"
-	msgMerged    = msgPrefix + "merged #%s at %s (%s)\n"
+	msgMergeFail = msgPrefix + "gh pr merge failed for #%s at %.12s (above) and the PR is still %s; nothing merged\n"
+	msgUnsettled = msgPrefix + "gh pr merge reported #%s merged at %.12s, but the PR is still %s after %d read(s); check it by hand\n"
+	msgMerged    = msgPrefix + "merged #%s at %s (%s), merge commit %s\n"
+	msgAlready   = msgPrefix + "#%s is already merged at %s, merge commit %s\n"
+	msgOtherHead = msgPrefix + "#%s was merged at another head %.12s, not the checked %.12s\n"
+	msgGhError   = msgPrefix + "%v\n"
+	msgGhRetry   = msgPrefix + "a network error; retry %d/%d in %s\n"
 )

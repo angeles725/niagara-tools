@@ -9,7 +9,8 @@ import (
 
 // diskRows checks "/" and every mount once, in order. With a free-space floor (DiskMinFree > 0) the
 // floor alone decides each row: FAIL below it, PASS otherwise. Without one the percent rule applies.
-// The floor is the user's rule of 2026-11-16 ("el limite maximo es 40 GB libres"): a 1 TB C: at 90%
+// The floor is the user's rule of 2026-11-16 (first 40 GB free, then "ahora tu cuida que no sobrepasen de los 101",
+// which scripts/ci-local.sh passes as 101G): a 1 TB C: at 90%
 // used still has 90 GB free. (retro 2026-11-15 coordination-stretch T2)
 func diskRows(c Config, p Probe) []Row {
 	seen := map[string]bool{}

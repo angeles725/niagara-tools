@@ -12,6 +12,7 @@ type Config struct {
 	Method            string // rebase, squash or merge: the gh pr merge flag without its dashes
 	Interval, Timeout time.Duration
 	LogLines          int
+	Retries           int // how many times a gh call that failed on a network error is sent again
 	Gh                Gh
 	Sleep             func(time.Duration)
 	Now               func() time.Time
@@ -21,9 +22,13 @@ type Config struct {
 // Wait checks the PR, waits for the checks of its head commit and merges that commit when they are
 // green. It returns one of the Exit codes.
 func Wait(c Config) int {
+	c.Gh = c.withRetries(c.Gh)
 	p, err := viewPR(c.Gh, c.PR)
 	if err != nil {
 		return c.ghFailed(err)
+	}
+	if rc, done := c.mergedState(p, ""); done {
+		return rc
 	}
 	if rc := c.mergeable(p); rc != ExitMerged {
 		return rc
@@ -48,7 +53,7 @@ func Wait(c Config) int {
 		v, done, bad := judge(runs)
 		switch v {
 		case green:
-			return c.merge(p, sha)
+			return c.merge(sha, p.BaseRefName)
 		case notGreen:
 			fmt.Fprintf(c.Err, msgNotGreen, sha)
 			return ExitFailed
@@ -74,6 +79,9 @@ func Wait(c Config) int {
 		now, err := viewPR(c.Gh, c.PR)
 		if err != nil {
 			return c.ghFailed(err)
+		}
+		if rc, done := c.mergedState(now, sha); done { // merged while we waited
+			return rc
 		}
 		if now.HeadRefOid != sha {
 			fmt.Fprintf(c.Err, msgMoved, c.PR, sha, now.HeadRefOid)
@@ -111,21 +119,5 @@ func (c Config) containsBase(base, sha string) int {
 	return ExitMerged
 }
 
-// merge checks the base once more (it may have moved while the checks ran) and merges exactly sha.
-func (c Config) merge(p pr, sha string) int {
-	if rc := c.containsBase(p.BaseRefName, sha); rc != ExitMerged {
-		return rc
-	}
-	if _, err := c.Gh("pr", "merge", c.PR, "--"+c.Method, "--match-head-commit", sha); err != nil {
-		fmt.Fprintln(c.Err, err)
-		fmt.Fprintf(c.Err, msgMergeFail, c.PR, sha)
-		return ExitRefused
-	}
-	fmt.Fprintf(c.Out, msgMerged, c.PR, sha, "--"+c.Method)
-	return ExitMerged
-}
-
-func (c Config) ghFailed(err error) int {
-	fmt.Fprintf(c.Err, "%s%v\n", msgPrefix, err)
-	return ExitGh
-}
+// ghFailed is the outcome of a gh error; withRetries already printed it.
+func (c Config) ghFailed(error) int { return ExitGh }

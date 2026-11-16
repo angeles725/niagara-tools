@@ -2,12 +2,14 @@
 # merge-when-green.sh — wait for the CI checks of a pull request's exact head commit, then merge that commit.
 #
 # Usage: scripts/merge-when-green.sh <pr> [--rebase|--squash|--merge] [--repo <owner/name>]
-#                                    [--interval <duration>] [--timeout <duration>] [--log-lines <n>]
+#                                    [--interval <duration>] [--timeout <duration>] [--log-lines <n>] [--retries <n>]
 #
 # The rules (go/internal/mergewait): merge only on green checks of the exact head SHA, through
 # `gh pr merge --match-head-commit <sha>`; the branch must contain the current base branch (rebase or update
 # it first); a draft is never green; a check that failed on a transient download error is re-run once; a
-# failed check is reported with the last lines of its log. Exit: 0 merged; 1 a check failed; 2 usage;
+# failed check is reported with the last lines of its log; every gh error is printed, a network error is retried
+# (--retries, default 3), and after the merge call the PR state decides (MERGED at the checked head, with its merge
+# commit, is success; so is a PR already merged at start). Exit: 0 merged; 1 a check failed; 2 usage;
 # 3 gh missing, a gh call failed, or the Go tool could not be built; 4 draft; 5 the branch lacks the current
 # base; 6 not open or the head moved; 7 timed out; 8 gh pr merge refused. (retro 2026-11-15 coordination-stretch C5)
 #

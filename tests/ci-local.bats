@@ -168,15 +168,16 @@ fake_cgroup() { # fake_cgroup <name> <current> <max>
   [[ "$output" == *"FAIL disk:$TMPDIR_T "* ]]
 }
 
-@test "CL15b: the host-budget call checks the disks against the 40 GB free floor, not the percent" {
-  # Mutation: CL15b -- dropping --disk-min-free 40G from check_host_budget brings back the 90% rule that refused a
-  # 1 TB C: with 90 GB free. User rule 2026-11-16: "el limite maximo es 40 GB libres". (retro 2026-11-15 coordination-stretch T2)
+@test "CL15b: the host-budget call checks the disks against the 101 GB free floor, not the percent" {
+  # Mutation: CL15b -- dropping --disk-min-free 101G from check_host_budget brings back the 90% rule that refused a
+  # 1 TB C: with 90 GB free. User rule 2026-11-16: "ya tinees libres 117 GB, ahora tu cuida que no sobrepasen de los
+  # 101" (it replaced "el limite maximo es 40 GB libres"). (retro 2026-11-15 coordination-stretch T2)
   fake_cgroup init.scope 16 48129
   # no floor of the test's own: the disk rows carry the script's floor (their verdict depends on this host's disks)
   CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" \
     CI_LOCAL_HOST_BUDGET_ARGS="--proc-root $ROOT/tests/fixtures/host-budget/proc --gocache $TMPDIR_T/gocache --mount $TMPDIR_T" \
     run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
-  [[ "$output" == *"disk:$TMPDIR_T "*"fail below 40.0GB free)"* ]]
+  [[ "$output" == *"disk:$TMPDIR_T "*"fail below 101.0GB free)"* ]]
   [[ "$output" != *"disk:"*"% used, fail above"* ]]   # the disk rows come last, after the pids rows
 }
 

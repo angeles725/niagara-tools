@@ -17,6 +17,9 @@ type fakeGh struct {
 	t       *testing.T
 	replies map[string][]reply
 	calls   []string
+	// lagless: after a merge call that succeeded, pr view answers MERGED at the head (GitHub with no lag);
+	// a test of the state read after the merge turns it off and scripts the views itself.
+	lagless, didMerge bool
 }
 
 type reply struct {
@@ -27,12 +30,16 @@ type reply struct {
 func (f *fakeGh) gh(args ...string) (string, error) {
 	call := strings.Join(args, " ")
 	f.calls = append(f.calls, call)
+	if f.lagless && f.didMerge && strings.HasPrefix(call, "pr view") {
+		return merged(head).out, nil
+	}
 	for key, rs := range f.replies {
 		if strings.HasPrefix(call, key) {
 			r := rs[0]
 			if len(rs) > 1 {
 				f.replies[key] = rs[1:]
 			}
+			f.didMerge = f.didMerge || strings.HasPrefix(call, "pr merge") && r.err == nil
 			return r.out, r.err
 		}
 	}
@@ -57,7 +64,7 @@ func checks(runs ...string) reply { return ok(`{"check_runs":[` + strings.Join(r
 
 // newFake is a PR #5 whose head contains main, with the given replies added.
 func newFake(t *testing.T, extra map[string][]reply) *fakeGh {
-	f := &fakeGh{t: t, replies: map[string][]reply{
+	f := &fakeGh{t: t, lagless: true, replies: map[string][]reply{
 		"pr view 5":                         {view(false, head)},
 		"api repos/{owner}/{repo}/compare/": {behind(0)},
 		"pr merge 5":                        {ok("")},
@@ -74,7 +81,7 @@ func waitWith(f *fakeGh) (int, string, string) {
 	var out, errb bytes.Buffer
 	clock := time.Unix(0, 0)
 	code := Wait(Config{
-		PR: "5", Method: "rebase", Interval: time.Second, Timeout: time.Minute, LogLines: 3, Gh: f.gh,
+		PR: "5", Method: "rebase", Interval: time.Second, Timeout: time.Minute, LogLines: 3, Retries: 3, Gh: f.gh,
 		Sleep: func(d time.Duration) { clock = clock.Add(d) }, Now: func() time.Time { return clock },
 		Out: &out, Err: &errb,
 	})
@@ -97,7 +104,7 @@ func TestMergesTheExactHeadOnceEveryCheckIsGreen(t *testing.T) {
 		checks(run(1, "go", "completed", "success"), run(2, "bats", "completed", "success"), run(3, "x", "completed", "skipped")),
 	}})
 	code, out, errs := waitWith(f)
-	if code != ExitMerged || out != "merge-when-green: merged #5 at "+head+" (--rebase)\n" {
+	if code != ExitMerged || out != "merge-when-green: merged #5 at "+head+" (--rebase), merge commit "+mergeSHA+"\n" {
 		t.Fatalf("exit %d, out %q\n%s", code, out, errs)
 	}
 	if !f.called("api repos/{owner}/{repo}/compare/main..." + head) {

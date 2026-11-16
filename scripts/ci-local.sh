@@ -32,7 +32,7 @@
 #         could not read the cgroup root;
 #       4 host budget exceeded (go/cmd/host-budget FAIL row): a cgroup under ${CI_LOCAL_CGROUP_ROOT:-/sys/fs/cgroup}
 #         uses more than half of its pids.max (a full init.scope rejected every fork and aborted all sessions on
-#         2026-10-22), the system thread count is above half of threads-max, or / or /mnt/c is above 90% used;
+#         2026-10-22), the system thread count is above half of threads-max, or / or /mnt/c has less than 101 GB free (DISK_MIN_FREE);
 #         wait (or free disk) and retry. --list never runs the check.
 # [ev: retro 2026-10-22-ci-local-replay] [ev: retro go-ci-steps] [ev: retro r8-t47-host-budget]
 set -euo pipefail
@@ -47,7 +47,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
 . "$ROOT/scripts/lib/ci-local-changed.sh" || exit 3
 
-DISK_MIN_FREE=40G   # host-budget floor for / and /mnt/c (retro 2026-11-15 coordination-stretch T2)
+DISK_MIN_FREE=101G  # host-budget floor for / and /mnt/c (retro 2026-11-15 coordination-stretch T2)
 # "<step-name glob>|<reason>": CI steps replaced by a local equivalent. `uses:` refs match the same way.
 SKIP_RULES=(
   "actions/checkout@*|the working tree is already checked out"
@@ -134,8 +134,8 @@ fi
 [ "$LIST" -eq 0 ] || exit 0
 
 # check_host_budget — refuse to start the steps while go/cmd/host-budget reports a FAIL row: a cgroup above
-# 50% of a numeric pids.max (or the system thread count above 50% of threads-max), or / or /mnt/c above 90%
-# used. WARN rows (pids above 40%, disk above 80%, GOCACHE above 20 GB) are printed and do not block.
+# 50% of a numeric pids.max (or the system thread count above 50% of threads-max), or / or /mnt/c below DISK_MIN_FREE
+# free. WARN rows (pids above 40%, GOCACHE above 20 GB) are printed and do not block.
 # A cgroup root that does not exist at all (macOS, cgroup-less containers) is a stderr note and the run
 # proceeds, as the pre-T47 inline loop did; a root that exists but cannot be read stays exit 3.
 # CI_LOCAL_HOST_BUDGET_ARGS holds extra host-budget arguments (word-split; no spaces inside one argument),
@@ -149,7 +149,8 @@ check_host_budget() {
   fi
   read -r -a extra <<< "${CI_LOCAL_HOST_BUDGET_ARGS:-}"
   bin="$(go_tool_bin "$ROOT/go" host-budget)" || exit 3
-  # The disks are judged by free space, not percent: user rule 2026-11-16, "el limite maximo es 40 GB libres"
+  # The disks are judged by free space, not percent: user rule 2026-11-16, "ya tinees libres 117 GB, ahora tu cuida que
+  # no sobrepasen de los 101" (it replaced the first rule of that day, "el limite maximo es 40 GB libres")
   # (a 1 TB C: at 90% used still had 90 GB free). Mutation: CL15b -- dropping the floor restores the 90% rule.
   "$bin" --cgroup-root "$root" --disk-min-free "$DISK_MIN_FREE" ${extra[@]+"${extra[@]}"} >&2 || rc=$?
   case "$rc" in

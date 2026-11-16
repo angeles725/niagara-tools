@@ -35,6 +35,17 @@ type pr struct {
 	IsDraft     bool   `json:"isDraft"`
 	HeadRefOid  string `json:"headRefOid"`
 	BaseRefName string `json:"baseRefName"`
+	MergeCommit *struct {
+		Oid string `json:"oid"`
+	} `json:"mergeCommit"`
+}
+
+// mergeOid is the merge commit of a merged PR ("" when gh gave none).
+func (p pr) mergeOid() string {
+	if p.MergeCommit == nil {
+		return ""
+	}
+	return p.MergeCommit.Oid
 }
 
 // checkRun is one entry of the check-runs API of a commit.
@@ -48,7 +59,7 @@ type checkRun struct {
 
 func viewPR(gh Gh, number string) (pr, error) {
 	var p pr
-	err := ghJSON(gh, &p, "pr", "view", number, "--json", "state,isDraft,headRefOid,baseRefName")
+	err := ghJSON(gh, &p, "pr", "view", number, "--json", "state,isDraft,headRefOid,baseRefName,mergeCommit")
 	if err == nil && (p.HeadRefOid == "" || p.BaseRefName == "") {
 		err = fmt.Errorf("gh pr view %s: no head commit or base branch in the reply", number)
 	}

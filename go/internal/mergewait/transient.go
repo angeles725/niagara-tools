@@ -14,6 +14,25 @@ var transientPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)unexpected EOF`),
 }
 
+// networkPatterns are gh errors of a request that never reached GitHub (this host loses its route now
+// and then: `dial tcp ...:443: connect: network is unreachable`), safe to send again; data only.
+var networkPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)dial tcp`),
+	regexp.MustCompile(`(?i)network is unreachable`),
+	regexp.MustCompile(`(?i)no such host`),
+	regexp.MustCompile(`(?i)TLS handshake timeout`),
+	regexp.MustCompile(`(?i)error connecting to`),
+}
+
+func isNetworkError(err error) bool {
+	for _, p := range networkPatterns {
+		if p.MatchString(err.Error()) {
+			return true
+		}
+	}
+	return false
+}
+
 // transientCause returns the first log line that names a transient download failure ("" when none).
 func transientCause(lines []string) string {
 	for _, l := range lines {

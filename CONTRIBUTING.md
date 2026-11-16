@@ -258,7 +258,7 @@ Before `git commit`:
       A step that runs bats runs the bats-core version ci.yml's install step pins (1.10.0; fetched sha256-checked into
       the same cache when the bats on PATH is another version): 1.10 refuses a here-document line that starts with
       the test keyword (`Duplicate test name(s)`), which 1.14 accepts. Its host-budget gate judges `/` and `/mnt/c`
-      by free space, at least 40 GB free (host-budget `--disk-min-free 40G`; the user's rule of 2026-11-16), not by percent.
+      by free space, at least 101 GB free (host-budget `--disk-min-free 101G`; the user's rule of 2026-11-16), not by percent.
 - [ ] Before a push, `scripts/ci-local.sh --changed` runs the pinned shellcheck, the kit's bats lints
       (lint-bats-errexit, the BEX-kit case, and `ci-steps lint-bats-heredoc`) and `gofmt -l` over the files changed
       against origin/main, work tree and untracked files included; `--range <from>..<to>` reads a commit range
@@ -415,7 +415,10 @@ live-doctrine citation gate and before the retro exits, so a `Retro: none (trivi
   push, run it again), waits for the check runs of the exact head commit (a head that moves while it waits is
   exit 6), re-runs once a check that failed on a transient download error (a 429, a 5xx, a reset connection),
   reports any other failed check with the last lines of its log (exit 1), and merges with
-  `gh pr merge --match-head-commit <sha>` (exit 0; 8 when gh refuses, 7 on timeout). It runs under bash and zsh.
+  `gh pr merge --match-head-commit <sha>`. Every gh error is printed and a network error (`dial tcp ...: network
+  is unreachable`) is retried up to `--retries` (3) times; after the merge call the PR state decides: MERGED at the
+  checked head is exit 0 with its merge commit, whatever the call returned (8 when it is still open, 7 on
+  timeout). It runs under bash and zsh.
   Open pull requests as ready, not draft: CI runs on drafts too, so a defect only CI's pinned tools catch shows up
   before the merge turn.
 - **Gate the whole landing range.** Before it pushes, a landing script checks review coverage of every non-merge
