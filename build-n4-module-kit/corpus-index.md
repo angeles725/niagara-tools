@@ -1,10 +1,10 @@
-# Corpus index — the curated map of the niagara-research corpus for module builders (B29–B1258)
+# Corpus index — the curated map of the niagara-research corpus for module builders (B5–B1420)
 
 The niagara-research corpus carries a COMPLETE N4 module-authoring body — the RT campaign (B729–B746),
 the Wire-Sheet + organization work (B747–B750), the WB/UX authoring taxonomy (B751–B753), and the
 module-authoring axes (B754–B760: versioning/upgrade-safety, bits, build/signing, integration, tags,
 lexicon, and a consolidated audit). Later campaigns extended it with exemplar, own-module, distribution and
-platform blocks, and the N4 Developer course focus (B29–B1258), so the title names the full range it cites. This index points the builder at the
+platform blocks, the N4 Developer course focus and the running-station topics (B5–B1420), so the title names the full range it cites. This index points the builder at the
 block that answers each need. `[ev: retro kit-meta-hygiene-2026-10-01 Δ2]`
 
 **How to use it:** `corpus-nav FIRST` when you have a TERM to look up (`corpus-nav find "<topic>"`); use THIS
@@ -177,6 +177,37 @@ which checked the open ones against code. `[ev: retro course-coverage Δ18]`
 | **B1419** | Recordings Day 4: `getServiceTypes()`, alarms / NEQL / SystemDB, engine watchdog defaults, threads, driver idioms (stale time, NDriver) | rt / alarm / driver |
 | **B1420** | Child gaps of B1416-B1419 worked to code: stale read after `lease()`, COV sensitivity per driver, alarm UUID on return-to-normal, `orientSystemDb` + relation IDs, shutdown thread, Niagara Console environment | rt / driver / reference |
 | **`docs/n4-module-development-course-guide.md`** | How to develop an N4 module as Tridium teaches it (N4.15), every rule linked to its block (B1230–B1258). Lives in `niagara-research/docs/`. | reference |
+
+## Debugging, services, licensing, removal, web tooling and classic UI (B5–B1297)
+
+Blocks the type cards cite for the running-station and authoring topics added on 2026-11-15
+(`types/diagnostics.md` § 4, `types/service.md`, `types/security.md` § 5.2-5.3, `types/distribution.md` § 10a,
+`types/wb-widgets.md`, `types/theme.md` § 8-10). Each was opened and its subject confirmed before it was listed.
+
+| Block | What it gives the builder | Layer |
+|---|---|---|
+| **B1296** | The station console: the eight documented verbs and five hidden ones (`threads`, `save`, `quit`, `kill`, `syncmodules`, …), how Application Director and `plat tellstation` deliver them through the daemon, station exit codes; code of 4.14.0.162 | diagnostics |
+| **B1297** | Launcher command lines from code: `nre`, `station`, `wb`, `niagarad`, `test` flags (documented and not), the shared `-name:value` grammar, the command-line property blacklist | diagnostics / build |
+| **B1249** | Course child gaps closed from code; §1249.1 is the launcher's `-@<jvm option>` pass-through and the `developer`-licence gate on Java agents (what a remote debugger needs) | diagnostics |
+| **B1257** | Expected results of the course labs as screenshots show them: §1257.7 the debugger attach (Appendix A), §1257.10 the rules they teach (signing, permissions, logging) | reference / test |
+| **B1191** | Station save: the rotated `config_backup_<time>.bog` rollback file and backup count, the save job; the spy page table with the state-changing, CSRF-gated pages | persistence / diagnostics |
+| **B1247** | Course runtime gaps from code; §1247.11: the `spy:` scheme is superuser-only, no per-component spy permission | security / diagnostics |
+| **B1240** | Course bonus topics: authoring a spy page (`spy(SpyWriter)`, always call `super`), a `-doc` help part (`toc.xml`, no custom styles), BajaDocs; the two Review Assignments decoded | observability / doc |
+| **B20** | Overview of `BAbstractService` internals (callbacks, bootstrap phases, fault states), `BApp`, system monitors, `BJobService`; an early overview: prefer B757/B778/B1145 for exact code | rt / service |
+| **B1145** | Service start order in `ServiceManager.startService`: licence check, then `serviceStarted()` with no guard between them; a throw is logged and the boot continues; the symmetric stop path | rt / service |
+| **B1143** | `BAbstractService` licence enforcement: the start-time presence gate sets a FATAL fault but stops nothing, limits fail open when the check failed, the fault cannot be edited away | service / licensing |
+| **B1144** | Licence validation chain: host id compare, vendor certificate signed by a built-in key, licence file signed by the vendor, load-time failures that only log, the exception taxonomy, node-locked vs subscription | licensing |
+| **B1139** | Recovering a station stuck at boot with the platform Software Manager (station down): statuses, Downgrade / Uninstall / Re-Install / Rebuild Module Signatures, Commit; never File Transfer Client | platform / recovery |
+| **B633** | Daemon-side module install mechanics: signature gate by the target's verification mode, every station stopped, jar overwritten in place with no backup or rollback | platform / distribution |
+| **B5** | ORD syntax and resolution, the BOG file format (type references `t=` and module bindings `m=`), queries; an early broad block | ord / persistence |
+| **B29** | The web tier end to end: Jetty embedding, servlet registry, filter chain (auth, CSRF), endpoint matrix, sessions, caching of JS bundles | ux / web |
+| **B38** | File system and `BOrd` resolution end to end; §38.22 notes the module-dev switch that reads module resources from the source tree instead of the jar | ord / web |
+| **B1132** | The `-ux` JavaScript build toolchain: grunt-niagara, the Gradle `niagara-grunt` plugin (`babel:dist`, `copy:dist`, `requirejs`), RequireJS `nmodule/<module>/rc/…` IDs | ux / build |
+| **B1119** | ES6 vs ES5 for `-ux` JavaScript: transpiled by the grunt build, mandatory ES5 for raw `rc/` files | ux / build |
+| **B204** | The bajaux framework: `Widget` lifecycle (`doInitialize`, `doLoad`, `doRead`, `doSave`), properties and validators, spandrel, and the rt→web bridge (`BIJavaScript`, `JsInfo`, `BJsBuild`, the widget servlet) | ux |
+| **B433** | The Hx framework from code: `BHxView` is a servlet view, buffered HTML wrapped by the profile with its CSRF token, header-keyed events, stateless requests, 5 s polling, legacy status | wb / hx |
+| **B427** | The Workbench widget model: `BWidget` is a `BComponent`, layout by `doLayout`, painting through the `gx` `Graphics` interface, event dispatch, the theme families | wb |
+| **B1086** | Field-editor extras: `BIPopupEditor`, `BWbFieldEditor.dialog()`, the `fieldEditor` facet override, `IDialogContentProvider`, the profile filter | wb |
 
 ---
 
