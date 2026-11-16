@@ -111,8 +111,11 @@ const (
 
 // Verify gate and report-module.
 const (
-	msgGate             = "==> verify gate (verify-module.sh):"
-	msgGateFailed       = "build.sh: verify gate failed — do not deploy these jars"
+	msgGate       = "==> verify gate (verify-module.sh):"
+	msgGateFailed = "build.sh: verify gate failed — do not deploy these jars"
+	msgNoSigner   = "build.sh: WARN — no niagaraSigningAlias is configured and no deployed jar gives a signer, so the gate accepts any signature: " +
+		"the jar is signed with the signing plugin's default development signer unless the gradle root names another, " +
+		"and a station's Software Manager shows that one as self-signed (set it: --gradle-prop niagaraSigningAlias=<alias>, or gradle.properties)"
 	msgReport           = "==> report-module (hand-off punch-list)"
 	msgReportEnv        = "build.sh: report-module environment error (exit 3)"
 	msgReportIncomplete = "build.sh: report-module verdict INCOMPLETE — a floor check (verify-module / schema-risk) did not run; extract the deployed baseline into <artifact>/.deploy-baseline (build-verify.md § Schema-risk deploy workflow) or pass --first-deploy for a never-deployed module"

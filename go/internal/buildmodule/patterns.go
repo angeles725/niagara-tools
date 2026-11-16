@@ -12,6 +12,11 @@ const (
 	mirrorUserHome  = ".mirror-user-home"
 	signingProfile  = ".tridium/security/niagara.signing.xml"
 	m2Repository    = "etc/m2/repository"
+	// aliasProperty is the gradle property the kit's root signing block takes the signing alias from
+	// (templates/signing-root.gradle.kts); gradleEnvPrefix is how the environment sets a gradle property.
+	aliasProperty    = "niagaraSigningAlias"
+	gradleEnvPrefix  = "ORG_GRADLE_PROJECT_"
+	gradleProperties = "gradle.properties"
 	// m2Depth is how deep under etc/m2/repository a plugin version directory is looked for.
 	m2Depth = 8
 )

@@ -1,7 +1,8 @@
 package buildmodule
 
-// gate runs verify-module.sh on every jar the build produced, with the module sources, then the
-// report-module punch-list unless --no-report. A jar that has not passed the gate does not go to a station.
+// gate runs verify-module.sh on every jar the build produced, with the module sources and the signer the
+// build expects (a WARN when it knows none: the gate then accepts any signature), then the report-module
+// punch-list unless --no-report. A jar that has not passed the gate does not go to a station.
 func (b *build) gate() int {
 	b.say(msgGate)
 	source := b.root + "/" + b.opt.mod
@@ -9,10 +10,18 @@ func (b *build) gate() int {
 	if b.opt.target != "" {
 		args = append(args, "--target-version", b.opt.target)
 	}
+	signer := b.expectedSigner()
+	if signer != "" {
+		args = append(args, "--expected-signer", signer)
+	}
 	for _, p := range b.profiles {
 		args = append(args, b.builtJar(p))
 	}
-	if b.runScript(gateScript, args...) != 0 {
+	code := b.runScript(gateScript, args...)
+	if signer == "" {
+		b.warn(msgNoSigner) // after the gate's rows, where the operator reads the verdict
+	}
+	if code != 0 {
 		b.warn(msgGateFailed)
 		return ExitGate
 	}

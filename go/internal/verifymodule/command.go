@@ -15,7 +15,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-// usage is what `sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'` printed: lines 2-20 of the bash script.
+// usage is what `sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'` printed: lines 2-20 of the bash script. The
+// --expected-signer lines under `signed` were added to it with the option.
 //
 //go:embed usage.txt
 var usage string
@@ -26,6 +27,7 @@ const usageCoverage = "usage: verify-module.sh coverage <npass> <nfail> <nwarn> 
 type run struct {
 	s                          cli.Stdio
 	target, src                string
+	expected                   string // --expected-signer: the alias the jar must be signed with, "" for any
 	stored, strict             bool
 	jar                        *jarFile
 	failed                     bool

@@ -36,6 +36,14 @@
 # Profiles: by default every <MOD>-<p> dir that has a gradle file AND sources under src/ is built; a scaffold
 #   (gradle file, no sources) is reported "skipped". --profiles replaces auto-detection entirely.
 # After gradle, verify-module.sh (same dir) runs on every produced jar with --src <module-root>/<MOD>.
+# Expected signer: the gate also gets --expected-signer <alias>, so a jar signed with another key (the signing
+#   plugin's default development key) FAILs its `signed` row (exit 50). The alias is the niagaraSigningAlias gradle
+#   property (the last --gradle-prop, else $ORG_GRADLE_PROJECT_niagaraSigningAlias, else
+#   $GRADLE_USER_HOME/gradle.properties, else the gradle root's gradle.properties); else the one signer of the deployed
+#   jars the drift gate snapshots (none under --no-drift-check, or when they disagree). With neither, the gate accepts
+#   any signature and build.sh prints one "WARN — no niagaraSigningAlias is configured" line after the gate's rows: the
+#   jar may carry the development signer, which a station's Software Manager shows as self-signed. The exit code does
+#   not change. [ev: external session retro, delta B5]
 # Build-location precheck (Δ7): WARNs (non-fatal) when <module-root>'s gradle root or niagara_home sits on a
 #   WSL 9p/drvfs mount (/mnt/<drive>) — Gradle's per-file work is far slower there than on ext4.
 # Deployed-baseline drift gate (Δ2): before gradle's :jar task overwrites <niagara_home>/modules/<jar>, this

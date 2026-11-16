@@ -30,10 +30,7 @@ func (b *build) isolateMirror() int {
 		return code // as under bash's set -e
 	}
 	b.signingXML = userHome + "/" + signingProfile
-	gradleHome := b.s.Env("GRADLE_USER_HOME")
-	if gradleHome == "" {
-		gradleHome = home + "/.gradle"
-	}
+	gradleHome := b.gradleUserHome()
 	if options != "" {
 		options += " "
 	}

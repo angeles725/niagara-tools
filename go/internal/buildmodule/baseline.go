@@ -13,6 +13,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/vendorversion"
+	"github.com/angeles725/niagara-tools/go/internal/verifymodule"
 )
 
 // snapshot is what was deployed for one profile before gradle ran.
@@ -20,6 +21,9 @@ type snapshot struct {
 	hash    string // content hash of the deployed jar, "" when it cannot be listed
 	version string // its own vendorVersion, "" when unreadable
 	backup  string // a full copy, restored into modules/ when the run must not leave the new jar there
+	// signers are the names of its complete signatures (META-INF/<NAME>.SF with its block file), none when
+	// it is unsigned or unreadable: what the gate expects of the new jar when no alias is configured.
+	signers []string
 }
 
 // snapshotBaseline is part 1 of the deployed-baseline drift gate: gradle's :jar task installs the new jar
@@ -44,6 +48,7 @@ func (b *build) snapshotBaseline() int {
 		}
 		snap := snapshot{version: vendorversion.ModuleVersion(old), backup: dir + "/" + p + ".old.jar"}
 		snap.hash, _ = b.contentHash(old)
+		snap.signers = verifymodule.Signers(old)
 		if reason, code := b.copyPreserving(old, snap.backup); code != 0 {
 			b.warn("%s", reason)
 			return code // the chain cannot go on without the backup; cp's own status, as under bash's set -e
