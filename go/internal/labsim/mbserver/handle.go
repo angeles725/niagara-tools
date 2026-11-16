@@ -64,6 +64,9 @@ func (s *Server) handle(f modbus.Frame, remote string) answer {
 		ElapsedMS: elapsed.Milliseconds(),
 		Remote:    remote, Unit: int(f.Unit), Function: int(function),
 	}}
+	req, exc := modbus.ParseRequest(f.PDU)
+	a.entry.Address, a.entry.Quantity = int(req.Address), int(req.Quantity)
+	a.entry.Written = append(ints(req.Words), flags(req.Bits)...)
 	unit, ok := s.opts.Units[f.Unit]
 	if !ok {
 		if s.opts.GatewayException {
@@ -77,9 +80,6 @@ func (s *Server) handle(f modbus.Frame, remote string) answer {
 		return a.silent(reqlog.ReasonOffline)
 	}
 	a.delay = device.Delay(nil)
-	req, exc := modbus.ParseRequest(f.PDU)
-	a.entry.Address, a.entry.Quantity = int(req.Address), int(req.Quantity)
-	a.entry.Written = append(ints(req.Words), flags(req.Bits)...)
 	if exc != modbus.None {
 		return a.exception(function, exc)
 	}

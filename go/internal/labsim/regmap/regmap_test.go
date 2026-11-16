@@ -156,3 +156,20 @@ func TestWritesChangeThePointValues(t *testing.T) {
 		t.Errorf("energy after one word = %v, want 3", v)
 	}
 }
+
+func TestReferenceOfIsTheOneBasedNotation(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		table   Table
+		address int
+		want    string
+	}{
+		{Coils, 0, "00001"}, {DiscreteInputs, 2, "10003"}, {InputRegisters, 0, "30001"},
+		{HoldingRegisters, 9998, "49999"}, {HoldingRegisters, 9999, "410000"}, {HoldingRegisters, 65535, "465536"},
+	}
+	for _, c := range cases {
+		if got := c.table.ReferenceOf(c.address); got != c.want {
+			t.Errorf("%s address %d = %s, want %s", c.table, c.address, got, c.want)
+		}
+	}
+}

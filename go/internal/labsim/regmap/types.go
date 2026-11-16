@@ -3,7 +3,10 @@
 // reads and writes of a range of addresses.
 package regmap
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // Table is one of the four Modbus data tables.
 type Table int
@@ -119,3 +122,13 @@ func (o Order) Known() bool { _, ok := permutations[o]; return ok }
 
 // swapsBytes reports whether the order swaps the two bytes of a register.
 func (o Order) swapsBytes() bool { return o == BADC || o == DCBA }
+
+// ReferenceOf is a 0-based address in the 1-based reference notation drivers
+// and device manuals use: the table's digit and four digits (40001), or five
+// once the address passes 9998 (410000).
+func (t Table) ReferenceOf(address int) string {
+	if n := address + 1; n > 9999 {
+		return fmt.Sprintf("%s%05d", t.Reference(), n)
+	}
+	return fmt.Sprintf("%s%04d", t.Reference(), address+1)
+}
