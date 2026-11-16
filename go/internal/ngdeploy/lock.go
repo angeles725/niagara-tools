@@ -22,7 +22,8 @@ import (
 func (d *deploy) lock(dir string) int {
 	path := dir + "/" + lockName
 	host, _ := os.Hostname()
-	err := d.makeLock(path, fmt.Sprintf(lockContent, os.Getpid(), host, time.Now().UTC().Format(lockTime), ownCommand()))
+	d.sweepLockTemps(dir)
+	inTwoSteps, err := d.makeLock(path, fmt.Sprintf(lockContent, os.Getpid(), host, time.Now().UTC().Format(lockTime), ownCommand()))
 	switch {
 	case errors.Is(err, fs.ErrExist):
 		holder, gone, hint := lockedBy(path)
@@ -37,6 +38,10 @@ func (d *deploy) lock(dir string) int {
 		return d.fail(ExitEnv, msgLockFailed, path, strerror.Text(err))
 	}
 	d.locks = append(d.locks, path)
+	if inTwoSteps != nil && !d.saidTwoSteps {
+		d.saidTwoSteps = true
+		d.warn(noticeLockInTwoSteps, dir, strerror.Text(inTwoSteps))
+	}
 	if d.signals == nil {
 		d.signals = watchInterrupts()
 	}
