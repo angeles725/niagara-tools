@@ -75,20 +75,6 @@ func ValidateQuery(query any) (string, error) {
 	return q, nil
 }
 
-// checkQueryText refuses a stripped query holding '|', a control character, or more than
-// MaxQueryLength code points: the checks every base shares.
-func checkQueryText(q string) error {
-	switch {
-	case strings.Contains(q, "|"):
-		return valueError("query must not contain '|': only one select is composed into the ORD")
-	case controlRe.MatchString(q):
-		return valueError("query must not contain control characters")
-	case pyjson.Len(q) > MaxQueryLength:
-		return valueError(fmt.Sprintf("query is longer than %d characters", MaxQueryLength))
-	}
-	return nil
-}
-
 // BaseSlot is base_slot: the slot path (/Drivers, / for the root) of a base given as an ORD or
 // a path.
 func BaseSlot(base any) (string, error) {
