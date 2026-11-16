@@ -57,7 +57,7 @@ func Validate(f *File) []string {
 		if len(d.Points) == 0 {
 			out.add(where, msgNoPoints)
 		}
-		validatePoints(d, where, out)
+		validatePoints(d, f.dir, where, out)
 		validateBACnet(d, where, seen, out)
 	}
 	return out.list

@@ -31,7 +31,7 @@ const (
 	msgValue         = "value %v does not fit %s"
 	msgOverlap       = "addresses %d-%d of table %q overlaps %q"
 
-	msgBehaviourKind     = "behaviour %q is none of constant, ramp, sine, random_walk"
+	msgBehaviourKind     = "behaviour %q is none of constant, ramp, sine, random_walk, replay"
 	msgBehaviourWritable = "a writable point cannot have behaviour %q: a write would be overwritten"
 	msgBehaviourBit      = "a bit cannot have behaviour %q"
 	msgBehaviourRange    = "behaviour %s runs over %v to %v, which does not fit %s"
@@ -44,6 +44,28 @@ const (
 	msgWalkInterval      = "random_walk needs interval_ms above 0"
 	msgWalkBounds        = "random_walk needs min below max"
 	msgWalkStart         = "random_walk needs value within min-max"
+
+	msgReplayFile   = "replay needs file: a CSV of time,value records beside the scenario"
+	msgReplaySpeed  = "replay needs speed above 0"
+	msgReplayEnd    = "replay end %q is neither \"hold_last\" nor \"loop\""
+	msgReplayOffset = "replay needs start_offset_ms of 0 or more"
+	msgReplayPast   = "replay start_offset_ms %d is past the end of the series (%d ms)"
+	msgReplayCannot = "replay file %q: %v"
+)
+
+// The faults of a replay file, one line each, naming the row (1 is the header)
+// and the column.
+const (
+	msgSeriesNoHeader = "row 1: no header"
+	msgSeriesNoTime   = "row 1: the header names no time column (time or timestamp)"
+	msgSeriesNoValue  = "row 1: the header names no value column (value)"
+	msgSeriesFields   = "row %d: %d field(s), the header has %d"
+	msgSeriesSyntax   = "row %d (line %d, character %d): %v"
+	msgSeriesTime     = "row %d, column %d (%s): %q is not a time with a zone, such as 2026-11-15T20:00:00.000-06:00 " +
+		"(read a history with timestamp.encodeToString)"
+	msgSeriesValue   = "row %d, column %d (%s): %q is not a number such as 21.5 (read a history with value.encodeToString)"
+	msgSeriesNoOK    = "no record has status ok (%d skipped)"
+	msgSeriesTooLong = "row %d: more than %d records"
 )
 
 // The faults of the BACnet sections; each is prefixed with its place and
