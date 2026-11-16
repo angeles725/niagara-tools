@@ -1,7 +1,6 @@
 package skillinstall
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -49,28 +48,34 @@ func harnessChoices() string {
 	return strings.Join(names[:len(names)-1], ", ") + " or " + allHarnesses
 }
 
-// root is the harness directory under home, or the directory its environment variable names.
-func (h harness) root(home string, s cli.Stdio) string {
-	if h.envDir != "" {
+// root is the harness directory: <home>/<dir> as given (never cleaned, so printed paths keep the --home
+// spelling), or the directory its environment variable names when --home was not given. An explicit --home
+// always wins, so `--home <scratch>` keeps every write under the scratch directory.
+func (h harness) root(home string, homeGiven bool, s cli.Stdio) string {
+	if h.envDir != "" && !homeGiven {
 		if dir := s.Env(h.envDir); dir != "" {
 			return dir
 		}
 	}
-	return filepath.Join(home, h.dir)
+	return home + "/" + h.dir
 }
 
 // skillFile is where a skill's launcher is installed in this harness.
 func (h harness) skillFile(root, skill string) (dir, file string) {
-	dir = filepath.Join(root, "skills", skill)
-	return dir, filepath.Join(dir, "SKILL.md")
+	dir = h.skillsDir(root) + "/" + skill
+	return dir, dir + "/SKILL.md"
 }
+
+// skillsDir and promptsDir are the parents of the installed files; neither may be a symbolic link.
+func (h harness) skillsDir(root string) string  { return root + "/skills" }
+func (h harness) promptsDir(root string) string { return root + "/prompts" }
 
 // promptFile is the prompt template that gives the harness a bare /<skill>; "" when it needs none.
 func (h harness) promptFile(root, skill string) string {
 	if !h.prompts {
 		return ""
 	}
-	return filepath.Join(root, "prompts", skill+".md")
+	return h.promptsDir(root) + "/" + skill + ".md"
 }
 
 // label is the skill column of a drift row: the bare skill for the default line, skill[harness] otherwise.

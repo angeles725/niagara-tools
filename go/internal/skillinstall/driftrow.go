@@ -18,7 +18,7 @@ type driftCheck struct {
 // launcher row and, where the harness needs one, the prompt row. It returns 0, 1 (a FAIL row) or 3.
 func checkHarness(c driftCheck, s cli.Stdio) int {
 	name := label(c.o.skill, c.h, c.o.explicit)
-	root := c.h.root(c.o.home, s)
+	root := c.h.root(c.o.home, c.o.homeGiven, s)
 	if c.h.optional {
 		if present, _ := installtools.IsDir(root); !present {
 			fmt.Fprintf(s.Out, "SKIP  skill-drift  %s  absent: %s not found\n", name, root)

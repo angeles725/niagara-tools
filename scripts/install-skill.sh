@@ -10,14 +10,17 @@
 # Harnesses (--harness; the table is go/internal/skillinstall/harness.go):
 #   claude (default)  <home>/.claude/skills/<skill>/SKILL.md (the directory is created)
 #   pi                <agent-dir>/skills/<skill>/SKILL.md and <agent-dir>/prompts/<skill>.md, where
-#                     <agent-dir> is $PI_CODING_AGENT_DIR when set, else <home>/.pi/agent
+#                     <agent-dir> is <home>/.pi/agent when --home is given, else $PI_CODING_AGENT_DIR
+#                     when set, else $HOME/.pi/agent (an explicit --home always wins)
 #   gentle-shell      the same two files under <home>/.gentle-shell/agent
 #   all               every harness above, in that order
 # A pi or gentle-shell agent directory that does not exist is never created: the run prints an
 # "absent: <harness>" row and goes on (exit 0). The prompt file gives the harness a bare /<skill>; it is
-# rendered from the kit's skill/prompt.md beside the tracked launcher (@SKILL_FILE@ becomes the installed
-# SKILL.md path), or from the Go package's default template when the kit has none, and follows the same
-# current / diverged / --force rules as the launcher.
+# rendered from the kit's skill/prompt.md beside the tracked launcher (@SKILL_FILE@ becomes the absolute
+# path of the installed SKILL.md), or from the Go package's default template when the kit has none, and follows the same
+# current / diverged / --force rules as the launcher. Every file of every selected harness is checked
+# before the first write: a diverged copy without --force (exit 1) or a symbolic link on the way (exit 3)
+# stops the run with nothing written.
 #
 # --skill build-n4-module also MATERIALIZES the kit's generated state in the kit checkout the launcher
 # reads: BUILD-STATE.md, retros/INDEX.md and toolbelt/INDEX.md are generated and not committed (R10-D1), so a fresh install
@@ -38,9 +41,9 @@
 #   --home <dir>   Base home directory (default: $HOME); an empty value is a usage error. Every test
 #                  passes this flag so no test ever touches the real $HOME.
 #   --dry-run      Print what would be done; write nothing. Exits 0.
-#   --force        Overwrite a diverged installed copy without exiting 1. A target SKILL.md, skill
-#                  directory or prompt file that is a symbolic link is refused (exit 3), never written
-#                  through: remove the link, then re-run.
+#   --force        Overwrite a diverged installed copy without exiting 1. A target SKILL.md or prompt
+#                  file, the skill directory, or the skills/ or prompts/ directory that is a symbolic
+#                  link is refused (exit 3), never written through: remove the link, then re-run.
 #
 # Exit codes:
 #   0   Installed or already current (or --dry-run); for build-n4-module, kit state materialized

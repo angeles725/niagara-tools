@@ -68,30 +68,15 @@ func Main(args []string, s cli.Stdio) int {
 	if err != nil {
 		return fail(exitEnv, "cannot read %s: %s", tracked, installtools.Reason(err))
 	}
-	code := exitOK
-	for _, h := range selected {
-		root := h.root(o.home, s)
-		if h.optional {
-			if present, _ := installtools.IsDir(root); !present {
-				fmt.Fprintf(s.Out, "%s: absent: %s (%s not found), nothing installed\n", installTool, h.name, root)
-				continue
-			}
-		}
-		all, err := units(h, root, o.skill, tracked, trackedData)
-		if err != nil {
-			return fail(exitEnv, "cannot render the prompt template: %v", err)
-		}
-		for _, u := range all {
-			switch placed := place(u, o, s); placed {
-			case exitEnv:
-				return exitEnv
-			case exitDiverged:
-				code = exitDiverged
-			}
-		}
-	}
+	steps, present, code := planInstall(o, selected, tracked, trackedData, s)
 	if code != exitOK {
 		return code
+	}
+	if code := runInstall(steps, o, s); code != exitOK {
+		return code
+	}
+	if !present {
+		return exitOK // nothing was installed, so there is no launcher whose kit state to materialize
 	}
 	if o.dryRun {
 		if kit != "" {

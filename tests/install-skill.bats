@@ -350,3 +350,30 @@ make_tree() {
   [[ "$output" == *"refusing to write through a symbolic link"* ]]
   [ "$(cat "$BATS_TEST_TMPDIR/elsewhere/SKILL.md")" = "not ours" ]
 }
+
+# ---------------------------------------------------------------------------
+# HS5-HS7 — review follow-ups of #692 (retro 2026-11-15 T4).
+# ---------------------------------------------------------------------------
+@test "HS5: an explicit --home wins over PI_CODING_AGENT_DIR" {
+  mkdir -p "$TEST_HOME/.pi/agent" "$BATS_TEST_TMPDIR/other-agent"
+  run env PI_CODING_AGENT_DIR="$BATS_TEST_TMPDIR/other-agent" HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4 --harness pi
+  [ "$status" -eq 0 ]
+  [ -f "$TEST_HOME/.pi/agent/skills/mcp-n4/SKILL.md" ]
+  [ ! -e "$BATS_TEST_TMPDIR/other-agent/skills" ]
+}
+
+@test "HS6: a symlinked prompts/ directory is refused (exit 3) before anything is written" {
+  mkdir -p "$TEST_HOME/.pi/agent" "$BATS_TEST_TMPDIR/elsewhere"
+  ln -s "$BATS_TEST_TMPDIR/elsewhere" "$TEST_HOME/.pi/agent/prompts"
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4 --harness pi
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"refusing to write through a symbolic link: $TEST_HOME/.pi/agent/prompts"* ]]
+  [ ! -e "$TEST_HOME/.pi/agent/skills" ]
+  [ -z "$(ls -A "$BATS_TEST_TMPDIR/elsewhere")" ]
+}
+
+@test "HS7: an empty --home prints the usage line" {
+  run env HOME="$TEST_HOME" bash "$SCRIPT" --home ""
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"usage: install-skill.sh "* ]]
+}
