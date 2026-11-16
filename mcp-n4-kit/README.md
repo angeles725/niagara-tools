@@ -200,7 +200,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
-`n4_read_history`, `n4_license_info`.
+`n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -242,6 +242,43 @@ text); `truncated: true` means the range holds more records than were returned. 
 station cannot read is an error naming the id and how to list ids
 (`n4_bql_query` `select historyConfig.id from history:HistoryExt`); an AuthError stays one.
 There is no `output_file`: it is not an export of whole histories.
+Alarms: `n4_read_alarms(limit=50, source, alarm_class, source_state, ack_state, since, until,
+open_only=true)` returns alarm records newest first (`order: newest_first`), by default the open
+ones: it sends `GET /ord/<url-encoded alarm:|bql:select timestamp, uuid, source, sourceState,
+ackState, alarmClass, priority, alarmData.msgText where <clause> order by timestamp
+desc|view:file:ITableToCsv>`, then `select count(*) where <clause>` for `total` (`null` with
+`total_note` when that count fails). The default clause is
+`(ackState != 'acked' or sourceState != 'normal')`; a `source_state` (`normal`, `offnormal`,
+`fault`, `alert`) or `ack_state` (`acked`, `unacked`, `ackPending`) filter replaces it, and
+`open_only: false` drops it. `source` (`station:|slot:/Drivers/Net`, each segment a slot name)
+becomes `source like 'local:|station:|slot:/Drivers/Net*'` (that component and everything below
+it), `alarm_class` (a slot name) `alarmClass = '<name>'`, and `since` / `until` (BAbsTime text)
+`timestamp.millis >= <epoch ms>` / `<=`. Every value is checked before any request (no quote,
+wildcard or BQL of the caller reaches the station); `where` echoes the clause sent. Rows are
+`{timestamp, uuid, source, source_state, ack_state, alarm_class, priority, msg_text}` read by
+position, as the station renders them (`msg_text` may be a raw `%lexicon(...)%` pattern).
+`n4_list_alarm_classes()` runs `select slotPath, name, priority, ackRequired, totalAlarmCount,
+openAlarmCount, inAlarmCount, unackedAlarmCount from alarm:AlarmClass` and
+`select slotPath, type from alarm:AlarmRecipient` at the station root; `priority` is decoded to
+`{toOffnormal, toFault, toNormal, toAlert}` (0-255) and `ack_required` to the same keys with
+booleans (a value in another form is returned as its text). A class routes alarms to a recipient
+(console, email, station and other `alarm:AlarmRecipient` types) through a link stored on the
+recipient, from the class's `alarm` topic to the recipient's `routeAlarm` action: each recipient
+is loaded two levels deep (at most 50, `recipients_truncated` beyond), a link source given by
+handle is resolved against one load of the folder holding the classes, and each class lists
+`recipients: [{path, type, link_name}]`; `recipients` lists each recipient with its `classes`,
+`unresolved_links` the `routeAlarm` links whose source is not a listed class.
+Creating an alarm class has no dedicated tool; the recipe is three ordinary writes, each with its
+dry run and token: `n4_create_component(parent_ord: "station:|slot:/Services/AlarmService",
+name: "Critical", type: "alarm:AlarmClass")`; `n4_set_slot(ord: "station:|slot:/Services/AlarmService/Critical",
+slot: "priority", value: "toOffnormal=10;toFault=20;toNormal=200;toAlert=30;", value_type: "baja:Simple")`
+(the `BAlarmPriorities` encoding, every transition followed by `;`) and
+`n4_set_slot(..., slot: "ackRequired", value: "7", value_type: "baja:Simple")` (the
+`BAlarmTransitionBits` encoding is hexadecimal bits: 1 toOffnormal, 2 toFault, 4 toNormal,
+8 toAlert; `7` is all but toAlert, `f` all four); then route it with
+`n4_create_link(source_ord: "station:|slot:/Services/AlarmService/Critical", source_slot: "alarm",
+target_ord: "station:|slot:/Services/AlarmService/ConsoleRecipient", target_slot: "routeAlarm")`,
+once per recipient. Check the result with `n4_list_alarm_classes`.
 Px views and other station files (METHODOLOGY section 9): `n4_list_px_views(root)` runs
 `select slotPath, displayName, pxFile, media from baja:PxView` and returns `display_name`,
 `px_file` (e.g. `file:^px/General.px`) and `media` per view; `slot_path` / `owner_path` are
