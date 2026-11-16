@@ -4,6 +4,7 @@
 package writeops
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
@@ -79,10 +80,7 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	}
 	node := box.Node(nodes, slot)
 	if node == nil {
-		return nil, plan.ToolError("slot " + pyjson.StrRepr(slot) + " not found on " + ordText + ". The station " +
-			"omits a slot whose value equals its type default (0.0, false, an empty string), so n4_set_slot " +
-			"cannot read its type and refuses. Check the name with n4_read_slots; if the slot exists at its " +
-			"default, set it once in Workbench (or through an action such as `set`) and plan again")
+		return nil, plan.ToolError(fmt.Sprintf(msgSetSlotMissing, pyjson.StrRepr(slot), ordText))
 	}
 	t, _ := node.Get("t")
 	slotType := pyjson.Str(t)

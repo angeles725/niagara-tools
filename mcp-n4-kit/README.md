@@ -807,7 +807,9 @@ Tool rules:
 
 - `n4_set_slot` writes Status slots whole (value plus status) and refuses a path
   ending in `/value` or `/status`. A nested slot (`grp/sp`) is loaded one level deeper
-  so its previous value is the real one. A plain slot at its type default is omitted by
+  so its previous value is the real one. A frozen property whose value equals its
+  declared default (whatever its type declares, e.g. a 10 s `RelTime`, not only 0, `false`
+  or an empty string) is omitted by
   the station's load; the tool then reads the slot's declared type and default from the
   station's type registry (BOX `reg`/`loadTypes`, walking supertypes), so such a slot
   (e.g. a history extension's `enabled=false`) can be set. A dynamic slot, an action or

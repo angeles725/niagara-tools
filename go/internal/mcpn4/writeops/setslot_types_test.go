@@ -80,7 +80,7 @@ func TestTheTypeDefinitionStillRefusesAWrongTypeOrAnUnknownSlot(t *testing.T) {
 	for _, tc := range []struct{ slot, valueType, want string }{
 		{"enabled", "baja:String", "slot 'enabled' is baja:Boolean, not baja:String"},
 		{"historyName", "baja:String", "slot 'historyName' is baja:Format, not baja:String"},
-		{"ghost", "baja:Boolean", "slot 'ghost' not found on " + ext + ". The station omits a slot"},
+		{"ghost", "baja:Boolean", "slot 'ghost' not found on " + ext + ". The station leaves out a frozen property whose value equals its declared default"},
 		{"enable", "baja:Boolean", "slot 'enable' not found on "}, // an action, not a property
 	} {
 		var value any = "x"
