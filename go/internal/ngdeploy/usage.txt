@@ -111,7 +111,10 @@ The run lock:
   killed (SIGKILL, power) leaves its lock, and the next deploy refuses: check that no process <pid> runs on
   <host> (ps -p <pid>), delete the file, deploy again; a .ng-deploy-old file that run left beside it is refused
   next, with its own way out. The lock is an exclusive file creation, not flock, so it also holds on a Windows
-  mount. A directory the run is not allowed to write gets no lock: the run cannot change it either.
+  mount: the run writes it in a temporary file beside it (.ng-deploy.lock.<random>.tmp) and hard-links that to
+  .ng-deploy.lock, so a run that loses the race reads a whole lock. A file system without hard links gets the
+  lock in two steps, created and then written, and a NOTICE says so: a run that starts in the same instant can
+  find it empty. A directory the run is not allowed to write gets no lock: the run cannot change it either.
 
 The signer the gate expects:
   The verify-module gate is told who must have signed the jars, resolved as toolbelt/build.sh resolves it: the
