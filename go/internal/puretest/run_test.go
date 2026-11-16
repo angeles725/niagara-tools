@@ -89,6 +89,17 @@ func TestSourceRoot(t *testing.T) {
 	}
 }
 
+// TestKitJavaOnSourcePath (O12): the kit's Java helper root the launcher names joins the javac source path
+// after the module's roots; unset, the source path is the module's alone (TestPass, TestSourceRoot).
+func TestKitJavaOnSourcePath(t *testing.T) {
+	f := newFixture(t)
+	f.kitJava = f.dir + "/kit/java"
+	f.run(f.rt, testClass)
+	if got := f.call("javac"); !strings.Contains(got, "<-sourcepath> <"+f.rt+"/src:"+f.rt+"/srcTest/test:"+f.dir+"/kit/java> ") {
+		t.Errorf("javac call %s", got)
+	}
+}
+
 // TestFailingTestIsExitOne: the runner's status is the tool's: 1 is a failed test, never swallowed.
 func TestFailingTestIsExitOne(t *testing.T) {
 	for _, code := range []int{1, 7} {

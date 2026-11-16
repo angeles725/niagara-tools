@@ -29,8 +29,9 @@ const (
 	junitJar    = "junit-4.13.2.jar"
 	hamcrestJar = "hamcrest-core-1.3.jar"
 	runner      = "org.junit.runner.JUnitCore"
-	mainSources = "src"   // under the module part: the pure sources the test references
-	tempPattern = "tmp.*" // the compile output directory, removed when the run ends
+	mainSources = "src"                    // under the module part: the pure sources the test references
+	tempPattern = "tmp.*"                  // the compile output directory, removed when the run ends
+	kitJavaEnv  = "RUN_PURE_TEST_KIT_JAVA" // set by run-pure-test.sh: the kit's Java helper source root
 )
 
 // compileFlags make javac emit Java 8 classes without the warnings a newer JDK adds about it.
