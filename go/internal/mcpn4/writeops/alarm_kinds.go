@@ -17,7 +17,8 @@ const alarmExtType = "alarm:AlarmSourceExt"
 // alarmKinds is the kind table, in the order refusals list them.
 var alarmKinds = []alarmKind{
 	{"out_of_range", "alarm:OutOfRangeAlgorithm", "alarm:OutOfRangeFaultAlgorithm", "Numeric", "OutOfRangeAlarmExt",
-		[]string{"high_limit", "low_limit", "deadband", "high_limit_text", "low_limit_text"}},
+		[]string{"high_limit", "low_limit", "deadband", "high_limit_text", "low_limit_text", "fault_high_limit",
+			"fault_low_limit", "fault_deadband"}},
 	{"numeric_change_of_state", "alarm:NumericChangeOfStateAlgorithm", "", "Numeric", "NumericChangeOfStateAlarmExt",
 		[]string{"alarm_values"}},
 	{"boolean_change_of_state", "alarm:BooleanChangeOfStateAlgorithm", "", "Boolean", "BooleanChangeOfStateAlarmExt",
@@ -37,7 +38,7 @@ var alarmDefaultKind = map[string]string{"Numeric": "out_of_range", "Boolean": "
 
 // alarmAlgorithmParams are every algorithm argument, in the order the ops set them.
 var alarmAlgorithmParams = []string{"high_limit", "low_limit", "deadband", "high_limit_text", "low_limit_text",
-	"alarm_value", "alarm_values"}
+	"alarm_value", "alarm_values", "fault_high_limit", "fault_low_limit", "fault_deadband"}
 
 func findAlarmKind(name string) (alarmKind, bool) {
 	for _, k := range alarmKinds {

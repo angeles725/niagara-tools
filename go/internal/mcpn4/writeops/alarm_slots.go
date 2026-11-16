@@ -3,6 +3,7 @@ package writeops
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -34,17 +35,23 @@ var alarmArgSlots = []struct {
 	{"alarm_enable", "alarmEnable", "alarm:AlarmTransitionBits", false}, {"inhibit", "alarmInhibit", "baja:StatusBoolean", false},
 }
 
-// alarmParamSlots are the algorithm slots (under offnormalAlgorithm) each algorithm argument
-// sets: BOutOfRangeAlgorithm highLimit, lowLimit, deadband (double), highLimitText, lowLimitText
-// (baja:Format), and the limit's enable bit in limitEnable (alarm:LimitEnable, a struct whose
-// lowLimitEnable and highLimitEnable are false by default); BBooleanChangeOfStateAlgorithm
+// alarmParamSlots are the algorithm slots (path under the extension) each algorithm argument
+// sets: BOutOfRangeAlgorithm (offnormalAlgorithm) and BOutOfRangeFaultAlgorithm (faultAlgorithm)
+// highLimit, lowLimit, deadband (double) and the limit's enable bit in limitEnable
+// (alarm:LimitEnable, a struct whose lowLimitEnable and highLimitEnable are false by default);
+// BOutOfRangeAlgorithm highLimitText, lowLimitText (baja:Format); BBooleanChangeOfStateAlgorithm
 // alarmValue (boolean); B{Enum,Numeric}ChangeOfStateAlgorithm alarmValues (baja:EnumRange).
 var alarmParamSlots = map[string][]struct{ slot, vt string }{
-	"high_limit":      {{"highLimit", "baja:Double"}, {"limitEnable/highLimitEnable", "baja:Boolean"}},
-	"low_limit":       {{"lowLimit", "baja:Double"}, {"limitEnable/lowLimitEnable", "baja:Boolean"}},
-	"deadband":        {{"deadband", "baja:Double"}},
-	"high_limit_text": {{"highLimitText", "baja:Format"}}, "low_limit_text": {{"lowLimitText", "baja:Format"}},
-	"alarm_value": {{"alarmValue", "baja:Boolean"}}, "alarm_values": {{"alarmValues", "baja:EnumRange"}},
+	"high_limit":       {{"offnormalAlgorithm/highLimit", "baja:Double"}, {"offnormalAlgorithm/limitEnable/highLimitEnable", "baja:Boolean"}},
+	"low_limit":        {{"offnormalAlgorithm/lowLimit", "baja:Double"}, {"offnormalAlgorithm/limitEnable/lowLimitEnable", "baja:Boolean"}},
+	"deadband":         {{"offnormalAlgorithm/deadband", "baja:Double"}},
+	"high_limit_text":  {{"offnormalAlgorithm/highLimitText", "baja:Format"}},
+	"low_limit_text":   {{"offnormalAlgorithm/lowLimitText", "baja:Format"}},
+	"alarm_value":      {{"offnormalAlgorithm/alarmValue", "baja:Boolean"}},
+	"alarm_values":     {{"offnormalAlgorithm/alarmValues", "baja:EnumRange"}},
+	"fault_high_limit": {{"faultAlgorithm/highLimit", "baja:Double"}, {"faultAlgorithm/limitEnable/highLimitEnable", "baja:Boolean"}},
+	"fault_low_limit":  {{"faultAlgorithm/lowLimit", "baja:Double"}, {"faultAlgorithm/limitEnable/lowLimitEnable", "baja:Boolean"}},
+	"fault_deadband":   {{"faultAlgorithm/deadband", "baja:Double"}},
 }
 
 // alarmValue coerces the argument arg to the value type vt: the encoded value sent and the value
@@ -57,8 +64,8 @@ func alarmValue(arg, vt string, raw any) (sent, want any, err error) {
 			return nil, nil, plan.ToolError(fmt.Sprintf(msgAlarmArg, arg, err.Error()))
 		}
 		if f, ok := norm.(float64); ok {
-			if arg == "deadband" && f < 0 {
-				return nil, nil, plan.ToolError(msgAlarmDeadband)
+			if strings.HasSuffix(arg, "deadband") && f < 0 {
+				return nil, nil, plan.ToolError(fmt.Sprintf(msgAlarmDeadband, arg))
 			}
 			return pyjson.FloatRepr(f), f, nil
 		}

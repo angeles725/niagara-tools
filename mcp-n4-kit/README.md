@@ -808,6 +808,7 @@ Slots and their encodings (`BAlarmSourceExt`, `BOutOfRangeAlgorithm`):
 | `inhibit` | `alarmInhibit` | `baja:StatusBoolean`, status ok |
 | `high_limit`, `low_limit`, `deadband` | `offnormalAlgorithm/highLimit`, `lowLimit`, `deadband` | `baja:Double`; deadband 0 or more |
 | (any limit given) | `offnormalAlgorithm/limitEnable/highLimitEnable`, `lowLimitEnable` | `baja:Boolean` inside the `alarm:LimitEnable` struct; both are false by default, so a limit given is also enabled; without a limit the extension raises nothing |
+| `fault_high_limit`, `fault_low_limit`, `fault_deadband` (out_of_range) | `faultAlgorithm/highLimit`, `lowLimit`, `deadband`, and `faultAlgorithm/limitEnable/highLimitEnable`, `lowLimitEnable` | `baja:Double` and `baja:Boolean` on `alarm:OutOfRangeFaultAlgorithm` (`BOutOfRangeFaultAlgorithm`: the same limit slots as the offnormal algorithm); a fault limit given is also enabled; beyond it the point goes to fault and the alarm carries `toFaultText` |
 | `high_limit_text`, `low_limit_text` | `offnormalAlgorithm/highLimitText`, `lowLimitText` | `baja:Format`; they override `toOffnormalText` for that limit |
 | `alarm_value` (boolean change of state) | `offnormalAlgorithm/alarmValue` | `baja:Boolean`, default true |
 | `alarm_values` (numeric or enum change of state), e.g. `{"alarm": 1}` | `offnormalAlgorithm/alarmValues` | `baja:EnumRange`, `{tag=ordinal,...}` (`BEnumRange.encodeToString`) |
@@ -825,6 +826,12 @@ for a translated text; `%%` for a literal percent. Examples:
 "to_normal_text":  "%alarmData.sourceName% back to normal"
 "source_name":     "AHU1 %parent.displayName%"
 ```
+
+To force a fault for a test (proven live on a lab station): an `out_of_range`
+extension with `fault_high_limit` (for example 100) and `to_fault_text`, then write
+the point above it (150): the alarm record shows source state Fault with
+`toFaultText` as its message and the point reads `{fault,alarm,unackedAlarm}`; back
+below the limit (20) it returns to Normal.
 
 A point that already has an extension of the same kind (a child whose
 `offnormalAlgorithm` is of that type) is refused unless `allow_second=true`. The

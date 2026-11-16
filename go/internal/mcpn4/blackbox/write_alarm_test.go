@@ -112,3 +112,20 @@ func TestAddAlarmRefusesAtTheDryRunAndWritesNothing(t *testing.T) {
 		t.Errorf("alarmValue = %+v", n)
 	}
 }
+
+func TestAddAlarmSetsAFaultLimitOnTheFaultAlgorithm(t *testing.T) {
+	h := newAlarmRig(t)
+	temp := h.Add("3", "Temp", "control:NumericWritable")
+	out := h.Srv.RunWrite("n4_add_alarm", Args{"points": []any{Folder + "/Temp"}, "fault_high_limit": 100,
+		"to_fault_text": "%alarmData.sourceName% sensor fault"})
+	if out["verdict"] != "verified" {
+		t.Fatalf("out = %v", out)
+	}
+	for path, want := range map[string]string{"highLimit": "100.0", "limitEnable/highLimitEnable": "true",
+		"limitEnable/lowLimitEnable": "false"} {
+		n := alarmNode(h.Rig, temp.Handle, append([]string{"OutOfRangeAlarmExt", "faultAlgorithm"}, strings.Split(path, "/")...)...)
+		if n == nil || n.Value != want {
+			t.Errorf("faultAlgorithm/%s = %+v, want %q", path, n, want)
+		}
+	}
+}

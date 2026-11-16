@@ -69,12 +69,12 @@ func alarmArgs(args *pyjson.Object) (alarmSpec, error) {
 		s.params = append(s.params, p)
 		for _, slot := range alarmParamSlots[p] {
 			var sent, want any = "true", true // a limit given enables it
-			if !strings.HasPrefix(slot.slot, "limitEnable/") {
+			if !strings.Contains(slot.slot, "/limitEnable/") {
 				if sent, want, err = alarmValue(p, slot.vt, raw); err != nil {
 					return s, err
 				}
 			}
-			s.paramWrites[p] = append(s.paramWrites[p], alarmWrite{"offnormalAlgorithm/" + slot.slot, slot.vt, sent, want})
+			s.paramWrites[p] = append(s.paramWrites[p], alarmWrite{slot.slot, slot.vt, sent, want})
 		}
 	}
 	if v, ok := args.Get("allow_second"); ok {

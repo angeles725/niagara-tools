@@ -34,8 +34,9 @@ const (
 	// msgAlarmArg: the argument and the coercion error.
 	msgAlarmArg = "%s: %s"
 	// msgAlarmString: the argument and the value given.
-	msgAlarmString     = "%s must be a non-empty string, got %s"
-	msgAlarmDeadband   = "deadband must be 0 or more (its slot facet min is 0)"
+	msgAlarmString = "%s must be a non-empty string, got %s"
+	// msgAlarmDeadband: the argument.
+	msgAlarmDeadband   = "%s must be 0 or more (its slot facet min is 0)"
 	msgAlarmNoPoints   = "points must list 1 to %d point ORDs"
 	msgAlarmPointOrd   = "points must be distinct non-empty ORD strings, got %s"
 	noteAlarmRename    = "The station may rename on collision; the real inverse uses the assigned name."
