@@ -10,7 +10,8 @@
 # $WORK/tree: with --range the bytes of the range's end commit (what a push sends; .githooks/pre-push passes
 # the pushed range), without it the work tree, untracked files included, against where HEAD left origin/main.
 # Which files shellcheck reads comes from ci.yml's own shellcheck step. The checks, from $WORK/tree:
-#   - the pinned shellcheck v0.10.0 over the changed files CI shellchecks;
+#   - the pinned shellcheck v0.10.0 over CI's whole shellcheck file set as the change leaves it, when one of its
+#     files changed (CI checks them in one run: a sourced lib is read with its sourcer);
 #   - lint-bats-errexit, the BEX-kit lint, over the changed tests/**/*.bats (fixtures/ and testdata/ pruned);
 #   - lint-bats-heredoc: a here-document line that starts with the test keyword (C8) in those files;
 #   - gofmt -l over the changed go/**/*.go.
@@ -52,7 +53,7 @@ run_changed() {
   fi
   if [ "${#sc[@]}" -gt 0 ]; then
     provision_shellcheck
-    changed_check "shellcheck ${SC_VER} (${#sc[@]} changed files)" shellcheck "${sc[@]}"
+    changed_check "shellcheck ${SC_VER} (CI's file set, ${#sc[@]} files)" shellcheck "${sc[@]}"
   fi
   if [ "${#bt[@]}" -gt 0 ]; then
     changed_check "lint-bats-errexit (${#bt[@]} changed bats files)" bash "$ROOT/build-n4-module-kit/toolbelt/lint-bats-errexit.sh" tests

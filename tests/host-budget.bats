@@ -74,7 +74,7 @@ hb() {
   # (retro 2026-11-15 coordination-stretch T2)
   hb cg-calm --disk-min-free 999999T
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL disk:$BATS_TEST_TMPDIR "*" bytes, fail below 999999000.0GB free)"* ]]
+  [[ "$output" == *"FAIL disk:$BATS_TEST_TMPDIR "*"% used, "*" bytes, fail below 999999000.0GB free)"* ]]
   hb cg-calm --disk-min-free 1
   [ "$status" -eq 0 ]
   [[ "$output" == *"PASS disk:$BATS_TEST_TMPDIR "*"GB free = "* ]]

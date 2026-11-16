@@ -1,8 +1,12 @@
 ### Added — merge-when-green, ci-local --changed, the here-document bats lint, the host-budget free-space floor
 - `scripts/merge-when-green.sh <pr> [--rebase|--squash|--merge]` (`go/cmd/merge-when-green`, `go/internal/mergewait`): waits for the check runs of the PR's exact head commit and merges it with `gh pr merge --match-head-commit`; refuses a draft (exit 4) and a branch that lacks the current base (exit 5), stops when the head moves (exit 6), re-runs once a check that failed on a transient download error, prints the log tail of a failed check (exit 1), 7 on timeout, 8 when the PR is not merged after the merge call. Every gh error is printed; a network error is retried (`--retries`, default 3); the PR state read after the merge call decides, so a merge that went through despite a failed call is exit 0 with its merge commit, as is a PR already merged at start. Runs under bash and zsh.
-- `scripts/ci-local.sh --changed [--range <from>..<to>]`: the pinned shellcheck, lint-bats-errexit, the new here-document lint and `gofmt -l` over the changed files only (`ci-steps changed`); the pre-push gate runs it on every pushed range.
+- `scripts/ci-local.sh --changed [--range <from>..<to>]`: the pinned shellcheck (CI's whole file set when one of its files changed), lint-bats-errexit, the new here-document lint and `gofmt -l` over the changed files only (`ci-steps changed`); the pre-push gate runs it on every pushed range.
 - `ci-steps lint-bats-heredoc <file|dir>...`: flags a here-document line in a .bats file that starts with the test keyword (bats 1.10 reads it as a duplicate case); a new `lint-sweeps` step of ci.yml runs it over `tests/`.
-- host-budget `--disk-min-free <size>` (40G, 500M, …): when given, a mount FAILs below that much free space instead of above `--disk-pct`, and the row names the free bytes and the floor; `scripts/ci-local.sh` passes 101G.
+- host-budget `--disk-min-free <size>` (40G, 500M, …): when given, a mount FAILs below that much free space instead of above `--disk-pct`. Not used by default.
+
+### Changed — host-budget disk rows and the ci-local disk limit
+- Every host-budget disk row names the percent used, the free space in GB and in bytes, and the limit.
+- `scripts/ci-local.sh` fails a disk above 95% used (`--disk-pct 95`), not the 90% default.
 
 ### Changed — CI on drafts, the pinned local bats, the retro refusal text, preflight.bats speed
 - ci.yml runs every job on a draft pull request too.

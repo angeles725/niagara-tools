@@ -9,9 +9,10 @@ import (
 
 // diskRows checks "/" and every mount once, in order. With a free-space floor (DiskMinFree > 0) the
 // floor alone decides each row: FAIL below it, PASS otherwise. Without one the percent rule applies.
-// The floor is the user's rule of 2026-11-16 (first 40 GB free, then "ahora tu cuida que no sobrepasen de los 101",
-// which scripts/ci-local.sh passes as 101G): a 1 TB C: at 90%
-// used still has 90 GB free. (retro 2026-11-15 coordination-stretch T2)
+// Every row names the percent used, the free space (GB and bytes) and the limit. The floor came from the
+// user's first rules of 2026-11-16 (40 GB, then 101 GB free); the final rule is a percent, 95% used, which
+// scripts/ci-local.sh passes as --disk-pct 95, so the floor stays an option. (retro 2026-11-15
+// coordination-stretch T2)
 func diskRows(c Config, p Probe) []Row {
 	seen := map[string]bool{}
 	var rows []Row
@@ -33,14 +34,19 @@ func diskRows(c Config, p Probe) []Row {
 				st = Fail
 			}
 			rows = append(rows, Row{st, res, gbString(d.Used), gbString(size),
-				fmt.Sprintf("(%s free = %d bytes, fail below %s free)", gbString(d.Avail), d.Avail, gbString(c.DiskMinFree))})
+				fmt.Sprintf("(%s, fail below %s free)", usedFree(d, size), gbString(c.DiskMinFree))})
 			continue
 		}
 		st := classify(d.Used, size, c.DiskPct, WarnDiskPct)
 		rows = append(rows, Row{st, res, gbString(d.Used), gbString(size),
-			fmt.Sprintf("(%d%% used, fail above %d%%)", pct(d.Used, size), c.DiskPct)})
+			fmt.Sprintf("(%s, fail above %d%%)", usedFree(d, size), c.DiskPct)})
 	}
 	return rows
+}
+
+// usedFree is the percent used and the free space of a disk row, in GB and in bytes.
+func usedFree(d Disk, size uint64) string {
+	return fmt.Sprintf("%d%% used, %s free = %d bytes", pct(d.Used, size), gbString(d.Avail), d.Avail)
 }
 
 // sizeUnits are the decimal suffixes parseSize reads (an optional trailing B is allowed): the same

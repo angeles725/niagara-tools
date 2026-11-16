@@ -66,6 +66,32 @@ func split0(out string) []string {
 	return paths
 }
 
+// allFiles lists every file of the change's end state: the range's end commit, or the work tree
+// (tracked files that still exist plus untracked ones).
+func (c changeSet) allFiles() ([]string, error) {
+	g := gitcmd.Command{Stderr: c.errTo}
+	if c.end != "" {
+		res := g.Run("ls-tree", "-r", "-z", "--name-only", c.end)
+		if !res.OK() {
+			return nil, fmt.Errorf("git ls-tree %s failed", c.end)
+		}
+		return split0(res.Stdout), nil
+	}
+	tracked := g.Run("ls-files", "-z")
+	others := g.Run("ls-files", "-z", "--others", "--exclude-standard")
+	if !tracked.OK() || !others.OK() {
+		return nil, errors.New("git ls-files failed")
+	}
+	var files []string
+	for _, p := range append(split0(tracked.Stdout), split0(others.Stdout)...) {
+		if st, err := os.Lstat(p); err == nil && st.Mode().IsRegular() {
+			files = append(files, p)
+		}
+	}
+	sort.Strings(files)
+	return files, nil
+}
+
 // materialize writes each path's bytes under tree at the same relative path, so the checks read
 // exactly the change and name its files as the repository does.
 func (c changeSet) materialize(tree string, paths []string) error {

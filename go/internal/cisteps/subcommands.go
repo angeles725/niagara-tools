@@ -19,7 +19,8 @@ const ExitEnv = 3
 const changedUsage = "usage: ci-steps changed --ci-file <workflow.yml> --tree <dir> [--range <from>..<to>]\n"
 
 // changedMain implements `ci-steps changed`: it lists the files a change touches (git, in the process
-// directory), writes the ones a check needs under --tree and prints one `<check>\t<path>` line per
+// directory), writes the ones a check needs under --tree (for shellcheck: CI's whole file set as the change
+// leaves it, when one file of it changed) and prints one `<check>\t<path>` line per
 // check and file: shellcheck, bats (the bats lints) and gofmt, in that order. Exit 0, 2 usage or an
 // unreadable workflow, 3 a git or write failure.
 func changedMain(args []string, s cli.Stdio) int {
@@ -53,7 +54,21 @@ func changedMain(args []string, s cli.Stdio) int {
 		return ExitEnv
 	}
 	plan := Select(globs, set.paths)
+	if len(plan.Shellcheck) > 0 {
+		// CI shellchecks its whole file set in one run, so a sourced file is read with its sourcer: check that
+		// set as the change leaves it, never a changed script alone (a lone ci-local.sh read a variable its
+		// sourced lib uses as unused).
+		all, err := set.allFiles()
+		if err != nil {
+			fmt.Fprintf(s.Err, "ci-steps changed: %v\n", err)
+			return ExitEnv
+		}
+		plan.Shellcheck = Select(globs, all).Shellcheck
+	}
 	need := append(append(append([]string{}, plan.Shellcheck...), plan.Bats...), plan.Gofmt...)
+	if len(plan.Shellcheck) > 0 && hasPath(set, shellcheckConfig) {
+		need = append(need, shellcheckConfig) // the suppressions CI's shellcheck reads; not a target itself
+	}
 	if err := set.materialize(*tree, need); err != nil {
 		fmt.Fprintf(s.Err, "ci-steps changed: %v\n", err)
 		return ExitEnv
@@ -67,6 +82,23 @@ func changedMain(args []string, s cli.Stdio) int {
 		}
 	}
 	return 0
+}
+
+// shellcheckConfig is the project config shellcheck reads from the repository root.
+const shellcheckConfig = ".shellcheckrc"
+
+// hasPath reports whether the change's end state holds a file at path.
+func hasPath(set changeSet, path string) bool {
+	all, err := set.allFiles()
+	if err != nil {
+		return false
+	}
+	for _, p := range all {
+		if p == path {
+			return true
+		}
+	}
+	return false
 }
 
 // lintMain implements `ci-steps lint-bats-heredoc <file|dir>...`: one
