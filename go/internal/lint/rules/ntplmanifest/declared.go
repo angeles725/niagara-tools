@@ -14,6 +14,8 @@ type module struct {
 	files []string        // every *.gradle.kts read (settings.gradle.kts is not a build file)
 	names map[string]bool // each module a build file declares, and the module's own parts
 	known bool            // every build file under the root was read: names is the whole declaration
+	// outside are the links the build-file walk did not follow: their target is outside the module root
+	outside []string
 }
 
 // declaredIn reads every build file under root (a symlinked one and those under a symlinked directory
@@ -24,7 +26,8 @@ type module struct {
 // template's dependencies are compared against the part of it that was read.
 func declaredIn(root string) (module, error) {
 	m := module{names: map[string]bool{}}
-	files, walkErr := lint.WalkFollow(root, lint.Selection{Names: []string{"*.gradle.kts"}, Except: []string{settingsFile}, PrunePaths: lint.PartOutputs()})
+	files, outside, walkErr := lint.WalkFollow(root, lint.Selection{Names: []string{"*.gradle.kts"}, Except: []string{settingsFile}, PrunePaths: lint.PartOutputs()})
+	m.outside = outside
 	for _, path := range files {
 		data, err := os.ReadFile(path)
 		if err != nil {
