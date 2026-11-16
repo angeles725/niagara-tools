@@ -24,6 +24,9 @@ Exit: 0 merged; 1 a check failed (its log tail printed); 2 usage; 3 gh missing o
       or its head moved; 7 timed out; 8 gh pr merge refused.
 `
 
+// callDeadline ends one gh call that hangs (a stalled connection); the wait's --timeout bounds the whole run.
+const callDeadline = 2 * time.Minute
+
 var prNumber = regexp.MustCompile(`^[1-9][0-9]*$`)
 
 // Main implements merge-when-green. Its gh is looked up on PATH; GH_REPO, or --repo, names the
@@ -43,7 +46,7 @@ func Main(args []string, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "%sgh is not on PATH (https://cli.github.com)\n", msgPrefix)
 		return ExitGh
 	}
-	c.Gh = ExecGh(repo, os.Environ())
+	c.Gh = ExecGh(repo, os.Environ(), callDeadline)
 	c.Sleep, c.Now = time.Sleep, time.Now
 	c.Out, c.Err = s.Out, s.Err
 	return Wait(c)

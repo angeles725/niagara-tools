@@ -40,11 +40,24 @@ func Wait(c Config) int {
 	deadline := c.Now().Add(c.Timeout)
 	rerun := map[int64]bool{} // the failed runs re-run once: their old entry counts as pending
 	last := ""
+	pollErrs := 0 // consecutive polls that failed: each is printed, and the wait gives up past c.Retries
+	pollFailed := func(err error) bool {
+		c.report(err)
+		pollErrs++
+		return pollErrs > c.Retries
+	}
 	for {
 		runs, err := checkRuns(c.Gh, sha)
 		if err != nil {
-			return c.ghFailed(err)
+			if pollFailed(err) {
+				return ExitGh
+			}
+			if rc, stop := c.pause(deadline, sha); stop {
+				return rc
+			}
+			continue
 		}
+		pollErrs = 0
 		for i := range runs {
 			if rerun[runs[i].ID] {
 				runs[i].Status = "queued"
@@ -71,14 +84,15 @@ func Wait(c Config) int {
 				last = msg
 			}
 		}
-		if !c.Now().Before(deadline) {
-			fmt.Fprintf(c.Err, msgTimeout, sha, c.Timeout)
-			return ExitTimeout
+		if rc, stop := c.pause(deadline, sha); stop {
+			return rc
 		}
-		c.Sleep(c.Interval)
 		now, err := viewPR(c.Gh, c.PR)
 		if err != nil {
-			return c.ghFailed(err)
+			if pollFailed(err) {
+				return ExitGh
+			}
+			continue
 		}
 		if rc, done := c.mergedState(now, sha); done { // merged while we waited
 			return rc
@@ -91,6 +105,16 @@ func Wait(c Config) int {
 			return rc
 		}
 	}
+}
+
+// pause ends the wait at its deadline, else sleeps one interval.
+func (c Config) pause(deadline time.Time, sha string) (rc int, stop bool) {
+	if !c.Now().Before(deadline) {
+		fmt.Fprintf(c.Err, msgTimeout, sha, c.Timeout)
+		return ExitTimeout, true
+	}
+	c.Sleep(c.Interval)
+	return 0, false
 }
 
 // mergeable refuses a PR that is not open or is a draft.
@@ -118,6 +142,3 @@ func (c Config) containsBase(base, sha string) int {
 	}
 	return ExitMerged
 }
-
-// ghFailed is the outcome of a gh error; withRetries already printed it.
-func (c Config) ghFailed(error) int { return ExitGh }

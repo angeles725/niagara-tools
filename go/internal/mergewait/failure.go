@@ -48,7 +48,7 @@ func (c Config) logTail(r checkRun) []string {
 		out, err = c.Gh("run", "view", "--job", job, "--log-failed")
 	}
 	if err != nil {
-		fmt.Fprintf(c.Err, msgNoLog, err)
+		fmt.Fprintf(c.Err, msgNoLog, "above") // the error itself was printed by withRetries
 		return nil
 	}
 	lines := tail(out, c.LogLines)

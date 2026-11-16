@@ -22,6 +22,7 @@ var networkPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)no such host`),
 	regexp.MustCompile(`(?i)TLS handshake timeout`),
 	regexp.MustCompile(`(?i)error connecting to`),
+	regexp.MustCompile(`: timed out after `), // ExecGh's deadline: a stalled connection
 }
 
 func isNetworkError(err error) bool {

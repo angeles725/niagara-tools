@@ -34,7 +34,7 @@ func (c Config) merge(sha string, base string) int {
 		}
 		p, err := viewPR(c.Gh, c.PR)
 		if err != nil {
-			return ExitGh // printed by withRetries
+			return c.ghFailed(err)
 		}
 		if p.State == "MERGED" {
 			if p.HeadRefOid != sha {
