@@ -267,6 +267,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
+`n4_alarm_text_check`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
 `n4_station_runtime`, `n4_read_tags`,
 `n4_neql_query`, `n4_list_tag_dictionaries`.
@@ -401,6 +402,12 @@ slot: "priority", value: "toOffnormal=10;toFault=20;toNormal=200;toAlert=30;", v
 `n4_create_link(source_ord: "station:|slot:/Services/AlarmService/Critical", source_slot: "alarm",
 target_ord: "station:|slot:/Services/AlarmService/ConsoleRecipient", target_slot: "routeAlarm")`,
 once per recipient. Check the result with `n4_list_alarm_classes`.
+`n4_alarm_text_check(base="station:|slot:/", max_rows=5000)` is kit rule LC9 made mechanical, the live twin
+of `bog-nav <bog> alarm-text` (same rule names and rows): one `select slotPath, toOffnormalText, toFaultText,
+toNormalText from alarm:AlarmSourceExt` below `base` (subtypes included); each finding is `{level: WARN, rule, path,
+slot, token, text}`: `parent-path` for a `%...%` token rooted at no `BAlarmRecord` field (`%parent...%`, `%out.value%`;
+the texts resolve against the alarm record), `empty-tonormal` for a `toOffnormalText` with an empty `toNormalText`
+(the return to normal blanks `msgText`); `%alarmData.<key>%`, record fields, `%lexicon(...)%` and `%%` pass.
 Px views and other station files (METHODOLOGY section 9): `n4_list_px_views(root)` runs
 `select slotPath, displayName, pxFile, media from baja:PxView` and returns `display_name`,
 `px_file` (e.g. `file:^px/General.px`) and `media` per view; `slot_path` / `owner_path` are

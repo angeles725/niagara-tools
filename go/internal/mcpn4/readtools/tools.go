@@ -74,6 +74,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_read_alarms"] = t.ReadAlarms
 	s.Handlers["n4_list_alarm_classes"] = t.ListAlarmClasses
 	s.Handlers["n4_event_report"] = t.EventReport
+	s.Handlers["n4_alarm_text_check"] = t.AlarmTextCheck
 	s.Handlers["n4_inventory"] = t.Inventory
 	s.Handlers["n4_read_file"] = t.ReadFile
 	s.Handlers["n4_list_px_views"] = t.ListPxViews
