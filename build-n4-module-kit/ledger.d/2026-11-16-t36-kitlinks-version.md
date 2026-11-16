@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-16 -->
+<!-- last-change-note: ci-local --changed kit-links runs the bats binary whose version it checked; downloads capped in all -->
+log: 2026-11-16 · ci-local T36 → the kit-links step of `scripts/ci-local.sh --changed` resolves the bats first on PATH to an absolute path, checks that binary's version against the ci.yml pin and runs kit-links with it (a relative PATH entry can no longer swap in an unchecked bats inside the snapshot); a mismatch names the pin, the version found and its path; a pinned-tarball download starts no retry after 60 s (`--retry-max-time 60`), about 3 minutes in all (#719 review advisories). Retro t36-kitlinks-version (Δ1-Δ3 applied, pending review). [ev: retro t36-kitlinks-version Δ1] [ev: retro t36-kitlinks-version Δ2] [ev: retro t36-kitlinks-version Δ3]

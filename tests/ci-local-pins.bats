@@ -51,8 +51,9 @@ fake_bats_tarball() {
   [[ "$output" != *"pinned bats"* ]]
 }
 
-@test "CL24: a pinned-tarball download is bounded (curl --connect-timeout 10 --max-time 120) and a failure exits 3" {
-  # Mutation: CL24 -- dropping the curl time limits lets a blackholed network hang the replay for ~20 minutes.
+@test "CL24: a pinned-tarball download is bounded (curl --connect-timeout 10 --max-time 120 --retry-max-time 60) and a failure exits 3" {
+  # Mutation: CL24 -- dropping the curl time limits lets a blackholed network hang the replay for ~20 minutes;
+  # dropping --retry-max-time lets --retry 3 run four full 120 s tries (~8 minutes).
   pinned_bats_ci 9.9.9 0000000000000000000000000000000000000000000000000000000000000000
   mkdir -p "$TMPDIR_T/bin"
   printf '#!/bin/sh\nprintf "%%s\\n" "$@" > "%s/curl.args"\nexit 28\n' "$TMPDIR_T" > "$TMPDIR_T/bin/curl"
@@ -63,6 +64,7 @@ fake_bats_tarball() {
   grep -qxF -- "--connect-timeout" "$TMPDIR_T/curl.args"
   [ "$(grep -xF -A1 -- "--connect-timeout" "$TMPDIR_T/curl.args" | tail -n 1)" = 10 ]
   [ "$(grep -xF -A1 -- "--max-time" "$TMPDIR_T/curl.args" | tail -n 1)" = 120 ]
+  [ "$(grep -xF -A1 -- "--retry-max-time" "$TMPDIR_T/curl.args" | tail -n 1)" = 60 ]
 }
 
 @test "CL22: --range without --changed, and --changed with --list or --only, are usage errors (exit 2)" {
