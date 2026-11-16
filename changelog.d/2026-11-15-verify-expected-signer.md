@@ -7,3 +7,7 @@
 - `build.sh` passes it with the configured `niagaraSigningAlias` (`--gradle-prop`, `ORG_GRADLE_PROJECT_`, or a
   `gradle.properties`), else with the signer of the deployed jars its drift gate snapshots; with neither it prints
   one `WARN — no niagaraSigningAlias is configured` line and keeps its exit code. External session retro, delta B5.
+- The deployed-jar signer is never the signing plugin's default development signer (`NIAGARA4`): such a deployed jar
+  gives no expected signer and the WARN names it. A verify gate FAIL now restores the pre-build `modules/` jar the
+  drift gate backed up (exit 50 as before), so a bare re-run fails for the same reason; `--no-drift-check` has no
+  backup and no deployed-jar signer.

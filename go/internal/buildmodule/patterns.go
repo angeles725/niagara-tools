@@ -17,6 +17,9 @@ const (
 	aliasProperty    = "niagaraSigningAlias"
 	gradleEnvPrefix  = "ORG_GRADLE_PROJECT_"
 	gradleProperties = "gradle.properties"
+	// devSigner is the name the signature files of the signing plugin's default development key carry
+	// (META-INF/NIAGARA4.SF): a signer a deployed jar never makes the expected one.
+	devSigner = "NIAGARA4"
 	// m2Depth is how deep under etc/m2/repository a plugin version directory is looked for.
 	m2Depth = 8
 )

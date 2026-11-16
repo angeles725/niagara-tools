@@ -40,10 +40,15 @@
 #   plugin's default development key) FAILs its `signed` row (exit 50). The alias is the niagaraSigningAlias gradle
 #   property (the last --gradle-prop, else $ORG_GRADLE_PROJECT_niagaraSigningAlias, else
 #   $GRADLE_USER_HOME/gradle.properties, else the gradle root's gradle.properties); else the one signer of the deployed
-#   jars the drift gate snapshots (none under --no-drift-check, or when they disagree). With neither, the gate accepts
+#   jars the drift gate snapshots (none under --no-drift-check, or when they disagree; never the plugin's default
+#   development signer NIAGARA4, which a deployed jar may carry: the WARN then says so). With neither, the gate accepts
 #   any signature and build.sh prints one "WARN — no niagaraSigningAlias is configured" line after the gate's rows: the
 #   jar may carry the development signer, which a station's Software Manager shows as self-signed. The exit code does
-#   not change. [ev: external session retro, delta B5]
+#   not change. A configured alias is passed as given, whatever its value.
+#   Retry-safe: when the gate FAILs, the pre-build modules/ jar the drift gate backed up is restored (one "Restored
+#   the previously-deployed" line, exit 50 as before), so a bare re-run still expects the deployed signer and FAILs
+#   again. Under --no-drift-check there is no backup: nothing is restored and the deployed-jar signer is unavailable.
+#   [ev: external session retro, delta B5]
 # Build-location precheck (Δ7): WARNs (non-fatal) when <module-root>'s gradle root or niagara_home sits on a
 #   WSL 9p/drvfs mount (/mnt/<drive>) — Gradle's per-file work is far slower there than on ext4.
 # Deployed-baseline drift gate (Δ2): before gradle's :jar task overwrites <niagara_home>/modules/<jar>, this

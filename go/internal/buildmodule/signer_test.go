@@ -61,6 +61,9 @@ func TestExpectedSignerSource(t *testing.T) {
 			return []string{"--no-drift-check"}
 		}, ""},
 		{"neither", func(f *fixture) []string { return nil }, ""},
+		{"a configured alias is passed as given, the development signer's name included", func(f *fixture) []string {
+			return []string{"--gradle-prop", "niagaraSigningAlias=NIAGARA4"}
+		}, "NIAGARA4"},
 	} {
 		f := newFixture(t)
 		f.wants(c.name, f.build(c.setup(f)...), ExitOK)
@@ -88,5 +91,68 @@ func TestExpectedSignerKeepsTheExitCode(t *testing.T) {
 	f.wants("a signer, the gate fails", f.build("--target-version", "4.14", "--gradle-prop", "niagaraSigningAlias=acmesigner"), ExitGate)
 	if f.err != "build.sh: verify gate failed — do not deploy these jars\n" || !strings.Contains(f.call(gateScript), " <--target-version> <4.14> <--expected-signer> <acmesigner> <") {
 		t.Errorf("stderr %q, gate call %q", f.err, f.call(gateScript))
+	}
+}
+
+// devSignerWarn is the stderr line of a build whose deployed jar carries the default development signer.
+const devSignerWarn = "build.sh: WARN — no niagaraSigningAlias is configured and the deployed jar itself carries the signing plugin's default development signer (NIAGARA4), " +
+	"which is never taken as the expected signer, so the gate accepts any signature: " +
+	"a station's Software Manager shows that signer as self-signed (set it: --gradle-prop niagaraSigningAlias=<alias>, or gradle.properties)\n"
+
+// TestDeployedDevelopmentSignerIsNeverExpected: a deployed jar signed only by the signing plugin's default
+// development signer gives the gate no --expected-signer, and the WARN says the deployed jar carries it.
+func TestDeployedDevelopmentSignerIsNeverExpected(t *testing.T) {
+	f := newFixture(t)
+	f.jar(f.deployed("rt"), "1.0.0", "p", "NIAGARA4")
+	f.jar(f.deployed("ux"), "1.0.0", "p") // unsigned: names nobody
+	f.wants("development signer deployed", f.build(), ExitOK)
+	if want := "verify-module.sh <--src> <" + f.root + "/Foo> <" + f.built("rt") + "> <" + f.built("ux") + ">"; f.call(gateScript) != want || f.err != devSignerWarn {
+		t.Errorf("gate call %q, want %q\nstderr %q, want %q", f.call(gateScript), want, f.err, devSignerWarn)
+	}
+}
+
+// TestGateFailRestoresTheDeployedJar: gradle's :jar step replaced the deployed jar before the gate ran, so a
+// gate FAIL puts the snapshot back (exit code unchanged) and a bare re-run still expects the deployed
+// signer and FAILs again; a gate PASS leaves the new jar in modules/. The gate stub FAILs exactly when it is
+// asked for ACMESIGN, as the real gate does on a new jar signed with another key.
+func TestGateFailRestoresTheDeployedJar(t *testing.T) {
+	const failsOnAcme = `case " $* " in *" --expected-signer ACMESIGN "*) exit 1 ;; esac`
+	f := newFixture(t)
+	f.jar(f.deployed("rt"), "1.0.0", "old", "ACMESIGN")
+	f.jar(f.built("rt"), "1.0.1", "new", "NIAGARA4")
+	before := f.read(f.deployed("rt"))
+	f.does("gradlew", `cp "`+f.built("rt")+`" "`+f.deployed("rt")+`"`) // as the plugin's last :jar step
+	f.does(gateScript, failsOnAcme)
+	restored := "  Restored the previously-deployed Foo-rt.jar into " + f.home + "/modules.\nbuild.sh: verify gate failed — do not deploy these jars\n"
+	for _, run := range []string{"first run", "bare re-run"} {
+		f.wants(run, f.build("--profiles", "rt"), ExitGate)
+		if f.err != restored {
+			t.Errorf("%s: stderr %q, want %q", run, f.err, restored)
+		}
+		if f.read(f.deployed("rt")) != before {
+			t.Errorf("%s: modules/ does not hold the pre-build jar", run)
+		}
+	}
+	if n := strings.Count(f.calls(), "verify-module.sh <--src> <"+f.root+"/Foo> <--expected-signer> <ACMESIGN> <"); n != 2 {
+		t.Errorf("the gate was asked for ACMESIGN %d times, want 2:\n%s", n, f.calls())
+	}
+
+	f = newFixture(t)
+	f.jar(f.deployed("rt"), "1.0.0", "old", "ACMESIGN")
+	f.jar(f.built("rt"), "1.0.1", "new", "ACMESIGN")
+	f.does("gradlew", `cp "`+f.built("rt")+`" "`+f.deployed("rt")+`"`)
+	f.wants("the gate passes", f.build("--profiles", "rt"), ExitOK)
+	if f.err != "" || f.read(f.deployed("rt")) != f.read(f.built("rt")) {
+		t.Errorf("a passing gate must leave the new jar in modules/: stderr %q", f.err)
+	}
+
+	f = newFixture(t)
+	f.jar(f.deployed("rt"), "1.0.0", "old", "ACMESIGN")
+	f.jar(f.built("rt"), "1.0.1", "new", "NIAGARA4")
+	f.does("gradlew", `cp "`+f.built("rt")+`" "`+f.deployed("rt")+`"`)
+	f.does(gateScript, "exit 1")
+	f.wants("--no-drift-check has no snapshot", f.build("--profiles", "rt", "--no-drift-check"), ExitGate)
+	if f.err != noSignerWarn+"build.sh: verify gate failed — do not deploy these jars\n" || f.read(f.deployed("rt")) != f.read(f.built("rt")) {
+		t.Errorf("without a snapshot nothing is restored: stderr %q", f.err)
 	}
 }

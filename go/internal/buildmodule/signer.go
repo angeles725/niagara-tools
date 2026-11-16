@@ -1,21 +1,31 @@
 package buildmodule
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/signingprofile"
 )
 
-// expectedSigner is the signer the verify gate must find on every jar (verify-module.sh --expected-signer),
-// "" when the build knows none: the configured niagaraSigningAlias, else the signer of the deployed jars.
-// Without it a jar signed with the signing plugin's default development key passes the gate and a station's
-// Software Manager then rejects it as self-signed. [ev: external session retro, delta B5]
-func (b *build) expectedSigner() string {
+// expectedSigner is the signer the verify gate must find on every jar (verify-module.sh --expected-signer):
+// the configured niagaraSigningAlias as given, else the signer of the deployed jars. When the build knows
+// none, signer is "" and warning is the line that says why. The signing plugin's default development signer
+// is never taken from a deployed jar: a mirror that only ever held development builds would pin it and the
+// gate would pass them without a word. Without an expected signer a jar signed with that key passes the gate
+// and a station's Software Manager then rejects it as self-signed. [ev: external session retro, delta B5]
+func (b *build) expectedSigner() (signer, warning string) {
 	if alias := b.configuredAlias(); alias != "" {
-		return alias
+		return alias, ""
 	}
-	return b.deployedSigner()
+	switch name := b.deployedSigner(); name {
+	case "":
+		return "", msgNoSigner
+	case devSigner:
+		return "", fmt.Sprintf(msgDevSignerDeployed, devSigner)
+	default:
+		return name, ""
+	}
 }
 
 // configuredAlias is the niagaraSigningAlias gradle property as gradle resolves it for the build: the last

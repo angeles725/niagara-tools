@@ -2,7 +2,7 @@ package buildmodule
 
 // gate runs verify-module.sh on every jar the build produced, with the module sources and the signer the
 // build expects (a WARN when it knows none: the gate then accepts any signature), then the report-module
-// punch-list unless --no-report. A jar that has not passed the gate does not go to a station.
+// punch-list unless --no-report. A failing gate restores the pre-build modules/ jars the drift gate snapshotted. A jar that has not passed the gate does not go to a station.
 func (b *build) gate() int {
 	b.say(msgGate)
 	source := b.root + "/" + b.opt.mod
@@ -10,7 +10,7 @@ func (b *build) gate() int {
 	if b.opt.target != "" {
 		args = append(args, "--target-version", b.opt.target)
 	}
-	signer := b.expectedSigner()
+	signer, warning := b.expectedSigner()
 	if signer != "" {
 		args = append(args, "--expected-signer", signer)
 	}
@@ -18,10 +18,15 @@ func (b *build) gate() int {
 		args = append(args, b.builtJar(p))
 	}
 	code := b.runScript(gateScript, args...)
-	if signer == "" {
-		b.warn(msgNoSigner) // after the gate's rows, where the operator reads the verdict
+	if warning != "" {
+		b.warn("%s", warning) // after the gate's rows, where the operator reads the verdict
 	}
 	if code != 0 {
+		// gradle's :jar step already put the new jar into modules/: put the pre-build one back, as a drift
+		// FAIL does, or a bare re-run would take the failed jar as its baseline and its signer as expected.
+		for _, p := range b.profiles {
+			b.restoreBaseline(p, restoredPlain)
+		}
 		b.warn(msgGateFailed)
 		return ExitGate
 	}
