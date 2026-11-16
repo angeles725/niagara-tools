@@ -1,10 +1,7 @@
 # Go files that were over 200 lines when the size rule arrived (2026-11-15): "<lines> <path under go/>".
 # A listed file may shrink but not grow, and no file may be added. Split a file, then lower or delete its line.
 683 internal/niagaratest/run.go
-675 internal/lint/rules/modulemap/modulemap.go
 575 internal/rcscan/scan.go
-529 internal/modulemap/modulemap.go
-520 internal/lint/rules/delays/scan.go
 485 internal/rcscan/provenance.go
 456 internal/reportmodule/special.go
 445 internal/lint/run.go
