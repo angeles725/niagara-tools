@@ -36,15 +36,16 @@ type deploy struct {
 	station   string // STATION_MODULES_DIR
 	moduleDir string // <directory of gradlew>/<MODULE_NAME>
 
-	homeDir     string       // <NIAGARA_HOME>/modules when it is a directory, else ""
-	sameDir     bool         // STATION_MODULES_DIR is that directory
-	homeJars    []*stagedJar // the module's jars there, from the move aside before the build (home.go)
-	gradleProps []string     // -Pk=v of every --gradle-prop, in order (isolate.go)
-	isolation   []string     // the gradlew arguments of a mirror build after the tasks: --no-daemon (isolate.go)
-	locks       []string     // the run locks this run took, in order (lock.go)
-	signals     *interrupts  // the watch for SIGINT and SIGTERM, from the first lock on
-	backedUp    bool         // the backup step wrote an archive
-	copied      bool         // the copy went through: the station holds the built jars
+	homeDir     string            // <NIAGARA_HOME>/modules when it is a directory, else ""
+	sameDir     bool              // STATION_MODULES_DIR is that directory
+	homeJars    []*stagedJar      // the module's jars there, from the move aside before the build (home.go)
+	gradleProps []string          // -Pk=v of every --gradle-prop, in order (isolate.go)
+	childEnv    map[string]string // set over this process's environment for every command after the mirror isolation (isolate.go)
+	isolation   []string          // the gradlew arguments of a mirror build after the tasks: --no-daemon (isolate.go)
+	locks       []string          // the run locks this run took, in order (lock.go)
+	signals     *interrupts       // the watch for SIGINT and SIGTERM, from the first lock on
+	backedUp    bool              // the backup step wrote an archive
+	copied      bool              // the copy went through: the station holds the built jars
 }
 
 // phases is the deploy after the command line was read; each returns an exit code, or proceed.

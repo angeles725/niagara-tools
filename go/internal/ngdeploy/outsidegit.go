@@ -23,7 +23,7 @@ func (d *deploy) outsideGit() bool {
 	}
 	var said bytes.Buffer
 	cmd := exec.Command(git, "rev-parse", "--git-dir")
-	cmd.Env, cmd.Stderr = append(os.Environ(), "LC_ALL=C", "LANGUAGE="), &said
+	cmd.Env, cmd.Stderr = append(d.environ(), "LC_ALL=C", "LANGUAGE="), &said
 	if cmd.Run() == nil || !strings.Contains(said.String(), notARepository) {
 		return false
 	}

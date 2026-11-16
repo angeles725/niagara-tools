@@ -1,6 +1,7 @@
 package ngdeploy
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -72,5 +73,36 @@ func TestGradlePropIsForwardedAsBuildShForwardsIt(t *testing.T) {
 		if code != ExitEnv || !strings.Contains(f.err, "--gradle-prop needs k=v") || f.calls() != "" {
 			t.Errorf("%v: exit %d, stderr %q", bad, code, f.err)
 		}
+	}
+}
+
+// The isolation goes to the commands the deploy starts, never into this process: after a mirror run the
+// process environment is as it was, and a second run in the same process hands gradle the same values, not
+// a second -Duser.home (review R3-env-leak).
+func TestTheIsolationDoesNotLeakIntoTheProcess(t *testing.T) {
+	f := newFixture(t)
+	withHome(t, f, true)
+	gradlewEnv(f, f.dir+"/home")
+	t.Setenv("HOME", f.dir+"/real-home")
+	before := os.Getenv("JAVA_TOOL_OPTIONS") + "|" + os.Getenv("GRADLE_USER_HOME")
+	f.want(f.run("--no-backup", "--no-deploy"), ExitOK)
+	first := f.read(f.dir + "/gradle.env")
+	if after := os.Getenv("JAVA_TOOL_OPTIONS") + "|" + os.Getenv("GRADLE_USER_HOME"); after != before {
+		t.Errorf("the process environment changed: %q, was %q", after, before)
+	}
+	os.Remove(f.dir + "/gradle.env")
+	f.want(f.run("--no-backup", "--no-deploy"), ExitOK)
+	if second := f.read(f.dir + "/gradle.env"); second != first || strings.Count(second, "-Duser.home=") != 1 {
+		t.Errorf("second run:\n%sfirst:\n%s", second, first)
+	}
+}
+
+// With two --gradle-prop niagaraSigningAlias, gradle gets both in order and the gate expects the last one,
+// as gradle resolves a repeated -P (review R3-last-alias-untested).
+func TestTheGateExpectsTheLastSigningAliasGiven(t *testing.T) {
+	f := newFixture(t)
+	f.want(f.run("--no-backup", "--mode", "C", "--gradle-prop", "niagaraSigningAlias=first", "--gradle-prop", "niagaraSigningAlias=second"), ExitOK)
+	if !strings.Contains(f.calls(), "<-PniagaraSigningAlias=first> <-PniagaraSigningAlias=second>") || !strings.Contains(f.calls(), "<--expected-signer> <second>") {
+		t.Errorf("calls:\n%s", f.calls())
 	}
 }

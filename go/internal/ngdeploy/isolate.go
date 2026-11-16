@@ -2,7 +2,6 @@ package ngdeploy
 
 import (
 	"errors"
-	"os"
 
 	"github.com/angeles725/niagara-tools/go/internal/gradleenv"
 )
@@ -10,7 +9,8 @@ import (
 // isolateMirror gives every gradlew call of a mirror build the isolation build.sh gives it, from the one
 // shared rule (gradleenv.Isolate): user.home in the mirror for every JVM gradle starts (the signing plugin
 // then cannot read the real ~/.tridium keystore), GRADLE_USER_HOME and the real maven repository pinned, and
-// --no-daemon. The environment is set in this process, so the commands after it inherit it as build.sh's do.
+// --no-daemon. The environment goes to every command the deploy starts after it (environ), as build.sh's
+// does, and never into this process: a second run in the same process starts from the same environment.
 // A value JAVA_TOOL_OPTIONS would carry with whitespace is exit 10 before gradle runs. A home that is not a
 // mirror (absent, or a real one opted in with --install-into-home) is left as it was.
 func (d *deploy) isolateMirror() int {
@@ -27,10 +27,7 @@ func (d *deploy) isolateMirror() int {
 	if code := d.show("mkdir", "-p", iso.UserHome); code != 0 {
 		return code
 	}
-	for name, value := range iso.Env {
-		os.Setenv(name, value)
-	}
-	d.isolation = iso.Args
+	d.childEnv, d.isolation = iso.Env, iso.Args
 	d.say(msgMirrorIsolated, iso.UserHome, iso.Env["GRADLE_USER_HOME"])
 	return proceed
 }
