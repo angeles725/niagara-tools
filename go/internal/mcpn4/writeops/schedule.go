@@ -56,7 +56,7 @@ type schedulePart struct {
 
 // scheduleParts are the planners of each argument, in plan order.
 var scheduleParts = []func(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []schedulePart{
-	weeklyParts, defaultOutputPart, eventParts, datesPart,
+	weeklyParts, defaultOutputPart, eventParts, datesPart, timesPart,
 }
 
 func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
