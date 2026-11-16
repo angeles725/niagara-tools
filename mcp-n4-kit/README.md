@@ -524,6 +524,14 @@ Destructive tools use the same pipeline:
   The plan loads one level deeper to see what the cut drops: anything there is listed in
   `snapshot_truncated: {depth, paths}` (first 20 paths, with the exact count in the note),
   also in the execution reply.
+  The dry run also scans for links from the subtree into components outside it (a
+  link is stored on its target, so the subtree load cannot see them): by default it
+  scans the `--write-scope` prefix that holds `parent_ord` to depth 6, and
+  `link_scan_ord` (inside the write scope) narrows that root; links stored outside the
+  scanned root are not detected, and the note names the root. When the scan finds any,
+  the dry run refuses and lists each one (`target (target_slot <- source_slot)`);
+  repeat it with `acknowledge_links: true` to remove anyway, and the plan lists them in
+  `outgoing_links_broken`.
 - `n4_rollback(batch_id)` plans the inverse recorded in the journal as a new batch
   (`rollback_of` points to the original). It refuses an unknown batch, one already
   rolled back, a rollback itself, an `in-doubt` batch (it shows the journaled

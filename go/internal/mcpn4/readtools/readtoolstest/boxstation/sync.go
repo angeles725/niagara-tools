@@ -92,6 +92,7 @@ func (st *Station) sync(op map[string]any) (any, error) {
 		for i, c := range parent.Children {
 			if c.Name == name {
 				parent.Children = append(parent.Children[:i], parent.Children[i+1:]...)
+				st.dropLinksFrom(c)
 				return []any{}, nil
 			}
 		}

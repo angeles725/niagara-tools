@@ -46,7 +46,7 @@ func TestAScanRootListsTheOutgoingLinksThatTheRemoveWouldBreak(t *testing.T) {
 	d := destructiveRig(t, nil)
 	nn, _ := d.group("Grp")
 	other := d.outside(nn)
-	args := removeArgs(nn)
+	args := acknowledged(removeArgs(nn)) // delta 3: links found refuse until acknowledged
 	args["link_scan_ord"] = Folder
 	plan := planOf(d.Srv.Dry("n4_remove_component", args))
 	if !same(plan["outgoing_links_broken"], []any{map[string]any{"target": Folder + "/" + other,
@@ -89,7 +89,7 @@ func TestTheScanResultIsCoveredByThePlanHash(t *testing.T) {
 	nn, _ := d.group("Grp")
 	plain := d.Srv.Dry("n4_remove_component", removeArgs(nn))
 	d.outside(nn)
-	args := removeArgs(nn)
+	args := acknowledged(removeArgs(nn)) // delta 3: links found refuse until acknowledged
 	args["link_scan_ord"] = Folder
 	scanned := d.Srv.Dry("n4_remove_component", args)
 	if plain["plan_hash"] == nil {

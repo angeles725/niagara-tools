@@ -898,7 +898,7 @@
   },
   {
    "name": "n4_remove_component",
-   "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. The dry run scans the write-scope prefix that holds parent_ord (or link_scan_ord) to depth 6 for links from the subtree into components outside it; when it finds any it refuses unless acknowledge_links is true. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -912,7 +912,12 @@
      },
      "link_scan_ord": {
       "type": "string",
-      "description": "Optional wider ORD (inside the write scope) to scan for links from the subtree into components outside it"
+      "description": "Optional ORD (inside the write scope) that narrows the link scan; by default the scan covers the write-scope prefix that holds parent_ord"
+     },
+     "acknowledge_links": {
+      "type": "boolean",
+      "default": false,
+      "description": "true removes even though the scan found links from the subtree into components outside it (the dry run lists them); false (default) refuses such a remove"
      },
      "dry_run": {
       "type": "boolean",
