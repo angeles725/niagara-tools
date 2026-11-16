@@ -5,6 +5,8 @@ package blackbox
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest/boxstation"
@@ -66,6 +68,10 @@ func TestARemoveWhoseRegistryCallFailsKeepsTheBaselineSnapshot(t *testing.T) {
 			return 0, nil
 		}
 	})
+	plan := planOf(d.Srv.Dry("n4_remove_component", removeArgs(k.Name)))
+	if !strings.Contains(fmt.Sprint(plan["notes"]), "configured out is not in this snapshot") {
+		t.Errorf("notes = %v", plan["notes"])
+	}
 	if out := d.Srv.RunWrite("n4_remove_component", removeArgs(k.Name)); out["verdict"] != "verified" {
 		t.Errorf("remove = %v", out)
 	}

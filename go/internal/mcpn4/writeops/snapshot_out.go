@@ -30,15 +30,20 @@ func (s *snapshot) keepsOutput(node, child *pyjson.Object) bool {
 
 // snapshotContracts are the contracts of every type in root, read as a copy reads them, for a
 // snapshot that does not refuse: nil (outputs left out as before) when the client cannot read
-// the registry channel or the station does not describe one of the types.
-func snapshotContracts(c plan.Client, root *pyjson.Object) (*plan.Contracts, error) {
+// the registry channel or the station does not describe one of the types; then note is the plan
+// note that says a constant's out is not carried ("" for a client with no registry channel).
+func snapshotContracts(c plan.Client, root *pyjson.Object) (ct *plan.Contracts, note string) {
 	tl, ok := c.(plan.TypeLoader)
 	if !ok {
-		return nil, nil
+		return nil, ""
 	}
 	ct, err := treeContracts(tl, root)
 	if err != nil { // an unanswered type or a failed registry call: the snapshot as before contracts
-		return nil, nil
+		return nil, msgOutNotCarried + plan.PyStr(err)
 	}
-	return ct, nil
+	return ct, ""
 }
+
+// msgOutNotCarried starts the note of a snapshot taken without type contracts.
+const msgOutNotCarried = "The type contracts could not be read, so a constant block's configured out is not " +
+	"in this snapshot and a rollback re-creates it at its default: "
