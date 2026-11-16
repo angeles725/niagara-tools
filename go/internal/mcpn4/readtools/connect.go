@@ -78,6 +78,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_list_batches"] = t.ListBatches
 	s.Handlers["n4_session_retro_draft"] = t.SessionRetroDraft
 	s.Handlers["n4_spy_page"] = t.SpyPage
+	s.Handlers["n4_station_health"] = t.StationHealth
 }
 
 func toolError(format string, a ...any) error {

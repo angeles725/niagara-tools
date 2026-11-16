@@ -195,7 +195,7 @@ Example MCP client entry (Claude Code `.mcp.json`):
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
-`n4_list_px_views`, `n4_px_summary`, `n4_spy_page`.
+`n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -233,6 +233,29 @@ never overwritten; a truncated read is not saved). `n4_px_summary(file_ord, max_
 max_items=200)` fetches a `.px` and returns its media, imported modules, canvases and
 `viewSize`, layers, widget and binding counts, bound ORDs grouped by component, images,
 included Px, charts and label texts, without the XML.
+Station health in one call: `n4_station_health(base="station:|slot:/", max_not_ok=50)` composes
+the reads above into one reply, each section answered on its own. `system` is the station's
+SystemService (`/Services/PlatformServices/SystemService`) by its slot names: `currentCpuUsage`
+and `overallCpuUsage` in percent, `numCpus`, `totalPhysicalMemory` and `freePhysicalMemory` as the
+station reports them (it names no unit; the magnitude on the 4.15 station measured fits
+kilobytes) plus the derived
+`memory_used_percent`, `niagaraVersion`, `hostId`, `model`, `stationName`, `systemTime`, `osName`,
+`javaVmVersion`. `points`, `networks` and `devices` each run one query that selects `status.bits`
+(the status as a number, which no locale translates) and report `total`, `ok`, `by_flag` (a count
+per flag: `disabled`, `fault`, `down`, `alarm`, `stale`, `overridden`, `null`, `unackedAlarm`; a
+row with two flags counts under both), `not_ok_count` and `not_ok` (the entries with any flag, up
+to `max_not_ok`; `truncated` says the list was cut, `rows_truncated` that the query hit
+`max_rows`, so the counts are lower bounds). Networks and devices also carry `disabled` (rows
+whose `enabled` is false) and name, type and `enabled` per entry. A status the station did not
+answer as a number counts under `unknown`, never as ok. `totals` are the `n4_inventory` totals of
+the same rows. `capacity` is the Global Capacity table of the spy metrics page (`spy:/metrics`):
+`resources` (`type`, `used`, `limit`, and `unlimited: true` where the station shows no limit) and
+`recount` (when the capacity recount last ran or failed). `capacity` is `null` with a
+`capacity_note` when the page is unreachable (the user may not read spy pages) or holds no such
+table: it is never a guessed count. The capacity counts are the licensing counter's, which counts
+by its own rules (it does not decrement on a delete until a recount), so they can differ from
+`totals`. A section that fails is `{"error": "..."}` and the others still answer; only an
+authentication failure fails the call.
 Spy pages (the station's diagnostics tree, the pages of the Workbench Spy view):
 `n4_spy_page(path="", max_rows=500, max_bytes=2097152)` sends one `GET /ord?spy:/<path>` with
 the session's credentials and returns the page as data: `title`, `tables` (each with its `title`,
