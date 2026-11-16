@@ -30,14 +30,17 @@ type Spec struct {
 	// has nothing to check, and report-module runs it on every module); a walk error still exits 3. A RootRule
 	// that returns no ErrEmptyRoot for such a root (lint-jasmine-ux) sets it to record the same exception.
 	EmptyOK bool
-	// OptionalInAll makes a root where the rule selects no file clean for it under n4lint --all (no ERROR row), for a
-	// rule whose files belong to one profile only (lint-spa-poll-no-recovery reads the *.html/*.js of a -ux root,
-	// and --all also runs on -rt roots that have none). Run by name or in a rule list it keeps the empty-root error.
+	// OptionalInAll makes a root where the rule selects no file clean for it under n4lint --all (no ERROR
+	// row), for a rule whose files belong to one profile only (lint-spa-poll-no-recovery reads the *.html/*.js
+	// of a -ux root, and --all also runs on -rt roots that have none). Run by name or in a rule list it keeps
+	// the empty-root error.
 	OptionalInAll bool
-	// FileRoot lets a RootRule run alone take a regular file it accepts as its root (a template module .jar); nil: none.
+	// FileRoot lets a RootRule run alone take a regular file it accepts as its root (a template module
+	// .jar), as well as a directory. Nil, the default, accepts none: a file root is "not a directory" (exit 3).
 	FileRoot func(path string) bool
-	// ModuleRoot marks a rule whose roots are module roots (lint-duplicate-helper reads every part's src/): n4lint
-	// --all, which runs on source roots, leaves it out as it leaves out a RootRule; it runs by name or in a rule list.
+	// ModuleRoot marks a rule whose roots are module roots, not source roots (lint-duplicate-helper reads
+	// every part's src/): n4lint --all, which runs on source roots, leaves it out as it leaves out a
+	// RootRule; it runs by name or in a rule list.
 	ModuleRoot bool
 	// Option is the value option Mode Valued parses (e.g. "--wiring-map"), or the noun of the file operand of
 	// Mode FileFirst ("manual"); the rule reads its value (Args.Option) by implementing Configurer.
