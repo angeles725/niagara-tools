@@ -135,3 +135,19 @@ func TestSetScheduleReportsADayTheStationDidNotKeep(t *testing.T) {
 		t.Errorf("out = %v", out)
 	}
 }
+
+// A schedule that is not there is named, with every fault that needs no station.
+func TestSetScheduleNamesAMissingScheduleWithTheRequestFaults(t *testing.T) {
+	r := scheduleWriteRig(t)
+	text := r.Srv.Err("n4_set_schedule", setSchedule("Nope", Args{"weekly": map[string]any{"lunes": []any{},
+		"monday": []any{map[string]any{"start": "09:00", "end": "08:00", "value": "x"}}}}))
+	for _, want := range []string{"3 fault(s)", "weekly: unknown day 'lunes'", "weekly.monday[0]: end '08:00' is not after start '09:00'",
+		"ord: no component at " + Folder + "/Nope ("} {
+		if !strings.Contains(text, want) {
+			t.Errorf("missing %q in %q", want, text)
+		}
+	}
+	if strings.Contains(text, "is not a boolean") {
+		t.Errorf("a value was checked without the schedule: %q", text)
+	}
+}

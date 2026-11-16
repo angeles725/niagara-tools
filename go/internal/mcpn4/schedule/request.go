@@ -50,7 +50,8 @@ func minutes(v any, end bool) int {
 
 // Weekly parses the weekly argument: {day: [{start, end, value}]} for the days given only. Each
 // fault (an unknown day, a malformed or reversed time, an overlap, a value of the wrong type) is
-// added to f; the ranges come back sorted by start.
+// added to f; the ranges come back sorted by start. A nil k checks the structure only (no value
+// types), before the schedule is read.
 func Weekly(arg *pyjson.Object, k *Kind, facets string, f *Faults) map[string][]Range {
 	out := map[string][]Range{}
 	for _, day := range arg.Keys() {
@@ -100,10 +101,10 @@ func ranges(where string, list []any, k *Kind, facets string, f *Faults) []Range
 		}
 	}
 	sort.SliceStable(rs, func(i, j int) bool { return rs[i].Start < rs[j].Start })
-	for i := 1; i < len(rs); i++ {
-		if rs[i].Start < rs[i-1].End {
-			f.add("%s: ranges %s-%s and %s-%s overlap", where, hhmm(rs[i-1].Start), hhmm(rs[i-1].End),
-				hhmm(rs[i].Start), hhmm(rs[i].End))
+	for i := range rs { // every overlapping pair, a long range against each one inside it too
+		for j := i + 1; j < len(rs) && rs[j].Start < rs[i].End; j++ {
+			f.add("%s: ranges %s-%s and %s-%s overlap", where, hhmm(rs[i].Start), hhmm(rs[i].End),
+				hhmm(rs[j].Start), hhmm(rs[j].End))
 		}
 	}
 	return rs
@@ -111,9 +112,12 @@ func ranges(where string, list []any, k *Kind, facets string, f *Faults) []Range
 
 var rangeOrdinal = regexp.MustCompile(`=(-?\d+)`)
 
-// CheckValue is "" when value fits the kind's value type, else why not. null is accepted only
+// CheckValue is "" when value fits the kind's value type (or k is nil), else why not. null is accepted only
 // where allowNull is true (a default output).
 func CheckValue(k *Kind, facets string, value any, allowNull bool) string {
+	if k == nil { // a structure-only check: no kind, no value type
+		return ""
+	}
 	if value == nil {
 		if allowNull {
 			return ""

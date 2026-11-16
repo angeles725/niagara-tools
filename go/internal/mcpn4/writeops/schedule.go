@@ -64,7 +64,7 @@ func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	ordText := str(args, "ord")
 	s, err := loadSchedule(c, ordText)
 	if err != nil {
-		return nil, err
+		return nil, unreadSchedule(ordText, args, err) // schedule_precheck.go
 	}
 	var faults schedule.Faults
 	var parts []schedulePart
