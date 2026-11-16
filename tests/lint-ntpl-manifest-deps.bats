@@ -195,3 +195,19 @@ _ntpl() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"find: '$M/ModA-rt/src/templates/p.ntpl': not a regular file" ]]
 }
+
+@test "NTPL14: a module the bog uses with no <dependency> and not shipped -> FAIL ntpl-uses; a .napl is checked as a template" {
+  local stage="$BATS_TEST_TMPDIR/uses" out="$M/ModA-rt/src/templates/Unit.ntpl"
+  mkdir -p "$stage"
+  printf '<bajaObjectGraph version="4.0"><p m="b=baja" t="b:Folder"><p n="a" m="c=control k=kitIo v=vendorx" t="c:NumericWritable"/></p></bajaObjectGraph>\n' > "$stage/template.bog"
+  printf '<template id="t1" version="1.0">\n  <dependencies>\n    <dependency name="control-rt" vendor="Tridium" vendorVersion="4.10"/>\n  </dependencies>\n</template>\n' > "$stage/template-manifest.xml"
+  (cd "$stage" && zip -q -X "$out" template.bog template-manifest.xml)
+  : > "$NH/modules/kitIo-rt.jar"
+  run "$LINT" --niagara-home "$NH" "$M"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  ntpl-uses  $out: template.bog uses vendorx: no <dependency> of template-manifest.xml names them, and the installation $NH does not ship them" ]
+  _ntpl "$M/ModA-rt/src/app/App.napl" "" ghost-rt
+  run "$LINT" --niagara-home "$NH" "$M"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  ntpl-deps  $M/ModA-rt/src/app/App.napl: manifest dependencies neither declared"*": ghost-rt"* ]]
+}
