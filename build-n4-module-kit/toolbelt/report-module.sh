@@ -64,6 +64,8 @@
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--niagara-home <dir>]
 #                         [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline]
+#        report-module.sh <module-root> --ready [--niagara-home <dir>] [--expect-niagara <ver>] [--expect-signer <alias>]
+#                         [--target-version x.y] [--first-deploy] [--json]
 # --niagara-home <dir>: the installation lint-ntpl-manifest-deps reads the stock modules from (build.sh passes its
 # niagara_home); without it that member reads NIAGARA_HOME from the environment, and with neither its ntpl-deps
 # rows are WARN. [ev: retro ntpl-lint-walk-k-rows Δ4]
@@ -87,6 +89,10 @@
 # (sorted, de-duplicated, atomic; floor and crash rows left out and named on stderr) and exits as the run does;
 # --no-baseline ignores the file for one run. A file that exists and cannot be read is exit 3. Without the file
 # and without these options the report is unchanged. (source: delta B7 of an external session retro, 2026-11-13)
+# --ready (retro row P4): the ready-to-load report of each built jar instead of the punch-list: module, niagara-target,
+# niagara-home, signer, verify-module, schema-risk, sha256 and mirror rows, then READY TO LOAD with the post-load
+# read-back, or NOT READY with the failing rows (--expect-niagara, --expect-signer, --json; build-verify.md
+# § Ready to load). Exit 0 ready, 1 not ready, 3 env. [ev: retro ready-to-load-p4 Δ1]
 # Mutation: RM-baseline-floor -- dropping `floor: true` of a floor member lets a baseline hide a verify-module or schema-risk FAIL
 # Mutation: RM-baseline-crash -- dropping the crashRow case lets a baseline hide a member that crashed without a FAIL row
 # Mutation: RM-floor -- dropping the floor-SKIP verdict reads a run that checked neither floor member as CLEAN

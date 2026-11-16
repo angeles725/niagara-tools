@@ -158,6 +158,27 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
 
 **Why the work-tree snapshot is wrong:** the current work tree is the BUILD baseline, not the DEPLOYED baseline. Version drift between the work tree and the live station (e.g. Dashboard 2.0 live vs 2.2.0 in the tree) makes the schema-risk diff report the wrong deltas — it sees code changes that were already deployed as new schema changes.
 
+## Ready to load: `report-module.sh --ready` `[ev: retro ready-to-load-p4 Δ1]`
+
+Before an operator loads a built client module on a production station, one command gathers what used to be checked by hand:
+
+`toolbelt/report-module.sh <module-root> --ready --niagara-home <mirror> --expect-niagara <ver> --expect-signer <alias> [--target-version x.y] [--first-deploy] [--json]`
+
+One row per check for each built jar (`<artifact>/build/libs`), `<artifact>  PASS|WARN|FAIL|SKIP|ERROR  <check>  <evidence>`:
+
+| Check | Evidence | FAIL when |
+|---|---|---|
+| `module` | the module part and vendorVersion of `META-INF/module.xml` | it cannot be read |
+| `niagara-target` | the `baja` dependency floor | the floor is above `--expect-niagara` (WARN without the flag) |
+| `niagara-home` | `<niagara-home>/modules/baja.jar` vendorVersion: the Niagara it was compiled against | its release line is newer than the target (an older line WARNs; SKIP without `--niagara-home`) |
+| `signer` | the complete `META-INF/<SIGNER>.SF` signatures | unsigned, the development signer `NIAGARA4`, or not `--expect-signer` (WARN without the flag) |
+| `verify-module` | the gate run with `--expected-signer` and `--target-version` when given | the gate FAILs (its first FAIL line is the evidence) |
+| `schema-risk` | the verdict against `<artifact>/.deploy-baseline` | OUTAGE, or no baseline (the row prints the command that creates it from the deployed ref, § Schema-risk deploy workflow); `--first-deploy` makes it a SKIP |
+| `sha256` | the jar's full sha256 | the jar cannot be read (ERROR) |
+| `mirror` | whether `<mirror>/modules/<jar>` is the deployed jar again | never; a WARN prints the `build.sh --restore-mirror <kept jar>` line (§ Mirror) |
+
+Then `READY TO LOAD: <MOD> <version> for Niagara <x> (sha256 <12>)` when no row FAILs or ERRORs (`<x>` is `--expect-niagara`, else the compile home's version), followed by the post-load read-back: after loading, `n4_station_runtime` (mcp-n4) must list the part at that version in `loaded_modules` with no `mismatches`. Otherwise `NOT READY` with the failing rows. The tool never contacts a station. Exit 0 ready · 1 not ready · 2 usage · 3 env (an ERROR row, no built jar). `--json` prints the same as one object (`root`, `verdict`, `jars[]` with `rows`, `line`, `readback`). No lint member runs and `.report-baseline` is not read.
+
 ## Signing per deploy target
 - **Check the deploy target's signing policy before assuming a Workbench re-sign:** a Honeywell supervisor ACCEPTS gradle's per-machine DEV cert — no re-sign needed (chihuahua's `deploy.sh` only builds + copies and runs on the same supervisor). A JACE field controller enforces the project CA (e.g. `angelessigner`), so a JACE-bound module IS re-signed. [CERT-live 2026-09-01 · retro 5rooms #9]
 - **A jar signed with the development key passes the default `signed` check — name the signer the module must carry:**
