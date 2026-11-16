@@ -1,5 +1,10 @@
 package buildmodule
 
+import (
+	"os"
+	"strings"
+)
+
 // gate runs verify-module.sh on every jar the build produced, with the module sources and the signer the
 // build expects (a WARN when it knows none: the gate then accepts any signature), then the report-module
 // punch-list unless --no-report. A failing gate restores the pre-build modules/ jars the drift gate snapshotted. A jar that has not passed the gate does not go to a station.
@@ -65,9 +70,29 @@ func (b *build) report(source string) int {
 		b.warn(msgReportEnv)
 		return ExitEnv
 	case reportIncomplete:
-		b.warn(msgReportIncomplete)
+		if !b.opt.firstDeploy && baselineMissing(source) {
+			b.warn(msgReportIncomplete + msgSchemaRiskCrossRef)
+		} else {
+			b.warn(msgReportIncomplete)
+		}
 		return ExitReportPartial
 	}
 	b.warn(msgReportFails)
 	return ExitGate
+}
+
+// baselineMissing reports whether an artifact report-module walks (a directory under source that is not a
+// symlink and not a dot-directory) has no .deploy-baseline directory: then its schema-risk row is a floor SKIP
+// naming the command that creates it.
+func baselineMissing(source string) bool {
+	entries, _ := os.ReadDir(source)
+	for _, e := range entries {
+		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		if st, err := os.Stat(source + "/" + e.Name() + "/.deploy-baseline"); err != nil || !st.IsDir() {
+			return true
+		}
+	}
+	return false
 }

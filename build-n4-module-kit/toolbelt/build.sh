@@ -33,8 +33,9 @@
 #                   (otherwise a missing <artifact>/.deploy-baseline is INCOMPLETE, exit 53; its schema-risk SKIP row
 #                   names the git archive command that creates it from the deployed ref) [ev: audit-2026-10-03 A2]
 #   --restore-mirror <kept-jar>  builds nothing: copies a jar a mirror build kept (below) back into that mirror's
-#                   modules/ and leaves the kept copy. Refuses a path not shaped <mirror>/.mirror-replaced/<name>.<sha12>
-#                   (exit 2), a missing kept jar or a home without .niagara-mirror (exit 10); a failed copy is exit 1.
+#                   modules/, leaves the kept copy and ends the cycle (below). Refuses a path not shaped
+#                   <mirror>/.mirror-replaced/<name>.<sha12> (exit 2); a missing kept jar, one whose sha256 prefix is
+#                   not <sha12>, or a home without .niagara-mirror (exit 10, nothing written); a failed copy is exit 1.
 #   --no-drift-check  skip the deployed-baseline drift gate below (Δ2) — fix the version bump, don't skip, unless
 #                   you have a real reason (e.g. this niagara_home was never the deploy target)
 #   $JAVA8          JDK 8 path (default /usr/lib/jvm/java-8-openjdk-amd64)
@@ -77,9 +78,13 @@
 # Mirror jar kept (retro row B6): a mirror is also the drift baseline of what the station runs, and gradle's :jar
 #   step replaces its modules/<MOD>-<p>.jar. When a run ends (any exit) with a modules/ jar that differs from the
 #   drift gate's pre-build snapshot, the snapshot is kept as <mirror>/.mirror-replaced/<MOD>-<p>.jar.<sha12> (sha256
-#   of the replaced jar) and stdout ends with one "==> mirror: … replaced (vendorVersion <old> sha256:<old> -> <new>
-#   sha256:<new>); … put it back with: <toolbelt>/build.sh --restore-mirror <kept>" line. Nothing is kept for a real
-#   niagara_home, under --no-drift-check (no snapshot), on a first deploy, or when the run restored modules/.
+#   of the replaced jar; a kept jar is never overwritten or deleted) and stdout ends with one "==> mirror: …
+#   replaced (vendorVersion <old> sha256:<old> -> <new> sha256:<new>); first replaced this cycle: vendorVersion <v>
+#   sha256:<s>; restore with: <toolbelt>/build.sh --restore-mirror <kept>" line. The first replaced jar of a cycle
+#   (the one the station runs, even after several builds) is named by <MOD>-<p>.jar.first; --restore-mirror ends
+#   the cycle. A jar that cannot be kept is one WARN ("was NOT kept"), exit code unchanged. Nothing is kept for a
+#   real niagara_home, under --no-drift-check (no snapshot), on a first deploy, or when the run restored modules/.
+#   An INCOMPLETE report ends with a pointer to the schema-risk SKIP row only when an artifact lacks .deploy-baseline.
 # Post-jar copy lock (exit 32): the plugin's last step copies the jar into <niagara_home>/modules; a Windows
 #   process (Workbench, station) holding the old jar open on /mnt/c makes it fail with FileAlreadyExistsException.
 #   build.sh names the build/libs jar(s) rebuilt THIS run as the artifact of record (a stale one is flagged
