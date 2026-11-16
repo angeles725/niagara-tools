@@ -106,6 +106,39 @@ MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
   go/bin/mcp-n4 --station MyStation=https://10.0.0.5
 ```
 
+### Install to a stable path and register a station per harness
+
+A harness should never run `go/bin/mcp-n4` from a worktree: removing or rebuilding it changes or
+breaks every server registered from it. Install the binary once, then register each station:
+
+```
+go/bin/mcp-n4 install                       # copies itself to ~/.local/bin/mcp-n4 (--prefix DIR)
+~/.local/bin/mcp-n4 register --station lab --harness claude -- \
+  --station LAB=https://10.0.0.5 --credential-env LAB_N4 --load-wait 10
+~/.local/bin/mcp-n4 register --station lab --harness pi            # reuses the launcher
+~/.local/bin/mcp-n4 register --station lab --harness gentle-shell
+```
+
+- `install` writes a temporary file next to the target, fsyncs it, makes it 0755 and renames it
+  over `<prefix>/mcp-n4`: a running server keeps the old file, a failure leaves it in place.
+- `register` writes `~/.config/mcp-n4/<station>-run.sh`, which sources the env file
+  (`--env`, default `~/.config/mcp-n4/<station>.env`, holding `<PREFIX>_USER` / `<PREFIX>_PASSWORD`,
+  chmod 600) and execs `--bin` (default `~/.local/bin/mcp-n4`) with the server flags given after
+  `--`. The flags are checked like a server start; a flag carrying a value of the env file is
+  refused, so the launcher holds no credential. Without flags after `--` an existing launcher is kept.
+- The MCP entry is `mcp-n4-<station>`: `claude` adds it to the Claude Code project `--project`
+  (default the current directory) in `~/.claude.json`, the local scope `claude mcp add` uses (the
+  project must have been opened in Claude Code once); `pi` and `gentle-shell` add it to
+  `~/.pi/agent/mcp.json` and `~/.gentle-shell/agent/mcp.json` with `"exposure": "direct"`. These
+  files are hand-edited, so only the bytes of the entry added or replaced change (with the comma
+  and line break joining it to its neighbours); every other server keeps its bytes exactly.
+- The launcher execs the installed binary. A `--bin` inside a git checkout (a `.git` file or
+  directory at or above it, after symlinks) is refused unless `--force`: removing or rebuilding a
+  worktree would break every server registered from it.
+- Re-running with the same arguments changes no byte. A launcher or entry that differs is refused,
+  naming the first differing line or the differing fields; `--force` replaces it.
+- Restart the harness (or reload its MCP servers) to pick up a new entry.
+
 The server speaks newline-delimited JSON-RPC 2.0 on stdin/stdout. Credentials are
 read from the environment only (`<prefix>_USER` / `<prefix>_PASSWORD`) and never
 appear in output.
