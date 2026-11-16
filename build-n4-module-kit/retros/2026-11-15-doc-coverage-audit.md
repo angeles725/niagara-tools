@@ -1,10 +1,10 @@
 <!-- review-status: pending -->
 <!-- module: kit -->
-<!-- deltas: 23 -->
+<!-- deltas: 24 -->
 # 2026-11-15 · kit · doc-coverage-audit
 
 **Session**: an audit of the kit's own documents against its code: two module shapes the guides prescribe that the structure lint rejected, seven places where a document contradicted the code, and the coverage the eight module kinds still lack.
-**Delta count**: 23
+**Delta count**: 24
 
 ## What happened
 The kit documents eight kinds of module. Built exactly as `types/theme.md` and `types/utility-lib.md` prescribe
@@ -52,19 +52,20 @@ The audit also listed what the eight kinds still lack. Those rows are open below
 | Δ8 | APPLIED 2026-11-15. B6: the gate's header lists every check it runs, in run order | `toolbelt/verify-module.sh` | `[ev: 18d6da5b]` |
 | Δ9 | APPLIED 2026-11-15. B7: a Go test fails when the rule table of the structure guide and the rules the lint reports differ, and one when the gate's header and its registered checks differ | `go/internal/lint/rules/structure/doc_test.go` · `go/internal/verifymodule/header_test.go` · `checks.go` | `[ev: b0c6667c]` |
 | Δ10 | A new module of the wb view, station service, utility library, theme and cloud connector kinds starts from a scaffold type or a fixture that builds and passes the lints, as the logic, dashboard and driver kinds do | `go/internal/scaffoldmodule/types.go` · `fixtures/` | `[ev: go/internal/scaffoldmodule/types.go]` |
-| Δ11 | The diagnostics guide tells an author how to take and read a thread dump, attach a remote debugger, and which launcher flags a station and Workbench accept | `types/diagnostics.md` | `[ev: build-n4-module-kit/types/diagnostics.md]` |
-| Δ12 | A front-end author can run a `-ux` module in webdev mode and knows what the JS build does and produces | `types/frontend-standard.md` · `types/dashboard.md` | `[ev: build-n4-module-kit/types/frontend-standard.md]` |
-| Δ13 | An author can write an Hx view from the kit alone: the class, its registration and its update cycle | `types/wb-widgets.md` · `types/dashboard.md` | `[ev: build-n4-module-kit/types/wb-widgets.md]` |
-| Δ14 | An author can write a custom-painted widget and a Workbench tool from the kit alone | `types/wb-widgets.md` | `[ev: build-n4-module-kit/types/wb-widgets.md]` |
-| Δ15 | The theme guide gives the official theme authoring flow from an empty directory to a theme a user can pick | `types/theme.md` | `[ev: build-n4-module-kit/types/theme.md]` |
+| Δ11 | APPLIED 2026-11-15. `types/diagnostics.md` § 4 (thread dump by three routes and how to read it, remote debugger, launcher flags). The diagnostics guide tells an author how to take and read a thread dump, attach a remote debugger, and which launcher flags a station and Workbench accept | `types/diagnostics.md` | `[ev: build-n4-module-kit/types/diagnostics.md]` |
+| Δ12 | APPLIED 2026-11-15. In `types/wb-widgets.md` (JS toolchain section) with a pointer from `types/dashboard.md`; the edit-and-reload mode is moduledev, webdev serves the unminified files, and both are documented. A front-end author can run a `-ux` module in webdev mode and knows what the JS build does and produces | `types/frontend-standard.md` · `types/dashboard.md` | `[ev: build-n4-module-kit/types/frontend-standard.md]` |
+| Δ13 | APPLIED 2026-11-15. `types/wb-widgets.md` § Hx view authoring. An author can write an Hx view from the kit alone: the class, its registration and its update cycle | `types/wb-widgets.md` · `types/dashboard.md` | `[ev: build-n4-module-kit/types/wb-widgets.md]` |
+| Δ14 | APPLIED 2026-11-15. `types/wb-widgets.md` § Custom-painted Workbench widget and § Workbench tool. An author can write a custom-painted widget and a Workbench tool from the kit alone | `types/wb-widgets.md` | `[ev: build-n4-module-kit/types/wb-widgets.md]` |
+| Δ15 | APPLIED 2026-11-15. `types/theme.md` § 8-10; the flow starts from a copy of a shipped theme, as the developer guide prescribes. The theme guide gives the official theme authoring flow from an empty directory to a theme a user can pick | `types/theme.md` | `[ev: build-n4-module-kit/types/theme.md]` |
 | Δ16 | A cloud connector has a test recipe and a checklist, and its two owed lints (G87 `mqtt-tls-port`, G88 `rdbms-dialect-descriptor`) exist | `types/cloud-connector.md` · `go/internal/lint/rules/` | `[ev: build-n4-module-kit/types/cloud-connector.md]` |
-| Δ17 | A station service has a guide of its own: the service type, its lifecycle, its registration and its checks | `types/` (new card) | `[ev: build-n4-module-kit/skill/SKILL.md]` |
-| Δ18 | An author can license a feature of their own module: the feature name, the check and what an unlicensed station does | `types/security.md` · `types/distribution.md` | `[ev: build-n4-module-kit/types/security.md]` |
-| Δ19 | Removing a module from a station follows a checklist: what refers to it, what to remove first and how to confirm the station starts clean | `types/distribution.md` · `BUILD-LOOP.md` | `[ev: build-n4-module-kit/types/distribution.md]` |
-| Δ20 | The corpus index holds an entry for every block the kit's guides cite, and its title states the range it reaches (it says B1258 and cites blocks beyond it) | `corpus-index.md` | `[ev: build-n4-module-kit/corpus-index.md]` |
+| Δ17 | APPLIED 2026-11-15. `types/service.md`, routed from `skill/SKILL.md`. A station service has a guide of its own: the service type, its lifecycle, its registration and its checks | `types/` (new card) | `[ev: build-n4-module-kit/skill/SKILL.md]` |
+| Δ18 | APPLIED 2026-11-15. `types/security.md` § 5.2-5.3; how a third-party vendor gets a certificate and issues licence files stays open (Δ24). An author can license a feature of their own module: the feature name, the check and what an unlicensed station does | `types/security.md` · `types/distribution.md` | `[ev: build-n4-module-kit/types/security.md]` |
+| Δ19 | APPLIED 2026-11-15. `types/distribution.md` § 10a with a row in `types/platform.md` § 2; `BUILD-LOOP.md` is unchanged. Removing a module from a station follows a checklist: what refers to it, what to remove first and how to confirm the station starts clean | `types/distribution.md` · `BUILD-LOOP.md` | `[ev: build-n4-module-kit/types/distribution.md]` |
+| Δ20 | PARTLY APPLIED 2026-11-15. The title states the real range (B5–B1420) and 22 rows were added for the blocks the 2026-11-15 sections cite; left: a sweep of every block cited by the other cards (B1146 and B1254 among them) against the index. The corpus index holds an entry for every block the kit's guides cite, and its title states the range it reaches (it says B1258 and cites blocks beyond it) | `corpus-index.md` | `[ev: build-n4-module-kit/corpus-index.md]` |
 | Δ21 | Each of the eight steps the skill requires and no tool reads either gets a check or is marked in the skill as unchecked: the behaviour decisions table, the design-shard checklist or its waiver, the checks-skipped section, the priority tier, preview before compiling, corpus search first, console triage after a reload, and a full station backup before a runtime install | `skill/SKILL.md` · `BUILD-LOOP.md` · kit lints | `[ev: build-n4-module-kit/skill/SKILL.md]` |
 | Δ22 | The undeclared L5 row says how to declare a library, as the `-ux` L9 row does for a theme: the four report goldens that pin the L5 text are re-recorded with it; the header of `toolbelt/lint-structure.sh` states the two declared kinds and the bats title that says "L1-L11" names the real range | `go/internal/lint/rules/structure/kind.go` · `go/internal/reportmodule/testdata/` · `toolbelt/lint-structure.sh` · `tests/lint-structure.bats` | `[ev: go/internal/reportmodule/testdata/fx-agent-on.txt]` |
 | Δ23 | The scaffold writes the `type:` line for a kind that needs one, and `lint.MapHeader` returns the declared kind so the structure lint and the module-map lint read the header with one reader; the improvement-candidates rows that still mark the Spanish level names as owed are closed | `go/internal/lint/paths.go` · `go/internal/scaffoldmodule/` · `odd/tasks/kit-improvement-candidates-2026-10-15.md` | `[ev: go/internal/lint/paths.go]` |
+| Δ24 | Research gaps the documents now mark as open are answered or filed as niagara-research gaps: how a third-party vendor obtains a vendor certificate and issues licence files (`types/security.md` § 5.2); how to pass the debugger agent option to a station the platform daemon starts (`types/diagnostics.md` § 4.2); whether a Software Manager uninstall stops the station (`types/distribution.md` § 10a); the console verbs and launcher flags on 4.15 (niagara-research B1296-G1) and the 4.15 service start and stop code (`types/service.md`); the official switch-off procedure of webdev and moduledev modes (`types/wb-widgets.md`) | `types/security.md` · `types/diagnostics.md` · `types/distribution.md` · `types/service.md` · `types/wb-widgets.md` | `[ev: build-n4-module-kit/types/security.md]` |
 
 ## Lessons
 - A lint that judges a shape by the files it lacks needs a declared exception before a guide may prescribe that
@@ -75,4 +76,4 @@ The audit also listed what the eight kinds still lack. Those rows are open below
 - A marker for owed work is closed in the same change that does the work, or it outlives it.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-15-doc-coverage-audit.md | kit | 2026-11-15 | pending | 23 |`
+**Status**: PENDING — INDEX row generated from the header: `| 2026-11-15-doc-coverage-audit.md | kit | 2026-11-15 | pending | 24 |`

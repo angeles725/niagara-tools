@@ -144,6 +144,11 @@ Tridium ships no vendor exemplar for the SPA/servlet split — DashboardPan-ux i
 
 The decision pivots on whether the module **authors its own AMD modules** (grunt needed) or simply **embeds a pre-built bundle** (grunt must be removed).
 
+Developing a grunt-built module without rebuilding the jar for every JS edit (moduledev mode), and serving its
+unminified sources to the browser debugger (webdev mode, keyed by the `BJsBuild` webdev ID): `types/wb-widgets.md`
+§ Edit-and-reload without rebuilding the jar. Laboratory station only. A raw-`rc/` servlet-SPA previews with
+`dashboard-preview` instead (`SOURCES.md` § Tools).
+
 Whether a NEW SPA should use a framework build at all (plain classic scripts vs. Vite + TypeScript built outside gradle with `build.target` = the panel engine; no Spring Boot on a JACE; framework stacks belong to off-station viewers) is decided in `frontend-standard.md` § Technology choices. `[ev: retro dashboard-frontend-standard Δ12]`
 
 - Frontend: ES5 + `fetch`, REST poll. **Every fetch (reads too) sends `X-Requested-With`** or the guard 302s it → page loads but data shows "--". Use ABSOLUTE `/<prefix>/...` URLs (relative break without a trailing slash). Write via `POST /api/setpoint {ord,value}`.

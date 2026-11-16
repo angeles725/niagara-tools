@@ -373,6 +373,9 @@ encoded too. `[ev: corpus B1418 §1418.1]` `[ev: retro course-recordings Δ6]`
 
 ## 5 · Licensing your own module
 
+Where a service sits in the station, when the check runs in its start sequence and how to test a service:
+`types/service.md` § 4-6.
+
 `BILicensed` is the interface to implement when a module requires a Niagara license
 feature. Call `feature.check()` in `serviceStarted()` so the station reports a clear
 fault immediately if the license is absent, rather than silently allowing unlicensed
@@ -435,8 +438,84 @@ calls is not followed, so such a row is cleared by moving the gate into the call
 `lint-status-parity` (config/status slot ratio) or `lint-silent-protection` (an unsurfaced protection trip): neither
 reads the license feature or the operational gate. [ev: retro secure-authoring-isoperational-gate Δ1]
 
-A fuller treatment of license file format, DSA signing, and OEM trust certs belongs in
-a future dedicated licensing doc.
+### 5.2 · How a feature name reaches a licence, and what validates it
+
+Sources: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/licensing.txt` (under niagara-research), the
+contract; corpus B1144, the 4.14.0.162 code behind it. They agree; where the code adds detail the bullet says so.
+
+- **A feature is a pair: vendor id + feature name** (`Acme:coolFeature`). It is one `<feature name="…"/>` element of a
+  licence file; extra XML attributes on it are the feature's properties, which code reads with `Feature.get(key)`,
+  `geti`, `getb` (a point or device count, an option switch). A feature may carry its own `expiration`.
+- **A licence file** is an XML file ending in `.license` in the `licenses` directory of the Niagara home, valid for
+  **one host**: its root element names the `vendor`, the `hostId`, a `generated` date and an `expiration`
+  (`never` or a date), and ends with the vendor's digital `<signature>`.
+- **A certificate** is a file ending in `.certificate` in the `certificates` directory: it binds a vendor id to that
+  vendor's public key, and is granted and signed by Tridium. So the vendor id in `getFeature("yourVendor", …)` is
+  the id of a vendor certificate, not a free string: without that certificate on the host no licence of that vendor
+  loads.
+- **The validation chain, at station boot**, per licence file: the vendor's certificate is present and valid (the
+  certificate is itself verified against a key built into the framework, and has its own expiration); the `hostId`
+  equals the host's id exactly; the clock is not before `generated`; the file is not past `expiration`; the
+  `<signature>` verifies against the certificate's public key. A file that fails any step contributes **no**
+  features. `[ev: corpus B1144 §1144.2, §1144.4]`
+- **A rejected licence file does not stop the boot and throws nothing at load:** the reason is one SEVERE log line,
+  and the failure surfaces later, as `FeatureNotLicensedException` when your code asks for the feature (code detail;
+  the guide only says the file is invalidated). `[ev: corpus B1144 §1144.5]`
+- **What your code calls.** `Sys.getLicenseManager().getFeature(vendor, name)` throws `FeatureNotLicensedException`
+  when the feature is absent; `feature.check()` throws `FeatureLicenseExpiredException` (a subclass) when it has
+  expired; `checkFeature(vendor, name)` does both. `check()` compares a cached expiration with the clock: it is cheap
+  enough for a callback, and it does not re-read the file. A node-locked licence is loaded once at boot, so a new
+  file needs a licence reload or a station restart to count. `[ev: corpus B1144 §1144.2-1144.3]`
+- **Catch the base type.** Besides the two declared exceptions, a damaged licence database makes every lookup throw
+  the unchecked `LicenseDatabaseException`; a guard that catches only `FeatureNotLicensedException` lets it escape
+  into the caller. Catch `LicenseException` (or `Exception`, as `BAbstractService` does) around a manual check.
+  `[ev: corpus B1144 §1144.5, §1144.6]`
+- **Checking a host:** `nre -licenses` prints the licence summary, `nre -hostid` the host id
+  (`types/diagnostics.md` § 4.3); the station spy pages show the licence database too.
+- **Naming:** by the framework's own convention the vendor and feature name returned by `getLicenseFeature()` match
+  the module that declares it `[ev: corpus B1143 §1143.1]`. Put limits in feature properties named `<what>.limit`
+  so the base class meters them (`types/service.md` § 5).
+
+**Not covered — how a third-party vendor gets a certificate and issues licence files.** The guide states only that
+certificates are granted by Tridium and that the vendor signs its licence files with its private key; neither it nor
+our corpus documents the commercial process, the tooling that produces a signed `.license`, or whether the Niagara
+licence server can carry a third party's features. Until that is answered by the vendor's channel, a module of
+ours cannot ship a feature gate that a customer could actually be licensed for `[INFER]`: gate on configuration, or
+deliver unlicensed. Open (no niagara-research gap ID yet).
+
+### 5.3 · Exercising the unlicensed path in a test
+
+The unlicensed branch is the one that runs on every host without your feature, the build machine included, so it
+is the easy one to test and the one most often left untested.
+
+1. **Station test, no licence needed.** In a `BTestNgStation` test (`types/moduleTest.md` § TEST-G1) add the licensed
+   service to the test station. The host holds no feature of yours, so the framework's start-time check fails by
+   itself. Assert every observable effect: `isFatalFault()` true, `isOperational()` false, `getFaultCause()` starts
+   with `Unlicensed:`, the `status` slot is in fault, and the licensed work did **not** happen (no output written, no
+   timer armed, a servlet write refused). The last assertion is the one that fails on a service that lacks the § 5.1
+   gate. `[ev: corpus B1143 §1143.2-1143.3]`
+2. **A seam for the licensed path.** `Feature` is an interface, so a test can supply one. Keep the lookup in an
+   overridable method (do not declare `getLicenseFeature()` `final` in a class you need to test), and in the test
+   subclass return a stub:
+
+   ```java
+   // test-only subclass, registered as a type of the test module
+   @Override
+   public Feature getLicenseFeature() { return licensed ? new StubFeature() : expiredFeature(); }
+   // StubFeature implements javax.baja.license.Feature: check() returns; an expired one throws
+   // FeatureLicenseExpiredException from check()
+   ```
+
+   With the stub that passes, assert the fault is absent and the work runs; with the one that throws, the same
+   assertions as step 1. Returning `null` means "no licence required" and skips the check: it tests the unlicensed-
+   by-design path, not the licensed one. `[ev: corpus B1143 §1143.1]`
+3. **A fatal fault survives `configOk()`** and a toggle of `enabled`; only a restart of the service clears it. Pin
+   that the service does not resume after a disable and enable while unlicensed. `[ev: corpus B1143 §1143.3]`
+4. **Expiry while running** is not seen by the framework, which checks once at start: if the product must stop at
+   expiry, your ongoing gate calls `feature.check()` itself, and the test drives it with the stub.
+   `[ev: corpus B1143 §1143.2]` `[ev: corpus B1144 §1144.2]`
+
+A real licence file for a test host is outside this card (see "Not covered" in § 5.2).
 
 ---
 

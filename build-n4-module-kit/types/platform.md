@@ -23,6 +23,7 @@ Guides: `G/` = `niagara-help/versions/4.15.6.20/guides-clean/Platform/` (under n
 | Upgrade or downgrade an installed module | the station stops and the host reboots | `G/aSoftwareManager.txt:18` "In some cases, you can install a new", `G/InstallingModulesInARemotePlatform-2C3324A0.txt:50` "If you are upgrading or downgrading modules, a" |
 | Module needs a dependency not installed | Installing Additional Software flags the dependencies too | `…InstallingModulesInARemotePlatform-2C3324A0.txt:36-41` |
 | Uninstall a module others depend on | Cannot Uninstall Module, unless the dependents are flagged too | `G/RemovingModulesFromARemotePlatform-2C318A1E.txt:7,20-22` "Modules you remove from a remote platform may" |
+| Uninstall a module whose types the station still uses | the components are skipped at the next boot and lost at the next save | checklist: `types/distribution.md` § 10a |
 | Status "Requires Commissioning" | install only after the Commissioning Wizard | `G/aSoftwareManager.txt:15` "Module statuses of Out of Date and Not" |
 | A module with a signature error | the install fails; a warning opens a dialog | `…InstallingModulesInARemotePlatform-2C3324A0.txt:20` |
 | Station Copier: a needed module needs a core or QNX upgrade | the station install stops at station selection | `G/aStationCopier_35_changes.txt:9` "If any module needed by the station has" |

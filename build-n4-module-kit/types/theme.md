@@ -195,4 +195,153 @@ Key NSS rules:
 
 ---
 
+## 8 · The official authoring flow
+
+Source for §§ 8-10: [CERT-doc] the two theme pages of the developer guide,
+`niagara-help/versions/4.15.6.20/devguide-clean/themes/themeCreation.txt` and
+`niagara-help/versions/4.15.6.20/devguide-clean/themes/themingCustomWidgets.txt` (under niagara-research).
+
+**Start from a shipped theme, not from nothing.** The guide's flow, in the kit's terms:
+
+1. Pick the shipped theme closest to the target look (`themeZebra` or `themeLucid`).
+2. Create `theme<Name>/theme<Name>-ux/`, extract the donor's `-ux` jar into `src/`, delete `META-INF/`.
+3. Move `Gruntfile.js`, `package.json` and `cssTemplate.mustache` from `src/` to the part root (they drive LESS and
+   the sprite, below).
+4. Replace **every** reference to the donor's module name in those files and in the CSS (§ 5 shows the bug a leftover
+   one causes).
+5. Declare the module (`runtimeProfile` `ux`) and the `themeName` def (§ 2), build the jar, install it, then choose
+   the theme in Workbench (Tools › Options › General) and restart Workbench.
+
+**Which page wins on build syntax.** `themeCreation` still shows a Groovy `.gradle` file, a `<defs>` block typed into
+`module-include.xml` and `build.xml` resource entries; the build page of the same guide, which § 2 follows, declares
+the def in `moduleManifest { defines { … } }` of a Kotlin build script. Both are official; the build page describes
+the current plugin, so § 2 and § 7 stand, and the theme page is read for the asset rules only.
+
+**What each technology styles**, so a change goes into the right file:
+
+| Surface | Technology | File |
+|---|---|---|
+| Workbench nav tree, Px widgets, dialogs, wire-sheet glyphs | bajaui | `nss/*.nss` (§ 6, § 9) |
+| Workbench menu bar, toolbar, scroll bars | JavaFX | `fx/theme.css`, JavaFX CSS (`-fx-…` properties) |
+| Classic web views | Hx | `hx/theme.css`, applied on top of the framework's default Hx styles |
+| Property Sheet, Web Chart, User Manager and other HTML5 views, the Shell Hx profile | bajaux | `ux/theme.css` |
+
+- **NSS is not CSS and never reaches the browser:** it styles Workbench only.
+- **bajaux:** the base class set lives in `module://web/rc/theme/theme.css`; a theme redefines those classes in
+  `ux/theme.css`, and may add rules for widgets that do not use them (dialogs, Property Sheet, charts). The station
+  serves a visual demonstration of the classes at `/module/web/rc/theme/test.html?theme=<Name>`.
+- **JavaFX IDs** worth knowing: `#menu-bar-profile`, `#tool-bar-profile`, `#view-profile-foreground` /
+  `-background`, `#content-profile-foreground` / `-background`. A container with no background of its own shows the
+  one behind it.
+- **LESS is optional.** The donor keeps a shared colour palette in `less/palette.less`, compiled into both
+  `hx/theme.css` and `ux/theme.css`; `grunt watch:css` recompiles on save and `grunt less` once (Node.js and
+  `grunt-cli` installed, `npm install` in the part directory). Without LESS, edit the two CSS files directly.
+- **Branding default:** `brand.properties` may set `workbench.theme.default` and `workbench.theme.locked=true` to
+  pin a brand's Workbench to one theme (`types/distribution.md` § 4 for the overlay that carries the file).
+
+## 9 · NSS, icons, fonts and sprites — the rules the guide adds
+
+**NSS syntax** (extends § 6):
+
+- A file is a tree of key-value pairs: a value is a string (`color: black;`) or a nested node in braces. Properties
+  cascade **down the braces**: a node inherits its parent's values and overrides the ones it sets.
+- `.name` inside a node is a style class, `#name` a style ID; an ID beats a class.
+- `#define x = value;` then `$x`. A `#define` cannot use another `#define`.
+- **Several `.nss` files give several themes from one module:** each file is listed on its own. `theme.nss` is
+  listed under the module's name without `theme`; any other file as `<Module without theme>/<file name>`. They share
+  the module's icons.
+- **Explicit widget properties win over the theme.** A Px widget whose font or colour is set on its property sheet,
+  or linked to a Px property, ignores NSS; leave the property at its null/default value to let the theme paint it.
+- Known limits: `padding` tags do not apply per widget, and the `table` font also styles drop-downs.
+
+**Icon overrides** (extends § 4):
+
+- A framework icon is addressed by ORD (`module://icons/x16/refresh.png`,
+  `module://alarm/com/tridium/alarm/icons/filterRed.png`); the override is the same path under
+  `imageOverrides/<module>/…`. Lookup order: the active theme, then the default icons module, then an error icon.
+- **The replacement must have the same pixel dimensions as the original** (a 16×16 icon is replaced by a 16×16).
+- The images must be packaged: list the `imageOverrides` paths among the jar's resources in the build script.
+
+**Fonts in Workbench** (the CSS `@font-face` rules of § 5 cover the browser):
+
+- Put the files in `fonts/`. For NSS **only TrueType (`.ttf`) is supported**, and the name used in the style sheet
+  is the family name embedded in the font, not the file name. A font value follows the `BFont` string format
+  (`12pt Tahoma`).
+- **Declare families, do not hard-code one font:**
+
+  ```nss
+  font-families {
+    sansserif: MyBrandSans, Tahoma, Arial;
+    monospaced: Consolas, Courier New;
+  }
+  font: 12pt sansserif;
+  ```
+
+  The first installed font of each list is used; `serif`, `dialog` and `dialoginput` are the other families. A
+  family can then be overridden per language from the `bajaui` lexicon (`font.sansserif=…`), which a hard-coded
+  `font: 12pt Tahoma;` ignores: use families whenever the theme must render a non-Latin script
+  (`types/lexicon.md`).
+
+**Sprites — required as soon as the theme carries images:**
+
+- bajaux views draw icons from one sprite image positioned by CSS, so a module's whole icon set costs two requests.
+  A theme that contains images must also ship `sprite/sprite.png` and `sprite/sprite.css`.
+- The donor's Grunt configuration generates them: `grunt buildsprite` runs `sprite` (builds both files),
+  `imagemin` (lossless compression) and `concat` (prepends the `@noSnoop` tag, which switches off the station HTML writer that
+  would otherwise break the direct URLs inside `sprite.css`).
+- The class of an icon is derived from its ORD: `icon-` plus the ORD from the module name on, separators as
+  hyphens, no extension (`module://icons/x16/add.png` → `.icon-icons-x16-add`). Each rule also hides an inner
+  `img`; that is how bajaux detects whether an icon is in the sprite. Build icon HTML with the RequireJS module
+  `bajaux/icon/iconUtils`, never by hand.
+- **Regenerate the sprite after every change to `imageOverrides/`,** and check that `sprite.css` points at
+  `/module/theme<Name>/sprite/sprite.png`, not at the donor (the § 5 bug again). `themeZebra` carries no image
+  overrides, so its sprite is empty: use `themeLucid` as the example of a generated one.
+
+## 10 · Making a custom widget themable
+
+A theme styles your widget only if the widget asks the theme. NSS says **what** to paint (font, colours, insets),
+never how: a `paint()` that hard-codes a colour ignores every theme.
+
+**bajaux / HTML widget.** The active theme's name is a class on `<body>`. Style from the shared `ux` classes first;
+where a theme needs its own look, scope a rule by the body class:
+
+```css
+body.Zebra .myWidget { background-color: gray; }
+body.Lucid .myWidget { background-color: beige; }
+```
+
+A widget ported from outside Niagara that uses none of the shared classes looks the same in every stock theme;
+only a custom theme's `ux/theme.css` can restyle it (a documented limitation).
+
+**bajaui (Workbench) widget.**
+
+- Ask the theme for each value **and pass the widget itself**, so its style class and ID are honoured:
+  `Theme.label().getTextBrush(this)`, `Theme.button().getControlBackground(this)`. The classes are in
+  `com.tridium.ui.theme`: an implementation package, not `javax.baja` API, so recheck it on each framework version you target
+  `[INFER]`.
+- `getStyleSelector()` on a `BWidget` names the NSS node the widget reads; without it each `Theme.<kind>()` object
+  uses its default node. The ones a custom widget usually needs:
+
+  | Theme object | Default NSS node | | Theme method | NSS tag |
+  |---|---|---|---|---|
+  | `Theme.widget()` | the NSS root | | `getTextBrush` | `color` |
+  | `Theme.label()` | `label` | | `getTextFont`, `getPlainText` | `font` |
+  | `Theme.button()` | `button` | | `getBoldText` | `bold-font` |
+  | `Theme.pane()` | `pane` | | `getControlBackground` | `background-color` |
+  | `Theme.table()` | `table` | | `getControlForeground` | `outline` |
+  | `Theme.textField()` | `text-field` | | `getSelectionBackground` / `getSelectionForeground` | `selection-background-color` / `selection-color` |
+  | `Theme.wiresheet()` | `wire-sheet` | | `getWindowBackground` | `window-background-color` |
+
+  The full lists are in `themingCustomWidgets`.
+- **The tag name decides the value type** when a theme author adds a tag for your widget: a name ending in `color`,
+  `outline`, `highlight` or `shadow` parses as a `BBrush`, `font` as a `BFont`, `padding` as `BInsets`, `image` as a
+  `BImage`, `height` or `width` as a number, anything else as a string. Name custom tags accordingly.
+- **Scroll panes and text editor panes:** read the pane background with `Theme.scrollPane().getWindowBackground()`
+  (likewise `Theme.textEditorPane()`); `getControlBackground()` on them returns the root background colour.
+
+Custom-painted widgets: `types/wb-widgets.md`. Checking a theme without changing user options: `wb -theme:<name>`
+(`types/diagnostics.md` § 4.3).
+
+---
+
 **See also:** `types/structure.md` (L9 empty-skeleton check and the `type: theme` declaration, L10 `nodeHome` rule).

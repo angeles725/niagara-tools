@@ -566,3 +566,271 @@ define(["nmodule/mymod/rc/myWidget", "nmodule/bajaui/rc/bajaui"], function(myWid
 - **Remove `niagara-grunt` entirely** when: the module only serves a pre-built static bundle (three.js, Chart.js, etc.) from `src/rc/` with no authored AMD modules — a leftover `niagara-grunt` dep adds a phantom `nodeHome` requirement and a no-op build step on every compile `[INFER — kit doctrine]`.
 
 See `types/dashboard.md §JS build strategy` for the full decision matrix. `[ev: corpus B1132]`
+
+### Edit-and-reload without rebuilding the jar — moduledev mode and webdev mode
+
+Two development switches, often confused. Both belong on a workstation or laboratory station and **never on a
+production station**. Source: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/js/buildingJS.txt` (under
+niagara-research), its headings "Developing in real time with moduledev mode" and "Switching your Station into Web
+Development mode"; the toolchain itself is corpus B1132, the ES6/ES5 decision B1119.
+
+| | **moduledev mode** | **webdev mode** |
+|---|---|---|
+| What it changes | requests for a module's web files are answered from the **source directory on disk**, not from the jar | the station serves the **original, unminified** JS files of a module instead of its built `*.built.min.js` |
+| What it gives the author | edit a `.js`/`.css`/`.html`, refresh the browser, see the change: no jar rebuild, no station restart | readable code and real line numbers in the browser debugger |
+| Keyed by | module name → source directory | the **webdev ID**, the first constructor argument of the module's `BJsBuild` |
+| Where it is set | `system.properties`: `niagara.module.dev=true` (browser), `niagara.module.dev.wb=true` (Workbench); plus the file `etc/moduledev.properties` under Niagara home | the station spy page `webDevSetup`, or by hand in `etc/webdev.properties` under the Niagara user home |
+
+**moduledev: what must be true.**
+
+1. The host licence holds the `developer` feature with its `moduleDev` property true (the feature a debugger needs,
+   `types/diagnostics.md` § 4.2).
+2. `niagara_dev_home` (environment variable, or the `niagara.dev.home` system property) names the directory that holds
+   your sources.
+3. `etc/moduledev.properties` has one line per module: `<moduleName>=<directory of the module>`. The key is the
+   module name **without** the runtime profile: `myMod=…/myMod` works, `myMod-ux=…/myMod/myMod-ux` does not; files are
+   then found in any of the module's profile directories.
+4. Only web file types resolve from disk by default (JS, CSS, HTML, images and a few more); extend the list with
+   `niagara.module.dev.supportedExtensions`. Java classes, `module-include.xml`, lexicons and palettes still come from
+   the jar: a change to those needs the normal build and deploy.
+
+**webdev: what must be true.**
+
+1. The module has a `BJsBuild` subtype, registered in `module-include.xml` like any type, whose singleton names the
+   webdev ID and the built file, and each `BIJavaScript` widget type passes it to `JsInfo.make(...)`:
+
+   ```java
+   @NiagaraType
+   public final class BMyModJsBuild extends BJsBuild {
+     public static final BMyModJsBuild INSTANCE = new BMyModJsBuild(
+       "myMod",                                                      // the webdev ID
+       new BOrd[] { BOrd.make("module://myMod/rc/myMod.built.min.js") });
+     // TYPE and the private constructor that calls super(id, files)
+   }
+   ```
+2. The unminified sources are reachable: packaged in the jar next to the built file, or resolved from disk by
+   moduledev `[INFER]`. A module with no `BJsBuild` (a servlet-SPA of raw `rc/` files, `types/dashboard.md` § JS build
+   strategy) has nothing to switch: it already serves its source files.
+3. Browse the station's web interface once, then open the spy page `webDevSetup` and enable the module's ID. The page
+   lists an ID only after the station has served files of that build. The `spy:` scheme is superuser-only
+   `[ev: corpus B1247 §1247.11]` and `webDevSetup` is a state-changing, CSRF-gated spy page `[ev: corpus B1191 §1191.2]`.
+
+**Switching them off.** webdev: disable the ID on `webDevSetup`, or delete its entry from `etc/webdev.properties`
+`[INFER]` (the guide documents the file as the by-hand way to configure the mode). moduledev: remove the two
+`niagara.module.dev*` properties and the `moduledev.properties` entry, then restart Workbench and the station
+`[INFER]`. Confirm in the browser's network tab that `*.built.min.js` is what loads again.
+
+**Why never on a production station.** The guide says so for moduledev. With it the station answers web requests
+from a directory on disk instead of the signed jar, so what runs is no longer the module that was verified and
+deployed `[ev: corpus B38 §38.22]`; a controller holds no source tree and no `developer` licence anyway. webdev
+serves many unminified files where one built file is meant to save network traffic on an embedded device (same
+guide page), and in webdev mode the BajaScript bundles are sent `no-cache` instead of the long production cache lifetime `[ev: corpus B29 §29.11.3]`.
+A release check: `etc/moduledev.properties` and `etc/webdev.properties` absent or empty, and no `niagara.module.dev`
+key in `system.properties`.
+
+## Hx view authoring — `BHxView` `[ev: corpus B433]`
+
+Source: [CERT-doc] the Hx pages of the developer guide, `niagara-help/versions/4.15.6.20/devguide-clean/hx-hxView.txt`,
+`hx-hxOp.txt`, `hx-events.txt`, `hx-dialogs.txt`, `hx-hxProfile.txt`, `hx-theming.txt` (under niagara-research); the
+4.14.0.162 code behind them is corpus B433.
+
+**When to use.** Hx is the classic server-rendered web framework and is maintained but legacy: several profile
+methods are deprecated and deprecated Hx views sort last in the view list `[ev: corpus B433 §433.7]`. Write new
+browser UI as a bajaux view or a servlet-SPA (`types/dashboard.md`). An Hx view is still the right tool in two
+cases: (1) a Workbench view or a Px widget of yours must also open in a browser that runs an Hx profile, and a
+small form is enough; (2) you extend a module that is already Hx. Hx needs no JavaScript build and no client state.
+
+**Minimal skeleton** (a form over one component; the framework's own Hx classes ship in a `-wb` part, `hx-wb`):
+
+```java
+@NiagaraType(agent = @AgentOn(types = "myMod:Foo"))
+@NiagaraSingleton
+public final class BFooHxView extends BHxView {
+  // @NiagaraSingleton makes Slot-o-Matic emit INSTANCE next to TYPE (devguide slot-o-matic)
+  private BFooHxView() {}
+
+  @Override
+  public void write(HxOp op) throws Exception {            // GET: emit only this view's markup
+    BFoo foo = (BFoo) op.get();
+    HtmlWriter out = op.getHtmlWriter();
+    out.w("<input type='text' name='").w(op.scope("label")).w("' value='").safe(foo.getLabel()).w("'/>");
+    out.w("<input type='button' value='Save' onclick='hx.save()'/>");
+  }
+
+  @Override
+  public BObject save(HxOp op) throws Exception {          // POST: read the form, change the target
+    BFoo foo = (BFoo) op.get();
+    foo.setLabel(op.getFormValue("label"));
+    return foo;
+  }
+}
+```
+
+The four callbacks: `write` renders (the counterpart of `doLoadValue`), `save` stores a form post and is followed
+by a redirect to a GET, `update` answers the periodic background poll and must return executable JavaScript,
+`process` answers one targeted background request and routes events.
+
+**Pitfalls.**
+
+- **The view is a singleton serving every request: keep no state in fields.** Per-request state is in the `HxOp`;
+  what must survive a request goes on the component or in the session. `[ev: corpus B433 §433.6]`
+- **Always `op.scope("name")` for a form control's `name`,** and read it back with `op.getFormValue("name")`; that
+  is what lets views nest without name clashes.
+- **One `HxOp` per view, created in the same order every time.** A composite view makes a sub-op with `op.make(…)`
+  for each child and must route `write`, `save`, `update` and `process` to it in the same order; auto-generated op
+  names are counters, so a different order in `save` than in `write` resolves the wrong control.
+- **Never write `<html>`, `<head>`, `<body>` or a `<form>`:** the profile writes the page and its single form. Do not
+  write `<script>` either: use `op.addOnload(code)`, or the view breaks when reused inside a dialog.
+- **Escape every value you write.** The view emits raw HTML: a component name or string slot written unescaped is a
+  stored script injection. `HtmlWriter.safe(value)` escapes it and `attr(name, value)` writes an escaped attribute
+  (`javax.baja.io.HtmlWriter`, original source of 4.14.0.162); lexicon text goes through `getHtmlSafeText`
+  (`types/security.md` § 4.3).
+- **The CSRF token is the profile's.** It is written into the page's form and checked on POST
+  `[ev: corpus B433 §433.3]`; a hand-made request from your own script that bypasses `hx.save()` / `hx.fireEvent()`
+  loses it.
+- **Live values are polled, not pushed:** a view opts in with `op.setDynamic()` in `write`; the browser then calls
+  `update` on every view of the page, every 5 s by default. Keep `update` cheap and idempotent.
+  `[ev: corpus B433 §433.6]`
+- **If you override `process`, call `super.process(op)`,** or events and commands stop routing.
+- **Events and commands** run on the server and answer with JavaScript; a `javax.baja.hx.Command` is a
+  user-triggered event with a display name. It is not `javax.baja.ui.Command` (§ Commands above): import the right
+  one. A modal dialog is a `javax.baja.hx.Dialog` opened from a command, whose `handle` first opens it and on submit
+  reads the form.
+- **File upload** needs `op.setMultiPartForm()` in `write`; `op.getFile(name)` in `save` returns a temporary file
+  that is deleted at the end of the request unless you move it. Validate the destination as for any client input
+  (`types/security.md` § 4.2).
+- **Registering for a Workbench view or a Px widget:** make the Hx view an agent **on the `BWbView` type** (then the
+  same `view:` ORD opens in both environments) or, for a Px widget, subclass `BHxPxWidget` and register on the
+  widget type; there `op.get()` is the widget, already mounted with its bindings active.
+- **Styling:** put the framework's default class first in the `class` list and your own after it, avoid inline
+  `style`, and let the theme's `hx/theme.css` restyle it (`types/theme.md` § 8).
+- **A custom `BHxProfile`** overrides the page chrome through its hooks (`doBody`, `updateDocument`,
+  `processDocument`, `saveDocument`) and must create the ops in the same order in all of them.
+
+## Custom-painted Workbench widget — `BWidget.paint` `[ev: corpus B427]`
+
+Source: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/bajaui.txt`, `gx.txt` and `workbench.txt` (under
+niagara-research); code model: corpus B427.
+
+**When to use.** Only when no composition of shipped widgets shows the thing: a gauge, a diagram, a custom plot in
+a Workbench view or a Px page. Climb the ladder first (§ How much wb is enough): labels, panes and bindings cost no
+paint code, theme correctly and render through Hx for free. A custom-painted widget is Workbench-only unless you
+also write its `BHxPxWidget` (above) or a bajaux counterpart.
+
+**Minimal skeleton:**
+
+```java
+@NiagaraType
+@NiagaraProperty(name = "value", type = "double", defaultValue = "0")
+public class BLevelBar extends BWidget {
+  // slot code generated by Slot-o-Matic
+
+  @Override
+  public void computePreferredSize() { setPreferredSize(120, 16); }
+
+  @Override
+  public void paint(Graphics g) {                    // origin 0,0 = this widget's top-left; clip = its size
+    double w = getWidth(), h = getHeight();
+    g.setBrush(Theme.widget().getControlBackground(this));
+    g.fill(new RectGeom(0, 0, w, h));
+    g.setBrush(Theme.widget().getSelectionBackground(this));
+    g.fill(new RectGeom(0, 0, w * Math.max(0, Math.min(1, getValue())), h));
+  }
+
+  @Override
+  public void changed(Property p, Context cx) {
+    super.changed(p, cx);
+    if (p == value) repaint();
+  }
+}
+```
+
+**Pitfalls.**
+
+- **A widget is a `BComponent`.** Its configuration is slots (so the Px editor can set and bind them), it lives in
+  the widget tree, and its geometry is plain fields set by the parent's layout, not slots.
+  `[ev: corpus B427 §427.1-427.2]`
+- **Paint only through `javax.baja.gx`:** `fill` and `stroke` an `IGeom` with the current brush and pen,
+  `drawString`, `drawImage`. Never reach for `java.awt` from widget code: the same `paint` also renders to other
+  devices (the guide names PDF). `[ev: corpus B427 §427.3]`
+- **`push()` and `pop()` around any temporary clip, transform or brush change, with `pop()` in a `finally`.** A
+  missed `pop` corrupts the painting of every sibling drawn after you.
+- **Ask the theme for colours and fonts, passing `this`** (`types/theme.md` § 10). A literal `BColor` in `paint`
+  ignores every theme and is unreadable on a dark one.
+- **Never block or do I/O in `paint`,** and do not resolve ORDs there: it runs on the UI thread at every repaint.
+  Compute in `changed()` or in the binding, store the result, then `repaint()`.
+- **Size and layout:** set a preferred size in `computePreferredSize()`; a container positions its children in
+  `doLayout(children)` and paints them with `paintChild` / `paintChildren`; call `relayout()` when something that
+  affects size changed, `repaint()` when only the picture did.
+- **Input** arrives as `BMouseEvent`, `BKeyEvent` and `BFocusEvent` callbacks on the widget (`mousePressed(...)`
+  and the rest), in the widget's own coordinates.
+- **Data comes through bindings, not through code that reads the station.** A `BValueBinding` on the widget animates
+  any property from an ORD and brings status colouring and the right-click actions; a widget that fetches its own
+  data bypasses the binding taxonomy (§ PX authoring — binding taxonomy) and the fail-closed rule
+  (`types/security.md` § 2.3).
+- **Images load asynchronously:** paint an image through a `BLabel` where possible; a `BImage` used directly may not
+  be loaded yet at the first paint.
+- **Views and editors are widgets too.** A full view subclasses `BWbView` (or `BWbComponentView`) and implements
+  `doLoadValue` / `doSaveValue` with `setModified()`; a small value editor is a `BWbFieldEditor`. Both are covered
+  above; for a field editor that opens in a dialog or as a popup, and for forcing one with the `fieldEditor` facet,
+  see corpus B1086.
+
+## Workbench tool — `BWbTool` (a Tools-menu entry)
+
+Source: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/workbench.txt` (under niagara-research), headings
+"WbTool", "WbSideBar" and "WbProfiles"; the dialog helper and the profile filter are corpus B1086.
+
+**When to use.** A task that does not belong to one station object: an import or export wizard, a generator, a
+checker. A view (above) works on the active ORD; a tool is independent of it and is reached from Workbench's Tools
+menu. Three bases, simplest first:
+
+| Base | What selecting it does | Use for |
+|---|---|---|
+| `BWbTool` | calls `invoke(BWbShell shell)` once | a dialog or a wizard |
+| `BWbNavNodeTool` | hyperlinks to `tool:<typespec>\|slot:/`; ordinary views registered on the tool's type then show | a tool with its own view or several |
+| `BWbService` | as the nav-node tool, and can keep running in the background of the Workbench VM, started, stopped and auto-started through the `WbServiceManager` | a monitor, or a driver run locally in Workbench |
+
+**Minimal skeleton:**
+
+```java
+@NiagaraType
+public final class BFooTool extends BWbTool {
+  // TYPE generated by Slot-o-Matic
+
+  @Override
+  public CommandArtifact invoke(BWbShell shell) throws Exception {
+    BString name = (BString) BWbFieldEditor.dialog(shell, "Name", BString.make(""));
+    if (name != null) { /* do the work; it runs in the Workbench VM, not in a station */ }
+    return null;                                  // no undo
+  }
+}
+```
+
+and in the module lexicon, keyed by the type name:
+
+```
+FooTool.displayName=Foo
+FooTool.icon=module://myMod/rc/icons/foo.png
+```
+
+**Pitfalls.**
+
+- **Installing the module is the registration.** Workbench discovers tools by searching the registry for the tool
+  types, so a `-wb` jar with the type shows in the Tools menu, subject to the profile below. There is no agent
+  declaration on a station type.
+- **The menu text and icon come from the lexicon** (`<TypeName>.displayName`, `<TypeName>.icon`); declare both
+  (`types/lexicon.md`).
+- **A tool runs in Workbench, with the Workbench user's rights on the PC.** It is independent of the active ORD, so expect no
+  station to be open when it is invoked `[INFER]`; station-side work belongs in an action or a job the tool invokes
+  (`types/logic-authoring.md`), not in the tool.
+- **`BWbFieldEditor.dialog(parent, title, value)`** opens the field editor of a value's type in a modal dialog and
+  returns the edited value, or `null` on cancel; for a `BComplex` whose slots are all hidden it shows nothing unless
+  a custom editor is registered. `[ev: corpus B1086 §1086.3]`
+- **A custom Workbench profile can hide your tool.** A `BWbProfile` chooses which views, sidebars and tools are
+  available (`wb -profile:<typespec>`), and an agent registered with an application name is only offered in a
+  profile that declares that name. Test under the profile the customer's Workbench runs.
+  `[ev: corpus B1086 §1086.6]`
+- **`invoke` returns a `CommandArtifact` for undo, or `null`;** keep it short: it runs on the Workbench UI thread
+  `[INFER]`.
+- **A sidebar** (`BWbSideBar`) is the sibling plugin for a panel beside the view, also independent of the active
+  ORD and also named and given its icon through the lexicon.
