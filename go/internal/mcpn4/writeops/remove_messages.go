@@ -29,7 +29,8 @@ func scanBlind(root string, outputs bool) string {
 	return "; links stored outside " + root + " are not detected"
 }
 
-const scanNone = ": no outgoing links from this subtree found (components deeper than that were not scanned)"
+const scanNone = ": no outgoing links from this subtree found (components deeper than that were not " +
+	"scanned, and a link whose source sits more than 3 levels below the removed component is not matched)"
 
 // scanBroken is the note of an acknowledged remove that breaks n links.
 func scanBroken(n int) string {

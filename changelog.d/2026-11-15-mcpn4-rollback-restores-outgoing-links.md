@@ -7,3 +7,7 @@
 - The rollback read-back looks for each re-created link on its target and reports
   `outgoing_links: {restored, missing}`; a missing one makes the verdict `mismatch`. Before, a
   remove then rollback of a constant block lost its links into other blocks and read `verified`.
+- A link stored at the remove snapshot's last level now keeps its slot names: its plan note names
+  them (it printed `(None <- None)`), `snapshot_truncated` no longer lists the link's own slots,
+  and such an internal link is recorded as a `relink` that `n4_rollback` restores, where the
+  rollback refused it as a malformed relink before.

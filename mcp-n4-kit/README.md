@@ -528,7 +528,10 @@ Destructive tools use the same pipeline:
   link is stored on its target, so the subtree load cannot see them): by default it
   scans the `--write-scope` prefix that holds `parent_ord` to depth 6, and
   `link_scan_ord` (inside the write scope) narrows that root; links stored outside the
-  scanned root are not detected, and the note names the root. When the scan finds any,
+  scanned root are not detected, and the note names the root (a link outside a narrowed
+  root is broken by the remove and not restored by its rollback; a link whose source sits
+  more than 3 levels below the removed component, past its snapshot, is not matched either).
+  When the scan finds any,
   the dry run refuses and lists each one (`target (target_slot <- source_slot)`);
   repeat it with `acknowledge_links: true` to remove anyway, and the plan lists them in
   `outgoing_links_broken`. The inverse records each one as an `outgoing_link` (target
