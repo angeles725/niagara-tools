@@ -1,0 +1,84 @@
+#!/usr/bin/env bats
+bats_require_minimum_version 1.5.0
+# ci-local-kitlinks.bats — `scripts/ci-local.sh --changed` runs tests/kit-links.bats when a kit doc, a ledger.d or a
+# changelog.d fragment changes (CL30-CL32). #706 failed CI on kit-links L1 ("dangling reference: prompt.md"): a
+# ledger.d fragment named a bare prompt.md, the fragment reaches the generated BUILD-STATE.md, and L1 scans it.
+# The pre-push replay did not run kit-links, so the writer saw it first in CI. (retro 2026-11-15 coordination-stretch T25)
+# The fixture is a throwaway repository holding this checkout's HEAD (go/ is a link) with this work tree's ci-local
+# files on top; its workflow shellchecks scripts/*.sh only and no case changes a .sh, so nothing is downloaded.
+
+setup_file() {
+  REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime
+  . "$REPO/go/go-tool.sh"
+  local t; for t in ci-steps host-budget kit-state; do go_tool_bin "$REPO/go" "$t" >/dev/null; done
+}
+
+setup() {
+  REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  R="$BATS_TEST_TMPDIR/r"
+  mkdir -p "$R" "$BATS_TEST_TMPDIR/cg/init.scope" "$BATS_TEST_TMPDIR/gocache"
+  git -C "$REPO" archive HEAD -- ':(exclude)go' | tar -x -C "$R"
+  ln -s "$REPO/go" "$R/go"
+  rm -rf "$R/scripts/lib"
+  cp "$REPO/scripts/ci-local.sh" "$R/scripts/"
+  cp -R "$REPO/scripts/lib" "$R/scripts/"
+  cp "$REPO/tests/kit-links.bats" "$R/tests/"
+  printf 'name: CI\non: pull_request\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - name: shellcheck\n        run: shellcheck scripts/*.sh .githooks/*\n' \
+    > "$R/.github/workflows/ci.yml"
+  printf '16\n' > "$BATS_TEST_TMPDIR/cg/init.scope/pids.current"
+  printf '48129\n' > "$BATS_TEST_TMPDIR/cg/init.scope/pids.max"
+  export CI_LOCAL_CGROUP_ROOT="$BATS_TEST_TMPDIR/cg"
+  export CI_LOCAL_HOST_BUDGET_ARGS="--proc-root $REPO/tests/fixtures/host-budget/proc --gocache $BATS_TEST_TMPDIR/gocache --disk-min-free 1"
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+  export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
+  git -C "$R" init -q -b main
+  git -C "$R" add -A
+  git -C "$R" commit -q -m base
+  git -C "$R" update-ref refs/remotes/origin/main HEAD
+  BASE="$(git -C "$R" rev-parse HEAD)"
+}
+
+# dangling_fragment — a valid ledger.d fragment whose log line names a bare nothere.md (the #706 form).
+dangling_fragment() {
+  printf '%s\n' '<!-- ledger: kit -->' '<!-- date: 2026-11-16 -->' '<!-- last-change-note: a fixture fragment -->' \
+    'log: 2026-11-16 · a fixture change that names nothere.md in prose.' \
+    > "$R/build-n4-module-kit/ledger.d/2026-11-16-fixture.md"
+}
+
+@test "CL30: a ledger.d fragment naming a bare nothere.md fails --changed with the kit-links L1 message" {
+  # Mutation: CL30 -- dropping the run_kit_links call from scripts/ci-local.sh --changed lets this change through.
+  dangling_fragment
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"dangling reference: nothere.md"* ]]
+  [[ "$output" == *"FAIL kit-links"* ]]
+  # the pushed form (.githooks/pre-push passes the range) reads the bytes of the range's end commit
+  git add -A
+  git commit -q -m "docs: fixture"
+  run bash scripts/ci-local.sh --changed --range "$BASE..$(git rev-parse HEAD)"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"dangling reference: nothere.md"* ]]
+}
+
+@test "CL31: a kit doc change whose references all resolve passes --changed and writes nothing in the checkout" {
+  # Mutation: CL31 -- materializing BUILD-STATE.md in the checkout instead of the snapshot leaves it here.
+  printf '\nSee METHODOLOGY.md.\n' >> "$R/build-n4-module-kit/README.md"
+  rm -f "$R/build-n4-module-kit/BUILD-STATE.md"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS kit-links"* ]]
+  [ ! -e "$R/build-n4-module-kit/BUILD-STATE.md" ]
+}
+
+@test "CL32: a change outside the kit docs, ledger.d and changelog.d does not run kit-links (unchanged)" {
+  # Mutation: CL32 -- running kit-links on every change costs every push a kit snapshot.
+  printf 'x\n' > "$R/scripts/notes.txt"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no changed file needs shellcheck, the bats lints or gofmt"* ]]
+  [[ "$output" != *"kit-links"* ]]
+}
