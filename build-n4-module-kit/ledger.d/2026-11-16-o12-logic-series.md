@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-16 -->
+<!-- last-change-note: logic series: a pure core checked against a CSV of timed inputs and expected outputs offline -->
+log: 2026-11-16 · O12 logic series → `toolbelt/java/n4kit/series` (`LogicSeries`, `SeriesModel`, `SeriesRow`) steps a pure model through a CSV of timed inputs and expected outputs with per-column tolerance and stops at the first mismatch (file:line, step, time, output, expected, actual); a malformed series is refused before any step; `run-pure-test.sh` puts the kit's Java helper root on the javac source path; `build-verify.md` § Logic series + `types/logic.md` pointer; worked example `tests/fixtures/logic-series/thermo-rt` pinned by `tests/logic-series.bats`. Retro o12-logic-series (Δ1-Δ2 applied, pending review). [ev: retro o12-logic-series Δ1] [ev: retro o12-logic-series Δ2]
