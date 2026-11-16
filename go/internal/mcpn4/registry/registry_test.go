@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -11,8 +12,14 @@ func TestDefaultHoldsEveryToolInTableOrder(t *testing.T) {
 	if r.Name != "mcp-n4" || r.Version == "" || r.ProtocolVersions[0] != "2025-06-18" {
 		t.Fatalf("server = %q %q %v", r.Name, r.Version, r.ProtocolVersions)
 	}
-	if len(r.Read) != 22 || len(r.Write) != 12 {
-		t.Fatalf("got %d read and %d write tools, want 22 and 12", len(r.Read), len(r.Write))
+	// One descriptor file per read tool (../testdata/tools, the tools/list goldens), so a branch
+	// that adds a read tool adds a file instead of editing a shared count.
+	descriptors, err := filepath.Glob("../testdata/tools/*.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Read) != len(descriptors) || len(r.Write) != 12 {
+		t.Fatalf("got %d read and %d write tools, want %d and 12", len(r.Read), len(r.Write), len(descriptors))
 	}
 	if r.Read[0].Name != "n4_connect" || r.Read[0].NeedsSession || !r.Read[2].NeedsSession {
 		t.Errorf("read tools start %q (session %v), third needs session %v",

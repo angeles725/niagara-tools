@@ -64,7 +64,7 @@ func TestSessionOverStdioAgainstTheFakeStation(t *testing.T) {
 	if name := Dig(replies[0], "result", "serverInfo", "name"); name != "mcp-n4" {
 		t.Errorf("serverInfo name %v", name)
 	}
-	if tools, _ := Dig(replies[1], "result", "tools").([]any); len(tools) != 22 {
+	if tools, _ := Dig(replies[1], "result", "tools").([]any); len(tools) != len(readTools) {
 		t.Errorf("%d tools", len(tools))
 	}
 	if got := structured(replies[2])["station_name"]; got != StationName {

@@ -1,0 +1,1 @@
+{"name": "n4_describe_session", "description": "Report whether a station session is active, which station, its version tier, and the server mode. Works without a session.", "inputSchema": {"type": "object", "properties": {}, "required": []}, "annotations": {"readOnlyHint": true, "openWorldHint": false}}
