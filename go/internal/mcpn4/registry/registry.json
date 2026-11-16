@@ -54,7 +54,7 @@
   },
   {
    "name": "n4_navigate",
-   "description": "List the children of a component (name, type, handle, has_children). depth > 1 nests grandchildren under a 'children' key. elapsed_ms is the load time. For a station inventory use n4_bql_query or n4_inventory instead: one navigate is one round trip per component. types (optional) keeps only children whose type is one of the given specs (e.g. bacnet:BacnetDevice) plus the path to them; each kept entry then carries matched true/false. has_children ignores the types filter: it is true when the entry has any component child, matching or not. types keeps a given type and its subtypes; types_note says when the registry could not be read.",
+   "description": "List the children of a component (name, type, handle, has_children). depth > 1 nests grandchildren under a 'children' key. elapsed_ms is the load time. For a station inventory use n4_bql_query or n4_inventory instead: one navigate is one round trip per component. types (optional) keeps only children whose type is one of the given specs (e.g. bacnet:BacnetDevice) plus the path to them; each kept entry then carries matched true/false. has_children ignores the types filter: it is true when the entry has any component child, matching or not. types keeps a given type and its subtypes; types_note says when the registry could not be read. Each component or struct slot whose children are listed also lists the declared properties the station left out at their default (handle null), marked default: true with their value, or value null and a note when the type contract gives no default value; the sub-entries of a declared struct default may show type null. defaults_note says when a type contract could not be read.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -88,7 +88,7 @@
   },
   {
    "name": "n4_read_slots",
-   "description": "Read all slots of one component as {name, type, value, status}. Status complexes add status_ok/status_null; omitted values take the type default. value_display carries the station's display string; a complex the reader cannot decode (e.g. a Modbus FlexAddress) returns that display string as value. elapsed_ms is the load time. A slot that is itself a baja:Status also adds status_flags, the names of the flags set; status_ok is false when any is set.",
+   "description": "Read all slots of one component as {name, type, value, status}. Status complexes add status_ok/status_null; omitted values take the type default. value_display carries the station's display string; a complex the reader cannot decode (e.g. a Modbus FlexAddress) returns that display string as value. elapsed_ms is the load time. A slot that is itself a baja:Status also adds status_flags, the names of the flags set; status_ok is false when any is set. A station leaves out a declared (frozen) property still at its default; those are listed after the loaded slots from the type contract (the station's type registry, read once per session), each marked default: true with the contract's default value, or value null and a note when the contract gives no default value (e.g. a component default such as proxyExt): never an invented value. defaults_note says when a type contract could not be read.",
    "inputSchema": {
     "type": "object",
     "properties": {
