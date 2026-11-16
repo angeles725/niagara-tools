@@ -8,7 +8,7 @@ import (
 )
 
 // historyArgs validates everything that needs no station: the points, the extension name and
-// type when given, the pattern, the interval and enabled.
+// type when given, the pattern, the mode, the interval, the capacity and enabled.
 func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
 	var s historySpec
 	raw, _ := args.Get("points")
@@ -31,24 +31,24 @@ func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
 			return s, nil, err
 		}
 	}
-	s.mode = "Interval"
 	if t, ok := args.Get("ext_type"); ok { // else the type that fits each point
 		if s.typ, _ = t.(string); !historyType(s.typ) {
 			return s, nil, plan.ToolError("ext_type must be one of " + joinStrings(historyExtTypes))
 		}
+	}
+	if s.mode, err = historyMode(args, s.typ); err != nil {
+		return s, nil, err
 	}
 	pattern, _ := args.Get("history_name")
 	if s.pattern, _ = pattern.(string); s.pattern == "" {
 		return s, nil, plan.ToolError("history_name must be a non-empty baja:Format pattern, e.g. " +
 			"S%parent.parent.parent.name%_%parent.name%")
 	}
-	interval, _ := args.Get("interval_ms")
-	iv, err := plan.Coerce("baja:RelTime", interval, "0")
-	if err != nil {
+	if s.interval, err = historyInterval(args, s.mode); err != nil {
 		return s, nil, err
 	}
-	if s.interval = pyjson.Str(iv); s.interval == "0" {
-		return s, nil, plan.ToolError("interval_ms must be at least 1")
+	if s.capacity, s.records, err = historyCapacity(args); err != nil {
+		return s, nil, err
 	}
 	s.enabled = true
 	if v, ok := args.Get("enabled"); ok {

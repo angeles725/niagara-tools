@@ -67,3 +67,15 @@ func wantRefusal(t *testing.T, name string, err error, want string) {
 }
 
 var errNoServlet = errors.New("ord servlet answered 404")
+
+// without is a copy of o without key.
+func without(o *pyjson.Object, key string) *pyjson.Object {
+	out := pyjson.NewObject()
+	for _, k := range o.Keys() {
+		if k != key {
+			v, _ := o.Get(k)
+			out.Set(k, v)
+		}
+	}
+	return out
+}

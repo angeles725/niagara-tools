@@ -17,7 +17,8 @@ var historyFamilies = []struct{ point, kind string }{
 	{"control:EnumPoint", "Enum"}, {"control:StringPoint", "String"},
 }
 
-// historyExtType is the extension type of kind and mode (Interval), and its default slot name.
+// historyExtType is the extension type of kind and mode (Interval or Cov), and its default slot
+// name.
 func historyExtType(kind, mode string) (typ, name string) {
 	return "history:" + kind + mode + "HistoryExt", kind + mode
 }

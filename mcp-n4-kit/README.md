@@ -499,8 +499,17 @@ Tool rules:
   that an extension on the station already holds (one BQL read of every
   `history:HistoryExt`): such an extension would sit in fault "Duplicate history
   id". The inverse removes every extension; the read-back compares each one,
-  including its history id and an empty fault cause. Capacity stays at the default
-  (500 records, Roll); the plan notes how long that lasts at the requested interval.
+  including its history id and an empty fault cause.
+  `mode=cov` adds a change-of-value extension instead (`NumericCov`,
+  `BooleanCov`, ...): it records each change of the point value, has no interval
+  and refuses `interval_ms`. `capacity` sets the history capacity in records (the
+  oldest roll off when full; 20160 is 7 days at 30 s) or `"unlimited"`, by a set
+  op on `<ext_name>/historyConfig/capacity` (`history:Capacity`, encoded `1:<records>`
+  or `0:0`) right after each add in the same batch: `historyConfig` is a component,
+  which a station refuses inside an add body. Without it the extension default
+  stays (500 records, Roll). The plan notes how long the capacity lasts at the
+  requested interval (a change-of-value history lasts as long as its changes take),
+  and the read-back checks the capacity when one was asked.
 - `n4_copy_component(parent_ord, name, new_names)` adds the configuration of one
   child again under each new name (1 to 30) in one batch under one confirmation
   token: type, plain slots and child components up to 6 levels deep (a Modbus

@@ -28,8 +28,25 @@ func readableDuration(ms float64) string {
 	return ""
 }
 
-// capacityNote is how long the planned history lasts: records × the sampling interval.
+// capacityNote is how long the planned history lasts: records × the sampling interval for an
+// interval extension; a change-of-value history lasts as long as its changes take.
 func capacityNote(s historySpec) string {
+	records := s.records
+	if records == "" {
+		records = strconv.Itoa(defaultHistoryCapacity)
+	}
+	switch {
+	case s.capacity == "0:0":
+		return noteHistoryUnlimited
+	case s.mode == "Cov" && s.capacity == "":
+		return fmt.Sprintf(noteHistoryCovCapacity, noteHistoryCovDefault, records)
+	case s.mode == "Cov":
+		return fmt.Sprintf(noteHistoryCovCapacity, "Capacity "+records+" records (Roll)", records)
+	}
 	ms, _ := strconv.ParseFloat(s.interval, 64)
-	return fmt.Sprintf(noteHistoryDefaultCapacity, readableDuration(defaultHistoryCapacity*ms), readableDuration(ms))
+	n, _ := strconv.ParseFloat(records, 64)
+	if s.capacity == "" {
+		return fmt.Sprintf(noteHistoryDefaultCapacity, readableDuration(n*ms), readableDuration(ms))
+	}
+	return fmt.Sprintf(noteHistoryCapacity, records, readableDuration(n*ms), readableDuration(ms))
 }
