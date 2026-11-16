@@ -135,9 +135,25 @@ func TestHelpStatesTheSupportedProtocolSetContract(t *testing.T) {
 	flat := strings.Join(strings.Fields(out), " ")
 	for _, want := range []string{"this server speaks 2025-06-18, 2025-03-26 and 2024-11-05",
 		"A client asking for a newer revision is answered with 2025-06-18. Only add a newer revision to " +
-			"that tuple once its semantics (new message shapes, capabilities, required fields) are implemented"} {
+			"that list once its semantics (new message shapes, capabilities, required fields) are implemented"} {
 		if code != 0 || !strings.Contains(flat, want) {
 			t.Errorf("--help (exit %d) lacks %q", code, want)
+		}
+	}
+}
+
+// The help names the binary an operator runs, not the module of the Python server retired at
+// S17 (second bench retro, delta 14).
+func TestHelpNamesTheGoBinaryNotThePythonModuleInvocation(t *testing.T) {
+	t.Parallel()
+	_, out, _ := run([]string{"--help"}, "")
+	flat := strings.Join(strings.Fields(out), " ")
+	if !strings.Contains(flat, "Run the `mcp-n4` binary") {
+		t.Errorf("--help does not name the mcp-n4 binary: %q", flat[:min(len(flat), 700)])
+	}
+	for _, stale := range []string{"python3", "Importing this module", "__main__", "SUPPORTED_PROTOCOL_VERSIONS"} {
+		if strings.Contains(out, stale) {
+			t.Errorf("--help still says %q", stale)
 		}
 	}
 }
