@@ -1118,3 +1118,26 @@ _install_gradlew() {
   [ "$status" -eq 30 ]
   [[ "$output" != *"@SuppressWarnings"* ]]
 }
+
+# [ev: retro buildsh-mirror-baseline-b6 Δ1] (retro row B6, a client A module build 2026-11-16) — a mirror build replaced modules/<MOD>-rt.jar, so the mirror
+# stopped matching what the station runs; the run now keeps the replaced jar and --restore-mirror puts it back.
+@test "BS-restore-mirror: --restore-mirror is in the usage, restores a kept jar into a mirror only, and keeps the copy" {
+  # Mutation: BS-restore-mirror -- dropping the .niagara-mirror guard lets --restore-mirror write a real install.
+  local kept="$TMPDIR_T/nh/.mirror-replaced/Foo-rt.jar.0123456789ab"
+  mkdir -p "$TMPDIR_T/nh/.mirror-replaced" "$TMPDIR_T/nh/modules"
+  printf 'deployed' > "$kept"
+  printf 'new build' > "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  run "$B_RAW" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"build.sh --restore-mirror <mirror>/.mirror-replaced/<MOD>-<profile>.jar.<sha12>"* ]]
+  run "$B_RAW" --restore-mirror "$kept"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"no .niagara-mirror marker"* ]]
+  [ "$(cat "$TMPDIR_T/nh/modules/Foo-rt.jar")" = "new build" ]
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  run "$B_RAW" --restore-mirror "$kept"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"==> mirror: restored $TMPDIR_T/nh/modules/Foo-rt.jar from $kept"* ]]
+  [ "$(cat "$TMPDIR_T/nh/modules/Foo-rt.jar")" = "deployed" ]
+  [ -f "$kept" ]
+}
