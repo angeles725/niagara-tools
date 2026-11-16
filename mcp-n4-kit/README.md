@@ -445,7 +445,12 @@ default the reader could not decode, which is left out; the read itself never fa
 contract cannot be read the read-back reports `readback_error` instead of a `mismatch`. One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
 first, so a failed reconnect leaves no session). `n4_describe_session` lists the
-configured station names. `n4_list_links` and
+configured station names and, with or without a session, a `server` block: `build` (the git
+revision the binary was built from, `+modified` for a dirty tree, `unknown` without a VCS
+stamp), `built_at` (the commit time, else the binary's mtime at start), `started_at` and
+`binary` (the executable's path). When the binary on disk was modified after the server
+started (rebuilt or reinstalled), the reply carries a top-level `warning`: new or changed tools
+reach a client only after its MCP server is restarted. `n4_list_links` and
 `n4_find_dangling_outputs` scan components up to `depth` levels below `ord`
 (the ord itself is level 0). Links are seen when their target is at most one level
 below `depth`; an out slot used only by a deeper target, or from outside the

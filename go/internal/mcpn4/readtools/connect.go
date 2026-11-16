@@ -131,8 +131,8 @@ func detectVersion(client Client) (version, why string) {
 	return version, ""
 }
 
-// DescribeSession is n4_describe_session: the session, the server mode and the configured
-// station names (never their URLs). It works without a session.
+// DescribeSession is n4_describe_session: the session, the server mode, the configured station
+// names (never their URLs) and the server block (serverBlock). It works without a session.
 func (t *Tools) DescribeSession(*pyjson.Object) (*pyjson.Object, error) {
 	ctx, sess := t.Ctx, t.Ctx.Session
 	names := []any{}
@@ -149,6 +149,11 @@ func (t *Tools) DescribeSession(*pyjson.Object) (*pyjson.Object, error) {
 	out.Set("configured_stations", names)
 	ctx.AddTierReport(out, sess)
 	ctx.AddAuthReport(out)
+	server, warning := serverBlock()
+	out.Set("server", server)
+	if warning != "" {
+		out.Set("warning", warning)
+	}
 	return out, nil
 }
 

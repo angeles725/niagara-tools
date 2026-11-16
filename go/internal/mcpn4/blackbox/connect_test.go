@@ -98,7 +98,7 @@ func TestDescribeBeforeConnectReportsDisconnected(t *testing.T) {
 	want := map[string]any{"connected": false, "station_name": nil, "base_url": nil, "mode": "read-only",
 		"server_version": serverVersion, "configured_stations": []any{StationName}, "version": nil,
 		"version_source": nil, "tier": nil, "tier_writes": nil}
-	if got := NewRig(t, nil).Srv.OK("n4_describe_session", nil); !reflect.DeepEqual(got, want) {
+	if got := withoutServer(t, NewRig(t, nil).Srv.OK("n4_describe_session", nil)); !reflect.DeepEqual(got, want) {
 		t.Errorf("describe = %v", got)
 	}
 }
@@ -109,7 +109,7 @@ func TestDescribeAfterConnect(t *testing.T) {
 	want := map[string]any{"connected": true, "station_name": StationName, "base_url": r.Station.URL,
 		"mode": "read-only", "server_version": serverVersion, "configured_stations": []any{StationName},
 		"version": "4.14.0.162", "version_source": "/obix/about/", "tier": "A", "tier_writes": "allowed"}
-	if got := r.Srv.OK("n4_describe_session", nil); !reflect.DeepEqual(got, want) {
+	if got := withoutServer(t, r.Srv.OK("n4_describe_session", nil)); !reflect.DeepEqual(got, want) {
 		t.Errorf("describe = %v", got)
 	}
 }
@@ -122,4 +122,14 @@ func TestDescribeListsOnlyNamesNeverUrlsOrCredentials(t *testing.T) {
 	if !reflect.DeepEqual(out["configured_stations"], []any{"a", "b"}) || strings.Contains(jsonText(out), "pw") {
 		t.Errorf("describe = %v", out)
 	}
+}
+
+// withoutServer is a describe reply without its server block (describe_server_test.go pins it).
+func withoutServer(t *testing.T, out map[string]any) map[string]any {
+	t.Helper()
+	if _, ok := out["server"].(map[string]any); !ok {
+		t.Errorf("no server block: %v", out)
+	}
+	delete(out, "server")
+	return out
 }

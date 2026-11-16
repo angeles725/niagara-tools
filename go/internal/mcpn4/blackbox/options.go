@@ -21,6 +21,8 @@ type Options struct {
 	AllowTierB    []string          // --allow-tier-b, repeated
 	AllowTierC    []string          // --allow-tier-c, repeated
 	Extra         []string
+	// Exe is the binary to run as the server instead of the test binary (a copy of it).
+	Exe string
 	// Env is the child's environment on top of baseEnv: the developer's own MCP_N4_* variables
 	// never leak into a test.
 	Env map[string]string
