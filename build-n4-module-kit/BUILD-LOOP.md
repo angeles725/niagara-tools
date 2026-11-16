@@ -631,7 +631,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   `stale baseline line` row with no exit change: delete it, the baseline only shrinks. `--no-baseline` ignores
   the file for one run. Rows that differ only in a line number or a count share one key, so a second site of an
   already listed finding in the same file is BASE: review the diff of the BASE group when that matters.
-  `[ev: external session retro, delta B7]`
+ (source: delta B7 of an external session retro, 2026-11-13)
 
 ## 6. Deploy (station) — operator
 - **MANDATORY before a live-station deploy — the §5 schema-risk verdict must be SAFE:** a **LOSSY/OUTAGE** verdict means the new jar's slots no longer match the station's saved `.bog` and it will fail to load. Proven LIVE: an OUTAGE-class retype (`BStatusNumeric`↔`BDouble`, `BRelTime`↔`BComplex`) crashed PANCCADIA after a ColdRoomPan reload — `SEVERE [sys] Cannot load station`, a full outage, not a warning. NEVER deploy a LOSSY/OUTAGE change to a station holding saved data without a bog migration. `[ev: corpus B800 §800.8]` `[ev: corpus B795]`
