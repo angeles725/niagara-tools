@@ -33,10 +33,13 @@ func (d *deploy) makeLock(path, content string) (inTwoSteps error, err error) {
 	if err == nil {
 		err = hardLink(temp.Name(), path)
 	}
-	if removing := os.Remove(temp.Name()); removing != nil {
-		d.warn(warnLockTempLeft, temp.Name(), strerror.Text(removing))
+	if removing := os.Remove(temp.Name()); removing != nil && !errors.Is(removing, fs.ErrNotExist) {
+		d.warn(warnLockTempLeft, temp.Name(), strerror.Text(removing)) // gone is removed: another run swept it
 	}
-	if linkFailed(err) {
+	switch {
+	case linkFailed(err) && errors.Is(err, fs.ErrNotExist):
+		return nil, makeLockInTwoSteps(path, content) // the temporary file was swept: the file system is not to blame
+	case linkFailed(err):
 		return err, makeLockInTwoSteps(path, content)
 	}
 	return nil, err

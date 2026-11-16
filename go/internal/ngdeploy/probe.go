@@ -39,7 +39,8 @@ func (d *deploy) probeStation() int {
 			return code
 		}
 	}
-	return proceed
+	signal.Stop(held)
+	return d.heldSignal(held) // one that arrived after the last check and before the stop
 }
 
 // probeJar moves one station jar to its probe name and straight back.

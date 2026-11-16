@@ -1,6 +1,8 @@
 package ngdeploy
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -18,7 +20,10 @@ func (d *deploy) sweepLockTemps(dir string) {
 		if err != nil || !st.Mode().IsRegular() || time.Since(st.ModTime()) < lockTempStale {
 			continue
 		}
-		if err := os.Remove(temp); err != nil {
+		switch err := os.Remove(temp); {
+		case errors.Is(err, fs.ErrNotExist):
+			continue // another run swept it first
+		case err != nil:
 			d.warn(warnLockTempLeft, temp, strerror.Text(err))
 			continue
 		}
