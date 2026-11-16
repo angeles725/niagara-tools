@@ -54,6 +54,10 @@ func (b *build) report(source string) int {
 	if b.opt.firstDeploy {
 		args = append(args, "--first-deploy")
 	}
+	if b.home != "" {
+		// the installation the template lint reads its stock modules from (retro K8)
+		args = append(args, "--niagara-home", b.home)
+	}
 	switch b.runScript(reportScript, args...) {
 	case 0:
 		return ExitOK

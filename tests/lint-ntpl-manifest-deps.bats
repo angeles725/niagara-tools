@@ -96,19 +96,19 @@ _ntpl() {
   [[ "$output" == "FAIL  ntpl-entries  $M/ModA-rt/src/templates/Unit.ntpl: not a zip archive ("*") -- archive refused" ]]
 }
 
-@test "NTPL6: a symlinked template and a template under a symlinked directory are checked, never 'nothing to check'" {
-  local ext="$BATS_TEST_TMPDIR/ext"
-  _ntpl "$ext/broken.ntpl" "" baja
-  zip -q -d "$ext/broken.ntpl" template-manifest.xml
-  _ntpl "$ext/dir/inner.ntpl" "" baja
-  zip -q -d "$ext/dir/inner.ntpl" template.bog
-  ln -s "$ext/broken.ntpl" "$M/ModA-rt/l.ntpl"
+@test "NTPL6: a symlinked template and a template under a symlinked directory inside the module are checked, never 'nothing to check'" {
+  local store="$M/store"   # link targets inside the module root (K6: a link out of it is not followed)
+  _ntpl "$store/broken.zip" "" baja
+  zip -q -d "$store/broken.zip" template-manifest.xml
+  ln -s "$store/broken.zip" "$M/ModA-rt/l.ntpl"
   run "$LINT" "$M"
   [ "$status" -eq 1 ]
   [ "$output" = "FAIL  ntpl-entries  $M/ModA-rt/l.ntpl: lacks template-manifest.xml" ]
   rm "$M/ModA-rt/l.ntpl"
+  _ntpl "$store/dir/inner.ntpl" "" baja
+  zip -q -d "$store/dir/inner.ntpl" template.bog
   rmdir "$M/ModA-rt/src/templates" "$M/ModA-rt/src"
-  ln -s "$ext/dir" "$M/ModA-rt/src"
+  ln -s "$store/dir" "$M/ModA-rt/src"
   run "$LINT" "$M"
   [ "$status" -eq 1 ]
   [ "$output" = "FAIL  ntpl-entries  $M/ModA-rt/src/inner.ntpl: lacks template.bog" ]
@@ -162,4 +162,36 @@ _ntpl() {
   [ "${#lines[@]}" -eq 2 ]
   [ "${lines[0]}" = "FAIL  ntpl-entries  $M/ModA-rt/src/templates/B.NTPL: lacks template.bog" ]
   [ "${lines[1]}" = "FAIL  ntpl-entries  \"$M/ModA-rt/src/templates/a\\nPASS  x.ntpl\": lacks template.bog" ]
+}
+
+@test "NTPL11: a link whose target is outside the module root is not followed: one WARN ntpl-link row, never a sibling module's template" {
+  _ntpl "$BATS_TEST_TMPDIR/ModB/ModB-rt/bad.ntpl" "" ghost-rt
+  ln -s "$BATS_TEST_TMPDIR" "$M/ModA-rt/up"
+  run "$LINT" --niagara-home "$NH" "$M"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  ntpl-link  $M/ModA-rt/up: a symlink to $(cd "$BATS_TEST_TMPDIR" && pwd -P), outside the module root -- not followed, nothing behind it is checked" ]
+}
+
+@test "NTPL12: a link to a part's build output stays pruned (out -> build)" {
+  _ntpl "$M/ModA-rt/build/out.ntpl" "" ghost-rt
+  ln -s build "$M/ModA-rt/out"
+  run "$LINT" --niagara-home "$NH" "$M"
+  [ "$status" -eq 0 ]
+  [ "$output" = "PASS  lint-ntpl-manifest-deps  $M: no *.ntpl under the root (nothing to check)" ]
+}
+
+@test "NTPL13: --niagara-home with an empty value is a usage error; a jar that is a dangling link or a directory ships nothing; a FIFO .ntpl is exit 3" {
+  _ntpl "$M/ModA-rt/src/templates/Unit.ntpl" "" fox-rt dir-rt gone-rt
+  run "$LINT" --niagara-home "" "$M"
+  [ "$status" -eq 3 ]
+  [ "${lines[0]}" = "lint-ntpl-manifest-deps: --niagara-home: an empty value names no installation" ]
+  mkdir "$NH/modules/dir-rt.jar"
+  ln -s "$NH/modules/nothing.jar" "$NH/modules/gone-rt.jar"
+  run "$LINT" --niagara-home "$NH" "$M"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"nor shipped by the installation $NH: dir-rt, gone-rt" ]]
+  mkfifo "$M/ModA-rt/src/templates/p.ntpl"
+  run "$LINT" --niagara-home "$NH" "$M"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"find: '$M/ModA-rt/src/templates/p.ntpl': not a regular file" ]]
 }

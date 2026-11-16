@@ -25,6 +25,7 @@ const (
 	checkManifest = "ntpl-manifest"
 	checkDeps     = "ntpl-deps"
 	checkStation  = "ntpl-station"
+	checkLink     = "ntpl-link"
 )
 
 // The command line and the environment.
@@ -64,6 +65,9 @@ const (
 	noHome        = "the installation's module list is not known, so a stock module cannot be told from a missing one: pass " + homeOption +
 		" <dir> or set " + homeEnv + " (the ntpl-deps rows are WARN until then)"
 
+	// ntpl-link: WARN, a symlink whose real target is outside the module root (%s is that target)
+	linkOutside = "a symlink to %s, outside the module root -- not followed, nothing behind it is checked"
+
 	notAStation  = "a template under " + stationDir + "/ is a station template, but its manifest root <%s> lacks " + stationAttr + "=\"true\""
 	scanFailure  = "cannot scan %s: %v"
 	partialWalk  = "cannot list every file under %s: %v"
@@ -72,4 +76,7 @@ const (
 	// an installation path that cannot give a module list (exit 3; %s is homeOption or homeEnv, then the path)
 	homeNoModules = "%s %s: no " + modulesDir + "/ directory (not a Niagara installation)"
 	homeUnread    = "%s %s: cannot list " + modulesDir + "/: %v"
+
+	// --niagara-home "" (a usage error: the lint's usage exit, 3)
+	emptyHome = ID + ": " + homeOption + ": an empty value names no installation\n" + usage + "\n"
 )

@@ -138,3 +138,47 @@ func TestInstallationModuleNames(t *testing.T) {
 		t.Errorf("an installation with no module: exit %d stdout %q, want FAIL rows naming fox-rt", code, out)
 	}
 }
+
+// TestEmptyInstallationOptionIsAUsageError (K7): --niagara-home "" names no installation; it is a usage
+// error (the lint's usage exit, 3, nothing checked), never a run that drops to "no installation" and WARN.
+// The last value still wins, and an empty NIAGARA_HOME stays "no installation" (TestWithoutAnInstallation).
+func TestEmptyInstallationOptionIsAUsageError(t *testing.T) {
+	t.Parallel()
+	root := moduleRoot(t, map[string]string{tpl: template(t, "", "ghost-rt")})
+	want := "lint-ntpl-manifest-deps: --niagara-home: an empty value names no installation\nusage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>\n"
+	nh := installation(t, stock...)
+	for name, args := range map[string][]string{"alone": {homeOption, "", root}, "after a path": {homeOption, nh, homeOption, "", root}} {
+		if code, out, errText := run(args...); code != 3 || out != "" || errText != want {
+			t.Errorf("%s: exit %d stdout %q stderr %q, want exit 3 and %q", name, code, out, errText, want)
+		}
+	}
+	if code, out, _ := run(homeOption, "", homeOption, nh, root); code != 1 || !strings.HasSuffix(out, ": ghost-rt\n") {
+		t.Errorf("an empty value then a path: exit %d stdout %q, want the path's run (exit 1 naming ghost-rt)", code, out)
+	}
+}
+
+// TestShippedModuleIsARegularReadableJar (K7): a jar name counts as shipped only when it is a regular file
+// the lint can open: a dangling link, a directory and an unreadable file named <module>.jar ship nothing,
+// while a link to a readable jar ships its name.
+func TestShippedModuleIsARegularReadableJar(t *testing.T) {
+	t.Parallel()
+	nh := installation(t, "baja", "real-rt")
+	symlink(t, nh+"/modules/gone.jar", nh+"/modules/dangling-rt.jar")
+	if err := os.Mkdir(nh+"/modules/dir-rt.jar", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	symlink(t, nh+"/modules/real-rt.jar", nh+"/modules/linked-rt.jar")
+	deps := []string{"dangling-rt", "dir-rt", "linked-rt", "real-rt"}
+	want := ": dangling-rt, dir-rt\n"
+	if os.Geteuid() != 0 {
+		write(t, nh, "modules/locked-rt.jar", "")
+		if err := os.Chmod(nh+"/modules/locked-rt.jar", 0); err != nil {
+			t.Fatal(err)
+		}
+		deps, want = append(deps, "locked-rt"), ": dangling-rt, dir-rt, locked-rt\n"
+	}
+	root := moduleRoot(t, map[string]string{tpl: template(t, "", deps...)})
+	if code, out, errText := run(homeOption, nh, root); code != 1 || !strings.HasSuffix(out, want) || errText != "" {
+		t.Errorf("exit %d stdout %q stderr %q, want exit 1 ending %q", code, out, errText, want)
+	}
+}

@@ -12,10 +12,12 @@
 // closed) and opens each archive within fixed bounds, never through the engine's whole-file text read. One
 // file per concern: messages.go (names, bounds and every text), archive.go (the bounded zip read),
 // manifest.go (the XML read), declared.go (the module's declared dependencies), installed.go (the modules
-// an installation ships), rows.go (the rows of one archive); this file composes them.
+// an installation ships), rows.go (the rows of one archive), links.go (the rows of the links the walk did
+// not follow out of the module); this file composes them.
 package ntplmanifest
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -29,7 +31,7 @@ func Spec() lint.Spec { return specWith(os.Getenv) }
 
 // specWith is Spec reading the environment through getenv.
 func specWith(getenv func(string) string) lint.Spec {
-	return lint.Spec{Root: rule{getenv: getenv}, Mode: lint.Valued, Option: homeOption, Usage: usage, EmptyError: lint.EmptyRow{Msg: emptyRoot}}
+	return lint.Spec{Root: rule{getenv: getenv}, Mode: lint.Valued, Options: []string{homeOption}, Usage: usage, EmptyError: lint.EmptyRow{Msg: emptyRoot}}
 }
 
 // rule is the lint; option is the --niagara-home value of a run that gave one.
@@ -41,9 +43,17 @@ type rule struct {
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Fail }
 
-// Configure keeps the --niagara-home value; the installation is read when a root is checked.
+// Configure keeps the --niagara-home value (the last one given); the installation is read when a root is
+// checked. An empty value names no installation and is a usage error: it never stands for "no
+// installation", which would turn the ntpl-deps rows into WARN.
 func (r rule) Configure(a lint.Args) (lint.Configured, error) {
-	r.option = a.Option
+	if vals := a.Values[homeOption]; len(vals) > 0 {
+		r.option = vals[len(vals)-1]
+		if r.option == "" {
+			// Mutation: NTPL-empty-home -- reading an empty value as "no installation" drops every ntpl-deps row to WARN
+			return nil, errors.New(emptyHome)
+		}
+	}
 	return r, nil
 }
 
@@ -57,22 +67,24 @@ func (r rule) CheckRoot(root string) ([]lint.Finding, error) {
 	if err != nil {
 		return nil, err
 	}
-	templates, walkErr := lint.WalkFollow(root, lint.Selection{Names: []string{templateNames}, PrunePaths: lint.PartOutputs()})
+	templates, outside, walkErr := lint.WalkFollow(root, lint.Selection{Names: []string{templateNames}, PrunePaths: lint.PartOutputs()})
 	mod, err := declaredIn(root)
 	if err == nil && walkErr != nil {
 		// Mutation: NTPL-walk -- dropping this error prints the rows of the templates that were found and exits as if every directory had been read
 		err = fmt.Errorf(partialWalk, rowpath.Display(root), walkErr)
 	}
+	links := linkRows(outside, mod.outside)
 	if len(templates) == 0 {
-		if err != nil {
-			return nil, err
-		}
-		if len(mod.files) == 0 {
+		switch {
+		case err != nil || len(links) > 0:
+			// "nothing to check" is never printed over a link that was not followed
+			return links, err
+		case len(mod.files) == 0:
 			return nil, lint.ErrEmptyRoot
 		}
 		return []lint.Finding{{Severity: lint.Pass, Path: rowpath.Display(root), Msg: noTemplates}}, nil
 	}
-	c := checker{root: rowpath.Display(root), mod: mod, home: h, stock: stock}
+	c := checker{root: rowpath.Display(root), mod: mod, home: h, stock: stock, out: links}
 	for _, path := range templates {
 		a, openErr := readArchive(path)
 		if openErr != nil {

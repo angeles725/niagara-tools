@@ -62,8 +62,11 @@
 # [ev: retro modularity-module-map Δ3] [ev: retro modularity-gaps Δ8]
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
-#                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only]
-#                         [--write-baseline] [--no-baseline]
+#                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--niagara-home <dir>]
+#                         [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline]
+# --niagara-home <dir>: the installation lint-ntpl-manifest-deps reads the stock modules from (build.sh passes its
+# niagara_home); without it that member reads NIAGARA_HOME from the environment, and with neither its ntpl-deps
+# rows are WARN. [ev: retro ntpl-lint-walk-k-rows Δ4]
 # Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR|INFO  <check>  <detail>   (ERROR = member env fault, not counted; exit 3; INFO = the modularity row, not counted)
 # Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES|INCOMPLETE|ISSUES (+INCOMPLETE)
 # Floor (BUILD-LOOP §5): verify-module (needs a built jar) and schema-risk (needs <artifact>/.deploy-baseline) never

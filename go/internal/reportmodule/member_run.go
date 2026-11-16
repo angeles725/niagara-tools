@@ -31,7 +31,11 @@ func (r *report) step(a artifact, m member) {
 			return
 		}
 	}
-	out, code, ok := r.x.member(m.script, dir)
+	args := []string{dir}
+	if m.home && r.o.niagaraHome != "" {
+		args = []string{"--niagara-home", r.o.niagaraHome, dir}
+	}
+	out, code, ok := r.x.member(m.script, args...)
 	if r.truncated(a.name, m.script, m.script+".sh", ok) {
 		return
 	}

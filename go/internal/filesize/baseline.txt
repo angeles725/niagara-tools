@@ -23,7 +23,6 @@
 293 internal/mcpn4/readtools/readtoolstest/station.go
 288 internal/citeresolve/paths.go
 288 internal/lint/rules/charsetdefault/charsetdefault.go
-284 internal/verifymodule/srcmore.go
 283 internal/citeparse/source.go
 283 internal/lint/rules/servlet/servlet.go
 283 internal/triageconsole/scan.go
@@ -64,7 +63,6 @@
 213 internal/citeresolve/resolve.go
 213 internal/foldaudit/command.go
 212 internal/lint/args.go
-212 internal/reportmodule/rows.go
 209 internal/lint/rules/sessionstore/sessionstore.go
 208 internal/buildstate/fragment.go
 208 internal/citeresolve/command.go

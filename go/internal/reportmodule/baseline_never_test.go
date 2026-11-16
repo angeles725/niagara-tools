@@ -25,7 +25,7 @@ func TestFloorRowsAreNeverBaselined(t *testing.T) {
 		"report-module: BASE FAIL rows (listed in " + path + ", not part of the verdict):\n" + rowDelays +
 		"(module)  WARN  report-baseline  floor check row cannot be baselined (it counts as NEW; remove the line): " + keySig + "\n" +
 		"(module)  WARN  report-baseline  floor check row cannot be baselined (it counts as NEW; remove the line): " + keySchema + "\n" +
-		"report-module: 1 artifact · 18 PASS · 3 FAIL (2 new, 1 base in " + path + ") · 2 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES\n"
+		"report-module: 1 artifact · 19 PASS · 3 FAIL (2 new, 1 base in " + path + ") · 2 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES\n"
 	if code != ExitFail || !strings.HasSuffix(out, want) {
 		t.Errorf("exit %d, want exit 1 and the report to end with\n%s\ngot\n%s", code, want, out)
 	}
@@ -43,7 +43,7 @@ func TestBaselineKeepsTheIncompleteVerdict(t *testing.T) {
 	root := tree(t, "A-rt/src/") // no built jar, no .deploy-baseline
 	path := writeBaselineFile(t, root, keyDelays)
 	code, out, _ := baselineRun(t, map[string]string{"lint-delays": stubDelays}, root)
-	want := "report-module: 1 artifact · 18 PASS · 1 FAIL (0 new, 1 base in " + path + ") · 0 WARN · 4 SKIP · 0 ADVISORY  ->  INCOMPLETE"
+	want := "report-module: 1 artifact · 19 PASS · 1 FAIL (0 new, 1 base in " + path + ") · 0 WARN · 4 SKIP · 0 ADVISORY  ->  INCOMPLETE"
 	if code != ExitIncomplete || summaryLine(out) != want {
 		t.Errorf("exit %d, %q; want exit 4 and %q", code, summaryLine(out), want)
 	}
@@ -61,7 +61,7 @@ func TestCrashedMemberRowIsNeverBaselined(t *testing.T) {
 	want := "report-module: NEW FAIL rows (not in " + path + "):\nA-rt  FAIL  lint-delays  " + crash + "\n" +
 		"report-module: BASE FAIL rows (listed in " + path + ", not part of the verdict):\n" + rowsSysOut +
 		"(module)  WARN  report-baseline  crashed member row cannot be baselined (it counts as NEW; remove the line): " + keyCrash + "\n" +
-		"report-module: 1 artifact · 18 PASS · 3 FAIL (1 new, 2 base in " + path + ") · 1 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES\n"
+		"report-module: 1 artifact · 19 PASS · 3 FAIL (1 new, 2 base in " + path + ") · 1 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES\n"
 	if code != ExitFail || !strings.HasSuffix(out, want) {
 		t.Errorf("exit %d, want exit 1 and the report to end with\n%s\ngot\n%s", code, want, out)
 	}

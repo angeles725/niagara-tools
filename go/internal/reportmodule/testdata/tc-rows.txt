@@ -48,6 +48,7 @@ A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the d
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  PASS  lint-vacuous-tests  clean
 (module)  PASS  lint-permissions-xml  clean
+(module)  PASS  lint-ntpl-manifest-deps  clean
 FAIL  triage-console  cdir  1x own frame
 WARN  triage-console  cdir  w
 PASS x
@@ -55,7 +56,7 @@ SKIP
 ADVISORY  a  b  c
 random noise
 stderr noise
-report-module: 1 artifact · 9 PASS · 1 FAIL · 1 WARN · 35 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 10 PASS · 1 FAIL · 1 WARN · 35 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

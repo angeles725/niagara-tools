@@ -26,17 +26,22 @@
 #
 # Stock modules: a station template lists every module its station uses, most of them shipped by every
 # Niagara installation and declared by no build file. --niagara-home <dir> (or NIAGARA_HOME in the
-# environment; the option wins) names the installation: each <dir>/modules/<name>.jar is a module it ships
-# (part suffix kept: fox-rt), and a dependency it ships is not a finding. Without an installation the lint
+# environment; the option wins) names the installation: each <dir>/modules/<name>.jar that is a regular file
+# the lint can open (a link to one counts; a dangling link, a directory or an unreadable file ships nothing) is
+# a module it ships (part suffix kept: fox-rt), and a dependency it ships is not a finding. An empty
+# --niagara-home value names no installation: it is a usage error (exit 3), never "no installation". Without an installation the lint
 # cannot tell a stock module from a missing one: it prints one WARN row saying so and reports the undeclared
 # dependencies as WARN ntpl-deps rows, exit 0; it never blocks on what it cannot know. An installation path
 # that does not exist, has no modules/ directory or whose modules/ cannot be listed is exit 3.
 # [ev: retro gate-followups-and-template-lints Δ12]
 #
-# Symlinks: a .ntpl that is a symlink is checked through the link, and a symlinked directory inside the
-# module is entered (each directory once, so a link back to an ancestor ends); both are reported under the
-# link's own path. A .ntpl link that leads nowhere is exit 3 (it could not be read). "Nothing to check" is
-# never printed over something that was skipped. A path holding a control character, a double quote or a
+# Symlinks: a link is followed only when its real target is inside the module root. A .ntpl that is such a
+# link is checked through it, and such a symlinked directory is entered unless its target is pruned (out ->
+# build stays a build output); both are reported under the link's own path, each directory and file once (a
+# link back to an ancestor ends). A link whose target is outside the module root (a sibling module, "/") is
+# not followed: one WARN ntpl-link row per link. A .ntpl link that leads nowhere, and a .ntpl that is not a
+# regular file (a FIFO), are exit 3 (they could not be read). "Nothing to check" is never printed over
+# something that was skipped. [ev: retro ntpl-lint-walk-k-rows Δ1] [ev: retro ntpl-lint-walk-k-rows Δ2] A path holding a control character, a double quote or a
 # backslash is printed in double quotes with C escapes, so a row is always one line.
 # A module root that ships no .ntpl is one PASS row and exit 0. Not checked: whether template.bog uses a
 # module the manifest does not list.
@@ -50,9 +55,10 @@
 # Usage:  lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>
 #   Row:  FAIL  ntpl-entries|ntpl-manifest|ntpl-deps|ntpl-station  <file.ntpl>: <reason>
 #   Row:  WARN  ntpl-deps  <file.ntpl>: <reason>            (no installation given)
+#   Row:  WARN  ntpl-link  <link>: a symlink to <target>, outside the module root -- not followed, ...
 #   Row:  WARN  lint-ntpl-manifest-deps  <module-root>: the installation's module list is not known, ...
 #   Row:  PASS  lint-ntpl-manifest-deps  <module-root>: no *.ntpl under the root (nothing to check)
-#   Exit: 0  no FAIL (WARN rows, or no .ntpl under the module root, are still 0) · 1  any FAIL · 3  usage/env, a root with neither a *.gradle.kts nor a *.ntpl, an installation path that gives no module list, a .ntpl link that leads nowhere, an archive or a build file that cannot be opened, or a directory that cannot be entered
+#   Exit: 0  no FAIL (WARN rows, or no .ntpl under the module root, are still 0) · 1  any FAIL · 3  usage/env (an empty --niagara-home included), a root with neither a *.gradle.kts nor a *.ntpl, an installation path that gives no module list, a .ntpl link that leads nowhere or a .ntpl that is not a regular file, an archive or a build file that cannot be opened, or a directory that cannot be entered
 # Mutation: NTPL1 -- dropping the lacks-entry row passes a .ntpl with no template.bog or no manifest
 # Mutation: NTPL2 -- reading a manifest that does not parse as one with no dependencies passes it
 # Mutation: NTPL3 -- dropping the undeclared-dependency row passes a template that needs a module nobody declares or ships

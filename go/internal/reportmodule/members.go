@@ -35,9 +35,15 @@ type member struct {
 	modeAware bool
 	noSource  string
 	// floor: a floor check (BUILD-LOOP §5): its FAIL rows can never be baselined (baseline.go).
-	floor   bool
+	floor bool
+	// home: the member takes the installation, `--niagara-home <dir>` before its input when report-module
+	// was given one; without it the member reads NIAGARA_HOME from the environment it inherits.
+	home    bool
 	special func(r *report, a artifact)
 }
+
+// ntplScript is the template lint: a module member that needs the installation to know the stock modules.
+const ntplScript = "lint-ntpl-manifest-deps"
 
 // artifact is what a member runs on: a profile artifact (its directory name labels the rows) or, for the
 // once-per-module members, the module root labelled "(module)".
@@ -129,6 +135,9 @@ var perModule = []member{
 	{script: "lint-structural-tests", in: inArtifact, f: warnOnly, noSource: "no *.java under a srcTest/"},
 	{script: "lint-logger-name", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt, -ux, -wb or -se part's src/"},
 	{script: "lint-adapter-cfg-default", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt part's src/"},
+	// retro coordination-stretch-deltas K2/K8: the template lint, with the installation report-module is given.
+	// Mutation: RM-ntpl-home -- dropping home runs it without the installation, so a missing module is WARN and never blocks
+	{script: ntplScript, in: inArtifact, f: filter{sel: "FAIL|WARN", mode: whole}, v: failRows, home: true, noSource: "no *.gradle.kts and no *.ntpl under the root"},
 }
 
 // Scripts lists every toolbelt member the report runs, as script file names (lint-timers.sh, ...), each once

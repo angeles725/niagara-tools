@@ -4,7 +4,7 @@ n
 -- want --
 exit 2
 -- stderr --
-usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline]
+usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--niagara-home <dir>] [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline]
   baseline: <module-root>/.report-baseline lists the FAIL rows the module already had, one key per line:
       <artifact>  <check>  <detail>
     the row without its status; in <detail> a path is cut to its file name and a number standing alone (a line
