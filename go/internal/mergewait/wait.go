@@ -18,13 +18,15 @@ type Config struct {
 	Now               func() time.Time
 	Out, Err          io.Writer
 	until             time.Time // Wait's deadline: Now at its start plus Timeout; no gh retry starts after it
-	settleGh          Gh        // gh with network retries that ignore until: the merge call and its outcome reads
+	settleGh          Gh        // gh with network retries that ignore until: the reads of the merge outcome
+	rawGh             Gh        // gh with no retries: the merge call wraps it the same way and counts its sends
 }
 
 // Wait checks the PR, waits for the checks of its head commit and merges that commit when they are
 // green. It returns one of the Exit codes.
 func Wait(c Config) int {
 	c.until = c.Now().Add(c.Timeout)
+	c.rawGh = c.Gh
 	c.settleGh = c.withRetries(c.Gh, time.Time{})
 	c.Gh = c.withRetries(c.Gh, c.until)
 	p, err := viewPR(c.Gh, c.PR)

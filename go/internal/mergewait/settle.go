@@ -1,6 +1,9 @@
 package mergewait
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // mergedState decides a PR that is MERGED: success when it was merged at the checked head sha (or at any
 // head when sha is ""), ExitMoved when another head was merged. done is false for a PR not merged.
@@ -18,16 +21,19 @@ func (c Config) mergedState(p pr, sha string) (rc int, done bool) {
 
 // merge checks the base once more (it may have moved while the checks ran), asks gh to merge exactly sha
 // and lets the PR state decide: what the merge call returned is only printed. The state is read 1+Retries
-// times, Interval apart (GitHub may show MERGED a moment later), or once when GitHub refused the merge outright;
+// times, Interval apart (GitHub may show MERGED a moment later), or once when GitHub refused the merge outright
+// on its only send (a refusal of a call sent again after a network error may answer a first send that merged);
 // a read that fails is printed and counts as one of them. The merge call and these reads keep their network
-// retries past --timeout: the green checks authorized the merge. (retro 2026-11-15 coordination-stretch T16, T23)
+// retries past --timeout: the green checks authorized the merge. (retro 2026-11-15 coordination-stretch T16, T23, T27)
 func (c Config) merge(sha string, base string) int {
 	if rc := c.containsBase(base, sha); rc != ExitMerged {
 		return rc
 	}
-	_, mergeErr := c.settleGh("pr", "merge", c.PR, "--"+c.Method, "--match-head-commit", sha)
+	sent := 0
+	send := c.withRetries(func(args ...string) (string, error) { sent++; return c.rawGh(args...) }, time.Time{})
+	_, mergeErr := send("pr", "merge", c.PR, "--"+c.Method, "--match-head-commit", sha)
 	reads := 1 + c.Retries
-	if mergeErr != nil && isRefusal(mergeErr) {
+	if mergeErr != nil && sent == 1 && isRefusal(mergeErr) {
 		reads = 1
 	}
 	state, answered := "", 0 // the last state read, and how many reads answered
