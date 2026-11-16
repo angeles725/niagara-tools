@@ -64,6 +64,8 @@
 #   ("vendorVersion went down") and passes: a deliberate rollback is legitimate.
 #   A jar the gate cannot read (not a zip, no entry, a duplicate entry name, an entry failing its CRC) or a changed jar whose own vendorVersion cannot be
 #   read FAILs closed with exit 52 ("cannot verify"), never a silent pass.
+#   The content hash covers each entry outside META-INF/ in name order (name, size, bytes); it is taken and compared
+#   within one run and is never stored.
 #   Retry-safe: gradle's :jar step already overwrote the deployed jar by the time this FAILs, so the gate
 #   backs up the pre-build jar and restores it into modules/ on FAIL — a bare re-run then still sees the
 #   OLD baseline and catches the same drift again, instead of silently "Up to Date"-passing on the retry.

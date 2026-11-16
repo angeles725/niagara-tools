@@ -38,11 +38,11 @@ byte-identical on purpose, because a port that also changes behaviour cannot be 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | The plugin-version fallback reads `gradleProperty("niagaraPluginVersion").getOrElse("X")` (and the `providers.gradleProperty(...)` form): fix the pattern, with a RED test on the documented settings file the scaffold emits | `go/internal/buildmodule/patterns.go` · `fixtures/` settings | `[ev: 0b48eef7]` |
-| Δ2 | An unenterable or missing module root names the path the operator typed in the message, and the test pins the path | `go/internal/buildmodule` (inputs, messages) | `[ev: 0b48eef7]` |
+| Δ1 | APPLIED 2026-11-14 (2fcf384e, be5a4ec5). The plugin-version fallback reads `gradleProperty("niagaraPluginVersion").getOrElse("X")` (and the `providers.gradleProperty(...)` form): fix the pattern, with a RED test on the documented settings file the scaffold emits | `go/internal/buildmodule/patterns.go` · `fixtures/` settings | `[ev: 0b48eef7]` |
+| Δ2 | APPLIED 2026-11-14 (4324618b). An unenterable or missing module root names the path the operator typed in the message, and the test pins the path | `go/internal/buildmodule` (inputs, messages) | `[ev: 0b48eef7]` |
 | Δ3 | The build chain does file work natively (copy with mode and times, mkdir, temp dir, zip listing, free space) instead of exec'ing `cp`, `mkdir`, `mktemp`, `unzip` and `df`; the bats cases that stub those commands move to Go tests with an injected filesystem error | `go/internal/buildmodule` (mirror, drift, baseline) · `tests/build-sh.bats` | `[ev: 4ab3316e]` |
 | Δ4 | Live doctrine cites a Go symbol or a test name, never a line number of a script; `kit-cite-resolve --strict` also checks `file:line` pairs written in prose and reports one past the end of the file | `toolbelt/kit-cite-resolve.sh` (Go `internal/kitcite`) · `CONTRIBUTING.md` evidence tokens | `[ev: 5be7f193]` |
-| Δ5 | The baseline content hash covers entry names and sizes as well as bytes, and an entry that cannot be read makes the comparison "cannot verify" (exit 52), never a pass | `go/internal/buildmodule/baseline.go` · drift tests | `[ev: 0b48eef7]` |
+| Δ5 | APPLIED 2026-11-14 (7b13b65c, 3c6a86bc). The baseline content hash covers entry names and sizes as well as bytes, and an entry that cannot be read makes the comparison "cannot verify" (exit 52), never a pass | `go/internal/buildmodule/baseline.go` · drift tests | `[ev: 0b48eef7]` |
 | Δ6 | On SIGINT/SIGTERM/SIGHUP after the jar copy started, the chain restores the pre-build modules/ jar before removing its temporary directory, and says so | `go/internal/buildmodule/proc.go` · `mirror.go` | `[ev: 0b48eef7]` |
 
 ## Lessons
