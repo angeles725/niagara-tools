@@ -83,6 +83,9 @@ func (t *Tools) Connect(args *pyjson.Object) (*pyjson.Object, error) {
 	out := obj("station_name", expected, "base_url", client.BaseURL(), "root_handle", root, "mode", ctx.Mode())
 	ctx.AddTierReport(out, ctx.Session)
 	ctx.AddAuthReport(out)
+	if warning := staleBinaryWarning(startup); warning != "" {
+		out.Set("warning", warning)
+	}
 	return out, nil
 }
 

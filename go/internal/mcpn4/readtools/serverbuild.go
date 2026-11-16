@@ -1,7 +1,6 @@
 package readtools
 
 import (
-	"fmt"
 	"os"
 	"runtime/debug"
 	"time"
@@ -14,9 +13,6 @@ import (
 
 // unknownBuild is the build of a binary without a VCS stamp (a test binary, a build outside git).
 const unknownBuild = "unknown"
-
-// warnNewerBinary is the warning when the binary on disk changed after the server started.
-const warnNewerBinary = "the binary on disk (%s) was modified at %s, after this server started at %s: restart the MCP server to serve it"
 
 // startup is what the process knew of itself when it started.
 var startup = readStartup()
@@ -65,19 +61,12 @@ func vcsStamp(settings []debug.BuildSetting) (build, builtAt string) {
 }
 
 // serverBlock is the server block and, when the binary on disk is newer than the server, the
-// warning that says to restart it ("" otherwise).
+// warning that says to restart it ("" otherwise; staleBinaryWarning).
 func serverBlock() (*pyjson.Object, string) {
 	s := startup
 	out := obj("build", s.build, "built_at", nilIfEmpty(s.builtAt), "started_at", stamp(s.at),
 		"binary", nilIfEmpty(s.binary))
-	if s.binary == "" {
-		return out, ""
-	}
-	fi, err := os.Stat(s.binary)
-	if err != nil || !fi.ModTime().After(s.at) {
-		return out, ""
-	}
-	return out, fmt.Sprintf(warnNewerBinary, s.binary, stamp(fi.ModTime()), stamp(s.at))
+	return out, staleBinaryWarning(s)
 }
 
 // stamp is t in UTC, to the second, RFC 3339.
@@ -93,3 +82,7 @@ func nilIfEmpty(s string) any {
 // Build is the build stamp of this binary, the server.build field of n4_describe_session (the VCS
 // revision, +modified for a dirty tree, or "unknown"); `mcp-n4 --version` prints it.
 func Build() string { return startup.build }
+
+// StampBuild replaces the build this binary reports as its own. Only the black-box harness calls
+// it, in a child it started: a test binary carries no VCS stamp.
+func StampBuild(build string) { startup.build = build }

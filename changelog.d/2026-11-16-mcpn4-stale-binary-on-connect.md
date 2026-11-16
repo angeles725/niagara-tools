@@ -1,0 +1,3 @@
+### Added — mcp-n4: n4_connect warns when the binary on disk is newer than the running server
+- A successful `n4_connect` carries the same one-line `warning` as `n4_describe_session` when the binary on disk is not the one serving: restart the MCP server to serve it.
+- Both tools now compare the git revision stamped in the binary on disk with the server's own first (`the binary on disk (<path>) is build <disk>, but this server runs build <running>: ...`); the mtime against the server start decides only when either binary has no stamp. A missing or unreadable binary never warns and never fails the tool.
