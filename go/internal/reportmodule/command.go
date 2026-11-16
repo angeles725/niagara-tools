@@ -28,6 +28,10 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 		fmt.Fprint(s.Err, usage)
 		return ExitUsage
 	}
+	if line := readyConflict(o); line != "" {
+		fmt.Fprint(s.Err, line+"\n"+usage)
+		return ExitUsage
+	}
 	if !isDir(o.root) {
 		fmt.Fprintf(s.Err, "report-module: not a directory: %s\n", o.root)
 		return ExitEnv

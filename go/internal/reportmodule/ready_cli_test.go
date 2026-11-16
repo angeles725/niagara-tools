@@ -29,15 +29,36 @@ func TestReadyJSON(t *testing.T) {
 	}
 }
 
-// TestReadyUsage: the --ready options need --ready, and --ready takes no lint-run option.
+// TestReadyUsage: the --ready options need --ready, and --ready refuses every option of the lint run
+// (R3-ready-ignores-lint-options): exit 2 with a first line naming the option, then the usage; a named
+// --wiring-map or --console-dir that does not exist is refused the same way, never silently ignored.
 func TestReadyUsage(t *testing.T) {
 	t.Parallel()
 	fx := newReadyFx(t)
-	for _, args := range [][]string{{"--json"}, {"--expect-niagara", "4.15"}, {"--expect-signer", "a"},
-		{"--ready", "--lint-only"}, {"--ready", "--write-baseline"}, {"--ready", "--expect-niagara"}} {
-		if code, _, errOut := fx.run(t, args...); code != ExitUsage || !strings.Contains(errOut, "--ready") {
-			t.Errorf("%q: exit %d, want 2 with the usage:\n%s", args, code, errOut)
+	cases := []struct {
+		args []string
+		line string
+	}{
+		{[]string{"--json"}, "report-module: --json needs --ready"},
+		{[]string{"--expect-niagara", "4.15"}, "report-module: --expect-niagara needs --ready"},
+		{[]string{"--expect-signer", "a"}, "report-module: --expect-signer needs --ready"},
+		{[]string{"--ready", "--lint-only"}, "report-module: --lint-only is not a --ready option"},
+		{[]string{"--ready", "--write-baseline"}, "report-module: --write-baseline is not a --ready option"},
+		{[]string{"--ready", "--no-baseline"}, "report-module: --no-baseline is not a --ready option"},
+		{[]string{"--ready", "--console-dir", "/nonexistent"}, "report-module: --console-dir is not a --ready option"},
+		{[]string{"--ready", "--profile", "lan"}, "report-module: --profile is not a --ready option"},
+		{[]string{"--ready", "--legacy"}, "report-module: --legacy is not a --ready option"},
+		{[]string{"--ready", "--wiring-map", "/nonexistent"}, "report-module: --wiring-map is not a --ready option"},
+	}
+	for _, c := range cases {
+		code, out, errOut := fx.run(t, c.args...)
+		first, rest, _ := strings.Cut(errOut, "\n")
+		if code != ExitUsage || out != "" || first != c.line || !strings.HasPrefix(rest, "usage: report-module.sh") {
+			t.Errorf("%q: exit %d, want 2 with %q then the usage:\n%s", c.args, code, c.line, errOut)
 		}
+	}
+	if code, _, errOut := fx.run(t, "--ready", "--expect-niagara"); code != ExitUsage || !strings.HasPrefix(errOut, "usage: ") {
+		t.Errorf("missing value: exit %d\n%s", code, errOut)
 	}
 }
 

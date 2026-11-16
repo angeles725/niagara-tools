@@ -18,8 +18,9 @@ const readyUsage = "  --ready [--niagara-home <dir>] [--expect-niagara <ver>] [-
 	"    the ready-to-load report of each built jar (<artifact>/build/libs): module, niagara-target, niagara-home,\n" +
 	"    signer, verify-module, schema-risk, sha256 and mirror rows, then \"READY TO LOAD: <MOD> <version> for\n" +
 	"    Niagara <x> (sha256 <12>)\" and the post-load read-back, or \"NOT READY\" with the failing rows; exit 0 ready,\n" +
-	"    1 not ready, 3 env (an ERROR row or no built jar). --target-version and --first-deploy apply; it takes no\n" +
-	"    --lint-only, --write-baseline or --no-baseline, and --json/--expect-* need --ready.\n"
+	"    1 not ready, 3 env (an ERROR row or no built jar). --target-version and --first-deploy apply; it refuses\n" +
+	"    every lint-run option (--lint-only, --write-baseline, --no-baseline, --console-dir, --profile, --legacy,\n" +
+	"    --wiring-map), and --json/--expect-* need --ready.\n"
 
 // readyMain runs the ready report over the jars of o.root (a directory) and returns its exit code.
 func readyMain(o options, s cli.Stdio, environ []string) int {

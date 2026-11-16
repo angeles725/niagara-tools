@@ -44,21 +44,40 @@ func parseArgs(args []string) (o options, ok bool) {
 		}
 		switch {
 		case a == "--":
-			return o, o.root != "" && readyValid(o)
+			return o, o.root != ""
 		case a != "" && a[0] == '-', o.root != "":
 			return o, false
 		default:
 			o.root = a // an empty word is taken too, and a later positional may replace it
 		}
 	}
-	return o, o.root != "" && readyValid(o)
+	return o, o.root != ""
 }
 
-// readyValid: the --ready options (--json, --expect-niagara, --expect-signer) need --ready, and --ready takes
-// none of the options that only shape a lint run (--lint-only, --write-baseline, --no-baseline).
-func readyValid(o options) bool {
-	if o.ready {
-		return !o.lintOnly && !o.writeBaseline && !o.noBaseline
+// readyConflict names an option that --ready does not take, or a --ready option given without --ready, as the
+// line printed before the usage; "" when there is none. --ready refuses every option that only shapes the lint
+// run, so none is ever silently ignored (review finding R3-ready-ignores-lint-options).
+func readyConflict(o options) string {
+	if !o.ready {
+		for _, f := range []struct {
+			set  bool
+			name string
+		}{{o.jsonOut, "--json"}, {o.expectNiagara != "", "--expect-niagara"}, {o.expectSigner != "", "--expect-signer"}} {
+			if f.set {
+				return "report-module: " + f.name + " needs --ready"
+			}
+		}
+		return ""
 	}
-	return !o.jsonOut && o.expectNiagara == "" && o.expectSigner == ""
+	for _, f := range []struct {
+		set  bool
+		name string
+	}{{o.lintOnly, "--lint-only"}, {o.writeBaseline, "--write-baseline"}, {o.noBaseline, "--no-baseline"},
+		{o.consoleDir != "", "--console-dir"}, {o.profile != "", "--profile"}, {o.legacy, "--legacy"},
+		{o.wiringMap != "", "--wiring-map"}} {
+		if f.set {
+			return "report-module: " + f.name + " is not a --ready option"
+		}
+	}
+	return ""
 }
