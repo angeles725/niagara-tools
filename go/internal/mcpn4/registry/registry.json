@@ -562,6 +562,97 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_read_alarms",
+   "description": "Read the station's alarm records, newest first: by default the open ones (unacknowledged or not back to normal). Each row is {timestamp, uuid, source, source_state, ack_state, alarm_class, priority, msg_text} as the station renders them (display text, e.g. '7 nov 2026 09:20:50 CST', 'Offnormal', 'Unacked'; msg_text may be a raw %lexicon(...)% pattern); columns are the station's headers. Filters, all optional and combined with and: source (a component ORD such as station:|slot:/Drivers/Net; matches it and everything below it), alarm_class (a class name such as defaultAlarmClass), source_state (normal, offnormal, fault, alert), ack_state (acked, unacked, ackPending), since and until (BAbsTime, e.g. 2026-11-15T00:00:00.000-06:00). A source_state or ack_state filter replaces the open default; open_only false reads every record. where echoes the BQL where clause sent; truncated is true when more records match than limit; total is the matching record count (select count(*)), null with total_note when that count failed. Every filter value is checked before any request: no quotes, wildcards or BQL of the caller reach the station. Read-only: fixed queries over the alarm: ORD.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "source": {
+      "type": "string",
+      "description": "Component ORD whose alarms to read, itself and below, e.g. station:|slot:/Drivers/Net"
+     },
+     "alarm_class": {
+      "type": "string",
+      "description": "Alarm class name, e.g. defaultAlarmClass"
+     },
+     "source_state": {
+      "type": "string",
+      "description": "One of normal, offnormal, fault, alert",
+      "enum": [
+       "normal",
+       "offnormal",
+       "fault",
+       "alert"
+      ]
+     },
+     "ack_state": {
+      "type": "string",
+      "description": "One of acked, unacked, ackPending",
+      "enum": [
+       "acked",
+       "unacked",
+       "ackPending"
+      ]
+     },
+     "since": {
+      "type": "string",
+      "description": "Oldest alarm time as a BAbsTime, e.g. 2026-11-15T00:00:00.000-06:00 or 2026-11-15T06:00:00Z"
+     },
+     "until": {
+      "type": "string",
+      "description": "Newest alarm time as a BAbsTime, e.g. 2026-11-15T23:59:59.999-06:00"
+     },
+     "open_only": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) reads only open alarms (unacked or not normal) unless a state filter is given; false reads every record"
+     },
+     "limit": {
+      "type": "integer",
+      "description": "Most recent alarms to return",
+      "minimum": 1,
+      "maximum": 1000,
+      "default": 50
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout per request in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_list_alarm_classes",
+   "description": "List the station's alarm classes with their priority per transition ({toOffnormal, toFault, toNormal, toAlert}, 0-255), whether each transition needs an acknowledgement (ack_required), their alarm counts, and the recipients each one routes to. Recipients are the alarm:AlarmRecipient components (console, email, station and others) and a class routes to one through a link from the class's alarm topic to the recipient's routeAlarm action; each class lists {path, type, link_name} of its recipients, recipients lists each recipient with the classes linked to it, and unresolved_links the routeAlarm links whose source is not a listed class. At most 50 recipients are read for links (recipients_truncated says when more exist). A value the station renders in another form is returned as its text. Read-only: two BQL selects at the station root and one tree load per class folder and recipient. To create a class, see the README recipe (n4_create_component, n4_set_slot, n4_create_link).",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout per request in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [
