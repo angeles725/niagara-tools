@@ -68,7 +68,7 @@ func (st *Station) ssc(key string, arg map[string]any) (any, error) {
 		return map[string]any{"h": "2", "t": "baja:Station"}, nil
 	case "loadSlots":
 		ord, _ := arg["o"].(string)
-		n, err := st.resolve(ord)
+		n, err := st.resolveComponent(ord)
 		if err != nil {
 			return nil, err
 		}
@@ -90,24 +90,6 @@ func (st *Station) ssc(key string, arg map[string]any) (any, error) {
 		return st.invoke(arg)
 	}
 	return nil, fmt.Errorf("ValueError: unknown ssc key %s", key)
-}
-
-// resolve is the node at a station:|slot:/a/b ORD; a double slash is refused like N4.14 does.
-func (st *Station) resolve(ord string) (*Node, error) {
-	if strings.Contains(ord, "//") {
-		return nil, fmt.Errorf("ValueError: Illegal double slashes")
-	}
-	_, path, _ := strings.Cut(ord, "slot:")
-	n := st.root
-	for _, part := range strings.Split(path, "/") {
-		if part == "" {
-			continue
-		}
-		if n = n.Child(part); n == nil {
-			return nil, fmt.Errorf("KeyError: '%s'", ord)
-		}
-	}
-	return n, nil
 }
 
 func (st *Station) checkLink(arg map[string]any) any {
