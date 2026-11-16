@@ -20,12 +20,14 @@ Wait for the CI checks of the PR's exact head commit, then merge that commit (gh
 the merge call the PR state, read up to 1+--retries times (once when GitHub refused a merge sent once), decides:
 MERGED at the checked head is success (with its merge commit), whatever the call returned; a PR already
 merged at start is success too; a call that returned while the PR stays OPEN (a merge queue, auto-merge,
-lag) is 9, and one after which the PR is CLOSED is 6. No retry starts after --timeout while the checks run;
-the merge call and its state reads keep theirs.
+lag) is 9, one after which the PR is CLOSED is 6, and one whose every send failed on a network error
+while the PR stays OPEN is 10 (GitHub never answered it; run this again). No retry starts after
+--timeout while the checks run; the merge call and its state reads keep theirs.
 Exit: 0 merged; 1 a check failed (its log tail printed); 2 usage; 3 gh missing or a gh call failed;
       4 the PR is a draft; 5 the branch lacks the current base (rebase first); 6 the PR is not open
       (also after the merge call) or its head moved; 7 timed out; 8 gh pr merge refused; 9 the merge was requested but the PR is
-      not MERGED yet (or its state could not be read): check it by hand.
+      not MERGED yet (or its state could not be read): check it by hand; 10 every send of the merge call
+      failed on a network error and the PR is still OPEN: nothing merged, GitHub refused nothing.
 `
 
 // callDeadline ends one gh call that hangs (a stalled connection); the wait's --timeout bounds the whole run.
