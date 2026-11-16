@@ -22,6 +22,8 @@ const (
 	msgProbeRefused = "copy refused: %s in %s cannot be moved (%s); nothing was built or copied"
 	// msgProbeStuck takes the jar, its probe name, why it could not be moved back, then the two again.
 	msgProbeStuck = "copy refused: %s was moved to %s to test it and could not be moved back (%s): rename %s back to %s before the station restarts; nothing was built or copied"
+	// msgProbeNotOurs takes the probe name, what it is (kindOf) and the jar.
+	msgProbeNotOurs = "copy refused: %s is %s, not a jar a run left while it tested %s: move it out of the station and deploy again; nothing was built or copied"
 	// msgProbeStale takes the probe file and the jar beside it; msgProbeStaleFix the jar, the probe file, the
 	// probe file, the jar.
 	msgProbeStale    = "copy refused: %s, left by a run that was killed while it tested the jar, is there beside %s; nothing was built or copied"

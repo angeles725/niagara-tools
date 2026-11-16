@@ -181,9 +181,12 @@ Exit codes:
       station jar the run will replace is renamed to <jar>.ng-probe and straight back: a jar that cannot be moved
       is exit 40 there, with no build ("copy refused: <jar> in <dir> cannot be moved"); one that could not be
       moved back is named with both paths and the rename to make. SIGINT, SIGTERM or SIGHUP during the two moves
-      waits until the jar is back, then ends the run (128 + the signal). A <jar>.ng-probe a killed run left is moved
+      waits until the jar is back, then ends the run (128 + the signal), as one does while the probe looks at a
+      jar it does not move. A <jar>.ng-probe a killed run left is moved
       back under the jar's name when the jar is missing (a NOTICE says so); beside the jar it is exit 40 with the
-      fix: compare the two, keep the one the station should load under the jar's name, delete the other
+      fix: compare the two, keep the one the station should load under the jar's name, delete the other; a
+      <jar>.ng-probe that is not a regular file (a directory, a symbolic link) is exit 40 naming what it is,
+      left in place: a run never leaves one
   130, 143  SIGINT or SIGTERM during the copy: the copy was undone as for exit 40 and the line says so; or between
       the first run lock and the copy: nothing was copied, <NIAGARA_HOME>/modules was put back and the locks
       were removed

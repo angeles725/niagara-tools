@@ -74,13 +74,18 @@ func (d *deploy) heldSignal(held <-chan os.Signal) int {
 
 // staleProbe looks at a <jar>.ng-probe a killed run left. With no jar beside it, it is the jar: it is moved
 // back under its name and a NOTICE says so. With the jar beside it the run cannot tell which one the station
-// should load: exit 40 with the manual fix, nothing changed.
+// should load: exit 40 with the manual fix, nothing changed. A probe name that is not a regular file was not
+// left by a run (a probe moves a jar): exit 40 naming what it is, nothing changed.
 // A probe file or jar that cannot be examined is left to the checks after it, which report it.
 func (d *deploy) staleProbe(name, jar, probe string) int {
-	if _, err := os.Lstat(probe); err != nil {
+	st, err := os.Lstat(probe)
+	switch {
+	case err != nil:
 		return proceed
+	case !st.Mode().IsRegular():
+		return d.fail(ExitCopy, msgProbeNotOurs, probe, kindOf(st.Mode()), jar)
 	}
-	_, err := os.Lstat(jar)
+	_, err = os.Lstat(jar)
 	switch {
 	case err == nil:
 		d.fail(ExitCopy, msgProbeStale, probe, name)
@@ -94,4 +99,15 @@ func (d *deploy) staleProbe(name, jar, probe string) int {
 	}
 	d.warn(noticeProbeRestored, probe, jar)
 	return proceed
+}
+
+// kindOf names a file type that is not a regular file.
+func kindOf(mode os.FileMode) string {
+	switch {
+	case mode.IsDir():
+		return "a directory"
+	case mode&os.ModeSymlink != 0:
+		return "a symbolic link"
+	}
+	return "a special file"
 }
