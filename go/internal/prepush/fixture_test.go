@@ -24,6 +24,10 @@ const (
 	stubKitState = "printf 'kit-state %s\\n' \"$*\" >> \"$STUB_CALLS\"\n" +
 		"[ \"$1\" != \"${KIT_STATE_FAIL_ON:-}\" ] || { echo \"kit-state: $1 violation\" >&2; exit 1; }\n" +
 		"echo \"generated $1\"\n"
+	// the CI-lints stub logs to its own file, so the exact call lists of the other stubs stay as they were
+	stubCILocal = "printf '%s\\n' \"$*\" >> \"$CI_LOCAL_CALLS\"\n" +
+		"[ -z \"${CI_LOCAL_OUT:-}\" ] || echo \"$CI_LOCAL_OUT\"\n" +
+		"exit \"${CI_LOCAL_RC:-0}\"\n"
 	stubSweep = "printf 'sweep %s\\n' \"$*\" >> \"$STUB_CALLS\"\n" +
 		"[ -f \"$1\" ] && [ -f \"$3\" ] || { echo 'sweep: generated input missing' >&2; exit 9; }\n" +
 		"echo 'sweep stdout line'\n" +
@@ -38,6 +42,7 @@ type repo struct {
 	dir, bin string // the work tree, the only PATH directory
 	git      string // the real git, for fixture commands
 	calls    string // the file the stubs append their argv to
+	ciCalls  string // the file the scripts/ci-local.sh stub appends its argv to
 	base     string // the first commit
 }
 
@@ -47,7 +52,8 @@ func newRepo(t *testing.T) *repo {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &repo{t: t, dir: filepath.Join(tmp, "r"), bin: filepath.Join(tmp, "bin"), calls: filepath.Join(tmp, "calls")}
+	r := &repo{t: t, dir: filepath.Join(tmp, "r"), bin: filepath.Join(tmp, "bin"), calls: filepath.Join(tmp, "calls"),
+		ciCalls: filepath.Join(tmp, "ci-local-calls")}
 	for _, tool := range []string{"git", "bash", "cat"} {
 		real, err := exec.LookPath(tool)
 		if err != nil {
@@ -59,7 +65,7 @@ func newRepo(t *testing.T) *repo {
 		r.tool(tool, "exec "+real+` "$@"`)
 	}
 	for k, v := range map[string]string{
-		"PATH": r.bin, "HOME": filepath.Join(tmp, "home"), "STUB_CALLS": r.calls,
+		"PATH": r.bin, "HOME": filepath.Join(tmp, "home"), "STUB_CALLS": r.calls, "CI_LOCAL_CALLS": r.ciCalls,
 		"NIAGARA_CLIENT_DENYLIST": filepath.Join(tmp, "no-client-denylist"),
 		"GIT_CONFIG_GLOBAL":       os.DevNull, "GIT_CONFIG_NOSYSTEM": "1",
 		"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.invalid",
@@ -70,6 +76,7 @@ func newRepo(t *testing.T) *repo {
 	r.write("build-n4-module-kit/toolbelt/kit-cite-resolve.sh", stubResolver)
 	r.write("build-n4-module-kit/toolbelt/kit-state.sh", stubKitState)
 	r.write("build-n4-module-kit/toolbelt/sweep-build-state.sh", stubSweep)
+	r.write("scripts/ci-local.sh", stubCILocal)
 	r.write("build-n4-module-kit/types/logic.md", "# logic\n")
 	r.write("README.md", "# readme\n")
 	r.run("init", "-q", "-b", "main")

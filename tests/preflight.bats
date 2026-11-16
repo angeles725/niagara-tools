@@ -8,7 +8,8 @@ bats_require_minimum_version 1.5.0
 # Checks (in order, all non-fatal — continue after FAIL):
 #   jdk8      JDK 8 present under --jvm-dir (default /usr/lib/jvm) or JAVA_HOME; never $HOME
 #   plugin-pin  <gradle-root>/settings.gradle.kts plugin version present in <nh>/etc/m2
-#   jar-lock  lsof on <nh>/modules/*.jar (SKIP if lsof absent — never false PASS)
+#   jar-lock  lsof on <nh>/modules/*.jar (SKIP if lsof absent — never false PASS); the cases run a stub lsof
+#             (setup), never the host's: a real `lsof -Fn` takes ~25 s on WSL (C7)
 #   win-path  C:\ or \ in <niagara_home> or <gradle-root> -> FAIL + /mnt/c/... remedy
 #
 # Row format: PASS|FAIL|WARN|SKIP  <check>  <detail>
@@ -57,10 +58,29 @@ setup() {
   NH="$FIXDIR/niagara-home"         # has plugin pin 7.6.17 in etc/m2
   NH_NO_PIN="$FIXDIR/niagara-home-no-pin"  # etc/m2 is empty (no plugin)
   GR="$FIXDIR/gradle-root"          # settings.gradle.kts references 7.6.17
+
+  # A stub lsof first on PATH for every case: the host `lsof -Fn` takes ~25 s per call on WSL and put this file
+  # over 600 s serially (C7). It lists one open file that is no module jar, so jar-lock PASSes. The jar-lock
+  # cases set their own PATH="$FAKEBIN" with their own lsof and never see it; none needs the host lsof.
+  # The rest of the file still runs real JDK/gradle fixtures: `bats -j <n> tests/preflight.bats` (GNU parallel)
+  # spreads it. (retro 2026-11-15 coordination-stretch C7)
+  STUB_LSOF="$TMPDIR_T/stub-lsof"
+  mkdir -p "$STUB_LSOF"
+  printf '#!/bin/sh\necho call >> "%s/calls"\nprintf "p1\\nn/usr/bin/lsof\\n"\n' "$STUB_LSOF" > "$STUB_LSOF/lsof"
+  chmod +x "$STUB_LSOF/lsof"
+  PATH="$STUB_LSOF:$PATH"
 }
 
 teardown() {
   rm -rf "$TMPDIR_T"
+}
+
+@test "PF-lsof-stub: a case that does not test lsof gets the stub lsof, never the host's (C7: ~25 s per real call)" {
+  # Mutation: PF-lsof-stub -- dropping the stub from setup() puts the host lsof back on every case's PATH and the
+  # serial file over 600 s on WSL. (retro 2026-11-15 coordination-stretch C7)
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$GR"
+  [[ "$output" == *"PASS  jar-lock"* ]]
+  [ "$(cat "$STUB_LSOF/calls")" = "call" ]
 }
 
 # ---------------------------------------------------------------------------

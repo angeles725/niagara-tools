@@ -7,7 +7,8 @@ name: CI
 on:
   push:
     branches: [main]
-  # A draft PR runs nothing; marking it ready (ready_for_review) starts the full run.
+  # A draft PR runs every job too: a defect only CI's pinned tools catch must surface while the PR is a draft, not
+  # in its merge turn (#675 stayed a draft through review; bats 1.10 refused it at merge). (retro 2026-11-15 coordination-stretch C8)
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -27,7 +28,6 @@ jobs:
   # suite (T9).
   go:
     name: Go gofmt + vet + test + build
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -79,7 +79,6 @@ jobs:
 
   bats:
     name: bats unit tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -228,7 +227,6 @@ jobs:
 
   lint-sweeps:
     name: shellcheck + ledger sweeps + kit lints
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -264,6 +262,11 @@ jobs:
           # every Δ1..Δn, not just their stem. --exact-stems: a citation credits a fold only by the
           # retro's exact stem, and a short alias token fails (kit #419).
           bash "$K/toolbelt/sweep-fold-audit.sh" --strict --exact-stems --deltas-since 2026-09-24 "$T/INDEX.md" "$K"
+
+      - name: lint-bats-heredoc (no here-document line in tests/ starts with the test keyword; bats 1.10 reads it as a case)
+        run: |
+          . go/go-tool.sh
+          "$(go_tool_bin "$PWD/go" ci-steps)" lint-bats-heredoc tests
 
       - name: lint-guard-pins (every kit lint carries a resolvable "# Mutation:" guard-pin — strict)
         run: bash build-n4-module-kit/toolbelt/lint-guard-pins.sh --strict .
@@ -351,7 +354,6 @@ jobs:
   # applicable. The retro half of the hook stays local-only.
   changelog:
     name: changelog gate (kit behaviour changes carry a CHANGELOG entry)
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

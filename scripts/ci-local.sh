@@ -2,6 +2,7 @@
 # ci-local.sh — replay .github/workflows/ci.yml locally with the CI tools and semantics.
 #
 # Usage: scripts/ci-local.sh [--list] [--only <substring>] [-j N] [--ci-file <path>] [--cache-dir <path>]
+#        scripts/ci-local.sh --changed [--range <from>..<to>] [--ci-file <path>] [--cache-dir <path>]
 #
 # The steps come from ci.yml itself (go/cmd/ci-steps, built on demand by go/go-tool.sh), so the replay
 # cannot drift from CI:
@@ -16,16 +17,22 @@
 # turns `bats tests/*.bats` into `bats -j N tests/*.bats`, and CI's `bats -j 4 --no-parallelize-within-files `
 # (four files at a time) into `bats -j N --no-parallelize-within-files `, when GNU parallel is on PATH; without
 # parallel it runs as plain `bats ` (bats refuses --no-parallelize-within-files without -j).
-# The shellcheck tarball is cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/
-# and its sha256 is checked on every use; never installed system-wide, never sudo.
+# A step that runs bats runs the bats-core version ci.yml installs (its "Install bats*" step: BATS_VER=,
+# BATS_SHA256=), fetched when the bats on PATH is another version (lib/ci-local-tools.sh). (retro 2026-11-15 coordination-stretch C8)
+# --changed runs no step: it runs the pinned shellcheck, the kit's bats lints and gofmt over the files changed
+# against origin/main, or over the commit range --range names (.githooks/pre-push calls it with the pushed
+# range); lib/ci-local-changed.sh. (retro 2026-11-15 coordination-stretch C3)
+# The tarballs are cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/ (--cache-dir)
+# and their sha256 is checked on every use; never installed system-wide, never sudo.
 #
-# Exit: 0 every run step passed; 1 a step failed; 2 usage error or an UNCOVERED / unparsable step;
+# Exit: 0 every run step (or --changed check) passed; 1 a step or check failed; 2 usage error or an UNCOVERED /
+#       unparsable step;
 #       3 the pinned shellcheck could not be provisioned (sha256 mismatch, download failed, no sha256 tool),
 #         the ci-steps parser or host-budget could not be built (no `go` on PATH, build failure), or host-budget
 #         could not read the cgroup root;
 #       4 host budget exceeded (go/cmd/host-budget FAIL row): a cgroup under ${CI_LOCAL_CGROUP_ROOT:-/sys/fs/cgroup}
 #         uses more than half of its pids.max (a full init.scope rejected every fork and aborted all sessions on
-#         2026-10-22), the system thread count is above half of threads-max, or / or /mnt/c is above 90% used;
+#         2026-10-22), the system thread count is above half of threads-max, or / or /mnt/c is above 95% used (DISK_PCT);
 #         wait (or free disk) and retry. --list never runs the check.
 # [ev: retro 2026-10-22-ci-local-replay] [ev: retro go-ci-steps] [ev: retro r8-t47-host-budget]
 set -euo pipefail
@@ -35,13 +42,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$ROOT/scripts/lib/sha256.sh" || exit 3
 # shellcheck disable=SC1091  # go/ helper, resolved at runtime via ROOT
 . "$ROOT/go/go-tool.sh" || exit 3
+# shellcheck disable=SC1091  # sibling libs, resolved at runtime via ROOT
+. "$ROOT/scripts/lib/ci-local-tools.sh" || exit 3
+# shellcheck disable=SC1091
+. "$ROOT/scripts/lib/ci-local-changed.sh" || exit 3
 
-SC_VER=v0.10.0
-SC_TAR="shellcheck-${SC_VER}.linux.x86_64.tar.xz"
-SC_URL="https://github.com/koalaman/shellcheck/releases/download/${SC_VER}/${SC_TAR}"
-# Computed 2026-10-22 from a download of SC_URL (2,404,716 bytes).
-SC_SHA256=6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87
-
+DISK_PCT=95  # host-budget disk limit, percent used, for / and /mnt/c (retro 2026-11-15 coordination-stretch T2)
 # "<step-name glob>|<reason>": CI steps replaced by a local equivalent. `uses:` refs match the same way.
 SKIP_RULES=(
   "actions/checkout@*|the working tree is already checked out"
@@ -55,13 +61,19 @@ SKIP_RULES=(
   "Set up Node.js*|uses node and npm on PATH (CI installs the pinned Node.js; the npm tools step then runs as in CI)"
 )
 
-usage() { printf 'usage: %s [--list] [--only <substring>] [-j N] [--ci-file <path>] [--cache-dir <path>]\n' "$0" >&2; exit 2; }
+usage() {
+  printf 'usage: %s [--list] [--only <substring>] [-j N] [--ci-file <path>] [--cache-dir <path>]\n' "$0" >&2
+  printf '       %s --changed [--range <from>..<to>] [--ci-file <path>] [--cache-dir <path>]\n' "$0" >&2
+  exit 2
+}
 
-LIST=0 ONLY="" JOBS=3 CI_FILE="$ROOT/.github/workflows/ci.yml"
+CHANGED=0 RANGE="" LIST=0 ONLY="" JOBS=3 CI_FILE="$ROOT/.github/workflows/ci.yml"
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-${SC_VER}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --list) LIST=1 ;;
+    --changed) CHANGED=1 ;;
+    --range) [ $# -ge 2 ] || usage; RANGE="$2"; shift ;;
     --only) [ $# -ge 2 ] || usage; ONLY="$2"; shift ;;
     -j) [[ "${2:-}" =~ ^[1-9][0-9]*$ ]] || usage; JOBS="$2"; shift ;;
     --ci-file) [ $# -ge 2 ] || usage; CI_FILE="$2"; shift ;;
@@ -70,6 +82,8 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+[ -z "$RANGE" ] || [ "$CHANGED" -eq 1 ] || usage
+[ "$CHANGED" -eq 0 ] || { [ "$LIST" -eq 0 ] && [ -z "$ONLY" ]; } || usage
 
 # classify <kind> <name> <body> — print "RUN", "SKIP|<reason>" or "UNCOVERED|<reason>".
 classify() {
@@ -120,8 +134,8 @@ fi
 [ "$LIST" -eq 0 ] || exit 0
 
 # check_host_budget — refuse to start the steps while go/cmd/host-budget reports a FAIL row: a cgroup above
-# 50% of a numeric pids.max (or the system thread count above 50% of threads-max), or / or /mnt/c above 90%
-# used. WARN rows (pids above 40%, disk above 80%, GOCACHE above 20 GB) are printed and do not block.
+# 50% of a numeric pids.max (or the system thread count above 50% of threads-max), or / or /mnt/c above DISK_PCT
+# (95%) used. WARN rows (pids above 40%, disk above 80%, GOCACHE above 20 GB) are printed and do not block.
 # A cgroup root that does not exist at all (macOS, cgroup-less containers) is a stderr note and the run
 # proceeds, as the pre-T47 inline loop did; a root that exists but cannot be read stays exit 3.
 # CI_LOCAL_HOST_BUDGET_ARGS holds extra host-budget arguments (word-split; no spaces inside one argument),
@@ -135,7 +149,10 @@ check_host_budget() {
   fi
   read -r -a extra <<< "${CI_LOCAL_HOST_BUDGET_ARGS:-}"
   bin="$(go_tool_bin "$ROOT/go" host-budget)" || exit 3
-  "$bin" --cgroup-root "$root" ${extra[@]+"${extra[@]}"} >&2 || rc=$?
+  # The user's final disk rule of 2026-11-16: /mnt/c up to 95% used (a 1 TB C: at 90% still had 90 GB free; it
+  # replaced a 40 GB, then a 101 GB free-space floor, which host-budget keeps as --disk-min-free).
+  # Mutation: CL15b -- dropping --disk-pct restores the 90% default.
+  "$bin" --cgroup-root "$root" --disk-pct "$DISK_PCT" ${extra[@]+"${extra[@]}"} >&2 || rc=$?
   case "$rc" in
     0) ;;
     1) printf 'ci-local: host budget exceeded (FAIL row above); wait for other sessions and retry\n' >&2; exit 4 ;;
@@ -144,28 +161,8 @@ check_host_budget() {
 }
 check_host_budget
 
-# provision_shellcheck — verify (and on first use download) the pinned tarball, unpack it into $WORK, PATH it.
-provision_shellcheck() {
-  local tar="$CACHE/$SC_TAR" got
-  sha256_require ci-local || exit 3
-  [ "$(uname -s)/$(uname -m)" = Linux/x86_64 ] || { printf 'ci-local: the pinned shellcheck is linux x86_64 only\n' >&2; exit 3; }
-  local src="$tar"
-  if [ ! -f "$tar" ]; then
-    src="$tar.partial"
-    mkdir -p "$CACHE"
-    curl -fsSL -o "$src" "$SC_URL" || { rm -f "$src"; printf 'ci-local: download failed: %s\n' "$SC_URL" >&2; exit 3; }
-  fi
-  got="$(sha256_of "$src")"
-  if [ "$got" != "$SC_SHA256" ]; then
-    [ "$src" = "$tar" ] || rm -f "$src"
-    printf 'ci-local: sha256 mismatch for %s (got %s, pinned %s); remove it to re-download\n' "$src" "$got" "$SC_SHA256" >&2
-    exit 3
-  fi
-  [ "$src" = "$tar" ] || mv "$src" "$tar"
-  tar -xJf "$tar" -C "$WORK"
-  PATH="$WORK/shellcheck-${SC_VER}:$PATH"
-  printf 'ci-local: %s\n' "$(shellcheck --version | grep '^version:')"
-}
+# --changed runs no workflow step: the lints of the change, after the same host-budget gate.
+if [ "$CHANGED" -eq 1 ]; then run_changed; exit $?; fi
 
 selected=()
 for i in "${!NAMES[@]}"; do
@@ -173,6 +170,9 @@ for i in "${!NAMES[@]}"; do
 done
 for i in "${selected[@]}"; do
   if grep -q shellcheck <<< "${BODIES[$i]}"; then provision_shellcheck; break; fi
+done
+for i in "${selected[@]}"; do
+  if grep -qE '(^|[;&|[:space:]])bats[[:space:]]' <<< "${BODIES[$i]}"; then provision_bats "$(bats_install_body)"; break; fi
 done
 
 BATS_ALL='bats tests/*.bats' BATS_CI_J='bats -j 4 --no-parallelize-within-files '

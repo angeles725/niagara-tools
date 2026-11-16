@@ -14,6 +14,11 @@ const (
 	folded   = "<!-- review-status: folded -->\n# demo\n"
 	noRetro  = "pre-push: build-relevant kit files changed without a ledger.d/ fragment (or a BUILD-STATE.src.md edit) + a pending retro,\n" +
 		"          and no 'Retro: none (trivial: <reason>)' trailer.\n" +
+		"          retros are read only from build-n4-module-kit/retros/ and fragments only from build-n4-module-kit/ledger.d/\n" +
+		"          (a retro or ledger elsewhere, such as a repository-level retros/, does not count). Two ways out:\n" +
+		"          (1) a pending retro under build-n4-module-kit/retros/ plus a build-n4-module-kit/ledger.d/ fragment\n" +
+		"              (or a BUILD-STATE.src.md edit), or\n" +
+		"          (2) a 'Retro: none (trivial: <reason>)' trailer in a commit of the range.\n" +
 		"          See BUILD-LOOP.md §7.\n" +
 		"pre-push: refused refs/heads/x -> refs/heads/x (exit 1)\n"
 	promotion = "\n\nRetro: promotion (folds demo Δ1)"

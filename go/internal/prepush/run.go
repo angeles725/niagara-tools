@@ -7,8 +7,9 @@
 //
 //  1. the client-identifier guard, on the whole stdin (clientguard.go);
 //  2. every ref line of stdin (refs.go), each through gateRef (gate.go): the pushed range (range.go),
-//     then the live-doctrine citation gate (livecite.go), the changelog gate (go/internal/changelog,
-//     in process) and the retro gate (retro.go) with its content half (sweep.go).
+//     then the live-doctrine citation gate (livecite.go), the CI lints of the changed files (cilints.go,
+//     the pushed tree's scripts/ci-local.sh --changed), the changelog gate (go/internal/changelog, in
+//     process) and the retro gate (retro.go) with its content half (sweep.go).
 //
 // The first ref that fails stops the push with its status. paths.go holds every path class and trailer
 // pattern as data, messages.go every line the hook prints, git.go the one place git is started.

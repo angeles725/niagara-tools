@@ -31,7 +31,6 @@
 271 internal/storedrepack/storedrepack.go
 268 internal/buildstatefields/buildstatefields.go
 267 internal/newretro/newretro.go
-265 internal/hostbudget/hostbudget.go
 264 internal/ktssrc/ktssrc.go
 255 internal/lint/rules/structure/module.go
 250 internal/mcpn4/box/load.go

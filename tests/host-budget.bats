@@ -69,6 +69,20 @@ hb() {
   [[ "$output" == *" disk:/ "* ]]
 }
 
+@test "HB5b: --disk-min-free replaces the percent: a floor no disk reaches FAILs naming it, a 1-byte floor PASSes" {
+  # Mutation: HB5b -- ignoring --disk-min-free leaves --disk-pct 100 deciding, and the impossible floor passes.
+  # (retro 2026-11-15 coordination-stretch T2)
+  hb cg-calm --disk-min-free 999999T
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL disk:$BATS_TEST_TMPDIR "*"% used, "*" bytes, fail below 999999000.0GB free)"* ]]
+  hb cg-calm --disk-min-free 1
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS disk:$BATS_TEST_TMPDIR "*"GB free = "* ]]
+  hb cg-calm --disk-min-free 0
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"--disk-min-free"* ]]
+}
+
 @test "HB6: an unreadable cgroup root and a usage error exit 3" {
   hb no-such-root
   [ "$status" -eq 3 ]

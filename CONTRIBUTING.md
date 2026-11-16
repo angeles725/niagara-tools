@@ -255,6 +255,20 @@ Before `git commit`:
 - [ ] Or replay the whole CI job: `scripts/ci-local.sh -j 3` runs every `ci.yml` step under GitHub's `bash -e` (no
       pipefail) with the pinned shellcheck v0.10.0 from a sha256-checked cache; a newer local shellcheck misses or
       adds findings (0.11 missed SC2015, adds SC2329). `--list` shows each step as RUN or SKIP. `[ev: retro ci-local-replay]`
+      A step that runs bats runs the bats-core version ci.yml's install step pins (1.10.0; fetched sha256-checked into
+      the same cache when the bats on PATH is another version): 1.10 refuses a here-document line that starts with
+      the test keyword (`Duplicate test name(s)`), which 1.14 accepts. Its host-budget gate fails `/` or `/mnt/c`
+      above 95% used (`--disk-pct 95`; the user's rule of 2026-11-16); each disk row names the percent, the free
+      bytes and the limit. host-budget also takes a free-space floor, `--disk-min-free <size>`, unused by default.
+- [ ] Before a push, `scripts/ci-local.sh --changed` runs the pinned shellcheck (over CI's whole shellcheck file
+      set as the change leaves it, when one of its files changed: a sourced lib is read with its sourcer), the kit's bats lints
+      (lint-bats-errexit, the BEX-kit case, and `ci-steps lint-bats-heredoc`) and `gofmt -l` over the files changed
+      against origin/main, work tree and untracked files included; `--range <from>..<to>` reads a commit range
+      instead. The pre-push gate runs it on every pushed range (§ 6.1). A fixture written through a here-document
+      spells its cases with a placeholder: `sed 's/^%test /@test /' > f <<'SH'`.
+- [ ] `tests/preflight.bats` puts a stub `lsof` first on PATH in `setup()`: the host `lsof -Fn` takes about 25 s per
+      call on WSL and put the file over 600 s serially (now about 15 s). Only the jar-lock cases script an `lsof`,
+      each with its own narrowed PATH. `bats -j <n>` spreads the rest (GNU parallel needed, see above).
 - [ ] No `exit` inside a function whose output is captured with `$( )`: it leaves only the subshell, so the
       script goes on (install-skill.sh installed on two empty digests; lint-timers' `$(perms_grant)` exited 3 and
       the lint exited 0). Split a fatal helper into a top-level check (`require_x <prefix> || exit N`) and a pure
@@ -304,6 +318,13 @@ Retro citation tags name the retro by its stem, the filename without the `YYYY-M
 `[ev: retro <stem> Δn]` and `[deferred: retro <stem> Δn]`. `toolbelt/sweep-fold-audit.sh` matches the stem
 exactly (header lines 13-15 and 22; `go/internal/foldaudit` `stem`), so the dated form is silently not counted.
 `[ev: retro truth-audit Δ4]`
+
+Every pushed range also goes through the pushed tree's `scripts/ci-local.sh --changed --range <range>` (§ 6), after
+the live-doctrine citation gate and before the changelog gate (`go/internal/prepush` `cilints.go`): a lint finding,
+a tool that cannot be provisioned or the host-budget gate refuses the push with that status. A tree without the
+script skips the step in one named line. The retro refusal names where it reads: retros only under
+`build-n4-module-kit/retros/`, fragments only under `build-n4-module-kit/ledger.d/` (a repository-level `retros/` does
+not count), and its two ways out.
 
 Before any of that, the hook runs the **client-identifier guard**: niagara-go's `client-guard` gets the
 hook arguments and the whole pre-push stdin and refuses a push whose added lines or commit messages match the
@@ -391,6 +412,17 @@ live-doctrine citation gate and before the retro exits, so a `Retro: none (trivi
   merging any other head merges unreviewed code. Incident 2026-10-22: a helper piped `git push` through
   `grep | tail`, a rejected non-fast-forward push looked successful, and PR #346 merged the stale remote head, WIP
   commit 79ca5a2, with CI green. `[ev: retro truth-audit Δ5]`
+- **Merge with `scripts/merge-when-green.sh <pr> [--rebase|--squash|--merge]`** (default `--rebase`), never a
+  hand-written wait loop. It refuses a draft (exit 4) and a branch that lacks the current base (exit 5: rebase,
+  push, run it again), waits for the check runs of the exact head commit (a head that moves while it waits is
+  exit 6), re-runs once a check that failed on a transient download error (a 429, a 5xx, a reset connection),
+  reports any other failed check with the last lines of its log (exit 1), and merges with
+  `gh pr merge --match-head-commit <sha>`. Every gh error is printed and a network error (`dial tcp ...: network
+  is unreachable`) is retried up to `--retries` (3) times; after the merge call the PR state decides: MERGED at the
+  checked head is exit 0 with its merge commit, whatever the call returned (8 when it is still open, 7 on
+  timeout). It runs under bash and zsh.
+  Open pull requests as ready, not draft: CI runs on drafts too, so a defect only CI's pinned tools catch shows up
+  before the merge turn.
 - **Gate the whole landing range.** Before it pushes, a landing script checks review coverage of every non-merge
   commit in `origin/main..<branch>`, not only the SHAs passed on this call: each one has an acknowledged review run,
   or is declared unreviewed and named in the PR body. A review-only mode may review without pushing. A commit
