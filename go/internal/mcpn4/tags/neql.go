@@ -47,16 +47,36 @@ func ValidateSelect(query any) (string, error) {
 		return "", &pyjson.ValueError{Msg: "bql must be a string such as select slotPath, out.value"}
 	}
 	q = bql.Strip(q)
+	decoded, err := bql.DecodeForBql(q) // BqlQuery.make decodes $xx before it parses
+	if err != nil {
+		return "", &pyjson.ValueError{Msg: "bql holds a malformed $ escape ('$' must start $xx or $uxxxx with hex digits)"}
+	}
+	// The decoded text keeps the from and length rules; a decoded '|' or control character is
+	// data (the ORD is split before BqlQuery.make decodes), so only the raw text is checked for them.
+	switch lowerDecoded := strings.ToLower(decoded); {
+	case strings.Contains(lowerDecoded, " from "):
+		return "", &pyjson.ValueError{Msg: "bql runs on the NEQL matches: give its columns only, no from clause"}
+	case pyjson.Len(decoded) > bql.MaxQueryLength:
+		return "", &pyjson.ValueError{Msg: "bql is longer than 2000 characters"}
+	}
+	if err := checkSelect(q); err != nil {
+		return "", err
+	}
+	return q, nil
+}
+
+// checkSelect is ValidateSelect's grammar on the raw text.
+func checkSelect(q string) error {
 	lower := strings.ToLower(q)
 	switch {
 	case !strings.HasPrefix(lower, "select "):
-		return "", &pyjson.ValueError{Msg: "bql must be one select of columns, e.g. select slotPath, out.value"}
+		return &pyjson.ValueError{Msg: "bql must be one select of columns, e.g. select slotPath, out.value"}
 	case strings.Contains(lower, " from "):
-		return "", &pyjson.ValueError{Msg: "bql runs on the NEQL matches: give its columns only, no from clause"}
+		return &pyjson.ValueError{Msg: "bql runs on the NEQL matches: give its columns only, no from clause"}
 	case strings.Contains(q, "|"), bql.StripControl(q) != q:
-		return "", &pyjson.ValueError{Msg: "bql must not contain '|' or control characters"}
+		return &pyjson.ValueError{Msg: "bql must not contain '|' or control characters"}
 	case pyjson.Len(q) > bql.MaxQueryLength:
-		return "", &pyjson.ValueError{Msg: "bql is longer than 2000 characters"}
+		return &pyjson.ValueError{Msg: "bql is longer than 2000 characters"}
 	}
-	return q, nil
+	return nil
 }

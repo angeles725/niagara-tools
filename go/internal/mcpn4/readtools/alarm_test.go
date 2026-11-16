@@ -26,7 +26,8 @@ func TestReadAlarmsDefaultsToOpenAlarmsNewestFirst(t *testing.T) {
 	first := pyjson.Repr(rows[0].(*pyjson.Object))
 	if first != "{'timestamp': '15 nov 2026 18:60:58 CST', 'uuid': 'aa110470-0000-0000-0000-000000000060', "+
 		"'source': 'local:|station:|slot:/Drivers/Net/D60', 'source_state': 'Offnormal', 'ack_state': 'Unacked', "+
-		"'alarm_class': 'defaultAlarmClass', 'priority': '255', 'msg_text': 'Ping Failed, retry'}" {
+		"'alarm_class': 'defaultAlarmClass', 'priority': '255', 'msg_text': 'Ping Failed, retry', "+
+		"'timestamp_iso': '2026-11-15T18:60:58.000-06:00', 'normal_time': None, 'ack_time': '2026-11-15T19:60:00.000-06:00'}" {
 		t.Errorf("newest row %s", first)
 	}
 	if field(out, "order") != "newest_first" || field(out, "where") != alarmOpen {

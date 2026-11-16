@@ -15,8 +15,13 @@ import (
 // The fixed history queries: the records newest first, and their count.
 const (
 	HistoryRecordsQuery = "select timestamp, value, status order by timestamp desc"
-	HistoryCountQuery   = "select count(*)"
-	HistoryScheme       = "history:"
+	// HistorySummaryQuery reads every record of the range with machine-encoded time and value
+	// (encodeToString: ISO-8601 with the station's offset, 21.0 not a localized "21,0").
+	HistorySummaryQuery = "select timestamp.encodeToString, value.encodeToString, status order by timestamp desc"
+	// HistoryAggregateQuery is the whole-range min and max as the station renders them.
+	HistoryAggregateQuery = "select min(value), max(value)"
+	HistoryCountQuery     = "select count(*)"
+	HistoryScheme         = "history:"
 )
 
 // HistoryPeriods are the period ids BDynamicTimeRange.make accepts (bql-rt BDynamicTimeRange
@@ -41,8 +46,11 @@ const (
 		"name (a letter, then letters, digits or '_', other characters $-escaped as $20 or $u00e9), " +
 		"the name at most %d characters, got %s"
 	periodRule = "period must be one of %s, got %q"
-	timeRule   = "%s must be a BAbsTime such as 2026-11-15T00:00:00.000-06:00 or 2026-11-15T06:00:00Z, got %q"
+	timeRule   = "%s must be a BAbsTime such as 2026-11-15T00:00:00.000-06:00 or 2026-11-15T06:00:00Z, or a span back from now such as 30m, 24h or 7d, got %q"
 	rangeRule  = "give either period or start/end, not both"
+	orderRule  = "start must not be later than end"
+	nameRule   = "history_id must be /<station>/<history name>, or a bare history name of the connected station " +
+		"(a Niagara slot name: a letter, then letters, digits or '_', other characters $-escaped; at most %d characters), got %s"
 )
 
 // ValidateHistoryId is nil when id is /<device>/<name> as BHistoryId.make parses it, both
@@ -54,6 +62,19 @@ func ValidateHistoryId(id string) error {
 		return valueError(fmt.Sprintf(historyIdRule, MaxHistoryNameLength, pyjson.StrRepr(id)))
 	}
 	return nil
+}
+
+// ResolveHistoryId is id when it holds a '/', else the bare history name id of station as
+// /<station>/<id>; a bare name that is not a slot name is refused naming the caller's text.
+func ResolveHistoryId(id, station string) (string, error) {
+	if id == "" || strings.Contains(id, "/") {
+		return id, ValidateHistoryId(id)
+	}
+	if !slotNameRe.MatchString(id) || len(id) > MaxHistoryNameLength {
+		return "", valueError(fmt.Sprintf(nameRule, MaxHistoryNameLength, pyjson.StrRepr(id)))
+	}
+	full := "/" + station + "/" + id
+	return full, ValidateHistoryId(full)
 }
 
 // HistoryParams is the HistoryQuery parameter string of a period or a start/end range ("" for
@@ -71,14 +92,20 @@ func HistoryParams(period, start, end string) (string, error) {
 		return "", valueError(fmt.Sprintf(periodRule, strings.Join(HistoryPeriods, ", "), period))
 	}
 	var params []string
-	for _, b := range [][2]string{{"start", start}, {"end", end}} {
+	var bounds [2]int64
+	for i, b := range [][2]string{{"start", start}, {"end", end}} {
 		if b[1] == "" {
 			continue
 		}
-		if !absTimeRe.MatchString(b[1]) {
+		at, ms, ok := ResolveTime(b[1])
+		if !ok {
 			return "", valueError(fmt.Sprintf(timeRule, b[0], b[1]))
 		}
-		params = append(params, b[0]+"="+b[1])
+		bounds[i] = ms
+		params = append(params, b[0]+"="+at)
+	}
+	if start != "" && end != "" && bounds[0] > bounds[1] {
+		return "", valueError(orderRule)
 	}
 	return strings.Join(params, ";"), nil
 }
