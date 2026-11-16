@@ -373,6 +373,9 @@ encoded too. `[ev: corpus B1418 §1418.1]` `[ev: retro course-recordings Δ6]`
 
 ## 5 · Licensing your own module
 
+Where a service sits in the station, when the check runs in its start sequence and how to test a service:
+`types/service.md` § 4-6.
+
 `BILicensed` is the interface to implement when a module requires a Niagara license
 feature. Call `feature.check()` in `serviceStarted()` so the station reports a clear
 fault immediately if the license is absent, rather than silently allowing unlicensed
