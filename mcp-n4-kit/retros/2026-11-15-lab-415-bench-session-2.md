@@ -1,0 +1,52 @@
+<!-- review-status: pending -->
+<!-- Marker lifecycle: the maintainer flips 'pending' above to 'folded <date> · kit <sha>' once the proposed deltas are reviewed and applied (or dismissed) in the kit. Rows are marked APPLIED with their commit as each one lands, under the operator's standing instruction for this bench. -->
+# Retro — lab-415 · 2026-11-15 · second mcp-n4 bench session on a laboratory station
+
+> Written by hand from two sources of the same day: a broad campaign run by a bench agent (127 `n4call` sessions,
+> 44 s of tool time, every tool of the registry, scratch folder removed afterwards) and the coordinator's own
+> runs (set-flags proof, wire-sheet proof, timings). Finding ids F1-F14 are the campaign's; W1-W4 are the
+> coordinator's. "Observed" means read from a tool reply, a read-back or the saved `config.bog`.
+
+## Session summary
+
+- Station: a laboratory station on Niagara 4.15.6.20 (tier B opt-in); the operator authorized every write.
+- Coverage: 25 component types created from eleven palettes; a control loop wired and exercised; history
+  extensions; an alarm raised through an out-of-range extension; ad hoc tags; every audit tool; copies; 49
+  refusal probes.
+- Speed: connect 0.16 s; connect plus eight reads, a navigate and an inventory 1.37 s; connect plus one dry run
+  0.26 s. No tool is slow. The cost of a task is its number of calls: area 1 (palette components) took 56 calls,
+  about 40 of which one batch-create call would replace; eight flag and annotation writes took 18 requests.
+- Refusals that behaved as documented: write scope, chained ORD, every confirmation-token case, wrong value
+  type, and the rollback of a batch already rolled back, unknown, in doubt, or whose slot changed later.
+- Left on the station: four unacknowledged alarms in the default alarm class and about nine histories in the
+  history database, which no tool can remove (deltas 10 and 8); a folder `WsDemo` kept on purpose for a person
+  to look at in Workbench.
+
+## Proposed kit deltas
+
+| # | Proposed change | Target (file · section) | Evidence (batch_id / tool call / audit line) | Type | Priority |
+|---|---|---|---|---|---|
+| 1 | `n4_rollback` of a batch that CREATED a component refuses, or lists and asks for an explicit acknowledgement, when later batches added anything under that component. Today the plan is one remove op and the verdict is `verified` with an empty inverse | `go/internal/mcpn4/writeops/rollback.go` · `README.md · Writing safely` | F1, observed: rolling back the create of a folder removed it with 10 blocks, their history extensions and 6 links that later batches had added; a set-slot rollback in the same state does refuse | tool | high: unrecoverable loss reported as success |
+| 2 | Copy, remove snapshot and rollback carry the `out` value of constant blocks (`kitControl:NumericConst` and its siblings), and the read-back compares the source value, so a dropped value can never read `verified` | `go/internal/mcpn4/writeops/copy_strip.go` · `rollback_readback.go` | F2, observed: a copy of a NumericConst with `out=10.0` had no `out` in the plan, the notes or the saved `config.bog`, verdict `verified`, `differences: []`; remove then rollback gave `restored: true`, `verified`, with `out` back at 0, two links gone and a downstream output changed from 109 to 99 | tool | high: wrong control value reported as success |
+| 3 | `n4_remove_component` scans for links into the component by default and refuses unless the caller acknowledges the list; `link_scan_ord` narrows the scan instead of enabling it | `go/internal/mcpn4/writeops/remove.go` | F3, observed: removing a link source without `link_scan_ord` executed; the broken links were a generic note | tool | high |
+| 4 | An explicit station refusal is recorded as `refused` with the station's text decoded, not as `in-doubt`; the dry run checks what it can before the token is issued: the type exists, the parent accepts it, the name is free, both link slots exist, no duplicate link | `go/internal/mcpn4/writeops` (journal verdict) · `plan` | F4, observed: 17 of 103 batches were `in-doubt` for `Illegal parent`, `Slot ... already exists`, `Duplicate link already exists`, `Could not find Source Slot`; HTML entities leaked into the message; an unknown type gave only "Unable to process request" | tool | medium |
+| 5 | `n4_read_slots` decodes a `baja:Status` slot: its flags by name, and `status_ok` false when any is set | `go/internal/mcpn4/readtools/readslots.go` | F5, observed: a slot showing `{fault}` or `{alarm,unackedAlarm}` returned `value: null, status: "0", status_ok: true` | tool | high: a faulted point reads as healthy |
+| 6 | `n4_inventory` resolves networks by type under any base, never by position | `go/internal/mcpn4/bql` (inventory) | F6, observed: with a base two levels above the driver container, five networks collapsed into one typed NiagaraNetwork, two plain folders were listed as networks and the local Lon device was `local: false`; with the driver container as base the result was right | tool | medium |
+| 7 | `n4_add_history` picks the extension type from the point type, names it after that type, refuses a second extension that would repeat a history id, and computes the capacity note from the real interval | `go/internal/mcpn4/writeops/history.go` | F7, observed: a duplicate pattern was `verified` while the extension sat in fault "Duplicate history id"; the default type on a boolean point failed only at execute; a boolean extension was named `NumericInterval`; the note said "41 h at 5 min" for a 100 ms interval | tool | medium |
+| 8 | Histories: change-of-value extensions and a capacity argument in `n4_add_history`; a read tool for history records | `go/internal/mcpn4/writeops/history.go` · new read tool | F8, observed: a COV extension took 3 calls per point by hand; records were refused ("base must be a plain slot path"); capacity was not settable in three encodings tried | tool | medium |
+| 9 | `n4_invoke_action`: allow `override` and `emergencyOverride` with a duration and `auto`; make `active`/`inactive` work on a boolean writable; state the workaround in the refusal until then | `go/internal/mcpn4/writeops` (invoke allow-list) | F9, observed: both override actions refused by the allow-list; `active` and `inactive` failed with "station error" and an `in-doubt` batch; `set` on a NumericConst refused "cannot tell the previous fallback" | tool | medium |
+| 10 | Alarms: a tool that adds an alarm extension with its algorithm configured in one call, creation of an alarm class under the alarm service, a read of alarm records and an acknowledge | new write and read tools · `skill/SKILL.md` | F10, observed: no alarm class could be created under a folder (not tried under the alarm service); no record query, no acknowledge. A route that works today and is not documented: `n4_set_slot` on `offnormalAlgorithm` with `baja:Simple`, `simple_type` `alarm:OutOfRangeAlgorithm` and an empty value swaps the algorithm, then the limits are set; the point went to High Limit | tool | medium |
+| 11 | Tags: accept dictionary tag names (`n:point`, escaped `n$3apoint`) where a slot name is checked, document the marker and value tag recipe, and allow a NEQL query | `go/internal/mcpn4/ord` (slot name rule) · `bql` · `skill/SKILL.md` | F11, observed: both name forms refused ("plain slot name"); NEQL refused; only ad hoc names worked, through `n4_create_component` with `baja:Marker` or `baja:String` | tool | medium |
+| 12 | `n4_copy_component`: options to copy the links internal to the copied subtree and to leave history extensions enabled; the two losses move to the top of the plan notes | `go/internal/mcpn4/writeops/copy_tree.go` | F12, observed: internal links not copied and history extensions disabled, both named in the notes among 26 items | tool | low |
+| 13 | `n4_navigate` type filter matches subtypes | `go/internal/mcpn4/readtools/navigate.go` | F13, observed: `types: ["history:HistoryExt"]` matched 0, the concrete type matched 12 | tool | low |
+| 14 | Wording left from the retired Python server: `--help` still shows the Python module invocation, the retro draft cites a Python file of the old server, a remove note prints "(None <- None)"; `n4_find_dangling_outputs` lists terminal points and calendar schedules as dangling | `go/internal/mcpn4/cli` · `retro` · `writeops` · `readtools/links.go` | F14, observed | wording | low |
+| 15 | `n4_set_flags` takes `add` and `remove` as an alternative to the full set, so adding one flag cannot drop another | `go/internal/mcpn4/writeops/setflags.go` | W1, observed: adding `s` to a frozen slot that held `r` with `flags: "s"` removed `r`; repaired by hand to `rs` | tool | medium |
+| 16 | A batch write tool: an ordered list of existing write operations, one dry run, one confirmation token over the whole list, one execute, one journal batch whose inverse is the reverse of what was applied, a verdict per operation | new tool over the existing plans | W2 and the campaign's area 1: 56 calls for 25 components; 18 requests for 8 writes | tool | high: it is the speed of every MCP task |
+| 17 | A wire-sheet tool that moves and resizes one or many blocks from `{x, y, w}`; the caller needs no type names | new tool | W3, observed: resizing a block needs `n4_set_slot` with `value_type` `baja:Simple` and `simple_type` `baja:WsAnnotation`; widths 20 and 4 and positions were written, read back `verified` and found in `config.bog`; the rows a block shows are its SUMMARY-flagged slots (bajadoc `javax.baja.sys.Flags`) and its height follows from them | tool | low |
+| 18 | The skill says which results only a person can confirm (what a wire sheet or a Px page draws) and asks the operator for that look instead of reporting it as verified | `skill/SKILL.md` · `METHODOLOGY.md` section 2 | W4: every wire-sheet write was verified in `config.bog`; none could be seen | doctrine | low |
+| 19 | `n4call` refuses a calls file that holds a destructive tool unless `--allow-destructive` is given, and says on stderr whether the run is dry-run-only | `go/cmd/mcp-n4/n4call` | F1's cause, observed: a wrapper dropped `--dry-run-only` and a planned dry run of a rollback executed | tool | medium |
+
+## Already covered (dedupe)
+
+- Refusals of scope, tokens, value types and stale rollbacks: all behaved as `README.md · Writing safely` says.
+- The first bench retro's delta 10 (a contract walk ending at an undescribed type) stays open there.
