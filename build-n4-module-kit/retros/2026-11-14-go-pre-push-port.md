@@ -29,10 +29,10 @@ client denylist that cannot be examined now refuses); four gaps stay open.
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | A failing `git rev-parse --show-toplevel` refuses the push with the git error, except in a bare repository, which is named in a one-line notice; both cases are tested | `go/internal/prepush/run.go` · `CONTRIBUTING.md` push gates | `[ev: 0b88574f]` |
-| Δ2 | The promotion exit compares the header flip with rename detection off (`--no-renames`), so only a flip inside the same path counts; RED test: delete a pending retro, add a similar folded one | `go/internal/prepush/retro.go` (promotion) | `[ev: 0b88574f]` |
-| Δ3 | The live-doctrine set has one home: delete `scripts/lib/live-doctrine-set.sh` and its pin test once no shell caller remains, keeping the Go data | `scripts/lib/live-doctrine-set.sh` · `go/internal/prepush/paths.go` | `[ev: 337512d4]` APPLIED |
-| Δ4 | Comments and test titles that describe the hook as bash (`pass_early`, "the bash hook") are reworded to the Go gate | `scripts/changelog-gate.sh` · `tests/build-retro-sync.bats` · `tests/changelog-gate.bats` | `[ev: 337512d4]` |
+| Δ1 | APPLIED 2026-11-14 (0d7fba74). A failing `git rev-parse --show-toplevel` refuses the push with the git error, except in a bare repository, which is named in a one-line notice; both cases are tested | `go/internal/prepush/run.go` · `CONTRIBUTING.md` push gates | `[ev: 0b88574f]` |
+| Δ2 | APPLIED 2026-11-14 (0594378a). The promotion exit compares the header flip with rename detection off (`--no-renames`), so only a flip inside the same path counts; RED test: delete a pending retro, add a similar folded one | `go/internal/prepush/retro.go` (promotion) | `[ev: 0b88574f]` |
+| Δ3 | APPLIED 2026-11-14 (f3962851). The live-doctrine set has one home: delete `scripts/lib/live-doctrine-set.sh` and its pin test once no shell caller remains, keeping the Go data | `scripts/lib/live-doctrine-set.sh` · `go/internal/prepush/paths.go` | `[ev: 337512d4]` APPLIED |
+| Δ4 | APPLIED (found on main 2026-11-15; no `pass_early` or "the bash hook" left in `scripts/changelog-gate.sh`, `tests/build-retro-sync.bats`, `tests/changelog-gate.bats`). Comments and test titles that describe the hook as bash (`pass_early`, "the bash hook") are reworded to the Go gate | `scripts/changelog-gate.sh` · `tests/build-retro-sync.bats` · `tests/changelog-gate.bats` | `[ev: 337512d4]` |
 
 ## Lessons
 - Write the decision table before porting a gate; the table is what the differential and the mutation proofs
