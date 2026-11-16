@@ -627,3 +627,150 @@ serves many unminified files where one built file is meant to save network traff
 guide page), and in webdev mode the BajaScript bundles are sent `no-cache` instead of the long production cache lifetime `[ev: corpus B29 §29.11.3]`.
 A release check: `etc/moduledev.properties` and `etc/webdev.properties` absent or empty, and no `niagara.module.dev`
 key in `system.properties`.
+
+## Hx view authoring — `BHxView` `[ev: corpus B433]`
+
+Source: [CERT-doc] the Hx pages of the developer guide, `niagara-help/versions/4.15.6.20/devguide-clean/hx-hxView.txt`,
+`hx-hxOp.txt`, `hx-events.txt`, `hx-dialogs.txt`, `hx-hxProfile.txt`, `hx-theming.txt` (under niagara-research); the
+4.14.0.162 code behind them is corpus B433.
+
+**When to use.** Hx is the classic server-rendered web framework and is maintained but legacy: several profile
+methods are deprecated and deprecated Hx views sort last in the view list `[ev: corpus B433 §433.7]`. Write new
+browser UI as a bajaux view or a servlet-SPA (`types/dashboard.md`). An Hx view is still the right tool in two
+cases: (1) a Workbench view or a Px widget of yours must also open in a browser that runs an Hx profile, and a
+small form is enough; (2) you extend a module that is already Hx. Hx needs no JavaScript build and no client state.
+
+**Minimal skeleton** (a form over one component; the framework's own Hx classes ship in a `-wb` part, `hx-wb`):
+
+```java
+@NiagaraType(agent = @AgentOn(types = "myMod:Foo"))
+@NiagaraSingleton
+public final class BFooHxView extends BHxView {
+  // @NiagaraSingleton makes Slot-o-Matic emit INSTANCE next to TYPE (devguide slot-o-matic)
+  private BFooHxView() {}
+
+  @Override
+  public void write(HxOp op) throws Exception {            // GET: emit only this view's markup
+    BFoo foo = (BFoo) op.get();
+    HtmlWriter out = op.getHtmlWriter();
+    out.w("<input type='text' name='").w(op.scope("label")).w("' value='").safe(foo.getLabel()).w("'/>");
+    out.w("<input type='button' value='Save' onclick='hx.save()'/>");
+  }
+
+  @Override
+  public BObject save(HxOp op) throws Exception {          // POST: read the form, change the target
+    BFoo foo = (BFoo) op.get();
+    foo.setLabel(op.getFormValue("label"));
+    return foo;
+  }
+}
+```
+
+The four callbacks: `write` renders (the counterpart of `doLoadValue`), `save` stores a form post and is followed
+by a redirect to a GET, `update` answers the periodic background poll and must return executable JavaScript,
+`process` answers one targeted background request and routes events.
+
+**Pitfalls.**
+
+- **The view is a singleton serving every request: keep no state in fields.** Per-request state is in the `HxOp`;
+  what must survive a request goes on the component or in the session. `[ev: corpus B433 §433.6]`
+- **Always `op.scope("name")` for a form control's `name`,** and read it back with `op.getFormValue("name")`; that
+  is what lets views nest without name clashes.
+- **One `HxOp` per view, created in the same order every time.** A composite view makes a sub-op with `op.make(…)`
+  for each child and must route `write`, `save`, `update` and `process` to it in the same order; auto-generated op
+  names are counters, so a different order in `save` than in `write` resolves the wrong control.
+- **Never write `<html>`, `<head>`, `<body>` or a `<form>`:** the profile writes the page and its single form. Do not
+  write `<script>` either: use `op.addOnload(code)`, or the view breaks when reused inside a dialog.
+- **Escape every value you write.** The view emits raw HTML: a component name or string slot written unescaped is a
+  stored script injection. `HtmlWriter.safe(value)` escapes it and `attr(name, value)` writes an escaped attribute
+  (`javax.baja.io.HtmlWriter`, original source of 4.14.0.162); lexicon text goes through `getHtmlSafeText`
+  (`types/security.md` § 4.3).
+- **The CSRF token is the profile's.** It is written into the page's form and checked on POST
+  `[ev: corpus B433 §433.3]`; a hand-made request from your own script that bypasses `hx.save()` / `hx.fireEvent()`
+  loses it.
+- **Live values are polled, not pushed:** a view opts in with `op.setDynamic()` in `write`; the browser then calls
+  `update` on every view of the page, every 5 s by default. Keep `update` cheap and idempotent.
+  `[ev: corpus B433 §433.6]`
+- **If you override `process`, call `super.process(op)`,** or events and commands stop routing.
+- **Events and commands** run on the server and answer with JavaScript; a `javax.baja.hx.Command` is a
+  user-triggered event with a display name. It is not `javax.baja.ui.Command` (§ Commands above): import the right
+  one. A modal dialog is a `javax.baja.hx.Dialog` opened from a command, whose `handle` first opens it and on submit
+  reads the form.
+- **File upload** needs `op.setMultiPartForm()` in `write`; `op.getFile(name)` in `save` returns a temporary file
+  that is deleted at the end of the request unless you move it. Validate the destination as for any client input
+  (`types/security.md` § 4.2).
+- **Registering for a Workbench view or a Px widget:** make the Hx view an agent **on the `BWbView` type** (then the
+  same `view:` ORD opens in both environments) or, for a Px widget, subclass `BHxPxWidget` and register on the
+  widget type; there `op.get()` is the widget, already mounted with its bindings active.
+- **Styling:** put the framework's default class first in the `class` list and your own after it, avoid inline
+  `style`, and let the theme's `hx/theme.css` restyle it (`types/theme.md` § 8).
+- **A custom `BHxProfile`** overrides the page chrome through its hooks (`doBody`, `updateDocument`,
+  `processDocument`, `saveDocument`) and must create the ops in the same order in all of them.
+
+## Custom-painted Workbench widget — `BWidget.paint` `[ev: corpus B427]`
+
+Source: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/bajaui.txt`, `gx.txt` and `workbench.txt` (under
+niagara-research); code model: corpus B427.
+
+**When to use.** Only when no composition of shipped widgets shows the thing: a gauge, a diagram, a custom plot in
+a Workbench view or a Px page. Climb the ladder first (§ How much wb is enough): labels, panes and bindings cost no
+paint code, theme correctly and render through Hx for free. A custom-painted widget is Workbench-only unless you
+also write its `BHxPxWidget` (above) or a bajaux counterpart.
+
+**Minimal skeleton:**
+
+```java
+@NiagaraType
+@NiagaraProperty(name = "value", type = "double", defaultValue = "0")
+public class BLevelBar extends BWidget {
+  // slot code generated by Slot-o-Matic
+
+  @Override
+  public void computePreferredSize() { setPreferredSize(120, 16); }
+
+  @Override
+  public void paint(Graphics g) {                    // origin 0,0 = this widget's top-left; clip = its size
+    double w = getWidth(), h = getHeight();
+    g.setBrush(Theme.widget().getControlBackground(this));
+    g.fill(new RectGeom(0, 0, w, h));
+    g.setBrush(Theme.widget().getSelectionBackground(this));
+    g.fill(new RectGeom(0, 0, w * Math.max(0, Math.min(1, getValue())), h));
+  }
+
+  @Override
+  public void changed(Property p, Context cx) {
+    super.changed(p, cx);
+    if (p == value) repaint();
+  }
+}
+```
+
+**Pitfalls.**
+
+- **A widget is a `BComponent`.** Its configuration is slots (so the Px editor can set and bind them), it lives in
+  the widget tree, and its geometry is plain fields set by the parent's layout, not slots.
+  `[ev: corpus B427 §427.1-427.2]`
+- **Paint only through `javax.baja.gx`:** `fill` and `stroke` an `IGeom` with the current brush and pen,
+  `drawString`, `drawImage`. Never reach for `java.awt` from widget code: the same `paint` also renders to other
+  devices (the guide names PDF). `[ev: corpus B427 §427.3]`
+- **`push()` and `pop()` around any temporary clip, transform or brush change, with `pop()` in a `finally`.** A
+  missed `pop` corrupts the painting of every sibling drawn after you.
+- **Ask the theme for colours and fonts, passing `this`** (`types/theme.md` § 10). A literal `BColor` in `paint`
+  ignores every theme and is unreadable on a dark one.
+- **Never block or do I/O in `paint`,** and do not resolve ORDs there: it runs on the UI thread at every repaint.
+  Compute in `changed()` or in the binding, store the result, then `repaint()`.
+- **Size and layout:** set a preferred size in `computePreferredSize()`; a container positions its children in
+  `doLayout(children)` and paints them with `paintChild` / `paintChildren`; call `relayout()` when something that
+  affects size changed, `repaint()` when only the picture did.
+- **Input** arrives as `BMouseEvent`, `BKeyEvent` and `BFocusEvent` callbacks on the widget (`mousePressed(...)`
+  and the rest), in the widget's own coordinates.
+- **Data comes through bindings, not through code that reads the station.** A `BValueBinding` on the widget animates
+  any property from an ORD and brings status colouring and the right-click actions; a widget that fetches its own
+  data bypasses the binding taxonomy (§ PX authoring — binding taxonomy) and the fail-closed rule
+  (`types/security.md` § 2.3).
+- **Images load asynchronously:** paint an image through a `BLabel` where possible; a `BImage` used directly may not
+  be loaded yet at the first paint.
+- **Views and editors are widgets too.** A full view subclasses `BWbView` (or `BWbComponentView`) and implements
+  `doLoadValue` / `doSaveValue` with `setModified()`; a small value editor is a `BWbFieldEditor`. Both are covered
+  above; for a field editor that opens in a dialog or as a popup, and for forcing one with the `fieldEditor` facet,
+  see corpus B1086.
