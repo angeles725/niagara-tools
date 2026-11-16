@@ -77,10 +77,9 @@ _gen_state() {
   [ "$status" -eq 0 ]
 }
 
-@test "CLOSE-install-skill (SC5): the installed SKILL.md matches the tracked source (install-skill --dry-run exit 0)" {
+@test "CLOSE-install-skill (SC5): the tracked SKILL.md is installable (install-skill --dry-run exit 0 on a throwaway home)" {
   _close
-  [ -f "$HOME/.claude/skills/build-n4-module/SKILL.md" ] || skip "no installed skill copy on this machine"
-  run bash "$REPO/scripts/install-skill.sh" --dry-run
+  run bash "$REPO/scripts/install-skill.sh" --home "$BATS_TEST_TMPDIR/home" --dry-run
   [ "$status" -eq 0 ]
 }
 

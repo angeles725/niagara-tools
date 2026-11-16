@@ -75,6 +75,11 @@ already set. [ev: retro campaign11-client-root; openspec/changes/archive/2026-09
   Prove the guard through the command's interface with the data injected: an input, a fixture tree, or the table
   the command is built over (`go/internal/vendorfloor` `TestSharedMethodNameIsAnEnvFault` runs the command over a
   table that breaks the rule). Editing a FIXTURE the tool reads is data, not the tool. `[ev: retro go-lint-vendor-floor Δ2]`
+- **A bats case that runs a `--home` script passes `--home <throwaway dir>` or a `HOME=` override on that command.**
+  `scripts/install-skill.sh` and `scripts/check-skill-drift.sh` default to the real home of whoever runs the suite,
+  `--dry-run` and `--help` included. `tests/shell-hygiene.bats` SH2 fails on a case that runs one of them (by path or
+  through a variable assigned the path) with neither; a here-document body is not scanned.
+  `[ev: retro go-install-tools-port Δ3]`
 - **An observed mutation is a review-time proof, run by hand outside the suite; shape it so it neutralizes the guard
   and nothing else.** Neutralize a status check as
   `if ! { cmd || true; }; then` or by deleting its `had_err=1` / `exit 3` line — never `if ! cmd || true; then`, which

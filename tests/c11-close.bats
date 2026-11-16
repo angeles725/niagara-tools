@@ -88,7 +88,7 @@ _gen_state() {
 
 @test "CLOSE-kit-links: kit-links.bats all green" { _close; run bats "$REPO/tests/kit-links.bats"; [ "$status" -eq 0 ]; }
 
-@test "CLOSE-install-skill: install-skill --dry-run exit 0" { _close; run "$REPO/scripts/install-skill.sh" --dry-run; [ "$status" -eq 0 ]; }
+@test "CLOSE-install-skill: install-skill --dry-run exit 0" { _close; run "$REPO/scripts/install-skill.sh" --home "$BATS_TEST_TMPDIR/home" --dry-run; [ "$status" -eq 0 ]; }
 
 @test "CLOSE-shellcheck: shellcheck exit 0 over toolbelt + scripts" {
   _close

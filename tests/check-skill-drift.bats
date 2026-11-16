@@ -87,7 +87,7 @@ _install() { "$REPO/scripts/install-skill.sh" --home "$H" "$@" >/dev/null; }
 }
 
 @test "SD9: --help prints the header only, never a code line" {
-  run "$SD" --help
+  run env HOME="$H" "$SD" --help
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c 'set -u')" -eq 0 ]
 }

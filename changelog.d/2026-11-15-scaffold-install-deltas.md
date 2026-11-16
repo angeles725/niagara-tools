@@ -26,3 +26,10 @@
   remains before the command runs is the Go one (`<tool>: go is not on PATH; it is needed to build <bin>` when the
   command has to be built). `scripts/lib/sha256.sh` stays for its one caller, `scripts/ci-local.sh`. Retro
   `2026-11-14-go-install-tools-port` Δ1.
+
+### Fixed — the close bats no longer run install-skill against the real home
+
+- `tests/c8-close.bats` to `tests/c11-close.bats` run `install-skill.sh --dry-run` with `--home` on the case's
+  temporary directory; the c8 and c9 cases no longer read `$HOME/.claude/skills` to decide whether to skip.
+  `tests/shell-hygiene.bats` SH2 fails on a bats case that runs a script taking `--home` with neither `--home` nor a
+  `HOME=` override on the command. Retro `2026-11-14-go-install-tools-port` Δ3.

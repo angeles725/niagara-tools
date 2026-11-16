@@ -306,5 +306,5 @@ make_tree() {
   run env HOME=/nonexistent PATH="$BIN" /bin/bash "$SCRIPT" --home "$TEST_HOME"
   [ "$status" -eq 0 ]
   [[ "$output" != *"sha256"* ]]
-  cmp -s "$TRACKED" "$TARGET"
+  cmp -s "$TRACKED" "$TEST_HOME/.claude/skills/build-n4-module/SKILL.md"
 }
