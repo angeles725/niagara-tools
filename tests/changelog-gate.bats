@@ -4,7 +4,8 @@ bats_require_minimum_version 1.5.0
 # (go/, build-n4-module-kit/, tools/, scripts/) must carry a CHANGELOG entry: a changelog.d/<YYYY-MM-DD>-<slug>.md
 # fragment added in the range or a `Changelog: none (<reason>)` commit trailer (the `## [Unreleased]` rule is
 # tests/changelog-gate-unreleased.bats). A malformed fragment or trailer fails the range whatever else it
-# carries. Exits: 0 pass or not applicable · 1 missing entry or malformed fragment/trailer · 3 usage/env.
+# carries. Exits: 0 pass or not applicable · 1 missing entry, an [Unreleased] line outside a release, or a
+# malformed fragment/trailer · 3 usage/env.
 # Hermetic: every test builds a throwaway git repository in $BATS_TEST_TMPDIR (generic names only).
 
 load helpers/changelog-gate

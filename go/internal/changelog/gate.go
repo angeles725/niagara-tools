@@ -3,7 +3,6 @@ package changelog
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -30,99 +29,27 @@ func Main(args []string, s cli.Stdio) int {
 	return run(args[1], realGit, s)
 }
 
+// run checks the range and reports one verdict; each step lives in its own file: rangefacts.go reads the
+// range, carriers.go checks fragments and trailers, unreleased.go judges [Unreleased], report.go prints.
 func run(rng string, git gitRunner, s cli.Stdio) int {
-	env := func(err error) int {
-		fmt.Fprintf(s.Err, "changelog-gate: %v; refusing to pass the range unchecked\n", err)
-		return ExitEnv
-	}
-	ends := strings.Split(rng, "..")
-	if len(ends) != 2 || ends[0] == "" || ends[1] == "" || strings.HasPrefix(ends[1], ".") {
-		fmt.Fprintf(s.Err, "changelog-gate: malformed range %q\n%s\n", rng, usage)
-		return ExitEnv
-	}
-	for _, e := range ends {
-		if _, err := git("rev-parse", "--verify", "--quiet", e+"^{commit}"); err != nil {
-			return env(fmt.Errorf("range end %q is not a commit", e))
-		}
-	}
-	head := ends[1]
-	changedOut, err := git("diff", "--name-only", "--no-renames", rng)
+	f, err := readRange(rng, git)
 	if err != nil {
-		return env(err)
+		return refuseEnv(s, err)
 	}
-	addedOut, err := git("diff", "--name-only", "--no-renames", "--diff-filter=AM", rng, "--", FragmentDir+"/")
+	fragments, problems, err := fragmentsIn(f.added, f.head, git)
 	if err != nil {
-		return env(err)
+		return refuseEnv(s, err)
 	}
-	logOut, err := git("log", "--format=%B", rng)
+	reasons, bad := trailersIn(f.log)
+	if problems = append(problems, bad...); len(problems) > 0 {
+		return refuseMalformed(s, problems)
+	}
+	u, err := unreleasedVerdict(f, git)
 	if err != nil {
-		return env(err)
+		return refuseEnv(s, err)
 	}
-
-	fragments, problems, err := fragmentsIn(nonEmpty(addedOut), head, git)
-	if err != nil {
-		return env(err)
+	if u == unreleasedOutsideRelease {
+		return refuseUnreleased(s)
 	}
-	reasons, bad := trailersIn(logOut)
-	problems = append(problems, bad...)
-	if len(problems) > 0 {
-		for _, p := range problems {
-			fmt.Fprintf(s.Err, "changelog-gate: %s\n", p)
-		}
-		fmt.Fprintln(s.Err, "changelog-gate: malformed changelog fragment or trailer in range; refusing (see CONTRIBUTING.md § 6.2)")
-		return ExitFail
-	}
-
-	changed := nonEmpty(changedOut)
-	unreleased := false
-	if contains(changed, "CHANGELOG.md") {
-		if unreleased, err = addsUnreleased(rng, head, git); err != nil {
-			return env(err)
-		}
-	}
-	if unreleased {
-		release, err := isRelease(rng, changed, git)
-		if err != nil {
-			return env(err)
-		}
-		if !release {
-			fmt.Fprintf(s.Err, "changelog-gate: CHANGELOG.md %s gains a line outside a release (the range deletes no %s/ fragment and leaves VERSION unchanged); two PRs that both add lines there conflict\n", UnreleasedHeader, FragmentDir)
-			fmt.Fprintf(s.Err, "  fix: move the entry to %s/<YYYY-MM-DD>-<slug>.md; only scripts/gen-changelog.sh --write adds lines to %s, at release (CONTRIBUTING.md § 6.2)\n", FragmentDir, UnreleasedHeader)
-			return ExitFail
-		}
-	}
-
-	var behaviour []string
-	for _, p := range changed {
-		if IsBehaviour(p) {
-			behaviour = append(behaviour, p)
-		}
-	}
-	if len(behaviour) == 0 {
-		fmt.Fprintln(s.Out, "changelog-gate: not applicable (no go/, build-n4-module-kit/, tools/ or scripts/ behaviour change in range)")
-		return ExitPass
-	}
-	if len(fragments) > 0 {
-		fmt.Fprintf(s.Out, "changelog-gate: PASS — fragment %s\n", strings.Join(fragments, ", "))
-		return ExitPass
-	}
-	if unreleased {
-		fmt.Fprintf(s.Out, "changelog-gate: PASS — CHANGELOG.md %s gains an entry from the release fold\n", UnreleasedHeader)
-		return ExitPass
-	}
-	if len(reasons) > 0 {
-		fmt.Fprintf(s.Out, "changelog-gate: PASS — Changelog: none (%s)\n", strings.Join(reasons, "; "))
-		return ExitPass
-	}
-	fmt.Fprintln(s.Err, "changelog-gate: kit behaviour changed with no CHANGELOG entry:")
-	for i, p := range behaviour {
-		if i == 20 {
-			fmt.Fprintf(s.Err, "  … and %d more\n", len(behaviour)-20)
-			break
-		}
-		fmt.Fprintf(s.Err, "  %s\n", p)
-	}
-	fmt.Fprintf(s.Err, "  fix: add %s/<YYYY-MM-DD>-<slug>.md (### Added|Changed|Fixed|Removed — <title>, then '- ' bullets),\n", FragmentDir)
-	fmt.Fprintln(s.Err, "       or a 'Changelog: none (<reason>)' commit trailer.")
-	return ExitFail
+	return verdict(s, f.changed, fragments, u == unreleasedInRelease, reasons)
 }

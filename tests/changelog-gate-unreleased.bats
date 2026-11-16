@@ -85,3 +85,39 @@ release_sequence() { # FEAT: a go/ change with a fragment; FOLD: gen-changelog -
   [ "$status" -eq 0 ]
   [[ "$output" == *"[Unreleased]"* ]]
 }
+
+@test "CG-u7: a valid Changelog: none trailer does not excuse a line inside [Unreleased] (FAILS)" {
+  printf 'package x // changed\n' > "$R/go/x.go"; unreleased_line
+  commit $'feat: change x\n\nChangelog: none (internal only)'
+  gate
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"[Unreleased] gains a line outside a release"* ]]
+}
+
+@test "CG-u8: .githooks/pre-push refuses a line inside [Unreleased] next to a valid fragment" {
+  printf 'package x // changed\n' > "$R/go/x.go"; unreleased_line
+  fragment 2026-11-15-change-x.md $'### Changed — x\n\n- x changed\n'
+  commit $'feat: change x\n\nRetro: none (trivial: probe)'
+  hook
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"[Unreleased] gains a line outside a release"* ]]
+}
+
+@test "CG-u9: a VERSION bump with a go/ change and an [Unreleased] line PASSES as a release" {
+  printf 'package x // changed\n' > "$R/go/x.go"; unreleased_line; printf '0.2.0\n' > "$R/VERSION"
+  commit "chore(release): v0.2.0"
+  gate
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"from the release fold"* ]]
+}
+
+@test "CG-u10: deleting a changelog.d/ file that is not a fragment name does not make a release (FAILS)" {
+  # Mutation: CG-u10 -- counting any deleted changelog.d/ path as the fold passes this range.
+  mkdir -p "$R/changelog.d"; printf 'x\n' > "$R/changelog.d/README"; commit "docs: stray file"
+  local base; base=$(git -C "$R" rev-parse HEAD)
+  rm "$R/changelog.d/README"; printf 'package x // changed\n' > "$R/go/x.go"; unreleased_line
+  commit "feat: change x"
+  gate "$base..HEAD"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"[Unreleased] gains a line outside a release"* ]]
+}

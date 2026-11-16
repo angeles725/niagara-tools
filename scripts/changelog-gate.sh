@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# changelog-gate.sh — fails a range that changes kit behaviour without a CHANGELOG entry (CONTRIBUTING.md § 6.2).
+# changelog-gate.sh — fails a range that changes kit behaviour without a CHANGELOG entry, or that adds a line inside
+# CHANGELOG.md's `## [Unreleased]` outside a release (CONTRIBUTING.md § 6.2).
 #
 # Behaviour = a changed path under go/, build-n4-module-kit/, tools/ or scripts/, except the retro gate's own exclusions
 # (go/bin/, build-n4-module-kit/BUILD-STATE(.src).md, ledger.d/, retros/). Tests and docs under those trees
@@ -18,7 +19,7 @@
 #
 # Implementation: go/internal/changelog, built on demand by go/go-tool.sh `go_tool_bin`.
 # Usage:  changelog-gate.sh --range <base>..<head>     (run inside the repository)
-# Exits:  0 pass / not applicable · 1 no entry, or a malformed fragment or trailer · 3 usage/env (a malformed
+# Exits:  0 pass / not applicable · 1 no entry, an [Unreleased] line outside a release, or a malformed fragment or trailer · 3 usage/env (a malformed
 #         range, git missing or failing, no Go toolchain or a failed build)
 set -u
 

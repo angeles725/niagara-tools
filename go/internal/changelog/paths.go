@@ -1,8 +1,6 @@
 package changelog
 
 import (
-	"fmt"
-	"os/exec"
 	"regexp"
 	"strings"
 )
@@ -19,35 +17,6 @@ func IsBehaviour(path string) bool {
 	for _, r := range behaviourRoots {
 		if strings.HasPrefix(path, r) {
 			return !notBehaviour.MatchString(path)
-		}
-	}
-	return false
-}
-
-type gitRunner func(args ...string) (string, error)
-
-func realGit(args ...string) (string, error) {
-	out, err := exec.Command("git", args...).Output()
-	if ee, ok := err.(*exec.ExitError); ok {
-		return "", fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(string(ee.Stderr)))
-	}
-	return string(out), err
-}
-
-func nonEmpty(out string) []string {
-	var r []string
-	for _, l := range strings.Split(out, "\n") {
-		if l = strings.TrimSpace(l); l != "" {
-			r = append(r, l)
-		}
-	}
-	return r
-}
-
-func contains(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
 		}
 	}
 	return false
