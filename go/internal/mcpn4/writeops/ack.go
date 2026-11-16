@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
@@ -12,8 +14,9 @@ import (
 
 // AckAlarm is n4_ack_alarm: one ackAlarms call on the station's alarm channel (box-rt
 // BAlarmChannel.ackAlarms: body {ids, notes?}, the station sets user, ackTime and ackPending,
-// updates the alarm database and routes the ack). Whole-station (any write scope will do), no
-// inverse: an acknowledgement cannot be undone.
+// updates the alarm database and routes the ack). The engine only requires some write scope;
+// the plan then checks each record's source against it (ackPlan, sourceOrd). No inverse: an
+// acknowledgement cannot be undone.
 var AckAlarm = plan.Impl{ScopeOrds: func(*pyjson.Object) []any { return nil }, PlanWith: ackPlan,
 	Readback: ackReadback, Unapplied: ackUnapplied}
 
@@ -117,10 +120,15 @@ func ackPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.Sessi
 }
 
 // sourceOrd is the station slot ORD of a record source in either stored form
-// (local:|station:|slot:/a or slot:/a); false for any other form (fail closed).
+// (local:|station:|slot:/a or slot:/a); false for any other form (fail closed): a source
+// holding several ORDs (BOrdList joins them with "; " or a newline), any whitespace, a chained
+// '|' (a view), a ".." segment or a ':' in the path (never in an escaped slot name; the CSV
+// reader joins the lines of a quoted cell, so "slot:/a\nslot:/b" arrives as "slot:/aslot:/b")
+// is never read as its first slot path.
 func sourceOrd(source string) (string, bool) {
 	slot := strings.TrimPrefix(source, "local:|station:|")
-	if !strings.HasPrefix(slot, "slot:/") {
+	if !strings.HasPrefix(slot, "slot:/") || strings.ContainsAny(slot[len("slot:"):], ";:") ||
+		strings.IndexFunc(slot, unicode.IsSpace) >= 0 || !ord.PlainSlotOrd("station:|"+slot) {
 		return "", false
 	}
 	return "station:|" + slot, true

@@ -772,13 +772,15 @@ Destructive tools use the same pipeline:
   `ackAlarms` with body `{ids: [<uuid>...], notes?}` (box-rt `BAlarmChannel.ackAlarms`;
   the station sets the acking user, ackTime and ackState `ackPending`, updates the alarm
   database and routes the ack). The plan's op is `{channel: "alarm", key: "ackAlarms",
-  body}`, journaled like any op. The dry run reads the records with
+  body}`, journaled like any op; the engine sends only the channel ops of its allow-list
+  (`alarm` `ackAlarms`) and refuses any other before sending. The dry run reads the records with
   `alarm:|bql:select uuid, ackState, user, source where (uuid = '<u>' or ...)` and the same with
   `ackState = 'unacked' and` (the state compared by its tag, never by localized text), and
   refuses, naming them, a uuid with no record, a record whose source is outside the write
   scope (the source, stored as `local:|station:|slot:/...` or `slot:/...`, is checked as
   `station:|slot:/...` by the same `--write-scope` check every write uses; a source in any
-  other form is refused, never assumed in scope) and a record already acknowledged or ack
+  other form, holding several ORDs (`; ` or newline separated), whitespace, a `..` segment or a
+  chained view, is refused as not a slot path, never assumed in scope) and a record already acknowledged or ack
   pending; a malformed or repeated uuid is refused before any read. The read-back repeats
   both reads: `verified` when no record is still unacked and each has a user; `mismatch`
   when one stayed unacked or the station's reply, the list of alarm classes the user may not

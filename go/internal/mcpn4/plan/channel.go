@@ -2,6 +2,8 @@ package plan
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -16,8 +18,15 @@ type ChannelCaller interface {
 	Call(channel, key string, body any) (any, error)
 }
 
-// msgNoChannel is the refusal of a channel op by a client that cannot Call.
-const msgNoChannel = "the station client cannot call the BOX channel %q (key %q): nothing was sent"
+// ChannelAllowList is every channel op the engine sends, as channel: keys (data). Any other
+// channel or key is refused before sending: a channel op can only do what a tool was built for.
+var ChannelAllowList = map[string][]string{"alarm": {"ackAlarms"}}
+
+// Refusals of a channel op, as data.
+const (
+	msgNoChannel  = "the station client cannot call the BOX channel %q (key %q): nothing was sent"
+	msgNotAllowed = "channel %q key %q is not an allowed channel op (allowed: %s): nothing was sent"
+)
 
 // ChannelOp is the planned op of one call of key on channel with body.
 func ChannelOp(channel, key string, body any) *pyjson.Object {
@@ -38,9 +47,34 @@ func NoChannelError(channel, key string) error {
 // sendChannel sends the channel op o, or refuses it before sending when c cannot Call.
 func sendChannel(c Client, o *pyjson.Object) (any, error) {
 	channel, key := pyjson.Str(field(o, "channel")), pyjson.Str(field(o, "key"))
+	if !allowedChannelOp(channel, key) {
+		return nil, &jsonrpc.ToolError{Msg: fmt.Sprintf(msgNotAllowed, channel, key, allowedText())}
+	}
 	cc, ok := c.(ChannelCaller)
 	if !ok {
 		return nil, NoChannelError(channel, key)
 	}
 	return cc.Call(channel, key, field(o, "body"))
+}
+
+// allowedChannelOp is whether key on channel is in ChannelAllowList.
+func allowedChannelOp(channel, key string) bool {
+	for _, k := range ChannelAllowList[channel] {
+		if k == key {
+			return true
+		}
+	}
+	return false
+}
+
+// allowedText is ChannelAllowList as "channel key, ...", sorted.
+func allowedText() string {
+	var pairs []string
+	for channel, keys := range ChannelAllowList {
+		for _, k := range keys {
+			pairs = append(pairs, channel+" "+k)
+		}
+	}
+	sort.Strings(pairs)
+	return strings.Join(pairs, ", ")
 }

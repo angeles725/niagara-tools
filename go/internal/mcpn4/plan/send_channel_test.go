@@ -65,3 +65,14 @@ func TestSscAndSyncOpsKeepTheirPaths(t *testing.T) {
 		t.Errorf("calls %q", got)
 	}
 }
+
+func TestAChannelOpOutsideTheAllowListRefusesBeforeSending(t *testing.T) {
+	for _, op := range [][2]string{{"alarm", "clearAllRecords"}, {"file", "ackAlarms"}} {
+		c := &caller{}
+		_, err := send(c, ChannelOp(op[0], op[1], obj()))
+		if err == nil || !strings.Contains(err.Error(), "is not an allowed channel op") ||
+			!strings.Contains(err.Error(), "nothing was sent") || len(c.calls) != 0 {
+			t.Errorf("%v: err %v, calls %q", op, err, c.calls)
+		}
+	}
+}

@@ -115,3 +115,15 @@ func TestAckAlarmRefusesBeforeAnyCall(t *testing.T) {
 		t.Errorf("no Call: %s (ords %q)", text, db.ords)
 	}
 }
+
+func TestAckAlarmSortsMalformedSourcesAsNotASlotPath(t *testing.T) {
+	for _, src := range []string{"slot:/Services/../Drivers/X", "local:|station:|slot:/Services/A|view:x",
+		"slot:/Services/A; slot:/Drivers/B", "slot:/Services/A B"} { // a quoted newline: ack_probe_test.go
+		db := newAlarmDB()
+		db.source[u1] = src
+		text, isErr, _ := newAckRig(t, db).call(t, "uuids", []any{u1})
+		if !isErr || !strings.Contains(text, "source is not a slot path: "+u1) || len(db.calls) != 0 {
+			t.Errorf("%q: %s", src, text)
+		}
+	}
+}
