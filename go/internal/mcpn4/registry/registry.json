@@ -788,6 +788,45 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_read_tags",
+   "description": "Read the tags of one or more components (ord, or ords: up to 50). Per component: direct tags (metadata slots, as {id, namespace, name, type, value, slot, flags}; the slot name is the escaped id, hs:point is hs$3apoint), tag_groups (each an n:tagGroup relation to a group definition, {group_ord, slot}), direct relations ({id, endpoint_ord, inbound, slot}) and, unless implied is false, the implied tags the station's dictionaries compute ({id, type, value}; a tag group's tags appear here). relations: direct (default), all (adds the implied relations, such as n:parent and n:child) or none. One load per component, plus one session call each for implied tags and implied relations.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "Component ORD, e.g. station:|slot:/Folder/Pump"
+     },
+     "ords": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Several component ORDs (1 to 50), read in order"
+     },
+     "implied": {
+      "type": "boolean",
+      "description": "Also read the implied tags (default true)"
+     },
+     "relations": {
+      "type": "string",
+      "enum": [
+       "direct",
+       "all",
+       "none"
+      ],
+      "description": "direct (default): the relation slots on the component; all: also the implied relations; none: no relations"
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [
