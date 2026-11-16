@@ -165,7 +165,7 @@
   },
   {
    "name": "n4_bql_query",
-   "description": "Bulk read: one projected BQL select over a subtree, returned as rows (one HTTP GET, usually under a second, where a navigate crawl costs one round trip per component). Use it FIRST for any inventory. Only 'select <cols> from <type> [where ...]' is accepted; '|' is refused. The base may also be alarm: (the alarm database) or history:/<station>/<history name> (one history): there the query is 'select <cols> [where ...] [order by ...]' with no type, e.g. select timestamp, source, sourceState where sourceState = 'offnormal' order by timestamp desc, or select timestamp, value where timestamp.millis >= 1794808800000; same rows and columns, read-only. Columns are the station's display headers (e.g. 'Slot Path', 'Name'; a localized station translates them, a repeated header becomes 'Type#2'); the queried name column is decoded ($20 -> space), 'Slot Path' stays ORD-ready. Proxy-extension fields project as proxyExt.<slot>, e.g. proxyExt.dataAddress. Rows are capped (truncated=true when cut).",
+   "description": "Bulk read: one projected BQL select over a subtree, returned as rows (one HTTP GET, usually under a second, where a navigate crawl costs one round trip per component). Use it FIRST for any inventory. Only 'select <cols> from <type> [where ...]' is accepted; '|' is refused. The base may also be alarm: (the alarm database) or history:/<station>/<history name> (one history): there the query is 'select <cols> [where ...] [order by ...]' with no from clause, e.g. select timestamp, source, sourceState where sourceState = 'offnormal' order by timestamp desc, or select timestamp, value where timestamp.millis >= 1794808800000; same rows and columns, read-only. Columns are the station's display headers (e.g. 'Slot Path', 'Name'; a localized station translates them, a repeated header becomes 'Type#2'); the queried name column is decoded ($20 -> space), 'Slot Path' stays ORD-ready. Proxy-extension fields project as proxyExt.<slot>, e.g. proxyExt.dataAddress. Rows are capped (truncated=true when cut).",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -175,7 +175,7 @@
      },
      "query": {
       "type": "string",
-      "description": "select <columns> from <type> [where ...], e.g. select slotPath, name, out from control:ControlPoint"
+      "description": "select <columns> from <type> [where ...], e.g. select slotPath, name, out from control:ControlPoint; over the alarm: or history: base: select <columns> [where ...] [order by ...] with no from clause"
      },
      "max_rows": {
       "type": "integer",

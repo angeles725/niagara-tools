@@ -285,7 +285,8 @@ columns by position, and a repeated header is kept as `Type#2`, `Type#3`. With
 Besides a station subtree, `base` may be `alarm:` (the alarm database) or
 `history:/<station>/<history name>` (one history; the id as `n4_read_history` checks it), each
 also accepted after `station:|`. The query there is `select <columns> [where ...] [order by ...]`:
-no type is needed (a `from` clause is passed through), e.g.
+no type is needed and a `from` clause is refused (live, `history:` silently ignores it and
+answers the whole history, `alarm:` answers HTTP 404), e.g.
 `select timestamp, source, sourceState, ackState where source like '*slot:/Lab/P/*' order by timestamp desc`
 or `select timestamp, value, status where timestamp.millis >= 1794808800000 order by timestamp desc`.
 It sends `GET /ord/<url-encoded alarm:|bql:<query>|view:file:ITableToCsv>` (or

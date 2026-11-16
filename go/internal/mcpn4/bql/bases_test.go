@@ -59,3 +59,20 @@ func TestComposeBaseOrdRefusesAnUnknownBaseNamingIt(t *testing.T) {
 		}
 	}
 }
+
+func TestComposeBaseOrdRefusesAFromClauseOverATableBase(t *testing.T) {
+	for _, base := range []string{"alarm:", "history:/S/N", "station:|alarm:"} {
+		for _, q := range []string{"select timestamp from history:HistoryRecord", "select * FROM alarm:AlarmRecord where a = 1",
+			"select timestamp  from x"} {
+			_, err := ComposeBaseOrd(base, q)
+			if err == nil || !strings.HasPrefix(err.Error(), "query ") || !strings.Contains(err.Error(), "select <columns> [where ...] [order by ...]") {
+				t.Errorf("ComposeBaseOrd(%q, %q) = %v", base, q, err)
+			}
+		}
+	}
+	for _, q := range []string{"select timestamp where msgText = 'from x'", "select fromState, timestamp", "select a where b = 'it''s from'"} {
+		if _, err := ComposeBaseOrd("alarm:", q); err != nil {
+			t.Errorf("ComposeBaseOrd(alarm:, %q) = %v", q, err)
+		}
+	}
+}

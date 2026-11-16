@@ -17,9 +17,12 @@ import (
 const stationPrefix = "station:|"
 
 var (
-	// tableSelectRe is a select over a table base: the alarm and history tables need no
-	// 'from <type>', so where, order by and the like follow the column list directly.
+	// tableSelectRe is a select over a table base: the alarm and history tables take no
+	// 'from <type>' (validateTableQuery refuses one), so where and order by follow the columns.
 	tableSelectRe = regexp.MustCompile(`^(?is)select` + space + `+` + nonSpace + `.*$`)
+	// fromRe is a from keyword; quotedRe a quoted literal ('' escapes a quote) masked before it.
+	fromRe   = regexp.MustCompile(`(?i)(^|` + space + `)from(` + space + `|$)`)
+	quotedRe = regexp.MustCompile(`'(?:[^']|'')*'`)
 	// schemeRe is an ORD scheme prefix such as file: or ip:.
 	schemeRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 )
@@ -29,6 +32,7 @@ const (
 	unknownBaseRule  = "base must be a station slot ORD such as station:|slot:/Drivers, alarm: (the alarm database) or history:/<station>/<history name>, got %s"
 	historyBaseRule  = "base %s is not a history ORD: %s"
 	tableSelectRule  = "query over the %s base must be 'select <columns> [where ...] [order by ...]'"
+	tableFromRule    = "query over the %s base must not have a from clause (the base is the table): use 'select <columns> [where ...] [order by ...]'"
 	historyBaseLabel = "history:"
 )
 
@@ -65,7 +69,7 @@ func ComposeBaseOrd(base, query any) (string, error) {
 }
 
 // validateTableQuery is ValidateQuery for a table base: the same '|', control and length
-// checks, then one select with no type required.
+// checks, then one select with no from clause (a from inside a quoted literal is data).
 func validateTableQuery(query any, base string) (string, error) {
 	q, ok := query.(string)
 	if !ok {
@@ -76,6 +80,10 @@ func validateTableQuery(query any, base string) (string, error) {
 	}
 	if q = Strip(q); !tableSelectRe.MatchString(q) {
 		return "", valueError(fmt.Sprintf(tableSelectRule, base))
+	}
+	// Live: history: ignores a from clause and answers the whole history; alarm: answers 404.
+	if fromRe.MatchString(quotedRe.ReplaceAllString(q, "''")) {
+		return "", valueError(fmt.Sprintf(tableFromRule, base))
 	}
 	return q, nil
 }
