@@ -100,3 +100,10 @@ cases that pinned the old word (`adv-exit-reasons`, `esl-kit-relative`, `lint-ex
 edited and checked by a script that compared each old and new case line by line: the only changed line is the
 summary line, and only its last word, `CLEAN` -> `INCOMPLETE`. Those recorded cases therefore differ from the bash
 recording at `a98c3357` in that word.
+
+### A vendor/ link that leads nowhere (retro gate-followups-and-template-lints V4)
+
+The report ran `lint-vendor-floor` only when `src/rc/vendor` resolved to a directory, so a `vendor/` symlink
+that leads nowhere got no row and the report read `CLEAN`, while the lint itself exits 3 on it. The lint now
+judges it: `truth-vf-dangling-vendor` pins the `ERROR  vendor-floor  env fault (exit 3)` row, and that an artifact
+with no `vendor/`, or with a regular file of that name, still gets no `vendor-floor` row. No recorded case moved.

@@ -337,11 +337,11 @@ func (r *report) rcScan(a artifact) {
 	r.verdictAfterRelay(a.name, "rc-scan", r.relayRows(a.name, out))
 }
 
-// vendorFloor is §5.19c: lint-vendor-floor on src/rc when src/rc/vendor/ is a directory: exit 0/1 relays, exit
-// 4 (a tool unavailable) is a SKIP naming it, any other exit is an env fault.
+// vendorFloor is §5.19c: lint-vendor-floor on src/rc when src/rc/vendor/ is for the lint to judge (toJudge): exit
+// 0/1 relays, exit 4 (a tool unavailable) is a SKIP naming it, any other exit is an env fault.
 func (r *report) vendorFloor(a artifact) {
 	rc := a.dir + "/src/rc"
-	if !isDir(rc + "/vendor") {
+	if !toJudge(rc + "/vendor") {
 		return
 	}
 	out, code, ok := r.x.member("lint-vendor-floor", rc)

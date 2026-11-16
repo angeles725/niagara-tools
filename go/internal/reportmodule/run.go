@@ -152,3 +152,22 @@ func isExec(p string) bool { return p != "" && syscall.Access(p, 1) == nil }
 
 // isRealDir is a directory that is not a symlink: what find -P descends into.
 func isRealDir(p string) bool { st, err := os.Lstat(p); return err == nil && st.IsDir() }
+
+// toJudge reports whether <rc>/vendor is something lint-vendor-floor must judge: a directory (a symlink to one
+// counts), or an entry nobody can follow or look for (a symlink that leads nowhere, an rc dir that cannot be
+// searched), which is the lint's exit 3 and never "no vendor/". No entry of that name, or one that is not a
+// directory, is nothing to run the lint on.
+func toJudge(vendor string) bool {
+	st, err := os.Lstat(vendor)
+	switch {
+	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR):
+		return false
+	case err != nil:
+		return true
+	case st.Mode()&os.ModeSymlink == 0:
+		return st.IsDir()
+	}
+	// Mutation: RM-vf-dangling -- judging only a link that resolves gives a dangling vendor/ no row, so the report reads CLEAN
+	st, err = os.Stat(vendor)
+	return err != nil || st.IsDir()
+}
