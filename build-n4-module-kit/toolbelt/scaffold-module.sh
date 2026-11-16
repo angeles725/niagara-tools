@@ -23,7 +23,8 @@
 # This script is VCS-free by design. version control is never invoked.
 #
 # Exit: 0 ok · 2 usage, invalid ModuleName, unknown --type or a refused option value · 3 env (skeleton missing,
-#        out-dir not creatable, or <out-dir>/<ModuleName> already exists)
+#        out-dir not creatable, or <out-dir>/<ModuleName> already exists) · 129, 130, 143 SIGHUP, SIGINT or SIGTERM
+#        while the module is emitted (`interrupted (<signal>)`; the partial tree is removed as below)
 # A run that fails after it created <out-dir>/<ModuleName> (a failed write, a missing template) removes that
 # directory and says so in a second stderr line (`removed the partial <path>`, or `could not remove the partial
 # <path> (<error>): its files stay`); the exit code stays the fault's (3). A destination that existed before the run
