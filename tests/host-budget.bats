@@ -117,3 +117,10 @@ hb() {
   grep -q -- '--disk-min-free SIZE (40G, 500M) replaces the percent' "$H"
   grep -q '(N% used, X.XGB free = N bytes, fail above P%)' "$H"
 }
+
+# T22: HB8 greps the header only; this pins the documented --disk-pct default on the real command line (the
+# row format and the --disk-min-free floor are pinned in go/internal/hostbudget/diskfloor_test.go).
+@test "HB9: without --disk-pct each disk row names the documented default limit, 90%" {
+  run "$HB" --cgroup-root "$FX/cg-calm" --proc-root "$FX/proc" --gocache "$CACHE" --mount "$BATS_TEST_TMPDIR"
+  [[ "$output" == *" disk:$BATS_TEST_TMPDIR "*"% used, "*" free = "*" bytes, fail above 90%)"* ]]
+}
