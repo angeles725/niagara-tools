@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	kitcli "github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -136,5 +137,50 @@ func TestMainDefaultsThePrefixToHomeLocalBin(t *testing.T) {
 	}
 	if code := Main([]string{"--bogus"}, s); code != 2 {
 		t.Fatalf("an unknown flag exits %d, want 2", code)
+	}
+}
+
+func TestInstallRemovesOnlyItsOwnStaleTemporaryFiles(t *testing.T) {
+	root := t.TempDir()
+	src := filepath.Join(root, "src", "mcp-n4")
+	writeFile(t, src, "bin", 0o755)
+	prefix := filepath.Join(root, "bin")
+	old := time.Now().Add(-2 * time.Hour)
+	for _, n := range []string{".mcp-n4-stale.tmp", ".mcp-n4-young.tmp", ".other-stale.tmp"} {
+		writeFile(t, filepath.Join(prefix, n), "x", 0o600)
+	}
+	for _, n := range []string{".mcp-n4-stale.tmp", ".other-stale.tmp"} {
+		if err := os.Chtimes(filepath.Join(prefix, n), old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, _, err := Install(src, prefix); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(entries(t, prefix), ","); got != ".mcp-n4-young.tmp,.other-stale.tmp,mcp-n4" {
+		t.Fatalf("prefix holds %s, want the stale mcp-n4 temp removed and the others kept", got)
+	}
+}
+
+func TestMainSaysItReplacedASymlink(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	src := filepath.Join(t.TempDir(), "mcp-n4")
+	writeFile(t, src, "bin", 0o755)
+	prefix := filepath.Join(home, ".local", "bin")
+	writeFile(t, filepath.Join(home, "wt", "mcp-n4"), "bin", 0o755)
+	if err := os.MkdirAll(prefix, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(home, "wt", "mcp-n4"), filepath.Join(prefix, "mcp-n4")); err != nil {
+		t.Fatal(err)
+	}
+	old := executable
+	executable = func() (string, error) { return src, nil }
+	t.Cleanup(func() { executable = old })
+	var out, errb bytes.Buffer
+	if code := Main(nil, kitcli.Stdio{Out: &out, Err: &errb, Getenv: func(string) string { return home }}); code != 0 ||
+		!strings.Contains(out.String(), "replaced the symlink to "+filepath.Join(home, "wt", "mcp-n4")) {
+		t.Fatalf("exit %d, stdout %q, want the replaced symlink named", code, out.String())
 	}
 }

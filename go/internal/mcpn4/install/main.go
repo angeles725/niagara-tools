@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
 	kitcli "github.com/angeles725/niagara-tools/go/internal/cli"
@@ -51,12 +52,18 @@ func Main(args []string, s kitcli.Stdio) int {
 		fmt.Fprintf(s.Err, "mcp-n4 install: cannot locate the running binary: %s\n", err)
 		return 1
 	}
+	link := ""
+	if target, lerr := os.Readlink(filepath.Join(*prefix, Name)); lerr == nil {
+		link = target
+	}
 	dst, changed, err := Install(src, *prefix)
 	if err != nil {
 		fmt.Fprintf(s.Err, "mcp-n4 install: %s\n", err)
 		return 1
 	}
-	if changed {
+	if changed && link != "" {
+		fmt.Fprintf(s.Out, "installed %s (replaced the symlink to %s with a regular file)\n", dst, link)
+	} else if changed {
 		fmt.Fprintf(s.Out, "installed %s\n", dst)
 	} else {
 		fmt.Fprintf(s.Out, "unchanged %s (already this binary)\n", dst)

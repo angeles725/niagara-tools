@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // Name is the installed binary's file name under the prefix.
@@ -28,14 +29,17 @@ func Install(src, prefix string) (dst string, changed bool, err error) {
 	if err != nil {
 		return dst, false, err
 	}
-	if old, rerr := os.ReadFile(dst); rerr == nil && bytes.Equal(old, data) {
-		if st, serr := os.Stat(dst); serr == nil && st.Mode().Perm() == 0o755 {
+	// Lstat: a symlink at the target (into a checkout, say) is never kept, even when it leads to
+	// the same bytes; the rename replaces the link itself with a regular file.
+	if st, serr := os.Lstat(dst); serr == nil && st.Mode().IsRegular() && st.Mode().Perm() == 0o755 {
+		if old, rerr := os.ReadFile(dst); rerr == nil && bytes.Equal(old, data) {
 			return dst, false, nil
 		}
 	}
 	if err := os.MkdirAll(prefix, 0o755); err != nil {
 		return dst, false, err
 	}
+	removeStaleTemps(prefix)
 	tmp, err := os.CreateTemp(prefix, "."+Name+"-*.tmp")
 	if err != nil {
 		return dst, false, err
@@ -49,6 +53,21 @@ func Install(src, prefix string) (dst string, changed bool, err error) {
 		return dst, false, err
 	}
 	return dst, true, syncDir(prefix)
+}
+
+// staleAfter is the age after which a temporary file of an interrupted install is removed.
+const staleAfter = time.Hour
+
+// removeStaleTemps removes the temporary files an interrupted install left in prefix (this
+// package's own name pattern only) once they are older than staleAfter; a younger one may belong
+// to an install running now.
+func removeStaleTemps(prefix string) {
+	matches, _ := filepath.Glob(filepath.Join(prefix, "."+Name+"-*.tmp"))
+	for _, m := range matches {
+		if st, err := os.Lstat(m); err == nil && st.Mode().IsRegular() && time.Since(st.ModTime()) > staleAfter {
+			_ = os.Remove(m)
+		}
+	}
 }
 
 // fill writes data to f, syncs it, makes it 0755 and closes it.
