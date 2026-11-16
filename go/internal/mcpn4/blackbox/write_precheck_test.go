@@ -51,6 +51,17 @@ func TestCreateOfATypeTheStationAnswersAsAnErrorIsRefusedByItsName(t *testing.T)
 	}
 }
 
+// A type the station's registry does not describe may still be loaded: a lab station whose module
+// jar was removed and re-added under the same name kept its registry "Up-to-date" without the
+// module's types (client A retro 2026-11-16 rows M12, M14). The refusal names that route.
+func TestAnUnknownTypeRefusalNamesTheStaleRegistryRoute(t *testing.T) {
+	r := verifiedRig(t)
+	r.Station.SetRegistry(map[string]any{"vendorX:Pump": map[string]any{"c": "", "isErr": true, "m": "vendorX:Pump", "s": ""}})
+	refusedDry(t, r, "n4_create_component", withArgs(createPump, Args{"type": "vendorX:Pump"}),
+		"vendorX:Pump", "not known to the station", "registry may be stale", "touch the module jar",
+		"Rebuilding registry", "reconnect with n4_connect")
+}
+
 func TestLinkToAMissingSlotIsRefused(t *testing.T) {
 	r, _, _, args := linkRig(t)
 	r.Station.SetRegistry(map[string]any{"kitControl:NumericConst": numericConst})
