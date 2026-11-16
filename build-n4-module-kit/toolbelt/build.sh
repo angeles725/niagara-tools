@@ -48,7 +48,7 @@
 #   Retry-safe: when the gate FAILs, the pre-build modules/ jar the drift gate backed up is restored (one "Restored
 #   the previously-deployed" line, exit 50 as before), so a bare re-run still expects the deployed signer and FAILs
 #   again. Under --no-drift-check there is no backup: nothing is restored and the deployed-jar signer is unavailable.
-#   [ev: external session retro, delta B5]
+#   (source: delta B5 of an external session retro, 2026-11-13)
 # Build-location precheck (Δ7): WARNs (non-fatal) when <module-root>'s gradle root or niagara_home sits on a
 #   WSL 9p/drvfs mount (/mnt/<drive>) — Gradle's per-file work is far slower there than on ext4.
 # Deployed-baseline drift gate (Δ2): before gradle's :jar task overwrites <niagara_home>/modules/<jar>, this

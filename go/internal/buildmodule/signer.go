@@ -13,7 +13,7 @@ import (
 // none, signer is "" and warning is the line that says why. The signing plugin's default development signer
 // is never taken from a deployed jar: a mirror that only ever held development builds would pin it and the
 // gate would pass them without a word. Without an expected signer a jar signed with that key passes the gate
-// and a station's Software Manager then rejects it as self-signed. [ev: external session retro, delta B5]
+// and a station's Software Manager then rejects it as self-signed. (source: delta B5 of an external session retro, 2026-11-13)
 func (b *build) expectedSigner() (signer, warning string) {
 	if alias := b.configuredAlias(); alias != "" {
 		return alias, ""
