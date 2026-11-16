@@ -123,13 +123,16 @@ func tagAdds(args *pyjson.Object, cat *tags.Catalog) ([]tagAdd, error) {
 func tagRemoves(args *pyjson.Object) ([]tags.ID, error) {
 	v, _ := args.Get("remove")
 	list, _ := v.([]any)
-	out := []tags.ID{}
+	out, seen := []tags.ID{}, map[tags.ID]bool{}
 	for _, e := range list {
 		id, err := tagID(e)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, id)
+		if seen[id] {
+			return nil, plan.ToolError("remove names " + id.String() + " twice")
+		}
+		seen[id], out = true, append(out, id)
 	}
 	return out, nil
 }

@@ -23,8 +23,11 @@ func tagGroups(args *pyjson.Object, key string, cat *tags.Catalog) ([]tagRel, er
 			return nil, plan.ToolError("no installed dictionary defines the tag group " + id.String() +
 				" (n4_list_tag_dictionaries lists the groups)")
 		}
-		out = append(out, tagRel{label: "tag group " + id.String(), id: tags.TagGroupRelation, source: g.Ord,
-			match: []string{g.Ord, "station:|" + g.Ord}, group: true, implies: g.Tags})
+		r := tagRel{label: "tag group " + id.String(), id: tags.TagGroupRelation, source: g.Ord,
+			match: []string{g.Ord, "station:|" + g.Ord}, group: true, implies: g.Tags}
+		if out, err = appendRel(out, r, key); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }
@@ -66,10 +69,24 @@ func tagRelations(c plan.Client, args *pyjson.Object, key string, cat *tags.Cata
 			return nil, err
 		}
 		src := "h:" + pyjson.Str(h)
-		out = append(out, tagRel{label: "relation " + id.String() + " to " + end, id: id.String(), source: src,
-			match: []string{src, end, tags.SlotOrd(end)}})
+		r := tagRel{label: "relation " + id.String() + " to " + end, id: id.String(), source: src,
+			match: []string{src, end, tags.SlotOrd(end)}}
+		if out, err = appendRel(out, r, key); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
+}
+
+// appendRel appends r unless the list already names it (same relation id and endpoint): two
+// entries would add two relation slots, or remove one twice.
+func appendRel(list []tagRel, r tagRel, key string) ([]tagRel, error) {
+	for _, o := range list {
+		if o.same(r) {
+			return nil, plan.ToolError(key + " names the " + r.label + " twice")
+		}
+	}
+	return append(list, r), nil
 }
 
 func lookupArg(args *pyjson.Object, k string) any { v, _ := args.Get(k); return v }

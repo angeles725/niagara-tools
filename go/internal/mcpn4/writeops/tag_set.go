@@ -72,8 +72,10 @@ func resolveTags(c plan.Client, args *pyjson.Object) (*tagRequest, error) {
 	if r.addRels, err = tagRelations(c, args, "add_relations", cat); err != nil {
 		return nil, err
 	}
-	r.rmRels, err = tagRelations(c, args, "remove_relations", cat)
-	return r, err
+	if r.rmRels, err = tagRelations(c, args, "remove_relations", cat); err != nil {
+		return nil, err
+	}
+	return r, r.contradiction()
 }
 
 func setTagsPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
@@ -141,13 +143,12 @@ func planTarget(c plan.Client, o string, req *tagRequest, p *plan.Planned, d *ta
 		exp.removed = append(exp.removed, id)
 	}
 	for _, r := range append(append([]tagRel{}, req.addGroups...), req.addRels...) {
-		op, inv, note := tagRelAddOp(h, nodes, r, o)
-		if note != "" {
-			p.Notes = append(p.Notes, note)
-		} else {
-			push(op, inv)
-			exp.addRels = append(exp.addRels, r)
+		op, inv, err := tagRelAddOp(h, nodes, r, o)
+		if err != nil {
+			return exp, err
 		}
+		push(op, inv)
+		exp.addRels = append(exp.addRels, r)
 	}
 	for _, r := range append(append([]tagRel{}, req.rmGroups...), req.rmRels...) {
 		op, inv, err := tagRelRemoveOp(h, nodes, r, o)

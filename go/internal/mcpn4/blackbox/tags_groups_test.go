@@ -89,6 +89,7 @@ func TestSetTagsGroupAndRelationRefusals(t *testing.T) {
 		want string
 	}{
 		{Args{"ords": []any{pord}, "add_groups": []any{"tst:nope"}}, "no installed dictionary defines the tag group tst:nope"},
+		{Args{"ords": []any{pord}, "add_groups": []any{"tst:pump"}, "remove_groups": []any{"tst:pump"}}, "both added and removed"},
 		{Args{"ords": []any{pord}, "remove_groups": []any{"tst:pump"}}, "has no tag group tst:pump"},
 		{Args{"ords": []any{pord}, "add_relations": []any{map[string]any{"id": "tst:other", "endpoint_ord": Folder + "/Q"}}}, "not defined by the installed dictionary Lab"},
 		{Args{"ords": []any{pord}, "add_relations": []any{map[string]any{"id": "zz:rel", "endpoint_ord": Folder + "/Q"}}}, "allow_ad_hoc"},
