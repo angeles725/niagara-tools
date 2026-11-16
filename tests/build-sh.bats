@@ -1132,6 +1132,7 @@ _install_gradlew() {
   run "$B_RAW" --help
   [ "$status" -eq 0 ]
   [[ "$output" == *"build.sh --restore-mirror <mirror>/.mirror-replaced/<MOD>-<profile>.jar.<sha12>"* ]]
+  [[ "$output" == *"AFTER DEPLOYING a build to the"* ]]
   run "$B_RAW" --restore-mirror "$kept"
   [ "$status" -eq 10 ]
   [[ "$output" == *"no .niagara-mirror marker"* ]]
