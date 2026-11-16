@@ -1,0 +1,62 @@
+#!/usr/bin/env bats
+# ci-local-pins.bats — scripts/ci-local.sh, the tool versions ci.yml pins and the options around them (CL20-CL22).
+# Split from tests/ci-local.bats (same setup), which holds the step-replay cases. [ev: retro 2026-10-22-ci-local-replay]
+
+setup() {
+  ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  CL="$ROOT/scripts/ci-local.sh"
+  TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
+}
+teardown() { rm -rf "$TMPDIR_T"; }
+
+# C8: CI pins bats-core 1.10.0, which refuses a file bats 1.14 accepts (a here-document line starting with the
+# test keyword is read as a duplicate case). The replay runs the version ci.yml's install step names.
+# pinned_bats_ci <version> <sha256> — a workflow whose install step pins that bats and whose one step runs it.
+pinned_bats_ci() {
+  printf 'name: CI\non: pull_request\njobs:\n  bats:\n    runs-on: ubuntu-latest\n    steps:\n' > "$TMPDIR_T/pin.yml"
+  printf '      - name: Install bats-core %s\n        run: |\n          BATS_VER=%s\n          BATS_SHA256=%s\n          sudo true\n' \
+    "$1" "$1" "$2" >> "$TMPDIR_T/pin.yml"
+  printf '      - name: bats run\n        run: bats --formatter tap tests/x.bats\n' >> "$TMPDIR_T/pin.yml"
+}
+
+# fake_bats_tarball <version> — a bats-core-v<version>.tar.gz in the cache whose bin/bats names itself; prints its sha256.
+fake_bats_tarball() {
+  local d="$TMPDIR_T/src/bats-core-$1/bin"
+  mkdir -p "$d" "$TMPDIR_T/cache"
+  printf '#!/bin/sh\necho "pinned bats %s: $*"\n' "$1" > "$d/bats"
+  chmod +x "$d/bats"
+  tar -czf "$TMPDIR_T/cache/bats-core-v$1.tar.gz" -C "$TMPDIR_T/src" "bats-core-$1"
+  sha256sum "$TMPDIR_T/cache/bats-core-v$1.tar.gz" | cut -d' ' -f1
+}
+
+@test "CL20: a bats step runs the bats version the install step pins, not the bats on PATH" {
+  # Mutation: CL20 -- dropping the provision_bats call runs the PATH bats (1.14 here, 1.10 in CI).
+  local sha; sha="$(fake_bats_tarball 9.9.9)"
+  pinned_bats_ci 9.9.9 "$sha"
+  mkdir -p "$TMPDIR_T/bin"
+  printf '#!/bin/sh\necho "path bats: $*"\n' > "$TMPDIR_T/bin/bats"
+  chmod +x "$TMPDIR_T/bin/bats"
+  PATH="$TMPDIR_T/bin:$PATH" run "$CL" --ci-file "$TMPDIR_T/pin.yml" --cache-dir "$TMPDIR_T/cache" --only 'bats run'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pinned bats 9.9.9: --formatter tap tests/x.bats"* ]]
+  [[ "$output" != *"path bats"* ]]
+}
+
+@test "CL21: a cached bats tarball with another sha256 is refused (exit 3) before the step runs" {
+  fake_bats_tarball 9.9.9 >/dev/null
+  pinned_bats_ci 9.9.9 0000000000000000000000000000000000000000000000000000000000000000
+  run "$CL" --ci-file "$TMPDIR_T/pin.yml" --cache-dir "$TMPDIR_T/cache" --only 'bats run'
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"sha256 mismatch"*"bats-core-v9.9.9.tar.gz"* ]]
+  [[ "$output" != *"pinned bats"* ]]
+}
+
+@test "CL22: --range without --changed, and --changed with --list or --only, are usage errors (exit 2)" {
+  run "$CL" --range a..b
+  [ "$status" -eq 2 ]
+  run "$CL" --changed --list
+  [ "$status" -eq 2 ]
+  run "$CL" --changed --only x
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"--changed [--range <from>..<to>]"* ]]
+}
