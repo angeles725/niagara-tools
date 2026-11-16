@@ -34,7 +34,7 @@ A-dup  SKIP  lint-size  no src/
 A-dup  SKIP  lint-license-isoperational-gate  no src/
 A-dup  SKIP  lint-set-null-ord  no src/
 A-dup  SKIP  lint-ws-placement  no src/
-A-dup  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-dup/.deploy-baseline && git -C m/A-dup archive <deployed-ref> . | tar -x -C m/A-dup/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-dup  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-dup archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-dup/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-dup/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-env  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-env  ERROR  slot-coverage  env fault (exit 3)
 A-env  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
@@ -65,7 +65,7 @@ A-env  SKIP  lint-size  no src/
 A-env  SKIP  lint-license-isoperational-gate  no src/
 A-env  SKIP  lint-set-null-ord  no src/
 A-env  SKIP  lint-ws-placement  no src/
-A-env  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-env/.deploy-baseline && git -C m/A-env archive <deployed-ref> . | tar -x -C m/A-env/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-env  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-env archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-env/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-env/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-facade  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-facade  PASS  dup-keys  0
 A-facade  FAIL  slot-coverage  facade type without lexicon: RoomPanel
@@ -98,7 +98,7 @@ A-facade  SKIP  lint-size  no src/
 A-facade  SKIP  lint-license-isoperational-gate  no src/
 A-facade  SKIP  lint-set-null-ord  no src/
 A-facade  SKIP  lint-ws-placement  no src/
-A-facade  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-facade/.deploy-baseline && git -C m/A-facade archive <deployed-ref> . | tar -x -C m/A-facade/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-facade  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-facade archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-facade/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-facade/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-full  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-full  PASS  dup-keys  0
 A-full  PASS  slot-coverage  100.0%
@@ -130,7 +130,7 @@ A-full  SKIP  lint-size  no src/
 A-full  SKIP  lint-license-isoperational-gate  no src/
 A-full  SKIP  lint-set-null-ord  no src/
 A-full  SKIP  lint-ws-placement  no src/
-A-full  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-full/.deploy-baseline && git -C m/A-full archive <deployed-ref> . | tar -x -C m/A-full/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-full  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-full archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-full/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-full/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-na  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-na  PASS  dup-keys  0
 A-na  SKIP  slot-coverage  N/A (no types declared)
@@ -162,7 +162,7 @@ A-na  SKIP  lint-size  no src/
 A-na  SKIP  lint-license-isoperational-gate  no src/
 A-na  SKIP  lint-set-null-ord  no src/
 A-na  SKIP  lint-ws-placement  no src/
-A-na  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-na/.deploy-baseline && git -C m/A-na archive <deployed-ref> . | tar -x -C m/A-na/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-na  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-na archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-na/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-na/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-onlyxml  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-onlyxml  SKIP  lint-lexicon-ascii  no *.lexicon under A-onlyxml
 A-onlyxml  SKIP  lint-delays  no src/
@@ -192,7 +192,7 @@ A-onlyxml  SKIP  lint-size  no src/
 A-onlyxml  SKIP  lint-license-isoperational-gate  no src/
 A-onlyxml  SKIP  lint-set-null-ord  no src/
 A-onlyxml  SKIP  lint-ws-placement  no src/
-A-onlyxml  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-onlyxml/.deploy-baseline && git -C m/A-onlyxml archive <deployed-ref> . | tar -x -C m/A-onlyxml/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-onlyxml  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-onlyxml archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-onlyxml/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-onlyxml/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-part  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-part  PASS  dup-keys  0
 A-part  WARN  slot-coverage  66.6% (missing Foo,Bar)
@@ -224,7 +224,7 @@ A-part  SKIP  lint-size  no src/
 A-part  SKIP  lint-license-isoperational-gate  no src/
 A-part  SKIP  lint-set-null-ord  no src/
 A-part  SKIP  lint-ws-placement  no src/
-A-part  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-part/.deploy-baseline && git -C m/A-part archive <deployed-ref> . | tar -x -C m/A-part/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-part  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-part archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-part/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-part/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-partnomiss  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-partnomiss  PASS  dup-keys  0
 A-partnomiss  WARN  slot-coverage  99.9%
@@ -256,7 +256,7 @@ A-partnomiss  SKIP  lint-size  no src/
 A-partnomiss  SKIP  lint-license-isoperational-gate  no src/
 A-partnomiss  SKIP  lint-set-null-ord  no src/
 A-partnomiss  SKIP  lint-ws-placement  no src/
-A-partnomiss  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-partnomiss/.deploy-baseline && git -C m/A-partnomiss archive <deployed-ref> . | tar -x -C m/A-partnomiss/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-partnomiss  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-partnomiss archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-partnomiss/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-partnomiss/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean

@@ -18,7 +18,7 @@ DemoPan-ux  PASS  lint-size  clean
 DemoPan-ux  PASS  lint-license-isoperational-gate  clean
 DemoPan-ux  PASS  lint-set-null-ord  clean
 DemoPan-ux  PASS  lint-ws-placement  clean
-DemoPan-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p @REPO@/tests/fixtures/report-module/servlet-info/DemoPan-ux/.deploy-baseline && git -C @REPO@/tests/fixtures/report-module/servlet-info/DemoPan-ux archive <deployed-ref> . | tar -x -C @REPO@/tests/fixtures/report-module/servlet-info/DemoPan-ux/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+DemoPan-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C @REPO@/tests/fixtures/report-module/servlet-info/DemoPan-ux archive -o "$T/b.tar" <deployed-ref> . && mkdir @REPO@/tests/fixtures/report-module/servlet-info/DemoPan-ux/.deploy-baseline && tar -x -f "$T/b.tar" -C @REPO@/tests/fixtures/report-module/servlet-info/DemoPan-ux/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean
