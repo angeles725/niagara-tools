@@ -153,3 +153,34 @@ func TestListVendoredNamesAnUnreadableDirectory(t *testing.T) {
 		t.Errorf("errs = %v", errs)
 	}
 }
+
+// An rc dir the process may not search cannot say whether it holds a vendor/: an env fault naming it
+// (exit 3, no row), never "no vendor/ under rc" and exit 0. No tool is needed to say so.
+// Mutation: VF-unsearchable -- reading any stat error as "no vendor/" exits 0 over libraries nobody looked for
+func TestUnsearchableRcDirIsAnEnvFault(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block a lookup")
+	}
+	d := rc(t, map[string]string{"lib.js": "x ??= 1;\n"})
+	if err := os.Chmod(d, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(d, 0o755) })
+	code, out, errs := call(map[string]string{"KIT_NODE": "/nonexistent/node"}, d)
+	check(t, "unsearchable rc dir", code, out, errs, ExitEnv, "",
+		"lint-vendor-floor: env fault: cannot look for vendor/ under "+d+": Permission denied\n")
+}
+
+// What is simply not a vendor/ directory keeps its note and exit 0: no entry of that name, or a regular
+// file of that name.
+func TestNoVendorDirectoryStaysClean(t *testing.T) {
+	t.Parallel()
+	none := t.TempDir()
+	file := t.TempDir()
+	write(t, file, "vendor", "not a directory\n")
+	for _, d := range []string{none, file} {
+		code, out, errs := call(map[string]string{"KIT_NODE": "/nonexistent/node"}, d)
+		check(t, d, code, out, errs, ExitOK, "", "lint-vendor-floor: no vendor/ under "+d+" — nothing to check\n")
+	}
+}

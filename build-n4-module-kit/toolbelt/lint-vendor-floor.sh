@@ -26,15 +26,16 @@
 # names it and the exit is 4. An rc dir with no vendor/ needs no tool and exits 0.
 #
 # Walk: a vendor/ that is a symlink is followed (as `find -H` follows a root); a symlink below it is neither
-# followed nor listed. The list fails closed, before any tool is asked: an unreadable sub-directory, or a
-# vendor/ link that leads nowhere, is one `lint-vendor-floor: env fault: ...` line naming the path and exit 3.
+# followed nor listed. The list fails closed, before any tool is asked: an unreadable sub-directory, a
+# vendor/ link that leads nowhere, or an rc dir the process may not search (so nobody can tell whether it
+# holds a vendor/) is one `lint-vendor-floor: env fault: ...` line naming the path and exit 3.
 # [ev: retro go-lint-vendor-floor Δ1]
 #
 # Usage:  lint-vendor-floor.sh <rc-dir> [--strict]
 #   Row:   FAIL|WARN  vendor-floor  <path under rc-dir>:<line>  syntax|api: <reason>
 #          SKIP  vendor-floor  <rc-dir>  unavailable: <tool> (<hint>)
-# Exit:   0 no FAIL (WARN-only is still 0) · 1 any FAIL · 3 usage/env (a vendor/ that cannot be listed whole
-#         included) · 4 tool unavailable (K20)
+# Exit:   0 no FAIL (WARN-only is still 0) · 1 any FAIL · 3 usage/env (a vendor/ that cannot be looked for or
+#         listed whole included) · 4 tool unavailable (K20)
 #
 # Mutation: VF3 -- treat a missing node as a clean pass (exit 0) so VF3 no longer sees exit 4
 # Mutation: VF5 -- parse at ecmaVersion latest so the ??= fixture parses and VF5 exits 0

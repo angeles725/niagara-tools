@@ -128,3 +128,15 @@ _need_acorn() {
   [[ "$output" == *"lint-vendor-floor: env fault: cannot list every file under $BATS_TEST_TMPDIR/rc/vendor"*"vendor/locked"* ]]
   [[ "$output" != *"vendor-floor  "* ]]
 }
+
+@test "VF12: an rc dir that cannot be searched -> env fault naming it, exit 3, never 'no vendor/'" {
+  [ "$(id -u)" -ne 0 ] || skip "running as root: chmod 000 does not block reads"
+  mkdir -p "$BATS_TEST_TMPDIR/rc/vendor"
+  printf 'x ??= 1;\n' > "$BATS_TEST_TMPDIR/rc/vendor/lib.js"
+  chmod 600 "$BATS_TEST_TMPDIR/rc"
+  KIT_NODE=/nonexistent/node run "$LVF" "$BATS_TEST_TMPDIR/rc"
+  chmod 755 "$BATS_TEST_TMPDIR/rc"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-vendor-floor: env fault: cannot look for vendor/ under $BATS_TEST_TMPDIR/rc: Permission denied"* ]]
+  [[ "$output" != *"nothing to check"* ]]
+}
