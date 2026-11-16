@@ -140,6 +140,8 @@ Flags:
   NAME (the one holding `security/licenses`), when it is reachable from the machine that runs the
   server; lets `n4_license_info` add when each licence was generated and its version. Only the
   attributes of the root element of each `*.license` file are read.
+  It also lets `n4_station_runtime` compare the jars of `PATH/modules` with the modules the
+  station loaded; only `META-INF/module.xml` of a jar is read.
 - `--allow-tier-b NAME` (repeatable): let writes run on that configured station although
   its version is tier B (4.15, 4.3). Only after a PoC matched that build.
 - `--allow-tier-c NAME` (repeatable): the same for tier C (any other or undetected
@@ -201,7 +203,8 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`,
-`n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`.
+`n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
+`n4_station_runtime`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -485,6 +488,26 @@ differ. Install the skill into the harness first (`scripts/install-skill.sh --sk
   }
 }
 ```
+
+### What the station runs: uptime, loaded modules, jars on disk
+
+`n4_station_runtime(max_rows=500, timeout_s=60)` answers "what is this station running, and does it
+need a restart?" in one read. `uptime` comes from the spy page `sysInfo`: `boot_time`,
+`current_time` and `up_time` as the station writes them, and `uptime_s` from its `bootTicks` and
+`currentTicks`. `loaded_modules` comes from the spy page `sysManagers/moduleManager`, which lists
+only the module parts the station has loaded (`name`, `vendor`, `version`; `count`, `truncated`).
+The session lists no module jars, so `jars_on_disk` is `unavailable` unless the server was started
+with `--niagara-home NAME=PATH` for the station: then the tool lists the `.jar` files of
+`PATH/modules` (a link is never opened: `skipped`) and reads `META-INF/module.xml` only from the
+jars that may hold a loaded part and from those changed after the boot. `mismatches` names each
+difference with its `reason`: `version_differs`, `modified_after_boot`, `loaded_not_on_disk` or
+`not_loaded_modified_after_boot`. The boot is this machine's clock minus `uptime_s`, compared with
+the jar times on this machine's filesystem. `restart_needed` is `true` with any mismatch, `false`
+only when the uptime, the whole loaded list and every jar are known and none differs, and `null`
+otherwise; `restart_note` says which. Use it after a deploy: a station holds its module jars open
+while it runs, so a jar it loaded changes only after a restart. Measured on Niagara 4.15: 311
+loaded parts of 740 jars, under 1 s with the installation on a local disk and 13 to 20 s through
+a mounted Windows drive.
 
 ### Finishing a job: the commissioning report
 
