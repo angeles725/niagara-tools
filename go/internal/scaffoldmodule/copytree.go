@@ -56,7 +56,11 @@ var createFile = os.WriteFile
 
 // writeFile creates path (and its directory) with data. The destination tree is new, so there is no
 // earlier file to keep whole: a plain create, with the mode the caller asks for under the umask.
+// A held signal (emitting) ends the copy before the next file.
 func writeFile(path string, data []byte, mode os.FileMode) error {
+	if emitting.caught() {
+		return errInterrupted
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
 		return err
 	}
