@@ -145,3 +145,34 @@ stub_provisioner() {
   [[ "$output" == *"pushed launcher"* ]]
   [[ "$output" == *"FAIL kit-state"* ]]
 }
+
+@test "CL38: kit-links runs the bats binary whose version was checked, not one a relative PATH entry finds in the snapshot" {
+  # Mutation: CL38 -- running a bare "bats" inside the snapshot lets a relative PATH entry swap in an unchecked binary.
+  local pin; pin="$(bats --version | awk '{print $2}')"
+  printf '      - name: Install bats\n        run: |\n          BATS_VER=%s\n          BATS_SHA256=%s\n' \
+    "$pin" "$(printf '0%.0s' $(seq 64))" >> "$R/.github/workflows/ci.yml"
+  stub_provisioner 'return 0'
+  mkdir -p "$R/tests/stubbin"
+  printf '#!/bin/sh\n: > "%s/stub-ran"\nprintf "Bats 0.0.1\\n"\n' "$BATS_TEST_TMPDIR" > "$R/tests/stubbin/bats"
+  chmod +x "$R/tests/stubbin/bats"
+  printf '\nSee METHODOLOGY.md.\n' >> "$R/build-n4-module-kit/README.md"
+  mkdir -p "$BATS_TEST_TMPDIR/elsewhere"
+  cd "$BATS_TEST_TMPDIR/elsewhere"
+  PATH="tests/stubbin:$PATH" run bash "$R/scripts/ci-local.sh" --changed
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS kit-links"* ]]
+  [ ! -e "$BATS_TEST_TMPDIR/stub-ran" ]
+}
+
+@test "CL39: a bats that is not the pinned version is named with its path in the one failure line" {
+  # Mutation: CL39 -- a bare "could not be provisioned" leaves the writer guessing which bats ran.
+  printf '      - name: Install bats\n        run: |\n          BATS_VER=0.0.1\n          BATS_SHA256=%s\n' \
+    "$(printf '0%.0s' $(seq 64))" >> "$R/.github/workflows/ci.yml"
+  stub_provisioner 'return 0'
+  printf '\nSee METHODOLOGY.md.\n' >> "$R/build-n4-module-kit/README.md"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 3 ]
+  [ "$(grep -c 'kit-links: bats could not be provisioned' <<< "$output")" -eq 1 ]
+  [[ "$output" == *"pins 0.0.1, found \"$(bats --version)\" at $(command -v bats)"* ]]
+}

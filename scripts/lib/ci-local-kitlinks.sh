@@ -17,7 +17,8 @@
 #     (its go/ is the checkout's either way);
 #   - bats is the version ci.yml installs (provision_bats), as the full replay runs it; never a run on the wrong bats:
 #     a download or sha256 failure exits 3 with its own error (lib/ci-local-tools.sh), and a provisioning that returns
-#     an error or leaves another version first on PATH is one stderr line and exit 3.
+#     an error or leaves another version first on PATH is one stderr line (naming the pin, the version found and its
+#     path) and exit 3; kit-links runs that checked binary by its absolute path.
 # changelog.d fragments reach no file L1 scans (CHANGELOG.md takes them only at release); a change to one still
 # runs kit-links, so a fragment cannot be the one change a push leaves unchecked.
 # Returns 0 pass or nothing to check, 1 kit-state or kit-links failed, 3 the snapshot could not be made, bats could
@@ -73,14 +74,24 @@ kit_links_check() {
 # prints are noise here.
 kit_state_write() { bash "$1/toolbelt/kit-state.sh" --write "$1" >/dev/null; }
 
-# kit_links_bats — provision the bats ci.yml pins and confirm it is the one first on PATH (provision_bats ends on a
-# printf, so a failed tar inside it would otherwise leave the bats already on PATH to run).
+# kit_links_bats — provision the bats ci.yml pins, resolve the binary first on PATH to an absolute path in KL_BATS,
+# and confirm that binary is the pinned version (provision_bats ends on a printf, so a failed tar inside it would
+# otherwise leave the bats already on PATH to run). kit-links then runs KL_BATS itself: a bare "bats" run inside the
+# snapshot could resolve a relative PATH entry to another binary than the one checked here. On a mismatch KL_BATS_MSG
+# names the pin and what was found. (retro 2026-11-15 coordination-stretch T36)
 kit_links_bats() {
-  local body ver
+  local body ver got
+  KL_BATS_MSG=""
   body="$(bats_install_body)"
   provision_bats "$body" || return 1
+  KL_BATS="$(command -v bats)" || { KL_BATS_MSG=" (no bats on PATH)"; return 1; }
+  case "$KL_BATS" in /*) ;; *) KL_BATS="$PWD/$KL_BATS" ;; esac
   ver="$(sed -nE 's/^[[:space:]]*BATS_VER=([0-9.]+)[[:space:]]*$/\1/p' <<< "$body" | head -n 1)"
-  [ -z "$ver" ] || [ "$(bats --version 2>/dev/null)" = "Bats $ver" ]
+  [ -n "$ver" ] || return 0
+  got="$("$KL_BATS" --version 2>/dev/null)"
+  [ "$got" = "Bats $ver" ] && return 0
+  KL_BATS_MSG=" (ci.yml pins $ver, found \"$got\" at $KL_BATS)"
+  return 1
 }
 
 run_kit_links() {
@@ -88,8 +99,8 @@ run_kit_links() {
   kit_docs_changed || rc=$?
   case "$rc" in 0) ;; 1) return 0 ;; *) return 3 ;; esac
   kit_links_snapshot "$snap" || { printf 'ci-local: --changed: cannot snapshot the change for kit-links\n' >&2; return 3; }
-  kit_links_bats || { printf 'ci-local: --changed: kit-links: bats could not be provisioned at the version ci.yml pins\n' >&2; return 3; }
+  kit_links_bats || { printf 'ci-local: --changed: kit-links: bats could not be provisioned at the version ci.yml pins%s\n' "$KL_BATS_MSG" >&2; return 3; }
   kit_links_check "kit-state --write (the generated BUILD-STATE.md kit-links scans)" "$snap" \
     kit_state_write "$snap/build-n4-module-kit" || return 1
-  kit_links_check "kit-links (tests/kit-links.bats over the changed kit docs)" "$snap" bats tests/kit-links.bats || return 1
+  kit_links_check "kit-links (tests/kit-links.bats over the changed kit docs)" "$snap" "$KL_BATS" tests/kit-links.bats || return 1
 }
