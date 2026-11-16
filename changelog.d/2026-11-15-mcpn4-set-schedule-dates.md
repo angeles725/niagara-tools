@@ -1,0 +1,2 @@
+### Added — mcp-n4: n4_set_schedule changes calendar dates and trigger times
+- `add_date` and `remove_date` change the dates of a calendar or of a trigger (a remove each; an add of the bare date type then a set of each part by path, so the rollback re-adds a removed date exactly); `times` replaces a trigger's firing times. Each is checked first and read back; replacing a date under the same name takes two calls.

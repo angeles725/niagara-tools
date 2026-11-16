@@ -1539,6 +1539,70 @@
    "needs_session": false
   },
   {
+   "name": "n4_set_schedule",
+   "description": "Change the weekly schedule, the default output, the special events, a calendar's dates and a trigger's times of a schedule in one batch under one confirmation token. weekly {day: [{start, end, value}]} replaces only the days given (monday..sunday; the days not given keep their ranges; {\"sunday\": []} clears one): times HH:MM, end 24:00 for midnight, start inclusive and end exclusive. default_output sets the value out takes when nothing is active (null: a null status). add_special_event [{name, kind, rule, ranges}] adds events with the kinds and rule fields of n4_list_schedule_kinds and n4_read_schedule (date, date_range, week_and_day, custom, reference); remove_special_event [names] removes events; an event is replaced by removing and adding it in one call. The events keep their order, which is their priority, and new ones go last. A date or date range that ends before today can never occur again and is refused unless allow_expired is true. add_date [{name, kind, rule}] (date, date_range, week_and_day or custom) and remove_date [names] change the dates of a calendar or of a trigger; a date is replaced in two calls. times [HH:MM] replaces a trigger's firing times. Values follow the schedule kind: true/false (boolean, calendar), a number (numeric), an ordinal of the range facet (enum), a string (string). Before anything is sent every fault is named, one message each: an unknown day, a malformed time, an end not after its start, overlapping ranges in a day, a missing value or one of the wrong type, a part the kind does not have (a calendar or trigger has no weekly schedule, a trigger no default output). Each day, the default output, the special events list and the times is one set that replaces it whole, a date one remove or one bare add then a set of each of its parts, so the inverse restores the previous schedule exactly (n4_rollback). The read-back reloads the schedule and compares each part written with n4_read_schedule's view of it. The station recalculates out, next time and next value by itself. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "The schedule component's ORD, e.g. station:|slot:/Schedules/Lobby"
+     },
+     "weekly": {
+      "type": "object",
+      "description": "Days to replace: {\"monday\": [{\"start\": \"08:00\", \"end\": \"18:00\", \"value\": true}], \"sunday\": []}"
+     },
+     "default_output": {
+      "description": "The default output: a value of the schedule's kind, or null"
+     },
+     "add_special_event": {
+      "type": "array",
+      "description": "Events to add: [{\"name\": \"Shutdown\", \"kind\": \"date_range\", \"rule\": {\"start\": {\"year\": 2027, \"month\": \"dec\", \"day\": 24}, \"end\": {\"year\": 2027, \"month\": \"dec\", \"day\": 31}}, \"ranges\": [{\"start\": \"00:00\", \"end\": \"24:00\", \"value\": false}]}]"
+     },
+     "remove_special_event": {
+      "type": "array",
+      "description": "Names of the events to remove, as n4_read_schedule shows them"
+     },
+     "add_date": {
+      "type": "array",
+      "description": "Dates to add to a calendar (or a trigger): [{\"name\": \"Fridays\", \"kind\": \"week_and_day\", \"rule\": {\"weekday\": \"friday\"}}]"
+     },
+     "remove_date": {
+      "type": "array",
+      "description": "Names of the dates to remove, as n4_read_schedule shows them"
+     },
+     "times": {
+      "type": "array",
+      "description": "A trigger's firing times, replacing them all: [\"06:00\", \"18:30\"]"
+     },
+     "allow_expired": {
+      "type": "boolean",
+      "default": false,
+      "description": "true adds a special event or calendar date that ends before today (it can never occur again)"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": true
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_ack_alarm",
    "description": "Acknowledge alarm records by uuid (1 to 100, as n4_read_alarms returns them), with optional notes, through the station's alarm channel (ackAlarms): the station sets the acking user, the ack time and ackState ackPending, updates the alarm database and routes the ack. The dry run reads each record first and refuses, naming them, any uuid with no record, any record whose source is outside the write scope (or is not a slot path), and any record already acknowledged or ack pending. The read-back re-reads the records: verified when none is still unacked and each has a user; mismatch when any stayed unacked or the station names alarm classes the user may not acknowledge (it needs operatorWrite on the record's class; those names are returned in observed.permission_failed_classes). An acknowledgement cannot be undone: there is no inverse and n4_rollback cannot reverse it. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {

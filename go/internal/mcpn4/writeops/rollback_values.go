@@ -71,6 +71,9 @@ func bsonValue(b *pyjson.Object) (any, error) {
 	if !ok {
 		return nil, &plan.PyError{Type: "AttributeError", Msg: "'" + plan.TypeName(tv) + "' object has no attribute 'startswith'"}
 	}
+	if own, ok := ownValue(t, b); ok { // a text Status or a schedule day: rollback_values_own.go
+		return own, nil
+	}
 	if strings.HasPrefix(t, "baja:Status") {
 		kids, err := items(sOf(b))
 		if err != nil {
@@ -112,21 +115,6 @@ func bsonValue(b *pyjson.Object) (any, error) {
 		return "", nil
 	}
 	return v, nil
-}
-
-// sOf is body.get("s", []).
-func sOf(b *pyjson.Object) any {
-	if v, ok := b.Get("s"); ok {
-		return v
-	}
-	return []any{}
-}
-
-func orZero(v any) any {
-	if pyjson.Truthy(v) {
-		return v
-	}
-	return "0.0"
 }
 
 // ordOf is _ord_of: the first recorded ORD whose handle == h ("" when none is).
@@ -172,7 +160,7 @@ func unchangedSince(c plan.Client, view *pyjson.Object, ops []any, targets *pyjs
 		if !ok {
 			return &plan.PyError{Type: "AttributeError", Msg: "'" + plan.TypeName(n) + "' object has no attribute 'split'"}
 		}
-		nodes, err := c.LoadTree(where, slotDepth(slot), box.LoadOptions{})
+		nodes, err := c.LoadTree(where, opDepth(op, slot), box.LoadOptions{})
 		if err != nil {
 			return err
 		}
@@ -212,6 +200,9 @@ func observeOp(nodes, op *pyjson.Object, slot string) (any, error) {
 	t, ok := tv.(string)
 	if !ok {
 		return nil, &plan.PyError{Type: "AttributeError", Msg: "'" + plan.TypeName(tv) + "' object has no attribute 'startswith'"}
+	}
+	if own, ok := observeOwn(nodes, slot, t); ok {
+		return own, nil
 	}
 	now, err := plan.Observe(nodes, slot, t)
 	var pe *plan.PyError

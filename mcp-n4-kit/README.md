@@ -1119,6 +1119,79 @@ out every slot that holds its type's default (a 00:00 start, a false `alwaysEffe
 fills those from the station's type registry and refuses, naming the slot, rather than guess one
 the registry does not describe.
 
+### Writing a weekly schedule and its default output
+
+`n4_set_schedule(ord, weekly, default_output)` (a write tool: `--allow-writes`, a write scope, dry run then
+`confirmation_token`) replaces the days given and only those: `{"monday": [{"start": "08:00",
+"end": "18:00", "value": true}]}` leaves tuesday to sunday as they are, and `{"sunday": []}`
+clears sunday. Times are `HH:MM`, `24:00` only as an end (midnight); a range covers its start up
+to, not including, its end. Values follow the kind: `true`/`false`, a number, an enum ordinal of
+the schedule's `range` facet, or a string. Every fault is named in one refusal before anything is
+sent (an unknown day, a malformed time, an end not after its start, overlapping ranges, a missing
+or mistyped value, a calendar or trigger, which have no weekly schedule).
+
+`default_output` is the value `out` takes when no range or special event is active: a value of
+the kind (a calendar's is a boolean) or `null` for a null status. A trigger has none.
+
+Each day is one BOX set that replaces its DaySchedule whole, the default output one set of its
+Status, and each inverse is a set of what was loaded (a default output the station left out is
+restored from its declared default), so `n4_rollback` restores the previous schedule exactly.
+The read-back reloads the schedule and compares each part written with what `n4_read_schedule` shows; the station
+recalculates `out`, `next_time` and `next_value` by itself.
+
+### Special events
+
+`add_special_event` and `remove_special_event` change the special events of a boolean, numeric,
+enum or string schedule in the same batch:
+
+```json
+{"ord": "station:|slot:/Schedules/Lobby",
+ "remove_special_event": ["Christmas Break"],
+ "add_special_event": [{"name": "Plant Shutdown", "kind": "date_range",
+   "rule": {"start": {"year": 2027, "month": "dec", "day": 24}, "end": {"year": 2027, "month": "dec", "day": 31}},
+   "ranges": [{"start": "00:00", "end": "24:00", "value": false}]}]}
+```
+
+`kind` and the `rule` fields are those `n4_list_schedule_kinds` lists and `n4_read_schedule`
+returns (`"*"` or a missing field matches any; `custom` fields are lists). The events keep their
+order, which is their priority (first wins), and new events go last; to change one, remove and add
+it in one call. A `date` or `date_range` that ends before today (the date of the machine running
+the server) can never occur again: it is refused, naming `allow_expired: true`, which adds it
+anyway. A `reference` must name an existing calendar (`schedule:CalendarSchedule`; it is only
+read, so it may sit outside the write scope), and a name given twice to remove is refused. The
+whole list is one set, so `n4_rollback` restores the events exactly as they were; the read-back
+compares each event's name, rule and ranges, and the rollback compares the list it wrote (names,
+order, rules and ranges) before overwriting it and after restoring it.
+
+### Calendar dates and trigger times
+
+`add_date` ([{name, kind, rule}], kind `date`, `date_range`, `week_and_day` or `custom`) and
+`remove_date` ([names]) change the dates of a calendar, or of a trigger's own `dates` calendar,
+under the same expiry rule as special events. A date is a component of the calendar itself, so
+each removal is one remove and each addition one add of the bare date type followed by one set
+per part (`<name>/yearSchedule`, `/monthSchedule`, ...); the inverse re-adds a removed date the
+same way from its loaded parts (live on 4.15.6.20: removing two dates and rolling back read the
+calendar back identical). A date cannot be removed and added under the same name in one call:
+replace it in two calls, so each rolls back on its own. The rollback compares each date part by
+its rule, so a date the station restores with another month reads as a mismatch. `times` (["06:00", "18:30"]) replaces a
+trigger's firing times with one set.
+
+### Recipe: a schedule that drives a point
+
+1. `n4_create_component` the schedule (`schedule:BooleanSchedule`, or the numeric, enum or string
+   kind that matches the point) next to the point.
+2. `n4_set_schedule` its `weekly` ranges, `default_output` and any `add_special_event`.
+3. `n4_create_link` the schedule's `out` to the writable point's `in16`. By convention a weekly
+   schedule drives priority level 16, though any level is allowed (Niagara help,
+   AboutLinkingWeeklySchedules: "By convention, when linking to a target writable point (with
+   16-level priority array), you select In16 among its different priority array inputs. However,
+   you are free to select any available input level."). A calendar is not linked: special events
+   reference it.
+
+Live on 4.15.6.20: a BooleanSchedule with `default_output` false and a special event for today
+(00:00-24:00 true), linked to a BooleanWritable's `in16`, put the point's `out` at true @ 16
+("Special Event: Today"); removing the event put both back at false (Default Output).
+
 ## Live smoke test
 
 `go/bin/live-smoke` (built from `go/cmd/mcp-n4/live-smoke`; formerly `tools/live_smoke.py`)

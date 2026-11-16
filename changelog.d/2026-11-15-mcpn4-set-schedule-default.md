@@ -1,0 +1,2 @@
+### Added — mcp-n4: n4_set_schedule sets the default output
+- `n4_set_schedule(ord, default_output)` sets the value `out` takes when nothing is active, of the schedule's kind (a calendar's is a boolean) or `null`; it is checked with the weekly request, rolled back exactly (a default output the station left out comes back as its declared default) and read back. A trigger schedule has none and is refused by name.
