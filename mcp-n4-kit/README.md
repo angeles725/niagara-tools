@@ -489,10 +489,27 @@ Tool rules:
 - `n4_add_history(points, history_name, interval_ms)` adds one interval history
   extension per point (1 to 50), created already configured (`historyName`,
   `interval`, `enabled`, default true) in one batch under one confirmation token.
-  It refuses a point that already has a child named `ext_name` and, when the
-  pattern only uses `%name%` / `%parent...name%` tokens, a history name that would
-  repeat across the batch. The inverse removes every extension; the read-back
-  compares each one. Capacity stays at the default (500 records, Roll).
+  The extension type follows the point type, read from the station's type registry
+  (a numeric, boolean, enum or string control point gets `NumericInterval`,
+  `BooleanInterval`, `EnumInterval` or `StringInterval`), and so does the default
+  `ext_name`; an `ext_type` that does not fit the point is refused at the dry run,
+  naming the one that does. It refuses a point that already has a child named
+  `ext_name` and, when the pattern only uses `%name%` / `%parent...name%` tokens, a
+  history id (`/<station>/<history name>`) that would repeat across the batch or
+  that an extension on the station already holds (one BQL read of every
+  `history:HistoryExt`): such an extension would sit in fault "Duplicate history
+  id". The inverse removes every extension; the read-back compares each one,
+  including its history id and an empty fault cause.
+  `mode=cov` adds a change-of-value extension instead (`NumericCov`,
+  `BooleanCov`, ...): it records each change of the point value, has no interval
+  and refuses `interval_ms`. `capacity` sets the history capacity in records (the
+  oldest roll off when full; 20160 is 7 days at 30 s) or `"unlimited"`, by a set
+  op on `<ext_name>/historyConfig/capacity` (`history:Capacity`, encoded `1:<records>`
+  or `0:0`) right after each add in the same batch: `historyConfig` is a component,
+  which a station refuses inside an add body. Without it the extension default
+  stays (500 records, Roll). The plan notes how long the capacity lasts at the
+  requested interval (a change-of-value history lasts as long as its changes take),
+  and the read-back checks the capacity when one was asked.
 - `n4_copy_component(parent_ord, name, new_names)` adds the configuration of one
   child again under each new name (1 to 30) in one batch under one confirmation
   token: type, plain slots and child components up to 6 levels deep (a Modbus

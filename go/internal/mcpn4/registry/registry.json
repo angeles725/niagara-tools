@@ -583,7 +583,7 @@
   },
   {
    "name": "n4_add_history",
-   "description": "Add one interval history extension per point, already configured: historyName (baja:Format pattern), interval (ms) and enabled, in one batch under one confirmation token (1 to 50 points). Refuses a point that already has a child named ext_name and, when the pattern only uses %name%/%parent...name% tokens, a history name that would repeat. Capacity stays at the extension default (500 records, Roll). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Add one history extension per point, already configured: historyName (baja:Format pattern), enabled and, for mode interval (the default), interval (ms), in one batch under one confirmation token (1 to 50 points). Mode cov adds a change-of-value extension instead, which records each change of the point value and has no interval. The extension type follows the point type read from the station (numeric, boolean, enum or string control point: NumericInterval / NumericCov, BooleanInterval / BooleanCov, EnumInterval / EnumCov, StringInterval / StringCov), and so does its default slot name. Refuses a point that is not one of those, an ext_type that does not fit the point, a point that already has a child named ext_name and, when the pattern only uses %name%/%parent...name% tokens, a history id (/<station>/<history name>) that would repeat in the batch or that an extension on the station already holds (one BQL read). The capacity argument sets the history capacity in records (Roll when full) or unlimited, by a set op on historyConfig/capacity right after each add in the same batch; without it the extension default stays (500 records). The plan notes how long the capacity lasts at the interval. The read-back checks the type, the configured slots, the capacity when given, the history id and that the extension is not in fault. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -600,23 +600,50 @@
      },
      "interval_ms": {
       "type": "integer",
-      "description": "Sampling interval in milliseconds (300000 is 5 minutes)"
+      "description": "Sampling interval in milliseconds (300000 is 5 minutes); required for mode interval, refused for mode cov"
+     },
+     "mode": {
+      "type": "string",
+      "default": "interval",
+      "enum": [
+       "interval",
+       "cov"
+      ],
+      "description": "interval: sample every interval_ms; cov: record each change of value (no interval). Default: the mode of ext_type when given, else interval"
+     },
+     "capacity": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2147483647
+       },
+       {
+        "type": "string",
+        "enum": [
+         "unlimited"
+        ]
+       }
+      ],
+      "description": "History capacity: a number of records (the oldest roll off when full; 20160 is 7 days at 30 s) or \"unlimited\". Default: the extension default, 500 records"
      },
      "ext_name": {
       "type": "string",
-      "default": "NumericInterval",
-      "description": "Slot name of the extension under each point"
+      "description": "Slot name of the extension under each point; default: the extension type's short name, e.g. BooleanInterval"
      },
      "ext_type": {
       "type": "string",
-      "default": "history:NumericIntervalHistoryExt",
       "enum": [
        "history:NumericIntervalHistoryExt",
        "history:BooleanIntervalHistoryExt",
        "history:EnumIntervalHistoryExt",
-       "history:StringIntervalHistoryExt"
+       "history:StringIntervalHistoryExt",
+       "history:NumericCovHistoryExt",
+       "history:BooleanCovHistoryExt",
+       "history:EnumCovHistoryExt",
+       "history:StringCovHistoryExt"
       ],
-      "description": "Interval history extension type"
+      "description": "History extension type; default: the one that fits each point's type, and a type that does not fit is refused"
      },
      "enabled": {
       "type": "boolean",
@@ -635,8 +662,7 @@
     },
     "required": [
      "points",
-     "history_name",
-     "interval_ms"
+     "history_name"
     ]
    },
    "annotations": {
