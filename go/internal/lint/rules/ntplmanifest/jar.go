@@ -66,7 +66,7 @@ func checkJar(root string, h home, stock map[string]bool) ([]lint.Finding, error
 		data, res, err := b.inflate(e, maxJarTemplate)
 		switch res {
 		case overBudget:
-			c.out = append(c.out, lint.Finding{Check: checkEntries, Path: entryPath, Msg: spentMsg("the template")})
+			c.out = append(c.out, lint.Finding{Check: checkEntries, Path: entryPath, Msg: b.spentMsg("the template")})
 			return c.rows(), nil
 		case overLimit:
 			c.out = append(c.out, lint.Finding{Check: checkEntries, Path: entryPath, Msg: fmt.Sprintf(jarTemplateTooLarge, maxJarTemplate)})

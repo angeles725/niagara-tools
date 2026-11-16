@@ -104,17 +104,24 @@ var maxJarTemplate int64 = maxArchive
 
 // The bounds of one lint run (retro coordination-stretch T26): every template it reads, in a module or a
 // jar, and every manifest, bog and Px entry inside them draw on one budget of maxInflate inflated bytes
-// (budget.go), and at most maxTemplates templates are read. 128 MiB, the bound one archive had before: the
-// bog and Px entries are parsed as XML at about 30 MiB/s, so the run's reads end in a few seconds. A
-// variable, so a test can lower it.
-var maxInflate int64 = 128 << 20
+// (budget.go), at most maxReads of those entries are opened, and at most maxTemplates templates are read.
+// 128 MiB, the bound one archive had before: the bog and Px entries are parsed as XML at about 30 MiB/s
+// (the 128 MiB amplifying jar of budget_test.go: 3.8 s). Bytes alone do not bound the time: each entry costs
+// an open and a parse whatever its size, about 12 us for a tiny one (100 templates of 10,000 four-byte Px
+// entries: 12.4 s, 4 MiB of the budget), so 100,000 reads end in about a second (T34). Variables, so a test
+// can lower them.
+var (
+	maxInflate int64 = 128 << 20
+	maxReads         = 100000
+)
 
 const maxTemplates = 1000
 
 // The rows of the run bounds: the entry the budget stopped at (%s is its name, or "the template" for a
-// template of a jar), and the first template past the count.
+// template of a jar) by bytes or by entries read, and the first template past the count.
 const (
 	runBudget        = "the templates and their entries inflate past %d bytes in all, the bound of one run -- %s and everything after it not read"
+	runReads         = "%d entries read in all, the bound of one run -- %s and everything after it not read"
 	tooManyTemplates = "%d templates, over the %d this lint reads -- this one and every one after it not read"
 )
 

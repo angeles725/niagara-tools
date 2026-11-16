@@ -18,7 +18,7 @@ func readUses(files []*zip.File, b *budget) []member {
 		switch res {
 		case overBudget:
 			// Mutation: NTPL-uses-total -- reading on past the run's budget lets a template of many entries inflate without limit
-			return append(out, member{name: f.Name, why: spentMsg(f.Name)})
+			return append(out, member{name: f.Name, why: b.spentMsg(f.Name)})
 		case overLimit:
 			why = fmt.Sprintf(entryTooLarge, f.Name, maxUsesRead)
 		case unread:
