@@ -2,7 +2,6 @@
 # A listed file may shrink but not grow, and no file may be added. Split a file, then lower or delete its line.
 683 internal/niagaratest/run.go
 575 internal/rcscan/scan.go
-529 internal/modulemap/modulemap.go
 520 internal/lint/rules/delays/scan.go
 485 internal/rcscan/provenance.go
 456 internal/reportmodule/special.go
