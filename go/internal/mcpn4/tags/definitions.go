@@ -27,9 +27,10 @@ type GroupDef struct {
 	Tags          []string
 }
 
-// TagDefs are the tag definitions of d (one load of its tagDefinitions, depth 1).
+// TagDefs are the tag definitions of d (one load of its tagDefinitions, depth 2: each
+// definition with its defValue and validity).
 func TagDefs(l Loader, d Dictionary) ([]TagDef, error) {
-	nodes, err := l.LoadTree(d.Ord+"/tagDefinitions", 1, box.LoadOptions{})
+	nodes, err := l.LoadTree(d.Ord+"/tagDefinitions", 2, box.LoadOptions{})
 	if err != nil {
 		return nil, err
 	}
