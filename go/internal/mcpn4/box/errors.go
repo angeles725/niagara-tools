@@ -42,6 +42,9 @@ type Error struct {
 	Msg          string
 	Channel, Key string
 	Code         int
+	// Station is set on the station's own error reply ("t": "e"): it answered and refused the
+	// request, unlike a transport, HTTP or malformed-reply failure.
+	Station bool
 }
 
 func (e *Error) Error() string { return e.Msg }

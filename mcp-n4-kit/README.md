@@ -351,6 +351,15 @@ Every write call goes through these layers:
    that re-creates a removed component's links still checks both ends of each link.
 5. **Dry run.** `dry_run` defaults to true: the reply is the exact BOX ops and their
    inverse, a `plan_hash` and a `confirmation_token`; nothing is sent to the station.
+   Before a token is issued the dry run refuses what it can check by reading:
+   `n4_create_component` an unknown `type` or `proxy_ext` (one the station's type
+   registry does not describe, named in the error instead of the station's generic
+   "Unable to process request"); `n4_create_link` a source or target slot that
+   neither the component nor its type contract has (checked only when the station
+   describes the type), and a link identical to one the target already has (same
+   source handle, source slot and target slot). Whether the parent accepts a child
+   type cannot be checked offline; the station's refusal of it is journaled as
+   `refused` (layer 7).
 6. **Token.** To execute, repeat the same call with `dry_run=false` and the token.
    It is single use, expires after `--token-ttl`, and is an HMAC under a per-process
    random key bound to the tool, the arguments, the plan and the expiry. If the
@@ -371,6 +380,18 @@ Every write call goes through these layers:
    sent, their replies and their inverse, and an in-doubt `result` record
    (`sent`, `failed_op`, partial `accepted` and `inverse`) is journaled; a rollback
    that stops after re-creating components lists the components that now exist.
+   One exception: when the station answers the first op with its own error reply
+   (`Illegal parent`, `Slot ... already exists`, `Could not find Source Slot`,
+   `Duplicate link already exists`) and a read-back of the targets shows nothing
+   applied (no new child under the parent for `n4_create_component`, no new link on
+   the target for `n4_create_link`), the batch is `refused`: a `result` record
+   `{verdict: "refused", refused: true, station_error, inverse: []}` is journaled,
+   the reply says the station refused it and nothing changed, and the audit outcome
+   is `refused`. A transport failure, a timeout, a read-back that fails or shows a
+   change, and every other tool stay `in-doubt`. The station's text is decoded from
+   HTML entities (`&quot;`, `&lt;`, `&amp;`) in every error a tool reports.
+   Journal states, as `n4_list_batches` shows them: `completed`, `in-doubt`,
+   `refused`.
 8. **Audit.** Every write call, dry, executed or refused, appends a line to
    `<state-dir>/audit.jsonl`; arguments whose key contains `pass`, `secret`, `token`
    or `credential` are replaced by `***`.
@@ -483,7 +504,9 @@ Destructive tools use the same pipeline:
 - `n4_rollback(batch_id)` plans the inverse recorded in the journal as a new batch
   (`rollback_of` points to the original). It refuses an unknown batch, one already
   rolled back, a rollback itself, an `in-doubt` batch (it shows the journaled
-  intent so a human decides) and a batch from another station. The current
+  intent so a human decides), a `refused` batch (the station applied nothing, so
+  there is nothing to roll back) and a batch from another station. A refused
+  rollback does not count as an earlier rollback. The current
   `--write-scope` is enforced on every ORD the batch touched, and each recorded
   handle must still belong to its ORD. Before restoring a slot or fallback it reads
   the slot and refuses when it no longer holds what the batch wrote (a later change is

@@ -2,6 +2,7 @@ package box
 
 import (
 	"fmt"
+	"html"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -28,11 +29,21 @@ func (c *Client) unwrap(reply any, channel, key string) (any, error) {
 	if t, _ := msg.Get("t"); t == "e" {
 		b, _ := msg.Get("b")
 		text, ok := get(b, "m")
-		if s, isStr := text.(string); ok && isStr {
-			return nil, boxError(s, channel, key)
+		s, isStr := text.(string)
+		if !ok || !isStr {
+			s = "station error"
 		}
-		return nil, boxError("station error", channel, key)
+		return nil, stationError(s, channel, key)
 	}
 	b, _ := msg.Get("b")
 	return b, nil
+}
+
+// stationError is the BoxError of the station's own error reply ("t": "e"): its text with the
+// HTML entities the station escapes (&quot;, &lt;, &amp; ...) decoded, flagged as an explicit
+// station answer rather than a transport or protocol failure.
+func stationError(text, channel, key string) *Error {
+	e := boxError(html.UnescapeString(text), channel, key)
+	e.Station = true
+	return e
 }

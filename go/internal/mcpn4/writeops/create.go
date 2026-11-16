@@ -13,15 +13,16 @@ import (
 // CreateComponent is n4_create_component: one add under parent_ord; the inverse removes the
 // component under the name the station assigned (it may rename on collision).
 var CreateComponent = plan.Impl{ScopeCheck: createScope, Plan: createPlan, PlanWith: createPlanWith,
-	Inverse: createInverse, Readback: createReadback}
+	Inverse: createInverse, Readback: createReadback, Unapplied: createUnapplied}
 
 // typeSpec is _TYPE_SPEC under re.match: "$" also matches before one final "\n".
 var typeSpec = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*:[A-Za-z][A-Za-z0-9_]*\n?$`)
 
 type createData struct {
 	parentH  any
-	ws       any    // the wsAnnotation value, or nil
-	proxyExt string // the requested proxyExt type, or "" (added after the Python port)
+	ws       any             // the wsAnnotation value, or nil
+	proxyExt string          // the requested proxyExt type, or "" (added after the Python port)
+	children map[string]bool // the parent's children when planned (createUnapplied)
 }
 
 // wireSheet is _wire_sheet: the wsAnnotation slot of {x, y, w} (w defaults to 8), or nil.
@@ -71,11 +72,14 @@ func createPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		return nil, plan.ToolError("proxy_ext must be a type spec module:Type, got " + pyjson.StrRepr(proxyExt))
 	}
 	parentOrd := str(args, "parent_ord")
-	h, _, err := plan.Handle(c, parentOrd, 1)
+	h, nodes, err := plan.Handle(c, parentOrd, 1)
 	if err != nil {
 		return nil, err
 	}
-	slots, data := []any{}, createData{parentH: h, proxyExt: proxyExt}
+	if err := typesKnown(c, typ, proxyExt); err != nil {
+		return nil, err
+	}
+	slots, data := []any{}, createData{parentH: h, proxyExt: proxyExt, children: childNames(nodes)}
 	if ws != nil {
 		slots, data.ws = []any{ws}, get(ws, "v")
 	}

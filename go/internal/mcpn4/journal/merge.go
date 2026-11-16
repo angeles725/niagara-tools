@@ -40,9 +40,13 @@ func orEmpty(v any) any {
 	return []any{}
 }
 
+// StateRefused is the state of a batch the station explicitly refused with nothing applied (its
+// result record carries refused: true; added after the Python port).
+const StateRefused = "refused"
+
 // merge is _merge: the intent without its phase, inverse/accepted/verdict reset, the relink and
 // component ops when their write-ahead record exists, the result over it (without phase and
-// ts) with result_ts, and the state.
+// ts) with result_ts, and the state: in-doubt, completed or refused.
 func merge(intent, result *pyjson.Object, relinks any, hasRelinks bool, comps []any, hasComps bool) *pyjson.Object {
 	view := pyjson.NewObject()
 	for _, k := range intent.Keys() {
@@ -67,7 +71,10 @@ func merge(intent, result *pyjson.Object, relinks any, hasRelinks bool, comps []
 			}
 		}
 		view.Set("result_ts", get(result, "ts"))
-		if !pyjson.Truthy(get(result, "in_doubt")) {
+		switch {
+		case pyjson.Truthy(get(result, "refused")): // the station refused it, nothing applied
+			state = StateRefused
+		case !pyjson.Truthy(get(result, "in_doubt")):
 			state = "completed"
 		}
 	}

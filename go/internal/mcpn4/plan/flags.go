@@ -91,3 +91,16 @@ func (c *Contracts) Declared(parentType string, child *pyjson.Object) (*pyjson.O
 	}
 	return c.Slot(parentType, name)
 }
+
+// Described reports whether the station describes typeSpec with a contract of its own (declared
+// slots "c" or a supertype "p"). An entry {} (a common baja type, or a station answering every
+// type alike) says nothing about which slots exist, so a caller must not refuse on it.
+func (c *Contracts) Described(typeSpec string) (bool, error) {
+	if err := c.Load([]string{typeSpec}); err != nil {
+		return false, err
+	}
+	e, _ := lookup(c.types, typeSpec)
+	_, hasSlots := e.Get("c")
+	_, hasSuper := e.Get("p")
+	return hasSlots || hasSuper, nil
+}

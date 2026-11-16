@@ -9,12 +9,17 @@ import (
 )
 
 // sendAll is _send_all: the batch's ops in order; a failure at op k is its partial in-doubt
-// error.
-func (e *Engine) sendAll(c Client, impl Impl, planned *Planned, batchID string) ([]any, error) {
+// error, except an explicit station refusal of op 1 that a read-back shows changed nothing.
+func (e *Engine) sendAll(c Client, impl Impl, args *pyjson.Object, planned *Planned, batchID string) ([]any, error) {
 	replies := []any{}
 	for _, op := range planned.Ops {
 		reply, err := send(c, op)
 		if err != nil {
+			if len(replies) == 0 { // the first op: a station refusal may have changed nothing
+				if refused := e.refused(c, impl, args, planned, batchID, err); refused != nil {
+					return nil, refused
+				}
+			}
 			return nil, e.inDoubtPartial(impl, planned, batchID, replies, err)
 		}
 		replies = append(replies, reply)

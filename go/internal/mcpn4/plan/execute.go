@@ -20,7 +20,7 @@ type readback struct {
 // journal the result. The inverse, recover and read-back steps catch every failure (a panic
 // too), as Python's `except Exception` does: the write already happened.
 func (e *Engine) execute(c Client, impl Impl, args *pyjson.Object, planned *Planned, batchID string) (*pyjson.Object, error) {
-	replies, err := e.sendAll(c, impl, planned, batchID)
+	replies, err := e.sendAll(c, impl, args, planned, batchID)
 	if err != nil {
 		return nil, err
 	}

@@ -59,6 +59,9 @@ var verdicts = []struct{ verdict, change, target, priority string }{
 	{"partial", "Restore by hand the configuration a rollback reported as not restored " +
 		"(frozen_config_not_restored, link_inputs_not_restored)", "METHODOLOGY.md · section 3", "MEDIUM"},
 	{"unverified", "Add a way to verify this write class, or document that it stays unverified", "METHODOLOGY.md · section 3", "MEDIUM"},
+	// added after the Python port (bench retro 2026-11-15 delta 4): refused with nothing applied
+	{"refused", "Check what the station refused (station_error in the journal) before the dry run, or " +
+		"document why the request was wrong", "mcp_n4 dry-run pre-checks", "MEDIUM"},
 }
 
 // RefusalClass is the class of a refusal reason (the key of the first _REFUSALS row with a
