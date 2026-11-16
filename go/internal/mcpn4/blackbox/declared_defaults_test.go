@@ -7,6 +7,7 @@ package blackbox
 import (
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -76,5 +77,85 @@ func TestReadSlotsListsTheDeclaredPropertiesTheLoadOmits(t *testing.T) {
 	}
 	if _, has := out["defaults_note"]; has {
 		t.Errorf("defaults_note with readable contracts: %v", out["defaults_note"])
+	}
+}
+
+func TestADeclaredPropertyTheStationSendsIsListedOnceWithItsValue(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	r.Set(c.Handle, "setpoint", map[string]any{"nm": "p", "t": "baja:Double", "v": "21.5"})
+	n := 0
+	for _, s := range objects(r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})["slots"]) {
+		if s["name"] == "setpoint" {
+			n++
+			if s["value"] != "21.5" || s["default"] != nil {
+				t.Errorf("setpoint = %v", s)
+			}
+		}
+	}
+	if n != 1 {
+		t.Errorf("setpoint listed %d times", n)
+	}
+}
+
+func TestTheContractsAreReadOncePerSession(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	args := Args{"ord": Folder + "/" + c.Name}
+	r.Srv.OK("n4_read_slots", args)
+	count := func() int {
+		before := r.Station.Requests()
+		r.Srv.OK("n4_read_slots", args)
+		return r.Station.Requests() - before
+	}
+	again, plain := count(), 0
+	r.Station.SetRegistry(map[string]any{})
+	other := r.Add("3", "Plain", "kitBench:Plain") // answered {}: one registry call, then none
+	r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + other.Name})
+	before := r.Station.Requests()
+	r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + other.Name})
+	plain = r.Station.Requests() - before
+	if again != plain {
+		t.Errorf("a repeated read costs %d requests, a read of a type with no contract %d", again, plain)
+	}
+}
+
+func TestATypeTheStationCannotDescribeSaysSoAndListsWhatWasLoaded(t *testing.T) {
+	r := stationRig(t)
+	r.Station.SetRegistry(map[string]any{"kitBench:Gone": map[string]any{"isErr": true, "c": "", "m": "kitBench:Gone", "s": ""}})
+	c := r.Add("3", "Gone", "kitBench:Gone")
+	r.Set(c.Handle, "label", map[string]any{"nm": "p", "t": "baja:String", "v": "x"})
+	out := r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})
+	if slots := objects(out["slots"]); len(slots) != 1 || slots[0]["name"] != "label" {
+		t.Errorf("slots = %v", out["slots"])
+	}
+	if note, _ := out["defaults_note"].(string); !strings.Contains(note, "kitBench:Gone") {
+		t.Errorf("defaults_note = %v", out["defaults_note"])
+	}
+}
+
+// A type the station does not describe (an error entry, or left out of the reply) is remembered
+// for the session too: three reads ask the registry once.
+func TestAnUndescribedTypeIsAskedForOncePerSession(t *testing.T) {
+	for _, entry := range []any{nil, map[string]any{"isErr": true, "c": "", "m": "kitBench:Gone", "s": ""}} {
+		r := stationRig(t)
+		r.Station.SetRegistry(map[string]any{"kitBench:Gone": entry})
+		c := r.Add("3", "Gone", "kitBench:Gone")
+		var calls int32
+		r.Station.SetHook(func(frame map[string]any) (int, []byte) {
+			for _, m := range objects(frame["m"]) {
+				if m["c"] == "reg" {
+					atomic.AddInt32(&calls, 1)
+				}
+			}
+			return 0, nil
+		})
+		for i := 0; i < 3; i++ {
+			out := r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})
+			if note, _ := out["defaults_note"].(string); !strings.Contains(note, "kitBench:Gone") {
+				t.Errorf("read %d defaults_note = %v", i, out["defaults_note"])
+			}
+		}
+		if n := atomic.LoadInt32(&calls); n != 1 {
+			t.Errorf("entry %v: three reads asked the registry %d times, want 1", entry, n)
+		}
 	}
 }
