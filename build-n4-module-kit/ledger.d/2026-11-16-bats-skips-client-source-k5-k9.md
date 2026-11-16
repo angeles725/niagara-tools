@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-16 -->
+<!-- last-change-note: check-bats-skips refuses ^* only where it opens a branch; check-client-source decodes a UTF-16 BUILD-STATE and refuses a byte-order mark in front of a later line -->
+log: 2026-11-16 · check-bats-skips and check-client-source encodings → `scripts/check-bats-skips.sh` refuses `^*` only at the start of a branch, where GNU grep warns "* at start of expression" (`a^*` is allowed again, `^*a` stays refused); `scripts/check-client-source.sh --build-state` decodes UTF-16 with its byte-order mark and exits 3 on UTF-16 it cannot decode and on a UTF-8 mark that opens a line other than the first (each read "undeclared", exit 0). Retro bats-skips-client-source-k5-k9 (Δ1-Δ2 applied, pending review). [ev: retro bats-skips-client-source-k5-k9 Δ1] [ev: retro bats-skips-client-source-k5-k9 Δ2]
+open_issue: retro bats-skips-client-source-k5-k9 Δ3, Δ4 open (2026-11-16): the GNU grep wording of gate-followups-and-template-lints Δ16; ugrep as `grep` on the dev host.
