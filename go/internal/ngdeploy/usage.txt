@@ -38,6 +38,12 @@ Required for mode A or C unless --first-deploy:
                          schema-risk.sh against the -rt module dir before the copy (build-verify.md
                          § Schema-risk deploy workflow)
 
+The env file and the flags:
+  An option variable in the env file (MODE, KEEP_N, FULL_BACKUP, NO_DEPLOY, WITH_SLOTOMATIC, STRICT_SLOTOMATIC,
+  FIRST_DEPLOY, ACCEPT_LOSSY) sets that option; the flag of the same option, when given, wins over it.
+  NO_GATE=1 and NO_BACKUP=1 are refused in the env file (exit 10, with file and line) unless --no-gate or
+  --no-backup is given: the file alone does not switch the verify-module gate or the backup off.
+
 Optional:
   BUILD_ID             — when set, verifies index.html in ux jar contains ?v=$BUILD_ID
   SLOTOMATIC_DETECTION — warn|strict|off (default: warn); controls annotation-change heuristic
@@ -47,7 +53,7 @@ Optional:
 Exit codes:
   0   success (or --help)
   10  missing required env var, invalid path or option value, or an env file that is a directory, cannot be
-      read or holds a line that is not a plain assignment; or, after the checks and before the copy, a
+      read, holds a line that is not a plain assignment, or sets NO_GATE=1 / NO_BACKUP=1 without the flag; or, after the checks and before the copy, a
       .last-deploy-sha that is a directory or cannot be written (nothing was copied; SLOTOMATIC_DETECTION=off
       makes the record optional)
   15  slotomatic failed or skipped a file (METHODOLOGY K15), or annotation changes detected in strict mode;

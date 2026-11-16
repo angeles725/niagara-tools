@@ -17,9 +17,11 @@ const (
 	msgEnvFileRead   = "env file %s cannot be read: %s"
 	msgEnvFileDir    = "env file %s is a directory"
 	msgEnvFileOwned  = "env file %s: line %d: %s is set by ng-deploy and cannot be assigned"
-	warnEnvFileCR    = "WARN env file %s: a carriage return was stripped from the end of %d line(s), the first at line %d (CRLF line endings; save the file with LF)"
-	msgNotSwitch     = "%s must be 0 or 1"
-	msgKeep          = "KEEP_N (--keep) must be a whole number of backups, 1 or more"
+	// msgEnvFileGuarded takes the file, the line, the key, the step it would switch off and the flag that does.
+	msgEnvFileGuarded = "env file %s: line %d: %s would switch %s off, which an env file may not do: give %s on the command line"
+	warnEnvFileCR     = "WARN env file %s: a carriage return was stripped from the end of %d line(s), the first at line %d (CRLF line endings; save the file with LF)"
+	msgNotSwitch      = "%s must be 0 or 1"
+	msgKeep           = "KEEP_N (--keep) must be a whole number of backups, 1 or more"
 
 	// required settings
 	msgRequired        = "%s is required but not set"

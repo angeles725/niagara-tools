@@ -29,6 +29,7 @@ type deploy struct {
 	scriptDir string            // the directory of the invoked ng-deploy.sh
 	raw       map[string]string // the option globals (options.go)
 	fileEnv   map[string]string // what the env file assigned
+	byFlag    map[string]bool   // the option globals a flag of the command line set
 
 	module    string // MODULE_NAME
 	station   string // STATION_MODULES_DIR
@@ -56,7 +57,7 @@ var phases = []func(*deploy) int{
 
 // Main implements ng-deploy.sh; usage.txt carries the usage text and the exit codes.
 func Main(args []string, s cli.Stdio) int {
-	d := &deploy{s: s, scriptDir: dirname(s.Env(ScriptEnv)), fileEnv: map[string]string{}}
+	d := &deploy{s: s, scriptDir: dirname(s.Env(ScriptEnv)), fileEnv: map[string]string{}, byFlag: map[string]bool{}}
 	os.Unsetenv(ScriptEnv)
 	d.raw = d.defaults()
 	if code := d.parseArgs(args); code != proceed {

@@ -17,7 +17,9 @@ var owned = map[string]bool{"SCRIPT_DIR": true, "VERSION_FILE": true, "SCRIPT_VE
 
 // loadEnvFile reads the env file the way `set -a; source` did for plain assignments: each one becomes part
 // of the environment of this process and of every command it runs, and one named like an option global
-// replaces that option. $NAME, ${NAME} and a leading ~ expand as bash expanded them (shellVariable). A
+// sets that option unless a flag of the command line did (the flag wins). A key that would switch the
+// backup or the verify-module gate off is refused with file and line unless its flag was given
+// (optiontable.go): the file alone does not skip either. $NAME, ${NAME} and a leading ~ expand as bash expanded them (shellVariable). A
 // missing file is tolerated; a directory is not (exit 10: the wrong path was named). A line that is not a plain assignment, and a variable that is not set, are
 // refused with file and line (the bash tool ran the first and stopped on the second); no message quotes a
 // value of the file.
@@ -38,6 +40,9 @@ func (d *deploy) loadEnvFile() int {
 		if owned[a.Key] {
 			return d.fail(ExitEnv, msgEnvFileOwned, path, a.Line, a.Key)
 		}
+		if option, _ := optionOf(a.Key); option.guards != "" && isOne(a.Value) && !d.byFlag[a.Key] {
+			return d.fail(ExitEnv, msgEnvFileGuarded, path, a.Line, a.Key, option.guards, option.flag)
+		}
 	}
 	if len(crLines) > 0 { // a CRLF file: the values are used without the carriage return
 		d.warn(warnEnvFileCR, path, len(crLines), crLines[0])
@@ -45,7 +50,7 @@ func (d *deploy) loadEnvFile() int {
 	for _, a := range assignments {
 		d.fileEnv[a.Key] = a.Value
 		os.Setenv(a.Key, a.Value)
-		if _, isOption := d.raw[a.Key]; isOption {
+		if _, isOption := d.raw[a.Key]; isOption && !d.byFlag[a.Key] {
 			d.raw[a.Key] = a.Value
 		}
 	}
