@@ -34,7 +34,7 @@ P1  SKIP  lint-size  no src/
 P1  SKIP  lint-license-isoperational-gate  no src/
 P1  SKIP  lint-set-null-ord  no src/
 P1  SKIP  lint-ws-placement  no src/
-P1  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P1  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/P1/.deploy-baseline && git -C m/P1 archive <deployed-ref> . | tar -x -C m/P1/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 P2  SKIP  verify-module  no built jar under build/libs (floor check not run)
 P2  PASS  dup-keys  0
 P2  PASS  slot-coverage  150.5%
@@ -66,7 +66,7 @@ P2  SKIP  lint-size  no src/
 P2  SKIP  lint-license-isoperational-gate  no src/
 P2  SKIP  lint-set-null-ord  no src/
 P2  SKIP  lint-ws-placement  no src/
-P2  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P2  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/P2/.deploy-baseline && git -C m/P2 archive <deployed-ref> . | tar -x -C m/P2/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 P3  SKIP  verify-module  no built jar under build/libs (floor check not run)
 P3  PASS  dup-keys  0
 P3  WARN  slot-coverage  0.0% (missing A)
@@ -98,7 +98,7 @@ P3  SKIP  lint-size  no src/
 P3  SKIP  lint-license-isoperational-gate  no src/
 P3  SKIP  lint-set-null-ord  no src/
 P3  SKIP  lint-ws-placement  no src/
-P3  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P3  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/P3/.deploy-baseline && git -C m/P3 archive <deployed-ref> . | tar -x -C m/P3/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 P4  SKIP  verify-module  no built jar under build/libs (floor check not run)
 P4  PASS  dup-keys  0
 P4  PASS  slot-coverage  +100.0%
@@ -130,7 +130,7 @@ P4  SKIP  lint-size  no src/
 P4  SKIP  lint-license-isoperational-gate  no src/
 P4  SKIP  lint-set-null-ord  no src/
 P4  SKIP  lint-ws-placement  no src/
-P4  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P4  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/P4/.deploy-baseline && git -C m/P4 archive <deployed-ref> . | tar -x -C m/P4/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 P5  SKIP  verify-module  no built jar under build/libs (floor check not run)
 P5  PASS  dup-keys  0
 P5  WARN  slot-coverage  -5% (missing Q)
@@ -162,7 +162,7 @@ P5  SKIP  lint-size  no src/
 P5  SKIP  lint-license-isoperational-gate  no src/
 P5  SKIP  lint-set-null-ord  no src/
 P5  SKIP  lint-ws-placement  no src/
-P5  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+P5  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/P5/.deploy-baseline && git -C m/P5 archive <deployed-ref> . | tar -x -C m/P5/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean

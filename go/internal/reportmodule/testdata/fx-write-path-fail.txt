@@ -17,7 +17,7 @@ DemoPan-rt  PASS  lint-size  clean
 DemoPan-rt  PASS  lint-license-isoperational-gate  clean
 DemoPan-rt  PASS  lint-set-null-ord  clean
 DemoPan-rt  PASS  lint-ws-placement  clean
-DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p @REPO@/tests/fixtures/report-module/write-path-fail/DemoPan-rt/.deploy-baseline && git -C @REPO@/tests/fixtures/report-module/write-path-fail/DemoPan-rt archive <deployed-ref> . | tar -x -C @REPO@/tests/fixtures/report-module/write-path-fail/DemoPan-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 docs  SKIP  verify-module  no built jar under build/libs (floor check not run)
 docs  SKIP  lint-lexicon-ascii  no *.lexicon under docs
 docs  SKIP  lint-delays  no src/
@@ -47,7 +47,7 @@ docs  SKIP  lint-size  no src/
 docs  SKIP  lint-license-isoperational-gate  no src/
 docs  SKIP  lint-set-null-ord  no src/
 docs  SKIP  lint-ws-placement  no src/
-docs  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+docs  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p @REPO@/tests/fixtures/report-module/write-path-fail/docs/.deploy-baseline && git -C @REPO@/tests/fixtures/report-module/write-path-fail/docs archive <deployed-ref> . | tar -x -C @REPO@/tests/fixtures/report-module/write-path-fail/docs/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean

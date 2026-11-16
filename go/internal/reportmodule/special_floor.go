@@ -5,6 +5,23 @@ import (
 	"strings"
 )
 
+// noBaseline is the floor SKIP of a missing baseline: the exact command that extracts <artifact> as it was at
+// the deployed commit (`git archive <ref> .` run in the artifact directory writes paths relative to it, so the
+// baseline has the artifact's own layout, module-include.xml and src/); %[1]s is the artifact directory as a
+// shell word. The operator fills in <deployed-ref>, the tag or commit the station runs. [ev: retro buildsh-mirror-baseline-b6 Δ2]
+// (retro row B6, a client A module build 2026-11-16)
+const noBaseline = "no .deploy-baseline (floor check not run); create it from the deployed commit: " +
+	"mkdir -p %[1]s/.deploy-baseline && git -C %[1]s archive <deployed-ref> . | tar -x -C %[1]s/.deploy-baseline" +
+	" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)"
+
+// shellWord is s as one POSIX shell word: as is when every byte is safe unquoted, else single-quoted.
+func shellWord(s string) string {
+	if s != "" && strings.Trim(s, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./@%+=:,-") == "" {
+		return s
+	}
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
 // schemaRisk is §6: schema-risk <artifact>/.deploy-baseline <artifact>, its output discarded and its exit the
 // verdict; no baseline is a floor SKIP unless --first-deploy.
 func (r *report) schemaRisk(a artifact) {
@@ -14,7 +31,7 @@ func (r *report) schemaRisk(a artifact) {
 		if r.o.firstDeploy {
 			r.emit(a.name, skip, check, "N/A (--first-deploy: never deployed, no baseline to diff)")
 		} else {
-			r.emit(a.name, skip, check, "no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)")
+			r.emit(a.name, skip, check, fmt.Sprintf(noBaseline, shellWord(a.dir)))
 			r.floorSkip = true
 		}
 		return

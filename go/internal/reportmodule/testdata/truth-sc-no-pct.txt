@@ -33,7 +33,7 @@ A  SKIP  lint-size  no src/
 A  SKIP  lint-license-isoperational-gate  no src/
 A  SKIP  lint-set-null-ord  no src/
 A  SKIP  lint-ws-placement  no src/
-A  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A/.deploy-baseline && git -C m/A archive <deployed-ref> . | tar -x -C m/A/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 B  SKIP  verify-module  no built jar under build/libs (floor check not run)
 B  ERROR  slot-coverage  env fault (exit 2): no pct= line
 B  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
@@ -64,7 +64,7 @@ B  SKIP  lint-size  no src/
 B  SKIP  lint-license-isoperational-gate  no src/
 B  SKIP  lint-set-null-ord  no src/
 B  SKIP  lint-ws-placement  no src/
-B  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+B  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/B/.deploy-baseline && git -C m/B archive <deployed-ref> . | tar -x -C m/B/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean

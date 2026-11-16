@@ -90,6 +90,11 @@ Since 2026-11-16 the cases that move this way are re-recorded with `memcap go te
 (`../../lint/rules/golden/record/README.md`, Re-recording through the Go port), which rewrites only the `want` and
 `stderr` sections of the cases that differ; the temporary dump hooks above are no longer needed.
 
+Retro row B6 (2026-11-16) made the `schema-risk` SKIP row of an artifact without `.deploy-baseline` name the exact
+command that creates it from the deployed commit (`mkdir -p <artifact>/.deploy-baseline && git -C <artifact> archive
+<deployed-ref> . | tar -x -C <artifact>/.deploy-baseline`). The 100 cases that print that row were re-recorded with
+`-update`; their diff changes that row only (156 lines), every exit line and summary unchanged.
+
 ## Truth cases (`truth-*`)
 
 Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro

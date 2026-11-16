@@ -15,7 +15,7 @@ B-rt  PASS  lint-size  clean
 B-rt  PASS  lint-license-isoperational-gate  clean
 B-rt  PASS  lint-set-null-ord  clean
 B-rt  PASS  lint-ws-placement  clean
-B-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+B-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/B-rt/.deploy-baseline && git -C m/B-rt archive <deployed-ref> . | tar -x -C m/B-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 Z  SKIP  verify-module  no built jar under build/libs (floor check not run)
 Z  SKIP  lint-lexicon-ascii  no *.lexicon under Z
 Z  SKIP  lint-delays  no src/
@@ -45,7 +45,7 @@ Z  SKIP  lint-size  no src/
 Z  SKIP  lint-license-isoperational-gate  no src/
 Z  SKIP  lint-set-null-ord  no src/
 Z  SKIP  lint-ws-placement  no src/
-Z  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+Z  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/Z/.deploy-baseline && git -C m/Z archive <deployed-ref> . | tar -x -C m/Z/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 a-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
 a-rt  SKIP  lint-lexicon-ascii  no *.lexicon under a-rt
 a-rt  SKIP  lint-delays  no src/
@@ -79,7 +79,7 @@ a-rt  SKIP  lint-size  no src/
 a-rt  SKIP  lint-license-isoperational-gate  no src/
 a-rt  SKIP  lint-set-null-ord  no src/
 a-rt  SKIP  lint-ws-placement  no src/
-a-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+a-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/a-rt/.deploy-baseline && git -C m/a-rt archive <deployed-ref> . | tar -x -C m/a-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean

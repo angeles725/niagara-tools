@@ -38,7 +38,7 @@ DemoPan-rt  SKIP  lint-size  no src/
 DemoPan-rt  SKIP  lint-license-isoperational-gate  no src/
 DemoPan-rt  SKIP  lint-set-null-ord  no src/
 DemoPan-rt  SKIP  lint-ws-placement  no src/
-DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p @REPO@/tests/fixtures/report-module/agent-on/DemoPan-rt/.deploy-baseline && git -C @REPO@/tests/fixtures/report-module/agent-on/DemoPan-rt archive <deployed-ref> . | tar -x -C @REPO@/tests/fixtures/report-module/agent-on/DemoPan-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  FAIL  lint-agent-on-shape  module-include.xml:4  malformed agent-on target (need module:Type): FooService
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  FAIL  lint-structure  DemoPan-rt:  L5: module.palette missing for -rt profile

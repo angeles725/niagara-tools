@@ -14,7 +14,7 @@ A-0warn  PASS  lint-size  clean
 A-0warn  PASS  lint-license-isoperational-gate  clean
 A-0warn  PASS  lint-set-null-ord  clean
 A-0warn  PASS  lint-ws-placement  clean
-A-0warn  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-0warn  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-0warn/.deploy-baseline && git -C m/A-0warn archive <deployed-ref> . | tar -x -C m/A-0warn/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-1  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-1  SKIP  lint-lexicon-ascii  no *.lexicon under A-1
 A-1  FAIL  lint-link-target-flags  exited 1 with no FAIL row (crash or unexpected output) -- run lint-link-target-flags.sh manually
@@ -25,7 +25,7 @@ A-1  PASS  lint-size  clean
 A-1  PASS  lint-license-isoperational-gate  clean
 A-1  PASS  lint-set-null-ord  clean
 A-1  PASS  lint-ws-placement  clean
-A-1  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-1  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-1/.deploy-baseline && git -C m/A-1 archive <deployed-ref> . | tar -x -C m/A-1/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-127  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-127  SKIP  lint-lexicon-ascii  no *.lexicon under A-127
 A-127  FAIL  lint-link-target-flags  exited 127 with no FAIL row (crash or unexpected output) -- run lint-link-target-flags.sh manually
@@ -36,7 +36,7 @@ A-127  PASS  lint-size  clean
 A-127  PASS  lint-license-isoperational-gate  clean
 A-127  PASS  lint-set-null-ord  clean
 A-127  PASS  lint-ws-placement  clean
-A-127  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-127  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-127/.deploy-baseline && git -C m/A-127 archive <deployed-ref> . | tar -x -C m/A-127/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-2fail  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-2fail  SKIP  lint-lexicon-ascii  no *.lexicon under A-2fail
 A-2fail  FAIL  ltf  B.java:2  LTF2 bad
@@ -47,7 +47,7 @@ A-2fail  PASS  lint-size  clean
 A-2fail  PASS  lint-license-isoperational-gate  clean
 A-2fail  PASS  lint-set-null-ord  clean
 A-2fail  PASS  lint-ws-placement  clean
-A-2fail  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-2fail  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-2fail/.deploy-baseline && git -C m/A-2fail archive <deployed-ref> . | tar -x -C m/A-2fail/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 A-3  SKIP  verify-module  no built jar under build/libs (floor check not run)
 A-3  SKIP  lint-lexicon-ascii  no *.lexicon under A-3
 A-3  ERROR  lint-link-target-flags  env fault (exit 3)
@@ -58,7 +58,7 @@ A-3  PASS  lint-size  clean
 A-3  PASS  lint-license-isoperational-gate  clean
 A-3  PASS  lint-set-null-ord  clean
 A-3  PASS  lint-ws-placement  clean
-A-3  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-3  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-3/.deploy-baseline && git -C m/A-3 archive <deployed-ref> . | tar -x -C m/A-3/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean
