@@ -34,6 +34,10 @@ memcap go/internal/lint/rules/golden/record/record.sh /tmp/rm/report-module.sh \
 diff -r go/internal/reportmodule/testdata /tmp/rm/out   # only the truth-* cases and README.md differ
 ```
 
+The nine `cli-` cases that print the usage text also differ: the usage gained `--write-baseline`, `--no-baseline`
+and the baseline paragraph (`baseline_messages.go`), which the bash tool never had. The baseline itself is pinned
+by `baseline_test.go`, not by a recorded case.
+
 `setup.sh` runs the script as `report-module.sh` of the same toolbelt copy; the members it runs are this
 checkout's wrappers. The `fx-` cases therefore pin the current lint rows too: a lint change that alters a row
 on those trees is re-recorded with it.
