@@ -372,6 +372,79 @@ module-verification check on next boot, even if the JAR bytes are correct.
 
 ---
 
+## 10a · Removing a module from a station — checklist
+
+Uninstalling a jar is a platform operation; what it does to the **station** is decided by whether the station file
+still holds components of the module's types. Check first, remove second.
+
+Sources: [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/Platform/RemovingModulesFromARemotePlatform-2C318A1E.txt`,
+`…/Platform/platDaemon-SoftwareManager.txt` and `…/Platform/platDaemon-ApplicationDirector.txt` (under
+niagara-research; the Software Manager rules are tabled in `types/platform.md` § 2); corpus B754 (decode behaviour),
+B1139 (Software Manager recovery), B633 (install mechanics), B1191 (save backups).
+
+**What happens to components whose type is gone** `[ev: corpus B754 §754.5-754.6]`:
+
+- At boot the station decodes `config.bog` against the installed modules. A child component whose type cannot be
+  found is **skipped with its whole subtree**, with a warning; the station still boots. Links to and from the
+  skipped components are gone with them, so a consumer that was fed by one now holds its last or default value
+  `[INFER]`.
+- The skipped subtree is absent from the running station, so **the next station save writes `config.bog` without
+  it** `[INFER]`: the loss becomes permanent at that save, not at the uninstall. The earlier file survives as a
+  rotated `config_backup_<yyMMdd_HHmm>.bog` beside `config.bog` only while the save rotation keeps it
+  `[ev: corpus B1191 §1191.1]`.
+- A different, fatal case: another **installed** module whose types need a class of the removed module (a shared
+  enum or base type) fails to load those types, for every instance (`Missing class …`). The Software Manager guards
+  the declared part of this: it refuses to uninstall a module that other installed modules depend on, unless the
+  dependents are flagged for removal too. An undeclared class use is not caught.
+
+**Order of steps:**
+
+1. **Back up.** A station Backup `.dist` (§ 12) taken now is the only complete rollback: it holds the `.bog` and
+   the module references. Keep a copy of the module jar as well: the platform keeps no rollback copy of a module jar (an
+   install overwrites in place, with no backup) `[ev: corpus B633 §633.4]`.
+2. **Look for leftover types in the station file** (next list). Any hit means the removal deletes station content.
+3. **Remove or replace those components in the running station**, re-link their consumers, verify the plant
+   behaviour, then save the station. Removing a component is an operator-visible change: do it with the integrator,
+   not as a side effect of an uninstall.
+4. **Put controlled equipment in manual.** An upgrade or downgrade stops the station (`types/platform.md` § 2); the
+   guides do not say whether an uninstall does, so plan for a stop and a restart `[INFER]`.
+5. **Software Manager** (Platform node): select the module, **Uninstall**; if a Cannot Uninstall Module window
+   names dependents, either flag them too or stop here; then **Commit**. Check afterwards that no part of the module
+   (`-rt`, `-ux`, `-wb`) is still listed as installed `[INFER]`. Module changes go through the Software Manager, never
+   the File Transfer Client (§ 10).
+6. **Application Director › Verify Software** before starting the station: Workbench parses the station's
+   `config.bog` and the host's `platform.bog` for module references and reports any that is not installed. A
+   reference to the removed module here means step 2 or 3 missed something: do not start and save.
+7. **Start the station and read the output** for decode warnings (a skipped type is a warning, not an error) and for
+   `Missing class` lines; check the consumers found in step 3.
+
+**How to check a station file for leftover types** (any one; the first is the kit's):
+
+- `toolbelt/bog-audit.sh <config.bog> --module <moduleName>`: CHECK1 lists the component count per named module, and
+  the tool exits 3 with "no component of the named modules" when the file holds none, which is the answer wanted
+  here. Run it on a copy of the saved file (save the station first: an unsaved running station is ahead of its file).
+- In a running station, a BQL query per type of the module: `select slotPath from <module>:<Type>` over the station
+  (`types/logic-authoring.md` § BQL from code — consumer cursor pattern). It sees unsaved components too, but one query per type.
+- By hand: `config.bog` is a zip holding `file.xml`; a component's type is `t="<symbol>:<Type>"` and the symbol is
+  bound to its module by an `m="<symbol>=<module>"` attribute `[ev: corpus B5 §5.2.3]`. A file with no
+  `=<moduleName>"` binding holds no component of that module.
+- Also look outside the component tree: Px files and palettes that name the module's widgets or types, `module://`
+  ORDs to its resources, and other modules' `<dependency>` on it.
+
+**Recovery, when a module was removed with components still in the station:**
+
+| State | Recovery |
+|---|---|
+| removed, station **not saved** since (or not started) | reinstall the same module version with the Software Manager and restart: the file still holds the components and they decode again `[INFER]` |
+| removed, station started and **saved** | stop the station; restore the newest `config_backup_*.bog` that predates the removal, or restore the Backup `.dist` of step 1; reinstall the module; start. Changes made after that backup are lost |
+| station will not boot after the removal | § 10: the Software Manager works with the station down; reinstall the removed module, or the dependents' matching versions |
+| no backup holds the components | they are rebuilt by hand from commissioning records; there is no other source |
+
+`BModuleRemovalConverter` (§ 9) belongs to the AX→N4 migration tool; nothing in our sources runs it when a module is uninstalled
+from an N4 station `[INFER]`.
+
+---
+
 ## 11 · Firmware/file OTA via chunked Base64 action invocations [ev: retro honeywell-wb-rt-wb-deltas Δ5]
 
 When an rt action can accept only small strings and you need to push a firmware image or large file from the WB to a device, split the file into 5 000-byte chunks, Base64-encode each chunk and send it as one action invocation. The shipped Honeywell HMI menu opens with an `initiateFileCopy` action, sends each chunk with `copyBinaryString`, aborts on any reply other than `"SUCCESS"`, and finishes with a separate `firmwareUpdateHMI` action; how the device side reassembles the chunks is not shown `[INFER]`. This avoids any single-payload size limit without a custom Fox file channel.
