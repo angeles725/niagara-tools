@@ -12,7 +12,7 @@
   not a regular file (a FIFO, or a link to one) is exit 3 naming it, never "nothing to check".
 - `toolbelt/report-module.sh` runs the template lint once per module root (a new member) and takes
   `--niagara-home <dir>`, passed on to it; without the option the lint reads `NIAGARA_HOME` from the environment
-  report-module inherits. Its rows are relayed whole (`(module)  FAIL  ntpl-deps  <file.ntpl>: <reason>`), a
+  report-module inherits; `toolbelt/build.sh` passes its `niagara_home` as that option. Its rows are relayed whole (`(module)  FAIL  ntpl-deps  <file.ntpl>: <reason>`), a
   `FAIL` row fails the report, and a module with neither a build file nor a template is a SKIP row. Every report
   gains the member's row (`PASS  lint-ntpl-manifest-deps  clean` or SKIP).
 - `verify-module --src` reads the declared dependencies through the shared `lint.DeclaredDeps` (no behaviour
