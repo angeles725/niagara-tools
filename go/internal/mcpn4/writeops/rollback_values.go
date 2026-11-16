@@ -88,6 +88,9 @@ func bsonValue(b *pyjson.Object) (any, error) {
 			}
 			values[key] = get(c, "v")
 		}
+		if textStatus(t) {
+			return textStatusValue(t, values["svalue"], values["sstatus"]), nil
+		}
 		raw := values["svalue"]
 		var value any = box.PyEqual(raw, "true")
 		if strings.HasSuffix(t, "Numeric") {
@@ -112,21 +115,6 @@ func bsonValue(b *pyjson.Object) (any, error) {
 		return "", nil
 	}
 	return v, nil
-}
-
-// sOf is body.get("s", []).
-func sOf(b *pyjson.Object) any {
-	if v, ok := b.Get("s"); ok {
-		return v
-	}
-	return []any{}
-}
-
-func orZero(v any) any {
-	if pyjson.Truthy(v) {
-		return v
-	}
-	return "0.0"
 }
 
 // ordOf is _ord_of: the first recorded ORD whose handle == h ("" when none is).
@@ -212,6 +200,9 @@ func observeOp(nodes, op *pyjson.Object, slot string) (any, error) {
 	t, ok := tv.(string)
 	if !ok {
 		return nil, &plan.PyError{Type: "AttributeError", Msg: "'" + plan.TypeName(tv) + "' object has no attribute 'startswith'"}
+	}
+	if textStatus(t) {
+		return observeTextStatus(nodes, slot, t), nil
 	}
 	now, err := plan.Observe(nodes, slot, t)
 	var pe *plan.PyError

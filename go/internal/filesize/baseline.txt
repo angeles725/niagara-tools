@@ -13,7 +13,7 @@
 328 internal/lint/rules/silentprotection/silentprotection.go
 327 internal/ledgercheck/ledgercheck.go
 320 internal/lint/rules/batserrexit/lex.go
-320 internal/mcpn4/writeops/rollback_values.go
+311 internal/mcpn4/writeops/rollback_values.go
 312 internal/lint/rules/vacuoustests/judge.go
 305 internal/javasrc/javasrc.go
 300 internal/lint/rules/arbitraryord/trace.go
