@@ -158,6 +158,31 @@ func TestNavigateListsTheDeclaredPropertiesOfEachListedComponent(t *testing.T) {
 	}
 }
 
+func TestAnUnreadableRegistrySaysSoAndListsWhatWasLoaded(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	r.Set(c.Handle, "setpoint", map[string]any{"nm": "p", "t": "baja:Double", "v": "3.0"})
+	r.Station.SetHook(func(frame map[string]any) (int, []byte) {
+		msgs, _ := frame["m"].([]any)
+		for _, m := range objects(msgs) {
+			if m["c"] == "reg" {
+				return 200, []byte(`{"v": "2.3", "p": "box", "m": [{"c": "reg", "k": "loadTypes", "r": 0, "t": "e", "b": {"isErr": true, "m": "no registry"}}]}`)
+			}
+		}
+		return 0, nil
+	})
+	out := r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})
+	if slots := objects(out["slots"]); len(slots) != 1 || slots[0]["name"] != "setpoint" || slots[0]["default"] != nil {
+		t.Errorf("slots = %v", out["slots"])
+	}
+	if note, _ := out["defaults_note"].(string); !strings.Contains(note, "could not be read") {
+		t.Errorf("defaults_note = %v", out["defaults_note"])
+	}
+	nav := r.Srv.OK("n4_navigate", Args{"ord": Folder + "/" + c.Name})
+	if note, _ := nav["defaults_note"].(string); !strings.Contains(note, "could not be read") {
+		t.Errorf("navigate defaults_note = %v", nav["defaults_note"])
+	}
+}
+
 // A type the station does not describe (an error entry, or left out of the reply) is remembered
 // for the session too: three reads ask the registry once.
 func TestAnUndescribedTypeIsAskedForOncePerSession(t *testing.T) {
