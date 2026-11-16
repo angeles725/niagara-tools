@@ -51,6 +51,7 @@ case "$1" in
     rev-parse)
         # FAKE_GIT_NOREPO: the working directory is not in a repository, as git answers there (exit 128)
         if [[ -n "${FAKE_GIT_NOREPO:-}" ]]; then
+            echo "fatal: not a git repository (or any of the parent directories): .git" >&2
             exit 128
         fi
         if [[ "$2" == "--git-dir" ]]; then

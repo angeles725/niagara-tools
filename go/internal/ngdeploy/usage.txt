@@ -184,7 +184,9 @@ Exit codes:
   41  the jars were copied, but the deployed commit could not be read (git rev-parse HEAD) or written to
       .last-deploy-sha (a record that could be written before the copy and no longer can): restart as the
       last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional). A working directory
-      that is not a git repository has no commit to record: a NOTICE says so and the deploy ends 0
+      that is not a git repository (git says "not a git repository" and no .git is there or above) has no commit
+      to record: a NOTICE says so and the deploy ends 0. A repository git refuses to open (dubious ownership, a
+      corrupt .git) is still exit 41
   12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
   50  verify failed: type count mismatch (a jar with no type entry counts 0), a module.xml that unzip cannot
       read, BUILD_ID not found, or verify-module gate failed/missing (a jar not signed by the expected signer

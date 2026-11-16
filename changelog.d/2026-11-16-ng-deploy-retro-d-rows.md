@@ -12,7 +12,8 @@
   build only when every jar was put back or removed; a jar of another origin left in place gets a NOTICE that says so.
 - A deploy from a working directory that is not a git repository ends 0 with `NOTICE: not a git repository; the
   deployed commit is not recorded in .last-deploy-sha: the next annotation check has no starting point` instead of an
-  ERROR and exit 41. A repository whose HEAD cannot be read is still exit 41.
+  ERROR and exit 41. Only git's "not a git repository" (read in the C locale) with no `.git` there or above counts;
+  a repository git refuses to open (dubious ownership, a corrupt `.git`) or whose HEAD cannot be read is still exit 41.
 - Before the build, each station jar the run will replace is renamed to `<jar>.ng-probe` and straight back: a jar a
   running station holds is exit 40 with the line above and no gradle call, instead of after a minute of building. A
   jar without write permission still deploys (a rename needs the directory's permission). A jar that cannot be moved

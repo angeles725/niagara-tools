@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -72,15 +71,6 @@ func (d *deploy) checkRecord() int {
 		}
 	}
 	return proceed
-}
-
-// outsideGit reports that git runs and the working directory is not in a repository (git rev-parse
-// --git-dir fails); without git the record step cannot tell, and stays exit 41.
-func (d *deploy) outsideGit() bool {
-	if _, err := exec.LookPath("git"); err != nil {
-		return false
-	}
-	return d.run(io.Discard, io.Discard, "git", "rev-parse", "--git-dir") != 0
 }
 
 // headCommit is the full object name of HEAD. why says what stopped the read; "" when nothing did. Only a
