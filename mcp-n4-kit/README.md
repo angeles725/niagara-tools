@@ -195,7 +195,7 @@ Example MCP client entry (Claude Code `.mcp.json`):
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
-`n4_list_px_views`, `n4_px_summary`.
+`n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -233,6 +233,62 @@ never overwritten; a truncated read is not saved). `n4_px_summary(file_ord, max_
 max_items=200)` fetches a `.px` and returns its media, imported modules, canvases and
 `viewSize`, layers, widget and binding counts, bound ORDs grouped by component, images,
 included Px, charts and label texts, without the XML.
+Station health in one call: `n4_station_health(base="station:|slot:/", max_not_ok=50)` composes
+the reads above into one reply, each section answered on its own. `system` is the station's
+SystemService (`/Services/PlatformServices/SystemService`) by its slot names: `currentCpuUsage`
+and `overallCpuUsage` in percent, `numCpus`, `totalPhysicalMemory` and `freePhysicalMemory` as the
+station reports them (it names no unit; the magnitude on the 4.15 station measured fits
+kilobytes) plus the derived
+`memory_used_percent`, `niagaraVersion`, `hostId`, `model`, `stationName`, `systemTime`, `osName`,
+`javaVmVersion`. `points`, `networks` and `devices` each run one query that selects `status.bits`
+(the status as a number, which no locale translates) and report `total`, `ok`, `by_flag` (a count
+per flag: `disabled`, `fault`, `down`, `alarm`, `stale`, `overridden`, `null`, `unackedAlarm`; a
+row with two flags counts under both), `null_only`, `not_ok_count` and `not_ok`. Every row is one
+of three: `ok` (no flag), `null_only` (the flag `null` alone: a point with no value, such as an
+unlinked input, which is not a fault and is not listed) or not ok (at least one flag other than
+`null`), so `ok + null_only + not_ok_count = total`. `not_ok` lists the not-ok entries up
+to `max_not_ok` ( `truncated` says the list was cut, `rows_truncated` that the query hit
+`max_rows`, so the counts are lower bounds). Networks and devices also carry `disabled` (rows
+whose `enabled` is false) and name, type and `enabled` per entry. A status the station did not
+answer as a number counts under `unknown` and as not ok, never as ok. `points` also carries
+`proxy`, the points whose proxy extension is not `control:NullProxyExt` (the same query selects
+`proxyExt.type`; `proxy_unknown` appears when the station left that cell empty): a licence counts
+proxy points, not every control point. `totals` are the `n4_inventory` totals of the same rows,
+with `rows_truncated` when a query feeding them was cut. `capacity` is the Global Capacity table
+of the spy metrics page (`spy:/metrics`): `resources` (`type`, `used`, `limit`, `unlimited: true`
+where the station shows no limit, and `live`) and `recount` (when the capacity recount last ran
+or failed). The two counts of a resource are different things. `used` is the licence's own tally:
+quote it against `limit` for licensing; it only grows (removing a component does not decrement
+it) until a capacity recount, about every ten minutes on a licensed station, or a station
+restart. `live` is what the station really holds now: networks, devices and proxy points of the
+whole station (`null` for links, histories and schedules, which this tool does not count, when
+`base` is a subtree, or when the count is not whole). `may_be_inflated: true` with an
+`inflation_note` says the tally can be above reality: a `used` greater than its `live`, or a
+recount that has never run. `capacity` is `null` with a `capacity_note` when the page is
+unreachable (the user may not read spy pages) or holds no such table: it is never a guessed
+count. It is never silently partial either: the page is read with a row cap above what its byte
+cap can hold, `capacity_truncated: true` and the note say when the page was cut before it was
+read whole (resources may be missing; a page cut before the table is "unknown", not "no table"),
+and rows of the table that do not match its header are counted in the note. A section that fails is `{"error": "..."}` and the others still answer; only an
+authentication failure fails the call.
+Spy pages (the station's diagnostics tree, the pages of the Workbench Spy view):
+`n4_spy_page(path="", max_rows=500, max_bytes=2097152)` sends one `GET /ord?spy:/<path>` with
+the session's credentials and returns the page as data: `title`, `tables` (each with its `title`,
+`header` and `rows` of cells), `links` (the child pages, each `path` ready to pass back), `actions`
+(the POST forms the page offers, by clean spy path without the query or fragment of the form's
+action: named, never invoked; the content of a form field, `textarea`, `select`, `button` or an
+`input` value, is never returned, wherever it sits) and `text` (what sits outside the tables). An empty `path` is the index. It only reads:
+a path is plain names separated by `/`, and a scheme or `:`, `|`, `..`, a query string (`?`, `&`,
+`=`, `#`), `%`, `;`, a backslash, any Unicode control character, invalid UTF-8 and the known action pages (`util/gc`,
+`util/forceThreadDump`) are refused before any request. `status` is `ok`, `forbidden` (403: the
+user may not read spy pages, which need a super user), `not_found` (404, or the station's "Spy Not
+Found" page), `not_html` or `parse_timeout` (the page was fetched but not parsed within
+`timeout_s`); a 401 is an authentication error like on any other read. `truncated`
+is true when a cap cut the reply and `truncated_by` names the caps: `max_bytes`, `max_rows` (rows
+across all tables), `tables` (200), `row_cells` (100 per row), `links` (500), `actions` (100),
+`name` (a link name or title over 200 characters), `cell`, `text`. The caps bound the reply as a
+whole, whatever the page holds. Spy pages are diagnostics, not an API: their layout differs between
+Niagara versions (this reader was measured on 4.15), so read the tables as found.
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
 children of those types or of their subtypes (`history:HistoryExt` keeps every history extension)

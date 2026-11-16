@@ -310,15 +310,12 @@ func (s *Server) call(params any) (any, error) {
 		s.Ctx.NoteAuthFailure(be)
 	}
 	if err != nil {
-		return s.toolError(errorText(err)), nil
+		return s.toolError(ErrorText(err)), nil
 	}
 	return obj("content", []any{obj("type", "text", "text", string(encode(out)))},
 		"structuredContent", out), nil
 }
 
-// errorText is the text of a failed tool: the words of a ToolError, BoxError (AuthError and
-// HttpStatusError included) or ValueError, else the Python type only, never the message (it
-// could hold a secret).
 func (s *Server) authBlock() string {
 	if s.Ctx == nil {
 		return ""
@@ -326,7 +323,10 @@ func (s *Server) authBlock() string {
 	return s.Ctx.AuthBlock()
 }
 
-func errorText(err error) string {
+// ErrorText is the text of a failed tool: the words of a ToolError, BoxError (AuthError and
+// HttpStatusError included) or ValueError, else the Python type only, never the message (it
+// could hold a secret). A tool that reports a failure inside its reply words it with this.
+func ErrorText(err error) string {
 	var te *ToolError
 	var be *box.Error
 	var ve *pyjson.ValueError

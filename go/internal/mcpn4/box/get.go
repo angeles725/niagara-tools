@@ -72,27 +72,7 @@ func (c *Client) GetFile(urlPath string, timeout float64, maxBytes int) (*File, 
 	if maxBytes <= 0 {
 		maxBytes = MaxFileBytes
 	}
-	resp, err := c.do(c.interrupt, "GET", urlPath, nil, nil, timeout, maxBytes+1)
-	if err != nil {
-		if st, ok := err.(*httpStatus); ok && (st.code == 403 || st.code == 404) {
-			return nil, &Error{Kind: KindHTTPStatus, Msg: fmt.Sprintf("HTTP %d from station", st.code),
-				Channel: "file", Key: "get", Code: st.code}
-		}
-		return nil, c.mapError(err, "file", "get", false)
-	}
-	f := &File{Body: resp.body, Truncated: len(resp.body) > maxBytes}
-	if f.Truncated {
-		f.Body = f.Body[:maxBytes]
-	}
-	if ct, ok := header(resp.header, "Content-Type"); ok {
-		f.ContentType = &ct
-	}
-	if cl, ok := header(resp.header, "Content-Length"); ok {
-		if n, ok := pyInt(cl); ok {
-			f.ContentLength = pyjson.IntLiteral(n.String())
-		}
-	}
-	return f, nil
+	return c.getPage(urlPath, "file", timeout, maxBytes)
 }
 
 // About is BoxClient.about: the text of GET /obix/about/ (at most maxBytes, 0: MaxAboutBytes).

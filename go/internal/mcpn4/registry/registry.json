@@ -399,6 +399,87 @@
     "openWorldHint": false
    },
    "needs_session": false
+  },
+  {
+   "name": "n4_spy_page",
+   "description": "Read one diagnostics page of the station's spy tree (GET /ord?spy:/<path>, the pages the Workbench Spy view shows) as data: title, tables (title, header, rows of cells), links to child pages as relative spy paths, the POST actions the page offers (named only as spy paths without their query, never invoked) and the text outside tables. The content of a form field (textarea, select, button, input) is never returned, wherever it sits. Read-only: one GET under the spy root. Refused before any request: a scheme or ':' , '|', '..', a query string ('?', '&', '=', '#'), '%', ';', a backslash, any Unicode control character, invalid UTF-8 and the known action pages (util/gc, util/forceThreadDump). status is ok, forbidden (the user may not read spy pages), not_found, not_html or parse_timeout (the page was not parsed within timeout_s). Spy pages are diagnostics: their layout differs between Niagara versions, so read the tables as found. The reply is bounded as a whole: truncated is true when a cap cut it and truncated_by names the caps (max_bytes, max_rows across all tables, tables, row_cells, links, actions, name, cell, text).",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Path below the spy root, e.g. metrics, sysInfo or util/JMX Info; empty for the index",
+      "default": ""
+     },
+     "max_rows": {
+      "type": "integer",
+      "description": "Cap of table rows returned, all tables together",
+      "minimum": 1,
+      "maximum": 5000,
+      "default": 500
+     },
+     "max_bytes": {
+      "type": "integer",
+      "description": "Byte cap of the page read",
+      "minimum": 1024,
+      "maximum": 16777216,
+      "default": 2097152
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_station_health",
+   "description": "Station health in one call, each section answered on its own: system (the SystemService slots by their station names: CPU usage in percent, memory as the station reports it plus memory_used_percent, version, host, time), points (total, ok, null_only, not_ok_count, a count per status flag in by_flag and the not-ok ones in not_ok, up to max_not_ok; ok is no flag, null_only is the flag null alone, a point with no value and not a fault, and not ok is any other flag, so ok + null_only + not_ok_count = total; proxy is the points whose proxy extension is not control:NullProxyExt, the ones a licence counts), networks and devices (the same, plus disabled and each not-ok entry's name, type and enabled), totals (the n4_inventory totals of the same rows, with rows_truncated when a query feeding them was cut), capacity (resources: the Global Capacity table of the spy metrics page, per resource used and limit, unlimited true where the station shows no limit, and live; recount: its recount times) and elapsed_ms. Two counts sit side by side in a resource: used is the licence's own tally, the number to quote against limit for licensing, and it only grows until a capacity recount or a station restart; live is what the station really holds now (networks, devices and proxy points of the whole station; null for a resource this tool does not count or when base is a subtree). may_be_inflated is true, with an inflation_note, when a used is above its live or the recount has never run. A section that fails is {error} and the others still answer. capacity is null with a capacity_note when the spy metrics page is unreachable or holds no Global Capacity table: never a guessed count. capacity_truncated is true, and capacity_note says so, when the page was cut before it was read whole, so resources may be missing; rows of the table that do not match its header are counted in capacity_note. In a section, truncated means not_ok was cut at max_not_ok (not_ok_count is whole) and rows_truncated means the query hit max_rows, so the counts are lower bounds. A status the station did not answer counts under the flag unknown and as not ok, never as ok.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "base": {
+      "type": "string",
+      "description": "Subtree ORD of the point, network and device counts, default station:|slot:/"
+     },
+     "max_not_ok": {
+      "type": "integer",
+      "description": "Cap of the not-ok entries listed per section",
+      "minimum": 0,
+      "maximum": 1000,
+      "default": 50
+     },
+     "max_rows": {
+      "type": "integer",
+      "description": "Row cap per query",
+      "minimum": 1,
+      "maximum": 50000,
+      "default": 5000
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout per request in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [
