@@ -159,3 +159,58 @@ func TestVerifySetScheduleRefusesAWeeklyThatIsNotAnObject(t *testing.T) {
 	}
 }
 
+func TestVerifySetScheduleStaysInsideTheWriteScope(t *testing.T) {
+	r := scheduleWriteRig(t)
+	dry := r.Srv.Dry("n4_set_schedule", setSchedule("BoolSch", Args{"default_output": true}))
+	for _, scope := range []string{Folder + "/NumSch", Folder + "/Bool"} {
+		r.Restart(func(o *Options) { o.WriteScopes = []string{scope} })
+		r.ConnectVerified()
+		syncs := countSyncs(r)
+		args := setSchedule("BoolSch", Args{"default_output": true})
+		if text := r.Srv.Err("n4_set_schedule", args); !strings.Contains(text, "outside") {
+			t.Errorf("scope %s, dry run: %q", scope, text)
+		}
+		if text := r.Srv.Err("n4_set_schedule", Execute(args, dry["confirmation_token"])); !strings.Contains(text, "outside") {
+			t.Errorf("scope %s, wider token: %q", scope, text)
+		}
+		if atomic.LoadInt64(syncs) != 0 {
+			t.Errorf("scope %s: a write was sent", scope)
+		}
+	}
+}
+
+func TestVerifySetScheduleInsideANestedScope(t *testing.T) {
+	r := scheduleWriteRig(t)
+	r.Restart(func(o *Options) { o.WriteScopes = []string{Folder + "/NumSch"} })
+	r.ConnectVerified()
+	if out := r.Srv.RunWrite("n4_set_schedule", setSchedule("NumSch", Args{"default_output": 4})); out["verdict"] != "verified" {
+		t.Errorf("out = %v", out)
+	}
+}
+
+func TestVerifySetScheduleChecksAnEnumValueAgainstTheRangeFacet(t *testing.T) {
+	r := scheduleWriteRig(t)
+	r.Set(enumHandle(r), "facets",
+		map[string]any{"nm": "p", "t": "baja:Facets", "v": "range=E:{Off=0,On=1,Auto=3}"})
+	syncs := countSyncs(r)
+	text := r.Srv.Err("n4_set_schedule", setSchedule("EnumSch", Args{"default_output": 2,
+		"weekly": map[string]any{"monday": []any{map[string]any{"start": "01:00", "end": "02:00", "value": 4}}}}))
+	for _, w := range []string{"2 fault(s)", "default_output: value 2 is not an ordinal of the schedule's range facet",
+		"weekly.monday[0]: value 4 is not an ordinal of the schedule's range facet"} {
+		if !strings.Contains(text, w) {
+			t.Errorf("missing %q in %q", w, text)
+		}
+	}
+	if atomic.LoadInt64(syncs) != 0 {
+		t.Errorf("a write was sent")
+	}
+	r.Station.SetFaults(boxstation.Faults{})
+	if out := r.Srv.RunWrite("n4_set_schedule", setSchedule("EnumSch", Args{"default_output": 3})); out["verdict"] != "verified" {
+		t.Errorf("ordinal 3 of the range: %v", out)
+	}
+}
+
+func enumHandle(r *Rig) (h string) {
+	r.Station.Do(func(st *boxstation.Station) { h = st.ByHandle("3").Child("EnumSch").Handle })
+	return h
+}
