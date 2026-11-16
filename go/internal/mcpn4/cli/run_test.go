@@ -157,3 +157,21 @@ func TestHelpNamesTheGoBinaryNotThePythonModuleInvocation(t *testing.T) {
 		}
 	}
 }
+
+// The usage line and every message the command prints name the binary, mcp-n4, not the module
+// of the retired Python server; the usage is wrapped as argparse wraps it for that name.
+func TestUsageAndErrorsNameTheMcpN4Binary(t *testing.T) {
+	t.Parallel()
+	const usage = "usage: mcp-n4 [-h] [--allow-writes] [--write-scope ORD_PREFIX]\n" +
+		"              [--state-dir STATE_DIR] [--token-ttl SECONDS] [--max-writes N]\n"
+	if code, out, _ := run([]string{"--help"}, ""); code != 0 || !strings.HasPrefix(out, usage) {
+		t.Errorf("--help (exit %d) starts %q", code, out[:min(len(out), 160)])
+	}
+	code, _, errOut := run([]string{"--bogus"}, "")
+	if code != 2 || !strings.HasPrefix(errOut, usage) || lastLine(errOut) != "mcp-n4: error: unrecognized arguments: --bogus" {
+		t.Errorf("--bogus (exit %d): %q", code, errOut)
+	}
+	if code, _, errOut := run([]string{"--station", "x"}, ""); code == 0 || !strings.HasPrefix(lastLine(errOut), "mcp-n4: ") {
+		t.Errorf("--station x (exit %d): %q", code, errOut)
+	}
+}

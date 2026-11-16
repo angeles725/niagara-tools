@@ -26,8 +26,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
 )
 
-// Prog is the argparse prog name every message starts with.
-const Prog = "mcp_n4.server"
+// Prog is the program name the usage line and every message start with: the binary.
+const Prog = "mcp-n4"
 
 // Main is the kitcli.Main entry point: it serves the process stdin until EOF or the first SIGINT
 // or SIGTERM (watchSignals). SIGPIPE is ignored, as Python ignores it: a client gone mid-reply

@@ -28,7 +28,7 @@ func TestDefaultHoldsEveryToolInTableOrder(t *testing.T) {
 			t.Errorf("%s descriptor keys = %s", tool.Name, got)
 		}
 	}
-	if !strings.HasPrefix(r.Usage, "usage: mcp_n4.server [-h]") || !strings.HasPrefix(r.Help, r.Usage) {
+	if !strings.HasPrefix(r.Usage, "usage: mcp-n4 [-h]") || !strings.HasPrefix(r.Help, r.Usage) {
 		t.Errorf("usage/help do not hold the argparse text")
 	}
 }
