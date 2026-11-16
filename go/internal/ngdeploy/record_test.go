@@ -152,3 +152,42 @@ func TestARecordGitDoesNotKnowIsNotHandedToTheDiff(t *testing.T) {
 		t.Errorf("stderr %q, calls %q", f.err, f.calls())
 	}
 }
+
+// The look before the copy answers what the write after it will do, links included: a record that is a
+// symbolic link to a file not there yet is written through the link, as it was before the look existed.
+func TestARecordThatIsALinkToAFileNotThereYetIsWrittenThroughTheLink(t *testing.T) {
+	f := newFixture(t)
+	if err := os.Symlink(f.dir+"/elsewhere", f.work+"/.last-deploy-sha"); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_GIT_HEAD", recordedCommit)
+	f.want(f.run("--no-backup", "--mode", "C"), ExitOK, "[ng-deploy] copy ok\n")
+	if to, _ := os.Readlink(f.work + "/.last-deploy-sha"); f.err != warnNoBackup || f.read(f.dir+"/elsewhere") != recordedCommit+"\n" || to != f.dir+"/elsewhere" {
+		t.Errorf("stderr %q, the link leads to %q holding %q", f.err, to, f.read(f.dir+"/elsewhere"))
+	}
+
+	f = newFixture(t) // the deploy stops at the copy: the file the look created through the link is gone again
+	if err := os.Symlink(f.dir+"/elsewhere", f.work+"/.last-deploy-sha"); err != nil {
+		t.Fatal(err)
+	}
+	failRename(t, "/demo-rt.jar")
+	f.want(f.run("--no-backup", "--mode", "C"), ExitCopy)
+	if to, _ := os.Readlink(f.work + "/.last-deploy-sha"); f.exists(f.dir+"/elsewhere") || to != f.dir+"/elsewhere" {
+		t.Errorf("the look left %q behind, or changed the link (%q)", f.dir+"/elsewhere", to)
+	}
+}
+
+// A link into a directory that is not there cannot be written, before the copy or after it: exit 10 with
+// the reason the write itself would give.
+func TestARecordThatIsALinkIntoAMissingDirectoryIsFoundBeforeTheCopy(t *testing.T) {
+	f := newFixture(t)
+	if err := os.Symlink(f.dir+"/nodir/x", f.work+"/.last-deploy-sha"); err != nil {
+		t.Fatal(err)
+	}
+	code := f.run("--no-backup", "--mode", "C")
+	want := warnNoBackup + "[ng-deploy] ERROR the deployed commit cannot be recorded in .last-deploy-sha (cannot write " + f.work + "/.last-deploy-sha: No such file or directory" +
+		"); nothing was copied (fix the file, or SLOTOMATIC_DETECTION=off makes the record optional)\n"
+	if code != ExitEnv || f.err != want || f.exists(f.deployedJar("rt")) {
+		t.Errorf("exit %d, stderr %q", code, f.err)
+	}
+}
