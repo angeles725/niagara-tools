@@ -3,6 +3,8 @@ package ngdeploy
 import (
 	"io"
 	"strconv"
+
+	"github.com/angeles725/niagara-tools/go/internal/gradleenv"
 )
 
 // The option globals of the bash tool. Each holds text: its default, then what the env file assigned, then
@@ -82,6 +84,11 @@ func (d *deploy) parseArgs(args []string) int {
 			io.WriteString(d.s.Out, d.versionText()+"\n")
 			return ExitOK
 		case flag == noOpFlag:
+		case flag == gradleenv.PropFlag:
+			if code := d.gradleProp(args[1:]); code != proceed {
+				return code
+			}
+			args = args[1:]
 		case d.setByFlag(flag, args[1:]):
 			if option, _ := optionOf(flag); option.value {
 				args = args[1:]

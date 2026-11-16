@@ -20,3 +20,10 @@
   same jars per refused run. Exit 21 still means nothing was copied. When `STATION_MODULES_DIR` is
   `<NIAGARA_HOME>/modules` the backup holds the jars that were there before the build, under their jar names. The
   `--no-backup` warning is printed where it was, before the build.
+- A mirror `NIAGARA_HOME` gets the isolation `build.sh` applies, from one shared rule (`go/internal/gradleenv`, which
+  `build.sh`'s `isolateMirror` now calls too): `JAVA_TOOL_OPTIONS += -Duser.home=<mirror>/.mirror-user-home` (and the
+  real maven repository), `GRADLE_USER_HOME` pinned and `--no-daemon` on every gradlew call, so the signing plugin
+  cannot read the real `~/.tridium` keystore. A mirror path or `$HOME` with whitespace is exit 10 before gradle.
+- `ng-deploy --gradle-prop k=v` (repeatable) is forwarded to gradlew as `-Pk=v`, as `build.sh --gradle-prop` is, so
+  `niagaraSigningAlias` and `niagaraSigningProfile` no longer need `ORG_GRADLE_PROJECT_*` set by hand; the gate expects
+  the last `niagaraSigningAlias` given. `build.sh` is unchanged: same gradle arguments and environment.

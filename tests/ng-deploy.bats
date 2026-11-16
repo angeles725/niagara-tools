@@ -1207,3 +1207,19 @@ STUB
     [[ "$output" != *"ERROR"* ]]
     [ ! -e "$TMPDIR_T/.last-deploy-sha" ]
 }
+
+@test "NG-mirror-isolation: a mirror build gets build.sh's user.home isolation and --gradle-prop, on every gradlew call" {
+    # Mutation: NG-mirror-isolation -- without it gradle read the real ~/.tridium keystore and the signing alias was set by hand (retro D3).
+    _gate_env; _fake_gate 0
+    # why: SC2016 — the line is inserted into the stub as text; the stub expands it when gradlew runs
+    # shellcheck disable=SC2016
+    sed -i '2i printf "%s\\n" "${JAVA_TOOL_OPTIONS-}" >> "${TMPDIR_T}/gradlew.jto"' "$TMPDIR_T/fakebin/gradlew"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C \
+        --gradle-prop niagaraSigningAlias=propsigner --gradle-prop niagaraSigningProfile=/p/signing.xml
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"mirror niagara_home: user.home isolated to $TMPDIR_T/niagara-home/.mirror-user-home"* ]]
+    [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == "-Pniagara_home=$TMPDIR_T/niagara-home -Pniagara_user_home="*" -Porg.gradle.java.installations.paths=/usr/lib/jvm/java-8-openjdk-amd64 -PniagaraSigningAlias=propsigner -PniagaraSigningProfile=/p/signing.xml :test-rt:clean :test-rt:jar --no-daemon" ]]
+    [[ "$(cat "$TMPDIR_T/gradlew.jto")" == *"-Duser.home=$TMPDIR_T/niagara-home/.mirror-user-home -Dmaven.repo.local="* ]]
+    [[ "$(cat "$TMPDIR_T/gate.args")" == *"--expected-signer propsigner"* ]]
+    [ -d "$TMPDIR_T/niagara-home/.mirror-user-home" ]
+}

@@ -13,8 +13,6 @@ const (
 	reportScript    = "report-module.sh"
 	werrorInit      = "lib/werror.init.gradle"
 	mirrorMarker    = modjar.MirrorMarker
-	mirrorUserHome  = ".mirror-user-home"
-	signingProfile  = ".tridium/security/niagara.signing.xml"
 	m2Repository    = "etc/m2/repository"
 	// aliasProperty is the gradle property the kit's root signing block takes the signing alias from
 	// (templates/signing-root.gradle.kts); gradleEnvPrefix is how the environment sets a gradle property.

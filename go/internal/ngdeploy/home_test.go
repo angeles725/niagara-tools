@@ -1,6 +1,7 @@
 package ngdeploy
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"syscall"
@@ -32,6 +33,7 @@ func withHome(t *testing.T, f *fixture, mirror bool) (modules string) {
 	}
 	if mirror {
 		f.write(home+"/.niagara-mirror", "")
+		f.mkdir(home + "/.mirror-user-home") // the user.home a mirror build makes (isolate.go), as build.sh does
 	}
 	f.set("NIAGARA_HOME", home)
 	f.write(f.dir+"/do/gradlew", installing(home, "", "rt", "ux"))
@@ -76,7 +78,8 @@ func TestAHomeThatIsNotAMirrorIsRefusedBeforeGradleRuns(t *testing.T) {
 }
 
 // What a deploy printed and did before the guard still holds for a mirror and for a NIAGARA_HOME that
-// names no directory (gradle fails on that one by itself): no new line, the same calls.
+// names no directory (gradle fails on that one by itself): the same calls, apart from the mirror isolation
+// (its one line and --no-daemon, isolate.go).
 func TestAMirrorHomeAndAHomeThatIsNotThereDeployAsBefore(t *testing.T) {
 	f := newFixture(t) // the fixture's NIAGARA_HOME names no directory
 	f.want(f.run("--no-backup"), ExitOK)
@@ -87,7 +90,10 @@ func TestAMirrorHomeAndAHomeThatIsNotThereDeployAsBefore(t *testing.T) {
 	f = newFixture(t)
 	modules := withHome(t, f, true)
 	f.want(f.run("--no-backup"), ExitOK)
-	if strings.ReplaceAll(f.out, f.dir, "DIR") != out || f.err != warnNoBackup || strings.ReplaceAll(strings.ReplaceAll(f.calls(), f.dir+"/home", "HOME"), f.dir, "DIR") != calls {
+	isolated := "[ng-deploy] " + fmt.Sprintf(msgMirrorIsolated, f.dir+"/home/.mirror-user-home", f.dir+"/gradle-user-home") + "\n"
+	mirrorOut := strings.Replace(f.out, isolated, "", 1)
+	mirrorCalls := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(f.calls(), " <--no-daemon>", ""), f.dir+"/home", "HOME"), f.dir, "DIR")
+	if !strings.Contains(f.out, isolated) || strings.ReplaceAll(mirrorOut, f.dir, "DIR") != out || f.err != warnNoBackup || mirrorCalls != calls {
 		t.Errorf("a mirror changed the run:\n%s%s%s", f.out, f.err, f.calls())
 	}
 	// The build's jars stay in the mirror, the wb jar it did not build is as it was, nothing is left aside.
