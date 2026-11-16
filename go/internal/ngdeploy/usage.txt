@@ -43,6 +43,18 @@ Required for mode A or C unless --first-deploy:
                          schema-risk.sh against the -rt module dir before the copy (build-verify.md
                          § Schema-risk deploy workflow)
 
+Backups:
+  A backup is written to _backups/ under the working directory (the directory ng-deploy.sh is run from), as
+  _backups/<MODULE_NAME>-pre-<YYYYMMDD-HHMMSS>.tar.gz; the newest KEEP_N of the module are kept. The step
+  prints "backup: <archive>" and "backup ok: <archive>" only when it writes one: for a module with no
+  -rt/-ux/-wb jar in STATION_MODULES_DIR it prints "backup: no existing <MODULE_NAME>-{rt,ux,wb}.jar in <dir>;
+  nothing to archive" and creates nothing. To restore a default (lightweight) backup, with the station stopped:
+    tar -xzf _backups/<archive> -C "$STATION_MODULES_DIR"
+  and a --full-backup one, which holds the modules directory itself:
+    tar -xzf _backups/<archive> -C "$(dirname "$STATION_MODULES_DIR")"
+  Restoring the previous jar is for a deploy that never ran in the station; after the station loaded the new
+  version, recover by deploying a higher version (BUILD-LOOP.md § 6: roll-forward).
+
 NIAGARA_HOME and its modules directory:
   gradle's :jar step installs the built jars into <NIAGARA_HOME>/modules before any check of the deploy has run,
   and in a real installation that directory is a station's. So NIAGARA_HOME must be a mirror (a directory made
