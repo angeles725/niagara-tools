@@ -57,7 +57,7 @@ type schedulePart struct {
 
 // scheduleParts are the planners of each argument, in plan order.
 var scheduleParts = []func(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []schedulePart{
-	weeklyParts, defaultOutputPart,
+	weeklyParts, defaultOutputPart, eventParts,
 }
 
 func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
@@ -72,7 +72,7 @@ func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		parts = append(parts, planner(s, args, &faults)...)
 	}
 	if len(parts) == 0 && len(faults) == 0 {
-		faults = append(faults, "nothing to set: give weekly and/or default_output")
+		faults = append(faults, "nothing to set: give weekly, default_output, add_special_event or remove_special_event")
 	}
 	if err := faults.Err(); err != nil {
 		return nil, plan.ToolError(err.Error())

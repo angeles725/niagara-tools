@@ -34,6 +34,9 @@ func scheduleReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, repli
 			}
 			got = sub
 		}
+		if k == "special_events" {
+			got = eventsView(got)
+		}
 		observed.Set(k, got)
 	}
 	verdict := "mismatch"
@@ -43,4 +46,15 @@ func scheduleReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, repli
 		verdict = "verified"
 	}
 	return want, replies, observed, verdict, nil
+}
+
+// eventsView is the special events read back as the plan compares them: name and ranges.
+func eventsView(v any) []any {
+	out := []any{}
+	list, _ := v.([]any)
+	for _, e := range list {
+		o := e.(*pyjson.Object)
+		out = append(out, obj("name", get(o, "name"), "ranges", get(o, "ranges")))
+	}
+	return out
 }
