@@ -9,7 +9,7 @@ import (
 // CreateLink is n4_create_link: one checkLinks call that makes the link; the inverse removes
 // the link the station named. A reply that cannot be trusted is in-doubt, and Recover looks
 // for the new link by its slots.
-var CreateLink = plan.Impl{ScopeOrds: func(args *pyjson.Object) []any { return []any{str(args, "source_ord"), str(args, "target_ord")} },
+var CreateLink = plan.Impl{ScopeCheck: linkScope,
 	Plan: linkPlan, Inverse: linkInverse, Recover: linkRecover, Readback: linkReadback}
 
 type linkData struct {

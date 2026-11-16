@@ -13,6 +13,7 @@ import (
 func TestAPlanWhoseDataIsNotADictStillExecutes(t *testing.T) {
 	r := newRig(t)
 	impl := writeops.CreateComponent
+	impl.PlanWith = nil // drive the plain Plan hook (create's PlanWith only adds the scope-root guard)
 	plan0 := impl.Plan
 	impl.Plan = func(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		p, err := plan0(c, args)

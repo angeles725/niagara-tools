@@ -98,14 +98,12 @@ func TestPrefixBoundaryIsRespected(t *testing.T) {
 	}
 }
 
-func TestEveryOrdOfALinkMustBeInScope(t *testing.T) {
+func TestALinkTargetOutsideTheScopeIsRefused(t *testing.T) {
 	r := verifiedRig(t)
 	r.AddWithOut("A", 1)
-	for _, pair := range [][2]string{{"station:|slot:/Other", Folder + "/A"}, {Folder + "/A", "station:|slot:/Other"}} {
-		text := r.Srv.Err("n4_create_link", Args{"source_ord": pair[0], "source_slot": "out",
-			"target_ord": pair[1], "target_slot": "in10"})
-		if !strings.Contains(text, "outside the write scope") {
-			t.Errorf("%v: refusal = %s", pair, text)
-		}
+	text := r.Srv.Err("n4_create_link", Args{"source_ord": Folder + "/A", "source_slot": "out",
+		"target_ord": "station:|slot:/Other", "target_slot": "in10"})
+	if !strings.Contains(text, "outside the write scope") {
+		t.Errorf("refusal = %s", text)
 	}
 }

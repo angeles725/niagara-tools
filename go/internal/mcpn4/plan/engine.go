@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
@@ -72,16 +73,8 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 		return nil, "", ToolError(fmt.Sprintf("%s: %d writes already executed by this server process "+
 			"(--max-writes; a reconnect does not reset it)", safety.ReasonBudget, w.MaxWrites))
 	}
-	ords := impl.ScopeOrds(args)
-	for _, o := range ords {
-		if err := w.Scope.Check(o); err != nil {
-			return nil, "", err
-		}
-	}
-	if len(ords) == 0 { // whole-station or journal-driven: at least one scope must be configured
-		if err := w.Scope.RequireAny(); err != nil {
-			return nil, "", err
-		}
+	if err := checkScope(impl, w.Scope, args); err != nil {
+		return nil, "", err
 	}
 	client, ok := sess.Client.(Client)
 	if !ok {
@@ -131,4 +124,23 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 		err = inDoubt(batchID, err)
 	}
 	return out, batchID, err
+}
+
+// checkScope is the scope step of a write: the tool's own rule when it has one, else every ORD it
+// lists under a prefix, and at least one prefix configured when it lists none (whole-station or
+// journal-driven writes).
+func checkScope(impl Impl, scope *ord.Scope, args *pyjson.Object) error {
+	if impl.ScopeCheck != nil {
+		return impl.ScopeCheck(scope, args)
+	}
+	ords := impl.ScopeOrds(args)
+	for _, o := range ords {
+		if err := scope.Check(o); err != nil {
+			return err
+		}
+	}
+	if len(ords) == 0 {
+		return scope.RequireAny()
+	}
+	return nil
 }

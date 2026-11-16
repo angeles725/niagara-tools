@@ -111,3 +111,26 @@ func (s *Scope) Check(v any) error {
 	}
 	return &safety.Error{Msg: "ord " + pyjson.Repr(v) + " " + safety.ReasonScopeOutside}
 }
+
+// CheckChild is Check for a component about to be created as name under parent: the parent must be
+// in scope, except that the scope root itself may be created under its own parent, so a scope can
+// name a folder that does not exist yet (retro 2026-11-13 M5). It reports whether the root rule
+// admitted it; on refusal the error is the parent's, as Check gives it.
+func (s *Scope) CheckChild(parent, name any) (root bool, err error) {
+	err = s.Check(parent)
+	if err == nil {
+		return false, nil
+	}
+	p, pok := parent.(string)
+	n, nok := name.(string)
+	if !pok || !nok || n == "" || strings.ContainsAny(n, "/|") || !PlainSlotOrd(parent) {
+		return false, err
+	}
+	child := strings.TrimRight(p, "/") + "/" + n
+	for _, pre := range s.prefixes {
+		if child == pre {
+			return true, nil
+		}
+	}
+	return false, err
+}
