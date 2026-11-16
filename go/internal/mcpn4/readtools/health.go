@@ -13,7 +13,8 @@ import (
 )
 
 // n4_station_health: one reply composed of the reads the server already has (the SystemService
-// slots, three status queries, the inventory summary of their rows, the spy metrics page). Each
+// slots, three status queries, the inventory summary of their rows, the spy metrics page, the
+// licence manager page). Each
 // section answers or carries its own error; only an authentication failure fails the call, so
 // the server latches on it like on any other read.
 
@@ -78,6 +79,11 @@ func (t *Tools) StationHealth(args *pyjson.Object) (*pyjson.Object, error) {
 	if capacity.note != "" {
 		out.Set("capacity_note", capacity.note)
 	}
+	license, err := t.healthLicense(timeout, system)
+	if err != nil {
+		return nil, err
+	}
+	out.Set("license", license)
 	out.Set("elapsed_ms", int(math.RoundToEven((t.Ctx.Clock()-start)*1000)))
 	t.recordRead("n4_station_health", "base", args, rowCount)
 	return out, nil

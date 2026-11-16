@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"sort"
 	"strings"
 	"syscall"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
@@ -87,7 +85,7 @@ func newServer(interrupt context.Context, cfg Config) (*jsonrpc.Server, error) {
 		bc.Interrupt = interrupt
 		return readtools.BoxFactory(bc, onAuthError)
 	}
-	tools := &readtools.Tools{Ctx: ctx, NewClient: factory, ServerVersion: reg.Version}
+	tools := &readtools.Tools{Ctx: ctx, NewClient: factory, ServerVersion: reg.Version, NiagaraHomes: niagaraHomes(cfg)}
 	if cfg.AllowWrites {
 		state, err := NewWriteState(cfg)
 		if err != nil {
@@ -114,10 +112,6 @@ func NewWriteState(cfg Config) (*plan.State, error) {
 	return state, nil
 }
 
-type startError struct{ msg string }
-
-func (e *startError) Error() string { return e.msg }
-
 // NewContext is the session state of a server started with cfg, which Check accepted.
 func NewContext(cfg Config) *session.Context {
 	urls, _, _ := stations(cfg)
@@ -142,64 +136,4 @@ func progressPath(file string) string {
 		return ""
 	}
 	return safety.ExpandUser(file)
-}
-
-// stations is the stations dict of main(): NAME -> URL (the last repeat wins) and the names in
-// insertion order.
-func stations(cfg Config) (map[string]string, []string, error) {
-	urls := map[string]string{}
-	var names []string
-	for _, item := range cfg.Stations {
-		name, url, ok := strings.Cut(item, "=")
-		if !ok || name == "" || url == "" {
-			return nil, nil, &startError{"--station expects NAME=URL, got " + pyjson.StrRepr(item)}
-		}
-		if _, seen := urls[name]; !seen {
-			names = append(names, name)
-		}
-		urls[name] = url
-	}
-	return urls, names, nil
-}
-
-// Check makes the start checks of main() and Server(...) in their order: NAME=URL and
-// NAME=PATH pairs, https station URLs (http:// only with --allow-http-for-tests), station names
-// the per-station flags may name.
-func Check(cfg Config) error {
-	urls, names, err := stations(cfg)
-	if err != nil {
-		return err
-	}
-	for _, item := range cfg.StationHomes {
-		name, path, ok := strings.Cut(item, "=")
-		if !ok || name == "" || path == "" {
-			return &startError{"--station-home expects NAME=PATH, got " + pyjson.StrRepr(item)}
-		}
-	}
-	for _, name := range names {
-		url := urls[name]
-		if !strings.HasPrefix(url, "https://") && !(cfg.AllowHTTP && strings.HasPrefix(url, "http://")) {
-			return &startError{"station " + name + ": URL must start with https://"}
-		}
-	}
-	for _, f := range []struct {
-		flag  string
-		names []string
-	}{{"--insecure-tls", cfg.InsecureTLS}, {"--allow-tier-b", cfg.AllowTierB}, {"--allow-tier-c", cfg.AllowTierC}} {
-		unknown := map[string]bool{}
-		for _, n := range f.names {
-			if _, ok := urls[n]; !ok {
-				unknown[n] = true
-			}
-		}
-		if len(unknown) > 0 {
-			list := make([]string, 0, len(unknown))
-			for n := range unknown {
-				list = append(list, n)
-			}
-			sort.Strings(list)
-			return &startError{f.flag + " names unconfigured station(s): " + strings.Join(list, ", ")}
-		}
-	}
-	return nil
 }

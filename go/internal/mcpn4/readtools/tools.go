@@ -49,6 +49,9 @@ type Tools struct {
 	Ctx           *session.Context
 	NewClient     Factory
 	ServerVersion string
+	// NiagaraHomes maps a station NAME to the Niagara installation directory the operator gave
+	// for it (--niagara-home): where n4_license_info reads the licence files, when reachable.
+	NiagaraHomes map[string]string
 	// Audit is the write machinery's audit log (ctx.write.audit), nil in read-only mode.
 	Audit interface {
 		Append(entry *pyjson.Object) error
@@ -74,6 +77,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_session_retro_draft"] = t.SessionRetroDraft
 	s.Handlers["n4_spy_page"] = t.SpyPage
 	s.Handlers["n4_station_health"] = t.StationHealth
+	s.Handlers["n4_license_info"] = t.LicenseInfo
 }
 
 func toolError(format string, a ...any) error {
