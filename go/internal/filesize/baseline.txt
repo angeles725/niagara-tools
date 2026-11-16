@@ -77,4 +77,3 @@
 201 internal/lint/rules/lifecycleguard/lifecycleguard.go
 201 internal/mcpn4/pyxml/pyxml.go
 201 internal/mcpn4/readtools/files.go
-201 internal/mcpn4/readtools/links.go
