@@ -7,7 +7,8 @@
 //
 // One responsibility per file: types.go the type table and defaults (data), messages.go every printed
 // text, args.go the command line, name.go the ModuleName rule, values.go the option values (literal
-// text), subst.go the substitution rules, copytree.go the tree copy, overlay.go the station-test overlay
+// text), subst.go the substitution rules, copytree.go the tree copy, cleanup.go the
+// claim of the destination and the removal of a failed emit, overlay.go the station-test overlay
 // and the ledger, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
 package scaffoldmodule
 
@@ -54,7 +55,8 @@ func Main(args []string, s cli.Stdio) int {
 }
 
 // scaffold runs the steps in the bash tool's order, so the first fault a run meets is the same one:
-// arguments, --type, ModuleName, option values, fixture, out-dir, destination, copy, overlay, ledger.
+// arguments, --type, ModuleName, option values, fixture, out-dir, destination, copy, overlay, ledger. A fault
+// after the destination is claimed removes it (discard).
 func scaffold(toolbelt string, args []string) (string, *failure) {
 	o, f := parseArgs(args)
 	if f != nil {
@@ -85,16 +87,24 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 	if _, err := os.Stat(dest); err == nil {
 		return "", failf(ExitEnv, destExists, dest)
 	}
-	if err := copyTree(fixture, dest, n.fixturePathRules(), n.fixtureTextRules(), verbatimFixtureFile); err != nil {
-		return "", failf(ExitEnv, writeFault, err)
-	}
-	if f := stationTestOverlay(toolbelt, dest, n, typ); f != nil {
+	if f := claim(dest); f != nil {
 		return "", f
 	}
-	if f := versionLedger(toolbelt, dest); f != nil {
-		return "", f
+	if f := emit(toolbelt, fixture, dest, n, typ); f != nil {
+		return "", discard(dest, f)
 	}
 	return dest, nil
+}
+
+// emit fills the claimed dest: the fixture copy, the station-test overlay, the version ledger.
+func emit(toolbelt, fixture, dest string, n names, typ moduleType) *failure {
+	if err := copyTree(fixture, dest, n.fixturePathRules(), n.fixtureTextRules(), verbatimFixtureFile); err != nil {
+		return failf(ExitEnv, writeFault, err)
+	}
+	if f := stationTestOverlay(toolbelt, dest, n, typ); f != nil {
+		return f
+	}
+	return versionLedger(toolbelt, dest)
 }
 
 func isDir(path string) bool {

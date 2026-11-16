@@ -24,6 +24,10 @@
 #
 # Exit: 0 ok · 2 usage, invalid ModuleName, unknown --type or a refused option value · 3 env (skeleton missing,
 #        out-dir not creatable, or <out-dir>/<ModuleName> already exists)
+# A run that fails after it created <out-dir>/<ModuleName> (a failed write, a missing template) removes that
+# directory and says so in a second stderr line (`removed the partial <path>`, or `could not remove the partial
+# <path> (<error>): its files stay`); the exit code stays the fault's (3). A destination that existed before the run
+# is refused and never touched; the out-dir itself is never removed.
 #
 # Add a concern to an emitted (or any mapped) module:
 #   scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]
