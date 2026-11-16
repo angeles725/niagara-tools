@@ -12,7 +12,8 @@ type manifest struct {
 	root     string   // the root element's name
 	station  bool     // the root carries isStation="true"
 	deps     []string // the name of each <dependencies><dependency>, in document order
-	nameless []int    // the line of each <dependency> with no name
+	nameless []int    // the line of each <dependencies><dependency> with no name
+	stray    []int    // the line of each <dependency> whose parent is not <dependencies>
 }
 
 // parseManifest reads data as XML through the shared scanner; why is the ntpl-manifest message of a document
@@ -32,13 +33,18 @@ func parseManifest(data []byte) (m manifest, why string) {
 			v, _ := e.Attr(stationAttr)
 			m.root, m.station = e.Name, v == "true"
 		}
-		if e.Name != "dependency" || e.Parent < 0 || elems[e.Parent].Name != "dependencies" {
+		if e.Name != "dependency" {
 			continue
 		}
-		if name, _ := e.Attr("name"); name != "" {
-			m.deps = append(m.deps, name)
-		} else {
+		name, _ := e.Attr("name")
+		switch {
+		case e.Parent < 0 || elems[e.Parent].Name != "dependencies":
+			// Mutation: NTPL-stray -- skipping a <dependency> outside <dependencies> passes a manifest whose needs no reader sees
+			m.stray = append(m.stray, e.Line)
+		case name == "":
 			m.nameless = append(m.nameless, e.Line)
+		default:
+			m.deps = append(m.deps, name)
 		}
 	}
 	return m, ""

@@ -13,11 +13,11 @@ const tpl = "ModA-rt/src/templates/Unit.ntpl"
 // row. Both exit 0.
 func TestCleanModule(t *testing.T) {
 	t.Parallel()
-	expect(t, "every dependency declared", moduleRoot(t, map[string]string{tpl: template(t, "", "baja", "control-rt", "ModA-rt", "nre")}), 0, "")
+	expect(t, "every dependency declared", moduleRoot(t, map[string]string{tpl: template(t, "", "baja", "local-rt", "ModA-rt", "nre")}), 0, "")
 	expect(t, "no dependency at all", moduleRoot(t, map[string]string{tpl: template(t, "")}), 0, "")
 	expect(t, "no template", moduleRoot(t, nil), 0, "PASS  lint-ntpl-manifest-deps  @ROOT@: no *.ntpl under the root (nothing to check)\n")
 	expect(t, "a sibling part declares it", moduleRoot(t, map[string]string{
-		tpl: template(t, "", "web-rt", "ModA-ux"), "ModA-ux/ModA-ux.gradle.kts": "dependencies { api(\":web-rt\") }\n"}), 0, "")
+		tpl: template(t, "", "other-rt", "ModA-ux"), "ModA-ux/ModA-ux.gradle.kts": "dependencies { api(\":other-rt\") }\n"}), 0, "")
 }
 
 // TestMissingEntry (NTPL1): an archive without template.bog or without template-manifest.xml fails, each
@@ -40,7 +40,7 @@ func TestMissingEntry(t *testing.T) {
 // never read as a manifest with no dependencies.
 func TestMalformedManifest(t *testing.T) {
 	t.Parallel()
-	bad := "<templateManifest>\n  <dependencies>\n    <dependency name=\"ghost-rt\">\n  </dependencies>\n</templateManifest>\n"
+	bad := "<template>\n  <dependencies>\n    <dependency name=\"ghost-rt\">\n  </dependencies>\n</template>\n"
 	expect(t, "an unclosed element", moduleRoot(t, map[string]string{tpl: ntpl(t, entry{bogEntry, bog}, entry{manifestEntry, bad})}), 1,
 		"FAIL  ntpl-manifest  @ROOT@/"+tpl+": template-manifest.xml is not well-formed XML: 4:3: element <dependency> opened at 3:5 closed by </dependencies>\n")
 	expect(t, "an empty manifest", moduleRoot(t, map[string]string{tpl: ntpl(t, entry{bogEntry, bog}, entry{manifestEntry, ""})}), 1,
@@ -50,19 +50,49 @@ func TestMalformedManifest(t *testing.T) {
 		"FAIL  ntpl-manifest  @ROOT@/"+tpl+": template-manifest.xml:4: a <dependency> with no name\n")
 }
 
-// TestUndeclaredDependency (NTPL3): a <dependency> naming a module no build file of the module declares
-// fails; the names are listed once each, sorted. A call in a comment, in settings.gradle.kts or in a build
-// output declares nothing, and a module with no build file at all cannot be compared.
+// TestManifestThatNoReaderTakes: a well-formed document that is not a template manifest, and a
+// <dependency> outside <dependencies>, fail ntpl-manifest. Neither is a silent pass: the undeclared module
+// such a manifest names would otherwise go unreported.
+func TestManifestThatNoReaderTakes(t *testing.T) {
+	t.Parallel()
+	other := "<project>\n  <dependencies>\n    <dependency name=\"ghost-rt\"/>\n  </dependencies>\n</project>\n"
+	expect(t, "another root element", moduleRoot(t, map[string]string{tpl: ntpl(t, entry{bogEntry, bog}, entry{manifestEntry, other})}), 1,
+		"FAIL  ntpl-manifest  @ROOT@/"+tpl+": template-manifest.xml: the root element is <project>, not <template> -- not a template manifest\n")
+	stray := "<template>\n  <dependency name=\"ghost-rt\"/>\n  <resources>\n    <dependency name=\"other-rt\"/>\n  </resources>\n  <dependencies>\n    <dependency name=\"baja\"/>\n  </dependencies>\n</template>\n"
+	expect(t, "a dependency under the root and one under another element", moduleRoot(t, map[string]string{tpl: ntpl(t, entry{bogEntry, bog}, entry{manifestEntry, stray})}), 1,
+		"FAIL  ntpl-manifest  @ROOT@/"+tpl+": template-manifest.xml:2: a <dependency> outside <dependencies> (no reader takes it for a dependency)\n"+
+			"FAIL  ntpl-manifest  @ROOT@/"+tpl+": template-manifest.xml:4: a <dependency> outside <dependencies> (no reader takes it for a dependency)\n")
+}
+
+// TestUndeclaredDependency (NTPL3): with the installation's module list, a <dependency> naming a module
+// that no build file of the module declares and the installation does not ship fails; the names are listed
+// once each, sorted. A call in a comment, in settings.gradle.kts or in a build output declares nothing, and
+// a module with no build file declares nothing either.
 func TestUndeclaredDependency(t *testing.T) {
 	t.Parallel()
-	expect(t, "two undeclared among declared ones", moduleRoot(t, map[string]string{tpl: template(t, "", "baja", "zeta-rt", "alpha-rt", "zeta-rt", "control-rt")}), 1,
-		"FAIL  ntpl-deps  @ROOT@/"+tpl+": manifest dependencies not declared (api/nre/implementation) in any *.gradle.kts under @ROOT@: alpha-rt, zeta-rt\n")
+	expect(t, "two undeclared among declared and stock ones", moduleRoot(t, map[string]string{tpl: template(t, "", "baja", "zeta-rt", "fox-rt", "alpha-rt", "zeta-rt", "local-rt")}), 1,
+		undeclaredRow(tpl, "alpha-rt, zeta-rt"))
 	expect(t, "a comment, the settings file and a build output declare nothing", moduleRoot(t, map[string]string{
 		tpl: template(t, "", "commented-rt", "settings-only-rt", "output-rt"), "ModA-rt/build/out.gradle.kts": "dependencies { api(\":output-rt\") }\n"}), 1,
-		"FAIL  ntpl-deps  @ROOT@/"+tpl+": manifest dependencies not declared (api/nre/implementation) in any *.gradle.kts under @ROOT@: commented-rt, output-rt, settings-only-rt\n")
+		undeclaredRow(tpl, "commented-rt, output-rt, settings-only-rt"))
 	bare := t.TempDir()
-	write(t, bare, "templates/Unit.ntpl", template(t, "", "baja"))
-	expect(t, "no build file", bare, 1, "FAIL  ntpl-deps  @ROOT@/templates/Unit.ntpl: no *.gradle.kts under @ROOT@: its 1 manifest dependencies cannot be compared\n")
+	write(t, bare, "templates/Unit.ntpl", template(t, "", "baja", "ghost-rt"))
+	expect(t, "no build file", bare, 1, undeclaredRow("templates/Unit.ntpl", "ghost-rt"))
+}
+
+// TestSelfDeclaredPart: a part is a dependency of its own templates without declaring itself, by the name
+// of the build file's directory (ModB-rt/build.gradle.kts) and by the build file's stem
+// (parts/ModC-rt.gradle.kts), each on its own. The stem "build" names no module, and neither does a
+// directory that holds no build file.
+func TestSelfDeclaredPart(t *testing.T) {
+	t.Parallel()
+	expect(t, "the directory name alone", moduleRoot(t, map[string]string{
+		tpl: template(t, "", "ModB-rt"), "ModB-rt/build.gradle.kts": "dependencies {}\n"}), 0, "")
+	expect(t, "the file stem alone", moduleRoot(t, map[string]string{
+		tpl: template(t, "", "ModC-rt"), "parts/ModC-rt.gradle.kts": "dependencies {}\n"}), 0, "")
+	expect(t, "neither the stem build nor a directory without a build file", moduleRoot(t, map[string]string{
+		tpl: template(t, "", "build", "templates", "src"), "ModB-rt/build.gradle.kts": "dependencies {}\n"}), 1,
+		undeclaredRow(tpl, "build, src, templates"))
 }
 
 // TestStationTemplate (NTPL4, K2): a template under a newStations directory is a station template; its
@@ -71,38 +101,42 @@ func TestStationTemplate(t *testing.T) {
 	t.Parallel()
 	const station = "overlay/defaults/workbench/newStations/Plant.ntpl"
 	expect(t, "no isStation", moduleRoot(t, map[string]string{station: template(t, "", "baja")}), 1,
-		"FAIL  ntpl-station  @ROOT@/"+station+": a template under newStations/ is a station template, but its manifest root <templateManifest> lacks isStation=\"true\"\n")
+		"FAIL  ntpl-station  @ROOT@/"+station+": a template under newStations/ is a station template, but its manifest root <template> lacks isStation=\"true\"\n")
 	expect(t, "isStation false", moduleRoot(t, map[string]string{station: template(t, ` isStation="false"`, "baja")}), 1,
-		"FAIL  ntpl-station  @ROOT@/"+station+": a template under newStations/ is a station template, but its manifest root <templateManifest> lacks isStation=\"true\"\n")
+		"FAIL  ntpl-station  @ROOT@/"+station+": a template under newStations/ is a station template, but its manifest root <template> lacks isStation=\"true\"\n")
 	expect(t, "isStation true", moduleRoot(t, map[string]string{station: template(t, ` isStation="true"`, "baja")}), 0, "")
 	expect(t, "a file named like the directory is no station directory", moduleRoot(t, map[string]string{"ModA-rt/src/newStations.ntpl": template(t, "")}), 0, "")
 }
 
-// TestRowsInPathOrder: every archive is judged, in path order, over several roots; a template in a part's
-// build output or in a dot directory is not shipped source and is not read.
+// TestRowsInPathOrder: every archive is judged, in path order; the extension counts in any letter case; a
+// template in a part's build output or in a dot directory is not shipped source and is not read.
 func TestRowsInPathOrder(t *testing.T) {
 	t.Parallel()
-	a := moduleRoot(t, map[string]string{
+	root := moduleRoot(t, map[string]string{
 		"ModA-rt/src/b.ntpl":     ntpl(t, entry{bogEntry, bog}),
 		"ModA-rt/src/a.ntpl":     template(t, "", "ghost-rt"),
+		"ModA-rt/src/c.NTPL":     ntpl(t, entry{manifestEntry, manifestXML("")}),
+		"ModA-rt/src/d.Ntpl":     "not a zip",
+		"ModA-rt/src/e.ntpl.bak": "not a zip",
 		"ModA-rt/build/out.ntpl": "not a zip",
 		".cache/c.ntpl":          "not a zip",
 	})
-	b := moduleRoot(t, nil)
-	want := "FAIL  ntpl-deps  " + a + "/ModA-rt/src/a.ntpl: manifest dependencies not declared (api/nre/implementation) in any *.gradle.kts under " + a + ": ghost-rt\n" +
-		"FAIL  ntpl-entries  " + a + "/ModA-rt/src/b.ntpl: lacks template-manifest.xml\n" +
-		"PASS  lint-ntpl-manifest-deps  " + b + ": no *.ntpl under the root (nothing to check)\n"
-	if code, out, errText := run("--", a, b); code != 1 || out != want || errText != "" {
-		t.Errorf("exit %d\nstdout %q\nstderr %q\nwant exit 1\nstdout %q", code, out, errText, want)
-	}
+	expect(t, "four templates", root, 1, undeclaredRow("ModA-rt/src/a.ntpl", "ghost-rt")+
+		"FAIL  ntpl-entries  @ROOT@/ModA-rt/src/b.ntpl: lacks template-manifest.xml\n"+
+		"FAIL  ntpl-entries  @ROOT@/ModA-rt/src/c.NTPL: lacks template.bog\n"+
+		"FAIL  ntpl-entries  @ROOT@/ModA-rt/src/d.Ntpl: not a zip archive (zip: not a valid zip file) -- archive refused\n")
 }
 
-// TestUsageAndEmptyRoot: no root is the usage line; a root with neither a build file nor a template is the
-// ERROR row; both exit 3, never a pass.
+// TestUsageAndEmptyRoot: no root, a second root and an unknown option are the usage line; a root with
+// neither a build file nor a template is the ERROR row; all exit 3, never a pass.
 func TestUsageAndEmptyRoot(t *testing.T) {
 	t.Parallel()
-	if code, out, errText := run(); code != 3 || out != "" || errText != "usage: lint-ntpl-manifest-deps.sh [--] <module-root>...\n" {
-		t.Errorf("no root: exit %d stdout %q stderr %q", code, out, errText)
+	const wantUsage = "usage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>\n"
+	root := moduleRoot(t, nil)
+	for name, args := range map[string][]string{"no root": nil, "two roots": {root, root}, "an unknown option": {"--strict", root}, "an option with no value": {root, homeOption}} {
+		if code, out, errText := run(args...); code != 3 || out != "" || errText != wantUsage {
+			t.Errorf("%s: exit %d stdout %q stderr %q", name, code, out, errText)
+		}
 	}
 	empty := t.TempDir()
 	write(t, empty, "README.txt", "notes\n")
@@ -134,5 +168,35 @@ func TestUnreadableInputIsExit3(t *testing.T) {
 	wantErr = "lint-ntpl-manifest-deps: cannot scan " + build + ": open " + build + ": permission denied\n"
 	if code, out, errText := run(root); code != 3 || out != "" || errText != wantErr {
 		t.Errorf("a locked build file: exit %d stdout %q stderr %q, want exit 3 and %q", code, out, errText, wantErr)
+	}
+}
+
+// TestUnreadableDirectoryWithTemplatesIsExit3: a directory the walk cannot enter fails the scan closed even
+// when templates were found elsewhere: their rows are printed, the exit is 3, never 0 or 1.
+func TestUnreadableDirectoryWithTemplatesIsExit3(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	root := moduleRoot(t, map[string]string{"ModA-rt/src/a.ntpl": template(t, ""), "ModA-rt/src/b.ntpl": ntpl(t, entry{bogEntry, bog}), "ModA-rt/locked/c.ntpl": "not a zip"})
+	locked := root + "/ModA-rt/locked"
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+	wantOut := "FAIL  ntpl-entries  " + root + "/ModA-rt/src/b.ntpl: lacks template-manifest.xml\n"
+	wantErr := "lint-ntpl-manifest-deps: cannot list every file under " + root + ": find: '" + locked + "': Permission denied\n"
+	if code, out, errText := run(root); code != 3 || out != wantOut || errText != wantErr {
+		t.Errorf("exit %d\nstdout %q\nstderr %q\nwant exit 3\nstdout %q\nstderr %q", code, out, errText, wantOut, wantErr)
+	}
+	clean := moduleRoot(t, map[string]string{"ModA-rt/src/a.ntpl": template(t, ""), "ModA-rt/locked/c.ntpl": "not a zip"})
+	lockedClean := clean + "/ModA-rt/locked"
+	if err := os.Chmod(lockedClean, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(lockedClean, 0o755) })
+	wantErr = "lint-ntpl-manifest-deps: cannot list every file under " + clean + ": find: '" + lockedClean + "': Permission denied\n"
+	if code, out, errText := run(clean); code != 3 || out != "" || errText != wantErr {
+		t.Errorf("only clean templates were read: exit %d stdout %q stderr %q, want exit 3 and %q", code, out, errText, wantErr)
 	}
 }

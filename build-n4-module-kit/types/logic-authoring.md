@@ -321,13 +321,17 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
 - **Version pinning:** set **Use Minor Version On Deployment** on purpose: `true` pins the minor version; `false`
   pins only the major, so a template built on a later minor deploys to stations on an earlier one
   (guide `Templates/TemplateOptions-49093F67.txt:9-11` "Minor Version On Deployment is set to true,").
-- **Check:** `toolbelt/lint-ntpl-manifest-deps.sh <module-root>` (Go lint G92) FAILs a shipped `.ntpl` that lacks
-  `template.bog` or `template-manifest.xml`, a manifest that is not well-formed XML, and a `<dependency>` that no
-  `*.gradle.kts` of the module declares with `api`, `nre` or `implementation`; a module that ships no `.ntpl`
-  passes with one row. The archive is read as untrusted input (size bounds, unsafe entry names refused). The
-  report does not run it yet: run it by hand at the verify gate. `[ev: retro gate-followups-and-template-lints Δ7]`
+- **Check:** `toolbelt/lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>` (Go lint G92) FAILs a
+  shipped `.ntpl` that lacks `template.bog` or `template-manifest.xml`, a manifest that is not a well-formed
+  `<template>` manifest, and a `<dependency>` that no `*.gradle.kts` of the module declares with `api`, `nre` or
+  `implementation` and that the installation does not ship; a module that ships no `.ntpl` passes with one row.
+  Give it the installation (`--niagara-home`, or `NIAGARA_HOME`): a template lists stock modules that no build file
+  declares, and without the installation's `modules/` the lint cannot tell them from a missing module, so it
+  reports undeclared dependencies as WARN and exits 0. The archive is read as untrusted input (size bounds, unsafe
+  entry names refused), and a symlinked template is read through the link. The report does not run it yet: run it
+  by hand at the verify gate. `[ev: retro gate-followups-and-template-lints Δ7]` `[ev: retro gate-followups-and-template-lints Δ12]`
   Still owed from the first G92 spec: a module the bog or a Px uses with no `<dependency>` row, and a template
-  module jar or a `--niagara-home` as input (`ledger.d/2026-10-23-r8-u10-platform-templates.md`).
+  module jar as input (`ledger.d/2026-10-23-r8-u10-platform-templates.md`).
   [deferred: retro devguide415-r2-packaging-platform-signing Δ2]
 
 ### What breaks on a module or template upgrade `[ev: corpus B1325 §1325.1 rows 4-6]` [ev: retro devguide415-r2-packaging-platform-signing Δ3]

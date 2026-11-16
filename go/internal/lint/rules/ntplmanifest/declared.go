@@ -16,14 +16,15 @@ type module struct {
 	known bool            // every build file under the root was read: names is the whole declaration
 }
 
-// declaredIn reads every build file under root through the shared reader (lint.DeclaredDeps: api, nre and
+// declaredIn reads every build file under root (a symlinked one and those under a symlinked directory
+// too: lint.WalkFollow) through the shared reader (lint.DeclaredDeps: api, nre and
 // implementation calls). A part is a dependency of its own templates without declaring itself, so the
 // directory of each build file, and the file's own stem (<part>.gradle.kts), count as declared. A build
 // file that cannot be read or tokenized is an error: what the module declares is then not known, and no
 // template's dependencies are compared against the part of it that was read.
 func declaredIn(root string) (module, error) {
 	m := module{names: map[string]bool{}}
-	files, walkErr := lint.Walk(root, lint.Selection{Names: []string{"*.gradle.kts"}, Except: []string{settingsFile}, PrunePaths: lint.PartOutputs()})
+	files, walkErr := lint.WalkFollow(root, lint.Selection{Names: []string{"*.gradle.kts"}, Except: []string{settingsFile}, PrunePaths: lint.PartOutputs()})
 	for _, path := range files {
 		data, err := os.ReadFile(path)
 		if err != nil {
