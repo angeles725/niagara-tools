@@ -3,11 +3,7 @@ package changelog
 import (
 	"fmt"
 	"os/exec"
-	"regexp"
-	"strconv"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -19,54 +15,7 @@ const (
 	ExitEnv  = 3 // usage error, a malformed range, or git missing or failing
 )
 
-// MaxReasonLen caps the reason of a `Changelog: none (<reason>)` trailer, in characters.
-const MaxReasonLen = 120
-
-// behaviourRoots are the trees whose changes change kit behaviour. notBehaviour are the retro gate's own
-// exclusions inside them (.githooks/pre-push `relevant`): built binaries and the ledger/retro bookkeeping.
-var (
-	behaviourRoots = []string{"go/", "build-n4-module-kit/", "tools/", "scripts/"}
-	notBehaviour   = regexp.MustCompile(`^(go/bin/|build-n4-module-kit/(BUILD-STATE(\.src)?\.md$|ledger\.d/|retros/))`)
-	trailer        = regexp.MustCompile(`^Changelog: none \((.*)\)$`)
-	hunk           = regexp.MustCompile(`^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
-)
-
 const usage = "usage: changelog-gate --range <base>..<head>"
-
-// IsBehaviour reports whether a changed path changes kit behaviour (the paths the gate applies to).
-func IsBehaviour(path string) bool {
-	for _, r := range behaviourRoots {
-		if strings.HasPrefix(path, r) {
-			return !notBehaviour.MatchString(path)
-		}
-	}
-	return false
-}
-
-// CheckReason returns why a trailer reason is not acceptable, or "": it must be non-empty, one printable
-// line and at most MaxReasonLen characters.
-func CheckReason(reason string) string {
-	r := strings.TrimSpace(reason)
-	switch {
-	case r == "":
-		return "the reason is empty"
-	case utf8.RuneCountInString(r) > MaxReasonLen:
-		return fmt.Sprintf("the reason is longer than %d characters", MaxReasonLen)
-	case strings.IndexFunc(r, func(c rune) bool { return !unicode.IsPrint(c) }) >= 0:
-		return "the reason holds a non-printable character"
-	}
-	return ""
-}
-
-type gitRunner func(args ...string) (string, error)
-
-func realGit(args ...string) (string, error) {
-	out, err := exec.Command("git", args...).Output()
-	if ee, ok := err.(*exec.ExitError); ok {
-		return "", fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(string(ee.Stderr)))
-	}
-	return string(out), err
-}
 
 // Main implements `changelog-gate --range <base>..<head>`, run in the repository.
 func Main(args []string, s cli.Stdio) int {
@@ -110,41 +59,12 @@ func run(rng string, git gitRunner, s cli.Stdio) int {
 		return env(err)
 	}
 
-	var problems, fragments, reasons []string
-	for _, p := range nonEmpty(addedOut) {
-		if !strings.HasPrefix(p, FragmentDir+"/") {
-			continue
-		}
-		why := CheckName(strings.TrimPrefix(p, FragmentDir+"/"))
-		if why == "" {
-			body, err := git("show", head+":"+p)
-			if err != nil {
-				return env(err)
-			}
-			why = CheckFragment(body)
-		}
-		if why != "" {
-			problems = append(problems, fmt.Sprintf("%s: %s", p, why))
-			continue
-		}
-		fragments = append(fragments, p)
+	fragments, problems, err := fragmentsIn(nonEmpty(addedOut), head, git)
+	if err != nil {
+		return env(err)
 	}
-	for _, l := range strings.Split(logOut, "\n") {
-		l = strings.TrimSpace(l)
-		if !strings.HasPrefix(l, "Changelog:") {
-			continue
-		}
-		m := trailer.FindStringSubmatch(l)
-		why := "not the form 'Changelog: none (<reason>)'"
-		if m != nil {
-			why = CheckReason(m[1])
-		}
-		if why != "" {
-			problems = append(problems, fmt.Sprintf("trailer %q: %s", l, why))
-			continue
-		}
-		reasons = append(reasons, strings.TrimSpace(m[1]))
-	}
+	reasons, bad := trailersIn(logOut)
+	problems = append(problems, bad...)
 	if len(problems) > 0 {
 		for _, p := range problems {
 			fmt.Fprintf(s.Err, "changelog-gate: %s\n", p)
@@ -193,55 +113,4 @@ func run(rng string, git gitRunner, s cli.Stdio) int {
 	fmt.Fprintf(s.Err, "  fix: add %s/<YYYY-MM-DD>-<slug>.md (### Added|Changed|Fixed|Removed — <title>, then '- ' bullets),\n", FragmentDir)
 	fmt.Fprintf(s.Err, "       or add a line under CHANGELOG.md %s, or a 'Changelog: none (<reason>)' commit trailer.\n", UnreleasedHeader)
 	return ExitFail
-}
-
-// addsUnreleased reports whether the range's CHANGELOG.md diff adds a non-blank line strictly inside the
-// `## [Unreleased]` section of the head version.
-func addsUnreleased(rng, head string, git gitRunner) (bool, error) {
-	cur, err := git("show", head+":CHANGELOG.md")
-	if err != nil {
-		return false, err
-	}
-	start, end, ok := UnreleasedBounds(strings.Split(cur, "\n"))
-	if !ok {
-		return false, nil
-	}
-	patch, err := git("diff", "-U0", "--no-renames", rng, "--", "CHANGELOG.md")
-	if err != nil {
-		return false, err
-	}
-	line := 0 // 1-based line number in the head version of the next '+' or ' ' line
-	for _, l := range strings.Split(patch, "\n") {
-		if m := hunk.FindStringSubmatch(l); m != nil {
-			line, _ = strconv.Atoi(m[1])
-			continue
-		}
-		if line == 0 || strings.HasPrefix(l, "+++") || !strings.HasPrefix(l, "+") {
-			continue
-		}
-		if idx := line - 1; idx > start && idx < end && strings.TrimSpace(l[1:]) != "" {
-			return true, nil
-		}
-		line++
-	}
-	return false, nil
-}
-
-func nonEmpty(out string) []string {
-	var r []string
-	for _, l := range strings.Split(out, "\n") {
-		if l = strings.TrimSpace(l); l != "" {
-			r = append(r, l)
-		}
-	}
-	return r
-}
-
-func contains(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
-		}
-	}
-	return false
 }
