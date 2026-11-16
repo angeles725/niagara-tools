@@ -40,9 +40,9 @@ var refusals = []refusal{
 	{"partial_status", []string{safety.ReasonPartialStatus},
 		"Teach that Status slots take value_type + status together in the write tool docs", "METHODOLOGY.md · section 3", "MEDIUM"},
 	{"unsupported", []string{safety.ReasonAction},
-		"Decide whether the refused action is worth supporting or documenting as unsupported", "mcp_n4/tools_write.py · allowed actions", "MEDIUM"},
+		"Decide whether the refused action is worth supporting or documenting as unsupported", "go/internal/mcpn4/writeops/invoke.go · AllowedActions", "MEDIUM"},
 	{"unsupported", []string{safety.ReasonValueType},
-		"Decide whether the refused value type is worth supporting or documenting", "mcp_n4/tools_write.py · VALUE_TYPES", "MEDIUM"},
+		"Decide whether the refused value type is worth supporting or documenting", "go/internal/mcpn4/plan/values.go · ValueTypes", "MEDIUM"},
 	{"tier", []string{tiers.ReasonTier},
 		"Record the PoC/probe outcome for this build and decide on --allow-tier-b/--allow-tier-c", "METHODOLOGY.md · section 5", "MEDIUM"},
 	{"unsupported", []string{safety.ReasonTypeSpec},
@@ -55,7 +55,7 @@ var refusals = []refusal{
 // verdicts is _VERDICTS, in its order: a read-back verdict and its advice.
 var verdicts = []struct{ verdict, change, target, priority string }{
 	{"mismatch", "Investigate why the read-back differs from the request and document the cause", "METHODOLOGY.md · section 3", "HIGH"},
-	{"failed", "Investigate why the read-back failed after the station accepted the write", "mcp_n4/tools_write.py · read-back", "HIGH"},
+	{"failed", "Investigate why the read-back failed after the station accepted the write", "go/internal/mcpn4/plan/execute.go · read-back", "HIGH"},
 	{"partial", "Restore by hand the configuration a rollback reported as not restored " +
 		"(frozen_config_not_restored, link_inputs_not_restored)", "METHODOLOGY.md · section 3", "MEDIUM"},
 	{"unverified", "Add a way to verify this write class, or document that it stays unverified", "METHODOLOGY.md · section 3", "MEDIUM"},
