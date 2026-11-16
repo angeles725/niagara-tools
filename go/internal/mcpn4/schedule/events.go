@@ -10,11 +10,12 @@ import (
 )
 
 // Event is one requested special event: its name (as shown and as a slot name), its rule (kind,
-// the rule as given and its body) and its ranges.
+// the rule as given and its body), its ranges and where it sits in the request (for faults).
 type Event struct {
 	Name, Slot, Kind string
 	Rule, Days       *pyjson.Object
 	Ranges           []Range
+	Where            string
 }
 
 // SpecialEvents parses add_special_event: [{name, kind, rule, ranges}]. A fixed date or a date
@@ -52,7 +53,7 @@ func SpecialEvents(list []any, k *Kind, facets string, today time.Time, allowExp
 		if days != nil {
 			days.Set("n", "days")
 		}
-		out = append(out, Event{name, EscapeName(name), kind, rule, days, ranges})
+		out = append(out, Event{name, EscapeName(name), kind, rule, days, ranges, where})
 	}
 	return out
 }

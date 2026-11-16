@@ -24,14 +24,22 @@ func TestSetScheduleRefusesANameRemovedTwice(t *testing.T) {
 	}
 }
 
-// A reference must name an existing calendar: another schedule or a missing ORD is refused.
+// A reference must name an existing calendar: another schedule or a missing ORD is refused, under
+// the event's own index, and a relative ORD gets only its format fault (no load).
 func TestSetScheduleRefusesAReferenceToNoCalendar(t *testing.T) {
 	r := scheduleWriteRig(t)
-	for _, ord := range []string{Folder + "/NumSch", Folder + "/Nope"} {
-		text := r.Srv.Err("n4_set_schedule", setSchedule("BoolSch", Args{"add_special_event": []any{refEvent(ord)}}))
-		if !strings.Contains(text, "the reference '"+ord+"' names no calendar") {
-			t.Errorf("%s: %s", ord, text)
+	for ord, want := range map[string]string{
+		Folder + "/NumSch": "add_special_event[1].rule.calendar: '" + Folder + "/NumSch' names no calendar (it is a schedule:NumericSchedule)",
+		Folder + "/Nope":   "add_special_event[1].rule.calendar: '" + Folder + "/Nope' names no component (KeyError",
+	} {
+		text := r.Srv.Err("n4_set_schedule", setSchedule("BoolSch", Args{"add_special_event": []any{"x", refEvent(ord)}}))
+		if !strings.Contains(text, want) || strings.Contains(text, "None") {
+			t.Errorf("%s: want %q in %s", ord, want, text)
 		}
+	}
+	text := r.Srv.Err("n4_set_schedule", setSchedule("BoolSch", Args{"add_special_event": []any{refEvent("Cal")}}))
+	if n := strings.Count(text, "'Cal'"); n != 1 || !strings.HasPrefix(text, "1 fault(s)") {
+		t.Errorf("a relative ORD is named %d times: %s", n, text)
 	}
 	out := r.Srv.RunWrite("n4_set_schedule", setSchedule("BoolSch", Args{"add_special_event": []any{refEvent(Folder + "/Cal")}}))
 	if out["verdict"] != "verified" {

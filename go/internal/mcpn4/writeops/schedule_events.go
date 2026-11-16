@@ -1,6 +1,7 @@
 package writeops
 
 import (
+	"strings"
 	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
@@ -45,7 +46,7 @@ func eventParts(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []sch
 		}
 		names[e.Name] = true
 		if e.Kind == "reference" {
-			checkCalendar(s, pyjson.Str(get(e.Rule, "calendar")), f)
+			checkCalendar(s, e.Where+".rule.calendar", pyjson.Str(get(e.Rule, "calendar")), f)
 		}
 	}
 	if len(*f) > before || old == nil { // nothing is encoded from a request with faults
@@ -118,22 +119,19 @@ func eventView(model *pyjson.Object, body any) *pyjson.Object {
 }
 
 // checkCalendar refuses a reference whose ORD does not name a calendar (a read only; the
-// calendar need not be inside the write scope).
-func checkCalendar(s *scheduleState, ord string, f *schedule.Faults) {
+// calendar need not be inside the write scope). An ORD that is not a slot ORD already has its
+// format fault, so it is not loaded.
+func checkCalendar(s *scheduleState, where, ord string, f *schedule.Faults) {
+	if !strings.HasPrefix(ord, "station:|slot:/") {
+		return
+	}
 	nodes, err := s.c.LoadTree(ord, 1, box.LoadOptions{})
-	var t any
-	if err == nil {
-		t = get(box.Node(nodes, ""), "t")
+	head := where + ": " + pyjson.StrRepr(ord)
+	switch {
+	case err != nil:
+		*f = append(*f, head+" names no component ("+err.Error()+")")
+	case get(box.Node(nodes, ""), "t") != "schedule:CalendarSchedule":
+		*f = append(*f, head+" names no calendar (it is a "+pyjson.Str(get(box.Node(nodes, ""), "t"))+
+			"); n4_read_schedule a calendar's ORD to check it")
 	}
-	if t != "schedule:CalendarSchedule" {
-		*f = append(*f, "add_special_event: the reference "+pyjson.StrRepr(ord)+" names no calendar ("+
-			pyjson.Str(t)+describeErr(err)+"); n4_read_schedule a calendar's ORD to check it")
-	}
-}
-
-func describeErr(err error) string {
-	if err != nil {
-		return err.Error()
-	}
-	return ""
 }
