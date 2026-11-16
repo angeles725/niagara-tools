@@ -1171,6 +1171,22 @@ calendar back identical). A date cannot be removed and added under the same name
 replace it in two calls, so each rolls back on its own. `times` (["06:00", "18:30"]) replaces a
 trigger's firing times with one set.
 
+### Recipe: a schedule that drives a point
+
+1. `n4_create_component` the schedule (`schedule:BooleanSchedule`, or the numeric, enum or string
+   kind that matches the point) next to the point.
+2. `n4_set_schedule` its `weekly` ranges, `default_output` and any `add_special_event`.
+3. `n4_create_link` the schedule's `out` to the writable point's `in16`. By convention a weekly
+   schedule drives priority level 16, though any level is allowed (Niagara help,
+   AboutLinkingWeeklySchedules: "By convention, when linking to a target writable point (with
+   16-level priority array), you select In16 among its different priority array inputs. However,
+   you are free to select any available input level."). A calendar is not linked: special events
+   reference it.
+
+Live on 4.15.6.20: a BooleanSchedule with `default_output` false and a special event for today
+(00:00-24:00 true), linked to a BooleanWritable's `in16`, put the point's `out` at true @ 16
+("Special Event: Today"); removing the event put both back at false (Default Output).
+
 ## Live smoke test
 
 `go/bin/live-smoke` (built from `go/cmd/mcp-n4/live-smoke`; formerly `tools/live_smoke.py`)
