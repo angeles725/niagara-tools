@@ -43,15 +43,18 @@ func (t *Tools) AlarmTextCheck(args *pyjson.Object) (*pyjson.Object, error) {
 		exts = append(exts, e)
 	}
 	sort.SliceStable(exts, func(i, j int) bool { return exts[i].path < exts[j].path })
-	findings, parents, empties := []any{}, 0, 0
+	findings, parents, empties, bad := []any{}, 0, 0, 0
 	for _, e := range exts {
-		extRows, p, n := alarmTextFindings(e.path, e.texts)
-		findings, parents, empties = append(findings, extRows...), parents+p, empties+n
+		extRows, p, n, b := alarmTextFindings(e.path, e.texts)
+		findings, parents, empties, bad = append(findings, extRows...), parents+p, empties+n, bad+b
 	}
 	t.recordRead("n4_alarm_text_check", "base", args, len(rows))
 	out := obj("base", base, "findings", findings, "alarm_extensions", len(exts), "parent_path", parents,
-		"empty_tonormal", empties, "summary", fmt.Sprintf("%d alarm source extensions; %d parent-path, %d empty-tonormal [LC9]",
-			len(exts), parents, empties), "truncated", truncated, "elapsed_ms", elapsed)
+		"empty_tonormal", empties, "bad_format", bad, "summary", fmt.Sprintf("%d alarm source extensions; %s [LC9]",
+			len(exts), alarmTextCounts(parents, empties, bad)), "truncated", truncated, "elapsed_ms", elapsed)
+	if bad > 0 {
+		out.Set("hint", "bad-format: "+badFormatHint)
+	}
 	if truncated {
 		out.Set("note", fmt.Sprintf("read cut at %d extensions (max_rows or the byte cap): the counts are lower bounds; "+
 			"narrow base or raise max_rows", len(exts)))

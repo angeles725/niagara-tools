@@ -17,6 +17,7 @@ import (
 const (
 	ruleParentPath    = "parent-path"
 	ruleEmptyToNormal = "empty-tonormal"
+	ruleBadFormat     = "bad-format"
 )
 
 // alarmTextSlots are the ext's text slots, in the order findings are listed and the order of the
@@ -59,18 +60,23 @@ func alarmTextFinding(rule, path, slot, token, text string) any {
 	return obj("level", "WARN", "rule", rule, "path", path, "slot", slot, "token", token, "text", text)
 }
 
-// alarmTextFindings are the rows of one ext whose texts are texts[slot]: one parent-path row per
-// unresolved token, then empty-tonormal when toOffnormalText is set and toNormalText is empty.
-func alarmTextFindings(path string, texts map[string]string) (rows []any, parents, empties int) {
+// alarmTextFindings are the rows of one ext whose texts are texts[slot]: per slot one bad-format
+// when BFormat cannot parse the text, else one parent-path per unresolved token (textFindings);
+// then empty-tonormal when toOffnormalText is set and toNormalText is empty.
+func alarmTextFindings(path string, texts map[string]string) (rows []any, parents, empties, bad int) {
 	for _, slot := range alarmTextSlots {
-		for _, tok := range unresolvedAlarmTokens(texts[slot]) {
-			rows = append(rows, alarmTextFinding(ruleParentPath, path, slot, tok, texts[slot]))
-			parents++
+		for _, f := range textFindings(texts[slot]) {
+			rows = append(rows, alarmTextFinding(f.rule, path, slot, f.token, texts[slot]))
+			if f.rule == ruleBadFormat {
+				bad++
+			} else {
+				parents++
+			}
 		}
 	}
 	if texts["toOffnormalText"] != "" && texts["toNormalText"] == "" {
 		rows = append(rows, alarmTextFinding(ruleEmptyToNormal, path, "toNormalText", "", ""))
 		empties++
 	}
-	return rows, parents, empties
+	return rows, parents, empties, bad
 }
