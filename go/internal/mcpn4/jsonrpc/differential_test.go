@@ -14,7 +14,8 @@ import (
 // the Python Server(...).handle_line (the in-process read-only server, decoding the bytes as its
 // stdin does) and through HandleLine; the reply bytes must be equal. Tool calls stop at the
 // layers ported in S2 (validation, the session gate), so no station is needed.
-// Python's replies are recorded in testdata/handle-line.golden.jsonl.
+// Python's replies are recorded in testdata/handle-line.golden.jsonl. Their tools/list
+// replies hold toolsMarker: assembleTools fills in the per-tool descriptors (toolsgolden_test.go).
 
 const handleLineDriver = `
 import sys
@@ -72,8 +73,8 @@ func TestDifferentialPython(t *testing.T) {
 	for _, l := range lines {
 		in.WriteString(hex.EncodeToString([]byte(l)) + "\n")
 	}
-	out := g.Run(handleLineDriver, []byte(in.String()))
-	sc := bufio.NewScanner(strings.NewReader(string(out)))
+	out := assembleTools(t, string(g.Run(handleLineDriver, []byte(in.String()))), readToolNames())
+	sc := bufio.NewScanner(strings.NewReader(out))
 	sc.Buffer(nil, 1<<24)
 	s := New(registry.Default())
 	i := 0

@@ -8,13 +8,15 @@ package blackbox
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
 // TestRepliesAreTheBytesThePythonServerWrites compares tools/list (every schema), errors and odd
 // ids, byte for byte, with what the Python server wrote; testdata/protocol.json is the frozen
 // recording (recorded before S17 removed that server; it cannot be re-recorded; its former kit
-// copy, tests/fixtures/oracles/protocol.json, was deleted in T9).
+// copy, tests/fixtures/oracles/protocol.json, was deleted in T9). Its tools/list reply holds
+// toolsMarker: assembleTools fills in the per-tool descriptors (toolsgolden_test.go).
 func TestRepliesAreTheBytesThePythonServerWrites(t *testing.T) {
 	data, err := os.ReadFile("testdata/protocol.json")
 	if err != nil {
@@ -32,8 +34,12 @@ func TestRepliesAreTheBytesThePythonServerWrites(t *testing.T) {
 	}
 	s := Start(t, Options{})
 	for _, c := range calls {
-		if got := s.Line(c[0]); got != c[1] {
-			t.Errorf("%q:\n got %.200s\nwant %.200s", c[0], got, c[1])
+		want := c[1]
+		if strings.Contains(want, toolsMarker) {
+			want = assembleTools(t, want, readTools)
+		}
+		if got := s.Line(c[0]); got != want {
+			t.Errorf("%q:\n got %.200s\nwant %.200s", c[0], got, want)
 		}
 	}
 }
