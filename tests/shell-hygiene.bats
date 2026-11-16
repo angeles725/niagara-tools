@@ -142,3 +142,28 @@ SH
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "SH2-forms: every form of tests/lib/home-lint-forms.tsv lints as its row says (run, clean or limit)" {
+  # Mutation: SH2-forms -- dropping a launcher (env, exec, time, timeout, if, elif, while, until), the ; ( $( rule,
+  # the $( ) rule, the comment strip (or its quote handling) or the assignment rule fails a row.
+  local expect form i=0 fails=""
+  while IFS=$'\t' read -r -u 3 expect form; do
+    [[ -z "$expect" || "$expect" == \#* ]] && continue
+    form="${form//\\t/$'\t'}"; form="${form//\\n/$'\n'}"; i=$((i + 1))
+    printf '%s\n%s\n' "SCRIPT=\"\$REPO/scripts/install-skill.sh\"" "$form" > "$TMPDIR_T/f$i.bats"
+    run _home_lint "install-skill.sh check-skill-drift.sh" "$TMPDIR_T/f$i.bats"
+    if [ "$expect" = run ]; then
+      [ "$status" -eq 1 ] && [[ "$output" == *"f$i.bats:2: install-skill.sh runs without --home"* ]] && continue
+    elif [ "$status" -eq 0 ] && [ -z "$output" ]; then continue; fi
+    fails+="row $i ($expect): $form -> status $status: $output"$'\n'
+  done 3< "$BATS_TEST_DIRNAME/lib/home-lint-forms.tsv"
+  [ "$i" -ge 44 ]                                          # non-vacuous: the verifier's forms are all read
+  [ -z "$fails" ] || { printf '%s' "$fails" >&2; return 1; }
+}
+
+@test "SH2-marker: the --home marker finds every script that takes --home, not only the installer" {
+  # Mutation: SH2-marker -- a marker that finds install-skill.sh alone leaves check-skill-drift.sh runs unlinted.
+  names="$(_home_scripts "$ROOT")"
+  [[ " $names" == *" install-skill.sh "* ]]
+  [[ " $names" == *" check-skill-drift.sh "* ]]
+}

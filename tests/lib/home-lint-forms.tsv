@@ -1,0 +1,73 @@
+# home-lint-forms.tsv — the forms the SH2 lint (tests/lib/home-lint.awk) is held to, one per row:
+# <expect><TAB><form>. expect: run (flagged), clean (protected or not a run), limit (an accepted evasion,
+# listed in the lint header: the lint stays silent on it). Each form is linted as line 2 of a bats file whose
+# line 1 is SCRIPT="$REPO/scripts/install-skill.sh". In a form, \n is a new line and \t a tab.
+# Rows start from the 44 forms of the niagara-tools #675 verifier (retro 2026-11-15 row S6).
+run	run "$SCRIPT" --dry-run
+run	"$SCRIPT" --dry-run
+run	"$REPO/scripts/install-skill.sh" --dry-run
+run	bash "$SCRIPT" --dry-run
+run	/bin/sh "$SCRIPT" --dry-run
+run	env FOO=1 "$SCRIPT" --dry-run
+run	env "$SCRIPT" --dry-run
+run	exec "$SCRIPT" --dry-run
+run	time "$SCRIPT" --dry-run
+run	timeout 5 "$SCRIPT" --dry-run
+run	bash -c "$REPO/scripts/install-skill.sh --dry-run"
+run	run -0 "$SCRIPT" --dry-run
+run	! "$SCRIPT" --dry-run
+run	true && "$SCRIPT" --dry-run
+run	false || "$SCRIPT" --dry-run
+run	echo y | "$SCRIPT" --dry-run
+run	( "$SCRIPT" --dry-run )
+run	cd /tmp; "$SCRIPT" --dry-run
+run	x=$( "$SCRIPT" --dry-run )
+run	run . "$REPO/scripts/install-skill.sh"
+run	run\t"$SCRIPT"\t--dry-run
+run	./scripts/install-skill.sh --dry-run
+run	"${REPO}/scripts/install-skill.sh" --dry-run
+run	{ "$SCRIPT" --dry-run; }
+run	run "$SCRIPT" \\n  --dry-run
+run	if "$SCRIPT" --dry-run; then :; fi
+run	if false; then :; elif "$SCRIPT" --dry-run; then :; fi
+run	while "$SCRIPT" --dry-run; do break; done
+run	until "$SCRIPT" --dry-run; do break; done
+run	out=$("$SCRIPT" --dry-run)
+run	out="$("$SCRIPT" --dry-run 2>&1)"
+run	out=`"$SCRIPT" --dry-run`
+run	local S="$REPO/scripts/install-skill.sh"; "$S" --dry-run
+run	export S="$REPO/scripts/install-skill.sh"; "$S" --dry-run
+run	f() { S="$REPO/scripts/install-skill.sh"; "$S" --dry-run; }
+run	run "$SCRIPT" --dry-run # --home is not needed here
+run	run "$SCRIPT" --dry-run # HOME=/x
+clean	run "$SCRIPT" --home "$H" --dry-run
+clean	run "$SCRIPT" --home="$H" --dry-run
+clean	run "$SCRIPT" --home "$H" --dry-run # a trailing note
+clean	run "$SCRIPT" --label "a #b" --home "$H"
+clean	run "$SCRIPT" --label "a \" #b" --home "$H"
+clean	run env HOME=/nonexistent "$SCRIPT" --dry-run
+clean	HOME="$H" "$SCRIPT" --dry-run
+clean	run "$SCRIPT" --dry-run \\n  --home "$H"
+clean	run "$SCRIPT" --home ""
+clean	# run "$SCRIPT" --dry-run
+clean	cp "$SCRIPT" "$FAKE/scripts/"
+clean	grep -q SKILLS "$REPO/scripts/install-skill.sh"
+clean	[ -f "$SCRIPT" ]
+clean	run "$REPO/scripts/install-hooks.sh"
+clean	setup() { INST="$REPO/scripts/install-skill.sh"; }
+clean	cat <<EOF\n"$SCRIPT" --dry-run\nEOF
+limit	command "$SCRIPT" --dry-run
+limit	nice "$SCRIPT" --dry-run
+limit	stdbuf -oL "$SCRIPT" --dry-run
+limit	/usr/bin/bash "$SCRIPT" --dry-run
+limit	echo y | xargs "$SCRIPT"
+limit	eval "\"$SCRIPT\" --dry-run"
+limit	my_runner "$SCRIPT" --dry-run
+limit	cmd=("$SCRIPT" --dry-run); "${cmd[@]}"
+limit	NAME=install-skill.sh; "$REPO/scripts/$NAME" --dry-run
+limit	cd scripts; ./install-skill.sh --dry-run
+limit	run '/repo/scripts/install-skill.sh' --dry-run
+limit	"$REPO/go/bin/install-skill" --dry-run
+limit	bash <<EOF\n"$SCRIPT" --dry-run\nEOF
+limit	HOME=/x true; run "$SCRIPT" --dry-run
+limit	run "$SCRIPT" --home "$HOME"
