@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# ci-local-pins.bats — scripts/ci-local.sh, the tool versions ci.yml pins and the options around them (CL20-CL22).
+# ci-local-pins.bats — scripts/ci-local.sh, the tool versions ci.yml pins and the options around them (CL20-CL24).
 # Split from tests/ci-local.bats (same setup), which holds the step-replay cases. [ev: retro 2026-10-22-ci-local-replay]
 
 setup() {
@@ -49,6 +49,20 @@ fake_bats_tarball() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"sha256 mismatch"*"bats-core-v9.9.9.tar.gz"* ]]
   [[ "$output" != *"pinned bats"* ]]
+}
+
+@test "CL24: a pinned-tarball download is bounded (curl --connect-timeout 10 --max-time 120) and a failure exits 3" {
+  # Mutation: CL24 -- dropping the curl time limits lets a blackholed network hang the replay for ~20 minutes.
+  pinned_bats_ci 9.9.9 0000000000000000000000000000000000000000000000000000000000000000
+  mkdir -p "$TMPDIR_T/bin"
+  printf '#!/bin/sh\nprintf "%%s\\n" "$@" > "%s/curl.args"\nexit 28\n' "$TMPDIR_T" > "$TMPDIR_T/bin/curl"
+  chmod +x "$TMPDIR_T/bin/curl"
+  PATH="$TMPDIR_T/bin:$PATH" run "$CL" --ci-file "$TMPDIR_T/pin.yml" --cache-dir "$TMPDIR_T/cache" --only 'bats run'
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"download failed"*"bats-core"* ]]
+  grep -qxF -- "--connect-timeout" "$TMPDIR_T/curl.args"
+  [ "$(grep -xF -A1 -- "--connect-timeout" "$TMPDIR_T/curl.args" | tail -n 1)" = 10 ]
+  [ "$(grep -xF -A1 -- "--max-time" "$TMPDIR_T/curl.args" | tail -n 1)" = 120 ]
 }
 
 @test "CL22: --range without --changed, and --changed with --list or --only, are usage errors (exit 2)" {

@@ -15,8 +15,9 @@
 #     CI's gen-build-state --check fails it);
 #   - the snapshot's own toolbelt/kit-state.sh does it, the launcher the push sends and kit-links.bats itself runs
 #     (its go/ is the checkout's either way);
-#   - bats is the version ci.yml installs (provision_bats), as the full replay runs it; a provisioning that fails or
-#     leaves another version first on PATH is one stderr line and exit 3, never a run on the wrong bats.
+#   - bats is the version ci.yml installs (provision_bats), as the full replay runs it; never a run on the wrong bats:
+#     a download or sha256 failure exits 3 with its own error (lib/ci-local-tools.sh), and a provisioning that returns
+#     an error or leaves another version first on PATH is one stderr line and exit 3.
 # changelog.d fragments reach no file L1 scans (CHANGELOG.md takes them only at release); a change to one still
 # runs kit-links, so a fragment cannot be the one change a push leaves unchecked.
 # Returns 0 pass or nothing to check, 1 kit-state or kit-links failed, 3 the snapshot could not be made, bats could
