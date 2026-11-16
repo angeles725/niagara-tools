@@ -13,8 +13,10 @@ const (
 	outcomeUndone    = "what was already replaced was put back: %s holds the jars it held before %s"
 	// msgCopyInterrupted takes SIGINT or SIGTERM and the same outcomes; the exit code is 128 + the signal.
 	msgCopyInterrupted = "copy interrupted (%s); %s"
-	// whyNotAJar takes what the station holds under the name of a jar (the kinds below).
-	whyNotAJar     = "the station holds %s under that name, not a jar file"
+	// hintHeldOpen follows, indented, a jar that could not be replaced or moved with EACCES, EPERM or EBUSY.
+	hintHeldOpen = "a running station or Workbench holds its module jars open; stop it and run again"
+	// whyNotAJar takes the holder of a site and what it holds under the name of a jar (the kinds below).
+	whyNotAJar     = "%s holds %s under that name, not a jar file"
 	kindDirectory  = "a directory"
 	kindOther      = "something that is not a regular file"
 	kindLinkTo     = "a symbolic link to "

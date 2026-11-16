@@ -43,7 +43,7 @@ func (d *deploy) guardHome() int {
 		return code
 	}
 	if !d.sameDir {
-		return proceed
+		return d.homeJarFiles()
 	}
 	d.say(msgSameDir, d.homeDir)
 	if d.isOn(optNoDeploy) {
@@ -51,6 +51,20 @@ func (d *deploy) guardHome() int {
 	}
 	for _, profile := range profilesOf[d.raw[optMode]] {
 		if _, code := d.jarFileAt(d.jarName(profile), d.station+"/"+d.jarName(profile)); code != proceed {
+			return code
+		}
+	}
+	return proceed
+}
+
+// homeJarFiles refuses, before the build and with or without --no-deploy, anything that is not a jar file
+// under the name of a jar the build installs in <NIAGARA_HOME>/modules when that is not the station: the
+// move aside would take it, and putting it back over the installed jar fails. The same directory is
+// looked at as the station (guardHome).
+func (d *deploy) homeJarFiles() int {
+	for _, profile := range profilesOf[d.raw[optMode]] {
+		name := d.jarName(profile)
+		if _, code := d.jarFileIn(homeSite(d.homeDir), msgHomeNotAJar, name, d.homeDir+"/"+name); code != proceed {
 			return code
 		}
 	}
@@ -99,7 +113,7 @@ func (d *deploy) asideHome() int {
 		if err := moveAside(jar.target, jar.aside); err != nil {
 			jars := d.homeJars
 			d.homeJars = nil
-			return d.fail(ExitEnv, msgHomeAsideFailed, jar.name, d.homeDir, strerror.Text(err), undo(jars, homeSite(d.homeDir)))
+			return d.failHeld(err, ExitEnv, msgHomeAsideFailed, jar.name, d.homeDir, strerror.Text(err), undo(jars, homeSite(d.homeDir)))
 		}
 		jar.moved = true
 	}

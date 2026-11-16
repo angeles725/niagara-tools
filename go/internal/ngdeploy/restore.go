@@ -9,9 +9,10 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
-// copyFailed undoes the copy after a move aside or a rename in failed for one jar; it is the exit 40 line.
+// copyFailed undoes the copy after a move aside or a rename in failed for one jar; it is the exit 40 line,
+// and the line naming a running station when the file system refused as for a jar held open.
 func (d *deploy) copyFailed(jars []*stagedJar, failed *stagedJar, why error) int {
-	return d.fail(ExitCopy, msgCopyFailed, failed.name+": "+strerror.Text(why), undo(jars, stationSite))
+	return d.failHeld(why, ExitCopy, msgCopyFailed, failed.name+": "+strerror.Text(why), undo(jars, stationSite))
 }
 
 // copyInterrupted undoes the copy after a SIGINT or SIGTERM; the run ends with 128 + the signal.

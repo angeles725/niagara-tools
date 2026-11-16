@@ -28,9 +28,14 @@ func (d *deploy) jarsToCopy() (jars []*stagedJar, code int) {
 // jarFileAt reports whether the station holds a jar file under the name of a jar; anything else under that
 // name (notAJar) is the exit 40 line of a copy that replaced nothing.
 func (d *deploy) jarFileAt(name, target string) (exists bool, code int) {
+	return d.jarFileIn(stationSite, msgCopyFailed, name, target)
+}
+
+// jarFileIn is that look in any site: headline takes the jar with the reason, then the outcome.
+func (d *deploy) jarFileIn(at site, headline, name, target string) (exists bool, code int) {
 	what, exists := notAJar(target)
 	if what != "" {
-		return exists, d.fail(ExitCopy, msgCopyFailed, name+": "+fmt.Sprintf(whyNotAJar, what), stationSite.unchanged())
+		return exists, d.fail(ExitCopy, headline, name+": "+fmt.Sprintf(whyNotAJar, at.holder, what), at.unchanged())
 	}
 	return exists, proceed
 }

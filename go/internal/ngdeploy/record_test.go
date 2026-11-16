@@ -191,3 +191,18 @@ func TestARecordThatIsALinkIntoAMissingDirectoryIsFoundBeforeTheCopy(t *testing.
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
 }
+
+// A module directory that is not a git repository has no commit to record: the deploy that went through
+// ends 0 with a NOTICE, not exit 41 (retro 2026-11-15-coordination-stretch-deltas D9, user decision
+// 2026-11-15). A repository whose HEAD cannot be read is still exit 41 (above).
+func TestADeployOutsideGitEndsZeroWithANotice(t *testing.T) {
+	f := newFixture(t)
+	t.Setenv("FAKE_GIT_NOREPO", "1")
+	t.Setenv("FAKE_GIT_HEAD_EXIT", "128")
+	code := f.run("--no-backup", "--mode", "C")
+	want := "[ng-deploy] NOTICE: not a git repository; the deployed commit is not recorded in .last-deploy-sha: the next annotation check has no starting point\n"
+	f.want(code, ExitOK, "[ng-deploy] copy ok\n[ng-deploy] station restart required (Java classes deployed)\n", "err:"+want)
+	if strings.Contains(f.err, "ERROR") || f.exists(f.work+"/.last-deploy-sha") || f.read(f.deployedJar("rt")) != "rtjar" {
+		t.Errorf("stderr %q", f.err)
+	}
+}

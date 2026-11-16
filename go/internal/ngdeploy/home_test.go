@@ -183,7 +183,7 @@ func TestAHomeJarThatCannotBeMovedAsideStopsTheDeployBeforeTheBuild(t *testing.T
 	failRename(t, "/home/modules/demo-wb.jar"+asideSuffix)
 	before := tree(t, modules)
 	code := f.run("--no-backup")
-	want := warnNoBackup + "[ng-deploy] ERROR build not started: demo-wb.jar could not be moved aside in " + modules + " (Permission denied); nothing was replaced: " + modules + " holds the jars it held before the build\n"
+	want := warnNoBackup + "[ng-deploy] ERROR build not started: demo-wb.jar could not be moved aside in " + modules + " (Permission denied); nothing was replaced: " + modules + " holds the jars it held before the build\n" + heldOpenLine
 	if code != ExitEnv || f.err != want || strings.Contains(f.calls(), "gradlew") || tree(t, modules) != before {
 		t.Errorf("exit %d, stderr:\n%scalls:\n%s", code, f.err, f.calls())
 	}

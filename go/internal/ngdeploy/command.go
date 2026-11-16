@@ -8,7 +8,7 @@
 // file), config.go (required settings and paths), home.go with lock.go and settle.go (NIAGARA_HOME: a mirror, the run locks, and its modules directory
 // put back when the deploy stops), backup.go and purge.go, annotations.go (the slotomatic
 // reminder), slotomatic.go, build.go, version.go with jarcontent.go and descriptor.go, and schema.go (the two prechecks), verify.go, gate.go,
-// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go, messages_home.go and messages_lock.go, patterns.go, usage.txt.
+// copy.go with aside.go, restore.go, heldopen.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go, messages_home.go and messages_lock.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy
 
