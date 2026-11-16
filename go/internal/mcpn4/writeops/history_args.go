@@ -8,7 +8,8 @@ import (
 )
 
 // historyArgs validates everything that needs no station: the points, the extension name and
-// type when given, the pattern, the mode, the interval, the capacity and enabled.
+// type when given, the pattern, the mode, the interval, the capacity, the change tolerance, the
+// full policy and enabled.
 func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
 	var s historySpec
 	raw, _ := args.Get("points")
@@ -48,6 +49,12 @@ func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
 		return s, nil, err
 	}
 	if s.capacity, s.records, err = historyCapacity(args); err != nil {
+		return s, nil, err
+	}
+	if s.tolerance, err = historyTolerance(args, s.mode, s.typ); err != nil {
+		return s, nil, err
+	}
+	if s.fullPolicy, err = historyFullPolicy(args); err != nil {
 		return s, nil, err
 	}
 	s.enabled = true

@@ -12,9 +12,11 @@ import (
 
 // AddHistory is n4_add_history: one interval or change-of-value history extension per point, of
 // the type that fits the point (numeric, boolean, enum or string), created already configured
-// (historyName, interval for an interval extension, enabled) by one add op per point and, when a
-// capacity is asked, a set op right after it, all in one batch under one confirmation token. The
-// dry run predicts each history id ("/<station>/<name>") and refuses one that would repeat, in
+// (historyName, interval for an interval extension, changeTolerance for a numeric COV one when
+// asked, enabled) by one add op per point and, when a capacity or a full policy is asked, a set
+// op for each right after it, all in one batch under one confirmation token. A station failure at
+// op k stops the batch: the ops before it stand and the batch is journaled in-doubt; the error
+// names the inverse of the sent ops, applied by hand (n4_rollback refuses in-doubt batches). The dry run predicts each history id ("/<station>/<name>") and refuses one that would repeat, in
 // the batch or against the station's extensions. The inverse removes every extension under the
 // name the station assigned.
 var AddHistory = plan.Impl{ScopeOrds: historyPoints, PlanWith: addHistoryPlan, Inverse: addHistoryInverse,
@@ -38,10 +40,12 @@ type historyData struct {
 // historySpec is one planned extension: its point, slot name, type, history name pattern (and
 // the name and id it resolves to, "" when the pattern cannot be resolved from the ORD), mode
 // (Interval or Cov), interval ("" for Cov), capacity (history:Capacity encoded, "" for the
-// default), its record count ("" unless given as one) and enabled.
+// default), its record count ("" unless given as one), the full policy tag ("" for the default),
+// the change tolerance (nil unless given) and enabled.
 type historySpec struct {
-	ord, name, typ, pattern, resolved, id, mode, interval, capacity, records string
-	enabled                                                                  bool
+	ord, name, typ, pattern, resolved, id, mode, interval, capacity, records, fullPolicy string
+	tolerance                                                                            any
+	enabled                                                                              bool
 }
 
 func historyPoints(args *pyjson.Object) []any {
@@ -82,6 +86,9 @@ func addHistoryPlan(c plan.Client, args *pyjson.Object, _ *plan.State, sess *ses
 		if s.capacity != "" {
 			ops = append(ops, capacityOp(h, s.name, s.capacity))
 		}
+		if s.fullPolicy != "" {
+			ops = append(ops, fullPolicyOp(h, s.name, s.fullPolicy))
+		}
 		inverse = append(inverse, obj("nm", "v", "h", h, "n", s.name))
 		targets.Set(ord, h)
 		data.parents = append(data.parents, h)
@@ -101,6 +108,12 @@ func addHistoryPlan(c plan.Client, args *pyjson.Object, _ *plan.State, sess *ses
 	if spec.capacity != "" {
 		notes = append(notes, noteHistoryCapacityOp)
 	}
+	if spec.fullPolicy != "" {
+		notes = append(notes, noteHistoryFullPolicyOp)
+	}
+	if spec.fullPolicy == "stop" && spec.capacity == "0:0" {
+		notes = append(notes, noteHistoryStopUnlimited)
+	}
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: targets, Data: data}, nil
 }
 
@@ -111,5 +124,9 @@ func historySlots(s historySpec) []any {
 	if s.mode == "Interval" {
 		slots = append(slots, obj("nm", "p", "n", "interval", "t", "baja:RelTime", "v", s.interval))
 	}
-	return append(slots, obj("nm", "p", "n", "enabled", "t", "baja:Boolean", "v", strconv.FormatBool(s.enabled)))
+	slots = append(slots, obj("nm", "p", "n", "enabled", "t", "baja:Boolean", "v", strconv.FormatBool(s.enabled)))
+	if f, ok := s.tolerance.(float64); ok {
+		slots = append(slots, toleranceSlot(f))
+	}
+	return slots
 }

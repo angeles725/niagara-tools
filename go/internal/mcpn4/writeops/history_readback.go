@@ -29,7 +29,8 @@ func addHistoryInverse(p *plan.Planned, replies []any) ([]any, error) {
 }
 
 // addHistoryReadback compares each extension with what was asked: its type, configured slots
-// (no interval for a change-of-value one), the capacity when one was asked, the history id the
+// (no interval for a change-of-value one), the capacity, full policy and change tolerance when
+// asked, the history id the
 // dry run predicted and no fault, so an extension in fault "Duplicate history id" reads
 // mismatch. A nil requested field (an id the pattern could not predict) is not checked.
 func addHistoryReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, inverse []any) (any, any, any, string, error) {
@@ -44,6 +45,12 @@ func addHistoryReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replie
 		want.Set("enabled", s.enabled)
 		if s.capacity != "" {
 			want.Set("capacity", s.capacity)
+		}
+		if s.fullPolicy != "" {
+			want.Set("fullPolicy", s.fullPolicy)
+		}
+		if s.tolerance != nil {
+			want.Set("changeTolerance", s.tolerance)
 		}
 		want.Set("historyId", orNil(s.id))
 		want.Set("faultCause", "")
@@ -88,6 +95,8 @@ var historyFields = []struct{ key, slot, vt string }{
 	{"historyName", "historyName", "baja:Format"}, {"interval", "interval", "baja:RelTime"},
 	{"enabled", "enabled", "baja:Boolean"}, {"capacity", "historyConfig/capacity", "history:Capacity"},
 	{"historyId", "historyConfig/id", "history:HistoryId"}, {"faultCause", "faultCause", "baja:String"},
+	{"fullPolicy", "historyConfig/fullPolicy", "history:FullPolicy"},
+	{"changeTolerance", "changeTolerance", "baja:Double"},
 }
 
 // observeHistory reads back the fields of want of one extension; a slot at its type default is

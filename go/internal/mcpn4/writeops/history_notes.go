@@ -31,7 +31,7 @@ func readableDuration(ms float64) string {
 // capacityNote is how long the planned history lasts: records × the sampling interval for an
 // interval extension; a change-of-value history lasts as long as its changes take.
 func capacityNote(s historySpec) string {
-	records := s.records
+	records, policy := s.records, policyWord(s.fullPolicy)
 	if records == "" {
 		records = strconv.Itoa(defaultHistoryCapacity)
 	}
@@ -39,14 +39,14 @@ func capacityNote(s historySpec) string {
 	case s.capacity == "0:0":
 		return noteHistoryUnlimited
 	case s.mode == "Cov" && s.capacity == "":
-		return fmt.Sprintf(noteHistoryCovCapacity, noteHistoryCovDefault, records)
+		return fmt.Sprintf(noteHistoryCovCapacity, fmt.Sprintf(noteHistoryCovDefault, policy), records)
 	case s.mode == "Cov":
-		return fmt.Sprintf(noteHistoryCovCapacity, "Capacity "+records+" records (Roll)", records)
+		return fmt.Sprintf(noteHistoryCovCapacity, "Capacity "+records+" records ("+policy+")", records)
 	}
 	ms, _ := strconv.ParseFloat(s.interval, 64)
 	n, _ := strconv.ParseFloat(records, 64)
 	if s.capacity == "" {
-		return fmt.Sprintf(noteHistoryDefaultCapacity, readableDuration(n*ms), readableDuration(ms))
+		return fmt.Sprintf(noteHistoryDefaultCapacity, policy, readableDuration(n*ms), readableDuration(ms))
 	}
-	return fmt.Sprintf(noteHistoryCapacity, records, readableDuration(n*ms), readableDuration(ms))
+	return fmt.Sprintf(noteHistoryCapacity, records, policy, readableDuration(n*ms), readableDuration(ms))
 }

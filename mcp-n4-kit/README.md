@@ -882,7 +882,18 @@ Tool rules:
   which a station refuses inside an add body. Without it the extension default
   stays (500 records, Roll). The plan notes how long the capacity lasts at the
   requested interval (a change-of-value history lasts as long as its changes take),
-  and the read-back checks the capacity when one was asked.
+  and the read-back checks the capacity when one was asked. `full_policy` (`roll`,
+  the default, drops the oldest record when the capacity is reached; `stop` stops
+  recording) is a second set op on `<ext_name>/historyConfig/fullPolicy`
+  (`history:FullPolicy`). `change_tolerance` (a number of at least 0, in the point's
+  units) sets `changeTolerance` of a `NumericCov` extension in its add body: a change
+  smaller than it records nothing. It is refused for mode interval, for an `ext_type`
+  other than `history:NumericCovHistoryExt` and for a point that is not numeric,
+  naming the point. One call covers every point that shares these settings (three
+  COV histories with a 0.5 A tolerance and 50000 records: one dry run, one token).
+  A station failure at op k stops the batch: the ops before it stand and the batch is
+  journaled in-doubt; the error names the inverse of the sent ops, which you apply by
+  hand (`n4_rollback` refuses in-doubt batches).
 - `n4_add_alarm(points)` adds one alarm extension per point (1 to 50), configured,
   in one batch under one confirmation token. See "Alarm extension recipe" below.
 - `n4_copy_component(parent_ord, name, new_names)` adds the configuration of one

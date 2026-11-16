@@ -95,11 +95,11 @@ func (s historySpec) forPoint(k *pointKinds, ord string, pointType any) (history
 	}
 	typ, name := historyExtType(kind, s.mode)
 	if s.typ != "" && s.typ != typ {
-		return s, plan.ToolError(fmt.Sprintf(msgHistoryTypeMismatch, s.typ, ord, strings.ToLower(kind), spec, typ))
+		return s, plan.ToolError(fmt.Sprintf(msgHistoryTypeMismatch, s.typ, ord, withArticle(strings.ToLower(kind)), spec, typ))
 	}
 	s.ord, s.typ = ord, typ
 	if s.name == "" {
 		s.name = name
 	}
-	return s, nil
+	return s, checkTolerance(s, kind, spec)
 }
