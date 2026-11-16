@@ -1157,7 +1157,11 @@ returns (`"*"` or a missing field matches any; `custom` fields are lists). The e
 order, which is their priority (first wins), and new events go last; to change one, remove and add
 it in one call. A `date` or `date_range` that ends before today (the date of the machine running
 the server) can never occur again: it is refused, naming `allow_expired: true`, which adds it
-anyway. The whole list is one set, so `n4_rollback` restores the events exactly as they were.
+anyway. A `reference` must name an existing calendar (`schedule:CalendarSchedule`; it is only
+read, so it may sit outside the write scope), and a name given twice to remove is refused. The
+whole list is one set, so `n4_rollback` restores the events exactly as they were; the read-back
+compares each event's name, rule and ranges, and the rollback compares the list it wrote (names,
+order, rules and ranges) before overwriting it and after restoring it.
 
 ### Calendar dates and trigger times
 
@@ -1168,7 +1172,8 @@ each removal is one remove and each addition one add of the bare date type follo
 per part (`<name>/yearSchedule`, `/monthSchedule`, ...); the inverse re-adds a removed date the
 same way from its loaded parts (live on 4.15.6.20: removing two dates and rolling back read the
 calendar back identical). A date cannot be removed and added under the same name in one call:
-replace it in two calls, so each rolls back on its own. `times` (["06:00", "18:30"]) replaces a
+replace it in two calls, so each rolls back on its own. The rollback compares each date part by
+its rule, so a date the station restores with another month reads as a mismatch. `times` (["06:00", "18:30"]) replaces a
 trigger's firing times with one set.
 
 ### Recipe: a schedule that drives a point
