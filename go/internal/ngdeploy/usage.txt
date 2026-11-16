@@ -158,7 +158,10 @@ Exit codes:
       build in every case ("build refused for <jar>"). A jar that could not be replaced or moved with
       Permission denied, Operation not permitted or Device or resource busy (exit 40, or exit 10 for a jar of
       <NIAGARA_HOME>/modules) is followed by the line "a running station or Workbench holds its module jars
-      open; stop it and run again": Windows keeps a running station's module jars open
+      open; stop it and run again": Windows keeps a running station's module jars open. Before the build, each
+      station jar the run will replace is renamed to <jar>.ng-probe and straight back: a jar that cannot be moved
+      is exit 40 there, with no build ("copy refused: <jar> in <dir> cannot be moved"); one that could not be
+      moved back is named with both paths and the rename to make
   130, 143  SIGINT or SIGTERM during the copy: the copy was undone as for exit 40 and the line says so; or between
       the first run lock and the copy: nothing was copied, <NIAGARA_HOME>/modules was put back and the locks
       were removed

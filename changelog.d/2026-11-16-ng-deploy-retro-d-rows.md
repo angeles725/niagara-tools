@@ -1,4 +1,4 @@
-### Fixed — ng-deploy: a jar held open, a directory in the home, the home NOTICE, a module outside git
+### Fixed — ng-deploy: retro rows D1-D4 and D7-D9 of the 2026-11-15 coordination stretch
 
 - A jar that cannot be replaced or moved with `Permission denied`, `Operation not permitted` or `Device or resource
   busy` (exit 40 in the station, exit 10 in `<NIAGARA_HOME>/modules`) is followed by the line `a running station or
@@ -11,3 +11,7 @@
 - A deploy from a working directory that is not a git repository ends 0 with `NOTICE: not a git repository; the
   deployed commit is not recorded in .last-deploy-sha: the next annotation check has no starting point` instead of an
   ERROR and exit 41. A repository whose HEAD cannot be read is still exit 41.
+- Before the build, each station jar the run will replace is renamed to `<jar>.ng-probe` and straight back: a jar a
+  running station holds is exit 40 with the line above and no gradle call, instead of after a minute of building. A
+  jar without write permission still deploys (a rename needs the directory's permission). A jar that cannot be moved
+  back is exit 40 naming both paths and the rename to make; a `.ng-probe` file already there is never written over.

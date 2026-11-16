@@ -15,6 +15,10 @@ const (
 	msgCopyInterrupted = "copy interrupted (%s); %s"
 	// hintHeldOpen follows, indented, a jar that could not be replaced or moved with EACCES, EPERM or EBUSY.
 	hintHeldOpen = "a running station or Workbench holds its module jars open; stop it and run again"
+	// msgProbeRefused takes the jar, the station directory and why it could not be moved before the build.
+	msgProbeRefused = "copy refused: %s in %s cannot be moved (%s); nothing was built or copied"
+	// msgProbeStuck takes the jar, its probe name, why it could not be moved back, then the two again.
+	msgProbeStuck = "copy refused: %s was moved to %s to test it and could not be moved back (%s): rename %s back to %s before the station restarts; nothing was built or copied"
 	// whyNotAJar takes the holder of a site and what it holds under the name of a jar (the kinds below).
 	whyNotAJar     = "%s holds %s under that name, not a jar file"
 	kindDirectory  = "a directory"

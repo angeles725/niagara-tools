@@ -20,7 +20,7 @@ func signalDuring(t *testing.T, sig syscall.Signal, suffix string) {
 	during := func(really func(string, string) error) func(string, string) error {
 		return func(from, to string) error {
 			err := really(from, to)
-			if !sent && strings.HasSuffix(to, suffix) {
+			if !sent && strings.HasSuffix(to, suffix) && !strings.HasSuffix(from, probeSuffix) { // the probe before the build is not the copy
 				sent = true
 				if e := syscall.Kill(os.Getpid(), sig); e != nil {
 					t.Fatal(e)

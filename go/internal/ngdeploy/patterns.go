@@ -43,6 +43,8 @@ const (
 	stagedSuffix = ".ng-deploy-new"
 	// asideSuffix ends the name the station's jar has beside its place while the new one is renamed in.
 	asideSuffix = ".ng-deploy-old"
+	// probeSuffix ends the name a station jar has for an instant before the build, to test that it can be moved.
+	probeSuffix = ".ng-probe"
 	// moduleXML and indexHTML are the jar members the verify step reads.
 	moduleXML = "META-INF/module.xml"
 	indexHTML = "rc/index.html"

@@ -90,7 +90,9 @@ func TestAJarThatCannotBeStagedLeavesTheStationUnchanged(t *testing.T) {
 	}
 	f := newFixture(t)
 	upgrade(t, f)
-	f.chmod(f.modules, 0o555)
+	f.chmod(f.builtJar("rt"), 0o644) // restored at the end of the test
+	// unreadable once the gate runs: after the probe before the build, before the copy
+	f.write(f.dir+"/do/vm.sh", "command -p chmod 000 "+f.builtJar("rt")+"\n"+stubDo["vm.sh"])
 	code := f.run("--no-backup")
 	if code != ExitCopy || !strings.HasSuffix(f.err, "[ng-deploy] ERROR copy failed for demo-rt.jar; "+copyUnchanged) || !strings.Contains(f.err, "cp: ") || strings.Count(f.err, "ERROR") != 1 {
 		t.Errorf("exit %d, stderr %q", code, f.err)
