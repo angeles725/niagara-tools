@@ -14,7 +14,7 @@ type detection int
 const (
 	noChange  detection = iota // the diff shows no annotation change, or the detection is off
 	changed                    // a @Niagara annotation line was added or removed since the last deploy
-	unchecked                  // the detection could not run: no git, not a repository, a failed diff, an unreadable record
+	unchecked                  // the detection could not run: no git, not a repository, a failed diff, a record that is unreadable, malformed or unknown to git
 )
 
 // remindSlotomatic warns when Java annotations changed since the last deploy and --with-slotomatic was not
@@ -73,9 +73,10 @@ func (d *deploy) detectAnnotationChanges() detection {
 }
 
 // baseline is the commit the last deploy recorded in .last-deploy-sha when git knows it as a commit, else
-// HEAD~1. known is false when a record is there but cannot be read, or holds something other than a full
+// HEAD~1. known is false when a record is there but cannot be read, holds something other than a full
 // object name (a notice says so, and the text never reaches git, which would read a leading "-" as an
-// option): the diff then starts at HEAD~1 and may miss older changes.
+// option), or names a commit git does not know (a notice too): the diff then starts at HEAD~1 and may miss
+// older changes, so strict mode refuses.
 func (d *deploy) baseline() (base string, known bool) {
 	is, err := regular(lastDeployFile)
 	if err != nil || !is {
@@ -95,5 +96,6 @@ func (d *deploy) baseline() (base string, known bool) {
 	case d.run(io.Discard, io.Discard, "git", "cat-file", "-e", candidate+"^{commit}") == 0:
 		return candidate, true
 	}
-	return fallbackBaseline, true
+	d.warn(noticeUnknownRecord, lastDeployFile, fallbackBaseline)
+	return fallbackBaseline, false
 }

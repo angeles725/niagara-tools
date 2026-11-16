@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	noticeBadRecordLine = "[ng-deploy] NOTICE: .last-deploy-sha does not hold a full commit id; annotation changes are looked for since HEAD~1 only\n"
-	recordErrorPrefix   = "[ng-deploy] ERROR jars copied, but the deployed commit was not recorded in .last-deploy-sha: "
-	recordErrorSuffix   = " (the next annotation check cannot start at this deploy; SLOTOMATIC_DETECTION=off makes the record optional)\n"
+	noticeUnknownRecordLine = "[ng-deploy] NOTICE: .last-deploy-sha names a commit git does not know; annotation changes are looked for since HEAD~1 only\n"
+	noticeBadRecordLine     = "[ng-deploy] NOTICE: .last-deploy-sha does not hold a full commit id; annotation changes are looked for since HEAD~1 only\n"
+	recordErrorPrefix       = "[ng-deploy] ERROR jars copied, but the deployed commit was not recorded in .last-deploy-sha: "
+	recordErrorSuffix       = " (the next annotation check cannot start at this deploy; SLOTOMATIC_DETECTION=off makes the record optional)\n"
 )
 
 // A record that is not a full hex object name never reaches git: a leading "-" would be read as an option.
@@ -135,5 +136,19 @@ func TestTheLookAtTheRecordBeforeTheCopyChangesNothing(t *testing.T) {
 		if f.read(f.work+"/.last-deploy-sha") != record || f.exists(f.work+"/.last-deploy-sha") != (record != "") {
 			t.Errorf("record %q: .last-deploy-sha holds %q", record, f.read(f.work+"/.last-deploy-sha"))
 		}
+	}
+}
+
+// A full object name git does not know (another clone's commit, a history rewritten since) is asked about
+// once and then left out of the diff, which starts at HEAD~1 and still finds a change there.
+func TestARecordGitDoesNotKnowIsNotHandedToTheDiff(t *testing.T) {
+	f := newFixture(t)
+	f.write(f.work+"/.last-deploy-sha", recordedCommit+"\n")
+	t.Setenv("FAKE_GIT_CAT_FILE_EXIT", "1")
+	t.Setenv("FAKE_GIT_DIFF", "+@NiagaraType")
+	f.want(f.run("--no-backup", "--no-deploy"), ExitOK, "[ng-deploy] build ok\n")
+	calls := "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <" + recordedCommit + "^{commit}>\ngit <diff> <HEAD~1..HEAD> <--> <*/src/com/**/*.java>\ngradlew"
+	if f.err != warnNoBackup+noticeUnknownRecordLine+annotationWarning || !strings.HasPrefix(f.calls(), calls) {
+		t.Errorf("stderr %q, calls %q", f.err, f.calls())
 	}
 }

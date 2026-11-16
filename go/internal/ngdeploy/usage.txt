@@ -50,7 +50,9 @@ Exit codes:
       read or holds a line that is not a plain assignment; or, after the checks and before the copy, a
       .last-deploy-sha that is a directory or cannot be written (nothing was copied; SLOTOMATIC_DETECTION=off
       makes the record optional)
-  15  slotomatic failed or skipped a file (METHODOLOGY K15), or annotation changes detected in strict mode
+  15  slotomatic failed or skipped a file (METHODOLOGY K15), or annotation changes detected in strict mode;
+      strict mode also refuses when the detection could not run, which includes a .last-deploy-sha that is
+      malformed or names a commit git does not know (outside strict mode: a NOTICE, and the diff starts at HEAD~1)
   20  backup failed (tar returned non-zero)
   21  the backup was written, but an older backup of the module could not be purged (nothing was built)
   30  build (gradlew) returned non-zero

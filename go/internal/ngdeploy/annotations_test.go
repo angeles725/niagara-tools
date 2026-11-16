@@ -90,6 +90,10 @@ var cannotDetect = map[string]struct {
 		f.write(f.work+"/.last-deploy-sha", recordedCommit+"\n")
 		f.chmod(f.work+"/.last-deploy-sha", 0o000)
 	}, ""},
+	"a record git does not know": {func(f *fixture) {
+		f.write(f.work+"/.last-deploy-sha", recordedCommit+"\n")
+		f.t.Setenv("FAKE_GIT_CAT_FILE_EXIT", "1")
+	}, noticeUnknownRecordLine},
 }
 
 func TestDetectionThatCannotRunIsANoticeAndTheDeployGoesOn(t *testing.T) {
@@ -126,7 +130,6 @@ func TestTheDiffStartsAtTheLastDeployedCommitWhenItIsOne(t *testing.T) {
 		{"a commit", recordedCommit + "\n", "", fromRecord},
 		{"trailing blank lines", recordedCommit + "\n\n\n", "", fromRecord},
 		{"a sha-256 commit", sha256 + "\n", "", strings.ReplaceAll(fromRecord, recordedCommit, sha256)},
-		{"not a commit", recordedCommit + "\n", "1", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <" + recordedCommit + "^{commit}>\ngit <diff> <HEAD~1..HEAD> <--> <*/src/com/**/*.java>\n"},
 		{"an empty file", "", "", gitDiffCalls},
 	} {
 		f := newFixture(t)
