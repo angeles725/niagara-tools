@@ -1,0 +1,44 @@
+{
+  "name": "energy meters",
+  "unknown_unit": "gateway_exception",
+  "devices": [
+    {
+      "name": "meter-1",
+      "unit": 10,
+      "points": [
+        {"name": "voltage_l1", "table": "input_register", "address": 0, "type": "float32", "order": "CDAB", "value": 230.1,
+         "behaviour": {"kind": "sine", "amplitude": 2, "period_ms": 90000}},
+        {"name": "voltage_l2", "table": "input_register", "address": 2, "type": "float32", "order": "CDAB", "value": 229.4},
+        {"name": "voltage_l3", "table": "input_register", "address": 4, "type": "float32", "order": "CDAB", "value": 231.0},
+        {"name": "current_l1", "table": "input_register", "address": 6, "type": "float32", "order": "CDAB", "value": 12.5,
+         "behaviour": {"kind": "random_walk", "seed": 21, "step": 0.4, "interval_ms": 2000, "min": 8, "max": 18}},
+        {"name": "current_l2", "table": "input_register", "address": 8, "type": "float32", "order": "CDAB", "value": 11.8},
+        {"name": "current_l3", "table": "input_register", "address": 10, "type": "float32", "order": "CDAB", "value": 12.1},
+        {"name": "active_power_kw", "table": "input_register", "address": 12, "type": "float32", "order": "CDAB", "value": 7.9},
+        {"name": "frequency_hz", "table": "input_register", "address": 14, "type": "float32", "order": "CDAB", "value": 50,
+         "behaviour": {"kind": "sine", "amplitude": 0.05, "period_ms": 30000}},
+        {"name": "power_factor", "table": "input_register", "address": 16, "type": "float32", "order": "CDAB", "value": 0.95},
+        {"name": "energy_kwh", "table": "input_register", "address": 18, "type": "float32", "order": "CDAB",
+         "behaviour": {"kind": "ramp", "min": 1000, "max": 2000, "period_ms": 3600000}},
+        {"name": "ct_ratio", "table": "holding_register", "address": 0, "type": "uint16", "value": 100, "writable": true},
+        {"name": "demand_interval_min", "table": "holding_register", "address": 1, "type": "uint16", "value": 15, "writable": true}
+      ]
+    },
+    {
+      "name": "meter-slow",
+      "unit": 11,
+      "faults": {"delay_ms": 3000},
+      "points": [
+        {"name": "energy_kwh", "table": "input_register", "address": 18, "type": "float32", "order": "CDAB", "value": 512.25}
+      ]
+    },
+    {
+      "name": "meter-flaky",
+      "unit": 12,
+      "faults": {"fail_after_reads": 20, "offline": [{"from_ms": 60000, "to_ms": 120000}]},
+      "points": [
+        {"name": "energy_kwh", "table": "input_register", "address": 18, "type": "float32", "order": "CDAB", "value": 77.5}
+      ]
+    }
+  ]
+}
