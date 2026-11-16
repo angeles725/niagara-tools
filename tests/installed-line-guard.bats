@@ -4,7 +4,8 @@
 # installed Dashboard 2.10.0 / Compresores 2.8.0 / Paccadia 2.4.2, branch Dashboard 2.9.2 / 2.8.0 / 2.4.4.
 # [ev: retro r10-installed-line-guard Δ1]
 # Named mutations: drop the -1 branch -> ILG-downgrade red; read "incomparable" as ok -> ILG-incomparable red;
-# skip groups missing on the branch -> ILG-missing red.
+# skip groups missing on the branch -> ILG-missing red; drop the `--` after `git show <ref>:<path>` -> ILG-ambiguous red;
+# print the path as it is -> ILG-one-line red.
 
 setup() {
   TMPDIR_T="$(mktemp -d)"
@@ -75,4 +76,25 @@ _commit() { git -C "$R" add -A; git -C "$R" commit -q -m "$1"; }
   git -C "$R" checkout -q --orphan empty; git -C "$R" rm -q -r -f .; printf 'x\n' > "$R/README"; _commit empty
   run "$CK" "$R" fix empty
   [ "$status" -eq 2 ]; [[ "$output" == *"no defaultModuleVersion"* ]]
+}
+
+@test "ILG-ambiguous: a working-tree entry named <ref>:<group>/build.gradle.kts never hides the group -> its downgrade still refuses" {
+  _versions 2.9.2 2.8.0 2.4.2; _commit old-base
+  mkdir -p "$R/installed:Dashboard"
+  printf 'defaultModuleVersion("9.9.9")\n' > "$R/installed:Dashboard/build.gradle.kts"   # untracked shadow
+  run "$CK" "$R" fix installed
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DOWNGRADE Dashboard/build.gradle.kts 2.10.0 -> 2.9.2"* ]]
+  [ "$(printf '%s\n' "$output" | grep -c 'build.gradle.kts')" -eq 3 ]
+}
+
+@test "ILG-one-line: a group path holding a newline is one quoted row, never two lines" {
+  local nl=$'Gro\nup'
+  mkdir -p "$R/$nl"
+  printf 'defaultModuleVersion("2.0.0")\n' > "$R/$nl/build.gradle.kts"; _commit with-newline
+  git -C "$R" tag -f installed >/dev/null
+  run "$CK" "$R" fix installed
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'ok "Gro\nup/build.gradle.kts" 2.0.0 -> 2.0.0'* ]]
+  [ "$(printf '%s\n' "$output" | wc -l)" -eq 4 ]
 }

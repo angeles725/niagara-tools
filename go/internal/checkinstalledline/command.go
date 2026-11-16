@@ -22,7 +22,8 @@ const (
 const tool = "check-installed-line"
 
 // Main implements `check-installed-line <repo> <branch> <installed-ref>`. Rows, one per group in path
-// order: `ok|DOWNGRADE|INCOMPARABLE <file> <installed> -> <branch>` or `MISSING <file> <installed>`.
+// order: `ok|DOWNGRADE|INCOMPARABLE <file> <installed> -> <branch>` or `MISSING <file> <installed>`; a
+// <file> holding a control character, a double quote or a backslash is printed quoted (quote.go).
 // An installed ref with nothing to guard is exit 2, never a pass.
 func Main(args []string, s cli.Stdio) int {
 	if len(args) != 3 {
@@ -60,6 +61,7 @@ func Main(args []string, s cli.Stdio) int {
 // row is the line of one group and whether it refuses the branch; got is "" when the branch has no
 // version for the file.
 func row(file, want, got string) (text string, refused bool) {
+	file = display(file)
 	if got == "" {
 		// Mutation: ILG-missing -- skipping a group the branch lost passes a branch that dropped it
 		return "MISSING " + file + " " + want, true

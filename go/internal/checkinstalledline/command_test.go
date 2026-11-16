@@ -166,3 +166,43 @@ func TestMainComparesAGroupUnderAPathGitQuotes(t *testing.T) {
 		t.Errorf("exit %d stdout %q stderr %q, want exit %d stdout %q", code, out, errText, ExitRefused, want)
 	}
 }
+
+// TestMainReadsARefPathAWorkingTreeEntryShadows (ILG-ambiguous): with a working-tree entry literally named
+// `<ref>:<group>/build.gradle.kts`, git refuses `show <ref>:<path>` as "both revision and filename" unless
+// the path list is closed with `--`; the group then read as "no version at the installed ref" and was
+// skipped, so its downgrade passed. The entry is untracked and never part of the comparison.
+func TestMainReadsARefPathAWorkingTreeEntryShadows(t *testing.T) {
+	gitEnv(t)
+	repo := t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	versions(t, repo, map[string]string{"GroupA": "3.2.0", "GroupB": "1.0.0"})
+	commit(t, repo, "installed")
+	git(t, repo, "tag", "installed")
+	versions(t, repo, map[string]string{"GroupA": "3.1.0"})
+	commit(t, repo, "downgrade")
+	versions(t, repo, map[string]string{"installed:GroupA": "9.9.9", "main:GroupB": "0.0.1"}) // shadows, not committed
+	want := "DOWNGRADE GroupA/build.gradle.kts 3.2.0 -> 3.1.0\nok GroupB/build.gradle.kts 1.0.0 -> 1.0.0\n"
+	if code, out, errText := run(repo, "main", "installed"); code != ExitRefused || out != want || errText != "" {
+		t.Errorf("exit %d stdout %q stderr %q, want exit %d stdout %q", code, out, errText, ExitRefused, want)
+	}
+}
+
+// TestMainPrintsAControlCharacterPathOnOneLine: a group path holding a newline is still one row; the path
+// is printed as git quotes one (double quotes, C escapes), so a reader that splits on lines sees every group.
+func TestMainPrintsAControlCharacterPathOnOneLine(t *testing.T) {
+	gitEnv(t)
+	repo := t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	versions(t, repo, map[string]string{"Gro\nup": "2.0.0", "Tab\tbed": "1.1.0", `Quo"te\d`: "1.0.0", "Plain": "4.0.0"})
+	commit(t, repo, "installed")
+	git(t, repo, "tag", "installed")
+	versions(t, repo, map[string]string{"Gro\nup": "1.9.0", "Tab\tbed": ""})
+	commit(t, repo, "downgrade")
+	want := `DOWNGRADE "Gro\nup/build.gradle.kts" 2.0.0 -> 1.9.0` + "\n" +
+		"ok Plain/build.gradle.kts 4.0.0 -> 4.0.0\n" +
+		`ok "Quo\"te\\d/build.gradle.kts" 1.0.0 -> 1.0.0` + "\n" +
+		`MISSING "Tab\tbed/build.gradle.kts" 1.1.0` + "\n"
+	if code, out, errText := run(repo, "main", "installed"); code != ExitRefused || out != want || errText != "" {
+		t.Errorf("exit %d stdout %q stderr %q, want exit %d stdout %q", code, out, errText, ExitRefused, want)
+	}
+}
