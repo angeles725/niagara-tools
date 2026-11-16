@@ -8,7 +8,7 @@ import (
 )
 
 // UsageError is an argparse error: printed after the usage text as
-// "mcp_n4.server: error: <Msg>", exit 2.
+// "mcp-n4: error: <Msg>", exit 2.
 type UsageError struct{ Msg string }
 
 func (e *UsageError) Error() string { return e.Msg }

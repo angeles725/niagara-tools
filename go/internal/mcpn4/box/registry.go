@@ -42,3 +42,18 @@ func (c *Client) LoadTypes(specs []string) (any, error) {
 	}
 	return out, nil
 }
+
+// Supertype is the supertype ("p") that types, a LoadTypes answer, gives for spec: "" when the
+// answer does not describe spec or describes it without one (a common baja type answers {}).
+func Supertype(types *pyjson.Object, spec string) string {
+	var entry *pyjson.Object
+	if types != nil {
+		entry = Node(types, spec)
+	}
+	if entry == nil {
+		return ""
+	}
+	super, _ := entry.Get("p")
+	s, _ := super.(string)
+	return s
+}

@@ -143,3 +143,21 @@ func TestOpenForgetsTheKeptTypes(t *testing.T) {
 		t.Errorf("station calls = %d, want 3: the types kept before Open were answered from the cache", calls)
 	}
 }
+
+// TestSupertypeReadsTheParentOfADescribedType: "" for a type the answer leaves out or describes
+// without a supertype, and for no answer at all.
+func TestSupertypeReadsTheParentOfADescribedType(t *testing.T) {
+	v, err := pyjson.Unmarshal([]byte(`{"a:B": {"p": "a:A", "c": []}, "a:A": {}, "a:Odd": {"p": 5}, "a:Bad": "x"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	types := v.(*pyjson.Object)
+	for spec, want := range map[string]string{"a:B": "a:A", "a:A": "", "a:Odd": "", "a:Bad": "", "a:Missing": ""} {
+		if got := Supertype(types, spec); got != want {
+			t.Errorf("Supertype(%s) = %q, want %q", spec, got, want)
+		}
+	}
+	if got := Supertype(nil, "a:B"); got != "" {
+		t.Errorf("Supertype(nil) = %q", got)
+	}
+}

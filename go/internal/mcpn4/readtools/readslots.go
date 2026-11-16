@@ -21,7 +21,8 @@ func isStatusType(kind any) (bool, error) {
 }
 
 // slotEntry is _slot_entry: one slot's type, value and display; a Status slot adds its status
-// and flags, an omitted child taking the type default.
+// and flags, an omitted child taking the type default. A baja:Status slot is not a complex:
+// see statusEntry.
 func slotEntry(nodes *pyjson.Object, name string) (*pyjson.Object, error) {
 	node := box.Node(nodes, name)
 	kind, _ := node.Get("t")
@@ -30,6 +31,9 @@ func slotEntry(nodes *pyjson.Object, name string) (*pyjson.Object, error) {
 	entry := obj("name", name, "type", kind, "value", value, "status", nil)
 	if display != nil {
 		entry.Set("value_display", display)
+	}
+	if kind == "baja:Status" {
+		return statusEntry(entry, value)
 	}
 	status, err := isStatusType(kind)
 	if err != nil {
@@ -80,4 +84,28 @@ func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 		slots = append(slots, entry)
 	}
 	return obj("ord", ord, "slots", slots, "elapsed_ms", elapsed), nil
+}
+
+// statusEntry completes the entry of a slot whose type is baja:Status itself: a simple whose
+// value is the encoded status (omitted when "0"), with no value/status children to read. The
+// status is that value, status_flags names the bits set and status_ok is false when any is.
+func statusEntry(entry *pyjson.Object, value any) (*pyjson.Object, error) {
+	if value == nil {
+		value = "0"
+	}
+	flags, err := box.StatusFlags(value)
+	if err != nil {
+		return nil, err
+	}
+	_, null, _ := box.ParseStatus(value)
+	names := make([]any, len(flags))
+	for i, f := range flags {
+		names[i] = f
+	}
+	entry.Set("value", value)
+	entry.Set("status", value)
+	entry.Set("status_ok", len(flags) == 0)
+	entry.Set("status_null", null)
+	entry.Set("status_flags", names)
+	return entry, nil
 }

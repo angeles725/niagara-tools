@@ -135,9 +135,43 @@ func TestHelpStatesTheSupportedProtocolSetContract(t *testing.T) {
 	flat := strings.Join(strings.Fields(out), " ")
 	for _, want := range []string{"this server speaks 2025-06-18, 2025-03-26 and 2024-11-05",
 		"A client asking for a newer revision is answered with 2025-06-18. Only add a newer revision to " +
-			"that tuple once its semantics (new message shapes, capabilities, required fields) are implemented"} {
+			"that list once its semantics (new message shapes, capabilities, required fields) are implemented"} {
 		if code != 0 || !strings.Contains(flat, want) {
 			t.Errorf("--help (exit %d) lacks %q", code, want)
 		}
+	}
+}
+
+// The help names the binary an operator runs, not the module of the Python server retired at
+// S17 (second bench retro, delta 14).
+func TestHelpNamesTheGoBinaryNotThePythonModuleInvocation(t *testing.T) {
+	t.Parallel()
+	_, out, _ := run([]string{"--help"}, "")
+	flat := strings.Join(strings.Fields(out), " ")
+	if !strings.Contains(flat, "Run the `mcp-n4` binary") {
+		t.Errorf("--help does not name the mcp-n4 binary: %q", flat[:min(len(flat), 700)])
+	}
+	for _, stale := range []string{"python3", "Importing this module", "__main__", "SUPPORTED_PROTOCOL_VERSIONS"} {
+		if strings.Contains(out, stale) {
+			t.Errorf("--help still says %q", stale)
+		}
+	}
+}
+
+// The usage line and every message the command prints name the binary, mcp-n4, not the module
+// of the retired Python server; the usage is wrapped as argparse wraps it for that name.
+func TestUsageAndErrorsNameTheMcpN4Binary(t *testing.T) {
+	t.Parallel()
+	const usage = "usage: mcp-n4 [-h] [--allow-writes] [--write-scope ORD_PREFIX]\n" +
+		"              [--state-dir STATE_DIR] [--token-ttl SECONDS] [--max-writes N]\n"
+	if code, out, _ := run([]string{"--help"}, ""); code != 0 || !strings.HasPrefix(out, usage) {
+		t.Errorf("--help (exit %d) starts %q", code, out[:min(len(out), 160)])
+	}
+	code, _, errOut := run([]string{"--bogus"}, "")
+	if code != 2 || !strings.HasPrefix(errOut, usage) || lastLine(errOut) != "mcp-n4: error: unrecognized arguments: --bogus" {
+		t.Errorf("--bogus (exit %d): %q", code, errOut)
+	}
+	if code, _, errOut := run([]string{"--station", "x"}, ""); code == 0 || !strings.HasPrefix(lastLine(errOut), "mcp-n4: ") {
+		t.Errorf("--station x (exit %d): %q", code, errOut)
 	}
 }

@@ -82,3 +82,21 @@ func pyBool(b bool) string {
 	}
 	return "False"
 }
+
+// TestStatusFlagsNamesEveryBitAndIsEmptyOnlyWhenOk pins the flag of each bit and that an
+// unnamed bit still shows, so "no flags" and ParseStatus's ok never disagree.
+func TestStatusFlagsNamesEveryBitAndIsEmptyOnlyWhenOk(t *testing.T) {
+	for v, want := range map[any]string{"0": "", nil: "", "0;x": "", "1": "disabled", "2": "fault", "4": "down",
+		"8": "alarm", "10": "stale", "20": "overridden", "40": "null", "80": "unackedAlarm",
+		"88;units=x": "alarm unackedAlarm", "ff": "disabled fault down alarm stale overridden null unackedAlarm",
+		"102": "fault 0x100", "-40": "-40"} {
+		flags, err := StatusFlags(v)
+		ok, _, _ := ParseStatus(v)
+		if got := strings.Join(flags, " "); err != nil || got != want || ok != (len(flags) == 0) {
+			t.Errorf("StatusFlags(%v) = %q, %v (ok %v), want %q", v, got, err, ok, want)
+		}
+	}
+	if _, err := StatusFlags("zz"); err == nil {
+		t.Error("StatusFlags(zz) did not fail")
+	}
+}

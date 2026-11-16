@@ -78,3 +78,49 @@ func TestReadSlotsAndNavigateReportElapsedMs(t *testing.T) {
 		}
 	}
 }
+
+// rfxFlags is the status_flags of entry as a Python repr.
+func rfxFlags(entry *pyjson.Object) string {
+	flags, _ := entry.Get("status_flags")
+	return pyjson.Repr(flags)
+}
+
+// A slot whose type is baja:Status carries its bits in "v", with no value/status children.
+const rfxStatusTree = `{"": {"t": "control:NumericWritable"},
+	"faulted": {"n": "faulted", "t": "baja:Status", "v": "2", "d": "{fault}"},
+	"alarmed": {"n": "alarmed", "t": "baja:Status", "v": "88", "d": "{alarm,unackedAlarm}"},
+	"healthy": {"n": "healthy", "t": "baja:Status", "v": "0", "d": "{ok}"},
+	"omitted": {"n": "omitted", "t": "baja:Status"},
+	"nulled": {"n": "nulled", "t": "baja:Status", "v": "40;units=x"},
+	"out": {"n": "out", "t": "baja:StatusNumeric"},
+	"out/value": {"n": "value", "t": "baja:Double", "v": "5.5"},
+	"out/status": {"n": "status", "t": "baja:Status", "v": "8"}}`
+
+func TestAStatusValueSlotNamesItsFlagsAndIsNotOkWhenAnyIsSet(t *testing.T) {
+	got := slots(t, serve(t, ord, rfxStatusTree), ord)
+	want(t, got["faulted"], "value", "2", "status", "2", "status_ok", false, "status_null", false, "value_display", "{fault}")
+	want(t, got["alarmed"], "value", "88", "status", "88", "status_ok", false, "status_null", false)
+	want(t, got["nulled"], "status", "40;units=x", "status_ok", false, "status_null", true)
+	for name, flags := range map[string]string{"faulted": "['fault']", "alarmed": "['alarm', 'unackedAlarm']", "nulled": "['null']"} {
+		if f := rfxFlags(got[name]); f != flags {
+			t.Errorf("%s status_flags = %s, want %s", name, f, flags)
+		}
+	}
+}
+
+func TestAStatusValueSlotWithNoFlagIsOk(t *testing.T) {
+	got := slots(t, serve(t, ord, rfxStatusTree), ord)
+	for _, name := range []string{"healthy", "omitted"} { // a station omits the default "0"
+		want(t, got[name], "value", "0", "status", "0", "status_ok", true, "status_null", false)
+		if f := rfxFlags(got[name]); f != "[]" {
+			t.Errorf("%s status_flags = %s", name, f)
+		}
+	}
+}
+
+func TestAStatusComplexKeepsItsValueStatusAndFlagsReply(t *testing.T) {
+	out := slots(t, serve(t, ord, rfxStatusTree), ord)["out"]
+	if got := pyjson.Repr(out); got != "{'name': 'out', 'type': 'baja:StatusNumeric', 'value': '5.5', 'status': '8', 'status_ok': False, 'status_null': False}" {
+		t.Errorf("out = %s", got)
+	}
+}
