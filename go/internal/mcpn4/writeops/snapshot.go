@@ -28,10 +28,22 @@ type linkRec struct {
 
 // snapshot is _snapshot's shared state: the links met and handle -> path (keyed as a dict),
 // and the type contracts that tell a configured output from a computed one (nil: none read).
+// wholeLinks reads a link's slots wherever the load holds them: the Python port cut them with
+// the depth, so a link at the last level had no slot names ("(None <- None)", bench retro
+// 2026-11-15 row 14).
 type snapshot struct {
-	links   []*linkRec
-	handles map[string]string
-	ct      *plan.Contracts
+	links      []*linkRec
+	handles    map[string]string
+	ct         *plan.Contracts
+	wholeLinks bool
+}
+
+// linkKids are the slots of link c met at depth: one more level than depth allows when wholeLinks.
+func (s *snapshot) linkKids(c *pyjson.Object, depth int) []*pyjson.Object {
+	if s.wholeLinks {
+		return kidsOf(c, 1)
+	}
+	return kidsOf(c, depth-1)
 }
 
 // kidsOf is node.get("s", []) of a node _prune cut to depth levels of children.
@@ -80,7 +92,7 @@ func (s *snapshot) take(node *pyjson.Object, path string, depth int) (*pyjson.Ob
 		if !isLink(get(c, "t")) {
 			continue
 		}
-		for _, k := range kidsOf(c, depth-1) {
+		for _, k := range s.linkKids(c, depth) {
 			if name(k) == "targetSlotName" {
 				key, err := pyjson.DictKey(get(k, "v"))
 				if err != nil {
@@ -100,7 +112,7 @@ func (s *snapshot) take(node *pyjson.Object, path string, depth int) (*pyjson.Ob
 		}
 		if isLink(get(child, "t")) {
 			slots := pyjson.NewObject()
-			for _, k := range kidsOf(child, depth-1) {
+			for _, k := range s.linkKids(child, depth) {
 				slots.Set(name(k), get(k, "v"))
 			}
 			s.links = append(s.links, &linkRec{targetPath: path, sourceOrd: get(slots, "sourceOrd"),

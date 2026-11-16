@@ -13,6 +13,18 @@ import (
 // LinkScanDepth is LINK_SCAN_DEPTH: how deep the optional outgoing-link scan loads.
 const LinkScanDepth = 6
 
+// DefaultLinkScanNodeBudget is the most nodes (components, slots and links, as the load returns them)
+// the remove's link scan matches before it refuses and asks for a narrower link_scan_ord (native
+// review R4-unbounded-default-scan). The lab station's whole root loads 11894 entries to depth 6
+// (live 2026-11-15), so the budget is about ten times that: a station root of that size still
+// scans, and only a very large tree (a big Drivers network) refuses and asks for link_scan_ord.
+// The tree is loaded before it is counted, so this bounds the matching, not the load.
+const DefaultLinkScanNodeBudget = 100000
+
+// LinkScanNodeBudget is the budget in force: DefaultLinkScanNodeBudget, a var only so tests can
+// lower it (and restore it) instead of building a tree of that size.
+var LinkScanNodeBudget = DefaultLinkScanNodeBudget
+
 // scanNotes is the end of _remove_plan: with link_scan_ord, the links from the subtree into
 // components outside it (keys gains outgoing_links_broken); without, a note when the subtree
 // has outputs such links could read.
@@ -90,7 +102,7 @@ func outgoing(node *pyjson.Object, path string, handles map[string]string, found
 		}
 		if _, inside := handles[key]; !inside {
 			found = append(found, obj("path", path, "target_slot", get(slots, "targetSlotName"),
-				"source_path", source, "source_slot", get(slots, "sourceSlotName")))
+				"source_path", source, "source_slot", get(slots, "sourceSlotName"), "h", here))
 		}
 	}
 	return found, nil
@@ -103,6 +115,12 @@ func scanOutgoing(c plan.Client, scanOrd string, handles map[string]string) ([]a
 	if err != nil {
 		return nil, err
 	}
+	return matchOutgoing(nodes, scanOrd, handles, false)
+}
+
+// matchOutgoing is the matching half of scanOutgoing over a loaded scanOrd; withHandle adds each
+// target's handle as target_h.
+func matchOutgoing(nodes *pyjson.Object, scanOrd string, handles map[string]string, withHandle bool) ([]any, error) {
 	found, err := outgoing(box.Node(nodes, ""), "", handles, nil)
 	if err != nil {
 		return nil, err
@@ -113,8 +131,12 @@ func scanOutgoing(c plan.Client, scanOrd string, handles map[string]string) ([]a
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, obj("target", target, "target_slot", get(f, "target_slot"),
-			"source_path", get(f, "source_path"), "source_slot", get(f, "source_slot")))
+		entry := obj("target", target, "target_slot", get(f, "target_slot"),
+			"source_path", get(f, "source_path"), "source_slot", get(f, "source_slot"))
+		if withHandle {
+			entry.Set("target_h", get(f, "h"))
+		}
+		out = append(out, entry)
 	}
 	return out, pySort(out, func(e any) []any {
 		o := e.(*pyjson.Object)

@@ -1,16 +1,13 @@
 package writeops
 
 import (
-	"errors"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
 
@@ -20,7 +17,7 @@ import (
 // the budget; a failure leaves the batch in-doubt and lists the components that exist now.
 func rollbackRuns(b *plan.Batch, p *plan.Planned, replies []any) (*plan.Runs, error) {
 	d, runs := p.Data.(*rollbackData), &plan.Runs{}
-	if len(d.components) == 0 && len(d.relinks) == 0 {
+	if len(d.components) == 0 && len(d.relinks) == 0 && len(d.outgoing) == 0 {
 		return runs, nil
 	}
 	base, err := topCreated(p, d, replies)
@@ -32,7 +29,7 @@ func rollbackRuns(b *plan.Batch, p *plan.Planned, replies []any) (*plan.Runs, er
 			return nil, err
 		}
 	}
-	if len(d.relinks) > 0 {
+	if len(d.relinks) > 0 || len(d.outgoing) > 0 {
 		if err := runRelinks(b, p, d, base, replies, runs); err != nil {
 			return nil, err
 		}
@@ -165,105 +162,4 @@ func parentOf(b *plan.Batch, parent, n string) (any, *pyjson.Object, error) {
 		return nil, nil, err
 	}
 	return plan.Handle(b.Client, parent, 1)
-}
-
-// runRelinks is _run_relinks: the links of the restored components, both ends in scope and
-// present, journaled before the first is sent. Its inverse removes the links created; a reply
-// without a verdict, or accepted without a name, may have been applied: the batch is in-doubt.
-func runRelinks(b *plan.Batch, p *plan.Planned, d *rollbackData, base map[int]string, replies []any, runs *plan.Runs) error {
-	var ops, targets []any
-	d.skipped = []any{}
-	restoredComps := 0
-	for i, op := range p.Ops {
-		o := op.(*pyjson.Object)
-		if get(o, "nm") != "a" {
-			continue
-		}
-		restoredComps++
-		comp, err := restoredOrd(d, o, replies[i])
-		if err != nil {
-			return err
-		}
-		nodes, err := b.Client.LoadTree(comp, SnapshotDepth, box.LoadOptions{})
-		if err != nil { // the components exist, their links were never attempted
-			return withCreated(plan.InDoubtOf(b.ID, err), base, d.created)
-		}
-		for _, s := range d.relinks {
-			spec := s.(*pyjson.Object)
-			src, tgt := box.Node(nodes, get(spec, "source_path").(string)), box.Node(nodes, get(spec, "target_path").(string))
-			var se *safety.Error
-			if err := checkEnds(b.State.Scope, comp, spec); errors.As(err, &se) {
-				src = nil
-			} else if err != nil {
-				return err
-			}
-			if src == nil || tgt == nil || !pyjson.Truthy(get(src, "h")) || !pyjson.Truthy(get(tgt, "h")) {
-				entry, err := inputEntry(comp, spec, "relink skipped") // an end is missing or out of scope
-				if err != nil {
-					return err
-				}
-				d.skipped = append(d.skipped, entry)
-				continue
-			}
-			ops = append(ops, obj("ssc", "checkLinks", "arg", obj("s", get(src, "h"), "ss", get(spec, "source_slot"),
-				"t", get(tgt, "h"), "ts", get(spec, "target_slot"), "c", true)))
-			targets = append(targets, get(tgt, "h"))
-		}
-	}
-	runs.Inverse = []any{}
-	restored, ambiguous := 0, 0
-	if len(ops) > 0 {
-		if b.State.Journal.Append(obj("batch_id", b.ID, "ts", session.Now(), "phase", "relink-intent", "ops", ops)) != nil {
-			return withCreated(plan.InDoubtBecause(b.ID, "nothing more was sent: the relink intent could "+
-				"not be written (components were re-created, links were not)"), base, d.created)
-		}
-		b.State.WritesExecuted += len(ops)
-		for i, op := range ops {
-			result, err := relinkResult(b.Client, get(op.(*pyjson.Object), "arg"))
-			if err != nil {
-				return withCreated(plan.InDoubtOf(b.ID, err), base, d.created)
-			}
-			v, hasV := result.Get("v")
-			switch {
-			case pyjson.Truthy(v) && pyjson.Truthy(get(result, "s")):
-				restored++
-				runs.Inverse = append(runs.Inverse, obj("nm", "v", "h", targets[i], "n", get(result, "s")))
-			case !hasV || pyjson.Truthy(v):
-				ambiguous++ // no verdict, or accepted without a name: maybe applied
-			}
-		}
-	}
-	runs.Report = obj("restored", restored, "skipped", len(d.relinks)*restoredComps-restored)
-	if ambiguous > 0 {
-		runs.Report.Set("ambiguous", ambiguous)
-	}
-	runs.Doubt, d.report = ambiguous > 0, runs.Report
-	return nil
-}
-
-// relinkResult is one relink's verdict dict; a station error or a malformed reply is {}.
-func relinkResult(c plan.Client, arg any) (*pyjson.Object, error) {
-	reply, err := c.SSC("checkLinks", arg)
-	var be *box.Error
-	if errors.As(err, &be) {
-		return obj(), nil
-	} else if err != nil {
-		return nil, err
-	}
-	result, err := linkResult([]any{reply})
-	if err != nil {
-		return obj(), nil
-	}
-	return result, nil
-}
-
-// inputEntry is _input_entry: a link-driven input the rollback did not restore, with its
-// recorded value.
-func inputEntry(comp string, spec *pyjson.Object, reason string) (*pyjson.Object, error) {
-	target, err := ord.JoinOrd(comp, get(spec, "target_path").(string))
-	if err != nil {
-		return nil, err
-	}
-	return obj("target", target, "target_slot", get(spec, "target_slot"), "source_slot", get(spec, "source_slot"),
-		"reason", reason, "value", get(spec, "prior")), nil
 }

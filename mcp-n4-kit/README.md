@@ -524,6 +524,26 @@ Destructive tools use the same pipeline:
   The plan loads one level deeper to see what the cut drops: anything there is listed in
   `snapshot_truncated: {depth, paths}` (first 20 paths, with the exact count in the note),
   also in the execution reply.
+  The dry run also scans for links from the subtree into components outside it (a
+  link is stored on its target, so the subtree load cannot see them): by default it
+  scans the `--write-scope` prefix that holds `parent_ord` to depth 6, and
+  `link_scan_ord` (equal to or under that prefix; any other root refuses) narrows it; a
+  root holding more than 100000 nodes to depth 6 refuses as too large to scan and asks for a
+  narrower `link_scan_ord` (the scan is never skipped). A link whose target is inside the
+  removed component is internal at any depth. Links stored outside the
+  scanned root are not detected, and the note names the root (a link outside a narrowed
+  root is broken by the remove and not restored by its rollback; a link whose source sits
+  more than 3 levels below the removed component, past its snapshot, is not matched either).
+  When the scan finds any,
+  the dry run refuses and lists each one (`target (target_slot <- source_slot)`);
+  repeat it with `acknowledge_links: true` to remove anyway, and the plan lists them in
+  `outgoing_links_broken`. The inverse records each one as an `outgoing_link` (target
+  ORD and handle, target slot, source path inside the component, source slot), and
+  `n4_rollback` re-creates it after the component (both ends in today's write scope,
+  else the rollback refuses; a target that is gone or was replaced is not linked). Its
+  read-back looks for each such link on its target, from the restored source with the
+  recorded slots, and reports `outgoing_links: {restored, missing}`; any missing one
+  makes the verdict `mismatch`.
 - `n4_rollback(batch_id)` plans the inverse recorded in the journal as a new batch
   (`rollback_of` points to the original). It refuses an unknown batch, one already
   rolled back, a rollback itself, an `in-doubt` batch (it shows the journaled
@@ -547,7 +567,8 @@ Destructive tools use the same pipeline:
   component's direct children only: a hand edit deeper down is not seen. Inverses: remove a created
   component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
-  `relinks: {restored, skipped}`). A frozen child (e.g. a writable's `proxyExt`) is
+  `relinks: {restored, skipped}`; the outgoing links a remove recorded are re-created
+  too, see `n4_remove_component`). A frozen child (e.g. a writable's `proxyExt`) is
   never re-added: the read-back compares it with the snapshot and lists any
   difference in `frozen_config_not_restored`. A link-driven input whose link is not
   re-created (an end is missing, or its source was outside the removed subtree) is

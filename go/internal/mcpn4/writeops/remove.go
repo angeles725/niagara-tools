@@ -13,8 +13,10 @@ import (
 
 // RemoveComponent is n4_remove_component: one remove of the child name of parent_ord. The
 // inverse is a data-only snapshot of the subtree (SnapshotDepth levels) that re-creates it,
-// then a relink per link inside it and an unlinked_input per input linked from outside.
-var RemoveComponent = plan.Impl{ScopeOrds: removeScope, Plan: removePlan, Readback: removeReadback}
+// then a relink per link inside it and an unlinked_input per input linked from outside. The
+// server runs PlanWith, which always scans for links leaving the subtree (remove_links.go).
+var RemoveComponent = plan.Impl{ScopeOrds: removeScope, Plan: removePlan, PlanWith: removePlanWith,
+	Readback: removeReadback}
 
 func removeScope(args *pyjson.Object) []any {
 	out := []any{str(args, "parent_ord")}
@@ -26,6 +28,12 @@ func removeScope(args *pyjson.Object) []any {
 
 // removePlan is _remove_plan.
 func removePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
+	return removePlanIn(c, args, nil)
+}
+
+// removePlanIn is the remove plan; a nil scope is the Python port's link step (scanNotes), else
+// the scan always runs (linkScan).
+func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.Planned, error) {
 	nameArg, _ := args.Get("name")
 	nm, err := plan.ExistingName("name", nameArg)
 	if err != nil {
@@ -50,13 +58,16 @@ func removePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	}
 	var truncated []string
 	for _, p := range nodes.Keys() {
+		if scope != nil && linkSlot(nodes, p) { // read into the link's record (wholeLinks)
+			continue
+		}
 		if p != "" && strings.Count(p, "/") >= SnapshotDepth {
 			truncated = append(truncated, p)
 		}
 	}
 	sort.Strings(truncated) // code point order: WTF-8 bytes sort as code points
 	ct, contractsNote := snapshotContracts(c, box.Node(nodes, ""))
-	s := &snapshot{handles: map[string]string{}, ct: ct}
+	s := &snapshot{handles: map[string]string{}, ct: ct, wholeLinks: scope != nil}
 	body, err := s.take(box.Node(nodes, ""), "", SnapshotDepth)
 	if err != nil {
 		return nil, err
@@ -121,7 +132,11 @@ func removePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 			"so deeper ones are not counted) and a rollback cannot bring them back (see snapshot_truncated"+
 			listed+"); export or note them before removing")
 	}
-	notes, err = scanNotes(c, args, nodes, s.handles, keys, notes)
+	if scope == nil {
+		notes, err = scanNotes(c, args, nodes, s.handles, keys, notes)
+	} else {
+		notes, inverse, err = linkScan(c, args, scope, nodes, s.handles, keys, notes, inverse)
+	}
 	if err != nil {
 		return nil, err
 	}
