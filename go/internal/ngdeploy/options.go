@@ -22,7 +22,11 @@ const (
 	optFullBackup  = "FULL_BACKUP"
 	optVerifyBin   = "VERIFY_MODULE_BIN"
 	optSchemaBin   = "SCHEMA_RISK_BIN"
+	optIntoHome    = "INSTALL_INTO_HOME"
 )
+
+// intoHomeFlag opts in to a NIAGARA_HOME that is not a mirror; build.sh has the same option (home.go).
+const intoHomeFlag = "--install-into-home"
 
 // noOpFlag is accepted and ignored: it once had to accompany --no-backup.
 const noOpFlag = "--i-know-what-im-doing"

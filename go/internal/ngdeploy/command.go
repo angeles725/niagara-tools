@@ -5,9 +5,10 @@
 // fixed since in changelog.d/2026-11-14-ng-deploy-silent-exits.md and 2026-11-15-ng-deploy-atomic-copy.md.
 //
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
-// file), config.go (required settings and paths), backup.go and purge.go, annotations.go (the slotomatic
+// file), config.go (required settings and paths), home.go (NIAGARA_HOME: a mirror, and its modules directory
+// put back when the deploy stops), backup.go and purge.go, annotations.go (the slotomatic
 // reminder), slotomatic.go, build.go, version.go and schema.go (the two prechecks), verify.go, gate.go,
-// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder). The data lives apart: exit.go, messages.go and messages_copy.go, patterns.go, usage.txt.
+// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder). The data lives apart: exit.go, messages.go with messages_copy.go and messages_home.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy
 
@@ -35,6 +36,11 @@ type deploy struct {
 	station   string // STATION_MODULES_DIR
 	moduleDir string // <directory of gradlew>/<MODULE_NAME>
 
+	homeDir  string       // <NIAGARA_HOME>/modules when it is a directory, else ""
+	sameDir  bool         // STATION_MODULES_DIR is that directory
+	homeJars []*stagedJar // the module's jars there, from the move aside before the build (home.go)
+	signals  *interrupts  // the watch for SIGINT and SIGTERM, from that move on
+	copied   bool         // the copy went through: the station holds the built jars
 }
 
 // phases is the deploy after the command line was read; each returns an exit code, or proceed.
@@ -42,8 +48,10 @@ var phases = []func(*deploy) int{
 	(*deploy).loadEnvFile,
 	(*deploy).checkSettings,
 	(*deploy).exportOptions,
+	(*deploy).guardHome,
 	(*deploy).backup,
 	(*deploy).slotomatic,
+	(*deploy).asideHome,
 	(*deploy).build,
 	(*deploy).precheckVersion,
 	(*deploy).precheckSchema,
@@ -63,10 +71,12 @@ func Main(args []string, s cli.Stdio) int {
 		return code
 	}
 	for _, phase := range phases {
-		if code := phase(d); code != proceed {
+		if code := d.interrupted(phase(d)); code != proceed {
+			d.settleHome(code)
 			return code
 		}
 	}
+	d.settleHome(ExitOK)
 	return ExitOK
 }
 

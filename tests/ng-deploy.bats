@@ -15,6 +15,10 @@ setup() {
     TMPDIR_T="$(mktemp -d)"
     export TMPDIR_T
     mkdir -p "$TMPDIR_T/fakebin" "$TMPDIR_T/modules"
+    # NIAGARA_HOME is a mirror of the test's own (the marker mirror-niagara-home.sh leaves): ng-deploy refuses a
+    # niagara_home that is not one, and no test may name a real installation.
+    mkdir -p "$TMPDIR_T/niagara-home"
+    : > "$TMPDIR_T/niagara-home/.niagara-mirror"
 
     # --- fake gradlew ---
     # Writes every invocation to gradlew.calls.log (one line per call, args space-separated)
@@ -99,7 +103,7 @@ STUB
     cat > "$TMPDIR_T/dot_env_local" << ENVEOF
 MODULE_NAME=test
 GRADLEW_PATH=$TMPDIR_T/fakebin/gradlew
-NIAGARA_HOME=/mnt/c/Niagara/iC-Niagara-4.13.2.18
+NIAGARA_HOME=$TMPDIR_T/niagara-home
 NIAGARA_USER_HOME=/mnt/c/Users/equipo/Niagara4.13/test
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 STATION_MODULES_DIR=$TMPDIR_T/modules
@@ -131,7 +135,7 @@ teardown() {
     # Write an env file with MODULE_NAME missing
     cat > "$TMPDIR_T/no_module_env" << ENVEOF
 GRADLEW_PATH=$TMPDIR_T/fakebin/gradlew
-NIAGARA_HOME=/mnt/c/Niagara/iC-Niagara-4.13.2.18
+NIAGARA_HOME=$TMPDIR_T/niagara-home
 NIAGARA_USER_HOME=/mnt/c/Users/equipo/Niagara4.13/test
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 STATION_MODULES_DIR=$TMPDIR_T/modules
@@ -446,7 +450,7 @@ ENVEOF
     cat > "$TMPDIR_T/env_t24" << ENVEOF
 MODULE_NAME=test
 GRADLEW_PATH=$TMPDIR_T/fakebin/gradlew
-NIAGARA_HOME=/mnt/c/Niagara/iC-Niagara-4.13.2.18
+NIAGARA_HOME=$TMPDIR_T/niagara-home
 NIAGARA_USER_HOME=/mnt/c/Users/equipo/Niagara4.13/test
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 STATION_MODULES_DIR=$TMPDIR_T/modules
@@ -575,7 +579,7 @@ _gate_env() {   # env whose expected type counts match the fake unzip (9) so ver
     cat > "$TMPDIR_T/env_gate" <<ENVEOF
 MODULE_NAME=test
 GRADLEW_PATH=$TMPDIR_T/fakebin/gradlew
-NIAGARA_HOME=/mnt/c/Niagara/iC-Niagara-4.13.2.18
+NIAGARA_HOME=$TMPDIR_T/niagara-home
 NIAGARA_USER_HOME=/mnt/c/Users/equipo/Niagara4.13/test
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 STATION_MODULES_DIR=$TMPDIR_T/modules
@@ -887,5 +891,93 @@ STUB
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
     [ "$status" -eq 0 ]
     run find "$TMPDIR_T/modules" -name '*.ng-deploy-*'
+    [ -z "$output" ]
+}
+
+# ===========================================================================
+# <NIAGARA_HOME>/modules: gradle's :jar step installs the built jars there before any check of the deploy runs.
+# ===========================================================================
+
+# helper: a gradlew that installs the built rt and ux jars into <NIAGARA_HOME>/modules on :jar, as the vendor's
+# plugin does, then exits $FAKE_GRADLEW_EXIT
+_installing_gradlew() {
+    cat > "$TMPDIR_T/fakebin/gradlew" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$TMPDIR_T/gradlew.calls.log"
+case "\$*" in *:jar*)
+    for p in rt ux; do cp "$TMPDIR_T/fakebin/test/test-\$p/build/libs/test-\$p.jar" "$TMPDIR_T/niagara-home/modules/test-\$p.jar"; done ;;
+esac
+exit "\${FAKE_GRADLEW_EXIT:-0}"
+STUB
+    chmod +x "$TMPDIR_T/fakebin/gradlew"
+}
+
+@test "NG-home-real: a niagara_home that is not a mirror is refused before gradle runs (exit 10); --install-into-home opts in" {
+    # Mutation: NG-home-real -- without the refusal gradle replaces the jars of a real installation before any check.
+    _gate_env; _fake_gate 0
+    mkdir -p "$TMPDIR_T/niagara-home/modules"
+    printf 'installed' > "$TMPDIR_T/niagara-home/modules/test-rt.jar"
+    rm "$TMPDIR_T/niagara-home/.niagara-mirror"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --mode A --with-slotomatic
+    [ "$status" -eq 10 ]
+    [[ "$output" == "[ng-deploy] ERROR NIAGARA_HOME $TMPDIR_T/niagara-home is a real niagara_home (no .niagara-mirror): gradle's :jar step would replace the jars of its modules/ before any check runs; build against a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>), or pass --install-into-home" ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+    [ ! -e "$TMPDIR_T/_backups" ]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "installed" ]
+
+    printf 'INSTALL_INTO_HOME=1\n' >> "$TMPDIR_T/env_gate"   # the env file alone does not opt in
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"INSTALL_INTO_HOME would switch the refusal of a real niagara_home off, which an env file may not do: give --install-into-home on the command line"* ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --install-into-home
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"copy ok"* ]]
+}
+
+@test "NG-home-restore: a check that fails after the build leaves <NIAGARA_HOME>/modules as it was before the build" {
+    # Mutation: NG-home-restore -- without the restore the jars of a refused deploy stay in <NIAGARA_HOME>/modules.
+    _gate_env; _fake_gate 1; _installing_gradlew
+    mkdir -p "$TMPDIR_T/niagara-home/modules"
+    printf 'previous-rt' > "$TMPDIR_T/niagara-home/modules/test-rt.jar"   # no ux jar was installed before
+    printf 'new-rt' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 50 ]
+    [[ "$output" == *"verify-module gate failed"* ]]
+    [[ "$output" == *"NOTICE: the jars the build installed in $TMPDIR_T/niagara-home/modules were taken out again: it holds the module jars it held before the build"* ]]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
+    [ "$(ls "$TMPDIR_T/niagara-home/modules")" = "test-rt.jar" ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+
+    _fake_gate 0   # the same deploy with every check green keeps what the build installed
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"NOTICE: the jars the build installed"* ]]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "new-rt" ]
+    [ "$(ls "$TMPDIR_T/niagara-home/modules" | tr '\n' ' ')" = "test-rt.jar test-ux.jar " ]
+}
+
+@test "NG-home-same: a STATION_MODULES_DIR that is <NIAGARA_HOME>/modules is verified, not copied, and still gets the version precheck" {
+    # Mutation: NG-home-same -- comparing the build with the jar gradle just installed skips the version precheck.
+    _gate_env; _fake_gate 0; _installing_gradlew
+    mkdir -p "$TMPDIR_T/niagara-home/modules"
+    printf 'previous-rt' > "$TMPDIR_T/niagara-home/modules/test-rt.jar"
+    printf 'new-rt' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    sed -i "s|^STATION_MODULES_DIR=.*|STATION_MODULES_DIR=$TMPDIR_T/niagara-home/modules/|" "$TMPDIR_T/env_gate"
+    export FAKE_OLD_VERSION=1.4 FAKE_NEW_VERSION=1.3
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 54 ]
+    [[ "$output" == *"STATION_MODULES_DIR is <NIAGARA_HOME>/modules ($TMPDIR_T/niagara-home/modules)"* ]]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
+    [ "$(ls "$TMPDIR_T/niagara-home/modules")" = "test-rt.jar" ]
+
+    export FAKE_NEW_VERSION=1.5
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"version-bump ok (test-rt.jar: 1.4 -> 1.5)"* ]]
+    [[ "$output" == *"copy: nothing to copy, the build installed test-rt.jar test-ux.jar in $TMPDIR_T/niagara-home/modules (the same bytes as build/libs)"* ]]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "new-rt" ]
+    run find "$TMPDIR_T/niagara-home/modules" -name '*.ng-deploy-*'
     [ -z "$output" ]
 }

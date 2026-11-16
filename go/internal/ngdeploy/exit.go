@@ -4,7 +4,7 @@ package ngdeploy
 const (
 	ExitOK             = 0  // deployed, built with --no-deploy, or --help / --version
 	ExitFault          = 1  // the backup directory could not be made (mkdir's own status, usually 1)
-	ExitEnv            = 10 // a required variable, an invalid path, option value or env file; a record that cannot be written, before the copy
+	ExitEnv            = 10 // a required variable, an invalid path, option value or env file; a record that cannot be written, before the copy; a NIAGARA_HOME that is not a mirror
 	ExitNoBaseline     = 12 // schema-risk precheck impossible: no baseline and no --first-deploy
 	ExitSlotomatic     = 15 // slotomatic failed or skipped a file, or annotation changes in strict mode
 	ExitBackup         = 20 // the backup failed

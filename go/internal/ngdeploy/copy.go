@@ -34,6 +34,9 @@ type stagedJar struct {
 // back or removed. The copy starts only in a station that holds no jar aside and nothing odd under the
 // name of a jar (aside.go).
 func (d *deploy) copyJars() int {
+	if d.sameDir {
+		return d.copySame()
+	}
 	jars, code := d.jarsToCopy()
 	if code != proceed {
 		return code
@@ -86,6 +89,7 @@ func (d *deploy) copyJars() int {
 			d.warn(warnAsideLeft, jar.name+asideSuffix, strerror.Text(err))
 		}
 	}
+	d.copied = true
 	d.say(msgCopyOK)
 	return proceed
 }

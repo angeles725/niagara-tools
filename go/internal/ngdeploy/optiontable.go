@@ -24,6 +24,7 @@ var optionTable = []flagOption{
 	{flag: "--first-deploy", variable: optFirstDeploy},
 	{flag: "--accept-lossy", variable: optAcceptLossy},
 	{flag: "--full-backup", variable: optFullBackup},
+	{flag: intoHomeFlag, variable: optIntoHome, guards: guardRealHome},
 }
 
 // switches are the variables that hold 0 or 1, in the order of the table.

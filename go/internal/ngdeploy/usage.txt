@@ -24,6 +24,9 @@ Options:
                              baseline to diff). Same as FIRST_DEPLOY=1 in the env file
                              (an exported FIRST_DEPLOY in the shell is ignored).
   --accept-lossy           Proceed on a schema-risk LOSSY verdict (an OUTAGE always blocks).
+  --install-into-home      Build although NIAGARA_HOME is a real installation and not a mirror (no
+                             .niagara-mirror): the build then replaces the module's jars in its modules/
+                             directory before any check runs. Command line only; build.sh has the same option.
   --help                   Print this help and exit 0
   --version                Print SCRIPT_VERSION and exit 0
 
@@ -38,11 +41,25 @@ Required for mode A or C unless --first-deploy:
                          schema-risk.sh against the -rt module dir before the copy (build-verify.md
                          § Schema-risk deploy workflow)
 
+NIAGARA_HOME and its modules directory:
+  gradle's :jar step installs the built jars into <NIAGARA_HOME>/modules before any check of the deploy has run,
+  and in a real installation that directory is a station's. So NIAGARA_HOME must be a mirror (a directory made
+  by build-n4-module-kit/toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>, which holds .niagara-mirror);
+  a NIAGARA_HOME that is a directory without that file is refused before the backup and before gradle runs
+  (exit 10) unless --install-into-home is given. In both cases the module's own -rt/-ux/-wb jars there are moved
+  aside (<jar>.ng-deploy-old) before the build, and when the build, a check or the copy fails, or SIGINT or
+  SIGTERM arrives before the copy, they are moved back and the jars the build added are removed: the directory
+  holds what it held before the build, and a NOTICE says so. A jar that could not be moved back or removed is an ERROR
+  line that names it jar by jar, as for exit 40; the exit code stays that of what failed. After a deploy that went through (or --no-deploy)
+  the built jars stay there. When STATION_MODULES_DIR is that same directory (symbolic links resolved) a line
+  says so, the version-bump precheck compares with the jar that was there before the build, and the copy step
+  copies nothing: it checks that the directory holds the jars of build/libs.
+
 The env file and the flags:
   An option variable in the env file (MODE, KEEP_N, FULL_BACKUP, NO_DEPLOY, WITH_SLOTOMATIC, STRICT_SLOTOMATIC,
   FIRST_DEPLOY, ACCEPT_LOSSY) sets that option; the flag of the same option, when given, wins over it.
-  NO_GATE=1 and NO_BACKUP=1 are refused in the env file (exit 10, with file and line) unless --no-gate or
-  --no-backup is given. Only these two keys are refused: MODE=B (a mode without the gate) and
+  NO_GATE=1, NO_BACKUP=1 and INSTALL_INTO_HOME=1 are refused in the env file (exit 10, with file and line) unless
+  --no-gate, --no-backup or --install-into-home is given. Only these three keys are refused: MODE=B (a mode without the gate) and
   VERIFY_MODULE_BIN in the env file are read as before.
 
 Optional:
@@ -57,6 +74,10 @@ Exit codes:
       read, holds a line that is not a plain assignment, or sets NO_GATE=1 / NO_BACKUP=1 without the flag;
       or, after the checks and before the copy, a .last-deploy-sha that is a directory or cannot be written
       (nothing was copied; SLOTOMATIC_DETECTION=off makes the record optional)
+      or, before the backup and before gradle runs, a NIAGARA_HOME that is a directory and not a mirror without
+      --install-into-home, or a <jar>.ng-deploy-old file of the module in <NIAGARA_HOME>/modules (a run that was
+      killed left it; rename it over its jar or delete it); or, just before the build, a jar of the module there
+      that cannot be moved aside
   15  slotomatic failed or skipped a file (METHODOLOGY K15), or annotation changes detected in strict mode;
       strict mode also refuses when the detection could not run, which includes a .last-deploy-sha that is
       malformed or names a commit git does not know (outside strict mode: a NOTICE, and the diff starts at HEAD~1)
@@ -72,14 +93,18 @@ Exit codes:
       a station that holds a .ng-deploy-old file for the -rt or -ux jar (a deploy that did not finish left
       it; ng-deploy never deletes one it did not create: rename it over its jar to go back, or delete it to
       keep what is there), and a directory or a dangling link under the name of a jar
-  130, 143  SIGINT or SIGTERM during the copy: the copy was undone as for exit 40 and the line says so
+      When STATION_MODULES_DIR is <NIAGARA_HOME>/modules nothing is copied; exit 40 is then a jar of the mode that
+      the build did not leave there with the bytes of build/libs (the previous jars are put back)
+  130, 143  SIGINT or SIGTERM during the copy: the copy was undone as for exit 40 and the line says so; or between
+      the move aside in <NIAGARA_HOME>/modules and the copy: nothing was copied and that directory was put back
   41  the jars were copied, but the deployed commit could not be read (git rev-parse HEAD) or written to
       .last-deploy-sha (a record that could be written before the copy and no longer can): restart as the
       last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional)
   12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
   50  verify failed: type count mismatch (a jar with no type entry counts 0), a module.xml that unzip cannot
       read, BUILD_ID not found, or verify-module gate failed/missing
-      (every check runs on build/libs before the copy: nothing reaches STATION_MODULES_DIR)
+      (every check runs on build/libs before the copy: nothing reaches STATION_MODULES_DIR, and
+      <NIAGARA_HOME>/modules is put back as it was before the build)
   51  version-bump precheck: the built jar's bytes differ from the deployed jar but its vendorVersion did not change
       (numeric per component, a missing component = 0: 1.3 -> 1.3.0 is NOT a bump)
   52  version-bump precheck cannot verify (a vendorVersion is unreadable, the two differ in a non-numeric suffix,
