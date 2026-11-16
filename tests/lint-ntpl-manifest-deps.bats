@@ -11,34 +11,9 @@
 # go/internal/lint/rules/ntplmanifest pins the untrusted-input half (unsafe names, read bounds).
 # The cases are split by concern: this file (NTPL0-NTPL9: entries, manifest, dependencies, station, the
 # installation) and lint-ntpl-manifest-deps-paths.bats (NTPL10-NTPL14: names, links, jars of the installation,
-# the bog and Px uses). Both carry the same setup and _ntpl helper.
+# the bog and Px uses). Shared setup and _ntpl helper: tests/lib/ntpl-setup.bash.
 
-setup() {
-  KIT="$(cd "$BATS_TEST_DIRNAME/../build-n4-module-kit" && pwd)"
-  LINT="$KIT/toolbelt/lint-ntpl-manifest-deps.sh"
-  M="$BATS_TEST_TMPDIR/ModA"
-  mkdir -p "$M/ModA-rt/src/templates"
-  printf 'dependencies {\n  nre(":nre")\n  api(":baja")\n}\n' > "$M/ModA-rt/ModA-rt.gradle.kts"
-  NH="$BATS_TEST_TMPDIR/niagara"
-  mkdir -p "$NH/modules"
-  local j
-  for j in baja fox-rt jetty-rt hx-wb web-rt control-rt bajaui-wb; do : > "$NH/modules/$j.jar"; done
-  unset NIAGARA_HOME   # the machine running the test may name a real installation
-}
-
-# _ntpl <out.ntpl> <manifest-root-attrs> <dependency>... — a template archive with both entries
-_ntpl() {
-  local out="$1" attrs="$2" d stage="$BATS_TEST_TMPDIR/stage.$RANDOM"
-  shift 2
-  mkdir -p "$stage" "$(dirname "$out")"
-  printf '<bajaObjectGraph version="4.0"/>\n' > "$stage/template.bog"
-  {
-    printf '<template id="t1" version="1.0"%s>\n  <dependencies>\n' "$attrs"
-    for d in "$@"; do printf '    <dependency name="%s" vendor="Acme" vendorVersion="1.0"/>\n' "$d"; done
-    printf '  </dependencies>\n</template>\n'
-  } > "$stage/template-manifest.xml"
-  (cd "$stage" && zip -q -X "$out" template.bog template-manifest.xml)
-}
+load lib/ntpl-setup
 
 @test "NTPL0: a module that ships no .ntpl is one PASS row, exit 0; a root that is no module is exit 3" {
   run "$LINT" "$M"
