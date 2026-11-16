@@ -32,9 +32,10 @@ type Args struct {
 	Flags  map[string]bool     // each boolean flag (Spec.Flags) given, nil when none
 }
 
-// ValueOptions is the option contract of Mode Valued: Option takes one value (the last wins), each Repeat option keeps
-// every value, each Flags flag takes no value ("--flag=v" is an unknown option), Strict accepts --strict. Under Mode
-// FileFirst, Option is the noun of the file operand in its error ("<name>: <Option> not found: <file>").
+// ValueOptions is the option contract of Mode Valued: Option takes one value (the last wins), each Repeat
+// option keeps every value, each Flags flag takes no value (given as "--flag=v" it is an unknown option), and
+// Strict accepts --strict. Under Mode FileFirst, Option is the noun of the
+// file operand in its error ("<name>: <Option> not found: <file>"); Repeat and Strict do not apply.
 type ValueOptions struct {
 	Option   string
 	Repeat   []string
