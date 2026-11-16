@@ -82,6 +82,9 @@ func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	want := pyjson.NewObject()
 	for _, part := range parts {
 		ops, inverse := opsOf(part.op), opsOf(part.inverse) // a part sends one op or several
+		if len(ops) == 0 {
+			continue
+		}
 		if h, _ := ops[0].(*pyjson.Object).Get("h"); part.target != "" {
 			p.Targets.Set(ordText+"/"+part.target, h)
 		}

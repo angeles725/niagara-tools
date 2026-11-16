@@ -65,6 +65,9 @@ func datesPart(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []sche
 	for _, slot := range slots.removed {
 		inverse = append(inverse, addByPath(h, slot, box.Node(s.nodes, joinPath(path, slot)))...)
 	}
+	if len(ops) == 0 { // empty add_date and remove_date lists change nothing
+		return nil
+	}
 	return []schedulePart{{op: ops, inverse: inverse, target: path, key: "dates", want: want,
 		note: fmt.Sprintf("%d date(s) added, %d removed", len(added), len(slots.removed))}}
 }
