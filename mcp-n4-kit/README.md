@@ -340,8 +340,12 @@ the range, `select timestamp.encodeToString, value.encodeToString, status order 
 `summary {count, complete, records_scanned, numeric, min {value, timestamp}, max {value, timestamp},
 first and last {value, timestamp, status}, status_counts}` over the whole range, whatever `limit`
 cut the rows; a tie keeps the earliest record (when the value was first reached). A non-numeric
-history has `numeric: false`, `min`/`max` null and a `note`; a `nan` or `inf` record (a faulted
-source) is counted but never compared. A range larger than `summary_max_rows`
+history has `numeric: false`, `min`/`max` null and a `note`. A record whose status has the `null`
+flag (no value: a new COV history writes `0.0 {null}` records at start) and a `nan` or `inf` record
+(a faulted source) are counted (`count`, `status_counts`) but left out of `min`, `max`, `first` and
+`last` (retro 2026-11-16 M16); then `excluded_from_extremes {null, nan_inf}` counts them, a `note`
+says so, and `first_record` / `last_record` are the raw ends when they differ. Other flags (fault,
+down, stale, alarm) keep their value and stay in. A range larger than `summary_max_rows`
 is summarized from its newest records with `complete: false` and a `note`, and `range_min` /
 `range_max` come from `select min(value), max(value)` over the whole range (localized text, no
 time: 4.15 has no `group by` and no aggregate that returns the record). A failed summary read is

@@ -66,12 +66,11 @@ func (t *Tools) historySummary(id, params string, maxRows, timeout int, total an
 }
 
 // summarize is numeric, min, max, first, last and status_counts of rows (newest first: the
-// first row is the last record), with a note when there is nothing numeric to compare. A tie
-// keeps the earliest record: when the value was first reached.
+// first row is the last record), with a note when there is nothing numeric to compare or when
+// records were left out of the extremes (history_summary_extremes.go).
 func summarize(columns []string, rows []*pyjson.Object) *pyjson.Object {
 	statuses := pyjson.NewObject()
-	var minRec, maxRec, firstRec, lastRec *pyjson.Object
-	var minVal, maxVal float64
+	var ext extremes
 	numeric, nonNumeric := len(rows) > 0, ""
 	for _, row := range rows {
 		ts, raw, status := cell(row, columns[0]), cell(row, columns[1]), cell(row, columns[2])
@@ -85,33 +84,20 @@ func summarize(columns []string, rows []*pyjson.Object) *pyjson.Object {
 		} else if !isNum && numeric {
 			numeric, nonNumeric = false, raw
 		}
-		// A nan or inf record (a faulted source) is counted but never compared.
-		isNum = isNum && !math.IsNaN(value) && !math.IsInf(value, 0)
-		rec := obj("value", shown, "timestamp", ts, "status", status)
-		if lastRec == nil {
-			lastRec = rec
-		}
-		firstRec = rec
-		if isNum && (minRec == nil || value <= minVal) {
-			minRec, minVal = rec, value
-		}
-		if isNum && (maxRec == nil || value >= maxVal) {
-			maxRec, maxVal = rec, value
-		}
+		ext.add(obj("value", shown, "timestamp", ts, "status", status), status, value, isNum)
 	}
-	out := obj("numeric", numeric, "min", nil, "max", nil, "first", nilIfNone(firstRec), "last", nilIfNone(lastRec),
-		"status_counts", statuses)
-	if numeric && minRec != nil { // nil when every record is nan or inf
-		minTs, _ := minRec.Get("timestamp")
-		maxTs, _ := maxRec.Get("timestamp")
-		out.Set("min", obj("value", minVal, "timestamp", minTs))
-		out.Set("max", obj("value", maxVal, "timestamp", maxTs))
-	}
+	out := obj("numeric", numeric, "min", nil, "max", nil, "first", nil, "last", nil, "status_counts", statuses)
+	ext.set(out, numeric) // min and max stay nil when every record is excluded
+	ext.setExcluded(out)
 	switch {
 	case len(rows) == 0:
 		out.Set("note", msgSummaryEmpty)
 	case !numeric:
-		out.Set("note", fmt.Sprintf(msgSummaryText, pyjson.StrRepr(nonNumeric)))
+		note := fmt.Sprintf(msgSummaryText, pyjson.StrRepr(nonNumeric))
+		if prior, ok := out.Get("note"); ok {
+			note = pyjson.Str(prior) + "; " + note
+		}
+		out.Set("note", note)
 	}
 	return out
 }
