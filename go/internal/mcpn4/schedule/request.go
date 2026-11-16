@@ -120,20 +120,20 @@ func CheckValue(k *Kind, facets string, value any, allowNull bool) string {
 		}
 		return "value null is not allowed for a range (only a default output may be null)"
 	}
-	switch k.Name {
-	case "boolean":
+	switch k.ValueType {
+	case "baja:StatusBoolean":
 		if _, ok := value.(bool); !ok {
-			return fmt.Sprintf("value %s is not a boolean (a boolean schedule takes true or false)", pyjson.Repr(value))
+			return fmt.Sprintf("value %s is not a boolean (a %s schedule takes true or false)", pyjson.Repr(value), k.Name)
 		}
-	case "numeric":
+	case "baja:StatusNumeric":
 		if _, ok := floatOf(value); !ok {
 			return fmt.Sprintf("value %s is not a number (a numeric schedule takes a number)", pyjson.Repr(value))
 		}
-	case "string":
+	case "baja:StatusString":
 		if _, ok := value.(string); !ok {
 			return fmt.Sprintf("value %s is not a string (a string schedule takes a string)", pyjson.Repr(value))
 		}
-	case "enum":
+	case "baja:StatusEnum":
 		n, ok := intOf(value)
 		if !ok || n < 0 {
 			return fmt.Sprintf("value %s is not an enum ordinal (an enum schedule takes a whole number >= 0)",

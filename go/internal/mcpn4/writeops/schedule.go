@@ -10,7 +10,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/schedule"
 )
 
-// SetSchedule is n4_set_schedule: the days given of the weekly schedule in one batch.
+// SetSchedule is n4_set_schedule: the days given of the weekly schedule and the default output in
+// one batch.
 // Each part is one set op that replaces a whole subtree, so its inverse is one set op with the
 // subtree as loaded: the rollback restores the previous schedule exactly.
 var SetSchedule = plan.Impl{ScopeOrds: ordArg, Plan: schedulePlan, Readback: scheduleReadback}
@@ -21,6 +22,7 @@ type scheduleState struct {
 	nodes *pyjson.Object
 	kind  *schedule.Kind
 	model *pyjson.Object
+	def   schedule.Defaults
 }
 
 // loadSchedule loads and decodes the schedule at ord (the station's type registry fills the
@@ -34,14 +36,13 @@ func loadSchedule(c plan.Client, ord string) (*scheduleState, error) {
 	if !ok {
 		return nil, plan.ToolError("this client cannot read the station's type registry, which n4_set_schedule needs")
 	}
-	model, err := schedule.Read(nodes, func(typeSpec, name string) (*pyjson.Object, error) {
-		return plan.DeclaredDefault(tl, typeSpec, name)
-	})
+	def := func(typeSpec, name string) (*pyjson.Object, error) { return plan.DeclaredDefault(tl, typeSpec, name) }
+	model, err := schedule.Read(nodes, def)
 	if err != nil {
 		return nil, plan.ToolError(ord + ": " + err.Error())
 	}
 	t, _ := box.Node(nodes, "").Get("t")
-	return &scheduleState{h, nodes, schedule.KindOf(pyjson.Str(t)), model}, nil
+	return &scheduleState{h, nodes, schedule.KindOf(pyjson.Str(t)), model, def}, nil
 }
 
 // schedulePart is one planned part: its op, inverse, what the read-back expects under key, and
@@ -56,7 +57,7 @@ type schedulePart struct {
 
 // scheduleParts are the planners of each argument, in plan order.
 var scheduleParts = []func(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []schedulePart{
-	weeklyParts,
+	weeklyParts, defaultOutputPart,
 }
 
 func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
@@ -71,7 +72,7 @@ func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		parts = append(parts, planner(s, args, &faults)...)
 	}
 	if len(parts) == 0 && len(faults) == 0 {
-		faults = append(faults, "nothing to set: give weekly")
+		faults = append(faults, "nothing to set: give weekly and/or default_output")
 	}
 	if err := faults.Err(); err != nil {
 		return nil, plan.ToolError(err.Error())
@@ -151,6 +152,44 @@ func weeklyParts(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []sc
 			note: "replaces " + day + " (" + itoa(len(ranges)) + " range(s)); the days not given keep their ranges"})
 	}
 	return parts
+}
+
+// defaultOutputPart sets the default output (null: the type default with a null status).
+func defaultOutputPart(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []schedulePart {
+	value, given := args.Get("default_output")
+	if !given {
+		return nil
+	}
+	if s.kind.ValueType == "" {
+		*f = append(*f, "default_output: a "+s.kind.Name+" schedule has no default output")
+		return nil
+	}
+	facets, _ := s.model.Get("facets")
+	if msg := schedule.CheckValue(s.kind, pyjson.Str(facets), value, true); msg != "" {
+		*f = append(*f, "default_output: "+msg)
+		return nil
+	}
+	old, err := previousSlot(s, "defaultOutput")
+	if err != nil {
+		*f = append(*f, "default_output: "+err.Error())
+		return nil
+	}
+	return []schedulePart{{op: setOp(s.h, "defaultOutput", schedule.StatusBody(s.kind, value)),
+		inverse: setOp(s.h, "defaultOutput", old), key: "default_output", want: schedule.StatusView(s.kind, value)}}
+}
+
+// previousSlot is the body that restores slot of the schedule: as loaded, or its declared
+// default when the station left it out (it held that default; loadSchedule's schedule.Read has
+// already refused a left-out slot the type registry does not describe).
+func previousSlot(s *scheduleState, slot string) (*pyjson.Object, error) {
+	if n := box.Node(s.nodes, slot); n != nil {
+		return schedule.Strip(n), nil
+	}
+	d, err := s.def(s.kind.Type, slot)
+	if err != nil {
+		return nil, err
+	}
+	return schedule.Strip(d), nil
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }

@@ -1540,7 +1540,7 @@
   },
   {
    "name": "n4_set_schedule",
-   "description": "Change the weekly schedule of a schedule in one batch under one confirmation token. weekly {day: [{start, end, value}]} replaces only the days given (monday..sunday; the days not given keep their ranges; {\"sunday\": []} clears one): times HH:MM, end 24:00 for midnight, start inclusive and end exclusive. Values follow the schedule kind: true/false (boolean), a number (numeric), an ordinal of the range facet (enum), a string (string). Before anything is sent every fault is named, one message each: an unknown day, a malformed time, an end not after its start, overlapping ranges in a day, a missing value or one of the wrong type, a part the kind does not have (a calendar or trigger has no weekly schedule). Each day is one set that replaces it whole, so the inverse restores the previous day exactly (n4_rollback). The read-back reloads the schedule and compares each day written with n4_read_schedule's view of it. The station recalculates out, next time and next value by itself. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Change the weekly schedule and the default output of a schedule in one batch under one confirmation token. weekly {day: [{start, end, value}]} replaces only the days given (monday..sunday; the days not given keep their ranges; {\"sunday\": []} clears one): times HH:MM, end 24:00 for midnight, start inclusive and end exclusive. default_output sets the value out takes when nothing is active (null: a null status). Values follow the schedule kind: true/false (boolean, calendar), a number (numeric), an ordinal of the range facet (enum), a string (string). Before anything is sent every fault is named, one message each: an unknown day, a malformed time, an end not after its start, overlapping ranges in a day, a missing value or one of the wrong type, a part the kind does not have (a calendar or trigger has no weekly schedule, a trigger no default output). Each day and the default output is one set that replaces it whole, so the inverse restores the previous schedule exactly (n4_rollback). The read-back reloads the schedule and compares each part written with n4_read_schedule's view of it. The station recalculates out, next time and next value by itself. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -1551,6 +1551,9 @@
      "weekly": {
       "type": "object",
       "description": "Days to replace: {\"monday\": [{\"start\": \"08:00\", \"end\": \"18:00\", \"value\": true}], \"sunday\": []}"
+     },
+     "default_output": {
+      "description": "The default output: a value of the schedule's kind, or null"
      },
      "dry_run": {
       "type": "boolean",

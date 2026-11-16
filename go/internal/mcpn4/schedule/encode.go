@@ -13,13 +13,13 @@ import (
 
 // encodedValue is a checked plain value as the station encodes it for kind k.
 func encodedValue(k *Kind, v any) string {
-	switch k.Name {
-	case "boolean":
+	switch k.ValueType {
+	case "baja:StatusBoolean":
 		return strconv.FormatBool(v.(bool))
-	case "numeric":
+	case "baja:StatusNumeric":
 		f, _ := floatOf(v)
 		return pyjson.FloatNumber(f).String()
-	case "enum":
+	case "baja:StatusEnum":
 		n, _ := intOf(v)
 		return strconv.Itoa(n)
 	}
@@ -32,12 +32,12 @@ func StatusBody(k *Kind, v any) *pyjson.Object {
 	value, status := "", "0"
 	if v == nil {
 		status = "40"
-		value = map[string]string{"boolean": "false", "numeric": "0.0", "enum": "0"}[k.Name]
+		value = map[string]string{"baja:StatusBoolean": "false", "baja:StatusNumeric": "0.0", "baja:StatusEnum": "0"}[k.ValueType]
 	} else {
 		value = encodedValue(k, v)
 	}
 	kid := obj("nm", "p", "n", "value", "v", value)
-	if t := map[string]string{"boolean": "baja:Boolean", "numeric": "baja:Double", "string": "baja:String"}[k.Name]; t != "" {
+	if t := map[string]string{"baja:StatusBoolean": "baja:Boolean", "baja:StatusNumeric": "baja:Double", "baja:StatusString": "baja:String"}[k.ValueType]; t != "" {
 		kid = obj("nm", "p", "n", "value", "t", t, "v", value)
 	}
 	return obj("nm", "p", "t", k.ValueType, "s", []any{kid, obj("nm", "p", "n", "status", "t", "baja:Status", "v", status)})

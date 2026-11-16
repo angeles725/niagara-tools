@@ -1119,9 +1119,9 @@ out every slot that holds its type's default (a 00:00 start, a false `alwaysEffe
 fills those from the station's type registry and refuses, naming the slot, rather than guess one
 the registry does not describe.
 
-### Writing a weekly schedule
+### Writing a weekly schedule and its default output
 
-`n4_set_schedule(ord, weekly)` (a write tool: `--allow-writes`, a write scope, dry run then
+`n4_set_schedule(ord, weekly, default_output)` (a write tool: `--allow-writes`, a write scope, dry run then
 `confirmation_token`) replaces the days given and only those: `{"monday": [{"start": "08:00",
 "end": "18:00", "value": true}]}` leaves tuesday to sunday as they are, and `{"sunday": []}`
 clears sunday. Times are `HH:MM`, `24:00` only as an end (midnight); a range covers its start up
@@ -1130,9 +1130,13 @@ the schedule's `range` facet, or a string. Every fault is named in one refusal b
 sent (an unknown day, a malformed time, an end not after its start, overlapping ranges, a missing
 or mistyped value, a calendar or trigger, which have no weekly schedule).
 
-Each day is one BOX set that replaces its DaySchedule whole, and its inverse is a set of the day
-as it was loaded, so `n4_rollback` restores the previous ranges exactly. The read-back reloads
-the schedule and compares each day written with what `n4_read_schedule` shows; the station
+`default_output` is the value `out` takes when no range or special event is active: a value of
+the kind (a calendar's is a boolean) or `null` for a null status. A trigger has none.
+
+Each day is one BOX set that replaces its DaySchedule whole, the default output one set of its
+Status, and each inverse is a set of what was loaded (a default output the station left out is
+restored from its declared default), so `n4_rollback` restores the previous schedule exactly.
+The read-back reloads the schedule and compares each part written with what `n4_read_schedule` shows; the station
 recalculates `out`, `next_time` and `next_value` by itself.
 
 ## Live smoke test
