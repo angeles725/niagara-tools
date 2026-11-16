@@ -98,3 +98,18 @@ func TestARemoveTokenSurvivesATransientDynamicSlotChanging(t *testing.T) {
 		t.Fatalf("execute refused: %s", done.Text)
 	}
 }
+
+// The dry-run plan marks each runtime slot it shows without a value; configuration keeps its value.
+func TestARemovePlanMarksEachRuntimeSlot(t *testing.T) {
+	d := destructiveRig(t, nil)
+	nn, _ := d.alarmed()
+	add := objects(planOf(d.Srv.Dry("n4_remove_component", removeArgs(nn)))["inverse"])[0]
+	ext := byName(Dig(add, "b", "s"))["Alarm"]
+	slots := byName(ext["s"])
+	if tic := slots["timeInCurrentState"]; tic["runtime"] != true || tic["v"] != nil {
+		t.Errorf("timeInCurrentState = %v", tic)
+	}
+	if delay := slots["timeDelay"]; delay["runtime"] != nil || delay["v"] != "5000" {
+		t.Errorf("timeDelay = %v", delay)
+	}
+}

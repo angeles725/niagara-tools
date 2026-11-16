@@ -6,20 +6,25 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// A runtime slot is one whose value the station computes or never persists, so it can change
-// between a dry run and its execute by timing alone (retro 2026-11-16 row M15: an alarm
-// extension's timeInCurrentState, BAlarmSourceExt flags 3 = readonly|transient, ticks every
-// second). It is a frozen slot whose DECLARED flags hold r readonly or t transient
-// (computedFlags, the rule keepsOutput already applies to an out), or any slot whose instance
-// flags hold t (never persisted). Such a slot stays in the snapshot the journal keeps and a
-// rollback re-adds, as before; only its value, and the values below it, leave the plan the
-// token hashes. Its name and type stay, so a slot or child added, removed or retyped still
-// changes the hash, and so does a configuration value.
+// A runtime slot is one the station never persists, so its value can change between a dry run
+// and its execute by timing alone (retro 2026-11-16 row M15: an alarm extension's
+// timeInCurrentState, BAlarmSourceExt flags 3 = readonly|transient, ticks every second). It is a
+// frozen slot whose DECLARED flags hold t transient, or any slot whose instance flags hold t.
+// Readonly alone is NOT runtime: Niagara marks a frozen struct readonly to mean "not replaceable"
+// while its children are edited in place (BDateSchedule.yearSchedule, BDailySchedule.day), and
+// persisted readonly state (alarmState, toOffnormalTimes) is a real change worth a new dry run.
+// So this rule is its own, not computedFlags (keepsOutput's "rt" rule for an out).
+//
+// A runtime slot stays in the snapshot the journal keeps and a rollback re-adds, as before; only
+// its value, and the values below it, leave the plan the token hashes, where it is marked
+// "runtime": true. Names and types stay, so a slot or child added, removed or retyped still
+// changes the hash, and so does any configuration value.
+const runtimeFlags = "t"
 
 // runtimeSlot says whether child, loaded under node, is a runtime slot. A contract that cannot be
 // read leaves only the instance rule: a slot it cannot classify stays hashed (the safe side).
 func (s *snapshot) runtimeSlot(node, child *pyjson.Object) bool {
-	if instance, _ := get(child, "f").(string); strings.Contains(instance, "t") {
+	if instance, _ := get(child, "f").(string); strings.ContainsAny(instance, runtimeFlags) {
 		return true
 	}
 	if s.ct == nil {
@@ -31,13 +36,13 @@ func (s *snapshot) runtimeSlot(node, child *pyjson.Object) bool {
 		return false
 	}
 	declared, _ := get(slot, "f").(string)
-	return strings.ContainsAny(declared, computedFlags)
+	return strings.ContainsAny(declared, runtimeFlags)
 }
 
 // msgRuntimeUnhashed is the plan note of a snapshot that holds runtime slots.
-const msgRuntimeUnhashed = "runtime slots (declared readonly or transient, such as an alarm extension's " +
-	"timeInCurrentState) are shown without their values and are not part of the confirmation hash, " +
-	"so their ticking does not invalidate the token; the journal and n4_rollback keep them as " +
+const msgRuntimeUnhashed = "runtime slots (transient, never persisted, such as an alarm extension's " +
+	"timeInCurrentState) are marked runtime and shown without their values: they are not part of the " +
+	"confirmation hash, so their ticking does not invalidate the token; the journal and n4_rollback keep them as " +
 	"captured when the confirmed remove runs"
 
 // hashedAdd is add, an inverse add op whose body the snapshot took, with the value of every
@@ -54,6 +59,7 @@ func (s *snapshot) hashedAdd(add *pyjson.Object) *pyjson.Object {
 
 // unvalued is a copy of node without the values of runtime slots (all values when below one).
 func (s *snapshot) unvalued(node *pyjson.Object, below bool) *pyjson.Object {
+	top := s.runtime[node] && !below
 	below = below || s.runtime[node]
 	out := pyjson.NewObject()
 	for _, k := range node.Keys() {
@@ -74,6 +80,9 @@ func (s *snapshot) unvalued(node *pyjson.Object, below bool) *pyjson.Object {
 			v = copied
 		}
 		out.Set(k, v)
+	}
+	if top { // the marker sits on the runtime slot itself, never on its children
+		out.Set("runtime", true)
 	}
 	return out
 }
