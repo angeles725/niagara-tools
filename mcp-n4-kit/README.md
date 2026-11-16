@@ -1334,7 +1334,9 @@ write. A destructive write (`n4_remove_component`, `n4_rollback`, `n4_save_stati
 `--execute` that misses either is refused with exit 2 before the server starts, naming the line.
 `"execute"` on a line without `"write": true` is a usage error. A run with writes says on stderr
 whether they execute. Output is one JSON line per request (`tool`, `phase`, `error`, `result`);
-credential values are masked; the run stops with exit 1 at the first tool error. The server
+credential values are masked; the run stops with exit 1 at the first tool error. A dry-run-only
+run exits 0 like an executed one: a caller that meant to execute checks for `"phase":"execute"`
+lines in the output (or for the stderr line `n4call: dry run only`), never the exit code alone. The server
 command line after `--` is the operator's: scopes, tier opt-ins and station homes are whatever it
 names, n4call adds nothing.
 

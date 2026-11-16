@@ -1,9 +1,10 @@
 // Command n4call is the bench client of the mcp-n4 server: it starts the server command given
-// after "--" over stdio and runs the tool calls of a JSON-lines file in one session, a write as
-// dry run -> confirmation token -> execute. One JSON line of output per request; credential
-// values are masked.
+// after "--" over stdio and runs the tool calls of a JSON-lines file in one session. A write is a
+// dry run only unless --execute is given, then dry run -> confirmation token -> execute; a
+// destructive write also needs --allow-destructive and its own line's "execute": true. One JSON
+// line of output per request; credential values are masked.
 //
-//	n4call --calls FILE [--dry-run-only] [--call-timeout SECONDS] -- SERVER [SERVER ARGS...]
+//	n4call --calls FILE [--execute [--allow-destructive] | --dry-run-only] [--call-timeout SECONDS] -- SERVER [SERVER ARGS...]
 //
 // Exit: 0 every call answered without error; 1 a tool error or a server failure; 2 usage.
 package main
