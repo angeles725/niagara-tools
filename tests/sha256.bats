@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-# sha256.bats — scripts/lib/sha256.sh, the shared digest helper of install-skill.sh and
-# check-skill-drift.sh (quality round 8 T8a: one copy instead of two).
+# sha256.bats — scripts/lib/sha256.sh, the digest helper whose remaining caller is
+# scripts/ci-local.sh (the two skill launchers no longer need a hash tool).
 # Every test sources the lib under a PATH it builds, so the host's hash tools never leak in.
 
 setup() {
