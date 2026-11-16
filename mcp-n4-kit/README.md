@@ -528,7 +528,7 @@ Destructive tools use the same pipeline:
   link is stored on its target, so the subtree load cannot see them): by default it
   scans the `--write-scope` prefix that holds `parent_ord` to depth 6, and
   `link_scan_ord` (equal to or under that prefix; any other root refuses) narrows it; a
-  root holding more than 5000 nodes to depth 6 refuses as too large to scan and asks for a
+  root holding more than 100000 nodes to depth 6 refuses as too large to scan and asks for a
   narrower `link_scan_ord` (the scan is never skipped). A link whose target is inside the
   removed component is internal at any depth. Links stored outside the
   scanned root are not detected, and the note names the root (a link outside a narrowed

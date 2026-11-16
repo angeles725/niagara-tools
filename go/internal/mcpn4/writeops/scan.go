@@ -13,11 +13,17 @@ import (
 // LinkScanDepth is LINK_SCAN_DEPTH: how deep the optional outgoing-link scan loads.
 const LinkScanDepth = 6
 
-// LinkScanNodeBudget is the most nodes (components, slots and links, as the load returns them)
+// DefaultLinkScanNodeBudget is the most nodes (components, slots and links, as the load returns them)
 // the remove's link scan matches before it refuses and asks for a narrower link_scan_ord (native
-// review R4-unbounded-default-scan): a work folder of a few hundred components fits, a station
-// root or a whole Drivers tree does not, and those make every remove dry run slow.
-const LinkScanNodeBudget = 5000
+// review R4-unbounded-default-scan). The lab station's whole root loads 11894 entries to depth 6
+// (live 2026-11-15), so the budget is about ten times that: a station root of that size still
+// scans, and only a very large tree (a big Drivers network) refuses and asks for link_scan_ord.
+// The tree is loaded before it is counted, so this bounds the matching, not the load.
+const DefaultLinkScanNodeBudget = 100000
+
+// LinkScanNodeBudget is the budget in force: DefaultLinkScanNodeBudget, a var only so tests can
+// lower it (and restore it) instead of building a tree of that size.
+var LinkScanNodeBudget = DefaultLinkScanNodeBudget
 
 // scanNotes is the end of _remove_plan: with link_scan_ord, the links from the subtree into
 // components outside it (keys gains outgoing_links_broken); without, a note when the subtree

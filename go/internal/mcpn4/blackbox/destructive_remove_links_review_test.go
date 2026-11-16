@@ -1,11 +1,10 @@
 package blackbox
 
 // The native review of the outgoing-link scan (bench retro 2026-11-15 deltas 3 and 20):
-// link_scan_ord only narrows, the rollback's budget refusal names the outgoing links, and a scope
-// root too large to scan refuses (the deep internal link is pinned in remove_links_internal_test).
+// link_scan_ord only narrows and the rollback's budget refusal names the outgoing links (the deep
+// internal link and the too-large root are pinned in writeops' remove_links tests).
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -45,22 +44,17 @@ func TestTheRollbackBudgetRefusalNamesTheOutgoingLinks(t *testing.T) {
 	}
 }
 
-func TestAScopeRootTooLargeToScanRefusesAndLinkScanOrdNarrowsIt(t *testing.T) {
+// The refusal of a scope root too large to scan is pinned in writeops/remove_links_budget_test.go
+// with a lowered budget; here only the narrowing it asks for, which needs no big tree.
+func TestLinkScanOrdInsideTheDefaultRootProceeds(t *testing.T) {
 	d := destructiveRig(t, nil)
-	big := d.Add("3", "Big", "baja:Folder")
-	for i := 0; i <= 5000; i++ {
-		d.Add(big.Handle, "F"+strconv.Itoa(i), "baja:Folder")
-	}
 	area := d.Add("3", "Area", "baja:Folder")
 	k := d.Add("3", "K", "")
-	text := d.Srv.Err("n4_remove_component", removeArgs(k.Name))
-	for _, want := range []string{"scope root " + Folder, "too large to scan", "5000", "link_scan_ord", "refusing"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("the refusal misses %q: %s", want, text)
-		}
-	}
 	args := Args{"parent_ord": Folder, "name": k.Name, "link_scan_ord": Folder + "/" + area.Name}
 	reply := d.Srv.Dry("n4_remove_component", args)
+	if len(noteWith(planOf(reply)["notes"], "scanned "+Folder+"/"+area.Name+" (link_scan_ord)")) != 1 {
+		t.Errorf("notes = %v", planOf(reply)["notes"])
+	}
 	d.Srv.OK("n4_remove_component", Execute(args, reply["confirmation_token"]))
 	if d.node(k.Name) != nil {
 		t.Errorf("K is still there")

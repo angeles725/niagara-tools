@@ -912,7 +912,7 @@
      },
      "link_scan_ord": {
       "type": "string",
-      "description": "Optional ORD equal to or under the write-scope prefix that holds parent_ord; it narrows the link scan, never widens or moves it. By default the scan covers that prefix; when the prefix holds more than 5000 nodes to depth 6 the dry run refuses and asks for this narrower root"
+      "description": "Optional ORD equal to or under the write-scope prefix that holds parent_ord; it narrows the link scan, never widens or moves it. By default the scan covers that prefix; when the prefix holds more than 100000 nodes to depth 6 the dry run refuses and asks for this narrower root"
      },
      "acknowledge_links": {
       "type": "boolean",
