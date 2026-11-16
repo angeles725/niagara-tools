@@ -78,7 +78,7 @@ func TestInstallRefusesWhatItCannotCheckOrWrite(t *testing.T) {
 	}
 	code, out, errText = f.install()
 	expect(t, "target is a directory", code, out, errText, 3, "",
-		"install-skill: cannot write "+dirTarget+": is a directory\n")
+		"install-skill: refusing to install: not a regular file: "+dirTarget+" (move it away, then re-run)\n")
 	if err := os.Remove(dirTarget); err != nil {
 		t.Fatal(err)
 	}

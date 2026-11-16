@@ -377,3 +377,13 @@ make_tree() {
   [ "$status" -eq 2 ]
   [[ "$output" == *"usage: install-skill.sh "* ]]
 }
+
+# HS8 — T4(3) residual: a file that cannot be placed is refused before the first write.
+@test "HS8: a prompts/ that is a file is refused (exit 3) before SKILL.md is written" {
+  mkdir -p "$TEST_HOME/.pi/agent"
+  printf 'a file\n' > "$TEST_HOME/.pi/agent/prompts"
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4 --harness pi
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"refusing to install: not a directory: $TEST_HOME/.pi/agent/prompts (move it away, then re-run)"* ]]
+  [ ! -e "$TEST_HOME/.pi/agent/skills" ]
+}

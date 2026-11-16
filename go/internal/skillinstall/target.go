@@ -18,7 +18,7 @@ type unit struct {
 	data           []byte
 	copyFrom       bool     // write with installtools.Copy(source, target); else write data
 	rendered       bool     // data is source rendered for this harness (the prompt file)
-	links          []string // paths that must not be symbolic links before the write
+	links          []string // paths that must not be symbolic links before the write: its directories, then target
 }
 
 // planned is a unit with the state of its target: installed (present) and its digest.
@@ -55,6 +55,21 @@ func symlinkIn(paths []string) string {
 		if st, err := os.Lstat(path); err == nil && st.Mode()&os.ModeSymlink != 0 {
 			return path
 		}
+	}
+	return ""
+}
+
+// unplaceable is why u cannot be written, "" when it can: a non-directory where one of its directories
+// must be, or a target that exists and is not a regular file. A path that cannot be examined is left to
+// the write, as before.
+func unplaceable(u unit) string {
+	for _, dir := range u.links[:len(u.links)-1] { // every link but the last is a directory on the way
+		if st, err := os.Lstat(dir); err == nil && !st.IsDir() {
+			return "not a directory: " + dir
+		}
+	}
+	if st, err := os.Lstat(u.target); err == nil && !st.Mode().IsRegular() {
+		return "not a regular file: " + u.target
 	}
 	return ""
 }

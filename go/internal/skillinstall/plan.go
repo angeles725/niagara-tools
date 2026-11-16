@@ -42,8 +42,9 @@ func planInstall(o installOptions, selected []harness, tracked string, trackedDa
 	return steps, present, exitOK
 }
 
-// runInstall carries out a plan: --dry-run reports it; otherwise every diverged copy without --force and
-// every symbolic link on the way is refused before the first write, then the files are placed in order.
+// runInstall carries out a plan: --dry-run reports it; otherwise every diverged copy without --force,
+// every symbolic link on the way and every file that cannot be placed (unplaceable) is refused before the
+// first write, then the files are placed in order.
 func runInstall(steps []step, o installOptions, s cli.Stdio) int {
 	files := make([]planned, 0, len(steps))
 	for _, st := range steps {
@@ -68,6 +69,10 @@ func runInstall(steps []step, o installOptions, s cli.Stdio) int {
 			}
 			if link := symlinkIn(p.u.links); link != "" {
 				fmt.Fprintf(s.Err, "%s: refusing to write through a symbolic link: %s (remove the link, then re-run)\n", installTool, link)
+				return exitEnv
+			}
+			if reason := unplaceable(p.u); reason != "" {
+				fmt.Fprintf(s.Err, "%s: refusing to install: %s (move it away, then re-run)\n", installTool, reason)
 				return exitEnv
 			}
 		}
