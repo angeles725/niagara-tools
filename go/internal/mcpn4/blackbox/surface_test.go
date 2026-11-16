@@ -28,6 +28,7 @@ var readTools = []string{
 	"n4_station_health",
 	"n4_read_history",
 	"n4_license_info",
+	"n4_station_runtime",
 	"n4_read_alarms",
 	"n4_list_alarm_classes",
 	"n4_commissioning_report",
