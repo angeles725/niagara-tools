@@ -260,8 +260,10 @@ Before `git commit`:
       the test keyword (`Duplicate test name(s)`), which 1.14 accepts. Its host-budget gate fails `/` or `/mnt/c`
       above 95% used (`--disk-pct 95`; the user's rule of 2026-11-16); each disk row names the percent, the free
       bytes and the limit. host-budget also takes a free-space floor, `--disk-min-free <size>`, unused by default.
-- [ ] Before a push, `scripts/ci-local.sh --changed` runs the pinned shellcheck (over CI's whole shellcheck file
-      set as the change leaves it, when one of its files changed: a sourced lib is read with its sourcer), the kit's bats lints
+- [ ] Before a push, `scripts/ci-local.sh --changed` runs the pinned shellcheck (over the changed files of CI's
+      shellcheck set together with the files they source and the files that source them, transitively, as the
+      change leaves them, so a sourced lib is read with its sourcer; CI's whole set, with a stderr line naming
+      `<file>:<line>`, only when a `.`/`source` path cannot be resolved), the kit's bats lints
       (lint-bats-errexit, the BEX-kit case, and `ci-steps lint-bats-heredoc`) and `gofmt -l` over the files changed
       against origin/main, work tree and untracked files included; `--range <from>..<to>` reads a commit range
       instead. The pre-push gate runs it on every pushed range (§ 6.1). A fixture written through a here-document
