@@ -39,6 +39,18 @@ func TestCreateOfAnUnknownTypeIsRefusedByItsName(t *testing.T) {
 	}
 }
 
+// A 4.15.6.20 station answers loadTypes for a type it does not know with an error entry
+// ({"isErr": true, "m": spec, "c": "", "s": ""}, seen live on the lab station), not by leaving it out.
+func TestCreateOfATypeTheStationAnswersAsAnErrorIsRefusedByItsName(t *testing.T) {
+	r := verifiedRig(t)
+	r.Station.SetRegistry(map[string]any{"kitControl:NoSuchType": map[string]any{"c": "", "isErr": true, "m": "kitControl:NoSuchType", "s": ""}})
+	refusedDry(t, r, "n4_create_component", withArgs(createPump, Args{"type": "kitControl:NoSuchType"}),
+		"kitControl:NoSuchType", "not known to the station")
+	if len(r.Children()) != 0 || len(r.Lines("journal.jsonl")) != 0 {
+		t.Errorf("children %v journal %d", r.Children(), len(r.Lines("journal.jsonl")))
+	}
+}
+
 func TestLinkToAMissingSlotIsRefused(t *testing.T) {
 	r, _, _, args := linkRig(t)
 	r.Station.SetRegistry(map[string]any{"kitControl:NumericConst": numericConst})

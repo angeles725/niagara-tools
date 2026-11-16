@@ -24,7 +24,8 @@ func typesKnown(c plan.Client, specs ...string) error {
 			continue
 		}
 		var unknown *plan.UnansweredType
-		if err := contracts.Load([]string{spec}); errors.As(err, &unknown) {
+		errored, err := contracts.Errored(spec)
+		if errors.As(err, &unknown) || errored {
 			return plan.ToolError(fmt.Sprintf(msgUnknownType, spec))
 		}
 	}
