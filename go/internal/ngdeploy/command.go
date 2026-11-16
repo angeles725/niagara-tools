@@ -7,7 +7,7 @@
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
 // file), config.go (required settings and paths), backup.go and purge.go, annotations.go (the slotomatic
 // reminder), slotomatic.go, build.go, version.go and schema.go (the two prechecks), verify.go, gate.go,
-// copy.go and restore.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder). The data lives apart: exit.go, messages.go, patterns.go, usage.txt.
+// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder). The data lives apart: exit.go, messages.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy
 

@@ -42,7 +42,8 @@ The env file and the flags:
   An option variable in the env file (MODE, KEEP_N, FULL_BACKUP, NO_DEPLOY, WITH_SLOTOMATIC, STRICT_SLOTOMATIC,
   FIRST_DEPLOY, ACCEPT_LOSSY) sets that option; the flag of the same option, when given, wins over it.
   NO_GATE=1 and NO_BACKUP=1 are refused in the env file (exit 10, with file and line) unless --no-gate or
-  --no-backup is given: the file alone does not switch the verify-module gate or the backup off.
+  --no-backup is given. Only these two keys are refused: MODE=B (a mode without the gate) and
+  VERIFY_MODULE_BIN in the env file are read as before.
 
 Optional:
   BUILD_ID             — when set, verifies index.html in ux jar contains ?v=$BUILD_ID
@@ -67,8 +68,11 @@ Exit codes:
       renamed in, and a failure is undone from the jars aside, with or without a backup. The ERROR line says
       what the station holds: the jars it held before the deploy (nothing to do); or, only when a jar aside
       could not be moved back, which jar is NEW or MISSING and the .ng-deploy-old file that holds its previous
-      bytes, to rename back before the station restarts. A .ng-deploy-old file left by a killed deploy whose
-      jar is missing also stops the deploy here, before anything is copied: rename it back or remove it
+      bytes, to rename back before the station restarts. Refused here before anything is copied or changed:
+      a station that holds a .ng-deploy-old file for the -rt or -ux jar (a deploy that did not finish left
+      it; ng-deploy never deletes one it did not create: rename it over its jar to go back, or delete it to
+      keep what is there), and a directory or a dangling link under the name of a jar
+  130, 143  SIGINT or SIGTERM during the copy: the copy was undone as for exit 40 and the line says so
   41  the jars were copied, but the deployed commit could not be read (git rev-parse HEAD) or written to
       .last-deploy-sha (a record that could be written before the copy and no longer can): restart as the
       last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional)

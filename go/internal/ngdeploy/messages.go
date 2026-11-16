@@ -98,16 +98,32 @@ const (
 	msgCopyFailed    = "copy failed for %s; %s"
 	outcomeUnchanged = "nothing was replaced: the station holds the jars it held before the deploy"
 	outcomeUndone    = "what was already replaced was put back: the station holds the jars it held before the deploy"
-	// outcomeStale takes the file a killed deploy left aside and, twice, the jar that is missing.
-	outcomeStale = "%s is in the station and %s is not: a deploy that was killed left the previous jar under that name; rename it back to %s, or remove it, then deploy again (nothing was copied)"
-	// outcomeMixed takes the state of each jar (below), joined by ", ", and the suffix of the files aside.
-	outcomeMixed  = "the station does NOT hold the jars it held before the deploy: %s; put each named %s file back under its jar name before the station restarts"
+	// msgCopyInterrupted takes SIGINT or SIGTERM and the same outcomes; the exit code is 128 + the signal.
+	msgCopyInterrupted = "copy interrupted (%s); %s"
+	// whyNotAJar takes what the station holds under the name of a jar (the kinds below).
+	whyNotAJar     = "the station holds %s under that name, not a jar file"
+	kindDirectory  = "a directory"
+	kindOther      = "something that is not a regular file"
+	kindLinkTo     = "a symbolic link to "
+	kindDangling   = "a symbolic link to nothing"
+	kindUnreadable = "something that cannot be examined"
+	// outcomeMixed takes the state of each jar (below), joined by ", "; mixedPutBack follows it when a
+	// state names a file aside, and takes the suffix of those files.
+	outcomeMixed  = "the station does NOT hold the jars it held before the deploy: %s"
+	mixedPutBack  = "; put each named %s file back under its jar name before the station restarts"
 	stateNew      = "%s is the NEW jar and the previous one is in %s (%s)" // the jar, the file aside, why it was not moved back
 	stateMissing  = "%s is MISSING and the previous one is in %s (%s)"
-	stateExtra    = "%s, which the station did not have, could not be removed (%s) and must be removed"
+	stateExtra    = "%s, which the station did not have, could not be removed (%s): remove it before the station restarts"
 	statePrevious = "%s is the previous jar"
-	// warnAsideLeft takes the file aside that a finished copy could not remove.
-	warnAsideLeft = "WARN the jars are copied, but %s (the previous jar) could not be removed: %s; the next deploy removes it"
+	// warnAsideLeft takes the file aside that a finished copy could not remove, and why.
+	warnAsideLeft = "WARN the jars are copied, but the previous jar %s could not be removed (%s): delete it, the next deploy refuses while it is in the station"
+	// msgAsideFound takes the station directory; one state line per jar and the ways out follow it,
+	// indented. The states take the jar, its file aside and the suffix; the ways out the suffix twice.
+	msgAsideFound     = "copy refused: a deploy that did not finish left previous jars aside in %s; nothing was copied or changed"
+	stateAsideWithJar = "%s present, %s present: the jar may be the new one of that deploy; the %s file is the previous jar"
+	stateAsideNoJar   = "%s missing, %s present: the %s file is the previous jar"
+	msgAsideWaysOut   = "to put the previous jars back, rename each %s file over its jar; to keep what is there, delete the %s files; then deploy again"
+	indent            = "  "
 	// msgRecordFailed takes the record file and one of the three reasons after it.
 	msgRecordFailed = "jars copied, but the deployed commit was not recorded in %s: %s (the next annotation check cannot start at this deploy; SLOTOMATIC_DETECTION=off makes the record optional)"
 	// msgRecordUnwritable is the same record found unwritable before the copy; it takes the file and whyNotWritten.

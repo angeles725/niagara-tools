@@ -193,31 +193,3 @@ func TestARenameBackThatFailsNamesTheFileThatHoldsThePreviousJar(t *testing.T) {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
 }
-
-// A jar moved aside by a deploy that was killed may be the only copy of the previous jar: when the jar
-// itself is missing the deploy refuses before it copies anything, and the file is left alone.
-func TestAStaleAsideFileWithoutItsJarIsRefused(t *testing.T) {
-	f := newFixture(t)
-	f.write(f.deployedJar("rt"), "rtjar") // the same bytes: no version to compare
-	f.write(f.deployedJar("ux")+asideSuffix, "the previous ux jar")
-	code := f.run("--no-backup")
-	want := warnNoBackup + "[ng-deploy] ERROR copy failed for demo-ux.jar; demo-ux.jar.ng-deploy-old is in the station and demo-ux.jar is not: " +
-		"a deploy that was killed left the previous jar under that name; rename it back to demo-ux.jar, or remove it, then deploy again (nothing was copied)\n"
-	left, _ := filepath.Glob(f.modules + "/*")
-	if code != ExitCopy || f.err != want || len(left) != 2 || f.read(f.deployedJar("ux")+asideSuffix) != "the previous ux jar" || f.read(f.deployedJar("rt")) != "rtjar" {
-		t.Errorf("exit %d, stderr %q, station %v", code, f.err, left)
-	}
-}
-
-// With the jar there, a stale file aside is only a leftover: it is removed and the deploy goes on.
-func TestAStaleAsideFileBesideItsJarIsRemoved(t *testing.T) {
-	f := newFixture(t)
-	upgrade(t, f)
-	f.write(f.deployedJar("rt")+asideSuffix, "left by a killed run")
-	f.write(f.deployedJar("ux")+asideSuffix+"/inside", "left by a killed run, and a directory")
-	f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] copy ok\n")
-	f.station("rtjar", "uxjar", 0o640)
-	if f.err != warnNoBackup {
-		t.Errorf("stderr %q", f.err)
-	}
-}

@@ -870,17 +870,20 @@ STUB
     [ -z "$output" ]
 }
 
-@test "NG-copy-stale-old: a jar left aside by a killed deploy is refused when its jar is missing (exit 40), removed when it is there" {
+@test "NG-copy-stale-old: a jar left aside by a deploy that did not finish is never deleted; the deploy refuses (exit 40) and changes nothing" {
     _gate_env; _fake_gate 0
     printf 'previous' > "$TMPDIR_T/modules/test-ux.jar.ng-deploy-old"
+    : > "$TMPDIR_T/modules/test-ux.jar"   # the same bytes as the built jar: beside its jar the file aside still stops the deploy
+    before="$(cd "$TMPDIR_T/modules" && ls -la --time-style=+ . && cat ./*)"
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
     [ "$status" -eq 40 ]
-    [[ "$output" == *"copy failed for test-ux.jar; test-ux.jar.ng-deploy-old is in the station and test-ux.jar is not"* ]]
-    [[ "$output" == *"(nothing was copied)"* ]]
-    [ "$(cat "$TMPDIR_T/modules/test-ux.jar.ng-deploy-old")" = previous ]
-    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+    [[ "$output" == *"copy refused: a deploy that did not finish left previous jars aside in $TMPDIR_T/modules; nothing was copied or changed"* ]]
+    [[ "$output" == *"test-ux.jar present, test-ux.jar.ng-deploy-old present"* ]]
+    [[ "$output" == *"rename each .ng-deploy-old file over its jar"* ]]
+    [[ "$output" == *"delete the .ng-deploy-old files"* ]]
+    [ "$(cd "$TMPDIR_T/modules" && ls -la --time-style=+ . && cat ./*)" = "$before" ]
 
-    : > "$TMPDIR_T/modules/test-ux.jar"   # the same bytes as the built jar: the file aside is only a leftover
+    rm "$TMPDIR_T/modules/test-ux.jar.ng-deploy-old"   # the operator keeps what is there
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
     [ "$status" -eq 0 ]
     run find "$TMPDIR_T/modules" -name '*.ng-deploy-*'

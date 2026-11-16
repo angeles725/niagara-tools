@@ -1,6 +1,9 @@
 package ngdeploy
 
-import "regexp"
+import (
+	"regexp"
+	"syscall"
+)
 
 // What the deploy looks for and builds, apart from the code that uses it.
 var (
@@ -48,6 +51,12 @@ const (
 
 // profilesOf lists the jar profiles each mode builds and deploys, in order.
 var profilesOf = map[string][]string{"A": {"rt", "ux"}, "B": {"ux"}, "C": {"rt"}}
+
+// deployable are the profiles whose jars the tool can put in a station, whatever the mode.
+var deployable = []string{"rt", "ux"}
+
+// signalNames are the signals the copy watches for, as a message names them.
+var signalNames = map[syscall.Signal]string{syscall.SIGINT: "SIGINT", syscall.SIGTERM: "SIGTERM"}
 
 // backupProfiles are the jars of the module a lightweight backup archives when they are deployed.
 var backupProfiles = []string{"rt", "ux", "wb"}
