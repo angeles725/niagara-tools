@@ -9,7 +9,7 @@
 - The links of a removed simple slot are checked like a component's: a link it sources into another component
   refuses the plan until `acknowledge_links: true`, is listed in `outgoing_links_broken` and is re-created by
   `n4_rollback` (only the links read from that slot: the holder's other links never refuse a tag remove); a link of
-  the holder that writes the slot is recorded as an `unlinked_input` the rollback reports. A struct slot (a
+  the holder that writes the slot is recorded as an `unlinked_input` with the slot's last value (`prior`), which the rollback reports. A struct slot (a
   `StatusNumeric`) is snapshotted with its fields whatever depth the parent was loaded at.
 - `n4_rollback` accepts the escaped slot names such a remove records (`tst$3acap`) in an outgoing link or an unlinked
   input, and its read-back of a re-created outgoing link now finds a `baja:ConversionLink` (a `Double` into a

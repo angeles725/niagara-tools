@@ -78,14 +78,13 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if contractsNote != "" {
 		notes = append(notes, contractsNote)
 	}
-	slot := ""
+	slot, anyPrior := "", false
 	if plain && scope != nil { // the Python port's path (no scope) keeps its handles
 		slot = nm
-		if inverse, notes, err = plainSlotLinks(holder, nm, parentH, s.handles, inverse, notes); err != nil {
+		if inverse, notes, anyPrior, err = plainSlotLinks(holder, body, nm, parentH, s.handles, inverse, notes); err != nil {
 			return nil, err
 		}
 	}
-	anyPrior := false
 	for _, l := range s.links {
 		tail, err := sourceTail(obj("sourceOrd", l.sourceOrd))
 		if err != nil {

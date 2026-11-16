@@ -35,11 +35,13 @@ func childNodes(c plan.Client, parentH any, nm, childOrd string) (nodes, holder 
 // found by the scan as links from the holder (parentH, path "") read from nm only (linkScan's
 // slot filter), and each link of the holder that writes nm is recorded as an unlinked_input, as
 // a component's linked input is: the remove drops it and a rollback does not re-create it.
-func plainSlotLinks(holder *pyjson.Object, nm string, parentH any, handles map[string]string, inverse, notes []any) ([]any, []any, error) {
+func plainSlotLinks(holder, body *pyjson.Object, nm string, parentH any, handles map[string]string,
+	inverse, notes []any) ([]any, []any, bool, error) {
 	key, err := pyjson.DictKey(parentH)
 	if err != nil {
-		return nil, nil, unhashable(parentH)
+		return nil, nil, false, unhashable(parentH)
 	}
+	linked := false
 	handles[key] = ""
 	for _, child := range kidsOf(box.Node(holder, ""), 1) {
 		if !isLink(get(child, "t")) {
@@ -52,12 +54,13 @@ func plainSlotLinks(holder *pyjson.Object, nm string, parentH any, handles map[s
 		if get(slots, "targetSlotName") != nm {
 			continue
 		}
-		spec := obj("source_slot", get(slots, "sourceSlotName"), "target_path", "", "target_slot", nm)
+		// its last value is the snapshot body, as a component's linked input keeps its own (prior)
+		spec := obj("source_slot", get(slots, "sourceSlotName"), "target_path", "", "target_slot", nm, "prior", body)
 		notes = append(notes, "link into "+pyjson.StrRepr(nm)+" ("+nm+" <- "+pyjson.Str(get(slots, "sourceSlotName"))+
-			") comes from outside the removed subtree: not restored")
-		inverse = append(inverse, obj("unlinked_input", spec))
+			") comes from outside the removed subtree: not restored; its last value is recorded and reported by n4_rollback")
+		inverse, linked = append(inverse, obj("unlinked_input", spec)), true
 	}
-	return inverse, notes, nil
+	return inverse, notes, linked, nil
 }
 
 // fromSlot keeps the scanned links whose source slot is slot ("" keeps them all): a plain slot's
