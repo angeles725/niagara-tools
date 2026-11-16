@@ -91,7 +91,7 @@
 # Mutation: LSV2h -- dropping the re-read check WARNs `catch (NumberFormatException e) { return range.get(tag); }`
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 # Mutation: TC-MAP6 -- dropping the handler-size check, or reading a strict module as legacy (WARN), lets an 83-line
-#   servlet method pass a strict fresh dashboard with exit 0 (tests/scaffold-module.bats TC-MAP6, no skip; both observed)
+#   servlet method pass a strict fresh dashboard with exit 0 (tests/scaffold-module-map.bats TC-MAP6, no skip; both observed)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
