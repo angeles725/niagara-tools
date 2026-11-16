@@ -20,8 +20,6 @@ func flagsRigNote(slot, current, requested string) string {
 	return "flags of slot '" + slot + "' on " + ext + ": current " + current + " -> requested " + requested
 }
 
-const flagsRigUnproven = "setting slot flags is not yet proven on a live station: try it on a scratch slot first"
-
 func flagsRigPlan(t *testing.T, c plan.Client, slot, flags string) *plan.Planned {
 	t.Helper()
 	p, err := writeops.SetFlags.Plan(c, flagsRigArgs(slot, flags))
@@ -71,7 +69,7 @@ func TestSetFlagsPlansTheOpTheExactInverseAndNamesBothSets(t *testing.T) {
 			if len(p.Inverse) != 1 || js(t, p.Inverse[0]) != tc.inverse {
 				t.Errorf("inverse\n got  %s\n want %s", js(t, p.Inverse), tc.inverse)
 			}
-			if got, want := js(t, p.Notes), js(t, []any{tc.note, flagsRigUnproven}); got != want {
+			if got, want := js(t, p.Notes), js(t, []any{tc.note}); got != want {
 				t.Errorf("notes\n got  %s\n want %s", got, want)
 			}
 			if got := js(t, p.Targets); got != `{"`+ext+`": "42"}` { // what a rollback checks

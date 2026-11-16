@@ -14,8 +14,6 @@ import (
 // flagsAccepted is the station's reply to a set-flags op (syncToMaster: one entry per op, its id).
 var flagsAccepted = []any{map[string]any{"id": "f"}}
 
-const flagsUnprovenNote = "setting slot flags is not yet proven on a live station: try it on a scratch slot first"
-
 func TestSetFlagsDryRunIsTheDefaultShowsBothSetsAndTouchesNothing(t *testing.T) {
 	f := newFlagsRig(t, "h")
 	reply := f.Srv.OK("n4_set_flags", f.args("oh")) // no dry_run argument
@@ -27,8 +25,7 @@ func TestSetFlagsDryRunIsTheDefaultShowsBothSetsAndTouchesNothing(t *testing.T) 
 	if !same(plan["ops"], []any{f.op("ho")}) || !same(plan["inverse"], []any{f.op("h")}) || plan["tool"] != "n4_set_flags" {
 		t.Errorf("plan = %v", plan)
 	}
-	wantNotes := []any{"flags of slot 'note' on " + f.ord + `: current "h" (h hidden) -> requested "ho" (h hidden, o operator)`,
-		flagsUnprovenNote}
+	wantNotes := []any{"flags of slot 'note' on " + f.ord + `: current "h" (h hidden) -> requested "ho" (h hidden, o operator)`}
 	if !reflect.DeepEqual(plan["notes"], wantNotes) {
 		t.Errorf("notes\n got  %v\n want %v", plan["notes"], wantNotes)
 	}

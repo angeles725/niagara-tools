@@ -27,7 +27,7 @@
 | 6 | The copy verdict compares the copy with the SOURCE configuration, not only with the planned add op: the read-back already compares type, value and flags (`diffTree`), but a slot the plan itself dropped is missing from both sides, so the loss of delta 5 could not surface. A source child that is neither in the add op nor in the plan notes is a difference. PARTIAL: applied as a plan invariant (`copy_accounting_test.go`: every source child is copied, listed in the notes or bare; it fails when the flag guard of delta 5 is removed); the runtime verdict still compares the read-back with the plan, so comparing it with the source stays proposed | `go/internal/mcpn4/writeops/copy_readback.go` · `METHODOLOGY.md · section 2` | the batch of delta 5 reported `"differences": []` | defect | high |
 | 7 | The rollback of a removed nested subtree stops being probe-only in `live-smoke`: it gates the exit code, and the plan text no longer says "not yet proven live". APPLIED | `go/internal/mcpn4/livesmoke` (scenario, plan) · `README.md · Live smoke test` | step `rollback folder removal`: verified, `relinks: {restored: 3, skipped: 0}` on 4.15.6.20 | doctrine | medium |
 | 8 | Section 5 says what the tier B PoC is in practice (a full `live-smoke --apply` on a scratch or laboratory station of the same build) and lists the builds it has passed on, starting with 4.15.6.20. APPLIED in this pass | `METHODOLOGY.md · section 5` | report of the run: `ok: true`, 22 verified | doctrine | medium |
-| 9 | A flags tool (`n4_set_flags`, dry run and token like every write) so an integrator flag can be set, proven and repaired without Workbench; today a flag specimen needs an offline edit of `config.bog` with the station stopped. APPLIED (`n4_set_flags`: plan with both flag sets, exact inverse, read-back verdict, rollback); not yet proven on a live station | `go/internal/mcpn4/writeops/setflags.go` · `README.md · Writing safely` | the specimen for delta 5 was made by stopping the station and editing the bog | tool | low |
+| 9 | A flags tool (`n4_set_flags`, dry run and token like every write) so an integrator flag can be set, proven and repaired without Workbench; today a flag specimen needs an offline edit of `config.bog` with the station stopped. APPLIED (`n4_set_flags`: plan with both flag sets, exact inverse, read-back verdict, rollback). Live on 4.15.6.20 (2026-11-15, scratch folder `Flags648`, removed afterwards): dynamic slot `nw` `""` to `h`, frozen property `in10` `ts` to `ths`, frozen action `set` `o` to `ho`, all `verified`; after `n4_save_station` the `config.bog` held `<p n="nw" f="h"`, `<p n="in10" f="ths"/>`, `<a n="set" f="ho"/>`; the three rollbacks read back `verified` and the next save left none of the three `f` attributes | `go/internal/mcpn4/writeops/setflags.go` · `README.md · Writing safely` | the specimen for delta 5 was made by stopping the station and editing the bog | tool | low |
 
 ## Already covered (dedupe)
 
@@ -37,7 +37,7 @@
 
 ## Honest verdict
 
-Eight deltas applied (9 against the fake station only, not yet proven on a live station) and one applied in part (6). The one that matters most is 5 with 6: the tool reported `verified`
+Eight deltas applied (9 proven live on 2026-11-15) and one applied in part (6). The one that matters most is 5 with 6: the tool reported `verified`
 over a copy that had lost configuration, and nothing in the audit could show it.
 
 INDEX row: | 2026-11-14-lab-415-bench-session.md | lab-415 | 2026-11-14 | pending | 9 |

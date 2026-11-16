@@ -348,8 +348,9 @@ Tool rules:
   one, and a slot whose current flags cannot be read (no flags on the slot and no
   readable type contract), because no faithful inverse exists. The read-back loads
   the slot again: `verified` only when the flags it holds are the requested set,
-  else `mismatch` with `requested` and `observed`. Not yet proven on a live station
-  (METHODOLOGY section 2, probe-only elements): try it on a scratch slot first.
+  else `mismatch` with `requested` and `observed`. Proven live on 4.15.6.20 for a
+  dynamic slot, a frozen property and a frozen action (set, save, `config.bog`,
+  rollback); on another build, try it on a scratch slot first.
   The station applies it only for a user with admin write on the component.
 - `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto` and `ping`. `set`
   restores the previous `fallback` as its inverse; the others have none and the plan

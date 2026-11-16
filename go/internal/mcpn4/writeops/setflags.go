@@ -42,7 +42,7 @@ func setFlagsPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	return &plan.Planned{
 		Ops:     []any{flagsOp(h, slot, requested)},
 		Inverse: []any{flagsOp(h, slot, current)}, // the station's own string: restored exactly
-		Notes:   []any{flagsChangeNote(slot, ordText, current, requested), flagsUnprovenNote},
+		Notes:   []any{flagsChangeNote(slot, ordText, current, requested)},
 		Targets: targets, Data: setFlagsData{requested}}, nil
 }
 

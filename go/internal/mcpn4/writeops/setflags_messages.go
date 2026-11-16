@@ -5,9 +5,6 @@ import "github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 // The texts of n4_set_flags: its plan notes and its refusals (data; the logic is in setflags.go
 // and setflags_current.go).
 
-// flagsUnprovenNote is the probe-only declaration METHODOLOGY section 2 asks of a flags write.
-const flagsUnprovenNote = "setting slot flags is not yet proven on a live station: try it on a scratch slot first"
-
 // Why a slot's current flags cannot be read from its type contract.
 const (
 	flagsNoRegistry = "this client cannot read the station's type definitions (registry channel)"

@@ -630,7 +630,7 @@
   },
   {
    "name": "n4_set_flags",
-   "description": "Set the flags of one slot of a component: the complete new flag set replaces the current one (an empty string clears every flag). The plan shows the current and the requested flags with their names; the inverse restores the previous flags exactly, and the read-back loads the slot again and compares the two sets. Refused: an unknown or repeated flag letter, a slot the component does not have, a set equal to the current one, and a slot whose current flags cannot be read (not sent by the station and its type contract unreadable). Not yet proven on a live station: try it on a scratch slot first. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Set the flags of one slot of a component: the complete new flag set replaces the current one (an empty string clears every flag). The plan shows the current and the requested flags with their names; the inverse restores the previous flags exactly, and the read-back loads the slot again and compares the two sets. Refused: an unknown or repeated flag letter, a slot the component does not have, a set equal to the current one, and a slot whose current flags cannot be read (not sent by the station and its type contract unreadable). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
