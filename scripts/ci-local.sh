@@ -45,7 +45,7 @@ SC_SHA256=6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87
 # "<step-name glob>|<reason>": CI steps replaced by a local equivalent. `uses:` refs match the same way.
 SKIP_RULES=(
   "actions/checkout@*|the working tree is already checked out"
-  "actions/cache@*|a CI cache of downloads; the local run uses what is already on disk"
+  "Cache the two pinned test jars*|a CI cache of downloads; the local run uses what is already on disk"
   "Set up Java 8*|uses the JDK on PATH (CI pins Temurin 8)"
   "Pre-fetch JUnit*|network download into ~/.gradle; run-pure-test.bats needs junit-4.13.2 there (one gradle build fetches it)"
   "Install bats*|uses bats (and GNU parallel, when on PATH, for -j) on PATH"
