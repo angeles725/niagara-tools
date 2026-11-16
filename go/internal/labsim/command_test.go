@@ -140,7 +140,7 @@ func TestRunRefusesToExposeItselfByAccident(t *testing.T) {
 		t.Errorf("exit %d, stdout %q, stderr %q", code, out, errs)
 	}
 	for _, args := range [][]string{
-		{"run", "--listen", "127.0.0.1:0", "--control", "0.0.0.0:0", ahu},
+		{"run", "--listen", "127.0.0.1:0", "--bacnet-listen", "127.0.0.1:0", "--control", "0.0.0.0:0", ahu},
 		{"get", "--control", "192.0.2.10:1503", "ahu-1", "fan_command"},
 		{"status", "--control", ":1503"},
 		{"probe", "--addr", "192.0.2.10:502", "--fn", "3", "--address", "0", "--count", "1"},
@@ -179,7 +179,7 @@ func TestRunServesAScenarioUntilItIsStopped(t *testing.T) {
 	var errs bytes.Buffer
 	done := make(chan int, 1)
 	go func() {
-		done <- Main([]string{"run", "--listen", "127.0.0.1:0", "--control", "127.0.0.1:0", "--log", logPath, ahu}, cli.Stdio{Out: out, Err: &errs})
+		done <- Main([]string{"run", "--listen", "127.0.0.1:0", "--control", "127.0.0.1:0", "--bacnet-listen", "127.0.0.1:0", "--log", logPath, ahu}, cli.Stdio{Out: out, Err: &errs})
 	}()
 	var ready struct{ Event, Scenario, Listen, Control string }
 	select {

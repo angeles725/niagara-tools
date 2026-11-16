@@ -19,17 +19,25 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/labsim/scenario"
 )
 
-// frontEnd is a field protocol served over the scenario's devices. Modbus TCP
-// is the only one today; another protocol adds its server here and its fields
-// to the scenario, and shares the devices, the control port and the stop.
+// The protocols of the front ends, as status names them.
+const (
+	protocolModbus  = "modbus-tcp"
+	protocolBACnet  = "bacnet-ip"
+	protocolControl = "control"
+)
+
+// frontEnd is one listening address served over the scenario's devices: the
+// Modbus TCP listener, one BACnet/IP socket per BACnet device, the control
+// port. They share the devices, the clock and the stop.
 type frontEnd struct {
-	listener net.Listener
-	serve    func(ctx context.Context, ln net.Listener) error
+	control.FrontEnd
+	serve func(ctx context.Context) error
+	close func()
 }
 
-// listenAddress decides where the field protocol listens: the scenario's
-// address when it is loopback, or whatever --listen names. A scenario alone
-// never binds outside this machine.
+// listenAddress decides where Modbus listens: the scenario's address when it
+// is loopback, or whatever --listen names. A scenario alone never binds
+// outside this machine.
 func listenAddress(f *scenario.File, flag string, given bool) (string, error) {
 	if given {
 		if _, _, err := net.SplitHostPort(flag); err != nil {
@@ -49,8 +57,17 @@ func runCommand(p parsed, s cli.Stdio) (int, error) {
 	if !ok {
 		return exitFailed, nil
 	}
+	broadcast, err := broadcastAddress(p)
+	if err != nil {
+		return exitUsage, err
+	}
 	flag, given := p.options["listen"]
 	listen, err := listenAddress(f, flag, given)
+	if err != nil {
+		return exitFailed, err
+	}
+	flag, given = p.options["bacnet-listen"]
+	bacnetListen, err := bacnetAddresses(f, flag, given)
 	if err != nil {
 		return exitFailed, err
 	}
@@ -78,24 +95,28 @@ func runCommand(p parsed, s cli.Stdio) (int, error) {
 		IdleTimeout:      time.Duration(f.IdleTimeoutMS) * time.Millisecond,
 		Log:              logTo.Log,
 	})
+	ends := []frontEnd{{FrontEnd: control.FrontEnd{Protocol: protocolModbus, Address: bus.Addr().String()},
+		serve: func(ctx context.Context) error { return server.Serve(ctx, bus) }}}
+	field, err := bacnetEnds(built, bacnetListen, broadcast, server.Elapsed, logTo)
+	for _, end := range field.ends {
+		defer end.close()
+	}
+	if err != nil {
+		return exitFailed, err
+	}
+	ends = append(ends, field.ends...)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	panel := &control.Server{
-		Devices: built.Devices,
-		Elapsed: server.Elapsed,
-		Status:  func() control.Status { return status(f, built, server, bus.Addr().String(), ctl.Addr().String()) },
-		Stop:    stop,
-	}
-	ends := []frontEnd{{bus, server.Serve}, {ctl, panel.Serve}}
-	ready, _ := json.Marshal(map[string]string{
-		"event": "listening", "scenario": f.Name, "listen": bus.Addr().String(), "control": ctl.Addr().String(),
-	})
-	fmt.Fprintf(s.Out, "%s\n", ready)
+	panel := &control.Server{Devices: built.Devices, Elapsed: server.Elapsed, Stop: stop, Changed: field.changed}
+	ends = append(ends, frontEnd{FrontEnd: control.FrontEnd{Protocol: protocolControl, Address: ctl.Addr().String()},
+		serve: func(ctx context.Context) error { return panel.Serve(ctx, ctl) }})
+	panel.Status = func() control.Status { return status(f, built, server, ends) }
+	fmt.Fprintf(s.Out, "%s\n", readyLine(f, ends))
 
 	failures := make(chan error, len(ends))
 	for _, end := range ends {
 		go func() {
-			err := end.serve(ctx, end.listener)
+			err := end.serve(ctx)
 			stop() // one front end down stops the others
 			failures <- err
 		}()
@@ -109,6 +130,28 @@ func runCommand(p parsed, s cli.Stdio) (int, error) {
 		return exitFailed, err
 	}
 	return exitOK, nil
+}
+
+// readyLine is the one line run prints when every front end listens, with the
+// addresses really bound (useful with port 0).
+func readyLine(f *scenario.File, ends []frontEnd) []byte {
+	ready := map[string]any{"event": "listening", "scenario": f.Name}
+	var field []map[string]string
+	for _, end := range ends {
+		switch end.Protocol {
+		case protocolModbus:
+			ready["listen"] = end.Address
+		case protocolControl:
+			ready["control"] = end.Address
+		case protocolBACnet:
+			field = append(field, map[string]string{"device": end.Device, "address": end.Address})
+		}
+	}
+	if field != nil {
+		ready["bacnet"] = field
+	}
+	line, _ := json.Marshal(ready)
+	return line
 }
 
 // openLog opens the request log: none, standard output for "-", or a file
@@ -128,11 +171,20 @@ func openLog(path string, stdout io.Writer) (*reqlog.Writer, func(), error) {
 }
 
 // status describes the running simulator for the control port.
-func status(f *scenario.File, built scenario.Built, server *mbserver.Server, listen, ctl string) control.Status {
+func status(f *scenario.File, built scenario.Built, server *mbserver.Server, ends []frontEnd) control.Status {
 	stats, elapsed := server.Stats(), server.Elapsed()
 	st := control.Status{
-		Scenario: f.Name, ElapsedMS: elapsed.Milliseconds(), Listen: listen, Control: ctl,
+		Scenario: f.Name, ElapsedMS: elapsed.Milliseconds(),
 		Requests: stats.Requests, Connections: stats.Connections, Refused: stats.Refused,
+	}
+	for _, end := range ends {
+		st.FrontEnds = append(st.FrontEnds, end.FrontEnd)
+		switch end.Protocol {
+		case protocolModbus:
+			st.Listen = end.Address
+		case protocolControl:
+			st.Control = end.Address
+		}
 	}
 	for i, dev := range built.Devices {
 		st.Devices = append(st.Devices, control.DeviceStatus{

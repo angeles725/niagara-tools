@@ -49,3 +49,25 @@ func TestANilWriterDropsEntries(t *testing.T) {
 	var w *Writer
 	w.Log(Entry{Unit: 1})
 }
+
+func TestABACnetEntryIsItsOwnLineAndLeavesModbusLinesAlone(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	w := NewWriter(&buf)
+	invoke, priority := 7, 8
+	w.Log(Entry{Time: "2026-01-02T03:04:05Z", Unit: 1, Function: 3, Address: 0, Quantity: 1, Result: ResultOK, Read: []int{5}})
+	w.LogBACnet(BACnet{Time: "2026-01-02T03:04:06Z", ElapsedMS: 20, Protocol: ProtocolBACnetIP, Remote: "127.0.0.1:47808", Device: "unit-a",
+		Link: "original-unicast-npdu", PDU: "confirmed-request", Service: "write-property", InvokeID: &invoke,
+		Object: "analog-output,1", Property: "present-value", Priority: &priority, Written: "55", Result: ResultOK})
+	w.LogBACnet(BACnet{Time: "2026-01-02T03:04:07Z", Protocol: ProtocolBACnetIP, Device: "unit-a", Link: "original-broadcast-npdu",
+		PDU: "unconfirmed-request", Service: "who-is", Result: ResultOK, To: []string{"127.0.0.1:47808"}})
+	want := `{"time":"2026-01-02T03:04:05Z","elapsed_ms":0,"remote":"","unit":1,"function":3,"address":0,"quantity":1,"result":"ok","read":[5]}
+{"time":"2026-01-02T03:04:06Z","elapsed_ms":20,"protocol":"bacnet-ip","remote":"127.0.0.1:47808","device":"unit-a","link":"original-unicast-npdu","pdu":"confirmed-request","service":"write-property","invoke_id":7,"object":"analog-output,1","property":"present-value","priority":8,"written":"55","result":"ok"}
+{"time":"2026-01-02T03:04:07Z","elapsed_ms":0,"protocol":"bacnet-ip","remote":"","device":"unit-a","link":"original-broadcast-npdu","pdu":"unconfirmed-request","service":"who-is","result":"ok","to":["127.0.0.1:47808"]}
+`
+	if got := buf.String(); got != want {
+		t.Errorf("log =\n%s\nwant\n%s", got, want)
+	}
+	var none *Writer
+	none.LogBACnet(BACnet{})
+}

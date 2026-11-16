@@ -11,6 +11,7 @@ import (
 type Built struct {
 	Devices []*model.Device       // in scenario order
 	Units   map[byte]*regmap.Unit // the Modbus register map of each unit id
+	BACnet  []BACnetEnd           // the devices that are BACnet devices too, in scenario order
 }
 
 // Build makes the devices and register maps of a scenario Validate found no
@@ -39,6 +40,9 @@ func (f *File) Build() Built {
 		dev := model.NewDevice(spec)
 		b.Devices = append(b.Devices, dev)
 		b.Units[byte(d.Unit)] = regmap.NewUnit(dev, bindings)
+		if d.BACnet != nil {
+			b.BACnet = append(b.BACnet, bacnetEnd(d, dev))
+		}
 	}
 	return b
 }

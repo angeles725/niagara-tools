@@ -45,3 +45,31 @@ const (
 	msgWalkBounds        = "random_walk needs min below max"
 	msgWalkStart         = "random_walk needs value within min-max"
 )
+
+// The faults of the BACnet sections; each is prefixed with its place and
+// "bacnet".
+const (
+	msgNoDeviceInstance   = "no device_instance"
+	msgDeviceInstance     = "device_instance %d is outside 0-%d"
+	msgDeviceInstanceUsed = "device_instance %d is already device %q"
+	msgBACnetListen       = "listen %q is not an IPv4 address and a port (BACnet/IP is UDP over IPv4)"
+	msgBACnetListenUsed   = "listen %q is already device %q: BACnet/IP has one device per address"
+	msgVendorID           = "vendor_id %d is outside 0-%d"
+	msgMaxAPDU            = "max_apdu %d is none of 50, 128, 206, 480, 1024, 1476"
+	msgBACnetNoDevice     = "the point is mapped but its device has no bacnet section"
+
+	msgObjectType       = "object_type %q is none of %s"
+	msgNoInstance       = "no instance"
+	msgInstance         = "instance %d is outside 0-%d"
+	msgObjectUsed       = "%s %d is already point %q"
+	msgCommandableInput = "an input (%s) cannot be commandable"
+	msgUnits            = "units %q is neither a unit name (degrees-celsius, percent, ...) nor a number 0-%d"
+	msgUnitsKind        = "units belong to analog objects, not to %s"
+	msgAnalogOnly       = "min_pres_value, max_pres_value, resolution and cov_increment belong to analog objects, not to %s"
+	msgMinAboveMax      = "min_pres_value %v is above max_pres_value %v"
+	msgCOVIncrement     = "cov_increment %v is negative"
+	msgBinaryTexts      = "active_text and inactive_text belong to binary objects, not to %s"
+	msgStatesKind       = "state_texts belong to multi-state objects, not to %s"
+	msgNoStates         = "%s needs state_texts: one text per state"
+	msgStateValue       = "value %v is not one of the %d states (1-%d)"
+)

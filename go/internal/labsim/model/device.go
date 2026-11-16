@@ -10,6 +10,7 @@ type point struct {
 	gen      Generator
 	faults   Faults
 	reads    int
+	override *float64 // a commanded value that hides the generator while set
 }
 
 // Device is one simulated device. Every method is safe for concurrent use.
@@ -114,15 +115,39 @@ type Tx struct {
 	elapsed time.Duration
 }
 
-// Get is the point's value now; 0 for a point the device does not have.
+// Get is the point's value now: the override while one is set, else the field
+// value; 0 for a point the device does not have.
 func (tx Tx) Get(name string) float64 {
+	if p := tx.d.points[name]; p != nil && p.override != nil {
+		return *p.override
+	}
+	return tx.Field(name)
+}
+
+// Field is the value the point has by itself (constant, written, pinned or
+// generated), whatever overrides it.
+func (tx Tx) Field(name string) float64 {
 	if p := tx.d.points[name]; p != nil {
 		return p.gen.At(tx.elapsed)
 	}
 	return 0
 }
 
-// Set fixes the point at v from now on, replacing any generated behaviour.
+// Override holds the point at *v over its field value until it is released
+// with nil. It is how a protocol with command priorities (BACnet) shows the
+// commanded value while the field value stays underneath.
+func (tx Tx) Override(name string, v *float64) {
+	if p := tx.d.points[name]; p != nil {
+		p.override = nil
+		if v != nil {
+			held := *v
+			p.override = &held
+		}
+	}
+}
+
+// Set fixes the point's field value at v from now on, replacing any generated
+// behaviour; an override, if one is set, keeps hiding it.
 func (tx Tx) Set(name string, v float64) {
 	if p := tx.d.points[name]; p != nil {
 		p.gen = constant(v)

@@ -1,12 +1,15 @@
-lab-sim: a field-device simulator for the laboratory (Modbus TCP)
+lab-sim: a field-device simulator for the laboratory (Modbus TCP and BACnet/IP)
 
-  lab-sim run [--listen HOST:PORT] [--control HOST:PORT] [--log FILE|-] <scenario.json>
+  lab-sim run [--listen HOST:PORT] [--bacnet-listen [DEVICE=]IP:PORT[,...]] [--bacnet-broadcast IP:PORT]
+              [--control HOST:PORT] [--log FILE|-] <scenario.json>
       Serve the scenario until interrupted or stopped. Prints one JSON line with the
-      addresses it listens on. --listen is required to bind anything but loopback;
-      the control port is loopback-only. --log writes one JSON line per request
-      (- is standard output).
+      addresses it listens on. --listen (Modbus) and --bacnet-listen (one address per
+      BACnet device) are required to bind anything but loopback; the control port is
+      loopback-only. A BACnet device sends its I-Am to whoever asked and to registered
+      foreign devices, and to a broadcast address only with --bacnet-broadcast.
+      --log writes one JSON line per request (- is standard output).
   lab-sim check <scenario.json>
-      Validate the scenario and print its register map.
+      Validate the scenario and print its register map and its BACnet object lists.
   lab-sim get    [--control HOST:PORT] <device> <point>
   lab-sim set    [--control HOST:PORT] <device> <point> <value>
   lab-sim status [--control HOST:PORT]
@@ -15,5 +18,15 @@ lab-sim: a field-device simulator for the laboratory (Modbus TCP)
   lab-sim probe [--addr HOST:PORT] [--unit N] [--timeout-ms N] --fn F --address A (--count N | --values V[,V...])
       Send one Modbus request to a simulator on this machine and print the answer.
       F is 1, 2, 3, 4 (with --count) or 5, 6, 15, 16 (with --values).
+  lab-sim bacnet-probe [--addr HOST:PORT] [--timeout-ms N] [--max-apdu N] <action>
+      Send BACnet requests to a simulator on this machine (default 127.0.0.1:47809)
+      and print each answer as one JSON line. Actions:
+        who-is [LOW HIGH]
+        read <type,instance> <property> [ARRAY-INDEX]
+        read-multiple <type,instance> <property>[,<property>...]   (all, required, optional too)
+        write <type,instance> <value|null> [--priority 1-16]        (present-value)
+        subscribe <type,instance> [--mode unconfirmed|confirmed|cancel] [--process N]
+                  [--lifetime SECONDS] [--count NOTIFICATIONS]
 
-Exit: 0 done, 1 failed (invalid scenario, refused address, no answer, exception), 2 usage.
+Exit: 0 done, 1 failed (invalid scenario, refused address, no answer, exception, BACnet
+error, reject or abort), 2 usage.

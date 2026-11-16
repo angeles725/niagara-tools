@@ -72,4 +72,5 @@ func fillDefaults(f *File) {
 			}
 		}
 	}
+	fillBACnet(f)
 }
