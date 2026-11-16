@@ -30,7 +30,7 @@ const defaultMount = "/mnt/c"
 const defaultMaxEntries = 2_000_000
 
 const usage = `usage: host-budget [--cgroup-root DIR] [--proc-root DIR] [--pids-pct N] [--gocache DIR]
-                   [--gocache-gb N] [--disk-pct N] [--mount PATH]... [--strict]
+                   [--gocache-gb N] [--disk-pct N] [--disk-min-free SIZE] [--mount PATH]... [--strict]
 `
 
 // goEnvGOCACHE asks the Go toolchain for its build cache, so GOCACHE set in `go env -w` counts too.
@@ -67,6 +67,8 @@ func Main(args []string, s cli.Stdio) int {
 	fl.StringVar(&c.GocacheDir, "gocache", "", "Go build cache (default: go env GOCACHE)")
 	fl.IntVar(&c.GocacheGB, "gocache-gb", 20, "WARN the Go build cache above this many GB")
 	fl.IntVar(&c.DiskPct, "disk-pct", 90, "FAIL a mount above this percent used")
+	var minFree string
+	fl.StringVar(&minFree, "disk-min-free", "", "FAIL a mount with less free space than SIZE (40G, 500M); replaces --disk-pct")
 	fl.Var(&mounts, "mount", "mount to check besides / (repeatable; default /mnt/c when present)")
 	fl.BoolVar(&strict, "strict", false, "exit 1 on WARN too")
 	if err := fl.Parse(args); err != nil {
@@ -84,6 +86,17 @@ func Main(args []string, s cli.Stdio) int {
 			fmt.Fprintf(s.Err, "host-budget: %s %d is not a percent (0-100)\n", name, v)
 			return ExitEnv
 		}
+	}
+	if minFree != "" {
+		n, err := parseSize(minFree)
+		if err == nil && n == 0 {
+			err = errors.New("a floor of 0 bytes checks nothing")
+		}
+		if err != nil {
+			fmt.Fprintf(s.Err, "host-budget: --disk-min-free %q: %v\n", minFree, err)
+			return ExitEnv
+		}
+		c.DiskMinFree = n
 	}
 	if c.GocacheGB < 0 {
 		fmt.Fprintf(s.Err, "host-budget: --gocache-gb %d is negative\n", c.GocacheGB)
