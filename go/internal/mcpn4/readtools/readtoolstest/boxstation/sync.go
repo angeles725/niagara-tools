@@ -85,6 +85,9 @@ func (st *Station) sync(op map[string]any) (any, error) {
 			node.Children = append(node.Children, leaf)
 		}
 		st.fill(leaf, body)
+		if st.AfterSet != nil {
+			st.AfterSet(st, leaf)
+		}
 		return []any{}, nil
 	case "f":
 		return setFlags(parent, name, op)

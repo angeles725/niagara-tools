@@ -497,7 +497,7 @@ other.
 ## Writing safely
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
-and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`,
+and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
 `n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_rollback` and
 `n4_save_station`. Example:
@@ -674,6 +674,8 @@ Tool rules:
   stays (500 records, Roll). The plan notes how long the capacity lasts at the
   requested interval (a change-of-value history lasts as long as its changes take),
   and the read-back checks the capacity when one was asked.
+- `n4_add_alarm(points)` adds one alarm extension per point (1 to 50), configured,
+  in one batch under one confirmation token. See "Alarm extension recipe" below.
 - `n4_copy_component(parent_ord, name, new_names)` adds the configuration of one
   child again under each new name (1 to 30) in one batch under one confirmation
   token: type, plain slots and child components up to 6 levels deep (a Modbus
@@ -765,6 +767,75 @@ Destructive tools use the same pipeline:
   polling up to 30 s, and returns `persisted: true|false|unknown` plus the
   `evidence`. Without a station home it returns `unknown` and says how to configure
   it. It needs at least one `--write-scope` like every write.
+
+### Alarm extension recipe
+
+Every palette alarm extension is one type, `alarm:AlarmSourceExt`; what makes it an
+"OutOfRangeAlarmExt" is its two preset algorithm children (alarm-rt `module.palette`,
+folder `Extensions`). `n4_add_alarm` picks the kind from the point type unless `kind`
+is given, and a kind that does not fit is refused at the dry run, naming the kinds
+that fit:
+
+| kind | `offnormalAlgorithm` | `faultAlgorithm` | point | default name |
+|------|----------------------|------------------|-------|--------------|
+| `out_of_range` (numeric default) | `alarm:OutOfRangeAlgorithm` | `alarm:OutOfRangeFaultAlgorithm` | numeric | `OutOfRangeAlarmExt` |
+| `numeric_change_of_state` | `alarm:NumericChangeOfStateAlgorithm` | (default) | numeric | `NumericChangeOfStateAlarmExt` |
+| `boolean_change_of_state` (boolean default) | `alarm:BooleanChangeOfStateAlgorithm` | (default) | boolean | `BooleanChangeOfStateAlarmExt` |
+| `boolean_command_failure` | `alarm:BooleanCommandFailureAlgorithm` | (default) | boolean | `BooleanCommandFailureAlarmExt` |
+| `enum_change_of_state` (enum default) | `alarm:EnumChangeOfStateAlgorithm` | `alarm:EnumFaultAlgorithm` | enum | `EnumChangeOfStateAlarmExt` |
+| `enum_command_failure` | `alarm:EnumCommandFailureAlgorithm` | `alarm:EnumFaultAlgorithm` | enum | `EnumCommandFailureAlarmExt` |
+| `string_change_of_value` (string default) | `alarm:StringChangeOfStateAlgorithm` | `alarm:StringChangeOfStateFaultAlgorithm` | string | `StringChangeOfValueAlarmExt` |
+| `status` | `alarm:StatusAlgorithm` | `alarm:StatusFaultAlgorithm` | any control point | `StatusAlarmExt` |
+
+The point check is each algorithm's `isGrandparentLegal` (`BOutOfRangeAlgorithm` needs
+a `BNumericPoint`, `BBooleanChangeOfStateAlgorithm` a `BBooleanPoint`, ...;
+`BAlarmSourceExt.isParentLegal` needs a control point). A station refuses an add body
+that nests a component, so the batch is: the add with the plain slots, then set ops
+that swap `offnormalAlgorithm` and `faultAlgorithm` by type (empty value, the route
+bench retro 2026-11-15 row 10 proved live with `n4_set_slot` `baja:Simple`), then set
+ops for the rest by path, e.g. `OutOfRangeAlarmExt/offnormalAlgorithm/highLimit`.
+
+Slots and their encodings (`BAlarmSourceExt`, `BOutOfRangeAlgorithm`):
+
+| argument | slot | type, encoding |
+|----------|------|----------------|
+| `alarm_class` (default `defaultAlarmClass`) | `alarmClass` | `baja:String`, the slot name of an `alarm:AlarmClass` under the AlarmService; checked by one BQL read (`select slotPath from alarm:AlarmClass`), a missing one is refused listing the classes |
+| `source_name` | `sourceName` | `baja:Format`; station default `%parent.displayName%` |
+| `to_offnormal_text`, `to_fault_text`, `to_normal_text` | `toOffnormalText`, `toFaultText`, `toNormalText` | `baja:Format`, default empty |
+| `time_delay_ms`, `time_delay_to_normal_ms` | `timeDelay`, `timeDelayToNormal` | `baja:RelTime`, milliseconds |
+| `hyperlink_ord` | `hyperlinkOrd` | `baja:Ord` |
+| `alarm_enable` (list of `offnormal`, `fault`, `normal`, `alert`) | `alarmEnable` | `alarm:AlarmTransitionBits`, the hex bit mask (`encodeToString` is `Integer.toHexString`): offnormal 1, fault 2, normal 4, alert 8; `["offnormal","normal"]` is `5`, all is `f` (the station default); Workbench shows it as `{toOffnormal toNormal}` |
+| `inhibit` | `alarmInhibit` | `baja:StatusBoolean`, status ok |
+| `high_limit`, `low_limit`, `deadband` | `offnormalAlgorithm/highLimit`, `lowLimit`, `deadband` | `baja:Double`; deadband 0 or more |
+| (any limit given) | `offnormalAlgorithm/limitEnable/highLimitEnable`, `lowLimitEnable` | `baja:Boolean` inside the `alarm:LimitEnable` struct; both are false by default, so a limit given is also enabled; without a limit the extension raises nothing |
+| `high_limit_text`, `low_limit_text` | `offnormalAlgorithm/highLimitText`, `lowLimitText` | `baja:Format`; they override `toOffnormalText` for that limit |
+| `alarm_value` (boolean change of state) | `offnormalAlgorithm/alarmValue` | `baja:Boolean`, default true |
+| `alarm_values` (numeric or enum change of state), e.g. `{"alarm": 1}` | `offnormalAlgorithm/alarmValues` | `baja:EnumRange`, `{tag=ordinal,...}` (`BEnumRange.encodeToString`) |
+
+Text syntax: the state texts and the limit texts are `baja:Format` patterns stored raw
+in the alarm record (`alarmData.msgText`) and resolved against the record, not the
+extension, so `%parent.displayName%` does not resolve there (it does in
+`source_name`). Use `%alarmData.<key>%`: `sourceName`, `presentValue`, `highLimit`,
+`lowLimit`, `deadband`, `alarmValue`, `fromState`, `toState`; `%lexicon(module:key)%`
+for a translated text; `%%` for a literal percent. Examples:
+
+```
+"high_limit_text": "%alarmData.sourceName% high: %alarmData.presentValue% > %alarmData.highLimit%"
+"low_limit_text":  "%alarmData.sourceName% low: %alarmData.presentValue% < %alarmData.lowLimit%"
+"to_normal_text":  "%alarmData.sourceName% back to normal"
+"source_name":     "AHU1 %parent.displayName%"
+```
+
+A point that already has an extension of the same kind (a child whose
+`offnormalAlgorithm` is of that type) is refused unless `allow_second=true`. The
+inverse removes each extension under the name the station assigned. The read-back
+reads every slot the batch set and both algorithm types; a slot the station stored
+differently is listed under `coerced` as `{slot: {sent, read}}` and the verdict is
+`mismatch`. Not covered here: recipients and routing (the AlarmService's
+`alarm:StationRecipient` and friends), creating alarm classes, reading alarm records
+and acknowledging them (other tools); the status kind's `alarmValues` / `faultValues`
+status masks and the string kind's `expression` stay at their defaults (set them with
+`n4_set_slot`).
 
 ## Live smoke test
 

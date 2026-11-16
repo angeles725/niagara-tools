@@ -45,9 +45,11 @@ type Station struct {
 	User, Password string
 	// ConfigPath, when set, is the config.bog a save rewrites (its mtime moves 5 s ahead).
 	ConfigPath string
-	// AfterAdd runs after an applied add of node, AfterInvoke after an accepted action; both run
-	// with the station locked.
+	// AfterAdd runs after an applied add of node, AfterSet after an applied set of node (a station
+	// gives a component set by type its frozen slots), AfterInvoke after an accepted action; all
+	// run with the station locked.
 	AfterAdd    func(st *Station, node *Node)
+	AfterSet    func(st *Station, node *Node)
 	AfterInvoke func(st *Station, action string, node *Node)
 	URL         string
 

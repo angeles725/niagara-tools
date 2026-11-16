@@ -868,6 +868,146 @@
    "needs_session": false
   },
   {
+   "name": "n4_add_alarm",
+   "description": "Add one alarm extension per point, already configured, in one batch under one confirmation token (1 to 50 points). Every palette alarm extension is an alarm:AlarmSourceExt whose offnormalAlgorithm and faultAlgorithm follow its kind: out_of_range (numeric point: high/low limits, deadband, limit texts; giving a limit enables it), numeric_change_of_state (numeric: alarm_values), boolean_change_of_state (boolean: alarm_value), boolean_command_failure (boolean), enum_change_of_state and enum_command_failure (enum: alarm_values for change of state), string_change_of_value (string) and status (any control point). Without kind, the point type read from the station picks it: numeric out_of_range, boolean boolean_change_of_state, enum enum_change_of_state, string string_change_of_value. Each extension is added with its plain slots (alarmClass, sourceName, toOffnormalText, toFaultText, toNormalText, timeDelay, timeDelayToNormal, hyperlinkOrd), then set ops in the same batch swap both algorithms by type and set alarmEnable, alarmInhibit and the algorithm slots by path. Texts are baja:Format patterns resolved against the alarm record: %alarmData.sourceName%, %alarmData.presentValue%, %alarmData.highLimit%, %alarmData.lowLimit%, %lexicon(module:key)%, %% for a literal percent; %parent...% does not resolve in the state texts (it does in source_name). Refuses a kind that does not fit a point (naming the kinds that do), an algorithm argument the kind does not take, an alarm_class the station does not hold (one BQL read; the refusal lists the existing classes), a child already named ext_name and a second extension of the same kind on a point unless allow_second. The read-back reads every slot it set and both algorithm types, and lists under coerced each slot the station stored differently ({slot: {sent, read}}, verdict mismatch). Alarm recipients, routing and acknowledging are other tools' work. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "points": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Point ORDs (1 to 50), each gets one alarm extension"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "out_of_range",
+       "numeric_change_of_state",
+       "boolean_change_of_state",
+       "boolean_command_failure",
+       "enum_change_of_state",
+       "enum_command_failure",
+       "string_change_of_value",
+       "status"
+      ],
+      "description": "Alarm extension kind; default: the one that fits each point's type (numeric out_of_range, boolean boolean_change_of_state, enum enum_change_of_state, string string_change_of_value); a kind that does not fit is refused"
+     },
+     "ext_name": {
+      "type": "string",
+      "description": "Slot name of the extension under each point; default: the palette name of the kind, e.g. OutOfRangeAlarmExt"
+     },
+     "high_limit": {
+      "type": "number",
+      "description": "out_of_range: offnormalAlgorithm/highLimit; giving it sets limitEnable/highLimitEnable true"
+     },
+     "low_limit": {
+      "type": "number",
+      "description": "out_of_range: offnormalAlgorithm/lowLimit; giving it sets limitEnable/lowLimitEnable true"
+     },
+     "deadband": {
+      "type": "number",
+      "description": "out_of_range: offnormalAlgorithm/deadband (0 or more)"
+     },
+     "high_limit_text": {
+      "type": "string",
+      "description": "out_of_range: baja:Format text of a high-limit alarm; it overrides to_offnormal_text, e.g. %alarmData.sourceName% high: %alarmData.presentValue% > %alarmData.highLimit%"
+     },
+     "low_limit_text": {
+      "type": "string",
+      "description": "out_of_range: baja:Format text of a low-limit alarm; it overrides to_offnormal_text"
+     },
+     "alarm_value": {
+      "type": "boolean",
+      "description": "boolean_change_of_state: the value that is in alarm (default true)"
+     },
+     "alarm_values": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "description": "numeric_change_of_state, enum_change_of_state: the values in alarm as tag -> ordinal, e.g. {\"alarm\": 1}; sent as the baja:EnumRange {alarm=1}"
+     },
+     "to_offnormal_text": {
+      "type": "string",
+      "description": "baja:Format text of the alarm when the point goes offnormal"
+     },
+     "to_fault_text": {
+      "type": "string",
+      "description": "baja:Format text of the alarm when the point goes to fault"
+     },
+     "to_normal_text": {
+      "type": "string",
+      "description": "baja:Format text when the point returns to normal"
+     },
+     "source_name": {
+      "type": "string",
+      "description": "baja:Format source name of the alarms; default on the station: %parent.displayName%"
+     },
+     "alarm_class": {
+      "type": "string",
+      "default": "defaultAlarmClass",
+      "description": "Slot name of an alarm class under the AlarmService (it must exist)"
+     },
+     "alarm_enable": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "offnormal",
+        "fault",
+        "normal",
+        "alert"
+       ]
+      },
+      "description": "Transitions that generate an alarm (alarmEnable, sent as the hex bit mask offnormal 1, fault 2, normal 4, alert 8); default on the station: all"
+     },
+     "time_delay_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "timeDelay: how long the point must stay offnormal before the alarm, in milliseconds"
+     },
+     "time_delay_to_normal_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "timeDelayToNormal: how long the point must stay normal before the return to normal, in milliseconds"
+     },
+     "inhibit": {
+      "type": "boolean",
+      "description": "alarmInhibit: true inhibits the alarms (sent as a baja:StatusBoolean, status ok)"
+     },
+     "hyperlink_ord": {
+      "type": "string",
+      "description": "hyperlinkOrd: an ORD the alarm console links to"
+     },
+     "allow_second": {
+      "type": "boolean",
+      "default": false,
+      "description": "Add the extension even when the point already has one of the same kind"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "points"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_copy_component",
    "description": "Copy one configured component (e.g. a Modbus device with its points and their addresses) under the same parent once per new name, in one batch under one confirmation token (1 to 30 copies). The copy holds the type, plain slots and child components up to 6 levels deep. Runtime slots are left out by flags read from the station's type definitions: a frozen slot declared readonly, transient or default-on-clone (e.g. status, health, out, read and write values) or made transient, and a dynamic slot flagged transient or remove-on-clone; flags an integrator set otherwise travel with the copy. The plan notes list each slot left out with its flags, calling out a readonly slot that holds a non-default value; actions, slots the station lists by name only and links are not copied either; a deeper source is refused. The read-back compares each copy's whole configured subtree with the plan. The source may carry station escapes (Numeric$20Writable40001); new names are plain. Change what differs per copy afterwards (e.g. deviceAddress with n4_set_slot). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
