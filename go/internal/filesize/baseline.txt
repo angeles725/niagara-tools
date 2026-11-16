@@ -2,7 +2,6 @@
 # A listed file may shrink but not grow, and no file may be added. Split a file, then lower or delete its line.
 456 internal/reportmodule/special.go
 445 internal/lint/run.go
-442 internal/lint/rules/golden/runner.go
 418 internal/verifymodule/driver.go
 396 internal/buildstatefields/command.go
 386 internal/lint/rules/adaptercfgdefault/adaptercfgdefault.go
