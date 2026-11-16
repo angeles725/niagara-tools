@@ -50,14 +50,20 @@ func TestRelativeHomeRendersAnAbsolutePromptPath(t *testing.T) {
 	}
 }
 
-// T4(4): `--home ""` prints the usage line in install-skill as in check-skill-drift.
+// T4(4): `--home ""` prints the usage line in install-skill as in check-skill-drift and writes nothing at all:
+// not $HOME, not the fixture, not the working directory (R3-empty-home-nothing-written-assertion-weakened).
 func TestEmptyHomePrintsUsageInBothCommands(t *testing.T) {
 	f := newFixture(t)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := snapshot(t, filepath.Dir(f.root)) + snapshot(t, cwd)
 	code, out, errText := f.installNoHome("--home", "")
 	expect(t, "install", code, out, errText, 2, "", "install-skill: --home requires a non-empty directory\n"+wantUsage)
 	code, out, errText = f.driftNoHome("--home", "")
 	expect(t, "drift", code, out, errText, 2, "", "check-skill-drift: --home requires a non-empty directory\n"+driftUsage)
-	if _, err := os.Lstat(f.env["HOME"]); err == nil {
-		t.Errorf("$HOME was written")
+	if after := snapshot(t, filepath.Dir(f.root)) + snapshot(t, cwd); after != before {
+		t.Errorf("a refused --home \"\" wrote something (in $HOME, the fixture or the working directory):\n%s", after)
 	}
 }
