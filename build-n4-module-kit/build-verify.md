@@ -330,6 +330,41 @@ An `-rt` class that imports `java.awt.*` compiles cleanly under JDK 8 (full SE) 
 ## Unit tests in WSL
 - **`niagaraTest` is not a WSL-side gate (it needs a native Windows NRE with `bin/test` + a dev license; a WSL-side Gradle with plugin 7.6.17 discovers 0 tests — run it through `cmd.exe` per `types/moduleTest.md` § Running from WSL):** extract the control decision into a ZERO-Baja pure class and run it standalone. Resolve the cached jars with `JU=$(find ~/.gradle -name 'junit-4.13.2.jar' | head -1)` and `HC=$(find ~/.gradle -name 'hamcrest-core-1.3.jar' | head -1)` (never `find /` — it times out); the test must be same-package as the package-private pure class; use a fresh OUT dir. `toolbelt/run-pure-test.sh <module-rt-dir> <pkg.TestClass>` wraps this (exit 3 if the cache is empty — run one gradle build to fetch the jars); resolves src from any cwd — the runner sets the JVM working directory to `<module-rt-dir>` so a structural test that reads `Paths.get("src/…")` resolves regardless of where the caller invoked the script. [ev: retro coldroompan-rt-hardening] [ev: retro junit-standalone-cached-jar-locations-for-wsl-pure-tests] [ev: retro campaign10-run-pure-test-cwd]
 
+### Logic series — scripted inputs, expected outputs, before the lab `[ev: retro o12-logic-series Δ1]`
+A step-by-step JUnit test spells one scenario in Java; a **series** puts the scenario in a table the reader can
+check against the spec line by line. The kit ships the runner as Java source (`toolbelt/java/n4kit/series`, Java 8,
+no dependency); `run-pure-test.sh` puts it on the javac source path, so a module test imports `n4kit.series.*`
+without copying it into the module.
+1. **Write the series** under the module part, e.g. `srcTest/series/<scenario>.csv` (`#` comments, blank lines
+   skipped):
+   ```
+   time_ms, in:temp, in:setpoint, in:enable, out:cooling, out:demand~0.5
+   0,       4.0,     4,           true,      false,       0
+   1000,    5.5,     4,           true,      true,        37.5
+   4000,    6.0,     4,           true,      false,       -
+   ```
+   `time_ms` first and never decreasing; `in:<name>` / `out:<name>` columns; `out:<name>~<tol>` compares within
+   `tol` (default exact); a cell is a number, `true` or `false` (1/0); an output cell may be `-` (not checked at
+   that step) or `NaN`.
+2. **Write the adapter** — a `SeriesModel` whose `step(SeriesRow r)` calls the pure core's `step(r.timeMs(),
+   r.num("temp"), …, r.bool("enable"))` and whose `output(name)` returns each output (boolean as 1/0), throwing
+   on an unknown name so a header typo fails loudly.
+3. **Run it** in a JUnit test: `LogicSeries.fromFile("srcTest/series/<scenario>.csv").run(adapter)` returns the
+   number of values checked; assert it is above 0. `run-pure-test.sh <module-rt-dir> <pkg.TestClass>` runs it
+   (the path resolves from the module part, wherever the runner was called).
+
+Results: exit 0 when every checked value matches. The first value outside its tolerance stops the run with exit 1
+and one line `srcTest/series/<scenario>.csv:<line>: step <n> (t=<ms> ms) out:<name> expected <e> ±<tol>, actual
+<a>`. A malformed series (missing `time_ms`, a column without `in:`/`out:`, no `out:` column, a wrong cell count, a
+non-numeric cell, a negative tolerance, a duplicate column, time going back, no rows) is refused before any step as
+`bad series <file>:<line>: <reason>`. Worked example: `tests/fixtures/logic-series/thermo-rt` (a toy thermostat,
+its adapter test and series), pinned by `tests/logic-series.bats`.
+
+A series checks the pure core only, offline and with exact time; it does not replace the lab restart proof (LP1,
+below): it pins the decision sequence before the lab, and LP1 then proves what only a live station shows (boot
+order, persisted state, the slot adapter). When LP1 or a field report finds a defect, add its input sequence as a
+new series row block first (RED), then fix the core.
+
 ## How you know it's good — the 4-layer assurance stack
 For any decision/safety logic, "done" means all four layers ran, in order:
 1. **Pure JUnit** (`toolbelt/run-pure-test.sh`) — the ONLY executable coverage of control/safety logic in WSL; mandatory. Extract inline logic to a pure class first (see `types/logic.md` §Pure-class extraction).

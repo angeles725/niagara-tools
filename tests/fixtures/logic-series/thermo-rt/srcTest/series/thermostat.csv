@@ -1,0 +1,11 @@
+# Thermostat worked example: setpoint 4 C, band +/-1, min off 3 s, demand 25 %/degree (tolerance 0.5).
+time_ms, in:temp, in:setpoint, in:enable, out:cooling, out:demand~0.5
+0,       4.0,     4,           true,      false,       0
+1000,    5.5,     4,           true,      true,        37.5
+2000,    3.5,     4,           true,      true,        0
+3000,    2.5,     4,           true,      false,       0
+# warm again 1 s later: min off time holds cooling off
+4000,    6.0,     4,           true,      false,       50
+6000,    6.0,     4,           true,      true,        -
+7000,    9.0,     4,           true,      true,        100
+8000,    9.0,     4,           false,     false,       0
