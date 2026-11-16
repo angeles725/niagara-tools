@@ -17,7 +17,7 @@ import (
 // the budget; a failure leaves the batch in-doubt and lists the components that exist now.
 func rollbackRuns(b *plan.Batch, p *plan.Planned, replies []any) (*plan.Runs, error) {
 	d, runs := p.Data.(*rollbackData), &plan.Runs{}
-	if len(d.components) == 0 && len(d.relinks) == 0 {
+	if len(d.components) == 0 && len(d.relinks) == 0 && len(d.outgoing) == 0 {
 		return runs, nil
 	}
 	base, err := topCreated(p, d, replies)
@@ -29,7 +29,7 @@ func rollbackRuns(b *plan.Batch, p *plan.Planned, replies []any) (*plan.Runs, er
 			return nil, err
 		}
 	}
-	if len(d.relinks) > 0 {
+	if len(d.relinks) > 0 || len(d.outgoing) > 0 {
 		if err := runRelinks(b, p, d, base, replies, runs); err != nil {
 			return nil, err
 		}

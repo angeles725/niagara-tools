@@ -7,6 +7,13 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
+// outgoingNote is the plan note of a rollback that re-creates n recorded outgoing links.
+func outgoingNote(n int) string {
+	return fmt.Sprintf("then re-creates %d outgoing link(s) the remove recorded (stored on components outside the "+
+		"removed one, from a source inside it), where both ends exist and the target is the recorded one; the "+
+		"read-back lists any missing in outgoing_links and the verdict is mismatch", n)
+}
+
 func rollbackNotes(view *pyjson.Object, bid string, relinks, unlinked, components, own, ops []any) []any {
 	notes := []any{"rolls back batch " + bid + " (" + pyjson.Str(get(view, "tool")) + ")"}
 	if len(relinks) > 0 {

@@ -14,7 +14,7 @@ import (
 // to it. A re-created subtree gets one add per nested component and its links back as ops of
 // the same batch (Run); the read-back reports what the snapshot could not bring back.
 var Rollback = plan.Impl{ScopeOrds: func(*pyjson.Object) []any { return nil }, PlanWith: rollbackPlan,
-	Run: rollbackRuns, Inverse: rollbackInverse, Readback: rollbackReadback}
+	Run: rollbackRuns, Inverse: rollbackInverse, Readback: rollbackReadbackAll}
 
 // batchJournal is what the rollback reads of the journal (journal.Journal).
 type batchJournal interface {
@@ -28,6 +28,8 @@ type rollbackData struct {
 	rollbackOf                    string
 	targets                       *pyjson.Object
 	relinks, unlinked, components []any
+	outgoing                      []any             // the outgoing links a remove recorded (rollback_outgoing.go)
+	outgoingSent, outgoingSkipped []any             // filled by the runs for the read-back
 	ordOf                         map[string]string // handle (as a dict key) -> ORD
 	created, frozenChecks         []any             // created: an ORD per spec, nil when skipped
 	hasCreated                    bool
@@ -61,6 +63,10 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 		return nil, err
 	}
 	ops, relinks, unlinked, err := inverseParts(inverse)
+	if err != nil {
+		return nil, err
+	}
+	outgoing, err := outgoingParts(inverse)
 	if err != nil {
 		return nil, err
 	}
@@ -124,13 +130,16 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 			own = append(own, obj("nm", "v", "h", h, "n", n))
 		}
 	}
-	links := len(relinks) * len(own)
+	links := (len(relinks) + len(outgoing)) * len(own)
 	if need := 1 + len(components) + links; w.WritesExecuted+need > w.MaxWrites {
 		return nil, plan.ToolError(fmt.Sprintf("%s: this rollback needs %d write(s) (1 batch + %d component(s) + %d "+
 			"relink(s)) but only %d remain (--max-writes %d)", safety.ReasonBudgetSmall, need, len(components), links,
 			w.MaxWrites-w.WritesExecuted, w.MaxWrites))
 	}
 	if err := checkRestoredEnds(w, targets, ops, own, components, relinks); err != nil {
+		return nil, err
+	}
+	if err := checkOutgoingEnds(w.Scope, targets, own, outgoing); err != nil {
 		return nil, err
 	}
 	ordOf := map[string]string{}
@@ -146,7 +155,11 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 		planInverse = own
 	}
 	keys := obj("rollback_of", bid, "relinks", list(relinks), "unlinked_inputs", list(unlinked), "components", list(components))
-	return &plan.Planned{Ops: ops, Inverse: planInverse, Notes: rollbackNotes(view, bid, relinks, unlinked, components, own, ops),
-		Targets: targets, Keys: keys, Data: &rollbackData{rollbackOf: bid, targets: targets, relinks: relinks,
-			unlinked: unlinked, components: components, ordOf: ordOf}}, nil
+	notes := rollbackNotes(view, bid, relinks, unlinked, components, own, ops)
+	if len(outgoing) > 0 {
+		notes = append(notes, outgoingNote(len(outgoing)))
+	}
+	return &plan.Planned{Ops: ops, Inverse: planInverse, Notes: notes, Targets: targets, Keys: keys,
+		Data: &rollbackData{rollbackOf: bid, targets: targets, relinks: relinks, unlinked: unlinked,
+			components: components, ordOf: ordOf, outgoing: outgoing}}, nil
 }

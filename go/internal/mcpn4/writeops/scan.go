@@ -90,7 +90,7 @@ func outgoing(node *pyjson.Object, path string, handles map[string]string, found
 		}
 		if _, inside := handles[key]; !inside {
 			found = append(found, obj("path", path, "target_slot", get(slots, "targetSlotName"),
-				"source_path", source, "source_slot", get(slots, "sourceSlotName")))
+				"source_path", source, "source_slot", get(slots, "sourceSlotName"), "h", here))
 		}
 	}
 	return found, nil
@@ -99,6 +99,11 @@ func outgoing(node *pyjson.Object, path string, handles map[string]string, found
 // scanOutgoing is _scan_outgoing: the outgoing links under scanOrd, sorted by target, target
 // slot and source path.
 func scanOutgoing(c plan.Client, scanOrd string, handles map[string]string) ([]any, error) {
+	return scanOutgoingWith(c, scanOrd, handles, false)
+}
+
+// scanOutgoingWith is scanOutgoing; withHandle adds each target's handle as target_h.
+func scanOutgoingWith(c plan.Client, scanOrd string, handles map[string]string, withHandle bool) ([]any, error) {
 	nodes, err := c.LoadTree(scanOrd, LinkScanDepth, box.LoadOptions{})
 	if err != nil {
 		return nil, err
@@ -113,8 +118,12 @@ func scanOutgoing(c plan.Client, scanOrd string, handles map[string]string) ([]a
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, obj("target", target, "target_slot", get(f, "target_slot"),
-			"source_path", get(f, "source_path"), "source_slot", get(f, "source_slot")))
+		entry := obj("target", target, "target_slot", get(f, "target_slot"),
+			"source_path", get(f, "source_path"), "source_slot", get(f, "source_slot"))
+		if withHandle {
+			entry.Set("target_h", get(f, "h"))
+		}
+		out = append(out, entry)
 	}
 	return out, pySort(out, func(e any) []any {
 		o := e.(*pyjson.Object)

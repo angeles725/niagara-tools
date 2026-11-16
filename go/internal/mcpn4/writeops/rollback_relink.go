@@ -11,23 +11,35 @@ import (
 )
 
 // runRelinks is _run_relinks: the links of the restored components, both ends in scope and
-// present, sent by sendLinks. Its report counts the relinks restored, skipped and ambiguous.
+// present, then the recorded outgoing links (outgoingOps), all sent by sendLinks in one intent.
+// Its report counts the relinks restored, skipped and ambiguous; an ambiguous outgoing link also
+// leaves the batch in-doubt.
 func runRelinks(b *plan.Batch, p *plan.Planned, d *rollbackData, base map[int]string, replies []any, runs *plan.Runs) error {
 	ops, targets, restoredComps, err := relinkOps(b, p, d, base, replies)
 	if err != nil {
 		return err
 	}
-	runs.Inverse = []any{}
-	states, err := sendLinks(b, d, base, ops, targets, runs)
+	relinks := len(ops)
+	more, moreTargets, err := outgoingOps(b, p, d, base, replies)
 	if err != nil {
 		return err
 	}
-	restored, ambiguous := tally(states)
+	runs.Inverse = []any{}
+	states, err := sendLinks(b, d, base, append(ops, more...), append(targets, moreTargets...), runs)
+	if err != nil {
+		return err
+	}
+	_, outAmbiguous := tally(states[relinks:])
+	runs.Doubt = outAmbiguous > 0
+	if len(d.relinks) == 0 {
+		return nil
+	}
+	restored, ambiguous := tally(states[:relinks])
 	runs.Report = obj("restored", restored, "skipped", len(d.relinks)*restoredComps-restored)
 	if ambiguous > 0 {
 		runs.Report.Set("ambiguous", ambiguous)
 	}
-	runs.Doubt, d.report = ambiguous > 0, runs.Report
+	runs.Doubt, d.report = runs.Doubt || ambiguous > 0, runs.Report
 	return nil
 }
 

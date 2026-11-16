@@ -898,7 +898,7 @@
   },
   {
    "name": "n4_remove_component",
-   "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. The dry run scans the write-scope prefix that holds parent_ord (or link_scan_ord) to depth 6 for links from the subtree into components outside it; when it finds any it refuses unless acknowledge_links is true. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. The dry run scans the write-scope prefix that holds parent_ord (or link_scan_ord) to depth 6 for links from the subtree into components outside it; when it finds any it refuses unless acknowledge_links is true, and then records them so n4_rollback re-creates them. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {

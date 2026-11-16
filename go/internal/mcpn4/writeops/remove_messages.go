@@ -38,7 +38,7 @@ func scanBroken(n int) string {
 }
 
 // linksFate is what happens to the broken links.
-const linksFate = "n4_rollback does not re-create them"
+const linksFate = "the remove records them in its inverse and n4_rollback re-creates them"
 
 // linksRefusal is the dry run's refusal when the scan found links and acknowledge_links is not true.
 func linksRefusal(head, root string, found []any) string {

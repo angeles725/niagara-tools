@@ -132,7 +132,7 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if scope == nil {
 		notes, err = scanNotes(c, args, nodes, s.handles, keys, notes)
 	} else {
-		notes, err = linkScan(c, args, scope, nodes, s.handles, keys, notes)
+		notes, inverse, err = linkScan(c, args, scope, nodes, s.handles, keys, notes, inverse)
 	}
 	if err != nil {
 		return nil, err
