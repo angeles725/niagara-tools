@@ -66,6 +66,9 @@ Default mode is read-only: write tools exist only with `--allow-writes`
 1. `n4_describe_session`, then `n4_connect` to a station the operator configured.
    Confirm the reported `stationName`, `version` and `tier` (section 5); with
    `tier_writes: refused` plan with dry runs only and follow the refusal's routes.
+   After rebuilding the mcp-n4 binary, restart the MCP server (the client keeps the
+   old process); `n4_describe_session`'s stale-binary warning shows it; never
+   conclude a tool is missing before checking `server.build`.
 2. For an inventory or any read wider than a few components, `n4_inventory` /
    `n4_bql_query` FIRST (section 7); then `n4_navigate` (optional `types` filter) and
    `n4_read_slots` only for the targeted components. **manual**
