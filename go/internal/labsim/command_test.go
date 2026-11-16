@@ -61,6 +61,26 @@ func TestCheckPrintsTheRegisterMapAnIntegratorTypesIn(t *testing.T) {
 	}
 }
 
+func TestCheckPrintsAReplayWithItsFileSpeedAndSkippedRecords(t *testing.T) {
+	t.Parallel()
+	code, out, errs := exec("check", "examples/replay.json")
+	if code != 0 || errs != "" {
+		t.Fatalf("exit %d, stderr %q", code, errs)
+	}
+	rows := map[string]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		rows[strings.Join(strings.Fields(line), " ")] = true
+	}
+	for _, want := range []string{
+		"plant-1 1 supply_water_temp_x10 input_register 0 30001 int16 ABCD read-only 70 replay replay-supply.csv x60, loop, from 0 ms (7 records, 1 skipped)",
+		"plant-1 1 return_water_temp_x10 input_register 1 30002 int16 ABCD read-only 120 replay replay-return.csv x1, hold_last, from 60000 ms (4 records, 0 skipped)",
+	} {
+		if !rows[want] {
+			t.Errorf("no row %q in\n%s", want, out)
+		}
+	}
+}
+
 func TestCheckPrintsTheFaultsOfADeviceAndTheSixDigitReference(t *testing.T) {
 	t.Parallel()
 	_, out, _ := exec("check", "examples/meter.json")

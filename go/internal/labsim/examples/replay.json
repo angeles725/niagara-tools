@@ -1,0 +1,17 @@
+{
+  "name": "chilled water plant, replayed",
+  "unknown_unit": "silent",
+  "devices": [
+    {
+      "name": "plant-1",
+      "unit": 1,
+      "points": [
+        {"name": "supply_water_temp_x10", "table": "input_register", "address": 0, "type": "int16",
+         "behaviour": {"kind": "replay", "file": "replay-supply.csv", "speed": 60, "end": "loop"}},
+        {"name": "return_water_temp_x10", "table": "input_register", "address": 1, "type": "int16",
+         "behaviour": {"kind": "replay", "file": "replay-return.csv", "start_offset_ms": 60000}},
+        {"name": "pump_command", "table": "coil", "address": 0, "value": 1, "writable": true}
+      ]
+    }
+  ]
+}
