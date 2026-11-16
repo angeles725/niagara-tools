@@ -634,3 +634,29 @@ st_link_in_flags() {
   run "$KIT/toolbelt/run-pure-test.sh" "$U" com.example.ModuleA.ux.route.StatusHandlerTest
   [ "$status" -eq 0 ] || { echo "$output"; false; }
 }
+
+@test "TC-S2a: a value holding a fixture token is written literally (a later substitution never rewrites it)" {
+  # Mutation: S2 -- applying the substitution rules one after another rewrites the 4.14 inside the plugin version.
+  run "$SC" MinimalPan "$OUT" --plugin-version 4.14-p --target-version 9.9
+  [ "$status" -eq 0 ]
+  grep -qF 'getOrElse("4.14-p")' "$OUT/MinimalPan/settings.gradle.kts"
+  grep -qF 'OptimizerSupervisor 9.9 -> 4.14-p (default)' "$OUT/MinimalPan/settings.gradle.kts"
+}
+
+@test "TC-S2b: a failed emit leaves nothing in the out-dir and the next run is not refused" {
+  # Mutation: S2 -- without the discard of a failed emit the partial MinimalPan tree stays in the out-dir.
+  local kit="$BATS_TEST_TMPDIR/kit" t
+  mkdir -p "$kit/toolbelt" "$kit/templates"
+  ln -s "$SC" "$kit/toolbelt/scaffold-module.sh"
+  ln -s "$KIT/fixtures" "$kit/fixtures"
+  for t in "$KIT"/templates/*; do
+    [ "${t##*/}" = VERSION-LEDGER.md ] || ln -s "$t" "$kit/templates/${t##*/}"
+  done
+  run "$kit/toolbelt/scaffold-module.sh" MinimalPan "$OUT"
+  [ "$status" -eq 3 ]
+  [ "$output" = "scaffold-module: version-ledger template not found: $kit/toolbelt/../templates/VERSION-LEDGER.md
+scaffold-module: removed the partial $OUT/MinimalPan" ]
+  [ -z "$(ls -A "$OUT")" ]
+  run "$SC" MinimalPan "$OUT"
+  [ "$status" -eq 0 ]
+}
