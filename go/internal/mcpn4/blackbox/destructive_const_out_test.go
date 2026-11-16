@@ -4,6 +4,7 @@ package blackbox
 // re-creates it with its value and its read-back compares it.
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest/boxstation"
@@ -45,5 +46,27 @@ func TestTheRemoveSnapshotStillDropsAComputedOut(t *testing.T) {
 	op := addOf(sent(), w.Name)
 	if op == nil || destructiveContainsAny(field(Dig(op, "b", "s"), "n"), "out") {
 		t.Errorf("W add = %v", op)
+	}
+}
+
+// A remove planned on a station whose registry channel answers an error keeps the snapshot it took
+// before contracts were read (out left out), instead of failing a remove that worked before.
+func TestARemoveWhoseRegistryCallFailsKeepsTheBaselineSnapshot(t *testing.T) {
+	d := destructiveRig(t, nil)
+	k := d.AddWithOut("K", 10.0)
+	d.f.set(func(f *faults) {
+		f.raw = func(frame map[string]any) (int, []byte) {
+			for _, m := range objects(frame["m"]) {
+				if m["c"] == "reg" {
+					data, _ := json.Marshal(map[string]any{"v": "2.3", "p": "box", "n": frame["n"], "m": []any{
+						map[string]any{"c": "reg", "k": "loadTypes", "r": 0, "t": "e", "b": map[string]any{"m": "registry denied"}}}})
+					return 200, data
+				}
+			}
+			return 0, nil
+		}
+	})
+	if out := d.Srv.RunWrite("n4_remove_component", removeArgs(k.Name)); out["verdict"] != "verified" {
+		t.Errorf("remove = %v", out)
 	}
 }

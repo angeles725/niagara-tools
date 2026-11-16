@@ -1,7 +1,6 @@
 package writeops
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
@@ -38,9 +37,8 @@ func snapshotContracts(c plan.Client, root *pyjson.Object) (*plan.Contracts, err
 		return nil, nil
 	}
 	ct, err := treeContracts(tl, root)
-	var u *plan.UnansweredType
-	if errors.As(err, &u) {
+	if err != nil { // an unanswered type or a failed registry call: the snapshot as before contracts
 		return nil, nil
 	}
-	return ct, err
+	return ct, nil
 }
