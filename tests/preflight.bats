@@ -31,13 +31,25 @@ setup_file() {
   ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   # shellcheck disable=SC1091  # go/ helper, resolved at runtime via ROOT
   . "$ROOT/go/go-tool.sh"
-  go_tool_bin "$ROOT/go" preflight >/dev/null
+  local bin
+  bin="$(go_tool_bin "$ROOT/go" preflight)"
+  # The cases that narrow PATH (no go) run a private copy of the launcher beside a copy of that binary. The shared
+  # go/bin/preflight is current only until a Go source changes: an edit, a checkout or another build during a
+  # parallel run makes the launcher ask for a rebuild it cannot do without go (exit 3), and the case fails on a
+  # row that was never printed. The binary is copied last, so nothing under the private go/ is newer than it.
+  PF_ISO="$BATS_FILE_TMPDIR/kit"
+  mkdir -p "$PF_ISO/build-n4-module-kit/toolbelt" "$PF_ISO/go/bin"
+  cp "$ROOT/build-n4-module-kit/toolbelt/preflight.sh" "$PF_ISO/build-n4-module-kit/toolbelt/"
+  cp "$ROOT/go/go-tool.sh" "$ROOT/go/go.mod" "$PF_ISO/go/"
+  cp "$bin" "$PF_ISO/go/bin/preflight"
+  export PF_ISO
 }
 
 setup() {
   TMPDIR_T="$(mktemp -d)"
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   PREFLIGHT="$KIT/toolbelt/preflight.sh"
+  PREFLIGHT_NOGO="$PF_ISO/build-n4-module-kit/toolbelt/preflight.sh"   # for a PATH with no go (setup_file)
   FIXDIR="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/preflight"
 
   # Stable fixture paths (not regenerated per-test — fixtures are pre-committed)
@@ -97,7 +109,7 @@ teardown() {
   done
   # Run with a PATH that has our fakebin first and then only dirs without lsof
   # lsof on this system: $(command -v lsof) — excluded by restricting PATH
-  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
   [[ "$out" == *"SKIP"* ]]
   [[ "$out" != *"PASS  jar-lock"* ]]
 }
@@ -181,7 +193,7 @@ _pf_fakebin() {
   for i in 1 2 3 4 5; do : > "$NH2/modules/Mod$i.jar"; done
   printf '#!/usr/bin/env bash\necho call >> "%s"\n' "$CALLS" > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
-  PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" >/dev/null 2>&1 || true
+  PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" >/dev/null 2>&1 || true
   # NAMED MUTATION: reintroduce the per-jar `for jar in ...; do lsof "$jar"; done` loop ->
   # this count becomes 5 (one per jar), so this assertion fails.
   [ "$(wc -l < "$CALLS")" -eq 1 ]
@@ -191,15 +203,18 @@ _pf_fakebin() {
   FAKEBIN="$TMPDIR_T/fakebin-timing"; _pf_fakebin "$FAKEBIN"
   NH2="$TMPDIR_T/nh-timing"; mkdir -p "$NH2/etc/m2" "$NH2/modules"
   for i in $(seq 1 20); do : > "$NH2/modules/Mod$i.jar"; done
-  printf '#!/usr/bin/env bash\nsleep 0.2\n' > "$FAKEBIN/lsof"
+  # sleep by its full path: the narrowed PATH has none, and a fake lsof that returns at once measures nothing.
+  printf '#!/usr/bin/env bash\n"%s" 1\n' "$(command -v sleep)" > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
   start=$(date +%s%N)
-  PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" >/dev/null 2>&1 || true
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
   end=$(date +%s%N)
   elapsed_ms=$(( (end - start) / 1000000 ))
-  # A per-jar loop over 20 jars at 0.2s each would take >=4000ms; a single pass stays well
-  # under 1 lsof call's worth of overhead (a couple hundred ms plus script overhead).
-  [ "$elapsed_ms" -lt 2000 ]
+  [[ "$out" == *"jar-lock"* ]]      # the check ran: a launcher that failed early is fast too
+  [ "$elapsed_ms" -ge 1000 ]        # and its one lsof call slept
+  # A per-jar loop over 20 jars at 1 s each takes >= 20000 ms; one pass takes 1000 ms plus the launcher. The 9 s
+  # between them is the margin for a loaded machine (a parallel run): the old 0.2 s sleep left under 2 s.
+  [ "$elapsed_ms" -lt 10000 ]
 }
 
 @test "PF-jarlock-detects-locked: the single -Fn pass still correctly flags a locked jar (functional parity)" {
@@ -209,7 +224,7 @@ _pf_fakebin() {
   : > "$NH2/modules/Free.jar"
   printf '#!/usr/bin/env bash\nprintf "p1234\\nn%s\\n"\n' "$NH2/modules/Locked.jar" > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
-  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
   [[ "$out" == *"WARN"* ]]
   [[ "$out" == *"jar-lock"* ]]
   [[ "$out" == *"Locked.jar"* ]]
@@ -223,7 +238,7 @@ _pf_fakebin() {
   CALLS="$TMPDIR_T/lsof.calls.9p"; : > "$CALLS"
   printf '#!/usr/bin/env bash\necho call >> "%s"\n' "$CALLS" > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
-  out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
+  out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
   [[ "$out" == *"SKIP"* ]]
   [[ "$out" == *"jar-lock"* ]]
   { [[ "$out" == *"9p"* ]] || [[ "$out" == *"drvfs"* ]]; }
@@ -237,7 +252,7 @@ _pf_fakebin() {
   # A real lsof always lists its own process's files: a non-empty listing with no module jar in it.
   printf '#!/usr/bin/env bash\nprintf "p1\\nn/usr/bin/lsof\\n"\n' > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
-  out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
+  out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
   [[ "$out" == *"PASS  jar-lock"* ]]
 }
 
@@ -249,7 +264,7 @@ _pf_fakebin() {
   FAKEBIN="$TMPDIR_T/fakebin-fail"; _pf_fakebin "$FAKEBIN"
   printf '#!/usr/bin/env bash\necho "lsof: permission denied" >&2\nexit 1\n' > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
-  out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
+  out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
   [[ "$out" == *"SKIP  jar-lock"* ]]
   [[ "$out" != *"PASS  jar-lock"* ]]
 }
@@ -283,7 +298,7 @@ _pf_cat_lsof() {
   FAKEBIN="$TMPDIR_T/fakebin-bulk"; _pf_fakebin "$FAKEBIN"
   NH2="$TMPDIR_T/nh-bulk"; _pf_bigjars "$NH2" "$TMPDIR_T/listing" 7 250 399
   _pf_cat_lsof "$FAKEBIN" "$TMPDIR_T/listing"
-  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
   # The listing names the jars in reverse order; the row keeps glob order.
   row=$(printf '%s\n' "$out" | grep 'jar-lock')
   [ "$(printf '%s\n' "$row" | wc -l)" -eq 1 ]
@@ -297,7 +312,7 @@ _pf_cat_lsof() {
   NH2="$TMPDIR_T/nh-bulkt"; _pf_bigjars "$NH2" "$TMPDIR_T/listing-t" 1
   _pf_cat_lsof "$FAKEBIN" "$TMPDIR_T/listing-t"
   TIMEOUT="$(command -v timeout)"
-  rc=0; PATH="$FAKEBIN" "$TIMEOUT" 10 "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" >"$TMPDIR_T/out" 2>&1 || rc=$?
+  rc=0; PATH="$FAKEBIN" "$TIMEOUT" 10 "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" >"$TMPDIR_T/out" 2>&1 || rc=$?
   [ "$rc" -ne 124 ]
   grep -q 'WARN  jar-lock .*Mod001.jar' "$TMPDIR_T/out"
 }
@@ -306,7 +321,7 @@ _pf_cat_lsof() {
   FAKEBIN="$TMPDIR_T/fakebin-bulkp"; _pf_fakebin "$FAKEBIN"
   NH2="$TMPDIR_T/nh-bulkp"; _pf_bigjars "$NH2" "$TMPDIR_T/listing-p"
   _pf_cat_lsof "$FAKEBIN" "$TMPDIR_T/listing-p"
-  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
   [[ "$out" == *"PASS  jar-lock"*"no locked jars under $NH2/modules/"* ]]
 }
 
@@ -314,7 +329,7 @@ _pf_cat_lsof() {
   FAKEBIN="$TMPDIR_T/fakebin-bulke"; _pf_fakebin "$FAKEBIN"
   NH2="$TMPDIR_T/nh-bulke"; _pf_bigjars "$NH2" "$TMPDIR_T/listing-e"
   printf '#!/usr/bin/env bash\nexit 0\n' > "$FAKEBIN/lsof"; chmod +x "$FAKEBIN/lsof"
-  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
   [[ "$out" == *"SKIP  jar-lock"* ]]
   [[ "$out" != *"PASS  jar-lock"* ]]
 }
@@ -327,7 +342,7 @@ _pf_cat_lsof() {
   printf '#!/usr/bin/env bash\nprintf "p1\\nn%s\\nn%s.bak\\n%s\\n"\n' \
     "$NH2/modules/Mod.ja" "$NH2/modules/Mod.jar" "$NH2/modules/Other.jar" > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
-  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
   [[ "$out" == *"PASS  jar-lock"* ]]
 }
 
@@ -336,7 +351,7 @@ _pf_cat_lsof() {
   NH2="$TMPDIR_T/nh-dir"; mkdir -p "$NH2/etc/m2" "$NH2/modules/Dir.jar"
   printf '#!/usr/bin/env bash\nprintf "p1\\nn%s\\n"\n' "$NH2/modules/Dir.jar" > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
-  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT_NOGO" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
   [[ "$out" == *"PASS  jar-lock"* ]]
 }
 

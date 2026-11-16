@@ -246,6 +246,11 @@ Before `git commit`:
       bats 1.14 runs 0 tests (`parallel: command not found`, `Executed 0 instead of expected N tests`) and prints no
       `not ok` line, so a check that greps for failures reads it as green. A parallel run must assert that its `ok`
       count equals `bats --count tests/*.bats`. `[ev: retro retro-fold-campaign-close Δ2]`
+      A case that narrows `PATH` until `go` is unreachable never runs a launcher over the shared `go/bin/`: that
+      binary is current only until a Go source changes, and an edit, a checkout or another build during the run makes
+      the launcher ask for a rebuild it cannot do (exit 3). `tests/preflight.bats` copies the launcher and its binary
+      once per file (`setup_file`, `PREFLIGHT_NOGO`) for those cases, and its wall-clock case (`PF-jarlock-timing`)
+      keeps seconds of margin and asserts that the measured command ran. `[ev: retro go-scaffold-module-port Δ2]`
 - [ ] `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash` exits 0 (no warnings on changed lines).
 - [ ] Or replay the whole CI job: `scripts/ci-local.sh -j 3` runs every `ci.yml` step under GitHub's `bash -e` (no
       pipefail) with the pinned shellcheck v0.10.0 from a sha256-checked cache; a newer local shellcheck misses or
