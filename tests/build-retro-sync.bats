@@ -666,8 +666,8 @@ ZERO=0000000000000000000000000000000000000000
   { printf 'chore: typo\n\nRetro: none (trivial: wording fix)\n'
     for _ in $(seq 1 4000); do printf 'filler line of a long multi-commit push log, enough to pass the pipe buffer\n'; done
   } > "$BATS_TEST_TMPDIR/log"
-  # git runs pre-push with SIGPIPE ignored (it writes the ref lines to the hook's stdin), so the shell
-  # builtin printf reports EPIPE instead of dying silently: reproduce that disposition.
+  # git runs pre-push with SIGPIPE ignored (it writes the ref lines to the hook's stdin), so a write to a
+  # closed pipe reports EPIPE instead of dying silently: reproduce that disposition for the launcher and the Go gate.
   FAKE_TOPLEVEL="$REPO" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" \
     run bash -c 'trap "" PIPE; exec env PATH="$1:$PATH" bash "$2" origin https://example/repo.git' _ "$FAKEBIN" "$HOOK" \
     <<<'refs/heads/main aaaa refs/heads/main bbbb'
