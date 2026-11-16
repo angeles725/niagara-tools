@@ -23,7 +23,7 @@ type Allowlist []*regexp.Regexp
 // Declared difference from the bash tool, which asked GNU grep -E: the dialect is Go's POSIX ERE
 // (regexp.CompilePOSIX), so a GNU-only extension Go does not compile (a back-reference, \w, a leading
 // `*`) is not a valid line, and a construct Go compiles with another meaning (\<, \n, [[:word:]], a
-// backslash in a bracket expression, {,2}, {}, a class name in single brackets: dialect.go) is refused by name
+// backslash in a bracket expression, {,2}, {}, {02}, ^*, a class name in single brackets: dialect.go) is refused by name
 // instead of matched.
 // TestCommittedAllowlist pins the committed list to this dialect.
 func ParseAllowlist(text string) (allow Allowlist, fault string) {

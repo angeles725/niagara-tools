@@ -128,3 +128,44 @@ func TestMainKeepsBracesAndColonsOfTheDialect(t *testing.T) {
 		}
 	}
 }
+
+// TestMainRefusesLeadingZeroIntervalsAndARepeatedAnchor: an interval bound written with a leading zero
+// (`{02}`, `{1,02}`) is a literal for Go and an interval for GNU grep -E, and `^*` is a repeated anchor for
+// Go where GNU grep warns "* at start of expression" and reads a literal star: all are outside the dialect.
+func TestMainRefusesLeadingZeroIntervalsAndARepeatedAnchor(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ name, line, construct string }{
+		{"a count with a leading zero", `a{02}`, `{02}`},
+		{"an upper bound with a leading zero", `a{1,02}`, `{1,02}`},
+		{"a lower bound with a leading zero", `a{01,}`, `{01,}`},
+		{"a star after the start anchor", `^*a`, `^*`},
+		{"a star after an anchor inside a group", `a(^*)b`, `^*`},
+	}
+	for _, c := range cases {
+		tap, allow := fixture(t, oneSkip, c.line+"\n")
+		want := "check-bats-skips: allowlist line uses " + c.construct +
+			", outside the dialect (POSIX ERE as Go regexp.CompilePOSIX reads it; tests/bats-skip-allowlist.txt header): " + c.line + "\n"
+		if code, out, errText := run(tap, allow); code != ExitEnv || out != "" || errText != want {
+			t.Errorf("%s: exit %d stdout %q stderr %q, want exit 3 stderr %q", c.name, code, out, errText, want)
+		}
+	}
+}
+
+// TestMainKeepsZeroBoundsAndAnEscapedStarAfterTheAnchor: a bound that is the single digit 0, a bound with
+// an inner zero, a star the anchor does not precede unescaped, and a caret that is a bracket member still
+// match as before.
+func TestMainKeepsZeroBoundsAndAnEscapedStarAfterTheAnchor(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ reason, line string }{
+		{"b", `^a{0}b{0,1}$`},
+		{"aaaaaaaaaa", `^a{10}$`},
+		{"*a", `^\*a$`},
+		{"^^a", `^[a^]*a$`},
+	}
+	for _, c := range cases {
+		tap, allow := fixture(t, "1..1\nok 1 a # skip "+c.reason+"\n", c.line+"\n")
+		if code, out, errText := run(tap, allow); code != ExitOK || out != "check-bats-skips: 1 skip(s), all allowlisted\n" || errText != "" {
+			t.Errorf("%s: exit %d stdout %q stderr %q", c.line, code, out, errText)
+		}
+	}
+}

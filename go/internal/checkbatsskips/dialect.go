@@ -16,8 +16,13 @@ const (
 	posixClasses = " alnum alpha blank cntrl digit graph lower print punct space upper xdigit "
 )
 
-// interval is a brace expression Go and GNU grep -E both read as a repetition count: {n}, {n,} or {n,m}.
-var interval = regexp.MustCompile(`^\{[0-9]+(,[0-9]*)?\}`)
+// interval is a brace expression Go and GNU grep -E both read as a repetition count: {n}, {n,} or {n,m},
+// each bound written without a leading zero (Go reads {02} as a literal, GNU grep as the count 2).
+var interval = regexp.MustCompile(`^\{(0|[1-9][0-9]*)(,(0|[1-9][0-9]*)?)?\}`)
+
+// repeatedAnchor is a star right after the start anchor: Go repeats the anchor, GNU grep -E warns
+// "* at start of expression" and reads a literal star.
+const repeatedAnchor = "^*"
 
 // foreign is the first construct of a compiled pattern line that is outside the dialect, "" when the
 // whole line is inside it:
@@ -28,7 +33,8 @@ var interval = regexp.MustCompile(`^\{[0-9]+(,[0-9]*)?\}`)
 //   - an equivalence class [=a=] or a collating symbol [.a.] (Go reads the characters one by one);
 //   - a class name in single brackets, [:alpha:] (Go reads a set of those characters; GNU grep refuses it);
 //   - an unescaped brace that opens no {n}, {n,} or {n,m} interval (Go reads {,2} and {} as literals; GNU
-//     grep reads {,2} as the interval 0 to 2 and refuses {}).
+//     grep reads {,2} as the interval 0 to 2 and refuses {}), a bound with a leading zero included ({02});
+//   - a star right after the start anchor, ^* (see repeatedAnchor).
 func foreign(line string) string {
 	for i := 0; i < len(line); i++ {
 		switch line[i] {
@@ -49,6 +55,10 @@ func foreign(line string) string {
 				return brace(line, i)
 			}
 			i += len(unit) - 1
+		case '^':
+			if strings.HasPrefix(line[i:], repeatedAnchor) {
+				return repeatedAnchor
+			}
 		}
 	}
 	return ""
