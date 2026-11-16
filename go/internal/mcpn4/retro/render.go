@@ -99,8 +99,11 @@ func summary(audit, views []*pyjson.Object, since string, unreadable []journal.U
 	}
 	for _, v := range views {
 		key := get(v, "verdict")
-		if get(v, "state") == "in-doubt" {
+		switch get(v, "state") {
+		case "in-doubt":
 			key = "in-doubt"
+		case journal.StateRefused: // refused by the station, nothing applied
+			key = journal.StateRefused
 		}
 		if err := verdicts.add(key); err != nil {
 			return "", err

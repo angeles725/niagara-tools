@@ -10,7 +10,7 @@ import (
 // the link the station named. A reply that cannot be trusted is in-doubt, and Recover looks
 // for the new link by its slots.
 var CreateLink = plan.Impl{ScopeCheck: linkScope,
-	Plan: linkPlan, Inverse: linkInverse, Recover: linkRecover, Readback: linkReadback}
+	Plan: linkPlan, Inverse: linkInverse, Recover: linkRecover, Readback: linkReadback, Unapplied: linkUnapplied}
 
 type linkData struct {
 	srcH, tgtH any
@@ -28,7 +28,7 @@ func linkPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
-	srcH, _, err := plan.Handle(c, str(args, "source_ord"), 1)
+	srcH, srcNodes, err := plan.Handle(c, str(args, "source_ord"), 1)
 	if err != nil {
 		return nil, err
 	}
@@ -40,6 +40,9 @@ func linkPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	data := linkData{srcH: srcH, tgtH: tgtH, existing: map[string]bool{}}
 	for _, name := range links(nodes) {
 		data.existing[name] = true
+	}
+	if err := linkPrecheck(c, args, srcNodes, nodes, data, ss, ts); err != nil {
+		return nil, err
 	}
 	targets := pyjson.NewObject()
 	targets.Set(tgtOrd, tgtH)

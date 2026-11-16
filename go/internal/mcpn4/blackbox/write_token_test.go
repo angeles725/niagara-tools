@@ -49,13 +49,41 @@ func TestExecuteWithoutATokenIsRefused(t *testing.T) {
 	}
 }
 
-func TestATokenIsSingleUse(t *testing.T) {
+// A re-used create token reads as a plan mismatch: the create that ran took the name, so the
+// re-plan now carries the taken-name note and its plan_hash differs from the one the token binds.
+func TestAReusedCreateTokenIsAPlanMismatch(t *testing.T) {
 	r := verifiedRig(t)
 	token := pumpToken(t, r)
 	r.Srv.OK("n4_create_component", Execute(createPump, token))
 	text := r.Srv.Err("n4_create_component", Execute(createPump, token))
-	if !strings.Contains(text, "already used") || !reflect.DeepEqual(r.Children(), []string{"Pump"}) {
+	if !strings.HasPrefix(text, "confirmation_token does not match this tool, these arguments and this plan") ||
+		!reflect.DeepEqual(r.Children(), []string{"Pump"}) || len(r.Lines("journal.jsonl")) != 2 {
 		t.Errorf("refusal = %s, children %v", text, r.Children())
+	}
+}
+
+// A token whose plan is the same after it ran (a save plans one invokeAction on the root, no
+// inverse, no state-dependent note) is refused as already used.
+func TestATokenIsSingleUse(t *testing.T) {
+	d := destructiveRig(t, nil)
+	token := d.Srv.Dry("n4_save_station", nil)["confirmation_token"]
+	d.Srv.OK("n4_save_station", Execute(nil, token))
+	text := d.Srv.Err("n4_save_station", Execute(nil, token))
+	if !strings.HasPrefix(text, "confirmation_token already used: run the dry run again") || d.Station.Saves() != 1 {
+		t.Errorf("refusal = %s, saves %d", text, d.Station.Saves())
+	}
+}
+
+// The caller approved a plan with the name free: if the name is taken before the execute, the
+// execute refuses on the plan mismatch instead of letting the station rename silently.
+func TestANameTakenAfterTheDryRunRefusesTheExecute(t *testing.T) {
+	r := verifiedRig(t)
+	token := pumpToken(t, r)
+	r.Add("3", "Pump", "")
+	text := r.Srv.Err("n4_create_component", Execute(createPump, token))
+	if !strings.HasPrefix(text, "confirmation_token does not match this tool, these arguments and this plan") ||
+		!reflect.DeepEqual(r.Children(), []string{"Pump"}) || len(r.Lines("journal.jsonl")) != 0 {
+		t.Errorf("refusal = %s, children %v, journal %d", text, r.Children(), len(r.Lines("journal.jsonl")))
 	}
 }
 

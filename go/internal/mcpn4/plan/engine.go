@@ -23,10 +23,14 @@ func (e *Engine) Handler(name string, impl Impl) jsonrpc.Handler {
 		var te *jsonrpc.ToolError
 		var se *safety.Error
 		var doubt *InDoubt
+		var refused *Refused
 		switch {
 		case errors.As(err, &doubt): // the station call failed after the intent was journaled
 			e.record(name, args, doubt.BatchID, "error", doubt.Msg)
 			return nil, ToolError(doubt.Msg)
+		case errors.As(err, &refused): // the station refused it and nothing was applied
+			e.record(name, args, refused.BatchID, "refused", refused.Msg)
+			return nil, ToolError(refused.Msg)
 		case errors.As(err, &te) || errors.As(err, &se):
 			e.record(name, args, nil, "refused", PyStr(err))
 			return nil, ToolError(PyStr(err))
@@ -120,7 +124,8 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	// unexpected exception) too.
 	out, err = jsonrpc.Recover(func() (*pyjson.Object, error) { return e.execute(client, impl, args, planned, batchID) })
 	var doubt *InDoubt
-	if err != nil && !errors.As(err, &doubt) {
+	var refused *Refused
+	if err != nil && !errors.As(err, &doubt) && !errors.As(err, &refused) {
 		err = inDoubt(batchID, err)
 	}
 	return out, batchID, err

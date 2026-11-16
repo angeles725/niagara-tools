@@ -16,12 +16,19 @@ func (st *Station) SetSupertype(spec, super string) {
 }
 
 // loadTypes is the registry channel's loadTypes: an entry for each requested spec and, like a
-// station, for every supertype it depends on ({p: supertype} when the type has one).
+// station, for every supertype it depends on ({p: supertype} when the type has one). A spec
+// SetRegistry describes answers its entry instead (nil: left out); the station is locked.
 func (st *Station) loadTypes(body map[string]any) map[string]any {
 	specs, _ := body["t"].([]any)
 	out := map[string]any{}
 	for _, s := range specs {
 		for spec := fmt.Sprint(s); spec != "" && out[spec] == nil; spec = st.supertypes[spec] {
+			if entry, described := st.registry[spec]; described {
+				if entry != nil {
+					out[spec] = entry
+				}
+				break
+			}
 			entry := map[string]any{}
 			if super := st.supertypes[spec]; super != "" {
 				entry["p"] = super

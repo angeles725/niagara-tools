@@ -58,6 +58,7 @@ type Station struct {
 	sessions map[string]bool
 	root     *Node
 	byHandle map[string]*Node
+	registry map[string]any // see SetRegistry
 	next     int
 	events   []any
 	requests int

@@ -24,7 +24,8 @@ type Planned struct {
 // instead when it also reads the write state and session, Python's needs_ctx), the inverse it
 // journals (nil: the planned one; else built from the station's replies, where an error means
 // the reply cannot be trusted), the recover hook of such a reply (nil: none), the follow-up
-// runs of the same batch (nil: none) and its read-back.
+// runs of the same batch (nil: none), its read-back, and the check that nothing of a batch the
+// station refused was applied (nil: a refusal stays in-doubt).
 type Impl struct {
 	ScopeOrds func(args *pyjson.Object) []any
 	// ScopeCheck, when set, replaces the ScopeOrds check: a tool whose scope rule is more than
@@ -36,6 +37,9 @@ type Impl struct {
 	Inverse    func(p *Planned, replies []any) ([]any, error)
 	Recover    func(c Client, args *pyjson.Object, p *Planned, replies []any) (observed any, inverse []any, err error)
 	Readback   func(c Client, args *pyjson.Object, p *Planned, replies, inverse []any) (requested, accepted, observed any, verdict string, err error)
+	// Unapplied reads back the batch's targets after the station refused its first op: true only
+	// when the observation shows none of its ops applied.
+	Unapplied func(c Client, args *pyjson.Object, p *Planned) (bool, error)
 }
 
 // Batch is one executing batch as its follow-up runs see it: the station client, the write

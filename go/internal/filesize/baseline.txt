@@ -59,7 +59,6 @@
 232 internal/lint/rules/intrinsiclock/intrinsiclock.go
 230 internal/lintindex/lintindex.go
 227 internal/verifymodule/plano.go
-225 internal/mcpn4/plan/execute.go
 224 internal/bogaudit/graph.go
 224 internal/mcpn4/writeops/history.go
 223 internal/lint/rules/silentprotection/trips.go
@@ -78,7 +77,6 @@
 212 internal/reportmodule/rows.go
 210 internal/niagaratest/ignored.go
 209 internal/lint/rules/sessionstore/sessionstore.go
-209 internal/mcpn4/journal/journal.go
 208 internal/buildstate/fragment.go
 208 internal/citeresolve/command.go
 207 internal/retroindex/retroindex.go
@@ -89,7 +87,6 @@
 202 internal/lint/rules/size/size.go
 202 internal/lint/rules/slotomaticmarkers/slotomaticmarkers.go
 201 internal/lint/rules/lifecycleguard/lifecycleguard.go
-201 internal/mcpn4/box/client.go
 201 internal/mcpn4/pyxml/pyxml.go
 201 internal/mcpn4/readtools/files.go
 201 internal/mcpn4/readtools/links.go

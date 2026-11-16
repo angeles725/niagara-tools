@@ -14,6 +14,10 @@ import (
 type Faults struct {
 	OnSync    func(st *Station, op map[string]any)
 	CheckLink func(st *Station, arg map[string]any, orig func(arg map[string]any) any) any
+	// Refuse, when it returns an error for an ssc call (sck, scarg), makes the station answer
+	// that call with its text as an error reply ("t": "e") instead of applying it; whatever
+	// Refuse itself changes on st stays applied.
+	Refuse func(st *Station, sck string, arg map[string]any) error
 }
 
 // SetFaults routes every authorized BOX frame through f from now on; it replaces the hook.
@@ -57,6 +61,11 @@ func (st *Station) faultedDispatch(channel, key string, body map[string]any, f F
 	}
 	sck, _ := body["sck"].(string)
 	arg, _ := body["scarg"].(map[string]any)
+	if f.Refuse != nil {
+		if err := f.Refuse(st, sck, arg); err != nil {
+			return nil, err
+		}
+	}
 	switch {
 	case sck == "checkLinks" && f.CheckLink != nil:
 		return []any{f.CheckLink(st, arg, st.checkLink)}, nil

@@ -82,8 +82,8 @@ func canonical(v any) string {
 }
 
 // RollbackTarget makes the journal checks _rollback_plan makes before the station one: a batch
-// id, journaled, not itself a rollback and not in-doubt (the station may or may not have applied
-// it). It returns the batch's view.
+// id, journaled, not refused by the station (nothing to undo), not itself a rollback and not
+// in-doubt (the station may or may not have applied it). It returns the batch's view.
 func (j *Journal) RollbackTarget(batchID any) (*pyjson.Object, error) {
 	bid, ok := batchID.(string)
 	if !ok || !batchIDPattern.MatchString(bid) {
@@ -105,6 +105,10 @@ func (j *Journal) RollbackTarget(batchID any) (*pyjson.Object, error) {
 	if view == nil {
 		return nil, toolError("unknown batch " + bid + ": it is not in the journal")
 	}
+	if get(view, "state") == StateRefused {
+		return nil, toolError("batch " + bid + " was refused by the station and nothing was applied: there is " +
+			"nothing to roll back")
+	}
 	if of := get(view, "rollback_of"); pyjson.Truthy(of) {
 		return nil, toolError("batch " + bid + " is itself a rollback of " + pyjson.Str(of) +
 			": roll forward by repeating the original write instead")
@@ -121,7 +125,8 @@ func (j *Journal) RollbackTarget(batchID any) (*pyjson.Object, error) {
 }
 
 // EarlierRollbacks makes the check _rollback_plan makes after the station one: no earlier
-// rollback of batchID is in-doubt or done, and none failed after the station accepted its ops.
+// rollback of batchID is in-doubt or done, and none failed after the station accepted its ops; a
+// rollback the station refused with nothing applied does not count.
 func (j *Journal) EarlierRollbacks(batchID string) error {
 	earlier, err := j.RollbacksOf(batchID)
 	if err != nil {
@@ -133,6 +138,8 @@ func (j *Journal) EarlierRollbacks(batchID string) error {
 			return &pyjson.Exception{Type: "KeyError"}
 		}
 		switch {
+		case get(e, "state") == StateRefused: // refused with nothing applied: as if never sent
+			continue
 		case get(e, "state") == "in-doubt":
 			return toolError("a rollback of batch " + batchID + " (" + pyjson.Str(id) + ") is in-doubt: inspect the station")
 		case get(e, "verdict") != "failed":

@@ -1,0 +1,9 @@
+### Fixed — mcp-n4: explicit station refusals are journaled as refused, and dry runs pre-check creates and links
+- A write the station answers with its own error reply on the first op (`Illegal parent`, `Slot ... already exists`, `Could not find Source Slot`, `Duplicate link already exists`) is read back; when nothing was applied, the batch is journaled with state `refused` (`verdict: "refused"`, `refused: true`, `station_error`, an empty inverse) instead of `in-doubt`, the reply says the station refused it and nothing changed, and the audit outcome is `refused`. `n4_create_component` and `n4_create_link` read back their targets for it; a transport failure, a timeout, a read-back that fails or shows a change, and every other tool stay `in-doubt`.
+- `n4_list_batches` shows the `refused` state, `n4_rollback` refuses a refused batch with "nothing to roll back" and does not count a refused rollback as an earlier one, and the session retro draft lists refused batches as their own candidate.
+- Station error text is decoded from HTML entities (`&quot;`, `&lt;`, `&amp;`) wherever a tool reports it.
+- The `n4_create_component` dry run refuses an unknown `type` or `proxy_ext` by name (the station's type registry does not describe it) instead of the station's generic "Unable to process request". The `n4_create_link` dry run refuses a source or target slot that neither the component nor its described type contract has, and a link identical to one the target already has.
+- A create whose name is already taken under the parent is not refused (the station renames
+  on collision and the read-back and inverse follow it), but its dry run says so in a first
+  note; the note is part of the hashed plan, so a name taken after the dry run, or a re-used
+  create token, is refused at execute as a plan mismatch instead of renamed silently.
