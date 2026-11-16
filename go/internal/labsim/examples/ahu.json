@@ -1,0 +1,29 @@
+{
+  "name": "air-handling unit",
+  "unknown_unit": "silent",
+  "devices": [
+    {
+      "name": "ahu-1",
+      "unit": 1,
+      "points": [
+        {"name": "fan_command", "table": "coil", "address": 0, "value": 1, "writable": true},
+        {"name": "heating_enable", "table": "coil", "address": 1, "value": 0, "writable": true},
+        {"name": "fan_status", "table": "discrete_input", "address": 0, "value": 1},
+        {"name": "filter_alarm", "table": "discrete_input", "address": 1, "value": 0},
+        {"name": "freeze_alarm", "table": "discrete_input", "address": 2, "value": 0},
+        {"name": "supply_air_temp_x10", "table": "input_register", "address": 0, "type": "int16", "value": 180,
+         "behaviour": {"kind": "sine", "amplitude": 15, "period_ms": 120000}},
+        {"name": "return_air_temp_x10", "table": "input_register", "address": 1, "type": "int16", "value": 225,
+         "behaviour": {"kind": "random_walk", "seed": 11, "step": 2, "interval_ms": 5000, "min": 200, "max": 250}},
+        {"name": "outdoor_air_temp", "table": "input_register", "address": 2, "type": "float32", "order": "ABCD",
+         "behaviour": {"kind": "ramp", "min": 5, "max": 25, "period_ms": 600000}},
+        {"name": "duct_pressure_pa", "table": "input_register", "address": 4, "type": "uint16", "value": 250},
+        {"name": "runtime_hours", "table": "input_register", "address": 6, "type": "uint32", "value": 12345},
+        {"name": "supply_setpoint_x10", "table": "holding_register", "address": 0, "type": "int16", "value": 180, "writable": true},
+        {"name": "damper_position_pct", "table": "holding_register", "address": 1, "type": "uint16", "value": 35, "writable": true},
+        {"name": "fan_speed_pct", "table": "holding_register", "address": 2, "type": "float32", "order": "ABCD", "value": 42.5, "writable": true},
+        {"name": "fault_code", "table": "holding_register", "address": 10, "type": "uint16", "value": 0}
+      ]
+    }
+  ]
+}

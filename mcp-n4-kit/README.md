@@ -757,6 +757,10 @@ writes says on stderr whether they execute. Output is one JSON line per request 
 first tool error. The server command line after `--` is the operator's: scopes, tier opt-ins
 and station homes are whatever it names, n4call adds nothing.
 
+A laboratory station has no field device to prove device, proxy-point, polling and write work
+against: `go/bin/lab-sim` (`go/cmd/lab-sim`) simulates one on loopback (Modbus TCP, a scenario
+file, a request log and a control port); see `go/internal/labsim/README.md`.
+
 ## Session retros
 
 Every session ends with a retro that proposes kit deltas (never applies them). The read-only
