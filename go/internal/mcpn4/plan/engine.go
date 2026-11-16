@@ -90,6 +90,9 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	} else {
 		planned, err = impl.Plan(client, args)
 	}
+	if err == nil {
+		err = checkChannelOps(planned.Ops) // before the token and the journal: nothing planned
+	}
 	if err != nil {
 		return nil, "", err
 	}

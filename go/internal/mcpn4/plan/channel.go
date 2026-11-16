@@ -26,6 +26,7 @@ var ChannelAllowList = map[string][]string{"alarm": {"ackAlarms"}}
 const (
 	msgNoChannel  = "the station client cannot call the BOX channel %q (key %q): nothing was sent"
 	msgNotAllowed = "channel %q key %q is not an allowed channel op (allowed: %s): nothing was sent"
+	msgNotPlanned = "channel %q key %q is not an allowed channel op (allowed: %s): nothing was planned"
 )
 
 // ChannelOp is the planned op of one call of key on channel with body.
@@ -55,6 +56,22 @@ func sendChannel(c Client, o *pyjson.Object) (any, error) {
 		return nil, NoChannelError(channel, key)
 	}
 	return cc.Call(channel, key, field(o, "body"))
+}
+
+// checkChannelOps refuses a plan holding a channel op outside ChannelAllowList, before its
+// token and journal intent exist; sendChannel checks again as defence in depth.
+func checkChannelOps(ops []any) error {
+	for _, op := range ops {
+		o, _ := op.(*pyjson.Object)
+		if _, ok := o.Get("channel"); !ok {
+			continue
+		}
+		channel, key := pyjson.Str(field(o, "channel")), pyjson.Str(field(o, "key"))
+		if !allowedChannelOp(channel, key) {
+			return &jsonrpc.ToolError{Msg: fmt.Sprintf(msgNotPlanned, channel, key, allowedText())}
+		}
+	}
+	return nil
 }
 
 // allowedChannelOp is whether key on channel is in ChannelAllowList.

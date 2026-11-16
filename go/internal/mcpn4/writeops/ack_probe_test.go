@@ -44,7 +44,7 @@ func (r *ackRig) tool(t *testing.T, name string, kv ...any) (string, bool, *pyjs
 	return get(content[0].(*pyjson.Object), "text").(string), get(res.(*pyjson.Object), "isError") == true, sc
 }
 
-func TestZZProbeScopeBoundary(t *testing.T) {
+func TestAckProbeSourceScopeBoundaries(t *testing.T) {
 	cases := []struct {
 		source string
 		ok     bool
@@ -68,7 +68,6 @@ func TestZZProbeScopeBoundary(t *testing.T) {
 		if isErr == c.ok || len(db.calls) != 0 {
 			t.Errorf("source %q: isErr=%v text=%s", c.source, isErr, text)
 		}
-		t.Logf("source %q -> err=%v %s", c.source, isErr, text)
 	}
 	// several scopes
 	db := newAlarmDB()
@@ -87,11 +86,10 @@ func TestZZProbeScopeBoundary(t *testing.T) {
 	if text, isErr, _ := r.call(t, "uuids", []any{u1}); !isErr || len(db.ords) != 0 {
 		t.Errorf("no scope: %v %s ords=%d", isErr, text, len(db.ords))
 	} else {
-		t.Logf("no scope -> %s", text)
 	}
 }
 
-func TestZZProbeUUIDForms(t *testing.T) {
+func TestAckProbeUUIDFormsAndCounts(t *testing.T) {
 	for _, c := range []struct {
 		v  any
 		ok bool
@@ -118,10 +116,12 @@ func TestZZProbeUUIDForms(t *testing.T) {
 		db := newAlarmDB()
 		r := newAckRig(t, db)
 		reply := r.srv.Dispatch(obj("id", 1, "method", "tools/call", "params", obj("name", "n4_ack_alarm", "arguments", obj(kv...))))
-		if len(db.ords) != 0 || len(db.calls) != 0 {
-			t.Errorf("%v reached the station", kv)
+		res, _ := reply.Get("result")
+		_, rpcErr := reply.Get("error")
+		refused := rpcErr || res != nil && get(res.(*pyjson.Object), "isError") == true
+		if !refused || len(db.ords) != 0 || len(db.calls) != 0 {
+			t.Errorf("%v: refused %v, reached the station %d/%d: %s", kv, refused, len(db.ords), len(db.calls), pyjson.Repr(reply))
 		}
-		t.Logf("%v -> %.300s", kv, pyjson.Repr(reply))
 	}
 	// 100 distinct uuids, every one existing and unacked, in scope: planned
 	db := newAlarmDB()
@@ -140,7 +140,7 @@ func TestZZProbeUUIDForms(t *testing.T) {
 	}
 }
 
-func TestZZProbeTokenAcrossStateChangeAndScope(t *testing.T) {
+func TestAckProbeTokenAcrossStateChangeAndScope(t *testing.T) {
 	// acked by someone else between dry run and execute: refused, nothing sent
 	db := newAlarmDB()
 	r := newAckRig(t, db)
@@ -158,7 +158,6 @@ func TestZZProbeTokenAcrossStateChangeAndScope(t *testing.T) {
 	if !isErr || len(db.calls) != 0 {
 		t.Errorf("notes changed: %s", text)
 	}
-	t.Logf("notes changed -> %s", text)
 	// token reuse after success
 	db = newAlarmDB()
 	r = newAckRig(t, db)
@@ -169,7 +168,6 @@ func TestZZProbeTokenAcrossStateChangeAndScope(t *testing.T) {
 	if !isErr || len(db.calls) != 1 {
 		t.Errorf("reuse: %s calls=%q", text, db.calls)
 	}
-	t.Logf("reuse -> %s", text)
 	// token from a wider-scope server, executed on a narrower-scope server with the same state dir
 	dir := filepath.Join(t.TempDir(), "s")
 	db = newAlarmDB()
@@ -183,7 +181,6 @@ func TestZZProbeTokenAcrossStateChangeAndScope(t *testing.T) {
 	if !isErr || len(db.calls) != 0 || !strings.Contains(text, "outside the write scope") {
 		t.Errorf("narrow restart: %s calls=%q", text, db.calls)
 	}
-	t.Logf("narrow restart -> %s", text)
 }
 
 // replyDB answers ackAlarms with a fixed reply or error.
@@ -205,7 +202,7 @@ func (d *replyDB) Call(channel, key string, body any) (any, error) {
 	return d.reply, d.err
 }
 
-func TestZZProbeRepliesAndFailures(t *testing.T) {
+func TestAckProbeStationRepliesAndFailures(t *testing.T) {
 	for _, reply := range []any{nil, "x", obj("a", 1), []any{}} {
 		d := &replyDB{alarmDB: newAlarmDB(), reply: reply}
 		_, out := newAckRig(t, d).ackBoth(t, "uuids", []any{u1})
@@ -216,7 +213,6 @@ func TestZZProbeRepliesAndFailures(t *testing.T) {
 		if get(out, "verdict") != want {
 			t.Errorf("reply %s: %s", pyjson.Repr(reply), pyjson.Repr(out))
 		}
-		t.Logf("reply %s -> %s observed=%s", pyjson.Repr(reply), get(out, "verdict"), pyjson.Repr(get(out, "observed")))
 	}
 	// partial ack
 	d := &replyDB{alarmDB: newAlarmDB(), reply: []any{}, ack: map[string]bool{u1: true}}
@@ -229,9 +225,7 @@ func TestZZProbeRepliesAndFailures(t *testing.T) {
 	r := newAckRig(t, d)
 	_, _, dry := r.call(t, "uuids", []any{u1})
 	text, isErr, _ := r.call(t, "uuids", []any{u1}, "dry_run", false, "confirmation_token", get(dry, "confirmation_token"))
-	t.Logf("station refusal -> %v %s", isErr, text)
 	view, _ := journal.New(r.dir).ListBatches(10)
-	t.Logf("list_batches after refusal: %s", pyjson.Repr(view))
 	if !isErr || !strings.Contains(pyjson.Repr(view), "refused") {
 		t.Errorf("refused not journaled: %s", pyjson.Repr(view))
 	}
@@ -243,7 +237,6 @@ func TestZZProbeRepliesAndFailures(t *testing.T) {
 	if !strings.Contains(strings.ToLower(text), "doubt") {
 		t.Errorf("applied-but-error should be in doubt: %s", text)
 	}
-	t.Logf("applied+error -> %s", text)
 	// transport error: in doubt
 	d = &replyDB{alarmDB: newAlarmDB(), err: errors.New("connection reset"), ack: map[string]bool{}}
 	r = newAckRig(t, d)
@@ -252,48 +245,32 @@ func TestZZProbeRepliesAndFailures(t *testing.T) {
 	if !strings.Contains(strings.ToLower(text), "doubt") {
 		t.Errorf("transport: %s", text)
 	}
-	t.Logf("transport -> %s", text)
 	view, _ = journal.New(r.dir).ListBatches(10)
-	t.Logf("list_batches after in-doubt: %s", pyjson.Repr(view))
+	if got := pyjson.Repr(view); !strings.Contains(got, "'tool': 'n4_ack_alarm'") || !strings.Contains(got, "'state': 'in-doubt'") {
+		t.Errorf("list_batches after in-doubt: %s", got)
+	}
 	d2, err := retro.Draft(r.dir, "FakeStation", "", nil)
-	if err != nil {
-		t.Errorf("retro draft: %v", err)
-	} else {
-		md := pyjson.Str(get(d2, "markdown"))
-		i := strings.Index(md, "audit")
-		if i < 0 {
-			i = 0
-		}
-		for _, l := range strings.Split(md, "\n") {
-			if strings.Contains(l, "None") || strings.Contains(l, "station call failed") || strings.Contains(l, "ack") {
-				t.Logf("retro: %s", l)
-			}
-		}
-		_ = i
+	if md := pyjson.Str(get(d2, "markdown")); err != nil || !strings.Contains(md, "(n4_ack_alarm,") {
+		t.Errorf("retro draft of an in-doubt ack: %v %s", err, md)
 	}
 }
 
-func TestZZProbeRollbackAndListOfAnAckBatch(t *testing.T) {
+func TestAckProbeAnAckBatchHasNoRollbackAndIsListed(t *testing.T) {
 	db := newAlarmDB()
 	r := newAckRig(t, db)
 	_, out := r.ackBoth(t, "uuids", []any{u1}, "notes", "n")
 	id := get(out, "batch_id")
-	text, isErr, sc := r.tool(t, "n4_rollback", "batch_id", id)
-	t.Logf("rollback dry -> err=%v %s", isErr, text)
-	if !isErr {
-		text2, isErr2, _ := r.tool(t, "n4_rollback", "batch_id", id, "dry_run", false, "confirmation_token", get(sc, "confirmation_token"))
-		t.Logf("rollback exec -> err=%v %s calls=%q", isErr2, text2, db.calls)
-		if len(db.calls) != 1 {
-			t.Errorf("rollback sent something: %q", db.calls)
-		}
+	text, isErr, _ := r.tool(t, "n4_rollback", "batch_id", id)
+	if !isErr || !strings.Contains(text, "has no inverse recorded") || len(db.calls) != 1 {
+		t.Errorf("rollback of an ack: %v %s calls=%q", isErr, text, db.calls)
 	}
 	view, err := journal.New(r.dir).ListBatches(10)
-	t.Logf("list_batches -> %v %s", err, pyjson.Repr(view))
-	d, err := retro.Draft(r.dir, "FakeStation", "", nil)
-	if err != nil {
-		t.Errorf("retro: %v", err)
-	} else {
-		t.Logf("retro ok, %d bytes", len(pyjson.Str(get(d, "markdown"))))
+	if got := pyjson.Repr(view); err != nil || !strings.Contains(got, "'tool': 'n4_ack_alarm'") ||
+		!strings.Contains(got, "'state': 'completed'") || !strings.Contains(got, "'verdict': 'verified'") {
+		t.Errorf("list_batches: %v %s", err, got)
+	}
+	if d, err := retro.Draft(r.dir, "FakeStation", "", nil); err != nil || pyjson.Str(get(d, "markdown")) == "" {
+		t.Errorf("retro draft: %v", err)
 	}
 }
 
@@ -314,7 +291,7 @@ func (d quotedDB) GetOrd(ord string, _ float64, _ int) (string, bool, error) {
 	return b.String(), false, nil
 }
 
-func TestZZProbeMultiOrdSource(t *testing.T) {
+func TestAckProbeMultiOrdSourcesAreNotASlotPath(t *testing.T) {
 	for _, src := range []string{
 		"local:|station:|slot:/Services/A\nlocal:|station:|slot:/Drivers/B",
 		"local:|station:|slot:/Services/A;local:|station:|slot:/Drivers/B",
@@ -329,7 +306,6 @@ func TestZZProbeMultiOrdSource(t *testing.T) {
 		db := newAlarmDB()
 		db.source[u1] = src
 		text, isErr, _ := newAckRig(t, quotedDB{db}).call(t, "uuids", []any{u1})
-		t.Logf("source %q -> err=%v %.200s", src, isErr, text)
 		if !isErr || !strings.Contains(text, "source is not a slot path") || len(db.calls) != 0 {
 			t.Errorf("multi-ORD source %q was not refused as not a slot path: %.200s", src, text)
 		}
