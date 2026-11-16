@@ -82,3 +82,66 @@ dangling_fragment() {
   [[ "$output" == *"no changed file needs shellcheck, the bats lints or gofmt"* ]]
   [[ "$output" != *"kit-links"* ]]
 }
+
+@test "CL33: a changelog.d-only change runs kit-links" {
+  # Mutation: CL33 -- dropping changelog.d from kit_docs_changed's pathspec skips kit-links on a fragment-only push.
+  printf '%s\n' '### Fixed' '- a fixture fragment.' > "$R/changelog.d/2026-11-16-fixture.md"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS kit-links"* ]]
+}
+
+# stub_provisioner <body> — redefine provision_bats in the fixture's copy of lib/ci-local-tools.sh.
+stub_provisioner() {
+  printf 'provision_bats() { %s; }\n' "$1" >> "$R/scripts/lib/ci-local-tools.sh"
+}
+
+@test "CL34: a failed bats provisioning exits 3 with one line and runs no kit-links" {
+  # Mutation: CL34 -- ignoring provision_bats' status runs kit-links with whatever bats is on PATH.
+  stub_provisioner 'printf "stub: provisioning failed\n" >&2; return 1'
+  printf '\nSee METHODOLOGY.md.\n' >> "$R/build-n4-module-kit/README.md"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 3 ]
+  [ "$(grep -c 'kit-links: bats could not be provisioned' <<< "$output")" -eq 1 ]
+  [[ "$output" != *"== kit-links"* ]]
+}
+
+@test "CL35: a provisioning that leaves another bats version first on PATH is a failure, not a pass" {
+  # Mutation: CL35 -- dropping the pinned-version check passes kit-links on a bats CI does not run.
+  printf '      - name: Install bats\n        run: |\n          BATS_VER=0.0.1\n          BATS_SHA256=%s\n' \
+    "$(printf '0%.0s' $(seq 64))" >> "$R/.github/workflows/ci.yml"
+  stub_provisioner 'return 0'
+  printf '\nSee METHODOLOGY.md.\n' >> "$R/build-n4-module-kit/README.md"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"kit-links: bats could not be provisioned"* ]]
+  [[ "$output" != *"PASS kit-links"* ]]
+}
+
+@test "CL36: a git error while detecting a kit doc change is reported, not read as no change" {
+  # Mutation: CL36 -- reading a failed git diff as "no kit change" skips kit-links silently.
+  # Through the CLI, run_changed exits 3 on a bad range first; the guard is pinned on run_kit_links itself.
+  ROOT="$R" RANGE="$BASE..refs/heads/no-such-branch" WORK="$BATS_TEST_TMPDIR/w"
+  # shellcheck disable=SC1091  # the fixture's copy of the lib
+  . "$R/scripts/lib/ci-local-kitlinks.sh"
+  run run_kit_links
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"kit-links: cannot tell whether the change touches a kit doc"* ]]
+}
+
+@test "CL37: --range runs the range end's kit-state launcher, not the checkout's" {
+  # Mutation: CL37 -- running the checkout's toolbelt/kit-state.sh checks a launcher the push does not send.
+  printf '\nSee METHODOLOGY.md.\n' >> "$R/build-n4-module-kit/README.md"
+  printf '#!/usr/bin/env bash\nprintf "pushed launcher\\n" >&2\nexit 1\n' > "$R/build-n4-module-kit/toolbelt/kit-state.sh"
+  cd "$R"
+  git add -A
+  git commit -q -m "docs: fixture"
+  git checkout -q "$BASE" -- build-n4-module-kit/toolbelt/kit-state.sh
+  run bash scripts/ci-local.sh --changed --range "$BASE..$(git rev-parse HEAD)"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"pushed launcher"* ]]
+  [[ "$output" == *"FAIL kit-state"* ]]
+}
