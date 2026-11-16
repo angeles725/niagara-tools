@@ -88,9 +88,12 @@ func TestBadValuesTypesAndStatusAreRefused(t *testing.T) {
 	for _, bad := range []Args{{"value": true, "value_type": "baja:Double"},
 		{"value": "x", "value_type": "baja:Boolean"},
 		{"value": 1, "value_type": "baja:String"},
-		{"value": 1.0, "value_type": "baja:Int"},
 		{"value": 1.0, "value_type": "baja:StatusNumeric", "status": "zz"}} {
 		r.Srv.Err("n4_set_slot", withArgs(base, bad))
+	}
+	// a value_type outside the schema enum is refused by the shared validator (retro row M11)
+	if code := r.Srv.CallError("n4_set_slot", withArgs(base, Args{"value": 1.0, "value_type": "baja:Int"})); code != -32602 {
+		t.Errorf("baja:Int: code %d, want -32602", code)
 	}
 	nan := callNaN(t, r.Srv, "n4_set_slot", withArgs(base, Args{"value_type": "baja:Double"}), "value")
 	if nan["isError"] != true {

@@ -54,7 +54,7 @@ func ValidateSelect(query any) (string, error) {
 	// The decoded text keeps the from and length rules; a decoded '|' or control character is
 	// data (the ORD is split before BqlQuery.make decodes), so only the raw text is checked for them.
 	switch lowerDecoded := strings.ToLower(decoded); {
-	case strings.Contains(lowerDecoded, " from "):
+	case bql.HasFrom(lowerDecoded):
 		return "", &pyjson.ValueError{Msg: "bql runs on the NEQL matches: give its columns only, no from clause"}
 	case pyjson.Len(decoded) > bql.MaxQueryLength:
 		return "", &pyjson.ValueError{Msg: "bql is longer than 2000 characters"}
@@ -71,7 +71,7 @@ func checkSelect(q string) error {
 	switch {
 	case !strings.HasPrefix(lower, "select "):
 		return &pyjson.ValueError{Msg: "bql must be one select of columns, e.g. select slotPath, out.value"}
-	case strings.Contains(lower, " from "):
+	case bql.HasFrom(lower):
 		return &pyjson.ValueError{Msg: "bql runs on the NEQL matches: give its columns only, no from clause"}
 	case strings.Contains(q, "|"), bql.StripControl(q) != q:
 		return &pyjson.ValueError{Msg: "bql must not contain '|' or control characters"}

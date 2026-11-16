@@ -106,8 +106,16 @@ func TestAuditAndOutputsHoldNoSecretValue(t *testing.T) {
 	r := newRig(t)
 	r.ctx.SetSecret(readtoolstest.Password)
 	args := setArgs()
-	args.Set("password", "hunter2")
-	args.Set("api_secret", "s3cr3t-x")
+	// secret-named arguments the schema does not declare are refused before anything is planned
+	// or audited, and the refusal names them without their values (retro row M11)
+	withSecrets := setArgs()
+	withSecrets.Set("password", "hunter2")
+	withSecrets.Set("api_secret", "s3cr3t-x")
+	refused := pyjson.Repr(r.srv.Dispatch(node("id", 1, "method", "tools/call",
+		"params", node("name", "n4_set_slot", "arguments", withSecrets))))
+	if !strings.Contains(refused, "unknown argument 'password' for n4_set_slot") || strings.Contains(refused, "hunter2") {
+		t.Fatalf("secret-named unknown argument: %s", refused)
+	}
 	_, _, plan := r.call(t, "n4_set_slot", args)
 	tok := get(plan, "confirmation_token").(string)
 	_, _, out := r.execute(t, "n4_set_slot", args, tok)

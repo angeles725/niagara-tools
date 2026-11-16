@@ -71,3 +71,8 @@ func validateTableQuery(query any, base string) (string, error) {
 	}
 	return q, nil
 }
+
+// HasFrom is whether text holds a from keyword between any two spaces of the BQL space class (a
+// tab, a newline or a no-break space as much as a blank), or at either end: the from rule of a
+// table base, for every check that refuses a from clause.
+func HasFrom(text string) bool { return fromRe.MatchString(text) }

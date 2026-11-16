@@ -624,21 +624,23 @@
      },
      "source_state": {
       "type": "string",
-      "description": "One of normal, offnormal, fault, alert",
+      "description": "One of normal, offnormal, fault, alert; an empty string is no filter",
       "enum": [
        "normal",
        "offnormal",
        "fault",
-       "alert"
+       "alert",
+       ""
       ]
      },
      "ack_state": {
       "type": "string",
-      "description": "One of acked, unacked, ackPending",
+      "description": "One of acked, unacked, ackPending; an empty string is no filter",
       "enum": [
        "acked",
        "unacked",
-       "ackPending"
+       "ackPending",
+       ""
       ]
      },
      "since": {

@@ -21,8 +21,8 @@ func TestValidateSupportsNumberAndArray(t *testing.T) {
 	t.Parallel()
 	schema := decodeObj(t, `{"properties": {"n": {"type": "number", "minimum": 0}, "a": {"type": "array"},
 		"i": {"type": "integer", "minimum": 1, "maximum": 3.5}, "u": {"description": "any"}}}`)
-	for _, ok := range []string{`{"n": 1.5, "a": [1]}`, `{"n": 2}`, `{"i": 3}`, `{"n": NaN}`, `{"u": [{}]}`, `{"x": true}`} {
-		if err := Validate(schema, decodeObj(t, ok)); err != nil {
+	for _, ok := range []string{`{"n": 1.5, "a": [1]}`, `{"n": 2}`, `{"i": 3}`, `{"n": NaN}`, `{"u": [{}]}`} {
+		if err := Validate("t", schema, decodeObj(t, ok)); err != nil {
 			t.Errorf("%s: %v", ok, err)
 		}
 	}
@@ -38,7 +38,7 @@ func TestValidateSupportsNumberAndArray(t *testing.T) {
 		`{"n": -Infinity}`:      "argument n must be >= 0",
 	} {
 		var ip *InvalidParams
-		if err := Validate(schema, decodeObj(t, args)); !errors.As(err, &ip) || ip.Msg != want {
+		if err := Validate("t", schema, decodeObj(t, args)); !errors.As(err, &ip) || ip.Msg != want {
 			t.Errorf("%s: err = %v, want %q", args, err, want)
 		}
 	}
@@ -47,11 +47,11 @@ func TestValidateSupportsNumberAndArray(t *testing.T) {
 func TestValidateComparesBigIntsExactly(t *testing.T) {
 	t.Parallel()
 	schema := decodeObj(t, `{"properties": {"i": {"type": "integer", "maximum": 9007199254740992}}}`)
-	if err := Validate(schema, decodeObj(t, `{"i": 9007199254740993}`)); err == nil {
+	if err := Validate("t", schema, decodeObj(t, `{"i": 9007199254740993}`)); err == nil {
 		t.Errorf("2**53+1 passed a maximum of 2**53 (float rounding)")
 	}
 	schema = decodeObj(t, `{"properties": {"i": {"type": "integer", "maximum": 1e300}}}`)
-	if err := Validate(schema, decodeObj(t, `{"i": 10}`)); err != nil {
+	if err := Validate("t", schema, decodeObj(t, `{"i": 10}`)); err != nil {
 		t.Errorf("10 vs 1e300: %v", err)
 	}
 }
@@ -60,7 +60,7 @@ func TestValidateRequiredKeysComeFirstInSchemaOrder(t *testing.T) {
 	t.Parallel()
 	schema := decodeObj(t, `{"properties": {"a": {"type": "string"}}, "required": ["b", "a"]}`)
 	var ip *InvalidParams
-	if err := Validate(schema, decodeObj(t, `{"a": 5}`)); !errors.As(err, &ip) || ip.Msg != "missing required argument: b" {
+	if err := Validate("t", schema, decodeObj(t, `{"a": 5}`)); !errors.As(err, &ip) || ip.Msg != "missing required argument: b" {
 		t.Errorf("err = %v", err)
 	}
 }
@@ -68,7 +68,7 @@ func TestValidateRequiredKeysComeFirstInSchemaOrder(t *testing.T) {
 func TestValidateFailsClearlyOnAnUnknownSchemaType(t *testing.T) {
 	t.Parallel()
 	var se *SchemaError
-	err := Validate(decodeObj(t, `{"properties": {"x": {"type": "float"}}}`), decodeObj(t, `{"x": 1}`))
+	err := Validate("t", decodeObj(t, `{"properties": {"x": {"type": "float"}}}`), decodeObj(t, `{"x": 1}`))
 	if !errors.As(err, &se) || se.Msg != "schema for x uses unsupported type 'float'" {
 		t.Errorf("err = %v", err)
 	}

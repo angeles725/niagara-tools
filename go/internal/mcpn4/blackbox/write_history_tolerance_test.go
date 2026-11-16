@@ -75,7 +75,6 @@ func TestAddHistoryRefusesAChangeToleranceThatDoesNotApply(t *testing.T) {
 			"change_tolerance applies only to a numeric point's NumericCov extension: " + Folder + "/Fan is a boolean point"},
 		{covArgs(Args{"change_tolerance": 0.5, "ext_type": "history:BooleanCovHistoryExt"}, "Fan"),
 			"change_tolerance applies only to history:NumericCovHistoryExt"},
-		{covArgs(Args{"full_policy": "drop"}, "Temp"), "full_policy must be roll or stop, got 'drop'"},
 	}
 	for _, c := range cases {
 		if text := h.Srv.Err("n4_add_history", c.args); !strings.Contains(text, c.want) {

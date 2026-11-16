@@ -55,9 +55,10 @@ func TestCredentialEnvIsNotAToolArgument(t *testing.T) {
 		!reflect.DeepEqual(schema["required"], []any{"station"}) {
 		t.Errorf("properties %v, required %v", props, schema["required"])
 	}
-	out := r.Srv.OK("n4_connect", Args{"station": StationName, "base_url": "https://evil.example"})
-	if out["base_url"] != r.Station.URL { // unknown args are ignored, never used
-		t.Errorf("base_url %v", out["base_url"])
+	// an unknown argument is refused before any request (retro row M11), never used
+	code, msg := rpcRefusal(t, r.Srv, "n4_connect", Args{"station": StationName, "base_url": "https://evil.example"})
+	if code != -32602 || msg != "unknown argument 'base_url' for n4_connect" || r.Station.Requests() != 0 {
+		t.Errorf("base_url: code %d %q, %d requests", code, msg, r.Station.Requests())
 	}
 }
 
