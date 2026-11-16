@@ -138,6 +138,10 @@ Tool-authoring rules for a Go tool or port (what to port and the lint stack: `bu
   its own droppable commit with a seeded RED test, and the PR lists them. A port is not done while it keeps a known
   lie: an unfixed one is an owed `ledger.d/` item. `[ev: retro go-check-facets-card Δ1]`
   `[ev: retro go-sweep-fold-audit Δ1]` `[ev: retro truth-audit Δ1]`
+  One exception: a false success the differential finds (the old tool exits 0 over a result it did not check) is
+  turned into a refusal inside the port commit, declared in the changelog fragment and pinned by a named test. Any
+  other fix (a false finding, a wrong message, a cosmetic or timing defect) stays a separate droppable commit.
+  `[ev: retro go-install-tools-port Δ4]`
 - **Compare finding counts across a port.** A port can reveal a dead rule. Run old and new on the real trees,
   compare the finding counts, and explain every new or lost row in the PR (a fixed dead rule, or a regression).
   Example: the lint-structure L10/L14 truth fixes took the real-tree output from 56 to 86 rows, each with a line
