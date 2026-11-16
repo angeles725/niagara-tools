@@ -65,12 +65,21 @@ func StatusValue(nodes *pyjson.Object, path string) (value, status any, err erro
 // and null is bit 0x40 of the hex bits before ";" (a falsy v is "0"). A truthy non-string is
 // Python's AttributeError; bits int() cannot read are its ValueError.
 func ParseStatus(v any) (ok, null bool, err error) {
+	bits, err := statusBits(v)
+	if err != nil {
+		return false, false, err
+	}
+	return bits.Sign() == 0, bits.Bit(6) == 1, nil
+}
+
+// statusBits is the bits of an encoded status: the hex digits before ";" (a falsy v is "0").
+func statusBits(v any) (*big.Int, error) {
 	s, isStr := v.(string)
 	switch {
 	case !pyjson.Truthy(v):
 		s = "0"
 	case !isStr:
-		return false, false, &pyjson.Exception{Type: "AttributeError"}
+		return nil, &pyjson.Exception{Type: "AttributeError"}
 	}
 	bitsStr, _, _ := strings.Cut(s, ";")
 	if bitsStr == "" {
@@ -79,9 +88,9 @@ func ParseStatus(v any) (ok, null bool, err error) {
 	bits, parsed := pyIntBase16(bitsStr)
 	if !parsed {
 		r := []rune(pyjson.StrRepr(bitsStr))
-		return false, false, &pyjson.ValueError{Msg: "invalid literal for int() with base 16: " + string(r[:min(len(r), 200)])}
+		return nil, &pyjson.ValueError{Msg: "invalid literal for int() with base 16: " + string(r[:min(len(r), 200)])}
 	}
-	return bits.Sign() == 0, bits.Bit(6) == 1, nil
+	return bits, nil
 }
 
 // pyIntBase16 is int(s, 16): outer whitespace, a sign, an optional 0x (then one optional "_"),

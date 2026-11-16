@@ -1,0 +1,2 @@
+### Fixed — mcp-n4: read fixes from the second bench retro
+- `n4_read_slots` decodes a slot whose type is `baja:Status` itself (a proxy extension's `status`, for example): `value` and `status` are its encoded bits, `status_flags` names the flags set (`fault`, `down`, `alarm`, `unackedAlarm`, ...) and `status_ok` is false when any is set. Before, such a slot read `value: null`, `status: "0"`, `status_ok: true` whatever the station showed, so a faulted point read as healthy. The reply for a Status complex (`baja:StatusNumeric` and its siblings) is unchanged.

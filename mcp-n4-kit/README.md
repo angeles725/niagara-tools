@@ -233,7 +233,9 @@ included Px, charts and label texts, without the XML.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
 children of those types plus the path to them, each kept entry marked `matched`.
 `n4_read_slots` adds `value_display` (the station's display string) and returns that string as
-`value` for complexes it cannot decode (e.g. a Modbus `dataAddress`: `Decimal:302`). One station session
+`value` for complexes it cannot decode (e.g. a Modbus `dataAddress`: `Decimal:302`). A slot that
+is itself a `baja:Status` (a proxy extension's `status`, for example) reads `status_flags`, the names of the
+flags set (`fault`, `down`, `alarm`, `unackedAlarm`, ...), and `status_ok` false when any is set. One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
 first, so a failed reconnect leaves no session). `n4_describe_session` lists the
 configured station names. `n4_list_links` and
