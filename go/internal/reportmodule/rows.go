@@ -11,6 +11,7 @@ const (
 	base               // `ST  check  path  reason` -> detail `<basename>  <reason>` (no :line split)
 	nosite             // `ST  check  site  reason` -> detail `<reason>`
 	ws                 // whitespace-split `ST check path detail...` -> detail = the words from field 4, one space apart
+	whole              // `ST  check  path: reason` -> detail = everything after the check column, path kept whole
 )
 
 // filter selects a member's rows: sel and asw are "|"-separated line prefixes (the bash EREs ^(sel) and
@@ -64,6 +65,8 @@ func parseRows(out string, f filter) []row {
 				det = reason
 			case base:
 				det = lastPart(at) + "  " + reason
+			case whole:
+				det = strings.TrimSuffix(at+"  "+reason, "  ")
 			default:
 				path, line, _ := strings.Cut(at, ":")
 				det = lastPart(path) + ":" + line + "  " + reason
