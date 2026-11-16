@@ -10,6 +10,9 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
+// probeRegular is regular for the probe; a test swaps it to send a signal while the probe looks at a jar.
+var probeRegular = regular
+
 // probeStation tests, before the build, that every station jar the run will replace can be moved: each is
 // moved to <jar>.ng-probe with moveAside (which never replaces a file already there) and straight back. On a
 // Windows mount a jar a running station or Workbench holds open refuses the move; that is exit 40 with the
@@ -18,8 +21,9 @@ import (
 // be moved back is exit 40 naming both paths. --no-deploy replaces nothing in the station and probes nothing.
 //
 // SIGINT, SIGTERM and SIGHUP are held across the two moves: a signal that arrives between them waits until
-// the jar is back under its name, then ends the run with 128 + the signal. A probe file a killed run left is
-// handled first (staleProbe).
+// the jar is back under its name, then ends the run with 128 + the signal; one that arrives while the probe
+// looks at a jar it does not move ends it too (heldSignal runs after every jar). A probe file a killed run
+// left is handled first (staleProbe).
 func (d *deploy) probeStation() int {
 	if d.isOn(optNoDeploy) {
 		return proceed
@@ -28,29 +32,44 @@ func (d *deploy) probeStation() int {
 	signal.Notify(held, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(held)
 	for _, profile := range profilesOf[d.raw[optMode]] {
-		name := d.jarName(profile)
-		jar := d.station + "/" + name
-		probe := jar + probeSuffix
-		if code := d.staleProbe(name, jar, probe); code != proceed {
+		if code := d.probeJar(d.jarName(profile)); code != proceed {
 			return code
 		}
-		if is, err := regular(jar); err != nil || !is {
-			continue // nothing to replace, or something the copy refuses with its own line
-		}
-		if err := moveAside(jar, probe); err != nil {
-			return d.failHeld(err, d.station, ExitCopy, msgProbeRefused, name, d.station, strerror.Text(err))
-		}
-		if err := rename(probe, jar); err != nil {
-			return d.fail(ExitCopy, msgProbeStuck, jar, probe, strerror.Text(err), probe, jar)
-		}
-		select {
-		case sig := <-held:
-			s := sig.(syscall.Signal)
-			return d.fail(signalBase+int(s), msgInterrupted, signalNames[s])
-		default:
+		if code := d.heldSignal(held); code != proceed {
+			return code
 		}
 	}
 	return proceed
+}
+
+// probeJar moves one station jar to its probe name and straight back.
+func (d *deploy) probeJar(name string) int {
+	jar := d.station + "/" + name
+	probe := jar + probeSuffix
+	if code := d.staleProbe(name, jar, probe); code != proceed {
+		return code
+	}
+	if is, err := probeRegular(jar); err != nil || !is {
+		return proceed // nothing to replace, or something the copy refuses with its own line
+	}
+	if err := moveAside(jar, probe); err != nil {
+		return d.failHeld(err, d.station, ExitCopy, msgProbeRefused, name, d.station, strerror.Text(err))
+	}
+	if err := rename(probe, jar); err != nil {
+		return d.fail(ExitCopy, msgProbeStuck, jar, probe, strerror.Text(err), probe, jar)
+	}
+	return proceed
+}
+
+// heldSignal ends the run with 128 + a signal the probe held, after every jar, whether it was moved or not.
+func (d *deploy) heldSignal(held <-chan os.Signal) int {
+	select {
+	case sig := <-held:
+		s := sig.(syscall.Signal)
+		return d.fail(signalBase+int(s), msgInterrupted, signalNames[s])
+	default:
+		return proceed
+	}
 }
 
 // staleProbe looks at a <jar>.ng-probe a killed run left. With no jar beside it, it is the jar: it is moved
