@@ -79,12 +79,13 @@
 # rows (...)`, the summary reads `f FAIL (n new, b base in <file>)`, and the verdict and the exit code read the NEW
 # rows only, so a change that adds no FAIL exits 0 and build.sh hands off. A line no FAIL row matches is a
 # `(module)  WARN  report-baseline  stale baseline line ...` row (no exit change). Never baselined, always NEW:
-# the verify-module gate rows and schema-risk rows (the floor; a listed one is a WARN row), and triage-console
-# lines; a SKIPped floor check still reads INCOMPLETE. --write-baseline writes the file from the run's FAIL rows
-# (sorted, de-duplicated, atomic; floor rows left out and named on stderr) and exits as the run does;
+# the verify-module gate rows and schema-risk rows (the floor), the row of a member that "exited N with no FAIL
+# row" (a crash, floor member or not) -- a listed one of either is a WARN row -- and triage-console lines; a SKIPped floor check still reads INCOMPLETE. --write-baseline writes the file from the run's FAIL rows
+# (sorted, de-duplicated, atomic; floor and crash rows left out and named on stderr) and exits as the run does;
 # --no-baseline ignores the file for one run. A file that exists and cannot be read is exit 3. Without the file
 # and without these options the report is unchanged. [ev: external session retro, delta B7]
 # Mutation: RM-baseline-floor -- dropping `floor: true` of a floor member lets a baseline hide a verify-module or schema-risk FAIL
+# Mutation: RM-baseline-crash -- dropping the crashRow case lets a baseline hide a member that crashed without a FAIL row
 # Mutation: RM-floor -- dropping the floor-SKIP verdict reads a run that checked neither floor member as CLEAN
 # Mutation: RM-floor-schema -- --first-deploy ignored keeps a never-deployed module INCOMPLETE forever
 # Mutation: RM-n4lint -- dropping a Go-ported member's invocation loses its rows from the report

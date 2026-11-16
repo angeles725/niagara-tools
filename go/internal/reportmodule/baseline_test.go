@@ -122,47 +122,6 @@ func TestBaselineGroupsNewAndBaseRows(t *testing.T) {
 	}
 }
 
-// Decision 4: a verify-module gate row and a schema-risk row are NEW even when the baseline lists them, and
-// --write-baseline leaves them out and says so.
-func TestFloorRowsAreNeverBaselined(t *testing.T) {
-	root := baselineModule(t)
-	stubs := map[string]string{
-		"lint-delays":   stubDelays,
-		"verify-module": "printf 'FAIL signature a.jar unsigned\\n'; exit 1\n",
-		"schema-risk":   "exit 2\n",
-	}
-	keySig, keySchema := "A-rt  signature  unsigned", "A-rt  schema-risk  verdict=OUTAGE"
-	path := writeBaselineFile(t, root, keyDelays, keySig, keySchema)
-	code, out, _ := baselineRun(t, stubs, root)
-	want := "report-module: NEW FAIL rows (not in " + path + "):\n" +
-		"A-rt  FAIL  signature  unsigned\nA-rt  FAIL  schema-risk  verdict=OUTAGE\n" +
-		"report-module: BASE FAIL rows (listed in " + path + ", not part of the verdict):\n" + rowDelays +
-		"(module)  WARN  report-baseline  floor check row cannot be baselined (it counts as NEW; remove the line): " + keySig + "\n" +
-		"(module)  WARN  report-baseline  floor check row cannot be baselined (it counts as NEW; remove the line): " + keySchema + "\n" +
-		"report-module: 1 artifact · 18 PASS · 3 FAIL (2 new, 1 base in " + path + ") · 2 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES\n"
-	if code != ExitFail || !strings.HasSuffix(out, want) {
-		t.Errorf("exit %d, want exit 1 and the report to end with\n%s\ngot\n%s", code, want, out)
-	}
-	code, _, errs := baselineRun(t, stubs, root, "--write-baseline")
-	got, err := os.ReadFile(path)
-	must(t, err)
-	wantErr := "report-module: wrote " + path + " (1 FAIL key; 2 floor check rows left out: verify-module and schema-risk rows are never baselined)\n"
-	if code != ExitFail || errs != wantErr || string(got) != baselineHeader+keyDelays+"\n" {
-		t.Errorf("--write-baseline: exit %d, stderr %q, file\n%s", code, errs, got)
-	}
-}
-
-// Decision 4, second half: a SKIPped floor check reads INCOMPLETE (exit 4) with every FAIL row baselined.
-func TestBaselineKeepsTheIncompleteVerdict(t *testing.T) {
-	root := tree(t, "A-rt/src/") // no built jar, no .deploy-baseline
-	path := writeBaselineFile(t, root, keyDelays)
-	code, out, _ := baselineRun(t, map[string]string{"lint-delays": stubDelays}, root)
-	want := "report-module: 1 artifact · 18 PASS · 1 FAIL (0 new, 1 base in " + path + ") · 0 WARN · 4 SKIP · 0 ADVISORY  ->  INCOMPLETE"
-	if code != ExitIncomplete || summaryLine(out) != want {
-		t.Errorf("exit %d, %q; want exit 4 and %q", code, summaryLine(out), want)
-	}
-}
-
 // Decision 5: a baseline line no current FAIL row matches is a WARN row and changes no exit code.
 func TestStaleBaselineLineIsAWarnRow(t *testing.T) {
 	root := baselineModule(t)

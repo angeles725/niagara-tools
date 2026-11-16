@@ -5,8 +5,13 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"regexp"
 	"strings"
 )
+
+// crashRow is the detail of the fail-closed row of a member that exited non-zero without a FAIL row
+// (exitedNoFail, lint-link-target-flags): a crash is news in every run, so it is never baselined.
+var crashRow = regexp.MustCompile(`^exited [0-9]+ with no FAIL row`)
 
 // baseline is the FAIL baseline of one run: the keys <module-root>/.report-baseline lists and the FAIL rows of
 // the run sorted against them. Without the file (--write-baseline alone) it only records the run's keys.
@@ -17,9 +22,10 @@ type baseline struct {
 	order   []string        // the file's keys in file order, each once
 	fresh   []failRow       // NEW: not listed, or a floor check row
 	known   []failRow       // BASE: listed
-	floor   []string        // listed keys a floor check row matched, in row order
+	refused []string        // WARN details of the listed keys a never-baselined row matched, in row order
 	keys    []string        // the key of every FAIL row that may be baselined, in row order
 	floorN  int             // floor check FAIL rows (never baselined)
+	crashN  int             // FAIL rows of a member that exited non-zero with no FAIL row (never baselined)
 }
 
 // loadBaseline reads <root>/.report-baseline. It returns nil when the run has no baseline to apply and none to
@@ -62,7 +68,7 @@ func (b *baseline) read(data string) {
 }
 
 // hold takes a FAIL row and reports whether it is held back from the row stream (a run with a baseline file
-// prints it later, in its group). A floor check row is NEW whatever the file lists.
+// prints it later, in its group). A floor check row and a crashed member's row are NEW whatever the file lists.
 func (b *baseline) hold(w failRow, floor bool) bool {
 	if b == nil {
 		return false
@@ -72,11 +78,19 @@ func (b *baseline) hold(w failRow, floor bool) bool {
 	if listed {
 		b.listed[key] = true
 	}
+	refused := ""
 	switch {
 	case floor:
 		b.floorN++
+		refused = msgFloorListed
+	case crashRow.MatchString(w.detail):
+		b.crashN++
+		refused = msgCrashListed
+	}
+	switch {
+	case refused != "":
 		if listed {
-			b.floor = append(b.floor, key)
+			b.refused = append(b.refused, refused+key)
 		}
 		b.fresh = append(b.fresh, w)
 	case listed:
@@ -91,7 +105,7 @@ func (b *baseline) hold(w failRow, floor bool) bool {
 
 // failGroups prints the held FAIL rows as the NEW and BASE groups, counting the NEW ones as the FAIL rows of
 // the run (the verdict and the exit code read them alone), then one WARN row per stale baseline line and per
-// listed floor check row. A run without a baseline file prints nothing here.
+// listed row that is never baselined (a floor check row, a crashed member's row). A run without a baseline file prints nothing here.
 func (r *report) failGroups() {
 	b := r.bl
 	if b == nil || !b.grouped {
@@ -109,8 +123,8 @@ func (r *report) failGroups() {
 			r.emit("(module)", warn, baselineCheck, msgStale+key)
 		}
 	}
-	for _, key := range b.floor {
-		r.emit("(module)", warn, baselineCheck, msgFloorListed+key)
+	for _, detail := range b.refused {
+		r.emit("(module)", warn, baselineCheck, detail)
 	}
 }
 

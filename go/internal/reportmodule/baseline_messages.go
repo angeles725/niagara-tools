@@ -20,10 +20,12 @@ const (
 	msgFailSplit    = " (%d new, %d base in %s)"
 	msgStale        = "stale baseline line (no current FAIL row matches it; remove it): "
 	msgFloorListed  = "floor check row cannot be baselined (it counts as NEW; remove the line): "
+	msgCrashListed  = "crashed member row cannot be baselined (it counts as NEW; remove the line): "
 	msgCannotRead   = "report-module: cannot read %s: %s\n"
 	msgCannotWrite  = "report-module: cannot write %s: %s\n"
 	msgWrote        = "report-module: wrote %s (%s)\n"
 	msgFloorLeftOut = "; %s left out: verify-module and schema-risk rows are never baselined"
+	msgCrashLeftOut = "; %s left out: an \"exited N with no FAIL row\" row is never baselined"
 )
 
 // baselineUsage follows the usage line.
@@ -33,7 +35,8 @@ const baselineUsage = `  baseline: <module-root>/.report-baseline lists the FAIL
     number, a count) reads N, so a key survives unrelated edits. "#" lines and blank lines are ignored.
     With the file, FAIL rows are printed in two groups, NEW and BASE, after the other rows, and the verdict and
     the exit code read the NEW rows only; a line no FAIL row matches is a WARN "stale baseline line" row.
-    Never baselined (always NEW): verify-module gate rows, schema-risk rows, triage-console lines.
+    Never baselined (always NEW): verify-module gate rows, schema-risk rows, a member that "exited N with no
+    FAIL row" (a crash), triage-console lines.
   --write-baseline  write the file from this run's FAIL rows (sorted, de-duplicated); the exit code is the run's
   --no-baseline     ignore the file for this run
 `

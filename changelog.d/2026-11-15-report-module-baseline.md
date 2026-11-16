@@ -10,4 +10,6 @@
 - The floor is never baselined: verify-module gate rows and schema-risk rows stay NEW and are left out of a
   written file, and a SKIPped floor check still reads INCOMPLETE. A baseline line no FAIL row matches is a WARN
   `stale baseline line` row.
+- A member that exited non-zero without a FAIL row ("exited N with no FAIL row") is never baselined either: its
+  row stays NEW and is left out of a written file, so a baseline cannot hide a crashed lint.
 - Without the file and without the options the report is unchanged; only the usage text (exit 2) is longer.

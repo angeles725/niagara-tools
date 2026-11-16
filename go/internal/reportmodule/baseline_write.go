@@ -9,7 +9,7 @@ import (
 )
 
 // writeBaseline is --write-baseline, after the summary: it replaces <root>/.report-baseline with the keys of
-// the run's FAIL rows, sorted and each once, floor check rows left out (and named on stderr), and returns the
+// the run's FAIL rows, sorted and each once, floor check rows and crashed members' rows left out (and named on stderr), and returns the
 // exit code of the run; a file that cannot be written is an env fault. Without the option it returns code.
 func (r *report) writeBaseline(code int) int {
 	if !r.o.writeBaseline {
@@ -34,6 +34,9 @@ func (r *report) writeBaseline(code int) int {
 	what := counted(n, "FAIL key")
 	if b.floorN > 0 {
 		what += fmt.Sprintf(msgFloorLeftOut, counted(b.floorN, "floor check row"))
+	}
+	if b.crashN > 0 {
+		what += fmt.Sprintf(msgCrashLeftOut, counted(b.crashN, "crashed member row"))
 	}
 	fmt.Fprintf(r.errw, msgWrote, b.path, what)
 	return code

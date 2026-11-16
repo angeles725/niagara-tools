@@ -626,7 +626,8 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   rows only: zero NEW is exit 0, which `build.sh` maps to hand-off as before (`build.sh` itself is unchanged; it
   reads the exit code). The floor is never baselined: a verify-module gate row or a schema-risk row counts as
   NEW even when listed (a WARN row names the line) and `--write-baseline` leaves it out; a SKIPped floor check
-  still reads INCOMPLETE (exit 4); triage-console lines are always NEW. A line no FAIL row matches is a WARN
+  still reads INCOMPLETE (exit 4); the row of a member that "exited N with no FAIL row" (a crash) is NEW and
+  left out the same way, for any member; triage-console lines are always NEW. A line no FAIL row matches is a WARN
   `stale baseline line` row with no exit change: delete it, the baseline only shrinks. `--no-baseline` ignores
   the file for one run. Rows that differ only in a line number or a count share one key, so a second site of an
   already listed finding in the same file is BASE: review the diff of the BASE group when that matters.
