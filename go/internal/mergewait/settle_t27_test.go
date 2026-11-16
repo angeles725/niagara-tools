@@ -59,6 +59,7 @@ func TestAMergeErrorThatIsNotAVerdictGetsEveryRead(t *testing.T) {
 		"gh pr merge 5: exit status 1: HTTP 429: Too Many Requests",
 		"gh pr merge 5: exit status 1: HTTP 408: Request Timeout",
 		"gh pr merge 5: exit status 1: GraphQL: API rate limit exceeded for user",
+		"gh pr merge 5: exit status 1: GraphQL: http 429 too many requests", // the status matched case-insensitively
 	} {
 		code, _, errs, reads := settleReads(t, []reply{{err: errors.New(msg)}}, view(false, head), merged(head))
 		if code != ExitMerged || reads != 2 {
