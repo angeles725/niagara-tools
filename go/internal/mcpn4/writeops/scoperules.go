@@ -31,7 +31,8 @@ func createPlanWith(c plan.Client, args *pyjson.Object, w *plan.State, _ *sessio
 			return nil, err
 		}
 		if _, exists := box.Children(nodes, "").Get(str(args, "name")); exists {
-			return nil, plan.ToolError("the scope root " + pyjson.StrRepr(str(args, "parent_ord")+"/"+str(args, "name")) +
+			root, _ := ord.ChildOrd(str(args, "parent_ord"), str(args, "name")) // CheckChild already joined it
+			return nil, plan.ToolError("the scope root " + pyjson.StrRepr(root) +
 				" already exists: nothing to create (a second one would be renamed outside the write scope)")
 		}
 	}

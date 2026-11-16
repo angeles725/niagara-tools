@@ -123,10 +123,13 @@ func (s *Scope) CheckChild(parent, name any) (root bool, err error) {
 	}
 	p, pok := parent.(string)
 	n, nok := name.(string)
-	if !pok || !nok || n == "" || strings.ContainsAny(n, "/|") || !PlainSlotOrd(parent) {
+	if !pok || !nok || !PlainSlotOrd(parent) {
 		return false, err
 	}
-	child := strings.TrimRight(p, "/") + "/" + n
+	child, cerr := ChildOrd(p, n) // refuses an empty, chained or ".." name
+	if cerr != nil {
+		return false, err
+	}
 	for _, pre := range s.prefixes {
 		if child == pre {
 			return true, nil
