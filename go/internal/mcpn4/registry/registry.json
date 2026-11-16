@@ -564,6 +564,35 @@
    "needs_session": true
   },
   {
+   "name": "n4_station_runtime",
+   "description": "What the station is running, in one read (read-only): uptime, from the spy page sysInfo: boot_time, current_time and up_time as the station writes them (localized text) and uptime_s, the seconds between its bootTicks and currentTicks; loaded_modules, from the spy page sysManagers/moduleManager, which lists only the module parts the station has loaded: count and modules (name, vendor, version), up to max_rows, truncated when cut; jars_on_disk: the session lists no module jars, so its status is unavailable (note says why) unless the server was started with --niagara-home NAME=PATH for this station (its Niagara installation directory, reachable from this machine): then the .jar files of PATH/modules (modules_dir, count; a link or other non-regular file is never opened and is named in skipped), with the root attributes of META-INF/module.xml read only from the jars that may hold a loaded part and from those changed after the boot (versions_read; jars whose module.xml cannot be read are named in unreadable; complete is false then or when the scan stopped at 5000 jars or timeout_s). mismatches (up to max_rows, mismatch_count, mismatches_truncated; null without the jars): module, reason, loaded_version, disk_version, jar and jar_modified, where reason is version_differs (the jar holds another version than the loaded one), modified_after_boot (same version, but the jar changed after the boot), loaded_not_on_disk (no jar holds the loaded part) or not_loaded_modified_after_boot (a jar of no loaded part changed after the boot). The boot is this machine's clock minus uptime_s, compared with the jar times of this machine's filesystem, with 2 s of slack. restart_needed is true with any mismatch, false only when the uptime, the whole loaded list and every jar are known and none differs, and null otherwise; restart_note says which. A spy page the user may not read is that section's status (forbidden, not_found, not_html, parse_timeout, with a hint), never a failed call; a page without the measured layout is not_recognized with a hint.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "max_rows": {
+      "type": "integer",
+      "description": "Cap of the loaded modules and of the mismatches listed, each",
+      "minimum": 1,
+      "maximum": 5000,
+      "default": 500
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout per request in seconds; also bounds the reading of the jars",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
    "name": "n4_read_alarms",
    "description": "Read the station's alarm records, newest first: by default the open ones (unacknowledged or not back to normal). Each row is {timestamp, uuid, source, source_state, ack_state, alarm_class, priority, msg_text} as the station renders them (display text, e.g. '7 nov 2026 09:20:50 CST', 'Offnormal', 'Unacked'; msg_text may be a raw %lexicon(...)% pattern); columns are the station's headers. Filters, all optional and combined with and: source (a component ORD such as station:|slot:/Drivers/Net; matches it and everything below it), alarm_class (a class name such as defaultAlarmClass), source_state (normal, offnormal, fault, alert), ack_state (acked, unacked, ackPending), since and until (BAbsTime, e.g. 2026-11-15T00:00:00.000-06:00). A source_state or ack_state filter replaces the open default; open_only false reads every record. where echoes the BQL where clause sent; truncated is true when more records match than limit; total is the matching record count (select count(*)), null with total_note when that count failed. Every filter value is checked before any request: no quotes, wildcards or BQL of the caller reach the station. Read-only: fixed queries over the alarm: ORD.",
    "inputSchema": {
