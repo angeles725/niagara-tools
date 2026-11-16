@@ -18,24 +18,29 @@ func (c Config) mergedState(p pr, sha string) (rc int, done bool) {
 
 // merge checks the base once more (it may have moved while the checks ran), asks gh to merge exactly sha
 // and lets the PR state decide: what the merge call returned is only printed. The state is read 1+Retries
-// times, Interval apart, whatever the call returned (GitHub may show MERGED a moment later); a read that
-// fails is printed and counts as one of them. (retro 2026-11-15 coordination-stretch T16)
+// times, Interval apart (GitHub may show MERGED a moment later), or once when GitHub refused the merge outright;
+// a read that fails is printed and counts as one of them. The merge call and these reads keep their network
+// retries past --timeout: the green checks authorized the merge. (retro 2026-11-15 coordination-stretch T16, T23)
 func (c Config) merge(sha string, base string) int {
 	if rc := c.containsBase(base, sha); rc != ExitMerged {
 		return rc
 	}
-	_, mergeErr := c.Gh("pr", "merge", c.PR, "--"+c.Method, "--match-head-commit", sha)
+	_, mergeErr := c.settleGh("pr", "merge", c.PR, "--"+c.Method, "--match-head-commit", sha)
 	reads := 1 + c.Retries
-	state := "" // the last state read; "" when no read succeeded
+	if mergeErr != nil && isRefusal(mergeErr) {
+		reads = 1
+	}
+	state, answered := "", 0 // the last state read, and how many reads answered
 	for i := 0; i < reads; i++ {
 		if i > 0 {
 			c.Sleep(c.Interval)
 		}
-		p, err := viewPR(c.Gh, c.PR)
+		p, err := viewPR(c.settleGh, c.PR)
 		if err != nil {
 			c.report(err)
 			continue
 		}
+		answered++
 		if p.State == "MERGED" {
 			if p.HeadRefOid != sha {
 				fmt.Fprintf(c.Err, msgOtherHead, c.PR, p.HeadRefOid, sha)
@@ -47,15 +52,18 @@ func (c Config) merge(sha string, base string) int {
 		state = p.State
 	}
 	switch {
-	case mergeErr != nil && state == "":
+	case mergeErr != nil && answered == 0:
 		return ExitGh // the call and every read failed, each printed above
 	case mergeErr != nil:
 		fmt.Fprintf(c.Err, msgMergeFail, c.PR, sha, state)
 		return ExitRefused
-	case state == "":
+	case answered == 0:
 		fmt.Fprintf(c.Err, msgUnread, c.PR, sha, reads)
 		return ExitPending
+	case state != "OPEN":
+		fmt.Fprintf(c.Err, msgClosedAfter, c.PR, state, sha)
+		return ExitMoved
 	}
-	fmt.Fprintf(c.Err, msgUnsettled, c.PR, sha, state, reads)
+	fmt.Fprintf(c.Err, msgUnsettled, c.PR, sha, reads, answered)
 	return ExitPending
 }

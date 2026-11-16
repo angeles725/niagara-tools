@@ -168,6 +168,17 @@ fail_once() {
   reply api_checks "{\"check_runs\":[$(check 1 go completed success)]}"
   mwg
   [ "$status" -eq 9 ]
-  [[ "$output" == *"the PR is still OPEN after 4 read(s): a merge queue or auto-merge holds it"* ]]
+  [[ "$output" == *"the PR is still OPEN after 4 read(s) (4 answered): a merge queue or auto-merge holds it"* ]]
   [ "$(grep -c "^pr view" "$GHS/calls")" -eq 5 ]
+}
+
+@test "MWG11: a merge GitHub refused outright exits 8 after one state read, not 1+--retries" {
+  # Mutation: MWG11 -- reading 1+--retries times after a refusal delays exit 8 by --retries intervals. (retro 2026-11-15 coordination-stretch T23)
+  : > "$GHS/no-lagless"
+  reply api_checks "{\"check_runs\":[$(check 1 go completed success)]}"
+  fail_once pr_merge 'GraphQL: Pull Request is not mergeable (mergePullRequest)'
+  mwg
+  [ "$status" -eq 8 ]
+  [[ "$output" == *"is not mergeable"* ]]
+  [ "$(grep -c "^pr view" "$GHS/calls")" -eq 2 ] || { cat "$GHS/calls"; return 1; } # the start and one read
 }

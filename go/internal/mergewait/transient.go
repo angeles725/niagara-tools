@@ -25,6 +25,25 @@ var networkPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`: timed out after `), // ExecGh's deadline: a stalled connection
 }
 
+// refusalPatterns are gh pr merge errors that carry GitHub's own answer: the merge was refused and nothing
+// happened, so one state read decides it; any other merge error may hide a merge that went through. Data only.
+// (retro 2026-11-15 coordination-stretch T23)
+var refusalPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`GraphQL: `),
+	regexp.MustCompile(`\bHTTP 4[0-9][0-9]\b`),
+	regexp.MustCompile(`(?i)is not mergeable`),
+	regexp.MustCompile(`(?i)head branch was modified`),
+}
+
+func isRefusal(err error) bool {
+	for _, p := range refusalPatterns {
+		if p.MatchString(err.Error()) {
+			return true
+		}
+	}
+	return false
+}
+
 func isNetworkError(err error) bool {
 	for _, p := range networkPatterns {
 		if p.MatchString(err.Error()) {
