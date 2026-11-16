@@ -48,7 +48,6 @@ func TestAddHistoryModeAndCapacityRefusals(t *testing.T) {
 	}{
 		{"cov with interval", histArgs("mode", "cov"), "interval_ms does not apply to mode cov"},
 		{"interval without interval", covArgs(), "interval_ms is required for mode interval"},
-		{"bad mode", histArgs("mode", "polled"), "mode must be interval or cov, got 'polled'"},
 		{"mode against type", histArgs("mode", "interval", "ext_type", "history:NumericCovHistoryExt"),
 			"ext_type history:NumericCovHistoryExt is a cov extension, but mode is interval"},
 		{"zero", histArgs("capacity", pyjson.IntLiteral("0")), "capacity must be"},
@@ -58,7 +57,6 @@ func TestAddHistoryModeAndCapacityRefusals(t *testing.T) {
 		{"text", histArgs("capacity", "lots"), "capacity must be a whole number of records from 1 to 2147483647, " +
 			"or \"unlimited\", got 'lots'"},
 		{"bool", histArgs("capacity", true), "capacity must be"},
-		{"unknown type", histArgs("ext_type", "history:AuditHistoryExt"), "ext_type must be one of"},
 	} {
 		_, err := planHistory(c, tc.args)
 		wantRefusal(t, tc.name, err, tc.want)

@@ -26,10 +26,7 @@ func (t *Tools) ReadTags(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	relations := strArg(args, "relations", "direct")
-	if relations != "direct" && relations != "all" && relations != "none" {
-		return nil, toolError("relations must be one of direct, all, none, got %s", pyjson.StrRepr(relations))
-	}
+	relations := strArg(args, "relations", "direct") // direct, all or none: the schema's enum
 	implied := true
 	if v, ok := args.Get("implied"); ok {
 		implied = v == true

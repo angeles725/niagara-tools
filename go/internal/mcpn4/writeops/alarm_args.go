@@ -32,11 +32,8 @@ func alarmArgs(args *pyjson.Object) (alarmSpec, error) {
 	if s.points, err = alarmPoints(args); err != nil {
 		return s, err
 	}
-	if raw, given := args.Get("kind"); given {
+	if raw, given := args.Get("kind"); given { // one of alarmKinds: the schema's enum
 		s.kind, _ = raw.(string)
-		if _, ok := findAlarmKind(s.kind); !ok {
-			return s, plan.ToolError(fmt.Sprintf(msgAlarmKind, strings.Join(alarmKindNames(), ", "), pyjson.Repr(raw)))
-		}
 	}
 	if name, _ := args.Get("ext_name"); name != nil {
 		if s.name, err = plan.Name("ext_name", name); err != nil {

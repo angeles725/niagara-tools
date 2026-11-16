@@ -76,7 +76,6 @@ func TestAddHistoryRefusals(t *testing.T) {
 			"history name 'RA_T' would repeat on " + ptA + " and " + ptB},
 		{"no points", histArgs("points", []any{}), histPoints(t), "points must list 1 to 50 point ORDs"},
 		{"duplicate point", histArgs("points", []any{ptA, ptA}), histPoints(t), "points must be distinct"},
-		{"not a history type", histArgs("ext_type", "history:AuditHistoryExt"), histPoints(t), "ext_type must be one of"},
 		{"empty pattern", histArgs("history_name", ""), histPoints(t), "history_name must be a non-empty"},
 		{"zero interval", histArgs("interval_ms", pyjson.IntLiteral("0")), histPoints(t), "interval_ms must be at least 1"},
 		{"text interval", histArgs("interval_ms", "5m"), histPoints(t), "whole number of milliseconds"},

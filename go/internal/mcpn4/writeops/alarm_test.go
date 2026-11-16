@@ -146,7 +146,6 @@ func TestAddAlarmRefusals(t *testing.T) {
 		{"kind mismatch", alarmArgsOf([]any{ptBool}, "kind", "out_of_range"), alarmPoints(t),
 			"kind out_of_range does not fit " + ptBool + ", a boolean point (control:BooleanWritable): use one of " +
 				"boolean_change_of_state, boolean_command_failure, status, or leave kind out"},
-		{"unknown kind", alarmArgsOf([]any{ptA}, "kind", "floating"), alarmPoints(t), "kind must be one of out_of_range, "},
 		{"missing class", alarmArgsOf([]any{ptA}, "alarm_class", "Nope"), alarmPoints(t),
 			"alarm class 'Nope' does not exist on the station; existing classes: defaultAlarmClass, Critical."},
 		{"second extension", alarmArgsOf([]any{ptA}), alarmPoints(t, ptA, second),

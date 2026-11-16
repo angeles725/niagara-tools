@@ -23,8 +23,6 @@ const (
 	msgHistoryNameRepeat = "history name %s would repeat on %s and %s: use a history_name pattern that " +
 		"includes the device, e.g. S%%parent.parent.parent.name%%_%%parent.name%%"
 
-	// msgHistoryMode: the mode given.
-	msgHistoryMode = "mode must be interval or cov, got %s"
 	// msgHistoryModeType: the ext_type, its mode, the mode given.
 	msgHistoryModeType    = "ext_type %s is a %s extension, but mode is %s"
 	msgHistoryCovInterval = "interval_ms does not apply to mode cov: a change-of-value extension records " +
@@ -42,8 +40,6 @@ const (
 		"%s point (%s); add it in a separate call without change_tolerance"
 	// msgHistoryTolerance: the change_tolerance given.
 	msgHistoryTolerance = "change_tolerance must be a finite number of at least 0, in the point's units, got %s"
-	// msgHistoryFullPolicy: the full_policy given.
-	msgHistoryFullPolicy = "full_policy must be roll or stop, got %s"
 
 	noteHistoryRename    = "The station may rename on collision; the real inverse uses the assigned name."
 	noteHistoryUnchecked = "history_name uses tokens other than %parent...name%: names were not checked for " +

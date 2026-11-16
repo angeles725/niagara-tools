@@ -3,7 +3,6 @@ package readtools
 import (
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/bql"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -28,11 +27,8 @@ func sectionsArg(args *pyjson.Object) ([]string, error) {
 		return commSections, nil
 	}
 	wanted := map[string]bool{}
-	for _, item := range v.([]any) { // an array: the schema checked
+	for _, item := range v.([]any) { // an array of commSections names: the schema's enum
 		name, _ := item.(string)
-		if commBuilders[name] == nil {
-			return nil, toolError(commBadSection, strings.Join(commSections, ", "), pyjson.Repr(item))
-		}
 		wanted[name] = true
 	}
 	var out []string

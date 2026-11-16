@@ -27,7 +27,7 @@ func TestValidateRefusesAnUnknownArgumentWithADidYouMean(t *testing.T) {
 	refusedWith(t, s, `{"capacity_records": 5}`, "unknown argument 'capacity_records' for tool; did you mean 'capacity'?")
 	refusedWith(t, s, `{"depht": 1}`, "unknown argument 'depht' for tool; did you mean 'depth'?")
 	refusedWith(t, s, `{"zzz": 1}`, "unknown argument 'zzz' for tool")
-	refusedWith(t, s, `{"dry": true}`, "unknown argument 'dry' for tool")           // a tie: no guess
+	refusedWith(t, s, `{"dry": true}`, "unknown argument 'dry' for tool")           // too short to name either
 	refusedWith(t, s, `{"depth": "x", "zzz": 1}`, "argument depth must be integer") // insertion order
 	refusedWith(t, s, `{"zzz": 1, "depth": "x"}`, "unknown argument 'zzz' for tool")
 }
