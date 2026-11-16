@@ -53,13 +53,14 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 |----------|------|
 | Pure logic (rt control) | `$KIT/types/logic.md` |
 | Framework extension (service, ORD scheme, point ext, analytics node, job, watchdog, provider) | `$KIT/types/logic-authoring.md` |
+| Station service (a `BAbstractService`: registration, lookup, lifecycle order, licence behaviour, tests) | `$KIT/types/service.md` |
 | Driver / device network (network, device, proxy ext, comm stack, discovery, licensing) | `$KIT/types/driver-authoring.md` (§ 1.8 picks the framework, § 12 testing and the gate's `driver-*` rows) `[ev: retro r10-dr1-driver-doctrine Δ1]` `[ev: retro r10-dr4-verify-driver Δ1]` |
 | Dashboard (facade + servlet + SPA) | `$KIT/types/dashboard.md` (+ `$KIT/types/frontend-standard.md` for the SPA side) |
 | Logic + dashboard | both |
 | Workbench widget / PX (wb) | `$KIT/types/wb-widgets.md` |
 | New module scaffold / source layout audit | `$KIT/types/structure.md` |
 | Lexicons, translation modules, runtime and browser text | `$KIT/types/lexicon.md` |
-| Station diagnostics (engine stats, log levels, console messages) | `$KIT/types/diagnostics.md` |
+| Station diagnostics (engine stats, log levels, console messages, thread dumps, remote debugger, launcher flags) | `$KIT/types/diagnostics.md` |
 | JSON export or a jsonToolkit extension | `$KIT/types/json-toolkit.md` |
 | Runtime profiles, Software Manager install, NRE memory on a JACE | `$KIT/types/platform.md` |
 | N4 capabilities our modules do not use yet | `$KIT/types/horizons.md` |
