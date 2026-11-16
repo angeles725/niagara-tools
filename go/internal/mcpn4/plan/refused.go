@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/journal"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
@@ -35,7 +36,7 @@ func (e *Engine) refused(c Client, impl Impl, args *pyjson.Object, planned *Plan
 	}
 	text := e.Ctx.Scrub(be.Msg)
 	result := obj("batch_id", batchID, "ts", session.Now(), "phase", "result", "accepted", nil,
-		"inverse", []any{}, "verdict", refusedVerdict, "refused", true, "station_error", text)
+		"inverse", []any{}, "verdict", journal.StateRefused, "refused", true, "station_error", text)
 	if e.State.Journal.Append(result) != nil {
 		return nil // no record: the intent alone leaves the batch in-doubt, and the reply says so
 	}

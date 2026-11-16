@@ -48,7 +48,9 @@ func TestADestructiveDryRunNeedsNoFlagAndSaysSo(t *testing.T) {
 	}
 }
 
-func TestAReadOfADestructiveToolNameIsNotAWriteAndARunWithoutWritesSaysNothing(t *testing.T) {
+// A run with no write prints no mode line (a destructive line without "write" is covered in
+// destructive_more_test.go).
+func TestARunWithoutWritesSaysNothingOnStderr(t *testing.T) {
 	b := newBench(t)
 	code, _, errOut := b.run(connect)
 	if code != 0 || errOut != "" {
