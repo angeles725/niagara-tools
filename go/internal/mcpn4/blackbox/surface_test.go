@@ -34,4 +34,7 @@ var readTools = []string{
 	"n4_commissioning_report",
 	"n4_list_schedule_kinds",
 	"n4_read_schedule",
+	"n4_read_tags",
+	"n4_neql_query",
+	"n4_list_tag_dictionaries",
 }

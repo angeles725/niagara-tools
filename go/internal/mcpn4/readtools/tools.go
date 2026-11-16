@@ -85,6 +85,9 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_station_runtime"] = t.StationRuntime
 	s.Handlers["n4_commissioning_report"] = t.CommissioningReport
 	registerSchedules(s, t)
+	s.Handlers["n4_read_tags"] = t.ReadTags
+	s.Handlers["n4_neql_query"] = t.NeqlQuery
+	s.Handlers["n4_list_tag_dictionaries"] = t.ListTagDictionaries
 }
 
 func toolError(format string, a ...any) error {

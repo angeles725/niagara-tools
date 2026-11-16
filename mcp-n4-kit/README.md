@@ -204,7 +204,8 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
-`n4_station_runtime`.
+`n4_station_runtime`, `n4_read_tags`,
+`n4_neql_query`, `n4_list_tag_dictionaries`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -567,12 +568,79 @@ offline punch-list of a module's sources and a `config.bog` file, run before dep
 exit code for a gate. This report reads the running station after deployment. Neither replaces the
 other.
 
+### Tags
+
+A direct tag is a dynamic slot with the metadata flag (`m`) whose name is the tag id with its colon
+escaped: `hs:point` is the slot `hs$3apoint`. A tag group is not a tag slot: it is a relation slot
+(`baja:Relation`, named `r`, `r1`, ...) with `relationId` `n:tagGroup` and `sourceOrd` the group's
+definition in a dictionary; the station then implies the group's tags. Implied tags (the
+dictionaries' rules, tag groups) are never slots: only the station's session handler computes them.
+
+`n4_read_tags(ord | ords, implied=true, relations="direct")` reads up to 50 components, one load
+each: `direct` tags (`id`, `namespace`, `name`, `type`, `value`, `slot`, `flags`), `tag_groups`
+(`group_ord`, `slot`), the direct `relations` (`id`, `endpoint_ord`, `inbound`, `slot`), and
+`implied` (`id`, `type`, `value`; one `impliedTags` session call per component, the call
+BajaScript makes). `relations="all"` adds the implied relations (`n:parent`, `n:child`, ...; one
+more call each), `"none"` leaves relations out, and `implied=false` makes no session call.
+`implied: null` with `implied_unavailable` means the implied tags were not read, never that there
+are none.
+
+`n4_list_tag_dictionaries(dictionary?, max_items=200)` lists the dictionaries under
+`/Services/TagDictionaryService` (one BQL query: namespace, enabled, frozen, version, status) and
+what each defines: tag definitions (`id`, `info`, value `type`, `default`, `validity`; `type` null
+for a smart tag), tag groups (`id`, `group_ord`, the `tags` they imply) and relation ids.
+
+Recipe, find components by tag: `n4_neql_query(neql, base_ord="station:|slot:/", bql?, max_rows=200)`
+is one GET of `<base_ord>|neql:<neql>|view:file:ITableToCsv`. It matches the components below
+`base_ord` (never `base_ord` itself), implied tags included, and returns their station ORDs:
+
+```text
+n4_neql_query(neql='tst:label = "hello"', base_ord="station:|slot:/ImplTAG")
+  -> ords ["station:|slot:/ImplTAG/Pt1"]
+n4_neql_query(neql="n:point", base_ord="station:|slot:/ImplTAG", bql="select slotPath, out.value")
+  -> columns ["Slot Path", "Value"], rows [{"Slot Path": "slot:/ImplTAG/Pt1", "Value": "0,00"}]
+```
+
+`bql` is a select of columns only (no `from`): the station runs it on the matches. `|` is refused;
+a query the station cannot parse comes back as HTTP 400, reported with the query.
+
+`n4_set_tags(ords, add=[{id, value?, type?}], remove=[id], allow_ad_hoc=false)` writes direct tags
+on 1 to 50 components (at most 200 ops) under the usual dry run, token, write scope and rollback:
+
+- A tag an installed dictionary defines takes the definition's value type (another `type` is
+  refused) and, without `value`, its default; a Marker takes no value.
+- An undefined tag needs `allow_ad_hoc: true` and a namespace no dictionary installs: `n:foo` is
+  refused even then (Tagging guide, Adding ad hoc tags).
+- A new tag is an `a` op with flag `m` (inverse `v`); a tag holding another value of the same type
+  is set (inverse: the old value); a type change is refused (remove, then add); an equal value is
+  skipped with a note. A removed tag's inverse re-adds it with its type, value and flags.
+- The read-back reloads each target; a value the station normalized is listed under `coerced`.
+- Refused at plan, before any write: a tag, group or relation named twice in one list, or both
+  added and removed; a group or relation already on the target; a value type other than
+  `baja:Marker`, `Boolean`, `Double`, `Float`, `Integer`, `Long`, `String`, `DynamicEnum`
+  (`ordinal` or `ordinal@range`), `Format` and `RelTime`, or a value that type does not take.
+  The dictionaries on the lab (Niagara, Haystack 4) define tags only of Marker, String,
+  DynamicEnum, Double and Integer, so no defined tag is refused by this list.
+- A removed relation's inverse re-adds the fields it stored (its endpoint ORD as written).
+- In the destructive class: a client such as `n4call` needs `--allow-destructive` to execute it.
+- `add_groups` / `remove_groups: [id]` apply or remove a tag group a dictionary defines: an `r?`
+  relation (`n:tagGroup` to `slot:/Services/TagDictionaryService/<dict>/tagGroupDefinitions/<g>`,
+  flag `r`); the read-back lists the implied tags and any group tag missing from them.
+- `add_relations` / `remove_relations: [{id, endpoint_ord}]` add or remove an outbound relation
+  (`sourceOrd` the endpoint's `h:` ORD). The inverse of an added relation removes the slot the
+  station named (`r`, `r1`, ...).
+
+Live smoke (lab station, a disposable folder and test dictionaries): `n4_list_tag_dictionaries`;
+`n4_set_tags` add a defined tag, a group and a relation; `n4_read_tags` shows them and the implied
+group tags; `n4_neql_query` finds the component by a group tag; `n4_rollback` the batch and read
+again (nothing left); an undefined tag in an installed namespace is refused.
+
 ## Writing safely
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
 `n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
-(`destructiveHint: true`) `n4_remove_component`, `n4_rollback`,
+(`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station` and `n4_ack_alarm`. Example:
 
 ```

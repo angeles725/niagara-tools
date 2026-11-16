@@ -788,6 +788,110 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_read_tags",
+   "description": "Read the tags of one or more components (ord, or ords: up to 50). Per component: direct tags (metadata slots, as {id, namespace, name, type, value, slot, flags}; the slot name is the escaped id, hs:point is hs$3apoint), tag_groups (each an n:tagGroup relation to a group definition, {group_ord, slot}), direct relations ({id, endpoint_ord, inbound, slot}) and, unless implied is false, the implied tags the station's dictionaries compute ({id, type, value}; a tag group's tags appear here). relations: direct (default), all (adds the implied relations, such as n:parent and n:child) or none. One load per component, plus one session call each for implied tags and implied relations.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "Component ORD, e.g. station:|slot:/Folder/Pump"
+     },
+     "ords": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Several component ORDs (1 to 50), read in order"
+     },
+     "implied": {
+      "type": "boolean",
+      "description": "Also read the implied tags (default true)"
+     },
+     "relations": {
+      "type": "string",
+      "enum": [
+       "direct",
+       "all",
+       "none"
+      ],
+      "description": "direct (default): the relation slots on the component; all: also the implied relations; none: no relations"
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_neql_query",
+   "description": "Find components by their tags with a NEQL query (one GET of base_ord|neql:<query>|view:file:ITableToCsv, the documented ORD route). neql is a filter such as n:point, hs:equip and not hs:ahu, tst:label = \"hello\", hs:temp > 20, n:name like \".*Pump.*\" or a relation path (n:parent->hs:floor = 2); implied tags count. It matches the components below base_ord (default station:|slot:/), never base_ord itself, and returns their station ORDs (ords). With bql (one select, e.g. select slotPath, out.value) the station runs that select on the matches and the reply carries its columns and rows instead. '|' is refused (the ORD separator); a query the station cannot parse is HTTP 400, reported as such. max_rows (default 200, at most 2000) bounds the reply; truncated says it was cut.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "neql": {
+      "type": "string",
+      "description": "NEQL filter, e.g. hs:point and hs:temp"
+     },
+     "base_ord": {
+      "type": "string",
+      "description": "Search below this component ORD (default station:|slot:/)"
+     },
+     "bql": {
+      "type": "string",
+      "description": "Optional select run on the matches, e.g. select slotPath, out.value"
+     },
+     "max_rows": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000,
+      "description": "Most rows returned (default 200)"
+     },
+     "timeout_s": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600,
+      "description": "Request timeout in seconds (default 60)"
+     }
+    },
+    "required": [
+     "neql"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_list_tag_dictionaries",
+   "description": "List the tag dictionaries installed under the TagDictionaryService (one BQL query), each with its namespace, enabled, frozen, version and status, and what it defines: tag definitions (id, info type, value type, default, validity condition; type null for a smart tag the station computes), tag groups (id, the group_ord a tag group relation points at, the tags it implies) and relation ids. dictionary (a name such as Niagara, or a namespace such as n) lists one. max_items (default 200, at most 2000) bounds the definitions listed across all dictionaries; truncated says some were left out. Use it before n4_set_tags to see which tags, values and groups a station defines.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "dictionary": {
+      "type": "string",
+      "description": "Dictionary name or namespace (default: all)"
+     },
+     "max_items": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000,
+      "description": "Most definitions listed (default 200)"
+     }
+    }
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [
@@ -1463,6 +1567,66 @@
     },
     "required": [
      "uuids"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_set_tags",
+   "description": "Add, change or remove direct tags on 1 to 50 components (ords) in one batch. add: [{id, value?, type?}] where id is ns:name; a tag the installed dictionaries define takes the definition's value type (a type that differs is refused) and, without value, its default; a Marker takes no value. A tag no dictionary defines is refused unless allow_ad_hoc is true, and never allowed in an installed dictionary's namespace (the Tagging guide: an ad hoc tag must not use an existing dictionary's namespace). A new tag is added as a metadata slot (flag m, named ns$3aname); a tag already there with another value of the same type is set (a type change is refused: remove, then add); one already holding the value is skipped with a note. remove: [id] removes direct tags (the inverse re-adds each with its type, value and flags). add_groups / remove_groups: [id] apply or remove a tag group an installed dictionary defines (a relation n:tagGroup to the group's definition, flag r, as Workbench adds it); the station then implies the group's tags, and the read-back lists the target's implied tags and any group tag missing from them. add_relations / remove_relations: [{id, endpoint_ord}] add or remove an outbound relation to another component (written as its handle ORD h:...), the id defined by a dictionary or, with allow_ad_hoc, in a namespace of its own. A group or relation already on the target, one missing from a remove, an entry named twice, or one both added and removed is refused. At most 200 ops (targets x changes), each target under the write scope. The read-back reloads each target and reports values the station normalized under coerced (sent 4.50, stored 4.5). It removes tags and relations, so it is in the destructive class (destructiveHint). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run; n4_rollback undoes the batch.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ords": {
+      "type": "array",
+      "description": "Component ORDs (1 to 50) to tag"
+     },
+     "add": {
+      "type": "array",
+      "description": "Tags to add or change: [{id: \"ns:name\", value?, type?}]"
+     },
+     "remove": {
+      "type": "array",
+      "description": "Tag ids (ns:name) to remove"
+     },
+     "add_groups": {
+      "type": "array",
+      "description": "Tag group ids (ns:name) to apply"
+     },
+     "remove_groups": {
+      "type": "array",
+      "description": "Tag group ids (ns:name) to remove"
+     },
+     "add_relations": {
+      "type": "array",
+      "description": "Relations to add: [{id: \"ns:name\", endpoint_ord}]"
+     },
+     "remove_relations": {
+      "type": "array",
+      "description": "Relations to remove: [{id, endpoint_ord}]"
+     },
+     "allow_ad_hoc": {
+      "type": "boolean",
+      "default": false,
+      "description": "true allows a tag or relation no installed dictionary defines, in a namespace no dictionary installs"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "ords"
     ]
    },
    "annotations": {
