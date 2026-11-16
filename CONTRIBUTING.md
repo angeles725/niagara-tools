@@ -420,8 +420,10 @@ live-doctrine citation gate and before the retro exits, so a `Retro: none (trivi
   exit 6), re-runs once a check that failed on a transient download error (a 429, a 5xx, a reset connection),
   reports any other failed check with the last lines of its log (exit 1), and merges with
   `gh pr merge --match-head-commit <sha>`. Every gh error is printed and a network error (`dial tcp ...: network
-  is unreachable`) is retried up to `--retries` (3) times; after the merge call the PR state decides: MERGED at the
-  checked head is exit 0 with its merge commit, whatever the call returned (8 when it is still open, 7 on
+  is unreachable`) is retried up to `--retries` (3) times, never past `--timeout`; after the merge call the PR state,
+  read up to 1+`--retries` times, decides: MERGED at the checked head is exit 0 with its merge commit, whatever the
+  call returned (8 when gh pr merge failed and the PR is still open; 9 when the call returned but the PR is not
+  MERGED yet, as with a merge queue or auto-merge, or its state could not be read: check it by hand; 7 on
   timeout). It runs under bash and zsh.
   Open pull requests as ready, not draft: CI runs on drafts too, so a defect only CI's pinned tools catch shows up
   before the merge turn.
