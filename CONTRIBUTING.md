@@ -316,8 +316,11 @@ Tests and docs under those trees count as behaviour.
 - **A fragment** `changelog.d/<YYYY-MM-DD>-<slug>.md` at the repository root, added in the range (preferred: two
   PRs never conflict on it). Line 1 is a Keep a Changelog heading, `### Added|Changed|Deprecated|Removed|Fixed|Security`
   with an optional ` — <title>`; every heading has at least one `- ` bullet; no other heading level appears.
-- **A non-blank line added inside `## [Unreleased]`** of `CHANGELOG.md`. An edit to an older release section does
-  not count.
+- **A non-blank line added inside `## [Unreleased]`** of `CHANGELOG.md`, in a release range only: one that deletes a
+  `changelog.d/` fragment (the fold) or changes `VERSION` (the bump), so the fold and the bump pass pushed together
+  or apart. Outside a release such a line FAILS the range, even next to a valid fragment and even when the range
+  changes no behaviour: two open PRs that both add lines there conflict, fragments never do. An edit to an older
+  release section does not count.
 - **A `Changelog: none (<reason>)` trailer** in any commit of the range. The reason is non-empty, one printable line,
   at most 120 characters, and the gate prints it.
 

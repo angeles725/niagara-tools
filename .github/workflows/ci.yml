@@ -357,5 +357,5 @@ jobs:
           cache: true
           cache-dependency-path: go/go.mod
 
-      - name: changelog-gate over origin/main..HEAD (a fragment, an [Unreleased] line or a no-entry trailer)
+      - name: changelog-gate over origin/main..HEAD (a fragment or a no-entry trailer; [Unreleased] lines only in a release)
         run: bash scripts/changelog-gate.sh --range "$(git merge-base origin/main HEAD)..HEAD"
