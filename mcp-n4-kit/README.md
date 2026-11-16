@@ -604,11 +604,23 @@ n4_neql_query(neql="n:point", base_ord="station:|slot:/ImplTAG", bql="select slo
 `bql` is a select of columns only (no `from`): the station runs it on the matches. `|` is refused;
 a query the station cannot parse comes back as HTTP 400, reported with the query.
 
+`n4_set_tags(ords, add=[{id, value?, type?}], remove=[id], allow_ad_hoc=false)` writes direct tags
+on 1 to 50 components (at most 200 ops) under the usual dry run, token, write scope and rollback:
+
+- A tag an installed dictionary defines takes the definition's value type (another `type` is
+  refused) and, without `value`, its default; a Marker takes no value.
+- An undefined tag needs `allow_ad_hoc: true` and a namespace no dictionary installs: `n:foo` is
+  refused even then (Tagging guide, Adding ad hoc tags).
+- A new tag is an `a` op with flag `m` (inverse `v`); a tag holding another value of the same type
+  is set (inverse: the old value); a type change is refused (remove, then add); an equal value is
+  skipped with a note. A removed tag's inverse re-adds it with its type, value and flags.
+- The read-back reloads each target; a value the station normalized is listed under `coerced`.
+
 ## Writing safely
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, `n4_set_tags`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_rollback`,
 `n4_save_station` and `n4_ack_alarm`. Example:
 
