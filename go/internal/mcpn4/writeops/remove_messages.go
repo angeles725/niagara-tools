@@ -57,3 +57,22 @@ func linksRefusal(head, root string, found []any) string {
 		"detected. " + strings.ToUpper(linksFate[:1]) + linksFate[1:] + ". Repeat the dry run with " +
 		"acknowledge_links: true to remove anyway: refusing"
 }
+
+// scanOrdOutside is the dry run's refusal of a link_scan_ord that is not root or under it.
+func scanOrdOutside(scan, root string) string {
+	return "link_scan_ord " + scan + " is not inside " + root + ", the write-scope prefix that holds the parent: " +
+		"link_scan_ord only narrows the link scan to a root equal to or under that prefix, it never widens or " +
+		"moves it: refusing"
+}
+
+// scanTooLarge is the dry run's refusal when the scan root loads more than LinkScanNodeBudget nodes.
+func scanTooLarge(root string, n int, narrowed bool) string {
+	what, ask := "the scope root "+root, "pass link_scan_ord, a narrower root inside it that holds the components "+
+		"the removed one feeds"
+	if narrowed {
+		what, ask = "the link_scan_ord root "+root, "pass a narrower link_scan_ord inside it"
+	}
+	return what + " is too large to scan for outgoing links: it holds " + strconv.Itoa(n) + " node(s) to depth " +
+		strconv.Itoa(LinkScanDepth) + ", more than " + strconv.Itoa(LinkScanNodeBudget) + "; " + ask +
+		" (the scan is never skipped): refusing"
+}

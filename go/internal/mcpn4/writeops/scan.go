@@ -13,6 +13,12 @@ import (
 // LinkScanDepth is LINK_SCAN_DEPTH: how deep the optional outgoing-link scan loads.
 const LinkScanDepth = 6
 
+// LinkScanNodeBudget is the most nodes (components, slots and links, as the load returns them)
+// the remove's link scan matches before it refuses and asks for a narrower link_scan_ord (native
+// review R4-unbounded-default-scan): a work folder of a few hundred components fits, a station
+// root or a whole Drivers tree does not, and those make every remove dry run slow.
+const LinkScanNodeBudget = 5000
+
 // scanNotes is the end of _remove_plan: with link_scan_ord, the links from the subtree into
 // components outside it (keys gains outgoing_links_broken); without, a note when the subtree
 // has outputs such links could read.
@@ -99,15 +105,16 @@ func outgoing(node *pyjson.Object, path string, handles map[string]string, found
 // scanOutgoing is _scan_outgoing: the outgoing links under scanOrd, sorted by target, target
 // slot and source path.
 func scanOutgoing(c plan.Client, scanOrd string, handles map[string]string) ([]any, error) {
-	return scanOutgoingWith(c, scanOrd, handles, false)
-}
-
-// scanOutgoingWith is scanOutgoing; withHandle adds each target's handle as target_h.
-func scanOutgoingWith(c plan.Client, scanOrd string, handles map[string]string, withHandle bool) ([]any, error) {
 	nodes, err := c.LoadTree(scanOrd, LinkScanDepth, box.LoadOptions{})
 	if err != nil {
 		return nil, err
 	}
+	return matchOutgoing(nodes, scanOrd, handles, false)
+}
+
+// matchOutgoing is the matching half of scanOutgoing over a loaded scanOrd; withHandle adds each
+// target's handle as target_h.
+func matchOutgoing(nodes *pyjson.Object, scanOrd string, handles map[string]string, withHandle bool) ([]any, error) {
 	found, err := outgoing(box.Node(nodes, ""), "", handles, nil)
 	if err != nil {
 		return nil, err

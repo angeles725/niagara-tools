@@ -6,7 +6,6 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
 
@@ -130,10 +129,9 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 			own = append(own, obj("nm", "v", "h", h, "n", n))
 		}
 	}
-	links := (len(relinks) + len(outgoing)) * len(own)
-	if need := 1 + len(components) + links; w.WritesExecuted+need > w.MaxWrites {
-		return nil, plan.ToolError(fmt.Sprintf("%s: this rollback needs %d write(s) (1 batch + %d component(s) + %d "+
-			"relink(s)) but only %d remain (--max-writes %d)", safety.ReasonBudgetSmall, need, len(components), links,
+	relinkWrites, outgoingWrites := len(relinks)*len(own), len(outgoing)*len(own)
+	if need := 1 + len(components) + relinkWrites + outgoingWrites; w.WritesExecuted+need > w.MaxWrites {
+		return nil, plan.ToolError(budgetRefusal(need, len(components), relinkWrites, outgoingWrites,
 			w.MaxWrites-w.WritesExecuted, w.MaxWrites))
 	}
 	if err := checkRestoredEnds(w, targets, ops, own, components, relinks); err != nil {

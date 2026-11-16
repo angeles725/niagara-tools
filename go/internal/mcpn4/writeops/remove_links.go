@@ -1,6 +1,8 @@
 package writeops
 
 import (
+	"strings"
+
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
@@ -21,16 +23,26 @@ func linkSlot(nodes *pyjson.Object, p string) bool {
 }
 
 // linkScan scans root for links from the subtree (handles) into components outside it: the
-// write-scope prefix holding the parent, or link_scan_ord when given. Links found refuse the
-// plan unless acknowledge_links is true; then outgoing_links_broken lists them and the inverse
-// records each as an outgoing_link n4_rollback re-creates (bench retro 2026-11-15 delta 20).
+// write-scope prefix holding the parent, or link_scan_ord when given (equal to or under that
+// prefix: it only narrows). Links found refuse the plan unless acknowledge_links is true; then
+// outgoing_links_broken lists them and the inverse records each as an outgoing_link n4_rollback
+// re-creates (bench retro 2026-11-15 delta 20).
 func linkScan(c plan.Client, args *pyjson.Object, scope *ord.Scope, nodes *pyjson.Object, handles map[string]string,
 	keys *pyjson.Object, notes, inverse []any) ([]any, []any, error) {
-	root, narrowed := scopeRootOf(scope, str(args, "parent_ord")), false
+	parent := str(args, "parent_ord")
+	root, narrowed := scopeRootOf(scope, parent), false
 	if v, ok := args.Get("link_scan_ord"); ok && v != nil {
-		root, narrowed = pyjson.Str(v), true // in scope: a plain slot ORD
+		scan := pyjson.Str(v) // in scope: a plain slot ORD
+		if !ordUnder(scan, root) {
+			return nil, nil, plan.ToolError(scanOrdOutside(scan, root))
+		}
+		root, narrowed = scan, true
 	}
-	found, err := scanOutgoingWith(c, root, handles, true)
+	removed, err := ord.ChildOrd(parent, str(args, "name"))
+	if err != nil {
+		return nil, nil, err
+	}
+	found, err := scanOutgoingFrom(c, root, removed, handles, narrowed)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -50,4 +62,35 @@ func linkScan(c plan.Client, args *pyjson.Object, scope *ord.Scope, nodes *pyjso
 	}
 	keys.Set("outgoing_links_broken", shown)
 	return append(notes, head+scanBroken(len(found))+scanBlind(root, false)), inverse, nil
+}
+
+// scanOutgoingFrom loads root to LinkScanDepth and returns its outgoing links with each target's
+// handle. A root holding more than LinkScanNodeBudget nodes refuses (never a silent skip), and a
+// link whose target is the removed component or under it is internal whatever its depth: the
+// snapshot's handles reach only depth 3 (native review R3-deep-internal-links-flagged).
+func scanOutgoingFrom(c plan.Client, root, removed string, handles map[string]string, narrowed bool) ([]any, error) {
+	nodes, err := c.LoadTree(root, LinkScanDepth, box.LoadOptions{})
+	if err != nil {
+		return nil, err
+	}
+	if n := len(nodes.Keys()); n > LinkScanNodeBudget {
+		return nil, plan.ToolError(scanTooLarge(root, n, narrowed))
+	}
+	all, err := matchOutgoing(nodes, root, handles, true)
+	if err != nil {
+		return nil, err
+	}
+	found := make([]any, 0, len(all))
+	for _, f := range all {
+		if !ordUnder(pyjson.Str(get(f.(*pyjson.Object), "target")), removed) {
+			found = append(found, f)
+		}
+	}
+	return found, nil
+}
+
+// ordUnder reports whether slot ORD o is root or under it, on slot boundaries.
+func ordUnder(o, root string) bool {
+	o, root = strings.TrimRight(o, "/"), strings.TrimRight(root, "/")
+	return o == root || strings.HasPrefix(o, root+"/")
 }
