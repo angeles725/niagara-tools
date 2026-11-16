@@ -55,10 +55,17 @@ func (t *Tools) progress(tool, step string, rows, elapsed int, log []any) []any 
 	return append(log, entry)
 }
 
-// query runs one projected BQL GET: the columns, rows, whether they were cut (byte or row
-// cap) and the latency in whole milliseconds.
+// query runs one projected BQL GET over a station subtree: the columns, rows, whether they
+// were cut (byte or row cap) and the latency in whole milliseconds.
 func (t *Tools) query(base, query string, maxRows, timeout int) ([]string, []*pyjson.Object, bool, int, error) {
-	ord, err := bql.ComposeOrd(base, query)
+	return t.queryWith(bql.ComposeOrd, base, query, maxRows, timeout)
+}
+
+// queryWith is query with the ORD composed by compose: bql.ComposeOrd for a station subtree,
+// bql.ComposeBaseOrd where the alarm: and history: bases are accepted too.
+func (t *Tools) queryWith(compose func(base, query any) (string, error), base, query string, maxRows,
+	timeout int) ([]string, []*pyjson.Object, bool, int, error) {
+	ord, err := compose(base, query)
 	if err != nil {
 		return nil, nil, false, 0, toolError("%s", err.Error())
 	}
@@ -90,7 +97,7 @@ func (t *Tools) query(base, query string, maxRows, timeout int) ([]string, []*py
 	return columns, rows, cut || capped, int(math.RoundToEven((t.Ctx.Clock() - start) * 1000)), nil
 }
 
-// BqlQuery is n4_bql_query: one select over base; the rows go into the reply, or into a private
+// BqlQuery is n4_bql_query: one select over base (a station subtree, alarm: or a history); the rows go into the reply, or into a private
 // result file under the state dir when output_file names one.
 func (t *Tools) BqlQuery(args *pyjson.Object) (*pyjson.Object, error) {
 	base := strArg(args, "base", RootOrd)
@@ -102,8 +109,8 @@ func (t *Tools) BqlQuery(args *pyjson.Object) (*pyjson.Object, error) {
 		}
 	}
 	q := strArg(args, "query", "")
-	columns, rows, truncated, elapsed, err := t.query(base, q, intArg(args, "max_rows", bql.DefaultMaxRows),
-		intArg(args, "timeout_s", 60))
+	columns, rows, truncated, elapsed, err := t.queryWith(bql.ComposeBaseOrd, base, q,
+		intArg(args, "max_rows", bql.DefaultMaxRows), intArg(args, "timeout_s", 60))
 	if err != nil {
 		return nil, err
 	}

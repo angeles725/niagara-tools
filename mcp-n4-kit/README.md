@@ -282,6 +282,18 @@ queried `name` column is decoded by its position in the select list, `n4_invento
 columns by position, and a repeated header is kept as `Type#2`, `Type#3`. With
 `output_file: "<name>.csv|.json"`, `n4_bql_query` writes the rows to `<state-dir>/bql/<name>`
 (directory 0700, file 0600, never overwritten) and replies without `rows`.
+Besides a station subtree, `base` may be `alarm:` (the alarm database) or
+`history:/<station>/<history name>` (one history; the id as `n4_read_history` checks it), each
+also accepted after `station:|`. The query there is `select <columns> [where ...] [order by ...]`:
+no type is needed (a `from` clause is passed through), e.g.
+`select timestamp, source, sourceState, ackState where source like '*slot:/Lab/P/*' order by timestamp desc`
+or `select timestamp, value, status where timestamp.millis >= 1794808800000 order by timestamp desc`.
+It sends `GET /ord/<url-encoded alarm:|bql:<query>|view:file:ITableToCsv>` (or
+`history:<id>|bql:...`), the same CSV view and reply shape as a station base, and stays
+read-only: a non-select, `|`, a control character or an over-long query is refused before any
+request, and so is any other scheme (`file:`, `ip:`, a history id that is not two slot names);
+a base under `station:` that is not a slot path keeps its slot-path refusal. `n4_inventory`
+still reads station subtrees only.
 History records: `n4_read_history(history_id | ext_ord, limit=20, period | start/end)` returns
 the last `limit` records (at most 1000) of one history, newest first (`order: newest_first`), so
 a rollout proves records arrive, not only that the extension runs. Give exactly one of
