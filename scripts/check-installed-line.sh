@@ -5,7 +5,9 @@
 # installed ref before building (BUILD-LOOP.md). It lives in scripts/ because toolbelt scripts never call version
 # control (kit-links L2); the read and the compare are the shared Go package go/internal/vendorversion
 # (fragment rule: one comparator for build, deploy and this guard).
-# Local refs only — never fetches. [ev: retro r10-installed-line-guard Δ1]
+# Local refs only — never fetches. Paths are read NUL-separated, so a group under a path git would quote (a
+# non-ASCII directory) is compared like any other. [ev: retro r10-installed-line-guard Δ1]
+# [ev: retro go-check-scripts-ports Δ1]
 #
 # Rows: ok|DOWNGRADE|INCOMPARABLE <file> <installed> -> <branch>  ·  MISSING <file> <installed>
 # Exit: 0 every group >= installed · 1 any DOWNGRADE, MISSING or INCOMPARABLE

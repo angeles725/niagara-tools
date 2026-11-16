@@ -31,14 +31,15 @@ func (r repository) show(ref, file string) string {
 }
 
 // filesNaming lists the files of ref matching pathspec that hold the literal text, in git's path order.
-// A path git quotes (a control or non-ASCII byte) is returned quoted, so show finds nothing for it, as
-// in the bash tool.
+// The names are read NUL-separated (-z): git then prints every path as it is, so a path it would quote
+// (a control or non-ASCII byte) reaches show unchanged and its group is compared, never skipped.
 func (r repository) filesNaming(ref, text, pathspec string) []string {
-	out, _ := r.git(r.stderr, "grep", "-l", "-F", "-e", text, ref, "--", pathspec)
+	// Mutation: ILG-quoted-path -- dropping -z returns a non-ASCII path quoted, so show finds nothing and its group is skipped
+	out, _ := r.git(r.stderr, "grep", "-l", "-z", "-F", "-e", text, ref, "--", pathspec)
 	var files []string
-	for _, line := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
-		if line != "" {
-			files = append(files, strings.TrimPrefix(line, ref+":"))
+	for _, name := range strings.Split(out, "\x00") {
+		if name != "" {
+			files = append(files, strings.TrimPrefix(name, ref+":"))
 		}
 	}
 	return files
