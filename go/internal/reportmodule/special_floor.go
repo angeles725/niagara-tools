@@ -30,28 +30,42 @@ func ShellWord(s string) string {
 // schemaRisk is §6: schema-risk <artifact>/.deploy-baseline <artifact>, its output discarded and its exit the
 // verdict; no baseline is a floor SKIP unless --first-deploy.
 func (r *report) schemaRisk(a artifact) {
-	const check = "schema-risk"
-	baseline := a.dir + "/.deploy-baseline"
-	if !isDir(baseline) {
-		if r.o.firstDeploy {
-			r.emit(a.name, skip, check, "N/A (--first-deploy: never deployed, no baseline to diff)")
-		} else {
-			r.emit(a.name, skip, check, fmt.Sprintf(noBaseline, ShellWord(a.dir)))
-			r.floorSkip = true
-		}
-		return
-	}
-	switch code := r.x.quiet(r.x.tb+"/schema-risk.sh", baseline, a.dir); code {
-	case 0:
-		r.emit(a.name, pass, check, "verdict=SAFE")
-	case 1:
-		r.emit(a.name, warn, check, "verdict=LOSSY")
-	case 2:
-		r.emit(a.name, failed, check, "verdict=OUTAGE") // D9a: OUTAGE is a finding, never an env fault
-	case 3, 4:
-		r.envFault(a.name, check, fmt.Sprintf("env fault (exit %d)", code))
+	st, detail := schemaRiskVerdict(r.x, a.dir, r.o.firstDeploy)
+	switch {
+	case st == errored:
+		r.envFault(a.name, schemaRiskCheck, detail)
+	case st == skip && !r.o.firstDeploy:
+		r.emit(a.name, st, schemaRiskCheck, detail)
+		r.floorSkip = true
 	default:
-		r.envFault(a.name, check, fmt.Sprintf("unexpected exit %d", code))
+		r.emit(a.name, st, schemaRiskCheck, detail)
+	}
+}
+
+const schemaRiskCheck = "schema-risk"
+
+// schemaRiskVerdict is the schema-risk row of an artifact directory: no .deploy-baseline is SKIP (its detail the
+// N/A of --first-deploy, else the command that creates the baseline), else the verdict of schema-risk's exit;
+// an env fault is ERROR. report-module --ready reads it too.
+func schemaRiskVerdict(x runner, dir string, firstDeploy bool) (st, detail string) {
+	baseline := dir + "/.deploy-baseline"
+	if !isDir(baseline) {
+		if firstDeploy {
+			return skip, "N/A (--first-deploy: never deployed, no baseline to diff)"
+		}
+		return skip, fmt.Sprintf(noBaseline, ShellWord(dir))
+	}
+	switch code := x.quiet(x.tb+"/schema-risk.sh", baseline, dir); code {
+	case 0:
+		return pass, "verdict=SAFE"
+	case 1:
+		return warn, "verdict=LOSSY"
+	case 2:
+		return failed, "verdict=OUTAGE" // D9a: OUTAGE is a finding, never an env fault
+	case 3, 4:
+		return errored, fmt.Sprintf("env fault (exit %d)", code)
+	default:
+		return errored, fmt.Sprintf("unexpected exit %d", code)
 	}
 }
 

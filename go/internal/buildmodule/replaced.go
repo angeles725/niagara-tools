@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
@@ -15,15 +14,14 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/vendorversion"
 )
 
-// replacedDir is where a mirror keeps the modules/ jars its builds replaced, named <MOD>-<profile>.jar.<sha12>
-// after the first 12 hex digits of the replaced jar's sha256.
-const replacedDir = ".mirror-replaced"
+// The kept-jar naming (reportmodule.ReplacedDir, FirstSuffix, KeptName) is shared with report-module --ready,
+// which reads the first-replaced pointer to say whether the mirror holds the deployed jar again.
+const (
+	replacedDir = reportmodule.ReplacedDir
+	firstSuffix = reportmodule.FirstSuffix
+)
 
-// firstSuffix names the pointer to the first jar a cycle replaced: <name>.first beside the kept jars.
-const firstSuffix = ".first"
-
-// keptName is the name of a kept jar: the modules/ file name, then its hash.
-var keptName = regexp.MustCompile(`^(.+\.jar)\.([0-9a-f]{12})$`)
+var keptName = reportmodule.KeptName
 
 // keepReplaced is retro row B6: gradle's :jar step installs the new jar into <mirror>/modules, so after a
 // build that the chain does not roll back the mirror no longer holds what the station runs, and the next
@@ -93,12 +91,10 @@ func (b *build) keep(backup, dir, name, sum string) string {
 // operator deletes the pointer (the build.sh header says so). why is set when a new pointer cannot be written:
 // then no jar can be vouched for as the first, and the caller must not name one.
 func (b *build) firstReplaced(dir, name, sum string) (first, why string) {
-	pointer := dir + "/" + name + firstSuffix
-	if data, err := os.ReadFile(pointer); err == nil {
-		if first := strings.TrimSpace(string(data)); keptName.MatchString(name+"."+first) && lint.IsFile(dir+"/"+name+"."+first) {
-			return first, ""
-		}
+	if first, ok := reportmodule.LiveFirst(dir, name); ok {
+		return first, ""
 	}
+	pointer := dir + "/" + name + firstSuffix
 	if err := os.WriteFile(pointer, []byte(sum+"\n"), 0o644); err != nil {
 		return "", strerror.Text(err)
 	}
