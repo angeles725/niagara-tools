@@ -59,6 +59,7 @@ func newFixture(t *testing.T) *fixture {
 	f.env = map[string]string{
 		ToolbeltEnv: f.kit, "JAVA8": d + "/j8", "HOME": d + "/home", fstype.MountsEnv: d + "/mounts",
 		"niagara_home": "", "NIAGARA_PLUGIN_VERSION": "", "JAVA_TOOL_OPTIONS": "", "GRADLE_USER_HOME": "",
+		gradleEnvPrefix + aliasProperty: "",
 	}
 	return f
 }
@@ -76,6 +77,9 @@ func (f *fixture) run(args ...string) int {
 	f.out, f.err = out.String(), errs.String()
 	return code
 }
+
+// signs configures a signing alias, which keeps the no-signer WARN out of a test about other messages.
+func (f *fixture) signs() { f.env[gradleEnvPrefix+aliasProperty] = "acmesigner" }
 
 // build runs the chain on the fixture's own module and home, opted in to a marker-less home.
 func (f *fixture) build(flags ...string) int {
@@ -128,8 +132,9 @@ func (f *fixture) call(script string) string {
 }
 
 // jar writes a module jar: META-INF/module.xml carrying version on its root tag ("" writes a module with
-// only a baja dependency floor) and, unless payload is "", one payload entry.
-func (f *fixture) jar(path, version, payload string) {
+// only a baja dependency floor), unless payload is "" one payload entry, and the META-INF/<NAME>.SF and .RSA
+// files of every signer.
+func (f *fixture) jar(path, version, payload string, signers ...string) {
 	f.t.Helper()
 	xml := `<module name="X"><dependencies><dependency name="baja" vendorVersion="4.13"/></dependencies></module>`
 	if version != "" {
@@ -138,6 +143,9 @@ func (f *fixture) jar(path, version, payload string) {
 	entries := [][2]string{{"META-INF/module.xml", xml}}
 	if payload != "" {
 		entries = append(entries, [2]string{"com/x/payload.txt", payload})
+	}
+	for _, s := range signers {
+		entries = append(entries, [2]string{"META-INF/" + s + ".SF", "x"}, [2]string{"META-INF/" + s + ".RSA", "x"})
 	}
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)

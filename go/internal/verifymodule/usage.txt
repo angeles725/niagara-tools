@@ -8,6 +8,9 @@ Checks (each guards a failure seen on a real build — build-n4-module-kit/retro
   bytecode    every .class has major 52 (Java 8). 65 = built with the default JDK 21.          [default]
               META-INF/versions/** (multi-release) is skipped and counted: Java 8 never loads it.
   signed      a META-INF/<ALIAS>.SF with its <ALIAS>.RSA|.DSA|.EC block; the alias is reported. [default]
+              --expected-signer ALIAS: FAIL unless the jar's only complete signature is that signer's,
+              compared as jarsigner names its files (upper-cased, 8 characters, other characters as _:
+              acmesigner -> META-INF/ACMESIGN.SF); a jar signed with the development key then FAILs.
               NOTE: `signed` checks PRESENCE only — the signer's cert may not be in the
               station's trust store. A self-signed/untrusted-CA jar PASSES this gate yet a
               station enforcing cert-chain validation loads it UNSIGNED (`Could not validate

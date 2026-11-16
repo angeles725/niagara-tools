@@ -5,6 +5,9 @@
 #   bytecode    every .class has major 52 (Java 8). 65 = built with the default JDK 21.          [default]
 #               META-INF/versions/** (multi-release) is skipped and counted: Java 8 never loads it.
 #   signed      a META-INF/<ALIAS>.SF with its <ALIAS>.RSA|.DSA|.EC block; the alias is reported. [default]
+#               --expected-signer ALIAS: FAIL unless the jar's only complete signature is that signer's,
+#               compared as jarsigner names its files (upper-cased, 8 characters, other characters as _:
+#               acmesigner -> META-INF/ACMESIGN.SF); a jar signed with the development key then FAILs.
 #               NOTE: `signed` checks PRESENCE only — the signer's cert may not be in the
 #               station's trust store. A self-signed/untrusted-CA jar PASSES this gate yet a
 #               station enforcing cert-chain validation loads it UNSIGNED (`Could not validate
@@ -40,7 +43,8 @@
 #               never a FAIL, also under --strict: an existing module keeps building. A call in a
 #               comment or a string is no call (javasrc tokens). [ev: retro double-station-save Δ3]  [--src]
 #
-# Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict] <jar>...
+# Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict]
+#                         [--expected-signer ALIAS] <jar>...
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is
 #   derived from each jar's basename (DashboardPan-rt.jar -> DashboardPan-rt/).
 # Report: one row per check per jar: PASS|FAIL|SKIP  <check>  <jar>  <detail>; a summary line closes it.
@@ -49,7 +53,7 @@
 # Needs no JDK.
 #
 # Implementation: the Go module at <repo>/go (go/internal/verifymodule, over the shared lint.Walk and the
-# jarversion zip reader; the usage text is lines 2-20 of the bash script it replaced, embedded as
+# jarversion zip reader; the usage text is lines 2-20 of the bash script it replaced plus the --expected-signer lines, embedded as
 # go/internal/verifymodule/usage.txt). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin`
 # builds go/bin/verify-module when the binary is missing or older than a Go source, then this script execs
 # it. Needs `go` on PATH to build; no Go toolchain or a failed build is exit 3 (its message starts with

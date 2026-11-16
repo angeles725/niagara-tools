@@ -62,6 +62,8 @@ const (
 
 // Baseline restore. %[1]s module-profile jar name without ".jar", %[2]s niagara_home.
 const (
+	msgRemoved          = "  Removed the newly-installed %[1]s.jar from %[2]s/modules (none was deployed before this build)."
+	msgRemoveFailed     = "  FAILED TO REMOVE the newly-installed %[1]s.jar (%[3]s) — %[2]s/modules still holds the jar that failed the gate; remove it manually before retrying."
 	msgRestored         = "  Restored the previously-deployed %[1]s.jar into %[2]s/modules%[3]s"
 	msgRestoreFailedOld = "  FAILED TO RESTORE %[1]s.jar (%[3]s); %[2]s/modules still holds the pre-build jar, so a retry is still safe."
 	msgRestoreFailedNew = "  FAILED TO RESTORE the previously-deployed %[1]s.jar (%[3]s) — %[2]s/modules no longer holds it (likely the NEW jar); restore it manually before retrying."
@@ -111,8 +113,15 @@ const (
 
 // Verify gate and report-module.
 const (
-	msgGate             = "==> verify gate (verify-module.sh):"
-	msgGateFailed       = "build.sh: verify gate failed — do not deploy these jars"
+	msgGate       = "==> verify gate (verify-module.sh):"
+	msgGateFailed = "build.sh: verify gate failed — do not deploy these jars"
+	msgNoSigner   = "build.sh: WARN — no niagaraSigningAlias is configured and no deployed jar gives a signer, so the gate accepts any signature: " +
+		"the jar is signed with the signing plugin's default development signer unless the gradle root names another, " +
+		"and a station's Software Manager shows that one as self-signed (set it: --gradle-prop niagaraSigningAlias=<alias>, or gradle.properties)"
+	// %s is the development signer's name.
+	msgDevSignerDeployed = "build.sh: WARN — no niagaraSigningAlias is configured and the deployed jar itself carries the signing plugin's default development signer (%s), " +
+		"which is never taken as the expected signer, so the gate accepts any signature: " +
+		"a station's Software Manager shows that signer as self-signed (set it: --gradle-prop niagaraSigningAlias=<alias>, or gradle.properties)"
 	msgReport           = "==> report-module (hand-off punch-list)"
 	msgReportEnv        = "build.sh: report-module environment error (exit 3)"
 	msgReportIncomplete = "build.sh: report-module verdict INCOMPLETE — a floor check (verify-module / schema-risk) did not run; extract the deployed baseline into <artifact>/.deploy-baseline (build-verify.md § Schema-risk deploy workflow) or pass --first-deploy for a never-deployed module"

@@ -31,6 +31,7 @@ func TestDriftVerdict(t *testing.T) {
 	}
 	for _, c := range cases {
 		f := newFixture(t)
+		f.signs()
 		f.jar(f.deployed("rt"), c.oldVer, same)
 		f.jar(f.built("rt"), c.newVer, c.payload)
 		before := f.read(f.deployed("rt"))
@@ -63,6 +64,7 @@ func TestDriftGateScope(t *testing.T) {
 		},
 	} {
 		f := newFixture(t)
+		f.signs()
 		f.wants(name, f.build(setup(f)...), ExitOK)
 		if f.err != "" {
 			t.Errorf("%s: stderr %q", name, f.err)

@@ -21,6 +21,7 @@ func TestSlowMountWarning(t *testing.T) {
 	}
 	for _, c := range cases {
 		f := newFixture(t)
+		f.signs()
 		f.write(f.dir+"/mounts", c.mounts(f))
 		f.wants(c.name, f.build(), ExitOK)
 		var got []string
@@ -50,6 +51,7 @@ func TestPreflight(t *testing.T) {
 	}
 	for _, c := range cases {
 		f := newFixture(t)
+		f.signs()
 		f.does(preflightScript, "exit "+c.exit)
 		if code := f.build(c.flags...); code != c.code || f.err != c.stderr {
 			t.Errorf("%s: exit %d stderr %q, want %d %q", c.name, code, f.err, c.code, c.stderr)
@@ -62,6 +64,7 @@ func TestPreflight(t *testing.T) {
 		}
 	}
 	f := newFixture(t)
+	f.signs()
 	f.env["NIAGARA_PLUGIN_VERSION"] = "7.6.17"
 	f.wants("plugin from the environment", f.build(), ExitOK)
 	if want := "preflight.sh <--plugin-version> <7.6.17> <" + f.home + "> <" + f.root + ">"; f.call(preflightScript) != want {

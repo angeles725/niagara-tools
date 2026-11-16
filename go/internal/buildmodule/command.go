@@ -39,6 +39,7 @@ type build struct {
 	signingXML string            // the mirror user home's signing profile; "" outside a mirror
 	temps      []string          // temporary paths of the run, removed when Main returns
 	baseline   map[string]snapshot
+	undeployed map[string]bool // the profiles with no jar in modules/ before gradle ran (a first deploy)
 }
 
 // steps is the chain; each returns an exit code, or proceed.

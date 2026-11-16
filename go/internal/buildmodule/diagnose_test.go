@@ -42,6 +42,7 @@ func TestGradleFailures(t *testing.T) {
 // TestGradleOutputGoesToStdoutInOrder: gradle's stdout and stderr are one stream, on the chain's stdout.
 func TestGradleOutputGoesToStdoutInOrder(t *testing.T) {
 	f := newFixture(t)
+	f.signs()
 	f.does("gradlew", `for i in 1 2 3; do echo "out $i"; echo "err $i" >&2; done`)
 	f.wants("order", f.build("--no-preflight", "--profiles", "rt"), ExitOK)
 	want := "==> build (Java 8 + slotomatic): :Foo-rt:clean :Foo-rt:slotomatic :Foo-rt:jar\nout 1\nerr 1\nout 2\nerr 2\nout 3\nerr 3\n==> verify gate (verify-module.sh):\n"
