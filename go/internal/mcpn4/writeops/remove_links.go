@@ -14,6 +14,12 @@ func removePlanWith(c plan.Client, args *pyjson.Object, w *plan.State, _ *sessio
 	return removePlanIn(c, args, w.Scope)
 }
 
+// linkSlot reports whether the node at path p is a slot of a link (its parent is one).
+func linkSlot(nodes *pyjson.Object, p string) bool {
+	head, _ := rpartition(p)
+	return p != "" && head != "" && isLink(get(box.Node(nodes, head), "t"))
+}
+
 // linkScan scans root for links from the subtree (handles) into components outside it: the
 // write-scope prefix holding the parent, or link_scan_ord when given. Links found refuse the
 // plan unless acknowledge_links is true; then outgoing_links_broken lists them and the inverse

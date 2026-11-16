@@ -58,13 +58,16 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	}
 	var truncated []string
 	for _, p := range nodes.Keys() {
+		if scope != nil && linkSlot(nodes, p) { // read into the link's record (wholeLinks)
+			continue
+		}
 		if p != "" && strings.Count(p, "/") >= SnapshotDepth {
 			truncated = append(truncated, p)
 		}
 	}
 	sort.Strings(truncated) // code point order: WTF-8 bytes sort as code points
 	ct, contractsNote := snapshotContracts(c, box.Node(nodes, ""))
-	s := &snapshot{handles: map[string]string{}, ct: ct}
+	s := &snapshot{handles: map[string]string{}, ct: ct, wholeLinks: scope != nil}
 	body, err := s.take(box.Node(nodes, ""), "", SnapshotDepth)
 	if err != nil {
 		return nil, err
