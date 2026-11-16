@@ -20,7 +20,7 @@ func (d *deploy) probeStation() int {
 		}
 		probe := jar + probeSuffix
 		if err := moveAside(jar, probe); err != nil {
-			return d.failHeld(err, ExitCopy, msgProbeRefused, name, d.station, strerror.Text(err))
+			return d.failHeld(err, d.station, ExitCopy, msgProbeRefused, name, d.station, strerror.Text(err))
 		}
 		if err := rename(probe, jar); err != nil {
 			return d.fail(ExitCopy, msgProbeStuck, jar, probe, strerror.Text(err), probe, jar)

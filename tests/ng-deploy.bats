@@ -1183,16 +1183,17 @@ STUB
     [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
 }
 
-@test "NG-held-open: a home jar the file system refuses to move (Permission denied) names a running station or Workbench (exit 10)" {
-    # Mutation: NG-held-open -- without the line the operator reads only "Permission denied" and not why (retro D1).
+@test "NG-no-permission: a home jar the directory's permissions refuse to move names the permissions, not a running station (exit 10)" {
+    # Mutation: NG-no-permission -- an operator told to stop a running station for a permission problem fails again (retro D1, review R3/R4).
     if [ "$(id -u)" -eq 0 ]; then skip "root writes everywhere"; fi
     _home_with_previous_rt; _fake_gate 0
-    # slotomatic runs before the move aside: it makes the directory refuse the move, as a running station does
+    # slotomatic runs before the move aside: it makes the directory read-only
     printf '#!/usr/bin/env bash\ncase "$*" in *slotomatic*) chmod 555 "%s/niagara-home/modules" ;; esac\nexit 0\n' "$TMPDIR_T" > "$TMPDIR_T/fakebin/gradlew"
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --with-slotomatic
     [ "$status" -eq 10 ]
     [[ "$output" == *"build not started: test-rt.jar could not be moved aside in $TMPDIR_T/niagara-home/modules (Permission denied)"* ]]
-    [[ "$output" == *"[ng-deploy]   a running station or Workbench holds its module jars open; stop it and run again"* ]]
+    [[ "$output" == *"[ng-deploy]   $TMPDIR_T/niagara-home/modules does not let this user create, rename or remove files (no write permission): fix its permissions or ownership, then run again; a running station is not the cause"* ]]
+    [[ "$output" != *"Workbench"* ]]
     [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
 }
 

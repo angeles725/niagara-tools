@@ -36,9 +36,10 @@ func TestAHomeJarRefusedByTheFileSystemNamesARunningStation(t *testing.T) {
 	}
 }
 
-// Only EACCES, EPERM and EBUSY name a running station: a failure for another reason keeps the one line.
+// EBUSY and ETXTBSY, and EACCES or EPERM in a writable directory, name a running station; a failure for
+// another reason keeps the one line.
 func TestAFailureForAnotherReasonDoesNotNameARunningStation(t *testing.T) {
-	for errno, held := range map[syscall.Errno]bool{syscall.EACCES: true, syscall.EPERM: true, syscall.EBUSY: true, syscall.ENOSPC: false, syscall.EXDEV: false} {
+	for errno, held := range map[syscall.Errno]bool{syscall.EACCES: true, syscall.EPERM: true, syscall.EBUSY: true, syscall.ETXTBSY: true, syscall.ENOSPC: false, syscall.EXDEV: false} {
 		f := newFixture(t)
 		upgrade(t, f)
 		t.Cleanup(func() { rename = os.Rename })
@@ -53,5 +54,46 @@ func TestAFailureForAnotherReasonDoesNotNameARunningStation(t *testing.T) {
 			t.Errorf("%v: exit %d, stderr %q", errno, code, f.err)
 		}
 		rename = os.Rename
+	}
+}
+
+// EACCES or EPERM in a directory whose mode lets this user write is the Windows sharing violation (a running
+// station); in one that does not, it is a permission problem and the line says so instead. EBUSY and
+// ETXTBSY name a running station either way (retro review R3/R4 held-open hint).
+func TestTheHintTellsAHeldJarFromAPermissionProblem(t *testing.T) {
+	t.Cleanup(func() { writable = func(dir string) bool { return syscall.Access(dir, 2|1) == nil } })
+	for _, tc := range []struct {
+		errno    syscall.Errno
+		writable bool
+		held     bool
+		denied   bool
+	}{
+		{syscall.EACCES, true, true, false}, {syscall.EACCES, false, false, true},
+		{syscall.EPERM, true, true, false}, {syscall.EPERM, false, false, true},
+		{syscall.EBUSY, false, true, false}, {syscall.ETXTBSY, false, true, false},
+		{syscall.ENOSPC, true, false, false}, {syscall.ENOSPC, false, false, false},
+	} {
+		writable = func(string) bool { return tc.writable }
+		err := &os.LinkError{Op: "rename", Old: "a", New: "b", Err: tc.errno}
+		if heldOpen(err, "/d") != tc.held || permissionDenied(err, "/d") != tc.denied {
+			t.Errorf("%v, writable %v: held %v denied %v", tc.errno, tc.writable, heldOpen(err, "/d"), permissionDenied(err, "/d"))
+		}
+	}
+}
+
+// A station directory this user may not write is refused at the probe with the line about its permissions,
+// never with the one that tells the operator to stop a running station.
+func TestAReadOnlyStationNamesItsPermissionsNotARunningStation(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root writes everywhere")
+	}
+	f := newFixture(t)
+	upgrade(t, f)
+	f.chmod(f.modules, 0o555)
+	code := f.run("--no-backup")
+	want := "[ng-deploy] ERROR copy refused: demo-rt.jar in " + f.modules + " cannot be moved (Permission denied); nothing was built or copied\n" +
+		"[ng-deploy]   " + f.modules + " does not let this user create, rename or remove files (no write permission): fix its permissions or ownership, then run again; a running station is not the cause\n"
+	if code != ExitCopy || !strings.HasSuffix(f.err, want) || strings.Contains(f.err, "Workbench") {
+		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
 }

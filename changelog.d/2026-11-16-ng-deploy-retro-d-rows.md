@@ -1,8 +1,10 @@
 ### Fixed — ng-deploy: retro rows D1-D4 and D7-D9 of the 2026-11-15 coordination stretch
 
-- A jar that cannot be replaced or moved with `Permission denied`, `Operation not permitted` or `Device or resource
-  busy` (exit 40 in the station, exit 10 in `<NIAGARA_HOME>/modules`) is followed by the line `a running station or
-  Workbench holds its module jars open; stop it and run again`: Windows keeps a running station's module jars open.
+- A jar that cannot be replaced or moved (exit 40 in the station, exit 10 in `<NIAGARA_HOME>/modules`) with `Device
+  or resource busy` or `Text file busy`, or with `Permission denied` or `Operation not permitted` in a directory this
+  user may write (how a WSL mount of a Windows drive answers for a jar a running station holds open), is followed by
+  `a running station or Workbench holds its module jars open; stop it and run again`. The same errors in a directory
+  this user may not write get a line about its permissions instead.
 - A directory or a dangling link under the name of a jar of the mode in `<NIAGARA_HOME>/modules` is refused before the
   build (exit 40, `build refused for <jar>`) in every case, not only when the station is that directory: the put-back
   could not rename over it.

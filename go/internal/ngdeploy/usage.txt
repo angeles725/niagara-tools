@@ -166,10 +166,12 @@ Exit codes:
       When STATION_MODULES_DIR is <NIAGARA_HOME>/modules nothing is copied; exit 40 is then a jar of the mode that
       the build did not leave there with the bytes of build/libs (the previous jars are put back). A directory
       or a dangling link under the name of a jar of the mode in <NIAGARA_HOME>/modules is exit 40 before the
-      build in every case ("build refused for <jar>"). A jar that could not be replaced or moved with
-      Permission denied, Operation not permitted or Device or resource busy (exit 40, or exit 10 for a jar of
-      <NIAGARA_HOME>/modules) is followed by the line "a running station or Workbench holds its module jars
-      open; stop it and run again": Windows keeps a running station's module jars open. Before the build, each
+      build in every case ("build refused for <jar>"). A jar that could not be replaced or moved (exit 40, or exit 10 for a
+      jar of <NIAGARA_HOME>/modules) with Device or resource busy or Text file busy, or with Permission denied or
+      Operation not permitted in a directory this user may write (how a Windows drive mounted in WSL answers for
+      a jar a running station holds open), is followed by the line "a running station or Workbench holds its
+      module jars open; stop it and run again". The same two errors in a directory this user may not write are
+      followed by "<dir> does not let this user create, rename or remove files (no write permission): ...". Before the build, each
       station jar the run will replace is renamed to <jar>.ng-probe and straight back: a jar that cannot be moved
       is exit 40 there, with no build ("copy refused: <jar> in <dir> cannot be moved"); one that could not be
       moved back is named with both paths and the rename to make

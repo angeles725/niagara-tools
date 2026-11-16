@@ -113,7 +113,7 @@ func (d *deploy) asideHome() int {
 		if err := moveAside(jar.target, jar.aside); err != nil {
 			jars := d.homeJars
 			d.homeJars = nil
-			return d.failHeld(err, ExitEnv, msgHomeAsideFailed, jar.name, d.homeDir, strerror.Text(err), undo(jars, homeSite(d.homeDir)))
+			return d.failHeld(err, d.homeDir, ExitEnv, msgHomeAsideFailed, jar.name, d.homeDir, strerror.Text(err), undo(jars, homeSite(d.homeDir)))
 		}
 		jar.moved = true
 	}
