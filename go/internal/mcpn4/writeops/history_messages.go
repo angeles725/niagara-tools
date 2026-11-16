@@ -5,7 +5,8 @@ package writeops
 
 const (
 	// msgHistoryTypeMismatch: the ext_type, the point ORD, its family, its type, the fitting type.
-	msgHistoryTypeMismatch = "ext_type %s does not fit %s, a %s point (%s): use %s or leave ext_type out"
+	// The family carries its article ("a numeric", "an enum").
+	msgHistoryTypeMismatch = "ext_type %s does not fit %s, %s point (%s): use %s or leave ext_type out"
 	// msgHistoryNotAPoint: the ORD and its type.
 	msgHistoryNotAPoint = "%s is a %s, not a numeric, boolean, enum or string control point: " +
 		"a history extension goes under one of those"
@@ -38,7 +39,7 @@ const (
 	msgHistoryToleranceType = "change_tolerance applies only to history:NumericCovHistoryExt, not ext_type %s"
 	// msgHistoryTolerancePoint: the point ORD, its family, its type.
 	msgHistoryTolerancePoint = "change_tolerance applies only to a numeric point's NumericCov extension: %s is " +
-		"a %s point (%s); add it in a separate call without change_tolerance"
+		"%s point (%s); add it in a separate call without change_tolerance"
 	// msgHistoryTolerance: the change_tolerance given.
 	msgHistoryTolerance = "change_tolerance must be a finite number of at least 0, in the point's units, got %s"
 	// msgHistoryFullPolicy: the full_policy given.
@@ -62,6 +63,8 @@ const (
 	noteHistoryCapacityOp = "capacity is set by a second op per point on <ext_name>/historyConfig/capacity " +
 		"(history:Capacity, 1:<records>, or 0:0 for unlimited): historyConfig is a component, which a station " +
 		"refuses inside an add body."
+	noteHistoryStopUnlimited = "full_policy stop has no effect with capacity unlimited: an unlimited history " +
+		"is never full."
 	noteHistoryFullPolicyOp = "full_policy is set by a set op per point on <ext_name>/historyConfig/fullPolicy " +
 		"(history:FullPolicy): roll drops the oldest record when the capacity is reached, stop stops recording."
 )

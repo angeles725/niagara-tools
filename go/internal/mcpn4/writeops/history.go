@@ -15,8 +15,8 @@ import (
 // (historyName, interval for an interval extension, changeTolerance for a numeric COV one when
 // asked, enabled) by one add op per point and, when a capacity or a full policy is asked, a set
 // op for each right after it, all in one batch under one confirmation token. A station failure at
-// op k stops the batch: the ops before it stand, the batch is journaled in-doubt with their
-// inverse, and n4_rollback removes the extensions it added. The dry run predicts each history id ("/<station>/<name>") and refuses one that would repeat, in
+// op k stops the batch: the ops before it stand and the batch is journaled in-doubt; the error
+// names the inverse of the sent ops, applied by hand (n4_rollback refuses in-doubt batches). The dry run predicts each history id ("/<station>/<name>") and refuses one that would repeat, in
 // the batch or against the station's extensions. The inverse removes every extension under the
 // name the station assigned.
 var AddHistory = plan.Impl{ScopeOrds: historyPoints, PlanWith: addHistoryPlan, Inverse: addHistoryInverse,
@@ -110,6 +110,9 @@ func addHistoryPlan(c plan.Client, args *pyjson.Object, _ *plan.State, sess *ses
 	}
 	if spec.fullPolicy != "" {
 		notes = append(notes, noteHistoryFullPolicyOp)
+	}
+	if spec.fullPolicy == "stop" && spec.capacity == "0:0" {
+		notes = append(notes, noteHistoryStopUnlimited)
 	}
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: targets, Data: data}, nil
 }

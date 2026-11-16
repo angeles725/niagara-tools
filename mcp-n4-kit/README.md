@@ -891,8 +891,9 @@ Tool rules:
   other than `history:NumericCovHistoryExt` and for a point that is not numeric,
   naming the point. One call covers every point that shares these settings (three
   COV histories with a 0.5 A tolerance and 50000 records: one dry run, one token).
-  A station failure at op k stops the batch: the ops before it stand, the batch is
-  journaled in-doubt with their inverse, and `n4_rollback` removes what it added.
+  A station failure at op k stops the batch: the ops before it stand and the batch is
+  journaled in-doubt; the error names the inverse of the sent ops, which you apply by
+  hand (`n4_rollback` refuses in-doubt batches).
 - `n4_add_alarm(points)` adds one alarm extension per point (1 to 50), configured,
   in one batch under one confirmation token. See "Alarm extension recipe" below.
 - `n4_copy_component(parent_ord, name, new_names)` adds the configuration of one

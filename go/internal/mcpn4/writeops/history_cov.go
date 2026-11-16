@@ -56,7 +56,7 @@ func checkTolerance(s historySpec, kind, pointType string) error {
 	if s.tolerance == nil || s.typ == numericCovType {
 		return nil
 	}
-	return plan.ToolError(fmt.Sprintf(msgHistoryTolerancePoint, s.ord, strings.ToLower(kind), pointType))
+	return plan.ToolError(fmt.Sprintf(msgHistoryTolerancePoint, s.ord, withArticle(strings.ToLower(kind)), pointType))
 }
 
 // toleranceSlot is the changeTolerance property of the add body.
@@ -69,6 +69,14 @@ func toleranceSlot(f float64) *pyjson.Object {
 func fullPolicyOp(h any, name, tag string) *pyjson.Object {
 	return obj("nm", "s", "h", h, "n", name+"/historyConfig/fullPolicy",
 		"b", obj("nm", "p", "t", "history:FullPolicy", "v", tag))
+}
+
+// withArticle is word after its indefinite article: "an enum", "a numeric".
+func withArticle(word string) string {
+	if word != "" && strings.ContainsRune("aeiou", rune(word[0])) {
+		return "an " + word
+	}
+	return "a " + word
 }
 
 // policyWord is the full policy as the capacity notes say it: Roll unless stop was asked.

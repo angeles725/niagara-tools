@@ -11,3 +11,5 @@
   (proven live on a 4.15 lab station: 9 ops, `verified`, a 0.3 change recorded nothing). Before, the tolerance took a
   `n4_set_slot` dry run and token per point. `capacity`, `mode=cov` and N points under one token were already there
   (#670). Client-A overamps retro 2026-11-16, row M4.
+- The plan notes that `full_policy=stop` has no effect with `capacity="unlimited"`, and the type-mismatch and
+  tolerance refusals say "an enum point" instead of "a enum point".
