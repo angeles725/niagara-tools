@@ -204,8 +204,8 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
-`n4_station_runtime`, `n4_read_tags`.
-`n4_station_runtime`.
+`n4_station_runtime`, `n4_read_tags`,
+`n4_neql_query`, `n4_list_tag_dictionaries`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -584,6 +584,25 @@ BajaScript makes). `relations="all"` adds the implied relations (`n:parent`, `n:
 more call each), `"none"` leaves relations out, and `implied=false` makes no session call.
 `implied: null` with `implied_unavailable` means the implied tags were not read, never that there
 are none.
+
+`n4_list_tag_dictionaries(dictionary?, max_items=200)` lists the dictionaries under
+`/Services/TagDictionaryService` (one BQL query: namespace, enabled, frozen, version, status) and
+what each defines: tag definitions (`id`, `info`, value `type`, `default`, `validity`; `type` null
+for a smart tag), tag groups (`id`, `group_ord`, the `tags` they imply) and relation ids.
+
+Recipe, find components by tag: `n4_neql_query(neql, base_ord="station:|slot:/", bql?, max_rows=200)`
+is one GET of `<base_ord>|neql:<neql>|view:file:ITableToCsv`. It matches the components below
+`base_ord` (never `base_ord` itself), implied tags included, and returns their station ORDs:
+
+```text
+n4_neql_query(neql='tst:label = "hello"', base_ord="station:|slot:/ImplTAG")
+  -> ords ["station:|slot:/ImplTAG/Pt1"]
+n4_neql_query(neql="n:point", base_ord="station:|slot:/ImplTAG", bql="select slotPath, out.value")
+  -> columns ["Slot Path", "Value"], rows [{"Slot Path": "slot:/ImplTAG/Pt1", "Value": "0,00"}]
+```
+
+`bql` is a select of columns only (no `from`): the station runs it on the matches. `|` is refused;
+a query the station cannot parse comes back as HTTP 400, reported with the query.
 
 ## Writing safely
 
