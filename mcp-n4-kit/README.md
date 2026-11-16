@@ -250,14 +250,26 @@ unlinked input, which is not a fault and is not listed) or not ok (at least one 
 to `max_not_ok` ( `truncated` says the list was cut, `rows_truncated` that the query hit
 `max_rows`, so the counts are lower bounds). Networks and devices also carry `disabled` (rows
 whose `enabled` is false) and name, type and `enabled` per entry. A status the station did not
-answer as a number counts under `unknown` and as not ok, never as ok. `totals` are the `n4_inventory` totals of
-the same rows. `capacity` is the Global Capacity table of the spy metrics page (`spy:/metrics`):
-`resources` (`type`, `used`, `limit`, and `unlimited: true` where the station shows no limit) and
-`recount` (when the capacity recount last ran or failed). `capacity` is `null` with a
-`capacity_note` when the page is unreachable (the user may not read spy pages) or holds no such
-table: it is never a guessed count. The capacity counts are the licensing counter's, which counts
-by its own rules (it does not decrement on a delete until a recount), so they can differ from
-`totals`. A section that fails is `{"error": "..."}` and the others still answer; only an
+answer as a number counts under `unknown` and as not ok, never as ok. `points` also carries
+`proxy`, the points whose proxy extension is not `control:NullProxyExt` (the same query selects
+`proxyExt.type`; `proxy_unknown` appears when the station left that cell empty): a licence counts
+proxy points, not every control point. `totals` are the `n4_inventory` totals of the same rows,
+with `rows_truncated` when a query feeding them was cut. `capacity` is the Global Capacity table
+of the spy metrics page (`spy:/metrics`): `resources` (`type`, `used`, `limit`, `unlimited: true`
+where the station shows no limit, and `live`) and `recount` (when the capacity recount last ran
+or failed). The two counts of a resource are different things. `used` is the licence's own tally:
+quote it against `limit` for licensing; it only grows (removing a component does not decrement
+it) until a capacity recount, about every ten minutes on a licensed station, or a station
+restart. `live` is what the station really holds now: networks, devices and proxy points of the
+whole station (`null` for links, histories and schedules, which this tool does not count, when
+`base` is a subtree, or when the count is not whole). `may_be_inflated: true` with an
+`inflation_note` says the tally can be above reality: a `used` greater than its `live`, or a
+recount that has never run. `capacity` is `null` with a `capacity_note` when the page is
+unreachable (the user may not read spy pages) or holds no such table: it is never a guessed
+count. It is never silently partial either: the page is read with a row cap above what its byte
+cap can hold, `capacity_truncated: true` and the note say when the page was cut before it was
+read whole (resources may be missing; a page cut before the table is "unknown", not "no table"),
+and rows of the table that do not match its header are counted in the note. A section that fails is `{"error": "..."}` and the others still answer; only an
 authentication failure fails the call.
 Spy pages (the station's diagnostics tree, the pages of the Workbench Spy view):
 `n4_spy_page(path="", max_rows=500, max_bytes=2097152)` sends one `GET /ord?spy:/<path>` with

@@ -7,7 +7,9 @@ import (
 )
 
 // The answers of the three health queries, as ITableToCsv writes them: the status bits are the
-// decimal of baja:Status (0 ok, 2 fault, 4 down, 16 stale, 1 disabled).
+// decimal of baja:Status (0 ok, 2 fault, 4 down, 16 stale, 1 disabled); a point row ends with the
+// type of its proxy extension (the second Type column), control:NullProxyExt for a point that
+// is no proxy.
 const (
 	shxNetworksCSV = "Slot Path,Name,Type,Bits,Enabled\n" +
 		"slot:/Drivers/BacnetNetwork,BacnetNetwork,bacnet:BacnetNetwork,0,true\n" +
@@ -17,12 +19,12 @@ const (
 		"slot:/Drivers/BacnetNetwork/Ahu1,Ahu1,bacnet:BacnetDevice,0,true\n" +
 		"slot:/Drivers/BacnetNetwork/Ahu2,Ahu2,bacnet:BacnetDevice,4,true\n" +
 		"slot:/Drivers/ModbusNetwork/Meter,Meter,modbusAsync:ModbusAsyncDevice,5,true\n"
-	shxPointsCSV = "Slot Path,Name,Type,Bits\n" +
-		"slot:/Drivers/BacnetNetwork/Ahu1/points/Temp,Temp,control:NumericPoint,0\n" +
-		"slot:/Drivers/BacnetNetwork/Ahu1/points/Fan,Fan,control:BooleanWritable,0\n" +
-		"slot:/Drivers/BacnetNetwork/Ahu2/points/Temp,Temp,control:NumericPoint,20\n" +
-		"slot:/Drivers/BacnetNetwork/Ahu2/points/Fan,Fan,control:BooleanWritable,16\n" +
-		"slot:/Logic/Setpoint,Setpoint,control:NumericWritable,2\n"
+	shxPointsCSV = "Slot Path,Name,Type,Bits,Type\n" +
+		"slot:/Drivers/BacnetNetwork/Ahu1/points/Temp,Temp,control:NumericPoint,0,bacnet:BacnetNumericProxyExt\n" +
+		"slot:/Drivers/BacnetNetwork/Ahu1/points/Fan,Fan,control:BooleanWritable,0,bacnet:BacnetBooleanProxyExt\n" +
+		"slot:/Drivers/BacnetNetwork/Ahu2/points/Temp,Temp,control:NumericPoint,20,bacnet:BacnetNumericProxyExt\n" +
+		"slot:/Drivers/BacnetNetwork/Ahu2/points/Fan,Fan,control:BooleanWritable,16,bacnet:BacnetBooleanProxyExt\n" +
+		"slot:/Logic/Setpoint,Setpoint,control:NumericWritable,2,control:NullProxyExt\n"
 )
 
 // shxHealthRig is a connected servlet rig whose station answers everything n4_station_health
@@ -72,4 +74,16 @@ func shxSection(t *testing.T, out map[string]any, name string) map[string]any {
 		t.Fatalf("%s = %v", name, out[name])
 	}
 	return m
+}
+
+// shxMetricsPage is a spy metrics page in the measured layout: lead (markup placed ahead of the
+// tables), the Recount table with lastRun, then the Global Capacity table with rows as HTML.
+func shxMetricsPage(lead, lastRun, rows string) []byte {
+	return []byte("<html><body>" + lead + "<table><tr><th colspan='3'>Recount</th></tr><tr><td>recountLastRun</td><td>" +
+		lastRun + "</td></tr></table><table><tr><th colspan='3'>Global Capacity</th></tr>" +
+		"<tr><th>Type</th><th>Limit</th><th>Used</th></tr>" + rows + "</table></body></html>")
+}
+
+func shxCapacityRow(kind, limit, used string) string {
+	return "<tr><td>" + kind + "</td><td>" + limit + "</td><td>" + used + "</td></tr>"
 }

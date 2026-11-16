@@ -75,10 +75,12 @@ const (
 
 // The tables and columns of the metrics page that Capacity reads, compared without case.
 const (
-	capacityTitle = "global capacity"
-	recountTitle  = "recount"
-	columnType    = "type"
-	columnLimit   = "limit"
-	columnUsed    = "used"
-	noLimit       = "none"
+	capacityTitle  = "global capacity"
+	recountTitle   = "recount"
+	columnType     = "type"
+	columnLimit    = "limit"
+	columnUsed     = "used"
+	noLimit        = "none"
+	recountLastRun = "recountLastRun" // the Recount row that says when the recount last ran
+	recountNever   = "never"          // its value on a station whose recount has not run
 )

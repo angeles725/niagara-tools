@@ -21,16 +21,36 @@ type Capacity struct {
 	Recount   [][2]string
 }
 
+// LastRun is the value of the Recount row that says when the recount last ran, ok false when
+// the page has no such row; NeverRan reports whether that value says it never did.
+func (c *Capacity) LastRun() (string, bool) {
+	for _, row := range c.Recount {
+		if strings.EqualFold(row[0], recountLastRun) {
+			return row[1], true
+		}
+	}
+	return "", false
+}
+
+// NeverRan reports whether the page says the recount has never run.
+func (c *Capacity) NeverRan() bool {
+	v, ok := c.LastRun()
+	return ok && strings.EqualFold(strings.TrimSpace(v), recountNever)
+}
+
 // ReadCapacity is the capacity of a parsed metrics page, nil when the page holds no Global
 // Capacity table with Type, Limit and Used columns and at least one row: a layout this reader
-// does not know is "no capacity", never a guessed count.
-func ReadCapacity(p *Page) *Capacity {
+// does not know is "no capacity", never a guessed count. skipped counts the rows of such a
+// table whose cell count differs from its header: they are not resources, and not silently so.
+func ReadCapacity(p *Page) (capacity *Capacity, skipped int) {
 	var out *Capacity
 	var recount [][2]string
 	for _, t := range p.Tables {
 		switch strings.ToLower(t.Title) {
 		case capacityTitle:
-			if res := resources(t); len(res) > 0 && out == nil {
+			res, odd := resources(t)
+			skipped += odd
+			if len(res) > 0 && out == nil {
 				out = &Capacity{Resources: res}
 			}
 		case recountTitle:
@@ -44,10 +64,10 @@ func ReadCapacity(p *Page) *Capacity {
 	if out != nil {
 		out.Recount = recount
 	}
-	return out
+	return out, skipped
 }
 
-func resources(t Table) []Resource {
+func resources(t Table) (out []Resource, skipped int) {
 	col := map[string]int{}
 	for i, name := range t.Header {
 		col[strings.ToLower(name)] = i
@@ -56,17 +76,17 @@ func resources(t Table) []Resource {
 	li, okL := col[columnLimit]
 	ui, okU := col[columnUsed]
 	if !okT || !okL || !okU {
-		return nil
+		return nil, 0
 	}
-	var out []Resource
 	for _, row := range t.Rows {
 		if len(row) != len(t.Header) {
+			skipped++
 			continue
 		}
 		out = append(out, Resource{Type: row[ti], Used: count(row[ui]), UsedText: row[ui],
 			Limit: count(row[li]), LimitText: row[li]})
 	}
-	return out
+	return out, skipped
 }
 
 // NoLimit reports whether a limit cell says the resource is not limited.

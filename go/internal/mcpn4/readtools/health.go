@@ -39,17 +39,21 @@ func (t *Tools) StationHealth(args *pyjson.Object) (*pyjson.Object, error) {
 		return nil, err
 	}
 	out.Set("system", system)
-	keyed, rowCount, failed := map[string][]*pyjson.Object{}, 0, []string{}
+	keyed, rowCount, failed, cut := map[string][]*pyjson.Object{}, 0, []string{}, false
+	live := map[string]int{} // what the station holds, by section: only for the whole station
+	slot, _ := bql.BaseSlot(base)
 	for _, q := range healthQueries {
-		section, rows, err := t.healthStatus(q, base, maxRows, timeout, maxNotOk)
+		res, err := t.healthStatus(q, base, maxRows, timeout, maxNotOk)
 		if err != nil {
 			return nil, err
 		}
-		if rows == nil {
+		if res.rows == nil {
 			failed = append(failed, q.section)
+		} else if res.liveKnown && slot == "/" {
+			live[q.section] = res.live
 		}
-		keyed[q.section], rowCount = rows, rowCount+len(rows)
-		out.Set(q.section, section)
+		keyed[q.section], rowCount, cut = res.rows, rowCount+len(res.rows), cut || res.cut
+		out.Set(q.section, res.section)
 	}
 	out.Set("totals", nil)
 	if len(failed) > 0 {
@@ -57,17 +61,22 @@ func (t *Tools) StationHealth(args *pyjson.Object) (*pyjson.Object, error) {
 	} else if sum, err := bql.SummarizeInventory(base, keyed["networks"], keyed["devices"], keyed["points"]); err != nil {
 		out.Set("totals_note", jsonrpc.ErrorText(err))
 	} else {
-		out.Set("totals", lookup(sum, "totals"))
+		totals := lookup(sum, "totals").(*pyjson.Object)
+		totals.Set("rows_truncated", cut) // a cut query makes these lower bounds
+		out.Set("totals", totals)
 	}
-	capacity, note, err := t.healthCapacity(timeout)
+	capacity, err := t.healthCapacity(timeout, live)
 	if err != nil {
 		return nil, err
 	}
-	if capacity == nil {
+	if capacity.section == nil {
 		out.Set("capacity", nil)
-		out.Set("capacity_note", note)
 	} else {
-		out.Set("capacity", capacity)
+		out.Set("capacity", capacity.section)
+	}
+	out.Set("capacity_truncated", capacity.truncated)
+	if capacity.note != "" {
+		out.Set("capacity_note", capacity.note)
 	}
 	out.Set("elapsed_ms", int(math.RoundToEven((t.Ctx.Clock()-start)*1000)))
 	t.recordRead("n4_station_health", "base", args, rowCount)

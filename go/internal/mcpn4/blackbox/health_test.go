@@ -28,7 +28,7 @@ func TestStationHealthAnswersTheSystemValuesWithADerivedMemoryPercentage(t *test
 
 func TestStationHealthCountsPointsPerStatusFlagAndNamesTheNotOkOnes(t *testing.T) {
 	r, _ := shxHealthRig(t)
-	want := map[string]any{"total": 5.0, "ok": 2.0, "null_only": 0.0, "by_flag": map[string]any{"down": 1.0, "fault": 1.0, "stale": 2.0},
+	want := map[string]any{"total": 5.0, "ok": 2.0, "null_only": 0.0, "proxy": 4.0, "by_flag": map[string]any{"down": 1.0, "fault": 1.0, "stale": 2.0},
 		"not_ok_count": 3.0, "truncated": false, "rows_truncated": false, "not_ok": []any{
 			map[string]any{"path": "slot:/Drivers/BacnetNetwork/Ahu2/points/Temp", "flags": []any{"down", "stale"}},
 			map[string]any{"path": "slot:/Drivers/BacnetNetwork/Ahu2/points/Fan", "flags": []any{"stale"}},
@@ -55,7 +55,7 @@ func TestStationHealthNamesTheNetworksAndDevicesThatAreNotOk(t *testing.T) {
 		t.Errorf("devices = %v", devices)
 	}
 	wantTotals := map[string]any{"networks": 2.0, "field_devices": 3.0, "local_devices": 1.0, "points": 5.0,
-		"unassigned_points": 1.0}
+		"unassigned_points": 1.0, "rows_truncated": false}
 	if got := shxSection(t, out, "totals"); !reflect.DeepEqual(got, wantTotals) {
 		t.Errorf("totals = %v", got)
 	}
@@ -66,7 +66,7 @@ func TestStationHealthReadsCapacityFromTheSpyMetricsPage(t *testing.T) {
 	capacity := shxSection(t, r.Srv.OK("n4_station_health", nil), "capacity")
 	resources := objects(capacity["resources"])
 	if len(resources) != 6 || !reflect.DeepEqual(resources[2], map[string]any{"type": "Points", "used": 36.0,
-		"limit": nil, "unlimited": true}) {
+		"limit": nil, "unlimited": true, "live": 4.0}) {
 		t.Errorf("resources = %v", capacity["resources"])
 	}
 	if !reflect.DeepEqual(capacity["recount"], map[string]any{"recountLastRun": "never", "recountLastFail": "never",
@@ -75,7 +75,7 @@ func TestStationHealthReadsCapacityFromTheSpyMetricsPage(t *testing.T) {
 	}
 	shxServeSpy(sv, "metrics", boxstation.SpyPage{Body: shxSpyFixture(t, "metrics-licensed.html")})
 	resources = objects(shxSection(t, r.Srv.OK("n4_station_health", nil), "capacity")["resources"])
-	if !reflect.DeepEqual(resources[2], map[string]any{"type": "Points", "used": 1036.0, "limit": 1250.0, "unlimited": false}) {
+	if !reflect.DeepEqual(resources[2], map[string]any{"type": "Points", "used": 1036.0, "limit": 1250.0, "unlimited": false, "live": 4.0}) {
 		t.Errorf("licensed points = %v", resources[2])
 	}
 }
@@ -157,8 +157,8 @@ func TestStationHealthMarksCountsOfACutQueryAsLowerBounds(t *testing.T) {
 
 func TestStationHealthNeverCallsAnUnreadableStatusOk(t *testing.T) {
 	r, sv := shxHealthRig(t)
-	shxRouteHealth(sv, shxNetworksCSV, shxDevicesCSV, "Slot Path,Name,Type,Bits\nslot:/A,A,control:NumericPoint,\n"+
-		"slot:/B,B,control:NumericPoint,0\n")
+	shxRouteHealth(sv, shxNetworksCSV, shxDevicesCSV, "Slot Path,Name,Type,Bits,Type\nslot:/A,A,control:NumericPoint,,x:Ext\n"+
+		"slot:/B,B,control:NumericPoint,0,x:Ext\n")
 	points := shxSection(t, r.Srv.OK("n4_station_health", nil), "points")
 	if points["ok"] != 1.0 || !reflect.DeepEqual(points["by_flag"], map[string]any{"unknown": 1.0}) {
 		t.Errorf("points = %v", points)
@@ -187,13 +187,13 @@ func TestStationHealthIsAReadToolThatNeedsASession(t *testing.T) {
 // counted under null_only, never listed as not ok. null beside another flag is not ok.
 func TestStationHealthCountsANullOnlyStatusApartFromTheNotOkOnes(t *testing.T) {
 	r, sv := shxHealthRig(t)
-	shxRouteHealth(sv, shxNetworksCSV, shxDevicesCSV, "Slot Path,Name,Type,Bits\n"+
-		"slot:/Logic/Ok,Ok,control:NumericWritable,0\n"+
-		"slot:/Logic/Unlinked,Unlinked,control:NumericWritable,64\n"+
-		"slot:/Logic/NullStale,NullStale,control:NumericPoint,80\n"+
-		"slot:/Logic/Unread,Unread,control:NumericPoint,\n")
+	shxRouteHealth(sv, shxNetworksCSV, shxDevicesCSV, "Slot Path,Name,Type,Bits,Type\n"+
+		"slot:/Logic/Ok,Ok,control:NumericWritable,0,control:NullProxyExt\n"+
+		"slot:/Logic/Unlinked,Unlinked,control:NumericWritable,64,control:NullProxyExt\n"+
+		"slot:/Logic/NullStale,NullStale,control:NumericPoint,80,x:Ext\n"+
+		"slot:/Logic/Unread,Unread,control:NumericPoint,,x:Ext\n")
 	points := shxSection(t, r.Srv.OK("n4_station_health", nil), "points")
-	want := map[string]any{"total": 4.0, "ok": 1.0, "null_only": 1.0, "not_ok_count": 2.0,
+	want := map[string]any{"total": 4.0, "ok": 1.0, "null_only": 1.0, "proxy": 2.0, "not_ok_count": 2.0,
 		"by_flag": map[string]any{"null": 2.0, "stale": 1.0, "unknown": 1.0}, "truncated": false, "rows_truncated": false,
 		"not_ok": []any{map[string]any{"path": "slot:/Logic/NullStale", "flags": []any{"stale", "null"}},
 			map[string]any{"path": "slot:/Logic/Unread", "flags": []any{"unknown"}}}}
@@ -208,5 +208,108 @@ func TestStationHealthCountsANullOnlyStatusApartFromTheNotOkOnes(t *testing.T) {
 		if s["null_only"] != 0.0 || s["ok"].(float64)+s["not_ok_count"].(float64) != s["total"] {
 			t.Errorf("%s = %v", name, s)
 		}
+	}
+}
+
+// Item 6: the capacity is never silently partial.
+func TestStationHealthCapacityIsNeverSilentlyPartial(t *testing.T) {
+	r, sv := shxHealthRig(t)
+	six := ""
+	for _, kind := range []string{"Networks", "Devices", "Points", "Links", "Histories", "Schedules"} {
+		six += shxCapacityRow(kind, "none", "7")
+	}
+	filler := func(rows int) string { return "<table>" + strings.Repeat("<tr><td>x</td></tr>", rows) + "</table>" }
+	for _, ahead := range []int{499, 600, 5000} { // rows ahead of the table never hide a resource
+		shxServeSpy(sv, "metrics", boxstation.SpyPage{Body: shxMetricsPage(filler(ahead), "never", six)})
+		out := r.Srv.OK("n4_station_health", nil)
+		if got := objects(shxSection(t, out, "capacity")["resources"]); len(got) != 6 || out["capacity_truncated"] != false {
+			t.Errorf("%d rows ahead: %d resources, capacity_truncated %v, note %v", ahead, len(got), out["capacity_truncated"], out["capacity_note"])
+		}
+	}
+	// a page cut before the table: unknown and said so, never "has no table"
+	shxServeSpy(sv, "metrics", boxstation.SpyPage{Body: shxMetricsPage(filler(120000), "never", six)})
+	out := r.Srv.OK("n4_station_health", nil)
+	note, _ := out["capacity_note"].(string)
+	if out["capacity"] != nil || out["capacity_truncated"] != true || !strings.Contains(note, "cut") ||
+		strings.Contains(note, "no Global Capacity table") {
+		t.Errorf("cut before the table: capacity %v, truncated %v, note %q", out["capacity"], out["capacity_truncated"], note)
+	}
+	// a page cut inside the table: what was read, marked partial
+	shxServeSpy(sv, "metrics", boxstation.SpyPage{Body: shxMetricsPage("", "never", six+"<tr><td>Tail</td><td>none</td><td>"+strings.Repeat("9", 3<<20)+"</td></tr>")})
+	out = r.Srv.OK("n4_station_health", nil)
+	note, _ = out["capacity_note"].(string)
+	if got := objects(shxSection(t, out, "capacity")["resources"]); len(got) < 6 || out["capacity_truncated"] != true || !strings.Contains(note, "max_bytes") {
+		t.Errorf("cut inside the table: %d resources, truncated %v, note %q", len(got), out["capacity_truncated"], note)
+	}
+	// a row that does not match the header is counted in the note, not dropped silently
+	shxServeSpy(sv, "metrics", boxstation.SpyPage{Body: shxMetricsPage("", "never", six+"<tr><td>Odd</td><td>1</td></tr><tr><td>Odd2</td></tr>")})
+	out = r.Srv.OK("n4_station_health", nil)
+	note, _ = out["capacity_note"].(string)
+	if got := objects(shxSection(t, out, "capacity")["resources"]); len(got) != 6 || !strings.Contains(note, "2 row(s)") || out["capacity_truncated"] != false {
+		t.Errorf("ragged rows: %d resources, note %q", len(got), note)
+	}
+}
+
+// Item 7: totals say when a query that feeds them was cut.
+func TestStationHealthTotalsSayWhenAQueryFeedingThemWasCut(t *testing.T) {
+	r, _ := shxHealthRig(t)
+	if got := shxSection(t, r.Srv.OK("n4_station_health", nil), "totals")["rows_truncated"]; got != false {
+		t.Errorf("whole queries: totals.rows_truncated = %v", got)
+	}
+	if got := shxSection(t, r.Srv.OK("n4_station_health", Args{"max_rows": 3}), "totals")["rows_truncated"]; got != true {
+		t.Errorf("a cut query: totals.rows_truncated = %v", got)
+	}
+}
+
+// Item 8a: proxy counts the points whose proxy extension is not control:NullProxyExt.
+func TestStationHealthCountsTheProxyPointsApartFromEveryControlPoint(t *testing.T) {
+	r, sv := shxHealthRig(t)
+	points := shxSection(t, r.Srv.OK("n4_station_health", nil), "points")
+	if points["total"] != 5.0 || points["proxy"] != 4.0 {
+		t.Errorf("points = %v", points)
+	}
+	if _, has := points["proxy_unknown"]; has {
+		t.Errorf("proxy_unknown without an unanswered cell: %v", points)
+	}
+	shxRouteHealth(sv, shxNetworksCSV, shxDevicesCSV, "Slot Path,Name,Type,Bits,Type\nslot:/A,A,control:NumericPoint,0,\n"+
+		"slot:/B,B,control:NumericPoint,0,x:Ext\nslot:/C,C,control:NumericPoint,0,control:NullProxyExt\n")
+	points = shxSection(t, r.Srv.OK("n4_station_health", nil), "points")
+	if points["proxy"] != 1.0 || points["proxy_unknown"] != 1.0 {
+		t.Errorf("an unanswered proxy type: %v", points)
+	}
+}
+
+// Item 8b and 8c: the licence tally beside the live count, and the warning that it only grows.
+func TestStationHealthPutsTheLiveCountBesideTheLicenceTally(t *testing.T) {
+	r, sv := shxHealthRig(t)
+	rows := shxCapacityRow("Networks", "none", "3") + shxCapacityRow("Devices", "50", "4") +
+		shxCapacityRow("Points", "1,250", "4") + shxCapacityRow("Links", "none", "94")
+	shxServeSpy(sv, "metrics", boxstation.SpyPage{Body: shxMetricsPage("", "15-Nov-26 7:05 PM", rows)})
+	capacity := shxSection(t, r.Srv.OK("n4_station_health", nil), "capacity")
+	want := []any{
+		map[string]any{"type": "Networks", "used": 3.0, "limit": nil, "unlimited": true, "live": 2.0},
+		map[string]any{"type": "Devices", "used": 4.0, "limit": 50.0, "unlimited": false, "live": 4.0},
+		map[string]any{"type": "Points", "used": 4.0, "limit": 1250.0, "unlimited": false, "live": 4.0},
+		map[string]any{"type": "Links", "used": 94.0, "limit": nil, "unlimited": true, "live": nil}}
+	note, _ := capacity["inflation_note"].(string)
+	if !reflect.DeepEqual(capacity["resources"], want) || capacity["may_be_inflated"] != true || !strings.Contains(note, "recount") {
+		t.Errorf("used above live: %v", capacity)
+	}
+	// no used above its live count and a recount that ran: not flagged
+	shxServeSpy(sv, "metrics", boxstation.SpyPage{Body: shxMetricsPage("", "15-Nov-26 7:05 PM",
+		shxCapacityRow("Networks", "none", "2")+shxCapacityRow("Points", "none", "4"))})
+	capacity = shxSection(t, r.Srv.OK("n4_station_health", nil), "capacity")
+	if _, has := capacity["inflation_note"]; has || capacity["may_be_inflated"] != false {
+		t.Errorf("level counts after a recount: %v", capacity)
+	}
+	// the same counts with a recount that never ran: flagged
+	shxServeSpy(sv, "metrics", boxstation.SpyPage{Body: shxMetricsPage("", "never", shxCapacityRow("Networks", "none", "2"))})
+	if capacity = shxSection(t, r.Srv.OK("n4_station_health", nil), "capacity"); capacity["may_be_inflated"] != true {
+		t.Errorf("recount never ran: %v", capacity)
+	}
+	// a subtree's counts are not the station's: no live count beside the tally
+	capacity = shxSection(t, r.Srv.OK("n4_station_health", Args{"base": "station:|slot:/Drivers"}), "capacity")
+	if got := objects(capacity["resources"])[0]; got["live"] != nil {
+		t.Errorf("a base below the root: %v", got)
 	}
 }
