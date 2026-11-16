@@ -3,6 +3,7 @@ package readtools
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/bql"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -13,9 +14,12 @@ import (
 // select. BQL's from matches subtypes, so every BAlarmSourceExt subclass is read, and a BFormat
 // cell is the raw pattern (live 4.15.6.20: "Over amps %parent.out.value% A" comes back as written).
 
-const alarmTextQuery = "select slotPath, toOffnormalText, toFaultText, toNormalText from alarm:AlarmSourceExt"
+// alarmTextQuery selects slotPath and then the alarmTextSlots in their order, so alarmTextFields
+// names each column by position (headers may be localized) and a reordered slice cannot put a
+// text in the wrong slot.
+var alarmTextQuery = "select slotPath, " + strings.Join(alarmTextSlots, ", ") + " from alarm:AlarmSourceExt"
 
-// alarmTextFields name the query's columns by position (headers may be localized).
+// alarmTextFields name the query's columns by position.
 var alarmTextFields = append([]string{"path"}, alarmTextSlots...)
 
 // AlarmTextCheck is n4_alarm_text_check.
@@ -41,8 +45,8 @@ func (t *Tools) AlarmTextCheck(args *pyjson.Object) (*pyjson.Object, error) {
 	sort.SliceStable(exts, func(i, j int) bool { return exts[i].path < exts[j].path })
 	findings, parents, empties := []any{}, 0, 0
 	for _, e := range exts {
-		rows, p, n := alarmTextFindings(e.path, e.texts)
-		findings, parents, empties = append(findings, rows...), parents+p, empties+n
+		extRows, p, n := alarmTextFindings(e.path, e.texts)
+		findings, parents, empties = append(findings, extRows...), parents+p, empties+n
 	}
 	t.recordRead("n4_alarm_text_check", "base", args, len(rows))
 	out := obj("base", base, "findings", findings, "alarm_extensions", len(exts), "parent_path", parents,

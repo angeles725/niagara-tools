@@ -33,3 +33,15 @@ func TestEmptyToNormalNeedsAnOffnormalText(t *testing.T) {
 		t.Errorf("offnormal without normal: %d empty-tonormal", n)
 	}
 }
+
+// The select's text columns are alarmTextSlots in their order, the positions alarmTextFields
+// names: the query live 4.15.6.20 answered is unchanged.
+func TestAlarmTextQueryFollowsTheSlots(t *testing.T) {
+	const want = "select slotPath, toOffnormalText, toFaultText, toNormalText from alarm:AlarmSourceExt"
+	if alarmTextQuery != want {
+		t.Errorf("query %q, want %q", alarmTextQuery, want)
+	}
+	if !reflect.DeepEqual(alarmTextFields[1:], alarmTextSlots) || alarmTextFields[0] != "path" {
+		t.Errorf("fields %q do not follow the slots %q", alarmTextFields, alarmTextSlots)
+	}
+}
