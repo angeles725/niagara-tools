@@ -138,12 +138,16 @@ func TestBuildStateSpellingsOfOneDeclaration(t *testing.T) {
 	}
 }
 
-// TestBuildStateKeepsAByteOrderMarkInsideTheText: only a mark that opens the file is dropped; one in the
-// middle of a line still belongs to that line, so the envelope it would open is not one.
-func TestBuildStateKeepsAByteOrderMarkInsideTheText(t *testing.T) {
+// TestBuildStateByteOrderMarkInFrontOfALine (retro coordination-stretch K9): only a mark that opens the
+// file is dropped. One that opens a later line (two files joined by an editor) would hide the key behind it
+// and read as "undeclared", exit 0: it is reported, exit 3, naming the line. A mark inside a line is text.
+func TestBuildStateByteOrderMarkInFrontOfALine(t *testing.T) {
 	f := newFixture(t)
 	state := filepath.Join(f.base, "BUILD-STATE.md")
-	write(t, state, "notes\n"+bom+"<!-- build-state.v1 -->\nmodule: Mod\nsource_of_truth: r@main@"+f.second+"\n<!-- /build-state.v1 -->\n")
-	expect(t, "a mark in the text", []string{"--build-state", state, "--module", "Mod", f.root}, ExitOK,
-		"WARN  source-of-truth  source_of_truth undeclared for this module — record <path>@<branch>@<commit> in its BUILD-STATE.src.md envelope\n", "")
+	write(t, state, "notes\r\n<!-- build-state.v1 -->\r\n"+bom+"module: Mod\nsource_of_truth: r@main@"+f.second+"\n<!-- /build-state.v1 -->\n")
+	expect(t, "a mark in front of a key", []string{"--build-state", state, "--module", "Mod", f.root}, ExitEnv, "",
+		"check-client-source: "+state+":3: a byte-order mark opens this line (only the file's first line may carry one): remove it\n")
+	write(t, state, "notes "+bom+"\n<!-- build-state.v1 -->\nmodule: Mod\nsource_of_truth: r@main@"+f.second+"\n<!-- /build-state.v1 -->\n")
+	expect(t, "a mark inside a line", []string{"--build-state", state, "--module", "Mod", f.root}, ExitOK,
+		"PASS  source-of-truth  "+f.top+" at the declared commit "+f.second+" on main\n", "")
 }

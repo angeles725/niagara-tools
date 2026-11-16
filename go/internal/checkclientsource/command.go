@@ -103,5 +103,8 @@ func readBuildState(path string) (text, fault string) {
 		// Mutation: CS-unreadable -- returning the empty text with no fault reads an unreadable BUILD-STATE as undeclared (WARN, exit 0)
 		return "", fmt.Sprintf(buildStateUnreadable, path, err)
 	}
-	return string(b), ""
+	if text, fault = decodeBuildState(path, b); fault != "" {
+		return "", fault
+	}
+	return text, strayBOM(path, text)
 }
