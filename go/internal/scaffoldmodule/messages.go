@@ -10,7 +10,7 @@ const (
 	nameFirst     = "scaffold-module: ModuleName must start with an uppercase letter: %s\n"
 	nameAlnum     = "scaffold-module: ModuleName must contain only alphanumeric characters: %s\n"
 	vendorSegment = "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): %s\n"
-	badValue      = "scaffold-module: %s value cannot be substituted (unescaped | or newline, trailing \\ or an unsupported \\ escape): %s\n"
+	valueNewline  = "scaffold-module: %s value must be a single line (it holds a newline): %s\n"
 
 	toolbeltUnset      = "scaffold-module: " + ToolbeltEnv + " is unset (run through toolbelt/scaffold-module.sh)\n"
 	fixtureMissing     = "scaffold-module: fixture skeleton not found: %s\n"

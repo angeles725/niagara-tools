@@ -6,8 +6,8 @@
 // resolved it from its own location: <toolbelt>/../fixtures and <toolbelt>/../templates.
 //
 // One responsibility per file: types.go the type table and defaults (data), messages.go every printed
-// text, args.go the command line, name.go the ModuleName rule, sedrhs.go option values as sed replacement
-// text, subst.go the substitution rules, copytree.go the tree copy, overlay.go the station-test overlay
+// text, args.go the command line, name.go the ModuleName rule, values.go the option values (literal
+// text), subst.go the substitution rules, copytree.go the tree copy, overlay.go the station-test overlay
 // and the ledger, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
 package scaffoldmodule
 
@@ -24,7 +24,7 @@ const ToolbeltEnv = "SCAFFOLD_MODULE_TOOLBELT"
 // Exit codes of scaffold-module (unchanged from the bash tool).
 const (
 	ExitOK    = 0
-	ExitUsage = 2 // usage, invalid ModuleName, unknown --type, an option value that cannot be substituted
+	ExitUsage = 2 // usage, invalid ModuleName, unknown --type, a refused option value
 	ExitEnv   = 3 // fixture or template missing, out-dir not creatable, destination exists, a failed write
 )
 
@@ -54,7 +54,7 @@ func Main(args []string, s cli.Stdio) int {
 }
 
 // scaffold runs the steps in the bash tool's order, so the first fault a run meets is the same one:
-// arguments, --type, ModuleName, fixture, out-dir, destination, copy, overlay, ledger.
+// arguments, --type, ModuleName, option values, fixture, out-dir, destination, copy, overlay, ledger.
 func scaffold(toolbelt string, args []string) (string, *failure) {
 	o, f := parseArgs(args)
 	if f != nil {
@@ -67,13 +67,10 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 	if f := checkName(o.module); f != nil {
 		return "", f
 	}
-	if f := checkVendor(o.vendor); f != nil {
+	if f := checkValues(o); f != nil {
 		return "", f
 	}
-	n, f := newNames(o, typ)
-	if f != nil {
-		return "", f
-	}
+	n := newNames(o, typ)
 	if toolbelt == "" {
 		return "", failf(ExitEnv, toolbeltUnset)
 	}

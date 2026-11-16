@@ -32,7 +32,7 @@ bash tool reported success over a broken result, which the port refuses instead.
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | Option values are literal text: `--vendor 'A&B'` emits `A&B`, and a value with `|`, `\` or a newline is either emitted as typed or refused by name; the sed-replacement emulation (`sedrhs.go`) is deleted with its tests | `go/internal/scaffoldmodule` (subst, sedrhs) · `toolbelt/scaffold-module.sh` header | `[ev: 8ea57144]` |
+| Δ1 | APPLIED 2026-11-15. Option values are literal text: `--vendor 'A&B'` emits `A&B`, and a value with `|`, `\` or a newline is either emitted as typed or refused by name; the sed-replacement emulation (`sedrhs.go`) is deleted with its tests | `go/internal/scaffoldmodule` (subst, sedrhs) · `toolbelt/scaffold-module.sh` header | `[ev: 8ea57144]` |
 | Δ2 | The `PF-jarlock-*` cases are safe under a parallel bats run (own lock path and port per case), or the file declares itself serial; the parallel batch rule names the file meanwhile | `tests/preflight.bats` · `CONTRIBUTING.md` parallel batch rules | `[ev: 4159818f]` |
 | Δ3 | APPLIED 2026-11-14 (b0723ce9). `--vendor` is validated before anything is written: its lowercased form must be one Java package segment (no `/`, `..`, whitespace or leading digit), else exit 2 naming the value | `go/internal/scaffoldmodule` (args, name) | `[ev: 8ea57144]` |
 | Δ4 | A failed emit removes the partial `<out-dir>/<ModuleName>` it created (and says so), with a Go test that injects the write fault | `go/internal/scaffoldmodule/command.go` · `copytree.go` | `[ev: 8ea57144]` |

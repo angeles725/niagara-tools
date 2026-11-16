@@ -18,7 +18,7 @@ func parseArgs(args []string) (options, *failure) {
 		vendor: defaultVendor, targetVersion: defaultTargetVersion, pluginVersion: defaultPluginVersion, typ: defaultType,
 	}
 	valued := map[string]*string{
-		"--vendor": &o.vendor, "--target-version": &o.targetVersion, "--plugin-version": &o.pluginVersion, "--type": &o.typ,
+		optVendor: &o.vendor, optTargetVersion: &o.targetVersion, optPluginVersion: &o.pluginVersion, optType: &o.typ,
 	}
 	for rest := args[2:]; len(rest) > 0; rest = rest[2:] {
 		target, known := valued[rest[0]]
