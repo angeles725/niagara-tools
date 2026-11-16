@@ -578,6 +578,14 @@ GRADLEW
   [[ "$args" != *"--legacy"* ]]
 }
 
+@test "BS-report-home: report-module gets the build's niagara_home as --niagara-home (its template lint reads the stock modules there)" {
+  _record_stub report-module
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  args="$(cat "$TMPDIR_T/report-module.args")"
+  [[ "$args" == *"--niagara-home $TMPDIR_T/nh"* ]]
+}
+
 @test "BS-ui-profile-bad: an unknown --ui-profile value exits 2 before gradle" {
   run "$B" --ui-profile kiosk "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 2 ]

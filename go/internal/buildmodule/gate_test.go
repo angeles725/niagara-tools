@@ -42,14 +42,15 @@ func TestGateAndReport(t *testing.T) {
 	}
 }
 
-// TestGateArgumentsWithoutFlags: the gate gets the sources and every built jar, report-module the sources.
+// TestGateArgumentsWithoutFlags: the gate gets the sources and every built jar, report-module the sources and
+// the niagara_home of the build as --niagara-home, so its template lint knows the stock modules (retro K8).
 func TestGateArgumentsWithoutFlags(t *testing.T) {
 	f := newFixture(t)
 	f.wants("default", f.build(), ExitOK)
 	if want := "verify-module.sh <--src> <" + f.root + "/Foo> <" + f.built("rt") + "> <" + f.built("ux") + ">"; f.call(gateScript) != want {
 		t.Errorf("gate call %q, want %q", f.call(gateScript), want)
 	}
-	if want := "report-module.sh <" + f.root + "/Foo>"; f.call(reportScript) != want {
+	if want := "report-module.sh <" + f.root + "/Foo> <--niagara-home> <" + f.home + ">"; f.call(reportScript) != want {
 		t.Errorf("report call %q, want %q", f.call(reportScript), want)
 	}
 }

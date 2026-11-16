@@ -66,7 +66,7 @@ func TestFlagsReachTheCommands(t *testing.T) {
 		" <-Pniagara_home=" + f.home + "> <-Porg.gradle.java.installations.paths=" + f.dir + "/j8> <-PniagaraPluginVersion=7.6.17>" +
 		" <-Pa=b> <-Pk=> <--init-script> <" + f.kit + "/lib/werror.init.gradle>\n" +
 		"verify-module.sh <--src> <" + f.root + "/Foo> <--target-version> <4.13> <" + f.built("rt") + "> <" + f.built("ux") + ">\n" +
-		"report-module.sh <" + f.root + "/Foo> <--target-version> <4.13> <--profile> <hmi> <--legacy> <--first-deploy>\n"
+		"report-module.sh <" + f.root + "/Foo> <--target-version> <4.13> <--profile> <hmi> <--legacy> <--first-deploy> <--niagara-home> <" + f.home + ">\n"
 	if f.calls() != want {
 		t.Errorf("calls:\n%s\nwant:\n%s", f.calls(), want)
 	}
