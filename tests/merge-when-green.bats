@@ -182,3 +182,17 @@ fail_once() {
   [[ "$output" == *"is not mergeable"* ]]
   [ "$(grep -c "^pr view" "$GHS/calls")" -eq 2 ] || { cat "$GHS/calls"; return 1; } # the start and one read
 }
+
+@test "MWG12: a merge refused after a network retry (the first send merged) is read 1+--retries times and is a success" {
+  # Mutation: MWG12 -- deciding a resent merge's refusal on one read reports exit 8 for a PR the first send merged. (retro 2026-11-15 coordination-stretch T27)
+  : > "$GHS/no-lagless"
+  reply api_checks "{\"check_runs\":[$(check 1 go completed success)]}"
+  open="{\"state\":\"OPEN\",\"isDraft\":false,\"headRefOid\":\"$HEAD_SHA\",\"baseRefName\":\"main\"}"
+  reply pr_view "$open" "$open" "$MERGED_JSON"
+  reply pr_merge 'dial tcp 140.82.112.6:443: connect: network is unreachable' 'GraphQL: Pull Request is not mergeable (mergePullRequest)'
+  printf '1\n' > "$GHS/pr_merge.1.rc"; printf '1\n' > "$GHS/pr_merge.2.rc"
+  mwg
+  [ "$status" -eq 0 ] || { echo "$output"; cat "$GHS/calls"; return 1; }
+  [[ "$output" == *"merged #5 at $HEAD_SHA"* ]]
+  [ "$(grep -c "^pr merge" "$GHS/calls")" -eq 2 ]
+}

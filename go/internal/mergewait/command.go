@@ -17,7 +17,7 @@ Wait for the CI checks of the PR's exact head commit, then merge that commit (gh
 --match-head-commit). Default --rebase (CONTRIBUTING.md § 8: linear history), --interval 30s,
 --timeout 60m, --log-lines 20, --retries 3. Every gh error is printed; one that never reached GitHub
 (network unreachable, DNS, TLS handshake) is sent again up to --retries times, --interval apart. After
-the merge call the PR state, read up to 1+--retries times (once when GitHub refused the merge), decides:
+the merge call the PR state, read up to 1+--retries times (once when GitHub refused a merge sent once), decides:
 MERGED at the checked head is success (with its merge commit), whatever the call returned; a PR already
 merged at start is success too; a call that returned while the PR stays OPEN (a merge queue, auto-merge,
 lag) is 9, and one after which the PR is CLOSED is 6. No retry starts after --timeout while the checks run;

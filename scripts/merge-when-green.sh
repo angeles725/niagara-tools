@@ -9,7 +9,7 @@
 # it first); a draft is never green; a check that failed on a transient download error is re-run once; a
 # failed check is reported with the last lines of its log; every gh error is printed, a network error is retried
 # (--retries, default 3; none starts past --timeout while the checks run), and after the merge call the PR state,
-# read up to 1+--retries times (once when GitHub refused the merge), decides (MERGED at the checked head, with its
+# read up to 1+--retries times (once when GitHub refused a merge sent once), decides (MERGED at the checked head, with its
 # merge commit, is success; so is a PR already merged at start; CLOSED after the call is 6). Exit: 0 merged; 1 a check failed; 2 usage; 3 gh missing, a gh call failed, or the Go tool could not be
 # built; 4 draft; 5 the branch lacks the current base; 6 not open or the head moved; 7 timed out; 8 gh pr merge
 # refused; 9 the merge call returned but the PR is not MERGED yet (a merge queue, auto-merge, lag) or its state
