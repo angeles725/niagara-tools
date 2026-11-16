@@ -2,10 +2,8 @@ package writeops
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
@@ -87,6 +85,9 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 				pyjson.Str(recorded) + ": the component was replaced, refusing")
 		}
 	}
+	if err := laterWork(c, w, view, ops, targets, bid); err != nil {
+		return nil, err
+	}
 	if err := unchangedSince(c, view, ops, targets); err != nil {
 		return nil, err
 	}
@@ -148,211 +149,4 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 	return &plan.Planned{Ops: ops, Inverse: planInverse, Notes: rollbackNotes(view, bid, relinks, unlinked, components, own, ops),
 		Targets: targets, Keys: keys, Data: &rollbackData{rollbackOf: bid, targets: targets, relinks: relinks,
 			unlinked: unlinked, components: components, ordOf: ordOf}}, nil
-}
-
-// inverseParts splits a recorded inverse: its ops (dicts with "nm"), then the validated relink
-// specs, then the validated unlinked inputs, each in the order Python's comprehensions check them.
-func inverseParts(inverse []any) (ops, relinks, unlinked []any, err error) {
-	for _, kind := range []string{"nm", "relink", "unlinked_input"} {
-		for _, e := range inverse {
-			o, ok := e.(*pyjson.Object)
-			if !ok {
-				continue
-			}
-			v, has := o.Get(kind)
-			switch {
-			case !has:
-			case kind == "nm":
-				ops = append(ops, o)
-			case kind == "relink":
-				spec, err := relinkSpec(v)
-				if err != nil {
-					return nil, nil, nil, err
-				}
-				relinks = append(relinks, spec)
-			default:
-				spec, err := unlinkedSpec(v)
-				if err != nil {
-					return nil, nil, nil, err
-				}
-				unlinked = append(unlinked, spec)
-			}
-		}
-	}
-	return ops, relinks, unlinked, nil
-}
-
-// recordedTargets is `view.get("targets") or {}`, refused when it is empty or misses the handle
-// of an op.
-func recordedTargets(view *pyjson.Object, ops []any, bid string) (*pyjson.Object, error) {
-	var targets *pyjson.Object
-	if v := get(view, "targets"); pyjson.Truthy(v) {
-		t, err := dict(v, "values")
-		if err != nil {
-			return nil, err
-		}
-		targets = t
-	}
-	refused := targets == nil
-	for _, op := range ops {
-		if refused {
-			break
-		}
-		refused = ordOf(targets, get(op.(*pyjson.Object), "h")) == ""
-	}
-	if refused {
-		return nil, plan.ToolError("batch " + bid + " does not record which components its inverse touches: refusing")
-	}
-	return targets, nil
-}
-
-// checkRestoredEnds checks every re-created component and both ends of every relink of every
-// restored component (named as requested) under today's scope.
-func checkRestoredEnds(w *plan.State, targets *pyjson.Object, ops, own, components, relinks []any) error {
-	for _, s := range components {
-		spec := s.(*pyjson.Object)
-		top := ops[get(spec, "top").(int)].(*pyjson.Object)
-		comp, err := childOrd(ordOf(targets, get(top, "h")), get(top, "n"))
-		if err != nil {
-			return err
-		}
-		end, err := ord.JoinOrd(comp, specPath(spec))
-		if err != nil {
-			return err
-		}
-		if err := w.Scope.Check(end); err != nil {
-			return err
-		}
-	}
-	for _, op := range own {
-		comp, err := childOrd(ordOf(targets, get(op.(*pyjson.Object), "h")), get(op.(*pyjson.Object), "n"))
-		if err != nil {
-			return err
-		}
-		for _, spec := range relinks {
-			if err := checkEnds(w.Scope, comp, spec.(*pyjson.Object)); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// checkEnds is _check_ends: both ends of a relink under scope.
-func checkEnds(scope *ord.Scope, comp string, spec *pyjson.Object) error {
-	for _, k := range []string{"source_path", "target_path"} {
-		end, err := ord.JoinOrd(comp, get(spec, k).(string))
-		if err != nil {
-			return err
-		}
-		if err := scope.Check(end); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// childOrd is box.child_ord of a parent ORD and a recorded name of any type.
-func childOrd(parent string, name any) (string, error) {
-	s, ok := name.(string)
-	if !ok {
-		return "", &pyjson.ValueError{Msg: "ORD child name must be one plain slot name, got " + pyjson.Repr(name)}
-	}
-	return ord.ChildOrd(parent, s)
-}
-
-func specPath(spec *pyjson.Object) string {
-	n, parent := get(spec, "n").(string), get(spec, "parent_path").(string)
-	if parent == "" {
-		return n
-	}
-	return parent + "/" + n
-}
-
-func rollbackNotes(view *pyjson.Object, bid string, relinks, unlinked, components, own, ops []any) []any {
-	notes := []any{"rolls back batch " + bid + " (" + pyjson.Str(get(view, "tool")) + ")"}
-	if len(relinks) > 0 {
-		notes = append(notes, fmt.Sprintf("then re-creates %d link(s) between restored components, where both "+
-			"ends exist; a skipped one is reported in link_inputs_not_restored with "+
-			"the input's recorded value", len(relinks)))
-	}
-	if len(unlinked) > 0 {
-		notes = append(notes, fmt.Sprintf("%d input(s) were linked from outside the removed subtree: their links "+
-			"are not re-created; they are reported in link_inputs_not_restored with "+
-			"their recorded value and the verdict is partial", len(unlinked)))
-	}
-	if len(components) > 0 {
-		notes = append(notes, fmt.Sprintf("re-creates %d nested component(s) one add per component, parents "+
-			"first: the station rejects an add that nests components", len(components)),
-			"a child that already exists on a freshly created component is a frozen "+
-				"slot (e.g. a writable's proxyExt): it is never re-added and is listed "+
-				"as frozen_children_not_restored; its configuration is not written. The "+
-				"read-back compares it with the snapshot and, when it differs, lists it "+
-				"in frozen_config_not_restored and the verdict is partial")
-	}
-	if len(own) != len(ops) { // ops is never empty: no add means no inverse either
-		notes = append(notes, "the rollback itself has no automatic inverse for slot restores or removals")
-	}
-	return notes
-}
-
-// relinkSpec is _relink_spec: a journaled relink, paths and slot names only, never handles.
-func relinkSpec(v any) (*pyjson.Object, error) {
-	spec, ok := v.(*pyjson.Object)
-	keys := []string{"source_path", "source_slot", "target_path", "target_slot"}
-	for _, k := range keys {
-		if _, isStr := get(spec, k).(string); !ok || !isStr {
-			return nil, plan.ToolError("batch records a malformed relink: refusing")
-		}
-	}
-	out := obj()
-	for _, k := range keys {
-		s := get(spec, k).(string)
-		if s != "" {
-			for _, part := range strings.Split(s, "/") {
-				if _, err := plan.Name(k, part); err != nil {
-					return nil, err
-				}
-			}
-		}
-		out.Set(k, s)
-	}
-	if prior, ok := get(spec, "prior").(*pyjson.Object); ok { // journaled since v0.28.0, absent before
-		out.Set("prior", prior)
-	}
-	return out, nil
-}
-
-// unlinkedSpec is _unlinked_spec: an input whose link came from outside the removed subtree.
-func unlinkedSpec(v any) (*pyjson.Object, error) {
-	spec, ok := v.(*pyjson.Object)
-	if !ok {
-		return nil, plan.ToolError("batch records a malformed unlinked input: refusing")
-	}
-	withSource := copyObj(spec)
-	withSource.Set("source_path", "")
-	out, err := relinkSpec(withSource)
-	if err != nil {
-		return nil, err
-	}
-	trimmed := obj()
-	for _, k := range out.Keys()[1:] {
-		trimmed.Set(k, get(out, k))
-	}
-	return trimmed, nil
-}
-
-func copyObj(o *pyjson.Object) *pyjson.Object {
-	c := obj()
-	for _, k := range o.Keys() {
-		c.Set(k, get(o, k))
-	}
-	return c
-}
-
-func list(v []any) []any {
-	if v == nil {
-		return []any{}
-	}
-	return v
 }
