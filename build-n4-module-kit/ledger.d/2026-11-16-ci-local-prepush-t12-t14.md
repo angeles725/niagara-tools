@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-16 -->
+<!-- last-change-note: the pre-push CI lints shellcheck the change with its sourced and sourcing files, not CI's whole set -->
+log: 2026-11-16 · ci-local and pre-push follow-ups → `scripts/ci-local.sh --only "Go"` on a host without acorn runs the Go step with `KIT_REQUIRE_JS_TOOLS` unset and a NOTE (`scripts/lib/ci-local-js.sh`); the `.githooks/pre-push` and `toolbelt/host-budget.sh` headers describe the CI-lints step and both disk options; `ci-steps changed` (the pre-push CI lints) shellchecks the changed files with the files they source and that source them, and CI's whole set only when a source path cannot be resolved. Retro ci-local-prepush-t12-t14 (Δ1-Δ3 applied, pending review). [ev: retro ci-local-prepush-t12-t14 Δ1] [ev: retro ci-local-prepush-t12-t14 Δ3]

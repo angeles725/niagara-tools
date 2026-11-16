@@ -29,9 +29,23 @@ type pendingDoc struct {
 // test keyword. A comment line opens no here-document; several operators on one line are read in order.
 func HeredocTestLines(data []byte) []int {
 	var found []int
+	lines := strings.Split(string(data), "\n")
+	for i, body := range heredocBody(lines) {
+		if body && testKeyword.MatchString(lines[i]) {
+			found = append(found, i+1)
+		}
+	}
+	return found
+}
+
+// heredocBody marks each line that is here-document text (a body line or its closing delimiter), not a
+// command: the source scan of sourced.go skips them too.
+func heredocBody(lines []string) []bool {
+	body := make([]bool, len(lines))
 	var queue []pendingDoc
-	for i, line := range strings.Split(string(data), "\n") {
+	for i, line := range lines {
 		if len(queue) > 0 {
+			body[i] = true
 			doc := queue[0]
 			end := line
 			if doc.stripTabs {
@@ -39,14 +53,12 @@ func HeredocTestLines(data []byte) []int {
 			}
 			if end == doc.delim {
 				queue = queue[1:]
-			} else if testKeyword.MatchString(line) {
-				found = append(found, i+1)
 			}
 			continue
 		}
 		queue = append(queue, openedOn(line)...)
 	}
-	return found
+	return body
 }
 
 // quotedAt reports whether byte i of a line sits inside a '…' or "…" string opened on that line

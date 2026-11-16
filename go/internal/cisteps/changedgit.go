@@ -96,19 +96,9 @@ func (c changeSet) allFiles() ([]string, error) {
 // exactly the change and name its files as the repository does.
 func (c changeSet) materialize(tree string, paths []string) error {
 	for _, p := range paths {
-		var data []byte
-		if c.end != "" {
-			res := gitcmd.Command{Stderr: c.errTo}.Run("show", c.end+":"+p)
-			if !res.OK() {
-				return fmt.Errorf("git show %s:%s failed", c.end, p)
-			}
-			data = []byte(res.Stdout)
-		} else {
-			b, err := os.ReadFile(p)
-			if err != nil {
-				return err
-			}
-			data = b
+		data, err := c.read(p)
+		if err != nil {
+			return err
 		}
 		dst := filepath.Join(tree, filepath.FromSlash(p))
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
@@ -119,4 +109,16 @@ func (c changeSet) materialize(tree string, paths []string) error {
 		}
 	}
 	return nil
+}
+
+// read returns a file's bytes at the change's end: the range's end commit, or the work tree.
+func (c changeSet) read(p string) ([]byte, error) {
+	if c.end == "" {
+		return os.ReadFile(p)
+	}
+	res := gitcmd.Command{Stderr: c.errTo}.Run("show", c.end+":"+p)
+	if !res.OK() {
+		return nil, fmt.Errorf("git show %s:%s failed", c.end, p)
+	}
+	return []byte(res.Stdout), nil
 }
