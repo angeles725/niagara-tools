@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-16 -->
+<!-- last-change-note: logic rule LC11 (boot output holds and derived last-valid state before the first cycle) and the LP1 lab restart proof -->
+log: 2026-11-16 · `types/logic.md` LC11 (extends LC10): timed boot holds (power-on stagger, minimum off across a restart, anti-short-cycle) are armed by an idempotent step the control cycle calls first, the cycle writes OFF while a hold is in force, output command slots are TRANSIENT, and derived "last valid" state used for change detection is seeded with the persisted slots, so a restart neither short-cycles an output nor bumps a revision; source-structural test pattern. `build-verify.md` § Lab restart proof (LP1): the restart recipe that found both. Retro lc11-boot-outputs (Δ1-Δ2 applied, pending review). [ev: retro lc11-boot-outputs Δ1] [ev: retro lc11-boot-outputs Δ2]
