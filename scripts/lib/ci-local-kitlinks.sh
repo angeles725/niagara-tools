@@ -13,18 +13,32 @@
 #   - toolbelt/kit-state.sh --write materializes BUILD-STATE.md, retros/INDEX.md and toolbelt/INDEX.md in the
 #     snapshot's kit, from its own ledger.d/ and BUILD-STATE.src.md (a fragment kit-state refuses fails here, as
 #     CI's gen-build-state --check fails it);
-#   - bats is the version ci.yml installs (provision_bats), as the full replay runs it.
+#   - the snapshot's own toolbelt/kit-state.sh does it, the launcher the push sends and kit-links.bats itself runs
+#     (its go/ is the checkout's either way);
+#   - bats is the version ci.yml installs (provision_bats), as the full replay runs it; a provisioning that fails or
+#     leaves another version first on PATH is one stderr line and exit 3, never a run on the wrong bats.
 # changelog.d fragments reach no file L1 scans (CHANGELOG.md takes them only at release); a change to one still
 # runs kit-links, so a fragment cannot be the one change a push leaves unchecked.
-# Returns 0 pass or nothing to check, 1 kit-state or kit-links failed, 3 the snapshot could not be made.
+# Returns 0 pass or nothing to check, 1 kit-state or kit-links failed, 3 the snapshot could not be made, bats could
+# not be provisioned, or git failed while detecting the change. (retro 2026-11-15 coordination-stretch T32)
 
-# kit_docs_changed — 0 when the change touches (deletions too) a kit *.md, a ledger.d or a changelog.d file; a git
-# error also reads as changed, so kit-links runs rather than being skipped.
+# kit_docs_changed — 0 when the change touches (deletions too) a kit *.md, a ledger.d or a changelog.d file, 1 when
+# it does not, 2 with one stderr line when git fails (a failed detection is never read as "no kit change").
 kit_docs_changed() {
-  local s=(':(glob)build-n4-module-kit/**/*.md' changelog.d) b
-  if [ -n "$RANGE" ]; then ! git -C "$ROOT" diff --quiet --no-renames "${RANGE%%..*}" "${RANGE#*..}" -- "${s[@]}"; return; fi
-  b="$(git -C "$ROOT" merge-base origin/main HEAD)" && git -C "$ROOT" diff --quiet "$b" -- "${s[@]}" || return 0
-  [ -n "$(git -C "$ROOT" ls-files --others --exclude-standard -- "${s[@]}")" ]
+  local s=(':(glob)build-n4-module-kit/**/*.md' changelog.d) b u rc=0
+  if [ -n "$RANGE" ]; then
+    git -C "$ROOT" diff --quiet --no-renames "${RANGE%%..*}" "${RANGE#*..}" -- "${s[@]}" || rc=$?
+  else
+    b="$(git -C "$ROOT" merge-base origin/main HEAD)" || rc=128
+    [ "$rc" -ne 0 ] || git -C "$ROOT" diff --quiet "$b" -- "${s[@]}" || rc=$?
+    if [ "$rc" -eq 0 ]; then
+      u="$(git -C "$ROOT" ls-files --others --exclude-standard -- "${s[@]}")" || rc=128
+      [ -z "$u" ] || rc=1
+    fi
+  fi
+  case "$rc" in 0) return 1 ;; 1) return 0 ;; esac
+  printf 'ci-local: --changed: kit-links: cannot tell whether the change touches a kit doc (git exit %d)\n' "$rc" >&2
+  return 2
 }
 
 # kit_links_snapshot <dir> — write the change's non-ignored files (go/ left out) under <dir>.
@@ -54,14 +68,26 @@ kit_links_check() {
   return 1
 }
 
-# kit_state_write <kit-root> — materialize the generated kit state there; the paths it prints are noise here.
-kit_state_write() { bash "$ROOT/build-n4-module-kit/toolbelt/kit-state.sh" --write "$1" >/dev/null; }
+# kit_state_write <kit-root> — materialize the generated kit state there with that kit's own launcher; the paths it
+# prints are noise here.
+kit_state_write() { bash "$1/toolbelt/kit-state.sh" --write "$1" >/dev/null; }
+
+# kit_links_bats — provision the bats ci.yml pins and confirm it is the one first on PATH (provision_bats ends on a
+# printf, so a failed tar inside it would otherwise leave the bats already on PATH to run).
+kit_links_bats() {
+  local body ver
+  body="$(bats_install_body)"
+  provision_bats "$body" || return 1
+  ver="$(sed -nE 's/^[[:space:]]*BATS_VER=([0-9.]+)[[:space:]]*$/\1/p' <<< "$body" | head -n 1)"
+  [ -z "$ver" ] || [ "$(bats --version 2>/dev/null)" = "Bats $ver" ]
+}
 
 run_kit_links() {
-  local snap="$WORK/kit-links"
-  kit_docs_changed || return 0
+  local snap="$WORK/kit-links" rc=0
+  kit_docs_changed || rc=$?
+  case "$rc" in 0) ;; 1) return 0 ;; *) return 3 ;; esac
   kit_links_snapshot "$snap" || { printf 'ci-local: --changed: cannot snapshot the change for kit-links\n' >&2; return 3; }
-  provision_bats "$(bats_install_body)"
+  kit_links_bats || { printf 'ci-local: --changed: kit-links: bats could not be provisioned at the version ci.yml pins\n' >&2; return 3; }
   kit_links_check "kit-state --write (the generated BUILD-STATE.md kit-links scans)" "$snap" \
     kit_state_write "$snap/build-n4-module-kit" || return 1
   kit_links_check "kit-links (tests/kit-links.bats over the changed kit docs)" "$snap" bats tests/kit-links.bats || return 1

@@ -24,7 +24,8 @@
 # --changed runs no step: it runs the pinned shellcheck, the kit's bats lints and gofmt over the files changed
 # against origin/main, or over the commit range --range names (.githooks/pre-push calls it with the pushed
 # range); lib/ci-local-changed.sh. (retro 2026-11-15 coordination-stretch C3) A kit *.md, ledger.d or changelog.d
-# change also runs tests/kit-links.bats on a snapshot of it; lib/ci-local-kitlinks.sh (T25).
+# change also runs tests/kit-links.bats on a snapshot of it; lib/ci-local-kitlinks.sh (T25). Its bats not provisioned
+# at the ci.yml pin, or a git error while detecting the change, exits 3 with one line (T32).
 # The tarballs are cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/ (--cache-dir)
 # and their sha256 is checked on every use; never installed system-wide, never sudo.
 #
