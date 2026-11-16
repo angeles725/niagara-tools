@@ -65,3 +65,17 @@ func TestChangedShellcheckTakesTheWholeSetWithANoteWhenASourceCannotBeResolved(t
 		t.Errorf("no fallback note on stderr: %q", errs)
 	}
 }
+
+// A range that deletes a shell script checks what is left and never reads the deleted file. (T22)
+func TestChangedShellcheckSkipsAScriptTheRangeDeleted(t *testing.T) {
+	dir, git := gitRepo(t)
+	base := git("rev-parse", "HEAD")
+	git("rm", "-q", "scripts/old.sh")
+	write(t, dir, "scripts/new.sh", "echo new\n")
+	git("add", "-A")
+	git("commit", "-q", "-m", "replace old.sh")
+	code, out, errs := runChanged(t, dir, "--tree", filepath.Join(t.TempDir(), "tree"), "--range", base+"..HEAD")
+	if code != 0 || out != "shellcheck\tscripts/new.sh\n" {
+		t.Errorf("exit %d, plan %q\n%s", code, out, errs)
+	}
+}
