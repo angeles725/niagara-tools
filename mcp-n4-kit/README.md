@@ -195,7 +195,8 @@ Example MCP client entry (Claude Code `.mcp.json`):
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
-`n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`.
+`n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
+`n4_read_history`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -219,6 +220,24 @@ queried `name` column is decoded by its position in the select list, `n4_invento
 columns by position, and a repeated header is kept as `Type#2`, `Type#3`. With
 `output_file: "<name>.csv|.json"`, `n4_bql_query` writes the rows to `<state-dir>/bql/<name>`
 (directory 0700, file 0600, never overwritten) and replies without `rows`.
+History records: `n4_read_history(history_id | ext_ord, limit=20, period | start/end)` returns
+the last `limit` records (at most 1000) of one history, newest first (`order: newest_first`), so
+a rollout proves records arrive, not only that the extension runs. Give exactly one of
+`history_id` (`/<station>/<history name>`, two slot-name segments as `BHistoryId` parses them;
+anything else, `|`, `?`, `;` and spaces included, is refused before any request) or `ext_ord`
+(a `station:|slot:/...` history extension ORD, resolved with one
+`select slotPath, historyConfig.id from history:HistoryExt` at the component holding it). It
+sends `GET /ord/<url-encoded history:<id>[?<range>]|bql:select timestamp, value, status order by
+timestamp desc|view:file:ITableToCsv>`, then the same ORD with `select count(*)` for
+`total_records` (`null` with `total_records_note` when that count fails). The range is
+`period=<id>` (`today`, `last24Hours`, `yesterday`, `weekToDate`, `lastWeek`, `last7Days`,
+`monthToDate`, `lastMonth`, `yearToDate`, `lastYear`: the ids `BDynamicTimeRange` accepts) or
+`start=<t>;end=<t>` (BAbsTime text such as `2026-11-15T00:00:00.000-06:00`), not both. Rows are
+`{timestamp, value, status}` read by position, as the station renders them (localized display
+text); `truncated: true` means the range holds more records than were returned. A history the
+station cannot read is an error naming the id and how to list ids
+(`n4_bql_query` `select historyConfig.id from history:HistoryExt`); an AuthError stays one.
+There is no `output_file`: it is not an export of whole histories.
 Px views and other station files (METHODOLOGY section 9): `n4_list_px_views(root)` runs
 `select slotPath, displayName, pxFile, media from baja:PxView` and returns `display_name`,
 `px_file` (e.g. `file:^px/General.px`) and `media` per view; `slot_path` / `owner_path` are
