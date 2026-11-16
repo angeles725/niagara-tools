@@ -30,12 +30,13 @@ type linkRec struct {
 // and the type contracts that tell a configured output from a computed one (nil: none read).
 // wholeLinks reads a link's slots wherever the load holds them: the Python port cut them with
 // the depth, so a link at the last level had no slot names ("(None <- None)", bench retro
-// 2026-11-15 row 14).
+// 2026-11-15 row 14). runtime holds the bodies taken from runtime slots (snapshot_runtime.go).
 type snapshot struct {
 	links      []*linkRec
 	handles    map[string]string
 	ct         *plan.Contracts
 	wholeLinks bool
+	runtime    map[*pyjson.Object]bool
 }
 
 // linkKids are the slots of link c met at depth: one more level than depth allows when wholeLinks.
@@ -129,6 +130,12 @@ func (s *snapshot) take(node *pyjson.Object, path string, depth int) (*pyjson.Ob
 		if _, has := kid.Get("v"); has && (get(kid, "t") == "baja:Status" || n == "status" && statusType(get(node, "t"))) {
 			// keep the configured status bits (null, disabled...), drop runtime facets after ';'
 			kid.Set("v", strings.SplitN(pyjson.Str(get(kid, "v")), ";", 2)[0])
+		}
+		if s.runtimeSlot(node, child) {
+			if s.runtime == nil {
+				s.runtime = map[*pyjson.Object]bool{}
+			}
+			s.runtime[kid] = true
 		}
 		if driven["s"+n] { // kept on its link, never in the re-create body
 			prior[n] = kid

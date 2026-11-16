@@ -146,8 +146,13 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if err != nil {
 		return nil, err
 	}
-	return &plan.Planned{Ops: []any{obj("nm", "v", "h", parentH, "n", nm)}, Inverse: inverse, Notes: notes,
-		Targets: targets, Keys: keys}, nil
+	p := &plan.Planned{Ops: []any{obj("nm", "v", "h", parentH, "n", nm)}, Inverse: inverse, Notes: notes,
+		Targets: targets, Keys: keys}
+	if add := s.hashedAdd(inverse[0].(*pyjson.Object)); add != nil { // retro 2026-11-16 row M15
+		p.HashInverse = append([]any{add}, inverse[1:]...)
+		p.Notes = append(p.Notes, msgRuntimeUnhashed)
+	}
+	return p, nil
 }
 
 // removeReadback is _remove_readback: the child must be gone from its parent.
