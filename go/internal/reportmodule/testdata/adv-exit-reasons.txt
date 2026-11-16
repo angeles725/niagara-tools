@@ -15,7 +15,7 @@ A-rt  ERROR  lint-size  env fault (exit 3): lint-size: cannot scan /x/U.java: Pe
 A-rt  ERROR  lint-license-isoperational-gate  env fault (exit 2):   indented reason
 A-rt  ERROR  lint-set-null-ord  env fault (exit 1)
 A-rt  PASS  lint-ws-placement  clean
-A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-rt/.deploy-baseline && git -C m/A-rt archive <deployed-ref> . | tar -x -C m/A-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean

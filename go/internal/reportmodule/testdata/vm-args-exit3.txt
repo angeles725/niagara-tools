@@ -38,7 +38,7 @@ A-rt  SKIP  lint-size  no src/
 A-rt  SKIP  lint-license-isoperational-gate  no src/
 A-rt  SKIP  lint-set-null-ord  no src/
 A-rt  SKIP  lint-ws-placement  no src/
-A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-rt/.deploy-baseline && git -C m/A-rt archive <deployed-ref> . | tar -x -C m/A-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 B-rt  ERROR  verify-module  env fault (exit 3)
 B-rt  SKIP  lint-lexicon-ascii  no *.lexicon under B-rt
 B-rt  SKIP  lint-delays  no src/
@@ -72,7 +72,7 @@ B-rt  SKIP  lint-size  no src/
 B-rt  SKIP  lint-license-isoperational-gate  no src/
 B-rt  SKIP  lint-set-null-ord  no src/
 B-rt  SKIP  lint-ws-placement  no src/
-B-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+B-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/B-rt/.deploy-baseline && git -C m/B-rt archive <deployed-ref> . | tar -x -C m/B-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 C-rt  PASS  args  --target-version 4.15 --src m m/C-rt/build/libs/d.jar
 C-rt  SKIP  lint-lexicon-ascii  no *.lexicon under C-rt
 C-rt  SKIP  lint-delays  no src/
@@ -106,7 +106,7 @@ C-rt  SKIP  lint-size  no src/
 C-rt  SKIP  lint-license-isoperational-gate  no src/
 C-rt  SKIP  lint-set-null-ord  no src/
 C-rt  SKIP  lint-ws-placement  no src/
-C-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+C-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/C-rt/.deploy-baseline && git -C m/C-rt archive <deployed-ref> . | tar -x -C m/C-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 D-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
 D-rt  SKIP  lint-lexicon-ascii  no *.lexicon under D-rt
 D-rt  SKIP  lint-delays  no src/
@@ -140,7 +140,7 @@ D-rt  SKIP  lint-size  no src/
 D-rt  SKIP  lint-license-isoperational-gate  no src/
 D-rt  SKIP  lint-set-null-ord  no src/
 D-rt  SKIP  lint-ws-placement  no src/
-D-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+D-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/D-rt/.deploy-baseline && git -C m/D-rt archive <deployed-ref> . | tar -x -C m/D-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean
