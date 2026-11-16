@@ -16,10 +16,12 @@ const (
 
 // SourceOfTruth is the source_of_truth value of module in a BUILD-STATE text, "" when it declares none:
 // the first `source_of_truth:` line that follows the `module:` line naming the module inside a
-// build-state.v1 envelope. Keys start at column 0.
+// build-state.v1 envelope. Keys start at column 0. A line may end in CRLF: its CR is not part of a value.
 func SourceOfTruth(text, module string) string {
 	inside, current := false, ""
 	for _, line := range buildstatefields.Lines(text) {
+		// Mutation: CS-crlf -- keeping the CR of a CRLF line leaves it on every value, so no module is ever named (WARN undeclared, exit 0)
+		line = strings.TrimSuffix(line, "\r")
 		switch {
 		case strings.HasPrefix(line, buildstatefields.OpenMarker):
 			inside, current = true, ""

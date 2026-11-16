@@ -91,3 +91,27 @@ func TestUnreadableBuildStateIsAnEnvFault(t *testing.T) {
 	expect(t, "unreadable BUILD-STATE", []string{"--build-state", state, "--module", "Mod", f.root}, ExitEnv, "",
 		"check-client-source: cannot read "+state+": open "+state+": permission denied\n")
 }
+
+// TestBuildStateWithCRLFLineEndings: a BUILD-STATE file saved with CRLF line endings declares what it
+// declares; read with the CR left on each value it named no module and the check WARNed "undeclared"
+// (exit 0) over a checkout nobody compared.
+func TestBuildStateWithCRLFLineEndings(t *testing.T) {
+	f := newFixture(t)
+	state := filepath.Join(f.base, "BUILD-STATE.md")
+	write(t, state, "<!-- build-state.v1 -->\r\nmodule: Mod\r\nsource_of_truth: r@main@"+f.second+"\r\n<!-- /build-state.v1 -->\r\n"+
+		"<!-- build-state.v1 -->\r\nmodule: Old  # stale\r\nsource_of_truth: r@main@"+f.first+"   # DECLARED\r\n<!-- /build-state.v1 -->\r\n")
+	expect(t, "the declared commit", []string{"--build-state", state, "--module", "Mod", f.root}, ExitOK,
+		"PASS  source-of-truth  "+f.top+" at the declared commit "+f.second+" on main\n", "")
+	expect(t, "a value before a comment", []string{"--build-state", state, "--module", "Old", f.root}, ExitOK,
+		"PASS  source-of-truth  "+f.top+" is ahead of the declared commit "+f.first+" (new local work) — update source_of_truth at close\n", "")
+}
+
+// TestEmptyBuildStatePathIsAUsageError: `--build-state ""` (an unset shell variable) names no file; it is
+// the usage error, never "undeclared" and exit 0. With --declared, which wins, it is still not read.
+func TestEmptyBuildStatePathIsAUsageError(t *testing.T) {
+	f := newFixture(t)
+	expect(t, "an empty path", []string{"--build-state", "", "--module", "Mod", f.root}, ExitUsage, "", wantUsage)
+	expect(t, "an empty path and no module", []string{"--build-state", "", f.root}, ExitUsage, "", wantUsage)
+	expect(t, "--declared still wins", []string{"--build-state", "", "--declared", "r@main@" + f.second, f.root}, ExitOK,
+		"PASS  source-of-truth  "+f.top+" at the declared commit "+f.second+" on main\n", "")
+}

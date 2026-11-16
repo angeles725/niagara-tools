@@ -19,6 +19,9 @@ func TestSourceOfTruth(t *testing.T) {
 		{"an empty first field ends the read", open + "module: Mod\nsource_of_truth:\nsource_of_truth: d@e@f\n" + shut, "Mod", ""},
 		{"an indented key is not a field", open + "module: Mod\n  source_of_truth: a@b@c\n" + shut, "Mod", ""},
 		{"no final newline", open + "module: Mod\nsource_of_truth: a@b@c", "Mod", "a@b@c"},
+		{"CRLF line endings", "<!-- build-state.v1 -->\r\nmodule: Mod\r\nsource_of_truth: a@b@c\r\n<!-- /build-state.v1 -->\r\n", "Mod", "a@b@c"},
+		{"CRLF keeps the blanks before it", open + "module: Mod\r\nsource_of_truth: unknown  \r\n" + shut, "Mod", "unknown  "},
+		{"a CR inside a value stays", open + "module: Mod\nsource_of_truth: a@b\r@c\n" + shut, "Mod", "a@b\r@c"},
 		{"a second envelope", open + "module: A\n" + shut + open + "module: Mod\nsource_of_truth: a@b@c\n" + shut, "Mod", "a@b@c"},
 	}
 	for _, c := range cases {

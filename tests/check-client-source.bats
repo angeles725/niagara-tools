@@ -3,6 +3,8 @@
 # [ev: retro client-source-of-truth Δ1] (git half of the preflight check; toolbelt scripts never
 # call version control — kit-links L2 — so this lives in scripts/).
 # Named mutation: read an unreadable BUILD-STATE as empty text -> CS-unreadable red.
+# Named mutation: keep the CR of a CRLF line on its value -> CS-crlf red.
+# Named mutation: read `--build-state ""` as no declaration -> CS-empty-path red.
 #
 # Every repository is created under a temp dir with a throwaway identity; no network, no $HOME config.
 
@@ -149,5 +151,22 @@ EOF
   run "$CS" --build-state "$TMPDIR_T/BUILD-STATE.md" --module Mod "$MODROOT"
   [ "$status" -eq 3 ]
   [[ "$output" == *"check-client-source: cannot read $TMPDIR_T/BUILD-STATE.md"* ]]
+  [[ "$output" != *"source-of-truth"* ]]
+}
+
+@test "CS-crlf: a BUILD-STATE with CRLF line endings declares what it declares (never WARN undeclared)" {
+  _repo "$TMPDIR_T/r"
+  printf '<!-- build-state.v1 -->\r\nmodule: Mod\r\nsource_of_truth: r@main@%s\r\n<!-- /build-state.v1 -->\r\n' "$C2" > "$TMPDIR_T/BUILD-STATE.md"
+  run "$CS" --build-state "$TMPDIR_T/BUILD-STATE.md" --module Mod "$MODROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  source-of-truth"*"at the declared commit $C2"* ]]
+  [[ "$output" != *"undeclared"* ]]
+}
+
+@test "CS-empty-path: --build-state with an empty path -> usage, exit 2, no row (never WARN undeclared)" {
+  _repo "$TMPDIR_T/r"
+  run "$CS" --build-state "" --module Mod "$MODROOT"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"usage: check-client-source.sh"* ]]
   [[ "$output" != *"source-of-truth"* ]]
 }
