@@ -91,3 +91,32 @@ _install() { "$REPO/scripts/install-skill.sh" --home "$H" "$@" >/dev/null; }
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c 'set -u')" -eq 0 ]
 }
+
+@test "SD10: --harness pi — a modified skill copy or prompt file is a FAIL row naming --harness pi, exit 1" {
+  mkdir -p "$H/.pi/agent"
+  PI_CODING_AGENT_DIR="" _install --skill mcp-n4 --harness pi
+  run env -u PI_CODING_AGENT_DIR "$SD" --skill mcp-n4 --harness pi --home "$H"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  skill-drift  mcp-n4[pi]  prompt "* ]]
+  printf 'stale\n' >> "$H/.pi/agent/prompts/mcp-n4.md"
+  run env -u PI_CODING_AGENT_DIR "$SD" --skill mcp-n4 --harness pi --home "$H"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  skill-drift  mcp-n4[pi]  prompt "*"differs from its template"*"--harness pi"* ]]
+}
+
+@test "SD11: --all prints a non-failing SKIP row for an absent harness; the default checks claude only" {
+  _install --skill mcp-n4
+  run env -u PI_CODING_AGENT_DIR "$SD" --skill mcp-n4 --all --home "$H"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SKIP  skill-drift  mcp-n4[pi]  absent: $H/.pi/agent not found"* ]]
+  [[ "$output" == *"SKIP  skill-drift  mcp-n4[gentle-shell]  absent: "* ]]
+  run "$SD" --skill mcp-n4 --home "$H"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | wc -l)" -eq 1 ]
+}
+
+@test "SD12: an empty --home is a usage error (exit 2)" {
+  run env HOME="$H" "$SD" --home ""
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"--home requires a non-empty directory"* ]]
+}

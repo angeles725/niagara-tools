@@ -71,7 +71,23 @@ _gen_state() {
 
 @test "CLOSE-kit-links: kit-links.bats all green" { _close; run bats "$REPO/tests/kit-links.bats"; [ "$status" -eq 0 ]; }
 
-@test "CLOSE-install-skill: install-skill --dry-run exit 0" { _close; run "$REPO/scripts/install-skill.sh" --home "$BATS_TEST_TMPDIR/home" --dry-run; [ "$status" -eq 0 ]; }
+@test "CLOSE-install-skill: every tracked launcher installs into a throwaway home in every harness, byte-identical, and its drift check passes" {
+  _close
+  local h="$BATS_TEST_TMPDIR/home" stub="$BATS_TEST_TMPDIR/stubkit" s
+  # A stub kit (no kit-state.sh): the install never writes generated state into this checkout.
+  mkdir -p "$h/.pi/agent" "$h/.gentle-shell/agent" "$stub"
+  : > "$stub/METHODOLOGY.md"
+  for s in build-n4-module mcp-n4; do
+    run env -u PI_CODING_AGENT_DIR BUILD_N4_KIT="$stub" bash "$REPO/scripts/install-skill.sh" --home "$h" --skill "$s" --harness all
+    [ "$status" -eq 0 ]
+    cmp -s "$REPO/$s-kit/skill/SKILL.md" "$h/.claude/skills/$s/SKILL.md"
+    cmp -s "$REPO/$s-kit/skill/SKILL.md" "$h/.pi/agent/skills/$s/SKILL.md"
+    grep -q "^name: $s\$" "$h/.gentle-shell/agent/skills/$s/SKILL.md"
+    run env -u PI_CODING_AGENT_DIR bash "$REPO/scripts/check-skill-drift.sh" --home "$h" --skill "$s" --all
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | grep -c '^PASS ')" -eq 5 ]
+  done
+}
 
 @test "CLOSE-shellcheck: shellcheck exit 0 over toolbelt + scripts" {
   _close

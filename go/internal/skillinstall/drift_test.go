@@ -7,7 +7,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/installtools"
 )
 
-const driftUsage = "usage: check-skill-drift.sh [--skill <name>] [--home <dir>]\n"
+const driftUsage = "usage: check-skill-drift.sh [--skill <name>] [--harness <claude|pi|gentle-shell|all> | --all] [--home <dir>]\n"
 
 // TestDriftPassesOnAnIdenticalCopy: one PASS row naming the tracked path relative to the repository.
 func TestDriftPassesOnAnIdenticalCopy(t *testing.T) {

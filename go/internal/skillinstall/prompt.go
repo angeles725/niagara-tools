@@ -1,0 +1,37 @@
+package skillinstall
+
+import (
+	"embed"
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// promptName is a kit's prompt template, beside its tracked SKILL.md: <kit>/skill/prompt.md. It is the one
+// source of the prompt file a pi-style harness needs for a bare /<skill>.
+const promptName = "prompt.md"
+
+// defaultPrompt is the template for a skill whose kit has no prompt.md (a skill added to the SKILLS table
+// without one). @SKILL@ is the skill name and @SKILL_FILE@ the installed SKILL.md path, in both.
+//
+//go:embed prompts/default.md
+var defaultPrompt embed.FS
+
+// promptSource is the template file beside the tracked launcher.
+func promptSource(tracked string) string { return filepath.Join(filepath.Dir(tracked), promptName) }
+
+// renderPrompt is the prompt file for skill whose tracked launcher is tracked and whose installed launcher
+// is skillFile. A kit template that exists but cannot be read is an error, never the default.
+func renderPrompt(skill, tracked, skillFile string) ([]byte, error) {
+	text, err := os.ReadFile(promptSource(tracked))
+	if errors.Is(err, fs.ErrNotExist) {
+		text, err = defaultPrompt.ReadFile("prompts/default.md")
+	}
+	if err != nil {
+		return nil, err
+	}
+	r := strings.NewReplacer("@SKILL_FILE@", skillFile, "@SKILL@", skill)
+	return []byte(r.Replace(string(text))), nil
+}

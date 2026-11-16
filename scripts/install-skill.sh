@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
-# install-skill.sh — install a skill launcher into the Claude skills directory.
+# install-skill.sh — install a skill launcher into an agent harness (Claude Code, pi, gentle-shell).
 #
-# Copies the tracked canonical launcher into <home>/.claude/skills/<skill>/SKILL.md
+# Copies the tracked canonical launcher into <harness-dir>/skills/<skill>/SKILL.md
 # using a sha256 comparison (computed by the Go command, no sha256 tool needed) to detect divergence:
 #   --skill build-n4-module (default): build-n4-module-kit/skill/SKILL.md
 #   --skill mcp-n4:                    mcp-n4-kit/skill/SKILL.md
 # (the SKILLS table below is the single source of these names and paths)
+#
+# Harnesses (--harness; the table is go/internal/skillinstall/harness.go):
+#   claude (default)  <home>/.claude/skills/<skill>/SKILL.md (the directory is created)
+#   pi                <agent-dir>/skills/<skill>/SKILL.md and <agent-dir>/prompts/<skill>.md, where
+#                     <agent-dir> is $PI_CODING_AGENT_DIR when set, else <home>/.pi/agent
+#   gentle-shell      the same two files under <home>/.gentle-shell/agent
+#   all               every harness above, in that order
+# A pi or gentle-shell agent directory that does not exist is never created: the run prints an
+# "absent: <harness>" row and goes on (exit 0). The prompt file gives the harness a bare /<skill>; it is
+# rendered from the kit's skill/prompt.md beside the tracked launcher (@SKILL_FILE@ becomes the installed
+# SKILL.md path), or from the Go package's default template when the kit has none, and follows the same
+# current / diverged / --force rules as the launcher.
 #
 # --skill build-n4-module also MATERIALIZES the kit's generated state in the kit checkout the launcher
 # reads: BUILD-STATE.md, retros/INDEX.md and toolbelt/INDEX.md are generated and not committed (R10-D1), so a fresh install
@@ -17,21 +29,25 @@
 # The source of truth lives in the repository; this script only installs it.
 #
 # Usage:
-#   install-skill.sh [--skill <build-n4-module|mcp-n4>] [--home <dir>] [--dry-run] [--force]
+#   install-skill.sh [--skill <build-n4-module|mcp-n4>] [--harness <claude|pi|gentle-shell|all>] [--home <dir>]
+#                    [--dry-run] [--force]
 #
 # Options:
 #   --skill <name> Skill to install: build-n4-module (default) or mcp-n4.
-#   --home <dir>   Base home directory (default: $HOME). Every test passes this flag
-#                  so no test ever touches the real $HOME.
+#   --harness <h>  Harness to install into: claude (default), pi, gentle-shell or all.
+#   --home <dir>   Base home directory (default: $HOME); an empty value is a usage error. Every test
+#                  passes this flag so no test ever touches the real $HOME.
 #   --dry-run      Print what would be done; write nothing. Exits 0.
-#   --force        Overwrite a diverged installed copy without exiting 1.
+#   --force        Overwrite a diverged installed copy without exiting 1. A target SKILL.md, skill
+#                  directory or prompt file that is a symbolic link is refused (exit 3), never written
+#                  through: remove the link, then re-run.
 #
 # Exit codes:
 #   0   Installed or already current (or --dry-run); for build-n4-module, kit state materialized
 #       (a kit without toolbelt/kit-state.sh is a warning, not an error).
 #   1   Installed copy exists and diverges from the tracked copy; --force absent.
-#   2   Usage error (including an unknown --skill name).
-#   3   Environment error (tracked source missing, no Go toolchain to build the command, target directory not
+#   2   Usage error (including an unknown --skill or --harness name and an empty --home).
+#   3   Environment error (tracked source missing, a prompt template that cannot be read, a symlinked target, no Go toolchain to build the command, target directory not
 #       creatable, kit-state failed: the launcher is installed but the kit state is not).
 #
 # Implementation: the Go module at <repo>/go (go/internal/skillinstall). This wrapper is the stable entry point

@@ -459,6 +459,33 @@ slot path (`station:|slot:/Folder/A`) is resolved; while any link reading `out` 
 source in another form (listed in `unresolved_links`), every out slot not proven used
 is reported under `unknown`, never as dangling.
 
+### Registering the server per harness
+
+The server entry is the same `mcpServers` object in every harness; only the file and the tool names
+differ. Install the skill into the harness first (`scripts/install-skill.sh --skill mcp-n4 --harness
+<claude|pi|gentle-shell|all>`, which also writes the prompt file that gives pi and gentle-shell a bare
+`/mcp-n4`), then check it with `scripts/check-skill-drift.sh --skill mcp-n4 --all`.
+
+- **Claude Code:** the project's `.mcp.json` (the example in "Getting the kit and registering it per project"). The tools are named
+  `mcp__<server>__<tool>`, the server name as written (`mcp__mcp-n4-<station>__n4_navigate`).
+- **pi and pi-based harnesses (gentle-shell):** `<agent-dir>/mcp.json` (`~/.pi/agent`, or
+  `$PI_CODING_AGENT_DIR`; `~/.gentle-shell/agent` for gentle-shell), the same `mcpServers` format. A
+  hyphen in the server name becomes an underscore in the tool name: a server `mcp-n4-<station>`
+  exposes `mcp__mcp_n4_<station>__n4_navigate`. In a harness whose code mode is disabled, give each
+  entry `"exposure": "direct"` so its tools are offered to the model as tools:
+
+```json
+{
+  "mcpServers": {
+    "mcp-n4-mystation": {
+      "command": "/path/to/niagara-tools/go/bin/mcp-n4",
+      "args": ["--station", "MyStation=https://10.0.0.5", "--insecure-tls", "MyStation"],
+      "exposure": "direct"
+    }
+  }
+}
+```
+
 ### Finishing a job: the commissioning report
 
 `n4_commissioning_report(scope="station:|slot:/", sections=None, limit=20, expect_histories=None,

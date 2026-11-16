@@ -308,3 +308,45 @@ make_tree() {
   [[ "$output" != *"sha256"* ]]
   cmp -s "$TRACKED" "$TEST_HOME/.claude/skills/build-n4-module/SKILL.md"
 }
+
+# ---------------------------------------------------------------------------
+# HS1-HS4 — --harness <claude|pi|gentle-shell|all> (retro 2026-11-15 H1, H2), the empty --home (S3) and a
+# symlinked target (S4). PI_CODING_AGENT_DIR is unset so pi resolves under the throwaway home.
+# ---------------------------------------------------------------------------
+@test "HS1: --harness pi installs the launcher and the prompt file under the pi agent dir" {
+  mkdir -p "$TEST_HOME/.pi/agent"
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4 --harness pi
+  [ "$status" -eq 0 ]
+  cmp -s "$REPO_ROOT/mcp-n4-kit/skill/SKILL.md" "$TEST_HOME/.pi/agent/skills/mcp-n4/SKILL.md"
+  grep -qF "Read the mcp-n4 skill at $TEST_HOME/.pi/agent/skills/mcp-n4/SKILL.md" "$TEST_HOME/.pi/agent/prompts/mcp-n4.md"
+  [ ! -e "$TEST_HOME/.claude" ]
+}
+
+@test "HS2: --harness all skips an absent harness with an absent row, exit 0; the default stays claude only" {
+  mkdir -p "$TEST_HOME/.gentle-shell/agent"
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_HOME/.gentle-shell/agent/skills" ]
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4 --harness all
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"absent: pi ($TEST_HOME/.pi/agent not found), nothing installed"* ]]
+  [ -f "$TEST_HOME/.gentle-shell/agent/prompts/mcp-n4.md" ]
+  [ ! -e "$TEST_HOME/.pi" ]
+}
+
+@test "HS3: an empty --home is a usage error (exit 2), never the real home" {
+  run env HOME="$TEST_HOME" bash "$SCRIPT" --home "" --skill mcp-n4
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"--home requires a non-empty directory"* ]]
+  [ ! -e "$TEST_HOME/.claude" ]
+}
+
+@test "HS4: --force refuses a symlinked SKILL.md (exit 3) and leaves the pointee unchanged" {
+  mkdir -p "$TEST_HOME/.claude/skills/mcp-n4" "$BATS_TEST_TMPDIR/elsewhere"
+  printf 'not ours\n' > "$BATS_TEST_TMPDIR/elsewhere/SKILL.md"
+  ln -s "$BATS_TEST_TMPDIR/elsewhere/SKILL.md" "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4 --force
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"refusing to write through a symbolic link"* ]]
+  [ "$(cat "$BATS_TEST_TMPDIR/elsewhere/SKILL.md")" = "not ours" ]
+}
