@@ -13,11 +13,14 @@ type call struct {
 	tool  string
 	args  *pyjson.Object
 	write bool
-	line  int // 1-based line in the calls file
+	// execute is the line's own "execute": true, the explicit step a destructive write needs to
+	// execute (retro 2026-11-16 row M17): a run-wide flag alone never executes one.
+	execute bool
+	line    int // 1-based line in the calls file
 }
 
 // loadCalls reads the calls file: one JSON object per non-blank line. Any line that is not
-// {"tool": string, "args": object, "write": bool} is an error naming file and line.
+// {"tool": string, "args": object, "write": bool, "execute": bool} is an error naming file and line.
 func loadCalls(path string) ([]call, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -60,6 +63,8 @@ func parseCall(line string) (call, error) {
 			c.args, ok = val.(*pyjson.Object)
 		case "write":
 			c.write, ok = val.(bool)
+		case "execute":
+			c.execute, ok = val.(bool)
 		default:
 			return call{}, fmt.Errorf("unknown key %q", key)
 		}
@@ -69,6 +74,9 @@ func parseCall(line string) (call, error) {
 	}
 	if c.tool == "" {
 		return call{}, fmt.Errorf(`no "tool"`)
+	}
+	if c.execute && !c.write {
+		return call{}, fmt.Errorf(`"execute" needs "write": true`)
 	}
 	return c, nil
 }

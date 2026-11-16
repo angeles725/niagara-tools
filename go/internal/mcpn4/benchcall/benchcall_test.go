@@ -89,10 +89,10 @@ func TestAReadCallPrintsItsResultAsOneJSONLine(t *testing.T) {
 	}
 }
 
-func TestAWriteCallDoesDryRunThenExecutesWithTheToken(t *testing.T) {
+func TestAnExecuteRunDoesTheDryRunThenExecutesWithItsToken(t *testing.T) {
 	b := newBench(t)
 	create := `{"tool":"n4_create_component","write":true,"args":{"parent_ord":"station:|slot:/","name":"BenchFolder","type":"baja:Folder"}}` + "\n"
-	code, lines, errOut := b.run(connect + create)
+	code, lines, errOut := b.run(connect+create, "--execute")
 	if code != 0 || len(lines) != 3 {
 		t.Fatalf("exit %d, %d lines\n%s", code, len(lines), errOut)
 	}
