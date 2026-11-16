@@ -17,6 +17,13 @@ const (
 	// holderUnknown takes the age of the file.
 	holderUnknown = "it does not say which run made it; the file is %s old"
 	goneUnknown   = "when no other ng-deploy runs on that directory, that run was killed"
+	// lockTempSuffix ends the temporary file a lock is written in before it gets its name (makeLock).
+	lockTempSuffix = ".tmp"
+	// noticeLockInTwoSteps takes the modules directory and why it took no hard link.
+	noticeLockInTwoSteps = "NOTICE: %s takes no hard link (%s): the run lock is made, then written; " +
+		"a run that starts in the same instant can find it empty and say that it does not say which run made it"
+	// warnLockTempLeft takes the temporary file of a lock and why it could not be removed.
+	warnLockTempLeft = "WARN %s, the file this run wrote its lock in, could not be removed (%s): delete it"
 	// msgLockFailed takes the lock file and why it could not be made.
 	msgLockFailed = "cannot take the run lock %s (%s); nothing was built or changed"
 	// warnLockLeft takes the lock file and why this run could not remove its own.
