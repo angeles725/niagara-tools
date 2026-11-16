@@ -583,7 +583,7 @@
   },
   {
    "name": "n4_add_history",
-   "description": "Add one interval history extension per point, already configured: historyName (baja:Format pattern), interval (ms) and enabled, in one batch under one confirmation token (1 to 50 points). Refuses a point that already has a child named ext_name and, when the pattern only uses %name%/%parent...name% tokens, a history name that would repeat. Capacity stays at the extension default (500 records, Roll). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Add one interval history extension per point, already configured: historyName (baja:Format pattern), interval (ms) and enabled, in one batch under one confirmation token (1 to 50 points). The extension type follows the point type read from the station (numeric, boolean, enum or string control point: NumericInterval, BooleanInterval, EnumInterval, StringInterval), and so does its default slot name. Refuses a point that is not one of those, an ext_type that does not fit the point, a point that already has a child named ext_name and, when the pattern only uses %name%/%parent...name% tokens, a history id (/<station>/<history name>) that would repeat in the batch or that an extension on the station already holds (one BQL read). Capacity stays at the extension default (500 records, Roll); the plan notes how long that lasts at the interval. The read-back checks the type, the configured slots, the history id and that the extension is not in fault. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -604,19 +604,17 @@
      },
      "ext_name": {
       "type": "string",
-      "default": "NumericInterval",
-      "description": "Slot name of the extension under each point"
+      "description": "Slot name of the extension under each point; default: the extension type's short name, e.g. BooleanInterval"
      },
      "ext_type": {
       "type": "string",
-      "default": "history:NumericIntervalHistoryExt",
       "enum": [
        "history:NumericIntervalHistoryExt",
        "history:BooleanIntervalHistoryExt",
        "history:EnumIntervalHistoryExt",
        "history:StringIntervalHistoryExt"
       ],
-      "description": "Interval history extension type"
+      "description": "Interval history extension type; default: the one that fits each point's type, and a type that does not fit is refused"
      },
      "enabled": {
       "type": "boolean",

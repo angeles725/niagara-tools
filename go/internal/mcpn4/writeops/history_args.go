@@ -8,7 +8,7 @@ import (
 )
 
 // historyArgs validates everything that needs no station: the points, the extension name and
-// type, the pattern, the interval and enabled.
+// type when given, the pattern, the interval and enabled.
 func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
 	var s historySpec
 	raw, _ := args.Get("points")
@@ -25,20 +25,17 @@ func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
 		dup[ord] = true
 		points = append(points, ord)
 	}
-	name, _ := args.Get("ext_name")
-	if name == nil {
-		name = "NumericInterval"
-	}
 	var err error
-	if s.name, err = plan.Name("ext_name", name); err != nil {
-		return s, nil, err
+	if name, _ := args.Get("ext_name"); name != nil { // else the type's short name, per point
+		if s.name, err = plan.Name("ext_name", name); err != nil {
+			return s, nil, err
+		}
 	}
-	s.typ = "history:NumericIntervalHistoryExt"
-	if t, ok := args.Get("ext_type"); ok {
-		s.typ, _ = t.(string)
-	}
-	if !historyType(s.typ) {
-		return s, nil, plan.ToolError("ext_type must be one of " + joinStrings(historyExtTypes))
+	s.mode = "Interval"
+	if t, ok := args.Get("ext_type"); ok { // else the type that fits each point
+		if s.typ, _ = t.(string); !historyType(s.typ) {
+			return s, nil, plan.ToolError("ext_type must be one of " + joinStrings(historyExtTypes))
+		}
 	}
 	pattern, _ := args.Get("history_name")
 	if s.pattern, _ = pattern.(string); s.pattern == "" {
