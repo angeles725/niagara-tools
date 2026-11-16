@@ -83,6 +83,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_station_health"] = t.StationHealth
 	s.Handlers["n4_license_info"] = t.LicenseInfo
 	s.Handlers["n4_commissioning_report"] = t.CommissioningReport
+	registerSchedules(s, t)
 }
 
 func toolError(format string, a ...any) error {

@@ -724,6 +724,20 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_list_schedule_kinds",
+   "description": "Which kinds of schedule a station can hold and how each works, so no type name has to be known (reads no station, needs no session). schedule_kinds: boolean, numeric, enum, string (weekly schedules with special events: out follows the weekly time ranges, special events override them, a default output fills the rest), calendar (a list of days other schedules reference) and trigger (fires a topic at times of day on chosen days); each with its station type, value_type, the plain value it takes, default_output, which parts it has (weekly, special_events, dates, times), purpose, behaviour and what its out is usually linked to (by convention a writable's in16). event_kinds: date, date_range, week_and_day, custom and reference (the days of a calendar), each with its type, purpose, whether a calendar can hold it (in_calendar) and its fields with their allowed values. Also priority (top special event first), cleanup (passed date and date-range events are deleted by the station) and export_import (the station types that copy schedules between stations; no tool here).",
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
   }
  ],
  "write_tools": [
