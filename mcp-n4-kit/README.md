@@ -499,8 +499,8 @@ other.
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
 `n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
-(`destructiveHint: true`) `n4_remove_component`, `n4_rollback` and
-`n4_save_station`. Example:
+(`destructiveHint: true`) `n4_remove_component`, `n4_rollback`,
+`n4_save_station` and `n4_ack_alarm`. Example:
 
 ```
 go/bin/mcp-n4 --allow-writes --write-scope 'station:|slot:/Sandbox'
@@ -767,6 +767,21 @@ Destructive tools use the same pipeline:
   polling up to 30 s, and returns `persisted: true|false|unknown` plus the
   `evidence`. Without a station home it returns `unknown` and says how to configure
   it. It needs at least one `--write-scope` like every write.
+- `n4_ack_alarm(uuids, notes)` acknowledges 1 to 100 alarm records by uuid (as
+  `n4_read_alarms` returns them) with one call on the station's alarm channel:
+  `ackAlarms` with body `{ids: [<uuid>...], notes?}` (box-rt `BAlarmChannel.ackAlarms`;
+  the station sets the acking user, ackTime and ackState `ackPending`, updates the alarm
+  database and routes the ack). The plan's op is `{channel: "alarm", key: "ackAlarms",
+  body}`, journaled like any op. The dry run reads the records with
+  `alarm:|bql:select uuid, ackState, user where (uuid = '<u>' or ...)` and the same with
+  `ackState = 'unacked' and` (the state compared by its tag, never by localized text), and
+  refuses, naming them, a uuid with no record and a record already acknowledged or ack
+  pending; a malformed or repeated uuid is refused before any read. The read-back repeats
+  both reads: `verified` when no record is still unacked and each has a user; `mismatch`
+  when one stayed unacked or the station's reply, the list of alarm classes the user may not
+  acknowledge (operatorWrite on the class), is not empty
+  (`observed.permission_failed_classes`). An acknowledgement cannot be undone: the plan has
+  no inverse and `n4_rollback` cannot reverse it. It needs at least one `--write-scope`.
 
 ### Alarm extension recipe
 
@@ -887,7 +902,7 @@ go/bin/n4call --calls calls.jsonl -- go/bin/mcp-n4 --station <NAME>=https://<hos
 Each line of the file is `{"tool": NAME, "args": {...}}`; with `"write": true` the call is sent
 with `dry_run=true` and then executed with the `confirmation_token` it returned
 (`--dry-run-only` stops after the dry run). A write of a destructive tool (`n4_remove_component`,
-`n4_rollback`, `n4_save_station`: the server's `destructiveHint`) is refused with exit 2 before
+`n4_rollback`, `n4_save_station`, `n4_ack_alarm`: the server's `destructiveHint`) is refused with exit 2 before
 the server starts unless `--allow-destructive` or `--dry-run-only` is given, and a run with
 writes says on stderr whether they execute. Output is one JSON line per request (`tool`,
 `phase`, `error`, `result`); credential values are masked; the run stops with exit 1 at the
