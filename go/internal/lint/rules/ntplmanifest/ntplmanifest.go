@@ -13,7 +13,8 @@
 // file per concern: messages.go (names, bounds and every text), archive.go (the bounded zip read),
 // manifest.go (the XML read), declared.go (the module's declared dependencies), installed.go (the modules
 // an installation ships), rows.go (the rows of one archive), links.go (the rows of the links the walk did
-// not follow out of the module); this file composes them.
+// not follow out of the module), jar.go (a template module jar given as the root: each template inside it);
+// this file composes them.
 package ntplmanifest
 
 import (
@@ -25,13 +26,13 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rowpath"
 )
 
-// Spec registers the rule: [--niagara-home <dir>] <module-root>. A root with neither a build file nor a
+// Spec registers the rule: [--niagara-home <dir>] <module-root | template-module.jar>. A root with neither a build file nor a
 // template is the ERROR row (exit 3); its root is a module root, so n4lint --all leaves it out.
 func Spec() lint.Spec { return specWith(os.Getenv) }
 
 // specWith is Spec reading the environment through getenv.
 func specWith(getenv func(string) string) lint.Spec {
-	return lint.Spec{Root: rule{getenv: getenv}, Mode: lint.Valued, Options: []string{homeOption}, Usage: usage, EmptyError: lint.EmptyRow{Msg: emptyRoot}}
+	return lint.Spec{Root: rule{getenv: getenv}, Mode: lint.Valued, Options: []string{homeOption}, Usage: usage, EmptyError: lint.EmptyRow{Msg: emptyRoot}, FileRoot: namedJar}
 }
 
 // rule is the lint; option is the --niagara-home value of a run that gave one.
@@ -66,6 +67,9 @@ func (r rule) CheckRoot(root string) ([]lint.Finding, error) {
 	stock, err := h.shipped()
 	if err != nil {
 		return nil, err
+	}
+	if isJar(root) {
+		return checkJar(root, h, stock)
 	}
 	templates, outside, walkErr := lint.WalkFollow(root, lint.Selection{Names: templateNames, PrunePaths: lint.PartOutputs()})
 	mod, err := declaredIn(root)

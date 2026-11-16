@@ -89,3 +89,20 @@ _ntpl() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  ntpl-deps  $M/ModA-rt/src/app/App.napl: manifest dependencies neither declared"*": ghost-rt"* ]]
 }
+
+@test "NTPL15: a template module jar is checked template by template, each row naming <jar>!/<entry>" {
+  # Mutation: NTPL15 -- refusing a file root, or skipping the templates inside a jar, passes a template module that needs an unshipped module
+  local stage="$BATS_TEST_TMPDIR/jarstage" jar="$BATS_TEST_TMPDIR/ModT.jar"
+  mkdir -p "$stage/templates"
+  _ntpl "$stage/templates/Good.ntpl" "" baja fox-rt
+  _ntpl "$stage/templates/Needs.ntpl" "" baja ghost-rt
+  (cd "$stage" && zip -q -X "$jar" templates/Good.ntpl templates/Needs.ntpl)
+  run "$LINT" --niagara-home "$NH" "$jar"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  ntpl-deps  $jar!/templates/Needs.ntpl: manifest dependencies not shipped by the installation $NH (a template module jar declares no build dependencies): ghost-rt" ]
+  printf 'not a template\n' > "$stage/readme.txt"
+  (cd "$stage" && zip -q -X "$BATS_TEST_TMPDIR/Plain.jar" readme.txt)
+  run "$LINT" --niagara-home "$NH" "$BATS_TEST_TMPDIR/Plain.jar"
+  [ "$status" -eq 0 ]
+  [ "$output" = "PASS  lint-ntpl-manifest-deps  $BATS_TEST_TMPDIR/Plain.jar: no *.ntpl or *.napl entry in the jar (nothing to check)" ]
+}
