@@ -9,7 +9,8 @@ Exemplar to read before writing: `componentLinks-rt/srcTest/…/BLinkCheckTestTe
 
 > **NRE requirement:** `moduleTest` tests run on a native Windows Niagara install. From a WSL shell, run
 > Gradle's `niagaraTest` through `cmd.exe` (§ Running from WSL); only a WSL-side
-> Gradle with plugin 7.6.17 discovers 0 tests. Keep them as a separate QA tier — they verify inter-component
+> Gradle with plugin 7.6.17 discovers 0 tests. No running station is needed: the runner works on a throwaway copy of
+> the install and refuses an install a station is using. Keep them as a separate QA tier — they verify inter-component
 > link/station behaviour that pure JUnit cannot reach. `[ev: corpus B958 §958.3]` `[ev: retro testing-parity-btestng Δ1]`
 
 ---

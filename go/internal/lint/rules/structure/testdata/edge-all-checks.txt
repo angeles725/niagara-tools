@@ -16,7 +16,7 @@ WARN  lint-structure  A-rt/src/com/x/model  L3: pure-model package contains java
 WARN  lint-structure  A-rt/src/com/x/model/sub/model  L3: pure-model package contains javax.baja.* imports (advisory; isolate control logic from Baja for testability)
 FAIL  lint-structure  A-rt  L11: mixed BTest+JUnit srcTest without both :test-wb and junit gradle declarations
 FAIL  lint-structure  B-ux  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
-FAIL  lint-structure  B-ux  L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile)
+FAIL  lint-structure  B-ux  L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile; a theme module declares `type: theme` in its MODULE-MAP.md header, types/theme.md § 7)
 FAIL  lint-structure  D-se  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
 FAIL  lint-structure  E-doc  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
 FAIL  lint-structure  plain  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)

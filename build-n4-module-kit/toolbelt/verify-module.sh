@@ -33,6 +33,18 @@
 #               palette-type FAILs a t= that is not "<symbol>:<Type>" with an m=-declared symbol; palette-root
 #               WARNs every baja Folder (root or nested, any alias); palette-parse FAILs an unterminated
 #               comment. Entries: palette_scan below.
+#   wb-scaffold a -wb jar with a module.palette, 0 classes and 0 palette entries packages nothing — WARN, or
+#               FAIL under --strict; SKIP on any other jar.                                       [default]
+#   phantom-dep a module.xml <dependency> the part's *.gradle.kts does not declare with api()/nre() — WARN. [--src]
+#   moduletest  an -rt part with production .java under src/ and no moduleTest-include.xml — WARN, or FAIL
+#               under --strict; on every part, a test type registered in the production
+#               module-include.xml (its class under srcTest/ or in moduleTest-include.xml) — FAIL.   [--src]
+#   cross-module-type a @NiagaraProperty type = "<pkg>.<Class>" of another module (not javax.baja, com.tridium,
+#               com.tridiumx, com.honeywell, nor a package under this part's src) — WARN.           [--src]
+#   transient-operator a slot that combines the TRANSIENT and OPERATOR flags, matched outside comments and
+#               strings — WARN per line.                                                          [--src]
+#   compact3-import an -rt or -ux source importing java.awt, javax.swing or java.sql (Compact3 non-safe) — WARN
+#               per line; SKIP on any other jar.                                                  [--src]
 #   subscription-leak a TypeSubscriber subclass with no stopped() override — unsubscribeAll() is never
 #               called; typeSubscriptionMap holds strong refs, leaking until station restart — WARN.    [--src]
 #   slot-wall   more than 15 @NiagaraProperty on one class (flat slot wall) — WARN; FAIL in a strict  [--src]
@@ -42,6 +54,14 @@
 #               second requester is reported before deploy (types/logic.md § Restart & persistence);
 #               never a FAIL, also under --strict: an existing module keeps building. A call in a
 #               comment or a string is no call (javasrc tokens). [ev: retro double-station-save Δ3]  [--src]
+#   driver      driver mode, only when a class under src extends a Baja network or device base: the rows
+#               driver-scaffold (a wizard stub left in: FAIL or WARN), driver-comm-config (a bare framework
+#               comm config: FAIL), driver-discovery-alive (getDiscoveryObjects never calls isAlive(): FAIL),
+#               driver-server-enabled (a TCP config that listens by default: FAIL) and driver-manager (the
+#               Workbench managers of the group); no row on any other module (types/driver-authoring.md). [--src]
+#
+# The list above is every check the gate runs, in the order it runs them (the checks table,
+# go/internal/verifymodule; pinned by TestHeaderListsEveryCheck).
 #
 # Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict]
 #                         [--expected-signer ALIAS] <jar>...

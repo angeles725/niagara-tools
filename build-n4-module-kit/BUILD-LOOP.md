@@ -92,7 +92,7 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
    `~/.gradle/gradle.properties` in WSL/Linux, `%USERPROFILE%\.gradle\gradle.properties` on Windows (`$GRADLE_USER_HOME/gradle.properties` when `GRADLE_USER_HOME` is set),
    never in the repository; the repository keeps only the machine-independent
    `org.gradle.java.installations.auto-detect=false` (lint-structure L12). Gradle reads that file before the build root's `gradle.properties` and a command-line `-P` beats both, so `build.sh -P…` keeps working (`[ev: https://docs.gradle.org/current/userguide/build_environment.html, read 2026-10-24]`).
-   lint-structure L10 WARNs any of the four keys left in a client `gradle.properties`. Also align
+   lint-structure L10 WARNs any of the four keys left in a client `gradle.properties` (and FAILs them inside the kit's `fixtures/` or `templates/`, and `user_home` anywhere: `types/structure.md` L10). Also align
    `gradlePluginVersion` / `settingsPluginVersion` in `settings.gradle.kts` to a sibling of the same
    SDK family (each Niagara install ships exactly one plugin version — see
    `build-verify.md §Build target & plugin version`). `[ev: retro r10-user-level-gradle-keys Δ1]`
@@ -144,7 +144,7 @@ existing pure suite); the full builds and the non-skippable floor run once at ta
 | `jar` | packages compiled classes into the profile jar | always (kit default; `build.sh` uses this, not `build`) `[ev: corpus B807]` |
 | `build` | `jar` + `test` (JUnit) | only when JUnit tests must run alongside compile; heavier than `jar` alone `[ev: corpus B807]` |
 | `moduleTestJar` | packages test classes for the `niagaraTest` framework | combined with `niagaraTest` only `[ev: corpus B807]` |
-| `niagaraTest` | runs tests inside a live Niagara container | only when Niagara-framework tests exist; requires a running station; rare in WSL `[ev: corpus B807]` |
+| `niagaraTest` | runs the `moduleTestJar` station tests (`BTestNg`) with the install's `test.exe` | only when Niagara-framework tests exist; needs a native Windows Niagara install and no running station (the runner refuses an install a station is using); from WSL run it with `toolbelt/run-niagara-test.sh run`, through `cmd.exe` on a throwaway copy of the install (`types/moduleTest.md` § Running from WSL), since a WSL-side Gradle discovers 0 tests `[ev: corpus B807]` |
 | `bajadoc` | Baja API docs | release/on-demand only; not part of the normal build loop `[ev: corpus B807]` |
 
 Safe combinations: `clean slotomatic jar` — the only correct kit build (`build.sh` default, per-profile). `clean slotomatic build` if JUnit tests must run alongside. Avoid `jar` without `clean` (stale class outputs). `[ev: corpus B807]`

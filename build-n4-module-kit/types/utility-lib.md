@@ -46,12 +46,14 @@ The JDBC driver for Niagara's `rdbMySQL`/`rdbOracle` is not bundled this way: it
 Consumer: `Class.forName("net.sourceforge.jtds.jdbc.Driver")` + `DriverManager.getConnection(...)`.
 No concrete import from the lib jar — the boundary is classpath only.
 
+A library module declares its kind in the module map, or `lint-structure` L5 FAILs its `-rt` part (§ 6).
+
 ---
 
 ## 2 · Shape B — helper-type library (e.g. clUtils)
 
 Registers agent/abstract helper types that auto-attach to driver or framework types. **No palette**
-(agent helpers are framework-wired, not dragged). **Yes lexicon** (L4 requires ≥ 1 `key=value` per type).
+(agent helpers are framework-wired, not dragged; declare the kind, § 6). **Yes lexicon** (L4 requires ≥ 1 `key=value` per type).
 
 ```xml
 <!-- clUtils-rt META-INF/module.xml (other <module> attributes elided) -->
@@ -141,6 +143,31 @@ yours at runtime. Both are required — see `types/module-wiring.md` for the api
 **Gotcha:** `autoload='true'` loads the module at station startup regardless of whether any
 station component currently uses it. Keep utility-libs free of heavy static initialisers — they
 run on every station start even on platforms that have no active consumer.
+
+---
+
+## 6 · Structure lint — declare `type: library`
+
+`lint-structure` L5 FAILs an `-rt` part with no `module.palette` (`L5: module.palette missing for -rt profile`): on a
+component module that is the empty-palette footgun. Both shapes above ship no palette on purpose, and the lint never
+infers a library from the missing file. The module says it in the header of `<module-root>/MODULE-MAP.md`
+(`types/structure.md` § Module map):
+
+```
+# MODULE-MAP — acmeJdbc
+
+modularity: strict
+type: library
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| plumbing | rt | acmeJdbc-rt/acmeJdbc-rt.gradle.kts; acmeJdbc-rt/module-include.xml; acmeJdbc-rt/module-permissions.xml | — | build, packaging or the wrapped library's version |
+```
+
+With `type: library` an `-rt` part may ship no `module.palette`. A palette it does ship is judged like any other
+(no named entry is still an L5 FAIL), and every other rule applies unchanged: Shape B still needs its lexicon (L4)
+and, in a strict module, its `model/` classes and tests (L3). Pinned by the `kind-library-*` golden cases of
+`go/internal/lint/rules/structure` and `TestDeclaredKindMapPassesModuleMap`.
 
 ---
 

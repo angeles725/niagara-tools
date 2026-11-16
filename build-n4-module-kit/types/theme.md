@@ -170,9 +170,29 @@ Key NSS rules:
   vineflower `WbWebWidgetServlet.java:133,143-149`, the bajaux resolver); a module's own HTML must link
   `/module/web/rc/theme/theme.css` and `/module/theme<Name>/ux/theme.css` itself, or render through a bajaux
   view (`types/frontend-standard.md` § 1). `[ev: corpus B1349 §1349.2]` `[ev: retro devguide415-r3-web-session-headers Δ4]`
-- `nodeHome` in `gradle.properties` is required (LESS runs via Node). `[ev: types/structure.md §L10]`
+- `nodeHome` is required (LESS runs via Node). Set it in the user-level `gradle.properties`, never in the module
+  tree: `lint-structure` L10 WARNs the key in a client tree (`types/structure.md` § L10 doctrine).
 - No `module.palette` or `module.lexicon` is needed for a pure theme.
+- **Declare the kind, or `lint-structure` L9 FAILs the part.** A `-ux` part with no Java source and no named palette
+  entry is what L9 calls an empty skeleton, and a theme is exactly that shape. The lint never infers a theme from the
+  missing files; the module says it in the header of `<module-root>/MODULE-MAP.md` (`types/structure.md` § Module map):
+
+  ```
+  # MODULE-MAP — themeAcme
+
+  modularity: strict
+  type: theme
+
+  | Concern | Part | Files | Tests | Change here when |
+  |---|---|---|---|---|
+  | plumbing | ux | themeAcme-ux/themeAcme-ux.gradle.kts; themeAcme-ux/module-include.xml | — | build or packaging only |
+  | plumbing | ux | themeAcme-ux/nss/theme.nss; themeAcme-ux/ux/theme.css; themeAcme-ux/hx/theme.css | — | a colour, font or icon of the theme changes |
+  ```
+
+  With `type: theme` the part passes L9 when it holds at least one `.nss` file (§ 2: a theme without one is never
+  listed) and FAILs without one. Theme assets carry no test, so their rows are `plumbing` rows. Pinned by the
+  `kind-theme-*` golden cases of `go/internal/lint/rules/structure` and `TestDeclaredKindMapPassesModuleMap`.
 
 ---
 
-**See also:** `types/structure.md` (L9 empty-skeleton check, L10 `nodeHome` rule).
+**See also:** `types/structure.md` (L9 empty-skeleton check and the `type: theme` declaration, L10 `nodeHome` rule).

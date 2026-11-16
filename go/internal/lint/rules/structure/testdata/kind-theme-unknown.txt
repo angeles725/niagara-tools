@@ -1,0 +1,33 @@
+-- args --
+@DIR@/kind-theme-unknown/themeAcme
+-- want --
+exit 1
+FAIL  lint-structure  themeAcme-ux  L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile; a theme module declares `type: theme` in its MODULE-MAP.md header, types/theme.md § 7)
+-- stderr --
+-- kind-theme-unknown/.git/HEAD --
+ref: refs/heads/main
+-- kind-theme-unknown/themeAcme/MODULE-MAP.md --
+# MODULE-MAP — themeAcme
+
+modularity: strict
+type: library # not a theme
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| plumbing | ux | themeAcme-ux/themeAcme-ux.gradle.kts; themeAcme-ux/module-include.xml | — | build or packaging only |
+| plumbing | ux | themeAcme-ux/nss/theme.nss; themeAcme-ux/ux/theme.css; themeAcme-ux/hx/theme.css | — | a colour, font or icon of the theme changes |
+-- kind-theme-unknown/themeAcme/themeAcme-ux/hx/theme.css --
+body { font-family: sans-serif; }
+-- kind-theme-unknown/themeAcme/themeAcme-ux/module-include.xml --
+<types/>
+-- kind-theme-unknown/themeAcme/themeAcme-ux/nss/theme.nss --
+#define accent = #336699;
+.button { background: $accent; }
+-- kind-theme-unknown/themeAcme/themeAcme-ux/themeAcme-ux.gradle.kts --
+moduleManifest {
+  moduleName.set("themeAcme")
+  runtimeProfile.set(ux)
+  defines { define("themeName", "themeAcme") }
+}
+-- kind-theme-unknown/themeAcme/themeAcme-ux/ux/theme.css --
+body { font-family: sans-serif; }

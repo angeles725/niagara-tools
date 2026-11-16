@@ -9,7 +9,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-// Strict L3 and L3b (types/structure.md § L1–L11): a module whose MODULE-MAP.md says modularity: strict keeps
+// Strict L3 and L3b (types/structure.md § The good-module checklist): a module whose MODULE-MAP.md says modularity: strict keeps
 // every Baja-free class in a role package, every model/ class free of framework imports and tested, and
 // model/ independent of the module's other packages. A legacy module (or one with no map) keeps the
 // advisory L3 directory WARN of pureModel, byte for byte.

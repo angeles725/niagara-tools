@@ -41,15 +41,6 @@ type run struct {
 // check is one check_* function: false is its `return 1` (a FAIL that fails the run).
 type check func(*run) bool
 
-// checks is the bash loop's order.
-var checks = []check{
-	(*run).bytecode, (*run).signed, (*run).types, (*run).baja, (*run).storedCheck, (*run).typeCount,
-	(*run).facets, (*run).facetPresence, (*run).ordLiteral, (*run).rcBackup, (*run).palette, (*run).wbScaffold,
-	(*run).phantomDep, (*run).moduleTest, (*run).crossModuleType, (*run).transientOperator,
-	(*run).compact3Imports, (*run).subscriptionLeak, (*run).slotWall, (*run).stationSave,
-	(*run).driver,
-}
-
 // Main is verify-module.sh. `coverage` and `--plano` are read before any flag.
 func Main(args []string, s cli.Stdio) int {
 	if len(args) >= 1 && args[0] == "coverage" {
@@ -89,7 +80,7 @@ func gate(args []string, s cli.Stdio) int {
 		}
 		r.jar = jf
 		for _, c := range checks {
-			if !c(r) {
+			if !c.run(r) {
 				r.failed = true
 			}
 			if r.unread != "" {

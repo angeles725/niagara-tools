@@ -1,0 +1,30 @@
+-- args --
+@DIR@/kind-theme-nonss/themeAcme
+-- want --
+exit 1
+FAIL  lint-structure  themeAcme-ux  L9: declared theme (type: theme in MODULE-MAP.md) holds no .nss style sheet (a theme without nss/*.nss is never listed — add it or delete the profile)
+-- stderr --
+-- kind-theme-nonss/.git/HEAD --
+ref: refs/heads/main
+-- kind-theme-nonss/themeAcme/MODULE-MAP.md --
+# MODULE-MAP — themeAcme
+
+modularity: strict
+type: theme
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| plumbing | ux | themeAcme-ux/themeAcme-ux.gradle.kts; themeAcme-ux/module-include.xml | — | build or packaging only |
+| plumbing | ux | themeAcme-ux/ux/theme.css; themeAcme-ux/hx/theme.css | — | a colour, font or icon of the theme changes |
+-- kind-theme-nonss/themeAcme/themeAcme-ux/hx/theme.css --
+body { font-family: sans-serif; }
+-- kind-theme-nonss/themeAcme/themeAcme-ux/module-include.xml --
+<types/>
+-- kind-theme-nonss/themeAcme/themeAcme-ux/themeAcme-ux.gradle.kts --
+moduleManifest {
+  moduleName.set("themeAcme")
+  runtimeProfile.set(ux)
+  defines { define("themeName", "themeAcme") }
+}
+-- kind-theme-nonss/themeAcme/themeAcme-ux/ux/theme.css --
+body { font-family: sans-serif; }

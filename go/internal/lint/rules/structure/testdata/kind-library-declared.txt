@@ -1,0 +1,36 @@
+-- args --
+@DIR@/kind-library-declared/acmeJdbc
+-- want --
+exit 0
+-- stderr --
+-- kind-library-declared/.git/HEAD --
+ref: refs/heads/main
+-- kind-library-declared/acmeJdbc/MODULE-MAP.md --
+# MODULE-MAP — acmeJdbc
+
+modularity: strict
+type: library
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| plumbing | rt | acmeJdbc-rt/acmeJdbc-rt.gradle.kts; acmeJdbc-rt/module-include.xml; acmeJdbc-rt/module-permissions.xml | — | build, packaging or the wrapped library's version |
+-- kind-library-declared/acmeJdbc/acmeJdbc-rt/acmeJdbc-rt.gradle.kts --
+moduleManifest {
+  moduleName.set("acmeJdbc")
+  runtimeProfile.set(rt)
+}
+dependencies {
+  nre(":nre")
+  api(":baja")
+}
+-- kind-library-declared/acmeJdbc/acmeJdbc-rt/module-include.xml --
+<types/>
+-- kind-library-declared/acmeJdbc/acmeJdbc-rt/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="station">
+    <req-permission>
+      <name>NETWORK_COMMUNICATION</name>
+      <purposeKey>The wrapped JDBC driver opens the database connection</purposeKey>
+    </req-permission>
+  </niagara-permission-groups>
+</permissions>
