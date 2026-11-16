@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# pre-push — the kit's delivery gate: client-identifier guard, live-doctrine citation gate, changelog gate
-# and the continuity + retro gate (build-n4-module campaign PR2). This file is the git hook and a launcher
+# pre-push — the kit's delivery gate: client-identifier guard, live-doctrine citation gate, CI lints of the
+# changed files, changelog gate and the continuity + retro gate (build-n4-module campaign PR2). This file is the git hook and a launcher
 # only: every allow/refuse decision and every message is in the Go command it runs.
 #
 # Implementation: go/internal/prepush (go/cmd/pre-push), built on demand by go/go-tool.sh `go_tool_bin`,
@@ -22,14 +22,21 @@
 #      the resolver runs `kit-cite-resolve --strict` on the pushed live set. Findings (exit 1) or any tool
 #      failure refuse; only exit 3 naming an absent research/modules/clients/memory root skips, with a named
 #      stderr line. It is local-only: GitHub runners hold none of those roots, so ci.yml cannot run it.
-#   4. Changelog gate (go/internal/changelog, the gate of scripts/changelog-gate.sh; CONTRIBUTING.md § 6.2).
-#   5. Retro gate: a range that changes build-relevant kit files is BLOCKED unless it also carries a ledger
+#   4. CI lints of the changed files: scripts/ci-local.sh --changed --range <pushed range> runs the kit's
+#      pinned shellcheck, bats lints and gofmt over the files the range changes (output on stderr); a failure
+#      refuses. A push with no scripts/ci-local.sh in the work tree skips it, with a named stderr line.
+#      (retro 2026-11-15 coordination-stretch C3)
+#   5. Changelog gate (go/internal/changelog, the gate of scripts/changelog-gate.sh; CONTRIBUTING.md § 6.2).
+#   6. Retro gate: a range that changes build-relevant kit files is BLOCKED unless it also carries a ledger
 #      update (a ledger.d/ fragment or a BUILD-STATE.src.md edit) + a pending retro, OR a
 #      `Retro: none (trivial: <reason>)` trailer, OR a `Retro: promotion (folds …)` trailer with a retro
 #      header flipped pending -> folded or a ledger update. BUILD-STATE.md and retros/INDEX.md are GENERATED
 #      and NOT committed, so the content half sweeps FRESH kit-state output in a temp dir: a malformed
 #      fragment, source or retro header fails the push. A range that changes BUILD-STATE.src.md, ledger.d/
 #      or retros/ runs that sweep at every exit, even the trivial one. [ev: retro ledger-generated-not-committed]
+#      Retros and fragments are read from build-n4-module-kit/retros/ and build-n4-module-kit/ledger.d/ only (a
+#      repository-level retros/ does not count); the refusal names both directories and the two ways out.
+#      (retro 2026-11-15 coordination-stretch C6, T13)
 # A git failure, an unreadable input or a missing tool refuses. So does this launcher: with no Go toolchain,
 # a failed build or a missing go/ the push is refused, never let through unchecked.
 #

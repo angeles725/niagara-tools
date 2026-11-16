@@ -84,3 +84,13 @@ Changelog: none (fixture)"
   [[ "$output" == *"(1) a pending retro under build-n4-module-kit/retros/ plus a build-n4-module-kit/ledger.d/ fragment"* ]]
   [[ "$output" == *"(2) a 'Retro: none (trivial: <reason>)' trailer in a commit of the range"* ]]
 }
+
+# T13: the hook's header comment is its contract for a reader; it lagged #696 (no CI-lints step, the old retro
+# refusal). (retro 2026-11-15 coordination-stretch T13)
+@test "PCL4: the hook header names the CI-lints step, its skip, and the retro refusal's directories and ways out" {
+  H="$BATS_TEST_DIRNAME/../.githooks/pre-push"
+  grep -q 'CI lints of the changed files: scripts/ci-local.sh --changed --range <pushed range>' "$H"
+  grep -q 'no scripts/ci-local.sh in the work tree skips it' "$H"
+  grep -q 'build-n4-module-kit/retros/ and build-n4-module-kit/ledger.d/ only' "$H"
+  grep -q 'the refusal names both directories and the two ways out' "$H"
+}

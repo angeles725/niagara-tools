@@ -8,7 +8,12 @@
 # Go source, then this script execs it. Needs `go` on PATH to build.
 #
 # Usage:  host-budget.sh [--cgroup-root DIR] [--proc-root DIR] [--pids-pct N] [--gocache DIR]
-#                        [--gocache-gb N] [--disk-pct N] [--mount PATH]... [--strict]
+#                        [--gocache-gb N] [--disk-pct N] [--disk-min-free SIZE] [--mount PATH]... [--strict]
+# Disk rows: / and every --mount (default /mnt/c when present), each checked once.
+# --disk-pct N (default 90; scripts/ci-local.sh passes 95) FAILs a mount above N% used;
+# --disk-min-free SIZE (40G, 500M) replaces the percent and FAILs a mount with less free space. Each row names the percent, the free space and the limit:
+#   (N% used, X.XGB free = N bytes, fail above P%)   or, with the floor, (..., fail below X.XGB free).
+# (retro 2026-11-15 coordination-stretch T2, T13)
 # Exits:  0 every row PASS, or WARN rows without --strict · 1 a FAIL row, or a WARN row under --strict ·
 #         3 usage error, an unreadable cgroup root, no Go toolchain or a failed build
 # VCS-free by design (kit-links L2).

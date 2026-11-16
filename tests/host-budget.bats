@@ -107,3 +107,13 @@ hb() {
   run bash "$BATS_TEST_TMPDIR/hb-link.sh" stray-argument
   [ "$status" -eq 3 ]
 }
+
+# T13: the wrapper's header is what `sed -n 1,20p` shows a reader; it lagged #696 (no --disk-min-free, no row
+# format). (retro 2026-11-15 coordination-stretch T13)
+@test "HB8: the toolbelt wrapper header documents both disk options, their defaults and the disk row format" {
+  H="$BATS_TEST_DIRNAME/../build-n4-module-kit/toolbelt/host-budget.sh"
+  grep -q '\[--disk-pct N\] \[--disk-min-free SIZE\]' "$H"
+  grep -q -- '--disk-pct N (default 90; scripts/ci-local.sh passes 95)' "$H"
+  grep -q -- '--disk-min-free SIZE (40G, 500M) replaces the percent' "$H"
+  grep -q '(N% used, X.XGB free = N bytes, fail above P%)' "$H"
+}
