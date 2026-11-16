@@ -2,8 +2,10 @@ package readtools
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
@@ -20,6 +22,95 @@ const (
 	notDescribedNote    = "the station did not describe type %s: its declared properties at their default are not listed"
 	unknownTypeNote     = "the station does not know type %s: its declared properties at their default are not listed"
 )
+
+// declared is a listing with its defaults: nodes holding the declared defaults the load left
+// out, the names added under each listed path (inherited first, as declared), every added path
+// (the property and the children of its default) and a note when a contract could not be read.
+type declared struct {
+	nodes  *pyjson.Object
+	added  map[string][]string
+	paths  map[string]bool
+	note   string
+	copied bool // nodes is this listing's own copy, not the loaded nodes
+}
+
+// withDefaults adds to nodes the declared properties at their default of the components at
+// paths. A client that cannot read type contracts adds nothing and says nothing.
+func (t *Tools) withDefaults(nodes *pyjson.Object, paths []string) *declared {
+	d := &declared{nodes: nodes, added: map[string][]string{}, paths: map[string]bool{}}
+	tl, readsTypes := t.Ctx.Session.Client.(typeLoader)
+	pc, resolves := t.Ctx.Session.Client.(plan.Client)
+	if !readsTypes || !resolves {
+		return d
+	}
+	specs, seen := []string{}, map[string]bool{}
+	for _, p := range paths {
+		if spec := nodeType(nodes, p); spec != "" && !seen[spec] {
+			seen[spec] = true
+			specs = append(specs, spec)
+		}
+	}
+	types, err := loadContracts(tl, &t.undescribed, specs)
+	if err != nil {
+		d.note = t.Ctx.Scrub(fmt.Sprintf(contractsUnreadNote, err.Error()))
+		return d
+	}
+	notes := map[string]bool{}
+	var order []string
+	for _, p := range paths {
+		names, note := declaredProps(types, nodeType(nodes, p))
+		if note != "" && !notes[note] {
+			notes[note] = true
+			order = append(order, note)
+		}
+		if err := d.add(pc, p, names); err != nil {
+			d.note = t.Ctx.Scrub(fmt.Sprintf(contractsUnreadNote, err.Error()))
+			return &declared{nodes: nodes, added: map[string][]string{}, paths: map[string]bool{}, note: d.note}
+		}
+	}
+	d.note = strings.Join(order, "; ")
+	return d
+}
+
+// add resolves each declared name the load left out under path to its declared default. The
+// lookup runs on the owner's node alone (plan.Resolve copies what it is given), and the default
+// with its children joins d.nodes, copied from the loaded nodes once.
+func (d *declared) add(pc plan.Client, path string, names []string) error {
+	owner := pyjson.NewObject()
+	owner.Set("", box.Node(d.nodes, path))
+	for _, name := range names {
+		full := childPath(path, name)
+		if box.Node(d.nodes, full) != nil {
+			continue
+		}
+		got, err := plan.Resolve(pc, owner, name)
+		if err != nil {
+			return err
+		}
+		if !d.copied {
+			d.nodes, d.copied = copyNodes(d.nodes), true
+		}
+		d.added[path] = append(d.added[path], name)
+		d.paths[full] = true
+		for _, k := range got.Keys() {
+			if k != "" {
+				v, _ := got.Get(k)
+				d.nodes.Set(childPath(path, k), v)
+				d.paths[childPath(path, k)] = true
+			}
+		}
+	}
+	return nil
+}
+
+func copyNodes(nodes *pyjson.Object) *pyjson.Object {
+	out := pyjson.NewObject()
+	for _, k := range nodes.Keys() {
+		v, _ := nodes.Get(k)
+		out.Set(k, v)
+	}
+	return out
+}
 
 // declaredProps is the property names spec and its supertypes declare, inherited first (a name a
 // subtype declares again keeps its first place), and a note when the walk met a type the station

@@ -65,7 +65,8 @@ func slotEntry(nodes *pyjson.Object, name string) (*pyjson.Object, error) {
 }
 
 // ReadSlots is n4_read_slots: every slot of ord, Status complexes decoded (depth 2: the slots
-// and the value/status children of each Status slot).
+// and the value/status children of each Status slot), then the declared properties the load
+// left out at their default (withDefaults), each marked default.
 func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 	ord, err := ordArg(args)
 	if err != nil {
@@ -83,7 +84,19 @@ func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 		}
 		slots = append(slots, entry)
 	}
-	return obj("ord", ord, "slots", slots, "elapsed_ms", elapsed), nil
+	d := t.withDefaults(nodes, []string{""})
+	for _, name := range d.added[""] {
+		entry, err := d.defaultSlot(name, name)
+		if err != nil {
+			return nil, err
+		}
+		slots = append(slots, entry)
+	}
+	out := obj("ord", ord, "slots", slots, "elapsed_ms", elapsed)
+	if d.note != "" {
+		out.Set("defaults_note", d.note)
+	}
+	return out, nil
 }
 
 // statusEntry completes the entry of a slot whose type is baja:Status itself: a simple whose
