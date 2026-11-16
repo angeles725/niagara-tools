@@ -61,7 +61,7 @@ func ValidateHistoryId(id string) error {
 		!slotNameRe.MatchString(parts[2]) || len(parts[2]) > MaxHistoryNameLength {
 		return valueError(fmt.Sprintf(historyIdRule, MaxHistoryNameLength, pyjson.StrRepr(id)))
 	}
-	return checkEscapes("history_id", id, pathForbidden)
+	return nil
 }
 
 // ResolveHistoryId is id when it holds a '/', else the bare history name id of station as
@@ -72,9 +72,6 @@ func ResolveHistoryId(id, station string) (string, error) {
 	}
 	if !slotNameRe.MatchString(id) || len(id) > MaxHistoryNameLength {
 		return "", valueError(fmt.Sprintf(nameRule, MaxHistoryNameLength, pyjson.StrRepr(id)))
-	}
-	if err := checkEscapes("history_id", id, pathForbidden); err != nil {
-		return "", err
 	}
 	full := "/" + station + "/" + id
 	return full, ValidateHistoryId(full)

@@ -293,15 +293,19 @@ It sends `GET /ord/<url-encoded alarm:|bql:<query>|view:file:ITableToCsv>` (or
 `history:<id>|bql:...`), the same CSV view and reply shape as a station base, and stays
 read-only: a non-select, `|`, a control character or an over-long query is refused before any
 request, and so is any other scheme (`file:`, `ip:`, a history id that is not two slot names);
-a base under `station:` that is not a slot path keeps its slot-path refusal. `n4_inventory`
-still reads station subtrees only.
+a base under `station:` that is not a slot path keeps its slot-path refusal. Niagara decodes
+`$xx` / `$uxxxx` escapes inside a BQL body (`BqlQuery.make`), so those checks (and the `from`
+rule of a table base, and `n4_neql_query`'s `bql` select) also run on the decoded text
+(`bql.DecodeForBql`, one pass of `EscUtil.unescape`; a malformed escape is refused): live,
+`select uuid$20from$20control:NumericPoint` on `alarm:` passed the no-`from` rule before.
+`n4_inventory` still reads station subtrees only.
 History records: `n4_read_history(history_id | ext_ord, limit=20, period | start/end, summary=false,
 summary_max_rows=100000)` returns
 the last `limit` records (at most 1000) of one history, newest first (`order: newest_first`), so
 a rollout proves records arrive, not only that the extension runs. Give exactly one of
 `history_id` (`/<station>/<history name>`, two slot-name segments as `BHistoryId` parses them;
-anything else, `|`, `?`, `;` and spaces included, is refused before any request, and so is a `$xx` /
-`$uxxxx` escape that decodes to `|` or a control character: the station decodes them in the `/ord/` path) or `ext_ord`
+anything else, `|`, `?`, `;` and spaces included, is refused before any request; the id is matched
+escaped, so a `$xx` escape in it is a name character and is never decoded) or `ext_ord`
 (a `station:|slot:/...` history extension ORD, resolved with one
 `select slotPath, historyConfig.id from history:HistoryExt` at the component holding it). It
 sends `GET /ord/<url-encoded history:<id>[?<range>]|bql:select timestamp, value, status order by
@@ -347,11 +351,12 @@ which would end the bql part of the ORD (HTTP 400), `alarm_class` (a slot name) 
 `timestamp.millis >= <epoch ms>` / `<=` (a span back from now, `30m`, `24h`, `7d`, is resolved first).
 `source_glob` (ORD characters and `*` only: no quote, space, `$` or `|`; `*` also matches an escaped
 character) becomes `source like '<glob>'`, e.g. `*slot:/Drivers/Net/D*`. Every value is checked
-before any request against its grammar and then as the station reads it: the station decodes
-`$xx` / `$uxxxx` in the `/ord/` path before it parses the BQL (live: `$27` became a quote and
-widened a filter to every record), so `source` and `alarm_class` are decoded exactly like
-`EscUtil.unescape` (repeatedly, so `$2427` counts as `$27`) and refused when they decode to a quote,
-space, `|` or control character; no quote, wildcard or BQL of the caller reaches the station; `where` echoes the clause sent. Rows are
+before any request against its grammar and then as BQL reads it: Niagara decodes `$xx` / `$uxxxx`
+inside a BQL body (`BqlQuery.make`; live, `alarm_class=x$27$20or$20alarmClass$20like$20$27$2a`
+matched 27 of 27 records), so `source` and `alarm_class` are decoded once like `EscUtil.unescape`
+(`bql.DecodeForBql`; `$2427` is the literal text `$27`, as the station reads it) and refused when
+they decode to a quote, space, `*`, `|` or control character; no quote, wildcard or BQL of the
+caller reaches the station; `where` echoes the clause sent. Rows are
 `{timestamp, uuid, source, source_state, ack_state, alarm_class, priority, msg_text}` read by
 position, as the station renders them (`msg_text` may be a raw `%lexicon(...)%` pattern; once the
 source is back to normal the record holds the toNormal text), plus `timestamp_iso`, `normal_time` and

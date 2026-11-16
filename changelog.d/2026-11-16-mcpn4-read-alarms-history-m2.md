@@ -9,10 +9,11 @@
   `normal_time` and `ack_time`; a `source_glob` like-pattern filter and relative `since`/`until`.
   "A cuanto llego" was six manual steps in the 2026-11-16 client A over-amps retro; it is now one call.
 
-### Security — mcp-n4: values are checked as the station decodes them
+### Security — mcp-n4: BQL values are checked as BQL decodes them
 
-- The station decodes `$xx` / `$uxxxx` in an `/ord/` path before it parses the BQL, so `n4_read_alarms`
-  `source` and `alarm_class` holding `$27` could close the quoted literal (live: a source filter matched every
-  alarm record). `source`, `alarm_class` and `history_id` are now decoded like `EscUtil.unescape`
-  (new `ordescape` package) and refused, before any request, when they decode to a quote, space, `|` or control
-  character (`history_id`: `|` or control). `source_glob` takes no `$`.
+- Niagara decodes `$xx` / `$uxxxx` escapes inside a BQL body (`BqlQuery.make`), so `n4_read_alarms`
+  `source` and `alarm_class` holding `$27` could close the quoted literal (live: `alarm_class` matched 27 of 27
+  alarm records), and `n4_bql_query` / `n4_neql_query` selects could pass a local check through an escape
+  (`select uuid$20from$20control:NumericPoint` on `alarm:` passed the no-from rule). `bql.DecodeForBql` (one pass
+  of `EscUtil.unescape`, a malformed escape refused) now feeds every one of those checks. ORD paths and history
+  ids are matched escaped by the station and are never decoded. `source_glob` takes no `$`.

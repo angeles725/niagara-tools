@@ -27,8 +27,21 @@ const (
 )
 
 // checkQueryText refuses a stripped query holding '|', a control character, or more than
-// MaxQueryLength code points: the checks every base shares.
+// MaxQueryLength code points, in its text or in the text BqlQuery.make decodes it to
+// (DecodeForBql): the checks every base shares.
 func checkQueryText(q string) error {
+	d, err := decodedQuery("query", q)
+	if err != nil {
+		return err
+	}
+	if err := checkPlainText(d); err != nil {
+		return err
+	}
+	return checkPlainText(q)
+}
+
+// checkPlainText is checkQueryText on one form of the text.
+func checkPlainText(q string) error {
 	switch {
 	case strings.Contains(q, "|"):
 		return valueError("query must not contain '|': only one select is composed into the ORD")
@@ -54,7 +67,8 @@ func validateTableQuery(query any, base string) (string, error) {
 		return "", valueError(fmt.Sprintf(tableSelectRule, base))
 	}
 	// Live: history: ignores a from clause and answers the whole history; alarm: answers 404.
-	if fromRe.MatchString(quotedRe.ReplaceAllString(q, "''")) {
+	d, _ := DecodeForBql(q) // checkQueryText refused a malformed escape
+	if fromRe.MatchString(quotedRe.ReplaceAllString(q, "''")) || fromRe.MatchString(quotedRe.ReplaceAllString(d, "''")) {
 		return "", valueError(fmt.Sprintf(tableFromRule, base))
 	}
 	return q, nil

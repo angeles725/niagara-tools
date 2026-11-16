@@ -65,7 +65,7 @@ func AlarmWhere(f AlarmFilter) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if err := checkEscapesShown("source", path, f.Source, literalForbidden); err != nil {
+		if err := checkLiteral("source", path, f.Source); err != nil {
 			return "", err
 		}
 		conds = append(conds, fmt.Sprintf(alarmSourceClause, path))
@@ -80,7 +80,7 @@ func AlarmWhere(f AlarmFilter) (string, error) {
 		if !slotNameRe.MatchString(f.AlarmClass) {
 			return "", valueError(fmt.Sprintf(alarmClassRule, f.AlarmClass))
 		}
-		if err := checkEscapes("alarm_class", f.AlarmClass, literalForbidden); err != nil {
+		if err := checkLiteral("alarm_class", f.AlarmClass, f.AlarmClass); err != nil {
 			return "", err
 		}
 		conds = append(conds, "alarmClass = '"+f.AlarmClass+"'")
