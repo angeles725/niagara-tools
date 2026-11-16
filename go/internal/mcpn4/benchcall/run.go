@@ -13,10 +13,11 @@ import (
 
 // options is the parsed command line.
 type options struct {
-	calls      string
-	dryRunOnly bool
-	timeout    float64
-	server     []string
+	calls       string
+	dryRunOnly  bool
+	destructive bool // --allow-destructive
+	timeout     float64
+	server      []string
 }
 
 // Main runs the command; environ is the environment the server is started with and the one the
@@ -28,9 +29,15 @@ func Main(argv []string, s cli.Stdio, environ []string) int {
 		return 2
 	}
 	calls, err := loadCalls(o.calls)
+	if err == nil {
+		err = checkDestructive(calls, o)
+	}
 	if err != nil {
 		fmt.Fprintf(s.Err, "%s: %s\n", prog, err)
 		return 2
+	}
+	if mode := writeMode(calls, o); mode != "" {
+		fmt.Fprintf(s.Err, "%s: %s\n", prog, mode)
 	}
 	secrets := secretsOf(o.server, environ)
 	client, err := livesmoke.StartClient(o.server, "", environ, time.Duration(o.timeout*float64(time.Second)))
@@ -69,6 +76,8 @@ func parse(argv []string) (*options, error) {
 			return o, nil
 		case "--dry-run-only":
 			o.dryRunOnly = true
+		case "--allow-destructive":
+			o.destructive = true
 		case "--calls", "--call-timeout":
 			if i+1 >= len(argv) {
 				return nil, fmt.Errorf("%s needs a value", a)

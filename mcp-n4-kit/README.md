@@ -560,7 +560,10 @@ go/bin/n4call --calls calls.jsonl -- go/bin/mcp-n4 --station <NAME>=https://<hos
 
 Each line of the file is `{"tool": NAME, "args": {...}}`; with `"write": true` the call is sent
 with `dry_run=true` and then executed with the `confirmation_token` it returned
-(`--dry-run-only` stops after the dry run). Output is one JSON line per request (`tool`,
+(`--dry-run-only` stops after the dry run). A write of a destructive tool (`n4_remove_component`,
+`n4_rollback`, `n4_save_station`: the server's `destructiveHint`) is refused with exit 2 before
+the server starts unless `--allow-destructive` or `--dry-run-only` is given, and a run with
+writes says on stderr whether they execute. Output is one JSON line per request (`tool`,
 `phase`, `error`, `result`); credential values are masked; the run stops with exit 1 at the
 first tool error. The server command line after `--` is the operator's: scopes, tier opt-ins
 and station homes are whatever it names, n4call adds nothing.

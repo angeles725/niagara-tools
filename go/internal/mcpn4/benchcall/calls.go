@@ -13,6 +13,7 @@ type call struct {
 	tool  string
 	args  *pyjson.Object
 	write bool
+	line  int // 1-based line in the calls file
 }
 
 // loadCalls reads the calls file: one JSON object per non-blank line. Any line that is not
@@ -31,6 +32,7 @@ func loadCalls(path string) ([]call, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s:%d: %s", path, i+1, err)
 		}
+		c.line = i + 1
 		calls = append(calls, c)
 	}
 	if len(calls) == 0 {
