@@ -16,15 +16,20 @@ import (
 // readyUsage is the --ready paragraph of the usage text.
 const readyUsage = "  --ready [--niagara-home <dir>] [--expect-niagara <ver>] [--expect-signer <alias>] [--json]\n" +
 	"    the ready-to-load report of each built jar (<artifact>/build/libs): module, niagara-target, niagara-home,\n" +
-	"    signer, verify-module, schema-risk, sha256 and mirror rows, then \"READY TO LOAD: <MOD> <version> for\n" +
-	"    Niagara <x> (sha256 <12>)\" and the post-load read-back, or \"NOT READY\" with the failing rows; exit 0 ready,\n" +
-	"    1 not ready, 3 env (an ERROR row or no built jar). --target-version and --first-deploy apply; it refuses\n" +
-	"    every lint-run option (--lint-only, --write-baseline, --no-baseline, --console-dir, --profile, --legacy,\n" +
-	"    --wiring-map), and --json/--expect-* need --ready.\n"
+	"    signer, verify-module, schema-risk, sha256 and mirror rows (an artifact with no built jar is one FAIL jar\n" +
+	"    row), then \"READY TO LOAD: <MOD> <version> for Niagara <x> (sha256 <12>)\" and the post-load read-back,\n" +
+	"    or \"NOT READY\" with the failing rows; exit 0 ready, 1 not ready, 3 env (an ERROR row, a module root that\n" +
+	"    cannot be listed, or no built jar). --target-version and --first-deploy apply; it refuses every lint-run\n" +
+	"    option (--lint-only, --write-baseline, --no-baseline, --console-dir, --profile, --legacy, --wiring-map),\n" +
+	"    and --json/--expect-* need --ready.\n"
 
 // readyMain runs the ready report over the jars of o.root (a directory) and returns its exit code.
 func readyMain(o options, s cli.Stdio, environ []string) int {
-	artifacts, _ := discover(o.root)
+	artifacts, err := discover(o.root)
+	if err != nil { // never "no built jar" for a root that could not be read
+		fmt.Fprintf(s.Err, "report-module: --ready: cannot list %s: %s\n", o.root, errText(err))
+		return ExitEnv
+	}
 	tb := toolbelt(s)
 	if !isDir(tb) {
 		fmt.Fprintf(s.Err, "report-module: toolbelt not found: %s\n", tb)
@@ -32,12 +37,17 @@ func readyMain(o options, s cli.Stdio, environ []string) int {
 	}
 	x := runner{tb: tb, env: memberEnv(environ)}
 	var jars []readyJar
+	built := 0
 	for _, a := range artifacts {
-		if jar := firstJar(a.dir + "/build/libs"); jar != "" {
+		switch jar := firstJar(a.dir + "/build/libs"); {
+		case jar != "":
 			jars = append(jars, assess(o, x, a, jar))
+			built++
+		case isModuleArtifact(a):
+			jars = append(jars, unbuilt(a))
 		}
 	}
-	if len(jars) == 0 {
+	if built == 0 {
 		fmt.Fprintf(s.Err, "report-module: --ready: no built jar under %s/*/build/libs\n", o.root)
 		return ExitEnv
 	}
@@ -78,11 +88,11 @@ func assess(o options, x runner, a artifact, jar string) readyJar {
 	add(niagaraHome(o.niagaraHome, home, o.expectNiagara))
 	add(signerRow(jar, o.expectSigner))
 	add(verifyGate(x, o, jar))
-	st, detail := schemaRiskVerdict(x, a.dir, o.firstDeploy)
-	if st == skip && !o.firstDeploy {
-		st = failed // no deployed baseline: the load would not be checked against what the station runs
+	v := schemaRiskVerdict(x, a.dir, o.firstDeploy)
+	if v.missingBaseline {
+		v.status = failed // no deployed baseline: the load would not be checked against what the station runs
 	}
-	add(st, schemaRiskCheck, detail)
+	add(v.status, schemaRiskCheck, v.detail)
 	if info.sum == "" {
 		add(errored, "sha256", "the jar cannot be read")
 	} else {
@@ -97,6 +107,27 @@ func assess(o options, x runner, a artifact, jar string) readyJar {
 	default:
 		j.Niagara = ">= " + shownOr(info.bajaFloor, "?")
 	}
+	j.conclude()
+	return j
+}
+
+// isModuleArtifact says whether a directory of the module root is one of its artifacts (an <MOD>-rt/-ux/-wb
+// subproject: module-include.xml, its own <name>.gradle.kts or a build.gradle[.kts]), so a docs/ or gradle/
+// directory beside them is never reported as an unbuilt artifact.
+func isModuleArtifact(a artifact) bool {
+	for _, f := range []string{"module-include.xml", a.name + ".gradle.kts", "build.gradle.kts", "build.gradle"} {
+		if isFile(a.dir + "/" + f) {
+			return true
+		}
+	}
+	return false
+}
+
+// unbuilt is the assessment of an artifact with no built jar: one FAIL row naming it, so the module is not ready
+// while one of its parts would not be loaded.
+func unbuilt(a artifact) readyJar {
+	j := readyJar{Artifact: a.name, Rows: []readyRow{{failed, "jar",
+		"no built jar under build/libs: this artifact of the module would not be loaded (build it first)"}}}
 	j.conclude()
 	return j
 }

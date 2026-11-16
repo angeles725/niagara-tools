@@ -15,7 +15,8 @@ import (
 const notChecked = "the target was not checked"
 
 // niagaraTarget compares the jar's baja floor (the Niagara it requires at least) with --expect-niagara: a floor
-// above the target FAILs, since the station would refuse the module.
+// above the target FAILs, since the station would refuse the module, and so does a floor that cannot be compared
+// with it (4.14-rc against 4.15): the target the operator named was not checked.
 func niagaraTarget(floor, expect string) (string, string, string) {
 	const check = "niagara-target"
 	switch c, ok := vendorversion.Cmp(floor, expect); {
@@ -23,8 +24,8 @@ func niagaraTarget(floor, expect string) (string, string, string) {
 		return warn, check, "no baja dependency in META-INF/module.xml"
 	case expect == "":
 		return warn, check, "baja >= " + floor + " (no --expect-niagara: " + notChecked + ")"
-	case !ok:
-		return warn, check, "baja >= " + floor + " cannot be compared with the target " + expect
+	case !ok: // FAIL, not WARN: a READY line must never stand on a target nobody could check
+		return failed, check, "baja >= " + floor + " cannot be compared with the target " + expect + ": the station may refuse the module"
 	case c > 0:
 		return failed, check, "baja >= " + floor + ", above the target " + expect
 	default:

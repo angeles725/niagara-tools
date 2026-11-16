@@ -24,7 +24,7 @@ func TestReadyMirror(t *testing.T) {
 	must(t, os.WriteFile(keptJar, data, 0o644))
 	must(t, os.WriteFile(filepath.Join(kept, "Mod-rt.jar"+FirstSuffix), []byte(deployed+"\n"), 0o644))
 
-	_, out, _ := fx.run(t, fullArgs(fx)...)
+	_, out, _ := fx.run(t, fullArgs(fx, "acmesigner")...)
 	if got := readyRowOf(out, "mirror"); got != "Mod-rt  PASS  mirror  modules/Mod-rt.jar is the deployed jar again (sha256 "+deployed+")" {
 		t.Errorf("restored: %q", got)
 	}
@@ -32,7 +32,7 @@ func TestReadyMirror(t *testing.T) {
 	built, err := os.ReadFile(fx.jar)
 	must(t, err)
 	must(t, os.WriteFile(modJar, built, 0o644)) // the build replaced the mirror's copy
-	code, out, _ := fx.run(t, fullArgs(fx)...)
+	code, out, _ := fx.run(t, fullArgs(fx, "acmesigner")...)
 	want := "Mod-rt  WARN  mirror  modules/Mod-rt.jar (sha256 " + sumOf(t, fx.jar)[:12] + ") is not the deployed jar (sha256 " +
 		deployed + "); restore with: " + ShellWord(fx.tb+"/build.sh") + " --restore-mirror " + ShellWord(keptJar)
 	if got := readyRowOf(out, "mirror"); got != want || code != ExitClean || !strings.Contains(out, "READY TO LOAD") {
@@ -40,13 +40,13 @@ func TestReadyMirror(t *testing.T) {
 	}
 
 	must(t, os.Remove(filepath.Join(kept, "Mod-rt.jar"+FirstSuffix)))
-	_, out, _ = fx.run(t, fullArgs(fx)...)
+	_, out, _ = fx.run(t, fullArgs(fx, "acmesigner")...)
 	if got := readyRowOf(out, "mirror"); !strings.HasPrefix(got, "Mod-rt  WARN  mirror  modules/Mod-rt.jar is this build (sha256 ") {
 		t.Errorf("this build, no pointer: %q", got)
 	}
 
 	must(t, os.Remove(filepath.Join(fx.home, ".niagara-mirror")))
-	_, out, _ = fx.run(t, fullArgs(fx)...)
+	_, out, _ = fx.run(t, fullArgs(fx, "acmesigner")...)
 	if got := readyRowOf(out, "mirror"); got != "Mod-rt  SKIP  mirror  "+fx.home+" is not a mirror (no .niagara-mirror): nothing to restore" {
 		t.Errorf("not a mirror: %q", got)
 	}

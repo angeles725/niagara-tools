@@ -7,12 +7,10 @@ import (
 	"testing"
 )
 
-var readyFull = []string{"--ready", "--niagara-home", "", "--expect-niagara", "4.15", "--expect-signer", "acmesigner"}
-
-func fullArgs(fx readyFx) []string {
-	a := append([]string(nil), readyFull...)
-	a[2] = fx.home
-	return a
+// fullArgs is --ready with every expectation set: the fixture's mirror as the compile home, Niagara 4.15 as the
+// target and signer as the expected signer.
+func fullArgs(fx readyFx, signer string) []string {
+	return []string{"--ready", "--niagara-home", fx.home, "--expect-niagara", "4.15", "--expect-signer", signer}
 }
 
 // TestReadyEveryCheckPasses (P4): a signed jar of the expected signer, a baja floor and a compile home on the
@@ -21,7 +19,7 @@ func fullArgs(fx readyFx) []string {
 func TestReadyEveryCheckPasses(t *testing.T) {
 	t.Parallel()
 	fx := newReadyFx(t)
-	code, out, errOut := fx.run(t, fullArgs(fx)...)
+	code, out, errOut := fx.run(t, fullArgs(fx, "acmesigner")...)
 	sum := sumOf(t, fx.jar)
 	want := map[string]string{
 		"module":         "Mod-rt  PASS  module  Mod-rt 2.8.6",
@@ -58,9 +56,7 @@ func TestReadyEveryCheckPasses(t *testing.T) {
 func TestReadyNotReadyListsTheFailingRows(t *testing.T) {
 	t.Parallel()
 	fx := newReadyFx(t)
-	args := fullArgs(fx)
-	args[6] = "othersigner"
-	code, out, _ := fx.run(t, args...)
+	code, out, _ := fx.run(t, fullArgs(fx, "othersigner")...)
 	if got := readyRowOf(out, "signer"); got != "Mod-rt  FAIL  signer  ACMESIGN, expected othersigner (OTHERSIG)" {
 		t.Errorf("signer row = %q", got)
 	}
@@ -126,21 +122,21 @@ func TestReadySchemaRisk(t *testing.T) {
 	t.Parallel()
 	fx := newReadyFx(t)
 	must(t, os.Remove(filepath.Join(fx.art, ".deploy-baseline")))
-	code, out, _ := fx.run(t, fullArgs(fx)...)
+	code, out, _ := fx.run(t, fullArgs(fx, "acmesigner")...)
 	if got := readyRowOf(out, "schema-risk"); code != ExitFail || !strings.HasPrefix(got, "Mod-rt  FAIL  schema-risk  no .deploy-baseline") || !strings.Contains(got, "archive") {
 		t.Errorf("no baseline: exit %d row %q", code, got)
 	}
-	code, out, _ = fx.run(t, append(fullArgs(fx), "--first-deploy")...)
+	code, out, _ = fx.run(t, append(fullArgs(fx, "acmesigner"), "--first-deploy")...)
 	if got := readyRowOf(out, "schema-risk"); code != ExitClean || got != "Mod-rt  SKIP  schema-risk  N/A (--first-deploy: never deployed, no baseline to diff)" {
 		t.Errorf("first deploy: exit %d row %q", code, got)
 	}
 	must(t, os.Mkdir(filepath.Join(fx.art, ".deploy-baseline"), 0o755))
 	fx.stub(t, "schema-risk", "exit 2")
-	if code, out, _ = fx.run(t, fullArgs(fx)...); code != ExitFail || readyRowOf(out, "schema-risk") != "Mod-rt  FAIL  schema-risk  verdict=OUTAGE" {
+	if code, out, _ = fx.run(t, fullArgs(fx, "acmesigner")...); code != ExitFail || readyRowOf(out, "schema-risk") != "Mod-rt  FAIL  schema-risk  verdict=OUTAGE" {
 		t.Errorf("outage: exit %d\n%s", code, out)
 	}
 	fx.stub(t, "schema-risk", "exit 3")
-	if code, out, _ = fx.run(t, fullArgs(fx)...); code != ExitEnv || readyRowOf(out, "schema-risk") != "Mod-rt  ERROR  schema-risk  env fault (exit 3)" ||
+	if code, out, _ = fx.run(t, fullArgs(fx, "acmesigner")...); code != ExitEnv || readyRowOf(out, "schema-risk") != "Mod-rt  ERROR  schema-risk  env fault (exit 3)" ||
 		!strings.Contains(out, "NOT READY") {
 		t.Errorf("env fault: exit %d\n%s", code, out)
 	}
@@ -151,12 +147,12 @@ func TestReadyVerifyModule(t *testing.T) {
 	t.Parallel()
 	fx := newReadyFx(t)
 	fx.stub(t, "verify-module", "printf 'PASS  signed  x  ok\\nFAIL  bytecode  x  major 65\\n'; exit 1")
-	code, out, _ := fx.run(t, fullArgs(fx)...)
+	code, out, _ := fx.run(t, fullArgs(fx, "acmesigner")...)
 	if got := readyRowOf(out, "verify-module"); code != ExitFail || got != "Mod-rt  FAIL  verify-module  FAIL  bytecode  x  major 65" {
 		t.Errorf("gate fail: exit %d row %q", code, got)
 	}
 	fx.stub(t, "verify-module", "exit 3")
-	if code, out, _ = fx.run(t, fullArgs(fx)...); code != ExitEnv || readyRowOf(out, "verify-module") != "Mod-rt  ERROR  verify-module  env fault (exit 3)" {
+	if code, out, _ = fx.run(t, fullArgs(fx, "acmesigner")...); code != ExitEnv || readyRowOf(out, "verify-module") != "Mod-rt  ERROR  verify-module  env fault (exit 3)" {
 		t.Errorf("env fault: exit %d\n%s", code, out)
 	}
 }

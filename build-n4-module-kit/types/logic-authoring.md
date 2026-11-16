@@ -333,7 +333,9 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
   by hand at the verify gate. `[ev: retro gate-followups-and-template-lints Δ7]` `[ev: retro gate-followups-and-template-lints Δ12]`
   Given a template module `.jar` (the Make Module output), it checks each `*.ntpl` and `*.napl` entry as a shipped
   template, each row naming `<jar>!/<entry>`, within the bounds of a `.ntpl` (32 MiB per template inflated, 128 MiB
-  for all); a jar declares no build dependencies, so its dependencies are judged against the installation alone.
+  for all, and at most 100,000 entries read in the whole run: past it one FAIL row `100000 entries read in all, the
+  bound of one run -- <entry> and everything after it not read`, since each tiny entry still costs an open and a
+  parse); a jar declares no build dependencies, so its dependencies are judged against the installation alone.
   Both items the first G92 spec left owed (`ledger.d/2026-10-23-r8-u10-platform-templates.md`) are delivered: a
   module the bog or a Px uses with no `<dependency>` row, and the template module jar as input.
   `[ev: retro ntpl-jar-manifest-k4b Δ2]` `[ev: retro ntpl-jar-manifest-k4b Δ3]`

@@ -12,7 +12,7 @@ import (
 func TestReadyJSON(t *testing.T) {
 	t.Parallel()
 	fx := newReadyFx(t)
-	code, out, _ := fx.run(t, append(fullArgs(fx), "--json")...)
+	code, out, _ := fx.run(t, append(fullArgs(fx, "acmesigner"), "--json")...)
 	var got readyJSON
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("not JSON: %v\n%s", err, out)

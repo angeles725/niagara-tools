@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-16 -->
+<!-- last-change-note: report-module.sh --ready names an unreadable root, FAILs an unbuilt artifact and an incomparable baja floor -->
+log: 2026-11-16 · `report-module.sh --ready` P4b (native-review advisories of #729): an unreadable module root names its read error (exit 3); an artifact with no built jar is one `FAIL  jar` row (NOT READY); a baja floor that cannot be compared with the target FAILs; `schemaRiskVerdict` reports a missing baseline apart from the `--first-deploy` N/A; tests pin `--target-version` reaching verify-module. Doc follow-up T34: the 100,000 entries-read bound of lint-ntpl-manifest-deps and its FAIL row are documented beside the 128 MiB bound. Retro ready-advisories-p4b (Δ1-Δ2 applied, pending review). [ev: retro ready-advisories-p4b Δ1] [ev: retro ready-advisories-p4b Δ2]

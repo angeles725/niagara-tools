@@ -32,9 +32,13 @@
 #                  [ev: retro ntpl-alias-napl-k4 Δ1]
 # Run bounds: one run reads at most 1000 templates (in path order, or entry-name order in a jar); past them one
 # FAIL ntpl-entries row names the first template not read. Every template of a jar and every manifest, bog and
-# Px entry of every archive inflate from one budget of 128 MiB for the whole run; the entry it leaves no room for
-# is one FAIL row (ntpl-manifest, ntpl-uses, or ntpl-entries for a template of a jar) and nothing more is read.
-# A small jar of many templates, each inflating its own bound, cannot run for minutes. [ev: retro ntpl-budget-t26 Δ1]
+# Px entry of every archive inflate from one budget of 128 MiB for the whole run, and at most 100,000 of those
+# entries are read in all (each costs an open and a parse whatever its size); the entry either bound leaves no
+# room for is one FAIL row (ntpl-manifest, ntpl-uses, or ntpl-entries for a template of a jar) and nothing more
+# is read: "the templates and their entries inflate past 134217728 bytes in all, the bound of one run -- <entry>
+# and everything after it not read", or "100000 entries read in all, the bound of one run -- <entry> and
+# everything after it not read". A small jar of many templates, each inflating its own bound, or of many tiny
+# entries cannot run for minutes. [ev: retro ntpl-budget-t26 Δ1] [ev: retro t34-ntpl-advisories Δ1]
 #
 # Stock modules: a station template lists every module its station uses, most of them shipped by every
 # Niagara installation and declared by no build file. --niagara-home <dir> (or NIAGARA_HOME in the
