@@ -32,6 +32,9 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 		fmt.Fprintf(s.Err, "report-module: not a directory: %s\n", o.root)
 		return ExitEnv
 	}
+	if o.ready {
+		return readyMain(o, s, environ)
+	}
 	switch {
 	case o.wiringMap != "":
 		if !isFile(o.wiringMap) {
@@ -61,14 +64,8 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 		fmt.Fprintf(s.Err, "report-module: toolbelt not found: %s\n", tb)
 		return ExitEnv
 	}
-	env := make([]string, 0, len(environ))
-	for _, kv := range environ {
-		if !strings.HasPrefix(kv, ToolbeltEnv+"=") {
-			env = append(env, kv)
-		}
-	}
 	r := &report{out: s.Out, errw: s.Err, o: o, getenv: s.Env, n: map[string]int{},
-		x: runner{tb: tb, env: env}, bl: bl}
+		x: runner{tb: tb, env: memberEnv(environ)}, bl: bl}
 	for _, a := range artifacts {
 		for _, m := range perArtifact {
 			r.step(a, m)
@@ -81,6 +78,17 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 	r.inFloor = false
 	r.triageConsole()
 	return r.writeBaseline(r.summary(len(artifacts)))
+}
+
+// memberEnv is the members' environment: environ without ToolbeltEnv (the bash members never saw it).
+func memberEnv(environ []string) []string {
+	env := make([]string, 0, len(environ))
+	for _, kv := range environ {
+		if !strings.HasPrefix(kv, ToolbeltEnv+"=") {
+			env = append(env, kv)
+		}
+	}
+	return env
 }
 
 // discover lists the profile artifacts like `find -H <root> -mindepth 1 -maxdepth 1 -type d | sort` in the C
