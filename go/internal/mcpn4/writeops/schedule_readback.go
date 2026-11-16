@@ -1,0 +1,46 @@
+package writeops
+
+import (
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+)
+
+// handleInvalidator is a client whose cached handles can be dropped below an ORD
+// (box.Client.InvalidateHandles).
+type handleInvalidator interface{ InvalidateHandles(prefix string) }
+
+// scheduleReadback reloads the schedule (its replaced subtrees have new handles, so the cached
+// ones below its ORD are dropped first), decodes it and compares every part the batch wrote with
+// what was requested, in n4_read_schedule's shape.
+func scheduleReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, _ []any) (any, any, any, string, error) {
+	ordText := str(args, "ord")
+	if hi, ok := c.(handleInvalidator); ok {
+		hi.InvalidateHandles(ordText)
+	}
+	s, err := loadSchedule(c, ordText)
+	if err != nil {
+		return nil, nil, nil, "", err
+	}
+	want := p.Data.(*pyjson.Object)
+	observed := pyjson.NewObject()
+	for _, k := range want.Keys() {
+		w, _ := want.Get(k)
+		got, _ := s.model.Get(k)
+		if wo, ok := w.(*pyjson.Object); ok && k == "weekly" { // only the days written
+			sub := pyjson.NewObject()
+			for _, day := range wo.Keys() {
+				v, _ := got.(*pyjson.Object).Get(day)
+				sub.Set(day, v)
+			}
+			got = sub
+		}
+		observed.Set(k, got)
+	}
+	verdict := "mismatch"
+	a, errA := pyjson.Marshal(want, pyjson.Canonical)
+	b, errB := pyjson.Marshal(observed, pyjson.Canonical)
+	if errA == nil && errB == nil && string(a) == string(b) {
+		verdict = "verified"
+	}
+	return want, replies, observed, verdict, nil
+}
