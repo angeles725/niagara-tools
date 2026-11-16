@@ -15,20 +15,17 @@
 #
 # Row format:  PASS|FAIL  skill-drift  <skill>  <detail>
 # Exit: 0 installed copy is current · 1 diverged or not installed · 2 usage (unknown skill) ·
-#       3 environment (install-skill.sh, its table or the tracked launcher missing; no sha256 tool)
+#       3 environment (install-skill.sh, its table or the tracked launcher missing; no Go toolchain to build
+#         the command)
 #
 # Implementation: the Go module at <repo>/go (go/internal/skillinstall; -h prints the header above, read from
-# this file). This wrapper is the stable entry point and keeps the up-front sha256 tool check of the contract
-# (exit 3 before anything else; the digests themselves are computed in Go). go/go-tool.sh `go_tool_bin` builds
+# this file). This wrapper is the stable entry point (the digests are computed in Go, so no sha256 tool is
+# needed). go/go-tool.sh `go_tool_bin` builds
 # go/bin/check-skill-drift when the binary is missing or older than a Go source, then this script execs it.
 # Needs `go` on PATH to build; no Go toolchain or a failed build is exit 3.
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via SCRIPT_DIR
-. "$SCRIPT_DIR/lib/sha256.sh" || exit 3
-sha256_require 'check-skill-drift' || exit 3
-
 # The repository is the one holding the invoked path (never resolved through a symlink), as it always was.
 GO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/go"
 [ -f "$GO_DIR/go-tool.sh" ] || { printf 'check-skill-drift: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }

@@ -18,3 +18,11 @@
   files stay`. The exit code stays 3. Before, the partial tree stayed and the next run was refused with "destination
   already exists". A destination that existed before the run is refused as before and never touched; the out-dir
   itself is never removed. Retro `2026-11-14-go-scaffold-module-port` Δ4.
+
+### Removed — install-skill and check-skill-drift no longer require a sha256 tool
+
+- `scripts/install-skill.sh` and `scripts/check-skill-drift.sh` no longer exit 3 with `<tool>: no sha256 tool found
+  (sha256sum or shasum)` when neither tool is on PATH: the digests are computed by the Go command. The exit 3 that
+  remains before the command runs is the Go one (`<tool>: go is not on PATH; it is needed to build <bin>` when the
+  command has to be built). `scripts/lib/sha256.sh` stays for its one caller, `scripts/ci-local.sh`. Retro
+  `2026-11-14-go-install-tools-port` Δ1.

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# lib/sha256.sh — shared sha256 helper for install-skill.sh and check-skill-drift.sh.
+# lib/sha256.sh — sha256 helper of scripts/ci-local.sh (the digest of the provisioned shellcheck archive), its
+# only caller: install-skill.sh and check-skill-drift.sh compute their digests in Go and need no sha256 tool.
 # Sourced only (never invoked directly). Linux has sha256sum, macOS has shasum -a 256.
-# VCS-free by design, like the scripts that source it.
+# VCS-free by design.
 #
 # sha256_require <prefix> — returns 0 when sha256sum or shasum is on PATH; otherwise prints
 #   "<prefix>: no sha256 tool found (sha256sum or shasum)" on stderr and returns 3.
