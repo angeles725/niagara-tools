@@ -3,6 +3,7 @@ package mergewait
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // printedError is a gh error withRetries has already printed: the caller reports it again only as an
@@ -12,10 +13,11 @@ type printedError struct{ error }
 func (e printedError) Unwrap() error { return e.error }
 
 // withRetries prints every gh error and sends a call that failed on a network error (or hit its deadline)
-// again, at most c.Retries more times, c.Interval apart, and never past the wait's --timeout (c.until; one
-// call can still run its callDeadline beyond it). Any other error is returned at once. The error it returns
-// is marked printed.
-func (c Config) withRetries(gh Gh) Gh {
+// again, at most c.Retries more times, c.Interval apart, and none that would start after until (the wait's
+// --timeout; zero for the merge call and the reads of its outcome, which the green checks authorized; one call
+// can still run its callDeadline beyond it). Any other error is returned at once. The error it returns is
+// marked printed.
+func (c Config) withRetries(gh Gh, until time.Time) Gh {
 	return func(args ...string) (string, error) {
 		for attempt := 0; ; attempt++ {
 			out, err := gh(args...)
@@ -26,7 +28,7 @@ func (c Config) withRetries(gh Gh) Gh {
 			if !isNetworkError(err) || attempt >= c.Retries {
 				return out, printedError{err}
 			}
-			if !c.until.IsZero() && c.Now().Add(c.Interval).After(c.until) {
+			if !until.IsZero() && c.Now().Add(c.Interval).After(until) {
 				fmt.Fprintf(c.Err, msgNoRetry, c.Timeout)
 				return out, printedError{err}
 			}
