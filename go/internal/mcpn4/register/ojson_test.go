@@ -63,3 +63,28 @@ func TestSetRefusesANonObjectOnThePath(t *testing.T) {
 		t.Fatalf("err = %v, want a refusal naming m", err)
 	}
 }
+
+func TestSetRefusesTrailingDataAndASecondDocument(t *testing.T) {
+	for _, doc := range []string{"{\"a\": {}} garbage\n", "{\"a\": {}}\n{\"b\": 1}\n", "[1]\n"} {
+		if _, err := setPath([]byte(doc), []string{"a", "k"}, []byte(`1`)); err == nil {
+			t.Errorf("%q: accepted", doc)
+		}
+	}
+}
+
+func TestSetRefusesADuplicateKeyOnThePath(t *testing.T) {
+	doc := "{\n  \"mcpServers\": {\"x\": 1},\n  \"mcpServers\": {\"y\": 2}\n}\n"
+	if _, err := setPath([]byte(doc), []string{"mcpServers", "k"}, []byte(`1`)); err == nil ||
+		!strings.Contains(err.Error(), `duplicate key "mcpServers"`) {
+		t.Fatalf("err = %v, want the duplicate key named", err)
+	}
+}
+
+func TestSetUsesTheLineEndingOfACRLFFile(t *testing.T) {
+	src := "{\r\n  \"s\": {\r\n    \"a\": 1\r\n  }\r\n}\r\n"
+	out, err := setPath([]byte(src), []string{"s", "k"}, []byte(`{"c":1}`))
+	want := "{\r\n  \"s\": {\r\n    \"a\": 1,\r\n    \"k\": {\r\n      \"c\": 1\r\n    }\r\n  }\r\n}\r\n"
+	if err != nil || string(out) != want {
+		t.Fatalf("set = %q %v, want %q", out, err, want)
+	}
+}

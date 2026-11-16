@@ -34,6 +34,7 @@ func scanObject(doc []byte, at int) (objSpan, error) {
 		return objSpan{}, fmt.Errorf("not a JSON object")
 	}
 	o := objSpan{open: i}
+	seen := map[string]bool{}
 	dec := json.NewDecoder(bytes.NewReader(doc[i:]))
 	if _, err := dec.Token(); err != nil {
 		return o, err
@@ -44,6 +45,11 @@ func scanObject(doc []byte, at int) (objSpan, error) {
 			return o, err
 		}
 		m := span{key: kt.(string), keyEnd: i + int(dec.InputOffset())}
+		if seen[m.key] {
+			// JSON.parse keeps the last one; which one a harness reads is not ours to guess.
+			return o, fmt.Errorf("duplicate key %q", m.key)
+		}
+		seen[m.key] = true
 		var v json.RawMessage
 		if err := dec.Decode(&v); err != nil {
 			return o, err
@@ -58,6 +64,21 @@ func scanObject(doc []byte, at int) (objSpan, error) {
 	}
 	o.close = i + int(dec.InputOffset()) - 1
 	return o, nil
+}
+
+// checkDocument refuses anything but one JSON object (white space around it allowed): trailing
+// data or a second document would be kept, unread, by a byte splice.
+func checkDocument(doc []byte) error {
+	if len(bytes.TrimSpace(doc)) == 0 {
+		return nil
+	}
+	if !json.Valid(doc) {
+		var v any
+		err := json.Unmarshal(doc, &v)
+		return fmt.Errorf("not one valid JSON document: %v", err)
+	}
+	_, err := scanObject(doc, 0)
+	return err
 }
 
 func (o objSpan) find(key string) *span {
@@ -98,7 +119,11 @@ func setPath(doc []byte, path []string, v []byte) ([]byte, error) {
 	if len(bytes.TrimSpace(doc)) == 0 {
 		return append(render(nest(path, v), "", true), '\n'), nil
 	}
+	if err := checkDocument(doc); err != nil {
+		return nil, err
+	}
 	multi := bytes.Contains(bytes.TrimSpace(doc), []byte("\n"))
+	crlf := bytes.Contains(doc, []byte("\r\n"))
 	at := 0
 	for i, k := range path {
 		o, err := scanObject(doc, at)
@@ -107,10 +132,10 @@ func setPath(doc []byte, path []string, v []byte) ([]byte, error) {
 		}
 		m := o.find(k)
 		if m == nil {
-			return insert(doc, o, k, nest(path[i+1:], v), multi), nil
+			return insert(doc, o, k, nest(path[i+1:], v), multi, crlf), nil
 		}
 		if i == len(path)-1 {
-			return splice(doc, m.valStart, m.valEnd, render(v, lineIndent(doc, m.keyEnd), multi)), nil
+			return splice(doc, m.valStart, m.valEnd, eol(render(v, lineIndent(doc, m.keyEnd), multi), crlf)), nil
 		}
 		at = m.valStart
 	}
@@ -119,7 +144,7 @@ func setPath(doc []byte, path []string, v []byte) ([]byte, error) {
 
 // insert adds "key": v as the last member of o, in the layout of its last member (or, for an
 // empty object, one level deeper than the line of its opening brace).
-func insert(doc []byte, o objSpan, key string, v []byte, multi bool) []byte {
+func insert(doc []byte, o objSpan, key string, v []byte, multi, crlf bool) []byte {
 	k := string(encodeKey(key))
 	if !multi {
 		sep := ""
@@ -131,58 +156,9 @@ func insert(doc []byte, o objSpan, key string, v []byte, multi bool) []byte {
 	if len(o.members) > 0 {
 		last := o.members[len(o.members)-1]
 		ind := lineIndent(doc, last.keyEnd)
-		return splice(doc, last.valEnd, last.valEnd, []byte(",\n"+ind+k+": "+string(render(v, ind, true))))
+		return splice(doc, last.valEnd, last.valEnd, eol([]byte(",\n"+ind+k+": "+string(render(v, ind, true))), crlf))
 	}
 	ind := lineIndent(doc, o.open)
 	inner := ind + "  "
-	return splice(doc, o.open+1, o.close, []byte("\n"+inner+k+": "+string(render(v, inner, true))+"\n"+ind))
-}
-
-// nest wraps v in one object per key of path.
-func nest(path []string, v []byte) []byte {
-	for i := len(path) - 1; i >= 0; i-- {
-		v = []byte("{" + string(encodeKey(path[i])) + ":" + string(v) + "}")
-	}
-	return v
-}
-
-// render is v indented by two spaces under a line indented by prefix (compact when !multi).
-func render(v []byte, prefix string, multi bool) []byte {
-	var b bytes.Buffer
-	if !multi || json.Indent(&b, v, prefix, "  ") != nil {
-		return v
-	}
-	return b.Bytes()
-}
-
-// lineIndent is the white space that starts the line holding doc[pos].
-func lineIndent(doc []byte, pos int) string {
-	start := bytes.LastIndexByte(doc[:pos], '\n') + 1
-	end := start
-	for end < len(doc) && (doc[end] == ' ' || doc[end] == '\t') {
-		end++
-	}
-	return string(doc[start:end])
-}
-
-func splice(doc []byte, from, to int, with []byte) []byte {
-	out := make([]byte, 0, len(doc)+len(with))
-	out = append(out, doc[:from]...)
-	out = append(out, with...)
-	return append(out, doc[to:]...)
-}
-
-func encodeKey(k string) []byte {
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(k)
-	return bytes.TrimSuffix(b.Bytes(), []byte("\n"))
-}
-
-func pathName(path []string) string {
-	if len(path) == 0 {
-		return "the document"
-	}
-	return fmt.Sprintf("%q", path)
+	return splice(doc, o.open+1, o.close, eol([]byte("\n"+inner+k+": "+string(render(v, inner, true))+"\n"+ind), crlf))
 }
