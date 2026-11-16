@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	existsOrd  = "alarm:|bql:select uuid, ackState, user where (uuid = '" + u1 + "' or uuid = '" + u2 + "')|view:file:ITableToCsv"
-	unackedOrd = "alarm:|bql:select uuid, ackState, user where ackState = 'unacked' and (uuid = '" + u1 + "' or uuid = '" + u2 + "')|view:file:ITableToCsv"
+	existsOrd  = "alarm:|bql:select uuid, ackState, user, source where (uuid = '" + u1 + "' or uuid = '" + u2 + "')|view:file:ITableToCsv"
+	unackedOrd = "alarm:|bql:select uuid, ackState, user, source where ackState = 'unacked' and (uuid = '" + u1 + "' or uuid = '" + u2 + "')|view:file:ITableToCsv"
 )
 
 func TestAckAlarmPlansOneAckAlarmsCallAndNoInverse(t *testing.T) {
@@ -95,6 +95,13 @@ func TestAckAlarmRefusesBeforeAnyCall(t *testing.T) {
 			t.Errorf("%v: %v %s (calls %q)", c.uuids, isErr, text, db.calls)
 		}
 	}
+	db := newAlarmDB()
+	text, isErr, _ := newAckRig(t, db).call(t, "uuids", []any{u1, u4, u5})
+	want := "outside the write scope: " + u4 + " (source local:|station:|slot:/Drivers/BenchModbus/D066); " +
+		"source is not a slot path: " + u5 + " (source local:|station:|h:12)"
+	if !isErr || !strings.Contains(text, want) || len(db.calls) != 0 {
+		t.Errorf("scope: %v %s", isErr, text)
+	}
 	many := make([]any, 101)
 	for i := range many {
 		many[i] = u1
@@ -102,8 +109,8 @@ func TestAckAlarmRefusesBeforeAnyCall(t *testing.T) {
 	if text, isErr, _ := newAckRig(t, newAlarmDB()).call(t, "uuids", many); !isErr || !strings.Contains(text, "uuids must hold 1 to 100") {
 		t.Errorf("101 uuids: %s", text)
 	}
-	db := newAlarmDB()
-	text, isErr, _ := newAckRig(t, readsOnly{db}).call(t, "uuids", []any{u1})
+	db = newAlarmDB()
+	text, isErr, _ = newAckRig(t, readsOnly{db}).call(t, "uuids", []any{u1})
 	if !isErr || !strings.Contains(text, `cannot call the BOX channel "alarm"`) || len(db.ords) != 0 {
 		t.Errorf("no Call: %s (ords %q)", text, db.ords)
 	}

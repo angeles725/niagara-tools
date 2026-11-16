@@ -37,6 +37,9 @@ const (
 	msgAckDone     = "already acknowledged or ack pending: %s"
 	msgAckRefused  = "n4_ack_alarm refused, nothing was planned: %s"
 	msgAckNoReader = "the station client cannot read alarm records"
+	msgAckSourceOf = "%s (source %s)"
+	msgAckOutside  = "outside the write scope: %s"
+	msgAckUnparsed = "source is not a slot path: %s"
 	noteAckUndo    = "an acknowledgement cannot be undone: there is no inverse and n4_rollback cannot reverse it"
 	noteAckUser    = "the station records the ack under the connected user and needs operatorWrite on each record's alarm class; " +
 		"a class it refuses is named in the reply and makes the verdict mismatch"
@@ -49,7 +52,7 @@ type ordReader interface {
 
 // ackPlan checks the uuids, that the client can Call the alarm channel, and that every record
 // exists and is unacked; the plan is the one channel op, with no inverse.
-func ackPlan(c plan.Client, args *pyjson.Object, _ *plan.State, _ *session.Session) (*plan.Planned, error) {
+func ackPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.Session) (*plan.Planned, error) {
 	ids, err := ackIDs(args)
 	if err != nil {
 		return nil, err
@@ -77,11 +80,18 @@ func ackPlan(c plan.Client, args *pyjson.Object, _ *plan.State, _ *session.Sessi
 	if err != nil {
 		return nil, err
 	}
-	var missing, done []string
+	var missing, outside, unparsed, done []string
 	for _, id := range ids {
-		switch _, found := exists[id.(string)]; {
+		row, found := exists[id.(string)]
+		source := pyjson.Str(get(row, "source"))
+		ord, parsed := sourceOrd(source)
+		switch {
 		case !found:
 			missing = append(missing, id.(string))
+		case !parsed:
+			unparsed = append(unparsed, fmt.Sprintf(msgAckSourceOf, id, source))
+		case w.Scope.Check(ord) != nil:
+			outside = append(outside, fmt.Sprintf(msgAckSourceOf, id, source))
 		case unacked[id.(string)] == nil:
 			done = append(done, id.(string))
 		}
@@ -89,6 +99,12 @@ func ackPlan(c plan.Client, args *pyjson.Object, _ *plan.State, _ *session.Sessi
 	var why []string
 	if missing != nil {
 		why = append(why, fmt.Sprintf(msgAckMissing, strings.Join(missing, ", ")))
+	}
+	if outside != nil {
+		why = append(why, fmt.Sprintf(msgAckOutside, strings.Join(outside, ", ")))
+	}
+	if unparsed != nil {
+		why = append(why, fmt.Sprintf(msgAckUnparsed, strings.Join(unparsed, ", ")))
 	}
 	if done != nil {
 		why = append(why, fmt.Sprintf(msgAckDone, strings.Join(done, ", ")))
@@ -98,6 +114,16 @@ func ackPlan(c plan.Client, args *pyjson.Object, _ *plan.State, _ *session.Sessi
 	}
 	return &plan.Planned{Ops: []any{plan.ChannelOp(ackChannel, ackKey, body)}, Notes: []any{noteAckUndo, noteAckUser},
 		Data: ids}, nil
+}
+
+// sourceOrd is the station slot ORD of a record source in either stored form
+// (local:|station:|slot:/a or slot:/a); false for any other form (fail closed).
+func sourceOrd(source string) (string, bool) {
+	slot := strings.TrimPrefix(source, "local:|station:|")
+	if !strings.HasPrefix(slot, "slot:/") {
+		return "", false
+	}
+	return "station:|" + slot, true
 }
 
 // ackIDs is the checked uuids argument, lower case, in the caller's order.

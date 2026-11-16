@@ -23,6 +23,8 @@ const (
 	u1 = "aa110470-0000-4000-8000-000000000001"
 	u2 = "aa110470-0000-4000-8000-000000000002"
 	u3 = "aa110470-0000-4000-8000-000000000003"
+	u4 = "aa110470-0000-4000-8000-000000000004" // its source is outside the write scope
+	u5 = "aa110470-0000-4000-8000-000000000005" // its source is not a slot path
 )
 
 var uuidInOrd = regexp.MustCompile(`uuid = '([^']+)'`)
@@ -30,28 +32,31 @@ var uuidInOrd = regexp.MustCompile(`uuid = '([^']+)'`)
 // alarmDB is the station: each record's ack state tag and user; ords and calls keep what reached it.
 type alarmDB struct {
 	state, user map[string]string
+	source      map[string]string
 	failClasses []any // what ackAlarms answers (the classes the user may not ack)
 	noAck       bool  // ackAlarms leaves the records unchanged
 	ords, calls []string
 }
 
 func newAlarmDB() *alarmDB {
-	return &alarmDB{state: map[string]string{u1: "unacked", u2: "unacked", u3: "acked"},
-		user: map[string]string{u3: "operator"}, failClasses: []any{}}
+	return &alarmDB{state: map[string]string{u1: "unacked", u2: "unacked", u3: "acked", u4: "unacked", u5: "unacked"},
+		user: map[string]string{u3: "operator"}, failClasses: []any{},
+		source: map[string]string{u1: "local:|station:|slot:/Services/A", u2: "slot:/Services/B/C", u3: "slot:/Services/A",
+			u4: "local:|station:|slot:/Drivers/BenchModbus/D066", u5: "local:|station:|h:12"}}
 }
 
-// GetOrd answers "select uuid, ackState, user" with the records the clause names that exist,
+// GetOrd answers "select uuid, ackState, user, source" with the records the clause names that exist,
 // and only the unacked ones when the clause also asks ackState = 'unacked'.
 func (d *alarmDB) GetOrd(ord string, _ float64, _ int) (string, bool, error) {
 	d.ords = append(d.ords, ord)
 	var b strings.Builder
-	b.WriteString("Uuid,Ack State,User\n")
+	b.WriteString("Uuid,Ack State,User,Source\n")
 	for _, m := range uuidInOrd.FindAllStringSubmatch(ord, -1) {
 		st, ok := d.state[m[1]]
 		if !ok || strings.Contains(ord, "ackState = 'unacked'") && st != "unacked" {
 			continue
 		}
-		fmt.Fprintf(&b, "%s,%s,%s\n", m[1], strings.ToUpper(st[:1])+st[1:], d.user[m[1]])
+		fmt.Fprintf(&b, "%s,%s,%s,%s\n", m[1], strings.ToUpper(st[:1])+st[1:], d.user[m[1]], d.source[m[1]])
 	}
 	return b.String(), false, nil
 }

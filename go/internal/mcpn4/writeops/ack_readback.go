@@ -12,13 +12,13 @@ import (
 // unacked ones (the ack state is compared by its tag in BQL, never by the station's localized
 // display text), and the read-back of an executed ack.
 
-// ackQuery reads a record's uuid, ack state and acking user, by position.
-const ackQuery = "select uuid, ackState, user"
+// ackQuery reads a record's uuid, ack state, acking user and source, by position.
+const ackQuery = "select uuid, ackState, user, source"
 
 // ackTimeout is the HTTP timeout of each read, in seconds.
 const ackTimeout = 60
 
-var ackFields = []string{"uuid", "ack_state", "user"}
+var ackFields = []string{"uuid", "ack_state", "user", "source"}
 
 // readAcks is the records among ids that exist (unackedOnly: that are still unacked), by uuid.
 func readAcks(r ordReader, ids []any, unackedOnly bool) (map[string]*pyjson.Object, error) {
