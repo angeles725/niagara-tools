@@ -2,9 +2,12 @@ package ngdeploy
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
@@ -38,6 +41,33 @@ func (d *deploy) recordDeploy() int {
 	return code
 }
 
+// checkRecord looks, before the copy, whether the record can be written at all: a .last-deploy-sha that is
+// a directory or read-only, or a working directory that takes no new file, stops the deploy with exit 10
+// while the station still holds the old jars. The look opens the record as the write after the copy will
+// (recordFlags without the truncation: through a symbolic link, creating the file when there is none), so
+// both give the same answer. Nothing is written: a record that is there is only opened, and a file the
+// look had to create, at the end of a link too, is removed again. With SLOTOMATIC_DETECTION=off the
+// record is optional and nothing is looked at.
+func (d *deploy) checkRecord() int {
+	if d.env("SLOTOMATIC_DETECTION") == detectionOff {
+		return proceed
+	}
+	path := recordPath()
+	_, err := os.Stat(path)
+	creates := errors.Is(err, fs.ErrNotExist) // through a link too: Stat follows it
+	file, err := os.OpenFile(path, recordFlags, recordMode)
+	if err != nil {
+		return d.fail(ExitEnv, msgRecordUnwritable, lastDeployFile, fmt.Sprintf(whyNotWritten, path, strerror.Text(err)))
+	}
+	file.Close()
+	if creates {
+		if made, err := filepath.EvalSymlinks(path); err == nil {
+			os.Remove(made)
+		}
+	}
+	return proceed
+}
+
 // headCommit is the full object name of HEAD. why says what stopped the read; "" when nothing did. Only a
 // full object name is ever recorded: the next deploy hands the record to git.
 func (d *deploy) headCommit() (sha, why string) {
@@ -54,9 +84,20 @@ func (d *deploy) headCommit() (sha, why string) {
 // writeRecord writes the commit to .last-deploy-sha in the working directory; path names the file in a
 // message.
 func writeRecord(sha string) (path string, err error) {
-	path = lastDeployFile
+	path = recordPath()
+	return path, os.WriteFile(path, []byte(sha+"\n"), recordMode)
+}
+
+// recordFlags and recordMode are how the record is opened to be written (os.WriteFile adds the truncation).
+const (
+	recordFlags = os.O_WRONLY | os.O_CREATE
+	recordMode  = 0o644
+)
+
+// recordPath is .last-deploy-sha in the working directory, as a message names it.
+func recordPath() string {
 	if dir, err := os.Getwd(); err == nil {
-		path = dir + "/" + lastDeployFile
+		return dir + "/" + lastDeployFile
 	}
-	return path, os.WriteFile(path, []byte(sha+"\n"), 0o644)
+	return lastDeployFile
 }

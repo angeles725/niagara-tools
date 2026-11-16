@@ -5,8 +5,9 @@ import (
 	"strconv"
 )
 
-// The option globals of the bash tool. Each held text: its default, then what a flag set, then what the env
-// file assigned (the file was sourced after the flags were read, so a key of the same name replaced them).
+// The option globals of the bash tool. Each holds text: its default, then what the env file assigned, then
+// what a flag set (the bash tool sourced the file after reading the flags, so a key replaced the flag; a
+// flag wins now). optiontable.go pairs them with their flags.
 const (
 	optMode        = "MODE"
 	optNoBackup    = "NO_BACKUP"
@@ -22,16 +23,6 @@ const (
 	optVerifyBin   = "VERIFY_MODULE_BIN"
 	optSchemaBin   = "SCHEMA_RISK_BIN"
 )
-
-// switchFlags are the flags without a value, by the global each sets to "1".
-var switchFlags = map[string]string{
-	"--no-backup": optNoBackup, "--no-deploy": optNoDeploy, "--with-slotomatic": optWithSlot,
-	"--strict-slotomatic": optStrictSlot, "--first-deploy": optFirstDeploy, "--accept-lossy": optAcceptLossy,
-	"--no-gate": optNoGate, "--full-backup": optFullBackup,
-}
-
-// valueFlags are the flags that take the next argument, by the global it goes to.
-var valueFlags = map[string]string{"--mode": optMode, "--env-file": optEnvFile, "--keep": optKeep}
 
 // noOpFlag is accepted and ignored: it once had to accompany --no-backup.
 const noOpFlag = "--i-know-what-im-doing"
@@ -49,9 +40,6 @@ const (
 	verifyModulePath = "/../build-n4-module-kit/toolbelt/verify-module.sh"
 	schemaRiskPath   = "/../build-n4-module-kit/toolbelt/schema-risk.sh"
 )
-
-// switches are the globals that hold 0 or 1.
-var switches = []string{optNoBackup, optNoDeploy, optWithSlot, optStrictSlot, optNoGate, optFirstDeploy, optAcceptLossy, optFullBackup}
 
 // defaults are the option globals before the flags are read. FIRST_DEPLOY and the other switches never
 // come from the environment: a variable left exported in the operator's shell must not skip a precheck.
@@ -90,14 +78,12 @@ func (d *deploy) parseArgs(args []string) int {
 			io.WriteString(d.s.Out, d.versionText()+"\n")
 			return ExitOK
 		case flag == noOpFlag:
-		case switchFlags[flag] != "":
-			d.raw[switchFlags[flag]] = on
-		case valueFlags[flag] != "":
-			if len(args) < 2 {
-				return d.fail(ExitEnv, msgNeedsArgument, flag)
+		case d.setByFlag(flag, args[1:]):
+			if option, _ := optionOf(flag); option.value {
+				args = args[1:]
 			}
-			d.raw[valueFlags[flag]] = args[1]
-			args = args[1:]
+		case isFlag(flag):
+			return d.fail(ExitEnv, msgNeedsArgument, flag)
 		default:
 			code := d.fail(ExitEnv, msgUnknownFlag, flag)
 			io.WriteString(d.s.Out, usage)
@@ -111,14 +97,39 @@ func (d *deploy) parseArgs(args []string) int {
 	return proceed
 }
 
+// setByFlag sets the option variable of a flag of the table from the command line (rest is what follows
+// the flag) and notes that a flag set it. It reports false for a word that is not such a flag, and for a
+// flag left without its value.
+func (d *deploy) setByFlag(flag string, rest []string) bool {
+	option, ok := optionOf(flag)
+	if !ok || option.flag != flag || (option.value && len(rest) == 0) {
+		return false
+	}
+	value := on
+	if option.value {
+		value = rest[0]
+	}
+	d.raw[option.variable], d.byFlag[option.variable] = value, true
+	return true
+}
+
+// isFlag reports whether a word of the command line is a flag of the table.
+func isFlag(word string) bool {
+	option, ok := optionOf(word)
+	return ok && option.flag == word
+}
+
 // isOn reads a switch global as bash's [[ "$X" -eq 1 ]] did for a value made of digits ("" is 0).
-func (d *deploy) isOn(name string) bool {
-	n, err := strconv.Atoi(d.raw[name])
+func (d *deploy) isOn(name string) bool { return isOne(d.raw[name]) }
+
+// isOne is that reading of one value.
+func isOne(value string) bool {
+	n, err := strconv.Atoi(value)
 	return err == nil && n == 1
 }
 
 // checkOptions refuses option values bash could not compare as numbers, and a mode or a keep count that
-// would deploy or keep nothing. The flags were checked when read; the env file may have replaced them.
+// would deploy or keep nothing. The mode of a flag was checked when read; the env file may have set one.
 func (d *deploy) checkOptions() int {
 	if profilesOf[d.raw[optMode]] == nil {
 		return d.fail(ExitEnv, msgFileMode)

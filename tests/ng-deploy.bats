@@ -810,3 +810,82 @@ STUB
     [ -n "$copy_line" ]
     [ "$gate_line" -lt "$copy_line" ]
 }
+
+# ===========================================================================
+# The env file and the command line (retro go-ng-deploy-port Δ1), and the staged copy (Δ2)
+# ===========================================================================
+
+@test "NG-flag-wins: a flag wins over the same option variable in the env file" {
+    printf 'MODE=B\nNO_DEPLOY=0\n' >> "$TMPDIR_T/dot_env_local"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/dot_env_local" --no-backup --no-deploy --mode C
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"build: mode C"* ]]
+    [[ "$output" == *"no-deploy: jars in build/libs/"* ]]
+    grep -q ":test-rt:jar" "$TMPDIR_T/gradlew.calls.log"
+    run grep -q ":test-ux:" "$TMPDIR_T/gradlew.calls.log"
+    [ "$status" -ne 0 ]
+}
+
+@test "NG-env-mode: without a flag the env file still sets the option" {
+    printf 'MODE=B\n' >> "$TMPDIR_T/dot_env_local"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/dot_env_local" --no-backup --no-deploy
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"build: mode B"* ]]
+}
+
+@test "NG-env-guard: NO_GATE=1 or NO_BACKUP=1 in the env file is refused with file and line (exit 10) unless the flag is given" {
+    _gate_env; _fake_gate 1   # the gate would fail if it ran
+    printf 'NO_GATE=1\n' >> "$TMPDIR_T/env_gate"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"env file $TMPDIR_T/env_gate: line 10: NO_GATE would switch the verify-module gate off"* ]]
+    [[ "$output" == *"give --no-gate on the command line"* ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --no-gate
+    [ "$status" -eq 0 ]
+    [ ! -f "$TMPDIR_T/gate.args" ]
+
+    _gate_env; _fake_gate 0
+    printf 'NO_BACKUP=1\n' >> "$TMPDIR_T/env_gate"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --mode A
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"env file $TMPDIR_T/env_gate: line 10: NO_BACKUP would switch the backup off"* ]]
+    [[ "$output" == *"give --no-backup on the command line"* ]]
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --mode A --no-backup
+    [ "$status" -eq 0 ]
+}
+
+@test "NG-copy-staged: a deploy replaces both jars and leaves no staged file in the station" {
+    _gate_env; _fake_gate 0
+    printf 'same' > "$TMPDIR_T/modules/test-rt.jar"
+    printf 'same' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"   # same bytes: no version to compare
+    : > "$TMPDIR_T/modules/test-ux.jar.ng-deploy-new"                          # left by a killed run
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"copy ok"* ]]
+    [ -e "$TMPDIR_T/modules/test-rt.jar" ]
+    [ -e "$TMPDIR_T/modules/test-ux.jar" ]
+    run find "$TMPDIR_T/modules" -name '*.ng-deploy-new'
+    [ -z "$output" ]
+}
+
+@test "NG-copy-stale-old: a jar left aside by a deploy that did not finish is never deleted; the deploy refuses (exit 40) and changes nothing" {
+    _gate_env; _fake_gate 0
+    printf 'previous' > "$TMPDIR_T/modules/test-ux.jar.ng-deploy-old"
+    : > "$TMPDIR_T/modules/test-ux.jar"   # the same bytes as the built jar: beside its jar the file aside still stops the deploy
+    before="$(cd "$TMPDIR_T/modules" && ls -la --time-style=+ . && cat ./*)"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 40 ]
+    [[ "$output" == *"copy refused: a deploy that did not finish left previous jars aside in $TMPDIR_T/modules; nothing was copied or changed"* ]]
+    [[ "$output" == *"test-ux.jar present, test-ux.jar.ng-deploy-old present"* ]]
+    [[ "$output" == *"rename each .ng-deploy-old file over its jar"* ]]
+    [[ "$output" == *"delete the .ng-deploy-old files"* ]]
+    [ "$(cd "$TMPDIR_T/modules" && ls -la --time-style=+ . && cat ./*)" = "$before" ]
+
+    rm "$TMPDIR_T/modules/test-ux.jar.ng-deploy-old"   # the operator keeps what is there
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    run find "$TMPDIR_T/modules" -name '*.ng-deploy-*'
+    [ -z "$output" ]
+}

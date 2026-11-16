@@ -12,6 +12,8 @@ set -u
 # --help prints go/internal/ngdeploy/usage.txt (options, env variables, exit codes).
 # The env file is read as plain KEY=value assignments (go/internal/envfile), never sourced: $NAME, ${NAME} and a
 # leading ~ expand as under bash, and a line that would run a command is refused with its file and line number.
+# A flag wins over the same option variable in the env file, and NO_GATE=1 or NO_BACKUP=1 there is refused
+# (exit 10) unless --no-gate or --no-backup is given.
 # readlink -f: a linked copy of this file still finds ../go, while VERSION and the default verify-module and
 # schema-risk tools are taken from the directory of the INVOKED path.
 NG_DEPLOY_GO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)/go"

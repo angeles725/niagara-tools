@@ -1,6 +1,9 @@
 package ngdeploy
 
-import "regexp"
+import (
+	"regexp"
+	"syscall"
+)
 
 // What the deploy looks for and builds, apart from the code that uses it.
 var (
@@ -33,6 +36,11 @@ const (
 	backupDir    = "_backups"
 	backupStamp  = "20060102-150405"
 	backupSuffix = ".tar.gz"
+	// stagedSuffix ends the name a new jar has beside its target until it is renamed. It does not end in
+	// .jar: the station must not read a staged file as a module.
+	stagedSuffix = ".ng-deploy-new"
+	// asideSuffix ends the name the station's jar has beside its place while the new one is renamed in.
+	asideSuffix = ".ng-deploy-old"
 	// moduleXML and indexHTML are the jar members the verify step reads.
 	moduleXML = "META-INF/module.xml"
 	indexHTML = "rc/index.html"
@@ -43,6 +51,12 @@ const (
 
 // profilesOf lists the jar profiles each mode builds and deploys, in order.
 var profilesOf = map[string][]string{"A": {"rt", "ux"}, "B": {"ux"}, "C": {"rt"}}
+
+// deployable are the profiles whose jars the tool can put in a station, whatever the mode.
+var deployable = []string{"rt", "ux"}
+
+// signalNames are the signals the copy watches for, as a message names them.
+var signalNames = map[syscall.Signal]string{syscall.SIGINT: "SIGINT", syscall.SIGTERM: "SIGTERM"}
 
 // backupProfiles are the jars of the module a lightweight backup archives when they are deployed.
 var backupProfiles = []string{"rt", "ux", "wb"}

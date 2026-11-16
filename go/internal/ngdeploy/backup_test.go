@@ -132,7 +132,8 @@ func TestBackupKeepsTheNewestNOfTheModule(t *testing.T) {
 		{"--keep 1", []string{"--keep", "1"}, "", "", []string{"TS"}},
 		{"KEEP_N=2", nil, "2", "", []string{"20260105", "TS"}},
 		{"the flag wins over the environment", []string{"--keep", "4"}, "2", "", []string{"20260103", "20260104", "20260105", "TS"}},
-		{"the env file wins over the flag", []string{"--keep", "1"}, "", "4", []string{"20260103", "20260104", "20260105", "TS"}},
+		{"the env file wins over the environment", nil, "2", "4", []string{"20260103", "20260104", "20260105", "TS"}},
+		{"the flag wins over the env file", []string{"--keep", "1"}, "", "4", []string{"TS"}},
 	} {
 		f := newFixture(t)
 		f.deployed()

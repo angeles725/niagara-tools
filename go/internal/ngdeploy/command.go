@@ -2,12 +2,12 @@
 // into a station modules directory. It follows the bash tool it replaces line for line: the same lines on
 // the same stream, the same exit codes, and the same commands run with the same arguments and environment.
 // The differences are declared in changelog.d/2026-11-14-ng-deploy-go.md, and the defects of the bash tool
-// fixed since in changelog.d/2026-11-14-ng-deploy-silent-exits.md.
+// fixed since in changelog.d/2026-11-14-ng-deploy-silent-exits.md and 2026-11-15-ng-deploy-atomic-copy.md.
 //
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
 // file), config.go (required settings and paths), backup.go and purge.go, annotations.go (the slotomatic
 // reminder), slotomatic.go, build.go, version.go and schema.go (the two prechecks), verify.go, gate.go,
-// copy.go, record.go (the deploy record and the restart reminder). The data lives apart: exit.go, messages.go, patterns.go, usage.txt.
+// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder). The data lives apart: exit.go, messages.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy
 
@@ -29,10 +29,12 @@ type deploy struct {
 	scriptDir string            // the directory of the invoked ng-deploy.sh
 	raw       map[string]string // the option globals (options.go)
 	fileEnv   map[string]string // what the env file assigned
+	byFlag    map[string]bool   // the option globals a flag of the command line set
 
 	module    string // MODULE_NAME
 	station   string // STATION_MODULES_DIR
 	moduleDir string // <directory of gradlew>/<MODULE_NAME>
+
 }
 
 // phases is the deploy after the command line was read; each returns an exit code, or proceed.
@@ -47,13 +49,14 @@ var phases = []func(*deploy) int{
 	(*deploy).precheckSchema,
 	(*deploy).verify,
 	(*deploy).gate,
+	(*deploy).checkRecord,
 	(*deploy).copyJars,
 	(*deploy).recordDeploy,
 }
 
 // Main implements ng-deploy.sh; usage.txt carries the usage text and the exit codes.
 func Main(args []string, s cli.Stdio) int {
-	d := &deploy{s: s, scriptDir: dirname(s.Env(ScriptEnv)), fileEnv: map[string]string{}}
+	d := &deploy{s: s, scriptDir: dirname(s.Env(ScriptEnv)), fileEnv: map[string]string{}, byFlag: map[string]bool{}}
 	os.Unsetenv(ScriptEnv)
 	d.raw = d.defaults()
 	if code := d.parseArgs(args); code != proceed {

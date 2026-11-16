@@ -17,9 +17,11 @@ const (
 	msgEnvFileRead   = "env file %s cannot be read: %s"
 	msgEnvFileDir    = "env file %s is a directory"
 	msgEnvFileOwned  = "env file %s: line %d: %s is set by ng-deploy and cannot be assigned"
-	warnEnvFileCR    = "WARN env file %s: a carriage return was stripped from the end of %d line(s), the first at line %d (CRLF line endings; save the file with LF)"
-	msgNotSwitch     = "%s must be 0 or 1"
-	msgKeep          = "KEEP_N (--keep) must be a whole number of backups, 1 or more"
+	// msgEnvFileGuarded takes the file, the line, the key, the step it would switch off and the flag that does.
+	msgEnvFileGuarded = "env file %s: line %d: %s would switch %s off, which an env file may not do: give %s on the command line"
+	warnEnvFileCR     = "WARN env file %s: a carriage return was stripped from the end of %d line(s), the first at line %d (CRLF line endings; save the file with LF)"
+	msgNotSwitch      = "%s must be 0 or 1"
+	msgKeep           = "KEEP_N (--keep) must be a whole number of backups, 1 or more"
 
 	// required settings
 	msgRequired        = "%s is required but not set"
@@ -38,18 +40,19 @@ const (
 	msgBackupCheck    = "backup failed: cannot check %s: %s"
 
 	// annotation detection and slotomatic
-	noticeNoGit        = "NOTICE: git not found; skipping annotation change detection"
-	noticeNoRepo       = "NOTICE: not a git repository; skipping annotation change detection"
-	noticeDiffFailed   = "NOTICE: git diff %s..HEAD failed (exit %d); skipping annotation change detection"
-	noticeBadRecord    = "NOTICE: %s does not hold a full commit id; annotation changes are looked for since %s only"
-	msgStrict          = "annotation changes detected; --with-slotomatic required (strict mode)"
-	msgStrictUnchecked = "annotation change detection could not run; strict mode cannot tell whether slotomatic is needed (SLOTOMATIC_DETECTION=off skips the check)"
-	msgSlotRT          = "slotomatic: running :%s-rt:slotomatic"
-	msgSlotRTUX        = "slotomatic: running :%s-rt:slotomatic :%s-ux:slotomatic (-ux has @Niagara annotations)"
-	msgSlotFailed      = "slotomatic failed (gradlew exited non-zero); deploy aborted"
-	msgSlotSkipped     = "Slot-o-Matic skipped the file(s) above (METHODOLOGY K15: the generated region needs exactly one stamp — delete it and re-run slotomatic); deploy aborted"
-	msgSlotOK          = "slotomatic ok"
-	msgUxScan          = "cannot scan the -ux sources for @Niagara annotations (%s: %s); deploy aborted"
+	noticeNoGit         = "NOTICE: git not found; skipping annotation change detection"
+	noticeNoRepo        = "NOTICE: not a git repository; skipping annotation change detection"
+	noticeDiffFailed    = "NOTICE: git diff %s..HEAD failed (exit %d); skipping annotation change detection"
+	noticeBadRecord     = "NOTICE: %s does not hold a full commit id; annotation changes are looked for since %s only"
+	noticeUnknownRecord = "NOTICE: %s names a commit git does not know; annotation changes are looked for since %s only"
+	msgStrict           = "annotation changes detected; --with-slotomatic required (strict mode)"
+	msgStrictUnchecked  = "annotation change detection could not run; strict mode cannot tell whether slotomatic is needed (SLOTOMATIC_DETECTION=off skips the check)"
+	msgSlotRT           = "slotomatic: running :%s-rt:slotomatic"
+	msgSlotRTUX         = "slotomatic: running :%s-rt:slotomatic :%s-ux:slotomatic (-ux has @Niagara annotations)"
+	msgSlotFailed       = "slotomatic failed (gradlew exited non-zero); deploy aborted"
+	msgSlotSkipped      = "Slot-o-Matic skipped the file(s) above (METHODOLOGY K15: the generated region needs exactly one stamp — delete it and re-run slotomatic); deploy aborted"
+	msgSlotOK           = "slotomatic ok"
+	msgUxScan           = "cannot scan the -ux sources for @Niagara annotations (%s: %s); deploy aborted"
 
 	// build
 	msgBuild       = "build: mode %s — %s"
@@ -89,13 +92,45 @@ const (
 	msgGateOK           = "gate ok"
 
 	// copy and after
-	msgCopyFailed = "copy failed for %s"
-	msgCopyOK     = "copy ok"
+	msgCopyOK = "copy ok"
+	// msgCopyFailed takes the jar that could not be staged or renamed (with the reason after ": " when cp did
+	// not print one) and what the station holds now: one of the outcomes below.
+	msgCopyFailed    = "copy failed for %s; %s"
+	outcomeUnchanged = "nothing was replaced: the station holds the jars it held before the deploy"
+	outcomeUndone    = "what was already replaced was put back: the station holds the jars it held before the deploy"
+	// msgCopyInterrupted takes SIGINT or SIGTERM and the same outcomes; the exit code is 128 + the signal.
+	msgCopyInterrupted = "copy interrupted (%s); %s"
+	// whyNotAJar takes what the station holds under the name of a jar (the kinds below).
+	whyNotAJar     = "the station holds %s under that name, not a jar file"
+	kindDirectory  = "a directory"
+	kindOther      = "something that is not a regular file"
+	kindLinkTo     = "a symbolic link to "
+	kindDangling   = "a symbolic link to nothing"
+	kindUnreadable = "something that cannot be examined"
+	// outcomeMixed takes the state of each jar (below), joined by ", "; mixedPutBack follows it when a
+	// state names a file aside, and takes the suffix of those files.
+	outcomeMixed  = "the station does NOT hold the jars it held before the deploy: %s"
+	mixedPutBack  = "; put each named %s file back under its jar name before the station restarts"
+	stateNew      = "%s is the NEW jar and the previous one is in %s (%s)" // the jar, the file aside, why it was not moved back
+	stateMissing  = "%s is MISSING and the previous one is in %s (%s)"
+	stateExtra    = "%s, which the station did not have, could not be removed (%s): remove it before the station restarts"
+	statePrevious = "%s is the previous jar"
+	// warnAsideLeft takes the file aside that a finished copy could not remove, and why.
+	warnAsideLeft = "WARN the jars are copied, but the previous jar %s could not be removed (%s): delete it, the next deploy refuses while it is in the station"
+	// msgAsideFound takes the station directory; one state line per jar and the ways out follow it,
+	// indented. The states take the jar, its file aside and the suffix; the ways out the suffix twice.
+	msgAsideFound     = "copy refused: a deploy that did not finish left previous jars aside in %s; nothing was copied or changed"
+	stateAsideWithJar = "%s present, %s present: the jar may be the new one of that deploy; the %s file is the previous jar"
+	stateAsideNoJar   = "%s missing, %s present: the %s file is the previous jar"
+	msgAsideWaysOut   = "to put the previous jars back, rename each %s file over its jar; to keep what is there, delete the %s files; then deploy again"
+	indent            = "  "
 	// msgRecordFailed takes the record file and one of the three reasons after it.
 	msgRecordFailed = "jars copied, but the deployed commit was not recorded in %s: %s (the next annotation check cannot start at this deploy; SLOTOMATIC_DETECTION=off makes the record optional)"
-	whyNoHead       = "git rev-parse HEAD failed (exit %d)"
-	whyHeadNotAName = "git rev-parse HEAD printed no full commit id"
-	whyNotWritten   = "cannot write %s: %s"
+	// msgRecordUnwritable is the same record found unwritable before the copy; it takes the file and whyNotWritten.
+	msgRecordUnwritable = "the deployed commit cannot be recorded in %s (%s); nothing was copied (fix the file, or SLOTOMATIC_DETECTION=off makes the record optional)"
+	whyNoHead           = "git rev-parse HEAD failed (exit %d)"
+	whyHeadNotAName     = "git rev-parse HEAD printed no full commit id"
+	whyNotWritten       = "cannot write %s: %s"
 
 	msgRestart    = "station restart required (Java classes deployed)"
 	msgHardReload = "browser hard-reload only (no station restart needed)"

@@ -1,6 +1,7 @@
 package ngdeploy
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -122,14 +123,13 @@ func TestAnEnvFileMayNotAssignWhatTheDeployOwns(t *testing.T) {
 	}
 }
 
-// Kept from the bash tool: the env file is read after the flags, so a key named like an option global
-// replaces what the flag set.
-func TestAnEnvFileKeyNamedLikeAnOptionReplacesTheFlag(t *testing.T) {
+// Kept from the bash tool: a key of the env file named like an option global sets that option when no flag
+// did (envflags_test.go has the two keys it may not switch on, and the flag that wins).
+func TestAnEnvFileKeyNamedLikeAnOptionSetsIt(t *testing.T) {
 	f := newFixture(t)
 	f.set("MODE", "B")
-	f.set("NO_BACKUP", "1")
 	f.set("NO_DEPLOY", "1")
-	f.want(f.run("--mode", "C"), ExitOK, "[ng-deploy] build: mode B — :demo-ux:clean :demo-ux:jar\n", "[ng-deploy] no-deploy: jars in build/libs/\n", "err:"+warnNoBackup)
+	f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] build: mode B — :demo-ux:clean :demo-ux:jar\n", "[ng-deploy] no-deploy: jars in build/libs/\n", "err:"+warnNoBackup)
 
 	f = newFixture(t)
 	f.baseline()
@@ -139,15 +139,18 @@ func TestAnEnvFileKeyNamedLikeAnOptionReplacesTheFlag(t *testing.T) {
 	f.set("NO_GATE", "1")
 	f.set("WITH_SLOTOMATIC", "1")
 	f.set("VERIFY_MODULE_BIN", f.dir+"/absent")
-	f.want(f.run("--no-backup", "--mode", "C"), ExitOK, "[ng-deploy] slotomatic ok\n", "[ng-deploy] copy ok\n", "err:[ng-deploy] WARN schema-risk LOSSY accepted (--accept-lossy)\n")
+	f.want(f.run("--no-backup", "--no-gate", "--mode", "C"), ExitOK, "[ng-deploy] slotomatic ok\n", "[ng-deploy] copy ok\n", "err:[ng-deploy] WARN schema-risk LOSSY accepted (--accept-lossy)\n")
 
 	f = newFixture(t)
-	f.set("FULL_BACKUP", "0")
+	f.set("FULL_BACKUP", "1")
+	f.set("KEEP_N", "1")
 	f.set("NO_GATE", "") // an empty value is off, as bash's [[ "" -eq 1 ]] is
 	f.deployed()
-	f.want(f.run("--full-backup", "--no-deploy"), ExitOK)
-	if !strings.Contains(f.calls(), "tar <-czf> <_backups/demo-pre-") || !strings.Contains(f.calls(), "<-C> <"+f.modules+"> <demo-rt.jar> <demo-ux.jar>\n") {
-		t.Errorf("FULL_BACKUP=0 in the env file did not win over --full-backup:\n%s", f.calls())
+	oldBackups(f)
+	f.want(f.run("--no-deploy"), ExitOK)
+	kept, _ := filepath.Glob(f.work + "/_backups/demo-pre-*")
+	if !strings.Contains(f.calls(), "<-C> <"+f.dir+"> <modules>\n") || len(kept) != 1 {
+		t.Errorf("FULL_BACKUP=1 and KEEP_N=1 of the env file: %d backups kept, calls:\n%s", len(kept), f.calls())
 	}
 }
 
