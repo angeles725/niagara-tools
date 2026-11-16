@@ -80,3 +80,12 @@ func gitTreeOf(path string) string {
 		}
 	}
 }
+
+// binInCheckout refuses, unless force, a binary that resolves into a git checkout.
+func binInCheckout(bin string, force bool) error {
+	if git := gitTreeOf(bin); git != "" && !force {
+		return fmt.Errorf("--bin %s is inside a git checkout (%s): a worktree removed or rebuilt breaks every registered server; run 'mcp-n4 install' and use its path, or rerun with --force",
+			bin, git)
+	}
+	return nil
+}
