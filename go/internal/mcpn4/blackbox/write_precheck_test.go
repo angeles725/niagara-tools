@@ -65,3 +65,19 @@ func TestAnIdenticalLinkIsRefusedButAnotherSlotIsNot(t *testing.T) {
 	refusedDry(t, r, "n4_create_link", args, "identical link already exists", name)
 	r.Srv.Dry("n4_create_link", withArgs(args, Args{"target_slot": "in11"}))
 }
+
+// A name already taken under the parent is not refused (the station assigns another one and the
+// read-back and inverse follow it): the dry run says so in its first note.
+func TestCreateOfATakenNameWarnsFirstInTheDryRun(t *testing.T) {
+	r := verifiedRig(t)
+	r.Add("3", "Pump", "")
+	notes, _ := planOf(r.Srv.Dry("n4_create_component", createPump))["notes"].([]any)
+	want := "name 'Pump' is already taken under " + Folder + ": the station will assign another name; the read-back and the inverse follow it"
+	if len(notes) == 0 || notes[0] != want {
+		t.Errorf("notes = %v", notes)
+	}
+	free := verifiedRig(t)
+	if notes, _ := planOf(free.Srv.Dry("n4_create_component", createPump))["notes"].([]any); len(notes) != 1 {
+		t.Errorf("free name notes = %v", notes)
+	}
+}

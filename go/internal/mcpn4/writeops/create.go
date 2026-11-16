@@ -1,6 +1,8 @@
 package writeops
 
 import (
+	"fmt"
+
 	"math/big"
 	"regexp"
 
@@ -88,10 +90,14 @@ func createPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	}
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, h)
+	notes := []any{"The station may rename on collision; the real inverse uses the assigned name."}
+	if data.children[name] {
+		notes = append([]any{fmt.Sprintf(msgNameTaken, pyjson.StrRepr(name), parentOrd)}, notes...)
+	}
 	return &plan.Planned{
 		Ops:     []any{obj("nm", "a", "h", h, "n", name, "b", obj("nm", "p", "t", typ, "s", slots))},
 		Inverse: []any{obj("nm", "v", "h", h, "n", name)},
-		Notes:   []any{"The station may rename on collision; the real inverse uses the assigned name."},
+		Notes:   notes,
 		Targets: targets, Data: data}, nil
 }
 

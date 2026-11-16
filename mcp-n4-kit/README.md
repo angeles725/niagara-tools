@@ -351,6 +351,10 @@ Every write call goes through these layers:
    that re-creates a removed component's links still checks both ends of each link.
 5. **Dry run.** `dry_run` defaults to true: the reply is the exact BOX ops and their
    inverse, a `plan_hash` and a `confirmation_token`; nothing is sent to the station.
+   The token is bound to the whole plan, its notes and warnings included: a create
+   whose name is taken carries a first note that the station will assign another name,
+   so a name taken after the dry run, or a re-used create token, is refused at execute
+   as a plan mismatch rather than renamed silently.
    Before a token is issued the dry run refuses what it can check by reading:
    `n4_create_component` an unknown `type` or `proxy_ext` (one the station's type
    registry does not describe, named in the error instead of the station's generic
