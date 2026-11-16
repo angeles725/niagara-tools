@@ -13,7 +13,9 @@ import (
 )
 
 const (
-	alarmSelect = "alarm:|bql:select timestamp, uuid, source, sourceState, ackState, alarmClass, priority, alarmData.msgText"
+	alarmSelect = "alarm:|bql:select timestamp, uuid, source, sourceState, ackState, alarmClass, priority, alarmData.msgText, " +
+		"timestamp.encodeToString, normalTime.encodeToString, ackTime.encodeToString"
+	alarmStates = "alarm:|bql:select sourceState.encodeToString, ackState.encodeToString"
 	alarmCount  = "alarm:|bql:select count(*)"
 	alarmOrder  = " order by timestamp desc|view:file:ITableToCsv"
 	alarmOpen   = "(ackState != 'acked' or sourceState != 'normal')"
@@ -23,10 +25,26 @@ const (
 // renders them (display text, localized headers).
 func alarmRecords(n int) string {
 	var b strings.Builder
-	b.WriteString("Timestamp,Uuid,Source,Source State,Ack State,Alarm Class,Priority,Msg Text\n")
+	b.WriteString("Timestamp,Uuid,Source,Source State,Ack State,Alarm Class,Priority,Msg Text," +
+		"Encode To String,Encode To String,Encode To String\n")
 	for i := n; i > 0; i-- {
 		fmt.Fprintf(&b, "15 nov 2026 18:%02d:58 CST,aa110470-0000-0000-0000-%012d,local:|station:|slot:/Drivers/Net/D%d,"+
-			"Offnormal,Unacked,defaultAlarmClass,255,\"Ping Failed, retry\"\n", i, i, i)
+			"Offnormal,Unacked,defaultAlarmClass,255,\"Ping Failed, retry\",2026-11-15T18:%02d:58.000-06:00,"+
+			"1969-12-31T18:00:00.000-06:00,2026-11-15T19:%02d:00.000-06:00\n", i, i, i, i, i)
+	}
+	return b.String()
+}
+
+// alarmStateRows is the state pass of n alarm records: all offnormal, every third one acked.
+func alarmStateRows(n int) string {
+	var b strings.Builder
+	b.WriteString("Encode To String,Encode To String\n")
+	for i := 1; i <= n; i++ {
+		ack := "unacked"
+		if i%3 == 0 {
+			ack = "acked"
+		}
+		fmt.Fprintf(&b, "offnormal,%s\n", ack)
 	}
 	return b.String()
 }
@@ -38,6 +56,7 @@ func alarmServer(t *testing.T, n int) *readtoolstest.Server {
 	s.Connect(t)
 	s.Station.OrdRoutes = []readtoolstest.OrdRoute{
 		{Needle: "select count(*)", Body: fmt.Sprintf("count(toString)\n%d\n", n)},
+		{Needle: "sourceState.encodeToString", Body: alarmStateRows(n)},
 		{Needle: "order by timestamp desc", Body: alarmRecords(n)},
 	}
 	return s

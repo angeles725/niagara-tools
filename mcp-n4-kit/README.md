@@ -295,7 +295,8 @@ read-only: a non-select, `|`, a control character or an over-long query is refus
 request, and so is any other scheme (`file:`, `ip:`, a history id that is not two slot names);
 a base under `station:` that is not a slot path keeps its slot-path refusal. `n4_inventory`
 still reads station subtrees only.
-History records: `n4_read_history(history_id | ext_ord, limit=20, period | start/end)` returns
+History records: `n4_read_history(history_id | ext_ord, limit=20, period | start/end, summary=false,
+summary_max_rows=100000)` returns
 the last `limit` records (at most 1000) of one history, newest first (`order: newest_first`), so
 a rollout proves records arrive, not only that the extension runs. Give exactly one of
 `history_id` (`/<station>/<history name>`, two slot-name segments as `BHistoryId` parses them;
@@ -307,14 +308,27 @@ timestamp desc|view:file:ITableToCsv>`, then the same ORD with `select count(*)`
 `total_records` (`null` with `total_records_note` when that count fails). The range is
 `period=<id>` (`today`, `last24Hours`, `yesterday`, `weekToDate`, `lastWeek`, `last7Days`,
 `monthToDate`, `lastMonth`, `yearToDate`, `lastYear`: the ids `BDynamicTimeRange` accepts) or
-`start=<t>;end=<t>` (BAbsTime text such as `2026-11-15T00:00:00.000-06:00`), not both. Rows are
+`start=<t>;end=<t>` (BAbsTime text such as `2026-11-15T00:00:00.000-06:00`, or a span back from now,
+`30m`, `24h`, `7d`, sent as UTC BAbsTime and echoed in `range`), not both. A `history_id` with no `/` is
+a history name of the connected station (`NumericWritable` is `/<station>/NumericWritable`). Rows are
 `{timestamp, value, status}` read by position, as the station renders them (localized display
 text); `truncated: true` means the range holds more records than were returned. A history the
 station cannot read is an error naming the id and how to list ids
 (`n4_bql_query` `select historyConfig.id from history:HistoryExt`); an AuthError stays one.
+`summary: true` (retro 2026-11-16 M2, "a cuanto llego" in one call) adds one read of every record of
+the range, `select timestamp.encodeToString, value.encodeToString, status order by timestamp desc`
+(ISO-8601 times with the station's offset, `21.0` instead of the localized `21,0`), and returns
+`summary {count, complete, records_scanned, numeric, min {value, timestamp}, max {value, timestamp},
+first and last {value, timestamp, status}, status_counts}` over the whole range, whatever `limit`
+cut the rows; a tie keeps the earliest record (when the value was first reached). A non-numeric
+history has `numeric: false`, `min`/`max` null and a `note`. A range larger than `summary_max_rows`
+is summarized from its newest records with `complete: false` and a `note`, and `range_min` /
+`range_max` come from `select min(value), max(value)` over the whole range (localized text, no
+time: 4.15 has no `group by` and no aggregate that returns the record). A failed summary read is
+`summary: null` with `summary_note`; the rows are still returned.
 There is no `output_file`: it is not an export of whole histories.
-Alarms: `n4_read_alarms(limit=50, source, alarm_class, source_state, ack_state, since, until,
-open_only=true)` returns alarm records newest first (`order: newest_first`), by default the open
+Alarms: `n4_read_alarms(limit=50, source, source_glob, alarm_class, source_state, ack_state, since,
+until, open_only=true)` returns alarm records newest first (`order: newest_first`), by default the open
 ones: it sends `GET /ord/<url-encoded alarm:|bql:select timestamp, uuid, source, sourceState,
 ackState, alarmClass, priority, alarmData.msgText where <clause> order by timestamp
 desc|view:file:ITableToCsv>`, then `select count(*) where <clause>` for `total` (`null` with
@@ -327,10 +341,18 @@ becomes `(source like 'slot:/Drivers/Net' or source like 'slot:/Drivers/Net/*' o
 everything below it, in both forms a station stores a source (`slot:/...` and
 `local:|station:|slot:/...`), never a sibling such as `/Drivers/NetX`; the clause holds no `|`,
 which would end the bql part of the ORD (HTTP 400), `alarm_class` (a slot name) `alarmClass = '<name>'`, and `since` / `until` (BAbsTime text)
-`timestamp.millis >= <epoch ms>` / `<=`. Every value is checked before any request (no quote,
+`timestamp.millis >= <epoch ms>` / `<=` (a span back from now, `30m`, `24h`, `7d`, is resolved first).
+`source_glob` (ORD characters and `*` only: no quote, space or `|`) becomes
+`source like '<glob>'`, e.g. `*slot:/Drivers/Net/D*`. Every value is checked before any request (no quote,
 wildcard or BQL of the caller reaches the station); `where` echoes the clause sent. Rows are
 `{timestamp, uuid, source, source_state, ack_state, alarm_class, priority, msg_text}` read by
-position, as the station renders them (`msg_text` may be a raw `%lexicon(...)%` pattern).
+position, as the station renders them (`msg_text` may be a raw `%lexicon(...)%` pattern; once the
+source is back to normal the record holds the toNormal text), plus `timestamp_iso`, `normal_time` and
+`ack_time` (`encodeToString`: ISO-8601 with the station's offset, `null` for the unset time).
+`state_counts` reads `select sourceState.encodeToString, ackState.encodeToString where <clause>`
+and counts every matching record per state: `{source_state: {normal, offnormal, fault, alert},
+ack_state: {acked, unacked, ackPending}, records_counted, complete}` (`null` with
+`state_counts_note` when that read fails).
 `n4_list_alarm_classes()` runs `select slotPath, name, priority, ackRequired, totalAlarmCount,
 openAlarmCount, inAlarmCount, unackedAlarmCount from alarm:AlarmClass` and
 `select slotPath, type from alarm:AlarmRecipient` at the station root; `priority` is decoded to

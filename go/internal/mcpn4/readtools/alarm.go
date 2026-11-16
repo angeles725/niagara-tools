@@ -14,8 +14,10 @@ import (
 // and one select count(*)), never a caller's query, never a write.
 
 // alarmFields name the record columns by position (a localized station translates headers).
+// The last three are machine text (encodeToString): the alarm time, the time it went back to
+// normal and the ack time as ISO-8601 with the station's offset, null when not set.
 var alarmFields = []string{"timestamp", "uuid", "source", "source_state", "ack_state", "alarm_class",
-	"priority", "msg_text"}
+	"priority", "msg_text", "timestamp_iso", "normal_time", "ack_time"}
 
 // Defaults of n4_read_alarms (the registry schema caps limit at 1000).
 const (
@@ -36,6 +38,7 @@ func (t *Tools) ReadAlarms(args *pyjson.Object) (*pyjson.Object, error) {
 		open = pyjson.Truthy(v)
 	}
 	where, err := bql.AlarmWhere(bql.AlarmFilter{Source: strArg(args, "source", ""),
+		SourceGlob: strArg(args, "source_glob", ""),
 		AlarmClass: strArg(args, "alarm_class", ""), SourceState: strArg(args, "source_state", ""),
 		AckState: strArg(args, "ack_state", ""), Since: strArg(args, "since", ""), Until: strArg(args, "until", ""),
 		OpenOnly: open})
@@ -52,14 +55,25 @@ func (t *Tools) ReadAlarms(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, toolError("%s", err.Error())
 	}
+	for _, row := range keyed {
+		for _, k := range []string{"timestamp_iso", "normal_time", "ack_time"} {
+			v, _ := row.Get(k)
+			row.Set(k, bql.IsoOrNull(pyjson.Str(v)))
+		}
+	}
 	total, note, countMs := t.countRows(bql.ComposeAlarmOrd(bql.AlarmCountQuery, where, ""), timeout)
+	states, statesNote, statesMs := t.alarmStateCounts(where, timeout)
 	t.recordRead("n4_read_alarms", "source", args, len(rows))
 	out := obj("where", where, "columns", strs(columns), "rows", list(keyed), "row_count", len(rows),
 		"order", "newest_first", "truncated", truncated, "total", total)
 	if note != "" {
 		out.Set("total_note", note)
 	}
-	out.Set("elapsed_ms", ms+countMs)
+	out.Set("state_counts", states)
+	if statesNote != "" {
+		out.Set("state_counts_note", statesNote)
+	}
+	out.Set("elapsed_ms", ms+countMs+statesMs)
 	return out, nil
 }
 
