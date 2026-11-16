@@ -87,20 +87,22 @@ func pxOf(module string, size int) string {
 }
 
 // TestUsesReadBounds (review of #702): one bog or Px entry over maxUsesRead is a FAIL row naming it and the
-// bound, the other entries still read; and the entries of one archive share a budget of maxUsesTotal inflated
-// bytes: past it one FAIL row names the archive's limit and the first entry not read, and nothing more of the
-// archive is read, however many entries it holds.
+// bound, the other entries still read; and the entries draw on the run's budget of maxInflate inflated bytes:
+// past it one FAIL row names the run's limit and the first entry not read, and nothing more of the archive is
+// read, however many entries it holds.
 func TestUsesReadBounds(t *testing.T) {
-	t.Parallel()
+	defer func(all int64) { maxInflate = all }(maxInflate)
 	big := moduleRoot(t, map[string]string{tpl: ntpl(t, entry{bogEntry, bog}, entry{manifestEntry, manifestXML("")},
 		entry{"px/Big.px", pxOf("vendorx", maxUsesRead+1)}, entry{"px/Small.px", pxOf("vendory", 200)})})
 	expect(t, "one entry over the bound", big, 1,
 		"FAIL  ntpl-uses  @ROOT@/"+tpl+": px/Big.px inflates past 33554432 bytes -- not read\n"+
 			"FAIL  ntpl-uses  @ROOT@/"+tpl+": px/Small.px uses vendory: no <dependency> of template-manifest.xml names them, and the installation @HOME@ does not ship them\n")
+	const quarter = 1 << 20
+	maxInflate = int64(len(manifestXML("")) + len(bog) + 3*quarter) // room for the manifest, the bog and three Px entries
 	many := []entry{{bogEntry, bog}, {manifestEntry, manifestXML("")}}
 	for _, n := range []string{"a", "b", "c", "d", "e"} {
-		many = append(many, entry{"px/" + n + ".px", pxOf("baja", maxUsesTotal/4)})
+		many = append(many, entry{"px/" + n + ".px", pxOf("baja", quarter)})
 	}
-	expect(t, "entries over the archive's budget", moduleRoot(t, map[string]string{tpl: ntpl(t, many...)}), 1,
-		"FAIL  ntpl-uses  @ROOT@/"+tpl+": the bog and Px entries inflate past 134217728 bytes in all, the bound of one archive -- px/d.px and every entry after it not read\n")
+	expect(t, "entries over the run's budget", moduleRoot(t, map[string]string{tpl: ntpl(t, many...)}), 1,
+		"FAIL  ntpl-uses  @ROOT@/"+tpl+": the templates and their entries inflate past "+itoa(int(maxInflate))+" bytes in all, the bound of one run -- px/d.px and everything after it not read\n")
 }

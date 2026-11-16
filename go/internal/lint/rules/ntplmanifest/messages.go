@@ -15,11 +15,10 @@ const (
 
 // The bounds of one archive read: a .ntpl is input nobody vouches for.
 const (
-	maxArchive   = 32 << 20  // bytes of the .ntpl on disk
-	maxEntries   = 10000     // entries in its directory
-	maxManifest  = 4 << 20   // inflated bytes of template-manifest.xml
-	maxUsesRead  = 32 << 20  // inflated bytes of template.bog and of each *.px entry (the ntpl-uses read)
-	maxUsesTotal = 128 << 20 // inflated bytes of all those entries of one archive together
+	maxArchive  = 32 << 20 // bytes of the .ntpl on disk
+	maxEntries  = 10000    // entries in its directory
+	maxManifest = 4 << 20  // inflated bytes of template-manifest.xml
+	maxUsesRead = 32 << 20 // inflated bytes of template.bog and of each *.px entry (the ntpl-uses read)
 )
 
 // The sub-checks, as the check column prints them.
@@ -81,7 +80,6 @@ const (
 	entryBadXML    = "%s is not well-formed XML: %s"
 	entryTooLarge  = "%s inflates past %d bytes -- not read"
 	entryUnread    = "cannot read %s: %v"
-	usesBudget     = "the bog and Px entries inflate past %d bytes in all, the bound of one archive -- %s and every entry after it not read"
 
 	notAStation  = "a template under " + stationDir + "/ is a station template, but its manifest root <%s> lacks " + stationAttr + "=\"true\""
 	scanFailure  = "cannot scan %s: %v"
@@ -100,11 +98,24 @@ const (
 // template.manifest.xml file"); an archive without manifestEntry is read through it.
 const manifestAlt = "template.manifest.xml"
 
-// The bounds of the templates of one template module jar: each inflates to at most maxJarTemplate bytes (the
-// bound of a .ntpl on disk), all together to at most maxJarTemplates. Variables, so a test can lower them.
-var (
-	maxJarTemplate  int64 = maxArchive
-	maxJarTemplates int64 = maxUsesTotal
+// The bound of each template of a template module jar: it inflates to at most maxJarTemplate bytes (the bound
+// of a .ntpl on disk). A variable, so a test can lower it.
+var maxJarTemplate int64 = maxArchive
+
+// The bounds of one lint run (retro coordination-stretch T26): every template it reads, in a module or a
+// jar, and every manifest, bog and Px entry inside them draw on one budget of maxInflate inflated bytes
+// (budget.go), and at most maxTemplates templates are read. 128 MiB, the bound one archive had before: the
+// bog and Px entries are parsed as XML at about 30 MiB/s, so the run's reads end in a few seconds. A
+// variable, so a test can lower it.
+var maxInflate int64 = 128 << 20
+
+const maxTemplates = 1000
+
+// The rows of the run bounds: the entry the budget stopped at (%s is its name, or "the template" for a
+// template of a jar), and the first template past the count.
+const (
+	runBudget        = "the templates and their entries inflate past %d bytes in all, the bound of one run -- %s and everything after it not read"
+	tooManyTemplates = "%d templates, over the %d this lint reads -- this one and every one after it not read"
 )
 
 // The rows of a template module jar.
@@ -112,7 +123,6 @@ const (
 	noJarTemplates      = "no *.ntpl or *.napl entry in the jar (nothing to check)"
 	jarTemplateTooLarge = "inflates past %d bytes -- not read"
 	jarTemplateUnread   = "cannot inflate the template: %v -- not read"
-	jarBudget           = "the templates of the jar inflate past %d bytes in all -- this one and every one after it not read"
 	// ntpl-deps of a template in a jar, which declares no build dependencies: FAIL with the installation's
 	// module list, WARN without it
 	jarUnshipped    = "manifest dependencies not shipped by the installation %s (a template module jar declares no build dependencies): %s"

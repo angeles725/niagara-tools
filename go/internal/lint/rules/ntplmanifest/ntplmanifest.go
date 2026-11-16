@@ -10,7 +10,8 @@
 //
 // It is a lint.RootRule: it lists the root itself (lint.WalkFollow, which reads through symlinks and fails
 // closed) and opens each archive within fixed bounds, never through the engine's whole-file text read. One
-// file per concern: messages.go (names, bounds and every text), archive.go (the bounded zip read),
+// file per concern: messages.go (names, bounds and every text), budget.go (the inflate budget one run
+// draws on), archive.go (the bounded zip read),
 // manifest.go (the XML read), declared.go (the module's declared dependencies), installed.go (the modules
 // an installation ships), rows.go (the rows of one archive), links.go (the rows of the links the walk did
 // not follow out of the module), jar.go (a template module jar given as the root: each template inside it);
@@ -89,8 +90,14 @@ func (r rule) CheckRoot(root string) ([]lint.Finding, error) {
 		return []lint.Finding{{Severity: lint.Pass, Path: rowpath.Display(root), Msg: noTemplates}}, nil
 	}
 	c := checker{root: rowpath.Display(root), mod: mod, home: h, stock: stock, out: links}
-	for _, path := range templates {
-		a, openErr := readArchive(path)
+	b := newBudget()
+	for i, path := range templates {
+		if i == maxTemplates {
+			// Mutation: NTPL-count -- reading every template lets a module of many small ones cost without bound
+			c.out = append(c.out, lint.Finding{Check: checkEntries, Path: rowpath.Display(path), Msg: fmt.Sprintf(tooManyTemplates, len(templates), maxTemplates)})
+			break
+		}
+		a, openErr := readArchive(path, b)
 		if openErr != nil {
 			if err == nil {
 				err = fmt.Errorf(scanFailure, rowpath.Display(path), openErr)
@@ -98,6 +105,9 @@ func (r rule) CheckRoot(root string) ([]lint.Finding, error) {
 			continue
 		}
 		c.check(rowpath.Display(path), underStationDir(root, path), a)
+		if b.spent { // the row naming where the run's budget stopped is the last one
+			break
+		}
 	}
 	return c.rows(), err
 }

@@ -27,33 +27,45 @@ type member struct {
 	why  string
 }
 
-// readArchive opens path as a zip within the bounds of messages.go. An archive that is refused whole (too
-// large, not a zip, too many entries, an unsafe entry name) has one entries message and nothing else: no
-// entry of it is read. A non-nil error is a file that could not be opened or measured (the caller fails
-// closed, exit 3); what the archive holds is never an error, it is a finding.
-func readArchive(path string) (archive, error) {
-	// the bound is read from the metadata before the file is opened: an archive over it is its row even when
-	// it cannot be opened
+// readArchive opens path as a zip within the bounds of messages.go, drawing what it inflates from b. An
+// archive that is refused whole (too large, not a zip, too many entries, an unsafe entry name) has one
+// entries message and nothing else: no entry of it is read. A non-nil error is a file that could not be
+// opened or measured (the caller fails closed, exit 3); what the archive holds is never an error, it is a
+// finding.
+func readArchive(path string, b *budget) (archive, error) {
+	f, size, refusedMsg, err := openBounded(path)
+	if err != nil || refusedMsg != "" {
+		return archive{entries: nonEmpty(refusedMsg)}, err
+	}
+	defer f.Close()
+	return readZip(f, size, b)
+}
+
+// openBounded opens the archive at path when it is within maxArchive bytes on disk; refusedMsg is the
+// entries message of one over it (f is then nil). The bound is read from the metadata before the file is
+// opened: an archive over it is its row even when it cannot be opened. A non-nil error is a file that could
+// not be opened or measured.
+func openBounded(path string) (f *os.File, size int64, refusedMsg string, err error) {
 	st, err := os.Stat(path)
 	if err != nil {
-		return archive{}, err
+		return nil, 0, "", err
 	}
 	if st.Size() > maxArchive {
 		// Mutation: NTPL-size-first -- opening before the bound turns an unreadable archive over it into exit 3
-		return refused(tooLarge, st.Size(), maxArchive), nil
+		return nil, 0, fmt.Sprintf(tooLarge, st.Size(), maxArchive), nil
 	}
-	f, err := os.Open(path)
-	if err != nil {
-		return archive{}, err
+	if f, err = os.Open(path); err != nil {
+		return nil, 0, "", err
 	}
-	defer f.Close()
 	if st, err = f.Stat(); err != nil {
-		return archive{}, err
+		f.Close()
+		return nil, 0, "", err
 	}
 	if st.Size() > maxArchive { // the file grew between the two reads
-		return refused(tooLarge, st.Size(), maxArchive), nil
+		f.Close()
+		return nil, 0, fmt.Sprintf(tooLarge, st.Size(), maxArchive), nil
 	}
-	return readZip(f, st.Size())
+	return f, st.Size(), "", nil
 }
 
 // openZip reads the directory of the zip in r within the bounds every archive shares (a .ntpl, a template
@@ -80,8 +92,9 @@ func openZip(r io.ReaderAt, size int64) (zr *zip.Reader, rejected string, err er
 	return zr, "", nil
 }
 
-// readZip reads the template archive in r: its two entries, its manifest and what its bog and Px use.
-func readZip(r io.ReaderAt, size int64) (archive, error) {
+// readZip reads the template archive in r: its two entries, its manifest and what its bog and Px use,
+// drawing what it inflates from b. Once b is spent, nothing more of the archive is read.
+func readZip(r io.ReaderAt, size int64, b *budget) (archive, error) {
 	zr, rejected, err := openZip(r, size)
 	if err != nil || rejected != "" {
 		return archive{entries: nonEmpty(rejected)}, err
@@ -107,12 +120,15 @@ func readZip(r io.ReaderAt, size int64) (archive, error) {
 	a.need(bogEntry, len(bogs))
 	a.need(a.manifestName, len(manifests))
 	if len(manifests) == 1 {
-		a.manifest, a.unread = inflate(manifests[0])
+		a.manifest, a.unread = inflate(manifests[0], b)
+	}
+	if b.spent {
+		return a, nil
 	}
 	if len(bogs) == 1 {
 		pxs = append([]*zip.File{bogs[0]}, pxs...)
 	}
-	a.uses = readUses(pxs)
+	a.uses = readUses(pxs, b)
 	return a, nil
 }
 
@@ -122,10 +138,6 @@ func nonEmpty(msg string) []string {
 		return nil
 	}
 	return []string{msg}
-}
-
-func refused(format string, args ...any) archive {
-	return archive{entries: []string{fmt.Sprintf(format, args...)}}
 }
 
 // need records an entry that is absent or present more than once.
@@ -139,23 +151,17 @@ func (a *archive) need(name string, n int) {
 	}
 }
 
-// inflate reads the manifest entry up to maxManifest bytes; why is the ntpl-manifest message when it could
-// not be read whole.
-func inflate(f *zip.File) (data []byte, why string) {
-	if f.UncompressedSize64 > maxManifest {
+// inflate reads the manifest entry up to maxManifest bytes, drawn from b; why is the ntpl-manifest message
+// when it could not be read whole.
+func inflate(f *zip.File, b *budget) (data []byte, why string) {
+	data, res, err := b.inflate(f, maxManifest)
+	switch res {
+	case overLimit:
 		return nil, fmt.Sprintf(manifestTooLarge, f.Name, maxManifest)
-	}
-	rc, err := f.Open()
-	if err != nil {
+	case overBudget:
+		return nil, spentMsg(f.Name)
+	case unread:
 		return nil, fmt.Sprintf(manifestUnread, f.Name, err)
-	}
-	defer rc.Close()
-	data, err = io.ReadAll(io.LimitReader(rc, maxManifest+1))
-	switch {
-	case err != nil:
-		return nil, fmt.Sprintf(manifestUnread, f.Name, err)
-	case len(data) > maxManifest:
-		return nil, fmt.Sprintf(manifestTooLarge, f.Name, maxManifest)
 	}
 	return data, ""
 }
