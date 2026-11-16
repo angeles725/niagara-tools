@@ -51,7 +51,7 @@ func (d *deploy) copyJars() int {
 			return d.copyInterrupted(jars, signals)
 		}
 		if !staged {
-			return d.fail(ExitCopy, msgCopyFailed, jar.name, outcomeUnchanged)
+			return d.fail(ExitCopy, msgCopyFailed, jar.name, stationSite.unchanged())
 		}
 	}
 	for _, jar := range jars {

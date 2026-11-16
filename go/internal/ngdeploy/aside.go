@@ -19,7 +19,7 @@ func (d *deploy) jarsToCopy() (jars []*stagedJar, code int) {
 		jar.staged, jar.aside = jar.target+stagedSuffix, jar.target+asideSuffix
 		what, exists := notAJar(jar.target)
 		if what != "" {
-			return nil, d.fail(ExitCopy, msgCopyFailed, jar.name+": "+fmt.Sprintf(whyNotAJar, what), outcomeUnchanged)
+			return nil, d.fail(ExitCopy, msgCopyFailed, jar.name+": "+fmt.Sprintf(whyNotAJar, what), stationSite.unchanged())
 		}
 		jar.had = exists
 		jars = append(jars, jar)
@@ -32,14 +32,20 @@ func (d *deploy) jarsToCopy() (jars []*stagedJar, code int) {
 // module, beside its jar (which may be the new one of a deploy that was killed) or without it: nothing is
 // removed or renamed. The lines say what the station holds for each such jar, and the two ways out.
 func (d *deploy) refuseAside() int {
+	return d.refuseAsideIn(d.station, deployable, ExitCopy, msgAsideFound)
+}
+
+// refuseAsideIn is that refusal for the jars of some profiles in one modules directory: the exit code and the
+// headline (which takes the directory) are the caller's, the state lines and the ways out are the same.
+func (d *deploy) refuseAsideIn(dir string, profiles []string, code int, headline string) int {
 	var found []string
-	for _, profile := range deployable {
+	for _, profile := range profiles {
 		name := d.jarName(profile)
-		if !present(d.station + "/" + name + asideSuffix) {
+		if !present(dir + "/" + name + asideSuffix) {
 			continue
 		}
 		state := stateAsideNoJar
-		if present(d.station + "/" + name) {
+		if present(dir + "/" + name) {
 			state = stateAsideWithJar
 		}
 		found = append(found, fmt.Sprintf(state, name, name+asideSuffix, asideSuffix))
@@ -47,7 +53,7 @@ func (d *deploy) refuseAside() int {
 	if len(found) == 0 {
 		return proceed
 	}
-	code := d.fail(ExitCopy, msgAsideFound, d.station)
+	d.fail(code, headline, dir)
 	for _, line := range found {
 		d.warn(indent + line)
 	}
