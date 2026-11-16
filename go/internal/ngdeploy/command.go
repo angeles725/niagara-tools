@@ -7,7 +7,7 @@
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
 // file), config.go (required settings and paths), home.go (NIAGARA_HOME: a mirror, and its modules directory
 // put back when the deploy stops), backup.go and purge.go, annotations.go (the slotomatic
-// reminder), slotomatic.go, build.go, version.go and schema.go (the two prechecks), verify.go, gate.go,
+// reminder), slotomatic.go, build.go, version.go with jarcontent.go and schema.go (the two prechecks), verify.go, gate.go,
 // copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder). The data lives apart: exit.go, messages.go with messages_copy.go and messages_home.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy

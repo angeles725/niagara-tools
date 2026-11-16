@@ -23,7 +23,8 @@ func TestVersionPrecheck(t *testing.T) {
 		{"built unreadable", "1.2", "", ExitVersionUnknown, "err:version-bump precheck cannot verify demo-rt.jar: vendorVersion unreadable (built='' deployed='1.2')"},
 	} {
 		f := newFixture(t)
-		f.deployed()
+		f.zipJar(f.deployedJar("rt"), builtAt("1788609301540", nil)) // real jars: with the same version their content is read
+		f.zipJar(f.builtJar("rt"), builtAt("1788609309999", map[string]string{"com/acme/BDemo.class": "changed"}))
 		t.Setenv("FAKE_OLD_VERSION", tc.old)
 		t.Setenv("FAKE_NEW_VERSION", tc.built)
 		code := f.run("--no-backup", "--mode", "C")
@@ -32,8 +33,8 @@ func TestVersionPrecheck(t *testing.T) {
 			want = "err:" + warnNoBackup + "[ng-deploy] ERROR " + rest + "\n"
 		}
 		f.want(code, tc.code, want)
-		if deployedNow := f.read(f.deployedJar("rt")); (deployedNow == "rtjar") != (tc.code == ExitOK) {
-			t.Errorf("%s: the station jar is %q after exit %d", tc.name, deployedNow, code)
+		if deployedNow := f.read(f.deployedJar("rt")); (deployedNow == f.read(f.builtJar("rt"))) != (tc.code == ExitOK) {
+			t.Errorf("%s: the station jar is the built one: %v, after exit %d", tc.name, deployedNow == f.read(f.builtJar("rt")), code)
 		}
 		if tc.code != ExitOK && strings.Contains(f.calls(), "vm.sh") {
 			t.Errorf("%s: the gate ran after a refused precheck", tc.name)
@@ -57,7 +58,8 @@ func TestVersionPrecheckSkipsAJarThatIsNewOrUnchanged(t *testing.T) {
 func TestVersionPrecheckChecksEveryJarOfTheMode(t *testing.T) {
 	f := newFixture(t)
 	f.write(f.deployedJar("rt"), "rtjar") // unchanged
-	f.write(f.deployedJar("ux"), "old-ux")
+	f.zipJar(f.deployedJar("ux"), builtAt("1788609301540", nil))
+	f.zipJar(f.builtJar("ux"), builtAt("1788609309999", map[string]string{"com/acme/BDemo.class": "changed"}))
 	t.Setenv("FAKE_OLD_VERSION", "1.0")
 	t.Setenv("FAKE_NEW_VERSION", "1.0")
 	f.want(f.run("--no-backup"), ExitVersionSame, "err:demo-ux.jar bytes changed but vendorVersion is still 1.0")

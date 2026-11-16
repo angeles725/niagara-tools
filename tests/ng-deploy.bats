@@ -710,14 +710,33 @@ STUB
     grep -q "test/test-rt" "$TMPDIR_T/sr.args"
 }
 
+# helper: a real jar (a zip) at $1 whose one class holds $2, built at time $3: the build time is in module.xml, in
+# the manifest's digest of module.xml and in the signature files, as in two builds by the vendor's plugin.
+_real_jar() {
+    local d
+    d="$(mktemp -d "$TMPDIR_T/jar.XXXXXX")"
+    mkdir -p "$d/META-INF" "$d/com/acme"
+    printf 'Manifest-Version: 1.0\r\n\r\nName: META-INF/module.xml\r\nSHA-256-Digest: digest-%s\r\n\r\n' "$3" > "$d/META-INF/MANIFEST.MF"
+    printf '<module name="test-rt" vendorVersion="1.0" buildMillis="%s" buildHost="H">\n</module>\n' "$3" > "$d/META-INF/module.xml"
+    printf 'sf %s' "$3" > "$d/META-INF/SIGNER.SF"
+    printf 'rsa %s' "$3" > "$d/META-INF/SIGNER.RSA"
+    printf '%s' "$2" > "$d/com/acme/BTest.class"
+    rm -f "$1"
+    (cd "$d" && zip -q -r -X "$1" .)
+    rm -r "$d"
+}
+
 @test "NG-version-same: changed jar bytes with the SAME vendorVersion as the deployed jar block the deploy (exit 51) (A2)" {
     # Mutation: NG-version-same -- skipping the version-bump precheck ships new bytes under an old version.
     _gate_env; _fake_gate 0
-    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    _real_jar "$TMPDIR_T/modules/test-rt.jar" old 1788609301540
+    _real_jar "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar" new 1788609309999
+    cp "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/deployed.before"
     export FAKE_OLD_VERSION=2.1.0 FAKE_NEW_VERSION=2.1.0
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
     [ "$status" -eq 51 ]
-    [ "$(cat "$TMPDIR_T/modules/test-rt.jar")" = "old" ]
+    [[ "$output" == *"test-rt.jar bytes changed but vendorVersion is still 2.1.0"* ]]
+    cmp -s "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/deployed.before"
     export FAKE_NEW_VERSION=2.1.1
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
     [ "$status" -eq 0 ]
@@ -738,11 +757,32 @@ STUB
 @test "NG-version-trailing-zero: 1.3 -> 1.3.0 with changed bytes is not a bump (exit 51)" {
     # Mutation: NG-version-numeric -- a string compare reads '1.3' != '1.3.0' as a bump and deploys (exit 0).
     _gate_env; _fake_gate 0
-    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    _real_jar "$TMPDIR_T/modules/test-rt.jar" old 1788609301540
+    _real_jar "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar" new 1788609309999
+    cp "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/deployed.before"
     export FAKE_OLD_VERSION=1.3 FAKE_NEW_VERSION=1.3.0
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
     [ "$status" -eq 51 ]
-    [ "$(cat "$TMPDIR_T/modules/test-rt.jar")" = "old" ]
+    cmp -s "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/deployed.before"
+}
+
+@test "NG-version-rebuild: a rebuild of unchanged sources under the same vendorVersion deploys; a jar that cannot be read is exit 52, never a pass" {
+    # Mutation: NG-version-rebuild -- comparing whole jars refuses a retry (exit 51); reading an unreadable jar as unchanged passes it.
+    _gate_env; _fake_gate 0
+    _real_jar "$TMPDIR_T/modules/test-rt.jar" same 1788609301540
+    _real_jar "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar" same 1788609309999
+    ! cmp -s "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    export FAKE_OLD_VERSION=1.0 FAKE_NEW_VERSION=1.0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"version-bump ok (test-rt.jar: vendorVersion still 1.0, and the same content as the deployed jar apart from the build time, the manifest digests and the signature files)"* ]]
+    cmp -s "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+
+    printf 'not a zip' > "$TMPDIR_T/modules/test-rt.jar"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 52 ]
+    [[ "$output" == *"version-bump precheck cannot verify test-rt.jar: cannot compare its content with the deployed jar: $TMPDIR_T/modules/test-rt.jar is not a readable jar ("* ]]
+    [ "$(cat "$TMPDIR_T/modules/test-rt.jar")" = "not a zip" ]
 }
 
 @test "NG-version-downgrade: a LOWER vendorVersion (1.4 -> 1.3, 1.10 -> 1.9) is refused as a downgrade (exit 54); 1.3 -> 1.4 deploys" {

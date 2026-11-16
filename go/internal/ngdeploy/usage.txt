@@ -119,9 +119,15 @@ Exit codes:
       fails the gate)
       (every check runs on build/libs before the copy: nothing reaches STATION_MODULES_DIR, and
       <NIAGARA_HOME>/modules is put back as it was before the build)
-  51  version-bump precheck: the built jar's bytes differ from the deployed jar but its vendorVersion did not change
-      (numeric per component, a missing component = 0: 1.3 -> 1.3.0 is NOT a bump)
+  51  version-bump precheck: the built jar's content differs from the deployed jar but its vendorVersion did not
+      change (numeric per component, a missing component = 0: 1.3 -> 1.3.0 is NOT a bump). Content is the set
+      of entry names and the bytes of every entry, apart from what a rebuild of unchanged sources changes: the
+      signature files (META-INF/*.SF, *.RSA, *.DSA, *.EC), the digests of the manifest's per-entry sections,
+      and the buildMillis attribute of <module> in META-INF/module.xml. Two jars that differ in nothing else
+      are the same module: the deploy goes on ("version-bump ok (<jar>: vendorVersion still <v>, and the same
+      content ...)"), so a deploy can be repeated unchanged
   52  version-bump precheck cannot verify (a vendorVersion is unreadable, the two differ in a non-numeric suffix,
-      or the build left no jar in build/libs)
+      the build left no jar in build/libs, or, under the same vendorVersion, a jar whose content cannot be read:
+      not a zip, no entry, two entries under one name, an entry that fails its CRC)
   53  schema-risk precheck: verdict OUTAGE, LOSSY without --accept-lossy, or a schema-risk env fault
   54  version-bump precheck: the built jar's vendorVersion is LOWER than the deployed jar's (a downgrade)

@@ -38,12 +38,30 @@ func (d *deploy) precheckVersion() int {
 		case !comparable:
 			return d.fail(ExitVersionUnknown, msgVersionIncomparable, name, newer, older)
 		case order == 0:
-			return d.fail(ExitVersionSame, msgVersionSame, name, newer)
+			if code := d.sameVersion(name, built, deployed, newer); code != proceed {
+				return code
+			}
+			continue
 		case order < 0:
 			return d.fail(ExitVersionDown, msgVersionDown, name, older, newer, older)
 		}
 		d.say(msgVersionOK, name, older, newer)
 	}
+	return proceed
+}
+
+// sameVersion judges a built jar whose bytes differ from the deployed one under the same vendorVersion. A
+// rebuild of unchanged sources differs only in what every build changes (sameContent): there is no version to
+// bump, and the deploy goes on. Any other difference is exit 51. A jar whose content cannot be read is
+// neither: the precheck cannot verify (exit 52).
+func (d *deploy) sameVersion(name, built, deployed, version string) int {
+	switch same, why := sameContent(built, deployed); {
+	case why != "":
+		return d.fail(ExitVersionUnknown, msgVersionContent, name, why)
+	case !same:
+		return d.fail(ExitVersionSame, msgVersionSame, name, version)
+	}
+	d.say(msgVersionSameContent, name, version)
 	return proceed
 }
 
