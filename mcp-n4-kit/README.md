@@ -1139,6 +1139,26 @@ restored from its declared default), so `n4_rollback` restores the previous sche
 The read-back reloads the schedule and compares each part written with what `n4_read_schedule` shows; the station
 recalculates `out`, `next_time` and `next_value` by itself.
 
+### Special events
+
+`add_special_event` and `remove_special_event` change the special events of a boolean, numeric,
+enum or string schedule in the same batch:
+
+```json
+{"ord": "station:|slot:/Schedules/Lobby",
+ "remove_special_event": ["Christmas Break"],
+ "add_special_event": [{"name": "Plant Shutdown", "kind": "date_range",
+   "rule": {"start": {"year": 2027, "month": "dec", "day": 24}, "end": {"year": 2027, "month": "dec", "day": 31}},
+   "ranges": [{"start": "00:00", "end": "24:00", "value": false}]}]}
+```
+
+`kind` and the `rule` fields are those `n4_list_schedule_kinds` lists and `n4_read_schedule`
+returns (`"*"` or a missing field matches any; `custom` fields are lists). The events keep their
+order, which is their priority (first wins), and new events go last; to change one, remove and add
+it in one call. A `date` or `date_range` that ends before today (the date of the machine running
+the server) can never occur again: it is refused, naming `allow_expired: true`, which adds it
+anyway. The whole list is one set, so `n4_rollback` restores the events exactly as they were.
+
 ## Live smoke test
 
 `go/bin/live-smoke` (built from `go/cmd/mcp-n4/live-smoke`; formerly `tools/live_smoke.py`)
