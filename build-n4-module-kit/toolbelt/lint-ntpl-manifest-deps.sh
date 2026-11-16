@@ -28,10 +28,13 @@
 #                  *.px entry (each <import><module name>, each module:// ORD) uses, that no <dependency>
 #                  names (a part counts: control-rt lists control) and the installation does not ship; baja
 #                  and the module's own parts are exempt. One row per entry, names sorted; a bog or Px entry
-#                  that is not well-formed XML, or inflates past 32 MiB, is a FAIL row naming it; the entries
-#                  of one archive share 128 MiB in all, and past it one FAIL row names the first entry not
-#                  read and nothing more of that archive is read.
+#                  that is not well-formed XML, or inflates past 32 MiB, is a FAIL row naming it.
 #                  [ev: retro ntpl-alias-napl-k4 Δ1]
+# Run bounds: one run reads at most 1000 templates (in path order, or entry-name order in a jar); past them one
+# FAIL ntpl-entries row names the first template not read. Every template of a jar and every manifest, bog and
+# Px entry of every archive inflate from one budget of 128 MiB for the whole run; the entry it leaves no room for
+# is one FAIL row (ntpl-manifest, ntpl-uses, or ntpl-entries for a template of a jar) and nothing more is read.
+# A small jar of many templates, each inflating its own bound, cannot run for minutes. [ev: retro ntpl-budget-t26 Δ1]
 #
 # Stock modules: a station template lists every module its station uses, most of them shipped by every
 # Niagara installation and declared by no build file. --niagara-home <dir> (or NIAGARA_HOME in the
@@ -55,9 +58,9 @@
 # A module root that ships no .ntpl is one PASS row and exit 0.
 # A template module jar (the one .jar of .ntpl entries Workbench's Make Module writes) given as the root, a
 # regular file named *.jar: each *.ntpl and *.napl entry is checked as a shipped template, in entry-name order,
-# each row naming <jar>!/<entry>. The jar is opened within the bounds of a .ntpl (32 MiB on disk, 10000 entries,
-# no unsafe name); each template inflates to at most 32 MiB and all of them together to 128 MiB, past which one
-# FAIL ntpl-entries row names the first template not read and nothing more of the jar is read. A jar declares no
+# each row naming <jar>!/<entry>. The jar is opened within the bounds of a .ntpl (32 MiB on disk, checked before
+# the jar is opened, 10000 entries, no unsafe name); each template inflates to at most 32 MiB, within the run
+# bounds above. A jar declares no
 # build dependencies: a dependency is judged against the installation alone. A jar with no template entry is one
 # PASS row. [ev: retro ntpl-jar-manifest-k4b Δ2]
 # The manifest: an archive without template-manifest.xml is read through template.manifest.xml, the spelling of

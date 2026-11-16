@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-16 -->
+<!-- last-change-note: lint-ntpl-manifest-deps reads within one 128 MiB inflate budget and at most 1000 templates per run, and bounds a jar's size before opening it -->
+log: 2026-11-16 · `lint-ntpl-manifest-deps` run bounds: every template of a jar and every manifest, bog and Px entry of every archive draw on one 128 MiB inflate budget for the run (was 128 MiB per archive and 128 MiB for a jar's templates, so a 114 KB jar of 200 templates ran 132.6 s); the entry the budget stops at is one FAIL row and nothing more is read; at most 1000 templates per run, past them one FAIL ntpl-entries row; a jar over 32 MiB is the size row before it is opened (an unreadable one is exit 1, not 3). Retro ntpl-budget-t26 (Δ1-Δ3 applied, pending review). [ev: retro ntpl-budget-t26 Δ1] [ev: retro ntpl-budget-t26 Δ2] [ev: retro ntpl-budget-t26 Δ3]

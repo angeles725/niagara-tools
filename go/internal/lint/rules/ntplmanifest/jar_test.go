@@ -44,11 +44,13 @@ func TestTemplateModuleJarWithoutTemplatesOrNotAZip(t *testing.T) {
 }
 
 // The bounds: a template entry that inflates past the per-template bound is one row and is not read; past
-// the jar's total, the first template not read is named and nothing more of the jar is read.
+// the run's budget, which each template and its entries draw on, the first template not read is named and
+// nothing more of the jar is read.
 func TestTemplateModuleJarBounds(t *testing.T) {
-	defer func(one, all int64) { maxJarTemplate, maxJarTemplates = one, all }(maxJarTemplate, maxJarTemplates)
+	defer func(one, all int64) { maxJarTemplate, maxInflate = one, all }(maxJarTemplate, maxInflate)
 	small := template(t, "", "baja")
-	maxJarTemplate, maxJarTemplates = int64(len(small)), int64(2*len(small))
+	inside := len(bog) + len(manifestXML("", "baja")) // what reading one small template inflates past itself
+	maxJarTemplate, maxInflate = int64(len(small)), int64(2*(len(small)+inside))
 	big := template(t, "", stock...) // a longer manifest: a larger archive than small
 	if len(big) <= len(small) {
 		t.Fatalf("the big template (%d bytes) is not larger than the small one (%d)", len(big), len(small))
@@ -56,5 +58,5 @@ func TestTemplateModuleJarBounds(t *testing.T) {
 	jar := jarAt(t, entry{"a/Big.ntpl", big}, entry{"b/One.ntpl", small}, entry{"c/Two.ntpl", small}, entry{"d/Three.ntpl", small})
 	expect(t, "bounds", jar, 1,
 		"FAIL  ntpl-entries  @ROOT@!/a/Big.ntpl: inflates past "+strconv.FormatInt(maxJarTemplate, 10)+" bytes -- not read\n"+
-			"FAIL  ntpl-entries  @ROOT@!/d/Three.ntpl: the templates of the jar inflate past "+strconv.FormatInt(maxJarTemplates, 10)+" bytes in all -- this one and every one after it not read\n")
+			"FAIL  ntpl-entries  @ROOT@!/d/Three.ntpl: the templates and their entries inflate past "+strconv.FormatInt(maxInflate, 10)+" bytes in all, the bound of one run -- the template and everything after it not read\n")
 }
