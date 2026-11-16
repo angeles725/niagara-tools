@@ -780,7 +780,7 @@ _real_jar() {
     _gate_env; _fake_gate 0
     _real_jar "$TMPDIR_T/modules/test-rt.jar" same 1788609301540
     _real_jar "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar" same 1788609309999
-    ! cmp -s "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    ! cmp -s "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar" || return 1
     export FAKE_OLD_VERSION=1.0 FAKE_NEW_VERSION=1.0
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
     [ "$status" -eq 0 ]
@@ -1030,7 +1030,7 @@ STUB
     [ "$status" -eq 0 ]
     [[ "$output" != *"NOTICE: the jars the build installed"* ]]
     [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "new-rt" ]
-    [ "$(ls "$TMPDIR_T/niagara-home/modules" | tr '\n' ' ')" = "test-rt.jar test-ux.jar " ]
+    [ "$(ls "$TMPDIR_T/niagara-home/modules")" = "test-rt.jar"$'\n'"test-ux.jar" ]
 }
 
 @test "NG-home-same: a STATION_MODULES_DIR that is <NIAGARA_HOME>/modules is verified, not copied, and still gets the version precheck" {
@@ -1114,7 +1114,10 @@ _home_with_previous_rt() {
 @test "NG-home-interrupt: a SIGINT during the build puts the jars of <NIAGARA_HOME>/modules back and ends with 130" {
     # Mutation: NG-home-interrupt -- without the watch the signal ends the run with the built jars in the home and its lock left.
     _home_with_previous_rt; _fake_gate 0
-    sed -i 's|^exit "\${FAKE_GRADLEW_EXIT:-0}"$|case "$*" in *:jar*) kill -INT $PPID; sleep 0.5; exit 130 ;; esac|' "$TMPDIR_T/fakebin/gradlew"
+    head -n -1 "$TMPDIR_T/fakebin/gradlew" > "$TMPDIR_T/gradlew.head"   # all but its last line, the exit
+    cat "$TMPDIR_T/gradlew.head" - > "$TMPDIR_T/fakebin/gradlew" <<'STUB'
+case "$*" in *:jar*) kill -INT $PPID; sleep 0.5; exit 130 ;; esac
+STUB
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
     [ "$status" -eq 130 ]
     [[ "$output" == *"[ng-deploy] ERROR interrupted (SIGINT) before the copy; nothing was copied to the station"* ]]
