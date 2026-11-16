@@ -91,9 +91,11 @@ Since 2026-11-16 the cases that move this way are re-recorded with `memcap go te
 `stderr` sections of the cases that differ; the temporary dump hooks above are no longer needed.
 
 Retro row B6 (2026-11-16) made the `schema-risk` SKIP row of an artifact without `.deploy-baseline` name the exact
-command that creates it from the deployed commit (`mkdir -p <artifact>/.deploy-baseline && git -C <artifact> archive
-<deployed-ref> . | tar -x -C <artifact>/.deploy-baseline`). The 100 cases that print that row were re-recorded with
-`-update`; their diff changes that row only (156 lines), every exit line and summary unchanged.
+command that creates it from the deployed commit (archive to a temporary tar, then `mkdir <artifact>/.deploy-baseline`
+and extract, so a failed archive leaves no empty baseline). The 100 cases that print that row were re-recorded with
+`-update` (twice, once per wording); each diff changes that row only (156 lines), every exit line and summary unchanged.
+Run `-update` only while no Go source changes: a member wrapper that finds its binary older than a source tries to
+rebuild it under the case's PATH (no Go) and records an env fault.
 
 ## Truth cases (`truth-*`)
 

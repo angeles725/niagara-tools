@@ -51,23 +51,36 @@ func TestSchemaRiskNoBaselineNamesTheCommand(t *testing.T) {
 		t.Errorf("a missing baseline must stay a floor SKIP (INCOMPLETE)")
 	}
 	quoted := "'" + dir + "'"
-	want := "Mod-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: " +
-		"mkdir -p " + quoted + "/.deploy-baseline && git -C " + quoted + " archive <deployed-ref> . | tar -x -C " +
-		quoted + "/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)"
+	want := "Mod-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit" +
+		" (put its tag or commit in place of <deployed-ref>): " +
+		`T=$(mktemp -d) && git -C ` + quoted + ` archive -o "$T/b.tar" <deployed-ref> . && mkdir ` + quoted +
+		`/.deploy-baseline && tar -x -f "$T/b.tar" -C ` + quoted + `/.deploy-baseline; rm -rf "$T"` +
+		" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)"
 	if row != want {
 		t.Fatalf("row:\n got %q\nwant %q", row, want)
 	}
-	command := row[strings.Index(row, "mkdir -p "):strings.Index(row, " — or --first-deploy")]
-	command = strings.ReplaceAll(command, "<deployed-ref>", "deployed-2.8.5")
-	if out, err := exec.Command("bash", "-c", command).CombinedOutput(); err != nil {
-		t.Fatalf("the printed command failed: %v\n%s", err, out)
+	command := row[strings.Index(row, "T=$(mktemp -d)"):strings.Index(row, " — or --first-deploy")]
+	run := func(ref string) {
+		t.Helper()
+		cmd := exec.Command("bash", "-c", strings.ReplaceAll(command, "<deployed-ref>", ref))
+		cmd.Dir = t.TempDir() // a pasted redirection must not touch the repo
+		_ = cmd.Run()
 	}
-	got, err := os.ReadFile(filepath.Join(dir, ".deploy-baseline", "module-include.xml"))
+	baseline := filepath.Join(dir, ".deploy-baseline")
+	// A wrong ref, or <deployed-ref> pasted as it is printed, creates no (empty) baseline.
+	for _, ref := range []string{"no-such-ref", "<deployed-ref>"} {
+		run(ref)
+		if _, err := os.Stat(baseline); err == nil {
+			t.Fatalf("ref %q: a failed archive left %s", ref, baseline)
+		}
+	}
+	run("deployed-2.8.5")
+	got, err := os.ReadFile(filepath.Join(baseline, "module-include.xml"))
 	must(t, err)
 	if string(got) != "<deployed/>" {
 		t.Errorf("baseline module-include.xml = %q, want the deployed commit's", got)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".deploy-baseline", "src", "A.java")); err != nil {
+	if _, err := os.Stat(filepath.Join(baseline, "src", "A.java")); err != nil {
 		t.Errorf("baseline lacks src/A.java: %v", err)
 	}
 }
@@ -85,8 +98,8 @@ func TestShellWord(t *testing.T) {
 	t.Parallel()
 	for in, want := range map[string]string{"/a/Mod-rt": "/a/Mod-rt", "m/N1": "m/N1", "/a b": "'/a b'",
 		"/it's": `'/it'\''s'`, "": "''", "/x$y": "'/x$y'"} {
-		if got := shellWord(in); got != want {
-			t.Errorf("shellWord(%q) = %q, want %q", in, got, want)
+		if got := ShellWord(in); got != want {
+			t.Errorf("ShellWord(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

@@ -38,7 +38,7 @@ A-rt  SKIP  lint-size  no src/
 A-rt  SKIP  lint-license-isoperational-gate  no src/
 A-rt  SKIP  lint-set-null-ord  no src/
 A-rt  SKIP  lint-ws-placement  no src/
-A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/A-rt/.deploy-baseline && git -C m/A-rt archive <deployed-ref> . | tar -x -C m/A-rt/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/A-rt archive -o "$T/b.tar" <deployed-ref> . && mkdir m/A-rt/.deploy-baseline && tar -x -f "$T/b.tar" -C m/A-rt/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean

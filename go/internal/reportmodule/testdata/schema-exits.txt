@@ -31,7 +31,7 @@ N1  SKIP  lint-size  no src/
 N1  SKIP  lint-license-isoperational-gate  no src/
 N1  SKIP  lint-set-null-ord  no src/
 N1  SKIP  lint-ws-placement  no src/
-N1  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p m/N1/.deploy-baseline && git -C m/N1 archive <deployed-ref> . | tar -x -C m/N1/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+N1  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C m/N1 archive -o "$T/b.tar" <deployed-ref> . && mkdir m/N1/.deploy-baseline && tar -x -f "$T/b.tar" -C m/N1/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 S0  SKIP  verify-module  no built jar under build/libs (floor check not run)
 S0  SKIP  lint-lexicon-ascii  no *.lexicon under S0
 S0  SKIP  lint-delays  no src/

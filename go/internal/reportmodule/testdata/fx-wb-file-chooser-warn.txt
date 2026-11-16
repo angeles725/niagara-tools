@@ -16,7 +16,7 @@ DemoPan-wb  PASS  lint-size  clean
 DemoPan-wb  PASS  lint-license-isoperational-gate  clean
 DemoPan-wb  PASS  lint-set-null-ord  clean
 DemoPan-wb  PASS  lint-ws-placement  clean
-DemoPan-wb  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit: mkdir -p @REPO@/tests/fixtures/report-module/wb-file-chooser-warn/DemoPan-wb/.deploy-baseline && git -C @REPO@/tests/fixtures/report-module/wb-file-chooser-warn/DemoPan-wb archive <deployed-ref> . | tar -x -C @REPO@/tests/fixtures/report-module/wb-file-chooser-warn/DemoPan-wb/.deploy-baseline — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
+DemoPan-wb  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C @REPO@/tests/fixtures/report-module/wb-file-chooser-warn/DemoPan-wb archive -o "$T/b.tar" <deployed-ref> . && mkdir @REPO@/tests/fixtures/report-module/wb-file-chooser-warn/DemoPan-wb/.deploy-baseline && tar -x -f "$T/b.tar" -C @REPO@/tests/fixtures/report-module/wb-file-chooser-warn/DemoPan-wb/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  PASS  lint-structure  clean
