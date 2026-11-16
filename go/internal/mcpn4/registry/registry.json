@@ -630,7 +630,7 @@
   },
   {
    "name": "n4_set_flags",
-   "description": "Set the flags of one slot of a component: the complete new flag set replaces the current one (an empty string clears every flag). The plan shows the current and the requested flags with their names; the inverse restores the previous flags exactly, and the read-back loads the slot again and compares the two sets. Refused: an unknown or repeated flag letter, a slot the component does not have, a set equal to the current one, and a slot whose current flags cannot be read (not sent by the station and its type contract unreadable). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Set the flags of one slot of a component: either flags, the complete new set that replaces the current one (an empty string clears every flag), or add and/or remove, letters changed in the current set so the letters the slot already holds are kept. The plan shows the current and the requested flags with their names; the inverse restores the previous flags exactly, and the read-back loads the slot again and compares the two sets. Refused: both forms or neither, an unknown or repeated flag letter, a letter both added and removed, a slot the component does not have, a set equal to the current one, and a slot whose current flags cannot be read (not sent by the station and its type contract unreadable). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -646,6 +646,14 @@
       "type": "string",
       "description": "The complete new flag set as letters, each once, in any order; \"\" for no flags. Letters: r readonly, t transient, h hidden, s summary, a async, n no-run, d default-on-clone, c confirm-required, o operator, x execute-on-change, f fan-in, A no-audit, p composite, R remove-on-clone, m metadata, N non-critical, L link-target, 1 2 3 4 user-defined"
      },
+     "add": {
+      "type": "string",
+      "description": "Instead of flags: letters to add to the slot's current flags, each once (same letters as flags)"
+     },
+     "remove": {
+      "type": "string",
+      "description": "Instead of flags: letters to remove from the slot's current flags, each once (same letters as flags)"
+     },
      "dry_run": {
       "type": "boolean",
       "default": true,
@@ -658,8 +666,7 @@
     },
     "required": [
      "ord",
-     "slot",
-     "flags"
+     "slot"
     ]
    },
    "annotations": {

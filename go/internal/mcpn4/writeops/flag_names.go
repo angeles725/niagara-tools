@@ -59,15 +59,18 @@ func sameFlags(a, b string) bool { return canonicalFlags(a) == canonicalFlags(b)
 
 // checkFlags refuses a requested flags string holding a letter the table does not have (the
 // station would ignore it silently, Flags.decodeFromString) or a letter twice.
-func checkFlags(flags string) error {
+func checkFlags(flags string) error { return checkFlagLetters("flags", flags) }
+
+// checkFlagLetters is checkFlags for the argument named label (flags, add or remove).
+func checkFlagLetters(label, flags string) error {
 	seen := map[rune]bool{}
 	for _, r := range flags {
 		if _, ok := flagName(string(r)); !ok {
-			return plan.ToolError("unknown flag letter " + pyjson.StrRepr(string(r)) + " in flags " +
+			return plan.ToolError("unknown flag letter " + pyjson.StrRepr(string(r)) + " in " + label + " " +
 				pyjson.StrRepr(flags) + "; valid letters: " + namedFlags(allFlagLetters()))
 		}
 		if seen[r] {
-			return plan.ToolError("flag letter " + pyjson.StrRepr(string(r)) + " is repeated in flags " +
+			return plan.ToolError("flag letter " + pyjson.StrRepr(string(r)) + " is repeated in " + label + " " +
 				pyjson.StrRepr(flags) + "; give each letter once")
 		}
 		seen[r] = true
