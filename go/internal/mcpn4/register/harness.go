@@ -9,7 +9,7 @@ import (
 )
 
 // Harnesses are the agent harnesses register writes an MCP server entry for.
-var Harnesses = []string{"claude"}
+var Harnesses = []string{"claude", "pi", "gentle-shell"}
 
 // target is where one harness keeps its MCP server entry, and the entry itself.
 type target struct {
@@ -21,13 +21,22 @@ type target struct {
 func jsonString(s string) []byte { return encodeKey(s) }
 
 // harnessTarget is the entry for server name running launcher in the given harness. Claude Code
-// keeps a project's (local scope) servers in ~/.claude.json under projects[<dir>].mcpServers.
+// keeps a project's (local scope) servers in ~/.claude.json under projects[<dir>].mcpServers;
+// pi and gentle-shell read <agent-dir>/mcp.json, where "exposure": "direct" makes every tool a
+// first-class tool.
 func harnessTarget(harness, home, project, name, launcher string) (target, error) {
 	cmd := jsonString(launcher)
 	switch harness {
 	case "claude":
 		return target{filepath.Join(home, ".claude.json"), []string{"projects", project, "mcpServers", name},
 			[]byte(`{"args":[],"command":` + string(cmd) + `,"env":{},"type":"stdio"}`)}, nil
+	case "pi", "gentle-shell":
+		dir := filepath.Join(home, ".pi", "agent")
+		if harness == "gentle-shell" {
+			dir = filepath.Join(home, ".gentle-shell", "agent")
+		}
+		return target{filepath.Join(dir, "mcp.json"), []string{"mcpServers", name},
+			[]byte(`{"command":` + string(cmd) + `,"args":[],"exposure":"direct"}`)}, nil
 	}
 	return target{}, usageErrorf("--harness must be one of %v, got %q", Harnesses, harness)
 }
