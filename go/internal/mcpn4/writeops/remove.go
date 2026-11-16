@@ -55,7 +55,8 @@ func removePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		}
 	}
 	sort.Strings(truncated) // code point order: WTF-8 bytes sort as code points
-	s := &snapshot{handles: map[string]string{}}
+	ct, contractsNote := snapshotContracts(c, box.Node(nodes, ""))
+	s := &snapshot{handles: map[string]string{}, ct: ct}
 	body, err := s.take(box.Node(nodes, ""), "", SnapshotDepth)
 	if err != nil {
 		return nil, err
@@ -63,6 +64,9 @@ func removePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	inverse := []any{obj("nm", "a", "h", parentH, "n", nm, "b", body)}
 	notes := []any{"Automatic re-creation (n4_rollback) is limited to this snapshot: type, plain slots " +
 		"and wsAnnotation to depth 3; it is not a full restore."}
+	if contractsNote != "" {
+		notes = append(notes, contractsNote)
+	}
 	anyPrior := false
 	for _, l := range s.links {
 		tail, err := sourceTail(obj("sourceOrd", l.sourceOrd))

@@ -14,7 +14,8 @@ const (
 	TruncatedPathsShown = 20
 )
 
-// runtimeOutputSlots is RUNTIME_OUTPUT_SLOTS: Status* outputs a re-create body never restores.
+// runtimeOutputSlots is RUNTIME_OUTPUT_SLOTS: Status* outputs a body leaves out unless the
+// parent's contract declares them configuration (see keepsOutput).
 var runtimeOutputSlots = map[string]bool{"out": true}
 
 // linkRec is a link the snapshot met: the path of the component that holds it, its slots and
@@ -25,10 +26,12 @@ type linkRec struct {
 	prior                             *pyjson.Object
 }
 
-// snapshot is _snapshot's shared state: the links met and handle -> path (keyed as a dict).
+// snapshot is _snapshot's shared state: the links met and handle -> path (keyed as a dict),
+// and the type contracts that tell a configured output from a computed one (nil: none read).
 type snapshot struct {
 	links   []*linkRec
 	handles map[string]string
+	ct      *plan.Contracts
 }
 
 // kidsOf is node.get("s", []) of a node _prune cut to depth levels of children.
@@ -104,7 +107,7 @@ func (s *snapshot) take(node *pyjson.Object, path string, depth int) (*pyjson.Ob
 				sourceSlot: get(slots, "sourceSlotName"), targetSlot: get(slots, "targetSlotName")})
 			continue
 		}
-		if runtimeOutputSlots[n] && statusType(get(child, "t")) && !driven["s"+n] {
+		if runtimeOutputSlots[n] && statusType(get(child, "t")) && !driven["s"+n] && !s.keepsOutput(node, child) {
 			continue
 		}
 		kid, err := s.take(child, childPath, depth-1)
