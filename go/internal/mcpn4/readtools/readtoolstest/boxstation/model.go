@@ -18,6 +18,9 @@ type Node struct {
 	// slot of the fake is dynamic, so a load carries them only when there are any.
 	Flags    string
 	Children []*Node
+	// AtDefault marks a frozen property still at its type default: an ORD resolves to it, but a
+	// load leaves it out, as a station does.
+	AtDefault bool
 }
 
 // Child is the direct child named name, nil when absent.
@@ -172,7 +175,7 @@ func serialize(n *Node, depth int, isRoot bool) map[string]any {
 	if depth > 0 {
 		var kids []any
 		for _, c := range n.Children {
-			if d, ok := defaults[c.Type]; ok && c.Value == d && c.Flags == "" {
+			if d, ok := defaults[c.Type]; c.AtDefault || ok && c.Value == d && c.Flags == "" {
 				continue
 			}
 			kidDepth := depth - 1

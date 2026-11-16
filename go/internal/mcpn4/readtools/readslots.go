@@ -66,7 +66,9 @@ func slotEntry(nodes *pyjson.Object, name string) (*pyjson.Object, error) {
 
 // ReadSlots is n4_read_slots: every slot of ord, Status complexes decoded (depth 2: the slots
 // and the value/status children of each Status slot), then the declared properties the load
-// left out at their default (withDefaults), each marked default.
+// left out at their default (withDefaults), each marked default. An ord that names a property of
+// a component (a struct such as alarm:AlarmTimestamps) lists that property's fields instead
+// (property), or the property itself when it has none.
 func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 	ord, err := ordArg(args)
 	if err != nil {
@@ -76,15 +78,48 @@ func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, err
 	}
+	d := t.withDefaults(nodes, []string{""})
+	prop, err := t.property(ord, nodes, d)
+	if err != nil {
+		return nil, err
+	}
+	atDefault := false
+	if prop != nil {
+		nodes, d, atDefault = prop.nodes, prop.d, prop.atDefault
+		elapsed += prop.elapsed
+	}
+	slots, err := listSlots(nodes, d, atDefault)
+	if err != nil {
+		return nil, err
+	}
+	if prop != nil && len(slots) == 0 {
+		slots = append(slots, prop.self)
+	}
+	out := obj("ord", ord, "slots", slots, "elapsed_ms", elapsed)
+	if prop != nil {
+		prop.describe(out, slots)
+	}
+	if note := d.noteText(); note != "" {
+		out.Set("defaults_note", note)
+	}
+	return out, nil
+}
+
+// listSlots is the entry of every loaded slot under the root, then of each declared default
+// the load left out; atDefault marks the loaded ones default too (the fields of a property that
+// is itself at its declared default).
+func listSlots(nodes *pyjson.Object, d *declared, atDefault bool) ([]any, error) {
 	slots := []any{}
 	for _, name := range box.Children(nodes, "").Keys() {
 		entry, err := slotEntry(nodes, name)
 		if err != nil {
 			return nil, err
 		}
+		if atDefault {
+			entry.Set("default", true)
+		}
 		slots = append(slots, entry)
 	}
-	d := t.withDefaults(nodes, []string{""})
 	for _, name := range d.added[""] {
 		if entry, err := d.defaultSlot(name, name); err != nil {
 			d.skip(name, err) // one default the reader cannot decode does not fail the read
@@ -92,11 +127,7 @@ func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 			slots = append(slots, entry)
 		}
 	}
-	out := obj("ord", ord, "slots", slots, "elapsed_ms", elapsed)
-	if note := d.noteText(); note != "" {
-		out.Set("defaults_note", note)
-	}
-	return out, nil
+	return slots, nil
 }
 
 // statusEntry completes the entry of a slot whose type is baja:Status itself: a simple whose
