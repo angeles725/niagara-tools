@@ -39,3 +39,18 @@ func signedBy(names ...string) map[string]string {
 	}
 	return entries
 }
+
+// declares writes a jar with one entry that declares size bytes of content and holds none: what the
+// directory of a zip says is all the precheck reads before it decides how much it will read.
+func (f *fixture) declares(path, name string, size uint64) {
+	f.t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	if _, err := zw.CreateRaw(&zip.FileHeader{Name: name, Method: zip.Deflate, UncompressedSize64: size, CompressedSize64: 0}); err != nil {
+		f.t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		f.t.Fatal(err)
+	}
+	f.write(path, buf.String())
+}

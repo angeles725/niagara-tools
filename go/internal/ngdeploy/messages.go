@@ -71,13 +71,18 @@ const (
 	msgVersionNoJar        = "version-bump precheck cannot verify %s: the build left no jar at %s"
 	msgVersionOK           = "version-bump ok (%s: %s -> %s)"
 	// msgVersionSameContent takes the jar and the version both jars carry.
-	msgVersionSameContent = "version-bump ok (%s: vendorVersion still %s, and the same content as the deployed jar apart from the build time, the manifest digests and the signature files)"
+	msgVersionSameContent = "version-bump ok (%s: vendorVersion still %s, and the same content as the deployed jar apart from the build time and host, the manifest digests and the signature files)"
 	// msgVersionContent takes the jar name and why a jar could not be read (below: the path, then the reason).
 	msgVersionContent = "version-bump precheck cannot verify %s: cannot compare its content with the deployed jar: %s"
 	whyNotAJarFile    = "%s is not a readable jar (%s)"
 	whyNoEntry        = "%s holds no entry"
 	whyTwoEntries     = "%s holds two entries named %s"
 	whyEntryUnread    = "%s: %s cannot be read (%s)"
+	// The limits (patterns.go): the jar and maxJarContent; the jar, the file and maxDescriptor; then a
+	// descriptor encoding/xml cannot read (the jar, the file, why).
+	whyJarTooLarge  = "%s declares more than %d bytes of content, the most the precheck reads"
+	whyFileTooLarge = "%s: %s is over %d bytes"
+	whyNoRoot       = "%s: %s cannot be read as a descriptor (%s)"
 
 	// schema-risk precheck
 	msgSchemaFirstDeploy = "schema-risk: N/A (--first-deploy: no deployed baseline)"

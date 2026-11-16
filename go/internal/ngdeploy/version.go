@@ -1,9 +1,6 @@
 package ngdeploy
 
 import (
-	"bytes"
-	"os"
-
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 	"github.com/angeles725/niagara-tools/go/internal/vendorversion"
 )
@@ -79,11 +76,4 @@ func (d *deploy) jarDiffers(name, built, deployed string) (differs bool, code in
 		}
 	}
 	return !sameBytes(built, deployed), proceed
-}
-
-// sameBytes is cmp -s: both files can be read and hold the same bytes.
-func sameBytes(a, b string) bool {
-	x, errX := os.ReadFile(a)
-	y, errY := os.ReadFile(b)
-	return errX == nil && errY == nil && bytes.Equal(x, y)
 }

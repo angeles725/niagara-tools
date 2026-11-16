@@ -18,9 +18,6 @@ var (
 	wholeNumber = regexp.MustCompile(`^(0|[1-9][0-9]*)$`)
 	// digits is a switch value: bash compared it to 1 as a number.
 	digits = regexp.MustCompile(`^[0-9]+$`)
-	// buildMillis is the build time the vendor's plugin stamps on the <module> element of META-INF/module.xml:
-	// the one attribute of the descriptor a rebuild of unchanged sources changes. Group 1 is all before its value.
-	buildMillis = regexp.MustCompile(`(<module\s[^>]*?\sbuildMillis=)("[^"]*"|'[^']*')`)
 	// digestAttribute is a digest attribute of a manifest section: SHA-256-Digest, SHA-256-Digest-Manifest...
 	digestAttribute = regexp.MustCompile(`^[A-Za-z0-9_-]+-Digest(-[A-Za-z0-9_-]+)?:`)
 )
@@ -55,9 +52,21 @@ const (
 )
 
 // What two builds of the same sources differ in, and the version-bump precheck therefore does not compare
-// (jarcontent.go), beside buildMillis and the digests above: the signature files, which are the entries
-// directly under metaInf whose name ends, in any case, in one of signatureExts.
-var signatureExts = []string{".SF", ".RSA", ".DSA", ".EC"}
+// (jarcontent.go, descriptor.go), beside the digests above: the signature files, which are the entries
+// directly under metaInf whose name ends, in any case, in one of signatureExts; and buildStamps, the
+// attributes the vendor's plugin stamps on the root element of META-INF/module.xml at every build: when it
+// ran and on which machine.
+var (
+	signatureExts = []string{".SF", ".RSA", ".DSA", ".EC"}
+	buildStamps   = map[string]bool{"buildMillis": true, "buildHost": true}
+)
+
+// The limits of that comparison, which keep its memory bounded whatever a jar holds.
+const (
+	maxJarContent = 1 << 31 // bytes of content a jar may declare, all entries together: over it, exit 52
+	maxDescriptor = 1 << 23 // bytes of the manifest and of module.xml, which are read whole: over it, exit 52
+	contentChunk  = 1 << 16 // bytes of an entry hashed at a time
+)
 
 const (
 	metaInf           = "META-INF/"
