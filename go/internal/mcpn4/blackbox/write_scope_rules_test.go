@@ -4,6 +4,7 @@ package blackbox
 // (M5) and a link is scoped on its target only (M10).
 
 import (
+	"encoding/json"
 	"slices"
 	"strings"
 	"testing"
@@ -79,4 +80,23 @@ func TestLinkSourceMustStillBeAPlainOrd(t *testing.T) {
 	if !strings.Contains(text, "source_ord") || !strings.Contains(text, "is not a plain station ORD") {
 		t.Errorf("refusal = %s", text)
 	}
+}
+
+// The dry run of a scope-root create tells the operator how the root goes away again.
+func TestScopeRootCreatePlanSaysHowToRemoveIt(t *testing.T) {
+	r := rootScopeRig(t)
+	out := r.Srv.Dry("n4_create_component", Args{"parent_ord": Folder, "name": "Root", "type": "baja:Folder"})
+	notes := pyjsonText(out["plan"])
+	if !strings.Contains(notes, "creates the write-scope root") || !strings.Contains(notes, "wider scope or by hand") {
+		t.Errorf("plan = %s", notes)
+	}
+	plain := verifiedRig(t).Srv.Dry("n4_create_component", createPump)
+	if strings.Contains(pyjsonText(plain["plan"]), "write-scope root") {
+		t.Errorf("an ordinary create carries the root note: %v", plain["plan"])
+	}
+}
+
+func pyjsonText(v any) string {
+	raw, _ := json.Marshal(v)
+	return string(raw)
 }

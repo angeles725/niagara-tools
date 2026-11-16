@@ -35,6 +35,12 @@ func createPlanWith(c plan.Client, args *pyjson.Object, w *plan.State, _ *sessio
 			return nil, plan.ToolError("the scope root " + pyjson.StrRepr(root) +
 				" already exists: nothing to create (a second one would be renamed outside the write scope)")
 		}
+		p, err := createPlan(c, args)
+		if err == nil {
+			p.Notes = append(p.Notes, "This creates the write-scope root itself; the same scope cannot remove it again "+
+				"(n4_remove_component scopes on parent_ord): remove it under a wider scope or by hand.")
+		}
+		return p, err
 	}
 	return createPlan(c, args)
 }
