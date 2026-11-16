@@ -52,7 +52,7 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 		return nil, err
 	}
 	// One level more than the snapshot keeps: what sits there is reported, never captured.
-	_, nodes, err := plan.Handle(c, childOrd, SnapshotDepth+1)
+	nodes, plain, err := childNodes(c, parentH, parentNodes, nm, childOrd)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if err != nil {
 		return nil, err
 	}
-	inverse := []any{obj("nm", "a", "h", parentH, "n", nm, "b", body)}
+	inverse := []any{slotAdd(parentH, nm, body, box.Node(nodes, ""), plain)}
 	notes := []any{"Automatic re-creation (n4_rollback) is limited to this snapshot: type, plain slots " +
 		"and wsAnnotation to depth 3; it is not a full restore."}
 	if contractsNote != "" {
