@@ -19,9 +19,9 @@ const ExitEnv = 3
 const changedUsage = "usage: ci-steps changed --ci-file <workflow.yml> --tree <dir> [--range <from>..<to>]\n"
 
 // changedMain implements `ci-steps changed`: it lists the files a change touches (git, in the process
-// directory), writes the ones a check needs under --tree (for shellcheck: CI's whole file set as the change
-// leaves it, when one file of it changed) and prints one `<check>\t<path>` line per
-// check and file: shellcheck, bats (the bats lints) and gofmt, in that order. Exit 0, 2 usage or an
+// directory), writes the ones a check needs under --tree (for shellcheck: the changed files of CI's set with
+// the files they source and that source them, or the whole set when a source path cannot be resolved) and
+// prints one `<check>\t<path>` line per check and file: shellcheck, bats (the bats lints) and gofmt, in that order. Exit 0, 2 usage or an
 // unreadable workflow, 3 a git or write failure.
 func changedMain(args []string, s cli.Stdio) int {
 	fl := flag.NewFlagSet("ci-steps changed", flag.ContinueOnError)
@@ -55,15 +55,24 @@ func changedMain(args []string, s cli.Stdio) int {
 	}
 	plan := Select(globs, set.paths)
 	if len(plan.Shellcheck) > 0 {
-		// CI shellchecks its whole file set in one run, so a sourced file is read with its sourcer: check that
-		// set as the change leaves it, never a changed script alone (a lone ci-local.sh read a variable its
-		// sourced lib uses as unused).
+		// A sourced file is read with its sourcer: the changed files go with what they source and what
+		// sources them (sourced.go); CI's whole set only when a source path cannot be resolved.
 		all, err := set.allFiles()
 		if err != nil {
 			fmt.Fprintf(s.Err, "ci-steps changed: %v\n", err)
 			return ExitEnv
 		}
-		plan.Shellcheck = Select(globs, all).Shellcheck
+		whole := Select(globs, all).Shellcheck
+		closure, unresolved, err := shellcheckClosure(plan.Shellcheck, whole, set.read)
+		if err != nil {
+			fmt.Fprintf(s.Err, "ci-steps changed: %v\n", err)
+			return ExitEnv
+		}
+		plan.Shellcheck = closure
+		if unresolved != "" {
+			fmt.Fprintf(s.Err, "ci-steps changed: %s: cannot resolve the sourced path; shellchecking CI's whole file set\n", unresolved)
+			plan.Shellcheck = whole
+		}
 	}
 	need := append(append(append([]string{}, plan.Shellcheck...), plan.Bats...), plan.Gofmt...)
 	if len(plan.Shellcheck) > 0 && hasPath(set, shellcheckConfig) {

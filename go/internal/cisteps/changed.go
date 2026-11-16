@@ -9,8 +9,8 @@ import (
 // The changed-file selection of `scripts/ci-local.sh --changed` (retro coordination-stretch C3): the CI
 // jobs that failed on #684 (the kit's bats lint, shellcheck 0.10) were reproducible locally, but only the
 // files of the change need them before a push. The shellcheck file set is read from ci.yml itself, so
-// the local selection cannot drift from what CI checks. When one file of that set changed, the whole set
-// is shellchecked as the change leaves it, as CI does: a sourced file is read with its sourcer.
+// the local selection cannot drift from what CI checks. A changed file of that set is shellchecked with
+// the files it sources and the files that source it (sourced.go, retro T14), as the change leaves them.
 
 // Plan is what the changed files need: the pinned shellcheck, the bats lints and gofmt.
 type Plan struct {
