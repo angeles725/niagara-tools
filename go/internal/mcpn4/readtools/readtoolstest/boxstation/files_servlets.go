@@ -11,7 +11,8 @@ import (
 )
 
 // This file adds the station's GET servlets to the fake, as a station serves them: GET
-// /file/<path> (FileServlet) and GET /ord/<ORD> (a BQL table as CSV). Servlets listens on its
+// /file/<path> (FileServlet) and GET /ord/<ORD> (a BQL table as CSV); spy_servlet.go adds the
+// spy pages. Servlets listens on its
 // own address in front of a Station; every other request (BOX POSTs, GET /obix/about/) is the
 // station's own answer.
 
@@ -42,6 +43,10 @@ type Servlets struct {
 	// GETs counts every GET (FakeStation.about_requests), authorized or not.
 	FileRequests, OrdRequests []string
 	GETs                      int
+	// SpyPages answer GET /ord?spy:/<path> by decoded path ("" is the index), see spy_servlet.go;
+	// SpyRequests is the request URI of every spy GET, in order.
+	SpyPages    map[string]SpyPage
+	SpyRequests []string
 
 	mu sync.Mutex
 }
@@ -50,7 +55,8 @@ type Servlets struct {
 // server under test should use for st.
 func ServeServlets(t testing.TB, st *Station) *Servlets {
 	t.Helper()
-	sv := &Servlets{St: st, Files: map[string]File{}, FileRequests: []string{}, OrdRequests: []string{}}
+	sv := &Servlets{St: st, Files: map[string]File{}, FileRequests: []string{}, OrdRequests: []string{},
+		SpyPages: map[string]SpyPage{}, SpyRequests: []string{}}
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -79,6 +85,10 @@ func (sv *Servlets) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sv.Do(func(*Servlets) { sv.GETs++ })
+	if isSpy(r) {
+		sv.serveSpy(w, r)
+		return
+	}
 	if !isFile && !isOrd {
 		sv.St.serve(w, r)
 		return

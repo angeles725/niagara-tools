@@ -195,7 +195,7 @@ Example MCP client entry (Claude Code `.mcp.json`):
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
-`n4_list_px_views`, `n4_px_summary`.
+`n4_list_px_views`, `n4_px_summary`, `n4_spy_page`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -233,6 +233,20 @@ never overwritten; a truncated read is not saved). `n4_px_summary(file_ord, max_
 max_items=200)` fetches a `.px` and returns its media, imported modules, canvases and
 `viewSize`, layers, widget and binding counts, bound ORDs grouped by component, images,
 included Px, charts and label texts, without the XML.
+Spy pages (the station's diagnostics tree, the pages of the Workbench Spy view):
+`n4_spy_page(path="", max_rows=500, max_bytes=2097152)` sends one `GET /ord?spy:/<path>` with
+the session's credentials and returns the page as data: `title`, `tables` (each with its `title`,
+`header` and `rows` of cells), `links` (the child pages, each `path` ready to pass back), `actions`
+(the POST forms the page offers, by path: named, never invoked, and their hidden fields are never
+returned) and `text` (what sits outside the tables). An empty `path` is the index. It only reads:
+a path is plain names separated by `/`, and a scheme or `:`, `|`, `..`, a query string (`?`, `&`,
+`=`, `#`), `%`, `;`, a backslash, a control character and the known action pages (`util/gc`,
+`util/forceThreadDump`) are refused before any request. `status` is `ok`, `forbidden` (403: the
+user may not read spy pages, which need a super user), `not_found` (404, or the station's "Spy Not
+Found" page) or `not_html`; a 401 is an authentication error like on any other read. `truncated`
+is true when a cap cut the reply and `truncated_by` names the caps (`max_bytes`, `max_rows`,
+`links`, `cell`, `text`). Spy pages are diagnostics, not an API: their layout differs between
+Niagara versions (this reader was measured on 4.15), so read the tables as found.
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
 children of those types or of their subtypes (`history:HistoryExt` keeps every history extension)

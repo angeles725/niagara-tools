@@ -399,6 +399,47 @@
     "openWorldHint": false
    },
    "needs_session": false
+  },
+  {
+   "name": "n4_spy_page",
+   "description": "Read one diagnostics page of the station's spy tree (GET /ord?spy:/<path>, the pages the Workbench Spy view shows) as data: title, tables (title, header, rows of cells), links to child pages as relative spy paths, the POST actions the page offers (named only, never invoked) and the text outside tables. Read-only: one GET under the spy root. Refused before any request: a scheme or ':' , '|', '..', a query string ('?', '&', '=', '#'), '%', ';', a backslash, control characters and the known action pages (util/gc, util/forceThreadDump). status is ok, forbidden (the user may not read spy pages), not_found or not_html. Spy pages are diagnostics: their layout differs between Niagara versions, so read the tables as found. truncated is true when a cap cut the reply; truncated_by names the caps.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Path below the spy root, e.g. metrics, sysInfo or util/JMX Info; empty for the index",
+      "default": ""
+     },
+     "max_rows": {
+      "type": "integer",
+      "description": "Cap of table rows returned, all tables together",
+      "minimum": 1,
+      "maximum": 5000,
+      "default": 500
+     },
+     "max_bytes": {
+      "type": "integer",
+      "description": "Byte cap of the page read",
+      "minimum": 1024,
+      "maximum": 16777216,
+      "default": 2097152
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [

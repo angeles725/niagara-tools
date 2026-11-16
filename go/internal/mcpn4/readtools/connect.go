@@ -1,6 +1,7 @@
 // Package readtools holds the read-only station tools of the mcp-n4 server
 // (mcp-n4-kit/mcp_n4/tools_read.py:198-822 and its TOOLS table): n4_connect,
-// n4_describe_session, the tree reads, the BQL bulk reads and the station file reads; every
+// n4_describe_session, the tree reads, the BQL bulk reads, the station file reads and the spy
+// page read; every
 // other read tool still answers jsonrpc.NotImplemented.
 package readtools
 
@@ -76,6 +77,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_px_summary"] = t.PxSummary
 	s.Handlers["n4_list_batches"] = t.ListBatches
 	s.Handlers["n4_session_retro_draft"] = t.SessionRetroDraft
+	s.Handlers["n4_spy_page"] = t.SpyPage
 }
 
 func toolError(format string, a ...any) error {
