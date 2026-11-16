@@ -2,6 +2,7 @@
 # Tests for scripts/check-client-source.sh — is the module root the declared source of truth?
 # [ev: retro client-source-of-truth Δ1] (git half of the preflight check; toolbelt scripts never
 # call version control — kit-links L2 — so this lives in scripts/).
+# Named mutation: read an unreadable BUILD-STATE as empty text -> CS-unreadable red.
 #
 # Every repository is created under a temp dir with a throwaway identity; no network, no $HOME config.
 
@@ -138,4 +139,15 @@ EOF
   _repo "$TMPDIR_T/r"
   run "$CS" --declared "r-main" "$MODROOT"
   [ "$status" -eq 2 ]
+}
+
+@test "CS-unreadable: a BUILD-STATE that exists and cannot be read -> exit 3 naming it, no row (never WARN undeclared)" {
+  [ "$(id -u)" -ne 0 ] || skip "running as root: chmod 000 does not block reads"
+  _repo "$TMPDIR_T/r"
+  printf '<!-- build-state.v1 -->\nmodule: Mod\nsource_of_truth: r@main@%s\n<!-- /build-state.v1 -->\n' "$C2" > "$TMPDIR_T/BUILD-STATE.md"
+  chmod 000 "$TMPDIR_T/BUILD-STATE.md"
+  run "$CS" --build-state "$TMPDIR_T/BUILD-STATE.md" --module Mod "$MODROOT"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"check-client-source: cannot read $TMPDIR_T/BUILD-STATE.md"* ]]
+  [[ "$output" != *"source-of-truth"* ]]
 }

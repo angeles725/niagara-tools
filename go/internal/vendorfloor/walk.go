@@ -13,10 +13,12 @@ var vendoredSuffixes = []string{".js", ".mjs", ".cjs"}
 
 // listVendored lists the vendored libraries under dir as
 // `find <dir> -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' \) | sort` does under LC_ALL=C:
-// every sub-directory is entered (a dot directory too: a library hidden there still ships), symlinks
-// are neither followed nor listed (dir itself included), and paths are dir + "/" + name. Each directory
-// that cannot be read is returned as the error find printed for it; the files that were listed still count.
-// lint.Walk is not used: it prunes dot and *-worktrees sub-directories and follows a symlinked root.
+// every sub-directory is entered (a dot directory too: a library hidden there still ships) and paths are
+// dir + "/" + name. dir itself, being a symlink, is followed as the other lint roots are (find -H), with
+// paths still spelled through the link; a symlink below it is neither followed nor listed, so a link that
+// points back at an ancestor is never walked twice. Each directory that cannot be read is returned as
+// the error find printed for it: the list is then incomplete and the caller fails closed.
+// lint.Walk is not used: it prunes dot and *-worktrees sub-directories.
 func listVendored(dir string) (files []string, errs []error) {
 	var walk func(dir string)
 	walk = func(dir string) {
@@ -34,7 +36,8 @@ func listVendored(dir string) (files []string, errs []error) {
 			}
 		}
 	}
-	if st, err := os.Lstat(dir); err == nil && st.IsDir() {
+	// Mutation: VF-symroot -- os.Lstat here lists nothing under a symlinked vendor/, which then reads "nothing to check"
+	if st, err := os.Stat(dir); err == nil && st.IsDir() {
 		walk(dir)
 	}
 	sort.Strings(files)
@@ -48,4 +51,14 @@ func vendored(name string) bool {
 		}
 	}
 	return false
+}
+
+// dangling reports whether path is a symlink whose target does not exist.
+func dangling(path string) bool {
+	st, err := os.Lstat(path)
+	if err != nil || st.Mode()&os.ModeSymlink == 0 {
+		return false
+	}
+	_, err = os.Stat(path)
+	return err != nil
 }

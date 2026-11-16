@@ -27,7 +27,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ### 0.b Preflight (before the first build)
 - Run **`toolbelt/preflight.sh <niagara_home> <gradle-root>`** — automates win-path, jdk8, plugin-pin, jar-lock checks; exit 0 = all clear. Pass **`--plugin-version <v>`** (or export `NIAGARA_PLUGIN_VERSION`) when the build overrides the plugin: plugin-pin then checks the version gradle will actually use instead of re-deriving a `settings.gradle.kts` default that may have drifted from this `niagara_home` (`build.sh` forwards its own `--plugin-version` automatically). `[ev: retro continuous-fan-post-defrost-delay Δ1]` For a project you did not generate (course zip, vendor sample) add **`--sample`**: the `sample-*` rows check the retarget (`niagara_home` present + same version, no `<…>` user-home placeholder, root signing block, no shipped `build/`). `[ev: retro n4-course-signed-jars-gate-fix Δ6]`
-- Run **`scripts/check-client-source.sh --build-state BUILD-STATE.src.md --module <MOD> <module-root>`** — is this checkout the module's declared `source_of_truth` (`<path>@<branch>@<commit>`)? WARN when the module root is not in a git work tree or the field is undeclared/`unknown`; FAIL on a detached HEAD, the wrong checkout, the wrong branch, or a HEAD behind the declared commit (stale). Local refs only, never fetches. It lives in `scripts/` because toolbelt scripts never call version control (kit-links L2); a FAIL means you are about to build from the wrong tree — stop and switch. `[ev: retro client-source-of-truth Δ1]`
+- Run **`scripts/check-client-source.sh --build-state BUILD-STATE.src.md --module <MOD> <module-root>`** — is this checkout the module's declared `source_of_truth` (`<path>@<branch>@<commit>`)? WARN when the module root is not in a git work tree or the field is undeclared/`unknown`; FAIL on a detached HEAD, the wrong checkout, the wrong branch, or a HEAD behind the declared commit (stale). Local refs only, never fetches. A `--build-state` file that is missing, or exists and cannot be read, is an environment fault (exit 3, no row), never "undeclared" (`go/internal/checkclientsource` `TestUnreadableBuildStateIsAnEnvFault`) `[ev: retro go-check-scripts-ports Δ2]`. It lives in `scripts/` because toolbelt scripts never call version control (kit-links L2); a FAIL means you are about to build from the wrong tree — stop and switch. `[ev: retro client-source-of-truth Δ1]`
 - **A fix branch must start from the installed line:** before building a client fix branch, run **`scripts/check-installed-line.sh <client-repo> <branch> <installed-ref>`** (`<installed-ref>` = the commit whose jars are on the station). Exit 1 = a GROUP `build.gradle.kts` would ship a `defaultModuleVersion` lower than installed (`DOWNGRADE`), drop an installed group (`MISSING`) or carry a suffix that cannot be compared (`INCOMPARABLE`) — rebase the fix onto the installed line, never build it; exit 2 = unknown ref or nothing to compare. Local refs only, never fetches. `[ev: retro r10-installed-line-guard Δ1]`
 - **JDK 8** present (`ls /usr/lib/jvm`).
 - **A second local test station** needs its own ports: in the new station's services set Fox 4911 → 4912 and Web
@@ -357,6 +357,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   - **A table-driven pin gives each row a positive control.** Each row carries a sample its pattern must match,
     checked before the absence, so a mis-escaped regex cannot pass silently (`tests/kit-packaging-pins.bats` PINS,
     #463). `[ev: retro r10-close-process-meta-lessons Δ6]`
+  - **A test that edits a tool's source text to prove a guard is a finding.** The guard is tested through the
+    command's interface with the data injected (an input, a fixture tree, the table the command runs over), never by
+    `sed` over the script inside the test: such a case pins a spelling and is lost at the port (the bats case
+    `VF-disjoint` was; its rule is pinned by `go/internal/vendorfloor` `TestSharedMethodNameIsAnEnvFault` and
+    `TestDefaultTableIsDisjoint`). An observed mutation stays a review-time proof run by hand: `CONTRIBUTING.md` § 2.
+    `[ev: retro go-lint-vendor-floor Δ2]`
   - **A dedupe stops at a call site that a generator or lint reads.** Before repeated call sites become a table,
     a loop or a generic runner, grep the kit for a generator, lint or test that matches them literally. Example:
     `toolbelt/gen-lint-index.sh` marks a lint Auto only when a non-comment line of `report-module.sh` invokes
@@ -530,7 +536,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     owed item G50; the four bash lints with a private empty-root row are Go rules with `EmptyError` now, and
     lint-vendor-floor exits 0 on an rc dir with no `vendor/` by its header). `[ev: retro r9-m1-walkers Δ1]` A walk
     follows a symlinked root like `find -H` (Go: `os.Stat` on the root), never a symlink below it and never `-L`
-    (`go/internal/lint` `TestWalkOrderAndSelection`, mutation WALK-symroot). `[ev: retro symlink-root-walk Δ1]` A per-file read fails closed too:
+    (`go/internal/lint` `TestWalkOrderAndSelection`, mutation WALK-symroot). `[ev: retro symlink-root-walk Δ1]` lint-vendor-floor keeps a
+    walk of its own (it enters dot directories) under the same rules: a symlinked `vendor/` is followed, and an
+    unreadable sub-directory or a `vendor/` link that leads nowhere is exit 3 before any tool is asked
+    (`go/internal/vendorfloor` `TestListVendoredFollowsASymlinkedRoot`, `TestUnreadableSubDirectoryIsAnEnvFault`,
+    `TestDanglingVendorLinkIsAnEnvFault`). `[ev: retro go-lint-vendor-floor Δ1]` A per-file read fails closed too:
     `grep … "$f" 2>/dev/null || true` reads an unreadable file as no hit and `xargs awk` splits a path on
     whitespace: the slot-coverage and schema-risk ports exit on an unreadable input now `[ev: retro go-schema-risk Δ2]`;
     verify-module's `--src` reads stay owed (phase B). `[deferred: retro r9-m1-walkers Δ2]` Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:

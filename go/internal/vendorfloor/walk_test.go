@@ -43,15 +43,93 @@ func TestListVendored(t *testing.T) {
 	}
 }
 
-func TestListVendoredSymlinkedRootIsNotFollowed(t *testing.T) {
+// A vendor/ that is a symlink is followed like the other lint roots (find -H): the libraries under the
+// link are listed with their paths spelled through it, so a library vendored through a link is linted
+// (retro go-lint-vendor-floor Δ1). This replaces the pin of the bash walk, which listed nothing here.
+func TestListVendoredFollowsASymlinkedRoot(t *testing.T) {
 	t.Parallel()
 	d := t.TempDir()
 	write(t, d, "real/lib.js", "")
+	write(t, d, "real/deep/two.mjs", "")
 	if err := os.Symlink(d+"/real", d+"/vendor"); err != nil {
 		t.Fatal(err)
 	}
-	if files, errs := listVendored(d + "/vendor"); len(files) != 0 || len(errs) != 0 {
-		t.Errorf("files = %v, errs = %v", files, errs)
+	files, errs := listVendored(d + "/vendor")
+	if want := d + "/vendor/deep/two.mjs\n" + d + "/vendor/lib.js"; strings.Join(files, "\n") != want || len(errs) != 0 {
+		t.Errorf("files = %v, errs = %v, want\n%s", files, errs, want)
+	}
+}
+
+// Only the root link is followed, so a vendor/ that points at an ancestor ends: the link is met again
+// below itself as a symlink and is neither followed nor listed. Every file is listed once.
+func TestListVendoredVisitsALinkCycleOnce(t *testing.T) {
+	t.Parallel()
+	d := t.TempDir()
+	write(t, d, "top.js", "")
+	write(t, d, "sub/a.js", "")
+	if err := os.Symlink(d, d+"/vendor"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(d+"/vendor", d+"/sub/back"); err != nil {
+		t.Fatal(err)
+	}
+	files, errs := listVendored(d + "/vendor")
+	if want := d + "/vendor/sub/a.js\n" + d + "/vendor/top.js"; strings.Join(files, "\n") != want || len(errs) != 0 {
+		t.Errorf("files = %v, errs = %v, want\n%s", files, errs, want)
+	}
+}
+
+// Through the command: the linked library reaches the tools (node is forced missing, so the proof is
+// the SKIP row and exit 4 instead of "nothing to check" and exit 0).
+func TestSymlinkedVendorIsLinted(t *testing.T) {
+	t.Parallel()
+	d := t.TempDir()
+	write(t, d, "shared/lib.js", "x ??= 1;\n")
+	if err := os.Symlink(d+"/shared", d+"/vendor"); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := call(map[string]string{"KIT_NODE": "/nonexistent/node"}, d)
+	check(t, "symlinked vendor/", code, out, errs, ExitUnavailable,
+		"SKIP  vendor-floor  "+d+"  unavailable: node not found (install Node, or set KIT_NODE)\n", "")
+}
+
+// A vendor/ link that leads nowhere cannot be followed: an env fault, never "no vendor/".
+func TestDanglingVendorLinkIsAnEnvFault(t *testing.T) {
+	t.Parallel()
+	d := t.TempDir()
+	if err := os.Symlink(d+"/gone", d+"/vendor"); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := call(nil, d)
+	check(t, "dangling vendor/", code, out, errs, ExitEnv, "",
+		"lint-vendor-floor: env fault: "+d+"/vendor is a symlink that leads nowhere\n")
+}
+
+// A sub-directory the walk cannot read is an env fault naming it (exit 3, no row), whether or not other
+// libraries were listed: the libraries in it were not looked at, so neither a pass nor a tool verdict
+// stands (retro go-lint-vendor-floor Δ1). No tool is needed to say so.
+// Mutation: VF-unreadable -- printing the walk error and scanning on exits 0 over libraries nobody parsed
+func TestUnreadableSubDirectoryIsAnEnvFault(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	for _, c := range []struct {
+		name  string
+		files map[string]string
+	}{
+		{"nothing else listed", map[string]string{"locked/in.js": "x ??= 1;\n"}},
+		{"another library listed", map[string]string{"locked/in.js": "x ??= 1;\n", "ok.js": "var a = 1;\n"}},
+	} {
+		d := rc(t, c.files)
+		locked := d + "/vendor/locked"
+		if err := os.Chmod(locked, 0); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { os.Chmod(locked, 0o755) })
+		code, out, errs := call(map[string]string{"KIT_NODE": "/nonexistent/node"}, d)
+		check(t, c.name, code, out, errs, ExitEnv, "",
+			"lint-vendor-floor: env fault: cannot list every file under "+d+"/vendor: find: '"+locked+"': Permission denied\n")
 	}
 }
 

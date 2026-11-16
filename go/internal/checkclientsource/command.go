@@ -22,10 +22,16 @@ const (
 	ExitOK    = 0 // no FAIL row
 	ExitFail  = 1 // any FAIL row
 	ExitUsage = 2 // usage, including a malformed declared value
-	ExitEnv   = 3 // module root missing, BUILD-STATE file missing, git absent
+	ExitEnv   = 3 // module root missing, BUILD-STATE file missing or unreadable, git absent
 )
 
 const tool = "check-client-source"
+
+// Why a BUILD-STATE file could not be read (stderr, after the tool prefix).
+const (
+	buildStateMissing    = "BUILD-STATE not found: %s"
+	buildStateUnreadable = "cannot read %s: %v"
+)
 
 //go:embed usage.txt
 var helpText string
@@ -61,9 +67,9 @@ func Main(args []string, s cli.Stdio) int {
 		if o.module == "" {
 			return usage()
 		}
-		text, found := readBuildState(o.buildState, s)
-		if !found {
-			fmt.Fprintf(s.Err, "%s: BUILD-STATE not found: %s\n", tool, o.buildState)
+		text, fault := readBuildState(o.buildState)
+		if fault != "" {
+			fmt.Fprintf(s.Err, "%s: %s\n", tool, fault)
 			return ExitEnv
 		}
 		raw = SourceOfTruth(text, o.module)
@@ -84,16 +90,17 @@ func Main(args []string, s cli.Stdio) int {
 	return ExitOK
 }
 
-// readBuildState reads a BUILD-STATE file; found is false when path is not a regular file. A file that
-// exists but cannot be read is named on stderr and read as empty (no field: the module is undeclared),
-// as the bash tool's awk did.
-func readBuildState(path string, s cli.Stdio) (text string, found bool) {
+// readBuildState reads a BUILD-STATE file; fault is the reason it could not be read, "" when text holds
+// its content. A file that exists and cannot be read is a fault like a missing one: read as empty it
+// would declare nothing, and the check would WARN "undeclared" over a checkout nobody compared.
+func readBuildState(path string) (text, fault string) {
 	if st, err := os.Stat(path); err != nil || !st.Mode().IsRegular() {
-		return "", false
+		return "", fmt.Sprintf(buildStateMissing, path)
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Fprintf(s.Err, "%s: cannot read %s: %v\n", tool, path, err)
+		// Mutation: CS-unreadable -- returning the empty text with no fault reads an unreadable BUILD-STATE as undeclared (WARN, exit 0)
+		return "", fmt.Sprintf(buildStateUnreadable, path, err)
 	}
-	return string(b), true
+	return string(b), ""
 }

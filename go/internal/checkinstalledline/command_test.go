@@ -148,3 +148,21 @@ func TestMainSkipsFilesWithNoCall(t *testing.T) {
 		t.Errorf("exit %d stdout %q stderr %q", code, out, errText)
 	}
 }
+
+// TestMainComparesAGroupUnderAPathGitQuotes (ILG-quoted-path): git prints a path holding a non-ASCII byte in quotes unless
+// it is asked for NUL-separated names; such a group is compared like any other, so its downgrade refuses
+// the branch (retro go-check-scripts-ports Δ1). The row names the path as it is on disk.
+func TestMainComparesAGroupUnderAPathGitQuotes(t *testing.T) {
+	gitEnv(t)
+	repo := t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	versions(t, repo, map[string]string{"Cámaras": "5.1", "Dashboard": "1.3"})
+	commit(t, repo, "installed")
+	git(t, repo, "tag", "installed")
+	versions(t, repo, map[string]string{"Cámaras": "5.0"})
+	commit(t, repo, "downgrade")
+	want := "DOWNGRADE Cámaras/build.gradle.kts 5.1 -> 5.0\nok Dashboard/build.gradle.kts 1.3 -> 1.3\n"
+	if code, out, errText := run(repo, "main", "installed"); code != ExitRefused || out != want || errText != "" {
+		t.Errorf("exit %d stdout %q stderr %q, want exit %d stdout %q", code, out, errText, ExitRefused, want)
+	}
+}

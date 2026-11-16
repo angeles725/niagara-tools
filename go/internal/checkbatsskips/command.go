@@ -15,7 +15,7 @@ import (
 const (
 	ExitOK       = 0 // every skip is allowlisted
 	ExitUnlisted = 1 // a skip reason matches no allowlist line
-	ExitEnv      = 3 // usage, an unreadable TAP or allowlist, a TAP with no plan, an allowlist line that is not an ERE
+	ExitEnv      = 3 // usage, an unreadable TAP or allowlist, a TAP with no plan, an allowlist line that is not an ERE of the dialect
 )
 
 const tool = "check-bats-skips"
@@ -39,10 +39,10 @@ func Main(args []string, s cli.Stdio) int {
 	if !HasPlan(texts[0]) {
 		return env(s, "no 1..N plan in "+tapPath+" (bats did not run)")
 	}
-	allow, bad, ok := ParseAllowlist(texts[1])
-	if !ok {
+	allow, fault := ParseAllowlist(texts[1])
+	if fault != "" {
 		// Mutation: SK6-bad-ere -- skipping a line that does not compile makes it a silent non-match
-		return env(s, "allowlist line is not a valid ERE: "+bad)
+		return env(s, fault)
 	}
 	skips := Skips(texts[0])
 	unlisted := 0

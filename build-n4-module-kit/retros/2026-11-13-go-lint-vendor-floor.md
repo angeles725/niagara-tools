@@ -30,8 +30,8 @@ the lint passes without having looked, and the CI Go job turned out to skip ever
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | `lint-vendor-floor` fails closed on its walk: a `vendor/` that is a symlink is followed like the other lint roots (`find -H`), and an unreadable sub-directory is an env fault (exit 3) instead of a pass; RED tests for both | `toolbelt/lint-vendor-floor.sh` (Go `internal/vendorfloor/walk.go`) · `BUILD-LOOP.md` § 5 Fail-closed input listing | `[ev: go/internal/vendorfloor/walk.go]` |
-| Δ2 | A test that mutates a script's source text to prove a guard is a finding: the guard is tested through the command's interface with the data injected | `CONTRIBUTING.md` tests · `BUILD-LOOP.md` § 5 Kit tooling doctrine | `[ev: a4ea352b]` |
+| Δ1 | APPLIED 2026-11-15. `lint-vendor-floor` fails closed on its walk: a `vendor/` that is a symlink is followed like the other lint roots (`find -H`), and an unreadable sub-directory is an env fault (exit 3) instead of a pass; RED tests for both | `toolbelt/lint-vendor-floor.sh` (Go `internal/vendorfloor/walk.go`) · `BUILD-LOOP.md` § 5 Fail-closed input listing | `[ev: go/internal/vendorfloor/walk.go]` |
+| Δ2 | APPLIED 2026-11-15. A test that mutates a script's source text to prove a guard is a finding: the guard is tested through the command's interface with the data injected | `CONTRIBUTING.md` tests · `BUILD-LOOP.md` § 5 Kit tooling doctrine | `[ev: a4ea352b]` |
 
 ## Lessons
 - A Go test that skips on a missing external tool needs a CI switch that turns the skip into a failure, or the job

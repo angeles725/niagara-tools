@@ -17,6 +17,10 @@ const (
 	noFilesNote  = tool + ": no *.js under %s/vendor — nothing to check\n"
 	envFaultLine = tool + ": env fault: %s\n"
 
+	// env faults of the walk (the %s of envFaultLine)
+	danglingVendor = "%s is a symlink that leads nowhere"
+	incompleteWalk = "cannot list every file under %s: %s"
+
 	nodeMissing  = "unavailable: node not found (install Node, or set KIT_NODE)"
 	acornMissing = "unavailable: acorn not resolvable from '%s' (npm install --prefix toolbelt/eslint, or set KIT_ACORN)"
 
