@@ -724,6 +724,41 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_list_schedule_kinds",
+   "description": "Which kinds of schedule a station can hold and how each works, so no type name has to be known (reads no station, needs no session). schedule_kinds: boolean, numeric, enum, string (weekly schedules with special events: out follows the weekly time ranges, special events override them, a default output fills the rest), calendar (a list of days other schedules reference) and trigger (fires a topic at times of day on chosen days); each with its station type, value_type, the plain value it takes, default_output, which parts it has (weekly, special_events, dates, times), purpose, behaviour and what its out is usually linked to (by convention a writable's in16). event_kinds: date, date_range, week_and_day, custom and reference (the days of a calendar), each with its type, purpose, whether a calendar can hold it (in_calendar) and its fields with their allowed values. Also priority (top special event first), cleanup (passed date and date-range events are deleted by the station) and export_import (the station types that copy schedules between stations; no tool here).",
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_read_schedule",
+   "description": "One schedule decoded into plain JSON (one load; read-only), for every kind n4_list_schedule_kinds lists. kind and type; for boolean, numeric, enum and string schedules: out, next_time, next_value, default_output, in and facets (each value is {value, status}: value true/false, a number, an enum ordinal or a string, null when the status is null; status ok, null or the station's encoding), out_source (what drives out: Input, Special Event: <name>, Week: <day> or Default Output), effective (always, or the date range rule of the effective period), weekly (monday to sunday, each a list of {start, end, value} sorted by start, times HH:MM with end 24:00 for a range that runs to midnight; a range the station holds without a value is listed with value null and ignored true, since the station skips it) and special_events in priority order (name, kind, rule, priority 1 = highest, ranges). Rules by kind: date {year, month, day, weekday}, each \"*\" when it matches any; date_range {start, end} (two date rules); week_and_day {month, week, weekday}; custom {year, months, days, weeks, weekdays} (lists, empty = any); reference {calendar: the calendar ORD}. Months are jan..dec, odd, even; weekdays sunday..saturday; weeks week1..week5, last7days, calendarWeek1..calendarWeek6, before_last7/14/21. calendar: out, next_time, next_value and dates (name, kind, rule). trigger: enabled, times (HH:MM), dates, last_trigger and next_trigger. Every slot the station leaves out because it holds its default is filled from the station's type registry; a slot neither sent nor described is an error, never a guess. last_modified is the station's time of the last change.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "The schedule component's ORD, e.g. station:|slot:/Schedules/Lobby"
+     }
+    },
+    "required": [
+     "ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [

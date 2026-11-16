@@ -201,7 +201,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`,
-`n4_commissioning_report`.
+`n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -881,6 +881,67 @@ differently is listed under `coerced` as `{slot: {sent, read}}` and the verdict 
 and acknowledging them (other tools); the status kind's `alarmValues` / `faultValues`
 status masks and the string kind's `expression` stay at their defaults (set them with
 `n4_set_slot`).
+
+## Schedules
+
+### Kinds of schedules
+
+`n4_list_schedule_kinds` (no station, no session) answers this section as data: every kind with
+its station type, value type, default output, parts, purpose, behaviour and usual link, and every
+special-event kind with its fields. A 4.15 station has six schedule kinds an integrator creates:
+
+| Kind | Type | Value | What it is for |
+|---|---|---|---|
+| boolean | `schedule:BooleanSchedule` | true / false | on/off by time: occupancy, lighting, a fan enable |
+| numeric | `schedule:NumericSchedule` | a number | a setpoint that changes by time |
+| enum | `schedule:EnumSchedule` | an ordinal of its `range` facet | named modes (occupied / standby); set the range before adding events |
+| string | `schedule:StringSchedule` | a string | a text by time |
+| calendar | `schedule:CalendarSchedule` | (dates only) | a list of days (holidays) that weekly schedules reference |
+| trigger | `schedule:TriggerSchedule` | (times only) | fires its `trigger` topic at times of day on chosen days; link it to an action |
+
+The first four are weekly schedules. Their `out` follows, highest first: a non-null `in`; the
+default output when today is outside the effective period; the active special event highest in
+the list; the active weekly time range; the default output (false for boolean, a null value for
+the others). A range runs from its start (inclusive) to its end (exclusive), and an end of 00:00
+is the end of the day. A special event controls only the hours it defines: to override a whole
+day, give it an all-day range. The station recalculates `out`, `nextTime` and `nextValue` after
+every change; no action is needed.
+
+Special events (and calendar dates) come in five kinds: `date` (one day, or every day matching
+the fields given: year, month, day, weekday), `date_range` (start to end inclusive),
+`week_and_day` (a weekday in a week of a month, e.g. the 4th Thursday of November), `custom`
+(lists of years, months, days, weeks and weekdays) and `reference` (the days of a calendar: edit
+the calendar and every referencing event follows). A calendar holds the first four. With
+`cleanupExpiredEvents` (default true) the station deletes `date` and `date_range` events once
+their last day has passed; the other kinds never expire. Schedules can also be exported from one
+station and imported read-only into another (`niagaraDriver:NiagaraScheduleExport` /
+`NiagaraScheduleImportExt`, and the `bacnet:` equivalents); mcp-n4 has no tool for that.
+
+How a station stores them (schedule-rt 4.15, confirmed live on a 4.15.6.20 lab station on
+2026-11-15 over BOX): a weekly schedule's ranges are `schedule:TimeSchedule` children of
+`schedule/week/<weekday>/day`, each with `start`, `finish` and a dynamic `effectiveValue` of the
+schedule's Status type (flags `o1`); special events are `schedule:DailySchedule` children of
+`schedule/specialEvents` whose slot order is their priority, with the day rule in `days` and the
+ranges in `day`. Live checks: a range added without `effectiveValue` is ignored by the station
+(out did not change); the week-of-month set takes 16 values (`Any Week`=0, `Week 1`..`Week 5`=1-5,
+`Last 7 Days`=6, `Calendar Week 1`..`6`=7-12, `7 Days Before Last 7/14/21`=13-15, from the
+station's type registry); a date special event for the current day switched `out` to its value and
+`outSource` to `Special Event: <name>` at once, and removing it switched it back.
+
+### Reading a schedule
+
+`n4_read_schedule(ord)` decodes one schedule of any kind in one load. Weekly kinds return `out`,
+`next_time`, `next_value`, `default_output`, `in` (each value `{value, status}`: a boolean, a
+number, an enum ordinal or a string, `null` when the status is null), `out_source`, `effective`
+(`always` or the date range rule), `weekly` (monday to sunday, each a list of `{start, end,
+value}` sorted by start, `HH:MM`, end `24:00` for a range that runs to midnight) and
+`special_events` in priority order (`name`, `kind`, `rule`, `priority` 1 = highest, `ranges`).
+A calendar returns its `dates`; a trigger its `times`, `dates`, `enabled`, `last_trigger` and
+`next_trigger`. Rules use the field names of `n4_list_schedule_kinds` (`"*"` matches any). A range
+the station holds without a value is listed with `value: null, ignored: true`. The station leaves
+out every slot that holds its type's default (a 00:00 start, a false `alwaysEffective`); the tool
+fills those from the station's type registry and refuses, naming the slot, rather than guess one
+the registry does not describe.
 
 ## Live smoke test
 
