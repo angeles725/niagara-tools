@@ -142,7 +142,7 @@ Covered once in `types/security.md` § 5 and § 5.1; what a service author must 
      without a second set of timers or subscriptions.
   4. **Removed and re-added on a running station:** remove the component, then add a new one: no leaked thread or
      ticket, and the lookup returns the new instance.
-  5. **Unlicensed**, when the service has a feature: `types/security.md` § 5.
+  5. **Unlicensed**, when the service has a feature: `types/security.md` § 5.3.
 - The test station is built once per test class, not per method: make fixtures idempotent
   (`types/moduleTest.md`, the `BTestNgStation` bullet under "Client parity doctrine").
 - Worked exemplars: the course certification exam's export service and the Review Assignment's summary service,
