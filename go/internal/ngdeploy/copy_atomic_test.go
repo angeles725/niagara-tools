@@ -75,7 +75,7 @@ func TestTheCopyStagesBothJarsAndRenamesThem(t *testing.T) {
 		f.chmod(f.deployedJar("ux"), 0o444)
 		f.write(f.deployedJar("rt")+stagedSuffix+"/inside", "left by a killed run, and in the way")
 		f.write(f.deployedJar("ux")+stagedSuffix, "left by a killed run")
-		f.want(f.run(args...), ExitOK, "[ng-deploy] gate ok\n[ng-deploy] copy ok\n[ng-deploy] station restart required (Java classes deployed)\n")
+		f.want(f.run(args...), ExitOK, "[ng-deploy] gate ok\n", "[ng-deploy] copy ok\n[ng-deploy] station restart required (Java classes deployed)\n")
 		f.station("rtjar", "uxjar", 0o640)
 		if st, err := os.Stat(f.deployedJar("ux")); err != nil || st.Mode().Perm() != 0o444 || strings.Contains(f.err, "ERROR") {
 			t.Errorf("%v: demo-ux.jar: %v %v, stderr %q", args, st, err, f.err)

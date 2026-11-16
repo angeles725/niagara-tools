@@ -17,7 +17,7 @@ func TestAFlagWinsOverTheSameOptionInTheEnvFile(t *testing.T) {
 	f.deployed()
 	oldBackups(f)
 	f.want(f.run("--mode", "C", "--keep", "1", "--full-backup", "--no-deploy", "--with-slotomatic"), ExitOK,
-		"[ng-deploy] slotomatic ok\n[ng-deploy] build: mode C — :demo-rt:clean :demo-rt:jar\n[ng-deploy] build ok\n[ng-deploy] no-deploy: jars in build/libs/\n")
+		"[ng-deploy] slotomatic ok\n[ng-deploy] build: mode C — :demo-rt:clean :demo-rt:jar\n[ng-deploy] build ok\n[ng-deploy] backup: ", "[ng-deploy] no-deploy: jars in build/libs/\n")
 	kept := 0
 	for _, day := range []string{"1", "2", "3", "4", "5"} {
 		if f.exists(f.work + "/_backups/demo-pre-2026010" + day + "-000000.tar.gz") {

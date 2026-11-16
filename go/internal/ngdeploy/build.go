@@ -12,7 +12,7 @@ func (d *deploy) gradleArgs(tasks []string) []string {
 }
 
 // build runs gradlew clean and jar for the profiles of the mode; a gradlew that fails is exit 30.
-// --no-deploy ends the run here with the jars in build/libs.
+// --no-deploy ends the run here with the jars in build/libs, after the backup (backup.go).
 func (d *deploy) build() int {
 	mode := d.raw[optMode]
 	var tasks []string
@@ -27,6 +27,9 @@ func (d *deploy) build() int {
 	}
 	d.say(msgBuildOK)
 	if d.isOn(optNoDeploy) {
+		if code := d.backup(); code != proceed {
+			return code
+		}
 		d.say(msgNoDeploy)
 		return ExitOK
 	}

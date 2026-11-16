@@ -6,9 +6,9 @@
 //
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
 // file), config.go (required settings and paths), home.go with lock.go and settle.go (NIAGARA_HOME: a mirror, the run locks, and its modules directory
-// put back when the deploy stops), backup.go and purge.go, annotations.go (the slotomatic
+// put back when the deploy stops), probe.go (the station jars can be moved), annotations.go (the slotomatic
 // reminder), slotomatic.go, build.go, version.go with jarcontent.go and descriptor.go, and schema.go (the two prechecks), verify.go, gate.go,
-// probe.go, copy.go with aside.go, restore.go, heldopen.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go, messages_home.go and messages_lock.go, patterns.go, usage.txt.
+// backup.go and purge.go (just before the copy), copy.go with aside.go, restore.go, heldopen.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go, messages_home.go and messages_lock.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy
 
@@ -52,7 +52,7 @@ var phases = []func(*deploy) int{
 	(*deploy).exportOptions,
 	(*deploy).guardHome,
 	(*deploy).probeStation,
-	(*deploy).backup,
+	(*deploy).warnNoBackup,
 	(*deploy).slotomatic,
 	(*deploy).asideHome,
 	(*deploy).build,
@@ -61,6 +61,7 @@ var phases = []func(*deploy) int{
 	(*deploy).verify,
 	(*deploy).gate,
 	(*deploy).checkRecord,
+	(*deploy).backup,
 	(*deploy).copyJars,
 	(*deploy).recordDeploy,
 	(*deploy).sayNextSteps,
