@@ -10,3 +10,5 @@
   like) also falls back to the two steps instead of failing the run with exit 10.
 - A `.ng-deploy.lock.<random>.tmp` older than a minute, left by a run killed while it took its lock, is removed
   with a NOTICE when the next run takes the lock of that directory.
+- Two runs that sweep the same temporary lock file print no WARN for the one that finds it gone, and a lock whose
+  own temporary file was swept is taken without the "takes no hard link" NOTICE.
