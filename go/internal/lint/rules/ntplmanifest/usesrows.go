@@ -24,10 +24,7 @@ func (c *checker) uses(path string, deps []string, members []member) {
 		c.out = append(c.out, lint.Finding{Check: checkUses, Severity: sev, Path: path, Msg: fmt.Sprintf(format, args...)})
 	}
 	for _, m := range members {
-		mods, why := modulesUsed(m.name, m.data)
-		if m.unread != "" {
-			why = m.unread
-		}
+		mods, why := m.mods, m.why
 		if why != "" {
 			// Mutation: NTPL-uses-unread -- reading an entry that does not parse as one that uses nothing passes it
 			row(lint.Fail, "%s", why)

@@ -15,10 +15,11 @@ const (
 
 // The bounds of one archive read: a .ntpl is input nobody vouches for.
 const (
-	maxArchive  = 32 << 20 // bytes of the .ntpl on disk
-	maxEntries  = 10000    // entries in its directory
-	maxManifest = 4 << 20  // inflated bytes of template-manifest.xml
-	maxUsesRead = 32 << 20 // inflated bytes of template.bog and of each *.px entry (the ntpl-uses read)
+	maxArchive   = 32 << 20  // bytes of the .ntpl on disk
+	maxEntries   = 10000     // entries in its directory
+	maxManifest  = 4 << 20   // inflated bytes of template-manifest.xml
+	maxUsesRead  = 32 << 20  // inflated bytes of template.bog and of each *.px entry (the ntpl-uses read)
+	maxUsesTotal = 128 << 20 // inflated bytes of all those entries of one archive together
 )
 
 // The sub-checks, as the check column prints them.
@@ -79,6 +80,7 @@ const (
 	entryBadXML    = "%s is not well-formed XML: %s"
 	entryTooLarge  = "%s inflates past %d bytes -- not read"
 	entryUnread    = "cannot read %s: %v"
+	usesBudget     = "the bog and Px entries inflate past %d bytes in all, the bound of one archive -- %s and every entry after it not read"
 
 	notAStation  = "a template under " + stationDir + "/ is a station template, but its manifest root <%s> lacks " + stationAttr + "=\"true\""
 	scanFailure  = "cannot scan %s: %v"
