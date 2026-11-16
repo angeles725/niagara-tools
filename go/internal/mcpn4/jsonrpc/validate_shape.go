@@ -82,9 +82,12 @@ func checkEnum(name string, spec *pyjson.Object, value any) error {
 			return nil
 		}
 		names[i] = pyjson.Str(a)
+		if a == "" {
+			names[i] = "''"
+		}
 	}
 	return &InvalidParams{fmt.Sprintf("argument %s must be one of %s; got %s",
-		name, strings.Join(names, ", "), pyjson.Repr(value))}
+		name, strings.Join(names, ", "), clip(pyjson.Repr(value)))}
 }
 
 // sameValue is JSON equality for an enum member: numbers by value (1 == 1.0, never a bool),
@@ -102,21 +105,34 @@ func sameValue(a, b any) bool {
 // unknownArgument is the refusal of an undeclared argument, with a did-you-mean when exactly one
 // declared key is close to it.
 func unknownArgument(tool, path, key string, props *pyjson.Object) error {
-	msg := fmt.Sprintf("unknown argument %s for %s", pyjson.StrRepr(path), tool)
+	msg := fmt.Sprintf("unknown argument %s for %s", clip(pyjson.StrRepr(path)), tool)
 	if near := nearestKey(key, props.Keys()); near != "" {
 		msg += fmt.Sprintf("; did you mean %s?", pyjson.StrRepr(near))
 	}
 	return &InvalidParams{msg}
 }
 
-// nearestKey is the declared key closest to key: one that starts the other (capacity_records,
-// capacity), else the single key within edit distance max(1, len/4); "" when none or a tie.
+// maxEcho is how many characters of a caller's value or argument name a refusal echoes.
+const maxEcho = 64
+
+// clip is text cut to maxEcho characters plus "…", so a huge value never lands in an error.
+func clip(text string) string {
+	if r := []rune(text); len(r) > maxEcho {
+		return string(r[:maxEcho]) + "…"
+	}
+	return text
+}
+
+// nearestKey is the declared key closest to key: one that starts it (capacity_records, capacity)
+// or that it starts while covering at least half of it (a short word such as all or ack never
+// names a safety override such as allow_ad_hoc or acknowledge_links), else the single key within
+// edit distance max(1, len/4); "" when none or a tie.
 func nearestKey(key string, known []string) string {
 	best, bestScore, tie := "", -1, false
 	for _, k := range known {
 		score := -1
 		switch {
-		case strings.HasPrefix(key, k) || strings.HasPrefix(k, key):
+		case strings.HasPrefix(key, k) || strings.HasPrefix(k, key) && 2*len(key) >= len(k):
 			score = 0
 		case editDistance(key, k) <= max(1, len(k)/4):
 			score = editDistance(key, k)

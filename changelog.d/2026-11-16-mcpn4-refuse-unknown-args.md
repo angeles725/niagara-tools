@@ -9,7 +9,10 @@
   call that ignored it. One shared validator (`go/internal/mcpn4/jsonrpc`) does it before the session gate, so
   nothing reaches a station. Objects a tool keeps open stay open (`alarm_values` through `additionalProperties`;
   `expect_histories`, `expect_alarms`, `wire_sheet`, `weekly` and the `n4_set_schedule` / `n4_set_tags` list items
-  declare no properties); a nested object is checked only where its schema declares `properties`.
+  declare no properties); a nested object is checked only where its schema declares `properties`. A refusal echoes at
+  most 64 characters of the value or argument name, then `…`. A did-you-mean never offers a key the unknown one only
+  starts unless it covers half of it (`all` is not `allow_ad_hoc`). `n4_read_alarms` keeps `source_state: ""` and
+  `ack_state: ""` as no filter: the empty string is now declared in their enums.
 - `n4_neql_query`: the no-from rule of its `bql` select now matches `from` between any BQL space (a decoded tab,
   newline or no-break space, `$09from$09`, `$0afrom$0a`, `$u00a0from$u00a0`) and at the end, as the table-base check
   does; before only ` from ` was refused (the station answered 404 anyway).

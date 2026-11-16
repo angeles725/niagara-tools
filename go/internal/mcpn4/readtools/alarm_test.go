@@ -94,12 +94,18 @@ func TestReadAlarmsRefusesABadFilterBeforeAnyRequest(t *testing.T) {
 		kv   []any
 		want string
 	}{
-		{[]any{"source_state", "Offnormal"}, "argument source_state must be one of normal, offnormal, fault, alert; got 'Offnormal'"},
-		{[]any{"ack_state", "acked' or '1'='1"}, "argument ack_state must be one of acked, unacked, ackPending; got "},
+		{[]any{"source_state", "Offnormal"}, "argument source_state must be one of normal, offnormal, fault, alert, ''; got 'Offnormal'"},
+		{[]any{"ack_state", "acked' or '1'='1"}, "argument ack_state must be one of acked, unacked, ackPending, "},
 	} {
 		s := alarmServer(t, 1)
 		if text := rpcError(t, s, "n4_read_alarms", c.kv...); len(s.Station.OrdRequests) != 0 || !strings.Contains(text, c.want) {
 			t.Errorf("%v: %s (%d requests)", c.kv, text, len(s.Station.OrdRequests))
+		}
+	}
+	for _, key := range []string{"source_state", "ack_state"} { // "" is no filter, as before M11
+		s := alarmServer(t, 1)
+		if text, isErr, _ := s.Call(t, "n4_read_alarms", key, ""); isErr || len(s.Station.OrdRequests) == 0 {
+			t.Errorf("%s \"\": %s (%d requests)", key, text, len(s.Station.OrdRequests))
 		}
 	}
 	args, params, msg := pyjson.NewObject(), pyjson.NewObject(), pyjson.NewObject()
