@@ -11,9 +11,11 @@ import (
 // namespace (one load of the service) and, for each namespace a write names, its tag
 // definitions (one load each, on first use).
 type Catalog struct {
-	l     Loader
-	dicts map[string]Dictionary
-	defs  map[string]map[string]TagDef
+	l      Loader
+	dicts  map[string]Dictionary
+	defs   map[string]map[string]TagDef
+	groups map[string]map[string]GroupDef
+	rels   map[string]map[string]bool
 }
 
 // LoadCatalog reads the dictionaries under the service. A dictionary whose load omits its
@@ -24,7 +26,8 @@ func LoadCatalog(l Loader) (*Catalog, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &Catalog{l: l, dicts: map[string]Dictionary{}, defs: map[string]map[string]TagDef{}}
+	c := &Catalog{l: l, dicts: map[string]Dictionary{}, defs: map[string]map[string]TagDef{},
+		groups: map[string]map[string]GroupDef{}, rels: map[string]map[string]bool{}}
 	kids := box.Children(nodes, "")
 	for _, name := range kids.Keys() {
 		typ, _ := get(box.Node(kids, name), "t").(string)
@@ -72,3 +75,46 @@ func (c *Catalog) Def(id ID) (TagDef, bool, error) {
 
 // Dictionary is the installed dictionary of namespace ns (Name "" when none).
 func (c *Catalog) Dictionary(ns string) Dictionary { return c.dicts[ns] }
+
+// Group is the tag group definition of id, ok false when its dictionary does not define it.
+func (c *Catalog) Group(id ID) (GroupDef, bool, error) {
+	d, ok := c.dicts[id.Namespace]
+	if !ok {
+		return GroupDef{}, false, nil
+	}
+	byName, read := c.groups[id.Namespace]
+	if !read {
+		list, err := GroupDefs(c.l, d)
+		if err != nil {
+			return GroupDef{}, false, err
+		}
+		byName = map[string]GroupDef{}
+		for _, g := range list {
+			byName[g.Name] = g
+		}
+		c.groups[id.Namespace] = byName
+	}
+	g, ok := byName[id.Name]
+	return g, ok, nil
+}
+
+// RelationDefined is whether the dictionary of id's namespace defines the relation id.
+func (c *Catalog) RelationDefined(id ID) (bool, error) {
+	d, ok := c.dicts[id.Namespace]
+	if !ok {
+		return false, nil
+	}
+	set, read := c.rels[id.Namespace]
+	if !read {
+		list, err := RelationDefs(c.l, d)
+		if err != nil {
+			return false, err
+		}
+		set = map[string]bool{}
+		for _, r := range list {
+			set[r] = true
+		}
+		c.rels[id.Namespace] = set
+	}
+	return set[id.String()], nil
+}
