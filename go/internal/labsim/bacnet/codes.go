@@ -58,7 +58,8 @@ const (
 	ClassDevice   = 0
 	ClassObject   = 1
 	ClassProperty = 2
-	ClassServices = 5
+	ClassResources = 3
+	ClassServices  = 5
 )
 
 // The error codes (BACnetErrorCode).
@@ -86,11 +87,11 @@ var (
 	ErrInvalidDataType    = &Error{ClassProperty, CodeInvalidDataType}
 	ErrNotAnArray         = &Error{ClassProperty, CodePropertyIsNotAnArray}
 	ErrCOVNotSupported    = &Error{ClassServices, CodeOptionalNotSupported}
-	ErrNoSubscriptionRoom = &Error{ClassServices, CodeNoSpaceToAddListElement}
+	ErrNoSubscriptionRoom = &Error{ClassResources, CodeNoSpaceToAddListElement}
 )
 
 var classNames = map[uint32]string{
-	ClassDevice: "device", ClassObject: "object", ClassProperty: "property", 3: "resources", 4: "security",
+	ClassDevice: "device", ClassObject: "object", ClassProperty: "property", ClassResources: "resources", 4: "security",
 	ClassServices: "services", 6: "vt", 7: "communication",
 }
 
