@@ -337,6 +337,35 @@ For any decision/safety logic, "done" means all four layers ran, in order:
 3. **A live cold-boot smoke on the TARGET distribution and version** (same vendor overlay or stock distribution and same Niagara release as the production station — a build `niagara_home` on another overlay or release proves nothing about a vendor/version mismatch; required before any production deploy, BUILD-LOOP §6) `[ev: retro panccadia-commissioning-lessons Δ10]` — for a timer-based control, read the live anchor slot (oBIX / Slot Sheet) after boot: anchor populated = the hook armed; anchor null in an arming mode = the hook did NOT run. Correct source ≠ correct behavior; this catches what a pure test cannot. [ev: retro hidden-actions-not-invocable-and-runtime-anchor-verification · T4]
 4. **Adversarial pure-logic review BEFORE compile** — a second reader of the pure class catches control-logic defects the gate cannot (the `Long.MIN_VALUE` overflow and the dead-sensor false-fault both compiled and passed the gate). [ev: retro comppan-fase1-staging · T3]
 
+## Lab restart proof (LP1) — boot outputs and persisted state `[ev: retro lc11-boot-outputs Δ2]`
+Layer 3 for a control module with persisted state (`types/logic.md` LC10) or boot output holds (`types/logic.md`
+LC11). A plain cold boot proves neither: with default timers and steady inputs the pre-steady cycle never runs, and
+an unwatched boot hides a command that lasts seconds. This recipe found both defects of LC11 on client A's
+compressor control module after a plain restart had passed. On a LAB station only, never production:
+1. **Set NON-default timers** (power-on delay, minimum off, anti-short-cycle, start delays). A default of 0 disables
+   the hold, so a boot bug in it cannot show.
+2. **Link EVERY input that gates demand**, each from a writable point. An unlinked numeric input reads `0.0 {ok}`,
+   not null, and can win a min or lower-of-two choice, so the module never has demand and never commands an
+   output: the proof then passes for the wrong reason.
+3. **Keep writing inputs during boot.** Toggle each linked writable's value between restarts so it differs from the
+   target slot's saved value; the boot-time link propagation is then a real change and runs the pre-steady cycle
+   (`niagara-help/versions/4.15.6.20/devguide-clean/station.txt:26`). Make demand true before the restart so an
+   output would be commanded ON.
+4. **Start the read-backs before `Station Started`** and keep them going until well after steady state and the
+   longest hold (every 2 s is enough). Timestamp every read and line it up against the station log's
+   `Station Started` line; measure the offset between the reading host's clock and the station log's clock first
+   (it was 15-16 s between a WSL host and a Windows station) and state it in the log.
+5. **Check, per read**: every persisted slot keeps its saved value (LC10); every derived revision or "last valid"
+   value is unchanged by the restart (LC11.3); every output command stays OFF until the hold expires, with no
+   ON-OFF-ON at boot (LC11.1). One unexpected read fails the proof.
+6. **Repeat once with each backup file missing** (move it out of `shared/` before the start, put it back after),
+   so the seed runs from the slots alone and a "restore if newer" guard is exercised against the slot.
+7. **Clean up and prove it**: remove the proof folder and save, remove the module jar if it was installed only for
+   the proof, move the module's backup files out of `shared/`, restart, and show that the station is back
+   (`Station Started` in the log, a `config.bog` grep for the proof names returns 0).
+
+Keep the log (setup, every read, the station log lines, cleanup) as the proof's evidence file.
+
 ## Known gap — mode B ignores `--with-slotomatic`
 - **Only mode A regenerates `-ux` slots, and only when `-ux` is annotated** (`scripts/ng-deploy.sh` `run_slotomatic`: `:<MOD>-ux:slotomatic` is added in mode A when `ux_has_annotations`). Mode C builds and regenerates `-rt` only; mode B (the `-ux`-only build) never runs slotomatic: given `--with-slotomatic` it prints two `WARN` lines on stderr and builds without it. So a `-ux` annotation edit deployed with mode B or C is not regenerated — use `--mode A --with-slotomatic`, or `toolbelt/build.sh` (slotomatic for every profile). [ev: QA audit · ng-deploy.sh]
 
