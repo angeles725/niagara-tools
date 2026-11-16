@@ -411,7 +411,9 @@ of `bog-nav <bog> alarm-text` (same rule names and rows): one `select slotPath, 
 toNormalText from alarm:AlarmSourceExt` below `base` (subtypes included); each finding is `{level: WARN, rule, path,
 slot, token, text}`: `parent-path` for a `%...%` token rooted at no `BAlarmRecord` field (`%parent...%`, `%out.value%`;
 the texts resolve against the alarm record), `empty-tonormal` for a `toOffnormalText` with an empty `toNormalText`
-(the return to normal blanks `msgText`); `%alarmData.<key>%`, record fields, `%lexicon(...)%` and `%%` pass.
+(the return to normal blanks `msgText`), `bad-format` for a text BFormat cannot parse (a `%` that never closes:
+it shows as `ERROR <text>`; write `%%` for a literal percent); `%alarmData.<key>%`, record fields, `%lexicon(...)%`
+and `%%` pass.
 Px views and other station files (METHODOLOGY section 9): `n4_list_px_views(root)` runs
 `select slotPath, displayName, pxFile, media from baja:PxView` and returns `display_name`,
 `px_file` (e.g. `file:^px/General.px`) and `media` per view; `slot_path` / `owner_path` are

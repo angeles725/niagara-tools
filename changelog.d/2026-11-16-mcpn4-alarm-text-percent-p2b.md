@@ -7,3 +7,7 @@
   `%` inside `%lexicon(...)%` split the call. The offline `bog-nav alarm-text` (niagara-go) has the same
   tokenizer and the same test table. The select's columns are now built from the text slot list, so the
   two cannot drift apart.
+- New rule `bad-format`: a text BFormat cannot parse (a `%` that never closes) shows on the station as
+  `ERROR <text>` and none of its tokens is evaluated. It is one WARN row naming the slot (token empty);
+  `bad_format` counts the rows, `hint` advises `%%` for a literal percent, and the summary names
+  bad-format only when a text has it. bog-nav alarm-text reports the same row.
