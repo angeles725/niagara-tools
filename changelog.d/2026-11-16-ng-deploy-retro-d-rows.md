@@ -23,7 +23,8 @@
 - The backup and its purge run just before the copy, after the build and every check (with `--no-deploy`, after the
   build): a run that fails at the build or a check leaves `_backups/` as it was, instead of one more archive of the
   same jars per refused run. Exit 21 still means nothing was copied. When `STATION_MODULES_DIR` is
-  `<NIAGARA_HOME>/modules` the backup holds the jars that were there before the build, under their jar names. The
+  `<NIAGARA_HOME>/modules` the backup holds the jars that were there before the build, under their jar names; only this
+  module's own jars are renamed or left out (another module's file aside is archived as it is). The
   `--no-backup` warning is printed where it was, before the build.
 - A mirror `NIAGARA_HOME` gets the isolation `build.sh` applies, from one shared rule (`go/internal/gradleenv`, which
   `build.sh`'s `isolateMirror` now calls too): `JAVA_TOOL_OPTIONS += -Duser.home=<mirror>/.mirror-user-home` (and the

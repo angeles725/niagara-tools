@@ -3,7 +3,6 @@ package ngdeploy
 import (
 	"io"
 	"os"
-	"regexp"
 	"strconv"
 	"time"
 
@@ -57,16 +56,12 @@ func (d *deploy) backupName() string {
 func (d *deploy) archive() int {
 	from, members := dirname(d.station), []string{basename(d.station)}
 	var options []string
-	if d.sameDir {
-		options = append(options, "--transform=s/"+regexpQuote(asideSuffix)+"$//")
+	if d.sameDir && d.isOn(optFullBackup) {
+		options = d.sameDirOptions(basename(d.station) + "/")
+	} else if d.sameDir {
+		options = d.sameDirOptions("")
 	}
-	if d.isOn(optFullBackup) {
-		for _, profile := range backupProfiles {
-			if d.sameDir {
-				options = append(options, "--exclude="+basename(d.station)+"/"+d.jarName(profile))
-			}
-		}
-	} else {
+	if !d.isOn(optFullBackup) {
 		from, members = d.station, nil
 		for _, profile := range backupProfiles {
 			jar := d.deployedJar(d.jarName(profile))
@@ -99,6 +94,3 @@ func (d *deploy) archive() int {
 	d.backedUp = true
 	return proceed
 }
-
-// regexpQuote is a literal for a sed expression of tar --transform.
-func regexpQuote(s string) string { return regexp.QuoteMeta(s) }

@@ -74,3 +74,49 @@ func TestABackupOfTheHomeModulesDirectoryHoldsThePreviousJars(t *testing.T) {
 		}
 	}
 }
+
+// A full backup of the home modules directory renames and leaves out only this module's own jars: a jar the
+// mode did not build is archived (mode C builds rt only), another module's file aside keeps its name and
+// never stands in for that module's live jar, and a jar the build installed where none was is left out
+// (review R1-001/R3/R4 full-backup findings).
+func TestAFullBackupOfTheHomeModulesDirectoryNamesOnlyThisModulesJars(t *testing.T) {
+	f := archiveFixture(t)
+	modules := sameDir(t, f)
+	f.set("STATION_MODULES_DIR", modules)
+	f.write(modules+"/other-rt.jar"+asideSuffix, "another module's leftover")
+	f.write(f.dir+"/do/gradlew", installing(f.dir+"/home", "", "rt"))
+	t.Setenv("FAKE_OLD_VERSION", "1.0")
+	t.Setenv("FAKE_NEW_VERSION", "1.1")
+	f.want(f.run("--full-backup", "--mode", "C"), ExitOK, "[ng-deploy] copy ok\n")
+	got := archiveContents(f)
+	for name, want := range map[string]string{
+		"modules/demo-rt.jar": "home-old-rt", "modules/demo-ux.jar": "home-old-ux", "modules/demo-wb.jar": "home-old-wb",
+		"modules/other-rt.jar": "another module", "modules/other-rt.jar" + asideSuffix: "another module's leftover",
+	} {
+		if got[name] != want {
+			t.Errorf("%s holds %q, want %q; archive %v", name, got[name], want, got)
+		}
+	}
+
+	f = archiveFixture(t) // the ux jar was not there: the one the build installed is not in the backup
+	modules = sameDir(t, f)
+	f.set("STATION_MODULES_DIR", modules)
+	f.remove(modules + "/demo-ux.jar")
+	t.Setenv("FAKE_OLD_VERSION", "1.0")
+	t.Setenv("FAKE_NEW_VERSION", "1.1")
+	f.want(f.run("--full-backup"), ExitOK, "[ng-deploy] copy ok\n")
+	if got := archiveContents(f); got["modules/demo-rt.jar"] != "home-old-rt" || got["modules/demo-ux.jar"] != "" {
+		t.Errorf("archive %v", got)
+	}
+}
+
+// The --transform expression matches the file aside literally: every character a sed basic regular
+// expression or replacement reads specially is escaped.
+func TestTheTransformQuotesItsNamesForSed(t *testing.T) {
+	if got, want := breQuote(`a.b*c[d]^e$f\g,h+i?(j)|k{l}`), `a\.b\*c\[d\]\^e\$f\\g\,h+i?(j)|k{l}`; got != want {
+		t.Errorf("breQuote = %s, want %s", got, want)
+	}
+	if got, want := sedReplacement(`a&b\c,d.e`), `a\&b\\c\,d.e`; got != want {
+		t.Errorf("sedReplacement = %s, want %s", got, want)
+	}
+}
