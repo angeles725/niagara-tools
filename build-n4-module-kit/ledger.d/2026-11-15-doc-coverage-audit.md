@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-15 -->
+<!-- last-change-note: lint-structure accepts a module that declares type: theme or type: library in MODULE-MAP.md; seven kit documents corrected against the code -->
+log: 2026-11-15 · doc coverage audit → `lint-structure` reads an optional `type: theme` or `type: library` line in the header of `<module-root>/MODULE-MAP.md`: a declared theme's zero-Java `-ux` part passes L9 when it holds a `.nss` file and a declared library's `-rt` part passes L5 with no palette; an undeclared part FAILs as before; `types/structure.md` lists the rules the lint runs (L1 to L17) and `toolbelt/verify-module.sh` every check the gate runs, each pinned to the code by a Go test; the station test runner, the Spanish console level names, L10 and the corpus-index range are stated as the code has them (retro doc-coverage-audit)
