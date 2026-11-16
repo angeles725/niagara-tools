@@ -18,13 +18,18 @@ func bogOf(size int) string {
 // T26 (the #710 verifier's A4): a jar of 200 templates, each holding a bog that inflates to the full
 // per-entry bound, is a small file that asked for 200 x 32 MiB of reads when each template kept its own
 // budget (132.6 s on the base). One budget for the run ends it with one FAIL row naming the first entry not
-// read. The work is pinned by where it stops, not by the clock: three templates use up 96 MiB and their
-// archives and manifests a little more, so the bog of the fourth, T003, is the first entry the 128 MiB budget
-// leaves no room for, and no later template is read. The wall-time bound is a generous backstop only (the
-// base took minutes; a busy host or -race slows the candidate).
+// read. The work is pinned by where it stops, not by the clock: maxInflate/maxUsesRead full bogs would fill the
+// budget exactly, and the templates' archives and manifests draw a little more, so the bog of template
+// maxInflate/maxUsesRead - 1 (T003 at 128 and 32 MiB) is the first entry not read, and no later template is
+// read. The stop is derived from the two bounds (T34: a change of either moves it, not the test's reason to
+// fail). The wall-time bound is a generous backstop only (the base took minutes; -race on a busy host: 74 s).
 func TestAmplifyingJarSpendsOneRunBudget(t *testing.T) {
+	if maxInflate%maxUsesRead != 0 || maxInflate/maxUsesRead < 2 {
+		t.Fatalf("the stop below assumes a budget of at least two whole bogs: %d / %d", maxInflate, maxUsesRead)
+	}
+	stop := int(maxInflate/maxUsesRead) - 1
 	one := ntpl(t, entry{bogEntry, bogOf(maxUsesRead)}, entry{manifestEntry, manifestXML("")})
-	entries := make([]entry, 200)
+	entries := make([]entry, stop+10)
 	for i := range entries {
 		entries[i] = entry{fmt.Sprintf("t/T%03d.ntpl", i), one}
 	}
@@ -35,12 +40,13 @@ func TestAmplifyingJarSpendsOneRunBudget(t *testing.T) {
 	start := time.Now()
 	code, out, errText := run(homeOption, installation(t, stock...), jar)
 	elapsed := time.Since(start)
-	want := "FAIL  ntpl-uses  " + jar + "!/t/T003.ntpl: the templates and their entries inflate past 134217728 bytes in all, the bound of one run -- template.bog and everything after it not read\n"
+	want := fmt.Sprintf("FAIL  ntpl-uses  %s!/t/T%03d.ntpl: the templates and their entries inflate past %d bytes in all, the bound of one run -- template.bog and everything after it not read\n",
+		jar, stop, maxInflate)
 	if code != 1 || out != want || errText != "" {
 		t.Errorf("exit %d\nstdout %q\nstderr %q\nwant exit 1\nstdout %q", code, out, errText, want)
 	}
-	if elapsed > 300*time.Second { // a hang guard only: the row above is the bound (-race on a busy host: 74 s)
-		t.Errorf("the amplifying jar took %s; the base took minutes and one run budget reads four templates", elapsed)
+	if elapsed > 300*time.Second { // a hang guard only: the row above is the bound
+		t.Errorf("the amplifying jar took %s; the base took minutes and one run budget reads %d templates", elapsed, stop+1)
 	}
 }
 
@@ -105,7 +111,7 @@ func TestRunBudgetStopsTheArchiveAtItsManifest(t *testing.T) {
 	data := ntpl(t, entry{bogEntry, small}, entry{manifestEntry, man})
 	b := &budget{left: int64(len(man) - 1)}
 	a, err := readZip(strings.NewReader(data), int64(len(data)), b)
-	if err != nil || !b.spent || a.uses != nil || b.left != int64(len(man)-1) || a.unread != spentMsg(manifestEntry) {
+	if err != nil || !b.spent || a.uses != nil || b.left != int64(len(man)-1) || a.unread != b.spentMsg(manifestEntry) {
 		t.Errorf("err %v spent %v uses %+v left %d unread %q: want the manifest's budget row, nothing read after it", err, b.spent, a.uses, b.left, a.unread)
 	}
 }

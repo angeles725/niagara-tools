@@ -159,7 +159,7 @@ func inflate(f *zip.File, b *budget) (data []byte, why string) {
 	case overLimit:
 		return nil, fmt.Sprintf(manifestTooLarge, f.Name, maxManifest)
 	case overBudget:
-		return nil, spentMsg(f.Name)
+		return nil, b.spentMsg(f.Name)
 	case unread:
 		return nil, fmt.Sprintf(manifestUnread, f.Name, err)
 	}

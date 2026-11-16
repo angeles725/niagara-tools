@@ -9,10 +9,14 @@ import (
 // budget is what one lint run may still inflate (retro coordination-stretch T26): every template of a jar,
 // and the manifest, template.bog and every Px entry of every archive, draw on it. A bound per archive let a
 // small jar of many templates, each inflating its own bound, run for minutes; one budget for the run caps
-// the work whatever the input holds. Once an entry does not fit, spent is set and the run reads nothing more.
+// the work whatever the input holds. Bytes alone do not bound it: an empty or tiny entry draws next to nothing,
+// yet each costs an open and an XML parse (T34), so the run also stops after maxReads entries. Once an entry
+// does not fit, spent is set (byReads when the entry count stopped it) and the run reads nothing more.
 type budget struct {
-	left  int64
-	spent bool
+	left    int64
+	reads   int
+	spent   bool
+	byReads bool
 }
 
 func newBudget() *budget { return &budget{left: maxInflate} }
@@ -32,6 +36,10 @@ const (
 // past the smaller bound. The bytes inflated are drawn from the budget whatever the result.
 func (b *budget) inflate(f *zip.File, limit int64) (data []byte, res result, err error) {
 	switch {
+	case b.reads >= maxReads:
+		// Mutation: NTPL-run-reads -- counting bytes only lets a run of many tiny entries cost minutes
+		b.spent, b.byReads = true, true
+		return nil, overBudget, nil
 	case f.UncompressedSize64 > uint64(limit):
 		return nil, overLimit, nil
 	case f.UncompressedSize64 > uint64(b.left):
@@ -39,6 +47,7 @@ func (b *budget) inflate(f *zip.File, limit int64) (data []byte, res result, err
 		b.spent = true
 		return nil, overBudget, nil
 	}
+	b.reads++
 	rc, err := f.Open()
 	if err != nil {
 		return nil, unread, err
@@ -60,4 +69,9 @@ func (b *budget) inflate(f *zip.File, limit int64) (data []byte, res result, err
 }
 
 // spentMsg is the row of the entry the budget stopped at (name, or "the template" for a template of a jar).
-func spentMsg(name string) string { return fmt.Sprintf(runBudget, maxInflate, name) }
+func (b *budget) spentMsg(name string) string {
+	if b.byReads {
+		return fmt.Sprintf(runReads, maxReads, name)
+	}
+	return fmt.Sprintf(runBudget, maxInflate, name)
+}
