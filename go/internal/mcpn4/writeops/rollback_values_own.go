@@ -9,21 +9,32 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// The rollback compares most set slots by their plain value (plan.Observe). Two kinds are
-// compared by what they hold instead: a StatusEnum or StatusString by its text and status
-// (rollback_values_status.go) and a schedule DaySchedule (written whole by n4_set_schedule) by
-// its time ranges. Every other body keeps the generic comparison, unchanged.
+// The rollback compares most set slots by their plain value (plan.Observe). The bodies only
+// n4_set_schedule sets are compared by what they hold instead: a StatusEnum or StatusString by
+// its text and status (rollback_values_status.go), a schedule DaySchedule by its time ranges,
+// the specialEvents list by each event's name, ranges and rule, and a day-rule part (a date's
+// yearSchedule, monthSchedule, ...) by its rule (rollback_values_rule.go). Every other body keeps
+// the generic comparison, unchanged.
 
-const daySchedule = "schedule:DaySchedule"
+const (
+	daySchedule    = "schedule:DaySchedule"
+	eventsSchedule = "schedule:CompositeSchedule"
+)
 
-// dayDepth is how far below a day its ranges' values sit (day/time/effectiveValue/value).
-const dayDepth = 4
+// ownDepth is how far below each own-compared type its compared values sit.
+var ownDepth = map[string]int{daySchedule: 4, eventsSchedule: 7}
 
-// opDepth is the load depth that observes the slot a set op writes: slotDepth, and a day's
-// ranges too.
+// opDepth is the load depth that observes the slot a set op writes: slotDepth, and the content
+// of an own-compared body too.
 func opDepth(op *pyjson.Object, slot string) int {
-	if b, ok := get(op, "b").(*pyjson.Object); ok && get(b, "t") == daySchedule {
-		return slotDepth(slot) + dayDepth
+	if b, ok := get(op, "b").(*pyjson.Object); ok {
+		t := pyjson.Str(get(b, "t"))
+		if d, own := ownDepth[t]; own {
+			return slotDepth(slot) + d
+		}
+		if ruleType(t) {
+			return slotDepth(slot) + 3
+		}
 	}
 	return slotDepth(slot)
 }
@@ -33,6 +44,10 @@ func ownValue(t string, b *pyjson.Object) (any, bool) {
 	switch {
 	case t == daySchedule:
 		return dayText(b), true
+	case t == eventsSchedule:
+		return eventsText(b), true
+	case ruleType(t):
+		return ruleText(b), true
 	case textStatus(t):
 		kids, _ := sOf(b).([]any)
 		values := map[string]any{}
@@ -50,12 +65,13 @@ func ownValue(t string, b *pyjson.Object) (any, bool) {
 // type: it changed); ok false for any other type.
 func observeOwn(nodes *pyjson.Object, slot, t string) (any, bool) {
 	switch {
-	case t == daySchedule:
+	case t == daySchedule, t == eventsSchedule, ruleType(t):
 		n := box.Node(nodes, slot)
 		if n == nil || get(n, "t") != t {
 			return nil, true
 		}
-		return dayText(n), true
+		v, _ := ownValue(t, n)
+		return v, true
 	case textStatus(t):
 		return observeTextStatus(nodes, slot, t), true
 	}
