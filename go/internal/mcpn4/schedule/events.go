@@ -9,12 +9,12 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// Event is one requested special event: its name (as shown and as a slot name), its day rule's
-// body and its ranges.
+// Event is one requested special event: its name (as shown and as a slot name), its rule (kind,
+// the rule as given and its body) and its ranges.
 type Event struct {
-	Name, Slot string
-	Days       *pyjson.Object
-	Ranges     []Range
+	Name, Slot, Kind string
+	Rule, Days       *pyjson.Object
+	Ranges           []Range
 }
 
 // SpecialEvents parses add_special_event: [{name, kind, rule, ranges}]. A fixed date or a date
@@ -52,7 +52,7 @@ func SpecialEvents(list []any, k *Kind, facets string, today time.Time, allowExp
 		if days != nil {
 			days.Set("n", "days")
 		}
-		out = append(out, Event{name, EscapeName(name), days, ranges})
+		out = append(out, Event{name, EscapeName(name), kind, rule, days, ranges})
 	}
 	return out
 }

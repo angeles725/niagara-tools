@@ -22,6 +22,7 @@ type scheduleState struct {
 	kind  *schedule.Kind
 	model *pyjson.Object
 	def   schedule.Defaults
+	c     plan.Client // for read-only checks of what a request names (a referenced calendar)
 }
 
 // loadSchedule loads and decodes the schedule at ord (the station's type registry fills the
@@ -41,7 +42,7 @@ func loadSchedule(c plan.Client, ord string) (*scheduleState, error) {
 		return nil, plan.ToolError(ord + ": " + err.Error())
 	}
 	t, _ := box.Node(nodes, "").Get("t")
-	return &scheduleState{h, nodes, schedule.KindOf(pyjson.Str(t)), model, def}, nil
+	return &scheduleState{h, nodes, schedule.KindOf(pyjson.Str(t)), model, def, c}, nil
 }
 
 // schedulePart is one planned part: its op and inverse (each one op or a list), what the

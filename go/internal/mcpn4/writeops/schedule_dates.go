@@ -84,6 +84,9 @@ func dateSlots(s *scheduleState, path string, remove []any, f *schedule.Faults) 
 	drop := map[string]bool{}
 	for _, r := range remove {
 		name, _ := r.(string)
+		if drop[name] {
+			*f = append(*f, "remove_date: "+pyjson.Repr(r)+" is named twice")
+		}
 		drop[name] = true
 	}
 	set, kept := dateSet{names: map[string]bool{}}, []string{}

@@ -50,13 +50,13 @@ func scheduleReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, repli
 	return want, replies, observed, verdict, nil
 }
 
-// eventsView is the special events read back as the plan compares them: name and ranges.
+// eventsView is the special events read back as the plan compares them: name, rule and ranges.
 func eventsView(v any) []any {
 	out := []any{}
 	list, _ := v.([]any)
 	for _, e := range list {
 		o := e.(*pyjson.Object)
-		out = append(out, obj("name", get(o, "name"), "ranges", get(o, "ranges")))
+		out = append(out, obj("name", get(o, "name"), "kind", get(o, "kind"), "rule", get(o, "rule"), "ranges", get(o, "ranges")))
 	}
 	return out
 }

@@ -32,6 +32,7 @@ func eventParts(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []sch
 	if removing && !ok {
 		*f = append(*f, "remove_special_event: must be a list of event names")
 	}
+	before := len(*f)
 	allow, _ := args.Get("allow_expired")
 	facets, _ := s.model.Get("facets")
 	added := schedule.SpecialEvents(addList, s.kind, pyjson.Str(facets), today(), allow == true, f)
@@ -43,10 +44,14 @@ func eventParts(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []sch
 			*f = append(*f, "add_special_event: "+pyjson.StrRepr(e.Name)+" already exists; remove it in the same call to replace it")
 		}
 		names[e.Name] = true
+		if e.Kind == "reference" {
+			checkCalendar(s, pyjson.Str(get(e.Rule, "calendar")), f)
+		}
 	}
-	if old == nil { // a schedule always holds specialEvents; any fault refuses the whole plan
+	if len(*f) > before || old == nil { // nothing is encoded from a request with faults
 		return nil
 	}
+	removed := len(box.Children(s.nodes, path).Keys()) - (len(kept))
 	body := schedule.Strip(old)
 	want := []any{}
 	for _, n := range kept {
@@ -58,13 +63,13 @@ func eventParts(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []sch
 		for _, r := range e.Ranges {
 			views = append(views, schedule.View(s.kind, r))
 		}
-		want = append(want, obj("name", e.Name, "ranges", views))
+		want = append(want, obj("name", e.Name, "kind", e.Kind, "rule", schedule.RuleView(e.Kind, e.Rule), "ranges", views))
 	}
 	newBody := obj("nm", "p", "t", get(body, "t"), "s", kept)
 	h, _ := box.Node(s.nodes, "schedule").Get("h")
 	return []schedulePart{{op: setOp(h, "specialEvents", newBody), inverse: setOp(h, "specialEvents", body),
 		target: "schedule", key: "special_events", want: want,
-		note: itoa(len(added)) + " event(s) added, " + itoa(len(removeList)) + " removed; the order is the priority"}}
+		note: itoa(len(added)) + " event(s) added, " + itoa(removed) + " removed; the order is the priority"}}
 }
 
 // keptEvents is the stripped bodies of the events not removed, in order, and the names of all
@@ -73,6 +78,9 @@ func keptEvents(s *scheduleState, path string, remove []any, f *schedule.Faults)
 	drop := map[string]bool{}
 	for _, r := range remove {
 		name, _ := r.(string)
+		if drop[name] {
+			*f = append(*f, "remove_special_event: "+pyjson.Repr(r)+" is named twice")
+		}
 		drop[name] = true
 	}
 	kept, names := []any{}, map[string]bool{}
@@ -96,15 +104,36 @@ func keptEvents(s *scheduleState, path string, remove []any, f *schedule.Faults)
 	return kept, names
 }
 
-// eventView is a kept event as the read-back compares it: its name and ranges.
+// eventView is a kept event as the read-back compares it: its name, rule and ranges.
 func eventView(model *pyjson.Object, body any) *pyjson.Object {
 	name := bql.UnescapeSlot(pyjson.Str(get(body.(*pyjson.Object), "n")))
 	events, _ := model.Get("special_events")
 	list, _ := events.([]any)
 	for _, e := range list {
 		if o := e.(*pyjson.Object); get(o, "name") == name {
-			return obj("name", name, "ranges", get(o, "ranges"))
+			return obj("name", name, "kind", get(o, "kind"), "rule", get(o, "rule"), "ranges", get(o, "ranges"))
 		}
 	}
-	return obj("name", name, "ranges", nil)
+	return obj("name", name)
+}
+
+// checkCalendar refuses a reference whose ORD does not name a calendar (a read only; the
+// calendar need not be inside the write scope).
+func checkCalendar(s *scheduleState, ord string, f *schedule.Faults) {
+	nodes, err := s.c.LoadTree(ord, 1, box.LoadOptions{})
+	var t any
+	if err == nil {
+		t = get(box.Node(nodes, ""), "t")
+	}
+	if t != "schedule:CalendarSchedule" {
+		*f = append(*f, "add_special_event: the reference "+pyjson.StrRepr(ord)+" names no calendar ("+
+			pyjson.Str(t)+describeErr(err)+"); n4_read_schedule a calendar's ORD to check it")
+	}
+}
+
+func describeErr(err error) string {
+	if err != nil {
+		return err.Error()
+	}
+	return ""
 }
