@@ -106,6 +106,55 @@ MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
   go/bin/mcp-n4 --station MyStation=https://10.0.0.5
 ```
 
+### Install to a stable path and register a station per harness
+
+A harness should never run `go/bin/mcp-n4` from a worktree: removing or rebuilding it changes or
+breaks every server registered from it. Install the binary once, then register each station:
+
+```
+go/bin/mcp-n4 install                       # copies itself to ~/.local/bin/mcp-n4 (--prefix DIR)
+~/.local/bin/mcp-n4 register --station lab --harness claude -- \
+  --station LAB=https://10.0.0.5 --credential-env LAB_N4 --load-wait 10
+~/.local/bin/mcp-n4 register --station lab --harness pi            # reuses the launcher
+~/.local/bin/mcp-n4 register --station lab --harness gentle-shell
+```
+
+- `install` writes a temporary file next to the target, fsyncs it, makes it 0755 and renames it
+  over `<prefix>/mcp-n4`: a running server keeps the old file, a failure leaves it in place. A
+  symlink there (into a checkout, say) is replaced by a regular file, and install says so; temporary
+  files of an interrupted install older than an hour are removed.
+- `register` writes `~/.config/mcp-n4/<station>-run.sh`, which sources the env file
+  (`--env`, default `~/.config/mcp-n4/<station>.env`, holding `<PREFIX>_USER` / `<PREFIX>_PASSWORD`,
+  chmod 600) and execs `--bin` (default `~/.local/bin/mcp-n4`) with the server flags given after
+  `--`. The flags are checked like a server start; a flag carrying a value of the env file is
+  refused, so the launcher holds no credential. Without flags after `--` an existing launcher is
+  kept only when its `exec` line runs the installed binary (`--bin`); a launcher that runs another
+  binary (a worktree's, as hand-written launchers did) is refused, naming both, unless `--force`:
+  pass the server flags after `--` to rewrite it. An explicit `--bin` or `--env` is never ignored
+  there: it must match what the launcher execs or sources, or register refuses (even with
+  `--force`, which cannot re-render a launcher without its flags).
+- The MCP entry is `mcp-n4-<station>`: `claude` adds it to the Claude Code project `--project`
+  (default the current directory) in `~/.claude.json`, the local scope `claude mcp add` uses (the
+  project must have been opened in Claude Code once); `pi` and `gentle-shell` add it to
+  `~/.pi/agent/mcp.json` and `~/.gentle-shell/agent/mcp.json` with `"exposure": "direct"`. These
+  files are hand-edited, so only the bytes of the entry added or replaced change (with the comma
+  and line break joining it to its neighbours); every other server keeps its bytes exactly.
+- The launcher execs the installed binary. A `--bin` inside a git checkout (a `.git` file or
+  directory at or above it, after symlinks) is refused unless `--force`: removing or rebuilding a
+  worktree would break every server registered from it.
+- Re-running with the same arguments changes no byte. A launcher or entry that differs is refused,
+  naming the first differing line or the differing fields; `--force` replaces it.
+- A config file that is a symlink (kept in a dotfiles repository) stays a link: the file it
+  resolves to is replaced. A file that is not exactly one JSON object (trailing data, a second
+  document) or has a duplicate key on the entry's path is refused with nothing written; a CRLF
+  file gets CRLF in the inserted entry. An entry equal in value in another key order (as
+  `claude mcp add` writes it) is unchanged.
+- Restart the harness (or reload its MCP servers) to pick up a new entry.
+- Limits: the credential check refuses a flag holding an env value of 4 bytes or more (a
+  shorter one only as a whole flag); a HOME that is itself a git checkout makes the default
+  `--bin` look like a checkout (use `--force`); Claude Code rewrites `~/.claude.json` while it
+  runs, so register with Claude Code closed or the entry may be overwritten.
+
 The server speaks newline-delimited JSON-RPC 2.0 on stdin/stdout. Credentials are
 read from the environment only (`<prefix>_USER` / `<prefix>_PASSWORD`) and never
 appear in output.
@@ -116,6 +165,10 @@ choose a URL, a credential prefix or TLS verification. Without any `--station`,
 `n4_connect` refuses.
 
 Flags:
+
+- `--version`: prints `mcp-n4 <version> (git <sha>)` and exits 0: the `server_version` and
+  `server.build` that `n4_describe_session` reports (`<sha>` ends in `+modified` for a dirty tree,
+  `unknown` for a binary built without VCS information).
 
 - `--station NAME=URL` (repeatable): the only stations `n4_connect` may open. `URL`
   must be `https://`. Set NAME to the station's real `stationName`: `n4_connect`
