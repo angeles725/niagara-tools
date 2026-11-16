@@ -9,10 +9,10 @@ import (
 )
 
 // purgeBackups keeps the newest backups of this module, as many as KEEP_N says, and removes the older
-// ones, newest first by modification time and then by name (`ls -t`). Another module's backups are not
-// touched. Every older backup is tried; failed names the first one that could not be listed, examined or
+// ones, newest first by modification time and then by name (`ls -t`). The backup just written is the
+// newest whatever its time says, so it is never removed. Another module's backups are not touched. Every older backup is tried; failed names the first one that could not be listed, examined or
 // removed (one that is already gone is not a failure), and err says why. The caller stops the deploy.
-func (d *deploy) purgeBackups() (failed string, err error) {
+func (d *deploy) purgeBackups(written string) (failed string, err error) {
 	pattern := backupDir + "/" + d.module + "-pre-*.tar.gz"
 	names, err := filepath.Glob(pattern)
 	if err != nil {
@@ -35,6 +35,9 @@ func (d *deploy) purgeBackups() (failed string, err error) {
 		}
 	}
 	sort.Slice(backups, func(i, j int) bool {
+		if backups[i].name == written || backups[j].name == written {
+			return backups[i].name == written
+		}
 		if backups[i].at != backups[j].at {
 			return backups[i].at > backups[j].at
 		}

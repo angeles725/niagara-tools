@@ -16,6 +16,7 @@ func TestARecordThatIsNotAFullObjectNameNeverReachesGit(t *testing.T) {
 	for name, record := range map[string]string{
 		"an option": "--output=/tmp/x", "a short name": "cafe01", "a ref": "HEAD", "upper case": strings.ToUpper(recordedCommit),
 		"a range": recordedCommit + "..HEAD", "two lines": recordedCommit + "\n" + recordedCommit, "39 digits": recordedCommit[1:],
+		"41 digits": recordedCommit + "a", "63 digits": recordedCommit + recordedCommit[:23],
 		"a blank before": " " + recordedCommit, "a carriage return": recordedCommit + "\r",
 	} {
 		f := newFixture(t)
