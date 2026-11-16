@@ -25,7 +25,11 @@ func fixedNow(t *testing.T, at string) {
 }
 
 func TestReadAlarmsCountsEveryMatchingRecordPerState(t *testing.T) {
-	out := callOK(t, alarmServer(t, 60), "n4_read_alarms", "limit", pyjson.IntLiteral("5"))
+	s := alarmServer(t, 60)
+	out := callOK(t, s, "n4_read_alarms", "limit", pyjson.IntLiteral("5"), "state_counts", true)
+	if got := sent(s)[2]; got != alarmStates+" where "+alarmOpen+"|view:file:ITableToCsv" {
+		t.Errorf("state read %q", got)
+	}
 	counts, _ := field(out, "state_counts").(*pyjson.Object)
 	if counts == nil {
 		t.Fatalf("no state_counts: %s", pyjson.Repr(out))
@@ -37,6 +41,14 @@ func TestReadAlarmsCountsEveryMatchingRecordPerState(t *testing.T) {
 	}
 	if field(out, "row_count") != 5 || field(out, "truncated") != true {
 		t.Errorf("the rows stay capped by limit: %s", pyjson.Repr(out))
+	}
+}
+
+func TestReadAlarmsReadsTheStateCountsOnlyWhenAsked(t *testing.T) {
+	s := alarmServer(t, 3)
+	out := callOK(t, s, "n4_read_alarms")
+	if _, ok := out.Get("state_counts"); ok || len(sent(s)) != 2 {
+		t.Errorf("default call: %d requests, reply %s", len(sent(s)), pyjson.Repr(out))
 	}
 }
 
@@ -71,7 +83,7 @@ func TestReadAlarmsAcceptsRelativeTimesAndASourceGlob(t *testing.T) {
 func TestReadAlarmsSaysWhenTheStateCountsAreUnavailable(t *testing.T) {
 	s := alarmServer(t, 2)
 	s.Station.OrdRoutes[1].Code = 400 // the sourceState.encodeToString route
-	out := callOK(t, s, "n4_read_alarms")
+	out := callOK(t, s, "n4_read_alarms", "state_counts", true)
 	note, _ := field(out, "state_counts_note").(string)
 	if v, ok := out.Get("state_counts"); !ok || v != nil || !strings.Contains(note, "HTTP 400") || field(out, "total") != 2 {
 		t.Errorf("reply %s", pyjson.Repr(out))

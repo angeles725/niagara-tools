@@ -79,13 +79,14 @@ func summarize(columns []string, rows []*pyjson.Object) *pyjson.Object {
 		prev, _ := n.(int)
 		statuses.Set(status, prev+1)
 		value, isNum := pyjson.ParseFloat(raw)
-		isNum = isNum && !math.IsNaN(value) && !math.IsInf(value, 0)
 		var shown any = raw
-		if isNum {
+		if isNum && !math.IsNaN(value) && !math.IsInf(value, 0) {
 			shown = value
-		} else if numeric {
+		} else if !isNum && numeric {
 			numeric, nonNumeric = false, raw
 		}
+		// A nan or inf record (a faulted source) is counted but never compared.
+		isNum = isNum && !math.IsNaN(value) && !math.IsInf(value, 0)
 		rec := obj("value", shown, "timestamp", ts, "status", status)
 		if lastRec == nil {
 			lastRec = rec
@@ -100,7 +101,7 @@ func summarize(columns []string, rows []*pyjson.Object) *pyjson.Object {
 	}
 	out := obj("numeric", numeric, "min", nil, "max", nil, "first", nilIfNone(firstRec), "last", nilIfNone(lastRec),
 		"status_counts", statuses)
-	if numeric {
+	if numeric && minRec != nil { // nil when every record is nan or inf
 		minTs, _ := minRec.Get("timestamp")
 		maxTs, _ := maxRec.Get("timestamp")
 		out.Set("min", obj("value", minVal, "timestamp", minTs))

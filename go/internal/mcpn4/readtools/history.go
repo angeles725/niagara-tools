@@ -1,8 +1,6 @@
 package readtools
 
 import (
-	"regexp"
-
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/bql"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -13,10 +11,6 @@ import (
 
 // historyFields name the record columns by position (a localized station translates headers).
 var historyFields = []string{"timestamp", "value", "status"}
-
-// bareHistoryNameRe is a history_id given as a bare history name (no '/'), resolved against
-// the session's station; ValidateHistoryId still checks the composed id.
-var bareHistoryNameRe = regexp.MustCompile(`^[^/]+$`)
 
 // Defaults of n4_read_history (the registry schema caps limit at 1000).
 const (
@@ -38,8 +32,10 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 	}
 	limit, timeout := intArg(args, "limit", historyDefaultLimit), intArg(args, "timeout_s", historyDefaultTimeout)
 	id, key, elapsed := strArg(args, "history_id", ""), "history_id", 0
-	if hasID && bareHistoryNameRe.MatchString(id) { // a bare name is a history of the session's station
-		id = "/" + t.Ctx.Session.StationName + "/" + id
+	if hasID {
+		if id, err = bql.ResolveHistoryId(id, t.Ctx.Session.StationName); err != nil {
+			return nil, toolError("%s", err.Error())
+		}
 	}
 	if hasExt {
 		key = "ext_ord"
@@ -76,7 +72,7 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 			out.Set(k, v)
 		}
 	}
-	if params != "" {
+	if params != "" && period == "" { // the resolved start/end; a period is already echoed
 		out.Set("range", params)
 	}
 	out.Set("columns", strs(columns))

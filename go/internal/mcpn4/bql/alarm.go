@@ -30,7 +30,8 @@ const (
 
 // alarmGlobRe is a source_glob: ORD characters and '*' only; no quote, space or '|' (the ORD
 // separator would cut the bql part, so '*' stands for it).
-var alarmGlobRe = regexp.MustCompile(`^[A-Za-z0-9_$:/.*-]{1,400}$`)
+// No '$' either: the station would decode $xx into any character ('*' matches an escaped one).
+var alarmGlobRe = regexp.MustCompile(`^[A-Za-z0-9_:/.*-]{1,400}$`)
 
 // The BAlarmRecord enum tags a filter may name (BSourceState, BAckState).
 var (
@@ -43,7 +44,7 @@ const (
 	alarmEnumRule   = "%s must be one of %s, got %q"
 	alarmClassRule  = "alarm_class must be an alarm class name (a letter, then letters, digits or '_', other characters $-escaped), got %q"
 	alarmSourceRule = "source must be a component ORD such as station:|slot:/Drivers/Net/Device (each segment a slot name), got %q"
-	alarmGlobRule   = "source_glob must be a like pattern of ORD characters and '*' (no quote, space or '|': '*' stands for '|'), e.g. *slot:/Drivers/Net/*, got %q"
+	alarmGlobRule   = "source_glob must be a like pattern of ORD characters and '*' (no quote, space, '$' or '|': '*' stands for '|' and for an escaped character), e.g. *slot:/Drivers/Net/*, got %q"
 	alarmTimeRule   = "%s must be a BAbsTime such as 2026-11-15T00:00:00.000-06:00 or 2026-11-15T06:00:00Z, or a span back from now such as 30m, 24h or 7d, got %q"
 	alarmRangeRule  = "since must not be later than until"
 )
@@ -64,6 +65,9 @@ func AlarmWhere(f AlarmFilter) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		if err := checkEscapesShown("source", path, f.Source, literalForbidden); err != nil {
+			return "", err
+		}
 		conds = append(conds, fmt.Sprintf(alarmSourceClause, path))
 	}
 	if f.SourceGlob != "" {
@@ -75,6 +79,9 @@ func AlarmWhere(f AlarmFilter) (string, error) {
 	if f.AlarmClass != "" {
 		if !slotNameRe.MatchString(f.AlarmClass) {
 			return "", valueError(fmt.Sprintf(alarmClassRule, f.AlarmClass))
+		}
+		if err := checkEscapes("alarm_class", f.AlarmClass, literalForbidden); err != nil {
+			return "", err
 		}
 		conds = append(conds, "alarmClass = '"+f.AlarmClass+"'")
 	}

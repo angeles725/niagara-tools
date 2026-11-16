@@ -137,3 +137,12 @@ func TestReadHistoryTakesARelativeStartAndABareName(t *testing.T) {
 		}
 	}
 }
+
+func TestReadHistorySummaryOfOnlyNonFiniteRecordsHasNoMinMax(t *testing.T) {
+	out := readOK(t, summaryServer(t, []string{"nan", "inf"}, []string{"{fault}", "{fault}"}),
+		"history_id", "/FakeStation/NW", "summary", true)
+	sum := field(out, "summary").(*pyjson.Object)
+	if field(sum, "min") != nil || field(sum, "max") != nil || field(sum, "count") != 2 {
+		t.Errorf("summary %s", pyjson.Repr(sum))
+	}
+}

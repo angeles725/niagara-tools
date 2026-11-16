@@ -62,14 +62,20 @@ func (t *Tools) ReadAlarms(args *pyjson.Object) (*pyjson.Object, error) {
 		}
 	}
 	total, note, countMs := t.countRows(bql.ComposeAlarmOrd(bql.AlarmCountQuery, where, ""), timeout)
-	states, statesNote, statesMs := t.alarmStateCounts(where, timeout)
+	var states any
+	statesNote, statesMs := "", 0
+	if v, ok := args.Get("state_counts"); ok && pyjson.Truthy(v) {
+		states, statesNote, statesMs = t.alarmStateCounts(where, timeout)
+	}
 	t.recordRead("n4_read_alarms", "source", args, len(rows))
 	out := obj("where", where, "columns", strs(columns), "rows", list(keyed), "row_count", len(rows),
 		"order", "newest_first", "truncated", truncated, "total", total)
 	if note != "" {
 		out.Set("total_note", note)
 	}
-	out.Set("state_counts", states)
+	if states != nil || statesNote != "" {
+		out.Set("state_counts", states)
+	}
 	if statesNote != "" {
 		out.Set("state_counts_note", statesNote)
 	}

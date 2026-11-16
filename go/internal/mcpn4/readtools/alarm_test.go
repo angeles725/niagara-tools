@@ -15,8 +15,7 @@ func TestReadAlarmsDefaultsToOpenAlarmsNewestFirst(t *testing.T) {
 	s := alarmServer(t, 60)
 	out := callOK(t, s, "n4_read_alarms")
 	want := []string{alarmSelect + " where " + alarmOpen + alarmOrder,
-		alarmCount + " where " + alarmOpen + "|view:file:ITableToCsv",
-		alarmStates + " where " + alarmOpen + "|view:file:ITableToCsv"}
+		alarmCount + " where " + alarmOpen + "|view:file:ITableToCsv"}
 	if got := sent(s); strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("ORDs sent %q, want %q", got, want)
 	}
