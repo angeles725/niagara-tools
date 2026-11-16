@@ -1,6 +1,8 @@
 package writeops
 
 import (
+	"strings"
+
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -57,4 +59,28 @@ func eventsView(v any) []any {
 		out = append(out, obj("name", get(o, "name"), "ranges", get(o, "ranges")))
 	}
 	return out
+}
+
+// putWant sets want[key] = v, merging a "weekly.<day>" key into a weekly object.
+func putWant(want *pyjson.Object, key string, v any) {
+	group, sub, nested := strings.Cut(key, ".")
+	if !nested {
+		want.Set(key, v)
+		return
+	}
+	g, _ := want.Get(group)
+	o, ok := g.(*pyjson.Object)
+	if !ok {
+		o = pyjson.NewObject()
+		want.Set(group, o)
+	}
+	o.Set(sub, v)
+}
+
+// opsOf is v when it is a list of ops, else the one op v.
+func opsOf(v any) []any {
+	if l, ok := v.([]any); ok {
+		return l
+	}
+	return []any{v}
 }

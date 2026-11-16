@@ -2,7 +2,6 @@ package writeops
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
@@ -45,8 +44,8 @@ func loadSchedule(c plan.Client, ord string) (*scheduleState, error) {
 	return &scheduleState{h, nodes, schedule.KindOf(pyjson.Str(t)), model, def}, nil
 }
 
-// schedulePart is one planned part: its op, inverse, what the read-back expects under key, and
-// a note.
+// schedulePart is one planned part: its op and inverse (each one op or a list), what the
+// read-back expects under key, and a note.
 type schedulePart struct {
 	op, inverse any
 	target      string // the ORD of the component the op is sent to, below the schedule
@@ -57,7 +56,7 @@ type schedulePart struct {
 
 // scheduleParts are the planners of each argument, in plan order.
 var scheduleParts = []func(s *scheduleState, args *pyjson.Object, f *schedule.Faults) []schedulePart{
-	weeklyParts, defaultOutputPart, eventParts,
+	weeklyParts, defaultOutputPart, eventParts, datesPart,
 }
 
 func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
@@ -72,7 +71,8 @@ func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		parts = append(parts, planner(s, args, &faults)...)
 	}
 	if len(parts) == 0 && len(faults) == 0 {
-		faults = append(faults, "nothing to set: give weekly, default_output, add_special_event or remove_special_event")
+		faults = append(faults, "nothing to set: give weekly, default_output, add_special_event, remove_special_event, "+
+			"add_date, remove_date or times")
 	}
 	if err := faults.Err(); err != nil {
 		return nil, plan.ToolError(err.Error())
@@ -81,12 +81,11 @@ func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	p.Targets.Set(ordText, s.h)
 	want := pyjson.NewObject()
 	for _, part := range parts {
-		if part.target != "" {
-			h, _ := part.op.(*pyjson.Object).Get("h")
+		ops, inverse := opsOf(part.op), opsOf(part.inverse) // a part sends one op or several
+		if h, _ := ops[0].(*pyjson.Object).Get("h"); part.target != "" {
 			p.Targets.Set(ordText+"/"+part.target, h)
 		}
-		p.Ops = append(p.Ops, part.op)
-		p.Inverse = append(p.Inverse, part.inverse)
+		p.Ops, p.Inverse = append(p.Ops, ops...), append(p.Inverse, inverse...)
 		if part.note != "" {
 			p.Notes = append(p.Notes, part.note)
 		}
@@ -94,22 +93,6 @@ func schedulePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	}
 	p.Data = want
 	return p, nil
-}
-
-// putWant sets want[key] = v, merging a "weekly.<day>" key into a weekly object.
-func putWant(want *pyjson.Object, key string, v any) {
-	group, sub, nested := strings.Cut(key, ".")
-	if !nested {
-		want.Set(key, v)
-		return
-	}
-	g, _ := want.Get(group)
-	o, ok := g.(*pyjson.Object)
-	if !ok {
-		o = pyjson.NewObject()
-		want.Set(group, o)
-	}
-	o.Set(sub, v)
 }
 
 // weeklyParts replaces the day subtree of each day given (and only those).
