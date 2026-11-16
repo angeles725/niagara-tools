@@ -35,6 +35,7 @@ func Validate(f *File) []string {
 	out := &faults{}
 	validateTop(f, out)
 	names, units := map[string]bool{}, map[int]string{}
+	seen := &bacnetSeen{instances: map[int]string{}, listens: map[string]string{}}
 	for i := range f.Devices {
 		d := &f.Devices[i]
 		where := label("device", i, d.Name)
@@ -57,6 +58,7 @@ func Validate(f *File) []string {
 			out.add(where, msgNoPoints)
 		}
 		validatePoints(d, where, out)
+		validateBACnet(d, where, seen, out)
 	}
 	return out.list
 }

@@ -53,6 +53,8 @@ type Device struct {
 	Unit   int     `json:"unit"`
 	Faults *Faults `json:"faults,omitempty"`
 	Points []Point `json:"points"`
+	// BACnet, when set, also serves the device as a BACnet/IP device.
+	BACnet *BACnetDevice `json:"bacnet,omitempty"`
 }
 
 // Point is one named value of a device and where it lives in the tables.
@@ -66,6 +68,8 @@ type Point struct {
 	Writable  bool         `json:"writable,omitempty"`
 	Behaviour *Behaviour   `json:"behaviour,omitempty"`
 	Faults    *PointFaults `json:"faults,omitempty"`
+	// BACnet, when set, is the object the point is in its BACnet device.
+	BACnet *BACnetPoint `json:"bacnet,omitempty"`
 }
 
 // Behaviour makes a point's value change with time.

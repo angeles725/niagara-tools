@@ -5,39 +5,58 @@
     {
       "name": "meter-1",
       "unit": 10,
+      "bacnet": {"device_instance": 2001, "listen": "127.0.0.1:47809"},
       "points": [
         {"name": "voltage_l1", "table": "input_register", "address": 0, "type": "float32", "order": "CDAB", "value": 230.1,
-         "behaviour": {"kind": "sine", "amplitude": 2, "period_ms": 90000}},
-        {"name": "voltage_l2", "table": "input_register", "address": 2, "type": "float32", "order": "CDAB", "value": 229.4},
-        {"name": "voltage_l3", "table": "input_register", "address": 4, "type": "float32", "order": "CDAB", "value": 231.0},
+         "behaviour": {"kind": "sine", "amplitude": 2, "period_ms": 90000},
+         "bacnet": {"object_type": "analog-input", "instance": 1, "units": "volts"}},
+        {"name": "voltage_l2", "table": "input_register", "address": 2, "type": "float32", "order": "CDAB", "value": 229.4,
+         "bacnet": {"object_type": "analog-input", "instance": 2, "units": "volts"}},
+        {"name": "voltage_l3", "table": "input_register", "address": 4, "type": "float32", "order": "CDAB", "value": 231.0,
+         "bacnet": {"object_type": "analog-input", "instance": 3, "units": "volts"}},
         {"name": "current_l1", "table": "input_register", "address": 6, "type": "float32", "order": "CDAB", "value": 12.5,
-         "behaviour": {"kind": "random_walk", "seed": 21, "step": 0.4, "interval_ms": 2000, "min": 8, "max": 18}},
-        {"name": "current_l2", "table": "input_register", "address": 8, "type": "float32", "order": "CDAB", "value": 11.8},
-        {"name": "current_l3", "table": "input_register", "address": 10, "type": "float32", "order": "CDAB", "value": 12.1},
-        {"name": "active_power_kw", "table": "input_register", "address": 12, "type": "float32", "order": "CDAB", "value": 7.9},
+         "behaviour": {"kind": "random_walk", "seed": 21, "step": 0.4, "interval_ms": 2000, "min": 8, "max": 18},
+         "bacnet": {"object_type": "analog-input", "instance": 4, "units": "amperes"}},
+        {"name": "current_l2", "table": "input_register", "address": 8, "type": "float32", "order": "CDAB", "value": 11.8,
+         "bacnet": {"object_type": "analog-input", "instance": 5, "units": "amperes"}},
+        {"name": "current_l3", "table": "input_register", "address": 10, "type": "float32", "order": "CDAB", "value": 12.1,
+         "bacnet": {"object_type": "analog-input", "instance": 6, "units": "amperes"}},
+        {"name": "active_power_kw", "table": "input_register", "address": 12, "type": "float32", "order": "CDAB", "value": 7.9,
+         "bacnet": {"object_type": "analog-input", "instance": 7, "units": "kilowatts"}},
         {"name": "frequency_hz", "table": "input_register", "address": 14, "type": "float32", "order": "CDAB", "value": 50,
-         "behaviour": {"kind": "sine", "amplitude": 0.05, "period_ms": 30000}},
-        {"name": "power_factor", "table": "input_register", "address": 16, "type": "float32", "order": "CDAB", "value": 0.95},
+         "behaviour": {"kind": "sine", "amplitude": 0.05, "period_ms": 30000},
+         "bacnet": {"object_type": "analog-input", "instance": 8, "units": "hertz"}},
+        {"name": "power_factor", "table": "input_register", "address": 16, "type": "float32", "order": "CDAB", "value": 0.95,
+         "bacnet": {"object_type": "analog-input", "instance": 9, "units": "power-factor"}},
         {"name": "energy_kwh", "table": "input_register", "address": 18, "type": "float32", "order": "CDAB",
-         "behaviour": {"kind": "ramp", "min": 1000, "max": 2000, "period_ms": 3600000}},
-        {"name": "ct_ratio", "table": "holding_register", "address": 0, "type": "uint16", "value": 100, "writable": true},
-        {"name": "demand_interval_min", "table": "holding_register", "address": 1, "type": "uint16", "value": 15, "writable": true}
+         "behaviour": {"kind": "ramp", "min": 1000, "max": 2000, "period_ms": 3600000},
+         "bacnet": {"object_type": "analog-input", "instance": 10, "units": "kilowatt-hours"}},
+        {"name": "ct_ratio", "table": "holding_register", "address": 0, "type": "uint16", "value": 100, "writable": true,
+         "bacnet": {"object_type": "analog-value", "instance": 1}},
+        {"name": "demand_interval_min", "table": "holding_register", "address": 1, "type": "uint16", "value": 15, "writable": true,
+         "bacnet": {"object_type": "analog-value", "instance": 2, "units": "minutes"}},
+        {"name": "tariff", "table": "holding_register", "address": 2, "type": "uint16", "value": 1, "writable": true,
+         "bacnet": {"object_type": "multi-state-value", "instance": 1, "state_texts": ["Peak", "Off-peak", "Night"]}}
       ]
     },
     {
       "name": "meter-slow",
       "unit": 11,
       "faults": {"delay_ms": 3000},
+      "bacnet": {"device_instance": 2002, "listen": "127.0.0.1:47810"},
       "points": [
-        {"name": "energy_kwh", "table": "input_register", "address": 18, "type": "float32", "order": "CDAB", "value": 512.25}
+        {"name": "energy_kwh", "table": "input_register", "address": 18, "type": "float32", "order": "CDAB", "value": 512.25,
+         "bacnet": {"object_type": "analog-input", "instance": 1, "units": "kilowatt-hours"}}
       ]
     },
     {
       "name": "meter-flaky",
       "unit": 12,
       "faults": {"fail_after_reads": 20, "offline": [{"from_ms": 60000, "to_ms": 120000}]},
+      "bacnet": {"device_instance": 2003, "listen": "127.0.0.1:47811"},
       "points": [
-        {"name": "energy_kwh", "table": "input_register", "address": 18, "type": "float32", "order": "CDAB", "value": 77.5}
+        {"name": "energy_kwh", "table": "input_register", "address": 18, "type": "float32", "order": "CDAB", "value": 77.5,
+         "bacnet": {"object_type": "analog-input", "instance": 1, "units": "kilowatt-hours"}}
       ]
     }
   ]
