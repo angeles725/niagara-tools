@@ -19,8 +19,10 @@ const (
 	ruleEmptyToNormal = "empty-tonormal"
 )
 
-// alarmTextSlots are the ext's text slots (BAlarmSourceExt 4.14 and 4.15.6.20: toFaultText,
-// toOffnormalText, toNormalText), in the order findings are listed. Each defaults to "".
+// alarmTextSlots are the ext's text slots, in the order findings are listed and the order of the
+// select's text columns (alarmTextQuery is built from this slice). BAlarmSourceExt (4.14 and
+// 4.15.6.20) declares the same three, as toFaultText, toOffnormalText, toNormalText. Each
+// defaults to "".
 var alarmTextSlots = []string{"toOffnormalText", "toFaultText", "toNormalText"}
 
 // alarmRecordFields are the properties of BAlarmRecord: a %field...% path rooted at one resolves.
@@ -34,21 +36,14 @@ var alarmRecordFields = map[string]bool{
 var formatCallRE = regexp.MustCompile(`^[A-Za-z_]\w*\(`)
 
 // unresolvedAlarmTokens are the %...% tokens of a BFormat text whose path is not rooted at a
-// field of the alarm record (%parent...% included). %% is a literal percent sign.
+// field of the alarm record (%parent...% included), split as BFormat splits them (formatScripts):
+// %% is a literal percent sign, and a text with a lone % has none (BFormat shows it as
+// "ERROR <text>").
 func unresolvedAlarmTokens(text string) []string {
+	scripts, _ := formatScripts(text)
 	var out []string
-	for rest := text; ; {
-		i := strings.IndexByte(rest, '%')
-		if i < 0 {
-			return out
-		}
-		j := strings.IndexByte(rest[i+1:], '%')
-		if j < 0 {
-			return out
-		}
-		body := rest[i+1 : i+1+j]
-		rest = rest[i+2+j:]
-		if body == "" || formatCallRE.MatchString(body) {
+	for _, body := range scripts {
+		if formatCallRE.MatchString(body) {
 			continue
 		}
 		root, _, _ := strings.Cut(body, ".")
@@ -56,6 +51,7 @@ func unresolvedAlarmTokens(text string) []string {
 			out = append(out, "%"+body+"%")
 		}
 	}
+	return out
 }
 
 // alarmTextFinding is one row, keys in bog-nav's column order.
