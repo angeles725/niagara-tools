@@ -161,11 +161,13 @@ func TestNavigateListsTheDeclaredPropertiesOfEachListedComponent(t *testing.T) {
 // Row 2: a rollback that restores a default reads verified, though the load omits the slot.
 func TestARollbackThatRestoresADefaultIsVerified(t *testing.T) {
 	r, c := dfxRig(t, verifiedRig)
+	armed := dropAfterRollbackWrite(r, "flag", false) // the station omits the restored default
 	set := r.Srv.RunWrite("n4_set_slot", Args{"ord": Folder + "/" + c.Name, "slot": "flag", "value": true,
 		"value_type": "baja:Boolean"})
 	if set["verdict"] != "verified" {
 		t.Fatalf("set = %v", set)
 	}
+	armed.Store(true)
 	back := r.Srv.RunWrite("n4_rollback", Args{"batch_id": set["batch_id"]})
 	if back["verdict"] != "verified" || Dig(back, "observed", "restored") != true {
 		t.Errorf("rollback = %v", back)
@@ -197,13 +199,28 @@ func TestAnUnreadableRegistrySaysSoAndListsWhatWasLoaded(t *testing.T) {
 	}
 }
 
-// A type the station does not describe (an error entry, or left out of the reply) is remembered
-// for the session too: three reads ask the registry once.
-func TestAnUndescribedTypeIsAskedForOncePerSession(t *testing.T) {
-	for _, entry := range []any{nil, map[string]any{"isErr": true, "c": "", "m": "kitBench:Gone", "s": ""}} {
+// A type the station does not describe is remembered for the session when the station said so: an
+// error entry, or a type left out of a reply that answered another one. Left out of a reply that
+// answered nothing, it proves nothing and is asked for again.
+func TestAnUndescribedTypeIsAskedForOncePerSessionWhenTheStationSaidSo(t *testing.T) {
+	for _, tc := range []struct {
+		entry      any
+		dash, want int32 // dash: a described component listed beside it; want: calls after the first listing
+	}{
+		{map[string]any{"isErr": true, "c": "", "m": "kitBench:Gone", "s": ""}, 0, 0},
+		{nil, 0, 2},
+		{nil, 1, 0},
+	} {
 		r := stationRig(t)
-		r.Station.SetRegistry(map[string]any{"kitBench:Gone": entry})
+		contracts := dfxContracts()
+		contracts["kitBench:Gone"] = tc.entry
+		r.Station.SetRegistry(contracts)
 		c := r.Add("3", "Gone", "kitBench:Gone")
+		ord := Folder + "/" + c.Name
+		if tc.dash == 1 {
+			r.Add("3", "Dash", "kitBench:Dash")
+			ord = Folder
+		}
 		var calls int32
 		r.Station.SetHook(func(frame map[string]any) (int, []byte) {
 			for _, m := range objects(frame["m"]) {
@@ -214,13 +231,16 @@ func TestAnUndescribedTypeIsAskedForOncePerSession(t *testing.T) {
 			return 0, nil
 		})
 		for i := 0; i < 3; i++ {
-			out := r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})
+			if i == 1 {
+				atomic.StoreInt32(&calls, 0)
+			}
+			out := r.Srv.OK("n4_navigate", Args{"ord": ord, "depth": 1 + int(tc.dash)})
 			if note, _ := out["defaults_note"].(string); !strings.Contains(note, "kitBench:Gone") {
 				t.Errorf("read %d defaults_note = %v", i, out["defaults_note"])
 			}
 		}
-		if n := atomic.LoadInt32(&calls); n != 1 {
-			t.Errorf("entry %v: three reads asked the registry %d times, want 1", entry, n)
+		if n := atomic.LoadInt32(&calls); n != tc.want {
+			t.Errorf("entry %v beside Dash %d: two listings after the first asked the registry %d times, want %d", tc.entry, tc.dash, n, tc.want)
 		}
 	}
 }
