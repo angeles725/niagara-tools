@@ -18,8 +18,11 @@ const (
 	AlarmOrder        = " order by timestamp desc"
 	// AlarmOpenClause is the default filter: an alarm still unacknowledged or not back to normal.
 	AlarmOpenClause = "(ackState != 'acked' or sourceState != 'normal')"
-	// alarmSourcePrefix is how a record's source names a component of this station.
-	alarmSourcePrefix = "local:|station:|slot:"
+	// alarmSourceClause matches a record source naming the component at a slot path or below
+	// it, in both forms a station stores (slot:/a and local:|station:|slot:/a). It holds no
+	// '|': the ORD separator would cut the bql part (HTTP 400 live), so '*' stands for it.
+	alarmSourceClause = "(source like 'slot:%[1]s' or source like 'slot:%[1]s/*' or " +
+		"source like 'local:*slot:%[1]s' or source like 'local:*slot:%[1]s/*')"
 )
 
 // The BAlarmRecord enum tags a filter may name (BSourceState, BAckState).
@@ -53,7 +56,7 @@ func AlarmWhere(f AlarmFilter) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		conds = append(conds, "source like '"+alarmSourcePrefix+path+"*'")
+		conds = append(conds, fmt.Sprintf(alarmSourceClause, path))
 	}
 	if f.AlarmClass != "" {
 		if !slotNameRe.MatchString(f.AlarmClass) {

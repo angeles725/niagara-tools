@@ -47,11 +47,17 @@ func TestReadAlarmsSendsEveryFilter(t *testing.T) {
 	callOK(t, s, "n4_read_alarms", "source", "station:|slot:/Drivers/Net", "alarm_class", "defaultAlarmClass",
 		"source_state", "offnormal", "ack_state", "unacked", "since", "2026-11-15T00:00:00.000-06:00",
 		"until", "2026-11-15T12:00:00Z")
-	where := "source like 'local:|station:|slot:/Drivers/Net*' and alarmClass = 'defaultAlarmClass' and " +
+	where := "(source like 'slot:/Drivers/Net' or source like 'slot:/Drivers/Net/*' or " +
+		"source like 'local:*slot:/Drivers/Net' or source like 'local:*slot:/Drivers/Net/*') and alarmClass = 'defaultAlarmClass' and " +
 		"sourceState = 'offnormal' and ackState = 'unacked' and timestamp.millis >= 1794722400000 and " +
 		"timestamp.millis <= 1794744000000"
 	if got := sent(s)[0]; got != alarmSelect+" where "+where+alarmOrder {
 		t.Errorf("ORD sent %q", got)
+	}
+	for _, ord := range sent(s) { // the ORD separator inside the bql part cuts the query (HTTP 400)
+		if part := strings.TrimSuffix(strings.TrimPrefix(ord, "alarm:|bql:"), "|view:file:ITableToCsv"); strings.Contains(part, "|") {
+			t.Errorf("the bql part of %q holds a '|'", ord)
+		}
 	}
 	s = alarmServer(t, 1)
 	callOK(t, s, "n4_read_alarms", "ack_state", "acked")

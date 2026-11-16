@@ -251,8 +251,11 @@ desc|view:file:ITableToCsv>`, then `select count(*) where <clause>` for `total` 
 `(ackState != 'acked' or sourceState != 'normal')`; a `source_state` (`normal`, `offnormal`,
 `fault`, `alert`) or `ack_state` (`acked`, `unacked`, `ackPending`) filter replaces it, and
 `open_only: false` drops it. `source` (`station:|slot:/Drivers/Net`, each segment a slot name)
-becomes `source like 'local:|station:|slot:/Drivers/Net*'` (that component and everything below
-it), `alarm_class` (a slot name) `alarmClass = '<name>'`, and `since` / `until` (BAbsTime text)
+becomes `(source like 'slot:/Drivers/Net' or source like 'slot:/Drivers/Net/*' or source like
+'local:*slot:/Drivers/Net' or source like 'local:*slot:/Drivers/Net/*')`: that component and
+everything below it, in both forms a station stores a source (`slot:/...` and
+`local:|station:|slot:/...`), never a sibling such as `/Drivers/NetX`; the clause holds no `|`,
+which would end the bql part of the ORD (HTTP 400), `alarm_class` (a slot name) `alarmClass = '<name>'`, and `since` / `until` (BAbsTime text)
 `timestamp.millis >= <epoch ms>` / `<=`. Every value is checked before any request (no quote,
 wildcard or BQL of the caller reaches the station); `where` echoes the clause sent. Rows are
 `{timestamp, uuid, source, source_state, ack_state, alarm_class, priority, msg_text}` read by
