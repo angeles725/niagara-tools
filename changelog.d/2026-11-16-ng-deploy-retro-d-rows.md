@@ -16,7 +16,9 @@
 - Before the build, each station jar the run will replace is renamed to `<jar>.ng-probe` and straight back: a jar a
   running station holds is exit 40 with the line above and no gradle call, instead of after a minute of building. A
   jar without write permission still deploys (a rename needs the directory's permission). A jar that cannot be moved
-  back is exit 40 naming both paths and the rename to make; a `.ng-probe` file already there is never written over.
+  back is exit 40 naming both paths and the rename to make. SIGINT, SIGTERM and SIGHUP are held across the two
+  moves. A `.ng-probe` file a killed run left is moved back when its jar is missing (NOTICE), and refused with the
+  manual fix (exit 40) when the jar is beside it; it is never written over.
 - The backup and its purge run just before the copy, after the build and every check (with `--no-deploy`, after the
   build): a run that fails at the build or a check leaves `_backups/` as it was, instead of one more archive of the
   same jars per refused run. Exit 21 still means nothing was copied. When `STATION_MODULES_DIR` is

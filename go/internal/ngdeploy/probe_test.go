@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -40,16 +41,59 @@ func TestAProbeThatCannotMoveTheJarBackNamesBothPaths(t *testing.T) {
 	}
 }
 
-// A probe file left by a killed run is never written over: the run refuses with exit 40 and leaves it.
-func TestAProbeNeverReplacesAFileAlreadyThere(t *testing.T) {
+// A probe file a killed run left beside the jar is never written over: the run cannot tell which one the
+// station should load, so it refuses with exit 40 and the manual fix, before the build, and changes nothing
+// (review R4-stale-probe-blocks-deploys).
+func TestAProbeFileBesideTheJarIsRefusedWithTheFix(t *testing.T) {
 	f := newFixture(t)
 	upgrade(t, f)
-	f.write(f.deployedJar("rt")+probeSuffix, "the only copy")
+	jar := f.deployedJar("rt")
+	f.write(jar+probeSuffix, "the only copy")
 	code := f.run("--no-backup")
-	if code != ExitCopy || !strings.Contains(f.err, "copy refused: demo-rt.jar in "+f.modules+" cannot be moved (File exists)") || f.read(f.deployedJar("rt")+probeSuffix) != "the only copy" || strings.Contains(f.calls(), "gradlew") {
+	want := "[ng-deploy] ERROR copy refused: " + jar + probeSuffix + ", left by a run that was killed while it tested the jar, is there beside demo-rt.jar; nothing was built or copied\n" +
+		"[ng-deploy]   compare " + jar + " and " + jar + probeSuffix + ": when they hold the same bytes delete " + jar + probeSuffix +
+		"; otherwise keep the one the station should load as " + jar + " and delete the other; then deploy again\n"
+	if code != ExitCopy || !strings.HasSuffix(f.err, want) || f.read(jar+probeSuffix) != "the only copy" || strings.Contains(f.calls(), "gradlew") {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
 	f.station("old-rt", "old-ux", 0o640)
+}
+
+// A probe file a killed run left with no jar beside it is the jar: it is moved back under its name with a
+// NOTICE, and the deploy goes on (it does not block every later deploy).
+func TestAProbeFileWithoutItsJarIsMovedBackAndTheDeployGoesOn(t *testing.T) {
+	f := newFixture(t)
+	upgrade(t, f)
+	jar := f.deployedJar("rt")
+	if err := os.Rename(jar, jar+probeSuffix); err != nil {
+		t.Fatal(err)
+	}
+	f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] version-bump ok (demo-rt.jar: 1.0 -> 1.1)\n", "[ng-deploy] copy ok\n",
+		"err:[ng-deploy] NOTICE: "+jar+probeSuffix+", left by a run that was killed while it tested the jar, was moved back to "+jar+"\n")
+	f.station("rtjar", "uxjar", 0o640)
+	if f.exists(jar + probeSuffix) {
+		t.Error("the probe file is still there")
+	}
+}
+
+// A SIGINT, SIGTERM or SIGHUP between the two moves of the probe waits until the jar is back under its name,
+// then ends the run with 128 + the signal before the build: no probe file is left (review R1/R3/R4 probe
+// signal window).
+func TestASignalDuringTheProbeLeavesTheJarInPlace(t *testing.T) {
+	for _, sig := range []syscall.Signal{syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP} {
+		f := newFixture(t)
+		upgrade(t, f)
+		signalDuring(t, sig, "/demo-ux.jar"+probeSuffix)
+		code := f.run("--no-backup")
+		want := "[ng-deploy] ERROR interrupted (" + signalNames[sig] + ") before the copy; nothing was copied to the station\n"
+		if code != signalBase+int(sig) || !strings.HasSuffix(f.err, want) || strings.Contains(f.calls(), "gradlew") {
+			t.Errorf("%v: exit %d, stderr %q", sig, code, f.err)
+		}
+		f.station("old-rt", "old-ux", 0o640)
+		if left, _ := filepath.Glob(f.modules + "/*" + probeSuffix); len(left) != 0 {
+			t.Errorf("%v: probe files left: %v", sig, left)
+		}
+	}
 }
 
 // --no-deploy replaces nothing in the station: nothing is probed there, even a jar that cannot be moved.
