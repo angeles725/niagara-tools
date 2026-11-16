@@ -19,4 +19,7 @@ func TestReadHistorySummaryKeepsMinMaxPastANonFiniteRecord(t *testing.T) {
 		pyjson.Repr(max) != "{'value': 23.1, 'timestamp': '2026-11-16T02:22:00.000-06:00'}" {
 		t.Errorf("summary %s", pyjson.Repr(sum))
 	}
+	if got := pyjson.Repr(field(sum, "excluded_from_extremes")); got != "{'null': 0, 'nan_inf': 2}" {
+		t.Errorf("excluded_from_extremes %s", got)
+	}
 }
