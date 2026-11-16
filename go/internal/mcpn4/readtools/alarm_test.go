@@ -77,8 +77,6 @@ func TestReadAlarmsRefusesABadFilterBeforeAnyRequest(t *testing.T) {
 		kv   []any
 		want string
 	}{
-		{[]any{"source_state", "Offnormal"}, "source_state must be one of normal, offnormal, fault, alert"},
-		{[]any{"ack_state", "acked' or '1'='1"}, "ack_state must be one of acked, unacked, ackPending"},
 		{[]any{"alarm_class", "x' or alarmClass != '"}, "alarm_class must be an alarm class name"},
 		{[]any{"source", "station:|slot:/Drivers/N*"}, "source must be a component ORD"},
 		{[]any{"source", "/Drivers/Net"}, "source must be a component ORD"},
@@ -89,6 +87,18 @@ func TestReadAlarmsRefusesABadFilterBeforeAnyRequest(t *testing.T) {
 		s := alarmServer(t, 1)
 		text := callFail(t, s, "n4_read_alarms", c.kv...)
 		if len(s.Station.OrdRequests) != 0 || !strings.Contains(text, c.want) {
+			t.Errorf("%v: %s (%d requests)", c.kv, text, len(s.Station.OrdRequests))
+		}
+	}
+	for _, c := range []struct { // the schema enums: the shared validator refuses them (retro row M11)
+		kv   []any
+		want string
+	}{
+		{[]any{"source_state", "Offnormal"}, "argument source_state must be one of normal, offnormal, fault, alert; got 'Offnormal'"},
+		{[]any{"ack_state", "acked' or '1'='1"}, "argument ack_state must be one of acked, unacked, ackPending; got "},
+	} {
+		s := alarmServer(t, 1)
+		if text := rpcError(t, s, "n4_read_alarms", c.kv...); len(s.Station.OrdRequests) != 0 || !strings.Contains(text, c.want) {
 			t.Errorf("%v: %s (%d requests)", c.kv, text, len(s.Station.OrdRequests))
 		}
 	}

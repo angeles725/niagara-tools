@@ -106,6 +106,17 @@ MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
   go/bin/mcp-n4 --station MyStation=https://10.0.0.5
 ```
 
+Every `tools/call` is checked against the tool's `inputSchema` before anything reaches a station,
+read and write tools alike. A missing required argument, a wrong type, a number out of its
+`minimum`/`maximum`, a value outside its `enum` (`argument full_policy must be one of roll, stop;
+got 'drop'`; for a list of enum values the item is named, `sections[1]`) and an argument the tool
+does not declare (`unknown argument 'capacity_records' for n4_add_history; did you mean
+'capacity'?`) are refused with JSON-RPC -32602: an argument is never silently dropped. The objects
+a tool keeps open stay free-form: `alarm_values` (tag -> ordinal), `expect_histories`,
+`expect_alarms`, `wire_sheet`, `weekly` and the items of the `n4_set_schedule` and `n4_set_tags`
+lists, which their tools check themselves; so do the untyped `value`, `arg`, `default_output` and
+`capacity` (a number or `"unlimited"`).
+
 ### Install to a stable path and register a station per harness
 
 A harness should never run `go/bin/mcp-n4` from a worktree: removing or rebuilding it changes or

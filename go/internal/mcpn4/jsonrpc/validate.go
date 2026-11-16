@@ -22,51 +22,56 @@ func (e *SchemaError) Error() string { return e.Msg }
 // KnownTypes are the JSON schema "type" values Validate checks (server._JSON_TYPES).
 var KnownTypes = []string{"string", "boolean", "integer", "number", "array", "object"}
 
-// Validate is server._validate: required keys in schema order, then each argument in its
-// insertion order against its property's type, "minimum" and "maximum". A bool is never an
-// integer or a number; an integer is a number; untyped and unknown properties accept anything.
-func Validate(schema, args *pyjson.Object) error {
-	props, _ := lookup(schema, "properties").(*pyjson.Object)
-	if req, ok := lookup(schema, "required").([]any); ok {
-		for _, key := range req {
-			k, _ := key.(string)
-			if _, ok := args.Get(k); !ok {
-				return &InvalidParams{"missing required argument: " + pyjson.Str(key)}
-			}
-		}
+// Validate checks tool's arguments against its input schema before anything reaches a station:
+// required keys in schema order, then each argument in its insertion order against its
+// property's type, "minimum", "maximum" and "enum". An argument the schema does not declare is
+// refused (retro row M11: a dropped argument is a silent wrong write), unless the schema keeps
+// its object open with "additionalProperties". Nested objects are checked the same way only
+// where their schema declares "properties"; array items only for "enum" and declared
+// "properties". A bool is never an integer or a number; an integer is a number; an untyped
+// property (anyOf) accepts any value and is left to its tool.
+func Validate(tool string, schema, args *pyjson.Object) error {
+	return validateObject(tool, "", schema, args)
+}
+
+// checkValue is one argument's type, bounds and enum; name is its path (points[0].ord).
+func checkValue(tool, name string, spec *pyjson.Object, value any) error {
+	if err := checkTyped(name, spec, value); err != nil {
+		return err
 	}
-	for _, key := range args.Keys() {
-		value, _ := args.Get(key)
-		spec, ok := lookup(props, key).(*pyjson.Object)
+	if err := checkEnum(name, spec, value); err != nil {
+		return err
+	}
+	return checkNested(tool, name, spec, value)
+}
+
+// checkTyped is the type and the "minimum"/"maximum" bounds of a typed property.
+func checkTyped(name string, spec *pyjson.Object, value any) error {
+	kind, typed := spec.Get("type")
+	if !typed || kind == nil {
+		return nil
+	}
+	tname, _ := kind.(string)
+	if !hasType(value, tname) {
+		if !known(tname) {
+			return &SchemaError{fmt.Sprintf("schema for %s uses unsupported type %s", name, pyjson.Repr(kind))}
+		}
+		return &InvalidParams{fmt.Sprintf("argument %s must be %s", name, tname)}
+	}
+	for _, bound := range []struct {
+		key, op string
+		bad     int // the comparison result that refuses the value
+	}{{"minimum", ">=", -1}, {"maximum", "<=", 1}} {
+		limit, ok := spec.Get(bound.key)
 		if !ok {
 			continue
 		}
-		kind, typed := spec.Get("type")
-		if !typed || kind == nil {
-			continue
+		c, comparable, err := compare(value, limit)
+		if err != nil {
+			return &SchemaError{fmt.Sprintf("schema for %s: %v", name, err)}
 		}
-		name, _ := kind.(string)
-		if !hasType(value, name) {
-			if !known(name) {
-				return &SchemaError{fmt.Sprintf("schema for %s uses unsupported type %s", key, pyjson.Repr(kind))}
-			}
-			return &InvalidParams{fmt.Sprintf("argument %s must be %s", key, name)}
-		}
-		for _, bound := range []struct {
-			key, op string
-			bad     int // the comparison result that refuses the value
-		}{{"minimum", ">=", -1}, {"maximum", "<=", 1}} {
-			limit, ok := spec.Get(bound.key)
-			if !ok {
-				continue
-			}
-			c, comparable, err := compare(value, limit)
-			if err != nil {
-				return &SchemaError{fmt.Sprintf("schema for %s: %v", key, err)}
-			}
-			if comparable && c == bound.bad {
-				return &InvalidParams{fmt.Sprintf("argument %s must be %s %s", key, bound.op, pyjson.Str(limit))}
-			}
+		if comparable && c == bound.bad {
+			return &InvalidParams{fmt.Sprintf("argument %s must be %s %s", name, bound.op, pyjson.Str(limit))}
 		}
 	}
 	return nil

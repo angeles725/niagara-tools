@@ -12,9 +12,9 @@ func TestAddHistoryRefusesEveryFullPolicyButRollOrStopBeforeAnyOp(t *testing.T) 
 	h := newHistoryRig(t, noHistoryIDs)
 	temp := h.Add("3", "Temp", "control:NumericWritable")
 	for _, v := range []string{"ROLL", "", "wrap", "Stop", " stop"} {
-		text := h.Srv.Err("n4_add_history", covArgs(Args{"full_policy": v}, "Temp"))
-		if !strings.Contains(text, "full_policy must be roll or stop, got '"+v+"'") {
-			t.Errorf("%q: %q", v, text)
+		code, text := rpcRefusal(t, h.Srv, "n4_add_history", covArgs(Args{"full_policy": v}, "Temp"))
+		if code != -32602 || text != "argument full_policy must be one of roll, stop; got '"+v+"'" {
+			t.Errorf("%q: %d %q", v, code, text)
 		}
 	}
 	if hasChild(h.Rig, temp.Handle, "NumericCov") {

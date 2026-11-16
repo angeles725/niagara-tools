@@ -137,8 +137,9 @@ func TestCommissioningBoundsEveryListAndRefusesAnUnknownSection(t *testing.T) {
 	if c["count"] != 4.0 || len(objects(c["items"])) != 1 || c["more"] != 3.0 {
 		t.Errorf("limit 1: %v", c)
 	}
-	if msg := r.Srv.Err("n4_commissioning_report", Args{"sections": []any{"points", "wiring"}}); !strings.Contains(msg, "wiring") {
-		t.Errorf("unknown section: %s", msg)
+	if code, msg := rpcRefusal(t, r.Srv, "n4_commissioning_report", Args{"sections": []any{"points", "wiring"}}); code != -32602 ||
+		msg != "argument sections[1] must be one of points, histories, alarms, links, naming, station; got 'wiring'" {
+		t.Errorf("unknown section: %d %s", code, msg)
 	}
 	if msg := r.Srv.Err("n4_commissioning_report", Args{"scope": "Drivers"}); !strings.Contains(msg, "slot path") {
 		t.Errorf("bad scope: %s", msg)

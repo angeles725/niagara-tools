@@ -57,7 +57,8 @@ func TestBqlQueryChecksTheDecodedQueryText(t *testing.T) {
 
 func TestNeqlSelectChecksTheDecodedText(t *testing.T) {
 	s, st := neqlServer(t, readtoolstest.OrdRoute{Needle: "neql:", Code: 400})
-	for _, bql := range []string{"select a$20from$20b", "select a where x = 'a|b'", "select a$zz"} {
+	for _, bql := range []string{"select a$20from$20b", "select a where x = 'a|b'", "select a$zz",
+		"select a$09from$09b", "select a$0afrom$0ab", "select a$u00a0from$u00a0b", "select a$20from"} { // any space class
 		if text, isErr, _ := s.Call(t, "n4_neql_query", "neql", "n:point", "bql", bql); !isErr {
 			t.Errorf("bql %q accepted: %s", bql, text)
 		}

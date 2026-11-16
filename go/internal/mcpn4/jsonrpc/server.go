@@ -287,7 +287,7 @@ func (s *Server) call(params any) (any, error) {
 			return nil, &InvalidParams{"'arguments' must be an object"}
 		}
 	}
-	if err := Validate(tool.Schema, args); err != nil {
+	if err := Validate(name, tool.Schema, args); err != nil {
 		return nil, err
 	}
 	if tool.NeedsSession && (s.Ctx == nil || !s.Ctx.Connected()) {

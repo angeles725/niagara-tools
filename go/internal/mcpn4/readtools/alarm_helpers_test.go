@@ -79,3 +79,23 @@ func callFail(t *testing.T, s *readtoolstest.Server, tool string, kv ...any) str
 	}
 	return text
 }
+
+// rpcError is one tools/call that must end in a JSON-RPC error: the reply's text (the shared
+// argument validator refuses an unknown argument or an enum violation this way).
+func rpcError(t *testing.T, s *readtoolstest.Server, tool string, kv ...any) string {
+	t.Helper()
+	args, params, msg := pyjson.NewObject(), pyjson.NewObject(), pyjson.NewObject()
+	for i := 0; i < len(kv); i += 2 {
+		args.Set(kv[i].(string), kv[i+1])
+	}
+	params.Set("name", tool)
+	params.Set("arguments", args)
+	msg.Set("id", 1)
+	msg.Set("method", "tools/call")
+	msg.Set("params", params)
+	reply := pyjson.Repr(s.Dispatch(msg))
+	if !strings.Contains(reply, "-32602") {
+		t.Fatalf("%s: not a -32602 refusal: %s", tool, reply)
+	}
+	return reply
+}

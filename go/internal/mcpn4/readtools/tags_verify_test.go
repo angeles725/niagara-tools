@@ -53,11 +53,15 @@ func TestVerifyReadTagsArgumentBounds(t *testing.T) {
 		ords = append(ords, "station:|slot:/P")
 	}
 	for _, kv := range [][]any{
-		{"ords", ords}, {"ords", []any{}}, {"ord", "slot:/P"}, {"ord", "station:|slot:/P", "relations", "some"},
+		{"ords", ords}, {"ords", []any{}}, {"ord", "slot:/P"},
 	} {
 		if text, isErr, _ := s.Call(t, "n4_read_tags", kv...); !isErr {
 			t.Errorf("%v accepted: %.200s", kv[0], text)
 		}
+	}
+	if text := rpcError(t, s, "n4_read_tags", "ord", "station:|slot:/P", "relations", "some"); !strings.Contains(text,
+		"argument relations must be one of direct, all, none; got 'some'") {
+		t.Errorf("relations some: %s", text)
 	}
 }
 
