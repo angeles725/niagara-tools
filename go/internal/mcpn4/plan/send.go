@@ -64,9 +64,13 @@ func (e *Engine) inDoubtPartial(impl Impl, planned *Planned, batchID string, rep
 	return err
 }
 
-// send is _send: an ssc op or one sync op; a removal makes every cached handle stale.
+// send is _send: an ssc op, a channel op (channel.go) or one sync op; a removal makes every
+// cached handle stale.
 func send(c Client, op any) (any, error) {
 	o, _ := op.(*pyjson.Object) // every planned op is a dict
+	if _, ok := o.Get("channel"); ok {
+		return sendChannel(c, o)
+	}
 	if key, ok := o.Get("ssc"); ok {
 		arg, _ := o.Get("arg")
 		return c.SSC(pyjson.Str(key), arg)
