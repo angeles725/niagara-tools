@@ -7,6 +7,7 @@ load helpers/stub-toolbelt
 
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
+  export KIT  # read by stub_toolbelt
   if ! command -v zip >/dev/null 2>&1; then skip "zip not available"; fi
   W="$BATS_TEST_TMPDIR/m"; A="$W/Mod-rt"
   mkdir -p "$A/build/libs" "$A/.deploy-baseline" "$BATS_TEST_TMPDIR/j/META-INF"
