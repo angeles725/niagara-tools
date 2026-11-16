@@ -28,7 +28,7 @@ func linkSlot(nodes *pyjson.Object, p string) bool {
 // outgoing_links_broken lists them and the inverse records each as an outgoing_link n4_rollback
 // re-creates (bench retro 2026-11-15 delta 20).
 func linkScan(c plan.Client, args *pyjson.Object, scope *ord.Scope, nodes *pyjson.Object, handles map[string]string,
-	keys *pyjson.Object, notes, inverse []any) ([]any, []any, error) {
+	slot string, keys *pyjson.Object, notes, inverse []any) ([]any, []any, error) {
 	parent := str(args, "parent_ord")
 	root, narrowed := scopeRootOf(scope, parent), false
 	if v, ok := args.Get("link_scan_ord"); ok && v != nil {
@@ -46,6 +46,7 @@ func linkScan(c plan.Client, args *pyjson.Object, scope *ord.Scope, nodes *pyjso
 	if err != nil {
 		return nil, nil, err
 	}
+	found = fromSlot(found, slot) // a removed plain slot breaks only the links it sources
 	head := scanHead(root, narrowed)
 	if len(found) == 0 { // nothing seen: a subtree with outputs gets the stronger warning
 		return append(notes, head+scanNone+scanBlind(root, hasOutputs(box.Node(nodes, "")))), inverse, nil

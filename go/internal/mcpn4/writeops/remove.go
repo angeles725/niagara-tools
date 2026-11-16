@@ -52,7 +52,7 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 		return nil, err
 	}
 	// One level more than the snapshot keeps: what sits there is reported, never captured.
-	nodes, plain, err := childNodes(c, parentH, parentNodes, nm, childOrd)
+	nodes, holder, plain, err := childNodes(c, parentH, nm, childOrd)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +77,13 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 		"and wsAnnotation to depth 3; it is not a full restore."}
 	if contractsNote != "" {
 		notes = append(notes, contractsNote)
+	}
+	slot := ""
+	if plain && scope != nil { // the Python port's path (no scope) keeps its handles
+		slot = nm
+		if inverse, notes, err = plainSlotLinks(holder, nm, parentH, s.handles, inverse, notes); err != nil {
+			return nil, err
+		}
 	}
 	anyPrior := false
 	for _, l := range s.links {
@@ -135,7 +142,7 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if scope == nil {
 		notes, err = scanNotes(c, args, nodes, s.handles, keys, notes)
 	} else {
-		notes, inverse, err = linkScan(c, args, scope, nodes, s.handles, keys, notes, inverse)
+		notes, inverse, err = linkScan(c, args, scope, nodes, s.handles, slot, keys, notes, inverse)
 	}
 	if err != nil {
 		return nil, err

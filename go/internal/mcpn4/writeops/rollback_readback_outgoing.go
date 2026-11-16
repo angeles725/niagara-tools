@@ -49,7 +49,11 @@ func outgoingThere(c plan.Client, sent *pyjson.Object) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for _, name := range links(nodes) {
+	kids := box.Children(nodes, "")
+	for _, name := range kids.Keys() {
+		if !isLink(get(box.Node(kids, name), "t")) { // a Double into a StatusNumeric is a ConversionLink
+			continue
+		}
 		f := linkSlots(nodes, name)
 		tail, err := sourceTail(f)
 		if err == nil && tail == want && box.PyEqual(get(f, "sourceSlotName"), get(sent, "source_slot")) &&

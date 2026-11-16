@@ -41,7 +41,7 @@ func TestALinkHeldDeepInsideTheRemovedSubtreeIsNotOutgoing(t *testing.T) {
 	args := obj("parent_ord", "station:|slot:/Folder", "name", "Grp")
 	handles := map[string]string{"s10": "", "s20": "Src", "s11": "L1", "s12": "L1/L2", "s13": "L1/L2/L3"}
 	keys := pyjson.NewObject()
-	_, inverse, err := linkScan(scanRoot{nodes}, args, scope, nodes, handles, keys, nil, nil)
+	_, inverse, err := linkScan(scanRoot{nodes}, args, scope, nodes, handles, "", keys, nil, nil)
 	if err != nil {
 		t.Fatalf("an internal link refused the remove: %v", err)
 	}

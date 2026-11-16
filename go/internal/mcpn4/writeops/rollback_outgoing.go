@@ -44,7 +44,7 @@ func outgoingSpec(v any) (*pyjson.Object, error) {
 		}
 		if s != "" {
 			for _, part := range strings.Split(s, "/") {
-				if _, err := plan.Name(k, part); err != nil {
+				if _, err := plan.ExistingName(k, part); err != nil { // as stored: a tag is hs$3apoint
 					return nil, err
 				}
 			}

@@ -66,7 +66,7 @@ func TestAScanRootOverTheBudgetRefusesAndAsksForLinkScanOrd(t *testing.T) {
 		{"", "the scope root station:|slot:/Folder is too large to scan"},
 		{"station:|slot:/Folder", "the link_scan_ord root station:|slot:/Folder is too large to scan"},
 	} {
-		_, _, err := linkScan(scanRoot{nodes}, scanArgs(c.scan), scope, nodes, map[string]string{"s100": ""},
+		_, _, err := linkScan(scanRoot{nodes}, scanArgs(c.scan), scope, nodes, map[string]string{"s100": ""}, "",
 			pyjson.NewObject(), nil, nil)
 		text := plan.PyStr(err)
 		if err == nil || !strings.Contains(text, c.want) || !strings.Contains(text, "4 node(s)") ||
@@ -75,7 +75,7 @@ func TestAScanRootOverTheBudgetRefusesAndAsksForLinkScanOrd(t *testing.T) {
 		}
 	}
 	lowerScanBudget(t, 4) // at the budget: scans
-	if _, _, err := linkScan(scanRoot{nodes}, scanArgs(""), scope, nodes, map[string]string{"s100": ""},
+	if _, _, err := linkScan(scanRoot{nodes}, scanArgs(""), scope, nodes, map[string]string{"s100": ""}, "",
 		pyjson.NewObject(), nil, nil); err != nil {
 		t.Errorf("a root at the budget refused: %v", err)
 	}
