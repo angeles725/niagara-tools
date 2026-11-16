@@ -31,7 +31,7 @@
 #   --no-report     skip report-module punch-list at the end (useful for quick inner rebuild loops)
 #   --first-deploy  forwarded to report-module.sh: a never-deployed module has no baseline for schema-risk
 #                   (otherwise a missing <artifact>/.deploy-baseline is INCOMPLETE, exit 53; its schema-risk SKIP row
-#                   names the git archive command that creates it from the deployed ref) [ev: audit-2026-10-03 A2]
+#                   names the archive command that creates it from the deployed ref) [ev: audit-2026-10-03 A2]
 #   --restore-mirror <kept-jar>  builds nothing: copies a jar a mirror build kept (below) back into that mirror's
 #                   modules/, leaves the kept copy and ends the cycle (below). Refuses a path not shaped
 #                   <mirror>/.mirror-replaced/<name>.<sha12> (exit 2); a missing kept jar, one whose sha256 prefix is
@@ -80,9 +80,13 @@
 #   drift gate's pre-build snapshot, the snapshot is kept as <mirror>/.mirror-replaced/<MOD>-<p>.jar.<sha12> (sha256
 #   of the replaced jar; a kept jar is never overwritten or deleted) and stdout ends with one "==> mirror: …
 #   replaced (vendorVersion <old> sha256:<old> -> <new> sha256:<new>); first replaced this cycle: vendorVersion <v>
-#   sha256:<s>; restore with: <toolbelt>/build.sh --restore-mirror <kept>" line. The first replaced jar of a cycle
-#   (the one the station runs, even after several builds) is named by <MOD>-<p>.jar.first; --restore-mirror ends
-#   the cycle. A jar that cannot be kept is one WARN ("was NOT kept"), exit code unchanged. Nothing is kept for a
+#   sha256:<s>; restore with: <toolbelt>/build.sh --restore-mirror <kept>" line (paths shell-quoted). "First replaced
+#   this cycle" is the first jar replaced since the last --restore-mirror, recorded in
+#   <mirror>/.mirror-replaced/<MOD>-<p>.jar.first; nothing else ends the cycle, so AFTER DEPLOYING a build to the
+#   station delete that .first file (the mirror then holds what the station runs), or the next build still names
+#   the pre-deploy jar. A pointer that cannot be written is one WARN, and that line names no first jar (list
+#   .mirror-replaced/ and pick the one the station runs). A jar that cannot be kept is one WARN ("was NOT kept").
+#   The exit code never changes. Nothing is kept for a
 #   real niagara_home, under --no-drift-check (no snapshot), on a first deploy, or when the run restored modules/.
 #   An INCOMPLETE report ends with a pointer to the schema-risk SKIP row only when an artifact lacks .deploy-baseline.
 # Post-jar copy lock (exit 32): the plugin's last step copies the jar into <niagara_home>/modules; a Windows

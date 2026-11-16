@@ -10,6 +10,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/modjar"
+	"github.com/angeles725/niagara-tools/go/internal/reportmodule"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 	"github.com/angeles725/niagara-tools/go/internal/vendorversion"
 )
@@ -49,10 +50,18 @@ func (b *build) keepReplaced() {
 			b.warn(msgKeepFailed, b.jarName(p), dir, why)
 			continue
 		}
-		first := b.firstReplaced(dir, name, oldSum)
+		script := reportmodule.ShellWord(b.here + "/" + scriptName)
+		newVersion, newSum := shown(vendorversion.ModuleVersion(now)), fileSum(now)
+		first, why := b.firstReplaced(dir, name, oldSum)
+		if why != "" {
+			b.warn(msgFirstUnrecorded, b.jarName(p), dir+"/"+name+firstSuffix, why)
+			b.say(msgReplacedNoFirst, b.jarName(p), b.home, shown(snap.version), oldSum, newVersion, newSum,
+				reportmodule.ShellWord(dir+"/"+name+"."+oldSum), reportmodule.ShellWord(dir), script)
+			continue
+		}
 		firstKept := dir + "/" + name + "." + first
-		b.say(msgReplaced, b.jarName(p), b.home, shown(snap.version), oldSum, shown(vendorversion.ModuleVersion(now)),
-			fileSum(now), shown(vendorversion.ModuleVersion(firstKept)), first, b.here+"/"+scriptName, firstKept)
+		b.say(msgReplaced, b.jarName(p), b.home, shown(snap.version), oldSum, newVersion, newSum,
+			shown(vendorversion.ModuleVersion(firstKept)), first, script, reportmodule.ShellWord(firstKept))
 	}
 }
 
@@ -80,16 +89,20 @@ func (b *build) keep(backup, dir, name, sum string) string {
 
 // firstReplaced is the hash of the first jar of name replaced this cycle, read from dir/<name>.first. A cycle
 // starts at the first replacement with no live pointer (none, or one naming a kept jar that is gone) and ends
-// when --restore-mirror puts a jar back. A pointer that cannot be written leaves sum as the answer.
-func (b *build) firstReplaced(dir, name, sum string) string {
+// when --restore-mirror puts a jar back; nothing else ends it, so after deploying a build to the station the
+// operator deletes the pointer (the build.sh header says so). why is set when a new pointer cannot be written:
+// then no jar can be vouched for as the first, and the caller must not name one.
+func (b *build) firstReplaced(dir, name, sum string) (first, why string) {
 	pointer := dir + "/" + name + firstSuffix
 	if data, err := os.ReadFile(pointer); err == nil {
 		if first := strings.TrimSpace(string(data)); keptName.MatchString(name+"."+first) && lint.IsFile(dir+"/"+name+"."+first) {
-			return first
+			return first, ""
 		}
 	}
-	_ = os.WriteFile(pointer, []byte(sum+"\n"), 0o644)
-	return sum
+	if err := os.WriteFile(pointer, []byte(sum+"\n"), 0o644); err != nil {
+		return "", strerror.Text(err)
+	}
+	return sum, ""
 }
 
 // restoreMirror is --restore-mirror <kept>: it copies a jar keepReplaced kept back into the modules/ of the

@@ -2,6 +2,7 @@ package buildmodule
 
 import (
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -121,5 +122,54 @@ func TestIncompleteCrossRefOnlyForSchemaRisk(t *testing.T) {
 		if !c.wantSuffix && !strings.Contains(f.err, msgReportIncomplete+"\n") {
 			t.Errorf("%s: the INCOMPLETE line changed: %s", c.name, f.err)
 		}
+	}
+}
+
+// TestUnrecordedFirstIsNotClaimed: when the cycle's pointer cannot be written, the run WARNs once and its line
+// does not name any jar as "first replaced this cycle" — it cannot vouch for one (the station may run an older
+// kept jar). Exit code unchanged.
+func TestUnrecordedFirstIsNotClaimed(t *testing.T) {
+	f, deployedSum := mirrorBuild(t)
+	f.mkdir(f.home + "/.mirror-replaced/Foo-rt.jar.first") // a directory: the pointer cannot be written
+	f.wants("first build", f.run(f.root, "Foo", f.home), ExitOK)
+	f.jar(f.built("rt"), "1.0.2", "NEWER payload")
+	f.wants("second build", f.run(f.root, "Foo", f.home), ExitOK)
+	if strings.Contains(f.out, "first replaced this cycle") {
+		t.Errorf("an unrecorded cycle claimed a first jar: %q", f.out)
+	}
+	warn := "build.sh: WARN — the first Foo-rt.jar replaced this cycle is not recorded (" + f.home +
+		"/.mirror-replaced/Foo-rt.jar.first: "
+	if n := strings.Count(f.err, warn); n != 1 {
+		t.Errorf("%d pointer WARN lines, want 1\nstderr: %s", n, f.err)
+	}
+	if !strings.Contains(f.out, "list "+f.home+"/.mirror-replaced and restore the jar the station runs") {
+		t.Errorf("the line does not say how to pick the jar: %q", f.out)
+	}
+	if !exists(f.home + "/.mirror-replaced/Foo-rt.jar." + deployedSum) {
+		t.Errorf("the replaced jar must still be kept")
+	}
+}
+
+// TestRestoreCommandIsQuoted: the printed restore command survives a toolbelt path with a space.
+func TestRestoreCommandIsQuoted(t *testing.T) {
+	f, oldSum := mirrorBuild(t)
+	spaced := f.dir + "/tool belt"
+	if err := os.Rename(f.kit, spaced); err != nil {
+		t.Fatal(err)
+	}
+	f.kit, f.env[ToolbeltEnv] = spaced, spaced
+	f.wants("build", f.run(f.root, "Foo", f.home), ExitOK)
+	i := strings.Index(f.out, "restore with: ")
+	if i < 0 {
+		t.Fatalf("no restore command: %q", f.out)
+	}
+	command := strings.TrimSuffix(f.out[i+len("restore with: "):], "\n")
+	argv, err := exec.Command("bash", "-c", `set -- `+command+`; printf '%s\n' "$@"`).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := spaced + "/build.sh\n--restore-mirror\n" + f.home + "/.mirror-replaced/Foo-rt.jar." + oldSum + "\n"
+	if string(argv) != want {
+		t.Errorf("the shell splits the command into %q, want %q", argv, want)
 	}
 }

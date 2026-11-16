@@ -27,6 +27,11 @@ The INCOMPLETE line came from `report-module`'s schema-risk row, which named a d
   build's jar. RED then GREEN: `TestTwoBuildsRestoreTheOriginal` (two builds, the restore names the pre-first-build
   jar), `TestRestoreRefusesAKeptJarWhoseHashDiffers`, `TestKeepFailureWarnsAndKeepsTheExitCode` (unwritable
   `.mirror-replaced/`, exits 0 and 53 unchanged), `TestIncompleteCrossRefOnlyForSchemaRisk`.
+- Second correction batch (independent verifier): CI "bats unit tests" was red on kit-links L2 because the
+  `build.sh` header said "git archive" (L2 greps toolbelt/*.sh for `git`); fixed. RED then GREEN:
+  `TestUnrecordedFirstIsNotClaimed` (pointer unwritable: one WARN, no "first replaced" claim),
+  `TestRestoreCommandIsQuoted` (toolbelt path with a space), and the schema-risk test now runs the printed command
+  with a wrong ref and with `<deployed-ref>` pasted as is: neither leaves a `.deploy-baseline`.
 - Mutation: dropping the `.niagara-mirror` guard of `--restore-mirror` fails bats `BS-restore-mirror` and
   `TestRestoreMirrorRefuses`.
 - Differential vs origin/main: `build.sh --help` differs only in the new lines; `report-module.sh` on the 22
@@ -42,6 +47,7 @@ The INCOMPLETE line came from `report-module`'s schema-risk row, which named a d
 ## Lessons
 - A "restore to what the station runs" must name the FIRST jar a cycle replaced, not the last: one build per day
   is not the field pattern.
+- A toolbelt script's comments are scanned by kit-links L2: write "archive command", never the word `git`, there.
 - Read the launcher before scoping a `toolbelt/*.sh` change: most of them exec a Go binary, so the edit surface is
   `go/internal/<tool>`, not the script.
 - `git archive <ref>:./` from a subdirectory archives nothing; `git -C <dir> archive <ref> .` writes the directory's

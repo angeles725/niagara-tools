@@ -80,6 +80,10 @@ const (
 const (
 	msgReplaced = "==> mirror: %[1]s.jar in %[2]s/modules replaced (vendorVersion %[3]s sha256:%[4]s -> %[5]s sha256:%[6]s);" +
 		" first replaced this cycle: vendorVersion %[7]s sha256:%[8]s; restore with: %[9]s --restore-mirror %[10]s"
+	msgReplacedNoFirst = "==> mirror: %[1]s.jar in %[2]s/modules replaced (vendorVersion %[3]s sha256:%[4]s -> %[5]s sha256:%[6]s);" +
+		" kept as %[7]s; the first jar replaced this cycle is not recorded: list %[8]s and restore the jar the station runs" +
+		" with: %[9]s --restore-mirror <kept jar>"
+	msgFirstUnrecorded     = "build.sh: WARN — the first %[1]s.jar replaced this cycle is not recorded (%[2]s: %[3]s); the line below names no jar as the one the station runs"
 	msgKeepFailed          = "build.sh: WARN — the replaced %[1]s.jar was NOT kept in %[2]s (%[3]s); the mirror's modules/ no longer holds the jar it had before this build"
 	msgNotKept             = "build.sh: --restore-mirror needs a jar a build kept: <mirror>/" + replacedDir + "/<MOD>-<profile>.jar.<sha12> (got: %s)"
 	msgNoKept              = "build.sh: --restore-mirror: no such kept jar: %s"
