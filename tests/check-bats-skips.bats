@@ -109,3 +109,15 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"1 skip(s), all allowlisted"* ]]
 }
+
+@test "SK11: ^* is refused only where it opens a branch (GNU grep warns there); a^* inside a branch is read alike and allowed" {
+  # Mutation: SK-anchor-branch -- refusing ^* wherever it stands refuses a^*, which Go and GNU grep read alike
+  printf '%s\n' '1..1' 'ok 1 a # skip a' > "$TAP"
+  printf '%s\n' 'a^*' > "$ALLOW"
+  run bash "$CHK" "$TAP" "$ALLOW"
+  [ "$status" -eq 0 ]
+  printf '%s\n' 'x|^*a' > "$ALLOW"
+  run bash "$CHK" "$TAP" "$ALLOW"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"allowlist line uses ^*, outside the dialect"* ]]
+}

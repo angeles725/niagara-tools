@@ -8,7 +8,8 @@
 # [[:alpha:]]; an unescaped { opens an interval {n}, {n,} or {n,m} and is written \{ anywhere else. A line outside
 # it is exit 3, never matched: \w \d \s \b, a back-reference, \< \>, \n \t \x41, [[:word:]], [[=a=]], [[.a.]], and
 # what Go and GNU grep -E read differently: {,2}, {}, an interval bound with a leading zero ({02}), a class name
-# in single brackets ([:alpha:]), a star right after the start anchor (^*).
+# in single brackets ([:alpha:]), a star right after a start anchor that opens a branch (^* at the line's start,
+# after ( or |: GNU grep warns "* at start of expression"); a^* inside a branch is read alike and accepted.
 # The CI bats job installs Java 8, JUnit, bats, GNU parallel, Go, CPython and the pinned npm tools
 # (toolbelt/eslint/package.json), so "no javac", "junit not in ~/.gradle", "eslint not installed" and
 # "acorn not installed" are deliberately NOT here: one of them in CI means a setup step broke.

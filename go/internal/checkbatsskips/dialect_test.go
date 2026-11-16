@@ -130,8 +130,9 @@ func TestMainKeepsBracesAndColonsOfTheDialect(t *testing.T) {
 }
 
 // TestMainRefusesLeadingZeroIntervalsAndARepeatedAnchor: an interval bound written with a leading zero
-// (`{02}`, `{1,02}`) is a literal for Go and an interval for GNU grep -E, and `^*` is a repeated anchor for
-// Go where GNU grep warns "* at start of expression" and reads a literal star: all are outside the dialect.
+// (`{02}`, `{1,02}`) is a literal for Go and an interval for GNU grep -E, and `^*` at the start of a branch
+// (the line's start, after `(` or `|`, after anchors only) is a star GNU grep -E warns about ("* at start of
+// expression": POSIX leaves its reading undefined): all are outside the dialect.
 func TestMainRefusesLeadingZeroIntervalsAndARepeatedAnchor(t *testing.T) {
 	t.Parallel()
 	cases := []struct{ name, line, construct string }{
@@ -140,6 +141,8 @@ func TestMainRefusesLeadingZeroIntervalsAndARepeatedAnchor(t *testing.T) {
 		{"a lower bound with a leading zero", `a{01,}`, `{01,}`},
 		{"a star after the start anchor", `^*a`, `^*`},
 		{"a star after an anchor inside a group", `a(^*)b`, `^*`},
+		{"a star after an anchor at the start of a second branch", `x|^*a`, `^*`},
+		{"a star after two start anchors", `^^*a`, `^*`},
 	}
 	for _, c := range cases {
 		tap, allow := fixture(t, oneSkip, c.line+"\n")
@@ -161,6 +164,25 @@ func TestMainKeepsZeroBoundsAndAnEscapedStarAfterTheAnchor(t *testing.T) {
 		{"aaaaaaaaaa", `^a{10}$`},
 		{"*a", `^\*a$`},
 		{"^^a", `^[a^]*a$`},
+	}
+	for _, c := range cases {
+		tap, allow := fixture(t, "1..1\nok 1 a # skip "+c.reason+"\n", c.line+"\n")
+		if code, out, errText := run(tap, allow); code != ExitOK || out != "check-bats-skips: 1 skip(s), all allowlisted\n" || errText != "" {
+			t.Errorf("%s: exit %d stdout %q stderr %q", c.line, code, out, errText)
+		}
+	}
+}
+
+// TestMainAcceptsAStarAfterAnAnchorInsideABranch (retro coordination-stretch K9): `^*` that does not open a
+// branch (`a^*`, `(a)^*`, `b|a^*`, after an escaped parenthesis) is read alike by Go and GNU grep -E, which
+// prints no warning for it: it stays inside the dialect.
+func TestMainAcceptsAStarAfterAnAnchorInsideABranch(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ reason, line string }{
+		{"a", `a^*`},
+		{"a", `(a)^*`},
+		{"a", `b|a^*`},
+		{"(a", `\(^*a`},
 	}
 	for _, c := range cases {
 		tap, allow := fixture(t, "1..1\nok 1 a # skip "+c.reason+"\n", c.line+"\n")
