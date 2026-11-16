@@ -427,7 +427,14 @@ Destructive tools use the same pipeline:
   the slot and refuses when it no longer holds what the batch wrote (a later change is
   never overwritten; restore it by hand with `n4_set_slot`). The flags an
   `n4_set_flags` batch set are checked the same way and restored by a set-flags op,
-  verified by reading the slot back. Inverses: remove a created
+  verified by reading the slot back. The rollback of an `n4_create_component` batch
+  removes the component with everything under it, so it refuses when that would
+  destroy later work: a later batch (not itself rolled back) whose targets are the
+  component or under it, or a link or child component on it that its create did not
+  make (a Workbench edit no journal records; a frozen slot its type declares does not
+  count). The refusal names the component, each later batch (`batch_id (tool)`,
+  newest first) and each extra child or link: roll the later batches back first,
+  newest first, or remove that work by hand. Inverses: remove a created
   component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
   `relinks: {restored, skipped}`). A frozen child (e.g. a writable's `proxyExt`) is

@@ -85,6 +85,9 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 				pyjson.Str(recorded) + ": the component was replaced, refusing")
 		}
 	}
+	if err := laterWork(c, w, view, ops, targets, bid); err != nil {
+		return nil, err
+	}
 	if err := unchangedSince(c, view, ops, targets); err != nil {
 		return nil, err
 	}

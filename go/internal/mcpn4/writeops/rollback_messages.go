@@ -2,6 +2,7 @@ package writeops
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -31,4 +32,19 @@ func rollbackNotes(view *pyjson.Object, bid string, relinks, unlinked, component
 		notes = append(notes, "the rollback itself has no automatic inverse for slot restores or removals")
 	}
 	return notes
+}
+
+// laterWorkRefusal is the refusal of a create rollback that would remove later work: the later
+// batches (newest first) and the children or links its create did not make.
+func laterWorkRefusal(bid, created string, batches, extras []string) string {
+	var found []string
+	if len(batches) > 0 {
+		found = append(found, "later batch(es) wrote under it: "+strings.Join(batches, ", "))
+	}
+	if len(extras) > 0 {
+		found = append(found, "it holds child(ren) or link(s) its create did not make: "+strings.Join(extras, ", "))
+	}
+	return "batch " + bid + " created " + created + "; rolling it back removes it with everything under it, and " +
+		strings.Join(found, "; ") + ". Roll back the later batches first (newest first) or remove that work by " +
+		"hand, then retry: refusing"
 }
