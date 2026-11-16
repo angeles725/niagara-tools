@@ -3,6 +3,9 @@
 # run-pure-test.sh on the worked-example module part (tests/fixtures/logic-series/thermo-rt), whose
 # ThermostatSeriesTest steps a toy pure model through srcTest/series/thermostat.csv.
 # Each test copies the fixture and rewrites the series, so a case is one CSV edit.
+# SC2030/SC2031: `run` sets $status/$output per @test (a subshell to shellcheck); the bad() helper reads them in
+# the same test, so they are not real subshell-loss bugs.
+# shellcheck disable=SC2030,SC2031
 
 setup_file() {
   ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
