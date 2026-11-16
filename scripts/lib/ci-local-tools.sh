@@ -55,7 +55,10 @@ provision_bats() {
     printf 'ci-local: the workflow installs no bats; using the bats on PATH\n' >&2
     return 0
   fi
-  [ -n "$ver" ] && [ -n "$sha" ] || { printf 'ci-local: the bats install step has no BATS_VER= / BATS_SHA256= line\n' >&2; exit 3; }
+  if [ -z "$ver" ] || [ -z "$sha" ]; then
+    printf 'ci-local: the bats install step has no BATS_VER= / BATS_SHA256= line\n' >&2
+    exit 3
+  fi
   if [ "$(bats --version 2>/dev/null)" = "Bats $ver" ]; then
     printf 'ci-local: bats %s (on PATH, the CI pin)\n' "$ver"
     return 0

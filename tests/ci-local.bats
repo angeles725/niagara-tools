@@ -217,6 +217,7 @@ fake_cgroup() { # fake_cgroup <name> <current> <max>
 fake_bats() {
   mkdir -p "$TMPDIR_T/bin"
   local pin; pin="$(sed -nE 's/^[[:space:]]*BATS_VER=([0-9.]+)$/\1/p' "$CI")"
+  # shellcheck disable=SC2016  # the stub's own $1, expanded when it runs
   { printf '#!/bin/sh\n[ "$1" != --version ] || { echo "Bats %s"; exit 0; }\ncat <<"TAP"\n' "$pin"
     printf '%s\n' "$@"; printf 'TAP\n'; } > "$TMPDIR_T/bin/bats"
   printf '#!/bin/sh\nexit 0\n' > "$TMPDIR_T/bin/parallel"

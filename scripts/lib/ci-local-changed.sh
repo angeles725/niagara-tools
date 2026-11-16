@@ -10,10 +10,10 @@
 # $WORK/tree: with --range the bytes of the range's end commit (what a push sends; .githooks/pre-push passes
 # the pushed range), without it the work tree, untracked files included, against where HEAD left origin/main.
 # Which files shellcheck reads comes from ci.yml's own shellcheck step. The checks, from $WORK/tree:
-#   shellcheck          the pinned v0.10.0 over the changed files CI shellchecks;
-#   lint-bats-errexit   the BEX-kit lint over the changed tests/**/*.bats (fixtures/ and testdata/ pruned);
-#   lint-bats-heredoc   a here-document line that starts with the test keyword (C8) in those files;
-#   gofmt -l            the changed go/**/*.go.
+#   - the pinned shellcheck v0.10.0 over the changed files CI shellchecks;
+#   - lint-bats-errexit, the BEX-kit lint, over the changed tests/**/*.bats (fixtures/ and testdata/ pruned);
+#   - lint-bats-heredoc: a here-document line that starts with the test keyword (C8) in those files;
+#   - gofmt -l over the changed go/**/*.go.
 # Each check runs even after another failed. Exit 0 all clean or nothing to check, 1 a check failed,
 # 2 a workflow ci-steps cannot read, 3 a git, write or tool failure.
 
@@ -26,11 +26,12 @@ changed_check() {
   if [ "$rc" -eq 0 ]; then printf 'PASS %s\n' "$name"; else printf 'FAIL %s (exit %d)\n' "$name" "$rc"; CHANGED_FAILED=$((CHANGED_FAILED + 1)); fi
 }
 
-# gofmt_clean <file...> — gofmt -l exits 0 on unformatted files; a listed file is the failure.
+# gofmt_clean <file...> — gofmt -l exits 0 on unformatted files, so a listed file is the failure; a syntax error is
+# its non-zero exit (an empty list alone would read it as clean: tests/fail-open-idioms.bats FMT-STDERR).
 gofmt_clean() {
-  local out
-  out="$(gofmt -l "$@")" || return 3
-  [ -z "$out" ] || { printf 'gofmt: not formatted: %s\n' "$out"; return 1; }
+  local list="$WORK/gofmt.list"
+  gofmt -l "$@" > "$list" || return 3
+  if [ -s "$list" ]; then printf 'gofmt: not formatted: %s\n' "$(tr '\n' ' ' < "$list")"; return 1; fi
 }
 
 run_changed() {

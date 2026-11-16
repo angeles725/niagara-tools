@@ -43,7 +43,7 @@ GH
 
 reply() { local key="$1" i=0; shift; for r in "$@"; do i=$((i + 1)); printf '%s\n' "$r" > "$GHS/$key.$i"; done; }
 check() { printf '{"id":%s,"name":"%s","status":"%s","conclusion":"%s","details_url":"https://github.com/o/r/actions/runs/77/job/%s"}' "$1" "$2" "$3" "$4" "$1"; }
-mwg() { PATH="$GHS/bin:$PATH" run "$@" "$MWG" 5 --interval 0s --timeout 1m; }
+mwg() { PATH="$GHS/bin:$PATH" run "$MWG" 5 --interval 0s --timeout 1m; }
 
 @test "MWG1: green checks of the exact head merge that head with --match-head-commit (rebase by default)" {
   # Mutation: MWG1 -- dropping --match-head-commit merges whatever the head is at merge time.

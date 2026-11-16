@@ -46,7 +46,7 @@ push() {
   git -C "$R" add -A
   git -C "$R" commit -q -m "$1"
   local sha; sha="$(git -C "$R" rev-parse HEAD)"
-  cd "$R"
+  cd "$R" || return 1
   run bash "$HOOK" origin https://example.invalid/r.git <<< "refs/heads/x $sha refs/heads/x $BASE"
 }
 
