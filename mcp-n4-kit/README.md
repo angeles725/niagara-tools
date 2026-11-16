@@ -204,6 +204,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
+`n4_station_runtime`, `n4_read_tags`.
 `n4_station_runtime`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
@@ -566,6 +567,23 @@ Recipe for closing a job:
 offline punch-list of a module's sources and a `config.bog` file, run before deployment with an
 exit code for a gate. This report reads the running station after deployment. Neither replaces the
 other.
+
+### Tags
+
+A direct tag is a dynamic slot with the metadata flag (`m`) whose name is the tag id with its colon
+escaped: `hs:point` is the slot `hs$3apoint`. A tag group is not a tag slot: it is a relation slot
+(`baja:Relation`, named `r`, `r1`, ...) with `relationId` `n:tagGroup` and `sourceOrd` the group's
+definition in a dictionary; the station then implies the group's tags. Implied tags (the
+dictionaries' rules, tag groups) are never slots: only the station's session handler computes them.
+
+`n4_read_tags(ord | ords, implied=true, relations="direct")` reads up to 50 components, one load
+each: `direct` tags (`id`, `namespace`, `name`, `type`, `value`, `slot`, `flags`), `tag_groups`
+(`group_ord`, `slot`), the direct `relations` (`id`, `endpoint_ord`, `inbound`, `slot`), and
+`implied` (`id`, `type`, `value`; one `impliedTags` session call per component, the call
+BajaScript makes). `relations="all"` adds the implied relations (`n:parent`, `n:child`, ...; one
+more call each), `"none"` leaves relations out, and `implied=false` makes no session call.
+`implied: null` with `implied_unavailable` means the implied tags were not read, never that there
+are none.
 
 ## Writing safely
 
