@@ -1,5 +1,5 @@
-// Package register writes a station's mcp-n4 launcher (`mcp-n4 register`), which execs the stable
-// binary `mcp-n4 install` put in place instead of one inside a worktree.
+// Package register writes a station's mcp-n4 launcher and its MCP server entry for one agent
+// harness (`mcp-n4 register`), so every harness runs the stable binary `mcp-n4 install` put in place.
 package register
 
 import (
@@ -18,19 +18,25 @@ import (
 )
 
 // Usage is the help text of `mcp-n4 register`.
-const Usage = `usage: mcp-n4 register --station NAME [--env PATH] [--bin PATH] [--force] -- SERVER-FLAGS...
+const Usage = `usage: mcp-n4 register --station NAME --harness claude|pi|gentle-shell
+                       [--env PATH] [--bin PATH] [--project DIR] [--force] [-- SERVER-FLAGS...]
 
-Writes the station launcher ~/.config/mcp-n4/NAME-run.sh: it sources the env file (default
-~/.config/mcp-n4/NAME.env) and execs --bin (default ~/.local/bin/mcp-n4) with SERVER-FLAGS; it
-holds no credential. Re-running is a no-op; a differing launcher is refused unless --force.
+Writes ~/.config/mcp-n4/NAME-run.sh (sources the env file, default ~/.config/mcp-n4/NAME.env,
+then execs --bin, default ~/.local/bin/mcp-n4, with SERVER-FLAGS; it holds no credential) and the
+MCP server entry mcp-n4-NAME for the harness: claude in ~/.claude.json for the project --project
+(default: the current directory), pi in ~/.pi/agent/mcp.json, gentle-shell in
+~/.gentle-shell/agent/mcp.json. Without SERVER-FLAGS an existing launcher is kept as is; an
+explicit --bin or --env must then match what it execs or sources, else pass SERVER-FLAGS to rewrite it.
+Re-running is a no-op; a differing launcher or entry is refused unless --force.
 `
 
 var stationName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 type options struct {
-	station, env, bin, home string
-	force                   bool
-	serverArgs              []string
+	station, harness, env, bin, project, home string
+	force                                     bool
+	serverArgs                                []string
+	explicit                                  map[string]bool // the flags given on the command line
 }
 
 // Main is `mcp-n4 register`: exit 0 when written or unchanged, 1 on a conflict or a failed
@@ -60,8 +66,10 @@ func parse(args []string, s kitcli.Stdio) (options, error) {
 	fs := flag.NewFlagSet("mcp-n4 register", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.StringVar(&o.station, "station", "", "")
+	fs.StringVar(&o.harness, "harness", "", "")
 	fs.StringVar(&o.env, "env", "", "")
 	fs.StringVar(&o.bin, "bin", "", "")
+	fs.StringVar(&o.project, "project", "", "")
 	fs.BoolVar(&o.force, "force", false, "")
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
@@ -70,6 +78,8 @@ func parse(args []string, s kitcli.Stdio) (options, error) {
 		return o, &usageError{err.Error()}
 	}
 	o.serverArgs = fs.Args()
+	o.explicit = map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { o.explicit[f.Name] = true })
 	if o.home = s.Env("HOME"); o.home == "" {
 		return o, usageErrorf("HOME is not set")
 	}
@@ -83,23 +93,53 @@ func parse(args []string, s kitcli.Stdio) (options, error) {
 	if o.bin == "" {
 		o.bin = filepath.Join(o.home, ".local", "bin", "mcp-n4")
 	}
+	if o.project == "" {
+		o.project, _ = os.Getwd()
+	}
 	return o, nil
 }
 
 func register(o options, out io.Writer) error {
+	name := "mcp-n4-" + o.station
 	launcher := filepath.Join(o.home, ".config", "mcp-n4", o.station+"-run.sh")
+	tgt, err := harnessTarget(o.harness, o.home, o.project, name, launcher)
+	if err != nil {
+		return err
+	}
 	text, err := launcherText(o, launcher)
 	if err != nil {
 		return err
 	}
-	return writeIfChanged(out, "launcher "+launcher, launcher, text, 0o755)
+	_, next, err := tgt.plan(o.force)
+	if err != nil {
+		return err
+	}
+	if err := writeIfChanged(out, "launcher "+launcher, launcher, text, 0o755); err != nil {
+		return err
+	}
+	label := fmt.Sprintf("%s entry %s in %s", o.harness, name, tgt.file)
+	if next == nil {
+		fmt.Fprintf(out, "unchanged %s\n", label)
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(tgt.file), 0o755); err != nil {
+		return err
+	}
+	if err := atomicfile.Write(tgt.file, next); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "written %s\n", label)
+	return nil
 }
 
-// launcherText is the launcher to write.
+// launcherText is the launcher to write, or nil to keep the existing one (no server flags).
 func launcherText(o options, launcher string) ([]byte, error) {
 	old, rerr := os.ReadFile(launcher)
 	if len(o.serverArgs) == 0 {
-		return nil, usageErrorf("no server flags after --: the launcher %s is written from them", launcher)
+		if rerr != nil {
+			return nil, usageErrorf("no server flags after -- and no launcher %s to keep", launcher)
+		}
+		return nil, checkKept(o, launcher, string(old))
 	}
 	env, found, err := envfile.Load(o.env, func(string) (string, bool) { return "", false })
 	if err != nil || !found {
