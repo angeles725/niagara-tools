@@ -18,6 +18,7 @@ type commCheck struct {
 	items        []any
 	extra        []any // further key, value pairs of a check that ran
 	why, skipped string
+	info         string // set: the check is a count with this note, not listed and not a finding
 }
 
 // add counts one finding and lists it while the list is under the limit.
@@ -41,6 +42,9 @@ func (c *commCheck) reply(hidden int) *pyjson.Object {
 		items = []any{}
 	}
 	out := obj("count", c.count, "items", items, "more", c.count-len(items)-hidden)
+	if c.info != "" {
+		out = obj("count", c.count, "items", []any{}, "more", 0, "note", c.info)
+	}
 	for i := 0; i < len(c.extra); i += 2 {
 		out.Set(c.extra[i].(string), c.extra[i+1])
 	}
@@ -92,7 +96,9 @@ func (s *commSection) reply() (*pyjson.Object, string) {
 			skipped = c.skipped
 		default:
 			ran++
-			findings += c.count
+			if c.info == "" {
+				findings += c.count
+			}
 		}
 		checks.Set(c.name, c.reply(s.hidden[c.name]))
 	}

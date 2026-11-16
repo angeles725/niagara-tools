@@ -456,17 +456,18 @@ that ran are clean while others did not run.
 | Section | Checks | Read |
 |---|---|---|
 | `points` | `devices_down_or_disabled` (listed first; their points are counted in their flags, `under_listed_devices`, not listed), `networks_not_ok`, `in_fault`, `down`, `stale`, `disabled`, `overridden`, `in_alarm`, `null_output`, `status_unreadable`; `by_network` counts devices and points per driver network | the network and device selects of `n4_station_health`, and `select slotPath, name, displayName, type, status.bits from control:ControlPoint` |
-| `histories` | `points_without_history` (the points `expect_histories` keeps, default all), `disabled`, `in_fault`, `never_recorded` | `select slotPath, name, type, enabled, status.bits, historyConfig.id, lastRecord.timestamp from history:HistoryExt` |
+| `histories` | `points_without_history` (with `expect_histories`: the points it keeps, listed, findings; without it: a count with the note `pass expect_histories to list them`, no list, not a finding), `disabled`, `in_fault`, `never_recorded` | `select slotPath, name, type, enabled, status.bits, historyConfig.id, lastRecord.timestamp from history:HistoryExt` |
 | `alarms` | `points_without_alarm` (only with `expect_alarms`), `unknown_alarm_class`, `classes_without_recipient`, `open_alarms`, `unacked_alarms` (`alarms` is the sum over the classes listed) | `select slotPath, name, type, alarmClass from alarm:AlarmSourceExt`; `select slotPath, name, openAlarmCount, unackedAlarmCount from alarm:AlarmClass` and one link scan, both over `Services/AlarmService` |
 | `links` | `unresolved_source` (a source ORD that is neither a handle nor an absolute slot path, or a slot path that does not exist; `source_outside_scan` counts the sources not judged), `inputs_with_several_links` (a priority input `in1`..`in16` that more than one link targets), `dangling_outputs` (the check of `n4_find_dangling_outputs`) | one link scan of the scope, `link_depth` levels deep |
-| `naming` | `duplicate_display_names` among sibling points, `escaped_names` (`$20` and the like in the slot name), `palette_default_names` (`NumericWritable`, `BooleanPoint1`, a name that is the type's own) | the points table |
+| `naming` | `duplicate_display_names` among sibling points, `escaped_names` (`$20` and the like in the slot name), `palette_default_names` (a point of the control palette, `NumericWritable`, `BooleanPoint1`; or a point called by the name of its own type, a `kitControl:Tstat` called `Tstat`: the fact says which) | the points table |
 | `station` | `services_in_fault`, `licence_expiry` (the warning of the health tool's `license` section), `unsaved_changes` and `last_backup` | one slot load of `Services`, the SystemService slots and the licence page; only when the scope is the whole station |
 
 `unsaved_changes` and `last_backup` are always `not_checked`, with the reason: the station exposes
 neither to a slot read or a query, and the report does not guess. `expect_histories` and
 `expect_alarms` say which points should carry the extension: `{"kinds": ["numeric", "writable"],
 "name_pattern": "*Temp*"}` (kinds are matched against the point's type name, the glob against its
-name or display name; `{}` is every point). Without `expect_alarms` the absence of an alarm
+name or display name; `{}` is every point). Without `expect_histories` the points with no history
+extension are only counted (on most stations that is nearly every point); without `expect_alarms` the absence of an alarm
 extension is not a finding and the check is skipped.
 
 Cost is bounded and independent of the station's size: 11 station reads for the whole station (7

@@ -26,7 +26,7 @@ func (r *commRun) alarmsSection() (*commSection, error) {
 	s := r.section("alarms", ext, classes)
 	if r.expectAlarms == nil {
 		s.check("points_without_alarm").skipped = skipNoExpectAlarms
-	} else if err := r.withoutExtension(s, "points_without_alarm", ext, r.expectAlarms, factNoAlarm); err != nil {
+	} else if err := r.withoutExtension(s, "points_without_alarm", ext, r.expectAlarms, factNoAlarm, ""); err != nil {
 		return nil, err
 	}
 	names := []string{"unknown_alarm_class", "classes_without_recipient", "open_alarms", "unacked_alarms"}

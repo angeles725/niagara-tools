@@ -134,7 +134,7 @@ func TestCommissioningPutsTheSummaryFirstAndStatesTheStationRequests(t *testing.
 func TestCommissioningBoundsEveryListAndRefusesAnUnknownSection(t *testing.T) {
 	r, _ := comRig(t, comNamingTables)
 	c := comCheck(t, comSection(t, r, "naming", Args{"limit": 1}), "palette_default_names")
-	if c["count"] != 3.0 || len(objects(c["items"])) != 1 || c["more"] != 2.0 {
+	if c["count"] != 4.0 || len(objects(c["items"])) != 1 || c["more"] != 3.0 {
 		t.Errorf("limit 1: %v", c)
 	}
 	if msg := r.Srv.Err("n4_commissioning_report", Args{"sections": []any{"points", "wiring"}}); !strings.Contains(msg, "wiring") {

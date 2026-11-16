@@ -72,6 +72,8 @@ var comNamingTables = map[string][]string{
 		"slot:/Other/C,C,Supply Temp,control:NumericPoint,0", "slot:/Logic/Zone$20Temp,Zone Temp,Zone Temp,control:NumericPoint,0",
 		"slot:/Logic/NumericWritable,NumericWritable,NumericWritable,control:NumericWritable,0",
 		"slot:/Logic/BooleanPoint1,BooleanPoint1,BooleanPoint1,control:BooleanPoint,0",
+		"slot:/Logic/Tstat,Tstat,Tstat,kitControl:Tstat,0", "slot:/Logic/Tstat1,Tstat1,Tstat1,control:BooleanPoint,0",
+		"slot:/Logic/Folder,Folder,Folder,control:NumericPoint,0",
 		"slot:/Logic/Thing2,Thing2,Thing2,vendor:Thing,0", "slot:/Logic/Thing2x,Thing2x,Thing2x,vendor:Thing,0"},
 }
 
@@ -94,6 +96,11 @@ func TestCommissioningListsNamesEscapedInTheSlotPath(t *testing.T) {
 
 func TestCommissioningListsPointsStillCalledByAPaletteDefaultName(t *testing.T) {
 	r, _ := comRig(t, comNamingTables)
-	comWant(t, comSection(t, r, "naming", nil), "palette_default_names", 3,
-		"slot:/Logic/NumericWritable", "slot:/Logic/BooleanPoint1", "slot:/Logic/Thing2")
+	// a name is a palette default when it is the name of the point's own type or one of the
+	// control palette's points; Tstat on another type, or a name no point palette gives, is not
+	c := comWant(t, comSection(t, r, "naming", nil), "palette_default_names", 4,
+		"slot:/Logic/NumericWritable", "slot:/Logic/BooleanPoint1", "slot:/Logic/Tstat", "slot:/Logic/Thing2")
+	if fact := comFact(c, "slot:/Logic/Tstat"); fact != "still called Tstat, the name of its own type kitControl:Tstat (the name a palette gives it)" {
+		t.Errorf("fact = %q", fact)
+	}
 }

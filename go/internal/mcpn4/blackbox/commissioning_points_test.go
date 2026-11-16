@@ -77,9 +77,15 @@ var comHistoryTables = map[string][]string{
 func TestCommissioningListsThePointsWithoutAHistoryExtension(t *testing.T) {
 	r, _ := comRig(t, comHistoryTables)
 	s := comSection(t, r, "histories", nil)
-	c := comWant(t, s, "points_without_history", 2, "slot:/Logic/Fan", "slot:/Logic/Mode")
-	if fact := comFact(c, "slot:/Logic/Fan"); fact != "no history extension below it" {
-		t.Errorf("fact = %q", fact)
+	// without expect_histories the absence is a count, not a list and not a finding
+	c := comWant(t, s, "points_without_history", 2)
+	if c["note"] != "pass expect_histories to list them" || c["more"] != 0.0 || s["findings"] != 3.0 {
+		t.Errorf("without the filter: %v, findings %v", c, s["findings"])
+	}
+	s = comSection(t, r, "histories", Args{"expect_histories": Args{}})
+	c = comWant(t, s, "points_without_history", 2, "slot:/Logic/Fan", "slot:/Logic/Mode")
+	if fact := comFact(c, "slot:/Logic/Fan"); fact != "no history extension below it" || c["note"] != nil || s["findings"] != 5.0 {
+		t.Errorf("fact = %q, check %v, findings %v", fact, c, s["findings"])
 	}
 	s = comSection(t, r, "histories", Args{"expect_histories": Args{"kinds": []any{"boolean"}}})
 	comWant(t, s, "points_without_history", 1, "slot:/Logic/Fan")

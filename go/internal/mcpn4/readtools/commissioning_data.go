@@ -68,10 +68,12 @@ const nullCell = "null"
 var expectKinds = map[string]string{"numeric": "Numeric", "boolean": "Boolean", "enum": "Enum", "string": "String",
 	"writable": "Writable"}
 
-// paletteDefaultNames are the names a component dragged from a palette is given, besides the
-// simple name of its own type; either may be followed by the digits the station appends.
+// paletteDefaultNames are the names of the points of the stock control palette (its Points
+// folder). A point is also at a palette default when its name is the simple name of its own
+// type (kitControl:Tstat called Tstat): a palette entry is named after its type. Either may be
+// followed by the digits the station appends.
 var paletteDefaultNames = []string{"NumericPoint", "NumericWritable", "BooleanPoint", "BooleanWritable", "EnumPoint",
-	"EnumWritable", "StringPoint", "StringWritable", "Folder", "PointFolder", "Program"}
+	"EnumWritable", "StringPoint", "StringWritable"}
 
 var (
 	// escapedNameRe is an escape of a slot name: $xx or $uxxxx.
@@ -118,7 +120,9 @@ const (
 	factDangling      = "out is read by no link seen (type %s)"
 	factDuplicate     = "display name %q is shared by %d siblings"
 	factEscaped       = "slot name %s holds escaped characters (%s)"
-	factPalette       = "still called by the palette default name %s"
+	factPaletteType   = "still called %s, the name of its own type %s (the name a palette gives it)"
+	factPaletteList   = "still called by the control palette default name %s"
+	noteExpectHistory = "pass expect_histories to list them"
 	factService       = "status %s"
 
 	skipNoExpectAlarms = "expect_alarms not given: which points should have an alarm extension is the caller's to say"

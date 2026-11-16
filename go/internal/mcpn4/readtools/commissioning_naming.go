@@ -38,20 +38,17 @@ func (r *commRun) namingSection() (*commSection, error) {
 		if slot := lastSegment(path); escapedNameRe.MatchString(slot) {
 			escaped.add(path, pointName(row), fmt.Sprintf(factEscaped, slot, strings.Join(uniqueStrings(escapedNameRe.FindAllString(slot, -1)), ", ")))
 		}
-		if base := trailingDigitsRe.ReplaceAllString(name, ""); isPaletteName(base, cellText(row, "Type")) {
-			palette.add(path, pointName(row), fmt.Sprintf(factPalette, base))
+		if base, kind := trailingDigitsRe.ReplaceAllString(name, ""), cellText(row, "Type"); base != "" {
+			if _, simple, _ := strings.Cut(kind, ":"); base == simple {
+				palette.add(path, pointName(row), fmt.Sprintf(factPaletteType, base, kind))
+			} else if contains(paletteDefaultNames, base) {
+				palette.add(path, pointName(row), fmt.Sprintf(factPaletteList, base))
+			}
 		}
 	}
 	answered(duplicates, "displayName", blank, len(points.rows))
 	s.extra = []any{"note", noteNaming}
 	return s, nil
-}
-
-// isPaletteName reports whether base (a name without its trailing digits) is a palette default:
-// one of paletteDefaultNames or the simple name of the component's own type.
-func isPaletteName(base, kind string) bool {
-	_, simple, _ := strings.Cut(kind, ":")
-	return base != "" && (base == simple || contains(paletteDefaultNames, base))
 }
 
 // uniqueStrings is list without its repeats, in order.

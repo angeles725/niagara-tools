@@ -11,7 +11,7 @@ import (
 // withoutExtension lists in check the expected points of the points table that hold no row of
 // ext (an extension sits right below its point). An absence needs both tables read, and ext
 // read whole: a truncated list of extensions proves no point lacks one.
-func (r *commRun) withoutExtension(s *commSection, check string, ext *commTable, expect *expectFilter, fact string) error {
+func (r *commRun) withoutExtension(s *commSection, check string, ext *commTable, expect *expectFilter, fact, info string) error {
 	points, err := r.table("points")
 	if err != nil {
 		return err
@@ -30,6 +30,9 @@ func (r *commRun) withoutExtension(s *commSection, check string, ext *commTable,
 		has := map[string]bool{}
 		for _, row := range ext.rows {
 			has[parentPath(cellText(row, "Slot Path"))] = true
+		}
+		if expect == nil && info != "" { // which points should have one is the caller's to say
+			c.info = info
 		}
 		expected := 0
 		for _, row := range points.rows {
@@ -63,7 +66,7 @@ func (r *commRun) historiesSection() (*commSection, error) {
 		return nil, err
 	}
 	s := r.section("histories", ext)
-	if err := r.withoutExtension(s, "points_without_history", ext, r.expectHistories, factNoHistory); err != nil {
+	if err := r.withoutExtension(s, "points_without_history", ext, r.expectHistories, factNoHistory, noteExpectHistory); err != nil {
 		return nil, err
 	}
 	disabled, fault, never := s.check("disabled"), s.check("in_fault"), s.check("never_recorded")
