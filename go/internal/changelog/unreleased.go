@@ -39,3 +39,18 @@ func addsUnreleased(rng, head string, git gitRunner) (bool, error) {
 	}
 	return false, nil
 }
+
+// isRelease reports whether the range is a release, the only kind that may add lines inside
+// `## [Unreleased]`: it deletes a changelog.d/ fragment (scripts/gen-changelog.sh --write folds and deletes
+// them) or it changes VERSION (the bump, CONTRIBUTING.md § 5). Either alone qualifies, so the fold and the bump
+// pass whether they are pushed as one range or as two.
+func isRelease(rng string, changed []string, git gitRunner) (bool, error) {
+	if contains(changed, "VERSION") {
+		return true, nil
+	}
+	deleted, err := git("diff", "--name-only", "--no-renames", "--diff-filter=D", rng, "--", FragmentDir+"/")
+	if err != nil {
+		return false, err
+	}
+	return len(nonEmpty(deleted)) > 0, nil
+}

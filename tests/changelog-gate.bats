@@ -2,40 +2,12 @@
 bats_require_minimum_version 1.5.0
 # changelog-gate.bats — scripts/changelog-gate.sh (go/internal/changelog): a range that changes kit behaviour
 # (go/, build-n4-module-kit/, tools/, scripts/) must carry a CHANGELOG entry: a changelog.d/<YYYY-MM-DD>-<slug>.md
-# fragment added in the range, or a line added inside CHANGELOG.md's `## [Unreleased]` section, or a
-# `Changelog: none (<reason>)` commit trailer. A malformed fragment or trailer fails the range whatever else it
+# fragment added in the range or a `Changelog: none (<reason>)` commit trailer (the `## [Unreleased]` rule is
+# tests/changelog-gate-unreleased.bats). A malformed fragment or trailer fails the range whatever else it
 # carries. Exits: 0 pass or not applicable · 1 missing entry or malformed fragment/trailer · 3 usage/env.
 # Hermetic: every test builds a throwaway git repository in $BATS_TEST_TMPDIR (generic names only).
 
-setup() {
-  REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
-  GATE="$REPO/scripts/changelog-gate.sh"
-  R="$BATS_TEST_TMPDIR/repo"
-  mkdir -p "$R/go" "$R/docs"
-  git -C "$R" init -q -b main
-  git -C "$R" config user.email t@example.invalid
-  git -C "$R" config user.name tester
-  git -C "$R" config commit.gpgsign false
-  printf '# Changelog\n\n## [Unreleased]\n\n---\n\n## [v0.1.0] - 2026-01-01\n\n### Added — first\n\n- the first tool\n' \
-    > "$R/CHANGELOG.md"
-  printf 'package x\n' > "$R/go/x.go"
-  printf '# doc\n' > "$R/docs/a.md"
-  git -C "$R" add -A && git -C "$R" commit -qm "chore: base"
-  BASE=$(git -C "$R" rev-parse HEAD)
-}
-
-commit() { # commit <message>: commit every change in the repo
-  git -C "$R" add -A && git -C "$R" commit -qm "$1"
-}
-
-gate() { # gate [range]: run the gate over BASE..HEAD (or the given range) inside the repo
-  local range="${1:-$BASE..HEAD}"
-  cd "$R" && run bash "$GATE" --range "$range"
-}
-
-fragment() { # fragment <name> <content>
-  mkdir -p "$R/changelog.d"; printf '%s' "$2" > "$R/changelog.d/$1"
-}
+load helpers/changelog-gate
 
 @test "CG-a: a go/ change with no CHANGELOG entry FAILS, naming the paths and the fix" {
   printf 'package x // changed\n' > "$R/go/x.go"; commit "feat: change x"
@@ -43,17 +15,7 @@ fragment() { # fragment <name> <content>
   [ "$status" -eq 1 ]
   [[ "$output" == *"go/x.go"* ]]
   [[ "$output" == *"changelog.d/"* ]]
-  [[ "$output" == *"## [Unreleased]"* ]]
   [[ "$output" == *"Changelog: none ("* ]]
-}
-
-@test "CG-b: the same change plus a line added inside [Unreleased] PASSES" {
-  printf 'package x // changed\n' > "$R/go/x.go"
-  sed -i 's/^## \[Unreleased\]$/## [Unreleased]\n\n### Changed — x\n\n- x changed/' "$R/CHANGELOG.md"
-  commit "feat: change x"
-  gate
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"[Unreleased]"* ]]
 }
 
 @test "CG-c: an edit to an OLDER release section only does not count (FAILS)" {
@@ -200,12 +162,6 @@ Changelog: none ($(printf 'r%.0s' $(seq 1 130)))"
   fragment 2026-10-25-bad.md $'no heading\n'; commit "docs: frag"
   gate
   [ "$status" -eq 1 ]
-}
-
-hook() { # hook: run .githooks/pre-push in the repo over BASE..HEAD (an existing remote branch)
-  cd "$R" && run env NIAGARA_CLIENT_DENYLIST="$BATS_TEST_TMPDIR/no-client-denylist" \
-    bash "$REPO/.githooks/pre-push" origin https://example.invalid/repo.git \
-    <<<"refs/heads/x $(git -C "$R" rev-parse HEAD) refs/heads/x $BASE"
 }
 
 @test "CG-hook1: .githooks/pre-push refuses a go/ change with no CHANGELOG entry (retro trailer alone is not enough)" {

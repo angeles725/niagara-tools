@@ -6,8 +6,9 @@
 # count. An entry is ONE of:
 #   - a changelog.d/<YYYY-MM-DD>-<slug>.md fragment added (or edited) in the range: line 1 is a Keep a Changelog
 #     heading (### Added|Changed|Deprecated|Removed|Fixed|Security [— <title>]), each heading has a '- ' bullet;
-#   - a non-blank line added strictly inside CHANGELOG.md's `## [Unreleased]` section (an older release section
-#     does not count);
+#   - in a release range only (it deletes a changelog.d/ fragment or changes VERSION), a non-blank line added strictly
+#     inside CHANGELOG.md's `## [Unreleased]` section (an older release section does not count); outside a
+#     release such a line fails the range whatever else it carries, since parallel PRs conflict on it;
 #   - a `Changelog: none (<reason>)` trailer in any commit of the range (reason: non-empty, one printable line,
 #     at most 120 characters).
 # A malformed fragment or `Changelog:` line fails the range even when it changes no behaviour (fail closed).

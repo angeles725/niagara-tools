@@ -73,8 +73,26 @@ func run(rng string, git gitRunner, s cli.Stdio) int {
 		return ExitFail
 	}
 
-	var behaviour []string
 	changed := nonEmpty(changedOut)
+	unreleased := false
+	if contains(changed, "CHANGELOG.md") {
+		if unreleased, err = addsUnreleased(rng, head, git); err != nil {
+			return env(err)
+		}
+	}
+	if unreleased {
+		release, err := isRelease(rng, changed, git)
+		if err != nil {
+			return env(err)
+		}
+		if !release {
+			fmt.Fprintf(s.Err, "changelog-gate: CHANGELOG.md %s gains a line outside a release (the range deletes no %s/ fragment and leaves VERSION unchanged); two PRs that both add lines there conflict\n", UnreleasedHeader, FragmentDir)
+			fmt.Fprintf(s.Err, "  fix: move the entry to %s/<YYYY-MM-DD>-<slug>.md; only scripts/gen-changelog.sh --write adds lines to %s, at release (CONTRIBUTING.md § 6.2)\n", FragmentDir, UnreleasedHeader)
+			return ExitFail
+		}
+	}
+
+	var behaviour []string
 	for _, p := range changed {
 		if IsBehaviour(p) {
 			behaviour = append(behaviour, p)
@@ -88,15 +106,9 @@ func run(rng string, git gitRunner, s cli.Stdio) int {
 		fmt.Fprintf(s.Out, "changelog-gate: PASS — fragment %s\n", strings.Join(fragments, ", "))
 		return ExitPass
 	}
-	if contains(changed, "CHANGELOG.md") {
-		ok, err := addsUnreleased(rng, head, git)
-		if err != nil {
-			return env(err)
-		}
-		if ok {
-			fmt.Fprintf(s.Out, "changelog-gate: PASS — CHANGELOG.md %s gains an entry\n", UnreleasedHeader)
-			return ExitPass
-		}
+	if unreleased {
+		fmt.Fprintf(s.Out, "changelog-gate: PASS — CHANGELOG.md %s gains an entry from the release fold\n", UnreleasedHeader)
+		return ExitPass
 	}
 	if len(reasons) > 0 {
 		fmt.Fprintf(s.Out, "changelog-gate: PASS — Changelog: none (%s)\n", strings.Join(reasons, "; "))
@@ -111,6 +123,6 @@ func run(rng string, git gitRunner, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "  %s\n", p)
 	}
 	fmt.Fprintf(s.Err, "  fix: add %s/<YYYY-MM-DD>-<slug>.md (### Added|Changed|Fixed|Removed — <title>, then '- ' bullets),\n", FragmentDir)
-	fmt.Fprintf(s.Err, "       or add a line under CHANGELOG.md %s, or a 'Changelog: none (<reason>)' commit trailer.\n", UnreleasedHeader)
+	fmt.Fprintln(s.Err, "       or a 'Changelog: none (<reason>)' commit trailer.")
 	return ExitFail
 }
