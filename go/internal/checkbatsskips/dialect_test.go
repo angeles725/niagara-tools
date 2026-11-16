@@ -66,3 +66,65 @@ func TestMainKeepsTheInvalidLineMessage(t *testing.T) {
 		}
 	}
 }
+
+// TestMainRefusesEachBracketSubGuard pins the three sub-guards of the bracket scan, one smallest line each:
+// a class opener with no closer, a `]` that is a member because it comes first (so the backslash after it
+// is still inside the bracket expression), and a POSIX class name written as an equivalence class.
+func TestMainRefusesEachBracketSubGuard(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ name, line, construct string }{
+		{"a class opener that is never closed", `[[:]`, `[:`},
+		{"a backslash after a leading member bracket", `[]a\]]`, `\]`},
+		{"a POSIX class name between equals signs", `[[=alpha=]]`, `[=alpha=]`},
+	}
+	for _, c := range cases {
+		tap, allow := fixture(t, oneSkip, c.line+"\n")
+		want := "check-bats-skips: allowlist line uses " + c.construct +
+			", outside the dialect (POSIX ERE as Go regexp.CompilePOSIX reads it; tests/bats-skip-allowlist.txt header): " + c.line + "\n"
+		if code, out, errText := run(tap, allow); code != ExitEnv || out != "" || errText != want {
+			t.Errorf("%s: exit %d stdout %q stderr %q, want exit 3 stderr %q", c.name, code, out, errText, want)
+		}
+	}
+}
+
+// TestMainRefusesWhatGNUGrepReadsDifferently: three constructs Go compiles and GNU grep -E reads another
+// way are outside the dialect, each named: `{,2}` (a literal for Go, the interval 0 to 2 for GNU), a
+// class name in single brackets (a set of those letters for Go; GNU refuses it) and `{}` (a literal for
+// Go; GNU refuses it).
+func TestMainRefusesWhatGNUGrepReadsDifferently(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ name, line, construct string }{
+		{"an interval with no lower bound", `x{,2}`, `{,2}`},
+		{"a class name in single brackets", `[:alpha:]+`, `[:alpha:]`},
+		{"an empty interval", `a{}`, `{}`},
+		{"a negated class name in single brackets", `^tool [^:alpha:] not installed$`, `[^:alpha:]`},
+		{"a brace that opens no interval", `^tool x{ not installed$`, `{`},
+	}
+	for _, c := range cases {
+		tap, allow := fixture(t, oneSkip, c.line+"\n")
+		want := "check-bats-skips: allowlist line uses " + c.construct +
+			", outside the dialect (POSIX ERE as Go regexp.CompilePOSIX reads it; tests/bats-skip-allowlist.txt header): " + c.line + "\n"
+		if code, out, errText := run(tap, allow); code != ExitEnv || out != "" || errText != want {
+			t.Errorf("%s: exit %d stdout %q stderr %q, want exit 3 stderr %q", c.name, code, out, errText, want)
+		}
+	}
+}
+
+// TestMainKeepsBracesAndColonsOfTheDialect: what sits next to the refused constructs still matches as
+// before: the three interval forms, an escaped brace, a brace or a colon as a bracket member, and a
+// bracket expression that holds a class between two colons.
+func TestMainKeepsBracesAndColonsOfTheDialect(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ reason, line string }{
+		{"aa bbb cc", `^a{2} b{2,} c{1,3}$`},
+		{"x{,2} {}", `^x\{,2\} \{\}$`},
+		{"{:} a:", `^[{][:][}] [:a][a:]$`},
+		{":b:", `^[:[:alpha:]:]{3}$`},
+	}
+	for _, c := range cases {
+		tap, allow := fixture(t, "1..1\nok 1 a # skip "+c.reason+"\n", c.line+"\n")
+		if code, out, errText := run(tap, allow); code != ExitOK || out != "check-bats-skips: 1 skip(s), all allowlisted\n" || errText != "" {
+			t.Errorf("%s: exit %d stdout %q stderr %q", c.line, code, out, errText)
+		}
+	}
+}
