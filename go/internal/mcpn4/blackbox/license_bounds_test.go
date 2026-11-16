@@ -96,7 +96,9 @@ func TestLicenseInfoWholeReplyStaysUnderTheStatedBound(t *testing.T) {
 		licences = append(licences, fmt.Sprintf("L%d.license [expires: 2020-01-01] {valid}", i))
 	}
 	pages["licences"] = licences
-	for name, lines := range pages {
+	// A fixed order: the last page served is the one the closing assertions read.
+	for _, name := range []string{"entries", "features", "licences"} {
+		lines := pages[name]
 		body := licPage(lines...)
 		if len(body) > 2<<20 {
 			t.Fatalf("%s: the page is %d bytes, over the byte cap", name, len(body))
