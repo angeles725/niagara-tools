@@ -70,7 +70,13 @@ already set. [ev: retro campaign11-client-root; openspec/changes/archive/2026-09
 - **One assertion per command line in bats.** An `[[ a ]] && [[ b ]]` list that is not the test's last command
   never fails on `a` (bats errexit ignores a failing `&&` list member); write `[[ a ]]` and `[[ b ]]` on their own
   lines. [ev: retro r8-t23-parked-advisories Δ1]
-- **Shape an observed mutation so it neutralizes the guard and nothing else.** Neutralize a status check as
+- **A committed test never edits a tool's source text to prove a guard: that is a finding.** A test that runs `sed`
+  over the script (or over a patched copy) pins how the tool is spelled, not the rule, and cannot survive a port.
+  Prove the guard through the command's interface with the data injected: an input, a fixture tree, or the table
+  the command is built over (`go/internal/vendorfloor` `TestSharedMethodNameIsAnEnvFault` runs the command over a
+  table that breaks the rule). Editing a FIXTURE the tool reads is data, not the tool. `[ev: retro go-lint-vendor-floor Δ2]`
+- **An observed mutation is a review-time proof, run by hand outside the suite; shape it so it neutralizes the guard
+  and nothing else.** Neutralize a status check as
   `if ! { cmd || true; }; then` or by deleting its `had_err=1` / `exit 3` line — never `if ! cmd || true; then`, which
   parses as `(! cmd) || true` and is always true. A check that exits from inside a function is neutralized by replacing
   the call, not by `|| true` after it. A mutation counts only when the mutated script still parses and the failing

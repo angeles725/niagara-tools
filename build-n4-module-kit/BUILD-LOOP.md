@@ -357,6 +357,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   - **A table-driven pin gives each row a positive control.** Each row carries a sample its pattern must match,
     checked before the absence, so a mis-escaped regex cannot pass silently (`tests/kit-packaging-pins.bats` PINS,
     #463). `[ev: retro r10-close-process-meta-lessons Δ6]`
+  - **A test that edits a tool's source text to prove a guard is a finding.** The guard is tested through the
+    command's interface with the data injected (an input, a fixture tree, the table the command runs over), never by
+    `sed` over the script inside the test: such a case pins a spelling and is lost at the port (the bats case
+    `VF-disjoint` was; its rule is pinned by `go/internal/vendorfloor` `TestSharedMethodNameIsAnEnvFault` and
+    `TestDefaultTableIsDisjoint`). An observed mutation stays a review-time proof run by hand: `CONTRIBUTING.md` § 2.
+    `[ev: retro go-lint-vendor-floor Δ2]`
   - **A dedupe stops at a call site that a generator or lint reads.** Before repeated call sites become a table,
     a loop or a generic runner, grep the kit for a generator, lint or test that matches them literally. Example:
     `toolbelt/gen-lint-index.sh` marks a lint Auto only when a non-comment line of `report-module.sh` invokes

@@ -20,3 +20,6 @@
   for each unreadable sub-directory (before: the bare `find:` line, then the verdict of the files that were listed,
   exit 0 when they were clean), and `lint-vendor-floor: env fault: <rc>/vendor is a symlink that leads nowhere` for a
   dangling link (before: `no vendor/ under <rc>`, exit 0). Retro go-lint-vendor-floor Δ1.
+- Doctrine (`CONTRIBUTING.md` § 2, `BUILD-LOOP.md` § 5 Kit tooling doctrine): a committed test that edits a tool's
+  source text to prove a guard is a finding; the guard is tested through the command's interface with the data
+  injected. An observed mutation stays a review-time proof run by hand. Retro go-lint-vendor-floor Δ2.
