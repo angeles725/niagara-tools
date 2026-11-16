@@ -33,16 +33,16 @@ type Args struct {
 	Flags  map[string]bool     // each boolean flag (Spec.Flags) given, nil when none
 }
 
-// ValueOptions is the option contract of Mode Valued: Option takes one value (the last wins), each Repeat
-// option keeps every value, each Flags flag takes no value (given as "--flag=v" it is an unknown option), and
-// Strict accepts --strict. Under Mode FileFirst, Option is the noun of the
-// file operand in its error ("<name>: <Option> not found: <file>"); Repeat and Strict do not apply.
+// ValueOptions is the option contract of Mode Valued: Option takes one value (the last wins), each Repeat option keeps
+// every value, each Flags flag takes no value ("--flag=v" is an unknown option), Strict accepts --strict. Under Mode
+// FileFirst, Option is the noun of the file operand in its error ("<name>: <Option> not found: <file>").
 type ValueOptions struct {
-	Option string
-	Repeat []string
-	Flags  []string
-	Strict bool
-	Named  bool // lint-write-path's named errors and empty-argument root (Spec.ValuedNamed)
+	Option   string
+	Repeat   []string
+	Flags    []string
+	Strict   bool
+	Named    bool                   // lint-write-path's named errors and empty-argument root (Spec.ValuedNamed)
+	FileRoot func(path string) bool // the regular-file roots a spec accepts (Spec.FileRoot); nil accepts none
 }
 
 // UsageError is a Parse error that prints the usage line (a wrong argument count or an unknown flag);
@@ -51,9 +51,9 @@ type UsageError struct{ Text string }
 
 func (e *UsageError) Error() string { return e.Text }
 
-// Parse reads args under mode. The error text is what the bash lint printed on stderr before exiting
-// 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, "<name>: unknown option: <arg>"
-// (Trailing), or "<name>: not a directory: <root>".
+// Parse reads args under mode. The error text is what the bash lint printed on stderr before exiting 3: the usage
+// line, "<name>: unknown flag: <flag>" plus the usage line, "<name>: unknown option: <arg>" (Trailing), or
+// "<name>: not a directory: <root>" (a regular file too, unless Spec.FileRoot accepts it).
 func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 	return ParseOption(mode, name, usage, "", args)
 }
@@ -64,8 +64,7 @@ func ParseOption(mode Mode, name, usage, option string, args []string) (Args, er
 	return ParseValued(mode, name, usage, ValueOptions{Option: option}, args)
 }
 
-// ParseValued is Parse under the full Mode Valued contract (vo); Mode FileFirst reads vo.Option as its file
-// noun; every other mode ignores vo.
+// ParseValued is Parse under the full Mode Valued contract (vo); Mode FileFirst reads vo.Option as its file noun.
 func ParseValued(mode Mode, name, usage string, vo ValueOptions, args []string) (Args, error) {
 	var a Args
 	if mode == FileFirst {
@@ -168,7 +167,7 @@ flags:
 	if mode == Each {
 		a.Roots = args
 	}
-	if err := checkRoots(name, a.Roots); err != nil {
+	if err := checkRoots(name, a.Roots, vo.FileRoot); err != nil {
 		return Args{}, err
 	}
 	return a, nil
@@ -182,9 +181,10 @@ func valuedError(vo ValueOptions, usage, named string) error {
 	return &UsageError{usage + "\n"}
 }
 
-func checkRoots(name string, roots []string) error {
-	for _, root := range roots {
-		if st, err := os.Stat(root); err != nil || !st.IsDir() {
+func checkRoots(name string, roots []string, fileRoot func(string) bool) error {
+	for _, root := range roots { // a directory, or a regular file fileRoot (Spec.FileRoot) accepts
+		st, err := os.Stat(root)
+		if err != nil || !(st.IsDir() || st.Mode().IsRegular() && fileRoot != nil && fileRoot(root)) {
 			return errors.New(name + ": not a directory: " + root + "\n")
 		}
 	}
@@ -205,7 +205,7 @@ func parseFileFirst(name, usage, noun string, args []string) (Args, error) {
 		return Args{}, errors.New(name + ": " + noun + " not found: " + args[0] + "\n")
 	}
 	a.Option, a.Roots = args[0], args[1:]
-	if err := checkRoots(name, a.Roots); err != nil {
+	if err := checkRoots(name, a.Roots, nil); err != nil {
 		return Args{}, err
 	}
 	return a, nil
