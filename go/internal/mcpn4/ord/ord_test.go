@@ -181,3 +181,16 @@ func TestJoinOrdWalksARelativePathAndAllowsTheEmptyPath(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckChildAdmitsTheScopeRootUnderTheStationRoot(t *testing.T) {
+	s, err := NewScope([]string{"station:|slot:/ImplT4"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root, err := s.CheckChild("station:|slot:/", "ImplT4"); !root || err != nil {
+		t.Fatalf("CheckChild = %v, %v; want the root admitted", root, err)
+	}
+	if root, _ := s.CheckChild("station:|slot:/", ".."); root {
+		t.Fatal(`CheckChild admitted ".." as the root`)
+	}
+}

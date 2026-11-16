@@ -272,6 +272,17 @@ Every write call goes through these layers:
    slot boundaries (`/A` does not cover `/AB`). With no prefix, every write is refused.
    Only plain slot ORDs pass: a `|` after `station:|slot:` (`|h:…`, `|slot:../…`) is
    refused, because a chained ORD resolves past the path the prefix was matched on.
+   Two tools scope differently. `n4_create_component` may create the scope root itself
+   under its parent (scope `…/Sandbox`, `parent_ord` its parent, `name` `Sandbox`), so a
+   scope can name a folder that does not exist yet; it is refused when that root already
+   exists, since the station would rename the new one outside the scope. The same scope
+   cannot remove that root again or roll its create back (`n4_remove_component` and
+   `n4_rollback` check `parent_ord`, so a scope never deletes itself in one call): remove
+   it under a wider scope or by hand.
+   `n4_create_link` is scoped on `target_ord` only: the link is stored on the target and
+   the source is only read, so the source may sit outside the scope but must still be a
+   plain slot ORD. A refusal names the end (`target_ord:` or `source_ord:`). A rollback
+   that re-creates a removed component's links still checks both ends of each link.
 5. **Dry run.** `dry_run` defaults to true: the reply is the exact BOX ops and their
    inverse, a `plan_hash` and a `confirmation_token`; nothing is sent to the station.
 6. **Token.** To execute, repeat the same call with `dry_run=false` and the token.

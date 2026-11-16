@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/token"
@@ -26,12 +27,15 @@ type Planned struct {
 // runs of the same batch (nil: none) and its read-back.
 type Impl struct {
 	ScopeOrds func(args *pyjson.Object) []any
-	Plan      func(c Client, args *pyjson.Object) (*Planned, error)
-	PlanWith  func(c Client, args *pyjson.Object, w *State, sess *session.Session) (*Planned, error)
-	Run       func(b *Batch, p *Planned, replies []any) (*Runs, error)
-	Inverse   func(p *Planned, replies []any) ([]any, error)
-	Recover   func(c Client, args *pyjson.Object, p *Planned, replies []any) (observed any, inverse []any, err error)
-	Readback  func(c Client, args *pyjson.Object, p *Planned, replies, inverse []any) (requested, accepted, observed any, verdict string, err error)
+	// ScopeCheck, when set, replaces the ScopeOrds check: a tool whose scope rule is more than
+	// "every listed ORD under a prefix" (create may make the scope root, a link is scoped on its target).
+	ScopeCheck func(s *ord.Scope, args *pyjson.Object) error
+	Plan       func(c Client, args *pyjson.Object) (*Planned, error)
+	PlanWith   func(c Client, args *pyjson.Object, w *State, sess *session.Session) (*Planned, error)
+	Run        func(b *Batch, p *Planned, replies []any) (*Runs, error)
+	Inverse    func(p *Planned, replies []any) ([]any, error)
+	Recover    func(c Client, args *pyjson.Object, p *Planned, replies []any) (observed any, inverse []any, err error)
+	Readback   func(c Client, args *pyjson.Object, p *Planned, replies, inverse []any) (requested, accepted, observed any, verdict string, err error)
 }
 
 // Batch is one executing batch as its follow-up runs see it: the station client, the write

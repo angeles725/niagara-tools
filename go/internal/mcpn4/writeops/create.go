@@ -12,8 +12,8 @@ import (
 
 // CreateComponent is n4_create_component: one add under parent_ord; the inverse removes the
 // component under the name the station assigned (it may rename on collision).
-var CreateComponent = plan.Impl{ScopeOrds: func(args *pyjson.Object) []any { return []any{str(args, "parent_ord")} },
-	Plan: createPlan, Inverse: createInverse, Readback: createReadback}
+var CreateComponent = plan.Impl{ScopeCheck: createScope, Plan: createPlan, PlanWith: createPlanWith,
+	Inverse: createInverse, Readback: createReadback}
 
 // typeSpec is _TYPE_SPEC under re.match: "$" also matches before one final "\n".
 var typeSpec = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*:[A-Za-z][A-Za-z0-9_]*\n?$`)
