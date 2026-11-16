@@ -615,6 +615,17 @@ on 1 to 50 components (at most 200 ops) under the usual dry run, token, write sc
   is set (inverse: the old value); a type change is refused (remove, then add); an equal value is
   skipped with a note. A removed tag's inverse re-adds it with its type, value and flags.
 - The read-back reloads each target; a value the station normalized is listed under `coerced`.
+- `add_groups` / `remove_groups: [id]` apply or remove a tag group a dictionary defines: an `r?`
+  relation (`n:tagGroup` to `slot:/Services/TagDictionaryService/<dict>/tagGroupDefinitions/<g>`,
+  flag `r`); the read-back lists the implied tags and any group tag missing from them.
+- `add_relations` / `remove_relations: [{id, endpoint_ord}]` add or remove an outbound relation
+  (`sourceOrd` the endpoint's `h:` ORD). The inverse of an added relation removes the slot the
+  station named (`r`, `r1`, ...).
+
+Live smoke (lab station, a disposable folder and test dictionaries): `n4_list_tag_dictionaries`;
+`n4_set_tags` add a defined tag, a group and a relation; `n4_read_tags` shows them and the implied
+group tags; `n4_neql_query` finds the component by a group tag; `n4_rollback` the batch and read
+again (nothing left); an undefined tag in an installed namespace is refused.
 
 ## Writing safely
 

@@ -1578,7 +1578,7 @@
   },
   {
    "name": "n4_set_tags",
-   "description": "Add, change or remove direct tags on 1 to 50 components (ords) in one batch. add: [{id, value?, type?}] where id is ns:name; a tag the installed dictionaries define takes the definition's value type (a type that differs is refused) and, without value, its default; a Marker takes no value. A tag no dictionary defines is refused unless allow_ad_hoc is true, and never allowed in an installed dictionary's namespace (the Tagging guide: an ad hoc tag must not use an existing dictionary's namespace). A new tag is added as a metadata slot (flag m, named ns$3aname); a tag already there with another value of the same type is set (a type change is refused: remove, then add); one already holding the value is skipped with a note. remove: [id] removes direct tags (the inverse re-adds each with its type, value and flags). At most 200 ops (targets x tags), each target under the write scope. The read-back reloads each target and reports values the station normalized under coerced (sent 4.50, stored 4.5). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run; n4_rollback undoes the batch.",
+   "description": "Add, change or remove direct tags on 1 to 50 components (ords) in one batch. add: [{id, value?, type?}] where id is ns:name; a tag the installed dictionaries define takes the definition's value type (a type that differs is refused) and, without value, its default; a Marker takes no value. A tag no dictionary defines is refused unless allow_ad_hoc is true, and never allowed in an installed dictionary's namespace (the Tagging guide: an ad hoc tag must not use an existing dictionary's namespace). A new tag is added as a metadata slot (flag m, named ns$3aname); a tag already there with another value of the same type is set (a type change is refused: remove, then add); one already holding the value is skipped with a note. remove: [id] removes direct tags (the inverse re-adds each with its type, value and flags). add_groups / remove_groups: [id] apply or remove a tag group an installed dictionary defines (a relation n:tagGroup to the group's definition, flag r, as Workbench adds it); the station then implies the group's tags, and the read-back lists the target's implied tags and any group tag missing from them. add_relations / remove_relations: [{id, endpoint_ord}] add or remove an outbound relation to another component (written as its handle ORD h:...), the id defined by a dictionary or, with allow_ad_hoc, in a namespace of its own. A group or relation already there is skipped with a note; one missing from a remove is refused. At most 200 ops (targets x changes), each target under the write scope. The read-back reloads each target and reports values the station normalized under coerced (sent 4.50, stored 4.5). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run; n4_rollback undoes the batch.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -1594,10 +1594,26 @@
       "type": "array",
       "description": "Tag ids (ns:name) to remove"
      },
+     "add_groups": {
+      "type": "array",
+      "description": "Tag group ids (ns:name) to apply"
+     },
+     "remove_groups": {
+      "type": "array",
+      "description": "Tag group ids (ns:name) to remove"
+     },
+     "add_relations": {
+      "type": "array",
+      "description": "Relations to add: [{id: \"ns:name\", endpoint_ord}]"
+     },
+     "remove_relations": {
+      "type": "array",
+      "description": "Relations to remove: [{id, endpoint_ord}]"
+     },
      "allow_ad_hoc": {
       "type": "boolean",
       "default": false,
-      "description": "true allows a tag no installed dictionary defines, in a namespace no dictionary installs"
+      "description": "true allows a tag or relation no installed dictionary defines, in a namespace no dictionary installs"
      },
      "dry_run": {
       "type": "boolean",
