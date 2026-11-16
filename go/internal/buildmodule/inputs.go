@@ -8,6 +8,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/findwalk"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/modjar"
 )
 
 // The listing of gradle roots below a repo root looks for a gradlew file 2 or 3 levels down.
@@ -56,7 +57,7 @@ func (b *build) resolveInputs() int {
 }
 
 // isMirror reports a niagara_home made by mirror-niagara-home.sh.
-func (b *build) isMirror() bool { return lint.IsFile(b.home + "/" + mirrorMarker) }
+func (b *build) isMirror() bool { return modjar.IsMirror(b.home) }
 
 // absolute is the directory as `cd -- <dir> && pwd` spells it: joined to the working directory and
 // cleaned, symlinks kept; ok is false when it cannot be entered.
