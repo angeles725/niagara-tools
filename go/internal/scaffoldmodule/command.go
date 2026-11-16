@@ -8,7 +8,7 @@
 // One responsibility per file: types.go the type table and defaults (data), messages.go every printed
 // text, args.go the command line, name.go the ModuleName rule, values.go the option values (literal
 // text), subst.go the substitution rules, copytree.go the tree copy, cleanup.go the
-// claim of the destination and the removal of a failed emit, overlay.go the station-test overlay
+// claim of the destination and the removal of a failed emit, interrupt.go the signals held during the emit, overlay.go the station-test overlay
 // and the ledger, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
 package scaffoldmodule
 
@@ -56,7 +56,8 @@ func Main(args []string, s cli.Stdio) int {
 
 // scaffold runs the steps in the bash tool's order, so the first fault a run meets is the same one:
 // arguments, --type, ModuleName, option values, fixture, out-dir, destination, copy, overlay, ledger. A fault
-// after the destination is claimed removes it (discard).
+// after the destination is claimed removes it (discard), and so does a SIGINT, SIGTERM or SIGHUP that arrives
+// before the emit ends (interrupt.go): exit 128 + the signal.
 func scaffold(toolbelt string, args []string) (string, *failure) {
 	o, f := parseArgs(args)
 	if f != nil {
@@ -87,10 +88,18 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 	if _, err := os.Stat(dest); err == nil {
 		return "", failf(ExitEnv, destExists, dest)
 	}
+	watch := holdSignals() // before the claim: a signal never leaves a dest this run made unsettled
+	defer watch.stop()
 	if f := claim(dest); f != nil {
 		return "", f
 	}
-	if f := emit(toolbelt, fixture, dest, n, typ); f != nil {
+	emitting = watch
+	f = emit(toolbelt, fixture, dest, n, typ)
+	emitting = nil
+	if watch.caught() {
+		f = watch.interrupted()
+	}
+	if f != nil {
 		return "", discard(dest, f)
 	}
 	return dest, nil

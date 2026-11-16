@@ -19,6 +19,7 @@ const (
 	stationTestMissing = "scaffold-module: station-test template not found: %s\n"
 	ledgerMissing      = "scaffold-module: version-ledger template not found: %s\n"
 	writeFault         = "scaffold-module: %v\n"
+	interruptedLine    = "scaffold-module: interrupted (%s)\n"
 	partialRemoved     = "scaffold-module: removed the partial %s\n"
 	partialStays       = "scaffold-module: could not remove the partial %s (%v): its files stay\n"
 	cannotRun          = "scaffold-module: cannot run %s: %s\n"
