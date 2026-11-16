@@ -1159,6 +1159,18 @@ it in one call. A `date` or `date_range` that ends before today (the date of the
 the server) can never occur again: it is refused, naming `allow_expired: true`, which adds it
 anyway. The whole list is one set, so `n4_rollback` restores the events exactly as they were.
 
+### Calendar dates and trigger times
+
+`add_date` ([{name, kind, rule}], kind `date`, `date_range`, `week_and_day` or `custom`) and
+`remove_date` ([names]) change the dates of a calendar, or of a trigger's own `dates` calendar,
+under the same expiry rule as special events. A date is a component of the calendar itself, so
+each removal is one remove and each addition one add of the bare date type followed by one set
+per part (`<name>/yearSchedule`, `/monthSchedule`, ...); the inverse re-adds a removed date the
+same way from its loaded parts (live on 4.15.6.20: removing two dates and rolling back read the
+calendar back identical). A date cannot be removed and added under the same name in one call:
+replace it in two calls, so each rolls back on its own. `times` (["06:00", "18:30"]) replaces a
+trigger's firing times with one set.
+
 ## Live smoke test
 
 `go/bin/live-smoke` (built from `go/cmd/mcp-n4/live-smoke`; formerly `tools/live_smoke.py`)
