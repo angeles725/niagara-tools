@@ -39,7 +39,7 @@ var refusalPatterns = []*regexp.Regexp{
 // limit, a request timeout, or a GraphQL server error that may follow a merge that went through; they get
 // every state read. Data only. (retro 2026-11-15 coordination-stretch T27)
 var notVerdictPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`\bHTTP (408|429)\b`),
+	regexp.MustCompile(`(?i)\bHTTP (408|429)\b`),
 	regexp.MustCompile(`(?i)rate limit`),
 	regexp.MustCompile(`(?i)something went wrong`),
 }

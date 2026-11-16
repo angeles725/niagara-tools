@@ -422,10 +422,10 @@ live-doctrine citation gate and before the retro exits, so a `Retro: none (trivi
   `gh pr merge --match-head-commit <sha>`. Every gh error is printed and a network error (`dial tcp ...: network
   is unreachable`) is retried up to `--retries` (3) times, none starting past `--timeout` while the checks run (the
   merge call and its state reads keep their retries); after the merge call the PR state, read up to 1+`--retries`
-  times (once when GitHub refused the merge), decides: MERGED at the checked head is exit 0 with its merge commit,
-  whatever the call returned (8 when gh pr merge failed and the PR is still open; 9 when the call returned but the
-  PR is still OPEN, as with a merge queue or auto-merge, or its state could not be read: check it by hand; 6 when
-  the PR is CLOSED after the call; 7 on timeout). It runs under bash and zsh.
+  times (once when GitHub refused a merge sent once; other refusals get every read), decides: MERGED at the checked
+  head is exit 0 with its merge commit, whatever the call returned (8 when gh pr merge failed and the PR is still
+  open; 9 when the call returned but the PR is still OPEN, as with a merge queue or auto-merge, or its state could
+  not be read: check it by hand; 6 when the PR is CLOSED after the call; 7 on timeout). It runs under bash and zsh.
   Open pull requests as ready, not draft: CI runs on drafts too, so a defect only CI's pinned tools catch shows up
   before the merge turn.
 - **Gate the whole landing range.** Before it pushes, a landing script checks review coverage of every non-merge
