@@ -30,7 +30,6 @@
 271 internal/javasrc/class.go
 271 internal/javasrc/decl.go
 271 internal/storedrepack/storedrepack.go
-269 internal/mcpn4/writeops/rollback_run.go
 268 internal/buildstatefields/buildstatefields.go
 267 internal/newretro/newretro.go
 265 internal/hostbudget/hostbudget.go
