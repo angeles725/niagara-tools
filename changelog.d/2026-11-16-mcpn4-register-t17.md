@@ -8,3 +8,6 @@
 - When writing the harness entry fails after the launcher was written, the launcher is put back (or removed when it
   is new) and the error ends with "; nothing written"; the "written launcher" line is printed only once both writes
   succeeded.
+- A dangling `~/.local/bin/mcp-n4` (a binary in a worktree since removed) is judged by its link text, followed
+  relative to the link's directory through the whole chain: a target inside a checkout, or under a checkout whose
+  worktree is gone, is refused like a live one; a dangling link outside any checkout is kept as before.
