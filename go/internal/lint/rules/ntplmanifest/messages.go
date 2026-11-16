@@ -98,3 +98,22 @@ const (
 // manifestAlt is the manifest name the Templates guide spells (niagara-help Templates, "Example
 // template.manifest.xml file"); an archive without manifestEntry is read through it.
 const manifestAlt = "template.manifest.xml"
+
+// The bounds of the templates of one template module jar: each inflates to at most maxJarTemplate bytes (the
+// bound of a .ntpl on disk), all together to at most maxJarTemplates. Variables, so a test can lower them.
+var (
+	maxJarTemplate  int64 = maxArchive
+	maxJarTemplates int64 = maxUsesTotal
+)
+
+// The rows of a template module jar.
+const (
+	noJarTemplates      = "no *.ntpl or *.napl entry in the jar (nothing to check)"
+	jarTemplateTooLarge = "inflates past %d bytes -- not read"
+	jarTemplateUnread   = "cannot inflate the template: %v -- not read"
+	jarBudget           = "the templates of the jar inflate past %d bytes in all -- this one and every one after it not read"
+	// ntpl-deps of a template in a jar, which declares no build dependencies: FAIL with the installation's
+	// module list, WARN without it
+	jarUnshipped    = "manifest dependencies not shipped by the installation %s (a template module jar declares no build dependencies): %s"
+	jarUnshippedAny = "manifest dependencies a template module jar does not declare, and the installation's module list is not known: %s"
+)

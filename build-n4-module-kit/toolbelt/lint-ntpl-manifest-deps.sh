@@ -52,7 +52,14 @@
 # regular file (a FIFO), are exit 3 (they could not be read). "Nothing to check" is never printed over
 # something that was skipped. [ev: retro ntpl-lint-walk-k-rows Δ1] [ev: retro ntpl-lint-walk-k-rows Δ2] A path holding a control character, a double quote or a
 # backslash is printed in double quotes with C escapes, so a row is always one line.
-# A module root that ships no .ntpl is one PASS row and exit 0. Not read: a template module .jar.
+# A module root that ships no .ntpl is one PASS row and exit 0.
+# A template module jar (the one .jar of .ntpl entries Workbench's Make Module writes) given as the root, a
+# regular file named *.jar: each *.ntpl and *.napl entry is checked as a shipped template, in entry-name order,
+# each row naming <jar>!/<entry>. The jar is opened within the bounds of a .ntpl (32 MiB on disk, 10000 entries,
+# no unsafe name); each template inflates to at most 32 MiB and all of them together to 128 MiB, past which one
+# FAIL ntpl-entries row names the first template not read and nothing more of the jar is read. A jar declares no
+# build dependencies: a dependency is judged against the installation alone. A jar with no template entry is one
+# PASS row. [ev: retro ntpl-jar-manifest-k4b Δ2]
 # The manifest: an archive without template-manifest.xml is read through template.manifest.xml, the spelling of
 # the Templates guide ("Example template.manifest.xml file"); with both, the hyphenated one alone is read.
 # [ev: retro ntpl-jar-manifest-k4b Δ1]
@@ -63,13 +70,14 @@
 # it is missing or older than a Go source, then this script execs `n4lint lint-ntpl-manifest-deps <args>`.
 # Needs `go` on PATH to build (exit 3 otherwise).
 #
-# Usage:  lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>
+# Usage:  lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root | template-module.jar>
 #   Row:  FAIL  ntpl-entries|ntpl-manifest|ntpl-deps|ntpl-station|ntpl-uses  <file.ntpl>: <reason>
 #   Row:  WARN  ntpl-uses  <file.ntpl>: <entry> uses <modules>: ...   (no installation given)
 #   Row:  WARN  ntpl-deps  <file.ntpl>: <reason>            (no installation given)
 #   Row:  WARN  ntpl-link  <link>: a symlink to <target>, outside the module root -- not followed, ...
 #   Row:  WARN  lint-ntpl-manifest-deps  <module-root>: the installation's module list is not known, ...
 #   Row:  PASS  lint-ntpl-manifest-deps  <module-root>: no *.ntpl under the root (nothing to check)
+#   Row:  PASS  lint-ntpl-manifest-deps  <file.jar>: no *.ntpl or *.napl entry in the jar (nothing to check)
 #   Exit: 0  no FAIL (WARN rows, or no .ntpl under the module root, are still 0) · 1  any FAIL · 3  usage/env (an empty --niagara-home included), a root with neither a *.gradle.kts nor a *.ntpl, an installation path that gives no module list, a .ntpl link that leads nowhere or a .ntpl that is not a regular file, an archive or a build file that cannot be opened, or a directory that cannot be entered
 # Mutation: NTPL1 -- dropping the lacks-entry row passes a .ntpl with no template.bog or no manifest
 # Mutation: NTPL2 -- reading a manifest that does not parse as one with no dependencies passes it
@@ -78,6 +86,7 @@
 # Mutation: NTPL6 -- walking without following links reads a symlinked template as "nothing to check"
 # Mutation: NTPL7 -- comparing against the build files alone fails a station template on the stock modules it lists
 # Mutation: NTPL8 -- failing without an installation blocks a module on stock modules the lint cannot know about
+# Mutation: NTPL15 -- refusing a file root, or skipping the templates inside a jar, passes a template module that needs an unshipped module
 # VCS-free by design.
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

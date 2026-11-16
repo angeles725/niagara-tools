@@ -17,6 +17,7 @@ type checker struct {
 	stock   map[string]bool // the modules the installation ships; nil when no installation was given
 	out     []lint.Finding
 	unknown bool // an ntpl-deps row was printed without the installation's module list
+	jar     bool // the archives are the templates of a template module jar, which declares no build dependencies
 }
 
 // rows is every row, the note about the missing module list first when a row depends on it.
@@ -77,10 +78,18 @@ func (c *checker) deps(path string, deps []string) {
 	case c.stock == nil:
 		// Mutation: NTPL-nohome -- failing here blocks a module on stock modules the lint cannot know about
 		c.unknown = true
-		c.out = append(c.out, lint.Finding{Check: checkDeps, Severity: lint.Warn, Path: path, Msg: fmt.Sprintf(undeclaredAny, c.root, strings.Join(missing, ", "))})
+		msg := fmt.Sprintf(undeclaredAny, c.root, strings.Join(missing, ", "))
+		if c.jar {
+			msg = fmt.Sprintf(jarUnshippedAny, strings.Join(missing, ", "))
+		}
+		c.out = append(c.out, lint.Finding{Check: checkDeps, Severity: lint.Warn, Path: path, Msg: msg})
 	default:
 		// Mutation: NTPL3 -- dropping this row passes a template that needs a module nobody declares or ships
-		c.out = append(c.out, lint.Finding{Check: checkDeps, Path: path, Msg: fmt.Sprintf(undeclared, c.root, c.home.dir, strings.Join(missing, ", "))})
+		msg := fmt.Sprintf(undeclared, c.root, c.home.dir, strings.Join(missing, ", "))
+		if c.jar {
+			msg = fmt.Sprintf(jarUnshipped, c.home.dir, strings.Join(missing, ", "))
+		}
+		c.out = append(c.out, lint.Finding{Check: checkDeps, Path: path, Msg: msg})
 	}
 }
 
