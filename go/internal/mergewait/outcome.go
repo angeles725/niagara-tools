@@ -12,7 +12,8 @@
 //     of times, and after the merge call the PR state is read again: MERGED at the checked head is the
 //     success, whatever the merge call returned (a session script once reported "OPEN" for a merge that
 //     had gone through, its gh stderr hidden); a merge call that returned while the PR stays OPEN (a merge
-//     queue, auto-merge, lag) is exit 9, not a refusal;
+//     queue, auto-merge, lag) is exit 9, not a refusal; a merge call whose every send failed on a network
+//     error while the PR stays OPEN is exit 10, not a refusal either (GitHub never answered);
 //   - no retry starts after --timeout, and each failing call (check runs, pr view) has its own budget.
 //
 // outcome.go holds the exit codes and messages, gh.go the gh calls and replies, checks.go how check runs
@@ -22,16 +23,17 @@ package mergewait
 
 // Exit codes, one per outcome.
 const (
-	ExitMerged  = 0 // merged at the head that was checked
-	ExitFailed  = 1 // a check failed (its log tail printed)
-	ExitUsage   = 2 // usage error
-	ExitGh      = 3 // gh missing, a gh call failed or its reply could not be read
-	ExitDraft   = 4 // the PR is a draft: never green
-	ExitBehind  = 5 // the branch does not contain the current base branch
-	ExitMoved   = 6 // the PR is not open, or its head changed while waiting
-	ExitTimeout = 7 // the checks did not finish in time
-	ExitRefused = 8 // gh pr merge refused the merge
-	ExitPending = 9 // the merge call returned but the PR is not MERGED yet (a merge queue, auto-merge, or lag)
+	ExitMerged  = 0  // merged at the head that was checked
+	ExitFailed  = 1  // a check failed (its log tail printed)
+	ExitUsage   = 2  // usage error
+	ExitGh      = 3  // gh missing, a gh call failed or its reply could not be read
+	ExitDraft   = 4  // the PR is a draft: never green
+	ExitBehind  = 5  // the branch does not contain the current base branch
+	ExitMoved   = 6  // the PR is not open, or its head changed while waiting
+	ExitTimeout = 7  // the checks did not finish in time
+	ExitRefused = 8  // gh pr merge refused the merge
+	ExitPending = 9  // the merge call returned but the PR is not MERGED yet (a merge queue, auto-merge, or lag)
+	ExitUnsent  = 10 // every send of the merge call failed on a network error and the PR is still OPEN
 )
 
 const (
@@ -49,6 +51,7 @@ const (
 	msgNotGreen    = msgPrefix + "the checks of %.12s completed with no success (every one skipped or neutral); nothing merged\n"
 	msgTimeout     = msgPrefix + "the checks of %.12s did not finish in %s; nothing merged\n"
 	msgMergeFail   = msgPrefix + "gh pr merge failed for #%s at %.12s (above) and the PR is still %s; nothing merged\n"
+	msgUnsent      = msgPrefix + "no send of gh pr merge for #%s at %.12s got an answer from GitHub (%d send(s), each a network error or a stalled call, above) and the PR is still OPEN; GitHub refused nothing and nothing merged: run this again when the network is back\n"
 	msgUnsettled   = msgPrefix + "gh pr merge returned for #%s at %.12s, but the PR is still OPEN after %d read(s) (%d answered): a merge queue or auto-merge holds it, or GitHub has not caught up; check it by hand\n"
 	msgClosedAfter = msgPrefix + "#%s is %s after the merge call at %.12s; nothing merged\n"
 	msgUnread      = msgPrefix + "gh pr merge returned for #%s at %.12s, but its state could not be read in %d read(s) (above); check it by hand\n"

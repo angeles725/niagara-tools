@@ -24,7 +24,9 @@ func (c Config) mergedState(p pr, sha string) (rc int, done bool) {
 // times, Interval apart (GitHub may show MERGED a moment later), or once when GitHub refused the merge outright
 // on its only send (a refusal of a call sent again after a network error may answer a first send that merged);
 // a read that fails is printed and counts as one of them. The merge call and these reads keep their network
-// retries past --timeout: the green checks authorized the merge. (retro 2026-11-15 coordination-stretch T16, T23, T27)
+// retries past --timeout: the green checks authorized the merge. A call whose every send failed on a network
+// error, with the PR still OPEN, is ExitUnsent: GitHub never answered it, so it is no refusal.
+// (retro 2026-11-15 coordination-stretch T16, T23, T27, T33b)
 func (c Config) merge(sha string, base string) int {
 	if rc := c.containsBase(base, sha); rc != ExitMerged {
 		return rc
@@ -60,6 +62,11 @@ func (c Config) merge(sha string, base string) int {
 	switch {
 	case mergeErr != nil && answered == 0:
 		return ExitGh // the call and every read failed, each printed above
+	case mergeErr != nil && isNetworkError(mergeErr) && state == "OPEN":
+		// Mutation: T33b-unsent -- reading a merge call GitHub never answered as a refusal says GitHub refused it.
+		// withRetries sends again only after a network error, so a last network error means every send had one.
+		fmt.Fprintf(c.Err, msgUnsent, c.PR, sha, sent)
+		return ExitUnsent
 	case mergeErr != nil:
 		fmt.Fprintf(c.Err, msgMergeFail, c.PR, sha, state)
 		return ExitRefused
