@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/signingprofile"
+	"github.com/angeles725/niagara-tools/go/internal/verifymodule"
 )
 
 // expectedSigner is the signer the verify gate must find on every jar (verify-module.sh --expected-signer):
@@ -18,10 +19,11 @@ func (b *build) expectedSigner() (signer, warning string) {
 	if alias := b.configuredAlias(); alias != "" {
 		return alias, ""
 	}
-	switch name := b.deployedSigner(); name {
-	case "":
+	// Compared as the gate compares a signer, so the development signer filed in another case is it too.
+	switch name := b.deployedSigner(); {
+	case name == "":
 		return "", msgNoSigner
-	case devSigner:
+	case verifymodule.SigfileName(name) == devSigner:
 		return "", fmt.Sprintf(msgDevSignerDeployed, devSigner)
 	default:
 		return name, ""

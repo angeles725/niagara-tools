@@ -20,30 +20,32 @@ const (
 // sigfileLen is how many characters of an alias jarsigner keeps in a signature file name.
 const sigfileLen = 8
 
-var sigRe = rx(`^META-INF/[^/]+\.(SF|RSA|DSA|EC)$`)
+// sigRe is a signature file: an .SF or a block file directly under META-INF/. The extension is read in any
+// case, as the JDK verifier reads it, so a signer filed as NAME.sf + NAME.rsa is a signer here too.
+var sigRe = rx(`^META-INF/[^/]+\.(?i:SF|RSA|DSA|EC)$`)
 
 // signers lists the jar's signature files: complete holds the name of every META-INF/<NAME>.SF that has its
 // block file, orphan every .SF entry without one.
 func (j *jarFile) signers() (complete, orphan []string) {
-	var sigs []string
+	blocks, sfs := map[string]bool{}, []string(nil)
 	for _, n := range j.list.lines {
-		if sigRe.MatchString(n) && j.list.shown(n) {
-			sigs = append(sigs, n)
-		}
-	}
-next:
-	for _, sf := range sigs {
-		if !strings.HasSuffix(sf, ".SF") {
+		if !sigRe.MatchString(n) || !j.list.shown(n) {
 			continue
 		}
-		alias := strings.TrimSuffix(strings.TrimPrefix(sf, "META-INF/"), ".SF")
-		for _, ext := range []string{"RSA", "DSA", "EC"} {
-			if contains(sigs, "META-INF/"+alias+"."+ext) {
-				complete = append(complete, alias)
-				continue next
-			}
+		dot := strings.LastIndexByte(n, '.')
+		if strings.EqualFold(n[dot:], ".SF") {
+			sfs = append(sfs, n)
+		} else {
+			blocks[n[:dot]] = true
 		}
-		orphan = append(orphan, sf)
+	}
+	for _, sf := range sfs {
+		base := sf[:strings.LastIndexByte(sf, '.')]
+		if blocks[base] {
+			complete = append(complete, strings.TrimPrefix(base, "META-INF/"))
+		} else {
+			orphan = append(orphan, sf)
+		}
 	}
 	return complete, orphan
 }
@@ -60,10 +62,11 @@ func Signers(path string) []string {
 	return complete
 }
 
-// sigfileName is the name jarsigner gives the signature files of an alias: the first 8 characters,
+// SigfileName is the name jarsigner gives the signature files of an alias: the first 8 characters,
 // upper-cased, each one outside A-Z 0-9 _ - as "_" (observed by signing jars with the jarsigner of JDK 8 and
-// of JDK 21). Alias acmesigner signs as META-INF/ACMESIGN.SF.
-func sigfileName(alias string) string {
+// of JDK 21). Alias acmesigner signs as META-INF/ACMESIGN.SF. It is the form --expected-signer compares in,
+// and build.sh recognises the development signer of a deployed jar in it.
+func SigfileName(alias string) string {
 	name := []rune(alias)
 	if len(name) > sigfileLen {
 		name = name[:sigfileLen]
@@ -91,7 +94,7 @@ func (r *run) signed() bool {
 	if r.expected == "" {
 		return r.verdict(len(complete) > 0, "signed", detail)
 	}
-	want := sigfileName(r.expected)
+	want := SigfileName(r.expected)
 	// The name as given also matches: a signer other than jarsigner may name its files after the whole alias.
 	if len(complete) == 1 && (complete[0] == want || complete[0] == r.expected) {
 		return r.verdict(true, "signed", fmt.Sprintf(signedExpected, complete[0], r.expected, complete[0]))

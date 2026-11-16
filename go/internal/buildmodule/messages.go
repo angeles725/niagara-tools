@@ -62,6 +62,8 @@ const (
 
 // Baseline restore. %[1]s module-profile jar name without ".jar", %[2]s niagara_home.
 const (
+	msgRemoved          = "  Removed the newly-installed %[1]s.jar from %[2]s/modules (none was deployed before this build)."
+	msgRemoveFailed     = "  FAILED TO REMOVE the newly-installed %[1]s.jar (%[3]s) — %[2]s/modules still holds the jar that failed the gate; remove it manually before retrying."
 	msgRestored         = "  Restored the previously-deployed %[1]s.jar into %[2]s/modules%[3]s"
 	msgRestoreFailedOld = "  FAILED TO RESTORE %[1]s.jar (%[3]s); %[2]s/modules still holds the pre-build jar, so a retry is still safe."
 	msgRestoreFailedNew = "  FAILED TO RESTORE the previously-deployed %[1]s.jar (%[3]s) — %[2]s/modules no longer holds it (likely the NEW jar); restore it manually before retrying."

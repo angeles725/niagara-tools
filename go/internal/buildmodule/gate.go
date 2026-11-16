@@ -24,8 +24,10 @@ func (b *build) gate() int {
 	if code != 0 {
 		// gradle's :jar step already put the new jar into modules/: put the pre-build one back, as a drift
 		// FAIL does, or a bare re-run would take the failed jar as its baseline and its signer as expected.
+		// On a first deploy there is none to put back: the new jar is taken out again.
 		for _, p := range b.profiles {
 			b.restoreBaseline(p, restoredPlain)
+			b.removeFirstDeploy(p)
 		}
 		b.warn(msgGateFailed)
 		return ExitGate

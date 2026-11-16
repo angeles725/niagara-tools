@@ -11,3 +11,9 @@
   gives no expected signer and the WARN names it. A verify gate FAIL now restores the pre-build `modules/` jar the
   drift gate backed up (exit 50 as before), so a bare re-run fails for the same reason; `--no-drift-check` has no
   backup and no deployed-jar signer.
+- On a first deploy (no jar of the profile in `modules/` before the build) a gate FAIL removes the jar gradle just
+  installed, so a later run cannot take its signer as the expected one; the development signer is recognised in any
+  case (`niagara4.SF`).
+- `verify-module.sh` reads signature files in any case of the extension (`.sf`, `.rsa`, `.dsa`, `.ec`), as the JDK
+  verifier does, with or without `--expected-signer`: a jar signed only as `NAME.sf` + `NAME.rsa` now PASSes `signed`
+  (it was "no META-INF/*.SF"), and a second signer filed in lower case is reported and FAILs under the option.

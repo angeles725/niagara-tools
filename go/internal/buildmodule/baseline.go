@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 	"github.com/angeles725/niagara-tools/go/internal/vendorversion"
 	"github.com/angeles725/niagara-tools/go/internal/verifymodule"
 )
@@ -40,10 +41,11 @@ func (b *build) snapshotBaseline() int {
 	if code != 0 {
 		return code
 	}
-	b.baseline = map[string]snapshot{}
+	b.baseline, b.undeployed = map[string]snapshot{}, map[string]bool{}
 	for _, p := range b.profiles {
 		old := b.deployedJar(p)
 		if !lint.IsFile(old) {
+			b.undeployed[p] = !exists(old)
 			continue
 		}
 		snap := snapshot{version: vendorversion.ModuleVersion(old), backup: dir + "/" + p + ".old.jar"}
@@ -142,6 +144,23 @@ func (b *build) restoreBaseline(profile, restoredSuffix string) {
 	} else {
 		b.warn(msgRestoreFailedNew, name, b.home, reason)
 	}
+}
+
+// removeFirstDeploy takes the jar gradle's :jar step installed for a profile out of modules/ when none was
+// deployed there before the build, and says so: the counterpart of restoreBaseline for a first deploy, where
+// there is nothing to put back. Left in place, a jar that failed the gate would be the next run's baseline
+// and its signer the expected one. A profile that had a jar, or a run without the snapshot
+// (--no-drift-check), is left alone.
+func (b *build) removeFirstDeploy(profile string) {
+	dst := b.deployedJar(profile)
+	if !b.undeployed[profile] || !lint.IsFile(dst) {
+		return
+	}
+	if err := os.Remove(dst); err != nil {
+		b.warn(msgRemoveFailed, b.jarName(profile), b.home, strerror.Text(err))
+		return
+	}
+	b.warn(msgRemoved, b.jarName(profile), b.home)
 }
 
 // sameContent is cmp -s: both files readable and byte-identical.

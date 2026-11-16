@@ -156,3 +156,55 @@ func TestGateFailRestoresTheDeployedJar(t *testing.T) {
 		t.Errorf("without a snapshot nothing is restored: stderr %q", f.err)
 	}
 }
+
+// TestDeployedDevelopmentSignerInAnyCase: the development signer is recognised in the form the gate compares
+// (verifymodule.SigfileName), so a deployed META-INF/niagara4.SF is never expected either.
+func TestDeployedDevelopmentSignerInAnyCase(t *testing.T) {
+	f := newFixture(t)
+	f.jar(f.deployed("rt"), "1.0.0", "p", "niagara4")
+	f.wants("lower-case development signer", f.build(), ExitOK)
+	if strings.Contains(f.call(gateScript), "--expected-signer") || f.err != devSignerWarn {
+		t.Errorf("gate call %q\nstderr %q, want %q", f.call(gateScript), f.err, devSignerWarn)
+	}
+}
+
+// TestGateFailOnAFirstDeployRemovesTheNewJar: with no jar in modules/ before the build there is nothing to
+// restore, so a gate FAIL removes the jar gradle just installed (exit code unchanged); a later run without
+// the alias then has no deployed signer to take and WARNs instead of passing in silence. A gate PASS leaves
+// the jar, and under --no-drift-check (no snapshot of what was deployed) nothing is removed.
+func TestGateFailOnAFirstDeployRemovesTheNewJar(t *testing.T) {
+	const failsOnAcme = `case " $* " in *" --expected-signer acmesigner "*) exit 1 ;; esac`
+	alias := []string{"--profiles", "rt", "--gradle-prop", "niagaraSigningAlias=acmesigner"}
+	first := func(signer string) *fixture {
+		f := newFixture(t)
+		f.jar(f.built("rt"), "1.0.0", "new", signer)
+		f.does("gradlew", `cp "`+f.built("rt")+`" "`+f.deployed("rt")+`"`) // as the plugin's last :jar step
+		f.does(gateScript, failsOnAcme)
+		return f
+	}
+	f := first("OTHERKEY")
+	f.wants("gate FAIL", f.build(alias...), ExitGate)
+	removed := "  Removed the newly-installed Foo-rt.jar from " + f.home + "/modules (none was deployed before this build).\n" +
+		"build.sh: verify gate failed — do not deploy these jars\n"
+	if f.err != removed || exists(f.deployed("rt")) {
+		t.Errorf("gate FAIL: stderr %q, want %q; modules/ holds the jar = %v", f.err, removed, exists(f.deployed("rt")))
+	}
+	f.write(f.dir+"/calls.log", "")
+	f.wants("a later run without the alias", f.build("--profiles", "rt"), ExitOK)
+	if strings.Contains(f.call(gateScript), "--expected-signer") || f.err != noSignerWarn {
+		t.Errorf("a later run without the alias: gate call %q, stderr %q, want %q", f.call(gateScript), f.err, noSignerWarn)
+	}
+
+	f = first("ACMESIGN")
+	f.does(gateScript, "exit 0")
+	f.wants("gate PASS", f.build(alias...), ExitOK)
+	if f.err != "" || f.read(f.deployed("rt")) != f.read(f.built("rt")) {
+		t.Errorf("gate PASS must leave the new jar in modules/: stderr %q", f.err)
+	}
+
+	f = first("OTHERKEY")
+	f.wants("--no-drift-check", f.build(append(alias, "--no-drift-check")...), ExitGate)
+	if f.err != "build.sh: verify gate failed — do not deploy these jars\n" || !exists(f.deployed("rt")) {
+		t.Errorf("--no-drift-check removes nothing: stderr %q", f.err)
+	}
+}

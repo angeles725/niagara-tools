@@ -65,6 +65,10 @@ func TestExpectedSigner(t *testing.T) {
 			"signed by alias A_B_C_D, the expected signer a.b c+d (META-INF/A_B_C_D.SF + signature block)"},
 		{"a signature file named after the whole alias", "CodeSigning", []string{"CodeSigning.SF", "CodeSigning.RSA"}, 0, "PASS",
 			"signed by alias CodeSigning, the expected signer CodeSigning (META-INF/CodeSigning.SF + signature block)"},
+		{"a second signer with lower-case extensions", "ACMESIGN", []string{"ACMESIGN.SF", "ACMESIGN.RSA", "NIAGARA4.sf", "NIAGARA4.rsa"}, 1, "FAIL",
+			"signed by alias ACMESIGN, NIAGARA4" + expects + "ACMESIGN (META-INF/ACMESIGN.SF + signature block)"},
+		{"mixed-case extensions of the expected signer", "ACMESIGN", []string{"ACMESIGN.Sf", "ACMESIGN.Ec"}, 0, "PASS",
+			"signed by alias ACMESIGN, the expected signer ACMESIGN (META-INF/ACMESIGN.SF + signature block)"},
 		{"the cut comes before the replacement", "acme-sig.ner", []string{"ACME-SIG.SF", "ACME-SIG.RSA"}, 0, "PASS",
 			"signed by alias ACME-SIG, the expected signer acme-sig.ner (META-INF/ACME-SIG.SF + signature block)"},
 	} {
@@ -123,6 +127,15 @@ func TestSignedWithoutExpectedSigner(t *testing.T) {
 			"PASS" + row + "signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)", "3 passed, 0 failed, 16 skipped, 0 warned -> ALL PASS"},
 		{"two signers", []string{"ACMESIGN.SF", "ACMESIGN.RSA", "NIAGARA4.SF", "NIAGARA4.EC"}, 0,
 			"PASS" + row + "signed by alias ACMESIGN, NIAGARA4 (META-INF/<ALIAS>.SF + signature block)", "3 passed, 0 failed, 16 skipped, 0 warned -> ALL PASS"},
+		// Signature files are read in any case of the extension, as the JDK verifier reads them. Declared
+		// difference from the bash tool and from the gate before --expected-signer: these two jars were
+		// "no META-INF/*.SF (jar not signed)", exit 1, and "signed by alias ACMESIGN" (one signer).
+		{"lower-case extensions", []string{"ACMESIGN.sf", "ACMESIGN.rsa"}, 0,
+			"PASS" + row + "signed by alias ACMESIGN (META-INF/<ALIAS>.SF + signature block)", "3 passed, 0 failed, 16 skipped, 0 warned -> ALL PASS"},
+		{"a second signer with lower-case extensions", []string{"ACMESIGN.SF", "ACMESIGN.RSA", "NIAGARA4.sf", "NIAGARA4.dsa"}, 0,
+			"PASS" + row + "signed by alias ACMESIGN, NIAGARA4 (META-INF/<ALIAS>.SF + signature block)", "3 passed, 0 failed, 16 skipped, 0 warned -> ALL PASS"},
+		{"a lower-case .sf without its block", []string{"ACMESIGN.sf"}, 1,
+			"FAIL" + row + "META-INF/ACMESIGN.sf without its .RSA/.DSA/.EC signature block (jar not signed)", "2 passed, 1 failed, 16 skipped, 0 warned -> FAILED"},
 		{"unsigned", nil, 1, "FAIL" + row + "no META-INF/*.SF (jar not signed)", "2 passed, 1 failed, 16 skipped, 0 warned -> FAILED"},
 		{"block file missing", []string{"ACMESIGN.SF"}, 1,
 			"FAIL" + row + "META-INF/ACMESIGN.SF without its .RSA/.DSA/.EC signature block (jar not signed)", "2 passed, 1 failed, 16 skipped, 0 warned -> FAILED"},

@@ -173,7 +173,14 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
   restores the pre-build `modules/` jar the drift gate backed up (one `Restored the previously-deployed` line, exit 50
   as before), so a bare re-run still expects the deployed signer and FAILs again instead of taking the failed jar as
   its baseline; under `--no-drift-check` there is no backup, nothing is restored and the deployed-jar signer is
-  unavailable. The first build of a client module therefore needs the alias configured:
+  unavailable. On a first deploy (no jar of the profile in `modules/` before the build) there is nothing to restore,
+  so a gate FAIL removes the jar gradle just installed (one `Removed the newly-installed` line, same exit code) and a
+  gate PASS leaves it; under `--no-drift-check` nothing is removed. The development signer is recognised in the
+  compared form, so a deployed `niagara4.SF` is never expected either. The check compares the signature FILE NAME,
+  not the certificate: two aliases that share their first 8 characters name the same file, and whether the key is
+  trusted stays a station-side question. Signature files are read in any case of the extension (`.sf`, `.rsa`, `.dsa`,
+  `.ec`), as the JDK verifier reads them, with or without the option: a jar whose only signature is `NAME.sf` +
+  `NAME.rsa` is signed (it was "no META-INF/*.SF" before), and a second signer filed in lower case is reported. The first build of a client module therefore needs the alias configured:
   with no deployed jar to compare with, only the WARN says the jar may carry the development signer, which a
   station's Software Manager shows as "Signature Error / Self-signed". (source: delta B5 of an external session retro, 2026-11-13)
 - **The signature entries are named after the signing ALIAS, not fixed:** `NIAGARA4.*` for the default profile, `CODESIGN.*` for the N4 course `CodeSigning` alias, `SERVER1.*` for Honeywell-signed jars. The station decides by `niagara.moduleVerificationMode` + cert chain, never by the entry name, and `verify-module.sh`'s `signed` check accepts any `META-INF/<ALIAS>.SF` with its `<ALIAS>.RSA|.DSA|.EC` block (an orphan `.SF` FAILs) and reports the alias. A wizard-generated ROOT `build.gradle.kts` applies `com.tridium.niagara-signing` with NO `signingServices`/`niagaraSigning` block (`devkit-wb.jar!gradle/build.gradle.kts.vm:18`, 4.15.6.20), so a missing profile signs with the self-signed default key and the build stays green: `lint-structure.sh` L15 WARNs such a root (same uncommented-code rule as `preflight.sh --sample` `sample-sign`, which FAILs a sample tree), `templates/signing-root.gradle.kts` holds the block (alias and profile path from the `niagaraSigningAlias` / `niagaraSigningProfile` gradle properties, never a tracked host path), and `scaffold-module.sh` emits it through both fixtures. `[ev: retro n4-course-signed-jars-gate-fix Δ4]` `[ev: retro n4-course-handson-build-signing-windows Δ4]` `[ev: corpus B817 §817.6]` `[ev: retro n4-course-signed-jars-gate-fix Δ1]`

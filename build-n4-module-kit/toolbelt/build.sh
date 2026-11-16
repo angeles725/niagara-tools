@@ -48,6 +48,10 @@
 #   Retry-safe: when the gate FAILs, the pre-build modules/ jar the drift gate backed up is restored (one "Restored
 #   the previously-deployed" line, exit 50 as before), so a bare re-run still expects the deployed signer and FAILs
 #   again. Under --no-drift-check there is no backup: nothing is restored and the deployed-jar signer is unavailable.
+#   First deploy: when modules/ held no jar of the profile before the build there is nothing to restore, so a gate
+#   FAIL removes the jar gradle just installed (one "Removed the newly-installed" line, exit 50 as before); left there,
+#   a later run without the alias would take its signer as the expected one and pass. A gate PASS leaves it. Under
+#   --no-drift-check nothing is removed either. The development signer is recognised in any case (niagara4.SF).
 #   (source: delta B5 of an external session retro, 2026-11-13)
 # Build-location precheck (Δ7): WARNs (non-fatal) when <module-root>'s gradle root or niagara_home sits on a
 #   WSL 9p/drvfs mount (/mnt/<drive>) — Gradle's per-file work is far slower there than on ext4.
