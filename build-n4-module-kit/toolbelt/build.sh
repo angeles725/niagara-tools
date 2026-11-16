@@ -7,6 +7,7 @@
 #                 [--gradle-prop k=v]... [--werror] [--no-preflight] [--no-report] [--no-drift-check]
 #                 [--install-into-home]
 #                 <module-root> <MOD> [niagara_home]
+#        build.sh --restore-mirror <mirror>/.mirror-replaced/<MOD>-<profile>.jar.<sha12>
 #   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/ (the GROUP dir). When neither it nor
 #                   an ancestor holds ./gradlew (the REPO root was passed), the error lists every gradle root
 #                   found up to 3 levels BELOW it — descend into one. [ev: retro comppan-fase2-amps-alarms Δ2]
@@ -29,7 +30,11 @@
 #   --no-preflight  skip environment preflight (useful for inner rebuild loops when env is known-good)
 #   --no-report     skip report-module punch-list at the end (useful for quick inner rebuild loops)
 #   --first-deploy  forwarded to report-module.sh: a never-deployed module has no baseline for schema-risk
-#                   (otherwise a missing <artifact>/.deploy-baseline is INCOMPLETE, exit 53) [ev: audit-2026-10-03 A2]
+#                   (otherwise a missing <artifact>/.deploy-baseline is INCOMPLETE, exit 53; its schema-risk SKIP row
+#                   names the git archive command that creates it from the deployed ref) [ev: audit-2026-10-03 A2]
+#   --restore-mirror <kept-jar>  builds nothing: copies a jar a mirror build kept (below) back into that mirror's
+#                   modules/ and leaves the kept copy. Refuses a path not shaped <mirror>/.mirror-replaced/<name>.<sha12>
+#                   (exit 2), a missing kept jar or a home without .niagara-mirror (exit 10); a failed copy is exit 1.
 #   --no-drift-check  skip the deployed-baseline drift gate below (Δ2) — fix the version bump, don't skip, unless
 #                   you have a real reason (e.g. this niagara_home was never the deploy target)
 #   $JAVA8          JDK 8 path (default /usr/lib/jvm/java-8-openjdk-amd64)
@@ -69,6 +74,12 @@
 #   Retry-safe: gradle's :jar step already overwrote the deployed jar by the time this FAILs, so the gate
 #   backs up the pre-build jar and restores it into modules/ on FAIL — a bare re-run then still sees the
 #   OLD baseline and catches the same drift again, instead of silently "Up to Date"-passing on the retry.
+# Mirror jar kept (retro row B6): a mirror is also the drift baseline of what the station runs, and gradle's :jar
+#   step replaces its modules/<MOD>-<p>.jar. When a run ends (any exit) with a modules/ jar that differs from the
+#   drift gate's pre-build snapshot, the snapshot is kept as <mirror>/.mirror-replaced/<MOD>-<p>.jar.<sha12> (sha256
+#   of the replaced jar) and stdout ends with one "==> mirror: … replaced (vendorVersion <old> sha256:<old> -> <new>
+#   sha256:<new>); … put it back with: <toolbelt>/build.sh --restore-mirror <kept>" line. Nothing is kept for a real
+#   niagara_home, under --no-drift-check (no snapshot), on a first deploy, or when the run restored modules/.
 # Post-jar copy lock (exit 32): the plugin's last step copies the jar into <niagara_home>/modules; a Windows
 #   process (Workbench, station) holding the old jar open on /mnt/c makes it fail with FileAlreadyExistsException.
 #   build.sh names the build/libs jar(s) rebuilt THIS run as the artifact of record (a stale one is flagged
@@ -86,7 +97,8 @@
 #   at WARNING level and gradle still ends BUILD SUCCESSFUL; the jar then carries stale generated code. A passing
 #   run whose log names a skipped file (go/internal/slotomaticskip) FAILs, the pre-build modules/ jar is restored
 #   like a drift FAIL, and the gate is not run (METHODOLOGY K15). [ev: retro r10-slotomatic-skip-fail-open Δ1]
-# Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
+# Exit: 0 chain passed (or mirror restored) · 1 a copy the run needs failed (temporary dir, baseline, --restore-mirror) ·
+#   2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
 #   without --install-into-home, no profile) ·
 #   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 33 mirror path or $HOME has whitespace ·
 #   34 Slot-o-Matic skipped a file in a passing gradle run · 50 gate or report-module FAIL ·

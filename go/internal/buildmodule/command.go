@@ -5,7 +5,8 @@
 //
 // One file per responsibility, in chain order: options.go (flags), inputs.go (roots, JDK, niagara_home),
 // location.go (WSL mount warning, preflight), profiles.go and gradleconf.go (what gradle builds and with which
-// arguments), mirror.go (user.home isolation), baseline.go (pre-build snapshot and restore), gradle.go and
+// arguments), mirror.go (user.home isolation), baseline.go (pre-build snapshot and restore), replaced.go (the
+// mirror jar a passing build replaced: kept, and --restore-mirror), gradle.go and
 // diagnose.go (the run and its log), drift.go (drift verdict), gate.go (verify gate, report-module). The data
 // lives apart: exit.go, messages.go, patterns.go; the usage text is the launcher header (usage.go). This file only composes them.
 package buildmodule
@@ -64,15 +65,22 @@ func Main(args []string, s cli.Stdio) int {
 		return code
 	}
 	b := &build{s: s, opt: opt, here: s.Env(ToolbeltEnv), plugin: opt.plugin, setenv: map[string]string{}}
+	if opt.restore != "" {
+		return b.restoreMirror(opt.restore)
+	}
 	defer b.cleanup()
 	stop := b.cleanupOnSignal()
 	defer stop()
 	for _, step := range steps {
-		if code := step(b); code != proceed {
-			return code
+		if code = step(b); code != proceed {
+			break
 		}
 	}
-	return ExitOK
+	if code == proceed {
+		code = ExitOK
+	}
+	b.keepReplaced() // whatever the exit: it looks at what modules/ holds now, before cleanup drops the snapshot
+	return code
 }
 
 // say prints one stdout message (a format of messages.go) and its newline.

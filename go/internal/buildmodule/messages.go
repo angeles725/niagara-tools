@@ -74,6 +74,19 @@ const (
 	restoredRetry       = " — a retry will catch this again."
 )
 
+// The mirror jar a build replaced (retro row B6). keepReplaced: %[1]s module-profile, %[2]s niagara_home, then
+// the old and new vendorVersion and sha256 prefix, the build.sh path and the kept jar.
+const (
+	msgReplaced = "==> mirror: %[1]s.jar in %[2]s/modules replaced (vendorVersion %[3]s sha256:%[4]s -> %[5]s sha256:%[6]s);" +
+		" the replaced jar is kept — put it back with: %[7]s --restore-mirror %[8]s"
+	msgKeepFailed          = "build.sh: WARN — could not keep the replaced %[1]s.jar in %[2]s (%[3]s); the mirror's modules/ no longer holds the jar it had before this build"
+	msgNotKept             = "build.sh: --restore-mirror needs a jar a build kept: <mirror>/" + replacedDir + "/<MOD>-<profile>.jar.<sha12> (got: %s)"
+	msgNoKept              = "build.sh: --restore-mirror: no such kept jar: %s"
+	msgRestoreNotMirror    = "build.sh: --restore-mirror refuses %s: no .niagara-mirror marker (only a mirror is restored)"
+	msgRestoreMirrorFailed = "build.sh: --restore-mirror: could not write %s (%s)"
+	msgMirrorRestored      = "==> mirror: restored %[1]s/modules/%[2]s from %[3]s (vendorVersion %[4]s sha256:%[5]s)"
+)
+
 // Gradle run and its log.
 const (
 	msgBuild       = "==> build (Java 8 + slotomatic): %s"
@@ -122,7 +135,7 @@ const (
 	msgDevSignerDeployed = "build.sh: WARN — " + modjar.WhyDevSigner + " (set it: --gradle-prop niagaraSigningAlias=<alias>, or gradle.properties)"
 	msgReport            = "==> report-module (hand-off punch-list)"
 	msgReportEnv         = "build.sh: report-module environment error (exit 3)"
-	msgReportIncomplete  = "build.sh: report-module verdict INCOMPLETE — a floor check (verify-module / schema-risk) did not run; extract the deployed baseline into <artifact>/.deploy-baseline (build-verify.md § Schema-risk deploy workflow) or pass --first-deploy for a never-deployed module"
+	msgReportIncomplete  = "build.sh: report-module verdict INCOMPLETE — a floor check (verify-module / schema-risk) did not run; extract the deployed baseline into <artifact>/.deploy-baseline (build-verify.md § Schema-risk deploy workflow) or pass --first-deploy for a never-deployed module (the schema-risk SKIP row above names the command)"
 	msgReportFails       = "build.sh: report-module punch-list has FAILs — not hand-off-ready (--no-report to skip)"
 )
 

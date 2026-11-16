@@ -15,6 +15,7 @@ type options struct {
 	target    string // --target-version
 	plugin    string // --plugin-version, else $NIAGARA_PLUGIN_VERSION
 	uiProfile string // --ui-profile
+	restore   string // --restore-mirror <kept jar>: put a jar a mirror build replaced back, and nothing else
 	// gradleProps are the --gradle-prop values as gradle takes them (-Pk=v), in order.
 	gradleProps                                                                 []string
 	legacy, werror, firstDeploy, intoHome, skipPreflight, skipReport, skipDrift bool
@@ -32,7 +33,8 @@ func (o *options) switches() map[string]*bool {
 
 // values are the flags whose value is taken as is.
 func (o *options) values() map[string]*string {
-	return map[string]*string{"--profiles": &o.profiles, "--target-version": &o.target, "--plugin-version": &o.plugin}
+	return map[string]*string{"--profiles": &o.profiles, "--target-version": &o.target, "--plugin-version": &o.plugin,
+		"--restore-mirror": &o.restore}
 }
 
 // parseArgs reads the command line. code is proceed, or the exit code after the usage or a message was
@@ -83,6 +85,12 @@ func parseArgs(args []string, s cli.Stdio) (o options, code int) {
 			return usageError()
 		}
 		args = args[2:]
+	}
+	if o.restore != "" {
+		if len(args) != 0 {
+			return usageError() // --restore-mirror runs alone: it builds nothing
+		}
+		return o, proceed
 	}
 	if len(args) < 2 || len(args) > 3 {
 		return usageError()
