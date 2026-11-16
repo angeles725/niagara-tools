@@ -145,7 +145,7 @@ func TestInstallationModuleNames(t *testing.T) {
 func TestEmptyInstallationOptionIsAUsageError(t *testing.T) {
 	t.Parallel()
 	root := moduleRoot(t, map[string]string{tpl: template(t, "", "ghost-rt")})
-	want := "lint-ntpl-manifest-deps: --niagara-home: an empty value names no installation\nusage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>\n"
+	want := "lint-ntpl-manifest-deps: --niagara-home: an empty value names no installation\nusage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root | template-module.jar>\n"
 	nh := installation(t, stock...)
 	for name, args := range map[string][]string{"alone": {homeOption, "", root}, "after a path": {homeOption, nh, homeOption, "", root}} {
 		if code, out, errText := run(args...); code != 3 || out != "" || errText != want {

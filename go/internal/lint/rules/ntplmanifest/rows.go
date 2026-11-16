@@ -42,7 +42,7 @@ func (c *checker) check(path string, station bool, a archive) {
 	if a.manifest == nil {
 		return
 	}
-	m, why := parseManifest(a.manifest)
+	m, why := parseManifest(a.manifestName, a.manifest)
 	if why != "" {
 		// Mutation: NTPL2 -- taking a manifest that does not parse for one with no dependencies passes it
 		row(checkManifest, "%s", why)
@@ -50,21 +50,21 @@ func (c *checker) check(path string, station bool, a archive) {
 	}
 	if m.root != rootElement {
 		// Mutation: NTPL-root -- reading any document for a manifest passes a file that declares nothing a reader takes
-		row(checkManifest, wrongRoot, m.root)
+		row(checkManifest, wrongRoot, a.manifestName, m.root)
 		return
 	}
 	for _, line := range m.nameless {
-		row(checkManifest, namelessDep, line)
+		row(checkManifest, namelessDep, a.manifestName, line)
 	}
 	for _, line := range m.stray {
-		row(checkManifest, strayDep, line)
+		row(checkManifest, strayDep, a.manifestName, line)
 	}
 	if station && !m.station {
 		// Mutation: NTPL4 -- dropping this row ships a newStations/ template whose manifest is not a station manifest
 		row(checkStation, notAStation, m.root)
 	}
 	c.deps(path, m.deps)
-	c.uses(path, m.deps, a.uses)
+	c.uses(path, a.manifestName, m.deps, a.uses)
 }
 
 // deps adds the ntpl-deps row of one manifest: the dependencies the module does not declare and, with an

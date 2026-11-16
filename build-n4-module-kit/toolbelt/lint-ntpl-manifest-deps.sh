@@ -61,8 +61,9 @@
 # build dependencies: a dependency is judged against the installation alone. A jar with no template entry is one
 # PASS row. [ev: retro ntpl-jar-manifest-k4b Δ2]
 # The manifest: an archive without template-manifest.xml is read through template.manifest.xml, the spelling of
-# the Templates guide ("Example template.manifest.xml file"); with both, the hyphenated one alone is read.
-# [ev: retro ntpl-jar-manifest-k4b Δ1]
+# the Templates guide ("Example template.manifest.xml file"); with both, the hyphenated one alone is read. A
+# manifest row names the entry it read.
+# [ev: retro ntpl-jar-manifest-k4b Δ1] [ev: retro ntpl-jar-manifest-k4b Δ4]
 # [ev: retro gate-followups-and-template-lints Δ7] [ev: retro gate-followups-and-template-lints Δ8]
 #
 # Implementation: rule package go/internal/lint/rules/ntplmanifest on the shared engine go/internal/lint

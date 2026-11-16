@@ -34,7 +34,7 @@ const (
 
 // The command line and the environment.
 const (
-	usage      = "usage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>"
+	usage      = "usage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root | template-module.jar>"
 	homeOption = "--niagara-home"
 	homeEnv    = "NIAGARA_HOME"
 	modulesDir = "modules" // under the installation: one <module>.jar per module part it ships
@@ -58,12 +58,13 @@ const (
 	lacksEntry    = "lacks %s"
 	repeatedEntry = "holds %d entries named %s (which one a reader takes is not defined)"
 
-	manifestTooLarge = manifestEntry + " inflates past %d bytes -- not read"
-	manifestUnread   = "cannot read " + manifestEntry + ": %v"
-	manifestBadXML   = manifestEntry + " is not well-formed XML: %s"
-	wrongRoot        = manifestEntry + ": the root element is <%s>, not <" + rootElement + "> -- not a template manifest"
-	namelessDep      = manifestEntry + ":%d: a <dependency> with no name"
-	strayDep         = manifestEntry + ":%d: a <dependency> outside <dependencies> (no reader takes it for a dependency)"
+	// the ntpl-manifest messages name the manifest entry read first: manifestEntry, or manifestAlt when only it is present
+	manifestTooLarge = "%s inflates past %d bytes -- not read"
+	manifestUnread   = "cannot read %s: %v"
+	manifestBadXML   = "%s is not well-formed XML: %s"
+	wrongRoot        = "%s: the root element is <%s>, not <" + rootElement + "> -- not a template manifest"
+	namelessDep      = "%s:%d: a <dependency> with no name"
+	strayDep         = "%s:%d: a <dependency> outside <dependencies> (no reader takes it for a dependency)"
 
 	// ntpl-deps: FAIL with the installation's module list, WARN without it
 	undeclared    = "manifest dependencies neither declared (api/nre/implementation) in any *.gradle.kts under %s nor shipped by the installation %s: %s"
@@ -74,9 +75,9 @@ const (
 	// ntpl-link: WARN, a symlink whose real target is outside the module root (%s is that target)
 	linkOutside = "a symlink to %s, outside the module root -- not followed, nothing behind it is checked"
 
-	// ntpl-uses: FAIL with the installation's module list, WARN without it (%s is the entry, then the modules)
-	usesMissing    = "%s uses %s: no <dependency> of " + manifestEntry + " names them, and the installation %s does not ship them"
-	usesMissingAny = "%s uses %s: no <dependency> of " + manifestEntry + " names them"
+	// ntpl-uses: FAIL with the installation's module list, WARN without it (%s is the entry, the modules, the manifest read)
+	usesMissing    = "%s uses %s: no <dependency> of %s names them, and the installation %s does not ship them"
+	usesMissingAny = "%s uses %s: no <dependency> of %s names them"
 	entryBadXML    = "%s is not well-formed XML: %s"
 	entryTooLarge  = "%s inflates past %d bytes -- not read"
 	entryUnread    = "cannot read %s: %v"
