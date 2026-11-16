@@ -40,7 +40,11 @@ var defaultEnv = map[string]string{"PATH": "/usr/bin:/bin", "HOME": "@DIR@", "LC
 // Run replays every case of r.Dir as a subtest, in name order, one at a time.
 func (r Runner) Run(t *testing.T) {
 	t.Helper()
-	paths, _ := filepath.Glob(filepath.Join(r.dir(), "*.txt"))
+	dir, err := filepath.Abs(r.dir()) // a CHDIR=1 case runs in its tree, and -update writes the case after it
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths, _ := filepath.Glob(filepath.Join(dir, "*.txt"))
 	if msg := countProblem(len(paths), r.Cases, r.AtLeast); msg != "" {
 		t.Fatal(msg)
 	}

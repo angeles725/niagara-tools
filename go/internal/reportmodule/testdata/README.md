@@ -86,6 +86,10 @@ none with a verdict row. The 25 cases that moved were re-recorded the same way (
 the added lines only rows of the new members (58 `SKIP ... no src/` for each of the two source lints, no real row),
 and each summary line changed only in its counts, verdict unchanged.
 
+Since 2026-11-16 the cases that move this way are re-recorded with `memcap go test ./internal/reportmodule -update`
+(`../../lint/rules/golden/record/README.md`, Re-recording through the Go port), which rewrites only the `want` and
+`stderr` sections of the cases that differ; the temporary dump hooks above are no longer needed.
+
 ## Truth cases (`truth-*`)
 
 Hand-kept expectations that differ from the bash tool on purpose: each one is a declared fix (retro
