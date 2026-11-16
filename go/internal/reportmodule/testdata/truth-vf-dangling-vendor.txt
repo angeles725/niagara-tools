@@ -1,0 +1,75 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 3
+A-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-ux  SKIP  lint-lexicon-ascii  no *.lexicon under A-ux
+A-ux  PASS  lint-link-target-flags  clean (no wiring map)
+A-ux  PASS  lint-no-system-out  clean
+A-ux  PASS  lint-slotomatic-markers  clean
+A-ux  SKIP  lint-servlet  no BWebServlet
+A-ux  PASS  rc-scan  clean
+A-ux  SKIP  eslint  no rc js
+A-ux  ERROR  vendor-floor  env fault (exit 3)
+A-ux  PASS  lint-no-md5-credential-digest  clean
+A-ux  PASS  lint-size  clean
+A-ux  PASS  lint-license-isoperational-gate  clean
+A-ux  PASS  lint-set-null-ord  clean
+A-ux  PASS  lint-ws-placement  clean
+A-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+B-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+B-ux  SKIP  lint-lexicon-ascii  no *.lexicon under B-ux
+B-ux  PASS  lint-link-target-flags  clean (no wiring map)
+B-ux  PASS  lint-no-system-out  clean
+B-ux  PASS  lint-slotomatic-markers  clean
+B-ux  SKIP  lint-servlet  no BWebServlet
+B-ux  PASS  rc-scan  clean
+B-ux  SKIP  eslint  no rc js
+B-ux  PASS  lint-no-md5-credential-digest  clean
+B-ux  PASS  lint-size  clean
+B-ux  PASS  lint-license-isoperational-gate  clean
+B-ux  PASS  lint-set-null-ord  clean
+B-ux  PASS  lint-ws-placement  clean
+B-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+C-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+C-ux  SKIP  lint-lexicon-ascii  no *.lexicon under C-ux
+C-ux  PASS  lint-link-target-flags  clean (no wiring map)
+C-ux  PASS  lint-no-system-out  clean
+C-ux  PASS  lint-slotomatic-markers  clean
+C-ux  SKIP  lint-servlet  no BWebServlet
+C-ux  PASS  rc-scan  clean
+C-ux  SKIP  eslint  no rc js
+C-ux  PASS  lint-no-md5-credential-digest  clean
+C-ux  PASS  lint-size  clean
+C-ux  PASS  lint-license-isoperational-gate  clean
+C-ux  PASS  lint-set-null-ord  clean
+C-ux  PASS  lint-ws-placement  clean
+C-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-module-map  clean
+(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(module)  PASS  lint-vacuous-tests  clean
+(module)  PASS  lint-permissions-xml  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 3 artifacts · 35 PASS · 0 FAIL · 0 WARN · 16 SKIP · 0 ADVISORY  ->  INCOMPLETE
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+truth: a vendor/ symlink that leads nowhere reaches lint-vendor-floor, whose exit 3 is the ERROR row (retro gate-followups-and-template-lints Δ4); an artifact with no vendor/, or with a file of that name, still gets no vendor-floor row
+-- @env --
+KIT_ESLINT=/nonexistent
+-- m/A-ux/src/rc/vendor (symlink) --
+@DIR@/m/gone
+-- m/B-ux/src/rc (dir) --
+-- m/C-ux/src/rc/vendor --
+not a directory
+-- toolbelt/.stub-rest --
+-- toolbelt/lint-vendor-floor.sh (mode 755) --
+#!/usr/bin/env bash
+printf 'lint-vendor-floor: env fault: %s/vendor is a symlink that leads nowhere\n' "$1" >&2
+exit 3

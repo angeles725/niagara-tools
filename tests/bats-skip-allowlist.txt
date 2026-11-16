@@ -4,8 +4,11 @@
 # Dialect: POSIX ERE as Go regexp.CompilePOSIX reads it (go/internal/checkbatsskips), leftmost-longest. A backslash
 # makes one ERE operator literal ( . [ ] ( ) { } * + ? | ^ $ \ ) and nothing else, and is never written inside a
 # bracket expression; a class is one of the twelve POSIX names ([:alnum:] [:alpha:] [:blank:] [:cntrl:] [:digit:]
-# [:graph:] [:lower:] [:print:] [:punct:] [:space:] [:upper:] [:xdigit:]). A line outside it is exit 3, never
-# matched: \w \d \s \b, a back-reference, \< \>, \n \t \x41, [[:word:]], [[=a=]], [[.a.]].
+# [:graph:] [:lower:] [:print:] [:punct:] [:space:] [:upper:] [:xdigit:]), written inside a bracket expression as
+# [[:alpha:]]; an unescaped { opens an interval {n}, {n,} or {n,m} and is written \{ anywhere else. A line outside
+# it is exit 3, never matched: \w \d \s \b, a back-reference, \< \>, \n \t \x41, [[:word:]], [[=a=]], [[.a.]], and
+# what Go and GNU grep -E read differently: {,2}, {}, an interval bound with a leading zero ({02}), a class name
+# in single brackets ([:alpha:]), a star right after the start anchor (^*).
 # The CI bats job installs Java 8, JUnit, bats, GNU parallel, Go, CPython and the pinned npm tools
 # (toolbelt/eslint/package.json), so "no javac", "junit not in ~/.gradle", "eslint not installed" and
 # "acorn not installed" are deliberately NOT here: one of them in CI means a setup step broke.

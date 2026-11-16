@@ -939,3 +939,46 @@ JAVA
   [[ "$output" == *"(module)  SKIP  lint-inline-site-literal  no *.java under a -rt or -ux part's src/"* ]]
   [[ "$output" != *"ERROR  lint-inline-site-literal"* ]]
 }
+
+@test "RM-rc-file: a part whose src/rc is a regular file gets its rows and a summary, never a crash" {
+  # Mutation: RM-rc-file -- reading the segments below <part>/src/rc without checking there are any panics on this module
+  local m="$BATS_TEST_TMPDIR/Mod"
+  mkdir -p "$m/Mod-ux/src"
+  printf 'x\n' > "$m/Mod-ux/src/rc"
+  printf 'plugins {}\n' > "$m/Mod-ux/Mod-ux.gradle.kts"
+  run "$RM" --lint-only "$m"
+  [[ "$output" != *"panic"* ]]
+  [[ "$output" != *"goroutine"* ]]
+  [[ "$output" == *"(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-"* ]]
+  [[ "$output" == *"report-module: 1 artifact"* ]]
+  [ "$status" -ne 2 ]
+}
+
+# _vf_module <dir> — one -ux part with an rc/ dir and its own script, so the vendor-floor step is reached
+_vf_module() {
+  mkdir -p "$1/A-ux/src/rc"
+  printf 'plugins {}\n' > "$1/A-ux/A-ux.gradle.kts"
+}
+
+@test "RM-vf-dangling: a src/rc/vendor link that leads nowhere is an ERROR vendor-floor row, never no row" {
+  # Mutation: RM-vf-dangling -- judging only a link that resolves gives a dangling vendor/ no row, so the report reads CLEAN
+  local m="$BATS_TEST_TMPDIR/m"
+  _vf_module "$m"
+  ln -s "$BATS_TEST_TMPDIR/gone" "$m/A-ux/src/rc/vendor"
+  run "$RM" --lint-only "$m"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"A-ux  ERROR  vendor-floor  env fault (exit 3)"* ]]
+}
+
+@test "RM-vf-unsearchable: an rc dir nobody may search is an ERROR vendor-floor row, never no row" {
+  # Mutation: RM-vf-unsearchable -- reading every stat error as "no vendor/" gives the locked rc dir no vendor-floor row
+  [ "$(id -u)" -ne 0 ] || skip "root may search every directory"
+  local m="$BATS_TEST_TMPDIR/m"
+  _vf_module "$m"
+  mkdir "$m/A-ux/src/rc/vendor"
+  chmod 600 "$m/A-ux/src/rc"
+  run "$RM" --lint-only "$m"
+  chmod 755 "$m/A-ux/src/rc"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"A-ux  ERROR  vendor-floor  env fault (exit 3)"* ]]
+}

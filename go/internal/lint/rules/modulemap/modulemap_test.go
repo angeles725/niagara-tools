@@ -247,3 +247,22 @@ func TestPartJava(t *testing.T) {
 		t.Errorf("PartJava = %v, %v; want %v", got, err, want)
 	}
 }
+
+// TestRegularFileNamedRcIsNoSource: <part>/src/rc that is a regular file (not the rc/ directory) is a
+// three-segment path with nothing below it. It is no source file, for the Java list and for the lint with a
+// map alike; it used to index past the path's segments (a panic that took report-module down with it).
+func TestRegularFileNamedRcIsNoSource(t *testing.T) {
+	t.Parallel()
+	root := tree(t, map[string]string{"M-ux/src/rc": "not a directory\n"})
+	got, err := PartJava(root)
+	if err != nil || strings.Join(got, ",") != "M-rt/src/A.java" {
+		t.Errorf("PartJava = %v, %v; want [M-rt/src/A.java]", got, err)
+	}
+	plain := tree(t, nil)
+	wantCode, wantOut, wantErr := run(plain)
+	code, out, errText := run(root)
+	if out = strings.ReplaceAll(out, root, plain); code != wantCode || out != wantOut || errText != wantErr {
+		t.Errorf("lint with src/rc as a file: exit %d stdout %q stderr %q, want the rows of the module without it: exit %d stdout %q stderr %q",
+			code, out, errText, wantCode, wantOut, wantErr)
+	}
+}

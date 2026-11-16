@@ -63,8 +63,9 @@ func Main(args []string, s cli.Stdio) int {
 		return ExitEnv
 	}
 	raw := o.declared
-	if !o.haveDeclared && o.buildState != "" {
-		if o.module == "" {
+	if !o.haveDeclared && o.haveState {
+		// Mutation: CS-empty-path -- reading only a non-empty path takes `--build-state ""` for no declaration (WARN undeclared, exit 0)
+		if o.module == "" || o.buildState == "" {
 			return usage()
 		}
 		text, fault := readBuildState(o.buildState)

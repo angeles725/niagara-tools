@@ -7,6 +7,7 @@ type options struct {
 	declared     string // --declared <value>
 	haveDeclared bool   // --declared was given (it wins over --build-state, even when empty)
 	buildState   string // --build-state <file>
+	haveState    bool   // --build-state was given (an empty <file> names nothing: a usage error when it is read)
 	module       string // --module <MOD>
 	root         string // the one <module-root>
 	help         bool   // -h or --help was met before any parse error
@@ -23,7 +24,7 @@ options:
 		case a == "--declared":
 			value, o.haveDeclared = &o.declared, true
 		case a == "--build-state":
-			value = &o.buildState
+			value, o.haveState = &o.buildState, true
 		case a == "--module":
 			value = &o.module
 		case a == "-h" || a == "--help":

@@ -19,6 +19,7 @@ const (
 
 	// env faults of the walk (the %s of envFaultLine)
 	danglingVendor = "%s is a symlink that leads nowhere"
+	unsearchableRc = "cannot look for vendor/ under %s: %s"
 	incompleteWalk = "cannot list every file under %s: %s"
 
 	nodeMissing  = "unavailable: node not found (install Node, or set KIT_NODE)"

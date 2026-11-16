@@ -91,3 +91,59 @@ func TestUnreadableBuildStateIsAnEnvFault(t *testing.T) {
 	expect(t, "unreadable BUILD-STATE", []string{"--build-state", state, "--module", "Mod", f.root}, ExitEnv, "",
 		"check-client-source: cannot read "+state+": open "+state+": permission denied\n")
 }
+
+// TestBuildStateWithCRLFLineEndings: a BUILD-STATE file saved with CRLF line endings declares what it
+// declares; read with the CR left on each value it named no module and the check WARNed "undeclared"
+// (exit 0) over a checkout nobody compared.
+func TestBuildStateWithCRLFLineEndings(t *testing.T) {
+	f := newFixture(t)
+	state := filepath.Join(f.base, "BUILD-STATE.md")
+	write(t, state, "<!-- build-state.v1 -->\r\nmodule: Mod\r\nsource_of_truth: r@main@"+f.second+"\r\n<!-- /build-state.v1 -->\r\n"+
+		"<!-- build-state.v1 -->\r\nmodule: Old  # stale\r\nsource_of_truth: r@main@"+f.first+"   # DECLARED\r\n<!-- /build-state.v1 -->\r\n")
+	expect(t, "the declared commit", []string{"--build-state", state, "--module", "Mod", f.root}, ExitOK,
+		"PASS  source-of-truth  "+f.top+" at the declared commit "+f.second+" on main\n", "")
+	expect(t, "a value before a comment", []string{"--build-state", state, "--module", "Old", f.root}, ExitOK,
+		"PASS  source-of-truth  "+f.top+" is ahead of the declared commit "+f.first+" (new local work) — update source_of_truth at close\n", "")
+}
+
+// TestEmptyBuildStatePathIsAUsageError: `--build-state ""` (an unset shell variable) names no file; it is
+// the usage error, never "undeclared" and exit 0. With --declared, which wins, it is still not read.
+func TestEmptyBuildStatePathIsAUsageError(t *testing.T) {
+	f := newFixture(t)
+	expect(t, "an empty path", []string{"--build-state", "", "--module", "Mod", f.root}, ExitUsage, "", wantUsage)
+	expect(t, "an empty path and no module", []string{"--build-state", "", f.root}, ExitUsage, "", wantUsage)
+	expect(t, "--declared still wins", []string{"--build-state", "", "--declared", "r@main@" + f.second, f.root}, ExitOK,
+		"PASS  source-of-truth  "+f.top+" at the declared commit "+f.second+" on main\n", "")
+}
+
+// TestBuildStateSpellingsOfOneDeclaration: the same envelope saved by another editor is the same
+// declaration: a UTF-8 byte-order mark (alone or with CRLF), CR-only line endings, a doubled CR before the
+// LF, and blanks after the value of the module or the source_of_truth line.
+func TestBuildStateSpellingsOfOneDeclaration(t *testing.T) {
+	f := newFixture(t)
+	lines := []string{"<!-- build-state.v1 -->", "module: Mod", "source_of_truth: r@main@" + f.second, "<!-- /build-state.v1 -->", ""}
+	trailing := []string{"<!-- build-state.v1 -->", "module: Mod \t", "source_of_truth: r@main@" + f.second + "  \t", "<!-- /build-state.v1 -->", ""}
+	cases := []struct{ name, text string }{
+		{"a byte-order mark", bom + strings.Join(lines, "\n")},
+		{"a byte-order mark and CRLF", bom + strings.Join(lines, "\r\n")},
+		{"CR-only line endings", strings.Join(lines, "\r")},
+		{"a doubled CR before the LF", strings.Join(lines, "\r\r\n")},
+		{"blanks after the values", strings.Join(trailing, "\n")},
+	}
+	for _, c := range cases {
+		state := filepath.Join(f.base, "BUILD-STATE.md")
+		write(t, state, c.text)
+		expect(t, c.name, []string{"--build-state", state, "--module", "Mod", f.root}, ExitOK,
+			"PASS  source-of-truth  "+f.top+" at the declared commit "+f.second+" on main\n", "")
+	}
+}
+
+// TestBuildStateKeepsAByteOrderMarkInsideTheText: only a mark that opens the file is dropped; one in the
+// middle of a line still belongs to that line, so the envelope it would open is not one.
+func TestBuildStateKeepsAByteOrderMarkInsideTheText(t *testing.T) {
+	f := newFixture(t)
+	state := filepath.Join(f.base, "BUILD-STATE.md")
+	write(t, state, "notes\n"+bom+"<!-- build-state.v1 -->\nmodule: Mod\nsource_of_truth: r@main@"+f.second+"\n<!-- /build-state.v1 -->\n")
+	expect(t, "a mark in the text", []string{"--build-state", state, "--module", "Mod", f.root}, ExitOK,
+		"WARN  source-of-truth  source_of_truth undeclared for this module — record <path>@<branch>@<commit> in its BUILD-STATE.src.md envelope\n", "")
+}

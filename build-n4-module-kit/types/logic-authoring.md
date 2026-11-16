@@ -321,7 +321,17 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
 - **Version pinning:** set **Use Minor Version On Deployment** on purpose: `true` pins the minor version; `false`
   pins only the major, so a template built on a later minor deploys to stations on an earlier one
   (guide `Templates/TemplateOptions-49093F67.txt:9-11` "Minor Version On Deployment is set to true,").
-- Owed advisory: Go lint G92 `ntpl-manifest-deps` (`ledger.d/2026-10-23-r8-u10-platform-templates.md`).
+- **Check:** `toolbelt/lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>` (Go lint G92) FAILs a
+  shipped `.ntpl` that lacks `template.bog` or `template-manifest.xml`, a manifest that is not a well-formed
+  `<template>` manifest, and a `<dependency>` that no `*.gradle.kts` of the module declares with `api`, `nre` or
+  `implementation` and that the installation does not ship; a module that ships no `.ntpl` passes with one row.
+  Give it the installation (`--niagara-home`, or `NIAGARA_HOME`): a template lists stock modules that no build file
+  declares, and without the installation's `modules/` the lint cannot tell them from a missing module, so it
+  reports undeclared dependencies as WARN and exits 0. The archive is read as untrusted input (size bounds, unsafe
+  entry names refused), and a symlinked template is read through the link. The report does not run it yet: run it
+  by hand at the verify gate. `[ev: retro gate-followups-and-template-lints Δ7]` `[ev: retro gate-followups-and-template-lints Δ12]`
+  Still owed from the first G92 spec: a module the bog or a Px uses with no `<dependency>` row, and a template
+  module jar as input (`ledger.d/2026-10-23-r8-u10-platform-templates.md`).
   [deferred: retro devguide415-r2-packaging-platform-signing Δ2]
 
 ### What breaks on a module or template upgrade `[ev: corpus B1325 §1325.1 rows 4-6]` [ev: retro devguide415-r2-packaging-platform-signing Δ3]
@@ -336,6 +346,42 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
   (guide `Templates/InstallingAnApplicationTemplate-B8DEEB83.txt`).
 - `[INFER]` renaming a slot of a type used by a deployed template breaks an exposed `BConfigBinding` on the next
   template upgrade (open: niagara-research B1325-G1). Treat a slot rename as a breaking change (`types/distribution.md` § 6).
+
+### What a template upgrade keeps and what it wipes `[ev: retro gate-followups-and-template-lints Δ9]`
+
+Read from the decompiled 4.14 template modules and the official Templates guide for 4.15 (its pages on the deploy
+process, on upgrading a deployed template and on bulk deployment). The method bodies were not re-verified on 4.15:
+confirm on the target release before a site depends on a detail below.
+
+- **Deploy is Workbench client code.** Deploying a component or device template, and bulk deploy from the
+  spreadsheet, run in the Workbench template module: it copies the template's root component into the target,
+  transfers the `.ntpl`, its Px files and images, then runs the post-deploy steps (the template tags, configuration
+  propagation, input and output binding, the configuration prompt, the default-password check). The station
+  offers no action that deploys a `.ntpl` under a parent, so a session without Workbench cannot deploy one.
+  Bulk deploy creates every instance first and wires them afterwards, and works online only.
+- **Upgrade is remove, then redeploy.** Upgrade, downgrade and redeploy are one path: Workbench pushes the new
+  `.ntpl` to the station and asks the station's template service to run the upgrade job, which saves state,
+  removes the deployed root, deploys the new one under the same name and restores what it saved.
+
+  | Kept (saved and restored by the job) | Wiped |
+  |---|---|
+  | links into and out of the template | every other local edit to the deployed objects |
+  | relations | |
+  | the exposed configurations (the values set on `templateConfig`) | |
+  | tags | |
+  | history names | |
+
+  Record the local edits before an upgrade and re-apply them afterwards; an edit that must survive belongs in an
+  exposed configuration.
+- **The station needs the template service.** The deployed-template records, the signatures and the upgrade job
+  belong to `template:TemplateService`; a station without it cannot upgrade a deployed template. An application
+  template install also needs the `-wb` profile (above).
+- **The manifest `signature` is a structure checksum, not a code signature.** It lets the station tell a modified
+  template from the one that was deployed (the service keeps the signature of the `.ntpl` and the one of the local
+  copy, and a difference marks a changed instance). It says nothing about who built the template and is unrelated to module signing
+  (`types/distribution.md` § 5).
+- `toolbelt/lint-ntpl-manifest-deps.sh` checks the archive and its manifest before it ships, never what an upgrade
+  does on a station.
 
 ## Background jobs
 

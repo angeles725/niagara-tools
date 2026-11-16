@@ -1,11 +1,15 @@
 package vendorfloor
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // vendoredSuffixes are the file names of a vendored browser library (find -name '*.js' -o '*.mjs' -o '*.cjs').
@@ -53,12 +57,23 @@ func vendored(name string) bool {
 	return false
 }
 
-// dangling reports whether path is a symlink whose target does not exist.
-func dangling(path string) bool {
-	st, err := os.Lstat(path)
-	if err != nil || st.Mode()&os.ModeSymlink == 0 {
-		return false
+// vendorDir reports whether rc holds a vendor/ directory to lint (a symlink to one counts). fault is why
+// that cannot be told or followed, "" otherwise: an rc dir the process may not search, or a vendor/ link
+// that leads nowhere. An rc dir with no entry of that name, or with one that is not a directory, simply
+// has no vendor/.
+func vendorDir(rc, vendor string) (present bool, fault string) {
+	st, err := os.Lstat(vendor)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return false, ""
+	case err != nil:
+		// Mutation: VF-unsearchable -- returning no fault here reads an rc dir nobody could look into as "no vendor/"
+		return false, fmt.Sprintf(unsearchableRc, rc, strerror.Text(err))
+	case st.Mode()&os.ModeSymlink == 0:
+		return st.IsDir(), ""
 	}
-	_, err = os.Stat(path)
-	return err != nil
+	if st, err = os.Stat(vendor); err != nil {
+		return false, fmt.Sprintf(danglingVendor, vendor)
+	}
+	return st.IsDir(), ""
 }

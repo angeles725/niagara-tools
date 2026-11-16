@@ -24,9 +24,12 @@ func (r repository) isCommit(ref string) bool {
 	return ok
 }
 
-// show is the text of file at ref, "" when the ref has no such file.
+// show is the text of file at ref, "" when the ref has no such file. The closing `--` says that
+// `<ref>:<file>` is a revision: without it git refuses the argument as "both revision and filename"
+// whenever the working tree holds an entry of that very name, and the file read as absent.
 func (r repository) show(ref, file string) string {
-	text, _ := r.git(nil, "show", ref+":"+file)
+	// Mutation: ILG-ambiguous -- dropping "--" skips a group whose `<ref>:<path>` name exists in the working tree
+	text, _ := r.git(nil, "show", ref+":"+file, "--")
 	return text
 }
 

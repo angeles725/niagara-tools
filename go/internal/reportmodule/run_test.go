@@ -91,3 +91,49 @@ func must(t *testing.T, err error) {
 		t.Fatal(err)
 	}
 }
+
+// TestToJudge: what makes <rc>/vendor something lint-vendor-floor must judge. A directory and a link to one
+// are; a link that leads nowhere and an rc dir nobody may search are too (the lint's exit 3, never a
+// missing row). No entry, a regular file, a link to a file, and an rc that is itself a file (ENOTDIR:
+// nothing can be under it) are nothing to run the lint on.
+func TestToJudge(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root may search every directory")
+	}
+	t.Parallel()
+	d := t.TempDir()
+	mk := func(rel string) string {
+		p := filepath.Join(d, rel)
+		must(t, os.MkdirAll(p, 0o755))
+		return p
+	}
+	must(t, os.WriteFile(filepath.Join(d, "file"), []byte("x\n"), 0o644))
+	must(t, os.Symlink(mk("real"), filepath.Join(mk("linked"), "vendor")))
+	must(t, os.Symlink(filepath.Join(d, "gone"), filepath.Join(mk("dangling"), "vendor")))
+	must(t, os.Symlink(filepath.Join(d, "file"), filepath.Join(mk("tofile"), "vendor")))
+	must(t, os.WriteFile(filepath.Join(mk("regular"), "vendor"), []byte("x\n"), 0o644))
+	mk("dir/vendor")
+	mk("none")
+	locked := mk("locked")
+	mk("locked/vendor")
+	must(t, os.Chmod(locked, 0o600))
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+	cases := []struct {
+		name, vendor string
+		want         bool
+	}{
+		{"a directory", "dir/vendor", true},
+		{"a link to a directory", "linked/vendor", true},
+		{"a link that leads nowhere", "dangling/vendor", true},
+		{"an rc dir nobody may search", "locked/vendor", true},
+		{"no entry", "none/vendor", false},
+		{"a regular file", "regular/vendor", false},
+		{"a link to a file", "tofile/vendor", false},
+		{"an rc that is a file (ENOTDIR)", "file/vendor", false},
+	}
+	for _, c := range cases {
+		if got := toJudge(filepath.Join(d, c.vendor)); got != c.want {
+			t.Errorf("%s: toJudge = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
