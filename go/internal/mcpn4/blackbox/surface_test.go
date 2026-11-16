@@ -13,4 +13,4 @@ var supportedProtocols = []string{"2025-06-18", "2025-03-26", "2024-11-05"}
 var readTools = []string{"n4_connect", "n4_describe_session", "n4_navigate", "n4_read_slots",
 	"n4_list_links", "n4_find_dangling_outputs", "n4_bql_query", "n4_inventory",
 	"n4_read_file", "n4_list_px_views", "n4_px_summary", "n4_list_batches",
-	"n4_session_retro_draft", "n4_spy_page", "n4_station_health"}
+	"n4_session_retro_draft", "n4_spy_page", "n4_station_health", "n4_read_history"}
