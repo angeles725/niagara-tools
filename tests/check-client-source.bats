@@ -6,6 +6,7 @@
 # Named mutation: keep the CR of a CRLF line on its value -> CS-crlf red.
 # Named mutation: read `--build-state ""` as no declaration -> CS-empty-path red.
 # Named mutation: keep a byte-order mark on the first line -> CS-bom red.
+# Named mutation: read UTF-16 as bytes -> CS-utf16 red; read a line a mark opens as no key -> CS-mid-bom red.
 #
 # Every repository is created under a temp dir with a throwaway identity; no network, no $HOME config.
 
@@ -183,4 +184,27 @@ EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *"PASS  source-of-truth"*"at the declared commit $C2"* ]]
   done
+}
+
+@test "CS-utf16: a UTF-16 BUILD-STATE with its byte-order mark declares what it declares; one without the mark is exit 3" {
+  # Mutation: CS-utf16 -- reading UTF-16 as bytes names no module (WARN undeclared, exit 0)
+  _repo "$TMPDIR_T/r"
+  printf '<!-- build-state.v1 -->\r\nmodule: Mod\r\nsource_of_truth: r@main@%s\r\n<!-- /build-state.v1 -->\r\n' "$C2" > "$TMPDIR_T/u8.md"
+  { printf '\377\376'; iconv -f UTF-8 -t UTF-16LE "$TMPDIR_T/u8.md"; } > "$TMPDIR_T/u16.md"
+  run "$CS" --build-state "$TMPDIR_T/u16.md" --module Mod "$MODROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  source-of-truth"*"at the declared commit $C2"* ]]
+  iconv -f UTF-8 -t UTF-16LE "$TMPDIR_T/u8.md" > "$TMPDIR_T/nomark.md"
+  run "$CS" --build-state "$TMPDIR_T/nomark.md" --module Mod "$MODROOT"
+  [ "$status" -eq 3 ]
+  [ "$output" = "check-client-source: $TMPDIR_T/nomark.md holds NUL bytes (UTF-16 without a byte-order mark?): save it as UTF-8" ]
+}
+
+@test "CS-mid-bom: a byte-order mark in front of a key in the middle of the file is exit 3 naming the line (never WARN undeclared)" {
+  # Mutation: CS-mid-bom -- reading a line a mark opens as no key reports "undeclared", exit 0
+  _repo "$TMPDIR_T/r"
+  printf 'notes\n<!-- build-state.v1 -->\n\357\273\277module: Mod\nsource_of_truth: r@main@%s\n<!-- /build-state.v1 -->\n' "$C2" > "$TMPDIR_T/mid.md"
+  run "$CS" --build-state "$TMPDIR_T/mid.md" --module Mod "$MODROOT"
+  [ "$status" -eq 3 ]
+  [ "$output" = "check-client-source: $TMPDIR_T/mid.md:3: a byte-order mark opens this line (only the file's first line may carry one): remove it" ]
 }
