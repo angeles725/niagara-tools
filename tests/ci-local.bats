@@ -14,7 +14,7 @@ setup() {
   # Neutral host-budget limits so the gate cases read only fixtures: the fake /proc, an empty Go cache and a
   # disk limit no mount can exceed. Without them CL10-CL12 would read this machine's threads, cache and disks.
   mkdir -p "$TMPDIR_T/gocache"
-  HB_NEUTRAL="--proc-root $ROOT/tests/fixtures/host-budget/proc --gocache $TMPDIR_T/gocache --disk-pct 100"
+  HB_NEUTRAL="--proc-root $ROOT/tests/fixtures/host-budget/proc --gocache $TMPDIR_T/gocache --disk-pct 100 --disk-min-free 1"
 }
 teardown() { rm -rf "$TMPDIR_T"; }
 
@@ -162,10 +162,22 @@ fake_cgroup() { # fake_cgroup <name> <current> <max>
 @test "CL15: CI_LOCAL_HOST_BUDGET_ARGS is appended to the host-budget call" {
   # Mutation: CL15 -- dropping the extra args makes CL10-CL12 read the real disks, threads and Go cache.
   fake_cgroup init.scope 16 48129
-  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL --disk-pct 0 --mount $TMPDIR_T" \
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL --disk-min-free 999999T --mount $TMPDIR_T" \
     run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
   [ "$status" -eq 4 ]
   [[ "$output" == *"FAIL disk:$TMPDIR_T "* ]]
+}
+
+@test "CL15b: the host-budget call checks the disks against the 40 GB free floor, not the percent" {
+  # Mutation: CL15b -- dropping --disk-min-free 40G from check_host_budget brings back the 90% rule that refused a
+  # 1 TB C: with 90 GB free. User rule 2026-11-16: "el limite maximo es 40 GB libres". (retro 2026-11-15 coordination-stretch T2)
+  fake_cgroup init.scope 16 48129
+  # no floor of the test's own: the disk rows carry the script's floor (their verdict depends on this host's disks)
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" \
+    CI_LOCAL_HOST_BUDGET_ARGS="--proc-root $ROOT/tests/fixtures/host-budget/proc --gocache $TMPDIR_T/gocache --mount $TMPDIR_T" \
+    run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  [[ "$output" == *"disk:$TMPDIR_T "*"fail below 40.0GB free)"* ]]
+  [[ "$output" != *"disk:"*"% used, fail above"* ]]   # the disk rows come last, after the pids rows
 }
 
 # CI runs `bats -j 4 --no-parallelize-within-files` (four files at a time); the replay must run it with the
@@ -200,10 +212,13 @@ fake_cgroup() { # fake_cgroup <name> <current> <max>
   [[ "$output" == *"bats-args: -j 2 --no-parallelize-within-files --formatter tap tests/"* ]]
 }
 
-# fake_bats <tap lines...> — a bats that prints the TAP lines and exits 0, as a silent parallel run would.
+# fake_bats <tap lines...> — a bats that prints the TAP lines and exits 0, as a silent parallel run would. It
+# answers --version with ci.yml's pin, so the replay runs it instead of fetching the pinned bats.
 fake_bats() {
   mkdir -p "$TMPDIR_T/bin"
-  { printf '#!/bin/sh\ncat <<"TAP"\n'; printf '%s\n' "$@"; printf 'TAP\n'; } > "$TMPDIR_T/bin/bats"
+  local pin; pin="$(sed -nE 's/^[[:space:]]*BATS_VER=([0-9.]+)$/\1/p' "$CI")"
+  { printf '#!/bin/sh\n[ "$1" != --version ] || { echo "Bats %s"; exit 0; }\ncat <<"TAP"\n' "$pin"
+    printf '%s\n' "$@"; printf 'TAP\n'; } > "$TMPDIR_T/bin/bats"
   printf '#!/bin/sh\nexit 0\n' > "$TMPDIR_T/bin/parallel"
   chmod +x "$TMPDIR_T/bin/bats" "$TMPDIR_T/bin/parallel"
 }
@@ -260,4 +275,56 @@ fake_bats() {
     }
     process.exit(bad);' "$dir"
   [ "$status" -eq 0 ]
+}
+
+# C8: CI pins bats-core 1.10.0, which refuses a file bats 1.14 accepts (a here-document line starting with the
+# test keyword is read as a duplicate case). The replay runs the version ci.yml's install step names.
+# pinned_bats_ci <version> <sha256> — a workflow whose install step pins that bats and whose one step runs it.
+pinned_bats_ci() {
+  printf 'name: CI\non: pull_request\njobs:\n  bats:\n    runs-on: ubuntu-latest\n    steps:\n' > "$TMPDIR_T/pin.yml"
+  printf '      - name: Install bats-core %s\n        run: |\n          BATS_VER=%s\n          BATS_SHA256=%s\n          sudo true\n' \
+    "$1" "$1" "$2" >> "$TMPDIR_T/pin.yml"
+  printf '      - name: bats run\n        run: bats --formatter tap tests/x.bats\n' >> "$TMPDIR_T/pin.yml"
+}
+
+# fake_bats_tarball <version> — a bats-core-v<version>.tar.gz in the cache whose bin/bats names itself; prints its sha256.
+fake_bats_tarball() {
+  local d="$TMPDIR_T/src/bats-core-$1/bin"
+  mkdir -p "$d" "$TMPDIR_T/cache"
+  printf '#!/bin/sh\necho "pinned bats %s: $*"\n' "$1" > "$d/bats"
+  chmod +x "$d/bats"
+  tar -czf "$TMPDIR_T/cache/bats-core-v$1.tar.gz" -C "$TMPDIR_T/src" "bats-core-$1"
+  sha256sum "$TMPDIR_T/cache/bats-core-v$1.tar.gz" | cut -d' ' -f1
+}
+
+@test "CL20: a bats step runs the bats version the install step pins, not the bats on PATH" {
+  # Mutation: CL20 -- dropping the provision_bats call runs the PATH bats (1.14 here, 1.10 in CI).
+  local sha; sha="$(fake_bats_tarball 9.9.9)"
+  pinned_bats_ci 9.9.9 "$sha"
+  mkdir -p "$TMPDIR_T/bin"
+  printf '#!/bin/sh\necho "path bats: $*"\n' > "$TMPDIR_T/bin/bats"
+  chmod +x "$TMPDIR_T/bin/bats"
+  PATH="$TMPDIR_T/bin:$PATH" run "$CL" --ci-file "$TMPDIR_T/pin.yml" --cache-dir "$TMPDIR_T/cache" --only 'bats run'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pinned bats 9.9.9: --formatter tap tests/x.bats"* ]]
+  [[ "$output" != *"path bats"* ]]
+}
+
+@test "CL21: a cached bats tarball with another sha256 is refused (exit 3) before the step runs" {
+  fake_bats_tarball 9.9.9 >/dev/null
+  pinned_bats_ci 9.9.9 0000000000000000000000000000000000000000000000000000000000000000
+  run "$CL" --ci-file "$TMPDIR_T/pin.yml" --cache-dir "$TMPDIR_T/cache" --only 'bats run'
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"sha256 mismatch"*"bats-core-v9.9.9.tar.gz"* ]]
+  [[ "$output" != *"pinned bats"* ]]
+}
+
+@test "CL22: --range without --changed, and --changed with --list or --only, are usage errors (exit 2)" {
+  run "$CL" --range a..b
+  [ "$status" -eq 2 ]
+  run "$CL" --changed --list
+  [ "$status" -eq 2 ]
+  run "$CL" --changed --only x
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"--changed [--range <from>..<to>]"* ]]
 }

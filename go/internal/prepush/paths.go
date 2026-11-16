@@ -13,6 +13,9 @@ const (
 	sweepTool    = "/toolbelt/sweep-build-state.sh" // under the kit
 )
 
+// ciLocalScript is the CI replay whose --changed mode lints the pushed range (cilints.go).
+const ciLocalScript = "scripts/ci-local.sh"
+
 // newBranchBases are the refs a new remote branch is measured from, in order.
 var newBranchBases = []string{"origin/main", "origin/HEAD"}
 

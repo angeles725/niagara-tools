@@ -1,6 +1,7 @@
 // Command ci-steps prints every `steps:` item of a GitHub workflow as NUL-terminated
 // <kind> <name> <body> records for scripts/ci-local.sh, which builds and runs it through
-// go/go-tool.sh.
+// go/go-tool.sh. `ci-steps changed` and `ci-steps lint-bats-heredoc` serve `ci-local.sh --changed`
+// (go/internal/cisteps subcommands.go).
 package main
 
 import (

@@ -3,7 +3,7 @@ package prepush
 import "github.com/angeles725/niagara-tools/go/internal/changelog"
 
 // gateRef gates one pushed ref and returns its status: 0 lets it through. The order is the contract:
-// the citation gate and the changelog gate run before the retro gate, whose early exits waive retro
+// the citation gate, the CI lints of the changed files and the changelog gate run before the retro gate, whose early exits waive retro
 // bookkeeping and nothing else.
 func (h hook) gateRef(localSha, remoteSha string) int {
 	if isDeletion(localSha) {
@@ -24,6 +24,9 @@ func (h hook) gateRef(localSha, remoteSha string) int {
 	changed := lines(changedOut)
 
 	if rc := h.liveCiteGate(changed, localSha); rc != 0 {
+		return rc
+	}
+	if rc := h.ciLints(rng); rc != 0 {
 		return rc
 	}
 	if rc := changelog.Main([]string{"--range", rng}, h.s); rc != 0 {
