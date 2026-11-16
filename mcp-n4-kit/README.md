@@ -619,6 +619,8 @@ on 1 to 50 components (at most 200 ops) under the usual dry run, token, write sc
   added and removed; a group or relation already on the target; a value type other than
   `baja:Marker`, `Boolean`, `Double`, `Float`, `Integer`, `Long`, `String`, `DynamicEnum`
   (`ordinal` or `ordinal@range`), `Format` and `RelTime`, or a value that type does not take.
+  The dictionaries on the lab (Niagara, Haystack 4) define tags only of Marker, String,
+  DynamicEnum, Double and Integer, so no defined tag is refused by this list.
 - A removed relation's inverse re-adds the fields it stored (its endpoint ORD as written).
 - In the destructive class: a client such as `n4call` needs `--allow-destructive` to execute it.
 - `add_groups` / `remove_groups: [id]` apply or remove a tag group a dictionary defines: an `r?`
