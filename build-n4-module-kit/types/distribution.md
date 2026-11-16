@@ -314,6 +314,13 @@ service slots an OEM product needs — eliminating per-unit manual wiring.
 
 `[ev: corpus B1021, B1024 §1024.4]`
 
+### Check
+
+A station template's manifest root carries `isStation="true"`. `toolbelt/lint-ntpl-manifest-deps.sh <module-root>`
+(sub-check `ntpl-station`) FAILs a `.ntpl` under a `newStations/` directory whose manifest lacks it, next to its
+checks of every shipped `.ntpl` (both entries present, a well-formed manifest, declared dependencies:
+`types/logic-authoring.md` § Shipping a template module). `[ev: retro gate-followups-and-template-lints Δ8]`
+
 ---
 
 ## 9 · AX→N4 migration readiness

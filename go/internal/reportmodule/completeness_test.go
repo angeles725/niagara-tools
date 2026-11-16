@@ -17,6 +17,7 @@ var notInReport = map[string]string{
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",
 	"lint-guard-pins":          "a kit meta-check of the toolbelt's own lint headers, run by the kit gates",
+	"lint-ntpl-manifest-deps":  "run by hand at the verify gate (BUILD-LOOP.md § 5) until it joins the module members: that re-records every real-member golden and is an open row of retro gate-followups-and-template-lints",
 	"split-package-check":      "a project-level check across every module of a project, not of one module",
 }
 

@@ -40,6 +40,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndrivertaglesscorrelation"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ntplmanifest"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/permissionsxml"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
@@ -135,5 +136,6 @@ func All() []lint.Spec {
 		intrinsiclock.Spec(),
 		lexiconapostrophe.Spec(),
 		slotdefaulttype.Spec(),
+		ntplmanifest.Spec(),
 	}
 }
