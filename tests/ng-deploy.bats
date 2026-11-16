@@ -184,6 +184,7 @@ ENVEOF
 # Test 5: backup filename matches expected format
 # ---------------------------------------------------------------------------
 @test "backup filename matches expected format" {
+    : > "$TMPDIR_T/modules/test-rt.jar"   # a deployed jar: an archive is named only when one is written
     run bash "$SCRIPT" \
         --env-file "$TMPDIR_T/dot_env_local" \
         --no-deploy \
@@ -191,6 +192,14 @@ ENVEOF
     # Even if exit is non-zero due to other issues, check that any _backups/ reference
     # in stdout matches the naming pattern
     [[ "$output" =~ _backups/test-pre-[0-9]{8}-[0-9]{6}\.tar\.gz ]]
+}
+
+@test "NG-backup-nothing: a module with no jar in the station names no archive and makes no _backups directory" {
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/dot_env_local" --no-deploy --mode A
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"backup: no existing test-{rt,ux,wb}.jar in $TMPDIR_T/modules; nothing to archive"* ]]
+    [[ "$output" != *"_backups/"* ]]
+    [ ! -e "$TMPDIR_T/_backups" ]
 }
 
 # ---------------------------------------------------------------------------
