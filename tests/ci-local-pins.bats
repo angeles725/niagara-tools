@@ -66,7 +66,7 @@ fake_bats_tarball() {
 # js_root <node exit> — a copy of the replay in a root with no npm tools installed, a node that answers
 # require.resolve with <node exit>, a workflow with CI's npm step and a Go step that exports the variable.
 js_root() {
-  R="$TMPDIR_T/root"
+  R="${TMPDIR_T:?}/root"
   rm -rf "$R"
   mkdir -p "$R/scripts/lib" "$R/.github/workflows" "$TMPDIR_T/nodebin" "$TMPDIR_T/cg/init.scope"
   cp "$ROOT/scripts/ci-local.sh" "$R/scripts/"
@@ -87,26 +87,32 @@ js_root() {
     '          echo "require=${KIT_REQUIRE_JS_TOOLS:-unset}"' > "$R/.github/workflows/ci.yml"
 }
 
+# js_replay [args] — the replay in js_root with the fake node first on PATH and the host's acorn settings
+# cleared: KIT_ACORN or KIT_NODE exported on a developer or CI host would otherwise find acorn. (T22)
+js_replay() {
+  env -u KIT_ACORN -u KIT_NODE -u KIT_REQUIRE_JS_TOOLS PATH="$TMPDIR_T/nodebin:$PATH" CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" \
+    CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" "$R/scripts/ci-local.sh" "$@"
+}
+
 @test "CL23: --only of the Go step on a host without acorn unsets KIT_REQUIRE_JS_TOOLS with a NOTE; with acorn it stays" {
   # Mutation: CL23 -- dropping js_tools_guard keeps require=1 and the vendorfloor tests fail on a host without acorn.
   js_root 1
-  PATH="$TMPDIR_T/nodebin:$PATH" CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" \
-    run "$R/scripts/ci-local.sh" --only 'Go gofmt'
+  run js_replay --only 'Go gofmt'
   [ "$status" -eq 0 ]
   [[ "$output" == *"NOTE: node or acorn is not installed and the npm step is not part of this run"*"KIT_REQUIRE_JS_TOOLS unset for 'Go gofmt + vet + test (go/)'"* ]]
   [[ "$output" == *"require=unset"* ]]
   [[ "$output" != *"npm-ran"* ]]
   # a host that resolves acorn keeps CI's strict setting, with no NOTE
   js_root 0
-  PATH="$TMPDIR_T/nodebin:$PATH" CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" \
-    run "$R/scripts/ci-local.sh" --only 'Go gofmt'
+  run js_replay --only 'Go gofmt'
   [ "$status" -eq 0 ]
   [[ "$output" == *"require=1"* ]]
   [[ "$output" != *"NOTE: node or acorn"* ]]
   # the whole replay runs the npm step first: nothing to change there
   js_root 1
-  PATH="$TMPDIR_T/nodebin:$PATH" CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" \
-    run "$R/scripts/ci-local.sh"
+  run js_replay
+  [ "$status" -eq 0 ]
   [[ "$output" == *"npm-ran"* ]]
   [[ "$output" == *"require=1"* ]]
+  [[ "$output" != *"NOTE: node or acorn"* ]]
 }
