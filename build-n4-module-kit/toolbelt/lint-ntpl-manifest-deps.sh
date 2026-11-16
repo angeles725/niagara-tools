@@ -28,7 +28,9 @@
 #                  *.px entry (each <import><module name>, each module:// ORD) uses, that no <dependency>
 #                  names (a part counts: control-rt lists control) and the installation does not ship; baja
 #                  and the module's own parts are exempt. One row per entry, names sorted; a bog or Px entry
-#                  that is not well-formed XML, or inflates past 32 MiB, is a FAIL row naming it.
+#                  that is not well-formed XML, or inflates past 32 MiB, is a FAIL row naming it; the entries
+#                  of one archive share 128 MiB in all, and past it one FAIL row names the first entry not
+#                  read and nothing more of that archive is read.
 #                  [ev: retro ntpl-alias-napl-k4 Δ1]
 #
 # Stock modules: a station template lists every module its station uses, most of them shipped by every

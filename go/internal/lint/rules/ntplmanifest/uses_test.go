@@ -79,3 +79,28 @@ func TestApplicationArchiveIsATemplate(t *testing.T) {
 	expect(t, "two application archives", root, 1, "FAIL  ntpl-entries  @ROOT@/ModA-rt/src/app/App.napl: lacks template-manifest.xml\n"+
 		undeclaredRow("ModA-rt/src/app/B.NAPL", "ghost-rt"))
 }
+
+// pxOf is a Px file that imports module and is padded with a comment to size bytes in all.
+func pxOf(module string, size int) string {
+	head := "<px version=\"1.0\"><import><module name=\"" + module + "\"/></import><!--"
+	return head + strings.Repeat(" ", size-len(head)-len("--></px>")) + "--></px>"
+}
+
+// TestUsesReadBounds (review of #702): one bog or Px entry over maxUsesRead is a FAIL row naming it and the
+// bound, the other entries still read; and the entries of one archive share a budget of maxUsesTotal inflated
+// bytes: past it one FAIL row names the archive's limit and the first entry not read, and nothing more of the
+// archive is read, however many entries it holds.
+func TestUsesReadBounds(t *testing.T) {
+	t.Parallel()
+	big := moduleRoot(t, map[string]string{tpl: ntpl(t, entry{bogEntry, bog}, entry{manifestEntry, manifestXML("")},
+		entry{"px/Big.px", pxOf("vendorx", maxUsesRead+1)}, entry{"px/Small.px", pxOf("vendory", 200)})})
+	expect(t, "one entry over the bound", big, 1,
+		"FAIL  ntpl-uses  @ROOT@/"+tpl+": px/Big.px inflates past 33554432 bytes -- not read\n"+
+			"FAIL  ntpl-uses  @ROOT@/"+tpl+": px/Small.px uses vendory: no <dependency> of template-manifest.xml names them, and the installation @HOME@ does not ship them\n")
+	many := []entry{{bogEntry, bog}, {manifestEntry, manifestXML("")}}
+	for _, n := range []string{"a", "b", "c", "d", "e"} {
+		many = append(many, entry{"px/" + n + ".px", pxOf("baja", maxUsesTotal/4)})
+	}
+	expect(t, "entries over the archive's budget", moduleRoot(t, map[string]string{tpl: ntpl(t, many...)}), 1,
+		"FAIL  ntpl-uses  @ROOT@/"+tpl+": the bog and Px entries inflate past 134217728 bytes in all, the bound of one archive -- px/d.px and every entry after it not read\n")
+}

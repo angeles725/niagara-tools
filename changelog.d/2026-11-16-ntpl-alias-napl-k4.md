@@ -6,5 +6,7 @@
   `control`), unless the installation ships it (`--niagara-home`, else `NIAGARA_HOME`), it is `baja`, or it is
   one of the module's own parts. One row per entry, names sorted: FAIL with the installation's module list, WARN
   without it. A bog or Px entry that is not well-formed XML, or inflates past 32 MiB, is a FAIL row naming it.
+- The bog and Px entries of one archive are read within 128 MiB inflated in all (32 MiB each): past it one
+  `FAIL  ntpl-uses` row names the limit and the first entry not read, and nothing more of that archive is read.
 - `.napl` application templates (the same zip) are checked like `.ntpl`, the extension in any letter case.
 - `report-module` relays the new rows through its existing template lint member.
