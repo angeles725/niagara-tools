@@ -63,6 +63,9 @@ func newFixture(t *testing.T) *fixture {
 	f.write(f.env, "MODULE_NAME=demo\nGRADLEW_PATH="+f.src+"/gradlew\nNIAGARA_HOME=\"/n4/niagara home\"\n"+
 		"NIAGARA_USER_HOME=/n4/user\nJAVA_HOME=/n4/jdk8\nSTATION_MODULES_DIR="+f.modules+"\n"+
 		"EXPECTED_RT_TYPES=9\nEXPECTED_UX_TYPES=9\nFIRST_DEPLOY=1\n")
+	// The module names its signer as the kit's signing block reads it, and no gradle.properties of the host is read.
+	f.write(f.src+"/gradle.properties", "niagaraSigningAlias=acmesigner\n")
+	t.Setenv("GRADLE_USER_HOME", d+"/gradle-user-home")
 	t.Setenv("PATH", f.bin)
 	t.Setenv("VERIFY_MODULE_BIN", d+"/tools/vm.sh")
 	t.Setenv("SCHEMA_RISK_BIN", d+"/tools/sr.sh")

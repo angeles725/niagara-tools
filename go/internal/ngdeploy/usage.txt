@@ -20,6 +20,8 @@ Options:
   --strict-slotomatic      Abort with exit 15 if annotation changes detected without --with-slotomatic
   --no-gate                Skip the verify-module.sh gate (default: on for mode A/C). Without
                              --no-gate a MISSING gate binary blocks the deploy (exit 50).
+                             The gate is run with --src and with --expected-signer <signer>: see
+                             "The signer the gate expects" below.
   --first-deploy           The module was never deployed: skip the schema-risk precheck (no
                              baseline to diff). Same as FIRST_DEPLOY=1 in the env file
                              (an exported FIRST_DEPLOY in the shell is ignored).
@@ -54,6 +56,17 @@ NIAGARA_HOME and its modules directory:
   the built jars stay there. When STATION_MODULES_DIR is that same directory (symbolic links resolved) a line
   says so, the version-bump precheck compares with the jar that was there before the build, and the copy step
   copies nothing: it checks that the directory holds the jars of build/libs.
+
+The signer the gate expects:
+  The verify-module gate is told who must have signed the jars, resolved as toolbelt/build.sh resolves it: the
+  niagaraSigningAlias gradle property (ORG_GRADLE_PROJECT_niagaraSigningAlias in the environment or the env
+  file, else GRADLE_USER_HOME/gradle.properties, else gradle.properties beside gradlew), else the one signer of
+  the module's jars of the mode that were in <NIAGARA_HOME>/modules before the build, never the signing
+  plugin's default development signer (NIAGARA4). A jar signed with another key then fails the gate (exit 50).
+  When neither names a signer the gate accepts any signature and, after the gate's rows, the deploy prints
+  "WARN no niagaraSigningAlias is configured and no deployed jar gives a signer, ..." (or "... the deployed
+  jar itself carries the signing plugin's default development signer (NIAGARA4), ..."); the exit code is the
+  same with or without the warning.
 
 The env file and the flags:
   An option variable in the env file (MODE, KEEP_N, FULL_BACKUP, NO_DEPLOY, WITH_SLOTOMATIC, STRICT_SLOTOMATIC,
@@ -102,7 +115,8 @@ Exit codes:
       last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional)
   12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
   50  verify failed: type count mismatch (a jar with no type entry counts 0), a module.xml that unzip cannot
-      read, BUILD_ID not found, or verify-module gate failed/missing
+      read, BUILD_ID not found, or verify-module gate failed/missing (a jar not signed by the expected signer
+      fails the gate)
       (every check runs on build/libs before the copy: nothing reaches STATION_MODULES_DIR, and
       <NIAGARA_HOME>/modules is put back as it was before the build)
   51  version-bump precheck: the built jar's bytes differ from the deployed jar but its vendorVersion did not change

@@ -19,6 +19,11 @@ setup() {
     # niagara_home that is not one, and no test may name a real installation.
     mkdir -p "$TMPDIR_T/niagara-home"
     : > "$TMPDIR_T/niagara-home/.niagara-mirror"
+    # The module names its signer (the gradle root is fakebin/), and no gradle.properties of the host is read: the
+    # deploy gate is told to expect that signer, and without one the deploy prints a WARN.
+    printf 'niagaraSigningAlias=testsigner\n' > "$TMPDIR_T/fakebin/gradle.properties"
+    export GRADLE_USER_HOME="$TMPDIR_T/gradle-user-home"
+    unset ORG_GRADLE_PROJECT_niagaraSigningAlias
 
     # --- fake gradlew ---
     # Writes every invocation to gradlew.calls.log (one line per call, args space-separated)
@@ -892,6 +897,27 @@ STUB
     [ "$status" -eq 0 ]
     run find "$TMPDIR_T/modules" -name '*.ng-deploy-*'
     [ -z "$output" ]
+}
+
+@test "NG-gate-signer: the deploy gate gets the signer build.sh expects; with none configured the deploy WARNs and the exit code is the same" {
+    # Mutation: NG-gate-signer -- a gate that is not told the signer passes a jar signed with any key.
+    _gate_env; _fake_gate 0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$TMPDIR_T/gate.args")" == "--src $TMPDIR_T/fakebin/test --expected-signer testsigner "*"test-rt.jar "*"test-ux.jar" ]]
+    [[ "$output" != *"niagaraSigningAlias"* ]]
+
+    rm "$TMPDIR_T/fakebin/gradle.properties"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$TMPDIR_T/gate.args")" != *"--expected-signer"* ]]
+    [[ "$output" == *"[ng-deploy] WARN no niagaraSigningAlias is configured and no deployed jar gives a signer, so the gate accepts any signature"* ]]
+    [[ "$output" == *"(set it: ORG_GRADLE_PROJECT_niagaraSigningAlias=<alias> in the env file, or niagaraSigningAlias=<alias> in gradle.properties)"* ]]
+
+    printf 'ORG_GRADLE_PROJECT_niagaraSigningAlias=fromenvfile\n' >> "$TMPDIR_T/env_gate"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    grep -q -- "--expected-signer fromenvfile " "$TMPDIR_T/gate.args"
 }
 
 # ===========================================================================

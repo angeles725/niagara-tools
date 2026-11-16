@@ -14,11 +14,11 @@ func TestTheVerifyModuleGate(t *testing.T) {
 		want    string
 		call    string // the gate call, "" when it must not run
 	}{
-		{"passes", func(*fixture) {}, nil, ExitOK, "[ng-deploy] gate: verify-module on demo-rt.jar demo-ux.jar\n[ng-deploy] gate ok\n[ng-deploy] copy ok\n", "vm.sh <--src> <SRC/demo> <RT> <UX>\n"},
-		{"mode C gates the rt jar only", func(*fixture) {}, []string{"--mode", "C"}, ExitOK, "[ng-deploy] gate: verify-module on demo-rt.jar\n[ng-deploy] gate ok\n", "vm.sh <--src> <SRC/demo> <RT>\n"},
+		{"passes", func(*fixture) {}, nil, ExitOK, "[ng-deploy] gate: verify-module on demo-rt.jar demo-ux.jar\n[ng-deploy] gate ok\n[ng-deploy] copy ok\n", "vm.sh <--src> <SRC/demo> <--expected-signer> <acmesigner> <RT> <UX>\n"},
+		{"mode C gates the rt jar only", func(*fixture) {}, []string{"--mode", "C"}, ExitOK, "[ng-deploy] gate: verify-module on demo-rt.jar\n[ng-deploy] gate ok\n", "vm.sh <--src> <SRC/demo> <--expected-signer> <acmesigner> <RT>\n"},
 		{"fails", func(f *fixture) { f.t.Setenv("FAKE_VM_EXIT", "1") }, nil, ExitVerify,
-			"err:[ng-deploy] ERROR verify-module gate failed; jars not fit to deploy (use --no-gate to override)\n", "vm.sh <--src> <SRC/demo> <RT> <UX>\n"},
-		{"fails in mode C", func(f *fixture) { f.t.Setenv("FAKE_VM_EXIT", "1") }, []string{"--mode", "C"}, ExitVerify, "err:verify-module gate failed", "vm.sh <--src> <SRC/demo> <RT>\n"},
+			"err:[ng-deploy] ERROR verify-module gate failed; jars not fit to deploy (use --no-gate to override)\n", "vm.sh <--src> <SRC/demo> <--expected-signer> <acmesigner> <RT> <UX>\n"},
+		{"fails in mode C", func(f *fixture) { f.t.Setenv("FAKE_VM_EXIT", "1") }, []string{"--mode", "C"}, ExitVerify, "err:verify-module gate failed", "vm.sh <--src> <SRC/demo> <--expected-signer> <acmesigner> <RT>\n"},
 		{"mode B has no gate", func(f *fixture) { f.t.Setenv("FAKE_VM_EXIT", "1") }, []string{"--mode", "B"}, ExitOK, "[ng-deploy] copy ok\n", ""},
 		{"--no-gate", func(f *fixture) { f.t.Setenv("FAKE_VM_EXIT", "1") }, []string{"--no-gate"}, ExitOK, "[ng-deploy] copy ok\n", ""},
 		{"a missing gate blocks", func(f *fixture) { f.t.Setenv("VERIFY_MODULE_BIN", f.dir+"/absent") }, nil, ExitVerify,

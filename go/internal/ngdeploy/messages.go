@@ -1,5 +1,7 @@
 package ngdeploy
 
+import "github.com/angeles725/niagara-tools/go/internal/modjar"
+
 // Every line the deploy prints, apart from the usage text (usage.txt). say and warn add the "[ng-deploy] "
 // prefix and the newline; fail adds "[ng-deploy] ERROR " too.
 const (
@@ -90,6 +92,11 @@ const (
 	msgGate             = "gate: verify-module on %s"
 	msgGateFailed       = "verify-module gate failed; jars not fit to deploy (use --no-gate to override)"
 	msgGateOK           = "gate ok"
+	// The warnings of a gate with no signer to expect: the texts build.sh prints (modjar), with the ways this
+	// tool has to set the alias. warnDevSigner takes the development signer's name.
+	warnNoSigner  = "WARN " + modjar.WhyNoSigner + signerRemedy
+	warnDevSigner = "WARN " + modjar.WhyDevSigner + signerRemedy
+	signerRemedy  = " (set it: " + modjar.GradleEnvPrefix + modjar.AliasProperty + "=<alias> in the env file, or " + modjar.AliasProperty + "=<alias> in gradle.properties)"
 
 	// the copy and its outcomes are in messages_copy.go; the deploy record and what follows it
 	// msgRecordFailed takes the record file and one of the three reasons after it.
