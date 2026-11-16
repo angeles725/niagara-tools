@@ -74,3 +74,37 @@ func TestUnreadableEntryCannotBeVerified(t *testing.T) {
 			"build.sh: deployed-baseline drift gate could not verify the jar(s) above")
 	}
 }
+
+// TestContentHashSizeChanges: with the names unchanged, an entry that grows is a change of what ships; and two
+// jars whose names and bytes concatenate to one stream still differ, because each entry's size is hashed.
+func TestContentHashSizeChanges(t *testing.T) {
+	const a, b = "com/x/A.class", "com/x/B.class"
+	type jar = [][2]string
+	for name, c := range map[string]struct{ deployed, built jar }{
+		"one entry grows": {jar{{a, "xy"}, {b, "z"}}, jar{{a, "xyq"}, {b, "z"}}},
+		"sizes differ, names and bytes concatenate equal": {
+			jar{{a, "p" + b + "\x00q"}, {b, "r"}},
+			jar{{a, "p"}, {b, "q" + b + "\x00r"}}},
+	} {
+		f := newFixture(t)
+		f.jarOf(f.deployed("rt"), "1.0.0", c.deployed...)
+		f.jarOf(f.built("rt"), "1.0.0", c.built...)
+		f.wants(name, f.build(), ExitDrift, "Foo-rt shipped bytes changed", "build.sh: deployed-baseline drift detected")
+	}
+}
+
+// TestIdenticalTreesHashEqual: the same entries with the same bytes are unchanged whatever order the jar
+// stores them in, at an unchanged version too.
+func TestIdenticalTreesHashEqual(t *testing.T) {
+	x, y := [2]string{"com/x/A.class", "xy"}, [2]string{"com/x/B.class", "z"}
+	for name, built := range map[string][][2]string{"same order": {x, y}, "stored in another order": {y, x}} {
+		f := newFixture(t)
+		f.signs()
+		f.jarOf(f.deployed("rt"), "1.0.0", x, y)
+		f.jarOf(f.built("rt"), "1.0.0", built...)
+		f.wants(name, f.build(), ExitOK)
+		if f.err != "" {
+			t.Errorf("%s: stderr %q", name, f.err)
+		}
+	}
+}
