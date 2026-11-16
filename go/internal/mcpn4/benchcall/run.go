@@ -15,6 +15,7 @@ import (
 type options struct {
 	calls       string
 	dryRunOnly  bool
+	execute     bool // --execute: without it every write is a dry run only
 	destructive bool // --allow-destructive
 	timeout     float64
 	server      []string
@@ -50,7 +51,7 @@ func Main(argv []string, s cli.Stdio, environ []string) int {
 		fmt.Fprintf(s.Err, "%s: %s\n", prog, livesmoke.Scrub(err.Error(), secrets))
 		return 1
 	}
-	r := &runner{client: client, out: func(line string) { fmt.Fprintln(s.Out, livesmoke.Scrub(line, secrets)) }, dryRunOnly: o.dryRunOnly}
+	r := &runner{client: client, out: func(line string) { fmt.Fprintln(s.Out, livesmoke.Scrub(line, secrets)) }, dryRunOnly: !o.execute}
 	for _, c := range calls {
 		if err := r.run(c); err != nil {
 			fmt.Fprintf(s.Err, "%s: %s: %s\n", prog, c.tool, livesmoke.Scrub(err.Error(), secrets))
@@ -73,9 +74,14 @@ func parse(argv []string) (*options, error) {
 			if o.calls == "" || len(o.server) == 0 {
 				return nil, fmt.Errorf("--calls FILE and a server command after -- are required")
 			}
+			if o.execute && o.dryRunOnly {
+				return nil, fmt.Errorf("--execute and --dry-run-only exclude each other")
+			}
 			return o, nil
 		case "--dry-run-only":
 			o.dryRunOnly = true
+		case "--execute":
+			o.execute = true
 		case "--allow-destructive":
 			o.destructive = true
 		case "--calls", "--call-timeout":

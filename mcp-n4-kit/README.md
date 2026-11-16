@@ -752,7 +752,8 @@ on 1 to 50 components (at most 200 ops) under the usual dry run, token, write sc
   The dictionaries on the lab (Niagara, Haystack 4) define tags only of Marker, String,
   DynamicEnum, Double and Integer, so no defined tag is refused by this list.
 - A removed relation's inverse re-adds the fields it stored (its endpoint ORD as written).
-- In the destructive class: a client such as `n4call` needs `--allow-destructive` to execute it.
+- In the destructive class: a client such as `n4call` executes it only with `--execute`,
+  `--allow-destructive` and the line's own `"execute": true`.
 - `add_groups` / `remove_groups: [id]` apply or remove a tag group a dictionary defines: an `r?`
   relation (`n:tagGroup` to `slot:/Services/TagDictionaryService/<dict>/tagGroupDefinitions/<g>`,
   flag `r`); the read-back lists the implied tags and any group tag missing from them.
@@ -1323,14 +1324,26 @@ go/bin/n4call --calls calls.jsonl -- go/bin/mcp-n4 --station <NAME>=https://<hos
 ```
 
 Each line of the file is `{"tool": NAME, "args": {...}}`; with `"write": true` the call is sent
-with `dry_run=true` and then executed with the `confirmation_token` it returned
-(`--dry-run-only` stops after the dry run). A write of a destructive tool (`n4_remove_component`,
-`n4_rollback`, `n4_save_station`, `n4_ack_alarm`: the server's `destructiveHint`) is refused with exit 2 before
-the server starts unless `--allow-destructive` or `--dry-run-only` is given, and a run with
-writes says on stderr whether they execute. Output is one JSON line per request (`tool`,
-`phase`, `error`, `result`); credential values are masked; the run stops with exit 1 at the
-first tool error. The server command line after `--` is the operator's: scopes, tier opt-ins
-and station homes are whatever it names, n4call adds nothing.
+with `dry_run=true` and, only when `--execute` is given, executed with the `confirmation_token`
+that dry run returned. Without `--execute` every write is a dry run only (`--dry-run-only` says
+so explicitly and excludes `--execute`), so a flag lost on the way to n4call never executes a
+write. A destructive write (`n4_remove_component`, `n4_rollback`, `n4_save_station`,
+`n4_ack_alarm`, `n4_set_tags`: the server's `destructiveHint`) executes only when the run has
+`--execute` and `--allow-destructive` AND its own line carries `"execute": true`
+(`{"tool": "n4_remove_component", "write": true, "execute": true, "args": {...}}`); a run with
+`--execute` that misses either is refused with exit 2 before the server starts, naming the line.
+`"execute"` on a line without `"write": true` is a usage error. A run with writes says on stderr
+whether they execute. Output is one JSON line per request (`tool`, `phase`, `error`, `result`);
+credential values are masked; the run stops with exit 1 at the first tool error. The server
+command line after `--` is the operator's: scopes, tier opt-ins and station homes are whatever it
+names, n4call adds nothing.
+
+The server side needs no client discipline: a confirmation token is issued only by a dry run,
+keyed by a random per-process key, bound to the tool, the arguments, the plan hash (which names
+the connect session) and an expiry, and spent once; a token from another process, another connect
+session or no dry run at all is refused (`blackbox.TestATokenFromAnEarlierServerProcessIsRefusedAfterARestart`,
+`blackbox.TestAWellFormedTokenNoDryRunIssuedIsRefused`). What a client must not do is chain the dry
+run into the execution by default: that is what the n4call rules above prevent.
 
 A laboratory station has no field device to prove device, proxy-point, polling and write work
 against: `go/bin/lab-sim` (`go/cmd/lab-sim`) simulates one on loopback (Modbus TCP, a scenario

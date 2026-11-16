@@ -9,7 +9,7 @@ import (
 
 // Lines a run with writes prints on stderr before the server starts.
 const (
-	modeDryRunOnly = "dry run only: no write executes"
+	modeDryRunOnly = "dry run only: no write executes (only --execute executes writes)"
 	modeExecute    = "writes execute (dry run, then the confirmation token)"
 )
 
@@ -28,17 +28,25 @@ func destructiveTools() map[string]bool {
 	return out
 }
 
-// checkDestructive refuses a calls file that writes with a destructive tool unless the run is a
-// dry run only or the operator passed --allow-destructive.
+// checkDestructive refuses, in a run that executes, a destructive write unless the operator
+// passed --allow-destructive and the line carries its own "execute": true. A run without
+// --execute dry-runs every write, so a lost flag never executes one (retro 2026-11-16 row M17).
 func checkDestructive(calls []call, o *options) error {
-	if o.dryRunOnly || o.destructive {
+	if !o.execute {
 		return nil
 	}
 	destructive := destructiveTools()
 	for _, c := range calls {
-		if c.write && destructive[c.tool] {
-			return fmt.Errorf("%s: line %d: %s is a destructive tool: pass --allow-destructive to execute it, or --dry-run-only",
-				o.calls, c.line, c.tool)
+		if !c.write || !destructive[c.tool] {
+			continue
+		}
+		head := fmt.Sprintf("%s: line %d: %s is a destructive tool: ", o.calls, c.line, c.tool)
+		if !c.execute {
+			return fmt.Errorf(`%sits line needs its own "execute": true to execute (a run-wide flag never `+
+				"executes a destructive call), or run without --execute for a dry run", head)
+		}
+		if !o.destructive {
+			return fmt.Errorf("%spass --allow-destructive to execute it, or run without --execute for a dry run", head)
 		}
 	}
 	return nil
@@ -49,7 +57,7 @@ func checkDestructive(calls []call, o *options) error {
 func writeMode(calls []call, o *options) string {
 	for _, c := range calls {
 		if c.write {
-			if o.dryRunOnly {
+			if !o.execute {
 				return modeDryRunOnly
 			}
 			return modeExecute
