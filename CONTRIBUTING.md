@@ -75,6 +75,11 @@ already set. [ev: retro campaign11-client-root; openspec/changes/archive/2026-09
   Prove the guard through the command's interface with the data injected: an input, a fixture tree, or the table
   the command is built over (`go/internal/vendorfloor` `TestSharedMethodNameIsAnEnvFault` runs the command over a
   table that breaks the rule). Editing a FIXTURE the tool reads is data, not the tool. `[ev: retro go-lint-vendor-floor Δ2]`
+- **A bats case that runs a `--home` script passes `--home <throwaway dir>` or a `HOME=` override on that command.**
+  `scripts/install-skill.sh` and `scripts/check-skill-drift.sh` default to the real home of whoever runs the suite,
+  `--dry-run` and `--help` included. `tests/shell-hygiene.bats` SH2 fails on a case that runs one of them (by path or
+  through a variable assigned the path) with neither; a here-document body is not scanned.
+  `[ev: retro go-install-tools-port Δ3]`
 - **An observed mutation is a review-time proof, run by hand outside the suite; shape it so it neutralizes the guard
   and nothing else.** Neutralize a status check as
   `if ! { cmd || true; }; then` or by deleting its `had_err=1` / `exit 3` line — never `if ! cmd || true; then`, which
@@ -133,6 +138,10 @@ Tool-authoring rules for a Go tool or port (what to port and the lint stack: `bu
   its own droppable commit with a seeded RED test, and the PR lists them. A port is not done while it keeps a known
   lie: an unfixed one is an owed `ledger.d/` item. `[ev: retro go-check-facets-card Δ1]`
   `[ev: retro go-sweep-fold-audit Δ1]` `[ev: retro truth-audit Δ1]`
+  One exception: a false success the differential finds (the old tool exits 0 over a result it did not check) is
+  turned into a refusal inside the port commit, declared in the changelog fragment and pinned by a named test. Any
+  other fix (a false finding, a wrong message, a cosmetic or timing defect) stays a separate droppable commit.
+  `[ev: retro go-install-tools-port Δ4]`
 - **Compare finding counts across a port.** A port can reveal a dead rule. Run old and new on the real trees,
   compare the finding counts, and explain every new or lost row in the PR (a fixed dead rule, or a regression).
   Example: the lint-structure L10/L14 truth fixes took the real-tree output from 56 to 86 rows, each with a line
@@ -237,6 +246,11 @@ Before `git commit`:
       bats 1.14 runs 0 tests (`parallel: command not found`, `Executed 0 instead of expected N tests`) and prints no
       `not ok` line, so a check that greps for failures reads it as green. A parallel run must assert that its `ok`
       count equals `bats --count tests/*.bats`. `[ev: retro retro-fold-campaign-close Δ2]`
+      A case that narrows `PATH` until `go` is unreachable never runs a launcher over the shared `go/bin/`: that
+      binary is current only until a Go source changes, and an edit, a checkout or another build during the run makes
+      the launcher ask for a rebuild it cannot do (exit 3). `tests/preflight.bats` copies the launcher and its binary
+      once per file (`setup_file`, `PREFLIGHT_NOGO`) for those cases, and its wall-clock case (`PF-jarlock-timing`)
+      keeps seconds of margin and asserts that the measured command ran. `[ev: retro go-scaffold-module-port Δ2]`
 - [ ] `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash` exits 0 (no warnings on changed lines).
 - [ ] Or replay the whole CI job: `scripts/ci-local.sh -j 3` runs every `ci.yml` step under GitHub's `bash -e` (no
       pipefail) with the pinned shellcheck v0.10.0 from a sha256-checked cache; a newer local shellcheck misses or

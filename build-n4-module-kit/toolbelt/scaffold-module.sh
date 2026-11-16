@@ -22,18 +22,23 @@
 # set niagaraSigningAlias and niagaraSigningProfile as gradle properties before the first build.
 # This script is VCS-free by design. version control is never invoked.
 #
-# Exit: 0 ok · 2 usage or invalid ModuleName or unknown --type · 3 env (skeleton missing,
+# Exit: 0 ok · 2 usage, invalid ModuleName, unknown --type or a refused option value · 3 env (skeleton missing,
 #        out-dir not creatable, or <out-dir>/<ModuleName> already exists)
+# A run that fails after it created <out-dir>/<ModuleName> (a failed write, a missing template) removes that
+# directory and says so in a second stderr line (`removed the partial <path>`, or `could not remove the partial
+# <path> (<error>): its files stay`); the exit code stays the fault's (3). A destination that existed before the run
+# is refused and never touched; the out-dir itself is never removed.
 #
 # Add a concern to an emitted (or any mapped) module:
 #   scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]
 # execs toolbelt/module-map.sh add-concern with the same arguments (its header has the contract and exits).
 # [ev: retro modularity-structure Δ1]
 #
-# Option values are sed replacement text, as they always were: `&` (and `\0`) is the token being replaced and a
-# backslash escapes the next character (`\&` a literal &, `\n` a newline). A value sed rejects (an unescaped `|` or
-# newline, a trailing `\`, `\1`-`\9`) or a GNU case-conversion or numeric escape (`\L \U \l \u \E \c \d \o \x`) is exit 2
-# with nothing written; a failed write is exit 3.
+# Option values are literal text: every character of a value is written as typed (`&` is `&`, `\1` is `\1`, `|` is
+# `|`), and inserted text is never rewritten by another substitution. The substituted options are --vendor,
+# --target-version and --plugin-version. --vendor must be one Java package segment once lowercased (an ASCII letter
+# or _ first, then ASCII letters, digits or _); a --target-version or --plugin-version that holds a newline is
+# refused by name. Either refusal is exit 2 with nothing written; a failed write is exit 3.
 #
 # Implementation: go/internal/scaffoldmodule (command go/cmd/scaffold-module; go/README.md). This wrapper is the
 # stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/scaffold-module when it is missing or older than a

@@ -42,13 +42,14 @@ func TestVersionLedger(t *testing.T) {
 	}
 }
 
-// A missing template is exit 3 after the fixture copy, naming the template path the launcher resolved.
+// A missing template is exit 3 after the fixture copy (which is then removed), naming the template path the launcher resolved.
 func TestMissingTemplates(t *testing.T) {
 	t.Run("station-test", func(t *testing.T) {
 		tb := newKit(t, "templates/station-test")
 		out := t.TempDir()
 		r := run(t, tb, "Foo", out)
-		want := "scaffold-module: station-test template not found: " + tb + "/../templates/station-test\n"
+		want := "scaffold-module: station-test template not found: " + tb + "/../templates/station-test\n" +
+			"scaffold-module: removed the partial " + out + "/Foo\n"
 		if r.code != 3 || r.out != "" || r.err != want {
 			t.Errorf("code=%d out=%q err=%q", r.code, r.out, r.err)
 		}
@@ -58,8 +59,10 @@ func TestMissingTemplates(t *testing.T) {
 	})
 	t.Run("version ledger", func(t *testing.T) {
 		tb := newKit(t, "templates/VERSION-LEDGER.md")
-		r := run(t, tb, "Foo", t.TempDir(), "--type", "driver")
-		want := "scaffold-module: version-ledger template not found: " + tb + "/../templates/VERSION-LEDGER.md\n"
+		out := t.TempDir()
+		r := run(t, tb, "Foo", out, "--type", "driver")
+		want := "scaffold-module: version-ledger template not found: " + tb + "/../templates/VERSION-LEDGER.md\n" +
+			"scaffold-module: removed the partial " + out + "/Foo\n"
 		if r.code != 3 || r.out != "" || r.err != want {
 			t.Errorf("code=%d out=%q err=%q", r.code, r.out, r.err)
 		}

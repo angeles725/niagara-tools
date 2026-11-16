@@ -2,7 +2,7 @@
 # install-skill.sh — install a skill launcher into the Claude skills directory.
 #
 # Copies the tracked canonical launcher into <home>/.claude/skills/<skill>/SKILL.md
-# using a sha256 comparison to detect divergence:
+# using a sha256 comparison (computed by the Go command, no sha256 tool needed) to detect divergence:
 #   --skill build-n4-module (default): build-n4-module-kit/skill/SKILL.md
 #   --skill mcp-n4:                    mcp-n4-kit/skill/SKILL.md
 # (the SKILLS table below is the single source of these names and paths)
@@ -31,27 +31,21 @@
 #       (a kit without toolbelt/kit-state.sh is a warning, not an error).
 #   1   Installed copy exists and diverges from the tracked copy; --force absent.
 #   2   Usage error (including an unknown --skill name).
-#   3   Environment error (tracked source missing, no sha256 tool, target directory not creatable,
-#       kit-state failed: the launcher is installed but the kit state is not).
+#   3   Environment error (tracked source missing, no Go toolchain to build the command, target directory not
+#       creatable, kit-state failed: the launcher is installed but the kit state is not).
 #
 # Implementation: the Go module at <repo>/go (go/internal/skillinstall). This wrapper is the stable entry point
-# and keeps two things: the SKILLS table below (data: Go reads that line from this file, for this script and for
-# check-skill-drift.sh) and the up-front sha256 tool check of the contract above (exit 3 before anything else,
-# also before a usage error; the digests themselves are computed in Go). go/go-tool.sh `go_tool_bin` builds
-# go/bin/install-skill when the binary is missing or older than a Go source, then this script execs it.
+# and keeps one thing: the SKILLS table below (data: Go reads that line from this file, for this script and for
+# check-skill-drift.sh). go/go-tool.sh `go_tool_bin` builds go/bin/install-skill when the binary is missing or older
+# than a Go source, then this script execs it.
 # Needs `go` on PATH to build; no Go toolchain or a failed build is exit 3.
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via SCRIPT_DIR
-. "$SCRIPT_DIR/lib/sha256.sh" || exit 3
-
 # The one place that names the skills: "<name>:<tracked launcher, relative to the repo>".
 # The usage text, the error messages and the lookup are all derived from it (go/internal/skillinstall/table.go).
 # shellcheck disable=SC2034  # data, read from this file by the Go command
 SKILLS="build-n4-module:build-n4-module-kit/skill/SKILL.md mcp-n4:mcp-n4-kit/skill/SKILL.md"
-
-sha256_require 'install-skill' || exit 3
 
 # The repository is the one holding the invoked path (never resolved through a symlink), as it always was.
 GO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/go"

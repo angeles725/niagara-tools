@@ -283,20 +283,28 @@ make_tree() {
 }
 
 # ---------------------------------------------------------------------------
-# IS5 — no sha256 tool: fail closed before any write (quality round 8 T8a)
-# The digest is taken inside $( ), where an exit cannot stop the script, so the
-# tool check must run up front.
-# Mutation: IS5 -- dropping the up-front tool check installs on two empty digests (exit 0).
+# IS5 — what the launcher needs before it reaches the Go command: a Go toolchain when the command has to be
+# built, and nothing else. The digests are computed in Go, so no sha256 tool is required.
+# Mutation: IS5b -- restoring the up-front `sha256_require` exits 3 under a PATH with no sha256 tool.
 # ---------------------------------------------------------------------------
-@test "IS5: no sha256sum and no shasum -> exit 3 with the missing-tool message, nothing installed" {
-  BIN="$BATS_TEST_TMPDIR/bin"
-  mkdir -p "$BIN"
-  for t in dirname cut mkdir cp cat; do
-    p="$(command -v "$t")"; if [ -n "$p" ]; then ln -s "$p" "$BIN/$t"; fi
-  done
-  run env HOME=/nonexistent PATH="$BIN" /bin/bash "$SCRIPT" --home "$TEST_HOME"
+@test "IS5: no Go toolchain and no built command -> exit 3 naming go, nothing installed" {
+  # A copy of the launcher beside a Go module with no bin/: the command must be built, and PATH has no go.
+  FAKE="$BATS_TEST_TMPDIR/repo"; BIN="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$FAKE/scripts" "$FAKE/go" "$BIN"
+  cp "$SCRIPT" "$FAKE/scripts/"
+  cp "$REPO_ROOT/go/go-tool.sh" "$REPO_ROOT/go/go.mod" "$FAKE/go/"
+  ln -s "$(command -v dirname)" "$BIN/dirname"
+  run env HOME=/nonexistent PATH="$BIN" /bin/bash "$FAKE/scripts/install-skill.sh" --home "$TEST_HOME"
   [ "$status" -eq 3 ]
-  [[ "$output" == *"install-skill: no sha256 tool found (sha256sum or shasum)"* ]]
+  [ "$output" = "install-skill: go is not on PATH; it is needed to build $FAKE/go/bin/install-skill" ]
   [ ! -e "$TEST_HOME/.claude/skills/build-n4-module" ]
-  [[ "$output" != *"installed"* ]]
+}
+
+@test "IS5b: no sha256sum and no shasum on PATH -> the launcher still installs (digests are computed in Go)" {
+  BIN="$BATS_TEST_TMPDIR/bin"; mkdir -p "$BIN"
+  for t in dirname find; do ln -s "$(command -v "$t")" "$BIN/$t"; done
+  run env HOME=/nonexistent PATH="$BIN" /bin/bash "$SCRIPT" --home "$TEST_HOME"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"sha256"* ]]
+  cmp -s "$TRACKED" "$TEST_HOME/.claude/skills/build-n4-module/SKILL.md"
 }

@@ -62,20 +62,32 @@ _install() { "$REPO/scripts/install-skill.sh" --home "$H" "$@" >/dev/null; }
   [ "$before" = "$after" ]
 }
 
-@test "SD8: no sha256 tool -> exit 3 (never a PASS on two empty digests)" {
+@test "SD8: no Go toolchain and no built command -> exit 3 naming go, never a PASS" {
+  # A copy of the launcher beside a Go module with no bin/: the command must be built, and PATH has no go.
   _install
-  mkdir -p "$TMPDIR_T/bin"
-  for t in printf cut sed awk grep dirname cat head; do
-    p="$(command -v "$t")"; if [ -n "$p" ]; then ln -s "$p" "$TMPDIR_T/bin/$t"; fi
-  done
-  run env PATH="$TMPDIR_T/bin" /bin/bash "$SD" --home "$H"
+  mkdir -p "$TMPDIR_T/repo/scripts" "$TMPDIR_T/repo/go" "$TMPDIR_T/bin"
+  cp "$SD" "$REPO/scripts/install-skill.sh" "$TMPDIR_T/repo/scripts/"
+  cp "$REPO/go/go-tool.sh" "$REPO/go/go.mod" "$TMPDIR_T/repo/go/"
+  ln -s "$(command -v dirname)" "$TMPDIR_T/bin/dirname"
+  run env PATH="$TMPDIR_T/bin" /bin/bash "$TMPDIR_T/repo/scripts/check-skill-drift.sh" --home "$H"
   [ "$status" -eq 3 ]
-  [[ "$output" == *"check-skill-drift: no sha256 tool found (sha256sum or shasum)"* ]]
-  [ "$(printf '%s' "$output" | grep -c 'PASS')" -eq 0 ]
+  [ "$output" = "check-skill-drift: go is not on PATH; it is needed to build $TMPDIR_T/repo/go/bin/check-skill-drift" ]
+}
+
+@test "SD8b: no sha256sum and no shasum on PATH -> the check still runs (digests are computed in Go)" {
+  _install
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via REPO
+  . "$REPO/go/go-tool.sh"
+  go_tool_bin "$REPO/go" check-skill-drift >/dev/null   # built with the full PATH: the narrowed one has no go
+  mkdir -p "$TMPDIR_T/bin"
+  for t in dirname find; do ln -s "$(command -v "$t")" "$TMPDIR_T/bin/$t"; done
+  run env PATH="$TMPDIR_T/bin" /bin/bash "$SD" --home "$H"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  skill-drift"*"build-n4-module"* ]]
 }
 
 @test "SD9: --help prints the header only, never a code line" {
-  run "$SD" --help
+  run env HOME="$H" "$SD" --help
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c 'set -u')" -eq 0 ]
 }

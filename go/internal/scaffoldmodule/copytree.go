@@ -51,13 +51,16 @@ func copyTree(srcRoot, dstRoot string, pathRules, textRules []rule, verbatim fun
 	return nil
 }
 
+// createFile writes one emitted file; a test replaces it to inject a write fault.
+var createFile = os.WriteFile
+
 // writeFile creates path (and its directory) with data. The destination tree is new, so there is no
 // earlier file to keep whole: a plain create, with the mode the caller asks for under the umask.
 func writeFile(path string, data []byte, mode os.FileMode) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, mode)
+	return createFile(path, data, mode)
 }
 
 // regularFiles lists the regular files under root/rel as slash paths relative to root, like

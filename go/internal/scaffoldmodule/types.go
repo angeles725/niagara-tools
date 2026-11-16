@@ -16,6 +16,17 @@ var moduleTypes = []moduleType{
 	{name: "driver", fixture: "MinimalDriver"},
 }
 
+// Option names. substitutedOptions are the ones whose value is written into the emitted tree, in the order
+// a run checks them (checkValues); --type only selects a fixture.
+const (
+	optVendor        = "--vendor"
+	optTargetVersion = "--target-version"
+	optPluginVersion = "--plugin-version"
+	optType          = "--type"
+)
+
+var substitutedOptions = []string{optVendor, optTargetVersion, optPluginVersion}
+
 // Option defaults.
 const (
 	defaultType          = "logic"
