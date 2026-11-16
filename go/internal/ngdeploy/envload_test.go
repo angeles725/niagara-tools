@@ -9,7 +9,7 @@ func TestEnvFileValuesWinOverTheEnvironmentAndReachEveryCommand(t *testing.T) {
 	f := newFixture(t)
 	t.Setenv("MODULE_NAME", "ambient")
 	f.write(f.env, f.read(f.env)+"\n# a comment\nexport FILEKEY='single $quoted'\nBUILD_ID=\"b 42\"   # trailing\n")
-	f.want(f.run("--no-backup", "--no-deploy", "--mode", "C"), ExitOK, "[ng-deploy] build: mode C — :demo-rt:clean\n:demo-rt:jar\n")
+	f.want(f.run("--no-backup", "--no-deploy", "--mode", "C"), ExitOK, "[ng-deploy] build: mode C — :demo-rt:clean :demo-rt:jar\n")
 	if !strings.Contains(f.envLog(), "gradlew MODE=[unset] FD=[1] FILEKEY=[single $quoted] MN=[demo] SELF=[unset]\n") {
 		t.Errorf("gradlew did not see the env file:\n%s", f.envLog())
 	}
@@ -22,8 +22,31 @@ func TestAMissingEnvFileIsToleratedAndTheEnvironmentIsUsed(t *testing.T) {
 		t.Setenv(k, v)
 	}
 	f.noEnvFile = true
-	for _, file := range []string{f.dir + "/absent", f.modules} { // a directory is skipped as an absent file is
+	for _, file := range []string{f.dir + "/absent", f.dir + "/absent/below", f.env + "/below", "/dev/null"} {
 		f.want(f.run("--env-file", file, "--no-backup", "--no-deploy", "--mode", "C"), ExitOK, "[ng-deploy] build ok\n")
+		if f.err != warnNoBackup {
+			t.Errorf("%s: stderr %q", file, f.err)
+		}
+	}
+}
+
+// A directory is not "no env file": the operator named the wrong path, and the deploy would run on the
+// ambient environment alone.
+func TestAnEnvFileThatIsADirectoryIsRefused(t *testing.T) {
+	f := newFixture(t)
+	for k, v := range map[string]string{"MODULE_NAME": "demo", "GRADLEW_PATH": f.src + "/gradlew", "NIAGARA_HOME": "/n", "NIAGARA_USER_HOME": "/u",
+		"JAVA_HOME": "/j", "STATION_MODULES_DIR": f.modules, "EXPECTED_RT_TYPES": "9"} {
+		t.Setenv(k, v)
+	}
+	f.noEnvFile = true
+	code := f.run("--env-file", f.modules, "--no-backup", "--no-deploy", "--mode", "C")
+	if code != ExitEnv || f.out != "" || f.err != "[ng-deploy] ERROR env file "+f.modules+" is a directory\n" || f.calls() != "" {
+		t.Errorf("--env-file <directory>: exit %d, stdout %q, stderr %q, calls %q", code, f.out, f.err, f.calls())
+	}
+	f.mkdir(f.work + "/.env.local") // the default path is checked the same way
+	code = f.run("--no-backup", "--no-deploy", "--mode", "C")
+	if code != ExitEnv || f.out != "" || f.err != "[ng-deploy] ERROR env file .env.local is a directory\n" || f.calls() != "" {
+		t.Errorf(".env.local is a directory: exit %d, stdout %q, stderr %q, calls %q", code, f.out, f.err, f.calls())
 	}
 }
 
@@ -106,7 +129,7 @@ func TestAnEnvFileKeyNamedLikeAnOptionReplacesTheFlag(t *testing.T) {
 	f.set("MODE", "B")
 	f.set("NO_BACKUP", "1")
 	f.set("NO_DEPLOY", "1")
-	f.want(f.run("--mode", "C"), ExitOK, "[ng-deploy] build: mode B — :demo-ux:clean\n:demo-ux:jar\n", "[ng-deploy] no-deploy: jars in build/libs/\n", "err:"+warnNoBackup)
+	f.want(f.run("--mode", "C"), ExitOK, "[ng-deploy] build: mode B — :demo-ux:clean :demo-ux:jar\n", "[ng-deploy] no-deploy: jars in build/libs/\n", "err:"+warnNoBackup)
 
 	f = newFixture(t)
 	f.baseline()
@@ -165,5 +188,30 @@ func TestCommandsSeeOptionGlobalsWithTheDeployValue(t *testing.T) {
 	f.want(f.run("--no-backup", "--no-deploy", "--mode", "B"), ExitOK)
 	if !strings.Contains(f.envLog(), "gradlew MODE=[B] FD=[0] FILEKEY=[unset] MN=[demo] SELF=[unset]\n") {
 		t.Errorf("gradlew saw:\n%s", f.envLog())
+	}
+}
+
+// A CRLF env file used to put a carriage return at the end of every value: paths that do not exist, a
+// module name no jar has. It is stripped, and one warning says so without quoting a value.
+func TestACRLFEnvFileIsReadWithAWarning(t *testing.T) {
+	f := newFixture(t)
+	f.write(f.env, strings.ReplaceAll("# deploy settings\n\n"+f.read(f.env)+"FILEKEY='hunter2'\n", "\n", "\r\n"))
+	f.want(f.run("--no-backup", "--no-deploy", "--mode", "C"), ExitOK, "[ng-deploy] build: mode C — :demo-rt:clean :demo-rt:jar\n[ng-deploy] build ok\n")
+	warning := "[ng-deploy] WARN env file " + f.env + ": a carriage return was stripped from the end of 12 line(s), the first at line 1 (CRLF line endings; save the file with LF)\n"
+	if f.err != warning+warnNoBackup {
+		t.Errorf("stderr %q", f.err)
+	}
+	if !strings.HasSuffix(f.calls(), "gradlew"+gradleProps+" <:demo-rt:clean> <:demo-rt:jar>\n") || !strings.Contains(f.envLog(), "FILEKEY=[hunter2] MN=[demo]") || strings.Contains(f.calls()+f.envLog(), "\r") {
+		t.Errorf("a carriage return reached a command:\n%q\n%q", f.calls(), f.envLog())
+	}
+}
+
+// An LF file is read as before, with no warning; a carriage return inside a value is the operator's.
+func TestAnLFEnvFileIsReadWithoutAWarning(t *testing.T) {
+	f := newFixture(t)
+	f.write(f.env, f.read(f.env)+"FILEKEY='a\rb'\n")
+	f.want(f.run("--no-backup", "--no-deploy", "--mode", "C"), ExitOK)
+	if f.err != warnNoBackup || !strings.Contains(f.envLog(), "FILEKEY=[a\rb]") {
+		t.Errorf("stderr %q, gradlew saw %q", f.err, f.envLog())
 	}
 }

@@ -29,7 +29,7 @@ exit "${FAKE_UNZIP_EXIT:-0}"`,
   diff) [ "${FAKE_GIT_DIFF_EXIT:-0}" -eq 0 ] || { echo "fatal: bad revision" >&2; exit "$FAKE_GIT_DIFF_EXIT"; }
         printf '%s\n' "${FAKE_GIT_DIFF:-}" ;;
   rev-parse) if [ "$2" = --git-dir ]; then [ -z "${FAKE_GIT_NOREPO:-}" ] || exit 128; echo .git
-             else [ -z "${FAKE_GIT_HEAD_EXIT:-}" ] || exit "$FAKE_GIT_HEAD_EXIT"; printf '%s\n' "${FAKE_GIT_HEAD-deadbeef00}"; fi ;;
+             else [ -z "${FAKE_GIT_HEAD_EXIT:-}" ] || exit "$FAKE_GIT_HEAD_EXIT"; printf '%s\n' "${FAKE_GIT_HEAD-deadbeef00deadbeef00deadbeef00deadbeef00}"; fi ;;
   cat-file) exit "${FAKE_GIT_CAT_FILE_EXIT:-0}" ;;
 esac`,
 	"gradlew": `case "$*" in *slotomatic*)

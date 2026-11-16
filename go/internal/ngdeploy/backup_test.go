@@ -176,3 +176,49 @@ func TestKeepMustBeAPositiveWholeNumber(t *testing.T) {
 	t.Setenv("KEEP_N", "") // an empty variable is the default, as ${KEEP_N:-3} is
 	f.want(f.run("--no-deploy"), ExitOK)
 }
+
+// Two deploys in the same second used to give their backups the same name, and the second tar wrote over
+// the first backup: the only copy of the jars the first deploy replaced.
+func TestBackupNamesAreUniqueWithinOneSecond(t *testing.T) {
+	f := newFixture(t)
+	f.deployed()
+	at := time.Date(2026, 3, 4, 5, 6, 7, 0, time.Local)
+	clock = func() time.Time { return at }
+	t.Cleanup(func() { clock = time.Now })
+	for i, name := range []string{"_backups/demo-pre-20260304-050607.tar.gz", "_backups/demo-pre-20260304-050607-2.tar.gz", "_backups/demo-pre-20260304-050607-3.tar.gz"} {
+		f.reset()
+		f.want(f.run("--no-deploy", "--keep", "5"), ExitOK, "[ng-deploy] backup: "+name+"\n[ng-deploy] backup ok: "+name+"\n")
+		if !strings.HasPrefix(f.calls(), "tar <-czf> <"+name+"> <-C> <"+f.modules+"> <demo-rt.jar> <demo-ux.jar>\n") || f.err != "" {
+			t.Errorf("backup %d: stderr %q, calls:\n%s", i+1, f.err, f.calls())
+		}
+		f.write(f.work+"/"+name, "backup "+name) // what a real tar would have left there
+	}
+	for _, name := range []string{"demo-pre-20260304-050607.tar.gz", "demo-pre-20260304-050607-2.tar.gz"} {
+		if got := f.read(f.work + "/_backups/" + name); got != "backup _backups/"+name {
+			t.Errorf("%s was written over: %q", name, got)
+		}
+	}
+	at = at.Add(time.Second) // the next second starts again with the plain name
+	f.want(f.run("--no-deploy", "--keep", "5"), ExitOK, "[ng-deploy] backup ok: _backups/demo-pre-20260304-050608.tar.gz\n")
+}
+
+// The numbered backups of one second are purged like any other, oldest first.
+func TestBackupsOfTheSameSecondArePurgedOldestFirst(t *testing.T) {
+	f := newFixture(t)
+	f.deployed()
+	at := time.Date(2026, 3, 4, 5, 6, 7, 0, time.Local)
+	clock = func() time.Time { return at }
+	t.Cleanup(func() { clock = time.Now })
+	for i, name := range []string{"demo-pre-20260304-050607.tar.gz", "demo-pre-20260304-050607-2.tar.gz"} {
+		f.write(f.work+"/_backups/"+name, "")
+		when := time.Date(2026, 1, 1+i, 0, 0, 0, 0, time.UTC)
+		if err := os.Chtimes(f.work+"/_backups/"+name, when, when); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.want(f.run("--no-deploy", "--keep", "2"), ExitOK, "[ng-deploy] backup ok: _backups/demo-pre-20260304-050607-3.tar.gz\n")
+	kept, _ := filepath.Glob(f.work + "/_backups/*")
+	if len(kept) != 2 || f.exists(f.work+"/_backups/demo-pre-20260304-050607.tar.gz") {
+		t.Errorf("kept %v", kept)
+	}
+}

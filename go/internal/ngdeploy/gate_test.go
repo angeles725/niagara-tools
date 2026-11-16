@@ -14,7 +14,7 @@ func TestTheVerifyModuleGate(t *testing.T) {
 		want    string
 		call    string // the gate call, "" when it must not run
 	}{
-		{"passes", func(*fixture) {}, nil, ExitOK, "[ng-deploy] gate: verify-module on demo-rt.jar\ndemo-ux.jar\n[ng-deploy] gate ok\n[ng-deploy] copy ok\n", "vm.sh <--src> <SRC/demo> <RT> <UX>\n"},
+		{"passes", func(*fixture) {}, nil, ExitOK, "[ng-deploy] gate: verify-module on demo-rt.jar demo-ux.jar\n[ng-deploy] gate ok\n[ng-deploy] copy ok\n", "vm.sh <--src> <SRC/demo> <RT> <UX>\n"},
 		{"mode C gates the rt jar only", func(*fixture) {}, []string{"--mode", "C"}, ExitOK, "[ng-deploy] gate: verify-module on demo-rt.jar\n[ng-deploy] gate ok\n", "vm.sh <--src> <SRC/demo> <RT>\n"},
 		{"fails", func(f *fixture) { f.t.Setenv("FAKE_VM_EXIT", "1") }, nil, ExitVerify,
 			"err:[ng-deploy] ERROR verify-module gate failed; jars not fit to deploy (use --no-gate to override)\n", "vm.sh <--src> <SRC/demo> <RT> <UX>\n"},

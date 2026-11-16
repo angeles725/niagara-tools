@@ -21,8 +21,7 @@ func (d *deploy) build() int {
 			tasks = append(tasks, ":"+d.module+"-"+profile+":"+verb)
 		}
 	}
-	// The bash tool joined the list with its IFS, a newline: the line is kept as it printed it.
-	d.say(msgBuild, mode, strings.Join(tasks, "\n"))
+	d.say(msgBuild, mode, strings.Join(tasks, " "))
 	if d.show(d.env("GRADLEW_PATH"), d.gradleArgs(tasks)...) != 0 {
 		return d.fail(ExitBuild, msgBuildFailed)
 	}

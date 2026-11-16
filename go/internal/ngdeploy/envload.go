@@ -18,14 +18,17 @@ var owned = map[string]bool{"SCRIPT_DIR": true, "VERSION_FILE": true, "SCRIPT_VE
 // loadEnvFile reads the env file the way `set -a; source` did for plain assignments: each one becomes part
 // of the environment of this process and of every command it runs, and one named like an option global
 // replaces that option. $NAME, ${NAME} and a leading ~ expand as bash expanded them (shellVariable). A
-// missing file is tolerated. A line that is not a plain assignment, and a variable that is not set, are
+// missing file is tolerated; a directory is not (exit 10: the wrong path was named). A line that is not a plain assignment, and a variable that is not set, are
 // refused with file and line (the bash tool ran the first and stopped on the second); no message quotes a
 // value of the file.
 func (d *deploy) loadEnvFile() int {
 	path := d.raw[optEnvFile]
-	assignments, _, err := envfile.Load(path, d.shellVariable)
+	var crLines []int
+	assignments, found, err := envfile.Load(path, d.shellVariable, envfile.TrimCR(&crLines))
 	var syntax *envfile.SyntaxError
 	switch {
+	case err == nil && !found && isDir(path):
+		return d.fail(ExitEnv, msgEnvFileDir, path)
 	case errors.As(err, &syntax):
 		return d.fail(ExitEnv, msgEnvFileSyntax, syntax.Error())
 	case err != nil:
@@ -35,6 +38,9 @@ func (d *deploy) loadEnvFile() int {
 		if owned[a.Key] {
 			return d.fail(ExitEnv, msgEnvFileOwned, path, a.Line, a.Key)
 		}
+	}
+	if len(crLines) > 0 { // a CRLF file: the values are used without the carriage return
+		d.warn(warnEnvFileCR, path, len(crLines), crLines[0])
 	}
 	for _, a := range assignments {
 		d.fileEnv[a.Key] = a.Value

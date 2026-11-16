@@ -19,9 +19,10 @@ const (
 
 // remindSlotomatic warns when Java annotations changed since the last deploy and --with-slotomatic was not
 // given; in strict mode (--strict-slotomatic or SLOTOMATIC_DETECTION=strict) a change aborts the deploy,
-// and so does a detection that could not run (under bash that passed like "no change").
+// and so does a detection that could not run (under bash that passed like "no change"). --with-slotomatic
+// satisfies strict mode: the slots are about to be regenerated.
 func (d *deploy) remindSlotomatic() int {
-	strict := d.isOn(optStrictSlot) || d.env("SLOTOMATIC_DETECTION") == detectionStrict
+	strict := (d.isOn(optStrictSlot) || d.env("SLOTOMATIC_DETECTION") == detectionStrict) && !d.isOn(optWithSlot)
 	switch d.detectAnnotationChanges() {
 	case changed:
 		if strict {
@@ -55,21 +56,26 @@ func (d *deploy) detectAnnotationChanges() detection {
 	}
 	base, known := d.baseline()
 	var diff bytes.Buffer
-	failed := d.run(&diff, io.Discard, "git", "diff", base+"..HEAD", "--", diffPathspec) != 0
+	status := d.run(&diff, io.Discard, "git", "diff", base+"..HEAD", "--", diffPathspec)
 	for _, line := range strings.Split(diff.String(), "\n") {
 		if annotationChange.MatchString(line) {
 			return changed
 		}
 	}
-	if failed || !known {
+	if status != 0 {
+		d.warn(noticeDiffFailed, base, status)
+		return unchecked
+	}
+	if !known {
 		return unchecked
 	}
 	return noChange
 }
 
 // baseline is the commit the last deploy recorded in .last-deploy-sha when git knows it as a commit, else
-// HEAD~1. known is false when a record is there but cannot be read: the diff then starts at HEAD~1 as
-// under bash, and may miss older changes.
+// HEAD~1. known is false when a record is there but cannot be read, or holds something other than a full
+// object name (a notice says so, and the text never reaches git, which would read a leading "-" as an
+// option): the diff then starts at HEAD~1 and may miss older changes.
 func (d *deploy) baseline() (base string, known bool) {
 	is, err := regular(lastDeployFile)
 	if err != nil || !is {
@@ -79,8 +85,14 @@ func (d *deploy) baseline() (base string, known bool) {
 	if err != nil {
 		return fallbackBaseline, false
 	}
-	if candidate := strings.TrimRight(string(text), "\n"); candidate != "" &&
-		d.run(io.Discard, io.Discard, "git", "cat-file", "-e", candidate+"^{commit}") == 0 {
+	candidate := strings.TrimRight(string(text), "\n")
+	switch {
+	case candidate == "":
+		return fallbackBaseline, true
+	case !objectName.MatchString(candidate):
+		d.warn(noticeBadRecord, lastDeployFile, fallbackBaseline)
+		return fallbackBaseline, false
+	case d.run(io.Discard, io.Discard, "git", "cat-file", "-e", candidate+"^{commit}") == 0:
 		return candidate, true
 	}
 	return fallbackBaseline, true

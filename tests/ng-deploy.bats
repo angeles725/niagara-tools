@@ -432,7 +432,8 @@ ENVEOF
 # T24: deploy exitoso → .last-deploy-sha escrito con HEAD SHA post-verify
 # ---------------------------------------------------------------------------
 @test "T24: successful deploy writes .last-deploy-sha after verify" {
-    export FAKE_GIT_REV_PARSE_OUTPUT="abc1234abc1234abc1234abc1234abc1234abc1234"
+    # a full 40-digit object name, as git prints it: anything else is not recorded (exit 41)
+    export FAKE_GIT_REV_PARSE_OUTPUT="abc1234abc1234abc1234abc1234abc1234abc12"
     export FAKE_UNZIP_TYPES=9
     # Need to touch fake jar files so copy_jars and verify_jar succeed
     # gradlew path in .env.local points to TMPDIR_T/fakebin/gradlew
@@ -461,7 +462,7 @@ ENVEOF
         --no-gate
     [ "$status" -eq 0 ]
     [ -f "$TMPDIR_T/.last-deploy-sha" ]
-    [ "$(cat "$TMPDIR_T/.last-deploy-sha")" = "abc1234abc1234abc1234abc1234abc1234abc1234" ]
+    [ "$(cat "$TMPDIR_T/.last-deploy-sha")" = "abc1234abc1234abc1234abc1234abc1234abc12" ]
 }
 
 # ---------------------------------------------------------------------------

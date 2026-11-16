@@ -15,7 +15,9 @@ const (
 	msgFileMode      = "MODE set by the env file is not A, B or C"
 	msgEnvFileSyntax = "env file %s" // a envfile.SyntaxError: "<path>: line N: <reason>"
 	msgEnvFileRead   = "env file %s cannot be read: %s"
+	msgEnvFileDir    = "env file %s is a directory"
 	msgEnvFileOwned  = "env file %s: line %d: %s is set by ng-deploy and cannot be assigned"
+	warnEnvFileCR    = "WARN env file %s: a carriage return was stripped from the end of %d line(s), the first at line %d (CRLF line endings; save the file with LF)"
 	msgNotSwitch     = "%s must be 0 or 1"
 	msgKeep          = "KEEP_N (--keep) must be a whole number of backups, 1 or more"
 
@@ -32,11 +34,14 @@ const (
 	msgBackupNothing  = "backup: no existing %s-{rt,ux,wb}.jar in %s; nothing to archive"
 	msgBackupOK       = "backup ok: %s"
 	msgBackupFailed   = "backup failed: %s"
+	msgPurgeFailed    = "backup written (%s), but an older backup could not be purged: %s: %s"
 	msgBackupCheck    = "backup failed: cannot check %s: %s"
 
 	// annotation detection and slotomatic
 	noticeNoGit        = "NOTICE: git not found; skipping annotation change detection"
 	noticeNoRepo       = "NOTICE: not a git repository; skipping annotation change detection"
+	noticeDiffFailed   = "NOTICE: git diff %s..HEAD failed (exit %d); skipping annotation change detection"
+	noticeBadRecord    = "NOTICE: %s does not hold a full commit id; annotation changes are looked for since %s only"
 	msgStrict          = "annotation changes detected; --with-slotomatic required (strict mode)"
 	msgStrictUnchecked = "annotation change detection could not run; strict mode cannot tell whether slotomatic is needed (SLOTOMATIC_DETECTION=off skips the check)"
 	msgSlotRT          = "slotomatic: running :%s-rt:slotomatic"
@@ -58,6 +63,7 @@ const (
 	msgVersionDown         = "version-bump precheck: %s vendorVersion went down (%s -> %s) — a deploy must raise it; bump defaultModuleVersion above %s and rebuild"
 	msgVersionIncomparable = "version-bump precheck cannot verify %s: vendorVersions are not comparable (built='%s' deployed='%s': their non-numeric suffixes differ)"
 	msgVersionCheck        = "version-bump precheck cannot verify %s: cannot check %s: %s"
+	msgVersionNoJar        = "version-bump precheck cannot verify %s: the build left no jar at %s"
 	msgVersionOK           = "version-bump ok (%s: %s -> %s)"
 
 	// schema-risk precheck
@@ -72,18 +78,25 @@ const (
 	msgSchemaFault       = "schema-risk precheck could not run (exit %d); deploy blocked"
 
 	// verify and gate
-	msgVerifyCount   = "verify failed: expected %s <type entries in %s, found %d"
-	msgVerifyOK      = "verify ok (%s: %d/%s)"
-	msgCacheBuster   = "verify failed: index.html in %s does not contain ?v=%s (BUILD_ID check)"
-	msgCacheBusterOK = "verify ok (cache-buster ?v=%s found)"
-	msgGateMissing   = "verify-module gate unavailable (not executable at %s); jars not verified (use --no-gate to override)"
-	msgGate          = "gate: verify-module on %s"
-	msgGateFailed    = "verify-module gate failed; jars not fit to deploy (use --no-gate to override)"
-	msgGateOK        = "gate ok"
+	msgVerifyCount      = "verify failed: expected %s <type entries in %s, found %d"
+	msgVerifyUnreadable = "verify failed: cannot read %s in %s (unzip exit %d)"
+	msgVerifyOK         = "verify ok (%s: %d/%s)"
+	msgCacheBuster      = "verify failed: index.html in %s does not contain ?v=%s (BUILD_ID check)"
+	msgCacheBusterOK    = "verify ok (cache-buster ?v=%s found)"
+	msgGateMissing      = "verify-module gate unavailable (not executable at %s); jars not verified (use --no-gate to override)"
+	msgGate             = "gate: verify-module on %s"
+	msgGateFailed       = "verify-module gate failed; jars not fit to deploy (use --no-gate to override)"
+	msgGateOK           = "gate ok"
 
 	// copy and after
 	msgCopyFailed = "copy failed for %s"
 	msgCopyOK     = "copy ok"
+	// msgRecordFailed takes the record file and one of the three reasons after it.
+	msgRecordFailed = "jars copied, but the deployed commit was not recorded in %s: %s (the next annotation check cannot start at this deploy; SLOTOMATIC_DETECTION=off makes the record optional)"
+	whyNoHead       = "git rev-parse HEAD failed (exit %d)"
+	whyHeadNotAName = "git rev-parse HEAD printed no full commit id"
+	whyNotWritten   = "cannot write %s: %s"
+
 	msgRestart    = "station restart required (Java classes deployed)"
 	msgHardReload = "browser hard-reload only (no station restart needed)"
 

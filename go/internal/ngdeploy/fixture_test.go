@@ -145,6 +145,13 @@ func (f *fixture) write(path, content string) {
 	}
 }
 
+func (f *fixture) remove(path string) {
+	f.t.Helper()
+	if err := os.Remove(path); err != nil {
+		f.t.Fatal(err)
+	}
+}
+
 func (f *fixture) chmod(path string, mode os.FileMode) {
 	f.t.Helper()
 	if err := os.Chmod(path, mode); err != nil {

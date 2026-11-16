@@ -46,16 +46,22 @@ Optional:
 
 Exit codes:
   0   success (or --help)
-  10  missing required env var or invalid path
+  10  missing required env var, invalid path or option value, or an env file that is a directory, cannot be
+      read or holds a line that is not a plain assignment
   15  slotomatic failed or skipped a file (METHODOLOGY K15), or annotation changes detected in strict mode
   20  backup failed (tar returned non-zero)
+  21  the backup was written, but an older backup of the module could not be purged (nothing was built)
   30  build (gradlew) returned non-zero
   40  copy of jar to STATION_MODULES_DIR failed
+  41  the jars were copied, but the deployed commit could not be read (git rev-parse HEAD) or written to
+      .last-deploy-sha: restart as the last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional)
   12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
-  50  verify failed: type count mismatch, BUILD_ID not found, or verify-module gate failed/missing
+  50  verify failed: type count mismatch (a jar with no type entry counts 0), a module.xml that unzip cannot
+      read, BUILD_ID not found, or verify-module gate failed/missing
       (every check runs on build/libs before the copy: nothing reaches STATION_MODULES_DIR)
   51  version-bump precheck: the built jar's bytes differ from the deployed jar but its vendorVersion did not change
       (numeric per component, a missing component = 0: 1.3 -> 1.3.0 is NOT a bump)
-  52  version-bump precheck cannot verify (a vendorVersion is unreadable, or the two differ in a non-numeric suffix)
+  52  version-bump precheck cannot verify (a vendorVersion is unreadable, the two differ in a non-numeric suffix,
+      or the build left no jar in build/libs)
   53  schema-risk precheck: verdict OUTAGE, LOSSY without --accept-lossy, or a schema-risk env fault
   54  version-bump precheck: the built jar's vendorVersion is LOWER than the deployed jar's (a downgrade)

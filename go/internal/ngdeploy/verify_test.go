@@ -1,7 +1,6 @@
 package ngdeploy
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
@@ -31,28 +30,47 @@ func TestTheTypeCountIsTheEntriesNotTheWrapper(t *testing.T) {
 	}
 }
 
-// Kept from the bash tool (set -e over `unzip | grep -c`): a jar with no type entry ends the deploy with
-// exit 1 and no message, even when 0 was expected; a failed unzip that still listed entries ends it with
-// unzip's own status.
-func TestAModuleXMLThatCannotBeCountedEndsTheDeploy(t *testing.T) {
+// A jar that declares no type is counted like any other: 0 of 0 passes, 0 of 9 is the mismatch of exit 50.
+func TestAJarWithNoTypeEntryIsCountedAsZero(t *testing.T) {
 	f := newFixture(t)
 	f.set("EXPECTED_UX_TYPES", "0")
 	t.Setenv("FAKE_UNZIP_TYPES", "0")
-	if code := f.run("--no-backup", "--mode", "B"); code != ExitFault || f.err != warnNoBackup || f.exists(f.deployedJar("ux")) {
-		t.Errorf("no type entry: exit %d, stderr %q", code, f.err)
+	f.want(f.run("--no-backup", "--mode", "B"), ExitOK, "[ng-deploy] verify ok (demo-ux.jar: 0/0)\n[ng-deploy] copy ok\n")
+	if f.err != warnNoBackup || f.read(f.deployedJar("ux")) != "uxjar" {
+		t.Errorf("0 of 0: stderr %q, deployed ux jar %q", f.err, f.read(f.deployedJar("ux")))
 	}
 	f = newFixture(t)
-	t.Setenv("FAKE_UNZIP_EXIT", "9")
-	t.Setenv("FAKE_UNZIP_ERR", "cannot find zipfile")
-	if code := f.run("--no-backup", "--mode", "C"); code != 9 || f.err != warnNoBackup+"unzip: cannot find zipfile\n" || f.exists(f.deployedJar("rt")) {
-		t.Errorf("failed unzip: exit %d, stderr %q", code, f.err)
+	t.Setenv("FAKE_UNZIP_TYPES", "0")
+	code := f.run("--no-backup", "--mode", "B")
+	want := warnNoBackup + "[ng-deploy] ERROR verify failed: expected 9 <type entries in " + f.builtJar("ux") + ", found 0\n"
+	if code != ExitVerify || f.err != want || strings.Contains(f.out, "verify ok") || f.exists(f.deployedJar("ux")) {
+		t.Errorf("0 of 9: exit %d, stdout %q, stderr %q", code, f.out, f.err)
 	}
-	f = newFixture(t)
-	if err := os.Remove(f.bin + "/unzip"); err != nil {
-		t.Fatal(err)
-	}
-	if code := f.run("--no-backup", "--mode", "C"); code != ExitFault || f.err != warnNoBackup+"ng-deploy.sh: unzip: command not found\n" || f.exists(f.deployedJar("rt")) {
-		t.Errorf("no unzip: exit %d, stderr %q", code, f.err)
+}
+
+// An unzip that fails did not show the whole module.xml, whatever it printed: exit 50, never unzip's status.
+func TestAModuleXMLThatCannotBeReadExits50(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		arrange func(f *fixture)
+		before  string // what the failed command wrote first
+		status  string
+	}{
+		{"unzip fails after listing the entries", func(f *fixture) {
+			f.t.Setenv("FAKE_UNZIP_EXIT", "9")
+			f.t.Setenv("FAKE_UNZIP_ERR", "cannot find zipfile")
+		}, "unzip: cannot find zipfile\n", "9"},
+		{"unzip fails with nothing printed", func(f *fixture) { f.write(f.dir+"/do/unzip", "exit 3\n") }, "", "3"},
+		{"exit 1 is not passed on as a bare fault", func(f *fixture) { f.write(f.dir+"/do/unzip", "exit 1\n") }, "", "1"},
+		{"no unzip", func(f *fixture) { f.remove(f.bin + "/unzip") }, "ng-deploy.sh: unzip: command not found\n", "127"},
+	} {
+		f := newFixture(t)
+		tc.arrange(f)
+		code := f.run("--no-backup", "--mode", "C")
+		want := warnNoBackup + tc.before + "[ng-deploy] ERROR verify failed: cannot read META-INF/module.xml in " + f.builtJar("rt") + " (unzip exit " + tc.status + ")\n"
+		if code != ExitVerify || f.err != want || strings.Contains(f.out, "verify ok") || f.exists(f.deployedJar("rt")) || strings.Contains(f.calls(), "vm.sh") {
+			t.Errorf("%s: exit %d, stdout %q, stderr %q", tc.name, code, f.out, f.err)
+		}
 	}
 }
 

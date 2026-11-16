@@ -9,7 +9,8 @@
 // text and inside double quotes, from an earlier assignment of the file first, then from the caller's
 // Lookup; an unset variable is refused by name, as the read under `set -u` it replaces. A bare ~ at the
 // start of a value or after a ":" in it, alone or before "/" or ":", is the home directory (expand.go).
-// Only a space and a tab separate words: the carriage return of a CRLF file stays in the value.
+// Only a space and a tab separate words: the carriage return of a CRLF file stays in the value, unless the
+// caller passes TrimCR (options.go).
 //
 // Refused: commands, functions, $(...), backquotes, arithmetic, ${NAME<op>...} forms, $1 $@ $? and the
 // other shell parameters, $'...', ~user, shell operators, a value that spans lines.
@@ -48,7 +49,7 @@ func (e *SyntaxError) Error() string { return fmt.Sprintf("%s: line %d: %s", e.P
 // Load reads the assignments of the file path, in file order. found is false, without an error, when there
 // is no regular file there (absent, or a directory), which the caller tolerates as bash's `[[ -f ]]` did.
 // A path that cannot be checked for another reason, or a file that cannot be read, is an error.
-func Load(path string, look Lookup) (assignments []Assignment, found bool, err error) {
+func Load(path string, look Lookup, opts ...Option) (assignments []Assignment, found bool, err error) {
 	st, err := os.Stat(path)
 	switch {
 	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR):
@@ -62,16 +63,24 @@ func Load(path string, look Lookup) (assignments []Assignment, found bool, err e
 	if err != nil {
 		return nil, false, err
 	}
-	assignments, err = Parse(path, string(text), look)
+	assignments, err = Parse(path, string(text), look, opts...)
 	return assignments, err == nil, err
 }
 
 // Parse reads the assignments of an env file text; path only names the file in an error. The first line
 // that is not a plain assignment stops the read: nothing is returned with a SyntaxError.
-func Parse(path, text string, look Lookup) ([]Assignment, error) {
+func Parse(path, text string, look Lookup, opts ...Option) ([]Assignment, error) {
 	var out []Assignment
 	sc := &scope{file: map[string]string{}, outer: look}
+	var r reader
+	for _, opt := range opts {
+		opt(&r)
+	}
 	for i, line := range strings.Split(text, "\n") {
+		if r.crLines != nil && strings.HasSuffix(line, "\r") {
+			line = line[:len(line)-1]
+			*r.crLines = append(*r.crLines, i+1)
+		}
 		words, reason := splitWords(line, sc)
 		if reason == "" {
 			var keep []Assignment

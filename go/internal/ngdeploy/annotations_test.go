@@ -42,12 +42,10 @@ func TestWithSlotomaticSilencesTheWarning(t *testing.T) {
 	}
 }
 
-// Kept from the bash tool: strict mode aborts even when --with-slotomatic is given.
 func TestStrictModeAbortsOnAnnotationChanges(t *testing.T) {
 	for name, strict := range map[string]func(f *fixture) []string{
-		"flag":            func(*fixture) []string { return []string{"--strict-slotomatic"} },
-		"variable":        func(*fixture) []string { t.Setenv("SLOTOMATIC_DETECTION", "strict"); return nil },
-		"with slotomatic": func(*fixture) []string { return []string{"--strict-slotomatic", "--with-slotomatic"} },
+		"flag":     func(*fixture) []string { return []string{"--strict-slotomatic"} },
+		"variable": func(*fixture) []string { t.Setenv("SLOTOMATIC_DETECTION", "strict"); return nil },
 	} {
 		f := newFixture(t)
 		t.Setenv("FAKE_GIT_DIFF", "+@NiagaraProperty")
@@ -87,9 +85,9 @@ var cannotDetect = map[string]struct {
 }{
 	"no git":        {func(f *fixture) { os.Remove(f.bin + "/git") }, "[ng-deploy] NOTICE: git not found; skipping annotation change detection\n"},
 	"no repository": {func(f *fixture) { f.t.Setenv("FAKE_GIT_NOREPO", "1") }, "[ng-deploy] NOTICE: not a git repository; skipping annotation change detection\n"},
-	"diff fails":    {func(f *fixture) { f.t.Setenv("FAKE_GIT_DIFF_EXIT", "128") }, ""},
+	"diff fails":    {func(f *fixture) { f.t.Setenv("FAKE_GIT_DIFF_EXIT", "128") }, "[ng-deploy] NOTICE: git diff HEAD~1..HEAD failed (exit 128); skipping annotation change detection\n"},
 	"unreadable baseline": {func(f *fixture) {
-		f.write(f.work+"/.last-deploy-sha", "cafe01\n")
+		f.write(f.work+"/.last-deploy-sha", recordedCommit+"\n")
 		f.chmod(f.work+"/.last-deploy-sha", 0o000)
 	}, ""},
 }
@@ -118,11 +116,17 @@ func TestStrictModeRefusesWhenDetectionCannotRun(t *testing.T) {
 	}
 }
 
+// recordedCommit is a .last-deploy-sha as a deploy writes it: the full object name git rev-parse HEAD prints.
+const recordedCommit = "cafe01cafe01cafe01cafe01cafe01cafe01cafe"
+
 func TestTheDiffStartsAtTheLastDeployedCommitWhenItIsOne(t *testing.T) {
+	fromRecord := "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <" + recordedCommit + "^{commit}>\ngit <diff> <" + recordedCommit + "..HEAD> <--> <*/src/com/**/*.java>\n"
+	sha256 := strings.Repeat("0123456789abcdef", 4)
 	for _, tc := range []struct{ name, file, catFile, want string }{
-		{"a commit", "cafe01\n", "", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <cafe01^{commit}>\ngit <diff> <cafe01..HEAD> <--> <*/src/com/**/*.java>\n"},
-		{"trailing blank lines", "cafe01\n\n\n", "", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <cafe01^{commit}>\ngit <diff> <cafe01..HEAD> <--> <*/src/com/**/*.java>\n"},
-		{"not a commit", "cafe01\n", "1", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <cafe01^{commit}>\ngit <diff> <HEAD~1..HEAD> <--> <*/src/com/**/*.java>\n"},
+		{"a commit", recordedCommit + "\n", "", fromRecord},
+		{"trailing blank lines", recordedCommit + "\n\n\n", "", fromRecord},
+		{"a sha-256 commit", sha256 + "\n", "", strings.ReplaceAll(fromRecord, recordedCommit, sha256)},
+		{"not a commit", recordedCommit + "\n", "1", "git <rev-parse> <--git-dir>\ngit <cat-file> <-e> <" + recordedCommit + "^{commit}>\ngit <diff> <HEAD~1..HEAD> <--> <*/src/com/**/*.java>\n"},
 		{"an empty file", "", "", gitDiffCalls},
 	} {
 		f := newFixture(t)
@@ -131,8 +135,45 @@ func TestTheDiffStartsAtTheLastDeployedCommitWhenItIsOne(t *testing.T) {
 			t.Setenv("FAKE_GIT_CAT_FILE_EXIT", tc.catFile)
 		}
 		f.want(f.run("--no-backup", "--no-deploy"), ExitOK)
-		if !strings.HasPrefix(f.calls(), tc.want+"gradlew") {
-			t.Errorf("%s: calls %q", tc.name, f.calls())
+		if !strings.HasPrefix(f.calls(), tc.want+"gradlew") || f.err != warnNoBackup {
+			t.Errorf("%s: stderr %q, calls %q", tc.name, f.err, f.calls())
+		}
+	}
+}
+
+// A diff that fails after showing an annotation change is still a change: the warning, not the notice.
+func TestAFailedDiffThatShowedAChangeStillWarns(t *testing.T) {
+	f := newFixture(t)
+	f.write(f.dir+"/do/git", "case \"$1\" in diff) echo '+@NiagaraType'; exit 2 ;; rev-parse) echo "+recordedCommit+" ;; esac\n")
+	f.want(f.run("--no-backup", "--no-deploy"), ExitOK)
+	if f.err != warnNoBackup+annotationWarning {
+		t.Errorf("stderr %q", f.err)
+	}
+}
+
+// Strict mode asks for slotomatic: a run that is about to regenerate the slots satisfies it, whether the
+// detection found a change or could not run.
+func TestStrictModeIsSatisfiedByWithSlotomatic(t *testing.T) {
+	slotomaticRan := "gradlew" + gradleProps + " <:demo-rt:slotomatic>\n"
+	for name, strict := range map[string]func(f *fixture) []string{
+		"flag":     func(*fixture) []string { return []string{"--strict-slotomatic"} },
+		"variable": func(*fixture) []string { t.Setenv("SLOTOMATIC_DETECTION", "strict"); return nil },
+	} {
+		f := newFixture(t)
+		t.Setenv("FAKE_GIT_DIFF", "+@NiagaraProperty")
+		args := append([]string{"--no-backup", "--no-deploy", "--mode", "C", "--with-slotomatic"}, strict(f)...)
+		f.want(f.run(args...), ExitOK, "[ng-deploy] slotomatic: running :demo-rt:slotomatic\n[ng-deploy] slotomatic ok\n[ng-deploy] build: mode C")
+		if f.err != warnNoBackup || !strings.HasPrefix(f.calls(), gitDiffCalls+slotomaticRan) {
+			t.Errorf("%s: stderr %q, calls %q", name, f.err, f.calls())
+		}
+		os.Unsetenv("SLOTOMATIC_DETECTION")
+	}
+	for name, tc := range cannotDetect {
+		f := newFixture(t)
+		tc.arrange(f)
+		f.want(f.run("--no-backup", "--no-deploy", "--mode", "C", "--strict-slotomatic", "--with-slotomatic"), ExitOK, "[ng-deploy] slotomatic ok\n")
+		if f.err != warnNoBackup+tc.notice || !strings.Contains(f.calls(), slotomaticRan) {
+			t.Errorf("%s: stderr %q, calls %q", name, f.err, f.calls())
 		}
 	}
 }

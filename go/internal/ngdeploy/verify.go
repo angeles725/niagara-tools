@@ -25,24 +25,20 @@ func (d *deploy) verify() int {
 }
 
 // verifyJar counts the lines of the jar's META-INF/module.xml that declare a type and refuses a count that
-// is not the expected one (exit 50). Kept from the bash tool, whose `unzip | grep -c` ran under set -e and
-// pipefail: no such line at all ends the run with exit 1 and no message, and an unzip that fails after
-// printing some ends it with unzip's own status.
+// is not the expected one (exit 50): a jar with no such line has 0. An unzip that fails did not show the
+// whole file, whatever it printed: that is exit 50 too, never unzip's own status.
 func (d *deploy) verifyJar(jar, expected string) int {
 	var xml bytes.Buffer
-	status := d.run(&xml, d.s.Err, "unzip", "-p", jar, moduleXML)
+	if status := d.run(&xml, d.s.Err, "unzip", "-p", jar, moduleXML); status != 0 {
+		return d.fail(ExitVerify, msgVerifyUnreadable, moduleXML, jar, status)
+	}
 	count := 0
 	for _, line := range strings.SplitAfter(xml.String(), "\n") {
 		if strings.Contains(line, typeEntry) {
 			count++
 		}
 	}
-	switch {
-	case count == 0:
-		return ExitFault
-	case status != 0:
-		return status
-	case strconv.Itoa(count) != expected:
+	if strconv.Itoa(count) != expected {
 		return d.fail(ExitVerify, msgVerifyCount, expected, jar, count)
 	}
 	d.say(msgVerifyOK, basename(jar), count, expected)

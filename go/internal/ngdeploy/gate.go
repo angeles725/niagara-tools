@@ -16,8 +16,7 @@ func (d *deploy) gate() int {
 	for i, jar := range jars {
 		names[i] = jar[strings.LastIndex(jar, "/")+1:]
 	}
-	// The bash tool joined the names with its IFS, a newline: the line is kept as it printed it.
-	d.say(msgGate, strings.Join(names, "\n"))
+	d.say(msgGate, strings.Join(names, " "))
 	if d.show(tool, append([]string{"--src", d.moduleDir}, jars...)...) != 0 {
 		return d.fail(ExitVerify, msgGateFailed)
 	}
