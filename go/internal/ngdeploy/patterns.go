@@ -33,6 +33,9 @@ const (
 	backupDir    = "_backups"
 	backupStamp  = "20060102-150405"
 	backupSuffix = ".tar.gz"
+	// stagedSuffix ends the name a new jar has beside its target until it is renamed. It does not end in
+	// .jar: the station must not read a staged file as a module.
+	stagedSuffix = ".ng-deploy-new"
 	// moduleXML and indexHTML are the jar members the verify step reads.
 	moduleXML = "META-INF/module.xml"
 	indexHTML = "rc/index.html"

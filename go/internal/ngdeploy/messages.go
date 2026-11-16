@@ -89,8 +89,20 @@ const (
 	msgGateOK           = "gate ok"
 
 	// copy and after
-	msgCopyFailed = "copy failed for %s"
-	msgCopyOK     = "copy ok"
+	msgCopyOK = "copy ok"
+	// msgCopyFailed takes the jar that could not be staged or renamed (with the reason after ": " when cp did
+	// not print one) and what the station holds now: one of the outcomes below.
+	msgCopyFailed    = "copy failed for %s; %s"
+	outcomeUnchanged = "nothing was replaced: the station holds the jars it held before the deploy"
+	outcomeRestored  = "%s was put back from %s: the station holds the jars it held before the deploy"
+	outcomeRemoved   = "%s, which the station did not have, was removed: the station holds the jars it held before the deploy"
+	// outcomeHalf takes the jar already renamed, the jar that failed, and why the first could not be undone.
+	outcomeHalf    = "%s in the station is the NEW jar and %s was not replaced: %s, before the station restarts"
+	whyNoBackup    = "this run took no backup to put the previous %s back from (--no-backup); put it back yourself, or fix the cause and deploy again"
+	whyNotRestored = "putting the previous %s back from %s failed (%s); restore it from that backup, or fix the cause and deploy again"
+	whyNotRemoved  = "the station did not have %s and it could not be removed (%s); remove it, or fix the cause and deploy again"
+	whyTarFailed   = "tar -xzOf exited %d"
+	whyNotTheBytes = "the backup does not hold the bytes of the jar"
 	// msgRecordFailed takes the record file and one of the three reasons after it.
 	msgRecordFailed = "jars copied, but the deployed commit was not recorded in %s: %s (the next annotation check cannot start at this deploy; SLOTOMATIC_DETECTION=off makes the record optional)"
 	whyNoHead       = "git rev-parse HEAD failed (exit %d)"

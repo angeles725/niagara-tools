@@ -10,7 +10,7 @@ const (
 	ExitBackup         = 20 // the backup failed
 	ExitPurge          = 21 // the backup was written, but an older backup could not be purged
 	ExitBuild          = 30 // gradlew failed
-	ExitCopy           = 40 // a jar could not be copied to the station
+	ExitCopy           = 40 // the copy failed; it is all-or-nothing, and the line says what the station holds
 	ExitRecord         = 41 // the jars were copied, but the deployed commit could not be read or recorded
 	ExitVerify         = 50 // type count, a module.xml that cannot be read, cache-buster or verify-module gate
 	ExitVersionSame    = 51 // changed jar bytes under an unchanged vendorVersion

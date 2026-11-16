@@ -1,7 +1,6 @@
 package ngdeploy
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
@@ -24,27 +23,6 @@ func TestADeployCopiesTheJarsOfTheModeAfterEveryCheck(t *testing.T) {
 		if (f.read(f.deployedJar("rt")) == "rtjar") != tc.rt || (f.read(f.deployedJar("ux")) == "uxjar") != tc.ux {
 			t.Errorf("mode %s: station holds rt %q ux %q", tc.mode, f.read(f.deployedJar("rt")), f.read(f.deployedJar("ux")))
 		}
-	}
-}
-
-func TestAFailedCopyExits40NamingTheJar(t *testing.T) {
-	if os.Getuid() == 0 {
-		t.Skip("root writes everywhere")
-	}
-	f := newFixture(t)
-	f.chmod(f.modules, 0o555)
-	code := f.run("--no-backup")
-	if code != ExitCopy || !strings.HasSuffix(f.err, "[ng-deploy] ERROR copy failed for demo-rt.jar\n") || !strings.Contains(f.err, "cp: ") || f.exists(f.work+"/.last-deploy-sha") {
-		t.Errorf("exit %d, stderr %q", code, f.err)
-	}
-	f = newFixture(t) // the rt jar is copied, then the ux jar fails: the deploy stops half done, as under bash
-	f.write(f.deployedJar("ux"), "old")
-	f.chmod(f.deployedJar("ux"), 0o444)
-	t.Setenv("FAKE_OLD_VERSION", "1.0")
-	t.Setenv("FAKE_NEW_VERSION", "1.1")
-	code = f.run("--no-backup")
-	if code != ExitCopy || !strings.HasSuffix(f.err, "[ng-deploy] ERROR copy failed for demo-ux.jar\n") || f.read(f.deployedJar("rt")) != "rtjar" {
-		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
 }
 

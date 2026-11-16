@@ -65,6 +65,10 @@ func (d *deploy) archive() int {
 	if d.run(d.s.Out, io.Discard, "tar", append([]string{"-czf", name, "-C", from}, members...)...) != 0 {
 		return d.fail(ExitBackup, msgBackupFailed, name)
 	}
+	d.saved = savedBackup{file: name}
+	if d.isOn(optFullBackup) {
+		d.saved.prefix = members[0] + "/"
+	}
 	if failed, err := d.purgeBackups(name); err != nil {
 		return d.fail(ExitPurge, msgPurgeFailed, name, failed, strerror.Text(err))
 	}
