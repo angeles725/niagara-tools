@@ -22,6 +22,9 @@ with the operator's target Niagara and signer. `report-module.sh --ready` now do
   buildmodule and reportmodule suites green on the refactor commit alone). `[ev: code go/internal/reportmodule/mirror_kept.go]`
 - Differential of the full report on `tests/fixtures/report-module` against origin/main: identical stdout, stderr
   and exit on every fixture; only the usage text gains the `--ready` paragraph. `[ev: code go/internal/reportmodule/args.go]`
+- Native review (correction): `--console-dir`, `--profile`, `--legacy` and `--wiring-map` were accepted and ignored
+  under `--ready`; `TestReadyUsage` failed on all ten option cases before the fix (no naming line) and passes
+  after it. `[ev: code go/internal/reportmodule/args.go]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
