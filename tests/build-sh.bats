@@ -1123,7 +1123,9 @@ _install_gradlew() {
 # stopped matching what the station runs; the run now keeps the replaced jar and --restore-mirror puts it back.
 @test "BS-restore-mirror: --restore-mirror is in the usage, restores a kept jar into a mirror only, and keeps the copy" {
   # Mutation: BS-restore-mirror -- dropping the .niagara-mirror guard lets --restore-mirror write a real install.
-  local kept="$TMPDIR_T/nh/.mirror-replaced/Foo-rt.jar.0123456789ab"
+  local kept sum
+  sum="$(printf 'deployed' | sha256sum | cut -c1-12)"   # a kept jar is named by its own sha256 prefix
+  kept="$TMPDIR_T/nh/.mirror-replaced/Foo-rt.jar.$sum"
   mkdir -p "$TMPDIR_T/nh/.mirror-replaced" "$TMPDIR_T/nh/modules"
   printf 'deployed' > "$kept"
   printf 'new build' > "$TMPDIR_T/nh/modules/Foo-rt.jar"
@@ -1140,4 +1142,9 @@ _install_gradlew() {
   [[ "$output" == *"==> mirror: restored $TMPDIR_T/nh/modules/Foo-rt.jar from $kept"* ]]
   [ "$(cat "$TMPDIR_T/nh/modules/Foo-rt.jar")" = "deployed" ]
   [ -f "$kept" ]
+  printf 'changed' > "$kept"
+  run "$B_RAW" --restore-mirror "$kept"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"the jar was changed after it was kept"* ]]
+  [ "$(cat "$TMPDIR_T/nh/modules/Foo-rt.jar")" = "deployed" ]
 }

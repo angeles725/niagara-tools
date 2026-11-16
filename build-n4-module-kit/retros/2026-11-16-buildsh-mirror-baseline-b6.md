@@ -23,6 +23,10 @@ The INCOMPLETE line came from `report-module`'s schema-risk row, which named a d
   command against a real git repo and checks the extracted baseline. `[ev: go/internal/buildmodule/replaced.go]`
 - Old behaviour pinned: `TestMirrorKeepsNothingWhenModulesIsUnchanged` (identical jar, drift FAIL exit 51,
   `--no-drift-check`, real home with `--install-into-home`), exit 53 still 53, `--first-deploy` row unchanged.
+- Correction batch on #721: the module was built twice that day, so the second build's snapshot was the first
+  build's jar. RED then GREEN: `TestTwoBuildsRestoreTheOriginal` (two builds, the restore names the pre-first-build
+  jar), `TestRestoreRefusesAKeptJarWhoseHashDiffers`, `TestKeepFailureWarnsAndKeepsTheExitCode` (unwritable
+  `.mirror-replaced/`, exits 0 and 53 unchanged), `TestIncompleteCrossRefOnlyForSchemaRisk`.
 - Mutation: dropping the `.niagara-mirror` guard of `--restore-mirror` fails bats `BS-restore-mirror` and
   `TestRestoreMirrorRefuses`.
 - Differential vs origin/main: `build.sh --help` differs only in the new lines; `report-module.sh` on the 22
@@ -36,6 +40,8 @@ The INCOMPLETE line came from `report-module`'s schema-risk row, which named a d
 | Δ2 | APPLIED 2026-11-16. The schema-risk SKIP row of a missing `.deploy-baseline` names the `git archive` command that creates it from the deployed ref; exit 4 / 53 unchanged | Go `internal/reportmodule` `special_floor.go`; `build-verify.md` §Schema-risk deploy workflow | `[ev: go/internal/reportmodule/special_floor.go]` |
 
 ## Lessons
+- A "restore to what the station runs" must name the FIRST jar a cycle replaced, not the last: one build per day
+  is not the field pattern.
 - Read the launcher before scoping a `toolbelt/*.sh` change: most of them exec a Go binary, so the edit surface is
   `go/internal/<tool>`, not the script.
 - `git archive <ref>:./` from a subdirectory archives nothing; `git -C <dir> archive <ref> .` writes the directory's

@@ -43,9 +43,7 @@ func TestMirrorKeepsTheReplacedJar(t *testing.T) {
 	if f.read(kept) != before {
 		t.Fatalf("the replaced jar is not kept at %s", kept)
 	}
-	line := "==> mirror: Foo-rt.jar in " + f.home + "/modules replaced (vendorVersion 1.0.0 sha256:" + oldSum +
-		" -> 1.0.1 sha256:" + newSum + "); the replaced jar is kept — put it back with: " + f.kit +
-		"/build.sh --restore-mirror " + kept + "\n"
+	line := mirrorLine(f, "1.0.0", oldSum, "1.0.1", newSum, "1.0.0", oldSum)
 	if !strings.HasSuffix(f.out, line) {
 		t.Errorf("stdout does not end with the mirror line\n got: %q\nwant suffix: %q", f.out, line)
 	}
