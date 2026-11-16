@@ -117,10 +117,13 @@ func sumOf(t *testing.T, path string) string {
 	return hex.EncodeToString(s[:])
 }
 
-// readyRowOf finds the `Mod-rt  <ST>  <check>  ...` line of out ("" when none).
-func readyRowOf(out, check string) string {
+// readyRowOf finds the row of check for the fixture's artifact Mod-rt ("" when none).
+func readyRowOf(out, check string) string { return rowOf(out, "Mod-rt", check) }
+
+// rowOf finds the `<artifact>  <ST>  <check>  ...` line of out ("" when none).
+func rowOf(out, artifact, check string) string {
 	for _, ln := range strings.Split(out, "\n") {
-		if f := strings.SplitN(ln, "  ", 4); len(f) >= 3 && f[0] == "Mod-rt" && f[2] == check {
+		if f := strings.SplitN(ln, "  ", 4); len(f) >= 3 && f[0] == artifact && f[2] == check {
 			return ln
 		}
 	}

@@ -30,42 +30,50 @@ func ShellWord(s string) string {
 // schemaRisk is §6: schema-risk <artifact>/.deploy-baseline <artifact>, its output discarded and its exit the
 // verdict; no baseline is a floor SKIP unless --first-deploy.
 func (r *report) schemaRisk(a artifact) {
-	st, detail := schemaRiskVerdict(r.x, a.dir, r.o.firstDeploy)
+	v := schemaRiskVerdict(r.x, a.dir, r.o.firstDeploy)
 	switch {
-	case st == errored:
-		r.envFault(a.name, schemaRiskCheck, detail)
-	case st == skip && !r.o.firstDeploy:
-		r.emit(a.name, st, schemaRiskCheck, detail)
+	case v.status == errored:
+		r.envFault(a.name, schemaRiskCheck, v.detail)
+	case v.missingBaseline:
+		r.emit(a.name, v.status, schemaRiskCheck, v.detail)
 		r.floorSkip = true
 	default:
-		r.emit(a.name, st, schemaRiskCheck, detail)
+		r.emit(a.name, v.status, schemaRiskCheck, v.detail)
 	}
 }
 
 const schemaRiskCheck = "schema-risk"
 
+// schemaVerdict is the schema-risk row of an artifact. missingBaseline is set only when there is no
+// .deploy-baseline and no --first-deploy (a SKIP the lint run counts as a floor SKIP and --ready FAILs); the N/A
+// SKIP of --first-deploy leaves it unset, so callers never tell the two apart by status and flag.
+type schemaVerdict struct {
+	status, detail  string
+	missingBaseline bool
+}
+
 // schemaRiskVerdict is the schema-risk row of an artifact directory: no .deploy-baseline is SKIP (its detail the
-// N/A of --first-deploy, else the command that creates the baseline), else the verdict of schema-risk's exit;
-// an env fault is ERROR. report-module --ready reads it too.
-func schemaRiskVerdict(x runner, dir string, firstDeploy bool) (st, detail string) {
+// N/A of --first-deploy, else the command that creates the baseline and missingBaseline set), else the verdict of
+// schema-risk's exit; an env fault is ERROR. report-module --ready reads it too.
+func schemaRiskVerdict(x runner, dir string, firstDeploy bool) schemaVerdict {
 	baseline := dir + "/.deploy-baseline"
 	if !isDir(baseline) {
 		if firstDeploy {
-			return skip, "N/A (--first-deploy: never deployed, no baseline to diff)"
+			return schemaVerdict{status: skip, detail: "N/A (--first-deploy: never deployed, no baseline to diff)"}
 		}
-		return skip, fmt.Sprintf(noBaseline, ShellWord(dir))
+		return schemaVerdict{status: skip, detail: fmt.Sprintf(noBaseline, ShellWord(dir)), missingBaseline: true}
 	}
 	switch code := x.quiet(x.tb+"/schema-risk.sh", baseline, dir); code {
 	case 0:
-		return pass, "verdict=SAFE"
+		return schemaVerdict{status: pass, detail: "verdict=SAFE"}
 	case 1:
-		return warn, "verdict=LOSSY"
+		return schemaVerdict{status: warn, detail: "verdict=LOSSY"}
 	case 2:
-		return failed, "verdict=OUTAGE" // D9a: OUTAGE is a finding, never an env fault
+		return schemaVerdict{status: failed, detail: "verdict=OUTAGE"} // D9a: OUTAGE is a finding, never an env fault
 	case 3, 4:
-		return errored, fmt.Sprintf("env fault (exit %d)", code)
+		return schemaVerdict{status: errored, detail: fmt.Sprintf("env fault (exit %d)", code)}
 	default:
-		return errored, fmt.Sprintf("unexpected exit %d", code)
+		return schemaVerdict{status: errored, detail: fmt.Sprintf("unexpected exit %d", code)}
 	}
 }
 
