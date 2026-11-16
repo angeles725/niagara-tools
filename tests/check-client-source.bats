@@ -5,6 +5,7 @@
 # Named mutation: read an unreadable BUILD-STATE as empty text -> CS-unreadable red.
 # Named mutation: keep the CR of a CRLF line on its value -> CS-crlf red.
 # Named mutation: read `--build-state ""` as no declaration -> CS-empty-path red.
+# Named mutation: keep a byte-order mark on the first line -> CS-bom red.
 #
 # Every repository is created under a temp dir with a throwaway identity; no network, no $HOME config.
 
@@ -169,4 +170,17 @@ EOF
   [ "$status" -eq 2 ]
   [[ "$output" == *"usage: check-client-source.sh"* ]]
   [[ "$output" != *"source-of-truth"* ]]
+}
+
+@test "CS-bom: a BUILD-STATE saved with a byte-order mark, CR-only endings or blanks after the value declares the same" {
+  # Mutation: CS-bom -- reading the mark as part of the first line never opens the envelope (WARN undeclared, exit 0)
+  _repo "$TMPDIR_T/r"
+  printf '\357\273\277<!-- build-state.v1 -->\r\nmodule: Mod\r\nsource_of_truth: r@main@%s\r\n<!-- /build-state.v1 -->\r\n' "$C2" > "$TMPDIR_T/bom.md"
+  printf '<!-- build-state.v1 -->\rmodule: Mod\rsource_of_truth: r@main@%s\r<!-- /build-state.v1 -->\r' "$C2" > "$TMPDIR_T/cr.md"
+  printf '<!-- build-state.v1 -->\nmodule: Mod \nsource_of_truth: r@main@%s  \n<!-- /build-state.v1 -->\n' "$C2" > "$TMPDIR_T/blanks.md"
+  for f in bom cr blanks; do
+    run "$CS" --build-state "$TMPDIR_T/$f.md" --module Mod "$MODROOT"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PASS  source-of-truth"*"at the declared commit $C2"* ]]
+  done
 }
