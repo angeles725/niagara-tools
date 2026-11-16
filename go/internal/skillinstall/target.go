@@ -11,8 +11,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/installtools"
 )
 
-// unit is one file install-skill places: the skill launcher (copied from source) or a prompt file
-// (data rendered from the template source).
+// unit is one file install-skill places: the skill launcher (copied from source) or a prompt file (data
+// rendered from a template; source then only names that template for a report, promptLabel).
 type unit struct {
 	source, target string
 	data           []byte
@@ -133,7 +133,7 @@ func units(h harness, root, skill, tracked string, trackedData []byte) ([]unit, 
 		if err != nil {
 			return nil, err
 		}
-		all = append(all, unit{source: promptSource(tracked), target: prompt, data: data, rendered: true,
+		all = append(all, unit{source: promptLabel(tracked), target: prompt, data: data, rendered: true,
 			links: []string{h.promptsDir(root), prompt}})
 	}
 	return all, nil
