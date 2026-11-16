@@ -616,6 +616,21 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   `<type>` whose class is declared under the part's `srcTest/` or listed in its `moduleTest-include.xml` (a
   malformed XML file is exit 3, never a PASS). `[ev: retro r10-lint-test-types-in-prod Δ2]`
 - **Aggregated punch-list before hand-off:** run automatically by `toolbelt/build.sh` at the end of every successful build (pass `--no-report` to skip for inner loops). To run standalone: `toolbelt/report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile <ui_profile>] [--legacy] [--wiring-map <file>]` — composes the non-lint checks above per profile artifact (schema-risk per D9a, rc-scan per -ux artifact with the module's `ui_profile` from its BUILD-STATE envelope as `--profile` and `--legacy` for a deployed module not yet restructured, ESLint on -ux rc js, optionally triage-console) plus every lint marked Auto=`yes` in the generated lint index (`toolbelt/kit-state.sh lint-index`) (per-artifact or once per module-root, as its usage names) — the index, not this bullet, is the list of what it runs `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]`; the link-target-flags lint gets the wiring map (`--wiring-map`, else `docs/wiring-map.md` in or beside the module root), a slot-coverage facade/empty-lexicon FAIL is a FAIL row, and ADVISORY rows (console-only trips) are relayed with their own count, never as PASS or FAIL `[ev: retro panccadia-commissioning-lessons Δ9]` `[ev: retro alarm-console-design Δ3]`; exit 1 = punch-list has FAILs that block hand-off. [ev: retro campaign7-report-module] [ev: retro campaign8-report-integration] [ev: retro report-module-orphan-wiring] [ev: retro build-sh-auto-chain]
+- **Baseline punch-list (`.report-baseline`):** a module that already carries FAIL rows keeps them in
+  `<module-root>/.report-baseline`, committed with the module, so a change that adds none is hand-off-ready:
+  `toolbelt/report-module.sh <module-root> --write-baseline` writes it from the run's FAIL rows (sorted,
+  de-duplicated; the exit code is the run's). One key per line, `<artifact>  <check>  <detail>`: the row without
+  its status, a path cut to its file name and a number standing alone (line number, count) read as `N`, so the
+  key survives unrelated edits. With the file, the report prints the FAIL rows in two groups, NEW and BASE, the
+  summary reads `f FAIL (n new, b base in <file>)` (never a bare "0"), and the verdict and exit code read the NEW
+  rows only: zero NEW is exit 0, which `build.sh` maps to hand-off as before (`build.sh` itself is unchanged; it
+  reads the exit code). The floor is never baselined: a verify-module gate row or a schema-risk row counts as
+  NEW even when listed (a WARN row names the line) and `--write-baseline` leaves it out; a SKIPped floor check
+  still reads INCOMPLETE (exit 4); triage-console lines are always NEW. A line no FAIL row matches is a WARN
+  `stale baseline line` row with no exit change: delete it, the baseline only shrinks. `--no-baseline` ignores
+  the file for one run. Rows that differ only in a line number or a count share one key, so a second site of an
+  already listed finding in the same file is BASE: review the diff of the BASE group when that matters.
+  `[ev: external session retro, delta B7]`
 
 ## 6. Deploy (station) — operator
 - **MANDATORY before a live-station deploy — the §5 schema-risk verdict must be SAFE:** a **LOSSY/OUTAGE** verdict means the new jar's slots no longer match the station's saved `.bog` and it will fail to load. Proven LIVE: an OUTAGE-class retype (`BStatusNumeric`↔`BDouble`, `BRelTime`↔`BComplex`) crashed PANCCADIA after a ColdRoomPan reload — `SEVERE [sys] Cannot load station`, a full outage, not a warning. NEVER deploy a LOSSY/OUTAGE change to a station holding saved data without a bog migration. `[ev: corpus B800 §800.8]` `[ev: corpus B795]`

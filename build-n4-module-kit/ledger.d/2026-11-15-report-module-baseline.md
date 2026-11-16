@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-15 -->
+<!-- last-change-note: report-module separates NEW FAIL rows from a committed .report-baseline -->
+log: 2026-11-15 · report-module baseline (external session retro, delta B7) → `<module-root>/.report-baseline` lists the FAIL rows a module already had (`<artifact>  <check>  <detail>` keys, line numbers and counts masked); with it `report-module.sh` groups FAIL rows NEW / BASE and the verdict and exit code read the NEW ones, so `build.sh` hands off a change that adds none. `--write-baseline` writes it, `--no-baseline` ignores it; verify-module gate and schema-risk rows are never baselined; a stale line is a WARN row. `go/internal/reportmodule` `baseline*.go`; `members.go` split into the table and `member_run.go`.

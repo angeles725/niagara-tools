@@ -32,13 +32,19 @@ type report struct {
 	x         runner
 	getenv    func(string) string
 	n         map[string]int
-	hadFail   bool // a FAIL row
-	hadEnv    bool // a member env fault (an ERROR row)
-	floorSkip bool // verify-module or schema-risk did not run (BUILD-LOOP §5 floor)
+	hadFail   bool      // a FAIL row
+	hadEnv    bool      // a member env fault (an ERROR row)
+	floorSkip bool      // verify-module or schema-risk did not run (BUILD-LOOP §5 floor)
+	inFloor   bool      // the member running is a floor check: its FAIL rows are never baselined
+	bl        *baseline // the FAIL baseline (nil: none to apply or write)
 }
 
-// emit prints `<label>  <ST>  <check>  <detail>` and counts it.
+// emit prints `<label>  <ST>  <check>  <detail>` and counts it. In a run with a baseline file a FAIL row is held
+// back instead: failGroups prints and counts it, in its group.
 func (r *report) emit(label, st, check, detail string) {
+	if st == failed && r.bl.hold(failRow{label, check, detail}, r.inFloor) {
+		return
+	}
 	fmt.Fprintf(r.out, "%s  %s  %s  %s\n", label, st, check, detail)
 	r.count(st)
 }
@@ -64,7 +70,10 @@ func (r *report) envFault(label, check, detail string) {
 // A FAIL with a skipped floor check reads ISSUES (+INCOMPLETE): the bash printed ISSUES alone, hiding that the
 // floor was not run (retro r10-client-gate-retro Δ4). A member env fault with no FAIL reads INCOMPLETE, never
 // CLEAN: the member did not run, so the run cannot vouch for it (the bash printed CLEAN there; the exit stays 3).
+// With a baseline file the held FAIL rows are printed first, hadFail reads the NEW ones alone and the FAIL count
+// (NEW and BASE together) is followed by its split.
 func (r *report) summary(artifacts int) int {
+	r.failGroups()
 	verdict := "CLEAN"
 	incomplete := r.floorSkip && !r.o.lintOnly
 	switch {
@@ -82,8 +91,8 @@ func (r *report) summary(artifacts int) int {
 	if artifacts == 1 {
 		plural = ""
 	}
-	fmt.Fprintf(r.out, "report-module: %d artifact%s · %d PASS · %d FAIL · %d WARN · %d SKIP · %d ADVISORY  ->  %s\n",
-		artifacts, plural, r.n[pass], r.n[failed], r.n[warn], r.n[skip], r.n[advisory], verdict)
+	fmt.Fprintf(r.out, "report-module: %d artifact%s · %d PASS · %d FAIL%s · %d WARN · %d SKIP · %d ADVISORY  ->  %s\n",
+		artifacts, plural, r.n[pass], r.n[failed]+r.baseFails(), r.failSplit(), r.n[warn], r.n[skip], r.n[advisory], verdict)
 	switch {
 	case r.hadEnv:
 		return ExitEnv

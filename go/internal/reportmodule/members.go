@@ -34,7 +34,9 @@ type member struct {
 	// with a FAIL row is relayed as FAIL; any other advisory member's exit 1 is an env fault.
 	modeAware bool
 	noSource  string
-	special   func(r *report, a artifact)
+	// floor: a floor check (BUILD-LOOP §5): its FAIL rows can never be baselined (baseline.go).
+	floor   bool
+	special func(r *report, a artifact)
 }
 
 // artifact is what a member runs on: a profile artifact (its directory name labels the rows) or, for the
@@ -49,7 +51,7 @@ var (
 
 // perArtifact is every per-artifact step, in report order (the bash §1-§6).
 var perArtifact = []member{
-	{script: "verify-module", special: (*report).verifyModule},
+	{script: "verify-module", special: (*report).verifyModule, floor: true},
 	{script: "slot-coverage", special: (*report).slotCoverage},
 	{script: "lint-timers", special: (*report).lintTimers},
 	{script: "verify-module", special: (*report).plano},
@@ -99,7 +101,7 @@ var perArtifact = []member{
 	{script: "lint-license-isoperational-gate", advisory: true},
 	{script: "lint-set-null-ord", advisory: true},
 	{script: "lint-ws-placement", advisory: true},
-	{script: "schema-risk", special: (*report).schemaRisk},
+	{script: "schema-risk", special: (*report).schemaRisk, floor: true},
 }
 
 // perModule is every once-per-module step on the module root, in report order (the bash §8-§13).

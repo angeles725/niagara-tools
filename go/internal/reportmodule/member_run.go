@@ -13,6 +13,7 @@ func (r *report) step(a artifact, m member) {
 	if !strings.HasSuffix(a.name, m.suffix) {
 		return
 	}
+	r.inFloor = m.floor
 	if m.special != nil {
 		m.special(r, a)
 		return

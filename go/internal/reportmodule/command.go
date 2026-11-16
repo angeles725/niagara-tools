@@ -43,6 +43,11 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 	case isFile(o.root + "/../docs/wiring-map.md"):
 		o.wiringMap = o.root + "/../docs/wiring-map.md"
 	}
+	bl, err := loadBaseline(o)
+	if err != nil { // never a run that silently ignores the file
+		fmt.Fprintf(s.Err, msgCannotRead, strings.TrimRight(o.root, "/")+"/"+baselineName, errText(err))
+		return ExitEnv
+	}
 	artifacts, err := discover(o.root)
 	if err != nil {
 		fmt.Fprintf(s.Err, "find: '%s': %s\n", o.root, errText(err))
@@ -63,7 +68,7 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 		}
 	}
 	r := &report{out: s.Out, errw: s.Err, o: o, getenv: s.Env, n: map[string]int{},
-		x: runner{tb: tb, env: env}}
+		x: runner{tb: tb, env: env}, bl: bl}
 	for _, a := range artifacts {
 		for _, m := range perArtifact {
 			r.step(a, m)
@@ -73,8 +78,9 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 	for _, m := range perModule {
 		r.step(mod, m)
 	}
+	r.inFloor = false
 	r.triageConsole()
-	return r.summary(len(artifacts))
+	return r.writeBaseline(r.summary(len(artifacts)))
 }
 
 // discover lists the profile artifacts like `find -H <root> -mindepth 1 -maxdepth 1 -type d | sort` in the C

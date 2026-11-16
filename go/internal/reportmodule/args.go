@@ -1,13 +1,14 @@
 package reportmodule
 
-// usage is the one usage line of report-module (stderr, exit 2).
-const usage = "usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only]\n"
+// usage is the usage text of report-module (stderr, exit 2): the usage line, then the baseline paragraph.
+const usage = "usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline]\n" + baselineUsage
 
 // options are the parsed arguments. An empty value is the same as an absent flag (the bash tests were
 // `[ -n "$X" ]`), except for --profile, whose value must be one of the four profiles.
 type options struct {
 	root, targetVersion, consoleDir, profile, wiringMap string
 	legacy, firstDeploy, lintOnly                       bool
+	writeBaseline, noBaseline                           bool // the FAIL baseline (baseline.go)
 }
 
 // profiles are the --profile values rc-scan accepts.
@@ -21,7 +22,8 @@ func parseArgs(args []string) (o options, ok bool) {
 		"--target-version": &o.targetVersion, "--console-dir": &o.consoleDir,
 		"--profile": &o.profile, "--wiring-map": &o.wiringMap,
 	}
-	switches := map[string]*bool{"--legacy": &o.legacy, "--first-deploy": &o.firstDeploy, "--lint-only": &o.lintOnly}
+	switches := map[string]*bool{"--legacy": &o.legacy, "--first-deploy": &o.firstDeploy, "--lint-only": &o.lintOnly,
+		"--write-baseline": &o.writeBaseline, "--no-baseline": &o.noBaseline}
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if v := values[a]; v != nil {
