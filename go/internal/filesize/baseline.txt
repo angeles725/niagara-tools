@@ -9,7 +9,6 @@
 360 internal/mcpn4/jsonrpc/server.go
 221 internal/mcpn4/writeops/rollback_readback.go
 347 internal/mcpn4/pyjson/decode.go
-328 internal/lint/lint.go
 328 internal/lint/rules/silentprotection/silentprotection.go
 327 internal/ledgercheck/ledgercheck.go
 320 internal/lint/rules/batserrexit/lex.go
