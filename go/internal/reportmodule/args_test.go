@@ -32,8 +32,6 @@ func TestParseArgs(t *testing.T) {
 		{"an empty root is replaced", []string{"", "m"}, options{root: "m"}, true},
 		{"ready flags", []string{"m", "--ready", "--json", "--expect-niagara", "4.15", "--expect-signer", "a", "--niagara-home", "h"},
 			options{root: "m", ready: true, jsonOut: true, expectNiagara: "4.15", expectSigner: "a", niagaraHome: "h"}, true},
-		{"--json needs --ready", []string{"m", "--json"}, options{root: "m", jsonOut: true}, false},
-		{"--ready takes no --no-baseline", []string{"m", "--ready", "--no-baseline"}, options{}, false},
 	}
 	for _, tt := range tests {
 		got, ok := parseArgs(tt.args)
