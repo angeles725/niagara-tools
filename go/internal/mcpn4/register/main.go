@@ -115,18 +115,21 @@ func register(o options, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := writeIfChanged(out, "launcher "+launcher, launcher, text, 0o755); err != nil {
+	line, undo, err := writeLauncher("launcher "+launcher, launcher, text)
+	if err != nil {
 		return err
 	}
-	label := fmt.Sprintf("%s entry %s in %s", o.harness, name, tgt.file)
-	if next == nil {
-		fmt.Fprintf(out, "unchanged %s\n", label)
-		return nil
+	label, state := fmt.Sprintf("%s entry %s in %s", o.harness, name, tgt.file), "unchanged"
+	if next != nil {
+		if err := writeFile(tgt.file, next, 0); err != nil {
+			if uerr := undo(); uerr != nil {
+				return fmt.Errorf("%w; restoring launcher %s failed too: %v", err, launcher, uerr)
+			}
+			return fmt.Errorf("%w; nothing written", err)
+		}
+		state = "written"
 	}
-	if err := writeFile(tgt.file, next, 0); err != nil {
-		return err
-	}
-	fmt.Fprintf(out, "written %s\n", label)
+	fmt.Fprintf(out, "%s\n%s %s\n", line, state, label)
 	return nil
 }
 
@@ -156,9 +159,8 @@ func launcherText(o options, launcher string) ([]byte, error) {
 	if keys := secretInArgs(o.serverArgs, env); len(keys) > 0 {
 		return nil, usageErrorf("server flags carry the value of %v from the env file; credentials stay in the env file", keys)
 	}
-	if git := gitTreeOf(o.bin); git != "" && !o.force {
-		return nil, fmt.Errorf("--bin %s is inside a git checkout (%s): a worktree removed or rebuilt breaks every registered server; run 'mcp-n4 install' and use its path, or rerun with --force",
-			o.bin, git)
+	if err := binInCheckout(o.bin, o.force); err != nil {
+		return nil, err
 	}
 	text := []byte(renderLauncher(o.station, o.env, o.bin, o.serverArgs))
 	if rerr == nil && string(old) != string(text) && !o.force {

@@ -1,8 +1,9 @@
 package register
 
 import (
+	"errors"
 	"fmt"
-	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -32,16 +33,29 @@ func writeFile(path string, data []byte, perm os.FileMode) error {
 	return nil
 }
 
-func writeIfChanged(out io.Writer, label, path string, text []byte, perm os.FileMode) error {
-	if old, err := os.ReadFile(path); text == nil || (err == nil && string(old) == string(text)) {
-		fmt.Fprintf(out, "unchanged %s\n", label)
-		return nil
+// writeLauncher writes the launcher text unless it is nil or already there, and returns the line to
+// report and an undo that puts back the launcher's previous bytes and mode (or removes a new one),
+// for when the entry write that follows fails.
+func writeLauncher(label, path string, text []byte) (line string, undo func() error, err error) {
+	noop := func() error { return nil }
+	old, rerr := os.ReadFile(path)
+	if text == nil || (rerr == nil && string(old) == string(text)) {
+		return "unchanged " + label, noop, nil
 	}
-	if err := writeFile(path, text, perm); err != nil {
-		return err
+	undo = func() error { return os.Remove(path) }
+	if rerr == nil {
+		st, err := os.Stat(path)
+		if err != nil {
+			return "", nil, err
+		}
+		undo = func() error { return writeFile(path, old, st.Mode().Perm()) }
+	} else if !errors.Is(rerr, fs.ErrNotExist) {
+		return "", nil, rerr
 	}
-	fmt.Fprintf(out, "written %s\n", label)
-	return nil
+	if err := writeFile(path, text, 0o755); err != nil {
+		return "", nil, err
+	}
+	return "written " + label, undo, nil
 }
 
 // checkKeptLauncher refuses, unless force, to keep a launcher that does not exec the installed
@@ -56,7 +70,7 @@ func checkKeptLauncher(launcher, text, bin string, force bool) error {
 	case !ok:
 		return fmt.Errorf("launcher %s has no exec line naming its binary; pass server flags after -- to rewrite it, or --force to keep it", launcher)
 	case filepath.Clean(target) == filepath.Clean(bin):
-		return nil
+		return binInCheckout(bin, false) // bin may be a symlink into a checkout
 	}
 	where := ""
 	if git := gitTreeOf(target); git != "" {

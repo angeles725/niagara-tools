@@ -59,14 +59,14 @@ func (t target) plan(force bool) (doc, next []byte, err error) {
 	}
 	if t.claude() {
 		if _, ok, err := getPath(doc, t.path[:2]); err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", t.file, err)
+			return nil, nil, fmt.Errorf("%s: %w; nothing written", t.file, err)
 		} else if !ok {
 			return nil, nil, fmt.Errorf("no Claude Code project %s in %s: start Claude Code in that directory once, or pass --project", t.path[1], t.file)
 		}
 	}
 	old, found, err := getPath(doc, t.path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s: %w", t.file, err)
+		return nil, nil, fmt.Errorf("%s: %w; nothing written", t.file, err)
 	}
 	if found && sameValue(old, t.entry) {
 		return doc, nil, nil
@@ -77,7 +77,7 @@ func (t target) plan(force bool) (doc, next []byte, err error) {
 	}
 	next, err = setPath(doc, t.path, t.entry)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s: %w", t.file, err)
+		return nil, nil, fmt.Errorf("%s: %w; nothing written", t.file, err)
 	}
 	return doc, next, nil
 }

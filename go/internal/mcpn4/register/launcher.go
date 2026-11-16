@@ -65,12 +65,10 @@ func firstDiffLine(a, b string) int {
 }
 
 // gitTreeOf is the .git (directory or worktree file) at or above the directory of path, after
-// resolving symlinks when path exists; "" when there is none. A launcher must not exec a binary
+// resolving symlinks (see resolveLink); "" when there is none. A launcher must not exec a binary
 // inside a git checkout: removing or rebuilding the checkout breaks every registered server.
 func gitTreeOf(path string) string {
-	if real, err := filepath.EvalSymlinks(path); err == nil {
-		path = real
-	}
+	path = resolveLink(path)
 	for dir := filepath.Dir(path); ; dir = filepath.Dir(dir) {
 		if _, err := os.Lstat(filepath.Join(dir, ".git")); err == nil {
 			return filepath.Join(dir, ".git")
@@ -79,4 +77,37 @@ func gitTreeOf(path string) string {
 			return ""
 		}
 	}
+}
+
+// resolveLink is path with its symlinks resolved. A dangling link (a binary in a worktree since
+// removed) is followed through its link text, relative to the link's own directory, as far as the
+// chain goes; path is returned unchanged when not even that can be read.
+func resolveLink(path string) string {
+	for hops := 0; hops < 40; hops++ {
+		if real, err := filepath.EvalSymlinks(path); err == nil {
+			return real
+		}
+		dest, err := os.Readlink(path)
+		if err != nil {
+			return path
+		}
+		if !filepath.IsAbs(dest) {
+			dir := filepath.Dir(path)
+			if real, err := filepath.EvalSymlinks(dir); err == nil {
+				dir = real
+			}
+			dest = filepath.Join(dir, dest)
+		}
+		path = dest
+	}
+	return path
+}
+
+// binInCheckout refuses, unless force, a binary that resolves into a git checkout.
+func binInCheckout(bin string, force bool) error {
+	if git := gitTreeOf(bin); git != "" && !force {
+		return fmt.Errorf("--bin %s is inside a git checkout (%s): a worktree removed or rebuilt breaks every registered server; run 'mcp-n4 install' and use its path, or rerun with --force",
+			bin, git)
+	}
+	return nil
 }
