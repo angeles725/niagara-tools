@@ -1,6 +1,6 @@
 // Command lab-sim is a field-device simulator for the laboratory: a Modbus TCP
-// server driven by a scenario file, with a request log and a loopback control
-// port (go/internal/labsim/README.md).
+// server and BACnet/IP devices driven by a scenario file, with a request log
+// and a loopback control port (go/internal/labsim/README.md).
 package main
 
 import (

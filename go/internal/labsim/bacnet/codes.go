@@ -55,9 +55,9 @@ type Error struct {
 
 // The error classes (BACnetErrorClass).
 const (
-	ClassDevice   = 0
-	ClassObject   = 1
-	ClassProperty = 2
+	ClassDevice    = 0
+	ClassObject    = 1
+	ClassProperty  = 2
 	ClassResources = 3
 	ClassServices  = 5
 )

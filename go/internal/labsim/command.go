@@ -1,8 +1,9 @@
 // Package labsim is the lab-sim command: a field-device simulator the
 // laboratory controls and scripts from tests. It only composes its parts: the
 // scenario file (scenario), the protocol-neutral devices (model), the Modbus
-// register map, codec and server (regmap, modbus, mbserver), the request log
-// (reqlog) and the loopback control port (control).
+// register map, codec and server (regmap, modbus, mbserver), the BACnet codec,
+// object model and server (bacnet, bacobj, bacserver), the request log (reqlog)
+// and the loopback control port (control).
 package labsim
 
 import (
@@ -27,13 +28,15 @@ type command struct {
 // commands is the table of sub-commands. A run returns exitUsage with the
 // error to print for a command line it cannot accept.
 var commands = map[string]command{
-	"run":    {options: []string{"listen", "control", "log"}, min: 1, max: 1, run: runCommand},
+	"run":    {options: []string{"listen", "control", "log", "bacnet-listen", "bacnet-broadcast"}, min: 1, max: 1, run: runCommand},
 	"check":  {min: 1, max: 1, run: checkCommand},
 	"get":    {options: []string{"control"}, min: 2, max: 2, run: getCommand},
 	"set":    {options: []string{"control"}, min: 3, max: 3, run: setCommand},
 	"status": {options: []string{"control"}, run: statusCommand},
 	"stop":   {options: []string{"control"}, run: stopCommand},
 	"probe":  {options: []string{"addr", "unit", "fn", "address", "count", "values", "timeout-ms"}, run: probeCommand},
+	"bacnet-probe": {options: []string{"addr", "timeout-ms", "max-apdu", "priority", "process", "lifetime", "mode", "count"}, min: 1, max: 4,
+		run: bacnetProbeCommand},
 }
 
 // Main is the lab-sim entry point.

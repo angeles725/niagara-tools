@@ -9,7 +9,7 @@ const (
 
 // Every text lab-sim prints besides the register map and JSON.
 const (
-	msgNoCommand      = "lab-sim: no command (run, check, get, set, status, stop, probe; see lab-sim help)\n"
+	msgNoCommand      = "lab-sim: no command (run, check, get, set, status, stop, probe, bacnet-probe; see lab-sim help)\n"
 	msgUnknownCommand = "lab-sim: unknown command %q (see lab-sim help)\n"
 	msgUsage          = "lab-sim %s: %v (see lab-sim help)\n"
 	msgArgCount       = "wrong number of arguments"
@@ -51,4 +51,48 @@ const (
 	textOffline   = "offline %d-%d ms"
 	textDevice    = "%s (unit %d)"
 	textPoint     = "%s (unit %d), point %s"
+)
+
+// The texts of the BACnet front end.
+const (
+	msgBadBroadcast    = "--bacnet-broadcast %q is not an IPv4 address and a port"
+	msgBadBACnetListen = "--bacnet-listen address %q is not an IPv4 address and a port"
+	msgBACnetWhich     = "--bacnet-listen %q names no device and the scenario has %d BACnet devices: write device=host:port"
+	msgBACnetNoDevice  = "--bacnet-listen names %q, which is not a BACnet device of the scenario"
+	msgBACnetTwice     = "--bacnet-listen names %q twice"
+	msgBACnetExposed   = "BACnet device %q: listen address %v; the scenario asks for it, but only an explicit --bacnet-listen %s=%s binds outside this machine"
+	msgBACnetBind      = "BACnet device %q: %v"
+)
+
+// The rendering of the BACnet devices by check.
+const (
+	checkBACnetDevice = "BACnet device %s: instance %d, listen %s, vendor %d %q, model %q, max APDU %d, COV %s\n"
+	checkObjectHeader = "DEVICE\tOBJECT TYPE\tINSTANCE\tNAME\tUNITS\tCOMMANDABLE\tACCESS"
+	textOn            = "on"
+	textOff           = "off"
+	textYes           = "yes"
+	textNo            = "no"
+)
+
+// The texts of bacnet-probe.
+const (
+	msgProbeAction    = "the action %q is none of who-is, read, read-multiple, write, subscribe"
+	msgProbeArgs      = "%s takes %s"
+	msgProbeObject    = "object %q is not type,instance with a type of %s and an instance of 0-4194303"
+	msgProbeProperty  = "property %q is not a property name (present-value, object-list, units, ...; all, required and optional in read-multiple)"
+	msgProbeIndex     = "array index %q is not a whole number from 0"
+	msgProbeRange     = "the range %s-%s is not two device instances, low then high"
+	msgProbeValue     = "value %q cannot be written to %s: %s"
+	msgProbePointType = "write needs an analog, binary or multi-state object: its type gives the type of the value"
+	msgProbeMode      = "--mode %q is none of unconfirmed, confirmed, cancel"
+	msgProbeMaxAPDU   = "--max-apdu %q is none of 50, 128, 206, 480, 1024, 1476"
+	msgProbeNoAnswer  = "no answer from %s within %d ms: %v"
+	wantAnalog        = "an analog value is a number or null"
+	wantBinary        = "a binary value is 0, 1 or null"
+	wantMultiState    = "a multi-state value is a state number from 1 or null"
+	argsWhoIs         = "no argument, or the lowest and highest device instance"
+	argsRead          = "an object, a property and optionally an array index"
+	argsReadMultiple  = "an object and a list of properties separated by commas"
+	argsWrite         = "an object and a value"
+	argsSubscribe     = "an object"
 )

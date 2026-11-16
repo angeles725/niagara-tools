@@ -30,13 +30,15 @@ func load(path string, s cli.Stdio) (f *scenario.File, ok bool) {
 	return f, true
 }
 
-// checkCommand validates a scenario and prints its register map.
+// checkCommand validates a scenario and prints its register map and, when it
+// has BACnet devices, their object lists.
 func checkCommand(p parsed, s cli.Stdio) (int, error) {
 	f, ok := load(p.rest[0], s)
 	if !ok {
 		return exitFailed, nil
 	}
 	printMap(s.Out, f)
+	printObjects(s.Out, f)
 	return exitOK, nil
 }
 

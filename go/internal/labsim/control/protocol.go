@@ -58,6 +58,14 @@ type Status struct {
 	Connections int            `json:"connections"`
 	Refused     int64          `json:"refused"`
 	Devices     []DeviceStatus `json:"devices"`
+	FrontEnds   []FrontEnd     `json:"front_ends"` // every address the simulator listens on
+}
+
+// FrontEnd is one listening address of the simulator.
+type FrontEnd struct {
+	Protocol string `json:"protocol"` // modbus-tcp, bacnet-ip or control
+	Address  string `json:"address"`
+	Device   string `json:"device,omitempty"` // the device behind a BACnet/IP address
 }
 
 // DeviceStatus is one simulated device in a Status.

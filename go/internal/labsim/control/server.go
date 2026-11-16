@@ -30,6 +30,9 @@ type Server struct {
 	Elapsed func() time.Duration // the simulator's time, for a get
 	Status  func() Status
 	Stop    func() // asks the simulator to stop; must not block
+	// Changed, when set, is told after a set: a front end with subscriptions
+	// (BACnet COV) then notifies at once.
+	Changed func()
 }
 
 // Serve answers requests on ln until ctx ends, then closes ln and waits for
@@ -120,6 +123,9 @@ func (s *Server) point(req Request) Response {
 			return Response{Error: errNoValue}
 		}
 		dev.Pin(req.Point, *req.Value)
+		if s.Changed != nil {
+			s.Changed()
+		}
 	}
 	v, _ := dev.Get(req.Point, elapsed)
 	return Response{OK: true, Value: &v}
