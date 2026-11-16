@@ -130,8 +130,8 @@ func (t *Tools) Navigate(args *pyjson.Object) (*pyjson.Object, error) {
 		return nil, err
 	}
 	out := obj("ord", ord, "children", children, "elapsed_ms", elapsed)
-	if l.declared.note != "" {
-		out.Set("defaults_note", l.declared.note)
+	if note := l.declared.noteText(); note != "" {
+		out.Set("defaults_note", note)
 	}
 	if list != nil {
 		out.Set("types", list)

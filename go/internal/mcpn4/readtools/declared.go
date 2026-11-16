@@ -2,7 +2,6 @@ package readtools
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
@@ -25,24 +24,35 @@ const (
 
 // declared is a listing with its defaults: nodes holding the declared defaults the load left
 // out, the names added under each listed path (inherited first, as declared), every added path
-// (the property and the children of its default) and a note when a contract could not be read.
+// (the property and the children of its default) and the notes of what could not be listed.
 type declared struct {
 	nodes  *pyjson.Object
 	added  map[string][]string
 	paths  map[string]bool
-	note   string
+	notes  []string
 	copied bool // nodes is this listing's own copy, not the loaded nodes
+}
+
+func newDeclared(nodes *pyjson.Object) *declared {
+	return &declared{nodes: nodes, added: map[string][]string{}, paths: map[string]bool{}}
 }
 
 // withDefaults adds to nodes the declared properties at their default of the components at
 // paths. A client that cannot read type contracts adds nothing and says nothing.
 func (t *Tools) withDefaults(nodes *pyjson.Object, paths []string) *declared {
-	d := &declared{nodes: nodes, added: map[string][]string{}, paths: map[string]bool{}}
 	tl, readsTypes := t.Ctx.Session.Client.(typeLoader)
 	pc, resolves := t.Ctx.Session.Client.(plan.Client)
 	if !readsTypes || !resolves {
-		return d
+		return newDeclared(nodes)
 	}
+	return fillDefaults(tl, pc, &t.undescribed, nodes, paths, t.Ctx.Scrub)
+}
+
+// fillDefaults is withDefaults with its client: what cannot be read becomes a note (scrubbed),
+// and a lookup that fails keeps the defaults and notes gathered before it.
+func fillDefaults(tl typeLoader, pc plan.Client, gone *undescribed, nodes *pyjson.Object, paths []string,
+	scrub func(string) string) *declared {
+	d := newDeclared(nodes)
 	specs, seen := []string{}, map[string]bool{}
 	for _, p := range paths {
 		if spec := nodeType(nodes, p); spec != "" && !seen[spec] {
@@ -50,25 +60,21 @@ func (t *Tools) withDefaults(nodes *pyjson.Object, paths []string) *declared {
 			specs = append(specs, spec)
 		}
 	}
-	types, err := loadContracts(tl, &t.undescribed, specs)
+	types, err := loadContracts(tl, gone, specs)
 	if err != nil {
-		d.note = t.Ctx.Scrub(fmt.Sprintf(contractsUnreadNote, err.Error()))
+		d.addNote(scrub(fmt.Sprintf(contractsUnreadNote, err.Error())))
 		return d
 	}
-	notes := map[string]bool{}
-	var order []string
 	for _, p := range paths {
 		names, note := declaredProps(types, nodeType(nodes, p))
-		if note != "" && !notes[note] {
-			notes[note] = true
-			order = append(order, note)
+		if note != "" {
+			d.addNote(note)
 		}
 		if err := d.add(pc, p, names); err != nil {
-			d.note = t.Ctx.Scrub(fmt.Sprintf(contractsUnreadNote, err.Error()))
-			return &declared{nodes: nodes, added: map[string][]string{}, paths: map[string]bool{}, note: d.note}
+			d.addNote(scrub(fmt.Sprintf(contractsUnreadNote, err.Error())))
+			return d
 		}
 	}
-	d.note = strings.Join(order, "; ")
 	return d
 }
 
@@ -123,7 +129,7 @@ func declaredProps(types *pyjson.Object, spec string) (names []string, note stri
 			note = fmt.Sprintf(notDescribedNote, spec)
 			break
 		}
-		if v, _ := e.Get("isErr"); v == true {
+		if isErrEntry(e) {
 			note = fmt.Sprintf(unknownTypeNote, spec)
 			break
 		}

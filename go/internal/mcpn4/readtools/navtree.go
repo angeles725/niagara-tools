@@ -38,22 +38,23 @@ func (l *listing) entries(path string, levels int) ([]any, error) {
 	nodes := l.declared.nodes
 	kids := box.Children(nodes, path)
 	for _, name := range kids.Keys() {
-		node, childPath := box.Node(kids, name), childPath(path, name)
+		node, full := box.Node(kids, name), childPath(path, name)
 		kind, _ := node.Get("t")
 		handle, _ := node.Get("h")
-		has, err := hasComponentChildren(l.loaded, childPath)
+		has, err := hasComponentChildren(l.loaded, full)
 		if err != nil {
 			return nil, err
 		}
 		entry := obj("name", name, "type", kind, "handle", handle, "has_children", has)
-		if l.declared.paths[childPath] {
-			if err := l.declared.navDefault(entry, childPath); err != nil {
-				return nil, err
+		if l.declared.paths[full] {
+			if err := l.declared.navDefault(entry, full); err != nil {
+				l.declared.skip(full, err) // one default the reader cannot decode does not fail the listing
+				continue
 			}
 		}
 		var nested []any
 		if levels > 1 {
-			if nested, err = l.entries(childPath, levels-1); err != nil {
+			if nested, err = l.entries(full, levels-1); err != nil {
 				return nil, err
 			}
 			entry.Set("children", nested)

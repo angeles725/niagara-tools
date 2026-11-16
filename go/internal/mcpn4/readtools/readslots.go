@@ -86,15 +86,15 @@ func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 	}
 	d := t.withDefaults(nodes, []string{""})
 	for _, name := range d.added[""] {
-		entry, err := d.defaultSlot(name, name)
-		if err != nil {
-			return nil, err
+		if entry, err := d.defaultSlot(name, name); err != nil {
+			d.skip(name, err) // one default the reader cannot decode does not fail the read
+		} else {
+			slots = append(slots, entry)
 		}
-		slots = append(slots, entry)
 	}
 	out := obj("ord", ord, "slots", slots, "elapsed_ms", elapsed)
-	if d.note != "" {
-		out.Set("defaults_note", d.note)
+	if note := d.noteText(); note != "" {
+		out.Set("defaults_note", note)
 	}
 	return out, nil
 }

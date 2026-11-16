@@ -200,7 +200,7 @@ func TestARollbackWhoseNonDefaultValueIsLostReadsMismatch(t *testing.T) {
 	}
 }
 
-func TestARollbackReadBackWithAnUnreadableRegistryReadsMismatch(t *testing.T) {
+func TestARollbackReadBackWithAnUnreadableRegistryReportsTheReadBackError(t *testing.T) {
 	r, c := dfxRig(t, verifiedRig)
 	set := r.Srv.RunWrite("n4_set_slot", Args{"ord": Folder + "/" + c.Name, "slot": "flag", "value": true, "value_type": "baja:Boolean"})
 	r.Restart(nil) // a new session: no contract is cached
@@ -208,7 +208,7 @@ func TestARollbackReadBackWithAnUnreadableRegistryReadsMismatch(t *testing.T) {
 	armed := dropAfterRollbackWrite(r, "flag", true)
 	armed.Store(true)
 	back := r.Srv.RunWrite("n4_rollback", Args{"batch_id": set["batch_id"]})
-	if back["verdict"] != "mismatch" || Dig(back, "observed", "restored") != false {
-		t.Errorf("rollback = %v, want mismatch when no contract can be read", back)
+	if back["verdict"] != "failed" || back["readback_failed"] != true || back["readback_error"] == nil {
+		t.Errorf("rollback = %v, want the read-back error, not a mismatch, when no contract can be read", back)
 	}
 }

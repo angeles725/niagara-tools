@@ -432,12 +432,17 @@ A BOX load leaves out a declared (frozen) property still at its default, so a fr
 would read no slots: `n4_read_slots` lists those after the loaded slots, and `n4_navigate` under
 each component or struct slot whose children it lists (with `handle` null), from the type contract
 the station's registry gives (`loadTypes`, read once per session for every listed type and its
-supertypes; a type the station does not describe is asked for once too). The sub-entries of a
-declared struct default may show `type: null` (the contract gives their value, not their type).
+supertypes; a type the station answers as unknown, or leaves out of a reply that answered other
+types, is not asked for again; one left out of a reply that answered nothing, or after a failed
+call, is). The sub-entries of a declared struct default are marked `default` too and may show
+`type: null` (the contract gives their value, not their type).
 Each is marked `default: true` with the contract's default value; when the contract gives no
 default value (a component default such as `proxyExt` is not sent) `value` is null and a `note`
 says so, never an invented value. `defaults_note` says when a contract could not be read (the
-registry failed, or the station does not know or did not describe a type). One station session
+registry failed, or the station does not know or did not describe a type) and names a declared
+default the reader could not decode, which is left out; the read itself never fails on one. The
+`n4_rollback` read-back counts an omitted frozen property as its declared default; when the
+contract cannot be read the read-back reports `readback_error` instead of a `mismatch`. One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
 first, so a failed reconnect leaves no session). `n4_describe_session` lists the
 configured station names. `n4_list_links` and
