@@ -24,27 +24,7 @@ func (t *Tools) sectionError(err error) (*pyjson.Object, error) {
 	if errors.As(err, &be) && be.IsAuth() {
 		return nil, err
 	}
-	return obj("error", t.Ctx.Scrub(errorWords(err))), nil
-}
-
-// errorWords is the text of err that is safe to show (the dispatcher's rule): the words of a
-// tool, station or value error, else the error's type only.
-func errorWords(err error) string {
-	var te *jsonrpc.ToolError
-	var be *box.Error
-	var ve *pyjson.ValueError
-	var typed jsonrpc.PyTyped
-	switch {
-	case errors.As(err, &te):
-		return te.Msg
-	case errors.As(err, &be):
-		return be.Msg
-	case errors.As(err, &ve):
-		return ve.Msg
-	case errors.As(err, &typed):
-		return "internal error (" + typed.PyType() + ")"
-	}
-	return "internal error (Exception)"
+	return obj("error", t.Ctx.Scrub(jsonrpc.ErrorText(err))), nil
 }
 
 // StationHealth is n4_station_health.
@@ -75,7 +55,7 @@ func (t *Tools) StationHealth(args *pyjson.Object) (*pyjson.Object, error) {
 	if len(failed) > 0 {
 		out.Set("totals_note", fmt.Sprintf(totalsNote, strings.Join(failed, ", ")))
 	} else if sum, err := bql.SummarizeInventory(base, keyed["networks"], keyed["devices"], keyed["points"]); err != nil {
-		out.Set("totals_note", errorWords(err))
+		out.Set("totals_note", jsonrpc.ErrorText(err))
 	} else {
 		out.Set("totals", lookup(sum, "totals"))
 	}

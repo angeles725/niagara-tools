@@ -11,7 +11,8 @@ import (
 )
 
 // healthStatus is one status section: the rows of q counted per status flag, the not-ok ones
-// listed up to maxNotOk. rows are the query's rows keyed like the inventory's (nil when the
+// listed up to maxNotOk. Every row is one of ok (no flag), null_only (null alone: no value, not
+// a fault) or not ok (any other flag, unknownFlag included), so the three counts sum to total. rows are the query's rows keyed like the inventory's (nil when the
 // section failed, with section = {error}); err is only an error that fails the whole call.
 func (t *Tools) healthStatus(q healthQuery, base string, maxRows, timeout, maxNotOk int) (section *pyjson.Object, rows []*pyjson.Object, err error) {
 	names := append(append([]string{}, inventoryColumns...), bitsColumn)
@@ -26,7 +27,7 @@ func (t *Tools) healthStatus(q healthQuery, base string, maxRows, timeout, maxNo
 		section, err = t.sectionError(err)
 		return section, nil, err
 	}
-	byFlag, notOk, okCount, notOkCount, disabled := map[string]int{}, []any{}, 0, 0, 0
+	byFlag, notOk, okCount, nullOnly, notOkCount, disabled := map[string]int{}, []any{}, 0, 0, 0, 0
 	for _, row := range rows {
 		flags := statusFlags(cellText(row, bitsColumn))
 		enabled := enabledCell(cellText(row, enabledColumn))
@@ -39,6 +40,10 @@ func (t *Tools) healthStatus(q healthQuery, base string, maxRows, timeout, maxNo
 		}
 		for _, f := range flags {
 			byFlag[f]++
+		}
+		if len(flags) == 1 && flags[0] == nullFlag { // no value, not a fault
+			nullOnly++
+			continue
 		}
 		if notOkCount++; len(notOk) < maxNotOk {
 			entry := obj("path", cellText(row, "Slot Path"))
@@ -53,7 +58,7 @@ func (t *Tools) healthStatus(q healthQuery, base string, maxRows, timeout, maxNo
 			notOk = append(notOk, entry)
 		}
 	}
-	section = obj("total", len(rows), "ok", okCount)
+	section = obj("total", len(rows), "ok", okCount, "null_only", nullOnly)
 	if q.enabled {
 		section.Set("disabled", disabled)
 	}

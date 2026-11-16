@@ -28,7 +28,7 @@ func TestStationHealthAnswersTheSystemValuesWithADerivedMemoryPercentage(t *test
 
 func TestStationHealthCountsPointsPerStatusFlagAndNamesTheNotOkOnes(t *testing.T) {
 	r, _ := shxHealthRig(t)
-	want := map[string]any{"total": 5.0, "ok": 2.0, "by_flag": map[string]any{"down": 1.0, "fault": 1.0, "stale": 2.0},
+	want := map[string]any{"total": 5.0, "ok": 2.0, "null_only": 0.0, "by_flag": map[string]any{"down": 1.0, "fault": 1.0, "stale": 2.0},
 		"not_ok_count": 3.0, "truncated": false, "rows_truncated": false, "not_ok": []any{
 			map[string]any{"path": "slot:/Drivers/BacnetNetwork/Ahu2/points/Temp", "flags": []any{"down", "stale"}},
 			map[string]any{"path": "slot:/Drivers/BacnetNetwork/Ahu2/points/Fan", "flags": []any{"stale"}},
@@ -41,7 +41,7 @@ func TestStationHealthCountsPointsPerStatusFlagAndNamesTheNotOkOnes(t *testing.T
 func TestStationHealthNamesTheNetworksAndDevicesThatAreNotOk(t *testing.T) {
 	r, _ := shxHealthRig(t)
 	out := r.Srv.OK("n4_station_health", nil)
-	wantNets := map[string]any{"total": 2.0, "ok": 1.0, "disabled": 1.0, "by_flag": map[string]any{"disabled": 1.0},
+	wantNets := map[string]any{"total": 2.0, "ok": 1.0, "null_only": 0.0, "disabled": 1.0, "by_flag": map[string]any{"disabled": 1.0},
 		"not_ok_count": 1.0, "truncated": false, "rows_truncated": false, "not_ok": []any{map[string]any{
 			"path": "slot:/Drivers/ModbusNetwork", "name": "ModbusNetwork", "type": "modbusAsync:ModbusAsyncNetwork",
 			"flags": []any{"disabled"}, "enabled": false}}}
@@ -180,5 +180,33 @@ func TestStationHealthIsAReadToolThatNeedsASession(t *testing.T) {
 	}
 	if text := r.Srv.Err("n4_station_health", nil); !strings.Contains(text, "n4_connect") {
 		t.Errorf("without a session: %q", text)
+	}
+}
+
+// A status whose only flag is null is a point with no value (an unlinked input, for example):
+// counted under null_only, never listed as not ok. null beside another flag is not ok.
+func TestStationHealthCountsANullOnlyStatusApartFromTheNotOkOnes(t *testing.T) {
+	r, sv := shxHealthRig(t)
+	shxRouteHealth(sv, shxNetworksCSV, shxDevicesCSV, "Slot Path,Name,Type,Bits\n"+
+		"slot:/Logic/Ok,Ok,control:NumericWritable,0\n"+
+		"slot:/Logic/Unlinked,Unlinked,control:NumericWritable,64\n"+
+		"slot:/Logic/NullStale,NullStale,control:NumericPoint,80\n"+
+		"slot:/Logic/Unread,Unread,control:NumericPoint,\n")
+	points := shxSection(t, r.Srv.OK("n4_station_health", nil), "points")
+	want := map[string]any{"total": 4.0, "ok": 1.0, "null_only": 1.0, "not_ok_count": 2.0,
+		"by_flag": map[string]any{"null": 2.0, "stale": 1.0, "unknown": 1.0}, "truncated": false, "rows_truncated": false,
+		"not_ok": []any{map[string]any{"path": "slot:/Logic/NullStale", "flags": []any{"stale", "null"}},
+			map[string]any{"path": "slot:/Logic/Unread", "flags": []any{"unknown"}}}}
+	if !reflect.DeepEqual(points, want) {
+		t.Errorf("points = %v", points)
+	}
+	if sum := points["ok"].(float64) + points["null_only"].(float64) + points["not_ok_count"].(float64); sum != points["total"] {
+		t.Errorf("ok + null_only + not_ok_count = %v, total %v", sum, points["total"])
+	}
+	for _, name := range []string{"networks", "devices"} {
+		s := shxSection(t, r.Srv.OK("n4_station_health", nil), name)
+		if s["null_only"] != 0.0 || s["ok"].(float64)+s["not_ok_count"].(float64) != s["total"] {
+			t.Errorf("%s = %v", name, s)
+		}
 	}
 }

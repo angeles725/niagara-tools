@@ -36,8 +36,12 @@ const (
 	enabledColumn = "Enabled"
 )
 
-// unknownFlag is the flag of a row whose status bits the station did not answer as a number.
-const unknownFlag = "unknown"
+// unknownFlag is the flag of a row whose status bits the station did not answer as a number;
+// nullFlag is the station's flag of a status with no value, which alone is not a fault.
+const (
+	unknownFlag = "unknown"
+	nullFlag    = "null"
+)
 
 // The spy page capacity is read from and the notes of a null capacity.
 const (

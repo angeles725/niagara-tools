@@ -243,11 +243,14 @@ kilobytes) plus the derived
 `javaVmVersion`. `points`, `networks` and `devices` each run one query that selects `status.bits`
 (the status as a number, which no locale translates) and report `total`, `ok`, `by_flag` (a count
 per flag: `disabled`, `fault`, `down`, `alarm`, `stale`, `overridden`, `null`, `unackedAlarm`; a
-row with two flags counts under both), `not_ok_count` and `not_ok` (the entries with any flag, up
-to `max_not_ok`; `truncated` says the list was cut, `rows_truncated` that the query hit
+row with two flags counts under both), `null_only`, `not_ok_count` and `not_ok`. Every row is one
+of three: `ok` (no flag), `null_only` (the flag `null` alone: a point with no value, such as an
+unlinked input, which is not a fault and is not listed) or not ok (at least one flag other than
+`null`), so `ok + null_only + not_ok_count = total`. `not_ok` lists the not-ok entries up
+to `max_not_ok` ( `truncated` says the list was cut, `rows_truncated` that the query hit
 `max_rows`, so the counts are lower bounds). Networks and devices also carry `disabled` (rows
 whose `enabled` is false) and name, type and `enabled` per entry. A status the station did not
-answer as a number counts under `unknown`, never as ok. `totals` are the `n4_inventory` totals of
+answer as a number counts under `unknown` and as not ok, never as ok. `totals` are the `n4_inventory` totals of
 the same rows. `capacity` is the Global Capacity table of the spy metrics page (`spy:/metrics`):
 `resources` (`type`, `used`, `limit`, and `unlimited: true` where the station shows no limit) and
 `recount` (when the capacity recount last ran or failed). `capacity` is `null` with a
