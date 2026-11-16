@@ -52,7 +52,6 @@
 230 internal/lintindex/lintindex.go
 227 internal/verifymodule/plano.go
 224 internal/bogaudit/graph.go
-224 internal/mcpn4/writeops/history.go
 223 internal/lint/rules/silentprotection/trips.go
 220 internal/lint/rules/timers/ticket.go
 220 internal/mcpn4/pyxml/tags.go

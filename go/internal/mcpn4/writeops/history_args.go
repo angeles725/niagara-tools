@@ -1,0 +1,81 @@
+package writeops
+
+import (
+	"strconv"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+)
+
+// historyArgs validates everything that needs no station: the points, the extension name and
+// type, the pattern, the interval and enabled.
+func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
+	var s historySpec
+	raw, _ := args.Get("points")
+	list, _ := raw.([]any)
+	if len(list) == 0 || len(list) > maxHistoryPoints {
+		return s, nil, plan.ToolError("points must list 1 to " + strconv.Itoa(maxHistoryPoints) + " point ORDs")
+	}
+	points, dup := []string{}, map[string]bool{}
+	for _, p := range list {
+		ord, ok := p.(string)
+		if !ok || ord == "" || dup[ord] {
+			return s, nil, plan.ToolError("points must be distinct non-empty ORD strings, got " + pyjson.Repr(p))
+		}
+		dup[ord] = true
+		points = append(points, ord)
+	}
+	name, _ := args.Get("ext_name")
+	if name == nil {
+		name = "NumericInterval"
+	}
+	var err error
+	if s.name, err = plan.Name("ext_name", name); err != nil {
+		return s, nil, err
+	}
+	s.typ = "history:NumericIntervalHistoryExt"
+	if t, ok := args.Get("ext_type"); ok {
+		s.typ, _ = t.(string)
+	}
+	if !historyType(s.typ) {
+		return s, nil, plan.ToolError("ext_type must be one of " + joinStrings(historyExtTypes))
+	}
+	pattern, _ := args.Get("history_name")
+	if s.pattern, _ = pattern.(string); s.pattern == "" {
+		return s, nil, plan.ToolError("history_name must be a non-empty baja:Format pattern, e.g. " +
+			"S%parent.parent.parent.name%_%parent.name%")
+	}
+	interval, _ := args.Get("interval_ms")
+	iv, err := plan.Coerce("baja:RelTime", interval, "0")
+	if err != nil {
+		return s, nil, err
+	}
+	if s.interval = pyjson.Str(iv); s.interval == "0" {
+		return s, nil, plan.ToolError("interval_ms must be at least 1")
+	}
+	s.enabled = true
+	if v, ok := args.Get("enabled"); ok {
+		s.enabled = pyjson.Truthy(v)
+	}
+	return s, points, nil
+}
+
+func historyType(t string) bool {
+	for _, k := range historyExtTypes {
+		if k == t {
+			return true
+		}
+	}
+	return false
+}
+
+func joinStrings(xs []string) string {
+	out := ""
+	for i, x := range xs {
+		if i > 0 {
+			out += ", "
+		}
+		out += x
+	}
+	return out
+}
