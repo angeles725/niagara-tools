@@ -266,7 +266,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
-`n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`,
+`n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
 `n4_station_runtime`, `n4_read_tags`,
 `n4_neql_query`, `n4_list_tag_dictionaries`.
@@ -378,6 +378,7 @@ source is back to normal the record holds the toNormal text), plus `timestamp_is
 and counts every matching record per state: `{source_state: {normal, offnormal, fault, alert},
 ack_state: {acked, unacked, ackPending}, records_counted, complete}` (`null` with
 `state_counts_note` when that read fails).
+Alarm events: `n4_event_report(source | source_glob, history_id, since, until, margin_minutes=15, max_events=10)` answers "how high did it get during that alarm" in one call: it reads `select timestamp.encodeToString, uuid, source, ... normalTime.encodeToString, ackTime.encodeToString, user` (filters checked as `n4_read_alarms` checks them; every record, open or not), one event per record (the alarm database keeps one record per uuid, updated in place on return to normal and on ack), then for each event the `n4_read_history` summary (count, min, max with its time, first, last) over `[alarm_time - margin, normal_time + margin]` (up to now while still active). The history is `history_id`, or the history extension on the alarm extension's parent or on the source itself (`select slotPath, historyConfig.id from history:HistoryExt`, once per source); none found or a failed read is a null `summary` with `summary_note` on that event, never a failed report.
 `n4_list_alarm_classes()` runs `select slotPath, name, priority, ackRequired, totalAlarmCount,
 openAlarmCount, inAlarmCount, unackedAlarmCount from alarm:AlarmClass` and
 `select slotPath, type from alarm:AlarmRecipient` at the station root; `priority` is decoded to

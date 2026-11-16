@@ -707,6 +707,62 @@
    "needs_session": true
   },
   {
+   "name": "n4_event_report",
+   "description": "Report what happened during each alarm event of one source, in one call: per event (newest first) the alarm database times and the source's history over the event window, so 'how high did it get' needs no date arithmetic and no second tool. Name the alarms by source (a component ORD such as station:|slot:/Folder/Point/AmpsAlarm; matches it and everything below it) or source_glob (a BQL like pattern over the stored source such as *slot:/Folder/*; no quote, space, '$' or '|'); give exactly one; optional since and until (BAbsTime, e.g. 2026-11-15T00:00:00.000-06:00, or a span back from now such as 30m, 24h or 7d) narrow the alarm time; max_events (default 10, 1 to 100) caps the events read. Every record is read, open or not: the alarm database keeps one record per event (one uuid), updated in place when the source returns to normal and when it is acknowledged. Each event is {uuid, source, alarm_class, transition, source_state, ack_state, alarm_time, normal_time, ack_time, acked_by, records, window, history, summary}: times are ISO-8601 with the station's offset (null when not set; acked_by is the record's user, null until acknowledged); window {start, end, end_is_now} is [alarm_time - margin_minutes, normal_time + margin_minutes] (default 15, 0 to 1440), up to now while the source has not returned to normal. history is the history read: history_id when given (a bare name is a history of the connected station) for every event, else the history extension on the alarm source's component (the alarm extension's parent) or on the source itself, found once per source with select slotPath, historyConfig.id from history:HistoryExt (history {id, found_by: history_id or history_ext, ext_slot, other_exts when several match: the first is read}). summary is n4_read_history's summary over the window: {count, complete, records_scanned, numeric, min {value, timestamp}, max {value, timestamp} (the peak and when; a tie keeps the earliest), first, last, status_counts}. No history found, a source that is not a slot path, or a failed read is history and/or summary null with summary_note on that event, never a failed report. truncated is true when more events match than max_events; total_events is their count (select count(*)), null with total_events_note when that count failed. Every filter value is checked before any request, as n4_read_alarms and n4_read_history check them. Read-only: fixed queries over the alarm: and history: ORDs.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "source": {
+      "type": "string",
+      "description": "Component ORD whose alarm events to report, itself and below, e.g. station:|slot:/Folder/Point/AmpsAlarm"
+     },
+     "source_glob": {
+      "type": "string",
+      "description": "BQL like pattern over the record source, '*' any run of characters, e.g. *slot:/Folder/*"
+     },
+     "history_id": {
+      "type": "string",
+      "description": "History to read for every event, /<station>/<history name> or a bare name of the connected station; default: the history extension beside the alarm source"
+     },
+     "since": {
+      "type": "string",
+      "description": "Oldest alarm time as a BAbsTime, e.g. 2026-11-15T00:00:00.000-06:00, or a span back from now: 30m, 24h, 7d"
+     },
+     "until": {
+      "type": "string",
+      "description": "Newest alarm time as a BAbsTime, e.g. 2026-11-15T23:59:59.999-06:00, or a span back from now: 30m, 24h, 7d"
+     },
+     "margin_minutes": {
+      "type": "integer",
+      "description": "Minutes of history read before the alarm time and after the normal time",
+      "minimum": 0,
+      "maximum": 1440,
+      "default": 15
+     },
+     "max_events": {
+      "type": "integer",
+      "description": "Most recent events to report",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout per request in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
    "name": "n4_commissioning_report",
    "description": "What is still wrong or unfinished below scope, in one call (read-only; about 11 station reads for the whole station whatever its size: one BQL query per table, one link scan, three slot loads and the licence page). The reply starts with summary, one line per section (ok / N finding(s) / not checked: why / skipped: why, with the truncation note), then requests (the station reads made) and each section: state (ok, findings, partial: clean in the checks that ran while others did not run, not_checked, skipped), findings (absent when no check ran) and checks. A check that ran is {count, items, more}: items are the first limit offenders as {path, name, fact} and more is how many the limit left out; a check that did not run is {not_checked: why} (a failed or impossible read: never a zero) or {skipped: why} (not asked for). Every fact is a value the station answered. points: the control points per status flag (in_fault, down, stale, disabled, overridden, in_alarm, null_output, status_unreadable); devices_down_or_disabled lists the devices that are down, disabled or in fault first, their points counted in their flags and not listed (under_listed_devices); networks_not_ok; by_network counts devices and points per driver network. histories: points_without_history (the points with no history extension below them: with expect_histories they are listed and are findings; without it the check is a count with the note pass expect_histories to list them, no list and not a finding), and the history extensions that are disabled, in_fault or never_recorded (lastRecord.timestamp null). alarms: points_without_alarm (only with expect_alarms), unknown_alarm_class (an alarm extension whose alarmClass names no class below Services/AlarmService), classes_without_recipient (no link from the class's alarm topic seen within three levels of the AlarmService), open_alarms and unacked_alarms (the classes with any, alarms is their sum). links (one scan link_depth levels below scope): unresolved_source (a source ORD that is neither a handle nor an absolute slot path, or a slot path that does not exist; source_outside_scan counts the sources not judged), inputs_with_several_links (a priority input in1..in16 targeted by more than one link), dangling_outputs (the check of n4_find_dangling_outputs; unknown counts the outputs it cannot decide). naming: duplicate_display_names among sibling points, escaped_names ($xx in the slot name), palette_default_names (a point of the control palette such as NumericWritable or BooleanPoint1, or a point called by the name of its own type plus the number the station appends, such as a kitControl:Tstat called Tstat1; a lone Tstat is not flagged). station (only when scope is the whole station): services_in_fault, licence_expiry (the warning of n4_station_health's license section), and unsaved_changes and last_backup, always not_checked with the reason: the station does not expose them to a read. Bounds: each query reads at most max_components rows; a truncated table sets truncated and truncated_note (truncated at N components: counts are lower bounds and absences are not asserted; narrow the scope), and a check that would assert an absence from it is not_checked; a link scan over max_components is not judged.",
    "inputSchema": {
