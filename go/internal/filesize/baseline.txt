@@ -1,6 +1,5 @@
 # Go files that were over 200 lines when the size rule arrived (2026-11-15): "<lines> <path under go/>".
 # A listed file may shrink but not grow, and no file may be added. Split a file, then lower or delete its line.
-683 internal/niagaratest/run.go
 575 internal/rcscan/scan.go
 485 internal/rcscan/provenance.go
 456 internal/reportmodule/special.go
@@ -8,14 +7,11 @@
 442 internal/lint/rules/golden/runner.go
 418 internal/verifymodule/driver.go
 396 internal/buildstatefields/command.go
-387 internal/niagaratest/ignoredsrc.go
 386 internal/lint/rules/adaptercfgdefault/adaptercfgdefault.go
 372 internal/lint/rules/configsanity/configsanity.go
 360 internal/mcpn4/jsonrpc/server.go
 221 internal/mcpn4/writeops/rollback_readback.go
 347 internal/mcpn4/pyjson/decode.go
-344 internal/niagaratest/diagnostics.go
-333 internal/niagaratest/command.go
 328 internal/lint/lint.go
 328 internal/lint/rules/silentprotection/silentprotection.go
 327 internal/ledgercheck/ledgercheck.go
@@ -39,7 +35,6 @@
 269 internal/mcpn4/writeops/rollback_run.go
 268 internal/buildstatefields/buildstatefields.go
 267 internal/newretro/newretro.go
-266 internal/niagaratest/reusehome.go
 265 internal/hostbudget/hostbudget.go
 264 internal/ktssrc/ktssrc.go
 255 internal/lint/rules/structure/module.go
@@ -64,7 +59,6 @@
 223 internal/lint/rules/silentprotection/trips.go
 220 internal/lint/rules/timers/ticket.go
 220 internal/mcpn4/pyxml/tags.go
-220 internal/niagaratest/gradleroot.go
 219 internal/citeresolve/corpus.go
 218 internal/lint/rules/machinedefaultpath/machinedefaultpath.go
 217 internal/lint/rules/wsplacement/wsplacement.go
@@ -75,7 +69,6 @@
 213 internal/foldaudit/command.go
 212 internal/lint/args.go
 212 internal/reportmodule/rows.go
-210 internal/niagaratest/ignored.go
 209 internal/lint/rules/sessionstore/sessionstore.go
 208 internal/buildstate/fragment.go
 208 internal/citeresolve/command.go
