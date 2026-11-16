@@ -96,3 +96,22 @@ func TestModularityRowUnreadablePart(t *testing.T) {
 		t.Errorf("%q, want %q", b.String(), want)
 	}
 }
+
+// TestModularityRowRegularFileNamedRc: a part whose src/rc is a regular file gets the module's ordinary row
+// (the largest class of the parts that have Java), never a crash of the whole report.
+func TestModularityRowRegularFileNamedRc(t *testing.T) {
+	t.Parallel()
+	root := filepath.Join(t.TempDir(), "M")
+	for rel, body := range map[string]string{"M-rt/src/A.java": "class A {\n  int a;\n}\n", "M-ux/src/rc": "not a directory\n"} {
+		p := filepath.Join(root, rel)
+		must(t, os.MkdirAll(filepath.Dir(p), 0o755))
+		must(t, os.WriteFile(p, []byte(body), 0o644))
+	}
+	var b bytes.Buffer
+	r := &report{out: &b, n: map[string]int{}, o: options{root: root}}
+	r.modularity(artifact{"(module)", root})
+	want := "(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=M-rt/src/A.java (3 hand-written lines)\n"
+	if got := strings.ReplaceAll(b.String(), root+"/", ""); got != want {
+		t.Errorf("row %q, want %q", got, want)
+	}
+}

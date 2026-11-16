@@ -939,3 +939,17 @@ JAVA
   [[ "$output" == *"(module)  SKIP  lint-inline-site-literal  no *.java under a -rt or -ux part's src/"* ]]
   [[ "$output" != *"ERROR  lint-inline-site-literal"* ]]
 }
+
+@test "RM-rc-file: a part whose src/rc is a regular file gets its rows and a summary, never a crash" {
+  # Mutation: RM-rc-file -- reading the segments below <part>/src/rc without checking there are any panics on this module
+  local m="$BATS_TEST_TMPDIR/Mod"
+  mkdir -p "$m/Mod-ux/src"
+  printf 'x\n' > "$m/Mod-ux/src/rc"
+  printf 'plugins {}\n' > "$m/Mod-ux/Mod-ux.gradle.kts"
+  run "$RM" --lint-only "$m"
+  [[ "$output" != *"panic"* ]]
+  [[ "$output" != *"goroutine"* ]]
+  [[ "$output" == *"(module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-"* ]]
+  [[ "$output" == *"report-module: 1 artifact"* ]]
+  [ "$status" -ne 2 ]
+}

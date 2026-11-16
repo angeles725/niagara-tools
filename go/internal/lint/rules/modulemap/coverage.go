@@ -38,7 +38,7 @@ func isSource(rel string) bool {
 	if strings.HasSuffix(name, ".java") {
 		return true
 	}
-	if seg[2] != "rc" || strings.Contains(name, ".min.") {
+	if len(seg) < 4 || seg[2] != "rc" || strings.Contains(name, ".min.") { // <part>/src/rc itself, a file, is no source
 		return false
 	}
 	for _, d := range seg[3 : len(seg)-1] {
