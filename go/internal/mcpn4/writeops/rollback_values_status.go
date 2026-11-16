@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
@@ -46,6 +47,15 @@ func observeTextStatus(nodes *pyjson.Object, slot, t string) any {
 	}
 	kids := box.Children(nodes, slot)
 	return textStatusValue(t, box.ChildValue(kids, "value", nil), box.ChildValue(kids, "status", "0"))
+}
+
+// observeValue is plan.Observe, with a text Status observed as textStatusValue (the rollback's
+// read-back of a restored slot).
+func observeValue(nodes *pyjson.Object, slot, t string) (any, error) {
+	if textStatus(t) {
+		return observeTextStatus(nodes, slot, t), nil
+	}
+	return plan.Observe(nodes, slot, t)
 }
 
 // sOf is body.get("s", []).

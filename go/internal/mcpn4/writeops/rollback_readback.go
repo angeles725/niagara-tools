@@ -193,7 +193,7 @@ func restored(nodes, op *pyjson.Object) (bool, error) {
 	if !isStr {
 		return false, &plan.PyError{Type: "AttributeError", Msg: "'" + plan.TypeName(tv) + "' object has no attribute 'startswith'"}
 	}
-	now, err := plan.Observe(nodes, n.(string), t)
+	now, err := observeValue(nodes, n.(string), t)
 	if err != nil {
 		return false, err
 	}

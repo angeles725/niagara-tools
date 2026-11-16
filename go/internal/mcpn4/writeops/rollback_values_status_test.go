@@ -89,3 +89,38 @@ func TestTheRollbackGuardOfBooleanAndNumericStatusIsUnchanged(t *testing.T) {
 		}
 	}
 }
+
+// restoredCase is restored() of the rollback's set of "defaultOutput" to (typ, v) on a station
+// whose slot holds now with status "0".
+func restoredCase(t *testing.T, typ, v, now string) bool {
+	t.Helper()
+	body := obj("nm", "p", "t", typ, "s", []any{obj("nm", "p", "n", "value", "v", v), obj("nm", "p", "n", "status", "v", "0")})
+	nodes := obj("", obj("t", "schedule:StringSchedule", "h", "5"), "defaultOutput", obj("t", typ),
+		"defaultOutput/value", obj("n", "value", "v", now), "defaultOutput/status", obj("n", "status", "v", "0"))
+	ok, err := restored(nodes, obj("nm", "s", "h", "5", "n", "defaultOutput", "b", body))
+	if err != nil {
+		t.Fatalf("%s %q: %v", typ, v, err)
+	}
+	return ok
+}
+
+// The rollback's read-back checks each restored Status the same way, the text types included.
+func TestTheRollbackReadbackObservesEveryStatusType(t *testing.T) {
+	for _, c := range []struct {
+		typ, v, now string
+		want        bool
+	}{
+		{"baja:StatusString", "eco", "eco", true},
+		{"baja:StatusString", "eco", "comfort", false},
+		{"baja:StatusEnum", "1", "1@{a=1,b=2}", true},
+		{"baja:StatusEnum", "1", "2", false},
+		{"baja:StatusBoolean", "true", "true", true}, // pins: unchanged
+		{"baja:StatusBoolean", "true", "false", false},
+		{"baja:StatusNumeric", "21.5", "21.5", true},
+		{"baja:StatusNumeric", "21.5", "19.0", false},
+	} {
+		if got := restoredCase(t, c.typ, c.v, c.now); got != c.want {
+			t.Errorf("%s %q, station %q: restored = %v", c.typ, c.v, c.now, got)
+		}
+	}
+}
