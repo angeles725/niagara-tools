@@ -29,11 +29,18 @@ func copyContracts(c plan.Client, root *pyjson.Object) (*plan.Contracts, error) 
 		return nil, plan.ToolError("a copy needs the station's type definitions (registry channel) to " +
 			"leave runtime slots out; this client cannot read them")
 	}
+	ct, err := treeContracts(tl, root)
+	return ct, typeRefusal(err)
+}
+
+// treeContracts reads the contracts of every type in root that has children in one registry
+// call; the error is Load's own (*plan.UnansweredType for a type the station does not describe).
+func treeContracts(tl plan.TypeLoader, root *pyjson.Object) (*plan.Contracts, error) {
 	ct, specs := plan.NewContracts(tl), []string{}
 	if err := collectTypes(root, "", &specs); err != nil {
 		return nil, err
 	}
-	return ct, typeRefusal(ct.Load(specs))
+	return ct, ct.Load(specs)
 }
 
 func collectTypes(node *pyjson.Object, path string, specs *[]string) error {
@@ -70,7 +77,7 @@ func configured(ct *plan.Contracts, root *pyjson.Object) (*pyjson.Object, []stri
 	if err != nil {
 		return nil, nil, nil, typeRefusal(err)
 	}
-	s := &snapshot{handles: map[string]string{}}
+	s := &snapshot{handles: map[string]string{}, ct: ct}
 	body, err := s.take(kept, "", CopyDepth)
 	if err != nil {
 		return nil, nil, nil, err

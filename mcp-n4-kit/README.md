@@ -456,7 +456,10 @@ Tool rules:
   from the station's type definitions through the registry channel: a frozen slot
   declared readonly, transient or default-on-clone (`r`, `t`, `d`) or made transient,
   and a dynamic slot flagged transient or remove-on-clone (`t`, `R`). Flags an
-  integrator set otherwise travel with the copy. The plan notes list each slot left
+  integrator set otherwise travel with the copy. A Status `out` travels only when the
+  parent's type declares it without `r` or `t`: a constant block's configured value
+  (`kitControl:NumericConst` and its Boolean, Enum and String siblings) is copied, a
+  computed output (a writable's `out`, declared `rtso`) is not. The plan notes list each slot left
   out with its flags and call out a readonly slot holding a non-default value.
   Links are not copied either; the plan counts the links left behind, and a deeper
   source is refused, as is a station whose type definitions cannot be read. Change
@@ -468,7 +471,10 @@ Destructive tools use the same pipeline:
 
 - `n4_remove_component(parent_ord, name)` removes a child and its subtree. The plan
   snapshots the subtree to depth 3 (type, plain slots, `wsAnnotation`, and the links
-  whose target is inside it) as data; it is the recorded inverse. Re-creation is
+  whose target is inside it) as data; it is the recorded inverse. A Status `out` is
+  kept by the same rule as a copy (a constant block's configured value, read from the
+  station's type definitions; left out when they cannot be read), and the rollback's
+  read-back compares each `out` the snapshot carries. Re-creation is
   limited to that snapshot and is not a full restore: deeper levels, runtime state
   and links coming from outside the subtree are not recreated (the plan says so).
   The plan loads one level deeper to see what the cut drops: anything there is listed in

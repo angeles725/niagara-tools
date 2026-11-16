@@ -55,7 +55,11 @@ func removePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		}
 	}
 	sort.Strings(truncated) // code point order: WTF-8 bytes sort as code points
-	s := &snapshot{handles: map[string]string{}}
+	ct, err := snapshotContracts(c, box.Node(nodes, ""))
+	if err != nil {
+		return nil, err
+	}
+	s := &snapshot{handles: map[string]string{}, ct: ct}
 	body, err := s.take(box.Node(nodes, ""), "", SnapshotDepth)
 	if err != nil {
 		return nil, err
