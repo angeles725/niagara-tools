@@ -201,7 +201,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`,
-`n4_commissioning_report`, `n4_list_schedule_kinds`.
+`n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -927,6 +927,21 @@ ranges in `day`. Live checks: a range added without `effectiveValue` is ignored 
 `Last 7 Days`=6, `Calendar Week 1`..`6`=7-12, `7 Days Before Last 7/14/21`=13-15, from the
 station's type registry); a date special event for the current day switched `out` to its value and
 `outSource` to `Special Event: <name>` at once, and removing it switched it back.
+
+### Reading a schedule
+
+`n4_read_schedule(ord)` decodes one schedule of any kind in one load. Weekly kinds return `out`,
+`next_time`, `next_value`, `default_output`, `in` (each value `{value, status}`: a boolean, a
+number, an enum ordinal or a string, `null` when the status is null), `out_source`, `effective`
+(`always` or the date range rule), `weekly` (monday to sunday, each a list of `{start, end,
+value}` sorted by start, `HH:MM`, end `24:00` for a range that runs to midnight) and
+`special_events` in priority order (`name`, `kind`, `rule`, `priority` 1 = highest, `ranges`).
+A calendar returns its `dates`; a trigger its `times`, `dates`, `enabled`, `last_trigger` and
+`next_trigger`. Rules use the field names of `n4_list_schedule_kinds` (`"*"` matches any). A range
+the station holds without a value is listed with `value: null, ignored: true`. The station leaves
+out every slot that holds its type's default (a 00:00 start, a false `alwaysEffective`); the tool
+fills those from the station's type registry and refuses, naming the slot, rather than guess one
+the registry does not describe.
 
 ## Live smoke test
 

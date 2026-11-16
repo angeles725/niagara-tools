@@ -1,0 +1,4719 @@
+{
+ "note": "Recorded live from a 4.15.6.20 lab station over BOX (schedules unit, 2026-11-15): the type registry entries of the schedule types and six schedule components as loaded at depth 9, display fields stripped.",
+ "types": {
+  "schedule:BooleanSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "defaultOutput",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       }
+      ]
+     },
+     "ts": "baja:StatusValue"
+    },
+    {
+     "st": "p",
+     "n": "facets",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Facets",
+      "v": "trueText=s:true|falseText=s:false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "out",
+     "f": "rsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "in",
+     "f": "so1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextTime",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextValue",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:WeeklySchedule"
+  },
+  "schedule:ControlSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "alwaysEffective",
+     "f": "ho1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "union",
+     "f": "ho1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "defaultOutput",
+     "f": "ho1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     },
+     "ts": "baja:StatusValue"
+    },
+    {
+     "st": "p",
+     "n": "cleanupExpiredEvents",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "true"
+     }
+    },
+    {
+     "st": "p",
+     "n": "scanLimit",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:RelTime",
+      "v": "7776000000"
+     }
+    },
+    {
+     "st": "p",
+     "n": "facets",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Facets",
+      "v": ""
+     }
+    },
+    {
+     "st": "p",
+     "n": "lastModified",
+     "f": "roA",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "a",
+     "n": "cleanup",
+     "f": "a"
+    },
+    {
+     "st": "a",
+     "n": "execute",
+     "f": "ha"
+    }
+   ],
+   "p": "schedule:CompositeSchedule"
+  },
+  "baja:IStatusValue": {},
+  "baja:Status": {},
+  "baja:RelTime": {},
+  "schedule:CompositeSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "status",
+     "f": "rtsd",
+     "v": {
+      "nm": "p",
+      "t": "baja:Status",
+      "v": "0"
+     }
+    },
+    {
+     "st": "p",
+     "n": "faultCause",
+     "f": "rtd",
+     "v": {
+      "nm": "p",
+      "t": "baja:String",
+      "v": ""
+     }
+    },
+    {
+     "st": "p",
+     "n": "union",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "true"
+     }
+    }
+   ],
+   "p": "schedule:AbstractSchedule"
+  },
+  "schedule:AbstractSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "alwaysEffective",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    }
+   ],
+   "p": "baja:Component"
+  },
+  "baja:Boolean": {},
+  "baja:Component": {},
+  "baja:String": {},
+  "baja:Facets": {},
+  "baja:StatusBoolean": {
+   "c": [
+    {
+     "st": "p",
+     "n": "value",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    }
+   ],
+   "p": "baja:StatusValue"
+  },
+  "baja:StatusValue": {
+   "c": [
+    {
+     "st": "p",
+     "n": "status",
+     "f": "r",
+     "v": {
+      "nm": "p",
+      "t": "baja:Status",
+      "v": "0"
+     }
+    }
+   ],
+   "p": "baja:Struct"
+  },
+  "baja:Struct": {},
+  "baja:IBoolean": {},
+  "baja:AbsTime": {},
+  "schedule:WeeklySchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "effective",
+     "f": "ho",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DateRangeSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "start",
+        "t": "schedule:DateSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "yearSchedule",
+          "t": "schedule:YearSchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "alwaysEffective",
+            "v": "true"
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "monthSchedule",
+          "t": "schedule:MonthSchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "singleSelection",
+            "v": "true"
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "daySchedule",
+          "t": "schedule:DayOfMonthSchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "singleSelection",
+            "v": "true"
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "weekdaySchedule",
+          "t": "schedule:WeekdaySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "singleSelection",
+            "v": "true"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "end",
+        "t": "schedule:DateSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "yearSchedule",
+          "t": "schedule:YearSchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "alwaysEffective",
+            "v": "true"
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "monthSchedule",
+          "t": "schedule:MonthSchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "singleSelection",
+            "v": "true"
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "daySchedule",
+          "t": "schedule:DayOfMonthSchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "singleSelection",
+            "v": "true"
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "weekdaySchedule",
+          "t": "schedule:WeekdaySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "singleSelection",
+            "v": "true"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "schedule",
+     "f": "ho",
+     "v": {
+      "nm": "p",
+      "t": "schedule:CompositeSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "specialEvents",
+        "t": "schedule:CompositeSchedule",
+        "s": []
+       },
+       {
+        "nm": "p",
+        "n": "week",
+        "t": "schedule:WeekSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "sunday",
+          "t": "schedule:DailySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "day",
+            "t": "schedule:DaySchedule",
+            "s": []
+           },
+           {
+            "nm": "p",
+            "n": "days",
+            "t": "schedule:WeekdaySchedule",
+            "s": [
+             {
+              "nm": "p",
+              "n": "set",
+              "t": "baja:EnumSet",
+              "v": "0"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "monday",
+          "t": "schedule:DailySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "day",
+            "t": "schedule:DaySchedule",
+            "s": []
+           },
+           {
+            "nm": "p",
+            "n": "days",
+            "t": "schedule:WeekdaySchedule",
+            "s": [
+             {
+              "nm": "p",
+              "n": "set",
+              "t": "baja:EnumSet",
+              "v": "1"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "tuesday",
+          "t": "schedule:DailySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "day",
+            "t": "schedule:DaySchedule",
+            "s": []
+           },
+           {
+            "nm": "p",
+            "n": "days",
+            "t": "schedule:WeekdaySchedule",
+            "s": [
+             {
+              "nm": "p",
+              "n": "set",
+              "t": "baja:EnumSet",
+              "v": "2"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "wednesday",
+          "t": "schedule:DailySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "day",
+            "t": "schedule:DaySchedule",
+            "s": []
+           },
+           {
+            "nm": "p",
+            "n": "days",
+            "t": "schedule:WeekdaySchedule",
+            "s": [
+             {
+              "nm": "p",
+              "n": "set",
+              "t": "baja:EnumSet",
+              "v": "3"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "thursday",
+          "t": "schedule:DailySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "day",
+            "t": "schedule:DaySchedule",
+            "s": []
+           },
+           {
+            "nm": "p",
+            "n": "days",
+            "t": "schedule:WeekdaySchedule",
+            "s": [
+             {
+              "nm": "p",
+              "n": "set",
+              "t": "baja:EnumSet",
+              "v": "4"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "friday",
+          "t": "schedule:DailySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "day",
+            "t": "schedule:DaySchedule",
+            "s": []
+           },
+           {
+            "nm": "p",
+            "n": "days",
+            "t": "schedule:WeekdaySchedule",
+            "s": [
+             {
+              "nm": "p",
+              "n": "set",
+              "t": "baja:EnumSet",
+              "v": "5"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "nm": "p",
+          "n": "saturday",
+          "t": "schedule:DailySchedule",
+          "s": [
+           {
+            "nm": "p",
+            "n": "day",
+            "t": "schedule:DaySchedule",
+            "s": []
+           },
+           {
+            "nm": "p",
+            "n": "days",
+            "t": "schedule:WeekdaySchedule",
+            "s": [
+             {
+              "nm": "p",
+              "n": "set",
+              "t": "baja:EnumSet",
+              "v": "6"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "outSource",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:String",
+      "v": ""
+     }
+    }
+   ],
+   "p": "schedule:ControlSchedule"
+  },
+  "schedule:MonthSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "set",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:EnumSet",
+      "v": ""
+     }
+    }
+   ],
+   "p": "schedule:EnumSetSchedule"
+  },
+  "baja:EnumSet": {},
+  "schedule:EnumSetSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "effectiveWhenEmpty",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "true"
+     }
+    },
+    {
+     "st": "p",
+     "n": "set",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:EnumSet",
+      "v": ""
+     }
+    },
+    {
+     "st": "p",
+     "n": "singleSelection",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    }
+   ],
+   "p": "schedule:AbstractSchedule"
+  },
+  "schedule:DaySchedule": {
+   "c": [],
+   "p": "schedule:CompositeSchedule"
+  },
+  "schedule:DailySchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "union",
+     "f": "r1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "day",
+     "f": "r",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DaySchedule",
+      "s": []
+     }
+    },
+    {
+     "st": "p",
+     "n": "days",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DateSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "yearSchedule",
+        "t": "schedule:YearSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "alwaysEffective",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "monthSchedule",
+        "t": "schedule:MonthSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "daySchedule",
+        "t": "schedule:DayOfMonthSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "weekdaySchedule",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       }
+      ]
+     },
+     "ts": "schedule:AbstractSchedule"
+    }
+   ],
+   "p": "schedule:CompositeSchedule"
+  },
+  "baja:Integer": {},
+  "schedule:YearSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "year",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Integer",
+      "v": "2000"
+     }
+    }
+   ],
+   "p": "schedule:AbstractSchedule"
+  },
+  "schedule:WeekdaySchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "set",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:EnumSet",
+      "v": ""
+     }
+    }
+   ],
+   "p": "schedule:EnumSetSchedule"
+  },
+  "schedule:DateSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "union",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "yearSchedule",
+     "f": "r",
+     "v": {
+      "nm": "p",
+      "t": "schedule:YearSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "alwaysEffective",
+        "v": "true"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "monthSchedule",
+     "f": "r",
+     "v": {
+      "nm": "p",
+      "t": "schedule:MonthSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "singleSelection",
+        "v": "true"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "daySchedule",
+     "f": "r",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DayOfMonthSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "singleSelection",
+        "v": "true"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "weekdaySchedule",
+     "f": "r",
+     "v": {
+      "nm": "p",
+      "t": "schedule:WeekdaySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "singleSelection",
+        "v": "true"
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:CompositeSchedule"
+  },
+  "schedule:DayOfMonthSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "set",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:EnumSet",
+      "v": ""
+     }
+    }
+   ],
+   "p": "schedule:EnumSetSchedule"
+  },
+  "schedule:WeekSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "sunday",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DailySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "day",
+        "t": "schedule:DaySchedule",
+        "s": []
+       },
+       {
+        "nm": "p",
+        "n": "days",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "set",
+          "t": "baja:EnumSet",
+          "v": "0"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "monday",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DailySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "day",
+        "t": "schedule:DaySchedule",
+        "s": []
+       },
+       {
+        "nm": "p",
+        "n": "days",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "set",
+          "t": "baja:EnumSet",
+          "v": "1"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "tuesday",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DailySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "day",
+        "t": "schedule:DaySchedule",
+        "s": []
+       },
+       {
+        "nm": "p",
+        "n": "days",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "set",
+          "t": "baja:EnumSet",
+          "v": "2"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "wednesday",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DailySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "day",
+        "t": "schedule:DaySchedule",
+        "s": []
+       },
+       {
+        "nm": "p",
+        "n": "days",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "set",
+          "t": "baja:EnumSet",
+          "v": "3"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "thursday",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DailySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "day",
+        "t": "schedule:DaySchedule",
+        "s": []
+       },
+       {
+        "nm": "p",
+        "n": "days",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "set",
+          "t": "baja:EnumSet",
+          "v": "4"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "friday",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DailySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "day",
+        "t": "schedule:DaySchedule",
+        "s": []
+       },
+       {
+        "nm": "p",
+        "n": "days",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "set",
+          "t": "baja:EnumSet",
+          "v": "5"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "saturday",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DailySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "day",
+        "t": "schedule:DaySchedule",
+        "s": []
+       },
+       {
+        "nm": "p",
+        "n": "days",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "set",
+          "t": "baja:EnumSet",
+          "v": "6"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:CompositeSchedule"
+  },
+  "schedule:DateRangeSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "start",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DateSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "yearSchedule",
+        "t": "schedule:YearSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "alwaysEffective",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "monthSchedule",
+        "t": "schedule:MonthSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "daySchedule",
+        "t": "schedule:DayOfMonthSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "weekdaySchedule",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "end",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DateSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "yearSchedule",
+        "t": "schedule:YearSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "alwaysEffective",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "monthSchedule",
+        "t": "schedule:MonthSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "daySchedule",
+        "t": "schedule:DayOfMonthSchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       },
+       {
+        "nm": "p",
+        "n": "weekdaySchedule",
+        "t": "schedule:WeekdaySchedule",
+        "s": [
+         {
+          "nm": "p",
+          "n": "singleSelection",
+          "v": "true"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:AbstractSchedule"
+  },
+  "schedule:NumericSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "defaultOutput",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusNumeric",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "0.0"
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     },
+     "ts": "baja:StatusValue"
+    },
+    {
+     "st": "p",
+     "n": "facets",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Facets",
+      "v": "units=u:null;;;;|precision=i:1|min=f:-inf|max=f:+inf"
+     }
+    },
+    {
+     "st": "p",
+     "n": "out",
+     "f": "rsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusNumeric",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "0.0"
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "in",
+     "f": "so1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusNumeric",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "0.0"
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextTime",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextValue",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusNumeric",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "0.0"
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:WeeklySchedule"
+  },
+  "baja:StatusNumeric": {
+   "c": [
+    {
+     "st": "p",
+     "n": "value",
+     "v": {
+      "nm": "p",
+      "t": "baja:Double",
+      "v": "0.0"
+     }
+    }
+   ],
+   "p": "baja:StatusValue"
+  },
+  "baja:INumeric": {},
+  "baja:Double": {},
+  "schedule:EnumSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "defaultOutput",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusEnum",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "0"
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     },
+     "ts": "baja:StatusValue"
+    },
+    {
+     "st": "p",
+     "n": "facets",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Facets",
+      "v": "range=E:{}"
+     }
+    },
+    {
+     "st": "p",
+     "n": "out",
+     "f": "rsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusEnum",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "0"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "in",
+     "f": "so1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusEnum",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "0"
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextTime",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextValue",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusEnum",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "0"
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:WeeklySchedule"
+  },
+  "baja:DynamicEnum": {},
+  "baja:IEnum": {},
+  "baja:StatusEnum": {
+   "c": [
+    {
+     "st": "p",
+     "n": "value",
+     "v": {
+      "nm": "p",
+      "t": "baja:DynamicEnum",
+      "v": "0"
+     }
+    }
+   ],
+   "p": "baja:StatusValue"
+  },
+  "schedule:StringSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "defaultOutput",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusString",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": ""
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     },
+     "ts": "baja:StatusValue"
+    },
+    {
+     "st": "p",
+     "n": "out",
+     "f": "rsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusString",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": ""
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "in",
+     "f": "so1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusString",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": ""
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextTime",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextValue",
+     "f": "rtsoA",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusString",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": ""
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:WeeklySchedule"
+  },
+  "baja:StatusString": {
+   "c": [
+    {
+     "st": "p",
+     "n": "value",
+     "v": {
+      "nm": "p",
+      "t": "baja:String",
+      "v": ""
+     }
+    }
+   ],
+   "p": "baja:StatusValue"
+  },
+  "schedule:CalendarSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "alwaysEffective",
+     "f": "h1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "union",
+     "f": "rh1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "true"
+     }
+    },
+    {
+     "st": "p",
+     "n": "defaultOutput",
+     "f": "th",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       }
+      ]
+     },
+     "ts": "baja:StatusValue"
+    },
+    {
+     "st": "p",
+     "n": "facets",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Facets",
+      "v": "trueText=s:true|falseText=s:false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "in",
+     "f": "s1",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       },
+       {
+        "nm": "p",
+        "n": "status",
+        "v": "40"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "out",
+     "f": "rts",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextTime",
+     "f": "rts",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextValue",
+     "f": "rts",
+     "v": {
+      "nm": "p",
+      "t": "baja:StatusBoolean",
+      "s": [
+       {
+        "nm": "p",
+        "n": "value",
+        "v": "false"
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:ControlSchedule"
+  },
+  "schedule:TriggerSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "alwaysEffective",
+     "f": "ho1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "status",
+     "f": "ro",
+     "v": {
+      "nm": "p",
+      "t": "baja:Status",
+      "v": "0"
+     }
+    },
+    {
+     "st": "p",
+     "n": "union",
+     "f": "ho1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "dates",
+     "f": "ho",
+     "v": {
+      "nm": "p",
+      "t": "schedule:CalendarSchedule",
+      "s": []
+     }
+    },
+    {
+     "st": "p",
+     "n": "times",
+     "f": "ho",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DaySchedule",
+      "s": []
+     }
+    },
+    {
+     "st": "p",
+     "n": "enabled",
+     "f": "so1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "true"
+     }
+    },
+    {
+     "st": "p",
+     "n": "lastTrigger",
+     "f": "rso",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextTrigger",
+     "f": "rso",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "p",
+     "n": "nextTriggerSearchLimit",
+     "f": "o1",
+     "v": {
+      "nm": "p",
+      "t": "baja:RelTime",
+      "v": "7776000000"
+     }
+    },
+    {
+     "st": "p",
+     "n": "lastModified",
+     "f": "ro",
+     "v": {
+      "nm": "p",
+      "t": "baja:AbsTime",
+      "v": "1969-12-31T18:00:00.000-06:00"
+     }
+    },
+    {
+     "st": "a",
+     "n": "execute",
+     "f": "ha"
+    },
+    {
+     "st": "t",
+     "n": "trigger",
+     "f": "s",
+     "tet": "baja:Value"
+    },
+    {
+     "st": "t",
+     "n": "triggerMissed",
+     "tet": "baja:AbsTime"
+    }
+   ],
+   "p": "schedule:CompositeSchedule"
+  },
+  "baja:IStatus": {},
+  "baja:Value": {},
+  "schedule:TimeSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "start",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Time",
+      "v": "00:00:00.000"
+     }
+    },
+    {
+     "st": "p",
+     "n": "finish",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Time",
+      "v": "00:00:00.000"
+     }
+    }
+   ],
+   "p": "schedule:AbstractSchedule"
+  },
+  "baja:Time": {},
+  "schedule:WeekAndDaySchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "union",
+     "f": "r1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "months",
+     "v": {
+      "nm": "p",
+      "t": "schedule:MonthSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "singleSelection",
+        "v": "true"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "weeksOfMonth",
+     "v": {
+      "nm": "p",
+      "t": "schedule:WeekOfMonthSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "singleSelection",
+        "v": "true"
+       }
+      ]
+     }
+    },
+    {
+     "st": "p",
+     "n": "weekdays",
+     "v": {
+      "nm": "p",
+      "t": "schedule:WeekdaySchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "singleSelection",
+        "v": "true"
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:CompositeSchedule"
+  },
+  "schedule:WeekOfMonthSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "set",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:EnumSet",
+      "v": ""
+     }
+    }
+   ],
+   "p": "schedule:EnumSetSchedule"
+  },
+  "schedule:CustomSchedule": {
+   "c": [
+    {
+     "st": "p",
+     "n": "union",
+     "f": "r1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Boolean",
+      "v": "false"
+     }
+    },
+    {
+     "st": "p",
+     "n": "daysOfMonth",
+     "v": {
+      "nm": "p",
+      "t": "schedule:DayOfMonthSchedule",
+      "s": []
+     }
+    },
+    {
+     "st": "p",
+     "n": "months",
+     "v": {
+      "nm": "p",
+      "t": "schedule:MonthSchedule",
+      "s": []
+     }
+    },
+    {
+     "st": "p",
+     "n": "weekdays",
+     "v": {
+      "nm": "p",
+      "t": "schedule:WeekdaySchedule",
+      "s": []
+     }
+    },
+    {
+     "st": "p",
+     "n": "weeksOfMonth",
+     "v": {
+      "nm": "p",
+      "t": "schedule:WeekOfMonthSchedule",
+      "s": []
+     }
+    },
+    {
+     "st": "p",
+     "n": "year",
+     "v": {
+      "nm": "p",
+      "t": "schedule:YearSchedule",
+      "s": [
+       {
+        "nm": "p",
+        "n": "alwaysEffective",
+        "v": "true"
+       }
+      ]
+     }
+    }
+   ],
+   "p": "schedule:CompositeSchedule"
+  },
+  "schedule:ScheduleReference": {
+   "c": [
+    {
+     "st": "p",
+     "n": "ref",
+     "f": "1",
+     "v": {
+      "nm": "p",
+      "t": "baja:Ord",
+      "v": "null"
+     }
+    }
+   ],
+   "p": "schedule:AbstractSchedule"
+  },
+  "baja:Ord": {}
+ },
+ "schedules": {
+  "BoolSch": {
+   "nm": "p",
+   "t": "schedule:BooleanSchedule",
+   "s": [
+    {
+     "nm": "p",
+     "n": "defaultOutput",
+     "t": "baja:StatusBoolean",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "false"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "lastModified",
+     "t": "baja:AbsTime",
+     "v": "2026-11-15T22:13:47.960-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "effective",
+     "t": "schedule:DateRangeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "start",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "alwaysEffective",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "end",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "alwaysEffective",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "schedule",
+     "t": "schedule:CompositeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "specialEvents",
+       "t": "schedule:CompositeSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "Probe",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusBoolean",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "true"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:DateSchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "yearSchedule",
+             "t": "schedule:YearSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "year",
+               "t": "baja:Integer",
+               "v": "2026"
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "monthSchedule",
+             "t": "schedule:MonthSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "set",
+               "t": "baja:EnumSet",
+               "v": "10"
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "daySchedule",
+             "t": "schedule:DayOfMonthSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "set",
+               "t": "baja:EnumSet",
+               "v": "15"
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "weekdaySchedule",
+             "t": "schedule:WeekdaySchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "singleSelection",
+               "t": "baja:Boolean",
+               "v": "true"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "Christmas$20Break",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusBoolean",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "false"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:DateRangeSchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "start",
+             "t": "schedule:DateSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "yearSchedule",
+               "t": "schedule:YearSchedule",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "year",
+                 "t": "baja:Integer",
+                 "v": "2026"
+                }
+               ]
+              },
+              {
+               "nm": "p",
+               "n": "monthSchedule",
+               "t": "schedule:MonthSchedule",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "set",
+                 "t": "baja:EnumSet",
+                 "v": "11"
+                }
+               ]
+              },
+              {
+               "nm": "p",
+               "n": "daySchedule",
+               "t": "schedule:DayOfMonthSchedule",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "set",
+                 "t": "baja:EnumSet",
+                 "v": "24"
+                }
+               ]
+              },
+              {
+               "nm": "p",
+               "n": "weekdaySchedule",
+               "t": "schedule:WeekdaySchedule",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "singleSelection",
+                 "t": "baja:Boolean",
+                 "v": "true"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "end",
+             "t": "schedule:DateSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "yearSchedule",
+               "t": "schedule:YearSchedule",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "year",
+                 "t": "baja:Integer",
+                 "v": "2026"
+                }
+               ]
+              },
+              {
+               "nm": "p",
+               "n": "monthSchedule",
+               "t": "schedule:MonthSchedule",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "set",
+                 "t": "baja:EnumSet",
+                 "v": "11"
+                }
+               ]
+              },
+              {
+               "nm": "p",
+               "n": "daySchedule",
+               "t": "schedule:DayOfMonthSchedule",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "set",
+                 "t": "baja:EnumSet",
+                 "v": "26"
+                }
+               ]
+              },
+              {
+               "nm": "p",
+               "n": "weekdaySchedule",
+               "t": "schedule:WeekdaySchedule",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "singleSelection",
+                 "t": "baja:Boolean",
+                 "v": "true"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "Thanksgiving",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "06:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "finish",
+               "t": "baja:Time",
+               "v": "12:30:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusBoolean",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "true"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekAndDaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "months",
+             "t": "schedule:MonthSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "set",
+               "t": "baja:EnumSet",
+               "v": "10"
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "weeksOfMonth",
+             "t": "schedule:WeekOfMonthSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "set",
+               "t": "baja:EnumSet",
+               "v": "4"
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "weekdays",
+             "t": "schedule:WeekdaySchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "set",
+               "t": "baja:EnumSet",
+               "v": "4"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "Summer",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "07:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "finish",
+               "t": "baja:Time",
+               "v": "09:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusBoolean",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "true"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:CustomSchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "daysOfMonth",
+             "t": "schedule:DayOfMonthSchedule",
+             "s": []
+            },
+            {
+             "nm": "p",
+             "n": "months",
+             "t": "schedule:MonthSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "set",
+               "t": "baja:EnumSet",
+               "v": "5,6"
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "weekdays",
+             "t": "schedule:WeekdaySchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "set",
+               "t": "baja:EnumSet",
+               "v": "1,2"
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "weeksOfMonth",
+             "t": "schedule:WeekOfMonthSchedule",
+             "s": []
+            },
+            {
+             "nm": "p",
+             "n": "year",
+             "t": "schedule:YearSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "alwaysEffective",
+               "t": "baja:Boolean",
+               "v": "true"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "Holidays",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:ScheduleReference",
+           "s": [
+            {
+             "nm": "p",
+             "n": "ref",
+             "t": "baja:Ord",
+             "v": "station:|slot:/ImplSCH/Cal"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "week",
+       "t": "schedule:WeekSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "sunday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "0"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "08:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "finish",
+               "t": "baja:Time",
+               "v": "18:00:00.000"
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "1"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "tuesday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "08:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "finish",
+               "t": "baja:Time",
+               "v": "18:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusBoolean",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "true"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "2"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "wednesday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "07:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "finish",
+               "t": "baja:Time",
+               "v": "12:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusBoolean",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "true"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "nm": "p",
+             "n": "time1",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "13:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusBoolean",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "true"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "3"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "thursday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "4"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "friday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "5"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "saturday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "6"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "outSource",
+     "t": "baja:String",
+     "v": "Special Event: Probe"
+    },
+    {
+     "nm": "p",
+     "n": "out",
+     "t": "baja:StatusBoolean",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "true"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "in",
+     "t": "baja:StatusBoolean",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "false"
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "nextTime",
+     "t": "baja:AbsTime",
+     "v": "2026-11-16T00:00:00.000-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "nextValue",
+     "t": "baja:StatusBoolean",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "false"
+      }
+     ]
+    }
+   ]
+  },
+  "NumSch": {
+   "nm": "p",
+   "t": "schedule:NumericSchedule",
+   "s": [
+    {
+     "nm": "p",
+     "n": "defaultOutput",
+     "t": "baja:StatusNumeric",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "0.0"
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "lastModified",
+     "t": "baja:AbsTime",
+     "v": "2026-11-15T22:03:02.977-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "effective",
+     "t": "schedule:DateRangeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "start",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "alwaysEffective",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "end",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "alwaysEffective",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "schedule",
+     "t": "schedule:CompositeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "specialEvents",
+       "t": "schedule:CompositeSchedule",
+       "s": []
+      },
+      {
+       "nm": "p",
+       "n": "week",
+       "t": "schedule:WeekSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "sunday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "0"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "09:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "finish",
+               "t": "baja:Time",
+               "v": "17:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusNumeric",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "21.5"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "1"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "tuesday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "2"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "wednesday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "3"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "thursday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "4"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "friday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "5"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "saturday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "6"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "outSource",
+     "t": "baja:String",
+     "v": "Default Output"
+    },
+    {
+     "nm": "p",
+     "n": "out",
+     "t": "baja:StatusNumeric",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "0.0"
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "in",
+     "t": "baja:StatusNumeric",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "0.0"
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "nextTime",
+     "t": "baja:AbsTime",
+     "v": "2026-11-16T09:00:00.000-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "nextValue",
+     "t": "baja:StatusNumeric",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "21.5"
+      }
+     ]
+    }
+   ]
+  },
+  "EnumSch": {
+   "nm": "p",
+   "t": "schedule:EnumSchedule",
+   "s": [
+    {
+     "nm": "p",
+     "n": "defaultOutput",
+     "t": "baja:StatusEnum",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "0"
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "lastModified",
+     "t": "baja:AbsTime",
+     "v": "2026-11-15T22:03:03.084-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "effective",
+     "t": "schedule:DateRangeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "start",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "alwaysEffective",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "end",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "alwaysEffective",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "schedule",
+     "t": "schedule:CompositeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "specialEvents",
+       "t": "schedule:CompositeSchedule",
+       "s": []
+      },
+      {
+       "nm": "p",
+       "n": "week",
+       "t": "schedule:WeekSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "sunday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "0"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "09:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "finish",
+               "t": "baja:Time",
+               "v": "17:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusEnum",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "2"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "1"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "tuesday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "2"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "wednesday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "3"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "thursday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "4"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "friday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "5"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "saturday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "6"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "outSource",
+     "t": "baja:String",
+     "v": "Default Output"
+    },
+    {
+     "nm": "p",
+     "n": "out",
+     "t": "baja:StatusEnum",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "0"
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "in",
+     "t": "baja:StatusEnum",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "0"
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "nextTime",
+     "t": "baja:AbsTime",
+     "v": "2026-11-16T09:00:00.000-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "nextValue",
+     "t": "baja:StatusEnum",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "2"
+      }
+     ]
+    }
+   ]
+  },
+  "StrSch": {
+   "nm": "p",
+   "t": "schedule:StringSchedule",
+   "s": [
+    {
+     "nm": "p",
+     "n": "lastModified",
+     "t": "baja:AbsTime",
+     "v": "2026-11-15T22:03:03.084-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "effective",
+     "t": "schedule:DateRangeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "start",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "alwaysEffective",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "end",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "alwaysEffective",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "schedule",
+     "t": "schedule:CompositeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "specialEvents",
+       "t": "schedule:CompositeSchedule",
+       "s": []
+      },
+      {
+       "nm": "p",
+       "n": "week",
+       "t": "schedule:WeekSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "sunday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "0"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "time",
+             "t": "schedule:TimeSchedule",
+             "s": [
+              {
+               "nm": "p",
+               "n": "start",
+               "t": "baja:Time",
+               "v": "09:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "finish",
+               "t": "baja:Time",
+               "v": "17:00:00.000"
+              },
+              {
+               "nm": "p",
+               "n": "effectiveValue",
+               "f": "o1",
+               "t": "baja:StatusString",
+               "s": [
+                {
+                 "nm": "p",
+                 "n": "value",
+                 "v": "hello"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "1"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "tuesday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "2"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "wednesday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "3"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "thursday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "4"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "friday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "5"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "saturday",
+         "t": "schedule:DailySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "day",
+           "t": "schedule:DaySchedule",
+           "s": []
+          },
+          {
+           "nm": "p",
+           "n": "days",
+           "t": "schedule:WeekdaySchedule",
+           "s": [
+            {
+             "nm": "p",
+             "n": "set",
+             "t": "baja:EnumSet",
+             "v": "6"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "outSource",
+     "t": "baja:String",
+     "v": "Default Output"
+    },
+    {
+     "nm": "p",
+     "n": "out",
+     "t": "baja:StatusString",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": ""
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "nextTime",
+     "t": "baja:AbsTime",
+     "v": "2026-11-16T09:00:00.000-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "nextValue",
+     "t": "baja:StatusString",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "hello"
+      }
+     ]
+    }
+   ]
+  },
+  "Cal": {
+   "nm": "p",
+   "t": "schedule:CalendarSchedule",
+   "s": [
+    {
+     "nm": "p",
+     "n": "defaultOutput",
+     "t": "baja:StatusBoolean",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "false"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "lastModified",
+     "t": "baja:AbsTime",
+     "v": "2026-11-15T22:13:47.960-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "in",
+     "t": "baja:StatusBoolean",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "false"
+      },
+      {
+       "nm": "p",
+       "n": "status",
+       "v": "40"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "out",
+     "t": "baja:StatusBoolean",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "false"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "nextTime",
+     "t": "baja:AbsTime",
+     "v": "2026-12-28T00:00:00.000-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "nextValue",
+     "t": "baja:StatusBoolean",
+     "s": [
+      {
+       "nm": "p",
+       "n": "value",
+       "v": "true"
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "NewYear",
+     "t": "schedule:DateSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "yearSchedule",
+       "t": "schedule:YearSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "alwaysEffective",
+         "t": "baja:Boolean",
+         "v": "true"
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "monthSchedule",
+       "t": "schedule:MonthSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "set",
+         "t": "baja:EnumSet",
+         "v": "0"
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "daySchedule",
+       "t": "schedule:DayOfMonthSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "set",
+         "t": "baja:EnumSet",
+         "v": "1"
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "weekdaySchedule",
+       "t": "schedule:WeekdaySchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "singleSelection",
+         "t": "baja:Boolean",
+         "v": "true"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "Shutdown",
+     "t": "schedule:DateRangeSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "start",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "year",
+           "t": "baja:Integer",
+           "v": "2026"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "set",
+           "t": "baja:EnumSet",
+           "v": "11"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "set",
+           "t": "baja:EnumSet",
+           "v": "28"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "end",
+       "t": "schedule:DateSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "yearSchedule",
+         "t": "schedule:YearSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "year",
+           "t": "baja:Integer",
+           "v": "2027"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "monthSchedule",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "set",
+           "t": "baja:EnumSet",
+           "v": "0"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "daySchedule",
+         "t": "schedule:DayOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "set",
+           "t": "baja:EnumSet",
+           "v": "2"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdaySchedule",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "TrigSch": {
+   "nm": "p",
+   "t": "schedule:TriggerSchedule",
+   "s": [
+    {
+     "nm": "p",
+     "n": "dates",
+     "t": "schedule:CalendarSchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "defaultOutput",
+       "t": "baja:StatusBoolean",
+       "s": [
+        {
+         "nm": "p",
+         "n": "value",
+         "v": "false"
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "lastModified",
+       "t": "baja:AbsTime",
+       "v": "2026-11-15T22:13:48.318-06:00"
+      },
+      {
+       "nm": "p",
+       "n": "in",
+       "t": "baja:StatusBoolean",
+       "s": [
+        {
+         "nm": "p",
+         "n": "value",
+         "v": "false"
+        },
+        {
+         "nm": "p",
+         "n": "status",
+         "v": "40"
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "out",
+       "t": "baja:StatusBoolean",
+       "s": [
+        {
+         "nm": "p",
+         "n": "value",
+         "v": "false"
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "nextTime",
+       "t": "baja:AbsTime",
+       "v": "2026-11-16T00:00:00.000-06:00"
+      },
+      {
+       "nm": "p",
+       "n": "nextValue",
+       "t": "baja:StatusBoolean",
+       "s": [
+        {
+         "nm": "p",
+         "n": "value",
+         "v": "true"
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "Weekdays",
+       "t": "schedule:WeekAndDaySchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "months",
+         "t": "schedule:MonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weeksOfMonth",
+         "t": "schedule:WeekOfMonthSchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "singleSelection",
+           "t": "baja:Boolean",
+           "v": "true"
+          }
+         ]
+        },
+        {
+         "nm": "p",
+         "n": "weekdays",
+         "t": "schedule:WeekdaySchedule",
+         "s": [
+          {
+           "nm": "p",
+           "n": "set",
+           "t": "baja:EnumSet",
+           "v": "1"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "times",
+     "t": "schedule:DaySchedule",
+     "s": [
+      {
+       "nm": "p",
+       "n": "time",
+       "t": "schedule:TimeSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "start",
+         "t": "baja:Time",
+         "v": "06:00:00.000"
+        },
+        {
+         "nm": "p",
+         "n": "finish",
+         "t": "baja:Time",
+         "v": "06:00:20.000"
+        }
+       ]
+      },
+      {
+       "nm": "p",
+       "n": "time1",
+       "t": "schedule:TimeSchedule",
+       "s": [
+        {
+         "nm": "p",
+         "n": "start",
+         "t": "baja:Time",
+         "v": "18:30:00.000"
+        },
+        {
+         "nm": "p",
+         "n": "finish",
+         "t": "baja:Time",
+         "v": "18:30:20.000"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "nm": "p",
+     "n": "nextTrigger",
+     "t": "baja:AbsTime",
+     "v": "2026-11-16T06:00:00.000-06:00"
+    },
+    {
+     "nm": "p",
+     "n": "lastModified",
+     "t": "baja:AbsTime",
+     "v": "2026-11-15T22:13:48.427-06:00"
+    }
+   ]
+  }
+ }
+}
