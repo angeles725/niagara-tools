@@ -23,6 +23,9 @@ func run(args []string, s cli.Stdio) int {
 			return register.Main(args[1:], s)
 		}
 	}
+	if wantsVersion(args) {
+		return printVersion(s)
+	}
 	return mcpcli.Main(args, s)
 }
 

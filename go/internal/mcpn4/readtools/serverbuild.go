@@ -89,3 +89,7 @@ func nilIfEmpty(s string) any {
 	}
 	return s
 }
+
+// Build is the build stamp of this binary, the server.build field of n4_describe_session (the VCS
+// revision, +modified for a dirty tree, or "unknown"); `mcp-n4 --version` prints it.
+func Build() string { return startup.build }

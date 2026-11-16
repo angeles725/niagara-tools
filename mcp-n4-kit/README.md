@@ -150,6 +150,10 @@ choose a URL, a credential prefix or TLS verification. Without any `--station`,
 
 Flags:
 
+- `--version`: prints `mcp-n4 <version> (git <sha>)` and exits 0: the `server_version` and
+  `server.build` that `n4_describe_session` reports (`<sha>` ends in `+modified` for a dirty tree,
+  `unknown` for a binary built without VCS information).
+
 - `--station NAME=URL` (repeatable): the only stations `n4_connect` may open. `URL`
   must be `https://`. Set NAME to the station's real `stationName`: `n4_connect`
   checks it by default (override per call with `expected_station`).
