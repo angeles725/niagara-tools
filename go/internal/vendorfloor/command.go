@@ -19,7 +19,7 @@ import (
 const (
 	ExitOK          = 0 // no FAIL row (WARN-only is still 0)
 	ExitFail        = 1 // any FAIL row
-	ExitEnv         = 3 // usage, a root that is not a directory, or a run that could not finish
+	ExitEnv         = 3 // usage, a root that is not a directory, a vendor/ that cannot be listed whole, or a run that could not finish
 	ExitUnavailable = 4 // node or acorn is missing: one SKIP row, never a pass (K20)
 )
 
@@ -27,7 +27,8 @@ const (
 func Main(args []string, s cli.Stdio) int { return run(args, s, Default) }
 
 // run is Main over any API table. An rc dir with no vendored library needs no tool and is clean; a
-// missing tool is one SKIP row and ExitUnavailable.
+// vendor/ the walk could not list whole (a link that leads nowhere, an unreadable sub-directory) is
+// ExitEnv before any tool is asked; a missing tool is one SKIP row and ExitUnavailable.
 func run(args []string, s cli.Stdio, apis APIs) int {
 	a, err := lint.ParseValued(lint.Valued, tool, usage, lint.ValueOptions{Strict: true}, dropLeadingEmpty(args))
 	if err != nil {
@@ -35,13 +36,22 @@ func run(args []string, s cli.Stdio, apis APIs) int {
 		return ExitEnv
 	}
 	rc := a.Roots[0]
-	if !lint.IsDir(rc + "/vendor") {
+	vendor := rc + "/vendor"
+	switch {
+	case dangling(vendor):
+		fmt.Fprintf(s.Err, envFaultLine, fmt.Sprintf(danglingVendor, vendor))
+		return ExitEnv
+	case !lint.IsDir(vendor):
 		fmt.Fprintf(s.Err, noVendorNote, rc)
 		return ExitOK
 	}
-	files, walkErrs := listVendored(rc + "/vendor")
+	files, walkErrs := listVendored(vendor)
 	for _, e := range walkErrs {
-		fmt.Fprintln(s.Err, e)
+		fmt.Fprintf(s.Err, envFaultLine, fmt.Sprintf(incompleteWalk, vendor, e))
+	}
+	if len(walkErrs) > 0 {
+		// Mutation: VF-unreadable -- scanning on over the files that were listed passes libraries nobody parsed
+		return ExitEnv
 	}
 	if len(files) == 0 {
 		fmt.Fprintf(s.Err, noFilesNote, rc)

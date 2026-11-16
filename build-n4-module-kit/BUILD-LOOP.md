@@ -530,7 +530,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     owed item G50; the four bash lints with a private empty-root row are Go rules with `EmptyError` now, and
     lint-vendor-floor exits 0 on an rc dir with no `vendor/` by its header). `[ev: retro r9-m1-walkers Δ1]` A walk
     follows a symlinked root like `find -H` (Go: `os.Stat` on the root), never a symlink below it and never `-L`
-    (`go/internal/lint` `TestWalkOrderAndSelection`, mutation WALK-symroot). `[ev: retro symlink-root-walk Δ1]` A per-file read fails closed too:
+    (`go/internal/lint` `TestWalkOrderAndSelection`, mutation WALK-symroot). `[ev: retro symlink-root-walk Δ1]` lint-vendor-floor keeps a
+    walk of its own (it enters dot directories) under the same rules: a symlinked `vendor/` is followed, and an
+    unreadable sub-directory or a `vendor/` link that leads nowhere is exit 3 before any tool is asked
+    (`go/internal/vendorfloor` `TestListVendoredFollowsASymlinkedRoot`, `TestUnreadableSubDirectoryIsAnEnvFault`,
+    `TestDanglingVendorLinkIsAnEnvFault`). `[ev: retro go-lint-vendor-floor Δ1]` A per-file read fails closed too:
     `grep … "$f" 2>/dev/null || true` reads an unreadable file as no hit and `xargs awk` splits a path on
     whitespace: the slot-coverage and schema-risk ports exit on an unreadable input now `[ev: retro go-schema-risk Δ2]`;
     verify-module's `--src` reads stay owed (phase B). `[deferred: retro r9-m1-walkers Δ2]` Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:

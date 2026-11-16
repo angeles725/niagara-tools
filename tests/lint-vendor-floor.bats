@@ -105,3 +105,26 @@ _need_acorn() {
   [[ "$output" == *"WARN  vendor-floor  vendor/sloppy-1.0.0.js:3  api: .replaceAll("* ]]
   # Named mutation VF9: tokenize with sourceType module only -> the replaceAll row vanishes.
 }
+
+@test "VF10: a vendor/ that is a symlink is followed -> its library reaches the tools (SKIP, exit 4, never 'nothing to check')" {
+  mkdir -p "$BATS_TEST_TMPDIR/rc/shared"
+  printf 'x ??= 1;\n' > "$BATS_TEST_TMPDIR/rc/shared/lib.js"
+  ln -s "$BATS_TEST_TMPDIR/rc/shared" "$BATS_TEST_TMPDIR/rc/vendor"
+  KIT_NODE=/nonexistent/node run "$LVF" "$BATS_TEST_TMPDIR/rc"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"SKIP  vendor-floor"* ]]
+  [[ "$output" != *"nothing to check"* ]]
+}
+
+@test "VF11: an unreadable sub-directory of vendor/ -> env fault naming it, exit 3, no row" {
+  [ "$(id -u)" -ne 0 ] || skip "running as root: chmod 000 does not block reads"
+  mkdir -p "$BATS_TEST_TMPDIR/rc/vendor/locked"
+  printf 'var a = 1;\n' > "$BATS_TEST_TMPDIR/rc/vendor/ok.js"
+  printf 'x ??= 1;\n' > "$BATS_TEST_TMPDIR/rc/vendor/locked/in.js"
+  chmod 000 "$BATS_TEST_TMPDIR/rc/vendor/locked"
+  KIT_NODE=/nonexistent/node run "$LVF" "$BATS_TEST_TMPDIR/rc"
+  chmod 755 "$BATS_TEST_TMPDIR/rc/vendor/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-vendor-floor: env fault: cannot list every file under $BATS_TEST_TMPDIR/rc/vendor"*"vendor/locked"* ]]
+  [[ "$output" != *"vendor-floor  "* ]]
+}
