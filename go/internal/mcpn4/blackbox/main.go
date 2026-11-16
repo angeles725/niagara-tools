@@ -21,14 +21,22 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	mcpcli "github.com/angeles725/niagara-tools/go/internal/mcpn4/cli"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools"
 )
 
 // marker, set to "1" in a child's environment, makes the test binary act as mcp-n4.
 const marker = "MCPN4_BLACKBOX_AS_SERVER"
 
+// buildEnv, when set in a child's environment, is the build the server reports as its own: a
+// test binary carries no VCS stamp, and the stale-binary tests need one.
+const buildEnv = "MCPN4_BLACKBOX_BUILD"
+
 // Main runs the tests, or, in a child the harness started, the mcp-n4 server; it never returns.
 func Main(m *testing.M) {
 	if os.Getenv(marker) == "1" {
+		if build := os.Getenv(buildEnv); build != "" {
+			readtools.StampBuild(build)
+		}
 		os.Exit(mcpcli.Main(os.Args[1:], cli.Stdio{Out: os.Stdout, Err: os.Stderr, Getenv: os.Getenv}))
 	}
 	os.Exit(m.Run())

@@ -573,9 +573,12 @@ first, so a failed reconnect leaves no session). `n4_describe_session` lists the
 configured station names and, with or without a session, a `server` block: `build` (the git
 revision the binary was built from, `+modified` for a dirty tree, `unknown` without a VCS
 stamp), `built_at` (the commit time, else the binary's mtime at start), `started_at` and
-`binary` (the executable's path). When the binary on disk was modified after the server
-started (rebuilt or reinstalled), the reply carries a top-level `warning`: new or changed tools
-reach a client only after its MCP server is restarted. `n4_list_links` and
+`binary` (the executable's path). When the binary on disk is not the one serving, the reply
+of `n4_describe_session` and of a successful `n4_connect` carries the same one-line top-level
+`warning` naming both builds: new or changed tools reach a client only after its MCP server is
+restarted. The git revision stamped in the binary on disk decides when both builds carry one
+(a different revision warns, the same revision never does); otherwise the binary's mtime
+later than the server start does. A missing or unreadable binary never warns or fails. `n4_list_links` and
 `n4_find_dangling_outputs` scan components up to `depth` levels below `ord`
 (the ord itself is level 0). Links are seen when their target is at most one level
 below `depth`; an out slot used only by a deeper target, or from outside the

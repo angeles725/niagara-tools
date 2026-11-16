@@ -15,6 +15,13 @@ import (
 // copiedServer starts a server from a copy of the test binary, so the test owns its mtime.
 func copiedServer(t *testing.T) (*Server, string) {
 	t.Helper()
+	bin := copiedExe(t)
+	return Start(t, Options{Exe: bin}), bin
+}
+
+// copiedExe is a copy of the test binary in a scratch directory, modified an hour ago.
+func copiedExe(t *testing.T) string {
+	t.Helper()
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -35,11 +42,17 @@ func copiedServer(t *testing.T) (*Server, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	past := time.Now().Add(-time.Hour)
-	if err := os.Chtimes(bin, past, past); err != nil {
+	touch(t, bin, -time.Hour)
+	return bin
+}
+
+// touch sets path's mtime to now plus offset.
+func touch(t *testing.T, path string, offset time.Duration) {
+	t.Helper()
+	at := time.Now().Add(offset)
+	if err := os.Chtimes(path, at, at); err != nil {
 		t.Fatal(err)
 	}
-	return Start(t, Options{Exe: bin}), bin
 }
 
 func TestDescribeReportsTheServerBuildWithoutASession(t *testing.T) {
@@ -59,10 +72,7 @@ func TestDescribeReportsTheServerBuildWithoutASession(t *testing.T) {
 
 func TestDescribeWarnsWhenTheBinaryOnDiskIsNewerThanTheServer(t *testing.T) {
 	s, bin := copiedServer(t)
-	later := time.Now().Add(time.Hour)
-	if err := os.Chtimes(bin, later, later); err != nil {
-		t.Fatal(err)
-	}
+	touch(t, bin, time.Hour)
 	out := s.OK("n4_describe_session", nil)
 	warning := str(out["warning"])
 	if !strings.Contains(warning, bin) || !strings.Contains(warning, "restart") {
