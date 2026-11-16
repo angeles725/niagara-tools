@@ -566,3 +566,64 @@ define(["nmodule/mymod/rc/myWidget", "nmodule/bajaui/rc/bajaui"], function(myWid
 - **Remove `niagara-grunt` entirely** when: the module only serves a pre-built static bundle (three.js, Chart.js, etc.) from `src/rc/` with no authored AMD modules — a leftover `niagara-grunt` dep adds a phantom `nodeHome` requirement and a no-op build step on every compile `[INFER — kit doctrine]`.
 
 See `types/dashboard.md §JS build strategy` for the full decision matrix. `[ev: corpus B1132]`
+
+### Edit-and-reload without rebuilding the jar — moduledev mode and webdev mode
+
+Two development switches, often confused. Both belong on a workstation or laboratory station and **never on a
+production station**. Source: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/js/buildingJS.txt` (under
+niagara-research), its headings "Developing in real time with moduledev mode" and "Switching your Station into Web
+Development mode"; the toolchain itself is corpus B1132, the ES6/ES5 decision B1119.
+
+| | **moduledev mode** | **webdev mode** |
+|---|---|---|
+| What it changes | requests for a module's web files are answered from the **source directory on disk**, not from the jar | the station serves the **original, unminified** JS files of a module instead of its built `*.built.min.js` |
+| What it gives the author | edit a `.js`/`.css`/`.html`, refresh the browser, see the change: no jar rebuild, no station restart | readable code and real line numbers in the browser debugger |
+| Keyed by | module name → source directory | the **webdev ID**, the first constructor argument of the module's `BJsBuild` |
+| Where it is set | `system.properties`: `niagara.module.dev=true` (browser), `niagara.module.dev.wb=true` (Workbench); plus the file `etc/moduledev.properties` under Niagara home | the station spy page `webDevSetup`, or by hand in `etc/webdev.properties` under the Niagara user home |
+
+**moduledev: what must be true.**
+
+1. The host licence holds the `developer` feature with its `moduleDev` property true (the feature a debugger needs,
+   `types/diagnostics.md` § 4.2).
+2. `niagara_dev_home` (environment variable, or the `niagara.dev.home` system property) names the directory that holds
+   your sources.
+3. `etc/moduledev.properties` has one line per module: `<moduleName>=<directory of the module>`. The key is the
+   module name **without** the runtime profile: `myMod=…/myMod` works, `myMod-ux=…/myMod/myMod-ux` does not; files are
+   then found in any of the module's profile directories.
+4. Only web file types resolve from disk by default (JS, CSS, HTML, images and a few more); extend the list with
+   `niagara.module.dev.supportedExtensions`. Java classes, `module-include.xml`, lexicons and palettes still come from
+   the jar: a change to those needs the normal build and deploy.
+
+**webdev: what must be true.**
+
+1. The module has a `BJsBuild` subtype, registered in `module-include.xml` like any type, whose singleton names the
+   webdev ID and the built file, and each `BIJavaScript` widget type passes it to `JsInfo.make(...)`:
+
+   ```java
+   @NiagaraType
+   public final class BMyModJsBuild extends BJsBuild {
+     public static final BMyModJsBuild INSTANCE = new BMyModJsBuild(
+       "myMod",                                                      // the webdev ID
+       new BOrd[] { BOrd.make("module://myMod/rc/myMod.built.min.js") });
+     // TYPE and the private constructor that calls super(id, files)
+   }
+   ```
+2. The unminified sources are reachable: packaged in the jar next to the built file, or resolved from disk by
+   moduledev `[INFER]`. A module with no `BJsBuild` (a servlet-SPA of raw `rc/` files, `types/dashboard.md` § JS build
+   strategy) has nothing to switch: it already serves its source files.
+3. Browse the station's web interface once, then open the spy page `webDevSetup` and enable the module's ID. The page
+   lists an ID only after the station has served files of that build. The `spy:` scheme is superuser-only
+   `[ev: corpus B1247 §1247.11]` and `webDevSetup` is a state-changing, CSRF-gated spy page `[ev: corpus B1191 §1191.2]`.
+
+**Switching them off.** webdev: disable the ID on `webDevSetup`, or delete its entry from `etc/webdev.properties`
+`[INFER]` (the guide documents the file as the by-hand way to configure the mode). moduledev: remove the two
+`niagara.module.dev*` properties and the `moduledev.properties` entry, then restart Workbench and the station
+`[INFER]`. Confirm in the browser's network tab that `*.built.min.js` is what loads again.
+
+**Why never on a production station.** The guide says so for moduledev. With it the station answers web requests
+from a directory on disk instead of the signed jar, so what runs is no longer the module that was verified and
+deployed `[ev: corpus B38 §38.22]`; a controller holds no source tree and no `developer` licence anyway. webdev
+serves many unminified files where one built file is meant to save network traffic on an embedded device (same
+guide page), and in webdev mode the BajaScript bundles are sent `no-cache` instead of the long production cache lifetime `[ev: corpus B29 §29.11.3]`.
+A release check: `etc/moduledev.properties` and `etc/webdev.properties` absent or empty, and no `niagara.module.dev`
+key in `system.properties`.
