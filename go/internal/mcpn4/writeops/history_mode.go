@@ -32,10 +32,7 @@ func historyMode(args *pyjson.Object, typ string) (string, error) {
 		}
 		return historyModes[typMode], nil
 	}
-	mode, _ := raw.(string)
-	if historyModes[mode] == "" {
-		return "", plan.ToolError(fmt.Sprintf(msgHistoryMode, pyjson.Repr(raw)))
-	}
+	mode, _ := raw.(string) // interval or cov: the schema's enum
 	if typMode != "" && typMode != mode {
 		return "", plan.ToolError(fmt.Sprintf(msgHistoryModeType, typ, typMode, mode))
 	}

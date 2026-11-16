@@ -32,10 +32,8 @@ func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
 			return s, nil, err
 		}
 	}
-	if t, ok := args.Get("ext_type"); ok { // else the type that fits each point
-		if s.typ, _ = t.(string); !historyType(s.typ) {
-			return s, nil, plan.ToolError("ext_type must be one of " + joinStrings(historyExtTypes))
-		}
+	if t, ok := args.Get("ext_type"); ok { // one of historyExtTypes (the schema's enum), else the type that fits each point
+		s.typ, _ = t.(string)
 	}
 	if s.mode, err = historyMode(args, s.typ); err != nil {
 		return s, nil, err
@@ -54,32 +52,10 @@ func historyArgs(args *pyjson.Object) (historySpec, []string, error) {
 	if s.tolerance, err = historyTolerance(args, s.mode, s.typ); err != nil {
 		return s, nil, err
 	}
-	if s.fullPolicy, err = historyFullPolicy(args); err != nil {
-		return s, nil, err
-	}
+	s.fullPolicy = historyFullPolicy(args)
 	s.enabled = true
 	if v, ok := args.Get("enabled"); ok {
 		s.enabled = pyjson.Truthy(v)
 	}
 	return s, points, nil
-}
-
-func historyType(t string) bool {
-	for _, k := range historyExtTypes {
-		if k == t {
-			return true
-		}
-	}
-	return false
-}
-
-func joinStrings(xs []string) string {
-	out := ""
-	for i, x := range xs {
-		if i > 0 {
-			out += ", "
-		}
-		out += x
-	}
-	return out
 }

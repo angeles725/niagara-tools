@@ -39,15 +39,13 @@ func historyTolerance(args *pyjson.Object, mode, typ string) (any, error) {
 }
 
 // historyFullPolicy is the full_policy argument as its history:FullPolicy tag, "" when not given.
-func historyFullPolicy(args *pyjson.Object) (string, error) {
+func historyFullPolicy(args *pyjson.Object) string {
 	raw, given := args.Get("full_policy")
 	if !given {
-		return "", nil
+		return ""
 	}
-	if tag, _ := raw.(string); fullPolicies[tag] != "" {
-		return tag, nil
-	}
-	return "", plan.ToolError(fmt.Sprintf(msgHistoryFullPolicy, pyjson.Repr(raw)))
+	tag, _ := raw.(string) // roll or stop: the schema's enum
+	return tag
 }
 
 // checkTolerance refuses a change tolerance on a point whose extension is not the numeric COV

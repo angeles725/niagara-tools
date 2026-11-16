@@ -4,8 +4,6 @@ package writeops
 // in the order its comment names.
 
 const (
-	// msgAlarmKind: the kind given, the kind names.
-	msgAlarmKind = "kind must be one of %s, got %s"
 	// msgAlarmKindMismatch: the kind, the point ORD, its family, its type, the fitting kinds.
 	msgAlarmKindMismatch = "kind %s does not fit %s, a %s point (%s): use one of %s, or leave kind out"
 	// msgAlarmNotAPoint: the ORD and its type.

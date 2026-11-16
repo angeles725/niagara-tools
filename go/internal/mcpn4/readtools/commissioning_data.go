@@ -86,7 +86,6 @@ var (
 // Messages of the report.
 const (
 	commBadScope    = "scope must be a plain slot path such as station:|slot:/Drivers (default: the whole station), got %s"
-	commBadSection  = "sections must be a list of %s; got %s"
 	commBadExpect   = "%s must be an object with kinds (a list of %s) and/or name_pattern (a glob such as *Temp*, matched against the point's name and display name): %s"
 	commTruncated   = "truncated at %d components: counts are lower bounds and absences are not asserted; narrow the scope"
 	commTruncShort  = " (truncated at %d components, narrow the scope)"

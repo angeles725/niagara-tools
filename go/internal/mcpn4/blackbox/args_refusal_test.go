@@ -5,10 +5,7 @@ package blackbox
 // capacity_records: 50000 on n4_add_history was accepted and dropped, the 500-record default
 // kept).
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // rpcRefusal is the JSON-RPC error of tools/call tool with args: its code and message.
 func rpcRefusal(t *testing.T, s *Server, tool string, args Args) (int, string) {
@@ -79,11 +76,23 @@ func TestKnownArgumentsAndOpenMapsStillPass(t *testing.T) {
 	if tok, _ := dry["confirmation_token"].(string); tok == "" {
 		t.Fatalf("a valid call was refused: %v", dry)
 	}
-	// alarm_values is an open map (additionalProperties): its tags are the caller's, never refused
-	// as unknown arguments.
-	code, msg := rpcRefusal(t, h.Srv, "n4_add_alarm", Args{"points": []any{Folder + "/Temp"},
-		"kind": "numeric_change_of_state", "alarm_values": Args{"anyTag": 1}})
-	if code == -32602 && strings.Contains(msg, "anyTag") {
-		t.Errorf("an open map's key was refused: %s", msg)
+}
+
+// alarm_values is an open map (additionalProperties): its tags are the caller's, never refused
+// as unknown arguments; the call is planned against the station (retro row M11b: asserted
+// positively, not only as "not this refusal").
+func TestAnOpenMapsKeysPassToTheTool(t *testing.T) {
+	h := newAlarmRig(t)
+	h.Station.SetSupertype("control:EnumWritable", "control:EnumPoint")
+	h.Station.SetSupertype("control:EnumPoint", "baja:Component")
+	h.Add("3", "Mode", "control:EnumWritable")
+	before := h.Station.Requests()
+	dry := h.Srv.Dry("n4_add_alarm", Args{"points": []any{Folder + "/Mode"},
+		"kind": "enum_change_of_state", "alarm_values": Args{"anyTag": 1}})
+	if tok, _ := dry["confirmation_token"].(string); tok == "" {
+		t.Fatalf("a valid call with an open map was refused: %v", dry)
+	}
+	if h.Station.Requests() == before {
+		t.Error("the call with an open map never reached the station")
 	}
 }
