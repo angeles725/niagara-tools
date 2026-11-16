@@ -133,8 +133,10 @@ func TestListenAddressNeedsTheFlagToLeaveLoopback(t *testing.T) {
 
 func TestRunRefusesToExposeItselfByAccident(t *testing.T) {
 	t.Parallel()
-	path := write(t, `{"listen":"0.0.0.0:0","devices":[{"name":"d","unit":1,"points":[{"name":"p","table":"coil","address":0}]}]}`)
-	if code, out, errs := exec("run", "--control", "127.0.0.1:0", path); code != 1 || out != "" || !strings.Contains(errs, "--listen 0.0.0.0:0") {
+	// 192.0.2.1 is a documentation address this machine does not have: were the
+	// guard ever dropped, the bind would fail instead of exposing a test server.
+	path := write(t, `{"listen":"192.0.2.1:0","devices":[{"name":"d","unit":1,"points":[{"name":"p","table":"coil","address":0}]}]}`)
+	if code, out, errs := exec("run", "--control", "127.0.0.1:0", path); code != 1 || out != "" || !strings.Contains(errs, "--listen 192.0.2.1:0") {
 		t.Errorf("exit %d, stdout %q, stderr %q", code, out, errs)
 	}
 	for _, args := range [][]string{
