@@ -141,10 +141,11 @@ _home_lint() {
 
 @test "SH2-neg: the lint flags a path, a variable and a continued command without --home (file:line named)" {
   # Mutation: SH2-neg -- dropping the variable lookup in script_of reports the "$SCRIPT" runs as clean.
-  cat > "$TMPDIR_T/bad.bats" <<'SH'
+  # The fixture spells its cases %test: a line starting with the real keyword is read by bats as a case of THIS file.
+  sed 's/^%test /@test /' > "$TMPDIR_T/bad.bats" <<'SH'
 SCRIPT="$REPO/scripts/install-skill.sh"
-@test "a" { _close; run "$REPO/scripts/install-skill.sh" --dry-run; [ "$status" -eq 0 ]; }
-@test "b" {
+%test "a" { _close; run "$REPO/scripts/install-skill.sh" --dry-run; [ "$status" -eq 0 ]; }
+%test "b" {
   run bash "$SCRIPT" --dry-run
   run env FOO=1 /bin/bash "${SCRIPT}" \
     --force
@@ -161,11 +162,11 @@ SH
 }
 
 @test "SH2-pos: --home, a HOME= override, a continued --home and a script that is only read stay clean" {
-  cat > "$TMPDIR_T/good.bats" <<'SH'
+  sed 's/^%test /@test /' > "$TMPDIR_T/good.bats" <<'SH'
 SCRIPT="$REPO/scripts/install-skill.sh"
 # run "$SCRIPT" --dry-run   (a comment is not a command)
 _install() { "$REPO/scripts/install-skill.sh" --home "$H" "$@" >/dev/null; }
-@test "a" {
+%test "a" {
   run bash "$SCRIPT" --home "$BATS_TEST_TMPDIR/home" --dry-run
   run env HOME=/nonexistent bash "$SCRIPT" --dry-run
   run "$SCRIPT" --dry-run \
