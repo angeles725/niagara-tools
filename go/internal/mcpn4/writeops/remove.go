@@ -52,7 +52,7 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 		return nil, err
 	}
 	// One level more than the snapshot keeps: what sits there is reported, never captured.
-	_, nodes, err := plan.Handle(c, childOrd, SnapshotDepth+1)
+	nodes, holder, plain, err := childNodes(c, parentH, nm, childOrd)
 	if err != nil {
 		return nil, err
 	}
@@ -72,13 +72,19 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if err != nil {
 		return nil, err
 	}
-	inverse := []any{obj("nm", "a", "h", parentH, "n", nm, "b", body)}
+	inverse := []any{slotAdd(parentH, nm, body, box.Node(nodes, ""), plain)}
 	notes := []any{"Automatic re-creation (n4_rollback) is limited to this snapshot: type, plain slots " +
 		"and wsAnnotation to depth 3; it is not a full restore."}
 	if contractsNote != "" {
 		notes = append(notes, contractsNote)
 	}
-	anyPrior := false
+	slot, anyPrior := "", false
+	if plain && scope != nil { // the Python port's path (no scope) keeps its handles
+		slot = nm
+		if inverse, notes, anyPrior, err = plainSlotLinks(holder, body, nm, parentH, s.handles, inverse, notes); err != nil {
+			return nil, err
+		}
+	}
 	for _, l := range s.links {
 		tail, err := sourceTail(obj("sourceOrd", l.sourceOrd))
 		if err != nil {
@@ -135,7 +141,7 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if scope == nil {
 		notes, err = scanNotes(c, args, nodes, s.handles, keys, notes)
 	} else {
-		notes, inverse, err = linkScan(c, args, scope, nodes, s.handles, keys, notes, inverse)
+		notes, inverse, err = linkScan(c, args, scope, nodes, s.handles, slot, keys, notes, inverse)
 	}
 	if err != nil {
 		return nil, err

@@ -98,9 +98,16 @@ func unlinkedSpec(v any) (*pyjson.Object, error) {
 	}
 	withSource := copyObj(spec)
 	withSource.Set("source_path", "")
+	slot, escaped := get(spec, "target_slot").(string)
+	if escaped = escaped && !plainName(slot) && existingName(slot); escaped { // a removed tag slot is stored escaped
+		withSource.Set("target_slot", "x") // the relink checks below see a plain name
+	} // any other bad name goes through: relinkSpec names the first bad field, source_slot first
 	out, err := relinkSpec(withSource)
 	if err != nil {
 		return nil, err
+	}
+	if escaped {
+		out.Set("target_slot", slot)
 	}
 	trimmed := obj()
 	for _, k := range out.Keys()[1:] {
@@ -108,6 +115,12 @@ func unlinkedSpec(v any) (*pyjson.Object, error) {
 	}
 	return trimmed, nil
 }
+
+// plainName is a plain slot name (plan.Name accepts it).
+func plainName(s string) bool { _, err := plan.Name("", s); return err == nil }
+
+// existingName is a slot name as a station stores it (plan.ExistingName accepts it: hs$3apoint).
+func existingName(s string) bool { _, err := plan.ExistingName("", s); return err == nil }
 
 func copyObj(o *pyjson.Object) *pyjson.Object {
 	c := obj()
