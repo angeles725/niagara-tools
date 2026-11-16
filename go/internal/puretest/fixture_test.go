@@ -24,6 +24,7 @@ type fixture struct {
 	junit    string
 	hamcrest string
 	out, err string
+	kitJava  string // the value of RUN_PURE_TEST_KIT_JAVA the run sees ("" = unset)
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -80,6 +81,9 @@ func (f *fixture) run(args ...string) int {
 	code := Main(args, cli.Stdio{Out: &out, Err: &errb, Getenv: func(k string) string {
 		if k == "HOME" {
 			return f.dir + "/home"
+		}
+		if k == kitJavaEnv {
+			return f.kitJava
 		}
 		return ""
 	}})

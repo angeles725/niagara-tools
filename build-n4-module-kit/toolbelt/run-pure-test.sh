@@ -36,4 +36,6 @@ GO_DIR="$(cd "$here/../.." && pwd)/go"
 # shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
 . "$GO_DIR/go-tool.sh"
 BIN="$(go_tool_bin "$GO_DIR" run-pure-test)" || exit 3
+# The kit's Java helpers (java/n4kit/…, e.g. the logic-series runner) join the javac source path.
+export RUN_PURE_TEST_KIT_JAVA="$here/java"
 exec "$BIN" "$@"

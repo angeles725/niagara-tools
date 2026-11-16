@@ -44,7 +44,7 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	defer os.RemoveAll(tmp)
 	defer removeOnSignal(tmp)()
-	if r.compile(tmp, junit, rt, root, root+"/"+pkgPath+"/"+simple+".java") != 0 {
+	if r.compile(tmp, junit, sourcePath(rt, root, s.Env(kitJavaEnv)), root+"/"+pkgPath+"/"+simple+".java") != 0 {
 		// Exit 1 is kept for a JUnit failure: a test that does not compile proves nothing.
 		return r.die(ExitEnv, msgNoCompile, class)
 	}
@@ -52,11 +52,21 @@ func Main(args []string, s cli.Stdio) int {
 	return r.exec(rt, java, "-cp", tmp+":"+junit+":"+hamcrest, runner, class)
 }
 
+// sourcePath is the module's pure sources, its test root and, when the launcher names it, the kit's Java
+// helpers (toolbelt/java: n4kit.series), so a module test uses them without copying them in.
+func sourcePath(rt, root, kitJava string) string {
+	path := rt + "/" + mainSources + ":" + root
+	if kitJava != "" {
+		path += ":" + kitJava
+	}
+	return path
+}
+
 // compile runs javac on the test source; -sourcepath brings in the pure classes it references, compiled
 // together so package-private members stay reachable.
-func (r *run) compile(out, junit, rt, root, source string) int {
+func (r *run) compile(out, junit, sourcepath, source string) int {
 	args := append([]string{}, compileFlags...)
-	args = append(args, "-cp", junit, "-sourcepath", rt+"/"+mainSources+":"+root, "-d", out, source)
+	args = append(args, "-cp", junit, "-sourcepath", sourcepath, "-d", out, source)
 	return r.exec("", javac, args...)
 }
 
