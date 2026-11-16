@@ -22,6 +22,16 @@ var defaultPrompt embed.FS
 // promptSource is the template file beside the tracked launcher.
 func promptSource(tracked string) string { return filepath.Join(filepath.Dir(tracked), promptName) }
 
+// promptLabel names the template renderPrompt reads, for a report: the kit's prompt.md, or the built-in
+// default when the kit has none (the same test as renderPrompt), so a report never names a missing file.
+func promptLabel(tracked string) string {
+	source := promptSource(tracked)
+	if _, err := os.Lstat(source); errors.Is(err, fs.ErrNotExist) {
+		return "the built-in default (the kit has no " + source + ")"
+	}
+	return source
+}
+
 // renderPrompt is the prompt file for skill whose tracked launcher is tracked and whose installed launcher
 // is skillFile, made absolute so the harness can read it from any working directory. A kit template that
 // exists but cannot be read is an error, never the default.
