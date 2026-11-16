@@ -5,8 +5,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// SetFlags is n4_set_flags: the complete flag set of one slot of a component, sent as the
-// station's SetFlagsOp (javax.baja.sync.SetFlagsOp, id 'f'). The inverse sets the flags the slot
+// SetFlags is n4_set_flags: the flag set of one slot of a component (given whole, or as letters to
+// add and remove from the current set; setflags_edit.go), sent as the station's SetFlagsOp (javax.baja.sync.SetFlagsOp, id 'f'). The inverse sets the flags the slot
 // held; the read-back loads the slot again and compares the sets.
 var SetFlags = plan.Impl{ScopeOrds: ordArg, Plan: setFlagsPlan, Readback: setFlagsReadback}
 
@@ -17,15 +17,15 @@ const flagsDepth = 1
 type setFlagsData struct{ requested string }
 
 func setFlagsPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
-	ordText, flags := str(args, "ord"), str(args, "flags")
+	ordText := str(args, "ord")
 	slot, err := plan.ExistingName("slot", str(args, "slot"))
 	if err != nil {
 		return nil, err
 	}
-	if err := checkFlags(flags); err != nil {
+	edit, err := flagsEditOf(args) // checked before the station is read
+	if err != nil {
 		return nil, err
 	}
-	requested := canonicalFlags(flags)
 	h, nodes, err := plan.Handle(c, ordText, flagsDepth)
 	if err != nil {
 		return nil, err
@@ -34,6 +34,7 @@ func setFlagsPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
+	requested := edit.result(current)
 	if sameFlags(current, requested) {
 		return nil, plan.ToolError(flagsNothingToDoMsg(slot, ordText, current))
 	}

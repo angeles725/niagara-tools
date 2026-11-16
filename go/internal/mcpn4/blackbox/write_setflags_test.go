@@ -174,8 +174,13 @@ func TestSetFlagsIsListedAsAWriteToolOnlyWhenWritesAreAllowed(t *testing.T) {
 	if def := Dig(tool, "inputSchema", "properties", "dry_run", "default"); def != true {
 		t.Errorf("dry_run default = %v", def)
 	}
-	if req := Dig(tool, "inputSchema", "required"); !reflect.DeepEqual(req, []any{"ord", "slot", "flags"}) {
+	if req := Dig(tool, "inputSchema", "required"); !reflect.DeepEqual(req, []any{"ord", "slot"}) { // flags or add/remove
 		t.Errorf("required = %v", req)
+	}
+	for _, k := range []string{"flags", "add", "remove"} {
+		if typ := Dig(tool, "inputSchema", "properties", k, "type"); typ != "string" {
+			t.Errorf("%s type = %v", k, typ)
+		}
 	}
 	r := NewRig(t, nil)
 	if _, ok := listedTools(r.Srv)["n4_set_flags"]; ok {

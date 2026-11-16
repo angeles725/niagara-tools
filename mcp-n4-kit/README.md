@@ -344,10 +344,12 @@ Tool rules:
   (`40005`: send it as `baja:Simple`, which also takes a whole number, because an MCP
   client may turn the string "40005" into a number). Enum tags come from the type's
   range, e.g. Modbus `DataTypeEnum` is `integerType`, `signedInteger`, `floatType`.
-- `n4_set_flags(ord, slot, flags)` sets the flags of one slot of a component (a
+- `n4_set_flags(ord, slot, flags | add/remove)` sets the flags of one slot of a component (a
   property, an action or a topic; a name, not a path) with the station's set-flags
   sync op. `flags` is the complete new set as letters, each once, in any order; `""`
-  clears every flag. Letters: `r` readonly, `t` transient, `h` hidden, `s` summary,
+  clears every flag. Instead of `flags`, `add` and/or `remove` name the letters to change
+  in the current set and keep the others (for example `add: "s"` makes the slot a summary
+  slot without dropping its `r`); a call gives one form, never both, and no letter in both. Letters: `r` readonly, `t` transient, `h` hidden, `s` summary,
   `a` async, `n` no-run, `d` default-on-clone, `c` confirm-required, `o` operator,
   `x` execute-on-change, `f` fan-in, `A` no-audit, `p` composite, `R`
   remove-on-clone, `m` metadata, `N` non-critical, `L` link-target, `1` to `4`
