@@ -25,6 +25,12 @@ and that the WARN rows of a jar had no test.
 - The case and WARN advisories were already met on the base: `T.NTPL` and `U.Ntpl` entries are read (the
   `templateNames` patterns are letter-case classes), and a jar without an installation gives the noHome,
   ntpl-deps and ntpl-uses WARN rows with exit 0. Both now have a test that pins them.
+- Verifier correction batch: removing readZip's return once the budget is spent turns
+  `TestRunBudgetStopsTheArchiveAtItsManifest` red (the bog is inflated after the stop; no row can show it, so
+  the read is checked); removing checkJar's break turns `TestRunBudgetStopsTheJar` red (a later template's
+  ntpl-deps row appears). The amplifying jar is pinned by the template it stops at (T003), not by the clock:
+  -race on a busy host took 74 s, so the wall time is only a 300 s hang guard.
+  `[ev: go/internal/lint/rules/ntplmanifest/budget_test.go]`
 - Profile of the amplifying jar: 91% of the time is the XML parse of the bog and Px entries (about 30 MiB/s),
   so the run budget is 128 MiB, the bound one archive had before, not 512 MiB (16 s of parse).
 

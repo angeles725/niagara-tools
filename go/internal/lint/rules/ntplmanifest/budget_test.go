@@ -17,8 +17,11 @@ func bogOf(size int) string {
 
 // T26 (the #710 verifier's A4): a jar of 200 templates, each holding a bog that inflates to the full
 // per-entry bound, is a small file that asked for 200 x 32 MiB of reads when each template kept its own
-// budget (132.6 s on the base). One budget for the run ends it in seconds with one FAIL row naming the first
-// entry not read.
+// budget (132.6 s on the base). One budget for the run ends it with one FAIL row naming the first entry not
+// read. The work is pinned by where it stops, not by the clock: three templates use up 96 MiB and their
+// archives and manifests a little more, so the bog of the fourth, T003, is the first entry the 128 MiB budget
+// leaves no room for, and no later template is read. The wall-time bound is a generous backstop only (the
+// base took minutes; a busy host or -race slows the candidate).
 func TestAmplifyingJarSpendsOneRunBudget(t *testing.T) {
 	one := ntpl(t, entry{bogEntry, bogOf(maxUsesRead)}, entry{manifestEntry, manifestXML("")})
 	entries := make([]entry, 200)
@@ -32,13 +35,12 @@ func TestAmplifyingJarSpendsOneRunBudget(t *testing.T) {
 	start := time.Now()
 	code, out, errText := run(homeOption, installation(t, stock...), jar)
 	elapsed := time.Since(start)
-	rows := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
-	want := ": the templates and their entries inflate past 134217728 bytes in all, the bound of one run -- template.bog and everything after it not read"
-	if code != 1 || len(rows) != 1 || !strings.HasPrefix(rows[0], "FAIL  ntpl-uses  "+jar+"!/t/T") || !strings.HasSuffix(rows[0], want) || errText != "" {
-		t.Errorf("exit %d, stdout %q, stderr %q; want exit 1 and one FAIL ntpl-uses row ending %q", code, out, errText, want)
+	want := "FAIL  ntpl-uses  " + jar + "!/t/T003.ntpl: the templates and their entries inflate past 134217728 bytes in all, the bound of one run -- template.bog and everything after it not read\n"
+	if code != 1 || out != want || errText != "" {
+		t.Errorf("exit %d\nstdout %q\nstderr %q\nwant exit 1\nstdout %q", code, out, errText, want)
 	}
-	if elapsed > 20*time.Second {
-		t.Errorf("the amplifying jar took %s; one run budget ends it in seconds", elapsed)
+	if elapsed > 300*time.Second { // a hang guard only: the row above is the bound (-race on a busy host: 74 s)
+		t.Errorf("the amplifying jar took %s; the base took minutes and one run budget reads four templates", elapsed)
 	}
 }
 
@@ -88,6 +90,40 @@ func TestRunBudgetStopsTheRun(t *testing.T) {
 	expect(t, "run budget at the manifest", root, 1,
 		"FAIL  ntpl-manifest  @ROOT@/ModA-rt/src/a/A.ntpl: the templates and their entries inflate past "+fmt.Sprint(maxInflate)+
 			" bytes in all, the bound of one run -- template-manifest.xml and everything after it not read\n")
+}
+
+// The archive the budget stops at reads nothing more: its manifest does not fit, and its small bog, which
+// would fit and uses a module nothing lists, is not inflated. No row can show it (an archive without its
+// manifest prints no ntpl-uses row), so the read itself is checked: no member, and the budget untouched by
+// the bog. Guard: readZip's return once the budget is spent.
+func TestRunBudgetStopsTheArchiveAtItsManifest(t *testing.T) {
+	man := manifestXML("")
+	small := `<bajaObjectGraph><p m="v=vendorx"/></bajaObjectGraph>`
+	if len(small) >= len(man)-1 {
+		t.Fatalf("the bog (%d bytes) must fit where the manifest (%d) does not", len(small), len(man))
+	}
+	data := ntpl(t, entry{bogEntry, small}, entry{manifestEntry, man})
+	b := &budget{left: int64(len(man) - 1)}
+	a, err := readZip(strings.NewReader(data), int64(len(data)), b)
+	if err != nil || !b.spent || a.uses != nil || b.left != int64(len(man)-1) || a.unread != spentMsg(manifestEntry) {
+		t.Errorf("err %v spent %v uses %+v left %d unread %q: want the manifest's budget row, nothing read after it", err, b.spent, a.uses, b.left, a.unread)
+	}
+}
+
+// The jar the budget stops in reads no later template: after A's bog does not fit, B, whose template and
+// manifest would still fit and which needs a module the installation does not ship, gives no row. Guard:
+// checkJar's break once the budget is spent.
+func TestRunBudgetStopsTheJar(t *testing.T) {
+	defer func(all int64) { maxInflate = all }(maxInflate)
+	man, needs := manifestXML(""), manifestXML("", "local-rt")
+	b := template(t, "", "local-rt")
+	slack := int64(len(b) + len(needs) + 10) // room left for B's template and manifest once A is stopped
+	a := ntpl(t, entry{bogEntry, bogOf(int(slack) + 64)}, entry{manifestEntry, man})
+	maxInflate = int64(len(a)+len(man)) + slack
+	jar := jarAt(t, entry{"t/A.ntpl", a}, entry{"t/B.ntpl", b})
+	expect(t, "stop in the jar", jar, 1,
+		"FAIL  ntpl-uses  @ROOT@!/t/A.ntpl: the templates and their entries inflate past "+fmt.Sprint(maxInflate)+
+			" bytes in all, the bound of one run -- template.bog and everything after it not read\n")
 }
 
 // #710 advisory: the size bound of a jar is read from its metadata before it is opened, as for a .ntpl, so an
