@@ -174,3 +174,26 @@ func TestValidateNamesEachBACnetFaultOnce(t *testing.T) {
 		t.Errorf("faults = %q", faults)
 	}
 }
+
+func TestAnInputIsNeverWrittenThroughBACnetEvenOverAWritableRegister(t *testing.T) {
+	t.Parallel()
+	f, faults := Parse([]byte(`{"devices": [{"name": "unit-a", "unit": 1, "bacnet": {"device_instance": 7}, "points": [
+	  {"name": "level", "table": "holding_register", "address": 0, "value": 4, "writable": true,
+	   "bacnet": {"object_type": "analog-input", "instance": 1}},
+	  {"name": "target", "table": "holding_register", "address": 1, "value": 4, "writable": true,
+	   "bacnet": {"object_type": "analog-value", "instance": 1}}]}]}`))
+	if len(faults) != 0 {
+		t.Fatalf("faults: %v", faults)
+	}
+	d := f.Build().BACnet[0].Device
+	write := func(objectType bacnet.ObjectType) *bacnet.Error {
+		return d.Write(bacnet.WriteProperty{Object: bacnet.ObjectID{Type: objectType, Instance: 1},
+			Ref: bacnet.PropertyRef{Property: bacnet.PropPresentValue}, Values: []bacnet.Value{bacnet.Real(9)}}, 0)
+	}
+	if err := write(bacnet.AnalogInput); err != bacnet.ErrWriteAccessDenied {
+		t.Errorf("a write to an analog input over a writable register: %v, want write-access-denied", err)
+	}
+	if err := write(bacnet.AnalogValue); err != nil {
+		t.Errorf("a write to the analog value over a writable register: %v", err)
+	}
+}

@@ -76,19 +76,19 @@ func TestBACnetAddressesNeedTheFlagToLeaveLoopback(t *testing.T) {
 		t.Errorf("a bare address for the only BACnet device: %v, %v", got, err)
 	}
 	for name, c := range map[string]struct {
-		f    *scenario.File
-		flag string
+		f          *scenario.File
+		flag, want string
 	}{
-		"a bare address with two BACnet devices": {exposed, "127.0.0.1:0"},
-		"a device the scenario has not":          {local, "z=127.0.0.1:0"},
-		"a device that is not a BACnet device":   {local, "plain=127.0.0.1:0"},
-		"an address without a port":              {local, "a=127.0.0.1"},
-		"an IPv6 address":                        {local, "a=[::1]:47809"},
-		"a name":                                 {local, "a=localhost:47809"},
-		"the same device twice":                  {local, "a=127.0.0.1:1,a=127.0.0.1:2"},
+		"a bare address with two BACnet devices": {exposed, "127.0.0.1:0", "the scenario has 2 BACnet devices"},
+		"a device the scenario has not":          {local, "z=127.0.0.1:0", `names "z", which is not a BACnet device`},
+		"a device that is not a BACnet device":   {local, "plain=127.0.0.1:0", `names "plain", which is not a BACnet device`},
+		"an address without a port":              {local, "a=127.0.0.1", "is not an IPv4 address and a port"},
+		"an IPv6 address":                        {local, "a=[::1]:47809", "is not an IPv4 address and a port"},
+		"a name":                                 {local, "a=localhost:47809", "is not an IPv4 address and a port"},
+		"the same device twice":                  {local, "a=127.0.0.1:1,a=127.0.0.1:2", `names "a" twice`},
 	} {
-		if got, err := bacnetAddresses(c.f, c.flag, true); err == nil {
-			t.Errorf("%s (%q) was accepted: %v", name, c.flag, got)
+		if got, err := bacnetAddresses(c.f, c.flag, true); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s (%q): %v, %v; want a refusal with %q", name, c.flag, got, err, c.want)
 		}
 	}
 }

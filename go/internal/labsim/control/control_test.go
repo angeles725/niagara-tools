@@ -14,6 +14,7 @@ import (
 type bench struct {
 	addr    string
 	stopped chan struct{}
+	changed chan struct{}
 	done    chan error
 }
 
@@ -23,12 +24,13 @@ func start(t *testing.T) *bench {
 		{Name: "setpoint", Initial: 21.5, Writable: true},
 		{Name: "ramp", Generator: model.Ramp(0, 100, time.Second)},
 	}})
-	b := &bench{stopped: make(chan struct{}, 1), done: make(chan error, 1)}
+	b := &bench{stopped: make(chan struct{}, 1), changed: make(chan struct{}, 8), done: make(chan error, 1)}
 	srv := &Server{
 		Devices: []*model.Device{dev},
 		Elapsed: func() time.Duration { return 250 * time.Millisecond },
 		Status:  func() Status { return Status{Scenario: "bench", Requests: 7} },
 		Stop:    func() { b.stopped <- struct{}{} },
+		Changed: func() { b.changed <- struct{}{} },
 	}
 	ln, err := Listen("127.0.0.1:0")
 	if err != nil {
@@ -161,5 +163,21 @@ func TestCallReportsASimulatorThatIsNotRunning(t *testing.T) {
 	ln.Close()
 	if _, err := Call(addr, Request{Op: OpStatus}, time.Second); err == nil {
 		t.Error("Call to a closed port returned no error")
+	}
+}
+
+func TestASetTellsTheFrontEndsAndNothingElseDoes(t *testing.T) {
+	t.Parallel()
+	b := start(t)
+	call(t, b.addr, Request{Op: OpGet, Device: "unit-a", Point: "setpoint"})
+	call(t, b.addr, Request{Op: OpSet, Device: "unit-a", Point: "absent", Value: value(1)})
+	call(t, b.addr, Request{Op: OpStatus})
+	if got := len(b.changed); got != 0 {
+		t.Fatalf("a get, a refused set and a status told the front ends %d times", got)
+	}
+	// The response comes after the hook, so the hook has run by now.
+	call(t, b.addr, Request{Op: OpSet, Device: "unit-a", Point: "setpoint", Value: value(19)})
+	if got := len(b.changed); got != 1 {
+		t.Errorf("a set told the front ends %d times, want once", got)
 	}
 }

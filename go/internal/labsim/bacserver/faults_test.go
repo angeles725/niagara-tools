@@ -1,6 +1,7 @@
 package bacserver
 
 import (
+	"context"
 	"net/netip"
 	"testing"
 	"time"
@@ -150,5 +151,36 @@ func TestTheTablesOfSourcesStayBounded(t *testing.T) {
 	}
 	if _, ok := seen.find(dupKey{invoke: 49}, []byte{1}, 49*time.Millisecond+duplicateWindow+1); ok {
 		t.Error("an answer was replayed after the duplicate window")
+	}
+}
+
+func TestHeldResponsesAreBounded(t *testing.T) {
+	t.Parallel()
+	release := make(chan struct{})
+	s := start(t, bench(false, 50*time.Millisecond), func(o *Options) {
+		o.Sleep = func(ctx context.Context, _ time.Duration) bool {
+			select {
+			case <-release:
+				return true
+			case <-ctx.Done():
+				return false
+			}
+		}
+	})
+	c := s.client()
+	for i := range maxDelayed + 1 {
+		s.unicast(c, readRequest(byte(i), supply))
+	}
+	s.await(maxDelayed + 1)
+	if e := s.last(); e.Result != reqlog.ResultNoResponse || e.Reason != reasonBusy || *e.InvokeID != maxDelayed {
+		t.Errorf("the response past the %d held ones: %+v, want none", maxDelayed, e)
+	}
+	close(release)
+	answered := map[byte]bool{}
+	for range maxDelayed {
+		answered[s.recv(c).apdu.InvokeID] = true
+	}
+	if len(answered) != maxDelayed || answered[maxDelayed] {
+		t.Errorf("%d requests were answered once released (the one over the bound among them: %v)", len(answered), answered[maxDelayed])
 	}
 }

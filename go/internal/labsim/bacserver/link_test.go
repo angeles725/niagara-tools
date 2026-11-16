@@ -111,6 +111,10 @@ func TestTheOtherBVLLFunctionsAreAnsweredOrIgnored(t *testing.T) {
 	if got := code(t, s.recv(c)); got != bacnet.ResultRegisterNAK {
 		t.Errorf("a registration with half a time to live: result %#x, want the NAK", got)
 	}
+	s.frame(c, bacnet.RegisterForeignDevice, []byte{0, 60, 0}) // and one octet too many
+	if got := code(t, s.recv(c)); got != bacnet.ResultRegisterNAK {
+		t.Errorf("a registration with three octets of time to live: result %#x, want the NAK", got)
+	}
 	s.frame(c, bacnet.RegisterForeignDevice, []byte{0, 60})
 	s.recv(c)
 	s.frame(c, bacnet.RegisterForeignDevice, []byte{0, 90}) // a renewal takes no second entry
