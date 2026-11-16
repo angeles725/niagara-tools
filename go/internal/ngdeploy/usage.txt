@@ -55,6 +55,19 @@ Backups:
   Restoring the previous jar is for a deploy that never ran in the station; after the station loaded the new
   version, recover by deploying a higher version (BUILD-LOOP.md § 6: roll-forward).
 
+After a deploy:
+  A deploy that went through (exit 0) ends with, after "station restart required (Java classes deployed)" or
+  "browser hard-reload only (no station restart needed)":
+    done:   the jars it copied and the directory they are in
+    signer: who signed each jar (or that it carries no complete signature). The gate checks who signed, not
+            whether the station trusts that signer: the station decides when it loads the module
+    next:   (modes A and C) restart the station. ng-deploy does not look at whether a station is running, and
+            stops or starts none
+    next:   (modes A and C) the console check to run after the restart (toolbelt/triage-console.sh)
+    undo:   how to remove the module again: take its components out of the station, stop it, delete the jars
+  A run that deployed nothing (--no-deploy, any failure) and one that could not record its commit (exit 41)
+  print none of these.
+
 NIAGARA_HOME and its modules directory:
   gradle's :jar step installs the built jars into <NIAGARA_HOME>/modules before any check of the deploy has run,
   and in a real installation that directory is a station's. So NIAGARA_HOME must be a mirror (a directory made

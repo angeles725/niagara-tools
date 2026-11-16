@@ -80,14 +80,14 @@ func TestAHomeThatIsNotAMirrorIsRefusedBeforeGradleRuns(t *testing.T) {
 func TestAMirrorHomeAndAHomeThatIsNotThereDeployAsBefore(t *testing.T) {
 	f := newFixture(t) // the fixture's NIAGARA_HOME names no directory
 	f.want(f.run("--no-backup"), ExitOK)
-	out, calls := f.out, strings.ReplaceAll(strings.ReplaceAll(f.calls(), "/n4/niagara home", "HOME"), f.dir, "DIR")
+	out, calls := strings.ReplaceAll(f.out, f.dir, "DIR"), strings.ReplaceAll(strings.ReplaceAll(f.calls(), "/n4/niagara home", "HOME"), f.dir, "DIR")
 	if f.err != warnNoBackup {
 		t.Errorf("stderr %q", f.err)
 	}
 	f = newFixture(t)
 	modules := withHome(t, f, true)
 	f.want(f.run("--no-backup"), ExitOK)
-	if f.out != out || f.err != warnNoBackup || strings.ReplaceAll(strings.ReplaceAll(f.calls(), f.dir+"/home", "HOME"), f.dir, "DIR") != calls {
+	if strings.ReplaceAll(f.out, f.dir, "DIR") != out || f.err != warnNoBackup || strings.ReplaceAll(strings.ReplaceAll(f.calls(), f.dir+"/home", "HOME"), f.dir, "DIR") != calls {
 		t.Errorf("a mirror changed the run:\n%s%s%s", f.out, f.err, f.calls())
 	}
 	// The build's jars stay in the mirror, the wb jar it did not build is as it was, nothing is left aside.

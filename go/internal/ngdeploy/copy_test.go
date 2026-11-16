@@ -17,7 +17,7 @@ func TestADeployCopiesTheJarsOfTheModeAfterEveryCheck(t *testing.T) {
 	} {
 		f := newFixture(t)
 		code := f.run("--no-backup", "--mode", tc.mode)
-		if code != ExitOK || !strings.HasSuffix(f.out, tc.last) || f.err != warnNoBackup {
+		if code != ExitOK || !strings.Contains(f.out, tc.last+"[ng-deploy] done: ") || f.err != warnNoBackup { // the closing lines follow (nextsteps_test.go)
 			t.Errorf("mode %s: exit %d, stdout:\n%sstderr %q", tc.mode, code, f.out, f.err)
 		}
 		if (f.read(f.deployedJar("rt")) == "rtjar") != tc.rt || (f.read(f.deployedJar("ux")) == "uxjar") != tc.ux {

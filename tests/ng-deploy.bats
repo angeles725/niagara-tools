@@ -1056,3 +1056,24 @@ STUB
     run find "$TMPDIR_T/niagara-home/modules" -name '*.ng-deploy-*'
     [ -z "$output" ]
 }
+
+@test "NG-next-steps: a deploy that went through ends with what it wrote, who signed, what to do next and how to undo; a failed one does not" {
+    _gate_env; _fake_gate 0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[ng-deploy] station restart required (Java classes deployed)"$'\n'"[ng-deploy] done: test-rt.jar test-ux.jar copied to $TMPDIR_T/modules"$'\n'"[ng-deploy] signer: test-rt.jar carries no complete signature, test-ux.jar carries no complete signature; the gate checks who signed a jar, not whether the station trusts that signer: the station decides when it loads the module"$'\n'* ]]
+    [[ "$output" == *"[ng-deploy] next: restart the station; ng-deploy did not look at whether one is running, and stops or starts none"* ]]
+    [[ "$output" == *"toolbelt/triage-console.sh --package <the Java package of the module> --module-prefix test <station-dir>/console*.txt"* ]]
+    [[ "${lines[-1]}" == "[ng-deploy] undo: to remove the module again, take its components out of the station, stop the station and delete $TMPDIR_T/modules/test-rt.jar $TMPDIR_T/modules/test-ux.jar (for the version before this one, restore the backup: --help, Backups)" ]]
+
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode B   # no Java classes: no restart to do
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[ng-deploy] done: test-ux.jar copied to $TMPDIR_T/modules"* ]]
+    [[ "$output" != *"next: restart the station"* ]]
+
+    _fake_gate 1
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 50 ]
+    [[ "$output" != *"[ng-deploy] done:"* ]]
+    [[ "$output" != *"[ng-deploy] undo:"* ]]
+}
