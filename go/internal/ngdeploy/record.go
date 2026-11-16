@@ -17,10 +17,15 @@ import (
 // directory, the baseline of the next annotation diff, then says what the operator must restart. The jars
 // are in the station by then, so the run goes on to that line whatever happens; a commit that could not be
 // read or recorded is an ERROR line and exit 41. With SLOTOMATIC_DETECTION=off nothing reads the record: it
-// stays best effort, and a file that cannot be written is only reported.
+// stays best effort, and a file that cannot be written is only reported. A working directory that is not a
+// git repository has no commit to record: a NOTICE says so and the deploy ends as it went.
 func (d *deploy) recordDeploy() int {
 	code := proceed
 	optional := d.env("SLOTOMATIC_DETECTION") == detectionOff
+	if !optional && d.outsideGit() {
+		d.warn(noticeNoRecord, lastDeployFile)
+		optional = true
+	}
 	sha, why := d.headCommit()
 	if why == "" {
 		if path, err := writeRecord(sha); err != nil {

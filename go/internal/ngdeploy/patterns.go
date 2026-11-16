@@ -43,6 +43,8 @@ const (
 	stagedSuffix = ".ng-deploy-new"
 	// asideSuffix ends the name the station's jar has beside its place while the new one is renamed in.
 	asideSuffix = ".ng-deploy-old"
+	// probeSuffix ends the name a station jar has for an instant before the build, to test that it can be moved.
+	probeSuffix = ".ng-probe"
 	// moduleXML and indexHTML are the jar members the verify step reads.
 	moduleXML = "META-INF/module.xml"
 	indexHTML = "rc/index.html"
@@ -80,8 +82,8 @@ var profilesOf = map[string][]string{"A": {"rt", "ux"}, "B": {"ux"}, "C": {"rt"}
 // deployable are the profiles whose jars the tool can put in a station, whatever the mode.
 var deployable = []string{"rt", "ux"}
 
-// signalNames are the signals the copy watches for, as a message names them.
-var signalNames = map[syscall.Signal]string{syscall.SIGINT: "SIGINT", syscall.SIGTERM: "SIGTERM"}
+// signalNames are the signals the deploy watches for, as a message names them (SIGHUP only across the probe).
+var signalNames = map[syscall.Signal]string{syscall.SIGINT: "SIGINT", syscall.SIGTERM: "SIGTERM", syscall.SIGHUP: "SIGHUP"}
 
 // backupProfiles are the jars of the module a lightweight backup archives when they are deployed.
 var backupProfiles = []string{"rt", "ux", "wb"}

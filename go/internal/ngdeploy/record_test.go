@@ -2,6 +2,8 @@ package ngdeploy
 
 import (
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -189,5 +191,70 @@ func TestARecordThatIsALinkIntoAMissingDirectoryIsFoundBeforeTheCopy(t *testing.
 		"); nothing was copied (fix the file, or SLOTOMATIC_DETECTION=off makes the record optional)\n"
 	if code != ExitEnv || f.err != want || f.exists(f.deployedJar("rt")) {
 		t.Errorf("exit %d, stderr %q", code, f.err)
+	}
+}
+
+// A module directory that is not a git repository has no commit to record: the deploy that went through
+// ends 0 with a NOTICE, not exit 41 (retro 2026-11-15-coordination-stretch-deltas D9, user decision
+// 2026-11-15). A repository whose HEAD cannot be read is still exit 41 (above).
+func TestADeployOutsideGitEndsZeroWithANotice(t *testing.T) {
+	f := newFixture(t)
+	t.Setenv("FAKE_GIT_NOREPO", "1")
+	t.Setenv("FAKE_GIT_HEAD_EXIT", "128")
+	code := f.run("--no-backup", "--mode", "C")
+	want := "[ng-deploy] NOTICE: not a git repository; the deployed commit is not recorded in .last-deploy-sha: the next annotation check has no starting point\n"
+	f.want(code, ExitOK, "[ng-deploy] copy ok\n[ng-deploy] station restart required (Java classes deployed)\n", "err:"+want)
+	if strings.Contains(f.err, "ERROR") || f.exists(f.work+"/.last-deploy-sha") || f.read(f.deployedJar("rt")) != "rtjar" {
+		t.Errorf("stderr %q", f.err)
+	}
+}
+
+// Only "not a git repository" with no .git above is outside git: a repository git refuses to open (dubious
+// ownership on a WSL mount, a corrupt .git) is still exit 41 with the ERROR (review R1/R3/R4
+// outside-git-misclassifies-unreadable-repo).
+func TestARepositoryGitCannotOpenIsStillExit41(t *testing.T) {
+	for name, arrange := range map[string]func(f *fixture){
+		"dubious ownership": func(f *fixture) {
+			f.t.Setenv("FAKE_GIT_NOREPO_SAYS", "fatal: detected dubious ownership in repository at '/mnt/c/x'")
+		},
+		"a corrupt .git above": func(f *fixture) { f.mkdir(f.work + "/.git") },
+	} {
+		f := newFixture(t)
+		t.Setenv("FAKE_GIT_NOREPO", "1")
+		t.Setenv("FAKE_GIT_HEAD_EXIT", "128")
+		arrange(f)
+		code := f.run("--no-backup", "--mode", "C")
+		if code != ExitRecord || !strings.HasSuffix(f.err, recordErrorPrefix+"git rev-parse HEAD failed (exit 128)"+recordErrorSuffix) || strings.Contains(f.err, "NOTICE: not a git repository; the deployed") {
+			t.Errorf("%s: exit %d, stderr %q", name, code, f.err)
+		}
+	}
+}
+
+// The same two cases with the host's git: a plain directory is outside git (exit 0, NOTICE); one holding a
+// .git that is not a repository is exit 41.
+func TestOutsideGitWithTheHostGit(t *testing.T) {
+	git, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("no git on this host")
+	}
+	for _, corrupt := range []bool{false, true} {
+		f := newFixture(t)
+		f.remove(f.bin + "/git")
+		if err := os.Symlink(git, f.bin+"/git"); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("SLOTOMATIC_DETECTION", "warn")
+		t.Setenv("GIT_CEILING_DIRECTORIES", filepath.Dir(f.dir))
+		if corrupt {
+			f.mkdir(f.work + "/.git")
+		}
+		code := f.run("--no-backup", "--mode", "C")
+		want, notice := ExitOK, true
+		if corrupt {
+			want, notice = ExitRecord, false
+		}
+		if code != want || strings.Contains(f.err, "NOTICE: not a git repository; the deployed commit") != notice {
+			t.Errorf("corrupt %v: exit %d, stderr %q", corrupt, code, f.err)
+		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
@@ -18,12 +19,31 @@ import (
 // diagnostic to the command's stderr.
 func (d *deploy) run(out, errTo io.Writer, name string, args ...string) int {
 	cmd := exec.Command(name, args...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, out, errTo
+	cmd.Env, cmd.Stdin, cmd.Stdout, cmd.Stderr = d.environ(), os.Stdin, out, errTo
 	why, code := exitStatus(cmd.Run())
 	if why != "" {
 		fmt.Fprintf(errTo, msgCannotRun+"\n", name, why)
 	}
 	return code
+}
+
+// environ is the environment of a command the deploy starts: this process's (which holds the env file by
+// then), with childEnv set over it.
+func (d *deploy) environ() []string {
+	env := os.Environ()
+	if len(d.childEnv) == 0 {
+		return env
+	}
+	var out []string
+	for _, kv := range env {
+		if name, _, _ := strings.Cut(kv, "="); d.childEnv[name] == "" {
+			out = append(out, kv)
+		}
+	}
+	for name, value := range d.childEnv {
+		out = append(out, name+"="+value)
+	}
+	return out
 }
 
 // show runs a command whose two streams are the deploy's own.

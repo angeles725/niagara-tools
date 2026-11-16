@@ -3,6 +3,8 @@ package buildmodule
 import (
 	"strings"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/gradleenv"
 )
 
 // TestMirrorIsolation: a mirror build moves user.home into the mirror for every JVM, keeps gradle's own home
@@ -95,7 +97,7 @@ func TestDevKeyWarning(t *testing.T) {
 	for _, c := range cases {
 		f := newFixture(t)
 		f.write(f.home+"/"+mirrorMarker, "")
-		profile := f.home + "/" + mirrorUserHome + "/" + signingProfile
+		profile := f.home + "/" + gradleenv.UserHomeDir + "/" + gradleenv.SigningProfile
 		switch c.profile {
 		case "before":
 			f.write(profile, "")

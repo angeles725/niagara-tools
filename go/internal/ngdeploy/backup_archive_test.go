@@ -76,7 +76,7 @@ func TestTheDefaultBackupHoldsOnlyTheJarsOfTheModule(t *testing.T) {
 	f.deployed()
 	f.write(f.modules+"/Other-rt.jar", "a sibling module") // must not be in the backup
 	f.want(f.run("--no-deploy"), ExitOK)
-	if want := "[ng-deploy] backup: _backups/demo-pre-TS.tar.gz\n[ng-deploy] backup ok: _backups/demo-pre-TS.tar.gz\n"; !strings.HasPrefix(stamp(f.out), want) || f.err != "" {
+	if want := "[ng-deploy] backup: _backups/demo-pre-TS.tar.gz\n[ng-deploy] backup ok: _backups/demo-pre-TS.tar.gz\n"; !strings.Contains(stamp(f.out), "[ng-deploy] build ok\n"+want+"[ng-deploy] no-deploy: ") || f.err != "" {
 		t.Errorf("stdout %q, stderr %q", f.out, f.err)
 	}
 	if got := strings.Join(archiveMembers(f), " "); got != "demo-rt.jar demo-ux.jar" {

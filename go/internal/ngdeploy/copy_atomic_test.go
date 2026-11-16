@@ -75,7 +75,7 @@ func TestTheCopyStagesBothJarsAndRenamesThem(t *testing.T) {
 		f.chmod(f.deployedJar("ux"), 0o444)
 		f.write(f.deployedJar("rt")+stagedSuffix+"/inside", "left by a killed run, and in the way")
 		f.write(f.deployedJar("ux")+stagedSuffix, "left by a killed run")
-		f.want(f.run(args...), ExitOK, "[ng-deploy] gate ok\n[ng-deploy] copy ok\n[ng-deploy] station restart required (Java classes deployed)\n")
+		f.want(f.run(args...), ExitOK, "[ng-deploy] gate ok\n", "[ng-deploy] copy ok\n[ng-deploy] station restart required (Java classes deployed)\n")
 		f.station("rtjar", "uxjar", 0o640)
 		if st, err := os.Stat(f.deployedJar("ux")); err != nil || st.Mode().Perm() != 0o444 || strings.Contains(f.err, "ERROR") {
 			t.Errorf("%v: demo-ux.jar: %v %v, stderr %q", args, st, err, f.err)
@@ -90,7 +90,9 @@ func TestAJarThatCannotBeStagedLeavesTheStationUnchanged(t *testing.T) {
 	}
 	f := newFixture(t)
 	upgrade(t, f)
-	f.chmod(f.modules, 0o555)
+	f.chmod(f.builtJar("rt"), 0o644) // restored at the end of the test
+	// unreadable once the gate runs: after the probe before the build, before the copy
+	f.write(f.dir+"/do/vm.sh", "command -p chmod 000 "+f.builtJar("rt")+"\n"+stubDo["vm.sh"])
 	code := f.run("--no-backup")
 	if code != ExitCopy || !strings.HasSuffix(f.err, "[ng-deploy] ERROR copy failed for demo-rt.jar; "+copyUnchanged) || !strings.Contains(f.err, "cp: ") || strings.Count(f.err, "ERROR") != 1 {
 		t.Errorf("exit %d, stderr %q", code, f.err)
@@ -119,7 +121,7 @@ func TestAJarThatCannotBeMovedAsideLeavesTheStationUnchanged(t *testing.T) {
 		upgrade(t, f)
 		failRename(t, "/"+jar+asideSuffix)
 		code := f.run("--no-backup")
-		if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for "+jar+": Permission denied; "+copyUnchanged {
+		if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for "+jar+": Permission denied; "+copyUnchanged+heldOpenLine {
 			t.Errorf("%s: exit %d, stderr %q", jar, code, f.err)
 		}
 		f.station("old-rt", "old-ux", 0o640)
@@ -132,7 +134,7 @@ func TestAFirstRenameThatFailsLeavesTheStationUnchanged(t *testing.T) {
 	upgrade(t, f)
 	failRename(t, "/demo-rt.jar.ng-deploy-new>/demo-rt.jar")
 	code := f.run("--no-backup")
-	if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for demo-rt.jar: Permission denied; "+copyUnchanged {
+	if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for demo-rt.jar: Permission denied; "+copyUnchanged+heldOpenLine {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
 	f.station("old-rt", "old-ux", 0o640)
@@ -146,7 +148,7 @@ func TestASecondRenameThatFailsPutsThePreviousPairBack(t *testing.T) {
 		upgrade(t, f)
 		failRename(t, renameInUX)
 		code := f.run(args...)
-		want := "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyUndone
+		want := "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyUndone + heldOpenLine
 		if code != ExitCopy || !strings.HasSuffix(f.err, want) || strings.Count(f.err, "ERROR") != 1 || strings.Contains(f.out, "copy ok") || strings.Contains(f.out, "restart") {
 			t.Errorf("%v: exit %d, stdout:\n%sstderr %q", args, code, f.out, f.err)
 		}
@@ -163,7 +165,7 @@ func TestASecondRenameThatFailsRemovesAJarTheStationDidNotHave(t *testing.T) {
 	f.write(f.deployedJar("ux"), "uxjar") // the same bytes: no version to compare
 	failRename(t, renameInUX)
 	code := f.run("--no-backup")
-	if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; "+copyUndone {
+	if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; "+copyUndone+heldOpenLine {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
 	f.station("", "uxjar", 0)
@@ -177,7 +179,7 @@ func TestARenameBackThatFailsNamesTheFileThatHoldsThePreviousJar(t *testing.T) {
 	failRename(t, renameInUX, "/demo-rt.jar.ng-deploy-old>/demo-rt.jar")
 	code := f.run("--no-backup")
 	want := warnNoBackup + "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyMixed +
-		"demo-rt.jar is the NEW jar and the previous one is in demo-rt.jar.ng-deploy-old (Permission denied), demo-ux.jar is the previous jar" + copyMixedDo
+		"demo-rt.jar is the NEW jar and the previous one is in demo-rt.jar.ng-deploy-old (Permission denied), demo-ux.jar is the previous jar" + copyMixedDo + heldOpenLine
 	if code != ExitCopy || f.err != want {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
@@ -191,7 +193,7 @@ func TestARenameBackThatFailsNamesTheFileThatHoldsThePreviousJar(t *testing.T) {
 	failRename(t, renameInUX, "/demo-ux.jar.ng-deploy-old>/demo-ux.jar")
 	code = f.run("--no-backup")
 	want = warnNoBackup + "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyMixed +
-		"demo-rt.jar is the previous jar, demo-ux.jar is MISSING and the previous one is in demo-ux.jar.ng-deploy-old (Permission denied)" + copyMixedDo
+		"demo-rt.jar is the previous jar, demo-ux.jar is MISSING and the previous one is in demo-ux.jar.ng-deploy-old (Permission denied)" + copyMixedDo + heldOpenLine
 	if code != ExitCopy || f.err != want || f.read(f.deployedJar("rt")) != "old-rt" || f.exists(f.deployedJar("ux")) || f.read(f.deployedJar("ux")+asideSuffix) != "old-ux" {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}

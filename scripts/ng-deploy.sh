@@ -2,6 +2,7 @@
 # scripts/ng-deploy.sh — Niagara N4 module deploy wrapper
 # Usage: ng-deploy.sh [--mode A|B|C] [--env-file PATH] [--no-backup] [--full-backup] [--keep N]
 #        ng-deploy.sh [--no-deploy] [--with-slotomatic] [--strict-slotomatic] [--no-gate] [--install-into-home]
+#        ng-deploy.sh [--gradle-prop k=v]...   (forwarded to gradlew as -Pk=v, as build.sh does)
 #        ng-deploy.sh [--help] [--version]
 # See docs/GOTCHAS.md and CLAUDE.md for decisions and invariants.
 set -u
@@ -16,6 +17,7 @@ set -u
 # (exit 10) unless --no-gate or --no-backup is given.
 # NIAGARA_HOME must be a mirror (build-n4-module-kit/toolbelt/mirror-niagara-home.sh): a real installation is exit 10
 # before gradle runs unless --install-into-home, and a deploy that stops puts <NIAGARA_HOME>/modules back as it was.
+# A mirror build gets build.sh's user.home isolation (go/internal/gradleenv) and --no-daemon.
 # readlink -f: a linked copy of this file still finds ../go, while VERSION and the default verify-module and
 # schema-risk tools are taken from the directory of the INVOKED path.
 NG_DEPLOY_GO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)/go"

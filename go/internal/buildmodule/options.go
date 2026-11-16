@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/gradleenv"
 )
 
 // options is the command line: flags first, then <module-root> <MOD> [niagara_home].
@@ -50,8 +51,12 @@ func parseArgs(args []string, s cli.Stdio) (o options, code int) {
 		case flag == "-h" || flag == "--help":
 			io.WriteString(s.Out, usageText(s))
 			return o, ExitOK
-		case flag == "--gradle-prop":
-			if !hasValue || !isKeyValue(args[1]) {
+		case flag == gradleenv.PropFlag:
+			prop, ok := "", false
+			if hasValue {
+				prop, ok = gradleenv.Prop(args[1])
+			}
+			if !ok {
 				got := "nothing"
 				if hasValue && args[1] != "" {
 					got = args[1]
@@ -59,7 +64,7 @@ func parseArgs(args []string, s cli.Stdio) (o options, code int) {
 				fmt.Fprintf(s.Err, msgGradleProp+"\n", got)
 				return o, ExitUsage
 			}
-			o.gradleProps = append(o.gradleProps, "-P"+args[1])
+			o.gradleProps = append(o.gradleProps, prop)
 		case values[flag] != nil || flag == "--ui-profile":
 			if !hasValue {
 				return usageError()
@@ -87,9 +92,4 @@ func parseArgs(args []string, s cli.Stdio) (o options, code int) {
 		o.home = args[2]
 	}
 	return o, proceed
-}
-
-// isKeyValue reports whether v is k=v with a non-empty key (the value may be empty).
-func isKeyValue(v string) bool {
-	return v != "" && v[0] != '=' && strings.Contains(v[1:], "=")
 }

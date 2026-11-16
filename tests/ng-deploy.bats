@@ -39,7 +39,7 @@ STUB
     chmod +x "$TMPDIR_T/fakebin/gradlew"
 
     # --- fake git ---
-    # Dispatches by $1: diff → FAKE_GIT_DIFF_OUTPUT; rev-parse (--git-dir) → exit 0;
+    # Dispatches by $1: diff → FAKE_GIT_DIFF_OUTPUT; rev-parse (--git-dir) → exit 0 (128 with FAKE_GIT_NOREPO);
     # rev-parse HEAD → FAKE_GIT_REV_PARSE_OUTPUT; cat-file → FAKE_GIT_CAT_FILE_EXIT.
     cat > "$TMPDIR_T/fakebin/git" << 'STUB'
 #!/usr/bin/env bash
@@ -49,6 +49,11 @@ case "$1" in
         exit 0
         ;;
     rev-parse)
+        # FAKE_GIT_NOREPO: the working directory is not in a repository, as git answers there (exit 128)
+        if [[ -n "${FAKE_GIT_NOREPO:-}" ]]; then
+            echo "fatal: not a git repository (or any of the parent directories): .git" >&2
+            exit 128
+        fi
         if [[ "$2" == "--git-dir" ]]; then
             printf '%s\n' ".git"
             exit 0
@@ -121,6 +126,7 @@ ENVEOF
 }
 
 teardown() {
+    chmod -R u+w "$TMPDIR_T" 2>/dev/null || true   # a test may leave a directory read-only
     rm -rf "$TMPDIR_T"
 }
 
@@ -1176,4 +1182,46 @@ STUB
     [[ "$output" == *"NOTICE: the build installed no jar in $TMPDIR_T/niagara-home/modules; the module jars moved aside for it were moved back: it holds the module jars it held before the build"* ]]
     [[ "$output" != *"were taken out again"* ]]
     [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
+}
+
+@test "NG-no-permission: a home jar the directory's permissions refuse to move names the permissions, not a running station (exit 10)" {
+    # Mutation: NG-no-permission -- an operator told to stop a running station for a permission problem fails again (retro D1, review R3/R4).
+    if [ "$(id -u)" -eq 0 ]; then skip "root writes everywhere"; fi
+    _home_with_previous_rt; _fake_gate 0
+    # slotomatic runs before the move aside: it makes the directory read-only
+    printf '#!/usr/bin/env bash\ncase "$*" in *slotomatic*) chmod 555 "%s/niagara-home/modules" ;; esac\nexit 0\n' "$TMPDIR_T" > "$TMPDIR_T/fakebin/gradlew"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --with-slotomatic
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"build not started: test-rt.jar could not be moved aside in $TMPDIR_T/niagara-home/modules (Permission denied)"* ]]
+    [[ "$output" == *"[ng-deploy]   $TMPDIR_T/niagara-home/modules does not let this user create, rename or remove files (no write permission): fix its permissions or ownership, then run again; a running station is not the cause"* ]]
+    [[ "$output" != *"Workbench"* ]]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
+}
+
+@test "NG-outside-git: a deploy from a directory that is not a git repository ends 0 with a NOTICE, not exit 41" {
+    # Mutation: NG-outside-git -- a deploy that went through ended with an ERROR and exit 41 (retro D9).
+    _gate_env; _fake_gate 0
+    export FAKE_GIT_NOREPO=1
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"copy ok"* ]]
+    [[ "$output" == *"NOTICE: not a git repository; the deployed commit is not recorded in .last-deploy-sha: the next annotation check has no starting point"* ]]
+    [[ "$output" != *"ERROR"* ]]
+    [ ! -e "$TMPDIR_T/.last-deploy-sha" ]
+}
+
+@test "NG-mirror-isolation: a mirror build gets build.sh's user.home isolation and --gradle-prop, on every gradlew call" {
+    # Mutation: NG-mirror-isolation -- without it gradle read the real ~/.tridium keystore and the signing alias was set by hand (retro D3).
+    _gate_env; _fake_gate 0
+    # why: SC2016 — the line is inserted into the stub as text; the stub expands it when gradlew runs
+    # shellcheck disable=SC2016
+    sed -i '2i printf "%s\\n" "${JAVA_TOOL_OPTIONS-}" >> "${TMPDIR_T}/gradlew.jto"' "$TMPDIR_T/fakebin/gradlew"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C \
+        --gradle-prop niagaraSigningAlias=propsigner --gradle-prop niagaraSigningProfile=/p/signing.xml
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"mirror niagara_home: user.home isolated to $TMPDIR_T/niagara-home/.mirror-user-home"* ]]
+    [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == "-Pniagara_home=$TMPDIR_T/niagara-home -Pniagara_user_home="*" -Porg.gradle.java.installations.paths=/usr/lib/jvm/java-8-openjdk-amd64 -PniagaraSigningAlias=propsigner -PniagaraSigningProfile=/p/signing.xml :test-rt:clean :test-rt:jar --no-daemon" ]]
+    [[ "$(cat "$TMPDIR_T/gradlew.jto")" == *"-Duser.home=$TMPDIR_T/niagara-home/.mirror-user-home -Dmaven.repo.local="* ]]
+    [[ "$(cat "$TMPDIR_T/gate.args")" == *"--expected-signer propsigner"* ]]
+    [ -d "$TMPDIR_T/niagara-home/.mirror-user-home" ]
 }

@@ -34,7 +34,7 @@ func TestAJarThisRunDidNotBuildIsNotRemovedFromTheHome(t *testing.T) {
 	code := f.run("--no-backup")
 	want := "[ng-deploy] ERROR verify-module gate failed; jars not fit to deploy (use --no-gate to override)\n" +
 		"[ng-deploy] WARN demo-ux.jar in " + modules + " was not there before the build and is not the jar this run built (build/libs): it is left where it is\n" +
-		strings.ReplaceAll(homeRestored, "{modules}", modules)
+		strings.ReplaceAll(homeForeignLeft, "{modules}", modules)
 	if code != ExitVerify || !strings.HasSuffix(f.err, want) {
 		t.Errorf("exit %d, stderr:\n%s", code, f.err)
 	}
@@ -56,5 +56,23 @@ func TestTheNoticeSaysWhatTheBuildDid(t *testing.T) {
 	want := warnNoBackup + "[ng-deploy] ERROR build failed (gradlew exited non-zero)\n" + strings.ReplaceAll(homeMovedBack, "{modules}", modules)
 	if code != ExitBuild || f.err != want || tree(t, modules) != before {
 		t.Errorf("exit %d, stderr:\n%s", code, f.err)
+	}
+}
+
+// A directory under the name of a jar of the mode in <NIAGARA_HOME>/modules is refused before the build in
+// every mode, not only when the station is that directory: the put-back could not rename over it
+// (retro 2026-11-15-coordination-stretch-deltas D8). Exit 40, nothing ran, nothing changed.
+func TestADirectoryUnderAJarNameInTheHomeIsRefusedBeforeTheBuild(t *testing.T) {
+	for _, args := range [][]string{{"--no-backup"}, {"--no-backup", "--no-deploy"}, {"--no-backup", "--mode", "C"}} {
+		f := newFixture(t)
+		modules := withHome(t, f, true)
+		f.remove(modules + "/demo-rt.jar")
+		f.write(modules+"/demo-rt.jar/keep", "kept")
+		before := tree(t, modules)
+		code := f.run(args...)
+		want := "[ng-deploy] ERROR build refused for demo-rt.jar: " + modules + " holds a directory under that name, not a jar file; nothing was replaced: " + modules + " holds the jars it held before the build\n"
+		if code != ExitCopy || f.err != want || f.calls() != "" || tree(t, modules) != before {
+			t.Errorf("%v: exit %d, stderr:\n%scalls %q", args, code, f.err, f.calls())
+		}
 	}
 }

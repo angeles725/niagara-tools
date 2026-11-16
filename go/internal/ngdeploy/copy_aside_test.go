@@ -152,7 +152,7 @@ func TestANewJarThatCannotBeRemovedAgainIsNamedWithoutTheAsideInstruction(t *tes
 	failRemove(t, "/demo-rt.jar")
 	code := f.run("--no-backup")
 	want := warnNoBackup + "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyMixed +
-		"demo-rt.jar, which the station did not have, could not be removed (Device or resource busy): remove it before the station restarts\n"
+		"demo-rt.jar, which the station did not have, could not be removed (Device or resource busy): remove it before the station restarts\n" + heldOpenLine
 	if code != ExitCopy || f.err != want || f.read(f.deployedJar("rt")) != "rtjar" {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}

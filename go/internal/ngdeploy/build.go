@@ -2,17 +2,19 @@ package ngdeploy
 
 import "strings"
 
-// gradleArgs are the arguments of every gradlew call: the three properties, then the tasks.
+// gradleArgs are the arguments of every gradlew call: the three properties and those of --gradle-prop, then
+// the tasks, then --no-daemon for a mirror build (isolate.go).
 func (d *deploy) gradleArgs(tasks []string) []string {
-	return append([]string{
+	args := append([]string{
 		"-Pniagara_home=" + d.env("NIAGARA_HOME"),
 		"-Pniagara_user_home=" + d.env("NIAGARA_USER_HOME"),
 		"-Porg.gradle.java.installations.paths=" + d.env("JAVA_HOME"),
-	}, tasks...)
+	}, d.gradleProps...)
+	return append(append(args, tasks...), d.isolation...)
 }
 
 // build runs gradlew clean and jar for the profiles of the mode; a gradlew that fails is exit 30.
-// --no-deploy ends the run here with the jars in build/libs.
+// --no-deploy ends the run here with the jars in build/libs, after the backup (backup.go).
 func (d *deploy) build() int {
 	mode := d.raw[optMode]
 	var tasks []string
@@ -27,6 +29,9 @@ func (d *deploy) build() int {
 	}
 	d.say(msgBuildOK)
 	if d.isOn(optNoDeploy) {
+		if code := d.backup(); code != proceed {
+			return code
+		}
 		d.say(msgNoDeploy)
 		return ExitOK
 	}

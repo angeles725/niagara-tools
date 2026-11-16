@@ -28,7 +28,7 @@ exit "${FAKE_UNZIP_EXIT:-0}"`,
 	"git": `case "$1" in
   diff) [ "${FAKE_GIT_DIFF_EXIT:-0}" -eq 0 ] || { echo "fatal: bad revision" >&2; exit "$FAKE_GIT_DIFF_EXIT"; }
         printf '%s\n' "${FAKE_GIT_DIFF:-}" ;;
-  rev-parse) if [ "$2" = --git-dir ]; then [ -z "${FAKE_GIT_NOREPO:-}" ] || exit 128; echo .git
+  rev-parse) if [ "$2" = --git-dir ]; then [ -z "${FAKE_GIT_NOREPO:-}" ] || { echo "${FAKE_GIT_NOREPO_SAYS:-fatal: not a git repository (or any of the parent directories): .git}" >&2; exit 128; }; echo .git
              else [ -z "${FAKE_GIT_HEAD_EXIT:-}" ] || exit "$FAKE_GIT_HEAD_EXIT"; printf '%s\n' "${FAKE_GIT_HEAD-deadbeef00deadbeef00deadbeef00deadbeef00}"; fi ;;
   cat-file) exit "${FAKE_GIT_CAT_FILE_EXIT:-0}" ;;
 esac`,
@@ -43,7 +43,7 @@ exit "${FAKE_GRADLEW_EXIT:-0}"`,
 
 // fakeVariables are the variables the stubs and the deploy read; each test starts with all of them unset.
 var fakeVariables = strings.Fields(`FAKE_OLD_VERSION FAKE_NEW_VERSION FAKE_UNZIP_TYPES FAKE_INDEX FAKE_UNZIP_ERR
-	FAKE_UNZIP_EXIT FAKE_TAR_EXIT FAKE_GIT_DIFF_EXIT FAKE_GIT_DIFF FAKE_GIT_NOREPO FAKE_GIT_HEAD_EXIT FAKE_GIT_HEAD
+	FAKE_UNZIP_EXIT FAKE_TAR_EXIT FAKE_GIT_DIFF_EXIT FAKE_GIT_DIFF FAKE_GIT_NOREPO FAKE_GIT_NOREPO_SAYS FAKE_GIT_HEAD_EXIT FAKE_GIT_HEAD
 	FAKE_GIT_CAT_FILE_EXIT FAKE_SLOT_OUT FAKE_SLOT_EXIT FAKE_GRADLEW_EXIT FAKE_VM_EXIT FAKE_SR_EXIT
 	MODULE_NAME GRADLEW_PATH NIAGARA_HOME NIAGARA_USER_HOME JAVA_HOME STATION_MODULES_DIR EXPECTED_RT_TYPES
 	EXPECTED_UX_TYPES FIRST_DEPLOY SCHEMA_BASELINE_DIR BUILD_ID SLOTOMATIC_DETECTION FULL_BACKUP KEEP_N FILEKEY

@@ -26,6 +26,9 @@ Options:
                              baseline to diff). Same as FIRST_DEPLOY=1 in the env file
                              (an exported FIRST_DEPLOY in the shell is ignored).
   --accept-lossy           Proceed on a schema-risk LOSSY verdict (an OUTAGE always blocks).
+  --gradle-prop <k=v>      Repeatable; forwarded to every gradlew call as -Pk=v, as build.sh forwards it
+                             (niagaraSigningAlias=<alias>, niagaraSigningProfile=<profile file>). The gate
+                             expects the last niagaraSigningAlias given. Not k=v: exit 10.
   --install-into-home      Build although NIAGARA_HOME is a real installation and not a mirror (no
                              .niagara-mirror): the build then replaces the module's jars in its modules/
                              directory before any check runs. Command line only; build.sh has the same option.
@@ -45,7 +48,10 @@ Required for mode A or C unless --first-deploy:
 
 Backups:
   A backup is written to _backups/ under the working directory (the directory ng-deploy.sh is run from), as
-  _backups/<MODULE_NAME>-pre-<YYYYMMDD-HHMMSS>.tar.gz; the newest KEEP_N of the module are kept. The step
+  _backups/<MODULE_NAME>-pre-<YYYYMMDD-HHMMSS>.tar.gz; the newest KEEP_N of the module are kept. It is written,
+  and the older ones purged, just before the copy, after the build and every check (with --no-deploy: after
+  the build), so a run that stops before then leaves _backups as it was. When STATION_MODULES_DIR is
+  <NIAGARA_HOME>/modules it holds the jars that were there before the build, under their jar names. The step
   prints "backup: <archive>" and "backup ok: <archive>" only when it writes one: for a module with no
   -rt/-ux/-wb jar in STATION_MODULES_DIR it prints "backup: no existing <MODULE_NAME>-{rt,ux,wb}.jar in <dir>;
   nothing to archive" and creates nothing. To restore a default (lightweight) backup, with the station stopped:
@@ -74,11 +80,16 @@ NIAGARA_HOME and its modules directory:
   and in a real installation that directory is a station's. So NIAGARA_HOME must be a mirror (a directory made
   by build-n4-module-kit/toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>, which holds .niagara-mirror);
   a NIAGARA_HOME that is a directory without that file is refused before the backup and before gradle runs
-  (exit 10) unless --install-into-home is given. In both cases the module's own -rt/-ux/-wb jars there are moved
+  (exit 10) unless --install-into-home is given. A mirror build gets the isolation build.sh gives it (one
+  shared rule, go/internal/gradleenv): JAVA_TOOL_OPTIONS += -Duser.home=<mirror>/.mirror-user-home (and
+  -Dmaven.repo.local=$HOME/.m2/repository unless set), GRADLE_USER_HOME pinned, and --no-daemon on every gradlew
+  call, so the signing plugin cannot read the real ~/.tridium keystore; a mirror path or $HOME with whitespace
+  is exit 10 before gradle runs. In both cases the module's own -rt/-ux/-wb jars there are moved
   aside (<jar>.ng-deploy-old) before the build, and when the build, a check or the copy fails, or SIGINT or
   SIGTERM arrives before the copy, they are moved back and the jars the build added are removed: the directory
   holds what it held before the build, and a NOTICE says so ("the jars the build installed ... were taken out
-  again", or, when the build installed none, "the build installed no jar ...; the module jars moved aside for
+  again" only when every jar was put back or removed; one that names the jar of another origin left in place
+  otherwise; or, when the build installed none, "the build installed no jar ...; the module jars moved aside for
   it were moved back"). A jar the directory did not have is removed only when it is the jar this run built
   (the bytes of build/libs): any other is left where it is, with a WARN that names it. A jar that could not be moved back or removed is an ERROR
   line that names it jar by jar, as for exit 40; the exit code stays that of what failed. After a deploy that went through (or --no-deploy)
@@ -140,8 +151,8 @@ Exit codes:
   15  slotomatic failed or skipped a file (METHODOLOGY K15), or annotation changes detected in strict mode;
       strict mode also refuses when the detection could not run, which includes a .last-deploy-sha that is
       malformed or names a commit git does not know (outside strict mode: a NOTICE, and the diff starts at HEAD~1)
-  20  backup failed (tar returned non-zero)
-  21  the backup was written, but an older backup of the module could not be purged (nothing was built)
+  20  backup failed (tar returned non-zero); nothing was copied
+  21  the backup was written, but an older backup of the module could not be purged (nothing was copied)
   30  build (gradlew) returned non-zero
   40  copy of the jars to STATION_MODULES_DIR failed. The copy is all-or-nothing: every jar is staged beside its
       target (<jar>.ng-deploy-new), the station's jars are moved aside (<jar>.ng-deploy-old), the staged ones
@@ -153,13 +164,29 @@ Exit codes:
       it; ng-deploy never deletes one it did not create: rename it over its jar to go back, or delete it to
       keep what is there), and a directory or a dangling link under the name of a jar
       When STATION_MODULES_DIR is <NIAGARA_HOME>/modules nothing is copied; exit 40 is then a jar of the mode that
-      the build did not leave there with the bytes of build/libs (the previous jars are put back)
+      the build did not leave there with the bytes of build/libs (the previous jars are put back). A directory
+      or a dangling link under the name of a jar of the mode in <NIAGARA_HOME>/modules is exit 40 before the
+      build in every case ("build refused for <jar>"). A jar that could not be replaced or moved (exit 40, or exit 10 for a
+      jar of <NIAGARA_HOME>/modules) with Device or resource busy or Text file busy, or with Permission denied or
+      Operation not permitted in a directory this user may write (how a Windows drive mounted in WSL answers for
+      a jar a running station holds open), is followed by the line "a running station or Workbench holds its
+      module jars open; stop it and run again". The same two errors in a directory this user may not write are
+      followed by "<dir> does not let this user create, rename or remove files (no write permission): ...". Before the build, each
+      station jar the run will replace is renamed to <jar>.ng-probe and straight back: a jar that cannot be moved
+      is exit 40 there, with no build ("copy refused: <jar> in <dir> cannot be moved"); one that could not be
+      moved back is named with both paths and the rename to make. SIGINT, SIGTERM or SIGHUP during the two moves
+      waits until the jar is back, then ends the run (128 + the signal). A <jar>.ng-probe a killed run left is moved
+      back under the jar's name when the jar is missing (a NOTICE says so); beside the jar it is exit 40 with the
+      fix: compare the two, keep the one the station should load under the jar's name, delete the other
   130, 143  SIGINT or SIGTERM during the copy: the copy was undone as for exit 40 and the line says so; or between
       the first run lock and the copy: nothing was copied, <NIAGARA_HOME>/modules was put back and the locks
       were removed
   41  the jars were copied, but the deployed commit could not be read (git rev-parse HEAD) or written to
       .last-deploy-sha (a record that could be written before the copy and no longer can): restart as the
-      last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional)
+      last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional). A working directory
+      that is not a git repository (git says "not a git repository" and no .git is there or above) has no commit
+      to record: a NOTICE says so and the deploy ends 0. A repository git refuses to open (dubious ownership, a
+      corrupt .git) is still exit 41
   12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
   50  verify failed: type count mismatch (a jar with no type entry counts 0), a module.xml that unzip cannot
       read, BUILD_ID not found, or verify-module gate failed/missing (a jar not signed by the expected signer

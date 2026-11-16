@@ -21,18 +21,20 @@ func (d *deploy) settleHome(code int) {
 		d.keepHome()
 		return
 	}
-	moved, installed := false, false
+	moved, installed, foreign := false, false, false
 	for i, jar := range d.homeJars {
 		jar.placed = present(jar.target)
 		moved, installed = moved || jar.moved, installed || jar.placed
 		if jar.placed && !jar.moved && !sameBytes(d.builtJar(backupProfiles[i]), jar.target) {
 			d.warn(warnHomeNotOurs, jar.name, d.homeDir)
-			jar.placed = false // not this run's to remove
+			jar.placed, foreign = false, true // not this run's to remove
 		}
 	}
 	switch _, mixed := putBack(d.homeJars, homeSite(d.homeDir)); {
 	case mixed != "":
 		d.fail(code, "%s", mixed)
+	case foreign:
+		d.warn(noticeHomeForeignLeft, d.homeDir)
 	case installed:
 		d.warn(noticeHomeRestored, d.homeDir)
 	case moved:

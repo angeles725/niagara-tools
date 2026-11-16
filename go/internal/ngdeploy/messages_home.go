@@ -11,10 +11,15 @@ const (
 	msgSameDir = "STATION_MODULES_DIR is <NIAGARA_HOME>/modules (%s): the build installs the jars there, so the copy step only verifies them"
 	// msgHomeAsideFound is msgAsideFound for <NIAGARA_HOME>/modules, before anything is built.
 	msgHomeAsideFound = "build refused: a deploy that did not finish left previous jars aside in %s; nothing was built or changed"
+	// msgHomeNotAJar is msgCopyFailed for <NIAGARA_HOME>/modules, before anything is built.
+	msgHomeNotAJar = "build refused for %s; %s"
 	// msgHomeAsideFailed takes the jar, the directory, why and an outcome.
 	msgHomeAsideFailed = "build not started: %s could not be moved aside in %s (%s); %s"
 	// noticeHomeRestored takes the directory, after a deploy that stopped put its jars back.
 	noticeHomeRestored = "NOTICE: the jars the build installed in %s were taken out again: it holds the module jars it held before the build"
+	// noticeHomeForeignLeft is that NOTICE when a jar of another origin (warnHomeNotOurs) was left in place.
+	noticeHomeForeignLeft = "NOTICE: the jars the build installed in %s were taken out again and the module jars moved aside for it were put back; " +
+		"the jar named above was not there before the build and is not the jar this run built: it was left in place"
 	// noticeHomeMovedBack is that NOTICE when the build installed no jar: only the move aside was undone.
 	noticeHomeMovedBack = "NOTICE: the build installed no jar in %s; the module jars moved aside for it were moved back: it holds the module jars it held before the build"
 	// warnHomeNotOurs takes a jar the directory did not have that is not the one this run built, and the directory.

@@ -29,10 +29,10 @@ func TestBackupArchivesOnlyTheJarsOfTheModule(t *testing.T) {
 	f.write(f.modules+"/demo-wb.jar", "")
 	f.write(f.modules+"/other-rt.jar", "")
 	f.want(f.run("--no-deploy"), ExitOK)
-	if !strings.HasPrefix(stamp(f.out), "[ng-deploy] backup: _backups/demo-pre-TS.tar.gz\n[ng-deploy] backup ok: _backups/demo-pre-TS.tar.gz\n[ng-deploy] build:") {
+	if !strings.Contains(stamp(f.out), "[ng-deploy] build ok\n[ng-deploy] backup: _backups/demo-pre-TS.tar.gz\n[ng-deploy] backup ok: _backups/demo-pre-TS.tar.gz\n[ng-deploy] no-deploy: ") {
 		t.Errorf("stdout:\n%s", f.out)
 	}
-	if want := "tar <-czf> <_backups/demo-pre-TS.tar.gz> <-C> <" + f.modules + "> <demo-rt.jar> <demo-ux.jar> <demo-wb.jar>\n"; !strings.HasPrefix(stamp(f.calls()), want) {
+	if want := "tar <-czf> <_backups/demo-pre-TS.tar.gz> <-C> <" + f.modules + "> <demo-rt.jar> <demo-ux.jar> <demo-wb.jar>\n"; !strings.Contains(stamp(f.calls()), want) {
 		t.Errorf("calls:\n%s", f.calls())
 	}
 }
@@ -43,8 +43,8 @@ func TestBackupOfAModuleNeverDeployedArchivesNothing(t *testing.T) {
 	f := newFixture(t)
 	f.write(f.modules+"/other-rt.jar", "")
 	f.want(f.run("--no-deploy"), ExitOK)
-	want := "[ng-deploy] backup: no existing demo-{rt,ux,wb}.jar in " + f.modules + "; nothing to archive\n[ng-deploy] build:"
-	if !strings.HasPrefix(f.out, want) || strings.Contains(f.calls(), "tar") || f.exists(f.work+"/_backups") {
+	want := "[ng-deploy] build ok\n[ng-deploy] backup: no existing demo-{rt,ux,wb}.jar in " + f.modules + "; nothing to archive\n[ng-deploy] no-deploy: "
+	if !strings.Contains(f.out, want) || strings.Contains(f.calls(), "tar") || f.exists(f.work+"/_backups") {
 		t.Errorf("stdout:\n%scalls:\n%s", f.out, f.calls())
 	}
 }
@@ -52,7 +52,7 @@ func TestBackupOfAModuleNeverDeployedArchivesNothing(t *testing.T) {
 func TestFullBackupArchivesTheWholeModulesDirectory(t *testing.T) {
 	want := func(f *fixture) {
 		t.Helper()
-		if want := "tar <-czf> <_backups/demo-pre-TS.tar.gz> <-C> <" + f.dir + "> <modules>\n"; !strings.HasPrefix(stamp(f.calls()), want) {
+		if want := "tar <-czf> <_backups/demo-pre-TS.tar.gz> <-C> <" + f.dir + "> <modules>\n"; !strings.Contains(stamp(f.calls()), want) {
 			t.Errorf("calls:\n%s", f.calls())
 		}
 	}
@@ -70,15 +70,18 @@ func TestFullBackupArchivesTheWholeModulesDirectory(t *testing.T) {
 	want(f)
 }
 
-func TestAFailedBackupExits20BeforeTheBuild(t *testing.T) {
+// The backup runs just before the copy: a tar that fails is exit 20 after the build and the checks, and the
+// station keeps its jars.
+func TestAFailedBackupExits20BeforeTheCopy(t *testing.T) {
 	for _, flag := range []string{"--no-deploy", "--full-backup"} {
 		f := newFixture(t)
-		f.deployed()
+		upgrade(t, f)
 		t.Setenv("FAKE_TAR_EXIT", "2")
 		code := f.run(flag)
-		if code != ExitBackup || stamp(f.err) != "[ng-deploy] ERROR backup failed: _backups/demo-pre-TS.tar.gz\n" || strings.Contains(f.calls(), "gradlew") {
+		if code != ExitBackup || stamp(f.err) != "[ng-deploy] ERROR backup failed: _backups/demo-pre-TS.tar.gz\n" || !strings.Contains(f.calls(), "gradlew") || strings.Contains(f.out, "copy ok") {
 			t.Errorf("%s: exit %d, stderr %q, calls %q", flag, code, f.err, f.calls())
 		}
+		f.station("old-rt", "old-ux", 0o640)
 	}
 }
 
@@ -87,7 +90,7 @@ func TestABackupDirectoryThatCannotBeMadeExits1(t *testing.T) {
 	f.deployed()
 	f.write(f.work+"/_backups", "a file in the way")
 	code := f.run("--no-deploy")
-	if code != ExitFault || f.out != "" || !strings.Contains(f.err, "mkdir: ") || f.calls() != "" {
+	if code != ExitFault || strings.Contains(f.out, "backup") || !strings.Contains(f.err, "mkdir: ") || strings.Contains(f.calls(), "tar") {
 		t.Errorf("exit %d, stdout %q, stderr %q, calls %q", code, f.out, f.err, f.calls())
 	}
 }
@@ -101,7 +104,7 @@ func TestBackupRefusesADeployedJarItCannotCheck(t *testing.T) {
 	f.deployed()
 	f.chmod(f.modules, 0o000)
 	code := f.run("--no-deploy")
-	if code != ExitBackup || f.err != "[ng-deploy] ERROR backup failed: cannot check "+f.modules+"/demo-rt.jar: Permission denied\n" || f.calls() != "" {
+	if code != ExitBackup || f.err != "[ng-deploy] ERROR backup failed: cannot check "+f.modules+"/demo-rt.jar: Permission denied\n" || strings.Contains(f.calls(), "tar") {
 		t.Errorf("exit %d, stderr %q, calls %q", code, f.err, f.calls())
 	}
 }
@@ -191,7 +194,7 @@ func TestBackupNamesAreUniqueWithinOneSecond(t *testing.T) {
 	for i, name := range []string{"_backups/demo-pre-20260304-050607.tar.gz", "_backups/demo-pre-20260304-050607-2.tar.gz", "_backups/demo-pre-20260304-050607-3.tar.gz"} {
 		f.reset()
 		f.want(f.run("--no-deploy", "--keep", "5"), ExitOK, "[ng-deploy] backup: "+name+"\n[ng-deploy] backup ok: "+name+"\n")
-		if !strings.HasPrefix(f.calls(), "tar <-czf> <"+name+"> <-C> <"+f.modules+"> <demo-rt.jar> <demo-ux.jar>\n") || f.err != "" {
+		if !strings.Contains(f.calls(), "tar <-czf> <"+name+"> <-C> <"+f.modules+"> <demo-rt.jar> <demo-ux.jar>\n") || f.err != "" {
 			t.Errorf("backup %d: stderr %q, calls:\n%s", i+1, f.err, f.calls())
 		}
 		f.write(f.work+"/"+name, "backup "+name) // what a real tar would have left there

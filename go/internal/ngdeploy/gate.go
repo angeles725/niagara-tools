@@ -45,7 +45,7 @@ func (d *deploy) gate() int {
 // the build (home.go moved them aside), never the development signer. When the deploy knows none, signer is
 // "" and warning is the line that says why: the gate then accepts any signature.
 func (d *deploy) expectedSigner() (signer, warning string) {
-	alias := modjar.ConfiguredAlias(nil, d.env, dirname(d.env("GRADLEW_PATH")))
+	alias := modjar.ConfiguredAlias(d.gradleProps, d.env, dirname(d.env("GRADLEW_PATH")))
 	var deployed [][]string
 	for _, jar := range d.homeJars {
 		if jar.moved && d.inMode(jar.name) {
