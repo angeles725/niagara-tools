@@ -45,6 +45,7 @@ const (
 	textRamp      = "ramp %s..%s / %d ms"
 	textSine      = "sine +/-%s / %d ms"
 	textWalk      = "random_walk +/-%s / %d ms within %s..%s, seed %d"
+	textReplay    = "replay %s x%s, %s, from %d ms (%d records, %d skipped)"
 	textFailAfter = "fails after %d reads"
 	textDelayAll  = "every response held %d ms"
 	textDelay     = "held %d ms"

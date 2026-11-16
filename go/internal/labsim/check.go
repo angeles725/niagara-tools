@@ -102,8 +102,24 @@ func behaviourText(b *scenario.Behaviour) string {
 		return fmt.Sprintf(textSine, num(b.Amplitude), b.PeriodMS)
 	case scenario.KindRandomWalk:
 		return fmt.Sprintf(textWalk, num(b.Step), b.IntervalMS, num(*b.Min), num(*b.Max), *b.Seed)
+	case scenario.KindReplay:
+		return replayText(b)
 	}
 	return textConstant
+}
+
+// replayText names a replay's file, speed, end and offset, and how many records
+// it plays and skipped for their status.
+func replayText(b *scenario.Behaviour) string {
+	speed, end := 1.0, b.End
+	if b.Speed != nil {
+		speed = *b.Speed
+	}
+	if end == "" {
+		end = scenario.EndHoldLast
+	}
+	s := b.Series()
+	return fmt.Sprintf(textReplay, b.File, num(speed), end, b.StartOffsetMS, len(s.Values), s.Skipped)
 }
 
 func addNote(notes []string, where string, parts []string) []string {

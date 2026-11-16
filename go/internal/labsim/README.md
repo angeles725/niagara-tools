@@ -62,7 +62,8 @@ refuse any other target.
 
 JSON; an unknown field is a fault. `examples/ahu.json` (an air-handling unit, mixed types) and
 `examples/meter.json` (energy meters with float32 registers, one slow and one flaky) are
-complete examples.
+complete examples; `examples/replay.json` replays two recorded series (`replay-supply.csv`, a
+history export, and `replay-return.csv`, a plain `time,value` file).
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -110,6 +111,47 @@ Behaviours follow the time since the simulator started, so a value is the same i
 | `ramp` | `min`, `max`, `period_ms` | climbs from `min` to `max` over the period, then starts again (`value` is not used) |
 | `sine` | `amplitude`, `period_ms` | `value` plus or minus `amplitude` |
 | `random_walk` | `seed`, `step`, `interval_ms`, `min`, `max` | starts at `value`; every interval moves by at most `step`, within `min`-`max`; the seed fixes the whole sequence |
+| `replay` | `file`; `speed` (1), `end` (`hold_last`), `start_offset_ms` (0) | plays a recorded series (below; `value` is not used) |
+
+### Replay a recorded series
+
+`replay` plays the records of a CSV file into the point, so a driver or a logic sees a real day
+of a real sensor instead of a formula:
+
+```json
+{"kind": "replay", "file": "replay-supply.csv", "speed": 60, "end": "loop", "start_offset_ms": 0}
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `file` | | the CSV, relative to the scenario file (an absolute path also works) |
+| `speed` | 1 | how many times faster than recorded it plays: 60 plays a recorded minute in a second; above 0 |
+| `end` | `hold_last` | at the end of the series: `hold_last` keeps the last record, `loop` starts again once the last record has held as long as the one before it |
+| `start_offset_ms` | 0 | how far into the recorded series (recorded time) the replay starts; at most the series' span |
+
+The file has a header row. Its columns are found by name, ignoring case and anything that is not
+a letter: a time column (`time`, or a name starting with `timestamp`), a value column (a name
+starting with `value`) and an optional `status` column; other columns are ignored. So both a plain
+`time,value` file and the `Timestamp,Value,Status` columns of a history read as ITableToCsv are
+read, in either order of time (a history read comes newest first; the records are sorted).
+
+- A time carries its zone: `2026-11-15T08:00:00.000-06:00` or `2026-11-15T14:00:00Z`. The
+  localized display form (`15 nov 2026 08:00:00 CST`) is refused: read the history with
+  `select timestamp.encodeToString, value.encodeToString, status` (the query `n4_read_history`
+  uses for its summary).
+- A value is a plain finite number (`21.5`); a localized `21,5`, units or `NaN` are refused.
+- **A record whose status is not ok is skipped**: with a status column, only `ok`, `{ok}` or an
+  empty status is played; `{stale}`, `{fault,down}` and every other status are left out and
+  counted. A file with no ok record is a fault. `lab-sim check` shows the records played and
+  skipped.
+- A record holds until the next one, as a history sample does: there is no interpolation.
+- At most 1,000,000 records. The values must fit the point's type, as for the other behaviours.
+
+A fault in the file is one line naming the row (the header is row 1) and the column:
+
+```
+device 1 "plant-1", point 1 "supply_water_temp_x10": replay file "replay-supply.csv": row 5, column 2 (Value): "21,5" is not a number such as 21.5 (read a history with value.encodeToString)
+```
 
 Faults:
 
@@ -472,7 +514,7 @@ below if long answers go missing. Not validated against any other stack (the BAC
 | `modbus/` | the wire codec: MBAP frame, request and response PDUs, exceptions, limits |
 | `model/` | devices and points, free of any protocol: behaviours and faults |
 | `regmap/` | the Modbus register map: tables, encodings, byte orders, reads and writes of a range |
-| `scenario/` | the scenario file: its shape, defaults, validation messages, and building devices from it |
+| `scenario/` | the scenario file: its shape, defaults, validation messages, the replay CSV reader, and building devices from it |
 | `mbserver/` | the Modbus TCP server |
 | `bacnet/` | the BACnet wire codec: tags and values, BVLL, NPDU, APDU headers, service data, and the names of services, properties, errors, rejects and aborts as data |
 | `bacobj/` | the BACnet object model over the neutral points: property tables as data, reads, writes, the priority array, units |
@@ -480,7 +522,7 @@ below if long answers go missing. Not validated against any other stack (the BAC
 | `reqlog/` | the request log: the Modbus entry and the BACnet entry |
 | `control/` | the control port, server and client |
 | `loopback/` | the one loopback check |
-| `examples/` | the two example scenarios |
+| `examples/` | the three example scenarios and the two recorded series the replay one plays |
 
 Another protocol reuses `model`, `control`, `loopback` and the command, as BACnet/IP does: it
 adds its own fields to the scenario's devices and points, its own codec and server packages,
