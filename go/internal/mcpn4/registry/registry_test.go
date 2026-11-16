@@ -11,8 +11,8 @@ func TestDefaultHoldsEveryToolInTableOrder(t *testing.T) {
 	if r.Name != "mcp-n4" || r.Version == "" || r.ProtocolVersions[0] != "2025-06-18" {
 		t.Fatalf("server = %q %q %v", r.Name, r.Version, r.ProtocolVersions)
 	}
-	if len(r.Read) != 19 || len(r.Write) != 10 {
-		t.Fatalf("got %d read and %d write tools, want 19 and 10", len(r.Read), len(r.Write))
+	if len(r.Read) != 20 || len(r.Write) != 10 {
+		t.Fatalf("got %d read and %d write tools, want 20 and 10", len(r.Read), len(r.Write))
 	}
 	if r.Read[0].Name != "n4_connect" || r.Read[0].NeedsSession || !r.Read[2].NeedsSession {
 		t.Errorf("read tools start %q (session %v), third needs session %v",

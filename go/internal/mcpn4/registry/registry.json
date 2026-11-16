@@ -653,6 +653,77 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_commissioning_report",
+   "description": "What is still wrong or unfinished below scope, in one call (read-only; about 11 station reads for the whole station whatever its size: one BQL query per table, one link scan, three slot loads and the licence page). The reply starts with summary, one line per section (ok / N finding(s) / not checked: why / skipped: why, with the truncation note), then requests (the station reads made) and each section: state (ok, findings, partial: clean in the checks that ran while others did not run, not_checked, skipped), findings (absent when no check ran) and checks. A check that ran is {count, items, more}: items are the first limit offenders as {path, name, fact} and more is how many the limit left out; a check that did not run is {not_checked: why} (a failed or impossible read: never a zero) or {skipped: why} (not asked for). Every fact is a value the station answered. points: the control points per status flag (in_fault, down, stale, disabled, overridden, in_alarm, null_output, status_unreadable); devices_down_or_disabled lists the devices that are down, disabled or in fault first, their points counted in their flags and not listed (under_listed_devices); networks_not_ok; by_network counts devices and points per driver network. histories: points_without_history (the points with no history extension below them: with expect_histories they are listed and are findings; without it the check is a count with the note pass expect_histories to list them, no list and not a finding), and the history extensions that are disabled, in_fault or never_recorded (lastRecord.timestamp null). alarms: points_without_alarm (only with expect_alarms), unknown_alarm_class (an alarm extension whose alarmClass names no class below Services/AlarmService), classes_without_recipient (no link from the class's alarm topic seen within three levels of the AlarmService), open_alarms and unacked_alarms (the classes with any, alarms is their sum). links (one scan link_depth levels below scope): unresolved_source (a source ORD that is neither a handle nor an absolute slot path, or a slot path that does not exist; source_outside_scan counts the sources not judged), inputs_with_several_links (a priority input in1..in16 targeted by more than one link), dangling_outputs (the check of n4_find_dangling_outputs; unknown counts the outputs it cannot decide). naming: duplicate_display_names among sibling points, escaped_names ($xx in the slot name), palette_default_names (a point of the control palette such as NumericWritable or BooleanPoint1, or a point called by the name of its own type, such as a kitControl:Tstat called Tstat). station (only when scope is the whole station): services_in_fault, licence_expiry (the warning of n4_station_health's license section), and unsaved_changes and last_backup, always not_checked with the reason: the station does not expose them to a read. Bounds: each query reads at most max_components rows; a truncated table sets truncated and truncated_note (truncated at N components: counts are lower bounds and absences are not asserted; narrow the scope), and a check that would assert an absence from it is not_checked; a link scan over max_components is not judged.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "scope": {
+      "type": "string",
+      "description": "Slot path to report on, e.g. station:|slot:/Drivers/BacnetNetwork; default the whole station",
+      "default": "station:|slot:/"
+     },
+     "sections": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "points",
+        "histories",
+        "alarms",
+        "links",
+        "naming",
+        "station"
+       ]
+      },
+      "description": "Sections to build; default all of them"
+     },
+     "limit": {
+      "type": "integer",
+      "description": "Offenders listed per check (the count is always whole)",
+      "minimum": 0,
+      "maximum": 500,
+      "default": 20
+     },
+     "expect_histories": {
+      "type": "object",
+      "description": "Which points should have a history extension: {kinds: [numeric, boolean, enum, string, writable], name_pattern: a glob such as *Temp* over the name or display name}, {} is every point; without it points_without_history is a count only"
+     },
+     "expect_alarms": {
+      "type": "object",
+      "description": "Which points should have an alarm extension, same shape as expect_histories ({} is every point); without it points_without_alarm is skipped"
+     },
+     "link_depth": {
+      "type": "integer",
+      "description": "Component levels below scope the link scan reads (1-4); the scan loads link_depth + 3 levels of slots, so keep it low on a large scope",
+      "minimum": 1,
+      "maximum": 4,
+      "default": 2
+     },
+     "max_components": {
+      "type": "integer",
+      "description": "Hard cap of the rows read per query and of the components a link scan may hold",
+      "minimum": 1,
+      "maximum": 50000,
+      "default": 5000
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout per request in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [

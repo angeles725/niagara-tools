@@ -200,7 +200,8 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
-`n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`.
+`n4_read_history`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`,
+`n4_commissioning_report`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -434,6 +435,64 @@ subtree, is reported as dangling. A link source given by handle (`h:`) or by abs
 slot path (`station:|slot:/Folder/A`) is resolved; while any link reading `out` has a
 source in another form (listed in `unresolved_links`), every out slot not proven used
 is reported under `unknown`, never as dangling.
+
+### Finishing a job: the commissioning report
+
+`n4_commissioning_report(scope="station:|slot:/", sections=None, limit=20, expect_histories=None,
+expect_alarms=None, link_depth=2, max_components=5000)` answers "what is still wrong or unfinished
+below this part of the station?" in one call. It is read-only and composed of reads the server
+already makes: one BQL query per table, one link scan, slot loads and the licence page. The reply
+starts with `summary`, one line per section (`ok`, `N finding(s)`, `not checked: <why>`,
+`skipped: <why>`), then `requests` (the station reads made), then each section with its `state`
+(`ok`, `findings`, `partial`, `not_checked`, `skipped`), its `findings` count and its `checks`.
+
+A check that ran is `{count, items, more}`: `items` are the first `limit` offenders as
+`{path, name, fact}` and `more` is how many the limit left out. A check that did not run is
+`{not_checked: "<why>"}` (the read failed or the station cannot answer it) or `{skipped: "<why>"}`
+(the caller did not ask for it). Every fact is a value the station answered; a failed read is never
+a zero: a section none of whose checks ran has no `findings` count, and `partial` means the checks
+that ran are clean while others did not run.
+
+| Section | Checks | Read |
+|---|---|---|
+| `points` | `devices_down_or_disabled` (listed first; their points are counted in their flags, `under_listed_devices`, not listed), `networks_not_ok`, `in_fault`, `down`, `stale`, `disabled`, `overridden`, `in_alarm`, `null_output`, `status_unreadable`; `by_network` counts devices and points per driver network | the network and device selects of `n4_station_health`, and `select slotPath, name, displayName, type, status.bits from control:ControlPoint` |
+| `histories` | `points_without_history` (with `expect_histories`: the points it keeps, listed, findings; without it: a count with the note `pass expect_histories to list them`, no list, not a finding), `disabled`, `in_fault`, `never_recorded` | `select slotPath, name, type, enabled, status.bits, historyConfig.id, lastRecord.timestamp from history:HistoryExt` |
+| `alarms` | `points_without_alarm` (only with `expect_alarms`), `unknown_alarm_class`, `classes_without_recipient`, `open_alarms`, `unacked_alarms` (`alarms` is the sum over the classes listed) | `select slotPath, name, type, alarmClass from alarm:AlarmSourceExt`; `select slotPath, name, openAlarmCount, unackedAlarmCount from alarm:AlarmClass` and one link scan, both over `Services/AlarmService` |
+| `links` | `unresolved_source` (a source ORD that is neither a handle nor an absolute slot path, or a slot path that does not exist; `source_outside_scan` counts the sources not judged), `inputs_with_several_links` (a priority input `in1`..`in16` that more than one link targets), `dangling_outputs` (the check of `n4_find_dangling_outputs`) | one link scan of the scope, `link_depth` levels deep |
+| `naming` | `duplicate_display_names` among sibling points, `escaped_names` (`$20` and the like in the slot name), `palette_default_names` (a point of the control palette, `NumericWritable`, `BooleanPoint1`; or a point called by the name of its own type, a `kitControl:Tstat` called `Tstat`: the fact says which) | the points table |
+| `station` | `services_in_fault`, `licence_expiry` (the warning of the health tool's `license` section), `unsaved_changes` and `last_backup` | one slot load of `Services`, the SystemService slots and the licence page; only when the scope is the whole station |
+
+`unsaved_changes` and `last_backup` are always `not_checked`, with the reason: the station exposes
+neither to a slot read or a query, and the report does not guess. `expect_histories` and
+`expect_alarms` say which points should carry the extension: `{"kinds": ["numeric", "writable"],
+"name_pattern": "*Temp*"}` (kinds are matched against the point's type name, the glob against its
+name or display name; `{}` is every point). Without `expect_histories` the points with no history
+extension are only counted (on most stations that is nearly every point); without `expect_alarms` the absence of an alarm
+extension is not a finding and the check is skipped.
+
+Cost is bounded and independent of the station's size: 11 station reads for the whole station (7
+GETs and 4 slot loads), 8 for a subtree (the `station` section is skipped), fewer with `sections`.
+Each query reads at most `max_components` rows. A truncated table sets `truncated` and
+`truncated_note` ("truncated at N components: counts are lower bounds and absences are not
+asserted; narrow the scope"), and a check that would assert an absence from it is `not_checked`. A
+link scan holding more than `max_components` components is not judged. The link scan loads
+`link_depth + 3` levels of slots: on a large station point `scope` at the folder that holds the
+logic rather than raising `link_depth`.
+
+Recipe for closing a job:
+
+1. `n4_commissioning_report(scope=<the job's folder or network>, expect_histories={...},
+   expect_alarms={...})`; read `summary` first.
+2. For each section with findings, fix or justify every item (`n4_read_slots` on its `path` shows
+   the detail); raise `limit` or narrow `scope` while `more` is above zero.
+3. A `not checked` line is work left for a person, not a pass: read its reason, then check it
+   another way (Workbench, `n4_bql_query`, `n4_spy_page`).
+4. Run it once more over the whole station for the `station` section, then `n4_save_station`.
+
+`commissioning-verify` (`go/cmd/commissioning-verify`) is a different tool with a similar name: the
+offline punch-list of a module's sources and a `config.bog` file, run before deployment with an
+exit code for a gate. This report reads the running station after deployment. Neither replaces the
+other.
 
 ## Writing safely
 

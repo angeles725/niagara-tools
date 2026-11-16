@@ -5,7 +5,6 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
 
 // Source ORDs name a component by handle, "h:<handle>", or by slot path, "slot:/Folder/A";
@@ -15,16 +14,6 @@ const (
 	handlePrefix = "h:"
 	slotPrefix   = "slot:"
 )
-
-// danglingScopeNote is the scope_note of n4_find_dangling_outputs.
-const danglingScopeNote = "Components are reported up to depth levels below ord. " +
-	"Links are seen when their target is at most one level below " +
-	"depth; an out slot used only by a deeper target, or by a " +
-	"target outside the subtree, is reported as dangling. A link " +
-	"source given by handle or by absolute slot path is resolved; " +
-	"while any link reading out has an unresolved source " +
-	"(unresolved_links), every out not proven used is reported " +
-	"as unknown, never as dangling."
 
 // level is _level: how many slot names deep path is.
 func level(path string) int {
@@ -84,25 +73,30 @@ type link struct {
 	resolved               bool
 }
 
-// scan is _scan: ord loaded depth+3 deep (a link sits one level below its target and its slots
-// one more) and every link whose target is at most depth+1 levels below ord, so that an out
-// slot feeding a target one level below depth is seen as used.
+// scan is _scan: scanOrd over the ord and depth arguments.
 func (t *Tools) scan(args *pyjson.Object) (string, *pyjson.Object, []link, int, error) {
 	ord, err := ordArg(args)
 	if err != nil {
 		return "", nil, nil, 0, err
 	}
-	depth := intArg(args, "depth", 2)
+	nodes, links, err := t.scanOrd(ord, intArg(args, "depth", 2))
+	return ord, nodes, links, intArg(args, "depth", 2), err
+}
+
+// scanOrd is ord loaded depth+3 deep (a link sits one level below its target and its slots
+// one more) and every link whose target is at most depth+1 levels below ord, so that an out
+// slot feeding a target one level below depth is seen as used.
+func (t *Tools) scanOrd(ord string, depth int) (*pyjson.Object, []link, error) {
 	nodes, err := t.Ctx.Session.Client.(Client).LoadTree(ord, depth+3, box.LoadOptions{})
 	if err != nil {
-		return "", nil, nil, 0, err
+		return nil, nil, err
 	}
 	byHandle := map[string]string{}
 	for _, p := range nodes.Keys() {
 		switch h, _ := box.Node(nodes, p).Get("h"); x := h.(type) {
 		case []any, *pyjson.Object: // an unhashable dict key
 			if pyjson.Truthy(x) {
-				return "", nil, nil, 0, typeError
+				return nil, nil, typeError
 			}
 		case string:
 			if x != "" {
@@ -119,7 +113,7 @@ func (t *Tools) scan(args *pyjson.Object) (string, *pyjson.Object, []link, int, 
 		sourceOrd := box.ChildValue(kids, "sourceOrd", nil)
 		source, resolved, err := sourcePath(byHandle, sourceOrd)
 		if err != nil {
-			return "", nil, nil, 0, err
+			return nil, nil, err
 		}
 		target, name := "", p
 		if i := strings.LastIndex(p, "/"); i >= 0 {
@@ -129,7 +123,7 @@ func (t *Tools) scan(args *pyjson.Object) (string, *pyjson.Object, []link, int, 
 			sourcePath: source, sourceSlot: box.ChildValue(kids, "sourceSlotName", nil),
 			targetSlot: box.ChildValue(kids, "targetSlotName", nil), targetLevel: level(target), resolved: resolved})
 	}
-	return ord, nodes, links, depth, nil
+	return nodes, links, nil
 }
 
 // ListLinks is n4_list_links: the links whose target component is at most depth levels below ord.
@@ -147,55 +141,4 @@ func (t *Tools) ListLinks(args *pyjson.Object) (*pyjson.Object, error) {
 		}
 	}
 	return obj("ord", ord, "links", shown), nil
-}
-
-// FindDanglingOutputs is n4_find_dangling_outputs: the components up to depth below ord whose
-// out slot no seen link reads. While a link that may read out has an unresolved source, every
-// out not proven used is unknown, never dangling.
-func (t *Tools) FindDanglingOutputs(args *pyjson.Object) (*pyjson.Object, error) {
-	ord, nodes, links, depth, err := t.scan(args)
-	if err != nil {
-		return nil, err
-	}
-	used := map[string]bool{} // the (source_path, "out") pairs, by path
-	unresolved, undecided := []any{}, false
-	for _, l := range links {
-		switch slot := l.sourceSlot.(type) {
-		case []any, *pyjson.Object: // an unhashable set member
-			return nil, typeError
-		case string:
-			if p, ok := l.sourcePath.(string); ok && slot == "out" {
-				used[p] = true
-			}
-		}
-		if !l.resolved {
-			unresolved = append(unresolved, obj("target_path", l.targetPath, "link_name", l.linkName,
-				"source_ord", l.sourceOrd, "source_slot", l.sourceSlot))
-			undecided = undecided || l.sourceSlot == nil || l.sourceSlot == "out"
-		}
-	}
-	dangling, unknown := []any{}, []any{}
-	for _, p := range nodes.Keys() {
-		kind, _ := box.Node(nodes, p).Get("t")
-		if level(p) > depth || isLinkType(kind) {
-			continue
-		}
-		out := "out" // "out" in children(nodes, p)
-		if p != "" {
-			out = p + "/out"
-		}
-		if _, has := nodes.Get(out); has && !used[absPath(ord, p)] {
-			entry := obj("path", absPath(ord, p), "type", kind)
-			if undecided {
-				unknown = append(unknown, entry)
-			} else {
-				dangling = append(dangling, entry)
-			}
-		}
-	}
-	if len(dangling) > 0 { // reads leave no audit line: remember it for the session retro
-		t.Ctx.Observations = append(t.Ctx.Observations, obj("ts", session.Now(), "ord", ord, "count", len(dangling)))
-	}
-	return obj("ord", ord, "dangling", dangling, "unknown", unknown, "unresolved_links", unresolved,
-		"scope_note", danglingScopeNote), nil
 }
