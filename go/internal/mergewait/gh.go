@@ -24,6 +24,7 @@ func ExecGh(repo string, env []string, deadline time.Duration) Gh {
 		if repo != "" {
 			cmd.Env = append(cmd.Env, "GH_REPO="+repo)
 		}
+		cmd.WaitDelay = pipeWait // a child of gh that holds the pipes past the deadline must not hold the call
 		var out, errb bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &errb
 		if err := cmd.Run(); err != nil {
@@ -35,6 +36,10 @@ func ExecGh(repo string, env []string, deadline time.Duration) Gh {
 		return out.String(), nil
 	}
 }
+
+// pipeWait is how long a killed gh's output pipes may stay open (held by a child: a pager, git, a credential
+// helper) before the call returns anyway. (retro 2026-11-15 coordination-stretch T16)
+const pipeWait = time.Second
 
 // pr is the part of `gh pr view --json` the wait reads.
 type pr struct {

@@ -12,8 +12,9 @@ type printedError struct{ error }
 func (e printedError) Unwrap() error { return e.error }
 
 // withRetries prints every gh error and sends a call that failed on a network error (or hit its deadline)
-// again, at most c.Retries more times, c.Interval apart. Any other error is returned at once. The error it
-// returns is marked printed.
+// again, at most c.Retries more times, c.Interval apart, and never past the wait's --timeout (c.until; one
+// call can still run its callDeadline beyond it). Any other error is returned at once. The error it returns
+// is marked printed.
 func (c Config) withRetries(gh Gh) Gh {
 	return func(args ...string) (string, error) {
 		for attempt := 0; ; attempt++ {
@@ -23,6 +24,10 @@ func (c Config) withRetries(gh Gh) Gh {
 			}
 			fmt.Fprintf(c.Err, msgGhError, err)
 			if !isNetworkError(err) || attempt >= c.Retries {
+				return out, printedError{err}
+			}
+			if !c.until.IsZero() && c.Now().Add(c.Interval).After(c.until) {
+				fmt.Fprintf(c.Err, msgNoRetry, c.Timeout)
 				return out, printedError{err}
 			}
 			fmt.Fprintf(c.Err, msgGhRetry, attempt+1, c.Retries, c.Interval)
