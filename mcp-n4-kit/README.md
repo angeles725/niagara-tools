@@ -294,10 +294,11 @@ It sends `GET /ord/<url-encoded alarm:|bql:<query>|view:file:ITableToCsv>` (or
 read-only: a non-select, `|`, a control character or an over-long query is refused before any
 request, and so is any other scheme (`file:`, `ip:`, a history id that is not two slot names);
 a base under `station:` that is not a slot path keeps its slot-path refusal. Niagara decodes
-`$xx` / `$uxxxx` escapes inside a BQL body (`BqlQuery.make`), so those checks (and the `from`
-rule of a table base, and `n4_neql_query`'s `bql` select) also run on the decoded text
-(`bql.DecodeForBql`, one pass of `EscUtil.unescape`; a malformed escape is refused): live,
-`select uuid$20from$20control:NumericPoint` on `alarm:` passed the no-`from` rule before.
+`$xx` / `$uxxxx` escapes inside a BQL body (`BqlQuery.make`), after the ORD is split on a literal
+`|`: the `from` rule of a table base, the no-`from` rule of `n4_neql_query`'s `bql` select and the
+length bound also read the decoded text (`bql.DecodeForBql`, one pass of `EscUtil.unescape`; a
+malformed escape is refused; live, `select uuid$20from$20control:NumericPoint` on `alarm:` passed
+the no-`from` rule before), while a decoded `|` or control character is data (`like '*$7c*'`).
 `n4_inventory` still reads station subtrees only.
 History records: `n4_read_history(history_id | ext_ord, limit=20, period | start/end, summary=false,
 summary_max_rows=100000)` returns
@@ -355,7 +356,8 @@ before any request against its grammar and then as BQL reads it: Niagara decodes
 inside a BQL body (`BqlQuery.make`; live, `alarm_class=x$27$20or$20alarmClass$20like$20$27$2a`
 matched 27 of 27 records), so `source` and `alarm_class` are decoded once like `EscUtil.unescape`
 (`bql.DecodeForBql`; `$2427` is the literal text `$27`, as the station reads it) and refused when
-they decode to a quote, space, `*`, `|` or control character; no quote, wildcard or BQL of the
+they decode to a quote, space, `*`, `|` or control character (to match an escaped slot name
+write `$24` for its literal `$`: `My$2420Device` matches the stored `My$20Device`); no quote, wildcard or BQL of the
 caller reaches the station; `where` echoes the clause sent. Rows are
 `{timestamp, uuid, source, source_state, ack_state, alarm_class, priority, msg_text}` read by
 position, as the station renders them (`msg_text` may be a raw `%lexicon(...)%` pattern; once the

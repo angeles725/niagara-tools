@@ -27,21 +27,19 @@ const (
 )
 
 // checkQueryText refuses a stripped query holding '|', a control character, or more than
-// MaxQueryLength code points, in its text or in the text BqlQuery.make decodes it to
-// (DecodeForBql): the checks every base shares.
+// MaxQueryLength code points: the checks every base shares. They read the raw text: the ORD is
+// split on a literal '|' before BqlQuery.make decodes $xx, so a decoded '|' or control
+// character is data inside the query (live: like '*$7c*' matches). The decoded text
+// (DecodeForBql) must still decode and keep the length bound; the from rule of a table base
+// reads it too (validateTableQuery).
 func checkQueryText(q string) error {
 	d, err := decodedQuery("query", q)
 	if err != nil {
 		return err
 	}
-	if err := checkPlainText(d); err != nil {
-		return err
+	if pyjson.Len(d) > MaxQueryLength {
+		return valueError(fmt.Sprintf("query is longer than %d characters", MaxQueryLength))
 	}
-	return checkPlainText(q)
-}
-
-// checkPlainText is checkQueryText on one form of the text.
-func checkPlainText(q string) error {
 	switch {
 	case strings.Contains(q, "|"):
 		return valueError("query must not contain '|': only one select is composed into the ORD")

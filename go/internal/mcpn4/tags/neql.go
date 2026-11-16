@@ -51,15 +51,21 @@ func ValidateSelect(query any) (string, error) {
 	if err != nil {
 		return "", &pyjson.ValueError{Msg: "bql holds a malformed $ escape ('$' must start $xx or $uxxxx with hex digits)"}
 	}
-	for _, form := range []string{decoded, q} {
-		if err := checkSelect(form); err != nil {
-			return "", err
-		}
+	// The decoded text keeps the from and length rules; a decoded '|' or control character is
+	// data (the ORD is split before BqlQuery.make decodes), so only the raw text is checked for them.
+	switch lowerDecoded := strings.ToLower(decoded); {
+	case strings.Contains(lowerDecoded, " from "):
+		return "", &pyjson.ValueError{Msg: "bql runs on the NEQL matches: give its columns only, no from clause"}
+	case pyjson.Len(decoded) > bql.MaxQueryLength:
+		return "", &pyjson.ValueError{Msg: "bql is longer than 2000 characters"}
+	}
+	if err := checkSelect(q); err != nil {
+		return "", err
 	}
 	return q, nil
 }
 
-// checkSelect is ValidateSelect's grammar on one form of the text.
+// checkSelect is ValidateSelect's grammar on the raw text.
 func checkSelect(q string) error {
 	lower := strings.ToLower(q)
 	switch {

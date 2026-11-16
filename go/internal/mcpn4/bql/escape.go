@@ -72,7 +72,8 @@ const literalForbidden = "'\" *|"
 
 // Messages of the decoded-value checks, as data.
 const (
-	escapeRule    = "%s must not hold a $ escape that BQL decodes to %s (BqlQuery decodes $xx and $uxxxx in the query text): got %q"
+	escapeRule = "%s must not hold a $ escape that BQL decodes to %s (BqlQuery decodes $xx and $uxxxx in the query text; " +
+		"to match an escaped slot name write $24 for its literal $, e.g. My$2420Device for My$20Device): got %q"
 	malformedRule = "%s holds a malformed $ escape ('$' must start $xx or $uxxxx with hex digits; BqlQuery refuses it): got %q"
 )
 

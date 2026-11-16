@@ -44,8 +44,7 @@ func TestBqlQueryChecksTheDecodedQueryText(t *testing.T) {
 	for _, c := range []struct{ base, query, want string }{
 		{"alarm:", "select uuid$20from$20control:NumericPoint", "from clause"},
 		{"alarm:", "select uuid$u0020from$20x", "from clause"},
-		{"station:|slot:/Drivers", "select slotPath from control:NumericPoint where name = 'a$7cb'", "'|'"},
-		{"station:|slot:/Drivers", "select slotPath from control:NumericPoint where name = 'a$0ab'", "control characters"},
+		{"alarm:", "select source where source like '*|*'", "'|'"},
 		{"history:/FakeStation/NW", "select timestamp$zz", "malformed $ escape"},
 	} {
 		s := alarmServer(t, 3)
@@ -58,13 +57,36 @@ func TestBqlQueryChecksTheDecodedQueryText(t *testing.T) {
 
 func TestNeqlSelectChecksTheDecodedText(t *testing.T) {
 	s, st := neqlServer(t, readtoolstest.OrdRoute{Needle: "neql:", Code: 400})
-	for _, bql := range []string{"select a$20from$20b", "select a where x = 'a$7cb'", "select a$zz"} {
+	for _, bql := range []string{"select a$20from$20b", "select a where x = 'a|b'", "select a$zz"} {
 		if text, isErr, _ := s.Call(t, "n4_neql_query", "neql", "n:point", "bql", bql); !isErr {
 			t.Errorf("bql %q accepted: %s", bql, text)
 		}
 	}
 	if len(st.OrdRequests) != 0 {
 		t.Errorf("a refused select reached the station: %v", st.OrdRequests)
+	}
+}
+
+// A decoded '|' or control character is data inside the query: the ORD is split on a literal '|'
+// before BqlQuery.make decodes (live: like '*$7c*' returned 20 rows), so both reach the station.
+func TestBqlQueryAndNeqlSelectSendADecodedPipeOrTabAsData(t *testing.T) {
+	for _, c := range []struct{ base, query string }{
+		{"alarm:", "select source where source like '*$7c*'"},
+		{"station:|slot:/Drivers", "select slotPath from control:NumericPoint where name = 'a$09b'"},
+	} {
+		s := alarmServer(t, 3)
+		s.Station.OrdRoutes = append(s.Station.OrdRoutes, readtoolstest.OrdRoute{Needle: "bql:", Body: "Source\nx\n"})
+		callOK(t, s, "n4_bql_query", "base", c.base, "query", c.query)
+		if len(s.Station.OrdRequests) != 1 || !strings.Contains(s.Station.OrdRequests[0].Ord, c.query) {
+			t.Errorf("%q: requests %v", c.query, s.Station.OrdRequests)
+		}
+	}
+	s, st := neqlServer(t, readtoolstest.OrdRoute{Needle: "neql:", Body: "Slot Path\nslot:/A\n"})
+	if text, isErr, _ := s.Call(t, "n4_neql_query", "neql", "n:point", "bql", "select slotPath where n = '$7c'"); isErr {
+		t.Errorf("neql select with $7c refused: %s", text)
+	}
+	if len(st.OrdRequests) == 0 || !strings.Contains(st.OrdRequests[len(st.OrdRequests)-1].Ord, "n = '$7c'") {
+		t.Errorf("neql requests %v", st.OrdRequests)
 	}
 }
 
