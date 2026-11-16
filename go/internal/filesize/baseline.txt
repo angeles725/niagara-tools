@@ -12,7 +12,7 @@
 386 internal/lint/rules/adaptercfgdefault/adaptercfgdefault.go
 372 internal/lint/rules/configsanity/configsanity.go
 360 internal/mcpn4/jsonrpc/server.go
-351 internal/mcpn4/writeops/rollback_readback.go
+221 internal/mcpn4/writeops/rollback_readback.go
 347 internal/mcpn4/pyjson/decode.go
 344 internal/niagaratest/diagnostics.go
 333 internal/niagaratest/command.go
