@@ -10,7 +10,10 @@ import (
 
 const (
 	copyUnchanged = "nothing was replaced: the station holds the jars it held before the deploy\n"
-	copyHalfDone  = "demo-rt.jar in the station is the NEW jar and demo-ux.jar was not replaced: "
+	copyUndone    = "what was already replaced was put back: the station holds the jars it held before the deploy\n"
+	copyMixed     = "the station does NOT hold the jars it held before the deploy: "
+	copyMixedDo   = "; put each named .ng-deploy-old file back under its jar name before the station restarts\n"
+	renameInUX    = "/demo-ux.jar.ng-deploy-new>/demo-ux.jar"
 )
 
 // upgrade is a fixture whose station holds an older pair, the rt jar with a mode of its own, and whose
@@ -25,20 +28,27 @@ func upgrade(t *testing.T, f *fixture) {
 	t.Setenv("FAKE_NEW_VERSION", "1.1")
 }
 
-// failRename makes the rename onto a path ending in suffix fail, as a station holding the jar open does.
-func failRename(t *testing.T, suffix string) {
+// failRename makes some renames fail, as a station holding a jar open does. Each of which is
+// "<end of the old path>><end of the new path>", or the end of the new path alone.
+func failRename(t *testing.T, which ...string) {
 	t.Helper()
 	t.Cleanup(func() { rename = os.Rename })
 	rename = func(from, to string) error {
-		if strings.HasSuffix(to, suffix) {
-			return &os.LinkError{Op: "rename", Old: from, New: to, Err: syscall.EACCES}
+		for _, w := range which {
+			old, new, both := strings.Cut(w, ">")
+			if !both {
+				old, new = "", w
+			}
+			if strings.HasSuffix(from, old) && strings.HasSuffix(to, new) {
+				return &os.LinkError{Op: "rename", Old: from, New: to, Err: syscall.EACCES}
+			}
 		}
 		return os.Rename(from, to)
 	}
 }
 
 // station fails the test unless the two station jars hold these bytes ("" for no jar), the rt jar has this
-// mode, and the copy left no staged file behind.
+// mode, and the copy left no staged jar and no jar moved aside behind.
 func (f *fixture) station(rt, ux string, rtMode os.FileMode) {
 	f.t.Helper()
 	if f.read(f.deployedJar("rt")) != rt || f.read(f.deployedJar("ux")) != ux || f.exists(f.deployedJar("rt")) != (rt != "") {
@@ -47,28 +57,30 @@ func (f *fixture) station(rt, ux string, rtMode os.FileMode) {
 	if st, err := os.Stat(f.deployedJar("rt")); err == nil && st.Mode().Perm() != rtMode {
 		f.t.Errorf("demo-rt.jar has mode %o, want %o", st.Mode().Perm(), rtMode)
 	}
-	if left, _ := filepath.Glob(f.modules + "/*" + stagedSuffix); len(left) != 0 {
-		f.t.Errorf("staged files left in the station: %v", left)
+	if left, _ := filepath.Glob(f.modules + "/*.ng-deploy-*"); len(left) != 0 {
+		f.t.Errorf("files of the copy left in the station: %v", left)
 	}
 }
 
-// Both jars are staged beside their targets and renamed: a stale staged file of a killed run is written
-// over, a jar the old copy could not write into (read-only) is replaced, and each jar keeps the mode the
-// station's had.
+// Both jars are staged beside their targets, the station's are moved aside, and the staged ones renamed
+// in: a stale staged file of a killed run is written over, a read-only jar is replaced, each jar keeps the
+// mode the station's had, and nothing of the copy is left, with a backup or without.
 func TestTheCopyStagesBothJarsAndRenamesThem(t *testing.T) {
-	f := newFixture(t)
-	upgrade(t, f)
-	f.chmod(f.deployedJar("ux"), 0o444)
-	f.write(f.deployedJar("rt")+stagedSuffix+"/inside", "left by a killed run, and in the way")
-	f.write(f.deployedJar("ux")+stagedSuffix, "left by a killed run")
-	f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] gate ok\n[ng-deploy] copy ok\n[ng-deploy] station restart required (Java classes deployed)\n")
-	f.station("rtjar", "uxjar", 0o640)
-	if st, err := os.Stat(f.deployedJar("ux")); err != nil || st.Mode().Perm() != 0o444 || f.err != warnNoBackup {
-		t.Errorf("demo-ux.jar: %v %v, stderr %q", st, err, f.err)
+	for _, args := range [][]string{{"--no-backup"}, nil} {
+		f := newFixture(t)
+		upgrade(t, f)
+		f.chmod(f.deployedJar("ux"), 0o444)
+		f.write(f.deployedJar("rt")+stagedSuffix+"/inside", "left by a killed run, and in the way")
+		f.write(f.deployedJar("ux")+stagedSuffix, "left by a killed run")
+		f.want(f.run(args...), ExitOK, "[ng-deploy] gate ok\n[ng-deploy] copy ok\n[ng-deploy] station restart required (Java classes deployed)\n")
+		f.station("rtjar", "uxjar", 0o640)
+		if st, err := os.Stat(f.deployedJar("ux")); err != nil || st.Mode().Perm() != 0o444 || strings.Contains(f.err, "ERROR") {
+			t.Errorf("%v: demo-ux.jar: %v %v, stderr %q", args, st, err, f.err)
+		}
 	}
 }
 
-// A jar that cannot be staged stops the copy before anything is renamed, whichever jar it is.
+// A jar that cannot be staged stops the copy before anything is moved, whichever jar it is.
 func TestAJarThatCannotBeStagedLeavesTheStationUnchanged(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("root writes everywhere")
@@ -96,11 +108,26 @@ func TestAJarThatCannotBeStagedLeavesTheStationUnchanged(t *testing.T) {
 	}
 }
 
-// The first rename fails: the old jar is untouched (a rename replaces a jar whole or not at all).
+// A jar of the station that cannot be moved aside (the station holds it open) leaves everything as it
+// was: a jar already moved aside is moved back, and no new jar went in.
+func TestAJarThatCannotBeMovedAsideLeavesTheStationUnchanged(t *testing.T) {
+	for _, jar := range []string{"demo-rt.jar", "demo-ux.jar"} {
+		f := newFixture(t)
+		upgrade(t, f)
+		failRename(t, "/"+jar+asideSuffix)
+		code := f.run("--no-backup")
+		if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for "+jar+": Permission denied; "+copyUnchanged {
+			t.Errorf("%s: exit %d, stderr %q", jar, code, f.err)
+		}
+		f.station("old-rt", "old-ux", 0o640)
+	}
+}
+
+// The first rename in fails: the jars moved aside are moved back.
 func TestAFirstRenameThatFailsLeavesTheStationUnchanged(t *testing.T) {
 	f := newFixture(t)
 	upgrade(t, f)
-	failRename(t, "/demo-rt.jar")
+	failRename(t, "/demo-rt.jar.ng-deploy-new>/demo-rt.jar")
 	code := f.run("--no-backup")
 	if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for demo-rt.jar: Permission denied; "+copyUnchanged {
 		t.Errorf("exit %d, stderr %q", code, f.err)
@@ -108,75 +135,89 @@ func TestAFirstRenameThatFailsLeavesTheStationUnchanged(t *testing.T) {
 	f.station("old-rt", "old-ux", 0o640)
 }
 
-// The second rename fails after the first jar went in: the previous first jar is put back from the backup
-// this run took, with its bytes and its mode, whether the backup is the module's jars or the whole directory.
-func TestASecondRenameThatFailsPutsThePreviousPairBackFromTheBackup(t *testing.T) {
-	for _, args := range [][]string{nil, {"--full-backup"}} {
-		f := archiveFixture(t)
+// The second rename in fails after the first jar went in: the previous pair is moved back, bytes and mode,
+// from the files moved aside, whether or not the run took a backup.
+func TestASecondRenameThatFailsPutsThePreviousPairBack(t *testing.T) {
+	for _, args := range [][]string{{"--no-backup"}, nil, {"--full-backup"}} {
+		f := newFixture(t)
 		upgrade(t, f)
-		failRename(t, "/demo-ux.jar")
+		failRename(t, renameInUX)
 		code := f.run(args...)
-		want := "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; demo-rt.jar was put back from _backups/demo-pre-TS.tar.gz: the station holds the jars it held before the deploy\n"
-		if code != ExitCopy || stamp(f.err) != want || strings.Contains(f.out, "copy ok") || strings.Contains(f.out, "restart") {
+		want := "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyUndone
+		if code != ExitCopy || !strings.HasSuffix(f.err, want) || strings.Count(f.err, "ERROR") != 1 || strings.Contains(f.out, "copy ok") || strings.Contains(f.out, "restart") {
 			t.Errorf("%v: exit %d, stdout:\n%sstderr %q", args, code, f.out, f.err)
 		}
 		f.station("old-rt", "old-ux", 0o640)
-		if f.exists(f.work + "/.last-deploy-sha") {
-			t.Errorf("%v: a failed copy recorded the commit", args)
+		if f.exists(f.work+"/.last-deploy-sha") || strings.Contains(f.calls(), "tar <-x") {
+			t.Errorf("%v: a failed copy recorded the commit, or read the backup:\n%s", args, f.calls())
 		}
 	}
 }
 
-// A first jar the station did not have is removed again: that is the pair it held, backup or not.
+// A first jar the station did not have is removed again: that is the pair it held.
 func TestASecondRenameThatFailsRemovesAJarTheStationDidNotHave(t *testing.T) {
-	for _, args := range [][]string{nil, {"--no-backup"}} {
-		f := newFixture(t)
-		f.write(f.deployedJar("ux"), "uxjar") // the same bytes: no version to compare
-		failRename(t, "/demo-ux.jar")
-		code := f.run(args...)
-		want := "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; demo-rt.jar, which the station did not have, was removed: the station holds the jars it held before the deploy\n"
-		if code != ExitCopy || !strings.HasSuffix(f.err, want) {
-			t.Errorf("%v: exit %d, stderr %q", args, code, f.err)
-		}
-		f.station("", "uxjar", 0)
+	f := newFixture(t)
+	f.write(f.deployedJar("ux"), "uxjar") // the same bytes: no version to compare
+	failRename(t, renameInUX)
+	code := f.run("--no-backup")
+	if code != ExitCopy || f.err != warnNoBackup+"[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; "+copyUndone {
+		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
+	f.station("", "uxjar", 0)
 }
 
-// Without a backup there is nothing to put the first jar back from: the line says which jar is new, which
-// is not, and what to do before the station restarts.
-func TestASecondRenameThatFailsWithoutABackupSaysWhichJarIsNew(t *testing.T) {
+// The only way to a mixed pair: a jar moved aside cannot be moved back. The line says which jar is new,
+// which is the previous one, and names the file that still holds the previous bytes; that file stays.
+func TestARenameBackThatFailsNamesTheFileThatHoldsThePreviousJar(t *testing.T) {
 	f := newFixture(t)
 	upgrade(t, f)
-	failRename(t, "/demo-ux.jar")
+	failRename(t, renameInUX, "/demo-rt.jar.ng-deploy-old>/demo-rt.jar")
 	code := f.run("--no-backup")
-	want := warnNoBackup + "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyHalfDone +
-		"this run took no backup to put the previous demo-rt.jar back from (--no-backup); put it back yourself, or fix the cause and deploy again, before the station restarts\n"
+	want := warnNoBackup + "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyMixed +
+		"demo-rt.jar is the NEW jar and the previous one is in demo-rt.jar.ng-deploy-old (Permission denied), demo-ux.jar is the previous jar" + copyMixedDo
 	if code != ExitCopy || f.err != want {
 		t.Errorf("exit %d, stderr %q", code, f.err)
 	}
-	f.station("rtjar", "old-ux", 0o640)
+	left, _ := filepath.Glob(f.modules + "/*.ng-deploy-*")
+	if f.read(f.deployedJar("rt")) != "rtjar" || f.read(f.deployedJar("ux")) != "old-ux" || f.read(f.deployedJar("rt")+asideSuffix) != "old-rt" || len(left) != 1 {
+		t.Errorf("station: rt %q ux %q, files of the copy %v", f.read(f.deployedJar("rt")), f.read(f.deployedJar("ux")), left)
+	}
+
+	f = newFixture(t) // the jar that failed cannot be moved back either: it is missing, and its bytes are named too
+	upgrade(t, f)
+	failRename(t, renameInUX, "/demo-ux.jar.ng-deploy-old>/demo-ux.jar")
+	code = f.run("--no-backup")
+	want = warnNoBackup + "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyMixed +
+		"demo-rt.jar is the previous jar, demo-ux.jar is MISSING and the previous one is in demo-ux.jar.ng-deploy-old (Permission denied)" + copyMixedDo
+	if code != ExitCopy || f.err != want || f.read(f.deployedJar("rt")) != "old-rt" || f.exists(f.deployedJar("ux")) || f.read(f.deployedJar("ux")+asideSuffix) != "old-ux" {
+		t.Errorf("exit %d, stderr %q", code, f.err)
+	}
 }
 
-// The restore itself fails (the archive cannot be read, or does not hold the jar's bytes): the same two
-// facts, the backup to restore from by hand, and the first jar left as the copy put it.
-func TestARestoreThatFailsNamesTheBackupToRestoreFrom(t *testing.T) {
-	for why, extract := range map[string]string{
-		"tar -xzOf exited 2":                            `echo "tar: Unexpected EOF in archive" >&2; exit 2`,
-		"the backup does not hold the bytes of the jar": `printf short`,
-	} {
-		f := newFixture(t)
-		upgrade(t, f)
-		f.write(f.dir+"/do/tar", `case "$1" in -czf) : > "$2" ;; *) `+extract+` ;; esac`)
-		failRename(t, "/demo-ux.jar")
-		code := f.run()
-		want := "[ng-deploy] ERROR copy failed for demo-ux.jar: Permission denied; " + copyHalfDone +
-			"putting the previous demo-rt.jar back from _backups/demo-pre-TS.tar.gz failed (" + why + "); restore it from that backup, or fix the cause and deploy again, before the station restarts\n"
-		if code != ExitCopy || !strings.HasSuffix(stamp(f.err), want) || strings.Count(f.err, "ERROR") != 1 {
-			t.Errorf("%s: exit %d, stderr %q", why, code, f.err)
-		}
-		f.station("rtjar", "old-ux", 0o640)
-		if backups, _ := filepath.Glob(f.work + "/_backups/demo-pre-*.tar.gz"); len(backups) != 1 {
-			t.Errorf("%s: backups %v", why, backups)
-		}
+// A jar moved aside by a deploy that was killed may be the only copy of the previous jar: when the jar
+// itself is missing the deploy refuses before it copies anything, and the file is left alone.
+func TestAStaleAsideFileWithoutItsJarIsRefused(t *testing.T) {
+	f := newFixture(t)
+	f.write(f.deployedJar("rt"), "rtjar") // the same bytes: no version to compare
+	f.write(f.deployedJar("ux")+asideSuffix, "the previous ux jar")
+	code := f.run("--no-backup")
+	want := warnNoBackup + "[ng-deploy] ERROR copy failed for demo-ux.jar; demo-ux.jar.ng-deploy-old is in the station and demo-ux.jar is not: " +
+		"a deploy that was killed left the previous jar under that name; rename it back to demo-ux.jar, or remove it, then deploy again (nothing was copied)\n"
+	left, _ := filepath.Glob(f.modules + "/*")
+	if code != ExitCopy || f.err != want || len(left) != 2 || f.read(f.deployedJar("ux")+asideSuffix) != "the previous ux jar" || f.read(f.deployedJar("rt")) != "rtjar" {
+		t.Errorf("exit %d, stderr %q, station %v", code, f.err, left)
+	}
+}
+
+// With the jar there, a stale file aside is only a leftover: it is removed and the deploy goes on.
+func TestAStaleAsideFileBesideItsJarIsRemoved(t *testing.T) {
+	f := newFixture(t)
+	upgrade(t, f)
+	f.write(f.deployedJar("rt")+asideSuffix, "left by a killed run")
+	f.write(f.deployedJar("ux")+asideSuffix+"/inside", "left by a killed run, and a directory")
+	f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] copy ok\n")
+	f.station("rtjar", "uxjar", 0o640)
+	if f.err != warnNoBackup {
+		t.Errorf("stderr %q", f.err)
 	}
 }

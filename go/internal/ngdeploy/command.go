@@ -35,7 +35,6 @@ type deploy struct {
 	station   string // STATION_MODULES_DIR
 	moduleDir string // <directory of gradlew>/<MODULE_NAME>
 
-	saved savedBackup // the backup this run wrote (backup.go), for a copy that must be undone
 }
 
 // phases is the deploy after the command line was read; each returns an exit code, or proceed.

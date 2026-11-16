@@ -869,3 +869,20 @@ STUB
     run find "$TMPDIR_T/modules" -name '*.ng-deploy-new'
     [ -z "$output" ]
 }
+
+@test "NG-copy-stale-old: a jar left aside by a killed deploy is refused when its jar is missing (exit 40), removed when it is there" {
+    _gate_env; _fake_gate 0
+    printf 'previous' > "$TMPDIR_T/modules/test-ux.jar.ng-deploy-old"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 40 ]
+    [[ "$output" == *"copy failed for test-ux.jar; test-ux.jar.ng-deploy-old is in the station and test-ux.jar is not"* ]]
+    [[ "$output" == *"(nothing was copied)"* ]]
+    [ "$(cat "$TMPDIR_T/modules/test-ux.jar.ng-deploy-old")" = previous ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+
+    : > "$TMPDIR_T/modules/test-ux.jar"   # the same bytes as the built jar: the file aside is only a leftover
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    run find "$TMPDIR_T/modules" -name '*.ng-deploy-*'
+    [ -z "$output" ]
+}
