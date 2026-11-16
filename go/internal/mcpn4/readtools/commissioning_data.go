@@ -69,9 +69,8 @@ var expectKinds = map[string]string{"numeric": "Numeric", "boolean": "Boolean", 
 	"writable": "Writable"}
 
 // paletteDefaultNames are the names of the points of the stock control palette (its Points
-// folder). A point is also at a palette default when its name is the simple name of its own
-// type (kitControl:Tstat called Tstat): a palette entry is named after its type. Either may be
-// followed by the digits the station appends.
+// folder), a default with or without the digits the station appends. The simple name of a
+// point's own type is a default only with those digits (paletteDefaultFact).
 var paletteDefaultNames = []string{"NumericPoint", "NumericWritable", "BooleanPoint", "BooleanWritable", "EnumPoint",
 	"EnumWritable", "StringPoint", "StringWritable"}
 
@@ -120,7 +119,7 @@ const (
 	factDangling      = "out is read by no link seen (type %s)"
 	factDuplicate     = "display name %q is shared by %d siblings"
 	factEscaped       = "slot name %s holds escaped characters (%s)"
-	factPaletteType   = "still called %s, the name of its own type %s (the name a palette gives it)"
+	factPaletteType   = "still called %s, the name of its own type %s and the number the station appends to a repeated name"
 	factPaletteList   = "still called by the control palette default name %s"
 	noteExpectHistory = "pass expect_histories to list them"
 	factService       = "status %s"

@@ -71,6 +71,7 @@ var comNamingTables = map[string][]string{
 	"points": {"slot:/Logic/A,A,Supply Temp,control:NumericPoint,0", "slot:/Logic/B,B,Supply Temp,control:NumericPoint,0",
 		"slot:/Other/C,C,Supply Temp,control:NumericPoint,0", "slot:/Logic/Zone$20Temp,Zone Temp,Zone Temp,control:NumericPoint,0",
 		"slot:/Logic/NumericWritable,NumericWritable,NumericWritable,control:NumericWritable,0",
+		"slot:/Logic/NumericWritable1,NumericWritable1,NumericWritable1,control:NumericWritable,0",
 		"slot:/Logic/BooleanPoint1,BooleanPoint1,BooleanPoint1,control:BooleanPoint,0",
 		"slot:/Logic/Tstat,Tstat,Tstat,kitControl:Tstat,0", "slot:/Logic/Tstat1,Tstat1,Tstat1,control:BooleanPoint,0",
 		"slot:/Logic/Folder,Folder,Folder,control:NumericPoint,0",
@@ -96,11 +97,15 @@ func TestCommissioningListsNamesEscapedInTheSlotPath(t *testing.T) {
 
 func TestCommissioningListsPointsStillCalledByAPaletteDefaultName(t *testing.T) {
 	r, _ := comRig(t, comNamingTables)
-	// a name is a palette default when it is the name of the point's own type or one of the
-	// control palette's points; Tstat on another type, or a name no point palette gives, is not
+	// a control palette point name is a default with or without the number the station appends;
+	// the name of the point's own type is one only with that number (Thing2): a lone Tstat of
+	// type kitControl:Tstat is a meaningful name, and Tstat1 on another type is no default at all
 	c := comWant(t, comSection(t, r, "naming", nil), "palette_default_names", 4,
-		"slot:/Logic/NumericWritable", "slot:/Logic/BooleanPoint1", "slot:/Logic/Tstat", "slot:/Logic/Thing2")
-	if fact := comFact(c, "slot:/Logic/Tstat"); fact != "still called Tstat, the name of its own type kitControl:Tstat (the name a palette gives it)" {
+		"slot:/Logic/NumericWritable", "slot:/Logic/NumericWritable1", "slot:/Logic/BooleanPoint1", "slot:/Logic/Thing2")
+	if fact := comFact(c, "slot:/Logic/NumericWritable1"); fact != "still called by the control palette default name NumericWritable" {
+		t.Errorf("fact = %q", fact)
+	}
+	if fact := comFact(c, "slot:/Logic/Thing2"); fact != "still called Thing2, the name of its own type vendor:Thing and the number the station appends to a repeated name" {
 		t.Errorf("fact = %q", fact)
 	}
 }
