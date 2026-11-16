@@ -1,4 +1,7 @@
-package checkinstalledline
+// Package rowpath spells a path for a report row. A path comes from a repository or an archive, so it may
+// hold any byte; a row is one line. check-installed-line and lint-ntpl-manifest-deps print their paths
+// through Display.
+package rowpath
 
 import (
 	"fmt"
@@ -8,11 +11,11 @@ import (
 // cEscapes are the control bytes git writes as a letter escape when it quotes a path.
 var cEscapes = map[byte]string{'\a': `\a`, '\b': `\b`, '\t': `\t`, '\n': `\n`, '\v': `\v`, '\f': `\f`, '\r': `\r`, '"': `\"`, '\\': `\\`}
 
-// display is a path as a row prints it: as it is on disk, unless it holds a control byte, a double quote or
+// Display is a path as a row prints it: as it is on disk, unless it holds a control byte, a double quote or
 // a backslash; then it is in double quotes with those bytes C-escaped (the other control bytes as three
 // octal digits), which is how git prints such a path with core.quotePath off. A row is therefore always one
 // line, and a non-ASCII path is printed unchanged.
-func display(path string) string {
+func Display(path string) string {
 	if !needsQuote(path) {
 		return path
 	}

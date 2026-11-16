@@ -206,3 +206,20 @@ func TestMainPrintsAControlCharacterPathOnOneLine(t *testing.T) {
 		t.Errorf("exit %d stdout %q stderr %q, want exit %d stdout %q", code, out, errText, ExitRefused, want)
 	}
 }
+
+// TestMainQuotesEachByteThatBreaksARow: each byte that makes a path unprintable as it is quotes the row on
+// its own: DEL, a backslash, a double quote, and a control byte with no letter escape (three octal digits).
+func TestMainQuotesEachByteThatBreaksARow(t *testing.T) {
+	gitEnv(t)
+	repo := t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	versions(t, repo, map[string]string{"De\x7fl": "1.0.0", `Back\slash`: "1.0.0", `Quo"te`: "1.0.0", "Ct\x01rl": "1.0.0"})
+	commit(t, repo, "installed")
+	want := `ok "Back\\slash/build.gradle.kts" 1.0.0 -> 1.0.0` + "\n" +
+		`ok "Ct\001rl/build.gradle.kts" 1.0.0 -> 1.0.0` + "\n" +
+		`ok "De\177l/build.gradle.kts" 1.0.0 -> 1.0.0` + "\n" +
+		`ok "Quo\"te/build.gradle.kts" 1.0.0 -> 1.0.0` + "\n"
+	if code, out, errText := run(repo, "main", "main"); code != ExitOK || out != want || errText != "" {
+		t.Errorf("exit %d stdout %q stderr %q, want exit %d stdout %q", code, out, errText, ExitOK, want)
+	}
+}
