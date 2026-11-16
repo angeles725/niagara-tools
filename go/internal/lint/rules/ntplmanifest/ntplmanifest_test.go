@@ -29,7 +29,7 @@ func TestMissingEntry(t *testing.T) {
 	expect(t, "no manifest", moduleRoot(t, map[string]string{tpl: ntpl(t, entry{bogEntry, bog})}), 1,
 		"FAIL  ntpl-entries  @ROOT@/"+tpl+": lacks template-manifest.xml\n")
 	expect(t, "neither, and the entries are matched by their whole name", moduleRoot(t, map[string]string{
-		tpl: ntpl(t, entry{"px/template.bog", bog}, entry{"template.manifest.xml", manifestXML("")})}), 1,
+		tpl: ntpl(t, entry{"px/template.bog", bog}, entry{"px/" + manifestEntry, manifestXML("")})}), 1,
 		"FAIL  ntpl-entries  @ROOT@/"+tpl+": lacks template.bog\nFAIL  ntpl-entries  @ROOT@/"+tpl+": lacks template-manifest.xml\n")
 	expect(t, "two manifests", moduleRoot(t, map[string]string{
 		tpl: ntpl(t, entry{bogEntry, bog}, entry{manifestEntry, manifestXML("")}, entry{manifestEntry, manifestXML("", "ghost-rt")})}), 1,

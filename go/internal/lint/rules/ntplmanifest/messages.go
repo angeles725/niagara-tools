@@ -94,3 +94,7 @@ const (
 	// --niagara-home "" (a usage error: the lint's usage exit, 3)
 	emptyHome = ID + ": " + homeOption + ": an empty value names no installation\n" + usage + "\n"
 )
+
+// manifestAlt is the manifest name the Templates guide spells (niagara-help Templates, "Example
+// template.manifest.xml file"); an archive without manifestEntry is read through it.
+const manifestAlt = "template.manifest.xml"
