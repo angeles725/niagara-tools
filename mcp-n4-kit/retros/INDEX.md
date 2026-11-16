@@ -13,3 +13,4 @@ Retros only propose: the kit is changed by a human, never by the retro.
 | 2026-11-10-client-a-history-rollout-session.md | client-a-jace | 2026-11-10 | pending | 8 |
 | 2026-11-14-lab-415-bench-session.md | lab-415 | 2026-11-14 | pending | 9 |
 | 2026-11-15-lab-415-bench-session-2.md | lab-415 | 2026-11-15 | pending | 19 |
+| 2026-11-15-lab-415-alarms-and-kit-module.md | lab-415 | 2026-11-15 | pending | 8 |
