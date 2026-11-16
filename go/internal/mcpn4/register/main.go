@@ -137,7 +137,10 @@ func launcherText(o options, launcher string) ([]byte, error) {
 		if rerr != nil {
 			return nil, usageErrorf("no server flags after -- and no launcher %s to keep", launcher)
 		}
-		return nil, checkKept(o, launcher, string(old))
+		if err := checkKept(o, launcher, string(old)); err != nil {
+			return nil, err
+		}
+		return nil, checkKeptLauncher(launcher, string(old), o.bin, o.force)
 	}
 	env, found, err := envfile.Load(o.env, func(string) (string, bool) { return "", false })
 	if err != nil || !found {

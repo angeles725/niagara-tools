@@ -43,3 +43,25 @@ func writeIfChanged(out io.Writer, label, path string, text []byte, perm os.File
 	fmt.Fprintf(out, "written %s\n", label)
 	return nil
 }
+
+// checkKeptLauncher refuses, unless force, to keep a launcher that does not exec the installed
+// binary bin: today's hand-written launchers run a worktree binary (the H5 failure), and a
+// launcher whose exec line cannot be read cannot be shown not to.
+func checkKeptLauncher(launcher, text, bin string, force bool) error {
+	if force {
+		return nil
+	}
+	target, ok := launcherWord(text, "exec ")
+	switch {
+	case !ok:
+		return fmt.Errorf("launcher %s has no exec line naming its binary; pass server flags after -- to rewrite it, or --force to keep it", launcher)
+	case filepath.Clean(target) == filepath.Clean(bin):
+		return nil
+	}
+	where := ""
+	if git := gitTreeOf(target); git != "" {
+		where = fmt.Sprintf(", inside a git checkout (%s)", git)
+	}
+	return fmt.Errorf("launcher %s execs %s%s, not the installed binary %s; pass server flags after -- to rewrite it, or --force to keep it",
+		launcher, target, where, bin)
+}

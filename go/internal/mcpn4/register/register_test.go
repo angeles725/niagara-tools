@@ -120,12 +120,12 @@ func TestABinInsideAGitCheckoutIsRefusedUnlessForced(t *testing.T) {
 	}
 }
 
-func TestWithoutServerFlagsAnExistingLauncherIsKept(t *testing.T) {
+func TestWithoutServerFlagsALauncherExecutingTheInstalledBinaryIsKept(t *testing.T) {
 	h := newHome(t)
 	if code := h.run("--station", "lab", "--harness", "pi"); code != 2 || !strings.Contains(h.err.String(), "server flags") {
 		t.Fatalf("no launcher, no flags: exit %d, stderr %q", code, h.err.String())
 	}
-	kept := "#!/bin/bash\nexec /custom\n"
+	kept := "#!/bin/bash\nexec " + h.path(".local/bin/mcp-n4") + " --station LAB=https://h\n"
 	h.write(t, ".config/mcp-n4/lab-run.sh", kept)
 	if code := h.run("--station", "lab", "--harness", "pi"); code != 0 || h.read(t, ".config/mcp-n4/lab-run.sh") != kept {
 		t.Fatalf("exit %d, stderr %q, want the launcher kept and the entry written", code, h.err.String())
@@ -148,5 +148,28 @@ func TestBadInputIsRefusedBeforeAnyWrite(t *testing.T) {
 		if _, err := os.Stat(h.path(".config/mcp-n4/lab-run.sh")); err == nil {
 			t.Errorf("%v: refused input wrote the launcher", args)
 		}
+	}
+}
+
+func TestAKeptLauncherNotExecutingTheInstalledBinaryIsRefusedNamingBothUnlessForced(t *testing.T) {
+	h := newHome(t)
+	h.write(t, "wt/.git", "gitdir: /x\n")
+	h.write(t, ".config/mcp-n4/lab-run.sh", "#!/bin/bash\nexec '"+h.path("wt/go/bin/mcp-n4")+"' --station LAB=https://h\n")
+	if code := h.run("--station", "lab", "--harness", "pi"); code != 1 ||
+		!strings.Contains(h.err.String(), h.path(".config/mcp-n4/lab-run.sh")) || !strings.Contains(h.err.String(), h.path("wt/go/bin/mcp-n4")) {
+		t.Fatalf("exit %d, stderr %q, want a refusal naming the launcher and the binary", code, h.err.String())
+	}
+	if !strings.Contains(h.err.String(), h.path("wt/.git")) {
+		t.Fatalf("stderr %q, want the checkout named", h.err.String())
+	}
+	h.write(t, ".config/mcp-n4/lab-run.sh", "#!/bin/bash\nset -a\n")
+	if code := h.run("--station", "lab", "--harness", "pi"); code != 1 || !strings.Contains(h.err.String(), "no exec line") {
+		t.Fatalf("no exec line: exit %d, stderr %q", code, h.err.String())
+	}
+	if code := h.run("--station", "lab", "--harness", "pi", "--force"); code != 0 {
+		t.Fatalf("--force exit %d, stderr %q", code, h.err.String())
+	}
+	if code := h.run(registerArgs("pi", "--force")...); code != 0 || !strings.Contains(h.read(t, ".config/mcp-n4/lab-run.sh"), h.path(".local/bin/mcp-n4")) {
+		t.Fatalf("rewrite exit %d, stderr %q, want the launcher migrated to the installed binary", code, h.err.String())
 	}
 }
