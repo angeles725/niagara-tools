@@ -1,0 +1,2 @@
+### Fixed — mcp-n4: n4_set_slot's missing-slot refusal states the declared-default rule
+- The refusal for a slot the station's load does not list said the station omits only type defaults (0.0, false, an empty string). The station omits any frozen property whose value equals the default its type declares (a 10 s `RelTime`, `false`), and `n4_set_slot` already fills such a slot from the type registry; the refusal now says so and is left for a name no type contract declares (a misspelled name, a dynamic slot at its default).

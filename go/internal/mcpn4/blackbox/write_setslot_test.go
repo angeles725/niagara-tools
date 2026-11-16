@@ -98,12 +98,12 @@ func TestBadValuesTypesAndStatusAreRefused(t *testing.T) {
 	}
 }
 
-func TestSlotAtItsTypeDefaultIsNotListedByTheStationSoItIsRefused(t *testing.T) {
+func TestASlotNoContractDeclaresIsRefusedWhenTheLoadOmitsIt(t *testing.T) {
 	r, c, ord := calcRig(t)
 	r.Set(c.Handle, "zero", map[string]any{"nm": "p", "t": "baja:Double", "v": "0.0"}) // default values are omitted
 	text := r.Srv.Err("n4_set_slot", Args{"ord": ord, "slot": "zero", "value": 1.0, "value_type": "baja:Double"})
 	// F10 (audit 2026-10-03): the refusal explains why and names the routes.
-	for _, needle := range []string{"not found", "type default", "n4_read_slots", "Workbench"} {
+	for _, needle := range []string{"not found", "declared default", "n4_read_slots", "Workbench"} {
 		if !strings.Contains(text, needle) {
 			t.Errorf("refusal lacks %q: %s", needle, text)
 		}
