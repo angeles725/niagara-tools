@@ -48,6 +48,9 @@ func cleanNames(path string) (string, error) {
 		}
 	}
 	for _, rule := range refusedChars {
+		if rule.chars == ":" && isTypePage(path) {
+			continue
+		}
 		if strings.ContainsAny(path, rule.chars) {
 			return "", refuse(path, "it holds "+rule.why)
 		}
@@ -68,6 +71,14 @@ func cleanNames(path string) (string, error) {
 		}
 	}
 	return trimmed, nil
+}
+
+// isTypePage reports whether path names a registry type page: exactly typePagesPath and one
+// module:Type segment (outer slashes aside). Nothing else may hold a ':', so neither a scheme
+// nor an ORD, nor a further segment after the type spec, passes through this exemption.
+func isTypePage(path string) bool {
+	dir, spec, ok := strings.Cut(strings.Trim(path, "/"), typePagesPath+"/")
+	return ok && dir == "" && typeSpecSegment.MatchString(spec)
 }
 
 // URLPath is the URL of the page at a clean path: every segment escaped, under Root.

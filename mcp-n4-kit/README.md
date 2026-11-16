@@ -353,7 +353,9 @@ the session's credentials and returns the page as data: `title`, `tables` (each 
 (the POST forms the page offers, by clean spy path without the query or fragment of the form's
 action: named, never invoked; the content of a form field, `textarea`, `select`, `button` or an
 `input` value, is never returned, wherever it sits) and `text` (what sits outside the tables). An empty `path` is the index. It only reads:
-a path is plain names separated by `/`, and a scheme or `:`, `|`, `..`, a query string (`?`, `&`,
+a path is plain names separated by `/`, and a scheme or `:` (except one `module:Type` segment directly
+under `sysManagers/registryManager/types/`, the registry's type pages, e.g.
+`sysManagers/registryManager/types/control:NumericWritable`), `|`, `..`, a query string (`?`, `&`,
 `=`, `#`), `%`, `;`, a backslash, any Unicode control character, invalid UTF-8 and the known action pages (`util/gc`,
 `util/forceThreadDump`) are refused before any request. `status` is `ok`, `forbidden` (403: the
 user may not read spy pages, which need a super user), `not_found` (404, or the station's "Spy Not

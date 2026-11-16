@@ -7,6 +7,8 @@
 // not a contract and differs between versions, so a page is returned as found.
 package spy
 
+import "regexp"
+
 // Root is the URL of the spy index; a page is Root plus its escaped path.
 const Root = "/ord?spy:/"
 
@@ -29,6 +31,13 @@ var refusedChars = []struct {
 	{";", "a path parameter"},
 	{"\\", "a backslash"},
 }
+
+// typePagesPath is the registry's list of types: a type page directly below it is named by its
+// type spec (module:Type), the one place a path segment may hold a ':' (typeSpecSegment).
+const typePagesPath = "sysManagers/registryManager/types"
+
+// typeSpecSegment is the only shape of that segment: a module name, ':', a type name.
+var typeSpecSegment = regexp.MustCompile(`^[A-Za-z0-9_]+:[A-Za-z0-9_]+$`)
 
 // actionPaths are the pages that run an action instead of showing one (measured on the util
 // page of Niagara 4.15, where they are POST forms): never fetched, compared without case.
