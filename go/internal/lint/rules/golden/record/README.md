@@ -51,3 +51,22 @@ root, a script or EXTRA file whose sha256 is not the pinned one, a script that r
 `go-tool.sh`: the recording would compare the port with itself) and an out or work dir inside a git
 worktree. Each run is `env -i` with only the case's environment, under `set -euo pipefail` and a cleanup
 trap.
+
+## Re-recording through the Go port (`-update`)
+
+When the port's output changes on purpose (a new member row, a declared difference), re-record the cases that
+moved instead of failing them:
+
+```sh
+memcap go test ./internal/<pkg> -update
+git diff go/internal/<pkg>/testdata                  # review: every changed line must be intended
+memcap go test ./internal/<pkg>                      # green, and writes nothing
+```
+
+`-update` is a flag of every test binary that imports this package (so such a package must not declare its own
+flag named `update`). A case whose exit code, stdout or stderr differs gets its `-- want --` and `-- stderr --`
+sections rewritten (with `(noeol)` when the output has no final newline; a stderr section is added after want
+when the case had none); every other byte of the file is kept. A tree difference is still a failure. The runner
+resolves the case directory to an absolute path first, so `CHDIR=1` cases are rewritten in place too. A
+re-recorded case of a set with `record.env` no longer shows what the pinned bash printed: say in the set's
+README which cases moved and why.

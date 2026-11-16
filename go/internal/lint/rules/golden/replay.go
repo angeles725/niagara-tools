@@ -87,7 +87,14 @@ func (r Runner) replay(t *testing.T, path string) (problems []string, skip strin
 	}
 	unsub := strings.NewReplacer(back...)
 	got, stderr := unsub.Replace(fmt.Sprintf("exit %d\n%s", code, o.String())), unsub.Replace(e.String())
-	if got != c.Want || stderr != c.Stderr {
+	switch differs := got != c.Want || stderr != c.Stderr; {
+	case differs && update:
+		if err := record(path, got, stderr); err != nil {
+			problems = append(problems, err.Error())
+		} else {
+			t.Logf("re-recorded %s", path)
+		}
+	case differs:
 		problems = append(problems, fmt.Sprintf("got\n%s-- stderr --\n%s\nwant\n%s-- stderr --\n%s", got, stderr, c.Want, c.Stderr))
 	}
 	left, err := snapshot(dir, skipPaths)
