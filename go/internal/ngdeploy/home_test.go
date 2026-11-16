@@ -197,7 +197,7 @@ func TestASignalBeforeTheCopyPutsTheHomeJarsBack(t *testing.T) {
 	before := tree(t, modules)
 	signalDuring(t, syscall.SIGTERM, "/home/modules/demo-rt.jar"+asideSuffix)
 	code := f.run("--no-backup")
-	want := warnNoBackup + "[ng-deploy] ERROR interrupted (SIGTERM) before the copy; nothing was copied to the station\n" + strings.ReplaceAll(homeRestored, "{modules}", modules)
+	want := warnNoBackup + "[ng-deploy] ERROR interrupted (SIGTERM) before the copy; nothing was copied to the station\n" + strings.ReplaceAll(homeMovedBack, "{modules}", modules)
 	if code != 128+int(syscall.SIGTERM) || f.err != want || strings.Contains(f.calls(), "gradlew") || tree(t, modules) != before {
 		t.Errorf("before the build: exit %d, stderr:\n%scalls:\n%s", code, f.err, f.calls())
 	}

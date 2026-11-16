@@ -71,5 +71,6 @@ func (d *deploy) archive() int {
 		return d.fail(ExitPurge, msgPurgeFailed, name, failed, strerror.Text(err))
 	}
 	d.say(msgBackupOK, name)
+	d.backedUp = true
 	return proceed
 }

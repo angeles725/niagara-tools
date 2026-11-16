@@ -17,14 +17,46 @@ func (d *deploy) jarsToCopy() (jars []*stagedJar, code int) {
 	for _, profile := range profilesOf[d.raw[optMode]] {
 		jar := &stagedJar{name: d.jarName(profile), target: d.station + "/" + d.jarName(profile)}
 		jar.staged, jar.aside = jar.target+stagedSuffix, jar.target+asideSuffix
-		what, exists := notAJar(jar.target)
-		if what != "" {
-			return nil, d.fail(ExitCopy, msgCopyFailed, jar.name+": "+fmt.Sprintf(whyNotAJar, what), stationSite.unchanged())
+		if jar.had, code = d.jarFileAt(jar.name, jar.target); code != proceed {
+			return nil, code
 		}
-		jar.had = exists
 		jars = append(jars, jar)
 	}
 	return jars, proceed
+}
+
+// jarFileAt reports whether the station holds a jar file under the name of a jar; anything else under that
+// name (notAJar) is the exit 40 line of a copy that replaced nothing.
+func (d *deploy) jarFileAt(name, target string) (exists bool, code int) {
+	what, exists := notAJar(target)
+	if what != "" {
+		return exists, d.fail(ExitCopy, msgCopyFailed, name+": "+fmt.Sprintf(whyNotAJar, what), stationSite.unchanged())
+	}
+	return exists, proceed
+}
+
+// link makes a second name for a file; a test replaces it, as it does rename and remove (copy.go).
+var link = os.Link
+
+// moveAside moves a jar to its name aside and never replaces a file that is already there: the second name is
+// made with link, which fails when it exists, and then the first is removed, so a run killed between the two
+// leaves the jar under both names. On a file system that makes no links the name is looked for and the jar
+// renamed, which is as safe while the run holds the lock of the directory (lock.go).
+func moveAside(target, aside string) error {
+	switch err := link(target, aside); {
+	case err == nil:
+		if err := remove(target); err != nil {
+			remove(aside)
+			return err
+		}
+		return nil
+	case errors.Is(err, fs.ErrExist):
+		return err
+	}
+	if present(aside) {
+		return &os.LinkError{Op: "rename", Old: target, New: aside, Err: fs.ErrExist}
+	}
+	return rename(target, aside)
 }
 
 // refuseAside stops the deploy when the station holds a <jar>.ng-deploy-old file for any jar the tool

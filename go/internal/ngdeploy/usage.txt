@@ -65,6 +65,7 @@ After a deploy:
             stops or starts none
     next:   (modes A and C) the console check to run after the restart (toolbelt/triage-console.sh)
     undo:   how to remove the module again: take its components out of the station, stop it, delete the jars
+            (it points at the backup only when this run wrote one)
   A run that deployed nothing (--no-deploy, any failure) and one that could not record its commit (exit 41)
   print none of these.
 
@@ -76,11 +77,30 @@ NIAGARA_HOME and its modules directory:
   (exit 10) unless --install-into-home is given. In both cases the module's own -rt/-ux/-wb jars there are moved
   aside (<jar>.ng-deploy-old) before the build, and when the build, a check or the copy fails, or SIGINT or
   SIGTERM arrives before the copy, they are moved back and the jars the build added are removed: the directory
-  holds what it held before the build, and a NOTICE says so. A jar that could not be moved back or removed is an ERROR
+  holds what it held before the build, and a NOTICE says so ("the jars the build installed ... were taken out
+  again", or, when the build installed none, "the build installed no jar ...; the module jars moved aside for
+  it were moved back"). A jar the directory did not have is removed only when it is the jar this run built
+  (the bytes of build/libs): any other is left where it is, with a WARN that names it. A jar that could not be moved back or removed is an ERROR
   line that names it jar by jar, as for exit 40; the exit code stays that of what failed. After a deploy that went through (or --no-deploy)
-  the built jars stay there. When STATION_MODULES_DIR is that same directory (symbolic links resolved) a line
-  says so, the version-bump precheck compares with the jar that was there before the build, and the copy step
-  copies nothing: it checks that the directory holds the jars of build/libs.
+  the built jars stay there. When STATION_MODULES_DIR is that same directory, however it is spelled (a relative
+  path, symbolic links, another case on a mount that ignores case: the file system is asked), a line says so,
+  the version-bump precheck compares with the jar that was there before the build, and the copy step copies
+  nothing: it checks that the directory holds the jars of build/libs. Something that is not a jar file under
+  the name of a jar of the mode is refused there as the copy refuses it (exit 40), before the build.
+
+The run lock:
+  Two runs on one modules directory lose jars (each puts back, or removes, what the other moved). A run
+  therefore holds a lock file, .ng-deploy.lock, in every modules directory it changes: <NIAGARA_HOME>/modules,
+  then STATION_MODULES_DIR when that is another directory and the run deploys (always in that order). The
+  locks are taken before the run looks at either directory and removed when it ends, however it ends: success,
+  any failure, SIGINT or SIGTERM (from its first lock on, the run catches both and ends with 130 or 143 after it
+  put things back). The file holds three lines: "pid <pid>", "host <host>", "started <UTC time>".
+  A lock that is there stops the deploy (exit 10): "another ng-deploy run holds <file> (pid <pid> on host
+  <host>, started <time>, <age> ago): ...". A lock is never removed for the run that made it, so a run that was
+  killed (SIGKILL, power) leaves its lock, and the next deploy refuses: check that no process <pid> runs on
+  <host> (ps -p <pid>), delete the file, deploy again; a .ng-deploy-old file that run left beside it is refused
+  next, with its own way out. The lock is an exclusive file creation, not flock, so it also holds on a Windows
+  mount. A directory the run is not allowed to write gets no lock: the run cannot change it either.
 
 The signer the gate expects:
   The verify-module gate is told who must have signed the jars, resolved as toolbelt/build.sh resolves it: the
@@ -110,6 +130,7 @@ Exit codes:
   0   success (or --help)
   10  missing required env var, invalid path or option value, or an env file that is a directory, cannot be
       read, holds a line that is not a plain assignment, or sets NO_GATE=1 / NO_BACKUP=1 without the flag;
+      or a modules directory another run holds the lock of (.ng-deploy.lock: "The run lock" above);
       or, after the checks and before the copy, a .last-deploy-sha that is a directory or cannot be written
       (nothing was copied; SLOTOMATIC_DETECTION=off makes the record optional)
       or, before the backup and before gradle runs, a NIAGARA_HOME that is a directory and not a mirror without
@@ -134,7 +155,8 @@ Exit codes:
       When STATION_MODULES_DIR is <NIAGARA_HOME>/modules nothing is copied; exit 40 is then a jar of the mode that
       the build did not leave there with the bytes of build/libs (the previous jars are put back)
   130, 143  SIGINT or SIGTERM during the copy: the copy was undone as for exit 40 and the line says so; or between
-      the move aside in <NIAGARA_HOME>/modules and the copy: nothing was copied and that directory was put back
+      the first run lock and the copy: nothing was copied, <NIAGARA_HOME>/modules was put back and the locks
+      were removed
   41  the jars were copied, but the deployed commit could not be read (git rev-parse HEAD) or written to
       .last-deploy-sha (a record that could be written before the copy and no longer can): restart as the
       last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional)
@@ -148,11 +170,17 @@ Exit codes:
       change (numeric per component, a missing component = 0: 1.3 -> 1.3.0 is NOT a bump). Content is the set
       of entry names and the bytes of every entry, apart from what a rebuild of unchanged sources changes: the
       signature files (META-INF/*.SF, *.RSA, *.DSA, *.EC), the digests of the manifest's per-entry sections,
-      and the buildMillis attribute of <module> in META-INF/module.xml. Two jars that differ in nothing else
+      and the values of the buildMillis and buildHost attributes of the root element of META-INF/module.xml
+      (when and on which machine it was built). Those two values are cut out of the root element's start tag,
+      wherever they stand among its attributes, and every other byte of module.xml is compared as it is: the
+      same names on another element, the order of the attributes and their quotes are content. Two jars that differ in nothing else
       are the same module: the deploy goes on ("version-bump ok (<jar>: vendorVersion still <v>, and the same
       content ...)"), so a deploy can be repeated unchanged
   52  version-bump precheck cannot verify (a vendorVersion is unreadable, the two differ in a non-numeric suffix,
       the build left no jar in build/libs, or, under the same vendorVersion, a jar whose content cannot be read:
-      not a zip, no entry, two entries under one name, an entry that fails its CRC)
+      not a zip, no entry, two entries under one name, an entry that fails its CRC, a module.xml with no
+      root element; or a jar over a limit of the comparison, which reads entries in pieces and never whole:
+      more than 2147483648 bytes (2 GiB) of declared content in one jar, or a MANIFEST.MF or module.xml over
+      8388608 bytes (8 MiB))
   53  schema-risk precheck: verdict OUTAGE, LOSSY without --accept-lossy, or a schema-risk env fault
   54  version-bump precheck: the built jar's vendorVersion is LOWER than the deployed jar's (a downgrade)

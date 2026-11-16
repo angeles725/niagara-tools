@@ -7,7 +7,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
-// rename moves a jar of the copy and remove deletes one; a test replaces them.
+// rename moves a jar of the copy and remove deletes one; a test replaces them. A jar is moved aside with
+// moveAside (aside.go), which never replaces a file already aside.
 var (
 	rename = os.Rename
 	remove = os.Remove
@@ -64,7 +65,7 @@ func (d *deploy) copyJars() int {
 		if !jar.had {
 			continue
 		}
-		if err := rename(jar.target, jar.aside); err != nil {
+		if err := moveAside(jar.target, jar.aside); err != nil {
 			return d.copyFailed(jars, jar, err)
 		}
 		jar.moved = true

@@ -784,7 +784,7 @@ _real_jar() {
     export FAKE_OLD_VERSION=1.0 FAKE_NEW_VERSION=1.0
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
     [ "$status" -eq 0 ]
-    [[ "$output" == *"version-bump ok (test-rt.jar: vendorVersion still 1.0, and the same content as the deployed jar apart from the build time, the manifest digests and the signature files)"* ]]
+    [[ "$output" == *"version-bump ok (test-rt.jar: vendorVersion still 1.0, and the same content as the deployed jar apart from the build time and host, the manifest digests and the signature files)"* ]]
     cmp -s "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
 
     printf 'not a zip' > "$TMPDIR_T/modules/test-rt.jar"
@@ -1064,7 +1064,7 @@ STUB
     [[ "$output" == *"[ng-deploy] station restart required (Java classes deployed)"$'\n'"[ng-deploy] done: test-rt.jar test-ux.jar copied to $TMPDIR_T/modules"$'\n'"[ng-deploy] signer: test-rt.jar carries no complete signature, test-ux.jar carries no complete signature; the gate checks who signed a jar, not whether the station trusts that signer: the station decides when it loads the module"$'\n'* ]]
     [[ "$output" == *"[ng-deploy] next: restart the station; ng-deploy did not look at whether one is running, and stops or starts none"* ]]
     [[ "$output" == *"toolbelt/triage-console.sh --package <the Java package of the module> --module-prefix test <station-dir>/console*.txt"* ]]
-    [[ "${lines[-1]}" == "[ng-deploy] undo: to remove the module again, take its components out of the station, stop the station and delete $TMPDIR_T/modules/test-rt.jar $TMPDIR_T/modules/test-ux.jar (for the version before this one, restore the backup: --help, Backups)" ]]
+    [[ "${lines[-1]}" == "[ng-deploy] undo: to remove the module again, take its components out of the station, stop the station and delete $TMPDIR_T/modules/test-rt.jar $TMPDIR_T/modules/test-ux.jar" ]]
 
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode B   # no Java classes: no restart to do
     [ "$status" -eq 0 ]
@@ -1076,4 +1076,101 @@ STUB
     [ "$status" -eq 50 ]
     [[ "$output" != *"[ng-deploy] done:"* ]]
     [[ "$output" != *"[ng-deploy] undo:"* ]]
+}
+
+# helper: the previous rt jar of the module in <NIAGARA_HOME>/modules, and a gradlew that installs the built jars there
+_home_with_previous_rt() {
+    _gate_env; _installing_gradlew
+    mkdir -p "$TMPDIR_T/niagara-home/modules"
+    printf 'previous-rt' > "$TMPDIR_T/niagara-home/modules/test-rt.jar"
+    printf 'new-rt' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+}
+
+@test "NG-lock: a run lock another run holds, or a killed run left, is refused (exit 10) and never removed; a run removes its own" {
+    # Mutation: NG-lock -- without the lock two runs on one <NIAGARA_HOME>/modules each put back or remove the other's jars.
+    _home_with_previous_rt; _fake_gate 0
+    printf 'pid 4194000\nhost elsewhere\nstarted 2020-01-02T03:04:05Z\n' > "$TMPDIR_T/niagara-home/modules/.ng-deploy.lock"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 10 ]
+    [[ "$output" == "[ng-deploy] ERROR another ng-deploy run holds $TMPDIR_T/niagara-home/modules/.ng-deploy.lock (pid 4194000 on host elsewhere, started 2020-01-02T03:04:05Z, "*" ago): two runs on one modules directory lose jars. A lock is never removed for the run that made it: when no process 4194000 runs on elsewhere (ps -p 4194000), that run was killed; delete the file and deploy again" ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
+    [ "$(sed -n 1p "$TMPDIR_T/niagara-home/modules/.ng-deploy.lock")" = "pid 4194000" ]
+
+    mv "$TMPDIR_T/niagara-home/modules/.ng-deploy.lock" "$TMPDIR_T/modules/.ng-deploy.lock"   # the station's is refused too
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"another ng-deploy run holds $TMPDIR_T/modules/.ng-deploy.lock (pid 4194000 on host elsewhere"* ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+    [ ! -e "$TMPDIR_T/niagara-home/modules/.ng-deploy.lock" ]   # the lock this run took first is released
+
+    rm "$TMPDIR_T/modules/.ng-deploy.lock"   # by hand, as the line says; then the deploy goes through and leaves none
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    run find "$TMPDIR_T" -name '.ng-deploy.lock'
+    [ -z "$output" ]
+}
+
+@test "NG-home-interrupt: a SIGINT during the build puts the jars of <NIAGARA_HOME>/modules back and ends with 130" {
+    # Mutation: NG-home-interrupt -- without the watch the signal ends the run with the built jars in the home and its lock left.
+    _home_with_previous_rt; _fake_gate 0
+    sed -i 's|^exit "\${FAKE_GRADLEW_EXIT:-0}"$|case "$*" in *:jar*) kill -INT $PPID; sleep 0.5; exit 130 ;; esac|' "$TMPDIR_T/fakebin/gradlew"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 130 ]
+    [[ "$output" == *"[ng-deploy] ERROR interrupted (SIGINT) before the copy; nothing was copied to the station"* ]]
+    [[ "$output" == *"NOTICE: the jars the build installed in $TMPDIR_T/niagara-home/modules were taken out again"* ]]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
+    [ "$(ls -A "$TMPDIR_T/niagara-home/modules")" = "test-rt.jar" ]
+    [ -z "$(ls -A "$TMPDIR_T/modules")" ]
+}
+
+@test "NG-home-aside-left: a jar left aside in <NIAGARA_HOME>/modules is refused before gradle runs (exit 10) and not touched" {
+    # Mutation: NG-home-aside-left -- without the refusal the move aside replaces the only copy of the previous jar.
+    _home_with_previous_rt; _fake_gate 0
+    printf 'the only copy' > "$TMPDIR_T/niagara-home/modules/test-rt.jar.ng-deploy-old"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"build refused: a deploy that did not finish left previous jars aside in $TMPDIR_T/niagara-home/modules; nothing was built or changed"* ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar.ng-deploy-old")" = "the only copy" ]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
+}
+
+@test "NG-home-same-verify: the same directory spelled as a relative path is recognised, and a jar the build did not install there fails the copy (exit 40)" {
+    # Mutation: NG-home-same-verify -- without the byte check a deploy 'goes through' with a jar the build never installed.
+    _home_with_previous_rt; _fake_gate 0
+    sed -i "s|^STATION_MODULES_DIR=.*|STATION_MODULES_DIR=./niagara-home/modules|" "$TMPDIR_T/env_gate"
+    sed -i 's|for p in rt ux; do|for p in rt; do|' "$TMPDIR_T/fakebin/gradlew"   # the ux jar is built and not installed
+    export FAKE_OLD_VERSION=1.4 FAKE_NEW_VERSION=1.5
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 40 ]
+    [[ "$output" == *"STATION_MODULES_DIR is <NIAGARA_HOME>/modules ($TMPDIR_T/niagara-home/modules)"* ]]
+    [[ "$output" == *"copy failed for test-ux.jar: STATION_MODULES_DIR is <NIAGARA_HOME>/modules and the jar the build left there is missing or is not the one in build/libs"* ]]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
+    [ "$(ls -A "$TMPDIR_T/niagara-home/modules")" = "test-rt.jar" ]
+
+    mkdir "$TMPDIR_T/niagara-home/modules/test-ux.jar"   # a directory under a jar name: refused as the copy refuses it
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 40 ]
+    [[ "$output" == *"copy failed for test-ux.jar: the station holds a directory under that name, not a jar file; nothing was replaced"* ]]
+    [ -d "$TMPDIR_T/niagara-home/modules/test-ux.jar" ]
+}
+
+@test "NG-closing-quiet: --no-deploy prints no closing lines, and a build that installed nothing says its jars were moved back" {
+    # Mutation: NG-closing-quiet -- closing lines after --no-deploy tell the author to restart a station nothing was copied to.
+    _home_with_previous_rt; _fake_gate 0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --no-deploy
+    [ "$status" -eq 0 ]
+    [[ "${lines[-1]}" == "[ng-deploy] no-deploy: jars in build/libs/" ]]
+    [[ "$output" != *"[ng-deploy] done:"* ]]
+    [[ "$output" != *"[ng-deploy] next:"* ]]
+    [[ "$output" != *"[ng-deploy] undo:"* ]]
+
+    printf 'previous-rt' > "$TMPDIR_T/niagara-home/modules/test-rt.jar"; rm -f "$TMPDIR_T/niagara-home/modules/test-ux.jar"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$TMPDIR_T/fakebin/gradlew"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 30 ]
+    [[ "$output" == *"NOTICE: the build installed no jar in $TMPDIR_T/niagara-home/modules; the module jars moved aside for it were moved back: it holds the module jars it held before the build"* ]]
+    [[ "$output" != *"were taken out again"* ]]
+    [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
 }

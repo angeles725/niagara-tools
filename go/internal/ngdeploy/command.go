@@ -5,10 +5,10 @@
 // fixed since in changelog.d/2026-11-14-ng-deploy-silent-exits.md and 2026-11-15-ng-deploy-atomic-copy.md.
 //
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
-// file), config.go (required settings and paths), home.go (NIAGARA_HOME: a mirror, and its modules directory
+// file), config.go (required settings and paths), home.go with lock.go and settle.go (NIAGARA_HOME: a mirror, the run locks, and its modules directory
 // put back when the deploy stops), backup.go and purge.go, annotations.go (the slotomatic
-// reminder), slotomatic.go, build.go, version.go with jarcontent.go and schema.go (the two prechecks), verify.go, gate.go,
-// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go and messages_home.go, patterns.go, usage.txt.
+// reminder), slotomatic.go, build.go, version.go with jarcontent.go and descriptor.go, and schema.go (the two prechecks), verify.go, gate.go,
+// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go, messages_home.go and messages_lock.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy
 
@@ -39,7 +39,9 @@ type deploy struct {
 	homeDir  string       // <NIAGARA_HOME>/modules when it is a directory, else ""
 	sameDir  bool         // STATION_MODULES_DIR is that directory
 	homeJars []*stagedJar // the module's jars there, from the move aside before the build (home.go)
-	signals  *interrupts  // the watch for SIGINT and SIGTERM, from that move on
+	locks    []string     // the run locks this run took, in order (lock.go)
+	signals  *interrupts  // the watch for SIGINT and SIGTERM, from the first lock on
+	backedUp bool         // the backup step wrote an archive
 	copied   bool         // the copy went through: the station holds the built jars
 }
 
@@ -73,12 +75,10 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	for _, phase := range phases {
 		if code := d.interrupted(phase(d)); code != proceed {
-			d.settleHome(code)
-			return code
+			return d.finish(code)
 		}
 	}
-	d.settleHome(ExitOK)
-	return ExitOK
+	return d.finish(ExitOK)
 }
 
 // say prints one stdout line (a format of messages.go) after the tool's prefix.

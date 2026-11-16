@@ -1,10 +1,10 @@
 <!-- review-status: pending -->
 <!-- module: kit -->
-<!-- deltas: 21 -->
+<!-- deltas: 25 -->
 # 2026-11-15 · kit · build-kit-bench-session
 
 **Session**: bench run of the build kit as a newcomer: `skill/SKILL.md` and `BUILD-LOOP.md` followed literally, from an empty directory to a verified, deployed jar, for every type `scaffold-module.sh` offers (`logic`, `dashboard`, `driver`).
-**Delta count**: 21
+**Delta count**: 25
 
 ## What happened
 The build ran for real: a 4.15 installation on a Windows-backed mount, read through a mirror made by
@@ -129,6 +129,10 @@ command gives another result or exit code for an input it accepted before.
 | Δ19 | (M, changes behaviour) A pending retro whose every delta is already cited as landed is reported: the fold audit prints a row for it and fails under `--strict` | `toolbelt/sweep-fold-audit.sh` (Go `internal/foldaudit`) | `[ev: retros/2026-11-14-double-station-save.md pending, deltas 3, citations Δ1 Δ2 Δ3 present; sweep-fold-audit.sh: "412 folded, 412 cited, 0 uncited"]` |
 | Δ20 | (S, no behaviour change) A Go test fails when an exit constant of the deploy is missing from its usage text, and the same check covers the exit lists of `build-verify.md` for `build.sh` and `ng-deploy.sh` | `go/internal/ngdeploy` (new test over `exit.go` and `usage.txt`) | `[ev: ExitFault = 1, TestABackupDirectoryThatCannotBeMadeExits1; no "1" in the exit list of usage.txt]` |
 | Δ21 | (S, changes behaviour) The delta counter tells a stale index from a wrong retro: when the generated index has no row for a retro it says to regenerate it (as it does when the file is missing), and a count mismatch already on the main branch is caught by a check that runs the counter over every retro | `go/internal/retrodeltas` · the retro checks of `tests/` | `[ev: count-retro-deltas on a new retro with an index generated before it: "index=- MISMATCH", no hint; on retros/2026-11-14-go-ng-deploy-port.md: "rows=11 count=8 header=8 index=8 MISMATCH" while gen-retro-index.sh --check says the headers are valid]` |
+| Δ22 | APPLIED 2026-11-15. (M, changes behaviour) One deploy at a time per modules directory: a run holds an exclusive lock file in `<NIAGARA_HOME>/modules` and in the station directory from before it looks at them until it has ended, a second run is refused (exit 10) with the holder and its age, and a lock a killed run left is never removed automatically. This answers what no row above covered and an independent verification of Δ1 found: two runs started together on one home each put back or removed the jars the other had moved, and the home ended with none of the module's jars. With it: the move aside never replaces a file already aside, and a stopped deploy removes from the home only the jar it built | `go/internal/ngdeploy` (`lock.go`, `aside.go`, `settle.go`) · `usage.txt` · `BUILD-LOOP.md` § 6 | `[ev: 17 of 30 trials of two failing-gate runs started together ended with no module jar in <home>/modules, both runs exit 50 with the "holds the jars it held before the build" NOTICE]` |
+| Δ23 | (S, changes behaviour) `--no-deploy` with `STATION_MODULES_DIR` = `<NIAGARA_HOME>/modules` does not replace the station's jars without the prechecks: the build's jars are taken out again, or the run is refused with a line that says the two settings name one directory | `go/internal/ngdeploy` (`home.go`, `settle.go`) | `[ev: code go/internal/ngdeploy/settle.go]` (`settleHome` keeps what the build installed when the run ends with exit 0, and `--no-deploy` ends there before the prechecks) |
+| Δ24 | (S, changes behaviour) The expected-signer fallback of the deploy gate reads the jars the station holds, not only those of `<NIAGARA_HOME>/modules`, so a station whose jars carry the real signer gives it when no alias is configured | `go/internal/ngdeploy/gate.go` (`expectedSigner`) · `go/internal/modjar` | `[ev: code go/internal/ngdeploy/gate.go]` |
+| Δ25 | (S, changes behaviour) A `NIAGARA_HOME` that names no directory, or names a file, is refused with exit 10 before gradle runs, with a line that names the value | `go/internal/ngdeploy/home.go` (`guardHome`) | `[ev: code go/internal/ngdeploy/home.go]` (`guardHome` refuses only a directory; pinned as it is by `TestAMirrorHomeAndAHomeThatIsNotThereDeployAsBefore`) |
 
 ## Lessons
 - A wrapper that builds and a wrapper that deploys need the same guards; a guard added to one is absent from the other

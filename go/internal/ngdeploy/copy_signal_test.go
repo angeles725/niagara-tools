@@ -15,21 +15,24 @@ func signalDuring(t *testing.T, sig syscall.Signal, suffix string) {
 	t.Helper()
 	own := make(chan os.Signal, 1)
 	signal.Notify(own, sig) // also keeps the signal from ending the test when nothing else catches it
-	t.Cleanup(func() { rename = os.Rename; signal.Stop(own) })
+	t.Cleanup(func() { rename, link = os.Rename, os.Link; signal.Stop(own) })
 	sent := false
-	rename = func(from, to string) error {
-		err := os.Rename(from, to)
-		if !sent && strings.HasSuffix(to, suffix) {
-			sent = true
-			if e := syscall.Kill(os.Getpid(), sig); e != nil {
-				t.Fatal(e)
+	during := func(really func(string, string) error) func(string, string) error {
+		return func(from, to string) error {
+			err := really(from, to)
+			if !sent && strings.HasSuffix(to, suffix) {
+				sent = true
+				if e := syscall.Kill(os.Getpid(), sig); e != nil {
+					t.Fatal(e)
+				}
+				<-own
+				signal.Stop(own)
+				signal.Notify(own, sig)
 			}
-			<-own
-			signal.Stop(own)
-			signal.Notify(own, sig)
+			return err
 		}
-		return err
 	}
+	rename, link = during(os.Rename), during(os.Link) // a jar is moved aside with link
 }
 
 // A SIGINT or SIGTERM during the copy is honoured at the next step: what the copy did is undone from the

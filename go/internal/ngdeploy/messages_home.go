@@ -15,6 +15,10 @@ const (
 	msgHomeAsideFailed = "build not started: %s could not be moved aside in %s (%s); %s"
 	// noticeHomeRestored takes the directory, after a deploy that stopped put its jars back.
 	noticeHomeRestored = "NOTICE: the jars the build installed in %s were taken out again: it holds the module jars it held before the build"
+	// noticeHomeMovedBack is that NOTICE when the build installed no jar: only the move aside was undone.
+	noticeHomeMovedBack = "NOTICE: the build installed no jar in %s; the module jars moved aside for it were moved back: it holds the module jars it held before the build"
+	// warnHomeNotOurs takes a jar the directory did not have that is not the one this run built, and the directory.
+	warnHomeNotOurs = "WARN %s in %s was not there before the build and is not the jar this run built (build/libs): it is left where it is"
 	// The warnings of a deploy that went through and could not tidy the directory: the file aside, the
 	// directory and why; then the jar, the directory, its file aside and why.
 	warnHomeAsideLeft = "WARN the previous jar %s in %s could not be removed (%s): delete it, the next deploy refuses while it is there"
