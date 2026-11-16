@@ -1119,6 +1119,22 @@ out every slot that holds its type's default (a 00:00 start, a false `alwaysEffe
 fills those from the station's type registry and refuses, naming the slot, rather than guess one
 the registry does not describe.
 
+### Writing a weekly schedule
+
+`n4_set_schedule(ord, weekly)` (a write tool: `--allow-writes`, a write scope, dry run then
+`confirmation_token`) replaces the days given and only those: `{"monday": [{"start": "08:00",
+"end": "18:00", "value": true}]}` leaves tuesday to sunday as they are, and `{"sunday": []}`
+clears sunday. Times are `HH:MM`, `24:00` only as an end (midnight); a range covers its start up
+to, not including, its end. Values follow the kind: `true`/`false`, a number, an enum ordinal of
+the schedule's `range` facet, or a string. Every fault is named in one refusal before anything is
+sent (an unknown day, a malformed time, an end not after its start, overlapping ranges, a missing
+or mistyped value, a calendar or trigger, which have no weekly schedule).
+
+Each day is one BOX set that replaces its DaySchedule whole, and its inverse is a set of the day
+as it was loaded, so `n4_rollback` restores the previous ranges exactly. The read-back reloads
+the schedule and compares each day written with what `n4_read_schedule` shows; the station
+recalculates `out`, `next_time` and `next_value` by itself.
+
 ## Live smoke test
 
 `go/bin/live-smoke` (built from `go/cmd/mcp-n4/live-smoke`; formerly `tools/live_smoke.py`)
