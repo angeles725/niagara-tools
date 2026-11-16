@@ -1,5 +1,7 @@
 package ngdeploy
 
+import "github.com/angeles725/niagara-tools/go/internal/modjar"
+
 // Every line the deploy prints, apart from the usage text (usage.txt). say and warn add the "[ng-deploy] "
 // prefix and the newline; fail adds "[ng-deploy] ERROR " too.
 const (
@@ -68,6 +70,19 @@ const (
 	msgVersionCheck        = "version-bump precheck cannot verify %s: cannot check %s: %s"
 	msgVersionNoJar        = "version-bump precheck cannot verify %s: the build left no jar at %s"
 	msgVersionOK           = "version-bump ok (%s: %s -> %s)"
+	// msgVersionSameContent takes the jar and the version both jars carry.
+	msgVersionSameContent = "version-bump ok (%s: vendorVersion still %s, and the same content as the deployed jar apart from the build time and host, the manifest digests and the signature files)"
+	// msgVersionContent takes the jar name and why a jar could not be read (below: the path, then the reason).
+	msgVersionContent = "version-bump precheck cannot verify %s: cannot compare its content with the deployed jar: %s"
+	whyNotAJarFile    = "%s is not a readable jar (%s)"
+	whyNoEntry        = "%s holds no entry"
+	whyTwoEntries     = "%s holds two entries named %s"
+	whyEntryUnread    = "%s: %s cannot be read (%s)"
+	// The limits (patterns.go): the jar and maxJarContent; the jar, the file and maxDescriptor; then a
+	// descriptor encoding/xml cannot read (the jar, the file, why).
+	whyJarTooLarge  = "%s declares more than %d bytes of content, the most the precheck reads"
+	whyFileTooLarge = "%s: %s is over %d bytes"
+	whyNoRoot       = "%s: %s cannot be read as a descriptor (%s)"
 
 	// schema-risk precheck
 	msgSchemaFirstDeploy = "schema-risk: N/A (--first-deploy: no deployed baseline)"
@@ -90,40 +105,13 @@ const (
 	msgGate             = "gate: verify-module on %s"
 	msgGateFailed       = "verify-module gate failed; jars not fit to deploy (use --no-gate to override)"
 	msgGateOK           = "gate ok"
+	// The warnings of a gate with no signer to expect: the texts build.sh prints (modjar), with the ways this
+	// tool has to set the alias. warnDevSigner takes the development signer's name.
+	warnNoSigner  = "WARN " + modjar.WhyNoSigner + signerRemedy
+	warnDevSigner = "WARN " + modjar.WhyDevSigner + signerRemedy
+	signerRemedy  = " (set it: " + modjar.GradleEnvPrefix + modjar.AliasProperty + "=<alias> in the env file, or " + modjar.AliasProperty + "=<alias> in gradle.properties)"
 
-	// copy and after
-	msgCopyOK = "copy ok"
-	// msgCopyFailed takes the jar that could not be staged or renamed (with the reason after ": " when cp did
-	// not print one) and what the station holds now: one of the outcomes below.
-	msgCopyFailed    = "copy failed for %s; %s"
-	outcomeUnchanged = "nothing was replaced: the station holds the jars it held before the deploy"
-	outcomeUndone    = "what was already replaced was put back: the station holds the jars it held before the deploy"
-	// msgCopyInterrupted takes SIGINT or SIGTERM and the same outcomes; the exit code is 128 + the signal.
-	msgCopyInterrupted = "copy interrupted (%s); %s"
-	// whyNotAJar takes what the station holds under the name of a jar (the kinds below).
-	whyNotAJar     = "the station holds %s under that name, not a jar file"
-	kindDirectory  = "a directory"
-	kindOther      = "something that is not a regular file"
-	kindLinkTo     = "a symbolic link to "
-	kindDangling   = "a symbolic link to nothing"
-	kindUnreadable = "something that cannot be examined"
-	// outcomeMixed takes the state of each jar (below), joined by ", "; mixedPutBack follows it when a
-	// state names a file aside, and takes the suffix of those files.
-	outcomeMixed  = "the station does NOT hold the jars it held before the deploy: %s"
-	mixedPutBack  = "; put each named %s file back under its jar name before the station restarts"
-	stateNew      = "%s is the NEW jar and the previous one is in %s (%s)" // the jar, the file aside, why it was not moved back
-	stateMissing  = "%s is MISSING and the previous one is in %s (%s)"
-	stateExtra    = "%s, which the station did not have, could not be removed (%s): remove it before the station restarts"
-	statePrevious = "%s is the previous jar"
-	// warnAsideLeft takes the file aside that a finished copy could not remove, and why.
-	warnAsideLeft = "WARN the jars are copied, but the previous jar %s could not be removed (%s): delete it, the next deploy refuses while it is in the station"
-	// msgAsideFound takes the station directory; one state line per jar and the ways out follow it,
-	// indented. The states take the jar, its file aside and the suffix; the ways out the suffix twice.
-	msgAsideFound     = "copy refused: a deploy that did not finish left previous jars aside in %s; nothing was copied or changed"
-	stateAsideWithJar = "%s present, %s present: the jar may be the new one of that deploy; the %s file is the previous jar"
-	stateAsideNoJar   = "%s missing, %s present: the %s file is the previous jar"
-	msgAsideWaysOut   = "to put the previous jars back, rename each %s file over its jar; to keep what is there, delete the %s files; then deploy again"
-	indent            = "  "
+	// the copy and its outcomes are in messages_copy.go; the deploy record and what follows it
 	// msgRecordFailed takes the record file and one of the three reasons after it.
 	msgRecordFailed = "jars copied, but the deployed commit was not recorded in %s: %s (the next annotation check cannot start at this deploy; SLOTOMATIC_DETECTION=off makes the record optional)"
 	// msgRecordUnwritable is the same record found unwritable before the copy; it takes the file and whyNotWritten.

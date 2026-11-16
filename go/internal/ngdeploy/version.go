@@ -1,9 +1,6 @@
 package ngdeploy
 
 import (
-	"bytes"
-	"os"
-
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 	"github.com/angeles725/niagara-tools/go/internal/vendorversion"
 )
@@ -22,7 +19,7 @@ func (d *deploy) precheckVersion() int {
 	}
 	for _, built := range d.builtJars() {
 		name := basename(built)
-		deployed := d.station + "/" + name
+		deployed := d.deployedJar(name)
 		differs, code := d.jarDiffers(name, built, deployed)
 		if code != proceed {
 			return code
@@ -38,12 +35,30 @@ func (d *deploy) precheckVersion() int {
 		case !comparable:
 			return d.fail(ExitVersionUnknown, msgVersionIncomparable, name, newer, older)
 		case order == 0:
-			return d.fail(ExitVersionSame, msgVersionSame, name, newer)
+			if code := d.sameVersion(name, built, deployed, newer); code != proceed {
+				return code
+			}
+			continue
 		case order < 0:
 			return d.fail(ExitVersionDown, msgVersionDown, name, older, newer, older)
 		}
 		d.say(msgVersionOK, name, older, newer)
 	}
+	return proceed
+}
+
+// sameVersion judges a built jar whose bytes differ from the deployed one under the same vendorVersion. A
+// rebuild of unchanged sources differs only in what every build changes (sameContent): there is no version to
+// bump, and the deploy goes on. Any other difference is exit 51. A jar whose content cannot be read is
+// neither: the precheck cannot verify (exit 52).
+func (d *deploy) sameVersion(name, built, deployed, version string) int {
+	switch same, why := sameContent(built, deployed); {
+	case why != "":
+		return d.fail(ExitVersionUnknown, msgVersionContent, name, why)
+	case !same:
+		return d.fail(ExitVersionSame, msgVersionSame, name, version)
+	}
+	d.say(msgVersionSameContent, name, version)
 	return proceed
 }
 
@@ -60,7 +75,5 @@ func (d *deploy) jarDiffers(name, built, deployed string) (differs bool, code in
 			return false, proceed
 		}
 	}
-	a, errA := os.ReadFile(built)
-	b, errB := os.ReadFile(deployed)
-	return errA != nil || errB != nil || !bytes.Equal(a, b), proceed
+	return !sameBytes(built, deployed), proceed
 }

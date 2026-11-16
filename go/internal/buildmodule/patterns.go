@@ -1,6 +1,10 @@
 package buildmodule
 
-import "regexp"
+import (
+	"regexp"
+
+	"github.com/angeles725/niagara-tools/go/internal/modjar"
+)
 
 // Names the chain reads or runs; one place, so a renamed file changes one line.
 const (
@@ -8,18 +12,17 @@ const (
 	preflightScript = "preflight.sh"
 	reportScript    = "report-module.sh"
 	werrorInit      = "lib/werror.init.gradle"
-	mirrorMarker    = ".niagara-mirror"
+	mirrorMarker    = modjar.MirrorMarker
 	mirrorUserHome  = ".mirror-user-home"
 	signingProfile  = ".tridium/security/niagara.signing.xml"
 	m2Repository    = "etc/m2/repository"
 	// aliasProperty is the gradle property the kit's root signing block takes the signing alias from
 	// (templates/signing-root.gradle.kts); gradleEnvPrefix is how the environment sets a gradle property.
-	aliasProperty    = "niagaraSigningAlias"
-	gradleEnvPrefix  = "ORG_GRADLE_PROJECT_"
-	gradleProperties = "gradle.properties"
+	aliasProperty   = modjar.AliasProperty
+	gradleEnvPrefix = modjar.GradleEnvPrefix
 	// devSigner is the name the signature files of the signing plugin's default development key carry
 	// (META-INF/NIAGARA4.SF): a signer a deployed jar never makes the expected one.
-	devSigner = "NIAGARA4"
+	devSigner = modjar.DevSigner
 	// m2Depth is how deep under etc/m2/repository a plugin version directory is looked for.
 	m2Depth = 8
 )

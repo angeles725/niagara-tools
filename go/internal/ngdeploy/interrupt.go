@@ -6,8 +6,9 @@ import (
 	"syscall"
 )
 
-// interrupts watches for SIGINT and SIGTERM while the copy runs. Outside the copy the deploy keeps the
-// default: the signal ends it, and nothing in the station was touched yet or is touched any more.
+// interrupts watches for SIGINT and SIGTERM: the copy has a watch of its own while it runs, and the deploy
+// one from the move aside in <NIAGARA_HOME>/modules on (home.go). Before that the deploy keeps the default:
+// the signal ends it, and nothing was touched yet.
 type interrupts struct {
 	arrive chan os.Signal
 	got    syscall.Signal // the first one caught; 0 for none

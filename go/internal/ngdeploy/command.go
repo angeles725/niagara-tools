@@ -5,9 +5,10 @@
 // fixed since in changelog.d/2026-11-14-ng-deploy-silent-exits.md and 2026-11-15-ng-deploy-atomic-copy.md.
 //
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
-// file), config.go (required settings and paths), backup.go and purge.go, annotations.go (the slotomatic
-// reminder), slotomatic.go, build.go, version.go and schema.go (the two prechecks), verify.go, gate.go,
-// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder). The data lives apart: exit.go, messages.go, patterns.go, usage.txt.
+// file), config.go (required settings and paths), home.go with lock.go and settle.go (NIAGARA_HOME: a mirror, the run locks, and its modules directory
+// put back when the deploy stops), backup.go and purge.go, annotations.go (the slotomatic
+// reminder), slotomatic.go, build.go, version.go with jarcontent.go and descriptor.go, and schema.go (the two prechecks), verify.go, gate.go,
+// copy.go with aside.go, restore.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go, messages_home.go and messages_lock.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy
 
@@ -35,6 +36,13 @@ type deploy struct {
 	station   string // STATION_MODULES_DIR
 	moduleDir string // <directory of gradlew>/<MODULE_NAME>
 
+	homeDir  string       // <NIAGARA_HOME>/modules when it is a directory, else ""
+	sameDir  bool         // STATION_MODULES_DIR is that directory
+	homeJars []*stagedJar // the module's jars there, from the move aside before the build (home.go)
+	locks    []string     // the run locks this run took, in order (lock.go)
+	signals  *interrupts  // the watch for SIGINT and SIGTERM, from the first lock on
+	backedUp bool         // the backup step wrote an archive
+	copied   bool         // the copy went through: the station holds the built jars
 }
 
 // phases is the deploy after the command line was read; each returns an exit code, or proceed.
@@ -42,8 +50,10 @@ var phases = []func(*deploy) int{
 	(*deploy).loadEnvFile,
 	(*deploy).checkSettings,
 	(*deploy).exportOptions,
+	(*deploy).guardHome,
 	(*deploy).backup,
 	(*deploy).slotomatic,
+	(*deploy).asideHome,
 	(*deploy).build,
 	(*deploy).precheckVersion,
 	(*deploy).precheckSchema,
@@ -52,6 +62,7 @@ var phases = []func(*deploy) int{
 	(*deploy).checkRecord,
 	(*deploy).copyJars,
 	(*deploy).recordDeploy,
+	(*deploy).sayNextSteps,
 }
 
 // Main implements ng-deploy.sh; usage.txt carries the usage text and the exit codes.
@@ -63,11 +74,11 @@ func Main(args []string, s cli.Stdio) int {
 		return code
 	}
 	for _, phase := range phases {
-		if code := phase(d); code != proceed {
-			return code
+		if code := d.interrupted(phase(d)); code != proceed {
+			return d.finish(code)
 		}
 	}
-	return ExitOK
+	return d.finish(ExitOK)
 }
 
 // say prints one stdout line (a format of messages.go) after the tool's prefix.

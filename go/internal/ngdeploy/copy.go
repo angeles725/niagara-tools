@@ -7,7 +7,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
-// rename moves a jar of the copy and remove deletes one; a test replaces them.
+// rename moves a jar of the copy and remove deletes one; a test replaces them. A jar is moved aside with
+// moveAside (aside.go), which never replaces a file already aside.
 var (
 	rename = os.Rename
 	remove = os.Remove
@@ -34,6 +35,9 @@ type stagedJar struct {
 // back or removed. The copy starts only in a station that holds no jar aside and nothing odd under the
 // name of a jar (aside.go).
 func (d *deploy) copyJars() int {
+	if d.sameDir {
+		return d.copySame()
+	}
 	jars, code := d.jarsToCopy()
 	if code != proceed {
 		return code
@@ -51,7 +55,7 @@ func (d *deploy) copyJars() int {
 			return d.copyInterrupted(jars, signals)
 		}
 		if !staged {
-			return d.fail(ExitCopy, msgCopyFailed, jar.name, outcomeUnchanged)
+			return d.fail(ExitCopy, msgCopyFailed, jar.name, stationSite.unchanged())
 		}
 	}
 	for _, jar := range jars {
@@ -61,7 +65,7 @@ func (d *deploy) copyJars() int {
 		if !jar.had {
 			continue
 		}
-		if err := rename(jar.target, jar.aside); err != nil {
+		if err := moveAside(jar.target, jar.aside); err != nil {
 			return d.copyFailed(jars, jar, err)
 		}
 		jar.moved = true
@@ -86,6 +90,7 @@ func (d *deploy) copyJars() int {
 			d.warn(warnAsideLeft, jar.name+asideSuffix, strerror.Text(err))
 		}
 	}
+	d.copied = true
 	d.say(msgCopyOK)
 	return proceed
 }

@@ -6,10 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"os/user"
 	"strings"
 	"syscall"
 
+	"github.com/angeles725/niagara-tools/go/internal/modjar"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
@@ -95,15 +95,7 @@ func (b *build) output(name string, args ...string) (out []byte, ok bool) {
 }
 
 // homeDir is $HOME as bash reads it: the variable, else the user's home directory.
-func (b *build) homeDir() string {
-	if h := b.s.Env("HOME"); h != "" {
-		return h
-	}
-	if u, err := user.Current(); err == nil {
-		return u.HomeDir
-	}
-	return ""
-}
+func (b *build) homeDir() string { return modjar.HomeDir(b.s.Env) }
 
 // cleanupOnSignal removes the temporary directory when the run is interrupted, then ends as bash does
 // for that signal. The returned function stops watching.

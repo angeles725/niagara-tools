@@ -37,13 +37,10 @@ func (d *deploy) backupName() string {
 	}
 }
 
-// archive writes the backup in the working directory. A tar that fails is exit 20.
+// archive writes the backup in the working directory, under backupDir. A tar that fails is exit 20. The
+// archive is named, and backupDir made, only once there is something to archive: a module with no jar in the
+// station gets one line that says so.
 func (d *deploy) archive() int {
-	name := d.backupName()
-	if code := d.show("mkdir", "-p", backupDir); code != 0 {
-		return code
-	}
-	d.say(msgBackup, name)
 	from, members := dirname(d.station), []string{basename(d.station)}
 	if !d.isOn(optFullBackup) {
 		from, members = d.station, nil
@@ -62,6 +59,11 @@ func (d *deploy) archive() int {
 			return proceed
 		}
 	}
+	name := d.backupName()
+	if code := d.show("mkdir", "-p", backupDir); code != 0 {
+		return code
+	}
+	d.say(msgBackup, name)
 	if d.run(d.s.Out, io.Discard, "tar", append([]string{"-czf", name, "-C", from}, members...)...) != 0 {
 		return d.fail(ExitBackup, msgBackupFailed, name)
 	}
@@ -69,5 +71,6 @@ func (d *deploy) archive() int {
 		return d.fail(ExitPurge, msgPurgeFailed, name, failed, strerror.Text(err))
 	}
 	d.say(msgBackupOK, name)
+	d.backedUp = true
 	return proceed
 }

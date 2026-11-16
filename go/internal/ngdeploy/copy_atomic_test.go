@@ -32,19 +32,22 @@ func upgrade(t *testing.T, f *fixture) {
 // "<end of the old path>><end of the new path>", or the end of the new path alone.
 func failRename(t *testing.T, which ...string) {
 	t.Helper()
-	t.Cleanup(func() { rename = os.Rename })
-	rename = func(from, to string) error {
-		for _, w := range which {
-			old, new, both := strings.Cut(w, ">")
-			if !both {
-				old, new = "", w
+	t.Cleanup(func() { rename, link = os.Rename, os.Link })
+	failing := func(really func(string, string) error) func(string, string) error {
+		return func(from, to string) error {
+			for _, w := range which {
+				old, new, both := strings.Cut(w, ">")
+				if !both {
+					old, new = "", w
+				}
+				if strings.HasSuffix(from, old) && strings.HasSuffix(to, new) {
+					return &os.LinkError{Op: "rename", Old: from, New: to, Err: syscall.EACCES}
+				}
 			}
-			if strings.HasSuffix(from, old) && strings.HasSuffix(to, new) {
-				return &os.LinkError{Op: "rename", Old: from, New: to, Err: syscall.EACCES}
-			}
+			return really(from, to)
 		}
-		return os.Rename(from, to)
 	}
+	rename, link = failing(os.Rename), failing(os.Link) // a jar is moved aside with link, or with rename when link fails
 }
 
 // station fails the test unless the two station jars hold these bytes ("" for no jar), the rt jar has this

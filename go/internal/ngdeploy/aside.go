@@ -17,14 +17,46 @@ func (d *deploy) jarsToCopy() (jars []*stagedJar, code int) {
 	for _, profile := range profilesOf[d.raw[optMode]] {
 		jar := &stagedJar{name: d.jarName(profile), target: d.station + "/" + d.jarName(profile)}
 		jar.staged, jar.aside = jar.target+stagedSuffix, jar.target+asideSuffix
-		what, exists := notAJar(jar.target)
-		if what != "" {
-			return nil, d.fail(ExitCopy, msgCopyFailed, jar.name+": "+fmt.Sprintf(whyNotAJar, what), outcomeUnchanged)
+		if jar.had, code = d.jarFileAt(jar.name, jar.target); code != proceed {
+			return nil, code
 		}
-		jar.had = exists
 		jars = append(jars, jar)
 	}
 	return jars, proceed
+}
+
+// jarFileAt reports whether the station holds a jar file under the name of a jar; anything else under that
+// name (notAJar) is the exit 40 line of a copy that replaced nothing.
+func (d *deploy) jarFileAt(name, target string) (exists bool, code int) {
+	what, exists := notAJar(target)
+	if what != "" {
+		return exists, d.fail(ExitCopy, msgCopyFailed, name+": "+fmt.Sprintf(whyNotAJar, what), stationSite.unchanged())
+	}
+	return exists, proceed
+}
+
+// link makes a second name for a file; a test replaces it, as it does rename and remove (copy.go).
+var link = os.Link
+
+// moveAside moves a jar to its name aside and never replaces a file that is already there: the second name is
+// made with link, which fails when it exists, and then the first is removed, so a run killed between the two
+// leaves the jar under both names. On a file system that makes no links the name is looked for and the jar
+// renamed, which is as safe while the run holds the lock of the directory (lock.go).
+func moveAside(target, aside string) error {
+	switch err := link(target, aside); {
+	case err == nil:
+		if err := remove(target); err != nil {
+			remove(aside)
+			return err
+		}
+		return nil
+	case errors.Is(err, fs.ErrExist):
+		return err
+	}
+	if present(aside) {
+		return &os.LinkError{Op: "rename", Old: target, New: aside, Err: fs.ErrExist}
+	}
+	return rename(target, aside)
 }
 
 // refuseAside stops the deploy when the station holds a <jar>.ng-deploy-old file for any jar the tool
@@ -32,14 +64,20 @@ func (d *deploy) jarsToCopy() (jars []*stagedJar, code int) {
 // module, beside its jar (which may be the new one of a deploy that was killed) or without it: nothing is
 // removed or renamed. The lines say what the station holds for each such jar, and the two ways out.
 func (d *deploy) refuseAside() int {
+	return d.refuseAsideIn(d.station, deployable, ExitCopy, msgAsideFound)
+}
+
+// refuseAsideIn is that refusal for the jars of some profiles in one modules directory: the exit code and the
+// headline (which takes the directory) are the caller's, the state lines and the ways out are the same.
+func (d *deploy) refuseAsideIn(dir string, profiles []string, code int, headline string) int {
 	var found []string
-	for _, profile := range deployable {
+	for _, profile := range profiles {
 		name := d.jarName(profile)
-		if !present(d.station + "/" + name + asideSuffix) {
+		if !present(dir + "/" + name + asideSuffix) {
 			continue
 		}
 		state := stateAsideNoJar
-		if present(d.station + "/" + name) {
+		if present(dir + "/" + name) {
 			state = stateAsideWithJar
 		}
 		found = append(found, fmt.Sprintf(state, name, name+asideSuffix, asideSuffix))
@@ -47,7 +85,7 @@ func (d *deploy) refuseAside() int {
 	if len(found) == 0 {
 		return proceed
 	}
-	code := d.fail(ExitCopy, msgAsideFound, d.station)
+	d.fail(code, headline, dir)
 	for _, line := range found {
 		d.warn(indent + line)
 	}

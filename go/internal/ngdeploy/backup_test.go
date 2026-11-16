@@ -37,12 +37,14 @@ func TestBackupArchivesOnlyTheJarsOfTheModule(t *testing.T) {
 	}
 }
 
+// An archive is named only when one is written: a module with no jar in the station gets the one line that
+// says so, no archive name, and no empty _backups directory.
 func TestBackupOfAModuleNeverDeployedArchivesNothing(t *testing.T) {
 	f := newFixture(t)
 	f.write(f.modules+"/other-rt.jar", "")
 	f.want(f.run("--no-deploy"), ExitOK)
-	want := "[ng-deploy] backup: _backups/demo-pre-TS.tar.gz\n[ng-deploy] backup: no existing demo-{rt,ux,wb}.jar in " + f.modules + "; nothing to archive\n[ng-deploy] build:"
-	if !strings.HasPrefix(stamp(f.out), want) || strings.Contains(f.calls(), "tar") {
+	want := "[ng-deploy] backup: no existing demo-{rt,ux,wb}.jar in " + f.modules + "; nothing to archive\n[ng-deploy] build:"
+	if !strings.HasPrefix(f.out, want) || strings.Contains(f.calls(), "tar") || f.exists(f.work+"/_backups") {
 		t.Errorf("stdout:\n%scalls:\n%s", f.out, f.calls())
 	}
 }
