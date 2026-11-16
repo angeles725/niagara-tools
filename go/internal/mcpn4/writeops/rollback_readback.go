@@ -84,7 +84,7 @@ func rollbackReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies,
 				return fail(err)
 			}
 		default:
-			if good, err = restored(nodes, op); err != nil {
+			if good, err = restoredOrDefault(c, nodes, op); err != nil {
 				return fail(err)
 			}
 		}

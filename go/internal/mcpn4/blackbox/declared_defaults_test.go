@@ -158,6 +158,20 @@ func TestNavigateListsTheDeclaredPropertiesOfEachListedComponent(t *testing.T) {
 	}
 }
 
+// Row 2: a rollback that restores a default reads verified, though the load omits the slot.
+func TestARollbackThatRestoresADefaultIsVerified(t *testing.T) {
+	r, c := dfxRig(t, verifiedRig)
+	set := r.Srv.RunWrite("n4_set_slot", Args{"ord": Folder + "/" + c.Name, "slot": "flag", "value": true,
+		"value_type": "baja:Boolean"})
+	if set["verdict"] != "verified" {
+		t.Fatalf("set = %v", set)
+	}
+	back := r.Srv.RunWrite("n4_rollback", Args{"batch_id": set["batch_id"]})
+	if back["verdict"] != "verified" || Dig(back, "observed", "restored") != true {
+		t.Errorf("rollback = %v", back)
+	}
+}
+
 func TestAnUnreadableRegistrySaysSoAndListsWhatWasLoaded(t *testing.T) {
 	r, c := dfxRig(t, stationRig)
 	r.Set(c.Handle, "setpoint", map[string]any{"nm": "p", "t": "baja:Double", "v": "3.0"})

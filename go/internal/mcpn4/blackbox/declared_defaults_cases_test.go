@@ -9,7 +9,11 @@ import (
 	"reflect"
 	"sync/atomic"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest/boxstation"
 )
+
+const registryDown = `{"v": "2.3", "p": "box", "m": [{"c": "reg", "k": "loadTypes", "r": 0, "t": "e", "b": {"isErr": true, "m": "no registry"}}]}`
 
 func TestReadSlotsKeepsTheLoadedSlotsFirstAndMarksOnlyTheAddedOnes(t *testing.T) {
 	r, c := dfxRig(t, stationRig)
@@ -136,5 +140,75 @@ func TestNavigateWithATypesFilterAddsNoUntypedDefault(t *testing.T) {
 		"default": true, "value": "0.0", "matched": true}}
 	if !reflect.DeepEqual(dash[0]["children"], want) {
 		t.Errorf("Dash children = %v, want %v", dash[0]["children"], want)
+	}
+}
+
+// dropAfterRollbackWrite removes slot from Folder/Dash on every load that follows the rollback's
+// syncTo, as a station omits a frozen property set back to its default; failReg answers every
+// registry call with an error. The returned flag arms it.
+func dropAfterRollbackWrite(r *Rig, slot string, failReg bool) *atomic.Bool {
+	var armed, synced atomic.Bool
+	r.Station.SetHook(func(frame map[string]any) (int, []byte) {
+		for _, m := range objects(frame["m"]) {
+			if failReg && m["c"] == "reg" {
+				return 200, []byte(registryDown)
+			}
+			b, _ := m["b"].(map[string]any)
+			if !armed.Load() || b == nil {
+				continue
+			}
+			if b["sck"] == "syncTo" {
+				synced.Store(true)
+			}
+			if b["sck"] == "loadSlots" && synced.Load() {
+				r.Station.Do(func(st *boxstation.Station) {
+					dash := st.Root().Child("Folder").Child("Dash")
+					for i, k := range dash.Children {
+						if k.Name == slot {
+							dash.Children = append(dash.Children[:i], dash.Children[i+1:]...)
+							return
+						}
+					}
+				})
+			}
+		}
+		return 0, nil
+	})
+	return &armed
+}
+
+func TestARollbackToADefaultTheStationOmitsReadsVerified(t *testing.T) {
+	r, c := dfxRig(t, verifiedRig)
+	armed := dropAfterRollbackWrite(r, "flag", false)
+	set := r.Srv.RunWrite("n4_set_slot", Args{"ord": Folder + "/" + c.Name, "slot": "flag", "value": true, "value_type": "baja:Boolean"})
+	armed.Store(true)
+	back := r.Srv.RunWrite("n4_rollback", Args{"batch_id": set["batch_id"]})
+	if back["verdict"] != "verified" || Dig(back, "observed", "restored") != true {
+		t.Errorf("rollback = %v, want verified and restored", back)
+	}
+}
+
+func TestARollbackWhoseNonDefaultValueIsLostReadsMismatch(t *testing.T) {
+	r, c := dfxRig(t, verifiedRig)
+	r.Set(c.Handle, "setpoint", map[string]any{"nm": "p", "t": "baja:Double", "v": "3.0"})
+	armed := dropAfterRollbackWrite(r, "setpoint", false)
+	set := r.Srv.RunWrite("n4_set_slot", Args{"ord": Folder + "/" + c.Name, "slot": "setpoint", "value": 5, "value_type": "baja:Double"})
+	armed.Store(true)
+	back := r.Srv.RunWrite("n4_rollback", Args{"batch_id": set["batch_id"]})
+	if back["verdict"] != "mismatch" || Dig(back, "observed", "restored") != false {
+		t.Errorf("rollback = %v, want mismatch: the default 0.0 is not the recorded 3.0", back)
+	}
+}
+
+func TestARollbackReadBackWithAnUnreadableRegistryReadsMismatch(t *testing.T) {
+	r, c := dfxRig(t, verifiedRig)
+	set := r.Srv.RunWrite("n4_set_slot", Args{"ord": Folder + "/" + c.Name, "slot": "flag", "value": true, "value_type": "baja:Boolean"})
+	r.Restart(nil) // a new session: no contract is cached
+	r.ConnectVerified()
+	armed := dropAfterRollbackWrite(r, "flag", true)
+	armed.Store(true)
+	back := r.Srv.RunWrite("n4_rollback", Args{"batch_id": set["batch_id"]})
+	if back["verdict"] != "mismatch" || Dig(back, "observed", "restored") != false {
+		t.Errorf("rollback = %v, want mismatch when no contract can be read", back)
 	}
 }
