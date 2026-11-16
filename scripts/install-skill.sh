@@ -19,8 +19,9 @@
 # rendered from the kit's skill/prompt.md beside the tracked launcher (@SKILL_FILE@ becomes the absolute
 # path of the installed SKILL.md), or from the Go package's default template when the kit has none, and follows the same
 # current / diverged / --force rules as the launcher. Every file of every selected harness is checked
-# before the first write: a diverged copy without --force (exit 1) or a symbolic link on the way (exit 3)
-# stops the run with nothing written.
+# before the first write: a diverged copy without --force (exit 1), a symbolic link on the way (exit 3), or
+# a file that cannot be placed (a non-directory where its directory must be, or a target that is not a
+# regular file; exit 3) stops the run with nothing written.
 #
 # --skill build-n4-module also MATERIALIZES the kit's generated state in the kit checkout the launcher
 # reads: BUILD-STATE.md, retros/INDEX.md and toolbelt/INDEX.md are generated and not committed (R10-D1), so a fresh install
@@ -50,7 +51,8 @@
 #       (a kit without toolbelt/kit-state.sh is a warning, not an error).
 #   1   Installed copy exists and diverges from the tracked copy; --force absent.
 #   2   Usage error (including an unknown --skill or --harness name and an empty --home).
-#   3   Environment error (tracked source missing, a prompt template that cannot be read, a symlinked target, no Go toolchain to build the command, target directory not
+#   3   Environment error (tracked source missing, a prompt template that cannot be read, a symlinked target, a
+#       non-directory on the target's path or a target that is not a regular file, no Go toolchain to build the command, target directory not
 #       creatable, kit-state failed: the launcher is installed but the kit state is not).
 #
 # Implementation: the Go module at <repo>/go (go/internal/skillinstall). This wrapper is the stable entry point
