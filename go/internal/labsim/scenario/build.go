@@ -55,11 +55,14 @@ func pointSpec(p *Point) model.PointSpec {
 	return spec
 }
 
-// Initial is the value the point has when the simulator starts: its value, or
-// the low end of a ramp.
+// Initial is the value the point has when the simulator starts: its value, the
+// low end of a ramp, or where a replay starts.
 func (p *Point) Initial() float64 {
 	if p.Behaviour != nil && p.Behaviour.Kind == KindRamp && p.Behaviour.Min != nil {
 		return *p.Behaviour.Min
+	}
+	if p.Behaviour != nil && p.Behaviour.Kind == KindReplay && p.Behaviour.series != nil {
+		return replayGenerator(p.Behaviour).At(0)
 	}
 	return p.Value
 }
@@ -77,6 +80,8 @@ func generator(p *Point) model.Generator {
 		return model.Sine(p.Value, b.Amplitude, millis(b.PeriodMS))
 	case KindRandomWalk:
 		return model.RandomWalk(*b.Seed, p.Value, b.Step, millis(b.IntervalMS), *b.Min, *b.Max)
+	case KindReplay:
+		return replayGenerator(b)
 	}
 	return nil
 }

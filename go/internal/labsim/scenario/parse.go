@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/angeles725/niagara-tools/go/internal/labsim/regmap"
 )
@@ -19,17 +20,22 @@ func Load(path string) (f *File, faults []string, err error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	f, faults = Parse(data)
+	f, faults = parseIn(data, filepath.Dir(path))
 	return f, faults, nil
 }
 
 // Parse reads a scenario, fills the fields it leaves out and validates it. A
 // text that is not a scenario at all (bad JSON, an unknown field, a value of the
-// wrong kind) is one fault and no File.
+// wrong kind) is one fault and no File. The files it names (a replay's CSV) are
+// read from the working directory; Load reads them beside the scenario.
 func Parse(data []byte) (*File, []string) {
+	return parseIn(data, "")
+}
+
+func parseIn(data []byte, dir string) (*File, []string) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
-	f := &File{}
+	f := &File{dir: dir}
 	if err := dec.Decode(f); err != nil {
 		return nil, []string{fmt.Sprintf(msgNotValid, err)}
 	}

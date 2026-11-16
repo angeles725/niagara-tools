@@ -26,6 +26,13 @@ const (
 	KindRamp       = "ramp"
 	KindSine       = "sine"
 	KindRandomWalk = "random_walk"
+	KindReplay     = "replay"
+)
+
+// What a replay does when its series ends.
+const (
+	EndHoldLast = "hold_last"
+	EndLoop     = "loop"
 )
 
 // Limits of the scenario's own fields.
@@ -45,6 +52,8 @@ type File struct {
 	MaxConnections int      `json:"max_connections,omitempty"`
 	IdleTimeoutMS  int      `json:"idle_timeout_ms,omitempty"`
 	Devices        []Device `json:"devices"`
+
+	dir string // where the files a scenario names are read from: the scenario's own directory
 }
 
 // Device is one simulated device, addressed by its Modbus unit id.
@@ -82,6 +91,15 @@ type Behaviour struct {
 	Step       float64  `json:"step,omitempty"`
 	IntervalMS int      `json:"interval_ms,omitempty"`
 	Seed       *uint64  `json:"seed,omitempty"`
+	// The fields of a replay: the CSV file (relative to the scenario), how many
+	// times faster than recorded it plays (1 when left out), what it does at the
+	// end of the series and how far into the series it starts.
+	File          string   `json:"file,omitempty"`
+	Speed         *float64 `json:"speed,omitempty"`
+	End           string   `json:"end,omitempty"`
+	StartOffsetMS int      `json:"start_offset_ms,omitempty"`
+
+	series *Series // the replay file, read by Validate
 }
 
 // Faults are the failures of a device.

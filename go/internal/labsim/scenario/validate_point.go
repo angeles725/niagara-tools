@@ -10,7 +10,7 @@ type span struct {
 }
 
 // validatePoints checks each point of a device and that no two share an address.
-func validatePoints(d *Device, deviceWhere string, out *faults) {
+func validatePoints(d *Device, dir, deviceWhere string, out *faults) {
 	names := map[string]bool{}
 	var placed []span
 	for i := range d.Points {
@@ -37,7 +37,7 @@ func validatePoints(d *Device, deviceWhere string, out *faults) {
 			}
 		}
 		placed = append(placed, s)
-		validateValue(p, where, out)
+		validateValue(p, dir, where, out)
 	}
 }
 
@@ -73,7 +73,7 @@ func validatePlace(p *Point, where string, out *faults) (span, bool) {
 }
 
 // validateValue checks the initial value and the behaviour against the type.
-func validateValue(p *Point, where string, out *faults) {
+func validateValue(p *Point, dir, where string, out *faults) {
 	typ := regmap.Type(p.Type)
 	b := p.Behaviour
 	if b == nil || b.Kind == KindConstant {
@@ -83,14 +83,14 @@ func validateValue(p *Point, where string, out *faults) {
 		return
 	}
 	switch {
-	case b.Kind != KindRamp && b.Kind != KindSine && b.Kind != KindRandomWalk:
+	case b.Kind != KindRamp && b.Kind != KindSine && b.Kind != KindRandomWalk && b.Kind != KindReplay:
 		out.add(where, msgBehaviourKind, b.Kind)
 	case typ == regmap.Bit:
 		out.add(where, msgBehaviourBit, b.Kind)
 	case p.Writable:
 		out.add(where, msgBehaviourWritable, b.Kind)
 	default:
-		if low, high, ok := behaviourRange(p, where, out); ok && (!typ.Fits(low) || !typ.Fits(high)) {
+		if low, high, ok := behaviourRange(p, dir, where, out); ok && (!typ.Fits(low) || !typ.Fits(high)) {
 			out.add(where, msgBehaviourRange, b.Kind, low, high, p.Type)
 		}
 	}
@@ -98,8 +98,11 @@ func validateValue(p *Point, where string, out *faults) {
 
 // behaviourRange checks a behaviour's own parameters and returns the lowest and
 // highest value it can reach.
-func behaviourRange(p *Point, where string, out *faults) (low, high float64, ok bool) {
+func behaviourRange(p *Point, dir, where string, out *faults) (low, high float64, ok bool) {
 	b := p.Behaviour
+	if b.Kind == KindReplay {
+		return replayRange(b, dir, where, out)
+	}
 	before := len(out.list)
 	bounded := b.Min != nil && b.Max != nil && *b.Min < *b.Max
 	switch b.Kind {
