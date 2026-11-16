@@ -434,7 +434,9 @@ Destructive tools use the same pipeline:
   make (a Workbench edit no journal records; a frozen slot its type declares does not
   count). The refusal names the component, each later batch (`batch_id (tool)`,
   newest first) and each extra child or link: roll the later batches back first,
-  newest first, or remove that work by hand. Inverses: remove a created
+  newest first, and remove by hand what no batch made; to drop it all instead,
+  `n4_remove_component` it (its snapshot keeps an inverse). The live check reads the
+  component's direct children only: a hand edit deeper down is not seen. Inverses: remove a created
   component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
   `relinks: {restored, skipped}`). A frozen child (e.g. a writable's `proxyExt`) is

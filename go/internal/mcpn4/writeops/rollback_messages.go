@@ -45,6 +45,6 @@ func laterWorkRefusal(bid, created string, batches, extras []string) string {
 		found = append(found, "it holds child(ren) or link(s) its create did not make: "+strings.Join(extras, ", "))
 	}
 	return "batch " + bid + " created " + created + "; rolling it back removes it with everything under it, and " +
-		strings.Join(found, "; ") + ". Roll back the later batches first (newest first) or remove that work by " +
-		"hand, then retry: refusing"
+		strings.Join(found, "; ") + ". Roll back the later batches first (newest first) and remove by hand what no " +
+		"batch made, then retry; to drop it all instead, n4_remove_component it (its snapshot keeps an inverse): refusing"
 }

@@ -115,5 +115,3 @@ func TestRollbackLaterWorkEdgeStaleTokenAfterLaterWork(t *testing.T) {
 		t.Errorf("stale token executed: %v; Box/Calc present=%v", r.Text, d.node("Box", "Calc") != nil)
 	}
 }
-
-// a hand-added grandchild (two levels below the created component).
