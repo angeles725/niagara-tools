@@ -50,23 +50,24 @@ func TestShellcheckClosureFollowsSourcesBothWaysAndFallsBackOnAnUnresolvedOne(t 
 		"scripts/uses-dynamic.sh": ". \"$ROOT/scripts/dynamic.sh\"\n",
 		"scripts/missing-dep.sh":  ". \"$ROOT/scripts/lib/gone.sh\"\n",
 	}
-	set := []string{"go/go-tool.sh", "scripts/dynamic.sh", "scripts/lib/a.sh", "scripts/missing-dep.sh",
-		"scripts/other.sh", "scripts/run.sh", "scripts/uses-dynamic.sh", "tools/wrap.sh"}
+	// no line of this set is unresolved; the cases that fall back add their broken files
+	set := []string{"go/go-tool.sh", "scripts/lib/a.sh", "scripts/other.sh", "scripts/run.sh", "tools/wrap.sh"}
 	read := func(p string) ([]byte, error) { return []byte(files[p]), nil }
 	for _, c := range []struct {
 		changed []string
+		extra   []string // set members added for this case
 		want    []string
 		reason  string
 	}{
 		// forward: a changed script takes what it sources, transitively
-		{[]string{"scripts/run.sh"}, []string{"go/go-tool.sh", "scripts/lib/a.sh", "scripts/run.sh"}, ""},
+		{[]string{"scripts/run.sh"}, nil, []string{"go/go-tool.sh", "scripts/lib/a.sh", "scripts/run.sh"}, ""},
 		// backward: a changed lib takes its sourcers (and what they source)
-		{[]string{"go/go-tool.sh"}, []string{"go/go-tool.sh", "scripts/lib/a.sh", "scripts/run.sh", "tools/wrap.sh"}, ""},
-		{[]string{"scripts/other.sh"}, []string{"scripts/other.sh"}, ""},
-		{[]string{"scripts/uses-dynamic.sh"}, nil, "scripts/dynamic.sh:1"},
-		{[]string{"scripts/missing-dep.sh"}, nil, "scripts/missing-dep.sh:1"},
+		{[]string{"go/go-tool.sh"}, nil, []string{"go/go-tool.sh", "scripts/lib/a.sh", "scripts/run.sh", "tools/wrap.sh"}, ""},
+		{[]string{"scripts/other.sh"}, nil, []string{"scripts/other.sh"}, ""},
+		{[]string{"scripts/uses-dynamic.sh"}, []string{"scripts/dynamic.sh", "scripts/uses-dynamic.sh"}, nil, "scripts/dynamic.sh:1"},
+		{[]string{"scripts/missing-dep.sh"}, []string{"scripts/missing-dep.sh"}, nil, "scripts/missing-dep.sh:1"},
 	} {
-		got, reason, err := shellcheckClosure(c.changed, set, read)
+		got, reason, err := shellcheckClosure(c.changed, append(append([]string{}, set...), c.extra...), read)
 		if err != nil || reason != c.reason || (c.reason == "" && !reflect.DeepEqual(got, c.want)) {
 			t.Errorf("%v: closure %v reason %q err %v, want %v reason %q", c.changed, got, reason, err, c.want, c.reason)
 		}
