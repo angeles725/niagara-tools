@@ -63,6 +63,7 @@ func (c *checker) check(path string, station bool, a archive) {
 		row(checkStation, notAStation, m.root)
 	}
 	c.deps(path, m.deps)
+	c.uses(path, m.deps, a.uses)
 }
 
 // deps adds the ntpl-deps row of one manifest: the dependencies the module does not declare and, with an

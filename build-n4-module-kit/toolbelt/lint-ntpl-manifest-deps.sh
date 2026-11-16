@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# lint-ntpl-manifest-deps.sh — FAILs a template archive (.ntpl) a module ships without template.bog or
-# template-manifest.xml, with a manifest that is no well-formed template manifest, or with a <dependency> that
-# neither the module's build declares nor the Niagara installation ships.
+# lint-ntpl-manifest-deps.sh — FAILs a template archive (.ntpl, or .napl application template) a module ships
+# without template.bog or template-manifest.xml, with a manifest that is no well-formed template manifest, with
+# a <dependency> that neither the module's build declares nor the Niagara installation ships, or whose bog or
+# Px files use a module no <dependency> lists and the installation does not ship.
 #
 # A .ntpl is a zip holding template.bog and template-manifest.xml; the manifest's <dependencies> name the
 # modules the template needs, and an application-template install hard-fails on a missing one
-# (types/logic-authoring.md § Shipping a template module). For every *.ntpl under the module root (the
-# extension in any letter case; a part's build/ and test/ outputs, dot directories and *-worktrees checkouts
+# (types/logic-authoring.md § Shipping a template module). A .napl application template is the same zip. For
+# every *.ntpl and *.napl under the module root (the extension in any letter case; a part's build/ and test/ outputs, dot directories and *-worktrees checkouts
 # are not read):
 #   ntpl-entries   the archive lacks template.bog or template-manifest.xml (matched by their whole name, at
 #                  the top of the archive), holds one of them twice, or is refused whole: not a zip, over
@@ -23,6 +24,12 @@
 #                  Names are listed once, sorted.
 #   ntpl-station   a template under a newStations/ directory (the station templates Workbench lists,
 #                  types/distribution.md § 8) whose manifest root lacks isStation="true".
+#   ntpl-uses      a module that template.bog (each m="<alias>=<module>", each module://<module> ORD) or a
+#                  *.px entry (each <import><module name>, each module:// ORD) uses, that no <dependency>
+#                  names (a part counts: control-rt lists control) and the installation does not ship; baja
+#                  and the module's own parts are exempt. One row per entry, names sorted; a bog or Px entry
+#                  that is not well-formed XML, or inflates past 32 MiB, is a FAIL row naming it.
+#                  [ev: retro ntpl-alias-napl-k4 Δ1]
 #
 # Stock modules: a station template lists every module its station uses, most of them shipped by every
 # Niagara installation and declared by no build file. --niagara-home <dir> (or NIAGARA_HOME in the
@@ -43,8 +50,8 @@
 # regular file (a FIFO), are exit 3 (they could not be read). "Nothing to check" is never printed over
 # something that was skipped. [ev: retro ntpl-lint-walk-k-rows Δ1] [ev: retro ntpl-lint-walk-k-rows Δ2] A path holding a control character, a double quote or a
 # backslash is printed in double quotes with C escapes, so a row is always one line.
-# A module root that ships no .ntpl is one PASS row and exit 0. Not checked: whether template.bog uses a
-# module the manifest does not list.
+# A module root that ships no .ntpl is one PASS row and exit 0. Not read: a template module .jar, and the
+# guide's template.manifest.xml spelling.
 # [ev: retro gate-followups-and-template-lints Δ7] [ev: retro gate-followups-and-template-lints Δ8]
 #
 # Implementation: rule package go/internal/lint/rules/ntplmanifest on the shared engine go/internal/lint
@@ -53,7 +60,8 @@
 # Needs `go` on PATH to build (exit 3 otherwise).
 #
 # Usage:  lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>
-#   Row:  FAIL  ntpl-entries|ntpl-manifest|ntpl-deps|ntpl-station  <file.ntpl>: <reason>
+#   Row:  FAIL  ntpl-entries|ntpl-manifest|ntpl-deps|ntpl-station|ntpl-uses  <file.ntpl>: <reason>
+#   Row:  WARN  ntpl-uses  <file.ntpl>: <entry> uses <modules>: ...   (no installation given)
 #   Row:  WARN  ntpl-deps  <file.ntpl>: <reason>            (no installation given)
 #   Row:  WARN  ntpl-link  <link>: a symlink to <target>, outside the module root -- not followed, ...
 #   Row:  WARN  lint-ntpl-manifest-deps  <module-root>: the installation's module list is not known, ...

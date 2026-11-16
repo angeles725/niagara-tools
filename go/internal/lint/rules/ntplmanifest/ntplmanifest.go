@@ -67,7 +67,7 @@ func (r rule) CheckRoot(root string) ([]lint.Finding, error) {
 	if err != nil {
 		return nil, err
 	}
-	templates, outside, walkErr := lint.WalkFollow(root, lint.Selection{Names: []string{templateNames}, PrunePaths: lint.PartOutputs()})
+	templates, outside, walkErr := lint.WalkFollow(root, lint.Selection{Names: templateNames, PrunePaths: lint.PartOutputs()})
 	mod, err := declaredIn(root)
 	if err == nil && walkErr != nil {
 		// Mutation: NTPL-walk -- dropping this error prints the rows of the templates that were found and exits as if every directory had been read

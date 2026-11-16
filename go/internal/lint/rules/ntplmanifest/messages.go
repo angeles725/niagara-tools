@@ -10,6 +10,7 @@ const (
 	stationDir    = "newStations"
 	stationAttr   = "isStation"
 	rootElement   = "template" // the manifest's root element
+	pxSuffix      = ".px"      // a Px file inside the archive, the extension in any letter case
 )
 
 // The bounds of one archive read: a .ntpl is input nobody vouches for.
@@ -17,6 +18,7 @@ const (
 	maxArchive  = 32 << 20 // bytes of the .ntpl on disk
 	maxEntries  = 10000    // entries in its directory
 	maxManifest = 4 << 20  // inflated bytes of template-manifest.xml
+	maxUsesRead = 32 << 20 // inflated bytes of template.bog and of each *.px entry (the ntpl-uses read)
 )
 
 // The sub-checks, as the check column prints them.
@@ -26,6 +28,7 @@ const (
 	checkDeps     = "ntpl-deps"
 	checkStation  = "ntpl-station"
 	checkLink     = "ntpl-link"
+	checkUses     = "ntpl-uses"
 )
 
 // The command line and the environment.
@@ -37,8 +40,10 @@ const (
 	jarSuffix  = ".jar"
 )
 
-// templateNames selects a template archive by its name: the extension in any letter case.
-const templateNames = "*.[nN][tT][pP][lL]"
+// templateNames select a template archive by its name: a station or component template (.ntpl) and an
+// application template (.napl, the same zip: types/logic-authoring.md § Shipping a template module), the
+// extension in any letter case.
+var templateNames = []string{"*.[nN][tT][pP][lL]", "*.[nN][aA][pP][lL]"}
 
 // Every message a row carries (the text after "<path>: ").
 const (
@@ -67,6 +72,13 @@ const (
 
 	// ntpl-link: WARN, a symlink whose real target is outside the module root (%s is that target)
 	linkOutside = "a symlink to %s, outside the module root -- not followed, nothing behind it is checked"
+
+	// ntpl-uses: FAIL with the installation's module list, WARN without it (%s is the entry, then the modules)
+	usesMissing    = "%s uses %s: no <dependency> of " + manifestEntry + " names them, and the installation %s does not ship them"
+	usesMissingAny = "%s uses %s: no <dependency> of " + manifestEntry + " names them"
+	entryBadXML    = "%s is not well-formed XML: %s"
+	entryTooLarge  = "%s inflates past %d bytes -- not read"
+	entryUnread    = "cannot read %s: %v"
 
 	notAStation  = "a template under " + stationDir + "/ is a station template, but its manifest root <%s> lacks " + stationAttr + "=\"true\""
 	scanFailure  = "cannot scan %s: %v"

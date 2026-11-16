@@ -13,6 +13,7 @@ import (
 type module struct {
 	files []string        // every *.gradle.kts read (settings.gradle.kts is not a build file)
 	names map[string]bool // each module a build file declares, and the module's own parts
+	parts map[string]bool // the module's own parts alone (the directory and stem of each build file)
 	known bool            // every build file under the root was read: names is the whole declaration
 	// outside are the links the build-file walk did not follow: their target is outside the module root
 	outside []string
@@ -25,7 +26,7 @@ type module struct {
 // file that cannot be read or tokenized is an error: what the module declares is then not known, and no
 // template's dependencies are compared against the part of it that was read.
 func declaredIn(root string) (module, error) {
-	m := module{names: map[string]bool{}}
+	m := module{names: map[string]bool{}, parts: map[string]bool{}}
 	files, outside, walkErr := lint.WalkFollow(root, lint.Selection{Names: []string{"*.gradle.kts"}, Except: []string{settingsFile}, PrunePaths: lint.PartOutputs()})
 	m.outside = outside
 	for _, path := range files {
@@ -41,8 +42,9 @@ func declaredIn(root string) (module, error) {
 			m.names[name] = true
 		}
 		m.names[lint.Basename(lint.Dirname(path))] = true
+		m.parts[lint.Basename(lint.Dirname(path))] = true
 		if stem := strings.TrimSuffix(lint.Basename(path), ".gradle.kts"); stem != "build" {
-			m.names[stem] = true
+			m.names[stem], m.parts[stem] = true, true
 		}
 		m.files = append(m.files, path)
 	}

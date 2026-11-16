@@ -15,6 +15,14 @@ type archive struct {
 	manifest []byte
 	entries  []string // ntpl-entries messages
 	unread   string   // an ntpl-manifest message, "" when manifest holds the bytes or the entry is absent
+	uses     []member // template.bog (when there is exactly one) and every *.px entry, in archive order
+}
+
+// member is an entry the ntpl-uses check reads: its bytes, or why they could not be read.
+type member struct {
+	name   string
+	data   []byte
+	unread string
 }
 
 // readArchive opens path as a zip within the bounds of messages.go. An archive that is refused whole (too
@@ -41,7 +49,7 @@ func readArchive(path string) (archive, error) {
 	if len(zr.File) > maxEntries {
 		return refused(tooManyNames, len(zr.File), maxEntries), nil
 	}
-	var bogs, manifests []*zip.File
+	var bogs, manifests, pxs []*zip.File
 	for _, f := range zr.File {
 		switch {
 		case unsafe(f.Name):
@@ -51,6 +59,8 @@ func readArchive(path string) (archive, error) {
 			bogs = append(bogs, f)
 		case f.Name == manifestEntry:
 			manifests = append(manifests, f)
+		case strings.HasSuffix(strings.ToLower(f.Name), pxSuffix):
+			pxs = append(pxs, f)
 		}
 	}
 	var a archive
@@ -58,6 +68,13 @@ func readArchive(path string) (archive, error) {
 	a.need(manifestEntry, len(manifests))
 	if len(manifests) == 1 {
 		a.manifest, a.unread = inflate(manifests[0])
+	}
+	if len(bogs) == 1 {
+		pxs = append([]*zip.File{bogs[0]}, pxs...)
+	}
+	for _, f := range pxs {
+		data, why := inflateEntry(f)
+		a.uses = append(a.uses, member{f.Name, data, why})
 	}
 	return a, nil
 }
@@ -94,6 +111,27 @@ func inflate(f *zip.File) (data []byte, why string) {
 		return nil, fmt.Sprintf(manifestUnread, err)
 	case len(data) > maxManifest:
 		return nil, fmt.Sprintf(manifestTooLarge, maxManifest)
+	}
+	return data, ""
+}
+
+// inflateEntry reads an entry the ntpl-uses check needs, up to maxUsesRead bytes; why is its ntpl-uses
+// message when it could not be read whole.
+func inflateEntry(f *zip.File) (data []byte, why string) {
+	if f.UncompressedSize64 > maxUsesRead {
+		return nil, fmt.Sprintf(entryTooLarge, f.Name, maxUsesRead)
+	}
+	rc, err := f.Open()
+	if err != nil {
+		return nil, fmt.Sprintf(entryUnread, f.Name, err)
+	}
+	defer rc.Close()
+	data, err = io.ReadAll(io.LimitReader(rc, maxUsesRead+1))
+	switch {
+	case err != nil:
+		return nil, fmt.Sprintf(entryUnread, f.Name, err)
+	case len(data) > maxUsesRead:
+		return nil, fmt.Sprintf(entryTooLarge, f.Name, maxUsesRead)
 	}
 	return data, ""
 }
