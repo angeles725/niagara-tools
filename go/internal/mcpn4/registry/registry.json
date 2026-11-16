@@ -946,7 +946,7 @@
   },
   {
    "name": "n4_add_history",
-   "description": "Add one history extension per point, already configured: historyName (baja:Format pattern), enabled and, for mode interval (the default), interval (ms), in one batch under one confirmation token (1 to 50 points). Mode cov adds a change-of-value extension instead, which records each change of the point value and has no interval. The extension type follows the point type read from the station (numeric, boolean, enum or string control point: NumericInterval / NumericCov, BooleanInterval / BooleanCov, EnumInterval / EnumCov, StringInterval / StringCov), and so does its default slot name. Refuses a point that is not one of those, an ext_type that does not fit the point, a point that already has a child named ext_name and, when the pattern only uses %name%/%parent...name% tokens, a history id (/<station>/<history name>) that would repeat in the batch or that an extension on the station already holds (one BQL read). The capacity argument sets the history capacity in records (Roll when full) or unlimited, by a set op on historyConfig/capacity right after each add in the same batch; without it the extension default stays (500 records). The plan notes how long the capacity lasts at the interval. The read-back checks the type, the configured slots, the capacity when given, the history id and that the extension is not in fault. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Add one history extension per point, already configured: historyName (baja:Format pattern), enabled and, for mode interval (the default), interval (ms), in one batch under one confirmation token (1 to 50 points). Mode cov adds a change-of-value extension instead, which records each change of the point value and has no interval. The extension type follows the point type read from the station (numeric, boolean, enum or string control point: NumericInterval / NumericCov, BooleanInterval / BooleanCov, EnumInterval / EnumCov, StringInterval / StringCov), and so does its default slot name. Refuses a point that is not one of those, an ext_type that does not fit the point, a point that already has a child named ext_name and, when the pattern only uses %name%/%parent...name% tokens, a history id (/<station>/<history name>) that would repeat in the batch or that an extension on the station already holds (one BQL read). The capacity argument sets the history capacity in records or unlimited, and full_policy (roll, the default, or stop) what happens when it is reached, each by a set op on historyConfig right after each add in the same batch; without them the extension defaults stay (500 records, roll). change_tolerance sets changeTolerance of a numeric change-of-value extension in its add body, and is refused for mode interval or a point that is not numeric. The plan notes how long the capacity lasts at the interval. The read-back checks the type, the configured slots, the capacity, full policy and change tolerance when given, the history id and that the extension is not in fault. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -989,6 +989,19 @@
        }
       ],
       "description": "History capacity: a number of records (the oldest roll off when full; 20160 is 7 days at 30 s) or \"unlimited\". Default: the extension default, 500 records"
+     },
+     "full_policy": {
+      "type": "string",
+      "enum": [
+       "roll",
+       "stop"
+      ],
+      "description": "What the history does when the capacity is reached: roll drops the oldest record, stop stops recording. Default: the extension default, roll"
+     },
+     "change_tolerance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Mode cov on numeric points only: the smallest change of the point value that records a new record, in the point's units (changeTolerance of NumericCov). Default: the extension default, 0"
      },
      "ext_name": {
       "type": "string",

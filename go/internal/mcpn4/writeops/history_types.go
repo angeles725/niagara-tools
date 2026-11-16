@@ -101,5 +101,5 @@ func (s historySpec) forPoint(k *pointKinds, ord string, pointType any) (history
 	if s.name == "" {
 		s.name = name
 	}
-	return s, nil
+	return s, checkTolerance(s, kind, spec)
 }
