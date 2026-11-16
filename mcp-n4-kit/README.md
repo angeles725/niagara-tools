@@ -615,6 +615,12 @@ on 1 to 50 components (at most 200 ops) under the usual dry run, token, write sc
   is set (inverse: the old value); a type change is refused (remove, then add); an equal value is
   skipped with a note. A removed tag's inverse re-adds it with its type, value and flags.
 - The read-back reloads each target; a value the station normalized is listed under `coerced`.
+- Refused at plan, before any write: a tag, group or relation named twice in one list, or both
+  added and removed; a group or relation already on the target; a value type other than
+  `baja:Marker`, `Boolean`, `Double`, `Float`, `Integer`, `Long`, `String`, `DynamicEnum`
+  (`ordinal` or `ordinal@range`), `Format` and `RelTime`, or a value that type does not take.
+- A removed relation's inverse re-adds the fields it stored (its endpoint ORD as written).
+- In the destructive class: a client such as `n4call` needs `--allow-destructive` to execute it.
 - `add_groups` / `remove_groups: [id]` apply or remove a tag group a dictionary defines: an `r?`
   relation (`n:tagGroup` to `slot:/Services/TagDictionaryService/<dict>/tagGroupDefinitions/<g>`,
   flag `r`); the read-back lists the implied tags and any group tag missing from them.
@@ -631,8 +637,8 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, `n4_set_tags`, plus the destructive class
-(`destructiveHint: true`) `n4_remove_component`, `n4_rollback`,
+`n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
+(`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station` and `n4_ack_alarm`. Example:
 
 ```
