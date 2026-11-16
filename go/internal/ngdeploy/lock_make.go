@@ -2,9 +2,9 @@ package ngdeploy
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
@@ -15,12 +15,13 @@ var hardLink = os.Link
 // makeLock creates path holding content, complete from the moment path exists, or fails with fs.ErrExist
 // when path is there: the content goes into a temporary file beside it, which is then hard-linked to path
 // (a link, like O_EXCL, never replaces a file). A run that loses the race reads a whole lock, never an
-// empty one. On a file system without hard links the lock is made in two steps (makeLockInTwoSteps), and
-// the run says so.
-func (d *deploy) makeLock(path, content string) error {
+// empty one. When the link fails for another reason than a lock that is there (a file system without hard
+// links, EMLINK and the like), the lock is made in two steps (makeLockInTwoSteps) and inTwoSteps says so:
+// the run prints why (noticeLockInTwoSteps) once it holds the lock.
+func (d *deploy) makeLock(path, content string) (inTwoSteps error, err error) {
 	temp, err := os.CreateTemp(filepath.Dir(path), lockName+".*"+lockTempSuffix)
 	if err != nil {
-		return makeLockInTwoSteps(path, content) // what O_EXCL says: the lock is there, or the directory may not be written
+		return nil, makeLockInTwoSteps(path, content) // what O_EXCL says: the lock is there, or the directory may not be written
 	}
 	err = temp.Chmod(0o644) // the mode of the lock, which is this file
 	if err == nil {
@@ -35,17 +36,17 @@ func (d *deploy) makeLock(path, content string) error {
 	if removing := os.Remove(temp.Name()); removing != nil {
 		d.warn(warnLockTempLeft, temp.Name(), strerror.Text(removing))
 	}
-	if noHardLinks(err) {
-		d.warn(noticeLockInTwoSteps, filepath.Dir(path), strerror.Text(err))
-		return makeLockInTwoSteps(path, content)
+	if linkFailed(err) {
+		return err, makeLockInTwoSteps(path, content)
 	}
-	return err
+	return nil, err
 }
 
-// noHardLinks reports whether a link failed because the file system has none (Linux says EPERM on vfat).
-func noHardLinks(err error) bool {
+// linkFailed reports whether the link failed for another reason than a lock that is there: a file system
+// without hard links (Linux says EPERM on vfat), too many links, and the like.
+func linkFailed(err error) bool {
 	var link *os.LinkError
-	return errors.As(err, &link) && (errors.Is(err, errors.ErrUnsupported) || errors.Is(err, syscall.EPERM))
+	return errors.As(err, &link) && !errors.Is(err, fs.ErrExist)
 }
 
 // makeLockInTwoSteps creates path with O_CREATE|O_EXCL and then writes content: a run that starts in the
