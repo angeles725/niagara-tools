@@ -12,8 +12,10 @@ var dependencyCalls = map[string]bool{"api": true, "nre": true, "implementation"
 // DeclaredDeps are the module names a gradle.kts token stream declares, in script order: every api, nre or
 // implementation call whose first argument is a ":X" string literal or project(":X"). The script is read
 // through ktssrc, so comments and string contents are no code, and a call named xapi() or a method call
-// (x.api(...)) declares nothing. It is the reader verify-module's phantom-dep check uses
-// (go/internal/verifymodule declaredDeps holds the same rule until it calls this one).
+// (x.api(...)) declares nothing. It is the one reader of that rule: verify-module's phantom-dep check
+// (go/internal/verifymodule) and lint-ntpl-manifest-deps both call it. The bash verify-module grepped the text
+// a line at a time, so a call in a comment or a string, or one named xapi(), declared X too (declared
+// difference, truth-kts-phantom).
 func DeclaredDeps(toks []ktssrc.Token) []string {
 	var out []string
 	at := func(i int, k ktssrc.Kind, text string) bool {
