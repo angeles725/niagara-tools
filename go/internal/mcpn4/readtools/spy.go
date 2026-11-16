@@ -34,10 +34,10 @@ const (
 	cutBytes            = "max_bytes"
 )
 
-// spyFetch is one spy page read: the reply so far (path, status, http_status, elapsed_ms and,
+// spyFetch is one spy page read within lim (its deadline is set here): the reply so far (path, status, http_status, elapsed_ms and,
 // for a refused read, a hint) and, when status is ok, the parsed page. A 403 or 404, and a page
 // not parsed within timeout seconds, is a typed status, never a latch; an unsafe path fails before any request.
-func (t *Tools) spyFetch(path string, maxRows, maxBytes, timeout int) (*pyjson.Object, *spy.Page, error) {
+func (t *Tools) spyFetch(path string, lim spy.Limits, maxBytes, timeout int) (*pyjson.Object, *spy.Page, error) {
 	clean, err := spy.CleanPath(path)
 	if err != nil {
 		return nil, nil, toolError("%s", err.Error())
@@ -71,7 +71,8 @@ func (t *Tools) spyFetch(path string, maxRows, maxBytes, timeout int) (*pyjson.O
 	}
 	text, _ := pyjson.DecodeUTF8(got.Body, true)
 	// the parse gets the call's timeout of its own, so a slow page is a typed status, not a hang
-	page, err := spy.Parse(text, spy.Limits{MaxRows: maxRows, Deadline: time.Now().Add(time.Duration(timeout) * time.Second)})
+	lim.Deadline = time.Now().Add(time.Duration(timeout) * time.Second)
+	page, err := spy.Parse(text, lim)
 	if err != nil {
 		out.Set("status", spyParseTimeout)
 		out.Set("hint", fmt.Sprintf(spyParseTimeoutHint, timeout))
@@ -91,7 +92,7 @@ func (t *Tools) spyFetch(path string, maxRows, maxBytes, timeout int) (*pyjson.O
 // SpyPage is n4_spy_page: the page at path as its title, tables, child links, action names and
 // text, with the caps that cut it.
 func (t *Tools) SpyPage(args *pyjson.Object) (*pyjson.Object, error) {
-	out, page, err := t.spyFetch(strArg(args, "path", ""), intArg(args, "max_rows", spy.DefaultMaxRows),
+	out, page, err := t.spyFetch(strArg(args, "path", ""), spy.Limits{MaxRows: intArg(args, "max_rows", spy.DefaultMaxRows)},
 		intArg(args, "max_bytes", box.MaxSpyBytes), intArg(args, "timeout_s", 60))
 	if err != nil {
 		return nil, err

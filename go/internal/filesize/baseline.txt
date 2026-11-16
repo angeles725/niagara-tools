@@ -70,7 +70,6 @@
 208 internal/citeresolve/command.go
 207 internal/retroindex/retroindex.go
 206 internal/citeresolve/sources.go
-205 internal/mcpn4/cli/run.go
 205 internal/mcpn4/livesmoke/client.go
 203 internal/lint/rules/wbthreading/wbthreading.go
 202 internal/lint/rules/size/size.go

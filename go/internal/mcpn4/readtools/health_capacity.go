@@ -22,7 +22,7 @@ type capacityResult struct {
 // An unreadable page or one without the table is never a count, and a page that was cut is
 // never read as whole: err is only an error that fails the whole call.
 func (t *Tools) healthCapacity(timeout int, live map[string]int) (capacityResult, error) {
-	reply, page, err := t.spyFetch(capacityPage, capacityMaxRows, box.MaxSpyBytes, timeout)
+	reply, page, err := t.spyFetch(capacityPage, spy.Limits{MaxRows: capacityMaxRows}, box.MaxSpyBytes, timeout)
 	if err != nil {
 		section, fatal := t.sectionError(err)
 		if fatal != nil {

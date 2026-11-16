@@ -1,0 +1,57 @@
+<!DOCTYPE html><html><head><link rel='stylesheet' href='/module/web/rc/spy/spy.css' type='text/css'/></head><body><div class='spy-container'><div class='spy-nav-container'><table width='100%' class='spy-nav'><tr><td class='spy-nav-index'><a href='/ord?spy:/'>Index</a> | <a href='/ord?spy:/sysManagers'>sysManagers</a> | <a href='/ord?spy:/sysManagers/licenseManager'>licenseManager</a></td><td class='spy-nav-station'>LabStation [/192.0.2.1]</tr></table></div><hr><h1>Niagara Licensing</h1><pre>
+HostId=Lab-0000-0000-0000-0000
+
+Certificates
+  VendorA.certificate [expires: never] {valid}
+  VendorB.certificate [expires: never] {valid}
+  Tridium.certificate [expires: never] {valid}
+
+Licenses (perpetual)
+  VendorA.license [expires: 2027-03-31] {valid}
+  VendorB.license [expires: 2027-03-31] {valid}
+  Lab.license [expires: 2027-03-31] {valid}
+
+Features
+  vendora:bacnetutil [expires: 2027-03-31]
+  vendora:driver [expires: 2027-03-31]
+    device.limit=none
+  vendorb:tool [expires: 2027-03-31]
+    zone.limit=none
+  tridium:about [expires: 2027-03-31]
+    owner=Lab Owner
+    project=Lab Project
+  tridium:bacnet [expires: 2027-03-31]
+    schedule.limit=none
+    point.limit=none
+    history.limit=none
+    device.limit=none
+    export=true
+  tridium:brand [expires: 2027-03-31]
+    accept.station.out=*
+    accept.wb.out=*
+    accept.wb.in=*
+    brandId=LabBrand
+    accept.station.in=*
+  tridium:cloudlink [expires: 2027-03-31]
+    sma.exempt=true
+  tridium:http [expires: 2027-03-31]
+    sma.exempt=true
+  tridium:jsontoolkit [expires: 2027-03-31]
+    import=true
+    export=true
+    sma.exempt=true
+  tridium:station [expires: 2027-03-31]
+    resource.limit=none
+  tridium:web [expires: 2027-03-31]
+    ui=true
+    ui.wb=true
+  tridium:workbench [expires: 2027-03-31]
+    admin=true
+
+Brand
+  brandId = LabBrand
+  accept.station.in = *
+  accept.station.out = *
+  accept.wb.in = *
+  accept.wb.out = *
+</pre></div></body></html>

@@ -15,6 +15,7 @@ import (
 type Config struct {
 	AllowWrites, AllowHTTP                bool
 	WriteScopes, Stations, StationHomes   []string
+	NiagaraHomes                          []string
 	InsecureTLS, AllowTierB, AllowTierC   []string
 	StateDir, CredentialEnv, ProgressFile string
 	TokenTTL, MaxWrites, AuthCooldown     int64
@@ -57,6 +58,7 @@ var options = []option{
 	{names: []string{"--http-timeout"}, set: httpTimeout},
 	{names: []string{"--station"}, set: appendTo(func(c *Config) *[]string { return &c.Stations })},
 	{names: []string{"--station-home"}, set: appendTo(func(c *Config) *[]string { return &c.StationHomes })},
+	{names: []string{"--niagara-home"}, set: appendTo(func(c *Config) *[]string { return &c.NiagaraHomes })},
 	{names: []string{"--credential-env"}, set: func(c *Config, v string) error { c.CredentialEnv = v; return nil }},
 	{names: []string{"--insecure-tls"}, set: appendTo(func(c *Config) *[]string { return &c.InsecureTLS })},
 	{names: []string{"--allow-tier-b"}, set: appendTo(func(c *Config) *[]string { return &c.AllowTierB })},

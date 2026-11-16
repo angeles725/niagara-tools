@@ -11,6 +11,7 @@ import (
 type Options struct {
 	Stations      map[string]string // --station NAME=URL, sorted by name
 	StationHomes  map[string]string // --station-home NAME=DIR, sorted by name
+	NiagaraHomes  map[string]string // --niagara-home NAME=DIR, sorted by name
 	AllowHTTP     bool              // --allow-http-for-tests
 	AllowWrites   bool              // --allow-writes
 	StateDir      string            // --state-dir
@@ -63,6 +64,7 @@ func (o Options) Argv() []string {
 	repeat("--allow-tier-c", o.AllowTierC)
 	pairs("--station", o.Stations)
 	pairs("--station-home", o.StationHomes)
+	pairs("--niagara-home", o.NiagaraHomes)
 	return append(args, o.Extra...)
 }
 

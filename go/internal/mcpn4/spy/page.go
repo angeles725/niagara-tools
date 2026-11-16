@@ -47,9 +47,11 @@ type parser struct {
 }
 
 // Limits bound one parse: MaxRows table rows are kept, all tables together (0: DefaultMaxRows),
-// and the parse gives up with ErrDeadline once Deadline has passed (zero: no deadline).
+// MaxText runes of the text outside tables (0: MaxTextRunes), and the parse gives up with
+// ErrDeadline once Deadline has passed (zero: no deadline).
 type Limits struct {
 	MaxRows  int
+	MaxText  int
 	Deadline time.Time
 }
 
@@ -89,7 +91,11 @@ func Parse(body string, lim Limits) (*Page, error) {
 	if n := len(p.crumbs); n > 0 {
 		p.page.Title = p.crumbs[n-1]
 	}
-	text, cut := clip(lines(p.text.String()), MaxTextRunes)
+	maxText := lim.MaxText
+	if maxText <= 0 {
+		maxText = MaxTextRunes
+	}
+	text, cut := clip(lines(p.text.String()), maxText)
 	p.page.Text = text
 	if cut {
 		p.cut(CutText)

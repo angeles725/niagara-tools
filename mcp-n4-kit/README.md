@@ -136,6 +136,10 @@ Flags:
   a reconnect does not reset it.
 - `--station-home NAME=PATH` (repeatable): directory holding the `config.bog` of configured
   station NAME; lets `n4_save_station` prove persistence (see Destructive tools).
+- `--niagara-home NAME=PATH` (repeatable): Niagara installation directory of configured station
+  NAME (the one holding `security/licenses`), when it is reachable from the machine that runs the
+  server; lets `n4_license_info` add when each licence was generated and its version. Only the
+  attributes of the root element of each `*.license` file are read.
 - `--allow-tier-b NAME` (repeatable): let writes run on that configured station although
   its version is tier B (4.15, 4.3). Only after a PoC matched that build.
 - `--allow-tier-c NAME` (repeatable): the same for tier C (any other or undetected
@@ -196,7 +200,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
-`n4_read_history`.
+`n4_read_history`, `n4_license_info`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -288,7 +292,18 @@ unreachable (the user may not read spy pages) or holds no such table: it is neve
 count. It is never silently partial either: the page is read with a row cap above what its byte
 cap can hold, `capacity_truncated: true` and the note say when the page was cut before it was
 read whole (resources may be missing; a page cut before the table is "unknown", not "no table"),
-and rows of the table that do not match its header are counted in the note. A section that fails is `{"error": "..."}` and the others still answer; only an
+and rows of the table that do not match its header are counted in the note. `license` is the
+licence manager page in short (`n4_license_info` has the whole of it): `licenses` (`name`,
+`expires`, `valid`, with `state` when not valid, and `days_left` counted from the station's own
+date, the day of `system.systemTime`; up to 100, `licenses_count` when the page has more),
+`nearest_expiry` (the earliest dated expiry among licences, certificates and features),
+`expired` (what is already past) and a `warning` when the nearest expiry is 60 days away or
+fewer or already past, when a licence is not reported valid, or when an expiry could not be read
+as a date; `note` says what the reading could not do (an unknown station date, which leaves
+`days_left` and `expired` `null`; a cut page, a missing section, unread lines). A licence page
+that was not read is `{"error": "..."}` saying which case it is (the user may not read spy pages,
+the station has no such page, the answer is not HTML or not a licence page), never an empty
+licence; a refused login on it fails the call like on any section. A section that fails is `{"error": "..."}` and the others still answer; only an
 authentication failure fails the call.
 Spy pages (the station's diagnostics tree, the pages of the Workbench Spy view):
 `n4_spy_page(path="", max_rows=500, max_bytes=2097152)` sends one `GET /ord?spy:/<path>` with
@@ -308,6 +323,56 @@ across all tables), `tables` (200), `row_cells` (100 per row), `links` (500), `a
 `name` (a link name or title over 200 characters), `cell`, `text`. The caps bound the reply as a
 whole, whatever the page holds. Spy pages are diagnostics, not an API: their layout differs between
 Niagara versions (this reader was measured on 4.15), so read the tables as found.
+The licence in one call: `n4_license_info(feature=None, max_features=50)` reads the station's
+licence manager (the spy page `sysManagers/licenseManager`, one GET, read-only) and answers
+`host_id`; `certificates` (`name`, `expires`, `valid`); `licenses` (`name`, `expires`, `valid`,
+`days_left`) with `license_kind`, the qualifier the page gives them (for example `perpetual`);
+`brand`, `owner` and `project` (the `tridium:brand` and `tridium:about` features);
+`nearest_expiry`, the earliest dated expiry among licences, certificates and features (`kind`,
+`name`, `expires`, `days_left`, and `same_date`: how many share that date); `expired`, what is
+already past (up to 50, `expired_count` when there are more); and `features` (`count`, `matched`,
+and `list` with each feature's `name`, `expires` and `attributes` by key, capped by `max_features`
+with a `truncated` marker). `feature` lists one feature by its exact `vendor:name`
+(`tridium:bacnet`), or every feature whose name holds the text. `valid` is true only when the page
+writes the state `valid`; any other state is `valid: false` with `state`, the text as written.
+`expires` is `never`, a date (`YYYY-MM-DD`) or, when the page writes anything else, that text as
+written with `days_left: null`: such entries are counted in `note` and are in neither
+`nearest_expiry` nor `expired`. Every `days_left` counts calendar days from the station's own date
+(`station_date`, the day of the SystemService `systemTime`, which must be a whole timestamp), never
+from the machine that runs the server: 0 on the expiry day, negative once past, `null` for `never`
+or when the station date could not be read (`station_date_note` says why, and `expired` is `null`:
+unknown, not none). `maintenance` is what the licence states of the software maintenance agreement
+(SMA): `sma_attributes`, one entry per feature that has `sma.*` attributes (`feature`, and its
+`attributes` by key), up to 50 with `sma_feature_count`; `sma_exempt_features`, the names of the
+features whose `sma.exempt` is true, each once, up to 50 with `sma_exempt_count` (the exemption is
+per feature: that one feature needs no active agreement, and it says nothing of the licence as a
+whole); `sma_truncated` when a list was cut; `feature` (a feature named after maintenance, when
+the licence has one); and `expires`, the end date of the agreement, which is `null` unless a local
+licence file states it: the page carries no such date (the vendor documentation shows it as the
+`maintenanceExpiration` attribute of a licence file). The page does not carry when a licence was
+generated nor its version either. Those three facts are only available where the installation's
+files are reachable: with `--niagara-home NAME=PATH` for the connected station, each licence adds
+`generated` and `version`, and `maintenance` adds `expires`, `days_left` and `license` (the file
+that states the earliest `maintenanceExpiration`), read from the root element of the file of that
+licence's name under `security/licenses` and nothing else of it (never its features or its
+signature). Only a regular file of exactly the licence's name is opened, and a local file that
+matches no licence of the page is neither read nor named. Without the option the fields are
+omitted and `generated_note` says why; with it, `generated_note` says per licence why its facts
+are missing: no file of that name, a link or another non-regular file, a name that differs in
+letter case, a file over 1 MiB or not readable as a licence, one issued for another host than the
+page's `host_id`, or past the 100 files read in one call.
+`status` is `ok`, `not_recognized` (the page answered but is no licence manager page) or a spy
+status (`forbidden`, `not_found`, `not_html`, `parse_timeout`): only `ok` carries the licence
+fields, so an unreachable page is never an empty licence. A line of the page is read whole or not
+at all: `note` counts the lines that matched no known pattern (two entries on one line, a name
+with a bracket or a brace, a section heading out of its place) and names a page that was cut, a
+missing section, an expiry that is not a date and a list that was cut (the layout was measured on
+Niagara 4.15 and is not a contract). The reply is bounded whatever the page holds: every string
+taken from the page is stripped of control characters and cut with the marker `...[cut]` (200
+characters for a name, an expiry, a state or the host id; 64 for an attribute key and 100 for its
+value), a feature keeps 30 attributes (`attributes_truncated`), 100 certificates and 100 licences
+are read (`certificates_count`, `licenses_count` when the page has more), every list also stops at
+a byte budget, and the whole reply stays under 2 MiB for any page up to the 2 MiB read cap.
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
 children of those types or of their subtypes (`history:HistoryExt` keeps every history extension)
