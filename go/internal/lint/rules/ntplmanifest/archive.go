@@ -31,31 +31,54 @@ type member struct {
 // entry of it is read. A non-nil error is a file that could not be opened or measured (the caller fails
 // closed, exit 3); what the archive holds is never an error, it is a finding.
 func readArchive(path string) (archive, error) {
-	st, err := os.Stat(path)
+	f, err := os.Open(path)
+	if err != nil {
+		return archive{}, err
+	}
+	defer f.Close()
+	st, err := f.Stat()
 	if err != nil {
 		return archive{}, err
 	}
 	if st.Size() > maxArchive {
 		return refused(tooLarge, st.Size(), maxArchive), nil
 	}
-	zr, err := zip.OpenReader(path)
+	return readZip(f, st.Size())
+}
+
+// openZip reads the directory of the zip in r within the bounds every archive shares (a .ntpl, a template
+// module jar, a template inside that jar): rejected is the entries message of one refused whole, the
+// directory otherwise. A non-nil error is r failing to read, never what it holds.
+func openZip(r io.ReaderAt, size int64) (zr *zip.Reader, rejected string, err error) {
+	zr, err = zip.NewReader(r, size)
 	switch {
 	case errors.Is(err, zip.ErrInsecurePath): // the reader is usable; unsafe() names the entry below
 	case errors.Is(err, zip.ErrFormat) || errors.Is(err, zip.ErrAlgorithm) || errors.Is(err, zip.ErrChecksum) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF):
-		return refused(notZip, err), nil
+		return nil, fmt.Sprintf(notZip, err), nil
 	case err != nil:
-		return archive{}, err
+		return nil, "", err
 	}
-	defer zr.Close()
 	if len(zr.File) > maxEntries {
-		return refused(tooManyNames, len(zr.File), maxEntries), nil
+		return nil, fmt.Sprintf(tooManyNames, len(zr.File), maxEntries), nil
+	}
+	for _, f := range zr.File {
+		if unsafe(f.Name) {
+			// Mutation: NTPL-unsafe -- reading on past an unsafe name judges an archive whose entries may land outside it when unpacked
+			return nil, fmt.Sprintf(unsafeName, f.Name), nil
+		}
+	}
+	return zr, "", nil
+}
+
+// readZip reads the template archive in r: its two entries, its manifest and what its bog and Px use.
+func readZip(r io.ReaderAt, size int64) (archive, error) {
+	zr, rejected, err := openZip(r, size)
+	if err != nil || rejected != "" {
+		return archive{entries: nonEmpty(rejected)}, err
 	}
 	var bogs, manifests, dotted, pxs []*zip.File
 	for _, f := range zr.File {
 		switch {
-		case unsafe(f.Name):
-			// Mutation: NTPL-unsafe -- reading on past an unsafe name judges an archive whose entries may land outside it when unpacked
-			return refused(unsafeName, f.Name), nil
 		case f.Name == bogEntry:
 			bogs = append(bogs, f)
 		case f.Name == manifestEntry:
@@ -81,6 +104,14 @@ func readArchive(path string) (archive, error) {
 	}
 	a.uses = readUses(pxs)
 	return a, nil
+}
+
+// nonEmpty is msg as a one-message list, nil when msg is "".
+func nonEmpty(msg string) []string {
+	if msg == "" {
+		return nil
+	}
+	return []string{msg}
 }
 
 func refused(format string, args ...any) archive {
