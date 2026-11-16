@@ -66,7 +66,7 @@ func (f *fixture) start(args ...string) <-chan ran {
 }
 
 var lockedLine = regexp.MustCompile(`^\[ng-deploy\] ERROR another ng-deploy run holds (\S+) \(pid (\d+) on host (\S+), started (\S+), (\S+) ago\): two runs on one modules directory lose jars\. ` +
-	`A lock is never removed for the run that made it: when no process (\d+) runs on (\S+) \(ps -p (\d+)\), that run was killed; delete the file and deploy again\n$`)
+	`A lock is never removed for the run that made it: when ps -p (\d+) -o comm= on (\S+) does not print (\S+), that run was killed; delete the file and deploy again\n$`)
 
 // Two runs on one <NIAGARA_HOME>/modules: the second starts while the first is held in the build (its jars
 // are aside: a second run that looked would record "the home had none") or in slotomatic (before the move
@@ -142,7 +142,7 @@ func TestTheLocksNameTheRunAndAreGoneWhenItEnds(t *testing.T) {
 		code := f.run("--no-backup")
 		signal.Stop(own)
 		host, _ := os.Hostname()
-		holder := regexp.QuoteMeta("pid "+strconv.Itoa(os.Getpid())+"\nhost "+host+"\nstarted ") + `\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\n`
+		holder := regexp.QuoteMeta("pid "+strconv.Itoa(os.Getpid())+"\nhost "+host+"\nstarted ") + `\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\ncommand ngdeploy\.test\n`
 		want := "^" + holder + holder + "$"
 		if !tc.home {
 			want = "^absent\n" + holder + "$"

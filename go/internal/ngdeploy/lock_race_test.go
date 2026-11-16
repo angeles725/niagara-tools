@@ -53,7 +53,7 @@ func TestEveryRunThatLosesTheLockRaceReadsWhoHoldsIt(t *testing.T) {
 			continue
 		}
 		m := lockedLine.FindStringSubmatch(errs[i])
-		if code != ExitEnv || m == nil || m[1] != lockFile(dir) || m[2] != pid {
+		if code != ExitEnv || m == nil || m[1] != lockFile(dir) || m[2] != pid || m[8] != "ngdeploy.test" {
 			t.Errorf("run %d: exit %d, stderr %q", i, code, errs[i])
 		}
 	}

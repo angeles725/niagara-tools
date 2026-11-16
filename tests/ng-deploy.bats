@@ -1098,7 +1098,7 @@ _home_with_previous_rt() {
     printf 'pid 4194000\nhost elsewhere\nstarted 2020-01-02T03:04:05Z\n' > "$TMPDIR_T/niagara-home/modules/.ng-deploy.lock"
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
     [ "$status" -eq 10 ]
-    [[ "$output" == "[ng-deploy] ERROR another ng-deploy run holds $TMPDIR_T/niagara-home/modules/.ng-deploy.lock (pid 4194000 on host elsewhere, started 2020-01-02T03:04:05Z, "*" ago): two runs on one modules directory lose jars. A lock is never removed for the run that made it: when no process 4194000 runs on elsewhere (ps -p 4194000), that run was killed; delete the file and deploy again" ]]
+    [[ "$output" == "[ng-deploy] ERROR another ng-deploy run holds $TMPDIR_T/niagara-home/modules/.ng-deploy.lock (pid 4194000 on host elsewhere, started 2020-01-02T03:04:05Z, "*" ago): two runs on one modules directory lose jars. A lock is never removed for the run that made it: when ps -p 4194000 -o comm= on elsewhere does not print ng-deploy, that run was killed; delete the file and deploy again" ]]
     [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
     [ "$(cat "$TMPDIR_T/niagara-home/modules/test-rt.jar")" = "previous-rt" ]
     [ "$(sed -n 1p "$TMPDIR_T/niagara-home/modules/.ng-deploy.lock")" = "pid 4194000" ]

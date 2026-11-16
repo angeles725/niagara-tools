@@ -24,7 +24,7 @@ func lockIn(dir string) (int, string, *deploy) {
 }
 
 // The content of a lock: what lockContent makes of this run.
-var ownLock = regexp.MustCompile(`\Apid \d+\nhost \S+\nstarted \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\n\z`)
+var ownLock = regexp.MustCompile(`\Apid \d+\nhost \S+\nstarted \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\ncommand ngdeploy\.test\n\z`)
 
 // D5: on a file system that takes no hard link the lock is made in two steps, and the run says so: one
 // NOTICE, a whole lock, no temporary file left.

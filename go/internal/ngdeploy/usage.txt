@@ -105,11 +105,14 @@ The run lock:
   then STATION_MODULES_DIR when that is another directory and the run deploys (always in that order). The
   locks are taken before the run looks at either directory and removed when it ends, however it ends: success,
   any failure, SIGINT or SIGTERM (from its first lock on, the run catches both and ends with 130 or 143 after it
-  put things back). The file holds three lines: "pid <pid>", "host <host>", "started <UTC time>".
+  put things back). The file holds four lines: "pid <pid>", "host <host>", "started <UTC time>", "command
+  <program>" (the name ps -p <pid> -o comm= prints for the run: ng-deploy).
   A lock that is there stops the deploy (exit 10): "another ng-deploy run holds <file> (pid <pid> on host
   <host>, started <time>, <age> ago): ...". A lock is never removed for the run that made it, so a run that was
-  killed (SIGKILL, power) leaves its lock, and the next deploy refuses: check that no process <pid> runs on
-  <host> (ps -p <pid>), delete the file, deploy again; a .ng-deploy-old file that run left beside it is refused
+  killed (SIGKILL, power) leaves its lock, and the next deploy refuses: check on <host> that ps -p <pid> -o
+  comm= does not print <program> (a pid that is alive can be another program's, given again after the kill),
+  delete the file, deploy again; a lock of this host whose pid runs another program gets a second line, "pid
+  <pid> runs <other>, not an ng-deploy run: ..."; a .ng-deploy-old file that run left beside it is refused
   next, with its own way out. The lock is an exclusive file creation, not flock, so it also holds on a Windows
   mount: the run writes it in a temporary file beside it (.ng-deploy.lock.<random>.tmp) and hard-links that to
   .ng-deploy.lock, so a run that loses the race reads a whole lock. A file system without hard links gets the
