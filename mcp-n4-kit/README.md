@@ -249,7 +249,7 @@ is reported under `unknown`, never as dangling.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`,
-`n4_copy_component`, `n4_set_slot`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_rollback` and
 `n4_save_station`. Example:
 
@@ -333,6 +333,25 @@ Tool rules:
   (`40005`: send it as `baja:Simple`, which also takes a whole number, because an MCP
   client may turn the string "40005" into a number). Enum tags come from the type's
   range, e.g. Modbus `DataTypeEnum` is `integerType`, `signedInteger`, `floatType`.
+- `n4_set_flags(ord, slot, flags)` sets the flags of one slot of a component (a
+  property, an action or a topic; a name, not a path) with the station's set-flags
+  sync op. `flags` is the complete new set as letters, each once, in any order; `""`
+  clears every flag. Letters: `r` readonly, `t` transient, `h` hidden, `s` summary,
+  `a` async, `n` no-run, `d` default-on-clone, `c` confirm-required, `o` operator,
+  `x` execute-on-change, `f` fan-in, `A` no-audit, `p` composite, `R`
+  remove-on-clone, `m` metadata, `N` non-critical, `L` link-target, `1` to `4`
+  user-defined. The plan notes show the current and the requested flags with their
+  names. The current flags are the ones the station sends on the slot; a frozen slot
+  at its declared flags carries none, so they are read from its type contract
+  (registry channel). The inverse restores exactly those flags. Refused: an unknown
+  or repeated letter, a slot the component does not have, a set equal to the current
+  one, and a slot whose current flags cannot be read (no flags on the slot and no
+  readable type contract), because no faithful inverse exists. The read-back loads
+  the slot again: `verified` only when the flags it holds are the requested set,
+  else `mismatch` with `requested` and `observed`. Proven live on 4.15.6.20 for a
+  dynamic slot, a frozen property and a frozen action (set, save, `config.bog`,
+  rollback); on another build, try it on a scratch slot first.
+  The station applies it only for a user with admin write on the component.
 - `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto` and `ping`. `set`
   restores the previous `fallback` as its inverse; the others have none and the plan
   says so. `ping` on a driver network, device or point device ext asks the driver to
@@ -383,8 +402,10 @@ Destructive tools use the same pipeline:
   `--write-scope` is enforced on every ORD the batch touched, and each recorded
   handle must still belong to its ORD. Before restoring a slot or fallback it reads
   the slot and refuses when it no longer holds what the batch wrote (a later change is
-  never overwritten; restore it by hand with `n4_set_slot`). Inverses: remove a created
-  component or link, restore a slot or fallback, re-create a removed component from its
+  never overwritten; restore it by hand with `n4_set_slot`). The flags an
+  `n4_set_flags` batch set are checked the same way and restored by a set-flags op,
+  verified by reading the slot back. Inverses: remove a created
+  component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
   `relinks: {restored, skipped}`). A frozen child (e.g. a writable's `proxyExt`) is
   never re-added: the read-back compares it with the snapshot and lists any

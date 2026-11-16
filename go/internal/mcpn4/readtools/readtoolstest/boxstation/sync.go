@@ -34,7 +34,7 @@ func valueOr(v any) any {
 	return v
 }
 
-// sync applies one syncTo op: add (a), set (s) or remove (v).
+// sync applies one syncTo op: add (a), set (s), set flags (f) or remove (v).
 func (st *Station) sync(op map[string]any) (any, error) {
 	name, _ := op["n"].(string)
 	if strings.Contains(name, "//") {
@@ -86,6 +86,8 @@ func (st *Station) sync(op map[string]any) (any, error) {
 		}
 		st.fill(leaf, body)
 		return []any{}, nil
+	case "f":
+		return setFlags(parent, name, op)
 	case "v":
 		for i, c := range parent.Children {
 			if c.Name == name {

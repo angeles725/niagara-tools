@@ -38,10 +38,17 @@ func DeclaredDefault(tl TypeLoader, typeSpec, name string) (*pyjson.Object, erro
 	return asObject(field(slot, "v")), nil
 }
 
-// walkDeclared is the one walk up a type's contracts: typeSpec, then each supertype ("p"), at
-// most maxSupertypes, and the first property slot ({st: "p", n, f?, v}) of a contract "c" that
-// match accepts; nil when none does or entry stops the walk (ok false: a type it cannot answer).
+// walkDeclared is walkSlots over property slots only ({st: "p", n, f?, v}).
 func walkDeclared(entry func(spec string) (*pyjson.Object, bool, error), typeSpec string,
+	match func(slot *pyjson.Object) bool) (*pyjson.Object, error) {
+	return walkSlots(entry, typeSpec, func(slot *pyjson.Object) bool { return field(slot, "st") == "p" && match(slot) })
+}
+
+// walkSlots is the one walk up a type's contracts: typeSpec, then each supertype ("p"), at most
+// maxSupertypes, and the first slot ({st: "p" property | "a" action | "t" topic, n, f?}) of a
+// contract "c" that match accepts; nil when none does or entry stops the walk (ok false: a type
+// it cannot answer).
+func walkSlots(entry func(spec string) (*pyjson.Object, bool, error), typeSpec string,
 	match func(slot *pyjson.Object) bool) (*pyjson.Object, error) {
 	for i := 0; i < maxSupertypes && typeSpec != ""; i++ {
 		e, ok, err := entry(typeSpec)
@@ -50,7 +57,7 @@ func walkDeclared(entry func(spec string) (*pyjson.Object, bool, error), typeSpe
 		}
 		slots, _ := field(e, "c").([]any)
 		for _, s := range slots {
-			if slot, ok := s.(*pyjson.Object); ok && field(slot, "st") == "p" && match(slot) {
+			if slot, ok := s.(*pyjson.Object); ok && match(slot) {
 				return slot, nil
 			}
 		}

@@ -81,6 +81,10 @@ func rollbackReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies,
 				}
 				inputs = append(inputs, entry)
 			}
+		case "f":
+			if good, err = flagsRestored(c, where, nodes, op); err != nil {
+				return fail(err)
+			}
 		default:
 			if good, err = restored(nodes, op); err != nil {
 				return fail(err)

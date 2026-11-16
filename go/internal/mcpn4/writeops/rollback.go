@@ -90,6 +90,9 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 	if err := unchangedSince(c, view, ops, targets); err != nil {
 		return nil, err
 	}
+	if err := flagsUnchangedSince(c, view, ops, targets); err != nil {
+		return nil, err
+	}
 	var components, own []any
 	for i, op := range ops { // one add per component: nested bodies are rejected live
 		o := op.(*pyjson.Object)
