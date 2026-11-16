@@ -235,7 +235,11 @@ max_items=200)` fetches a `.px` and returns its media, imported modules, canvase
 included Px, charts and label texts, without the XML.
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
-children of those types plus the path to them, each kept entry marked `matched`.
+children of those types or of their subtypes (`history:HistoryExt` keeps every history extension)
+plus the path to them, each kept entry marked `matched`. The ancestry is read from the station's
+type registry, one call for the types of the listing; when it cannot be read the filter keeps exact
+types only and the reply says so in `types_note`. A common `baja` type is described without its
+supertype, so `baja:Component` does not keep a `baja:Folder`.
 `n4_read_slots` adds `value_display` (the station's display string) and returns that string as
 `value` for complexes it cannot decode (e.g. a Modbus `dataAddress`: `Decimal:302`). A slot that
 is itself a `baja:Status` (a proxy extension's `status`, for example) reads `status_flags`, the names of the

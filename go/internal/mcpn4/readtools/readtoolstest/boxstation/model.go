@@ -62,6 +62,8 @@ type Station struct {
 	events   []any
 	requests int
 	saves    int
+	// supertypes is what the type registry answers as "p", by type spec (SetSupertype).
+	supertypes map[string]string
 }
 
 // New is a station named name with the login user / password and the Folder component.

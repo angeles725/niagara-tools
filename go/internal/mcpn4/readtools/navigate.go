@@ -75,21 +75,10 @@ func hasComponentChildren(nodes *pyjson.Object, path string) (bool, error) {
 	return false, nil
 }
 
-// typeIn is `kind in types` for the set of type specs: a list or dict kind is unhashable.
-func typeIn(kind any, types map[string]bool) (bool, error) {
-	switch k := kind.(type) {
-	case string:
-		return types[k], nil
-	case []any, *pyjson.Object:
-		return false, typeError
-	}
-	return false, nil
-}
-
 // treeEntries is _tree_entries: the child entries of path, levels deep. With types an entry is
-// kept when its type is in the set (matched) or a nested entry is kept (the path to it);
+// kept when the filter matches its type (matched) or a nested entry is kept (the path to it);
 // has_children is never filtered, so a caller can still descend below the depth (#179 R3-003).
-func treeEntries(nodes *pyjson.Object, path string, levels int, types map[string]bool) ([]any, error) {
+func treeEntries(nodes *pyjson.Object, path string, levels int, types *typeFilter) ([]any, error) {
 	entries := []any{}
 	kids := box.Children(nodes, path)
 	for _, name := range kids.Keys() {
@@ -112,7 +101,7 @@ func treeEntries(nodes *pyjson.Object, path string, levels int, types map[string
 			entry.Set("children", nested)
 		}
 		if types != nil {
-			matched, err := typeIn(kind, types)
+			matched, err := types.match(kind)
 			if err != nil {
 				return nil, err
 			}
@@ -154,7 +143,8 @@ func (t *Tools) timedLoad(ord string, depth int) (*pyjson.Object, int, error) {
 	return nodes, int(math.RoundToEven((t.Ctx.Clock() - start) * 1000)), err
 }
 
-// Navigate is n4_navigate: the children of ord, depth levels deep, optionally kept by type.
+// Navigate is n4_navigate: the children of ord, depth levels deep, optionally kept by type (a
+// given type or a subtype of it).
 func (t *Tools) Navigate(args *pyjson.Object) (*pyjson.Object, error) {
 	ord, err := ordArg(args)
 	if err != nil {
@@ -170,13 +160,20 @@ func (t *Tools) Navigate(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	children, err := treeEntries(nodes, "", depth, types)
+	var filter *typeFilter
+	if types != nil {
+		filter = t.typeFilter(types, nodes, depth)
+	}
+	children, err := treeEntries(nodes, "", depth, filter)
 	if err != nil {
 		return nil, err
 	}
 	out := obj("ord", ord, "children", children, "elapsed_ms", elapsed)
 	if list != nil {
 		out.Set("types", list)
+		if filter.note != "" {
+			out.Set("types_note", filter.note)
+		}
 	}
 	return out, nil
 }

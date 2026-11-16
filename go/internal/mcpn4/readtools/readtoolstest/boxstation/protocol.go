@@ -28,13 +28,8 @@ func (st *Station) handleFrame(frame map[string]any) map[string]any {
 }
 
 func (st *Station) dispatch(channel, key string, body map[string]any) (any, error) {
-	if channel == "reg" && key == "loadTypes" { // every slot of the fake is dynamic
-		specs, _ := body["t"].([]any)
-		out := map[string]any{}
-		for _, s := range specs {
-			out[fmt.Sprint(s)] = map[string]any{}
-		}
-		return out, nil
+	if channel == "reg" && key == "loadTypes" {
+		return st.loadTypes(body), nil
 	}
 	if channel != "ssession" {
 		return nil, fmt.Errorf("ValueError: unknown channel %s", channel)
