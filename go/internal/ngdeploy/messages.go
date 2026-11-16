@@ -105,9 +105,11 @@ const (
 	whyNotTheBytes = "the backup does not hold the bytes of the jar"
 	// msgRecordFailed takes the record file and one of the three reasons after it.
 	msgRecordFailed = "jars copied, but the deployed commit was not recorded in %s: %s (the next annotation check cannot start at this deploy; SLOTOMATIC_DETECTION=off makes the record optional)"
-	whyNoHead       = "git rev-parse HEAD failed (exit %d)"
-	whyHeadNotAName = "git rev-parse HEAD printed no full commit id"
-	whyNotWritten   = "cannot write %s: %s"
+	// msgRecordUnwritable is the same record found unwritable before the copy; it takes the file and whyNotWritten.
+	msgRecordUnwritable = "the deployed commit cannot be recorded in %s (%s); nothing was copied (fix the file, or SLOTOMATIC_DETECTION=off makes the record optional)"
+	whyNoHead           = "git rev-parse HEAD failed (exit %d)"
+	whyHeadNotAName     = "git rev-parse HEAD printed no full commit id"
+	whyNotWritten       = "cannot write %s: %s"
 
 	msgRestart    = "station restart required (Java classes deployed)"
 	msgHardReload = "browser hard-reload only (no station restart needed)"

@@ -49,6 +49,7 @@ var phases = []func(*deploy) int{
 	(*deploy).precheckSchema,
 	(*deploy).verify,
 	(*deploy).gate,
+	(*deploy).checkRecord,
 	(*deploy).copyJars,
 	(*deploy).recordDeploy,
 }
