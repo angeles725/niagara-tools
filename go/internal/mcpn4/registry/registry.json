@@ -827,6 +827,71 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_neql_query",
+   "description": "Find components by their tags with a NEQL query (one GET of base_ord|neql:<query>|view:file:ITableToCsv, the documented ORD route). neql is a filter such as n:point, hs:equip and not hs:ahu, tst:label = \"hello\", hs:temp > 20, n:name like \".*Pump.*\" or a relation path (n:parent->hs:floor = 2); implied tags count. It matches the components below base_ord (default station:|slot:/), never base_ord itself, and returns their station ORDs (ords). With bql (one select, e.g. select slotPath, out.value) the station runs that select on the matches and the reply carries its columns and rows instead. '|' is refused (the ORD separator); a query the station cannot parse is HTTP 400, reported as such. max_rows (default 200, at most 2000) bounds the reply; truncated says it was cut.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "neql": {
+      "type": "string",
+      "description": "NEQL filter, e.g. hs:point and hs:temp"
+     },
+     "base_ord": {
+      "type": "string",
+      "description": "Search below this component ORD (default station:|slot:/)"
+     },
+     "bql": {
+      "type": "string",
+      "description": "Optional select run on the matches, e.g. select slotPath, out.value"
+     },
+     "max_rows": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000,
+      "description": "Most rows returned (default 200)"
+     },
+     "timeout_s": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600,
+      "description": "Request timeout in seconds (default 60)"
+     }
+    },
+    "required": [
+     "neql"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_list_tag_dictionaries",
+   "description": "List the tag dictionaries installed under the TagDictionaryService (one BQL query), each with its namespace, enabled, frozen, version and status, and what it defines: tag definitions (id, info type, value type, default, validity condition; type null for a smart tag the station computes), tag groups (id, the group_ord a tag group relation points at, the tags it implies) and relation ids. dictionary (a name such as Niagara, or a namespace such as n) lists one. max_items (default 200, at most 2000) bounds the definitions listed across all dictionaries; truncated says some were left out. Use it before n4_set_tags to see which tags, values and groups a station defines.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "dictionary": {
+      "type": "string",
+      "description": "Dictionary name or namespace (default: all)"
+     },
+     "max_items": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000,
+      "description": "Most definitions listed (default 200)"
+     }
+    }
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [
