@@ -74,3 +74,22 @@ func itoa(i int) string {
 	}
 	return string(b)
 }
+
+// A1 of the #710 verifier: the size bound is read from the file's metadata before the file is opened, so a
+// .ntpl over the bound is the FAIL row even when it cannot be opened (no read permission), never exit 3.
+func TestOversizeUnreadableArchiveIsTheBoundRow(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a file without read permission")
+	}
+	root := moduleRoot(t, map[string]string{tpl: template(t, "")})
+	if err := os.Truncate(root+"/"+tpl, maxArchive+1); err != nil { // a sparse file: no data is written
+		t.Fatal(err)
+	}
+	if err := os.Chmod(root+"/"+tpl, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(root+"/"+tpl, 0o600) })
+	expect(t, "an unreadable file over the bound", root, 1,
+		"FAIL  ntpl-entries  @ROOT@/"+tpl+": 33554433 bytes on disk, over the 33554432 this lint reads -- archive refused\n")
+}

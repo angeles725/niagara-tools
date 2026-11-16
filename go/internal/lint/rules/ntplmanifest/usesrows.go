@@ -13,11 +13,11 @@ import (
 var usedFree = map[string]bool{"baja": true}
 
 // uses adds the ntpl-uses rows of one archive (retro coordination-stretch K4): for template.bog and each
-// Px file, the modules it uses (modulesUsed) that no <dependency> of the manifest names (a part of the
-// module counts: control-rt lists control), that are not the module's own parts and that the installation
-// does not ship. As for ntpl-deps the row is FAIL with the installation's module list and WARN without it.
+// Px file, the modules it uses (modulesUsed) that no <dependency> of the manifest (manifestName) names (a
+// part of the module counts: control-rt lists control), that are not the module's own parts and that the
+// installation does not ship. As for ntpl-deps the row is FAIL with the installation's module list and WARN without it.
 // An entry that could not be read or parsed is a FAIL row with its reason, never a template that uses nothing.
-func (c *checker) uses(path string, deps []string, members []member) {
+func (c *checker) uses(path, manifestName string, deps []string, members []member) {
 	listed := moduleSet(c.mod.parts, deps)
 	shipped := moduleSet(c.stock)
 	row := func(sev lint.Severity, format string, args ...any) {
@@ -43,10 +43,10 @@ func (c *checker) uses(path string, deps []string, members []member) {
 		names := strings.Join(missing, ", ")
 		if c.stock == nil {
 			c.unknown = true
-			row(lint.Warn, usesMissingAny, m.name, names)
+			row(lint.Warn, usesMissingAny, m.name, names, manifestName)
 			continue
 		}
 		// Mutation: NTPL-uses -- dropping this row passes a template whose bog or Px uses a module it does not list
-		row(lint.Fail, usesMissing, m.name, names, c.home.dir)
+		row(lint.Fail, usesMissing, m.name, names, manifestName, c.home.dir)
 	}
 }

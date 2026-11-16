@@ -131,7 +131,7 @@ func TestRowsInPathOrder(t *testing.T) {
 // neither a build file nor a template is the ERROR row; all exit 3, never a pass.
 func TestUsageAndEmptyRoot(t *testing.T) {
 	t.Parallel()
-	const wantUsage = "usage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root>\n"
+	const wantUsage = "usage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root | template-module.jar>\n"
 	root := moduleRoot(t, nil)
 	for name, args := range map[string][]string{"no root": nil, "two roots": {root, root}, "an unknown option": {"--strict", root}, "an option with no value": {root, homeOption}} {
 		if code, out, errText := run(args...); code != 3 || out != "" || errText != wantUsage {

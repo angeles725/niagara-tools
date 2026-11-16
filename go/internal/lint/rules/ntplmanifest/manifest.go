@@ -16,16 +16,17 @@ type manifest struct {
 	stray    []int    // the line of each <dependency> whose parent is not <dependencies>
 }
 
-// parseManifest reads data as XML through the shared scanner; why is the ntpl-manifest message of a document
-// that is not well-formed (its position is inside the manifest, so the path is left out).
-func parseManifest(data []byte) (m manifest, why string) {
-	doc, err := xmlsrc.Parse(manifestEntry, data)
+// parseManifest reads data, the manifest entry called name, as XML through the shared scanner; why is the
+// ntpl-manifest message of a document that is not well-formed (its position is inside the manifest, so the
+// path is left out).
+func parseManifest(name string, data []byte) (m manifest, why string) {
+	doc, err := xmlsrc.Parse(name, data)
 	if err != nil {
 		var pos *xmlsrc.Error
 		if errors.As(err, &pos) {
-			return m, fmt.Sprintf(manifestBadXML, fmt.Sprintf("%d:%d: %s", pos.Line, pos.Col, pos.Msg))
+			return m, fmt.Sprintf(manifestBadXML, name, fmt.Sprintf("%d:%d: %s", pos.Line, pos.Col, pos.Msg))
 		}
-		return m, fmt.Sprintf(manifestBadXML, err)
+		return m, fmt.Sprintf(manifestBadXML, name, err)
 	}
 	elems := doc.Elements()
 	for i, e := range elems {

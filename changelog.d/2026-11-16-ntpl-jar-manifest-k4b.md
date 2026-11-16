@@ -7,3 +7,5 @@
   inflated, 128 MiB for all). A jar declares no build dependencies: dependencies are judged against the
   installation alone. The lint engine gains `Spec.FileRoot`, an opt-in that only this rule sets; every other lint
   still refuses a file root ("not a directory", exit 3).
+- Every ntpl-manifest and ntpl-uses row names the manifest entry it read (`template.manifest.xml` when the
+  fallback was used), and the usage line names both inputs: `<module-root | template-module.jar>`.
