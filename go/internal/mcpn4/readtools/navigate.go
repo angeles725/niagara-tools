@@ -75,46 +75,6 @@ func hasComponentChildren(nodes *pyjson.Object, path string) (bool, error) {
 	return false, nil
 }
 
-// treeEntries is _tree_entries: the child entries of path, levels deep. With types an entry is
-// kept when the filter matches its type (matched) or a nested entry is kept (the path to it);
-// has_children is never filtered, so a caller can still descend below the depth (#179 R3-003).
-func treeEntries(nodes *pyjson.Object, path string, levels int, types *typeFilter) ([]any, error) {
-	entries := []any{}
-	kids := box.Children(nodes, path)
-	for _, name := range kids.Keys() {
-		node, childPath := box.Node(kids, name), name
-		if path != "" {
-			childPath = path + "/" + name
-		}
-		kind, _ := node.Get("t")
-		handle, _ := node.Get("h")
-		has, err := hasComponentChildren(nodes, childPath)
-		if err != nil {
-			return nil, err
-		}
-		entry := obj("name", name, "type", kind, "handle", handle, "has_children", has)
-		var nested []any
-		if levels > 1 {
-			if nested, err = treeEntries(nodes, childPath, levels-1, types); err != nil {
-				return nil, err
-			}
-			entry.Set("children", nested)
-		}
-		if types != nil {
-			matched, err := types.match(kind)
-			if err != nil {
-				return nil, err
-			}
-			entry.Set("matched", matched)
-			if !matched && len(nested) == 0 {
-				continue
-			}
-		}
-		entries = append(entries, entry)
-	}
-	return entries, nil
-}
-
 // typesArg is _types_arg: the "types" filter as given and as a set, or nil when absent or
 // empty (no filter).
 func typesArg(args *pyjson.Object) ([]any, map[string]bool, error) {
@@ -144,7 +104,8 @@ func (t *Tools) timedLoad(ord string, depth int) (*pyjson.Object, int, error) {
 }
 
 // Navigate is n4_navigate: the children of ord, depth levels deep, optionally kept by type (a
-// given type or a subtype of it).
+// given type or a subtype of it); each listed component also lists the declared properties the
+// load left out at their default (withDefaults), marked default.
 func (t *Tools) Navigate(args *pyjson.Object) (*pyjson.Object, error) {
 	ord, err := ordArg(args)
 	if err != nil {
@@ -160,19 +121,22 @@ func (t *Tools) Navigate(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	var filter *typeFilter
+	l := &listing{loaded: nodes, declared: t.withDefaults(nodes, listedPaths(nodes, depth))}
 	if types != nil {
-		filter = t.typeFilter(types, nodes, depth)
+		l.types = t.typeFilter(types, l.declared.nodes, depth)
 	}
-	children, err := treeEntries(nodes, "", depth, filter)
+	children, err := l.entries("", depth)
 	if err != nil {
 		return nil, err
 	}
 	out := obj("ord", ord, "children", children, "elapsed_ms", elapsed)
+	if l.declared.note != "" {
+		out.Set("defaults_note", l.declared.note)
+	}
 	if list != nil {
 		out.Set("types", list)
-		if filter.note != "" {
-			out.Set("types_note", filter.note)
+		if l.types.note != "" {
+			out.Set("types_note", l.types.note)
 		}
 	}
 	return out, nil

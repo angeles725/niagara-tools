@@ -48,3 +48,19 @@ func TestAContractWhoseSupertypeIsNotDescribedListsTheSubtypeDefaultsAndNamesThe
 		t.Errorf("defaults_note = %v, want %q", out["defaults_note"], want)
 	}
 }
+
+const noDefaultNoteText = "at its declared default, but the type contract gives no default value (a component default is not sent): read it in Workbench"
+
+func TestNavigateWithATypesFilterAddsNoUntypedDefault(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	out := r.Srv.OK("n4_navigate", Args{"ord": Folder, "depth": 2, "types": []any{"baja:Double"}})
+	dash := objects(out["children"])
+	if len(dash) != 1 || dash[0]["name"] != c.Name || dash[0]["matched"] != false {
+		t.Fatalf("children = %v, want only the path to the matching default", out["children"])
+	}
+	want := []any{map[string]any{"name": "setpoint", "type": "baja:Double", "handle": nil, "has_children": false,
+		"default": true, "value": "0.0", "matched": true}}
+	if !reflect.DeepEqual(dash[0]["children"], want) {
+		t.Errorf("Dash children = %v, want %v", dash[0]["children"], want)
+	}
+}

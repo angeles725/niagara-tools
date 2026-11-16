@@ -132,6 +132,32 @@ func TestATypeTheStationCannotDescribeSaysSoAndListsWhatWasLoaded(t *testing.T) 
 	}
 }
 
+func TestNavigateListsTheDeclaredPropertiesOfEachListedComponent(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	out := r.Srv.OK("n4_navigate", Args{"ord": Folder, "depth": 2})
+	var dash map[string]any
+	for _, e := range objects(out["children"]) {
+		if e["name"] == c.Name {
+			dash = e
+		}
+	}
+	kids := map[string]map[string]any{}
+	for _, e := range objects(dash["children"]) {
+		kids[e["name"].(string)] = e
+	}
+	want := map[string]any{"name": "setpoint", "type": "baja:Double", "handle": nil, "has_children": false,
+		"default": true, "value": "0.0"}
+	if !reflect.DeepEqual(kids["setpoint"], want) {
+		t.Errorf("setpoint = %v", kids["setpoint"])
+	}
+	if p := kids["proxyExt"]; p["value"] != nil || p["default"] != true || p["note"] == nil {
+		t.Errorf("proxyExt = %v", p)
+	}
+	if len(kids) != 5 {
+		t.Errorf("children = %v", dash["children"])
+	}
+}
+
 // A type the station does not describe (an error entry, or left out of the reply) is remembered
 // for the session too: three reads ask the registry once.
 func TestAnUndescribedTypeIsAskedForOncePerSession(t *testing.T) {
