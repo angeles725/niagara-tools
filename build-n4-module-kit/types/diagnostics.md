@@ -41,6 +41,7 @@ high action-queue peak date a callback or action that held the engine thread; co
 **Spanish-locale consoles print localized level names.** OpenJDK 8 `sun.util.logging.resources.logging_es`:
 SEVERE `Grave`, WARNING `Advertencia`, INFO `Información`, CONFIG `Configurar`, FINE `Detallado`, FINER
 `Muy Detallado`, FINEST `Más Detallado` (read from `jre/lib/rt.jar` of OpenJDK 1.8.0, 2026-10-23). A live course
-station printed them upper-case (`INFORMACIÓN`, `GRAVE`, `DETALLADO`). `triage-console.sh` recognises only `GRAVE`,
-`ADVERTENCIA` and `INFORMACI*`, and FINER/FINEST are two words. `[ev: retro n4-course-lexicon-logging-testing Δ4]`
-`[deferred: retro n4-course-lexicon-logging-testing Δ4]` (script fix owed as G73).
+station printed them upper-case (`INFORMACIÓN`, `GRAVE`, `DETALLADO`). `triage-console.sh` recognises all seven,
+upper-case, in UTF-8 and in Latin-1, the two-word FINER and FINEST included (`isLevel`,
+`go/internal/triageconsole`; golden cases `truth-es-levels` and `truth-informacion-level`, `TestLevelFieldTwoWord`).
+Matching is exact: the unaccented `INFORMACION` is no level. `[ev: retro n4-course-lexicon-logging-testing Δ4]`
