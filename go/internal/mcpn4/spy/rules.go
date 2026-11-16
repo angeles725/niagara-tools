@@ -34,23 +34,43 @@ var refusedChars = []struct {
 // page of Niagara 4.15, where they are POST forms): never fetched, compared without case.
 var actionPaths = []string{"util/gc", "util/forceThreadDump"}
 
-// The caps of one parsed page.
+// The caps of one parsed page: together they bound the reply whatever the page holds (a page
+// of empty tables, one row of many cells, one long name).
 const (
 	DefaultMaxRows = 500   // table rows, all tables together
+	MaxTables      = 200   // tables
+	MaxRowCells    = 100   // cells of one row (a header row too)
 	MaxLinks       = 500   // links to child pages
+	MaxActions     = 100   // POST actions named
+	MaxNameRunes   = 200   // a link name or the page title
 	MaxCellRunes   = 2000  // one table cell
 	MaxTextRunes   = 20000 // the text outside tables
 )
+
+// fieldTags are the form fields whose content is what a user typed or may pick: never returned,
+// wherever they sit (an input's value is an attribute, which is never read).
+var fieldTags = map[string]bool{"textarea": true, "select": true, "button": true}
+
+// optionTag is a field whose end tag is optional: it stays open until its own end tag or the
+// end of its select.
+const optionTag, selectTag = "option", "select"
+
+// deadlineEvery is how many tokens are read between two looks at the parse deadline.
+const deadlineEvery = 512
 
 // notFoundHeading is the heading of the page a station answers (HTTP 200) for an unknown path.
 const notFoundHeading = "Spy Not Found"
 
 // The names of the caps a page reports in Cut.
 const (
-	CutRows  = "max_rows"
-	CutLinks = "links"
-	CutCell  = "cell"
-	CutText  = "text"
+	CutRows    = "max_rows"
+	CutTables  = "tables"
+	CutCells   = "row_cells"
+	CutLinks   = "links"
+	CutActions = "actions"
+	CutName    = "name"
+	CutCell    = "cell"
+	CutText    = "text"
 )
 
 // The tables and columns of the metrics page that Capacity reads, compared without case.

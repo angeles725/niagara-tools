@@ -263,15 +263,19 @@ Spy pages (the station's diagnostics tree, the pages of the Workbench Spy view):
 `n4_spy_page(path="", max_rows=500, max_bytes=2097152)` sends one `GET /ord?spy:/<path>` with
 the session's credentials and returns the page as data: `title`, `tables` (each with its `title`,
 `header` and `rows` of cells), `links` (the child pages, each `path` ready to pass back), `actions`
-(the POST forms the page offers, by path: named, never invoked, and their hidden fields are never
-returned) and `text` (what sits outside the tables). An empty `path` is the index. It only reads:
+(the POST forms the page offers, by clean spy path without the query or fragment of the form's
+action: named, never invoked; the content of a form field, `textarea`, `select`, `button` or an
+`input` value, is never returned, wherever it sits) and `text` (what sits outside the tables). An empty `path` is the index. It only reads:
 a path is plain names separated by `/`, and a scheme or `:`, `|`, `..`, a query string (`?`, `&`,
-`=`, `#`), `%`, `;`, a backslash, a control character and the known action pages (`util/gc`,
+`=`, `#`), `%`, `;`, a backslash, any Unicode control character, invalid UTF-8 and the known action pages (`util/gc`,
 `util/forceThreadDump`) are refused before any request. `status` is `ok`, `forbidden` (403: the
 user may not read spy pages, which need a super user), `not_found` (404, or the station's "Spy Not
-Found" page) or `not_html`; a 401 is an authentication error like on any other read. `truncated`
-is true when a cap cut the reply and `truncated_by` names the caps (`max_bytes`, `max_rows`,
-`links`, `cell`, `text`). Spy pages are diagnostics, not an API: their layout differs between
+Found" page), `not_html` or `parse_timeout` (the page was fetched but not parsed within
+`timeout_s`); a 401 is an authentication error like on any other read. `truncated`
+is true when a cap cut the reply and `truncated_by` names the caps: `max_bytes`, `max_rows` (rows
+across all tables), `tables` (200), `row_cells` (100 per row), `links` (500), `actions` (100),
+`name` (a link name or title over 200 characters), `cell`, `text`. The caps bound the reply as a
+whole, whatever the page holds. Spy pages are diagnostics, not an API: their layout differs between
 Niagara versions (this reader was measured on 4.15), so read the tables as found.
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only

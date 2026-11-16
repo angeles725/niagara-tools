@@ -51,7 +51,7 @@ func TestSpyPageRefusesUnsafePathsBeforeAnyRequest(t *testing.T) {
 	before := getCount(sv)
 	for _, bad := range []string{"spy:/metrics", "https://other.invalid/x", "//other.invalid/x", "../metrics",
 		"util/../../file/config.bog", "metrics|bql:select name from baja:Component", "logSetup?level=FINE",
-		"a&b=c", "util/%2e%2e", "a;b", `a\b`, "a\nb", "util/gc", "util/forceThreadDump", "/Util/GC"} {
+		"a&b=c", "util/%2e%2e", "a;b", `a\b`, "a\nb", "a\u0085b", "a\u009bb", "util/gc", "util/forceThreadDump", "/Util/GC"} {
 		if text := r.Srv.Err("n4_spy_page", Args{"path": bad}); !strings.Contains(text, "refusing spy path") {
 			t.Errorf("%q: %q", bad, text)
 		}
@@ -122,5 +122,38 @@ func TestSpyPageNeedsASessionAndNoWriteMode(t *testing.T) {
 	}
 	if text := r.Srv.Err("n4_spy_page", Args{"path": "metrics"}); !strings.Contains(text, "n4_connect") {
 		t.Errorf("without a session: %q", text)
+	}
+}
+
+func TestSpyPageNeverReturnsFormFieldContentEvenInsideATableCell(t *testing.T) {
+	r, sv := shxSpyRig(t)
+	shxServeSpy(sv, "form", boxstation.SpyPage{Body: []byte("<table><tr><td><form method=post action='/ord?spy:/util/x?csrfToken=FIELDX'>" +
+		"<textarea name=t>FIELDX</textarea><select><option>FIELDX</select><button>FIELDX</button></form>label</td></tr></table>")})
+	res := r.Srv.Call("n4_spy_page", Args{"path": "form"})
+	if strings.Contains(res.Text, "FIELDX") {
+		t.Errorf("a form field or a form action's query was returned: %s", res.Text)
+	}
+	if !reflect.DeepEqual(res.Structured["actions"], []any{"util/x"}) ||
+		!reflect.DeepEqual(Dig(objects(res.Structured["tables"])[0], "rows"), []any{[]any{"label"}}) {
+		t.Errorf("out = %v", res.Structured)
+	}
+}
+
+// The reply is bounded as a whole: a page built to amplify (empty tables, one row of many
+// cells, one long link name) comes back small and marked truncated.
+func TestSpyPageBoundsTheWholeReplyWhateverThePageHolds(t *testing.T) {
+	r, sv := shxSpyRig(t)
+	for name, c := range map[string]struct{ body, cut string }{
+		"tables": {strings.Repeat("<table></table>", 139000), "tables"},
+		"cells":  {"<table><tr>" + strings.Repeat("<td>", 400000) + "</tr></table>", "row_cells"},
+		"name":   {"<a href='/ord?spy:/x'>" + strings.Repeat("n", 1500000) + "</a>", "name"},
+	} {
+		shxServeSpy(sv, name, boxstation.SpyPage{Body: []byte(c.body)})
+		res := r.Srv.Call("n4_spy_page", Args{"path": name, "max_rows": 1, "max_bytes": 16777216})
+		if len(res.Text) > 64<<10 || res.Structured["truncated"] != true ||
+			!reflect.DeepEqual(res.Structured["truncated_by"], []any{c.cut}) {
+			t.Errorf("%s: a reply of %d bytes, truncated %v by %v", name, len(res.Text), res.Structured["truncated"],
+				res.Structured["truncated_by"])
+		}
 	}
 }

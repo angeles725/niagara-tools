@@ -17,53 +17,74 @@ type token struct {
 // rawText are the elements whose content is not page text.
 var rawText = map[string]bool{"script": true, "style": true}
 
-// tokens splits a page the way a lenient reader does: tags by their angle brackets (a quoted
+// scanner splits a page the way a lenient reader does: tags by their angle brackets (a quoted
 // attribute value may hold '>'), comments and declarations dropped, script and style content
-// dropped, entities decoded. It never fails: what is not a tag is text.
-func tokens(page string) []token {
-	var out []token
-	for i := 0; i < len(page); {
+// dropped, entities decoded. It never fails: what is not a tag is text. Each byte of the page is
+// looked at a bounded number of times, so reading is linear in the page size.
+type scanner struct {
+	page string
+	i    int
+}
+
+// next is the next token, ok false at the end of the page.
+func (sc *scanner) next() (token, bool) {
+	page := sc.page
+	for sc.i < len(page) {
+		i := sc.i
 		lt := strings.IndexByte(page[i:], '<')
 		if lt < 0 {
-			out = append(out, token{text: html.UnescapeString(page[i:])})
-			break
+			sc.i = len(page)
+			return token{text: html.UnescapeString(page[i:])}, true
 		}
 		if lt > 0 {
-			out = append(out, token{text: html.UnescapeString(page[i : i+lt])})
+			sc.i = i + lt
+			return token{text: html.UnescapeString(page[i : i+lt])}, true
 		}
-		i += lt
 		switch {
 		case strings.HasPrefix(page[i:], "<!--"):
 			end := strings.Index(page[i:], "-->")
 			if end < 0 {
-				return out
+				sc.i = len(page)
+				return token{}, false
 			}
-			i += end + 3
+			sc.i = i + end + 3
 			continue
 		case i+1 >= len(page) || !isTagStart(page[i+1]):
-			out = append(out, token{text: "<"})
-			i++
-			continue
+			sc.i = i + 1
+			return token{text: "<"}, true
 		}
 		end := tagEnd(page, i)
 		if end < 0 {
-			return out
+			sc.i = len(page)
+			return token{}, false
 		}
 		t := parseTag(page[i+1 : end])
-		i = end + 1
+		sc.i = end + 1
 		if t.name == "" {
 			continue
 		}
-		out = append(out, t)
 		if rawText[t.name] && !t.end {
-			closing := strings.Index(strings.ToLower(page[i:]), "</"+t.name)
-			if closing < 0 {
-				return out
-			}
-			i += closing
+			sc.i = closingTag(page, sc.i, t.name)
 		}
+		return t, true
 	}
-	return out
+	return token{}, false
+}
+
+// closingTag is the index of the first "</name" at or after from, compared without case; the
+// end of the page when there is none. It walks the "</" of the page once.
+func closingTag(page string, from int, name string) int {
+	for i := from; ; {
+		at := strings.Index(page[i:], "</")
+		if at < 0 {
+			return len(page)
+		}
+		i += at
+		if rest := page[i+2:]; len(rest) >= len(name) && strings.EqualFold(rest[:len(name)], name) {
+			return i
+		}
+		i += 2
+	}
 }
 
 func isTagStart(c byte) bool {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // PathError is a path refused before any request.
@@ -20,11 +22,28 @@ func refuse(path, why string) error {
 // refusal: only plain names may be read, so a path can neither leave the spy root nor carry a
 // query, and the known action pages are never fetched.
 func CleanPath(path string) (string, error) {
+	clean, err := cleanNames(path)
+	if err != nil {
+		return "", err
+	}
+	for _, action := range actionPaths {
+		if strings.EqualFold(clean, action) {
+			return "", refuse(path, "it is an action page, and this tool only reads")
+		}
+	}
+	return clean, nil
+}
+
+// cleanNames is CleanPath without the action pages rule: what may be named, not fetched.
+func cleanNames(path string) (string, error) {
 	if len(path) > MaxPathLen {
-		return "", refuse(path[:40]+"...", fmt.Sprintf("longer than %d bytes", MaxPathLen))
+		return "", refuse(strings.ToValidUTF8(path[:40], "?")+"...", fmt.Sprintf("longer than %d bytes", MaxPathLen))
+	}
+	if !utf8.ValidString(path) {
+		return "", refuse(strings.ToValidUTF8(path, "?"), "it is not valid UTF-8")
 	}
 	for _, r := range path {
-		if r < 0x20 || r == 0x7f {
+		if unicode.IsControl(r) {
 			return "", refuse(path, "it holds a control character")
 		}
 	}
@@ -46,11 +65,6 @@ func CleanPath(path string) (string, error) {
 			return "", refuse(path, "a segment starts or ends with a space")
 		case strings.Trim(seg, ".") == "":
 			return "", refuse(path, "it holds a '.' or '..' segment")
-		}
-	}
-	for _, action := range actionPaths {
-		if strings.EqualFold(trimmed, action) {
-			return "", refuse(path, "it is an action page, and this tool only reads")
 		}
 	}
 	return trimmed, nil
@@ -118,4 +132,26 @@ func linkPath(href string) (string, bool) {
 	}
 	clean, err := CleanPath(plain)
 	return clean, err == nil
+}
+
+// actionPath is the clean spy path a form posts to, without the query or fragment its action
+// carries (a CSRF value, for example); ok is false when the action leaves the spy root or does
+// not clean to a path. An action page is named here: naming it is not fetching it.
+func actionPath(action string) (string, bool) {
+	for _, root := range linkRoots {
+		rest, found := strings.CutPrefix(action, root)
+		if !found {
+			continue
+		}
+		if cut := strings.IndexAny(rest, "?#"); cut >= 0 {
+			rest = rest[:cut]
+		}
+		plain, err := url.PathUnescape(rest)
+		if err != nil {
+			return "", false
+		}
+		clean, err := cleanNames(plain)
+		return clean, err == nil && clean != ""
+	}
+	return "", false
 }

@@ -8,7 +8,7 @@ import (
 func shxInt(n int) *int { return &n }
 
 func TestReadCapacityReadsCountsAndUnlimitedLimits(t *testing.T) {
-	c := ReadCapacity(Parse(shxFixture(t, "metrics.html"), 0))
+	c := ReadCapacity(shxParse(t, shxFixture(t, "metrics.html"), 0))
 	if c == nil || len(c.Resources) != 6 {
 		t.Fatalf("capacity = %+v", c)
 	}
@@ -25,7 +25,7 @@ func TestReadCapacityReadsCountsAndUnlimitedLimits(t *testing.T) {
 // The licensed page is the recorded one with limits written in by hand: no licensed station was
 // measured, so it pins the reader's rule (grouped digits are a count), not a station's format.
 func TestReadCapacityReadsLimitsWithGroupedDigits(t *testing.T) {
-	c := ReadCapacity(Parse(shxFixture(t, "metrics-licensed.html"), 0))
+	c := ReadCapacity(shxParse(t, shxFixture(t, "metrics-licensed.html"), 0))
 	if c == nil {
 		t.Fatal("no capacity")
 	}
@@ -39,7 +39,7 @@ func TestReadCapacityIsNilWithoutACapacityTable(t *testing.T) {
 	for _, body := range []string{shxFixture(t, "metrics-no-capacity.html"), shxFixture(t, "index.html"), "",
 		"<table><tr><th>Global Capacity</th></tr><tr><th>Type</th><th>Limit</th><th>Used</th></tr></table>",
 		"<table><tr><th>Global Capacity</th></tr><tr><th>Name</th><th>Value</th></tr><tr><td>Points</td><td>36</td></tr></table>"} {
-		if c := ReadCapacity(Parse(body, 0)); c != nil {
+		if c := ReadCapacity(shxParse(t, body, 0)); c != nil {
 			t.Errorf("capacity of %.60q = %+v", body, c)
 		}
 	}

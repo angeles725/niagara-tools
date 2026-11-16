@@ -2,8 +2,10 @@ package readtools
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -21,18 +23,20 @@ type spyReader interface {
 
 // The typed statuses of a spy read and what the operator can do about a refused one.
 const (
-	spyOK          = "ok"
-	spyNotFound    = "not_found"
-	spyNotHTML     = "not_html"
-	spyNoReader    = "this client cannot read spy pages"
-	spyForbidden   = "the station user lacks the permission spy pages need (a super user reads them), or this station does not serve them at " + spy.Root
-	spyNotHTMLHint = "the station answered something that is not an HTML page; spy pages are HTML"
-	cutBytes       = "max_bytes"
+	spyOK               = "ok"
+	spyNotFound         = "not_found"
+	spyNotHTML          = "not_html"
+	spyParseTimeout     = "parse_timeout"
+	spyParseTimeoutHint = "the page was fetched but not parsed within timeout_s=%d; raise timeout_s or lower max_bytes"
+	spyNoReader         = "this client cannot read spy pages"
+	spyForbidden        = "the station user lacks the permission spy pages need (a super user reads them), or this station does not serve them at " + spy.Root
+	spyNotHTMLHint      = "the station answered something that is not an HTML page; spy pages are HTML"
+	cutBytes            = "max_bytes"
 )
 
 // spyFetch is one spy page read: the reply so far (path, status, http_status, elapsed_ms and,
-// for a refused read, a hint) and, when status is ok, the parsed page. A 403 or 404 is a typed
-// status, never a latch; an unsafe path fails before any request.
+// for a refused read, a hint) and, when status is ok, the parsed page. A 403 or 404, and a page
+// not parsed within timeout seconds, is a typed status, never a latch; an unsafe path fails before any request.
 func (t *Tools) spyFetch(path string, maxRows, maxBytes, timeout int) (*pyjson.Object, *spy.Page, error) {
 	clean, err := spy.CleanPath(path)
 	if err != nil {
@@ -66,7 +70,13 @@ func (t *Tools) spyFetch(path string, maxRows, maxBytes, timeout int) (*pyjson.O
 		return out, nil, nil
 	}
 	text, _ := pyjson.DecodeUTF8(got.Body, true)
-	page := spy.Parse(text, maxRows)
+	// the parse gets the call's timeout of its own, so a slow page is a typed status, not a hang
+	page, err := spy.Parse(text, spy.Limits{MaxRows: maxRows, Deadline: time.Now().Add(time.Duration(timeout) * time.Second)})
+	if err != nil {
+		out.Set("status", spyParseTimeout)
+		out.Set("hint", fmt.Sprintf(spyParseTimeoutHint, timeout))
+		return out, nil, nil
+	}
 	if got.Truncated {
 		page.Cut = append([]string{cutBytes}, page.Cut...)
 	}

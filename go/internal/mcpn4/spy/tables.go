@@ -16,9 +16,12 @@ func (p *parser) closeCell(b *builder) {
 	if b.cell == nil {
 		return
 	}
-	text, cut := clip(oneLine(b.cell.String()), MaxCellRunes)
-	if cut {
-		p.cut(CutCell)
+	text := ""
+	if !b.nav { // a navigation table is read for its links only
+		var cut bool
+		if text, cut = clip(oneLine(b.cell.String()), MaxCellRunes); cut {
+			p.cut(CutCell)
+		}
 	}
 	b.row, b.cell = append(b.row, text), nil
 }
@@ -48,7 +51,11 @@ func (p *parser) closeTable() {
 	b := p.top()
 	p.closeRow(b)
 	p.stack = p.stack[:len(p.stack)-1]
-	if !b.nav {
+	switch {
+	case b.nav:
+	case len(p.page.Tables) >= MaxTables:
+		p.cut(CutTables)
+	default:
 		p.page.Tables = append(p.page.Tables, b.table)
 	}
 }
