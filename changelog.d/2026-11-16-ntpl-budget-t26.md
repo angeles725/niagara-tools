@@ -5,7 +5,8 @@
   archive. The entry the budget leaves no room for is one FAIL row (`the templates and their entries inflate
   past 134217728 bytes in all, the bound of one run -- <entry> and everything after it not read`) and nothing
   more is read: a small jar of many amplifying templates ends in seconds instead of minutes.
-- At most 1000 templates are read per run, in a module or a jar; past them one FAIL ntpl-entries row names the
+- Behaviour change: a module or a template module jar with more than 1000 templates now FAILs (exit 1). The
+  first 1000 are checked, in path order (entry-name order in a jar), and one FAIL ntpl-entries row names the
   first template not read.
-- A jar over 32 MiB is refused from its metadata before it is opened, as a .ntpl already was: an unreadable one
-  is the size row (exit 1), no longer exit 3.
+- Behaviour change: an unreadable jar over 32 MiB is now the size-bound FAIL row (exit 1); it was exit 3. A jar
+  over 32 MiB is refused from its metadata before it is opened, as a .ntpl already was.
