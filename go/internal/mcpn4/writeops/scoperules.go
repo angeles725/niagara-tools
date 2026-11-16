@@ -37,8 +37,8 @@ func createPlanWith(c plan.Client, args *pyjson.Object, w *plan.State, _ *sessio
 		}
 		p, err := createPlan(c, args)
 		if err == nil {
-			p.Notes = append(p.Notes, "This creates the write-scope root itself; the same scope cannot remove it again "+
-				"(n4_remove_component scopes on parent_ord): remove it under a wider scope or by hand.")
+			p.Notes = append(p.Notes, "This creates the write-scope root itself; the same scope cannot remove it or roll this create back "+
+				"(n4_remove_component and n4_rollback check parent_ord): remove it under a wider scope or by hand.")
 		}
 		return p, err
 	}

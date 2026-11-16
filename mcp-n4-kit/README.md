@@ -276,8 +276,9 @@ Every write call goes through these layers:
    under its parent (scope `…/Sandbox`, `parent_ord` its parent, `name` `Sandbox`), so a
    scope can name a folder that does not exist yet; it is refused when that root already
    exists, since the station would rename the new one outside the scope. The same scope
-   cannot remove that root again (`n4_remove_component` scopes on `parent_ord`, so a
-   scope never deletes itself in one call): remove it under a wider scope or by hand.
+   cannot remove that root again or roll its create back (`n4_remove_component` and
+   `n4_rollback` check `parent_ord`, so a scope never deletes itself in one call): remove
+   it under a wider scope or by hand.
    `n4_create_link` is scoped on `target_ord` only: the link is stored on the target and
    the source is only read, so the source may sit outside the scope but must still be a
    plain slot ORD. A refusal names the end (`target_ord:` or `source_ord:`). A rollback
