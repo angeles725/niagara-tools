@@ -1,0 +1,48 @@
+package rcscan
+
+var (
+	commentOnly = re(`^[[:space:]]*(//|/\*|\*+|<!--)`)
+
+	httpURL    = re(`http://[^ `+"\t"+`"',;)>]+`, "http://")
+	bareCatch  = re(`catch[[:space:]]*\([[:space:]]*\(\)[[:space:]]*=>[[:space:]]*\{[[:space:]]*\}[[:space:]]*\)`, "catch")
+	nullBranch = re(`\?[[:space:]]*null[[:space:]]*:`, "null")
+
+	scriptOpen  = re(`<script([[:space:]][^>]*)?>`, "<script")
+	styleOpen   = re(`<style([[:space:]][^>]*)?>`, "<style")
+	srcAttr     = re(`[[:space:]]src[[:space:]]*=`, "src")
+	scriptClose = re(`</script>`, "</script>")
+	styleClose  = re(`</style>`, "</style>")
+	blockClose  = re(`</(script|style)>`, "</")
+
+	dataURI   = re(`data:[^"')[:space:]]+`, "data:")
+	styleAttr = re(`style[[:space:]]*=[[:space:]]*("[^"]*"|'[^']*')`, "style")
+	gapDecl   = re(`(^|[;{[:space:]"'])(row-|column-)?gap[[:space:]]*:`, "gap")
+	gridDecl  = re(`display[[:space:]]*:[[:space:]]*(inline-)?grid`, "grid")
+	insetDecl = re(`(^|[;{[:space:]"'])inset[[:space:]]*:`, "inset")
+	aspect    = re(`aspect-ratio[[:space:]]*:`, "aspect-ratio")
+	minCall   = re(`(^|[^A-Za-z0-9_-])min\(`, "min(")
+	maxCall   = re(`(^|[^A-Za-z0-9_-])max\(`, "max(")
+	clampCall = re(`(^|[^A-Za-z0-9_-])clamp\(`, "clamp(")
+	topAwait  = re(`^await[[:space:]]`, "await")
+
+	authWord   = re(`[Aa][Uu][Tt][Hh]`)
+	asyncFunc  = re(`async[[:space:]]+function[[:space:]]*\*?[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*`, "async")
+	asyncFuncP = re(`^async[[:space:]]+function[[:space:]]*\*?[[:space:]]*`, "async")
+	asyncConst = re(`(const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=[[:space:]]*async([[:space:](]|$)`, "async")
+	declP      = re(`^(const|let|var)[[:space:]]+`)
+	assignS    = re(`[[:space:]]*=.*$`, "=")
+
+	fetchCall     = re(`(^|[^A-Za-z0-9_$])fetch[[:space:]]*\(`, "fetch")
+	intervalAsync = re(`setInterval\([[:space:]]*async([[:space:](]|$)`, "setInterval(")
+	intervalName  = re(`setInterval\([[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*[,)]`, "setInterval(")
+	intervalP     = re(`^setInterval\([[:space:]]*`, "setInterval(")
+	intervalS     = re(`[[:space:]]*[,)]$`)
+	htmlAssign    = re(`(inner|outer)HTML[[:space:]]*\+?=([^=]|$)|insertAdjacentHTML[[:space:]]*\(`, "HTML")
+	memberConcat  = re(`\+[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*\.[A-Za-z_$]|\$\{[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*\.[A-Za-z_$]`, ".")
+	escCall       = re(`esc[A-Za-z]*\(`, "esc")
+	disabledSet   = re(`\.disabled[[:space:]]*=([^=]|$)`, ".disabled")
+	disabledRHS   = re(`^=?[[:space:]]*`)
+	notDisabled   = re(`^(false|0)([^A-Za-z0-9_$]|$)`)
+	disabledAttr  = re(`setAttribute\([[:space:]]*["']disabled["']`, "setAttribute(")
+	disabledTag   = re(`<(button|input|select|textarea)[^>]*[[:space:]]disabled([[:space:]=>/]|$)`, "disabled")
+)
