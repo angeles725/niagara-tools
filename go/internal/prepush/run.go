@@ -20,6 +20,7 @@
 package prepush
 
 import (
+	"bytes"
 	"io"
 	"strings"
 
@@ -37,10 +38,12 @@ type hook struct {
 // stdin holds one "<local ref> <local sha> <remote ref> <remote sha>" line per pushed ref. It returns
 // 0 to let the push go on and non-zero to refuse it.
 func Run(args []string, stdin io.Reader, s cli.Stdio) int {
-	// Outside a work tree there is no push to gate: the bash hook left here with status 0.
-	toplevel, ok := gitOut(nil, "rev-parse", "--show-toplevel")
+	// Without a work tree nothing can be checked: a bare repository is named and passes, anything else
+	// refuses with git's own error (the bash hook left here with status 0 and no word).
+	var gitErr bytes.Buffer
+	toplevel, ok := gitOut(&gitErr, "rev-parse", "--show-toplevel")
 	if !ok {
-		return 0
+		return noWorkTree(s.Err, gitErr.String())
 	}
 	h := hook{s: s, toplevel: toplevel, kit: toplevel + "/" + kitDir}
 	data, err := io.ReadAll(stdin)
@@ -64,4 +67,19 @@ func Run(args []string, stdin io.Reader, s cli.Stdio) int {
 		}
 	}
 	return 0
+}
+
+// noWorkTree is the status when `git rev-parse --show-toplevel` failed with stderr gitErr: 0 and a one-line
+// notice in a bare repository, else the refusal carrying git's error.
+func noWorkTree(w io.Writer, gitErr string) int {
+	if bare, ok := gitOut(nil, "rev-parse", "--is-bare-repository"); ok && bare == "true" {
+		dir, _ := gitOut(nil, "rev-parse", "--absolute-git-dir")
+		printf(w, msgBareRepo, dir)
+		return 0
+	}
+	why := strings.TrimSpace(strings.ReplaceAll(gitErr, "\n", " "))
+	if why == "" {
+		why = "no error text"
+	}
+	return refuse(w, msgNoToplevel, why)
 }
