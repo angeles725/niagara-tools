@@ -19,6 +19,8 @@
 # parallel it runs as plain `bats ` (bats refuses --no-parallelize-within-files without -j).
 # A step that runs bats runs the bats-core version ci.yml installs (its "Install bats*" step: BATS_VER=,
 # BATS_SHA256=), fetched when the bats on PATH is another version (lib/ci-local-tools.sh). (retro 2026-11-15 coordination-stretch C8)
+# A Go step run without the npm step (--only "Go") on a host without node or acorn runs with KIT_REQUIRE_JS_TOOLS
+# unset and a NOTE, so its vendorfloor tests skip instead of failing (lib/ci-local-js.sh). (retro 2026-11-15 coordination-stretch T12)
 # --changed runs no step: it runs the pinned shellcheck, the kit's bats lints and gofmt over the files changed
 # against origin/main, or over the commit range --range names (.githooks/pre-push calls it with the pushed
 # range); lib/ci-local-changed.sh. (retro 2026-11-15 coordination-stretch C3)
@@ -46,6 +48,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$ROOT/scripts/lib/ci-local-tools.sh" || exit 3
 # shellcheck disable=SC1091
 . "$ROOT/scripts/lib/ci-local-changed.sh" || exit 3
+# shellcheck disable=SC1091
+. "$ROOT/scripts/lib/ci-local-js.sh" || exit 3
 
 DISK_PCT=95  # host-budget disk limit, percent used, for / and /mnt/c (retro 2026-11-15 coordination-stretch T2)
 # "<step-name glob>|<reason>": CI steps replaced by a local equivalent. `uses:` refs match the same way.
@@ -168,6 +172,8 @@ selected=()
 for i in "${!NAMES[@]}"; do
   [ "${VERDICTS[$i]}" = RUN ] && [[ "${NAMES[$i]}" == *"$ONLY"* ]] && selected+=("$i")
 done
+npm_selected=0
+for i in "${selected[@]}"; do [[ "${BODIES[$i]}" != *"npm ci "* ]] || npm_selected=1; done
 for i in "${selected[@]}"; do
   if grep -q shellcheck <<< "${BODIES[$i]}"; then provision_shellcheck; break; fi
 done
@@ -183,7 +189,8 @@ passed=0 failed=0
 cd "$ROOT"
 for i in "${selected[@]}"; do
   printf '== %s\n' "${NAMES[$i]}"
-  body="${BODIES[$i]//"$BATS_ALL"/"$BATS_J"}"
+  body="$(js_tools_guard "${NAMES[$i]}" "${BODIES[$i]}" "$npm_selected")"
+  body="${body//"$BATS_ALL"/"$BATS_J"}"
   body="${body//"$BATS_CI_J"/"$BATS_LOCAL_J"}"
   rc=0
   CI=true RUNNER_TEMP="$WORK/runner-temp" bash -e -c "$body" || rc=$?
