@@ -45,11 +45,22 @@ func harnessTarget(harness, home, project, name, launcher string) (target, error
 // there byte-for-byte equal in value. A differing entry is a conflict unless force is set.
 func (t target) plan(force bool) (doc, next []byte, err error) {
 	doc, err = os.ReadFile(t.file)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	switch {
+	case err == nil:
+	case errors.Is(err, fs.ErrNotExist) && t.claude():
+		return nil, nil, fmt.Errorf("no %s: start Claude Code once, or pass --project", t.file)
+	case errors.Is(err, fs.ErrNotExist):
+		doc = nil // a new mcp.json
+	default:
 		return nil, nil, err
 	}
-	if t.path[0] == "projects" {
-		if _, ok, perr := getPath(doc, t.path[:2]); err != nil || perr != nil || !ok {
+	if err := checkDocument(doc); err != nil {
+		return nil, nil, fmt.Errorf("%s: %w; nothing written", t.file, err)
+	}
+	if t.claude() {
+		if _, ok, err := getPath(doc, t.path[:2]); err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", t.file, err)
+		} else if !ok {
 			return nil, nil, fmt.Errorf("no Claude Code project %s in %s: start Claude Code in that directory once, or pass --project", t.path[1], t.file)
 		}
 	}
@@ -57,7 +68,7 @@ func (t target) plan(force bool) (doc, next []byte, err error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %w", t.file, err)
 	}
-	if found && compactString(old) == string(t.entry) {
+	if found && sameValue(old, t.entry) {
 		return doc, nil, nil
 	}
 	if found && !force {
@@ -70,3 +81,5 @@ func (t target) plan(force bool) (doc, next []byte, err error) {
 	}
 	return doc, next, nil
 }
+
+func (t target) claude() bool { return t.path[0] == "projects" }

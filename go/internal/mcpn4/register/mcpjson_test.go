@@ -54,3 +54,12 @@ func TestAnUnknownHarnessIsAUsageError(t *testing.T) {
 		t.Fatalf("err = %v, want a usage error naming the harness", err)
 	}
 }
+
+func TestAnEntryDifferingOnlyInArgsNamesJustThatField(t *testing.T) {
+	h := newHome(t)
+	h.write(t, ".pi/agent/mcp.json", "{\"mcpServers\": {\"mcp-n4-lab\": {\"exposure\": \"direct\", \"args\": [\"-x\"], \"command\": \"/l/lab-run.sh\"}}}\n")
+	tgt, _ := harnessTarget("pi", h.dir, "", "mcp-n4-lab", "/l/lab-run.sh")
+	if _, _, err := tgt.plan(false); err == nil || !strings.Contains(err.Error(), "different [args]") {
+		t.Fatalf("err = %v, want only args named", err)
+	}
+}

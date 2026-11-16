@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/angeles725/niagara-tools/go/internal/atomicfile"
 	kitcli "github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/envfile"
 	mcpcli "github.com/angeles725/niagara-tools/go/internal/mcpn4/cli"
@@ -95,6 +94,8 @@ func parse(args []string, s kitcli.Stdio) (options, error) {
 	}
 	if o.project == "" {
 		o.project, _ = os.Getwd()
+	} else if abs, err := filepath.Abs(o.project); err == nil {
+		o.project = abs // Claude Code keys projects by absolute path
 	}
 	return o, nil
 }
@@ -122,10 +123,7 @@ func register(o options, out io.Writer) error {
 		fmt.Fprintf(out, "unchanged %s\n", label)
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(tgt.file), 0o755); err != nil {
-		return err
-	}
-	if err := atomicfile.Write(tgt.file, next); err != nil {
+	if err := writeFile(tgt.file, next, 0); err != nil {
 		return err
 	}
 	fmt.Fprintf(out, "written %s\n", label)
@@ -165,22 +163,4 @@ func launcherText(o options, launcher string) ([]byte, error) {
 			launcher, o.station, firstDiffLine(string(old), string(text)))
 	}
 	return text, nil
-}
-
-func writeIfChanged(out io.Writer, label, path string, text []byte, perm os.FileMode) error {
-	if old, err := os.ReadFile(path); text == nil || (err == nil && string(old) == string(text)) {
-		fmt.Fprintf(out, "unchanged %s\n", label)
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	if err := atomicfile.Write(path, text); err != nil {
-		return err
-	}
-	if err := os.Chmod(path, perm); err != nil {
-		return err
-	}
-	fmt.Fprintf(out, "written %s\n", label)
-	return nil
 }

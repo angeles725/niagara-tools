@@ -1,10 +1,26 @@
 package register
 
 import (
-	"bytes"
 	"encoding/json"
+	"reflect"
 	"sort"
 )
+
+// decode is raw as Go values (nil when it does not decode).
+func decode(raw []byte) any {
+	var v any
+	if json.Unmarshal(raw, &v) != nil {
+		return nil
+	}
+	return v
+}
+
+// sameValue is true when two JSON texts hold the same value, whatever their key order or layout
+// (`claude mcp add` writes type, command, args, env; register writes them sorted).
+func sameValue(a, b []byte) bool {
+	va, vb := decode(a), decode(b)
+	return va != nil && reflect.DeepEqual(va, vb)
+}
 
 // changedFields names the top-level fields of two JSON objects whose values differ (values are
 // never shown: an entry's env may hold anything).
@@ -20,18 +36,10 @@ func changedFields(old, new []byte) []string {
 		}
 	}
 	for k, v := range b {
-		if compactString(a[k]) != compactString(v) {
+		if _, ok := a[k]; !ok || !sameValue(a[k], v) {
 			out = append(out, k)
 		}
 	}
 	sort.Strings(out)
 	return out
-}
-
-func compactString(raw []byte) string {
-	var b bytes.Buffer
-	if err := json.Compact(&b, raw); err != nil {
-		return string(raw)
-	}
-	return b.String()
 }
