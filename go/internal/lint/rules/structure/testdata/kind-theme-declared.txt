@@ -1,0 +1,32 @@
+-- args --
+@DIR@/kind-theme-declared/themeAcme
+-- want --
+exit 0
+-- stderr --
+-- kind-theme-declared/.git/HEAD --
+ref: refs/heads/main
+-- kind-theme-declared/themeAcme/MODULE-MAP.md --
+# MODULE-MAP — themeAcme
+
+modularity: strict
+type: theme
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| plumbing | ux | themeAcme-ux/themeAcme-ux.gradle.kts; themeAcme-ux/module-include.xml | — | build or packaging only |
+| plumbing | ux | themeAcme-ux/nss/theme.nss; themeAcme-ux/ux/theme.css; themeAcme-ux/hx/theme.css | — | a colour, font or icon of the theme changes |
+-- kind-theme-declared/themeAcme/themeAcme-ux/hx/theme.css --
+body { font-family: sans-serif; }
+-- kind-theme-declared/themeAcme/themeAcme-ux/module-include.xml --
+<types/>
+-- kind-theme-declared/themeAcme/themeAcme-ux/nss/theme.nss --
+#define accent = #336699;
+.button { background: $accent; }
+-- kind-theme-declared/themeAcme/themeAcme-ux/themeAcme-ux.gradle.kts --
+moduleManifest {
+  moduleName.set("themeAcme")
+  runtimeProfile.set(ux)
+  defines { define("themeName", "themeAcme") }
+}
+-- kind-theme-declared/themeAcme/themeAcme-ux/ux/theme.css --
+body { font-family: sans-serif; }

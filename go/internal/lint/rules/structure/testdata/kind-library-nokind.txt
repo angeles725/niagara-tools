@@ -1,0 +1,37 @@
+-- args --
+@DIR@/kind-library-nokind/acmeJdbc
+-- want --
+exit 1
+FAIL  lint-structure  acmeJdbc-rt  L5: module.palette missing for -rt profile
+-- stderr --
+-- kind-library-nokind/.git/HEAD --
+ref: refs/heads/main
+-- kind-library-nokind/acmeJdbc/MODULE-MAP.md --
+# MODULE-MAP — acmeJdbc
+
+modularity: strict
+type: theme
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| plumbing | rt | acmeJdbc-rt/acmeJdbc-rt.gradle.kts; acmeJdbc-rt/module-include.xml; acmeJdbc-rt/module-permissions.xml | — | build, packaging or the wrapped library's version |
+-- kind-library-nokind/acmeJdbc/acmeJdbc-rt/acmeJdbc-rt.gradle.kts --
+moduleManifest {
+  moduleName.set("acmeJdbc")
+  runtimeProfile.set(rt)
+}
+dependencies {
+  nre(":nre")
+  api(":baja")
+}
+-- kind-library-nokind/acmeJdbc/acmeJdbc-rt/module-include.xml --
+<types/>
+-- kind-library-nokind/acmeJdbc/acmeJdbc-rt/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="station">
+    <req-permission>
+      <name>NETWORK_COMMUNICATION</name>
+      <purposeKey>The wrapped JDBC driver opens the database connection</purposeKey>
+    </req-permission>
+  </niagara-permission-groups>
+</permissions>

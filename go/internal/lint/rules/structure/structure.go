@@ -20,6 +20,7 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 	}
 	s.hostPaths()
 	s.types = s.declaredTypes(profiles)
+	s.kind = s.declaredKind()
 	if s.mode = lint.ModuleMode(root); s.mode == lint.ModularityStrict {
 		s.packages = s.modulePackages(profiles)
 	}

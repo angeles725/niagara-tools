@@ -1,0 +1,23 @@
+-- args --
+@DIR@/kind-theme-undeclared/themeAcme
+-- want --
+exit 1
+FAIL  lint-structure  themeAcme-ux  L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile; a theme module declares `type: theme` in its MODULE-MAP.md header, types/theme.md § 7)
+-- stderr --
+-- kind-theme-undeclared/.git/HEAD --
+ref: refs/heads/main
+-- kind-theme-undeclared/themeAcme/themeAcme-ux/hx/theme.css --
+body { font-family: sans-serif; }
+-- kind-theme-undeclared/themeAcme/themeAcme-ux/module-include.xml --
+<types/>
+-- kind-theme-undeclared/themeAcme/themeAcme-ux/nss/theme.nss --
+#define accent = #336699;
+.button { background: $accent; }
+-- kind-theme-undeclared/themeAcme/themeAcme-ux/themeAcme-ux.gradle.kts --
+moduleManifest {
+  moduleName.set("themeAcme")
+  runtimeProfile.set(ux)
+  defines { define("themeName", "themeAcme") }
+}
+-- kind-theme-undeclared/themeAcme/themeAcme-ux/ux/theme.css --
+body { font-family: sans-serif; }

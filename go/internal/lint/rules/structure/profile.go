@@ -77,11 +77,7 @@ func (s *scan) profile(dir string) {
 	}
 	named := func() bool { return lint.IsFile(pal) && countText(s.lines(pal), "<p n=") > 0 } // grep -q '<p n='
 	if strings.HasSuffix(name, "-rt") {
-		if !lint.IsFile(pal) {
-			s.row(lint.Unset, rel, "L5: module.palette missing for -rt profile")
-		} else if !named() {
-			s.row(lint.Unset, s.rel(pal), "L5: module.palette has no named component entries (empty palette — see B788)")
-		}
+		s.rtPalette(rel, pal, named())
 	}
 	if lint.IsFile(pal) {
 		s.palette(pal, s.ownModule(dir))
@@ -97,7 +93,7 @@ func (s *scan) profile(dir string) {
 		java = s.files(src, false, "*.java")
 	}
 	if (strings.HasSuffix(name, "-wb") || strings.HasSuffix(name, "-ux")) && !named() && len(java) == 0 {
-		s.row(lint.Unset, rel, "L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile)")
+		s.emptyPart(dir, name, rel)
 	}
 	for _, f := range java {
 		lines := s.lines(f)

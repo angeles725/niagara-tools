@@ -1,6 +1,6 @@
 # Type: module structure — the layout, naming, and a conformance lint (`lint-structure.sh`)
 
-The shape a Niagara N4 module must have on disk, and the L1–L11 checklist `lint-structure.sh` enforces. Grounded
+The shape a Niagara N4 module must have on disk, and the L1–L17 checklist `lint-structure.sh` enforces (L8 is `verify-module.sh`'s). Grounded
 in how Tridium/Honeywell lay out their own modules and an audit of our four. `[ev: corpus B817]`
 
 ## Layout — one `moduleName`, per-profile parts `[ev: corpus B817]`
@@ -102,7 +102,7 @@ a section of `module-include.xml` and the two must never be merged.  A test type
 The Gradle plugin emits a distinct `moduleTestJar` output task that includes the test registry; the
 regular `jar` task does not. `[ev: corpus B958 §958.4, B960 §960.4]`
 
-## The good-module checklist — L1–L11 (`lint-structure.sh <module-root>`) `[ev: corpus B817]`
+## The good-module checklist — L1–L17 (`lint-structure.sh <module-root>`) `[ev: corpus B817]`
 Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clean · **1** any FAIL · **3** usage.
 `.deploy-baseline/` subtrees are PRUNED (a deploy snapshot is not source). `[ev: corpus B817]`
 
@@ -113,13 +113,18 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 | L3 | legacy or no map: a `…/model/` directory holding a `.java` file that imports `javax.baja.*` WARNs once per directory (advisory). Strict (`modularity: strict` in `<module-root>/MODULE-MAP.md`), per file of every `-rt`/`-ux`/`-wb`/`-se` part: a Baja-free class (no `javax.baja`/`com.tridium` import, no `@NiagaraType`) outside a role package FAILs (`-rt`, `-wb`, `-se`: `model/`; `-ux`: `route/`, `service/` or `model/`); a `model/` class importing a `javax.baja` or `com.tridium` type FAILs at the import line; a `model/` class `<C>` with no `<C>Test.java` anywhere under the part's `srcTest/` FAILs | WARN legacy · FAIL strict | chihuahua `wb/model/` isolated ✓; ColdRoomPan/CompPan keep it flat (advisory); client modules A–C have no `model/` in any part, which the legacy row cannot see `[ev: retro modularity-strict-new Δ3]` |
 | L3b | strict only: a `model/` class importing a type of one of the module's own packages that is not a `model` package (any part's `src/`) FAILs at the import line — `model/` depends only on `model/` and libraries | FAIL strict | `[ev: retro modularity-gaps Δ1]` |
 | L4 | `module.lexicon` present AND non-empty (≥1 `key=value`) when ≥1 type is declared | FAIL | chihuahua-rt + -ux lexicons EMPTY → **L4 FAIL** |
-| L5 | `module.palette` present AND non-empty on a component module | FAIL | empty palette = the B788 footgun |
+| L5 | `module.palette` present AND non-empty (≥1 named `<p n=` entry) on every `-rt` part. A module whose map declares `type: library` (§ Module map) may ship no palette; a palette it does ship is still judged | FAIL | empty palette = the B788 footgun |
 | L6 | source ships `module-include.xml`, NOT a hand-authored `META-INF/module.xml` | FAIL | plugin generates the manifest |
 | L7 | every `<dependency>` `vendorVersion` is a 3-part floor (`4.14.0`), not 2-part or the 4-part self-stamp `[INFER — kit rule; B784 §784.2 records a valid 2-part legacy floor]` | FAIL | mutation `:baja:4.14` (2-part) → **L7 FAIL** |
-| L8 | signed jar present (`NIAGARA4`/vendor `.SF`+`.RSA`) | FAIL | shared with `verify-module.sh` |
-| L9 | no empty skeleton part — a declared `-wb`/`-ux` with 0 `.java` AND empty palette/lexicon | FAIL | DashboardPan-wb (0 source, empty palette) → **L9 FAIL** |
-| L10 | no absolute HOST paths in a tracked `gradle.properties` (`C:\…` `niagara_home`/`user_home`/`nodeHome`) | FAIL | client `ColdRoomPan`/`CompPan` `gradle.properties` hardcode `C:\Honeywell\…` → **L10 FAIL** (`.deploy-baseline/` pruned) |
+| L8 | signed jar present (`NIAGARA4`/vendor `.SF`+`.RSA`) | not run by this lint: `verify-module.sh` `signed` | a source lint has no jar |
+| L9 | no empty skeleton part — a `-wb`/`-ux` part with 0 `.java` under `src/` AND no named palette entry. The `-ux` part of a module whose map declares `type: theme` (§ Module map) passes when it holds at least one `.nss` file, and FAILs without one; the kind is never inferred from the missing files, and the undeclared `-ux` row says how to declare it | FAIL | DashboardPan-wb (0 source, empty palette) → **L9 FAIL** |
+| L10 | no absolute HOST path in a `gradle.properties` (every one under the module root, then each parent's up to the `.git` sentinel; tracked or not). `niagara_home`, `niagara_user_home`, `nodeHome`, `org.gradle.java.installations.paths`: WARN in a client tree (migrate to the user-level file), FAIL inside the kit's `fixtures/` or `templates/`. `user_home`: FAIL everywhere (§ L10 doctrine) | WARN · FAIL | client `ColdRoomPan`/`CompPan` `gradle.properties` hardcode `C:\Honeywell\…` → **L10 FAIL** (`.deploy-baseline/` pruned) |
 | L11 | a `srcTest` mixing pure-JUnit + Baja (`BTest`/`BTestNg`) declares BOTH `moduleTestImplementation(":test-wb")` AND junit declarations (or splits source sets) | FAIL | ColdRoomPan-rt/CompPan-rt declare only `:test-wb` → **L11 FAIL** |
+| L12 | the module root's `gradle.properties`, when there is one, carries `org.gradle.java.installations.auto-detect=false` uncommented (§ JDK-pinning block) | FAIL | R10-D8 |
+| L13 | the first `niagara_home=` of each `<group>/*/gradle.properties` (the group is the module root's parent) agrees; when two differ, every sibling that sets one gets a row | FAIL | three modules of one station built against three installs (§ L10 doctrine) |
+| L14 | the gradle root's `settings.gradle.kts` (the module root's, else the nearest ancestor's up to the `.git` sentinel) does not pin `gradlePluginVersion` to a string literal (read as Kotlin code: comments and literal contents out) | FAIL | `-PniagaraPluginVersion` must apply |
+| L15 | the root `build.gradle.kts` beside that `settings.gradle.kts`, when it applies `com.tridium.niagara-signing`, carries `allowDefaultProfile.set(false)` and the `niagaraSigning` block (`templates/signing-root.gradle.kts`); a root it cannot scan is the same WARN | WARN | a wizard root signs with the development key |
+| L16 | the signing profile that gradle root's `gradle.properties` names (`niagaraSigningProfile`) keeps a validity − refresh margin of at least `signingprofile.MinMargin`; a named profile that does not exist is a WARN (margin unchecked) | FAIL | the plugin re-mints the key at every signing |
 | L17 | `module.palette` type specs: a dotted Java class name in `t=`, or `<symbol>:B<Type>` for a type the module declares as `<Type>`, the symbol mapped to this module, compared ignoring case (the `moduleName` of a gradle file in the part directory, else in the module root, else the part directory name; another module's symbol is not judged) | FAIL (a symbol remapped to another module by a later `m=`, a palette holding `<p` that is not well-formed XML: WARN) | `[ev: retro course-coverage Δ20]` |
 
 `[ev: corpus B817]` for every row. Deeper cites B817 carries: lexicon/palette STANDARD ← B780/B759 (§817.4), the
@@ -211,7 +216,7 @@ type (`0d`, `1.5f`, `0L`, `"\"text\""`) or its `B` value (`BDouble.make(0)`). Ch
 - **"java file must belong to a package"** means the `package` line was lost in a copy-paste. `[ev: corpus B1418 §1418.5 b]`
 
 ## PASS state + scaffold `[ev: corpus B817]`
-`scaffold-module.sh <MOD>` output passes L1–L11 at exit 0 — the skeleton is the GREEN fixture. A mutation that
+`scaffold-module.sh <MOD>` output passes L1–L17 at exit 0 — the skeleton is the GREEN fixture. A mutation that
 empties the palette (L5/L9), a lexicon (L4), drops a 3-part floor (L7), hardcodes a `C:\` path (L10), or mixes
 tests without both deps (L11) flips the corresponding row to FAIL. `[ev: corpus B817]`
 
@@ -279,6 +284,13 @@ modularity: strict
   in the module tree because a lint must decide it from the tree alone: `.deploy-baseline/` appears only at the first
   deploy, git history is VCS-bound (the lints are VCS-free), and the BUILD-STATE envelope lives in the kit repo (it
   mirrors the mode for orientation: the `modularity` field in `BUILD-STATE.src.md`).
+- **Kind (optional header line).** `type: theme` or `type: library`, on its own line before the table, declares a
+  module that is not a component module, and `lint-structure` reads it from the module root's map only
+  (`declaredKind`, `go/internal/lint/rules/structure`): a `type: theme` module's zero-Java `-ux` part passes L9 when
+  it holds a `.nss` file (`types/theme.md` § 7), and a `type: library` module's `-rt` part passes L5 with no
+  `module.palette` (`types/utility-lib.md` § 6). Any other value, or no line, declares nothing: the lint never
+  infers a kind from the files a part lacks, so a part left empty by accident still FAILs. `lint-module-map`
+  ignores the line. Pinned by `TestDeclaredKindHeader` and the `kind-*` golden cases.
 - **Table.** The first table whose header is exactly `Concern | Part | Files | Tests | Change here when`. One row per
   concern and part (a concern with rt and ux code has one row per part; `plumbing` rows may repeat). `Files` and `Tests` hold `;`-separated paths relative to the module root (backticks allowed); `—`, `-` or
   an empty cell means none. A Java file is listed by its own path, one entry per file. Front-end files under a part's
