@@ -46,7 +46,7 @@ func TestHarnessInstallsUnderTheAgentDir(t *testing.T) {
 	}
 }
 
-// H1: pi honours PI_CODING_AGENT_DIR over <home>/.pi/agent.
+// H1: without --home, pi honours PI_CODING_AGENT_DIR over $HOME/.pi/agent.
 func TestHarnessPiHonoursTheAgentDirVariable(t *testing.T) {
 	f := newFixture(t)
 	agent := filepath.Join(filepath.Dir(f.home), "elsewhere-agent")
@@ -54,7 +54,8 @@ func TestHarnessPiHonoursTheAgentDirVariable(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.env["PI_CODING_AGENT_DIR"] = agent
-	code, _, errText := f.install("--skill", "mcp-n4", "--harness", "pi")
+	f.env["HOME"] = f.home // no --home: an explicit --home wins over the variable (TestHomeWinsOverThePiAgentDirVariable)
+	code, _, errText := f.installNoHome("--skill", "mcp-n4", "--harness", "pi")
 	if code != 0 || errText != "" {
 		t.Fatalf("exit %d, stderr %q", code, errText)
 	}

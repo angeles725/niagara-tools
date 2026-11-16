@@ -23,8 +23,13 @@ var defaultPrompt embed.FS
 func promptSource(tracked string) string { return filepath.Join(filepath.Dir(tracked), promptName) }
 
 // renderPrompt is the prompt file for skill whose tracked launcher is tracked and whose installed launcher
-// is skillFile. A kit template that exists but cannot be read is an error, never the default.
+// is skillFile, made absolute so the harness can read it from any working directory. A kit template that
+// exists but cannot be read is an error, never the default.
 func renderPrompt(skill, tracked, skillFile string) ([]byte, error) {
+	abs, err := filepath.Abs(skillFile)
+	if err != nil {
+		return nil, err
+	}
 	text, err := os.ReadFile(promptSource(tracked))
 	if errors.Is(err, fs.ErrNotExist) {
 		text, err = defaultPrompt.ReadFile("prompts/default.md")
@@ -32,6 +37,6 @@ func renderPrompt(skill, tracked, skillFile string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := strings.NewReplacer("@SKILL_FILE@", skillFile, "@SKILL@", skill)
+	r := strings.NewReplacer("@SKILL_FILE@", abs, "@SKILL@", skill)
 	return []byte(r.Replace(string(text))), nil
 }

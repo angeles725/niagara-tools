@@ -5,8 +5,8 @@
 //
 // One file per concern: layout.go (names and exit codes, data), harness.go (the --harness table and its
 // paths), prompt.go (the prompt file, rendered from <kit>/skill/prompt.md or prompts/default.md), table.go (the SKILLS table read from the
-// installer script), options.go (the two command lines), install.go, target.go and materialize.go
-// (install-skill), drift.go and driftrow.go (check-skill-drift). Hashing, copying and file tests come from internal/installtools.
+// installer script), options.go (the two command lines), install.go, target.go, materialize.go and
+// plan.go (install-skill: every file checked before the first write), drift.go and driftrow.go (check-skill-drift). Hashing, copying and file tests come from internal/installtools.
 package skillinstall
 
 const (

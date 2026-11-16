@@ -13,7 +13,8 @@
 #     --skill <name>    a skill from install-skill.sh's table (default build-n4-module)
 #     --harness <h>     the harness whose copy is checked (default claude; harnesses as in install-skill.sh)
 #     --all             every harness (the same as --harness all)
-#     --home <dir>      base home directory (default $HOME; an empty value is a usage error); tests always pass it
+#     --home <dir>      base home directory (default $HOME; an empty value is a usage error); tests always pass it.
+#                       It wins over $PI_CODING_AGENT_DIR for pi, as in install-skill.sh
 #
 # Row format:  PASS|FAIL|SKIP  skill-drift  <skill>  <detail>
 # Without --harness the rows are the Claude copy's, as before. With --harness or --all the skill column is

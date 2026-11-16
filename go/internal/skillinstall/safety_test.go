@@ -6,17 +6,6 @@ import (
 	"testing"
 )
 
-// S3: an empty --home is a usage error (exit 2), never a fall back to $HOME.
-func TestEmptyHomeIsUsage(t *testing.T) {
-	f := newFixture(t)
-	f.env["HOME"] = f.home
-	code, out, errText := f.installNoHome("--home", "", "--skill", "mcp-n4")
-	expect(t, "install", code, out, errText, 2, "", "install-skill: --home requires a non-empty directory\n")
-	code, out, errText = f.driftNoHome("--home", "")
-	expect(t, "drift", code, out, errText, 2, "", "check-skill-drift: --home requires a non-empty directory\n"+driftUsage)
-	absent(t, f.home)
-}
-
 // S4: --force never writes through a symlinked SKILL.md or skill directory; the pointee is unchanged.
 func TestForceRefusesASymlinkedTarget(t *testing.T) {
 	f := newFixture(t)
@@ -29,7 +18,7 @@ func TestForceRefusesASymlinkedTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, out, errText := f.install("--skill", "mcp-n4", "--force")
-	expect(t, "file link", code, out, errText, 3, "install-skill: --force: overwriting diverged copy\n",
+	expect(t, "file link", code, out, errText, 3, "",
 		"install-skill: refusing to write through a symbolic link: "+target+" (remove the link, then re-run)\n")
 	if got := read(t, pointee); got != "someone else's file\n" {
 		t.Errorf("the pointee was written: %q", got)

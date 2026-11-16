@@ -9,6 +9,7 @@ const emptyHome = "--home requires a non-empty directory"
 type installOptions struct {
 	skill, home, harness string
 	dryRun, force        bool
+	homeGiven            bool // --home was on the line: it wins over a harness's directory variable
 }
 
 // parseInstall reads the install-skill arguments. A malformed line returns its message, and whether
@@ -25,9 +26,9 @@ func parseInstall(args []string) (o installOptions, message string, withUsage bo
 			switch arg {
 			case "--home":
 				if args[i] == "" {
-					return o, emptyHome, false
+					return o, emptyHome, true
 				}
-				o.home = args[i]
+				o.home, o.homeGiven = args[i], true
 			case "--skill":
 				o.skill = args[i]
 			default:
@@ -53,6 +54,7 @@ func parseInstall(args []string) (o installOptions, message string, withUsage bo
 type driftOptions struct {
 	skill, home, harness string
 	help, explicit       bool
+	homeGiven            bool // --home was on the line: it wins over a harness's directory variable
 }
 
 // parseDrift reads the check-skill-drift arguments left to right; a malformed line returns a non-empty
@@ -73,7 +75,7 @@ func parseDrift(args []string, home string) (o driftOptions, ok bool, message st
 				if args[i+1] == "" {
 					return o, false, emptyHome
 				}
-				o.home = args[i+1]
+				o.home, o.homeGiven = args[i+1], true
 			default:
 				o.harness, o.explicit = args[i+1], true
 			}
