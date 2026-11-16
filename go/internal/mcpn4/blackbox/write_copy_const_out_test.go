@@ -23,7 +23,10 @@ var constContracts = map[string]any{
 }
 
 // withContracts makes the station's registry channel answer constContracts.
-func (d *dRig) withContracts() {
+func (d *dRig) withContracts() { d.withContractsOf(constContracts) }
+
+// withContractsOf makes the station's registry channel answer contracts, {} for any other type.
+func (d *dRig) withContractsOf(contracts map[string]any) {
 	d.f.set(func(f *faults) {
 		f.raw = func(frame map[string]any) (int, []byte) {
 			for _, m := range objects(frame["m"]) {
@@ -34,7 +37,7 @@ func (d *dRig) withContracts() {
 				out := map[string]any{}
 				for _, s := range body["t"].([]any) {
 					spec, _ := s.(string)
-					if c, ok := constContracts[spec]; ok {
+					if c, ok := contracts[spec]; ok {
 						out[spec] = c
 					} else {
 						out[spec] = map[string]any{}

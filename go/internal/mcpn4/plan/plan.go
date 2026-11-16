@@ -13,9 +13,13 @@ import (
 // Planned is what a tool's plan returns (tools_write.Planned): the exact ops and inverse, both
 // hashed into the token (the inverse without its `prior` values), human notes, the ORD ->
 // handle targets the intent records, the PlanKeys and IntentKeys the token and the intent carry
-// (Python keeps them in the plan's data), and the private data its read-back needs.
+// (Python keeps them in the plan's data), and the private data its read-back needs. HashInverse,
+// when not nil, is the inverse the plan shows and the token hashes instead of Inverse: the same
+// entries with the values of runtime slots left out (writeops.runtimeSlot), which change by
+// timing alone; the journal keeps Inverse whole.
 type Planned struct {
 	Ops, Inverse, Notes []any
+	HashInverse         []any
 	Targets, Keys       *pyjson.Object
 	Data                any
 }
@@ -71,7 +75,11 @@ type Engine struct {
 // canonical JSON. It names the station session (audit F1): a token cannot execute after a
 // reconnect or on another station.
 func Hashed(name string, p *Planned, sess *session.Session) (*pyjson.Object, string, error) {
-	plan := obj("tool", name, "ops", list(p.Ops), "inverse", HashedInverse(list(p.Inverse)), "notes", list(p.Notes),
+	inverse := p.Inverse
+	if p.HashInverse != nil {
+		inverse = p.HashInverse
+	}
+	plan := obj("tool", name, "ops", list(p.Ops), "inverse", HashedInverse(list(inverse)), "notes", list(p.Notes),
 		"station", obj("name", sess.StationName, "base_url", sess.BaseURL, "session_id", sess.SessionID))
 	withKeys(plan, p, PlanKeys)
 	canon, err := pyjson.Marshal(plan, pyjson.Canonical)
