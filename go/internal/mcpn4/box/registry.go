@@ -13,7 +13,8 @@ const RegistryChannel = "reg"
 // within a station session, so every entry of each reply is kept until the next Open: a request whose
 // specs are all kept is answered without a call. The answer holds every kept type (at least the
 // requested specs the station described and their dependencies); a reply that is not an object
-// is returned as it came. It reads type definitions only, never a component.
+// is returned as it came. It reads type definitions only, never a component. A request that gets
+// no answer is asked again once (callRegistry).
 func (c *Client) LoadTypes(specs []string) (any, error) {
 	if c.types == nil {
 		c.types = pyjson.NewObject()
@@ -25,7 +26,7 @@ func (c *Client) LoadTypes(specs []string) (any, error) {
 		}
 	}
 	if len(missing) > 0 {
-		reply, err := c.Call(RegistryChannel, "loadTypes", obj("t", missing, "ec", true))
+		reply, err := c.callRegistry(obj("t", missing, "ec", true))
 		got, ok := reply.(*pyjson.Object)
 		if err != nil || !ok {
 			return reply, err

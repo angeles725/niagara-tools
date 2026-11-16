@@ -72,11 +72,12 @@ func TestLoadTypesAnswersCachedSpecsWithoutASecondCall(t *testing.T) {
 	}
 }
 
-// A reply that is not an object, or a failed call, is never cached: the next request for the same
-// spec asks the station again instead of answering from a half-filled cache.
+// A reply that is not an object, or a failed call (no answer twice: the first is retried once), is
+// never cached: the next request for the same spec asks the station again instead of answering
+// from a half-filled cache.
 func TestLoadTypesCachesNeitherAMalformedReplyNorAFailedCall(t *testing.T) {
 	calls := 0
-	bodies := []string{`[]`, ``, `{"a:B":{"c":[],"p":"a:A"},"a:A":{}}`}
+	bodies := []string{`[]`, ``, ``, `{"a:B":{"c":[],"p":"a:A"},"a:A":{}}`}
 	st := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		v, _ := pyjson.Unmarshal(body)
@@ -92,6 +93,7 @@ func TestLoadTypesCachesNeitherAMalformedReplyNorAFailedCall(t *testing.T) {
 	}))
 	t.Cleanup(st.Close)
 	c := newClient(t, st.URL, nil)
+	c.Sleep = func(float64) {}
 	got, err := c.LoadTypes([]string{"a:B"})
 	if _, isObj := got.(*pyjson.Object); err != nil || isObj {
 		t.Fatalf("malformed reply: got %v, err %v; want it returned as it came", got, err)
@@ -103,8 +105,8 @@ func TestLoadTypesCachesNeitherAMalformedReplyNorAFailedCall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if calls != 3 {
-		t.Errorf("calls = %d, want 3 (nothing cached before the good reply)", calls)
+	if calls != 4 {
+		t.Errorf("calls = %d, want 4 (nothing cached before the good reply)", calls)
 	}
 	reply, _ := pyjson.Marshal(got, pyjson.Options{})
 	if string(reply) != `{"a:B": {"c": [], "p": "a:A"}, "a:A": {}}` {
