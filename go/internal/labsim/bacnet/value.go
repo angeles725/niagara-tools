@@ -1,8 +1,10 @@
 package bacnet
 
 import (
+	"bytes"
 	"encoding/binary"
 	"math"
+	"slices"
 )
 
 // Kind is the application data type of a Value; it equals the tag number.
@@ -159,4 +161,10 @@ func AppendEnclosed(b []byte, number byte, values []Value) []byte {
 		b = v.Append(b)
 	}
 	return AppendClosing(b, number)
+}
+
+// Equal reports whether two values are the same type and value.
+func (v Value) Equal(o Value) bool {
+	return v.Kind == o.Kind && v.Bool == o.Bool && v.Uint == o.Uint && v.Int == o.Int && v.Real == o.Real &&
+		v.Double == o.Double && v.Text == o.Text && v.Object == o.Object && slices.Equal(v.Bits, o.Bits) && bytes.Equal(v.Raw, o.Raw)
 }

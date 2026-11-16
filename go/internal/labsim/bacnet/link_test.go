@@ -113,4 +113,3 @@ func TestNPDUEncodesAndDecodes(t *testing.T) {
 		}
 	}
 }
-

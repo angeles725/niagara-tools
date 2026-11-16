@@ -175,3 +175,35 @@ func TestADeviceFailsAfterItsReads(t *testing.T) {
 		t.Errorf("Reads() = %d, want 1 (a refused read is not counted)", got)
 	}
 }
+
+func TestAnOverrideHidesTheFieldValueUntilItIsReleased(t *testing.T) {
+	t.Parallel()
+	d := device()
+	commanded := 55.0
+	d.Do(0, func(tx Tx) {
+		tx.Override("setpoint", &commanded)
+		if got, field := tx.Get("setpoint"), tx.Field("setpoint"); got != 55 || field != 21.5 {
+			t.Errorf("overridden: value %v, field %v; want 55 over 21.5", got, field)
+		}
+		tx.Set("setpoint", 19) // a field write lands under the override
+		tx.Override("absent", &commanded)
+	})
+	if v, _ := d.Get("setpoint", 0); v != 55 {
+		t.Errorf("a field write showed through the override: %v", v)
+	}
+	if !d.Pin("setpoint", 18) {
+		t.Fatal("Pin refused an overridden point")
+	}
+	d.Do(0, func(tx Tx) {
+		if got, field := tx.Get("setpoint"), tx.Field("setpoint"); got != 55 || field != 18 {
+			t.Errorf("pinned under the override: value %v, field %v; want 55 over 18", got, field)
+		}
+		tx.Override("setpoint", nil)
+		if got := tx.Get("setpoint"); got != 18 {
+			t.Errorf("released = %v, want the field value 18", got)
+		}
+	})
+	if v, _ := d.Get("ramp", 500*ms); !near(v, 50) {
+		t.Errorf("a point that was never overridden = %v, want its behaviour (50)", v)
+	}
+}
