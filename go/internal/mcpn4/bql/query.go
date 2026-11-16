@@ -66,14 +66,10 @@ func ValidateQuery(query any) (string, error) {
 		return "", valueError("query must be a string starting with select")
 	}
 	q = Strip(q)
-	switch {
-	case strings.Contains(q, "|"):
-		return "", valueError("query must not contain '|': only one select is composed into the ORD")
-	case controlRe.MatchString(q):
-		return "", valueError("query must not contain control characters")
-	case pyjson.Len(q) > MaxQueryLength:
-		return "", valueError(fmt.Sprintf("query is longer than %d characters", MaxQueryLength))
-	case !selectRe.MatchString(q):
+	if err := checkQueryText(q); err != nil {
+		return "", err
+	}
+	if !selectRe.MatchString(q) {
 		return "", valueError("only 'select <columns> from <type> [where ...]' is allowed")
 	}
 	return q, nil
