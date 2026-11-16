@@ -161,3 +161,13 @@ fail_once() {
   run grep -c "pr merge" "$GHS/calls"
   [ "$output" = 0 ]
 }
+
+@test "MWG10: a merge call that returned while the PR stays OPEN (a merge queue, auto-merge) exits 9, not 8" {
+  # Mutation: MWG10 -- reporting a refusal (8) for a merge that GitHub only queued. (retro 2026-11-15 coordination-stretch T16)
+  : > "$GHS/no-lagless"
+  reply api_checks "{\"check_runs\":[$(check 1 go completed success)]}"
+  mwg
+  [ "$status" -eq 9 ]
+  [[ "$output" == *"the PR is still OPEN after 4 read(s): a merge queue or auto-merge holds it"* ]]
+  [ "$(grep -c "^pr view" "$GHS/calls")" -eq 5 ]
+}

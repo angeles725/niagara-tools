@@ -76,7 +76,7 @@ func TestAMergeReportedOKIsConfirmedByTheState(t *testing.T) {
 	}
 	f = newFake(t, map[string][]reply{checksKey: {checks(run(1, "go", "completed", "success"))}}) // never MERGED
 	f.lagless = false
-	if code, _, errs := waitWith(f); code != ExitRefused || !strings.Contains(errs, "still OPEN") {
+	if code, _, errs := waitWith(f); code != ExitPending || !strings.Contains(errs, "still OPEN") { // T16: pending, not refused
 		t.Errorf("unconfirmed: exit %d\n%s", code, errs)
 	}
 }

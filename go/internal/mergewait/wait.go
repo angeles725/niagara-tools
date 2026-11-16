@@ -17,11 +17,13 @@ type Config struct {
 	Sleep             func(time.Duration)
 	Now               func() time.Time
 	Out, Err          io.Writer
+	until             time.Time // Wait's deadline: Now at its start plus Timeout; no gh retry starts after it
 }
 
 // Wait checks the PR, waits for the checks of its head commit and merges that commit when they are
 // green. It returns one of the Exit codes.
 func Wait(c Config) int {
+	c.until = c.Now().Add(c.Timeout)
 	c.Gh = c.withRetries(c.Gh)
 	p, err := viewPR(c.Gh, c.PR)
 	if err != nil {
@@ -37,19 +39,21 @@ func Wait(c Config) int {
 	if rc := c.containsBase(p.BaseRefName, sha); rc != ExitMerged {
 		return rc
 	}
-	deadline := c.Now().Add(c.Timeout)
+	deadline := c.until
 	rerun := map[int64]bool{} // the failed runs re-run once: their old entry counts as pending
 	last := ""
-	pollErrs := 0 // consecutive polls that failed: each is printed, and the wait gives up past c.Retries
-	pollFailed := func(err error) bool {
+	// consecutive failures of each poll call: each is printed, and the wait gives up past c.Retries. Each call
+	// has its own count, so a check-runs call that succeeds does not hide a pr view that keeps failing.
+	checkErrs, viewErrs := 0, 0
+	pollFailed := func(n *int, err error) bool {
 		c.report(err)
-		pollErrs++
-		return pollErrs > c.Retries
+		*n++
+		return *n > c.Retries
 	}
 	for {
 		runs, err := checkRuns(c.Gh, sha)
 		if err != nil {
-			if pollFailed(err) {
+			if pollFailed(&checkErrs, err) {
 				return ExitGh
 			}
 			if rc, stop := c.pause(deadline, sha); stop {
@@ -57,7 +61,7 @@ func Wait(c Config) int {
 			}
 			continue
 		}
-		pollErrs = 0
+		checkErrs = 0
 		for i := range runs {
 			if rerun[runs[i].ID] {
 				runs[i].Status = "queued"
@@ -89,11 +93,12 @@ func Wait(c Config) int {
 		}
 		now, err := viewPR(c.Gh, c.PR)
 		if err != nil {
-			if pollFailed(err) {
+			if pollFailed(&viewErrs, err) {
 				return ExitGh
 			}
 			continue
 		}
+		viewErrs = 0
 		if rc, done := c.mergedState(now, sha); done { // merged while we waited
 			return rc
 		}
