@@ -1,4 +1,4 @@
-// Command install-skill installs a tracked skill launcher under <home>/.claude/skills and materializes the kit state.
+// Command install-skill installs a tracked skill launcher into an agent harness (Claude Code, pi, gentle-shell) and materializes the kit state.
 // Run it through scripts/install-skill.sh, which builds this binary on demand; the script header is the contract.
 package main
 

@@ -14,7 +14,7 @@ const (
 	installerText = "#!/usr/bin/env bash\n# install-skill.sh — fixture header.\nset -u\n" +
 		"SKILLS=\"build-n4-module:build-n4-module-kit/skill/SKILL.md mcp-n4:mcp-n4-kit/skill/SKILL.md\"\n"
 	driftText   = "#!/usr/bin/env bash\n# check-skill-drift.sh — fixture header.\n#\n#   second line\nset -u\n"
-	wantUsage   = "usage: install-skill.sh [--skill <build-n4-module|mcp-n4>] [--home <dir>] [--dry-run] [--force]\n"
+	wantUsage   = "usage: install-skill.sh [--skill <build-n4-module|mcp-n4>] [--harness <claude|pi|gentle-shell|all>] [--home <dir>] [--dry-run] [--force]\n"
 	buildSkill  = "stub build skill\n"
 	mcpSkill    = "stub mcp skill\n"
 	kitStateLog = "kit-state.log"
@@ -57,6 +57,9 @@ func newFixture(t *testing.T) *fixture {
 	f.driftCheck = write(t, filepath.Join(f.root, "scripts", "check-skill-drift.sh"), driftText)
 	write(t, f.tracked("build-n4-module"), buildSkill)
 	write(t, f.tracked("mcp-n4"), mcpSkill)
+	for _, skill := range []string{"build-n4-module", "mcp-n4"} { // the real kit templates: the bytes are the contract
+		write(t, promptSource(f.tracked(skill)), read(t, filepath.Join("..", "..", "..", skill+"-kit", "skill", promptName)))
+	}
 	write(t, filepath.Join(f.kit, "METHODOLOGY.md"), "")
 	// HOME is a path that must never be written: every case passes --home or sets it on purpose.
 	f.env = map[string]string{"HOME": filepath.Join(base, "never-home"), "BUILD_N4_KIT": f.kit}
@@ -120,5 +123,12 @@ func absent(t *testing.T, path string) {
 func (f *fixture) driftNoHome(args ...string) (int, string, string) {
 	var out, errb bytes.Buffer
 	code := DriftMain(args, f.stdio(f.driftCheck, &out, &errb))
+	return code, out.String(), errb.String()
+}
+
+// installNoHome runs install-skill without the --home prefix, with args exactly as given.
+func (f *fixture) installNoHome(args ...string) (int, string, string) {
+	var out, errb bytes.Buffer
+	code := Main(args, f.stdio(f.installer, &out, &errb))
 	return code, out.String(), errb.String()
 }

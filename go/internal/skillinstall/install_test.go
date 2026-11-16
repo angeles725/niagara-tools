@@ -171,7 +171,7 @@ func TestInstallTableIsTheSingleSource(t *testing.T) {
 	code, out, errText = f.install("--skill", "mcp-n4")
 	expect(t, "removed from the table", code, out, errText, 2, "",
 		"install-skill: unknown skill: mcp-n4 (expected extra or build-n4-module)\n"+
-			"usage: install-skill.sh [--skill <extra|build-n4-module>] [--home <dir>] [--dry-run] [--force]\n")
+			"usage: install-skill.sh [--skill <extra|build-n4-module>] [--harness <claude|pi|gentle-shell|all>] [--home <dir>] [--dry-run] [--force]\n")
 
 	write(t, f.installer, "#!/usr/bin/env bash\nset -u\n")
 	code, out, errText = f.install()

@@ -1,4 +1,4 @@
-// Command check-skill-drift reports whether an installed skill launcher still matches the tracked one (read-only).
+// Command check-skill-drift reports whether the installed skill launcher and prompt file of each harness still match the tracked ones (read-only).
 // Run it through scripts/check-skill-drift.sh, which builds this binary on demand; the script header is the contract.
 package main
 

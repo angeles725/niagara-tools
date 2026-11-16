@@ -10,8 +10,8 @@ import (
 
 const installTool = "install-skill"
 
-// Main implements `install-skill [--skill <name>] [--home <dir>] [--dry-run] [--force]` for the
-// repository of the launcher named by installtools.LauncherEnv.
+// Main implements `install-skill [--skill <name>] [--harness <name|all>] [--home <dir>] [--dry-run] [--force]`
+// for the repository of the launcher named by installtools.LauncherEnv.
 func Main(args []string, s cli.Stdio) int {
 	fail := func(code int, format string, a ...any) int {
 		fmt.Fprintf(s.Err, installTool+": "+format+"\n", a...)
@@ -28,7 +28,8 @@ func Main(args []string, s cli.Stdio) int {
 	if len(table) == 0 {
 		return fail(exitEnv, "no SKILLS table in %s", launcher.Path)
 	}
-	usage := "usage: install-skill.sh [--skill <" + names(table, "|") + ">] [--home <dir>] [--dry-run] [--force]\n"
+	usage := "usage: install-skill.sh [--skill <" + names(table, "|") + ">] [--harness <" + harnessNames("|") +
+		">] [--home <dir>] [--dry-run] [--force]\n"
 	o, message, withUsage := parseInstall(args)
 	if message != "" {
 		fail(exitUsage, "%s", message)
@@ -49,6 +50,12 @@ func Main(args []string, s cli.Stdio) int {
 		fmt.Fprint(s.Err, usage)
 		return exitUsage
 	}
+	selected, known := selectHarnesses(o.harness)
+	if !known {
+		fail(exitUsage, "unknown harness: %s (expected %s)", o.harness, harnessChoices())
+		fmt.Fprint(s.Err, usage)
+		return exitUsage
+	}
 	tracked := launcher.RepoRoot() + "/" + rel
 	if isFile, _ := installtools.IsFile(tracked); !isFile {
 		return fail(exitEnv, "tracked source not found: %s", tracked)
@@ -57,53 +64,40 @@ func Main(args []string, s cli.Stdio) int {
 	if err != nil {
 		return fail(exitEnv, "%v", err)
 	}
-	trackedSHA, err := installtools.SHA256(tracked)
+	trackedData, err := os.ReadFile(tracked)
 	if err != nil {
 		return fail(exitEnv, "cannot read %s: %s", tracked, installtools.Reason(err))
 	}
-	targetDir, target := installedPath(o.home, o.skill)
-	installed, _ := installtools.IsFile(target) // a target that cannot be examined fails at the write below
-	targetSHA := ""
-	if installed {
-		if targetSHA, err = installtools.SHA256(target); err != nil {
-			return fail(exitEnv, "cannot read %s: %s", target, installtools.Reason(err))
+	code := exitOK
+	for _, h := range selected {
+		root := h.root(o.home, s)
+		if h.optional {
+			if present, _ := installtools.IsDir(root); !present {
+				fmt.Fprintf(s.Out, "%s: absent: %s (%s not found), nothing installed\n", installTool, h.name, root)
+				continue
+			}
+		}
+		all, err := units(h, root, o.skill, tracked, trackedData)
+		if err != nil {
+			return fail(exitEnv, "cannot render the prompt template: %v", err)
+		}
+		for _, u := range all {
+			switch placed := place(u, o, s); placed {
+			case exitEnv:
+				return exitEnv
+			case exitDiverged:
+				code = exitDiverged
+			}
 		}
 	}
-	say := func(format string, a ...any) { fmt.Fprintf(s.Out, format+"\n", a...) }
-	switch {
-	case o.dryRun:
-		switch {
-		case !installed:
-			say("%s: [dry-run] would install to: %s", installTool, target)
-		case trackedSHA == targetSHA:
-			say("%s: [dry-run] already current: %s", installTool, target)
-		default:
-			say("%s: [dry-run] would update (diverged): %s", installTool, target)
-			say("  tracked sha256: %s", trackedSHA)
-			say("  current sha256: %s", targetSHA)
-		}
+	if code != exitOK {
+		return code
+	}
+	if o.dryRun {
 		if kit != "" {
-			say("%s: [dry-run] would run kit-state --write in: %s", installTool, kit)
+			fmt.Fprintf(s.Out, "%s: [dry-run] would run kit-state --write in: %s\n", installTool, kit)
 		}
 		return exitOK
-	case installed && trackedSHA == targetSHA:
-		say("%s: already current: %s", installTool, target)
-		return materialize(kit, s)
-	case installed && !o.force:
-		fail(exitDiverged, "installed copy diverges from tracked source")
-		fmt.Fprintf(s.Err, "  tracked:  %s\n  installed: %s\n  tracked sha256:   %s\n  installed sha256: %s\n",
-			tracked, target, trackedSHA, targetSHA)
-		fmt.Fprint(s.Err, "Re-run with --force to overwrite.\n")
-		return exitDiverged
-	case installed:
-		say("%s: --force: overwriting diverged copy", installTool)
 	}
-	if err := os.MkdirAll(targetDir, 0o777); err != nil {
-		return fail(exitEnv, "cannot create target directory: %s", targetDir)
-	}
-	if err := installtools.Copy(tracked, target); err != nil {
-		return fail(exitEnv, "cannot write %s: %s", target, installtools.Reason(err))
-	}
-	say("%s: installed %s", installTool, target)
 	return materialize(kit, s)
 }

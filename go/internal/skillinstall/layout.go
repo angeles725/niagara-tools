@@ -1,10 +1,12 @@
 // Package skillinstall is the Go side of scripts/install-skill.sh and scripts/check-skill-drift.sh: the
-// tracked skill launchers of this repository and their installed copies under
-// <home>/.claude/skills/<skill>/SKILL.md. The two script headers are the contracts.
+// tracked skill launchers of this repository and their installed copies in each agent harness
+// (<harness-dir>/skills/<skill>/SKILL.md, plus <harness-dir>/prompts/<skill>.md where the harness needs a
+// prompt file for a bare /<skill>). The two script headers are the contracts.
 //
-// One file per concern: layout.go (names and paths, data), table.go (the SKILLS table read from the
-// installer script), options.go (the two command lines), install.go and materialize.go (install-skill),
-// drift.go (check-skill-drift). Hashing, copying and file tests come from internal/installtools.
+// One file per concern: layout.go (names and exit codes, data), harness.go (the --harness table and its
+// paths), prompt.go (the prompt file, rendered from <kit>/skill/prompt.md or prompts/default.md), table.go (the SKILLS table read from the
+// installer script), options.go (the two command lines), install.go, target.go and materialize.go
+// (install-skill), drift.go and driftrow.go (check-skill-drift). Hashing, copying and file tests come from internal/installtools.
 package skillinstall
 
 const (
@@ -25,9 +27,3 @@ const (
 	exitUsage    = 2
 	exitEnv      = 3
 )
-
-// installedPath is where a skill's launcher is installed under a home directory.
-func installedPath(home, skill string) (dir, file string) {
-	dir = home + "/.claude/skills/" + skill
-	return dir, dir + "/SKILL.md"
-}
