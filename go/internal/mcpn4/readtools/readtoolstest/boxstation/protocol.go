@@ -53,6 +53,9 @@ func (st *Station) dispatch(channel, key string, body map[string]any) (any, erro
 		return nil, nil
 	case "callssc":
 		sck, _ := body["sck"].(string)
+		if sck == "impliedTags" || sck == "impliedRelations" {
+			return st.impliedCall(sck, body["scarg"])
+		}
 		arg, _ := body["scarg"].(map[string]any)
 		return st.ssc(sck, arg)
 	}

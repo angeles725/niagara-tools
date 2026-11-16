@@ -48,6 +48,10 @@ func (st *Station) sync(op map[string]any) (any, error) {
 	body, _ := op["b"].(map[string]any)
 	switch op["nm"] {
 	case "a":
+		if !isComponentType(body["t"]) {
+			flags, _ := op["f"].(string)
+			return st.addPlain(parent, name, body, flags)
+		}
 		subs, _ := body["s"].([]any)
 		for _, s := range subs {
 			if m, ok := s.(map[string]any); ok && isComponentType(m["t"]) {

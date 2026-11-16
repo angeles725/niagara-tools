@@ -67,6 +67,7 @@ type Station struct {
 	saves    int
 	// supertypes is what the type registry answers as "p", by type spec (SetSupertype).
 	supertypes map[string]string
+	implied    map[string]*implied // see SetImplied
 }
 
 // New is a station named name with the login user / password and the Folder component.
@@ -174,7 +175,11 @@ func serialize(n *Node, depth int, isRoot bool) map[string]any {
 			if d, ok := defaults[c.Type]; ok && c.Value == d && c.Flags == "" {
 				continue
 			}
-			kids = append(kids, serialize(c, depth-1, false))
+			kidDepth := depth - 1
+			if c.Type == "baja:Relation" { // a struct the station sends whole with its component
+				kidDepth = 1
+			}
+			kids = append(kids, serialize(c, kidDepth, false))
 		}
 		if len(kids) > 0 {
 			out["s"] = kids
