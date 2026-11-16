@@ -14,14 +14,15 @@ SC_SHA256=6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87
 
 # fetch_pinned <tarball name> <url> <sha256> — make CACHE/<name> hold the pinned bytes (download on first use)
 # and print its path. A cached file with another digest is refused (remove it to re-download); a fresh download
-# with another digest is deleted.
+# with another digest is deleted. The download is bounded (10 s to connect, 120 s in all per try), so a blackholed
+# network ends in exit 3 instead of hanging. (retro 2026-11-15 coordination-stretch T32)
 fetch_pinned() {
   local tar="$CACHE/$1" src got
   src="$tar"
   if [ ! -f "$tar" ]; then
     src="$tar.partial"
     mkdir -p "$CACHE"
-    curl -fsSL --retry 3 -o "$src" "$2" || { rm -f "$src"; printf 'ci-local: download failed: %s\n' "$2" >&2; exit 3; }
+    curl -fsSL --retry 3 --connect-timeout 10 --max-time 120 -o "$src" "$2" || { rm -f "$src"; printf 'ci-local: download failed: %s\n' "$2" >&2; exit 3; }
   fi
   got="$(sha256_of "$src")"
   if [ "$got" != "$3" ]; then
