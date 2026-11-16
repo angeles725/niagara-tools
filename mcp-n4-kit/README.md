@@ -353,7 +353,10 @@ the session's credentials and returns the page as data: `title`, `tables` (each 
 (the POST forms the page offers, by clean spy path without the query or fragment of the form's
 action: named, never invoked; the content of a form field, `textarea`, `select`, `button` or an
 `input` value, is never returned, wherever it sits) and `text` (what sits outside the tables). An empty `path` is the index. It only reads:
-a path is plain names separated by `/`, and a scheme or `:`, `|`, `..`, a query string (`?`, `&`,
+a path is plain names separated by `/`, and a scheme or `:` (except one `module:Type` segment directly
+under `sysManagers/registryManager/types/`, the registry's type pages, e.g.
+`sysManagers/registryManager/types/control:NumericWritable`; the `sysManagers/registryManager/types`
+page links to each of them), `|`, `..`, a query string (`?`, `&`,
 `=`, `#`), `%`, `;`, a backslash, any Unicode control character, invalid UTF-8 and the known action pages (`util/gc`,
 `util/forceThreadDump`) are refused before any request. `status` is `ok`, `forbidden` (403: the
 user may not read spy pages, which need a super user), `not_found` (404, or the station's "Spy Not
@@ -424,7 +427,22 @@ supertype, so `baja:Component` does not keep a `baja:Folder`.
 `n4_read_slots` adds `value_display` (the station's display string) and returns that string as
 `value` for complexes it cannot decode (e.g. a Modbus `dataAddress`: `Decimal:302`). A slot that
 is itself a `baja:Status` (a proxy extension's `status`, for example) reads `status_flags`, the names of the
-flags set (`fault`, `down`, `alarm`, `unackedAlarm`, ...), and `status_ok` false when any is set. One station session
+flags set (`fault`, `down`, `alarm`, `unackedAlarm`, ...), and `status_ok` false when any is set.
+A BOX load leaves out a declared (frozen) property still at its default, so a fresh component
+would read no slots: `n4_read_slots` lists those after the loaded slots, and `n4_navigate` under
+each component or struct slot whose children it lists (with `handle` null), from the type contract
+the station's registry gives (`loadTypes`, read once per session for every listed type and its
+supertypes; a type the station answers as unknown, or leaves out of a reply that answered other
+types, is not asked for again; one left out of a reply that answered nothing, or after a failed
+call, is). The sub-entries of a declared struct default are marked `default` too and may show
+`type: null` (the contract gives their value, not their type).
+Each is marked `default: true` with the contract's default value; when the contract gives no
+default value (a component default such as `proxyExt` is not sent) `value` is null and a `note`
+says so, never an invented value. `defaults_note` says when a contract could not be read (the
+registry failed, or the station does not know or did not describe a type) and names a declared
+default the reader could not decode, which is left out; the read itself never fails on one. The
+`n4_rollback` read-back counts an omitted frozen property as its declared default; when the
+contract cannot be read the read-back reports `readback_error` instead of a `mismatch`. One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
 first, so a failed reconnect leaves no session). `n4_describe_session` lists the
 configured station names. `n4_list_links` and

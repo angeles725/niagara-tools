@@ -1,0 +1,246 @@
+package blackbox
+
+// Declared properties at their default (lab retro 2026-11-15 rows 1-2): a load omits a frozen
+// property still at its type default, so n4_read_slots and n4_navigate list it from the type
+// contract (the registry's loadTypes), marked default, and never invent a value.
+
+import (
+	"reflect"
+	"strings"
+	"sync/atomic"
+	"testing"
+)
+
+// dfxProp is a declared property of a contract with its default value node.
+func dfxProp(name string, v map[string]any) map[string]any {
+	p := map[string]any{"st": "p", "n": name}
+	if v != nil {
+		p["v"] = v
+	}
+	return p
+}
+
+// dfxContracts declare kitBench:Dash (setpoint, flag, an action) below kitBench:Base (in1, a
+// Status default; proxyExt, a component default the station does not send; label, with no typed
+// default), below baja:Component, which declares nothing ({}).
+func dfxContracts() map[string]any {
+	in1 := map[string]any{"nm": "p", "t": "baja:StatusNumeric", "d": "- {null}", "s": []any{
+		map[string]any{"nm": "p", "n": "value", "v": "0.0", "d": "0,00"},
+		map[string]any{"nm": "p", "n": "status", "v": "40", "d": "{null}"}}}
+	return map[string]any{
+		"kitBench:Dash": map[string]any{"p": "kitBench:Base", "c": []any{
+			dfxProp("setpoint", map[string]any{"nm": "p", "t": "baja:Double", "d": "0,00", "v": "0.0"}),
+			dfxProp("flag", map[string]any{"nm": "p", "t": "baja:Boolean", "d": "false", "v": "false"}),
+			map[string]any{"st": "a", "n": "reset"}}},
+		"kitBench:Base": map[string]any{"p": "baja:Component", "c": []any{
+			dfxProp("in1", in1),
+			dfxProp("proxyExt", map[string]any{"nm": "p", "t": "control:NullProxyExt", "d": "null", "nc": "true"}),
+			dfxProp("label", nil)}},
+		"baja:Component": map[string]any{},
+	}
+}
+
+// dfxRig is a station whose Folder holds a fresh kitBench:Dash, the registry describing it.
+func dfxRig(t *testing.T, rig func(*testing.T) *Rig) (*Rig, Component) {
+	r := rig(t)
+	r.Station.SetRegistry(dfxContracts())
+	return r, r.Add("3", "Dash", "kitBench:Dash")
+}
+
+func TestReadSlotsListsTheDeclaredPropertiesTheLoadOmits(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	out := r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})
+	var names []string
+	byName := map[string]map[string]any{}
+	for _, s := range objects(out["slots"]) {
+		names = append(names, s["name"].(string))
+		byName[s["name"].(string)] = s
+	}
+	// inherited first, as declared; the action is not a property
+	wantStrings(t, "slots", names, []string{"in1", "proxyExt", "label", "setpoint", "flag"})
+	want := map[string]map[string]any{
+		"setpoint": {"name": "setpoint", "type": "baja:Double", "value": "0.0", "value_display": "0,00", "status": nil, "default": true},
+		"flag":     {"name": "flag", "type": "baja:Boolean", "value": "false", "value_display": "false", "status": nil, "default": true},
+		"in1": {"name": "in1", "type": "baja:StatusNumeric", "value": "0.0", "value_display": "- {null}", "status": "40",
+			"status_ok": false, "status_null": true, "default": true},
+	}
+	for name, w := range want {
+		if !reflect.DeepEqual(byName[name], w) {
+			t.Errorf("%s = %v\nwant %v", name, byName[name], w)
+		}
+	}
+	for _, name := range []string{"proxyExt", "label"} {
+		s := byName[name]
+		if s["value"] != nil || s["default"] != true || !strings.Contains(s["note"].(string), "no default value") {
+			t.Errorf("%s = %v, want value null with a note", name, s)
+		}
+	}
+	if _, has := out["defaults_note"]; has {
+		t.Errorf("defaults_note with readable contracts: %v", out["defaults_note"])
+	}
+}
+
+func TestADeclaredPropertyTheStationSendsIsListedOnceWithItsValue(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	r.Set(c.Handle, "setpoint", map[string]any{"nm": "p", "t": "baja:Double", "v": "21.5"})
+	n := 0
+	for _, s := range objects(r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})["slots"]) {
+		if s["name"] == "setpoint" {
+			n++
+			if s["value"] != "21.5" || s["default"] != nil {
+				t.Errorf("setpoint = %v", s)
+			}
+		}
+	}
+	if n != 1 {
+		t.Errorf("setpoint listed %d times", n)
+	}
+}
+
+func TestTheContractsAreReadOncePerSession(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	args := Args{"ord": Folder + "/" + c.Name}
+	r.Srv.OK("n4_read_slots", args)
+	count := func() int {
+		before := r.Station.Requests()
+		r.Srv.OK("n4_read_slots", args)
+		return r.Station.Requests() - before
+	}
+	again, plain := count(), 0
+	r.Station.SetRegistry(map[string]any{})
+	other := r.Add("3", "Plain", "kitBench:Plain") // answered {}: one registry call, then none
+	r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + other.Name})
+	before := r.Station.Requests()
+	r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + other.Name})
+	plain = r.Station.Requests() - before
+	if again != plain {
+		t.Errorf("a repeated read costs %d requests, a read of a type with no contract %d", again, plain)
+	}
+}
+
+func TestATypeTheStationCannotDescribeSaysSoAndListsWhatWasLoaded(t *testing.T) {
+	r := stationRig(t)
+	r.Station.SetRegistry(map[string]any{"kitBench:Gone": map[string]any{"isErr": true, "c": "", "m": "kitBench:Gone", "s": ""}})
+	c := r.Add("3", "Gone", "kitBench:Gone")
+	r.Set(c.Handle, "label", map[string]any{"nm": "p", "t": "baja:String", "v": "x"})
+	out := r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})
+	if slots := objects(out["slots"]); len(slots) != 1 || slots[0]["name"] != "label" {
+		t.Errorf("slots = %v", out["slots"])
+	}
+	if note, _ := out["defaults_note"].(string); !strings.Contains(note, "kitBench:Gone") {
+		t.Errorf("defaults_note = %v", out["defaults_note"])
+	}
+}
+
+func TestNavigateListsTheDeclaredPropertiesOfEachListedComponent(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	out := r.Srv.OK("n4_navigate", Args{"ord": Folder, "depth": 2})
+	var dash map[string]any
+	for _, e := range objects(out["children"]) {
+		if e["name"] == c.Name {
+			dash = e
+		}
+	}
+	kids := map[string]map[string]any{}
+	for _, e := range objects(dash["children"]) {
+		kids[e["name"].(string)] = e
+	}
+	want := map[string]any{"name": "setpoint", "type": "baja:Double", "handle": nil, "has_children": false,
+		"default": true, "value": "0.0"}
+	if !reflect.DeepEqual(kids["setpoint"], want) {
+		t.Errorf("setpoint = %v", kids["setpoint"])
+	}
+	if p := kids["proxyExt"]; p["value"] != nil || p["default"] != true || p["note"] == nil {
+		t.Errorf("proxyExt = %v", p)
+	}
+	if len(kids) != 5 {
+		t.Errorf("children = %v", dash["children"])
+	}
+}
+
+// Row 2: a rollback that restores a default reads verified, though the load omits the slot.
+func TestARollbackThatRestoresADefaultIsVerified(t *testing.T) {
+	r, c := dfxRig(t, verifiedRig)
+	armed := dropAfterRollbackWrite(r, "flag", false) // the station omits the restored default
+	set := r.Srv.RunWrite("n4_set_slot", Args{"ord": Folder + "/" + c.Name, "slot": "flag", "value": true,
+		"value_type": "baja:Boolean"})
+	if set["verdict"] != "verified" {
+		t.Fatalf("set = %v", set)
+	}
+	armed.Store(true)
+	back := r.Srv.RunWrite("n4_rollback", Args{"batch_id": set["batch_id"]})
+	if back["verdict"] != "verified" || Dig(back, "observed", "restored") != true {
+		t.Errorf("rollback = %v", back)
+	}
+}
+
+func TestAnUnreadableRegistrySaysSoAndListsWhatWasLoaded(t *testing.T) {
+	r, c := dfxRig(t, stationRig)
+	r.Set(c.Handle, "setpoint", map[string]any{"nm": "p", "t": "baja:Double", "v": "3.0"})
+	r.Station.SetHook(func(frame map[string]any) (int, []byte) {
+		msgs, _ := frame["m"].([]any)
+		for _, m := range objects(msgs) {
+			if m["c"] == "reg" {
+				return 200, []byte(`{"v": "2.3", "p": "box", "m": [{"c": "reg", "k": "loadTypes", "r": 0, "t": "e", "b": {"isErr": true, "m": "no registry"}}]}`)
+			}
+		}
+		return 0, nil
+	})
+	out := r.Srv.OK("n4_read_slots", Args{"ord": Folder + "/" + c.Name})
+	if slots := objects(out["slots"]); len(slots) != 1 || slots[0]["name"] != "setpoint" || slots[0]["default"] != nil {
+		t.Errorf("slots = %v", out["slots"])
+	}
+	if note, _ := out["defaults_note"].(string); !strings.Contains(note, "could not be read") {
+		t.Errorf("defaults_note = %v", out["defaults_note"])
+	}
+	nav := r.Srv.OK("n4_navigate", Args{"ord": Folder + "/" + c.Name})
+	if note, _ := nav["defaults_note"].(string); !strings.Contains(note, "could not be read") {
+		t.Errorf("navigate defaults_note = %v", nav["defaults_note"])
+	}
+}
+
+// A type the station does not describe is remembered for the session when the station said so: an
+// error entry, or a type left out of a reply that answered another one. Left out of a reply that
+// answered nothing, it proves nothing and is asked for again.
+func TestAnUndescribedTypeIsAskedForOncePerSessionWhenTheStationSaidSo(t *testing.T) {
+	for _, tc := range []struct {
+		entry      any
+		dash, want int32 // dash: a described component listed beside it; want: calls after the first listing
+	}{
+		{map[string]any{"isErr": true, "c": "", "m": "kitBench:Gone", "s": ""}, 0, 0},
+		{nil, 0, 2},
+		{nil, 1, 0},
+	} {
+		r := stationRig(t)
+		contracts := dfxContracts()
+		contracts["kitBench:Gone"] = tc.entry
+		r.Station.SetRegistry(contracts)
+		c := r.Add("3", "Gone", "kitBench:Gone")
+		ord := Folder + "/" + c.Name
+		if tc.dash == 1 {
+			r.Add("3", "Dash", "kitBench:Dash")
+			ord = Folder
+		}
+		var calls int32
+		r.Station.SetHook(func(frame map[string]any) (int, []byte) {
+			for _, m := range objects(frame["m"]) {
+				if m["c"] == "reg" {
+					atomic.AddInt32(&calls, 1)
+				}
+			}
+			return 0, nil
+		})
+		for i := 0; i < 3; i++ {
+			if i == 1 {
+				atomic.StoreInt32(&calls, 0)
+			}
+			out := r.Srv.OK("n4_navigate", Args{"ord": ord, "depth": 1 + int(tc.dash)})
+			if note, _ := out["defaults_note"].(string); !strings.Contains(note, "kitBench:Gone") {
+				t.Errorf("read %d defaults_note = %v", i, out["defaults_note"])
+			}
+		}
+		if n := atomic.LoadInt32(&calls); n != tc.want {
+			t.Errorf("entry %v beside Dash %d: two listings after the first asked the registry %d times, want %d", tc.entry, tc.dash, n, tc.want)
+		}
+	}
+}

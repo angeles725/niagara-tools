@@ -1,7 +1,6 @@
 package readtools
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
@@ -50,8 +49,8 @@ func (f *typeFilter) match(kind any) (bool, error) {
 }
 
 // typeFilter builds the filter for the entries of nodes down to depth levels. It asks the
-// registry about the listed types that are not wanted themselves, in one call (more only when
-// the reply leaves a supertype out); a registry it cannot read leaves exact matching and a note.
+// registry about the listed types that are not wanted themselves (loadContracts); a registry it
+// cannot read leaves exact matching and a note.
 func (t *Tools) typeFilter(wanted map[string]bool, nodes *pyjson.Object, depth int) *typeFilter {
 	f := &typeFilter{wanted: wanted}
 	tl, ok := t.Ctx.Session.Client.(typeLoader)
@@ -68,23 +67,11 @@ func (t *Tools) typeFilter(wanted map[string]bool, nodes *pyjson.Object, depth i
 		seen[spec] = true
 		specs = append(specs, spec)
 	}
-	for round := 0; round < maxSupertypes && len(specs) > 0; round++ {
-		reply, err := tl.LoadTypes(specs)
-		types, isObj := reply.(*pyjson.Object)
-		if err == nil && !isObj {
-			err = errors.New("its answer is not an object")
-		}
-		if err != nil {
-			f.types, f.note = nil, t.Ctx.Scrub(strings.Replace(exactTypesNote, "%s", err.Error(), 1))
-			return f
-		}
-		f.types, specs = types, nil
-		for _, spec := range types.Keys() { // a supertype the reply names but does not describe
-			if super := box.Supertype(types, spec); super != "" && !seen[super] && box.Node(types, super) == nil {
-				seen[super] = true
-				specs = append(specs, super)
-			}
-		}
+	types, err := loadContracts(tl, &t.undescribed, specs)
+	if err != nil {
+		f.note = t.Ctx.Scrub(strings.Replace(exactTypesNote, "%s", err.Error(), 1))
+		return f
 	}
+	f.types = types
 	return f
 }

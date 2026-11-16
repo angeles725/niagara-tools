@@ -56,6 +56,8 @@ type Tools struct {
 	Audit interface {
 		Append(entry *pyjson.Object) error
 	}
+	// undescribed is the types the station left out of a registry reply this session.
+	undescribed undescribed
 }
 
 // Register serves the ported read tools on s, with t.Ctx as its session state.
