@@ -1,0 +1,2 @@
+### Fixed — mcp-n4: the commissioning report no longer flags a lone point named after its type
+- `n4_commissioning_report` `palette_default_names` lists a control palette point name (`NumericWritable`, `NumericWritable1`) with or without the number the station appends, but the simple name of the point's own type only with that number (`Tstat1` of `kitControl:Tstat`): a lone `Tstat` is a meaningful name, not a forgotten default.

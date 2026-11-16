@@ -38,17 +38,32 @@ func (r *commRun) namingSection() (*commSection, error) {
 		if slot := lastSegment(path); escapedNameRe.MatchString(slot) {
 			escaped.add(path, pointName(row), fmt.Sprintf(factEscaped, slot, strings.Join(uniqueStrings(escapedNameRe.FindAllString(slot, -1)), ", ")))
 		}
-		if base, kind := trailingDigitsRe.ReplaceAllString(name, ""), cellText(row, "Type"); base != "" {
-			if _, simple, _ := strings.Cut(kind, ":"); base == simple {
-				palette.add(path, pointName(row), fmt.Sprintf(factPaletteType, base, kind))
-			} else if contains(paletteDefaultNames, base) {
-				palette.add(path, pointName(row), fmt.Sprintf(factPaletteList, base))
-			}
+		if fact := paletteDefaultFact(name, cellText(row, "Type")); fact != "" {
+			palette.add(path, pointName(row), fact)
 		}
 	}
 	answered(duplicates, "displayName", blank, len(points.rows))
 	s.extra = []any{"note", noteNaming}
 	return s, nil
+}
+
+// paletteDefaultFact is why name is still a palette default name for a point of type kind, or "".
+// A control palette point name is one with or without the number the station appends to a
+// repeated name (NumericWritable, NumericWritable1). The simple name of the point's own type is
+// one only with that number (Tstat1 of kitControl:Tstat): a palette drop names the first instance
+// after its type, so a lone Tstat is as likely a meaningful name as a forgotten default.
+func paletteDefaultFact(name, kind string) string {
+	base := trailingDigitsRe.ReplaceAllString(name, "")
+	if base == "" {
+		return ""
+	}
+	if contains(paletteDefaultNames, base) {
+		return fmt.Sprintf(factPaletteList, base)
+	}
+	if _, simple, _ := strings.Cut(kind, ":"); base == simple && base != name {
+		return fmt.Sprintf(factPaletteType, name, kind)
+	}
+	return ""
 }
 
 // uniqueStrings is list without its repeats, in order.

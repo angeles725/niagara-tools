@@ -445,7 +445,12 @@ default the reader could not decode, which is left out; the read itself never fa
 contract cannot be read the read-back reports `readback_error` instead of a `mismatch`. One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
 first, so a failed reconnect leaves no session). `n4_describe_session` lists the
-configured station names. `n4_list_links` and
+configured station names and, with or without a session, a `server` block: `build` (the git
+revision the binary was built from, `+modified` for a dirty tree, `unknown` without a VCS
+stamp), `built_at` (the commit time, else the binary's mtime at start), `started_at` and
+`binary` (the executable's path). When the binary on disk was modified after the server
+started (rebuilt or reinstalled), the reply carries a top-level `warning`: new or changed tools
+reach a client only after its MCP server is restarted. `n4_list_links` and
 `n4_find_dangling_outputs` scan components up to `depth` levels below `ord`
 (the ord itself is level 0). Links are seen when their target is at most one level
 below `depth`; an out slot used only by a deeper target, or from outside the
@@ -477,7 +482,7 @@ that ran are clean while others did not run.
 | `histories` | `points_without_history` (with `expect_histories`: the points it keeps, listed, findings; without it: a count with the note `pass expect_histories to list them`, no list, not a finding), `disabled`, `in_fault`, `never_recorded` | `select slotPath, name, type, enabled, status.bits, historyConfig.id, lastRecord.timestamp from history:HistoryExt` |
 | `alarms` | `points_without_alarm` (only with `expect_alarms`), `unknown_alarm_class`, `classes_without_recipient`, `open_alarms`, `unacked_alarms` (`alarms` is the sum over the classes listed) | `select slotPath, name, type, alarmClass from alarm:AlarmSourceExt`; `select slotPath, name, openAlarmCount, unackedAlarmCount from alarm:AlarmClass` and one link scan, both over `Services/AlarmService` |
 | `links` | `unresolved_source` (a source ORD that is neither a handle nor an absolute slot path, or a slot path that does not exist; `source_outside_scan` counts the sources not judged), `inputs_with_several_links` (a priority input `in1`..`in16` that more than one link targets), `dangling_outputs` (the check of `n4_find_dangling_outputs`) | one link scan of the scope, `link_depth` levels deep |
-| `naming` | `duplicate_display_names` among sibling points, `escaped_names` (`$20` and the like in the slot name), `palette_default_names` (a point of the control palette, `NumericWritable`, `BooleanPoint1`; or a point called by the name of its own type, a `kitControl:Tstat` called `Tstat`: the fact says which) | the points table |
+| `naming` | `duplicate_display_names` among sibling points, `escaped_names` (`$20` and the like in the slot name), `palette_default_names` (a point of the control palette with or without the number the station appends, `NumericWritable`, `NumericWritable1`, `BooleanPoint1`; or a point called by the name of its own type plus that number, a `kitControl:Tstat` called `Tstat1`: a palette drop names the first instance after its type, so a lone `Tstat` is not flagged, and neither is a bare `Ramp` beside a `Ramp1` sibling, though it is likely the first drop of the two; the fact says which) | the points table |
 | `station` | `services_in_fault`, `licence_expiry` (the warning of the health tool's `license` section), `unsaved_changes` and `last_backup` | one slot load of `Services`, the SystemService slots and the licence page; only when the scope is the whole station |
 
 `unsaved_changes` and `last_backup` are always `not_checked`, with the reason: the station exposes

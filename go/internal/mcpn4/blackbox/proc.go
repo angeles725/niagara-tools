@@ -35,6 +35,9 @@ func Spawn(t testing.TB, o Options) *Proc {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if o.Exe != "" {
+		exe = o.Exe
+	}
 	p := &Proc{cmd: exec.Command(exe, o.Argv()...), lines: make(chan string, 64), done: make(chan struct{})}
 	p.cmd.Env = append(o.Environ(), marker+"=1")
 	p.cmd.Stderr = &p.stderr
