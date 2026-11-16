@@ -60,7 +60,7 @@ report-module: 3 artifacts · 35 PASS · 0 FAIL · 0 WARN · 16 SKIP · 0 ADVISO
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
-truth: a vendor/ symlink that leads nowhere reaches lint-vendor-floor, whose exit 3 is the ERROR row (retro gate-followups-and-template-lints V4); an artifact with no vendor/, or with a file of that name, still gets no vendor-floor row
+truth: a vendor/ symlink that leads nowhere reaches lint-vendor-floor, whose exit 3 is the ERROR row (retro gate-followups-and-template-lints Δ4); an artifact with no vendor/, or with a file of that name, still gets no vendor-floor row
 -- @env --
 KIT_ESLINT=/nonexistent
 -- m/A-ux/src/rc/vendor (symlink) --
