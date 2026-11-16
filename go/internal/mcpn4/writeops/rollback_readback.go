@@ -39,7 +39,7 @@ func rollbackReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies,
 			if !isStr {
 				return fail(&plan.PyError{Type: "AttributeError", Msg: "'" + plan.TypeName(get(op, "n")) + "' object has no attribute 'split'"})
 			}
-			depth = slotDepth(slot)
+			depth = opDepth(op, slot)
 		}
 		nodes, err := c.LoadTree(where, depth, box.LoadOptions{})
 		if err != nil {

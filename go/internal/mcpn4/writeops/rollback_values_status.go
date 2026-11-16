@@ -49,11 +49,11 @@ func observeTextStatus(nodes *pyjson.Object, slot, t string) any {
 	return textStatusValue(t, box.ChildValue(kids, "value", nil), box.ChildValue(kids, "status", "0"))
 }
 
-// observeValue is plan.Observe, with a text Status observed as textStatusValue (the rollback's
-// read-back of a restored slot).
+// observeValue is plan.Observe, with a text Status or a schedule day observed as observeOwn does
+// (the rollback's read-back of a restored slot).
 func observeValue(nodes *pyjson.Object, slot, t string) (any, error) {
-	if textStatus(t) {
-		return observeTextStatus(nodes, slot, t), nil
+	if own, ok := observeOwn(nodes, slot, t); ok {
+		return own, nil
 	}
 	return plan.Observe(nodes, slot, t)
 }
