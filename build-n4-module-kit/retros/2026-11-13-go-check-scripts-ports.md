@@ -28,7 +28,7 @@ parity kept three soft spots of the bash versions, found by the differential and
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
 | Δ1 | APPLIED 2026-11-15. `check-installed-line` reads git paths NUL-separated (`git grep -z`), so a group under a quoted path is compared instead of skipped; RED test with a non-ASCII group directory | `scripts/check-installed-line.sh` (Go `internal/checkinstalledline`) | `[ev: go/internal/checkinstalledline/git.go]` |
-| Δ2 | `check-client-source` treats a BUILD-STATE that exists and cannot be read as an env fault (exit 3), not as "not declared" | `scripts/check-client-source.sh` (Go `internal/checkclientsource`) · `BUILD-LOOP.md` § 0.b | `[ev: go/internal/checkclientsource/command.go]` |
+| Δ2 | APPLIED 2026-11-15. `check-client-source` treats a BUILD-STATE that exists and cannot be read as an env fault (exit 3), not as "not declared" | `scripts/check-client-source.sh` (Go `internal/checkclientsource`) · `BUILD-LOOP.md` § 0.b | `[ev: go/internal/checkclientsource/command.go]` |
 | Δ3 | `tests/bats-skip-allowlist.txt` header states the pattern dialect (POSIX ERE as Go `regexp.CompilePOSIX` reads it) and the check refuses a line using a class or escape outside it | `tests/bats-skip-allowlist.txt` · Go `internal/checkbatsskips` | `[ev: go/internal/checkbatsskips/allowlist.go]` |
 
 ## Lessons

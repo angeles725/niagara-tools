@@ -25,7 +25,7 @@
 #   A <branch> or <commit> of `unknown` skips that comparison.
 #
 # Exit: 0 no FAIL · 1 any FAIL · 2 usage (incl. a malformed declared value) · 3 environment
-#       (module root missing, BUILD-STATE file missing, git absent)
+#       (module root missing, BUILD-STATE file missing or unreadable, git absent)
 #
 # Implementation: the Go module at <repo>/go (go/internal/checkclientsource; -h prints its usage.txt, the text of
 # the header above). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds

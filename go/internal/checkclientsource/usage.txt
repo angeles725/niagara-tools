@@ -24,4 +24,4 @@ Checks (rows: PASS|WARN|FAIL  source-of-truth  <detail>):
   A <branch> or <commit> of `unknown` skips that comparison.
 
 Exit: 0 no FAIL · 1 any FAIL · 2 usage (incl. a malformed declared value) · 3 environment
-      (module root missing, BUILD-STATE file missing, git absent)
+      (module root missing, BUILD-STATE file missing or unreadable, git absent)

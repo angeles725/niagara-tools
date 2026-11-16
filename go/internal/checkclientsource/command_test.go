@@ -52,7 +52,7 @@ func TestUsage(t *testing.T) {
 	}
 	code, out, errText := run("-h")
 	if code != ExitOK || errText != "" || !strings.HasPrefix(out, "check-client-source.sh — is this module root the declared SOURCE OF TRUTH checkout?\n") ||
-		!strings.HasSuffix(out, "      (module root missing, BUILD-STATE file missing, git absent)\n") {
+		!strings.HasSuffix(out, "      (module root missing, BUILD-STATE file missing or unreadable, git absent)\n") {
 		t.Errorf("-h: exit %d stderr %q stdout %q", code, errText, out)
 	}
 	expect(t, "-- ends the options", []string{"--", f.root}, ExitOK,
@@ -73,4 +73,21 @@ func TestHelpMatchesTheWrapperHeader(t *testing.T) {
 	if helpText != want.String() {
 		t.Errorf("usage.txt differs from the wrapper header:\n%s\nwant:\n%s", helpText, want.String())
 	}
+}
+
+// TestUnreadableBuildStateIsAnEnvFault: a BUILD-STATE that exists and cannot be read is exit 3 naming
+// the file, with no row; reading it as "undeclared" (WARN, exit 0) would pass a checkout nobody compared
+// (retro go-check-scripts-ports Δ2).
+func TestUnreadableBuildStateIsAnEnvFault(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	f := newFixture(t)
+	state := filepath.Join(f.base, "BUILD-STATE.md")
+	write(t, state, "<!-- build-state.v1 -->\nmodule: Mod\nsource_of_truth: r@main@"+f.second+"\n<!-- /build-state.v1 -->\n")
+	if err := os.Chmod(state, 0); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "unreadable BUILD-STATE", []string{"--build-state", state, "--module", "Mod", f.root}, ExitEnv, "",
+		"check-client-source: cannot read "+state+": open "+state+": permission denied\n")
 }
