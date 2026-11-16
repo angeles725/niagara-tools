@@ -50,7 +50,7 @@ func readArchive(path string) (archive, error) {
 	if len(zr.File) > maxEntries {
 		return refused(tooManyNames, len(zr.File), maxEntries), nil
 	}
-	var bogs, manifests, pxs []*zip.File
+	var bogs, manifests, dotted, pxs []*zip.File
 	for _, f := range zr.File {
 		switch {
 		case unsafe(f.Name):
@@ -60,9 +60,15 @@ func readArchive(path string) (archive, error) {
 			bogs = append(bogs, f)
 		case f.Name == manifestEntry:
 			manifests = append(manifests, f)
+		case f.Name == manifestAlt:
+			dotted = append(dotted, f)
 		case strings.HasSuffix(strings.ToLower(f.Name), pxSuffix):
 			pxs = append(pxs, f)
 		}
+	}
+	if len(manifests) == 0 {
+		// Mutation: NTPL-dotted -- dropping the fallback reports "lacks template-manifest.xml" for an archive spelled as the guide spells it
+		manifests = dotted // the guide's spelling (manifestAlt), read only when the shipped one is absent
 	}
 	var a archive
 	a.need(bogEntry, len(bogs))

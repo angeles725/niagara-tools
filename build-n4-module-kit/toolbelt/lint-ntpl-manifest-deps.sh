@@ -52,8 +52,10 @@
 # regular file (a FIFO), are exit 3 (they could not be read). "Nothing to check" is never printed over
 # something that was skipped. [ev: retro ntpl-lint-walk-k-rows Δ1] [ev: retro ntpl-lint-walk-k-rows Δ2] A path holding a control character, a double quote or a
 # backslash is printed in double quotes with C escapes, so a row is always one line.
-# A module root that ships no .ntpl is one PASS row and exit 0. Not read: a template module .jar, and the
-# guide's template.manifest.xml spelling.
+# A module root that ships no .ntpl is one PASS row and exit 0. Not read: a template module .jar.
+# The manifest: an archive without template-manifest.xml is read through template.manifest.xml, the spelling of
+# the Templates guide ("Example template.manifest.xml file"); with both, the hyphenated one alone is read.
+# [ev: retro ntpl-jar-manifest-k4b Δ1]
 # [ev: retro gate-followups-and-template-lints Δ7] [ev: retro gate-followups-and-template-lints Δ8]
 #
 # Implementation: rule package go/internal/lint/rules/ntplmanifest on the shared engine go/internal/lint
