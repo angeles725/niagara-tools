@@ -202,6 +202,10 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 
 For an inventory, use `n4_inventory` (networks, devices and points under `/Drivers`, with the
 network's built-in `localDevice` flagged `local` and counted apart) or `n4_bql_query` first.
+A network is a row of the networks query (a `driver:DeviceNetwork` of any type), wherever it sits
+below `base`: with a base above the driver container it is named by its path below the base
+(`Plant/Drivers/BacnetNetwork`), a device or point under no network has `network: null`, and a
+plain folder is never listed as a network.
 Both send `GET /ord/<url-encoded station:|slot:<base>|bql:select ...|view:file:ITableToCsv>`.
 The query must be one `select`, `|` is refused, and rows are capped (default 5000).
 A body over 32 MB is cut at its last complete record (a newline inside a quoted cell does not
