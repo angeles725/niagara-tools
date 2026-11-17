@@ -34,6 +34,9 @@ func targetRegisters(t replicaTarget, points []string, sources map[string]*copyS
 				format = ov.format
 			}
 		}
+		if address == unassigned {
+			continue // no register yet: nothing to share
+		}
 		text := flexText(format, address)
 		if holder, ok := held[text]; ok {
 			notes = append(notes, t.ord+": "+pyjson.StrRepr(t.newName(p))+" would use the register address "+
@@ -63,6 +66,10 @@ const oneWritable = ", and the device allows one writable point per register: th
 	"proxyExt/dataAddress to Hex:-1 (station log \"Duplicate Writable point for register address\"). Give it its " +
 	"own address with copies[].data_address of that target."
 
+// unassigned is the address the station resets a duplicate writable point to (Hex:-1): no register, so
+// it is never held or shared (verifier probe G2 of #798).
+const unassigned = "-1"
+
 // registerDepth reaches a point's proxyExt/dataAddress/address from its parent.
 const registerDepth = 4
 
@@ -84,6 +91,9 @@ func heldRegisters(nodes *pyjson.Object, isSource bool, points []string) map[str
 		}
 		format, _ := get(box.Node(nodes, name+"/proxyExt/dataAddress/addressFormat"), "v").(string)
 		address, _ := get(box.Node(nodes, name+"/proxyExt/dataAddress/address"), "v").(string)
+		if address == unassigned {
+			continue
+		}
 		if text := flexText(format, address); out[text] == "" {
 			out[text] = name
 		}
