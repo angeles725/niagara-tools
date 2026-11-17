@@ -28,8 +28,8 @@ func TestACreateRollbackUnderTheRootScopeKeepsAHandMadeChild(t *testing.T) {
 	toRootScope(d)
 	r := d.Srv.Call("n4_rollback", Args{"batch_id": out["batch_id"]})
 	t.Logf("create rollback: isErr=%v text=%.300s", r.IsError, r.Text)
-	if !r.IsError || d.node("Root") == nil {
-		t.Errorf("BLOCKER populated root deleted by create rollback")
+	if !r.IsError || !strings.Contains(r.Text, "Hand") || d.node("Root") == nil {
+		t.Errorf("the create rollback must be refused by the later-work check naming Hand: %v %.300s", r.IsError, r.Text)
 	}
 }
 
@@ -67,7 +67,7 @@ func TestACopyRollbackUnderTheRootScopeIsRefusedAfterLaterWork(t *testing.T) {
 	d.Srv.RunWrite("n4_create_component", Args{"parent_ord": scopeRoot, "name": "Inner", "type": "baja:Folder"})
 	r := d.Srv.Call("n4_rollback", Args{"batch_id": cp["batch_id"]})
 	t.Logf("copy rollback with later journaled work: isErr=%v text=%.300s", r.IsError, r.Text)
-	if !r.IsError {
-		t.Errorf("BLOCKER: copy rollback admitted under root scope with later journaled work inside")
+	if !r.IsError || !strings.Contains(r.Text, "outside the write scope") {
+		t.Errorf("copy rollback with later work inside: %v %.300s", r.IsError, r.Text)
 	}
 }
