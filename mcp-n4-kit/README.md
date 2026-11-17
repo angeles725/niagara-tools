@@ -820,7 +820,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station` and `n4_ack_alarm`. Example:
 
@@ -1028,6 +1028,27 @@ Tool rules:
   what differs per copy afterwards (e.g. `deviceAddress` with `n4_set_slot`). The
   inverse removes every copy under its assigned name; the read-back loads each copy
   and compares its whole configured subtree with the plan, listing the paths that differ.
+- `n4_deploy_template(template_file, parent_ord, name?, settings?)` deploys a component
+  template (`.ntpl`, a file on the machine the server runs on) under `parent_ord` in one
+  add op, client-side as Workbench does (the station's TemplateService has no deploy
+  action). The template component (the first child of `template.bog`'s root folder) is
+  added with the template's settings filled: `settings` maps each exposed setting of the
+  manifest to a value (`num`, `bool` or `str`; a `num` is checked against the manifest's
+  `min`/`max`). A setting writes the slot its manifest `slotPath` names, or the target of
+  the template configuration's ConfigBinding for it; a setting not given keeps the
+  template's value; a required setting the template leaves empty must be given; an
+  unknown setting, the configuration's own metadata (`uID`, `version`...), a station or
+  application template and a type the station's registry does not describe (its module
+  is missing) are refused before a token. The dry run notes the template (title,
+  version, vendor, id), the manifest dependencies, each setting with its value, source
+  and slot (warning when a Status slot it writes stays null), and everything not
+  carried: the template configuration (its bindings name template handles, which would
+  point at unrelated station components, so the deployed component is not linked to its
+  template), links inside the template (create them with `n4_create_link`), ORD values
+  naming a template handle, passwords, slot facets (`x`) and categories (`c`). A
+  template of more than 5,000 properties is refused. The read-back loads the deployed
+  component and checks every planned node (type, value, flags; a slot the station omits
+  must equal its declared default); the inverse removes it under its assigned name.
 
 Destructive tools use the same pipeline:
 

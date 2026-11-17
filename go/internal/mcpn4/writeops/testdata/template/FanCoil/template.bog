@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0" reversibleEncodingKeySource="none" FIPSEnabled="false" reversibleEncodingValidator="[null.1]=" >
+<p h="1" m="b=baja" t="b:UnrestrictedFolder">
+ <!-- /FanCoil -->
+ <p n="FanCoil" h="2" c="1" t="b:Folder">
+  <p n="location" t="b:String" v=""/>
+  <p n="Setpoint" h="3" m="c=control" t="c:NumericWritable">
+   <p n="facets" v="units=u:fahrenheit;&#xb0;F;(K);*0.5555555555555556+255.37222222222223;|precision=i:1"/>
+   <p n="fallback" t="b:StatusNumeric">
+    <p n="value" v="72.0"/>
+   </p>
+  </p>
+  <p n="FanCmd" h="4" t="c:BooleanWritable">
+  </p>
+  <p n="Control" h="5" t="b:Folder">
+   <p n="deadband" x="units=u:fahrenheit;&#xb0;F;(K);*0.5555555555555556+255.37222222222223;" t="b:Double" v="2.0"/>
+   <p n="Limit" h="6" t="c:NumericWritable">
+    <p n="Link" t="b:Link">
+     <p n="sourceOrd" v="h:3"/>
+     <p n="sourceSlotName" v="out"/>
+     <p n="targetSlotName" v="in10"/>
+    </p>
+   </p>
+   <p n="peer" t="b:Ord" v="h:4"/>
+  </p>
+  <p n="ntpl$3atitle" f="rhm" t="b:String" v="FanCoil"/>
+  <p n="ntpl$3aid" f="rhm" t="b:String" v="5f0c2a8e-3b7d-4c1e-9a62-1d8e4b7c9f30"/>
+  <!-- /FanCoil/templateConfig -->
+  <p n="templateConfig" h="7" m="ntp=template" t="ntp:TemplateConfig">
+   <p n="templateName" v="FanCoil"/>
+   <p n="uID" t="b:Uuid" v="5f0c2a8e-3b7d-4c1e-9a62-1d8e4b7c9f30"/>
+   <p n="versionDate" t="b:AbsTime" v="2026-11-16T22:00:00.000-05:00"/>
+   <p n="Setpoint" x="units=u:fahrenheit;&#xb0;F;(K);*0.5555555555555556+255.37222222222223;" t="b:StatusNumeric"><p n="value" v="72.0"/></p>
+   <p n="Location" t="b:String" v=""/>
+   <p n="FanAuto" t="b:Boolean" v="true"/>
+   <p n="ConfigBinding" f="h" t="ntp:ConfigBinding">
+    <p n="targetOrd" t="b:Ord" v="h:3"/>
+    <p n="sourceSlot" v="Setpoint"/>
+    <p n="targetSlot" v="fallback"/>
+   </p>
+   <p n="ConfigBinding1" f="h" t="ntp:ConfigBinding">
+    <p n="targetOrd" t="b:Ord" v="h:2"/>
+    <p n="sourceSlot" v="Location"/>
+    <p n="targetSlot" v="location"/>
+   </p>
+   <p n="ConfigBinding2" f="h" t="ntp:ConfigBinding">
+    <p n="targetOrd" t="b:Ord" v="h:4"/>
+    <p n="sourceSlot" v="FanAuto"/>
+    <p n="targetSlot" v="fallback"/>
+   </p>
+  </p>
+  <p n="ntpl$3atemplate" f="rhm" t="b:Marker" v="M"/>
+  <p n="ntpl$3aversion" f="rhm" t="b:String" v="1.2"/>
+ </p>
+</p>
+</bajaObjectGraph>
