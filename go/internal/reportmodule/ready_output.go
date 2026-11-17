@@ -34,6 +34,7 @@ type readyJar struct {
 	Verdict  string     `json:"verdict"`
 	Line     string     `json:"line"`
 	Readback string     `json:"readback,omitempty"` // only when ready
+	notBuilt bool       // an artifact with no built jar: its verdict line says so instead of a version
 }
 
 // readyJSON is the --json document.
@@ -68,10 +69,19 @@ func (j *readyJar) conclude() {
 		plural = ""
 	}
 	j.Verdict = verdictNotReady
-	j.Line = fmt.Sprintf("NOT READY: %s %s — %d failing row%s:", shownOr(j.Module, j.Artifact), shownOr(j.Version, "?"), len(bad), plural)
+	j.Line = fmt.Sprintf("NOT READY: %s %s — %d failing row%s:", shownOr(j.Module, j.Artifact), j.versionLabel(), len(bad), plural)
 	for _, r := range bad {
 		j.Line += fmt.Sprintf("\n  %s  %s  %s  %s", j.Artifact, r.Status, r.Check, r.Detail)
 	}
+}
+
+// versionLabel is the version the NOT READY line names: "(not built)" for an artifact with no jar, else the
+// vendorVersion or "?" when it is unreadable.
+func (j *readyJar) versionLabel() string {
+	if j.notBuilt {
+		return "(not built)"
+	}
+	return shownOr(j.Version, "?")
 }
 
 // writeText prints each jar's rows, its verdict line and, when ready, its read-back.
