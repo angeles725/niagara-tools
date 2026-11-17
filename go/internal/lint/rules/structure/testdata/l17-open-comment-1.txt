@@ -1,0 +1,22 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-structure  Legacy-rt/build.gradle.kts  L17: the file ends inside an unclosed /* */ comment or text block, so no moduleName after it is read (check the file; the module name used is Acme)
+-- stderr --
+-- Mod/Legacy-rt/build.gradle.kts --
+niagaraModule {
+  moduleName.set("Acme")
+}
+/* an unclosed comment
+-- Mod/Legacy-rt/module-include.xml --
+<types><type name="Room" class="com.acme.BRoom"/></types>
+-- Mod/Legacy-rt/module.lexicon --
+Room.displayName=Room
+-- Mod/Legacy-rt/module.palette --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0">
+<p m="b=baja" t="b:UnrestrictedFolder">
+  <p n="Own" m="le=Legacy" t="le:Room"/>
+</p>
+</bajaObjectGraph>

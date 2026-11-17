@@ -23,10 +23,10 @@ teeth by mutation. A real `toolbelt/build.sh --werror` run on a client A rt modu
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | Read `moduleName` with comments blanked (`javasrc.Strip`) as L17 now does | `go/internal/lint/rules/loggername/loggername.go:54` | `[ev: 0f0d0066]` |
+| Δ1 | APPLIED 2026-11-17. Read `moduleName` with comments blanked (`javasrc.Strip`) as L17 now does | `go/internal/lint/rules/loggername/loggername.go:54` | `[ev: 0f0d0066]` |
 | Δ2 | Name the IL3 lambda / anonymous-method exception in the wrapper header | `toolbelt/lint-intrinsic-lock.sh` header | `[ev: dcb947af]` |
-| Δ3 | version-drift: do not treat sibling `<repo>-worktrees/` checkouts (or the repo root) as drifted sibling modules | preflight version-drift check | `[ev: 8b5422b5]` |
-| Δ4 | Groovy `*.gradle` golden with a single-quoted string holding `/*`, and surface the ignored `Strip` error | `go/internal/lint/rules/structure/palette.go:37-39` | `[ev: 8e775d4e]` |
+| Δ3 | APPLIED 2026-11-17. version-drift: do not treat sibling `<repo>-worktrees/` checkouts (or the repo root) as drifted sibling modules | preflight version-drift check | `[ev: 8b5422b5]` |
+| Δ4 | APPLIED 2026-11-17. Groovy `*.gradle` golden with a single-quoted string holding `/*`, and surface the ignored `Strip` error | `go/internal/lint/rules/structure/palette.go:37-39` | `[ev: 8e775d4e]` |
 
 ## Lessons
 - A rule that keys findings by a type or simple name merges anonymous bodies; key by the body's opening brace.

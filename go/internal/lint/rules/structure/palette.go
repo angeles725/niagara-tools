@@ -35,13 +35,31 @@ func (s *scan) ownModule(dir string) string {
 		sort.Strings(names)
 		for _, n := range names {
 			// Mutation: L17-commented-modulename -- reading raw lines lets a commented-out old moduleName win
-			code, _ := javasrc.Strip(s.lines(d + "/" + n)) // Kotlin and Groovy comments are Java's: // and /* */
+			code, end := javasrc.Strip(s.lines(d + "/" + n)) // Kotlin and Groovy comments are Java's: // and /* */
+			name := ""
 			for _, ln := range code {
 				if m := gradleModuleName.FindStringSubmatch(ln); m != nil {
-					return m[1]
+					name = m[1]
+					break
 				}
 			}
+			if end != javasrc.Closed { // retro kit-followups-rare-cases Δ4: never ignore an unclosed comment
+				s.row(lint.Warn, strings.TrimPrefix(d+"/"+n, s.root+"/"), "L17: the file ends inside an unclosed /* */ "+
+					"comment or text block, so no moduleName after it is read (check the file; the module name used is "+
+					shownModule(name, dir)+")")
+			}
+			if name != "" {
+				return name
+			}
 		}
+	}
+	return partModule(dir[strings.LastIndexByte(dir, '/')+1:])
+}
+
+// shownModule is the module name ownModule settles on when a gradle file's name is name ("" for none).
+func shownModule(name, dir string) string {
+	if name != "" {
+		return name
 	}
 	return partModule(dir[strings.LastIndexByte(dir, '/')+1:])
 }

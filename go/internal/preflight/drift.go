@@ -12,7 +12,8 @@ import (
 
 // versionDrift warns when a sibling tree declares a higher defaultModuleVersion("X.Y.Z") than the gradle
 // root: the siblings of its parent, then of the next two ancestors (3 levels), each tree's version being
-// the first one in its *.gradle.kts files down to depth 3. WARN only [ev: retro B832].
+// the first one in its *.gradle.kts files down to depth 3; `<repo>-worktrees/` checkouts and the gradle root's
+// own ancestors are skipped. WARN only [ev: retro B832].
 func (r *run) versionDrift() {
 	if r.win {
 		return
@@ -24,7 +25,7 @@ func (r *run) versionDrift() {
 	parent := lint.Dirname(r.gr)
 	for lvl := 0; lvl < 3 && lint.IsDir(parent); lvl++ {
 		for _, sib := range globDirs(parent) {
-			if sib == r.gr {
+			if sib == r.gr || notASibling(sib, r.gr) {
 				continue
 			}
 			if v := r.treeVersion(sib); v != "" && versionLess(mine, v) {
@@ -37,6 +38,13 @@ func (r *run) versionDrift() {
 		}
 		parent = next
 	}
+}
+
+// notASibling says whether sib is another checkout of the same repository (a `<repo>-worktrees/` directory) or
+// an ancestor of the gradle root (the repository root holding it): neither is a sibling module, so a newer
+// version there is no drift [ev: retro kit-followups-rare-cases Δ3].
+func notASibling(sib, gradleRoot string) bool {
+	return strings.HasSuffix(sib, "-worktrees") || strings.HasPrefix(gradleRoot, sib+"/")
 }
 
 // treeVersion is the first quoted X.Y.Z on a line holding defaultModuleVersion, over every *.gradle.kts
