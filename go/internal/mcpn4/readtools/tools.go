@@ -98,6 +98,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_neql_query"] = t.NeqlQuery
 	s.Handlers["n4_semantic_export"] = t.SemanticExport
 	s.Handlers["n4_list_tag_dictionaries"] = t.ListTagDictionaries
+	s.Handlers["n4_tag_coverage"] = t.TagCoverage
 }
 
 func toolError(format string, a ...any) error {

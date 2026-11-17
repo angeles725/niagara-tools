@@ -1,6 +1,7 @@
 package tags
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
@@ -71,6 +72,16 @@ func (c *Catalog) Def(id ID) (TagDef, bool, error) {
 	}
 	def, ok := byName[id.Name]
 	return def, ok, nil
+}
+
+// Dictionaries are the installed dictionaries, sorted by namespace.
+func (c *Catalog) Dictionaries() []Dictionary {
+	out := make([]Dictionary, 0, len(c.dicts))
+	for _, d := range c.dicts {
+		out = append(out, d)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Namespace < out[j].Namespace })
+	return out
 }
 
 // Dictionary is the installed dictionary of namespace ns (Name "" when none).

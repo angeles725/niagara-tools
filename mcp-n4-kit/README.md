@@ -277,7 +277,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_alarm_text_check`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
 `n4_station_runtime`, `n4_read_tags`,
-`n4_neql_query`, `n4_list_tag_dictionaries`.
+`n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -879,6 +879,20 @@ are none.
 `/Services/TagDictionaryService` (one BQL query: namespace, enabled, frozen, version, status) and
 what each defines: tag definitions (`id`, `info`, value `type`, `default`, `validity`; `type` null
 for a smart tag), tag groups (`id`, `group_ord`, the `tags` they imply) and relation ids.
+
+Tag coverage: `n4_tag_coverage(base, dictionary?, max_points=2000, exclude_services=true)`
+(station-audits S9) answers "how far does the Haystack tagging reach" in one read-only call. It reads
+`select slotPath from control:ControlPoint` and `neql:hs:equip` below `base`, the dictionaries under
+`/Services/TagDictionaryService`, then each component as `n4_read_tags` does (points with implied tags
+and relations). `points_without_tags` lists the control points missing `hs:point` (direct or implied)
+or an outbound `hs:equipRef` relation (`{point, missing}`; the ORDs go straight into
+`n4_set_tags(ords)`); `equips_without_points` the `hs:equip` components no point names in an
+`hs:equipRef` (by handle `h:5` or slot), null with a note when a read was cut; `unknown_tags` the
+direct tags no installed dictionary defines (`{tag, count, example, why}`), where a namespace with no
+dictionary installed (every `hs:` tag on a station without a Haystack dictionary) is ONE `ns:*` entry,
+never a line per tag. `dictionary` checks one dictionary's namespace only. Lists keep 100 items;
+`counts` holds the totals. Bulk tagging (S10) is `n4_set_tags` itself: up to 50 ords, `add` and
+`remove` together, one dry run and one token.
 
 Recipe, find components by tag: `n4_neql_query(neql, base_ord="station:|slot:/", bql?, max_rows=200)`
 is one GET of `<base_ord>|neql:<neql>|view:file:ITableToCsv`. It matches the components below
