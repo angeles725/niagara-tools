@@ -693,6 +693,27 @@ scopes. Recipe:
    `n4_behavior_diff(before="before_<module>_<date>", tolerance=<the noise of the process>)`.
 4. Explain or fix every item; an intended change is still listed, so say which ones were expected.
 
+### Refrigeration fault rules over history
+
+`n4_refrigeration_faults(rules, period | start/end, max_rows=5000, limit=50)` runs the rules named
+in `rules` over history data and reports findings only (read-only). Each history is read once per
+call with the locale-free query (`timestamp.encodeToString, value.encodeToString`); every threshold
+is a required argument, since the sources disagree (a short cycle is a run under about 2 minutes
+for some and under 10 for others).
+
+| Rule | Histories | Thresholds | Finding |
+|---|---|---|---|
+| `short_cycling` | `run_history` (boolean) | `min_run_s`, `max_starts_per_hour` | a finished run shorter than `min_run_s`; a clock hour with more starts |
+| `defrost_termination` | `defrost_history` (boolean), `coil_history` | `terminate_temp`, `max_minutes`, `slack_minutes` | a cycle whose coil never reached `terminate_temp` and lasted at least `max_minutes - slack_minutes` (ended by time); `cycles` counts temperature / time / early / open |
+| `setpoint_not_reached` | `temp_history`, optional `exclude_history` (boolean, e.g. defrost) | `setpoint`, `band`, `min_minutes` | a period above `setpoint + band` for at least `min_minutes` (a sample holds until the next) |
+| `over_amps` | `amps_history` | `limit` | a clock hour with samples above `limit`, their count and the peak |
+| `door_drift` | `door_history` (boolean), `temp_history` | `max_rise`, `after_minutes` | an opening after which the room rose more than `max_rise` until close + `after_minutes` |
+
+Each rule is `{count, items, more}`, `summary` has one line per rule (`ok`, `N finding(s)`,
+`not checked: why`), and `histories` lists each read with `records` and `truncated` (more records
+existed; the oldest were cut). A history that could not be read makes its rule `not_checked`,
+never clean. An event still open at `end` is cut there.
+
 ### Finishing a job: the commissioning report
 
 `n4_commissioning_report(scope="station:|slot:/", sections=None, limit=20, expect_histories=None,

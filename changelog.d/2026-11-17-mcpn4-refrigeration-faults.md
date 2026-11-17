@@ -1,0 +1,3 @@
+### Added — mcp-n4: n4_refrigeration_faults, refrigeration fault rules over history (O1)
+- Read-only report over history data: `short_cycling`, `defrost_termination` (ended by temperature / time / early / open), `setpoint_not_reached` (with an optional exclusion history such as defrost), `over_amps` per clock hour, `door_drift`. Every threshold is a required argument; each history is read once per call with ISO timestamps and locale-free values.
+- Findings per rule as `{count, items, more}`, a `summary` line per rule, and a rule whose history could not be read is `not_checked`. The rules are pure functions in `go/internal/mcpn4/refrig`.
