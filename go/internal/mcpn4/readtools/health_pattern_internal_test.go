@@ -1,6 +1,10 @@
 package readtools
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+)
 
 func TestDownPatternNamesTheBusOrTheSingleDevice(t *testing.T) {
 	cases := []struct {
@@ -21,16 +25,25 @@ func TestDownPatternNamesTheBusOrTheSingleDevice(t *testing.T) {
 		{"no devices", 0, 0, 0, ""},
 	}
 	for _, c := range cases {
-		got := downPattern(c.total, c.down, c.bad)
+		got := downPattern(c.total, c.down, c.bad, true)
 		if c.want == "" {
 			if got != nil {
 				t.Errorf("%s: pattern = %v, want null", c.name, got)
 			}
 			continue
 		}
-		if got == nil || lookup(got, "kind") != c.want || lookup(got, "down") != c.down ||
-			lookup(got, "total") != c.total || lookup(got, "hint") == "" {
+		p, ok := got.(*pyjson.Object)
+		if !ok || p == nil || lookup(p, "kind") != c.want || lookup(p, "down") != c.down ||
+			lookup(p, "total") != c.total || lookup(p, "hint") == "" {
 			t.Errorf("%s: pattern = %v, want kind %s", c.name, got, c.want)
 		}
+	}
+}
+
+func TestDownPatternHintNamesWiringOnlyOnASerialNetwork(t *testing.T) {
+	serial, _ := downPattern(4, 4, 4, true).(*pyjson.Object)
+	ip, _ := downPattern(4, 4, 4, false).(*pyjson.Object)
+	if lookup(serial, "hint") != hintBus || lookup(ip, "hint") != hintNetwork || lookup(ip, "kind") != patternBus {
+		t.Errorf("serial %v, ip %v", serial, ip)
 	}
 }

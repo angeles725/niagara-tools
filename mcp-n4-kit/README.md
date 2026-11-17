@@ -533,9 +533,11 @@ network, sent only when a network lists a bad device): each `devices_bad` entry 
 `health.lastOkTime`, `health.lastFailTime`; a ping failure fills `last_fail_cause` and leaves
 `fault_cause` empty), `address` (`deviceAddress` for Modbus devices, `address` as network:mac for
 BACnet devices, `null` for any other type) and `stale_points` (its stale proxy points); each network
-gains `port` (`serialPortConfig.portName`) and `pattern`: `{kind: "bus", down, total, hint}` when 2
-or more devices and all but at most one are down (check bus wiring, termination, polarity and the
-port), `{kind: "single", ...}` when exactly one of 2 or more devices is bad and it is down (check
+gains `port` (`serialPortConfig.portName`; `null` on a network with no serial port) and `pattern`:
+`{kind: "bus", down, total, hint}` when 2 or more devices and all but at most one are down (on a
+serial network: check bus wiring, termination, polarity and the port; on any other, such as
+BACnet/IP: check the shared network path, the station's interface, switches or routers, and the
+devices' power), `{kind: "single", ...}` when exactly one of 2 or more devices is bad and it is down (check
 that device's address and power), else `null`. A value the station did not give is `null`, never a
 guess; `drivers.device_detail_note` names a detail query that failed.
 `platform=true` adds `platform`, platform capacity and what is about to expire, from five more

@@ -55,7 +55,7 @@ func (t *Tools) addDeviceDetail(drivers *pyjson.Object, devices, points []*pyjso
 		path := cellText(entry, "network")
 		c := tallies[path]
 		entry.Set("port", ports[path])
-		entry.Set("pattern", downPattern(c[0], c[1], c[2]))
+		entry.Set("pattern", downPattern(c[0], c[1], c[2], ports[path] != nil))
 	}
 	if len(notes) > 0 {
 		drivers.Set("device_detail_note", strings.Join(notes, "; "))
@@ -168,9 +168,10 @@ func deviceTallies(networks []any, devices []*pyjson.Object) map[string][3]int {
 	return out
 }
 
-// textOrNull is a cell's text, or null when the station gave none ("" or a null time).
+// textOrNull is a cell's text, or null when the station gave none ("", a null time, or NULL for a
+// path the row's type does not have).
 func textOrNull(cell string) any {
-	if s := strings.TrimSpace(cell); s != "" && s != "null" {
+	if s := strings.TrimSpace(cell); s != "" && !strings.EqualFold(s, "null") {
 		return s
 	}
 	return nil

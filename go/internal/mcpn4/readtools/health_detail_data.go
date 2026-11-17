@@ -44,6 +44,7 @@ const (
 	patternBus      = "bus"
 	patternSingle   = "single"
 	hintBus         = "check bus wiring, termination, polarity and the port"
+	hintNetwork     = "check the shared network path: the station's interface, switches or routers, and the devices' power"
 	hintSingle      = "check that device's address and power"
 	deviceDetailArg = "device_detail"
 )
