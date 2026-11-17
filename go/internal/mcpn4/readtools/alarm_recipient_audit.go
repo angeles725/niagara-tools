@@ -10,31 +10,36 @@ import (
 )
 
 // The recipient side of n4_list_alarm_classes audit=true (station-audits S5): each recipient's
-// settings as its routeAlarm load already holds them, and the problems that stop delivery. A
-// slot whose name or type looks like a credential is never returned, only named; a URL keeps
-// no user info, Telegram bot token or secret query value.
+// settings as its routeAlarm load already holds them, and the problems that stop delivery.
+// Fail closed (PR #788 verifier B1, B2): a value is returned only for a slot on the allowlist of
+// a known recipient type; every other slot, and every slot of an unknown type, shows only
+// "<set>" or "". The problem checks read the raw values and never quote one off the allowlist.
 
-// settingMaxRunes bounds a returned setting (a mail body is a long format).
+// settingMaxRunes bounds a returned setting.
 const settingMaxRunes = 200
 
+// The text of a slot whose value is not returned.
+const (
+	maskedSet   = "<set>"
+	maskedEmpty = ""
+)
+
 var (
-	// sensitiveSlotRe names a slot whose value is never returned.
-	sensitiveSlotRe = regexp.MustCompile(`(?i)pass|secret|token|credential|api_?key|private`)
-	// endpointSlotRe names a slot a custom recipient (webhook, Telegram) delivers to.
-	endpointSlotRe = regexp.MustCompile(`(?i)(url|chatid|webhook)$`)
-	emailRe        = regexp.MustCompile(`^[^@\s<>"(),;:|]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$`)
-	redactions     = []struct {
-		re   *regexp.Regexp
-		with string
-	}{
-		{regexp.MustCompile(`://[^/@\s]+@`), "://<redacted>@"},
-		{regexp.MustCompile(`/bot[0-9]+:[A-Za-z0-9_-]+`), "/bot<redacted>"},
-		{regexp.MustCompile(`(?i)([?&](?:token|key|secret|password|apikey|api_key)=)[^&\s]*`), "${1}<redacted>"},
+	// routeSlots are the non-secret delivery slots of every BAlarmRecipient.
+	routeSlots = []string{"transitions", "daysOfWeek", "timeRange", "routeAcks"}
+	// safeSlots are the slots of a known recipient type whose value is returned.
+	safeSlots = map[string][]string{
+		"email:EmailRecipient":   append([]string{"to", "cc", "bcc", "emailAccount", "language"}, routeSlots...),
+		"alarm:StationRecipient": append([]string{"remoteStation", "lastFailureCause", "status", "persistent", "retryInterval"}, routeSlots...),
+		"alarm:ConsoleRecipient": append([]string{"status", "defaultTimeRange"}, routeSlots...),
 	}
 	// emptyDefaults are the route slots a load omits at their type default, which is empty
 	// (BEmailRecipient to, cc, bcc and emailAccount; BStationRecipient remoteStation).
-	emptyDefaults = map[string][]string{"EmailRecipient": {"to", "cc", "bcc", "emailAccount"},
-		"StationRecipient": {"remoteStation"}}
+	emptyDefaults = map[string][]string{"email:EmailRecipient": {"to", "cc", "bcc", "emailAccount"},
+		"alarm:StationRecipient": {"remoteStation"}}
+	// endpointSlotRe names a slot a custom recipient (webhook, Telegram) delivers to.
+	endpointSlotRe = regexp.MustCompile(`(?i)(url|chatid|webhook)$`)
+	emailRe        = regexp.MustCompile(`^[^@\s<>"(),;:|]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$`)
 )
 
 // Problems of a recipient, as data.
@@ -46,12 +51,17 @@ const (
 	probNoDay        = "daysOfWeek is empty: no day is routed"
 	probNoEndpoint   = "%s is empty: the recipient has nowhere to deliver"
 	probLastFailure  = "the last delivery failed: %s"
+	probLastFailed   = "the last delivery failed (lastFailureCause is set; its text is not returned for this type)"
 )
 
-// recipientAudit is {settings, at_default, omitted_slots, problems} of the recipient whose
-// load (two levels from the recipient) is nodes, kind its type.
+// recipientAudit is {settings, at_default, masked_slots, problems} of the recipient whose load
+// (two levels from the recipient) is nodes, kind its type.
 func recipientAudit(nodes *pyjson.Object, kind string) *pyjson.Object {
-	settings, omitted, atDefault := pyjson.NewObject(), []any{}, []any{}
+	raw, settings, masked, atDefault := map[string]string{}, pyjson.NewObject(), []any{}, []any{}
+	safe := map[string]bool{}
+	for _, name := range safeSlots[kind] {
+		safe[name] = true
+	}
 	kids := box.Children(nodes, "")
 	for _, name := range kids.Keys() {
 		node := box.Node(kids, name)
@@ -59,31 +69,38 @@ func recipientAudit(nodes *pyjson.Object, kind string) *pyjson.Object {
 		if !has || isLinkType(get(node, "t")) {
 			continue
 		}
-		if sensitiveSlotRe.MatchString(name) || strings.Contains(strings.ToLower(pyjson.Str(get(node, "t"))), "password") {
-			omitted = append(omitted, name)
-			continue
+		raw[name] = pyjson.Str(v)
+		switch {
+		case safe[name]:
+			settings.Set(name, cutSetting(raw[name]))
+		case strings.TrimSpace(raw[name]) == "":
+			settings.Set(name, maskedEmpty)
+			masked = append(masked, name)
+		default:
+			settings.Set(name, maskedSet)
+			masked = append(masked, name)
 		}
-		settings.Set(name, redact(pyjson.Str(v)))
 	}
-	short := kind[strings.LastIndexByte(kind, ':')+1:]
-	for _, name := range emptyDefaults[short] {
-		if _, ok := settings.Get(name); !ok {
+	for _, name := range emptyDefaults[kind] {
+		if _, ok := raw[name]; !ok {
+			raw[name] = ""
 			settings.Set(name, "")
 			atDefault = append(atDefault, name)
 		}
 	}
-	return obj("settings", settings, "at_default", atDefault, "omitted_slots", omitted,
-		"problems", recipientProblems(settings, short))
+	return obj("settings", settings, "at_default", atDefault, "masked_slots", masked,
+		"problems", recipientProblems(raw, settings.Keys(), kind, safe))
 }
 
-// recipientProblems are the reasons the recipient cannot deliver, from its settings.
-func recipientProblems(settings *pyjson.Object, short string) []any {
+// recipientProblems are the reasons the recipient cannot deliver, from its raw values (names in
+// order); a problem quotes a value only when safe holds its slot.
+func recipientProblems(raw map[string]string, names []string, kind string, safe map[string]bool) []any {
 	problems := []any{}
 	text := func(name string) (string, bool) {
-		v, ok := settings.Get(name)
-		return strings.TrimSpace(pyjson.Str(v)), ok
+		v, ok := raw[name]
+		return strings.TrimSpace(v), ok
 	}
-	if short == "EmailRecipient" {
+	if kind == "email:EmailRecipient" {
 		found := 0
 		for _, slot := range []string{"to", "cc", "bcc"} {
 			v, _ := text(slot)
@@ -98,7 +115,7 @@ func recipientProblems(settings *pyjson.Object, short string) []any {
 			problems = append(problems, probNoEmail)
 		}
 	}
-	if v, ok := text("remoteStation"); ok && v == "" && short == "StationRecipient" {
+	if v, ok := text("remoteStation"); ok && v == "" && kind == "alarm:StationRecipient" {
 		problems = append(problems, probNoStation)
 	}
 	for _, c := range []struct{ slot, msg string }{{"transitions", probNoTransition}, {"daysOfWeek", probNoDay}} {
@@ -106,13 +123,17 @@ func recipientProblems(settings *pyjson.Object, short string) []any {
 			problems = append(problems, c.msg)
 		}
 	}
-	for _, name := range settings.Keys() {
+	for _, name := range names {
 		if v, _ := text(name); v == "" && endpointSlotRe.MatchString(name) {
 			problems = append(problems, fmt.Sprintf(probNoEndpoint, name))
 		}
 	}
 	if v, ok := text("lastFailureCause"); ok && v != "" {
-		problems = append(problems, fmt.Sprintf(probLastFailure, v))
+		if safe["lastFailureCause"] {
+			problems = append(problems, fmt.Sprintf(probLastFailure, cutSetting(v)))
+		} else {
+			problems = append(problems, probLastFailed)
+		}
 	}
 	return problems
 }
@@ -133,13 +154,10 @@ func emailAddresses(list string) []string {
 	return out
 }
 
-// redact is a setting without user info, bot token or secret query value, cut to settingMaxRunes.
-func redact(v string) string {
-	for _, r := range redactions {
-		v = r.re.ReplaceAllString(v, r.with)
-	}
+// cutSetting is v cut to settingMaxRunes.
+func cutSetting(v string) string {
 	if runes := []rune(v); len(runes) > settingMaxRunes {
-		v = string(runes[:settingMaxRunes]) + "..."
+		return string(runes[:settingMaxRunes]) + "..."
 	}
 	return v
 }

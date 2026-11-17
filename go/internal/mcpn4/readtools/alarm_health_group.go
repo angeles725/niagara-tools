@@ -12,6 +12,16 @@ import (
 // database keeps one record per alarm event (bql/event.go): a record whose alarm time is in the
 // window is one transition out of normal, and its normal time, when set, one transition back.
 
+// alarmSource is the source a record names, one spelling per component: a slot path stored as
+// slot:/a, station:|slot:/a or local:|station:|slot:/a (bql/alarm.go) reads station:|slot:/a, the
+// form the source filter of n4_read_alarms and n4_event_report takes; any other text is kept.
+func alarmSource(stored string) string {
+	if path, ok := bql.RecordSourcePath(stored); ok {
+		return "station:|slot:" + path
+	}
+	return stored
+}
+
 // sourceTally is one source's records in the window and the transitions they hold.
 type sourceTally struct {
 	source               string
@@ -23,7 +33,7 @@ func tallySources(rows []*pyjson.Object) []*sourceTally {
 	var out []*sourceTally
 	bySource := map[string]*sourceTally{}
 	for _, row := range rows {
-		src := cell(row, "source")
+		src := alarmSource(cell(row, "source"))
 		s, ok := bySource[src]
 		if !ok {
 			s = &sourceTally{source: src}
@@ -86,10 +96,11 @@ type openAlarm struct {
 }
 
 // openFindings splits the open rows ({source, source_state, ack_state, alarm_class,
-// alarm_time}): offnormal are the records not back to normal ({source, source_state,
-// alarm_class, since}), unacked those not acknowledged whose alarm time is at least days days
-// before now ({source, alarm_class, ack_state, alarm_time, age_days}), both oldest first;
-// unreadable counts the records whose alarm time could not be read (left out of unacked).
+// alarm_time}): offnormal are the sources with a record not back to normal, once per source
+// ({source, source_state, alarm_class, since, records}, state and class of its earliest record),
+// unacked the records not acknowledged whose alarm time is more than days days before now
+// ({source, alarm_class, ack_state, alarm_time, age_days}), both oldest first; unreadable counts
+// the records whose alarm time could not be read (left out of unacked).
 func openFindings(rows []*pyjson.Object, now time.Time, days int) (offnormal, unacked []any, unreadable int) {
 	var all []openAlarm
 	for _, row := range rows {
@@ -101,16 +112,23 @@ func openFindings(rows []*pyjson.Object, now time.Time, days int) (offnormal, un
 	}
 	sort.SliceStable(all, func(i, j int) bool { return all[i].ok && (!all[j].ok || all[i].at.Before(all[j].at)) })
 	offnormal, unacked = []any{}, []any{}
+	bySource := map[string]*pyjson.Object{}
 	limit := time.Duration(days) * 24 * time.Hour
 	for _, a := range all {
+		src := alarmSource(cell(a.row, "source"))
 		if cell(a.row, "source_state") != "normal" {
-			offnormal = append(offnormal, obj("source", cell(a.row, "source"), "source_state", cell(a.row, "source_state"),
-				"alarm_class", cell(a.row, "alarm_class"), "since", bql.IsoOrNull(cell(a.row, "alarm_time"))))
+			if seen, ok := bySource[src]; ok {
+				seen.Set("records", get(seen, "records").(int)+1)
+			} else {
+				bySource[src] = obj("source", src, "source_state", cell(a.row, "source_state"),
+					"alarm_class", cell(a.row, "alarm_class"), "since", bql.IsoOrNull(cell(a.row, "alarm_time")), "records", 1)
+				offnormal = append(offnormal, bySource[src])
+			}
 		}
-		if cell(a.row, "ack_state") == "acked" || !a.ok || now.Sub(a.at) < limit {
+		if cell(a.row, "ack_state") == "acked" || !a.ok || now.Sub(a.at) <= limit {
 			continue
 		}
-		unacked = append(unacked, obj("source", cell(a.row, "source"), "alarm_class", cell(a.row, "alarm_class"),
+		unacked = append(unacked, obj("source", src, "alarm_class", cell(a.row, "alarm_class"),
 			"ack_state", cell(a.row, "ack_state"), "alarm_time", cell(a.row, "alarm_time"),
 			"age_days", int(now.Sub(a.at)/(24*time.Hour))))
 	}

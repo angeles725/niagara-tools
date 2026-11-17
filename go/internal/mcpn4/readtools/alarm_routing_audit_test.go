@@ -11,7 +11,7 @@ import (
 )
 
 // auditServer is classesServer plus a class nobody routes (Orphan), a mail recipient whose
-// to-list is empty and whose cc holds a bad address and a password slot, a console routing no
+// to-list is empty and whose cc holds a bad address and two credential slots, a console routing no
 // transition, and a webhook recipient with an empty chat id and a failed delivery.
 func auditServer(t *testing.T) *pyjson.Object {
 	t.Helper()
@@ -45,16 +45,17 @@ func TestListAlarmClassesAuditFindsUnroutedClassesAndBrokenRecipients(t *testing
 	recipients := field(out, "recipients").([]any)
 	want := []string{
 		"{'path': '/Services/AlarmService/Console', 'type': 'alarm:ConsoleRecipient', 'classes': ['defaultAlarmClass', 'Critical'], " +
-			"'settings': {'transitions': '0'}, 'at_default': [], 'omitted_slots': [], " +
+			"'settings': {'transitions': '0'}, 'at_default': [], 'masked_slots': [], " +
 			"'problems': ['transitions is empty: no alarm transition is routed']}",
 		"{'path': '/Services/AlarmService/Mail', 'type': 'email:EmailRecipient', 'classes': ['Critical'], " +
-			"'settings': {'cc': 'ops@plant.example;not-an-address|Ops', 'emailAccount': 'Outgoing', 'to': '', 'bcc': ''}, " +
-			"'at_default': ['to', 'bcc'], 'omitted_slots': ['accountPassword', 'secretKey'], " +
+			"'settings': {'cc': 'ops@plant.example;not-an-address|Ops', 'emailAccount': 'Outgoing', 'accountPassword': '<set>', " +
+			"'secretKey': '<set>', 'to': '', 'bcc': ''}, 'at_default': ['to', 'bcc'], 'masked_slots': ['accountPassword', 'secretKey'], " +
 			"'problems': ['cc holds \"not-an-address\", which is not an email address']}",
 		"{'path': '/Services/AlarmService/Hook', 'type': 'acme:WebhookRecipient', 'classes': [], " +
-			"'settings': {'url': 'https://<redacted>@api.telegram.org/bot<redacted>/sendMessage', 'chatId': '', 'lastFailureCause': 'HTTP 401'}, " +
-			"'at_default': [], 'omitted_slots': [], " +
-			"'problems': ['chatId is empty: the recipient has nowhere to deliver', 'the last delivery failed: HTTP 401']}",
+			"'settings': {'url': '<set>', 'chatId': '', 'lastFailureCause': '<set>'}, " +
+			"'at_default': [], 'masked_slots': ['url', 'chatId', 'lastFailureCause'], " +
+			"'problems': ['chatId is empty: the recipient has nowhere to deliver', " +
+			"'the last delivery failed (lastFailureCause is set; its text is not returned for this type)']}",
 	}
 	if len(recipients) != len(want) {
 		t.Fatalf("recipients %s", pyjson.Repr(recipients))
@@ -64,7 +65,7 @@ func TestListAlarmClassesAuditFindsUnroutedClassesAndBrokenRecipients(t *testing
 			t.Errorf("recipient %d\n got %s\nwant %s", i, got, w)
 		}
 	}
-	if text := pyjson.Repr(out); strings.Contains(text, "hunter2") || strings.Contains(text, "s3cr3t") || strings.Contains(text, "ABC-def") {
+	if text := pyjson.Repr(out); strings.Contains(text, "hunter2") || strings.Contains(text, "s3cr3t") || strings.Contains(text, "ABC-def") || strings.Contains(text, "HTTP 401") {
 		t.Errorf("a credential reached the reply: %s", text)
 	}
 }

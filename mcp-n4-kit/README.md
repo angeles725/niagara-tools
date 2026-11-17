@@ -402,11 +402,12 @@ Alarm health: `n4_alarm_health(window="24h", chatter_threshold=10, unacked_days=
 `select source, normalTime.encodeToString where timestamp.millis >= <now - window>` and
 `select source, sourceState.encodeToString, ackState.encodeToString, alarmClass, timestamp.encodeToString`
 over the open records (`(ackState != 'acked' or sourceState != 'normal')`), each capped at 100000
-records. The server groups them: `chattering` `[{source, transitions, records}]` (a record in the
+records. The server groups them: `chattering` `[{source, transitions, records}]` (a source stored as `slot:/a` or `local:|station:|slot:/a` is
+reported once as `station:|slot:/a`; a record in the
 window is one transition out of normal, plus one back when its normal time is set; sources at or
-over `chatter_threshold`), `offnormal` `[{source, source_state, alarm_class, since}]` (open and not
-back to normal, oldest first), `unacked_older` `[{source, alarm_class, ack_state, alarm_time,
-age_days}]` (not acknowledged, alarm time at least `unacked_days` days old) and `top_sources`
+over `chatter_threshold`), `offnormal` `[{source, source_state, alarm_class, since, records}]` (sources
+with an open record not back to normal, once per source, `since` the earliest, oldest first), `unacked_older` `[{source, alarm_class, ack_state, alarm_time,
+age_days}]` (not acknowledged, alarm time more than `unacked_days` days old) and `top_sources`
 `[{source, count}]`. Each list keeps `top` entries (1-50); `counts` holds the full numbers and
 `truncated_note` names each cut list or capped read. `window` is a span (`30m`, `24h`, `7d`).
 `n4_list_alarm_classes()` runs `select slotPath, name, priority, ackRequired, totalAlarmCount,
@@ -424,14 +425,19 @@ handle is resolved against one load of the folder holding the classes, and each 
 request): `unrouted_classes` `[{path, name}]` are the classes no recipient is linked to
 (`unrouted_note` when an unresolved link or an unread recipient may route one of them),
 `audit_counts` counts classes, unrouted classes, recipients read and recipients with problems,
-and each recipient gains `settings` (the slot values its load returned; an email recipient's `to`,
-`cc`, `bcc`, `emailAccount` and a station recipient's `remoteStation` read as `""` when the station
-omits them at their empty default, named in `at_default`), `omitted_slots` (slots named or typed
-like a password, secret, token, credential or key: named, never their value; a URL loses its user
-info, a Telegram `/bot<token>` and secret query values) and `problems`: an email recipient with no
-address in `to`, `cc` or `bcc`, or one that is not an email address; a station recipient with no
-`remoteStation`; `transitions` or `daysOfWeek` empty; an empty `url`, `chatId` or `webhook` slot (a
-custom webhook or Telegram recipient); a last delivery failure (`lastFailureCause`).
+and each recipient gains `settings`, `at_default`, `masked_slots` and `problems`. `settings` fails
+closed: a value is returned only for an allowlisted slot of a known type (every recipient type:
+`transitions`, `daysOfWeek`, `timeRange`, `routeAcks`; `email:EmailRecipient` also `to`, `cc`, `bcc`,
+`emailAccount`, `language`; `alarm:StationRecipient` also `remoteStation`, `lastFailureCause`,
+`status`, `persistent`, `retryInterval`; `alarm:ConsoleRecipient` also `status`, `defaultTimeRange`).
+Every other slot, and every slot of any other recipient type (a custom webhook or Telegram
+recipient included), reads `"<set>"` or `""` and is named in `masked_slots`. An email recipient's
+`to`, `cc`, `bcc`, `emailAccount` and a station recipient's `remoteStation` read as `""` when the
+station omits them at their empty default, named in `at_default`. `problems` reads the raw values
+and never quotes one off the allowlist: an email recipient with no address in `to`, `cc` or `bcc`,
+or one that is not an email address; a station recipient with no `remoteStation`; `transitions` or
+`daysOfWeek` empty; an empty `url`, `chatId` or `webhook` slot; a last delivery failure
+(`lastFailureCause`, its text quoted only where allowlisted).
 Creating an alarm class has no dedicated tool; the recipe is three ordinary writes, each with its
 dry run and token: `n4_create_component(parent_ord: "station:|slot:/Services/AlarmService",
 name: "Critical", type: "alarm:AlarmClass")`; `n4_set_slot(ord: "station:|slot:/Services/AlarmService/Critical",

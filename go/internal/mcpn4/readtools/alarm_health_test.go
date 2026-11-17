@@ -54,10 +54,10 @@ func TestAlarmHealthGroupsTheWindowAndTheOpenRecords(t *testing.T) {
 		t.Errorf("ORDs sent %q", got)
 	}
 	for k, want := range map[string]string{
-		"chattering":    "[{'source': 'local:|station:|slot:/Plant/Pump', 'transitions': 11, 'records': 6}]",
-		"top_sources":   "[{'source': 'local:|station:|slot:/Plant/Pump', 'count': 6}, {'source': 'local:|station:|slot:/Plant/Fan', 'count': 1}]",
-		"offnormal":     "[{'source': 'local:|station:|slot:/Plant/Door', 'source_state': 'offnormal', 'alarm_class': 'defaultAlarmClass', 'since': '2026-11-01T07:00:00.000-06:00'}, {'source': 'local:|station:|slot:/Plant/Fan', 'source_state': 'offnormal', 'alarm_class': 'Critical', 'since': '2026-11-17T07:00:00.000-06:00'}]",
-		"unacked_older": "[{'source': 'local:|station:|slot:/Plant/Valve', 'alarm_class': 'defaultAlarmClass', 'ack_state': 'unacked', 'alarm_time': '2026-11-10T07:00:00.000-06:00', 'age_days': 7}]",
+		"chattering":    "[{'source': 'station:|slot:/Plant/Pump', 'transitions': 11, 'records': 6}]",
+		"top_sources":   "[{'source': 'station:|slot:/Plant/Pump', 'count': 6}, {'source': 'station:|slot:/Plant/Fan', 'count': 1}]",
+		"offnormal":     "[{'source': 'station:|slot:/Plant/Door', 'source_state': 'offnormal', 'alarm_class': 'defaultAlarmClass', 'since': '2026-11-01T07:00:00.000-06:00', 'records': 1}, {'source': 'station:|slot:/Plant/Fan', 'source_state': 'offnormal', 'alarm_class': 'Critical', 'since': '2026-11-17T07:00:00.000-06:00', 'records': 1}]",
+		"unacked_older": "[{'source': 'station:|slot:/Plant/Valve', 'alarm_class': 'defaultAlarmClass', 'ack_state': 'unacked', 'alarm_time': '2026-11-10T07:00:00.000-06:00', 'age_days': 7}]",
 		"counts":        "{'records_in_window': 7, 'sources_in_window': 2, 'chattering': 1, 'open_records': 3, 'offnormal': 2, 'unacked_older': 1, 'unreadable_alarm_times': 0}",
 	} {
 		if got := pyjson.Repr(field(out, k)); got != want {

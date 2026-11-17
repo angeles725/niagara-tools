@@ -45,8 +45,8 @@ func TestOpenFindingsSplitsOffnormalAndOldUnackedOldestFirst(t *testing.T) {
 		row("source", "bad", "source_state", "normal", "ack_state", "unacked", "alarm_class", "c", "alarm_time", "yesterday"),
 	}
 	off, unacked, unreadable := openFindings(rows, now, 3)
-	if got := pyjson.Repr(off); got != "[{'source': 'acked', 'source_state': 'fault', 'alarm_class': 'c', 'since': '2026-11-01T12:00:00.000-06:00'}, "+
-		"{'source': 'new', 'source_state': 'offnormal', 'alarm_class': 'c', 'since': '2026-11-16T12:00:00.000-06:00'}]" {
+	if got := pyjson.Repr(off); got != "[{'source': 'acked', 'source_state': 'fault', 'alarm_class': 'c', 'since': '2026-11-01T12:00:00.000-06:00', 'records': 1}, "+
+		"{'source': 'new', 'source_state': 'offnormal', 'alarm_class': 'c', 'since': '2026-11-16T12:00:00.000-06:00', 'records': 1}]" {
 		t.Errorf("offnormal %s", got)
 	}
 	if got := pyjson.Repr(unacked); got != "[{'source': 'old', 'alarm_class': 'c', 'ack_state': 'unacked', "+
