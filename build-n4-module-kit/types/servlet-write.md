@@ -73,7 +73,7 @@ public final class BPanelServlet extends BWebServlet {
 ```
 
 Adapt the parameter names, the base and the value type; keep the five steps and their order. In a
-web-module servlet (`HttpServlet` + `WEB-INF/web.xml`, `types/dashboard.md` § Web-module recipe) map
+web-module servlet (`HttpServlet` + `WEB-INF/web.xml`, the web-module recipe of `types/dashboard.md`) map
 `CsrfProtectedFilter` on its write verbs instead of step 1 (`types/security.md` § 3.1); steps 2-5 stay.
 
 ## Why each guard is there
