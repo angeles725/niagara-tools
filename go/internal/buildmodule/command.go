@@ -42,7 +42,7 @@ type build struct {
 	signingXML string            // the mirror user home's signing profile; "" outside a mirror
 	temps      []string          // temporary paths of the run, removed when Main returns
 	tempsMu    sync.Mutex        // temps is appended by the chain and read by the signal handler
-	// modulesMu serialises what puts modules/ back (restoreBaseline, removeFirstDeploy) and the removal of
+	// modulesMu serialises what puts modules/ back (restoreBaseline, removeFirstDeploy), what reads it after the run (keepReplaced) and the removal of
 	// the snapshot (cleanup) between the chain and the signal handler, which holds it until the run ends.
 	modulesMu  sync.Mutex
 	gradle     gradleRun // the running gradle, which a signal stops before the restore (gradleproc.go)
