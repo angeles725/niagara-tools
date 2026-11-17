@@ -73,6 +73,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_read_history"] = t.ReadHistory
 	s.Handlers["n4_export_history"] = t.ExportHistory
 	s.Handlers["n4_read_audit"] = t.ReadAudit
+	s.Handlers["n4_users_audit"] = t.UsersAudit
 	s.Handlers["n4_histories_audit"] = t.HistoriesAudit
 	s.Handlers["n4_read_alarms"] = t.ReadAlarms
 	s.Handlers["n4_list_alarm_classes"] = t.ListAlarmClasses
