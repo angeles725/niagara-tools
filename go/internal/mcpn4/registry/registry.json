@@ -1871,13 +1871,13 @@
   },
   {
    "name": "n4_set_slot",
-   "description": "Set one slot to a value. Status slots are always written whole (value and status). A slot the station omits because it holds its type default is typed from the station's type definition (registry channel), so a default-valued property such as a history extension's enabled, historyName or interval can be set. A nested slot is a path from ord (grp/sp). When links write the slot, the dry run lists them as incoming_links {source_ord, source_slot, target_slot, enabled} with a note: the link overwrites the written value at its next update (the token covers them). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Set one slot to a value. Status slots are always written whole (value and status). A slot the station omits because it holds its type default is typed from the station's type definition (registry channel), so a default-valued property such as a history extension's enabled, historyName or interval can be set. A nested slot is a path from ord (grp/sp). When links write the slot, the dry run lists them as incoming_links {source_ord, source_slot, target_slot, enabled} with a note: the link overwrites the written value at its next update (the token covers them). Batch form: writes, a list of 1 to 50 entries {ord, slot, value, value_type, status?, simple_type?} planned exactly as the single form, under one dry run and one confirmation_token; writes cannot be combined with ord, slot, value, value_type, status or simple_type, the same (component, slot) twice is refused, every entry's ord must be under the write scope (one outside refuses the call), the batch spends one write of --max-writes, a refused entry refuses the batch, the read-back lists {ord, slot, requested, observed, verdict} per entry (verified only when every entry is) and n4_rollback restores every entry. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
      "ord": {
       "type": "string",
-      "description": "Component ORD"
+      "description": "Component ORD (single form: required unless writes is given)"
      },
      "slot": {
       "type": "string",
@@ -1910,6 +1910,57 @@
       "description": "Status string for Status types",
       "default": "0"
      },
+     "writes": {
+      "type": "array",
+      "description": "Batch form, instead of ord/slot/value/value_type/status/simple_type: 1 to 50 entries, each one write with the single form's arguments",
+      "maxItems": 50,
+      "items": {
+       "type": "object",
+       "properties": {
+        "ord": {
+         "type": "string",
+         "description": "Component ORD"
+        },
+        "slot": {
+         "type": "string",
+         "description": "Slot name or nested slot path, as in the single form"
+        },
+        "value": {
+         "description": "New value by value_type, as in the single form"
+        },
+        "value_type": {
+         "type": "string",
+         "description": "As in the single form",
+         "enum": [
+          "baja:Double",
+          "baja:Boolean",
+          "baja:String",
+          "baja:StatusNumeric",
+          "baja:StatusBoolean",
+          "baja:Format",
+          "baja:RelTime",
+          "baja:Integer",
+          "baja:Simple"
+         ]
+        },
+        "status": {
+         "type": "string",
+         "description": "Status string for Status types",
+         "default": "0"
+        },
+        "simple_type": {
+         "type": "string",
+         "description": "Only with baja:Simple, as in the single form"
+        }
+       },
+       "required": [
+        "ord",
+        "slot",
+        "value",
+        "value_type"
+       ]
+      }
+     },
      "dry_run": {
       "type": "boolean",
       "default": true,
@@ -1920,12 +1971,7 @@
       "description": "Token returned by the matching dry run (single use)"
      }
     },
-    "required": [
-     "ord",
-     "slot",
-     "value",
-     "value_type"
-    ]
+    "required": []
    },
    "annotations": {
     "readOnlyHint": false,

@@ -13,14 +13,12 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
-// SetSlot is n4_set_slot: one slot, a Status slot always whole (value and status).
-var SetSlot = plan.Impl{ScopeOrds: ordArg, Plan: setSlotPlan, Readback: setSlotReadback}
-
 // setSlotData carries what the read-back compares: the requested value and, for baja:Simple, the
 // type the slot must hold afterwards.
 type setSlotData struct {
 	requested any
 	wireType  string
+	key       string // the slot's canonical identity in a batch (slotKey)
 }
 
 func ordArg(args *pyjson.Object) []any { return []any{str(args, "ord")} }
@@ -32,6 +30,7 @@ func str(args *pyjson.Object, k string) string {
 	return s
 }
 
+// setSlotPlan plans one write: the single form's arguments, or one entry of writes (same keys).
 func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	slot, valueType, ordText := str(args, "slot"), str(args, "value_type"), str(args, "ord")
 	if slot == "" {
@@ -114,7 +113,7 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	return &plan.Planned{
 		Ops:     []any{setOp(h, slot, op)},
 		Inverse: []any{setOp(h, slot, inverse)},
-		Notes:   notes, Targets: targets, Keys: obj("incoming_links", links), Data: setSlotData{requested, wireType}}, nil
+		Notes:   notes, Targets: targets, Keys: obj("incoming_links", links), Data: setSlotData{requested, wireType, slotKey(h, nodes, slot)}}, nil
 }
 
 func known(valueType string) bool {
