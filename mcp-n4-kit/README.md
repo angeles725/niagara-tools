@@ -356,8 +356,10 @@ flag (no value: a new COV history writes `0.0 {null}` records at start) and a `n
 says so, and `first_record` / `last_record` are the raw ends when they differ. Other flags (fault,
 down, stale, alarm) keep their value and stay in. A range larger than `summary_max_rows`
 is summarized from its newest records with `complete: false` and a `note`, and `range_min` /
-`range_max` come from `select min(value), max(value)` over the whole range (localized text, no
-time: 4.15 has no `group by` and no aggregate that returns the record). A failed summary read is
+`range_max` come from `select min(value), max(value) where status.null = false` over the whole
+range (localized text, no time: 4.15 has no `group by` and no aggregate that returns the record).
+The `where` leaves out null-status records as the summary does (retro M16b; checked live on
+4.15.6.20); a `nan` or `inf` record still counts in the station's aggregate. A failed summary read is
 `summary: null` with `summary_note`; the rows are still returned.
 There is no `output_file`: it is not an export of whole histories.
 Alarms: `n4_read_alarms(limit=50, source, source_glob, alarm_class, source_state, ack_state, since,

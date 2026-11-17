@@ -14,7 +14,7 @@ import (
 
 const (
 	summaryQuery   = "|bql:select timestamp.encodeToString, value.encodeToString, status order by timestamp desc|view:file:ITableToCsv"
-	aggregateQuery = "|bql:select min(value), max(value)|view:file:ITableToCsv"
+	aggregateQuery = "|bql:select min(value), max(value) where status.null = false|view:file:ITableToCsv"
 )
 
 // summaryRows is the summary pass of values (oldest first in the argument), answered newest

@@ -18,8 +18,10 @@ const (
 	// HistorySummaryQuery reads every record of the range with machine-encoded time and value
 	// (encodeToString: ISO-8601 with the station's offset, 21.0 not a localized "21,0").
 	HistorySummaryQuery = "select timestamp.encodeToString, value.encodeToString, status order by timestamp desc"
-	// HistoryAggregateQuery is the whole-range min and max as the station renders them.
-	HistoryAggregateQuery = "select min(value), max(value)"
+	// HistoryAggregateQuery is the whole-range min and max as the station renders them, without
+	// the records whose status is null (no value; the summary's rule, retro 2026-11-16 row M16b).
+	// The where form is live-checked on 4.15.6.20: status.null = false (status.isNull() is 400).
+	HistoryAggregateQuery = "select min(value), max(value) where status.null = false"
 	HistoryCountQuery     = "select count(*)"
 	HistoryScheme         = "history:"
 )
