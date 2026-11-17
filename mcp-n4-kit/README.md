@@ -985,6 +985,11 @@ Tool rules:
   (`40005`: send it as `baja:Simple`, which also takes a whole number, because an MCP
   client may turn the string "40005" into a number). Enum tags come from the type's
   range, e.g. Modbus `DataTypeEnum` is `integerType`, `signedInteger`, `floatType`.
+- A slot that links write (a linked input, a fallback fed by a link) gets the value again at
+  the link's next update. `n4_set_slot`'s dry run lists those links as `incoming_links`
+  (`source_ord`, `source_slot`, `target_slot`, `enabled`) with a note; the write is still planned,
+  and a link added after the dry run makes the token refuse. To keep the value, remove the link
+  (`n4_list_links`) or write its source (backlog OD001).
 - `n4_set_flags(ord, slot, flags | add/remove)` sets the flags of one slot of a component (a
   property, an action or a topic; a name, not a path) with the station's set-flags
   sync op. `flags` is the complete new set as letters, each once, in any order; `""`

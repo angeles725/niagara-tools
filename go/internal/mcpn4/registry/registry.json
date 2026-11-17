@@ -1871,7 +1871,7 @@
   },
   {
    "name": "n4_set_slot",
-   "description": "Set one slot to a value. Status slots are always written whole (value and status). A slot the station omits because it holds its type default is typed from the station's type definition (registry channel), so a default-valued property such as a history extension's enabled, historyName or interval can be set. A nested slot is a path from ord (grp/sp). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Set one slot to a value. Status slots are always written whole (value and status). A slot the station omits because it holds its type default is typed from the station's type definition (registry channel), so a default-valued property such as a history extension's enabled, historyName or interval can be set. A nested slot is a path from ord (grp/sp). When links write the slot, the dry run lists them as incoming_links {source_ord, source_slot, target_slot, enabled} with a note: the link overwrites the written value at its next update (the token covers them). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
