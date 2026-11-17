@@ -994,6 +994,19 @@ Tool rules:
   (`source_ord`, `source_slot`, `target_slot`, `enabled`) with a note; the write is still planned,
   and a link added after the dry run makes the token refuse. To keep the value, remove the link
   (`n4_list_links`) or write its source (backlog OD001).
+- `n4_set_slot(writes: [{ord, slot, value, value_type, status?, simple_type?}, ...])` is the
+  batch form (overamps retro row M6, backlog OD040): 1 to 50 entries, each planned exactly as the
+  single form, under one dry run and one `confirmation_token`. `writes` cannot be combined with
+  `ord`, `slot`, `value`, `value_type`, `status` or `simple_type`; the same (component, slot)
+  twice is refused; every entry's `ord` must be under the write scope (one outside refuses the
+  call); a refused entry refuses the batch and its message names it (`writes[2]: ...`). The batch
+  spends one write of `--max-writes`, as `n4_set_tags` and `n4_add_history` do. The plan's notes name their entry, and `incoming_links` lists every
+  entry's incoming links with the entry's `target_ord`. The read-back lists `{ord, slot,
+  requested, observed, verdict}` per entry; the batch is `verified` only when every entry is,
+  else `mismatch`. `n4_rollback` of the batch restores every entry. The single form's reply is
+  unchanged, except that a missing `ord`, `slot`, `value` or `value_type` is now refused as a
+  tool error with the same text (`missing required argument: ord`) instead of a -32602 error,
+  because the schema no longer lists them as required.
 - `n4_set_flags(ord, slot, flags | add/remove)` sets the flags of one slot of a component (a
   property, an action or a topic; a name, not a path) with the station's set-flags
   sync op. `flags` is the complete new set as letters, each once, in any order; `""`
