@@ -79,7 +79,9 @@ NIAGARA_HOME and its modules directory:
   gradle's :jar step installs the built jars into <NIAGARA_HOME>/modules before any check of the deploy has run,
   and in a real installation that directory is a station's. A NIAGARA_HOME that names no directory, or names
   a file, is refused before the backup and before gradle runs (exit 10, "NIAGARA_HOME <value> names no
-  directory: ..." or "... is not a directory: ..."); a symbolic link to a directory is one. NIAGARA_HOME must be a mirror (a directory made
+  directory: ..." or "... is not a directory: ..."), and one under a directory the deploy may not search says
+  so ("... cannot be looked at (Permission denied): ..."); a symbolic link to a directory is one. gradle gets
+  it absolute (-Pniagara_home=<absolute path>), the lines of the deploy name it as given. NIAGARA_HOME must be a mirror (a directory made
   by build-n4-module-kit/toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>, which holds .niagara-mirror);
   a NIAGARA_HOME that is a directory without that file is refused before the backup and before gradle runs
   (exit 10) unless --install-into-home is given. A mirror build gets the isolation build.sh gives it (one
@@ -130,8 +132,11 @@ The signer the gate expects:
   niagaraSigningAlias gradle property (ORG_GRADLE_PROJECT_niagaraSigningAlias in the environment or the env
   file, else GRADLE_USER_HOME/gradle.properties, else gradle.properties beside gradlew), else the one signer of
   the module's jars of the mode that STATION_MODULES_DIR holds before the copy (the ones the station runs),
-  else, when none of those is signed, of those that were in <NIAGARA_HOME>/modules before the build; the two
-  are never mixed, and the signing plugin's default development signer (NIAGARA4) is never expected. A jar signed with another key then fails the gate (exit 50).
+  else, when those give none (none signed, two signers, or only the development signer), of those that were in
+  <NIAGARA_HOME>/modules before the build; the two are never mixed in one decision, and the signing plugin's
+  default development signer (NIAGARA4) is never expected. A station jar whose signer cannot be told (it
+  cannot be read, is not a zip, or holds a .SF without its block file) gives no signer and no fallback to the
+  home: "WARN the signer of <jar> cannot be told (<why>), so the gate accepts any signature ...". A jar signed with another key then fails the gate (exit 50).
   When neither names a signer the gate accepts any signature and, after the gate's rows, the deploy prints
   "WARN no niagaraSigningAlias is configured and no deployed jar gives a signer, ..." (or "... the deployed
   jar itself carries the signing plugin's default development signer (NIAGARA4), ..."); the exit code is the

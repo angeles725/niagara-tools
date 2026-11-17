@@ -10,6 +10,10 @@ const (
 		"point it at a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>) or a niagara_home; nothing was built or changed"
 	msgHomeNotADir = "NIAGARA_HOME %s is not a directory: gradle builds against <NIAGARA_HOME> and installs the jars in its modules/; " +
 		"point it at a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>) or a niagara_home; nothing was built or changed"
+	// msgHomeNoAccess takes NIAGARA_HOME and why it cannot be looked at (a directory of its path the deploy may
+	// not search).
+	msgHomeNoAccess = "NIAGARA_HOME %s cannot be looked at (%s): gradle builds against <NIAGARA_HOME> and installs the jars in its modules/; " +
+		"let the deploy search every directory of its path, or point it elsewhere; nothing was built or changed"
 	// msgRealHome takes NIAGARA_HOME, the marker of a mirror and the flag that opts in.
 	msgRealHome = "NIAGARA_HOME %s is a real niagara_home (no %s): gradle's :jar step would replace the jars of its modules/ before any check runs; " +
 		"build against a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>), or pass %s"

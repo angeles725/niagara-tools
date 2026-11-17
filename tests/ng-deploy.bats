@@ -985,6 +985,9 @@ _real_jar() {
     [[ "$output" != *"niagaraSigningAlias"* ]]
 
     rm "$TMPDIR_T/fakebin/gradle.properties"
+    # The first run deployed the fake (empty) jars; a station jar that is not a zip has a signer that cannot
+    # be told and WARNs on its own (TestAStationJarWhoseSignerCannotBeToldGivesNoSignerAndAWarning).
+    rm "$TMPDIR_T/modules/test-rt.jar" "$TMPDIR_T/modules/test-ux.jar"
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
     [ "$status" -eq 0 ]
     [[ "$(cat "$TMPDIR_T/gate.args")" != *"--expected-signer"* ]]

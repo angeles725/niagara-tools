@@ -1,6 +1,8 @@
 package ngdeploy
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -63,13 +65,21 @@ func (d *deploy) guardHome() int {
 
 // homeIsDir refuses a NIAGARA_HOME that names no directory, or names a file, with exit 10 (bench Δ25): gradle
 // builds against it and installs the built jars in its modules/, and what it does with a value that is not
-// a directory is not the deploy's to find out after the build. A symbolic link to a directory is one.
+// a directory is not the deploy's to find out after the build. A symbolic link to a directory is one; a path
+// the deploy may not search is said to be a permission error. gradle then gets it absolute (niagaraHome), as
+// build.sh hands it; the lines of the deploy name it as given.
 func (d *deploy) homeIsDir(home string) int {
 	switch info, err := os.Stat(home); {
+	case errors.Is(err, fs.ErrPermission):
+		return d.fail(ExitEnv, msgHomeNoAccess, home, strerror.Text(err))
 	case err != nil:
 		return d.fail(ExitEnv, msgHomeMissing, home)
 	case !info.IsDir():
 		return d.fail(ExitEnv, msgHomeNotADir, home)
+	}
+	d.niagaraHome = home // gradle runs in the gradle root: a relative path would name another directory there
+	if abs, err := filepath.Abs(home); err == nil {
+		d.niagaraHome = abs
 	}
 	return proceed
 }

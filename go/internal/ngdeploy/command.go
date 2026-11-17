@@ -37,6 +37,7 @@ type deploy struct {
 	moduleDir string // <directory of gradlew>/<MODULE_NAME>
 
 	homeDir      string            // <NIAGARA_HOME>/modules when it is a directory, else ""
+	niagaraHome  string            // NIAGARA_HOME made absolute once guardHome took it, for gradle
 	sameDir      bool              // STATION_MODULES_DIR is that directory
 	homeJars     []*stagedJar      // the module's jars there, from the move aside before the build (home.go)
 	gradleProps  []string          // -Pk=v of every --gradle-prop, in order (isolate.go)
