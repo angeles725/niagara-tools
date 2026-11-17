@@ -32,6 +32,11 @@ const (
 	defaultPluginVersion = "7.6.17"
 )
 
+// pluginForTarget is the Niagara gradle plugin a release ships in <niagara_home>/etc/m2, the default
+// --plugin-version for that --target-version (read from 4.13.2, 4.14 and 4.15 installations); a release not
+// listed keeps defaultPluginVersion.
+var pluginForTarget = map[string]string{"4.13": "7.3.40", "4.14": "7.6.17", "4.15": "7.6.22"}
+
 // What the fixtures are written with; a run replaces each by the module's value.
 const (
 	fixtureVendor        = "Angeles"

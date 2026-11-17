@@ -10,7 +10,8 @@
 #                    a run without it is exit 2 naming the option [ev: retro build-kit-bench-session Δ11]
 #   --target-version <x.y>  baja target version, <major>.<minor> digits only; default 4.14
 #   --plugin-version <x.y.z> Niagara Gradle plugin version baked into settings.gradle.kts, <major>.<minor>.<patch>
-#                    digits only; default 7.6.17 (use the one the installation ships in etc/m2)
+#                    digits only; default: the plugin the --target-version release ships in etc/m2 (4.13 7.3.40,
+#                    4.14 7.6.17, 4.15 7.6.22; another release 7.6.17)
 #   --type <logic|dashboard|driver>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay
