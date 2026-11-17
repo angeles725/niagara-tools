@@ -2,7 +2,6 @@ package buildmodule
 
 import (
 	"os"
-	"strings"
 )
 
 // gate runs verify-module.sh on every jar the build produced, with the module sources and the signer the
@@ -88,12 +87,8 @@ func (b *build) report(source string) int {
 // symlink and not a dot-directory) has no .deploy-baseline directory: then its schema-risk row is a floor SKIP
 // naming the command that creates it.
 func baselineMissing(source string) bool {
-	entries, _ := os.ReadDir(source)
-	for _, e := range entries {
-		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
-			continue
-		}
-		if st, err := os.Stat(source + "/" + e.Name() + "/.deploy-baseline"); err != nil || !st.IsDir() {
+	for _, a := range walkedArtifacts(source) {
+		if st, err := os.Stat(a + "/.deploy-baseline"); err != nil || !st.IsDir() {
 			return true
 		}
 	}

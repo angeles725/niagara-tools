@@ -138,6 +138,19 @@ const (
 	msgDriftUnverified = "build.sh: deployed-baseline drift gate could not verify the jar(s) above — fix the cause (a damaged jar, an unreadable module.xml), or --no-drift-check if this niagara_home is not the deploy target."
 )
 
+// --schema-baseline-ref (baselineref.go).
+const (
+	msgBaselineRefFirstDeploy = "build.sh: --schema-baseline-ref and --first-deploy exclude each other (a never-deployed module has no deployed ref)"
+	msgBaselineRefNotCommit   = "build.sh: --schema-baseline-ref %s: not a commit of the repository holding %s"
+	msgBaselineRefNoModule    = "build.sh: --schema-baseline-ref %s: %s does not exist at that commit (pass the commit that was deployed)"
+	msgBaselineRefExists      = "build.sh: --schema-baseline-ref: %s already exists — remove it to take the baseline from the ref, or drop the option to use it"
+	msgBaselineRefNewArtifact = "build.sh: INFO — %s does not exist at %s: no schema-risk baseline for it (a first deploy of that artifact)"
+	msgBaselineRefFailed      = "build.sh: --schema-baseline-ref %s: cannot extract %s (exit %d)"
+	msgBaselineRefDangling    = "build.sh: INFO — removed %s, a dangling link a killed --schema-baseline-ref run left"
+	msgBaselineRefLink        = "build.sh: --schema-baseline-ref: cannot link %s: %v"
+	msgBaselineRefDone        = "==> schema-risk baseline: %s from %s (removed when the run ends)"
+)
+
 // Verify gate and report-module.
 const (
 	msgGate       = "==> verify gate (verify-module.sh):"
@@ -147,7 +160,7 @@ const (
 	msgDevSignerDeployed = "build.sh: WARN — " + modjar.WhyDevSigner + " (set it: --gradle-prop niagaraSigningAlias=<alias>, or gradle.properties)"
 	msgReport            = "==> report-module (hand-off punch-list)"
 	msgReportEnv         = "build.sh: report-module environment error (exit 3)"
-	msgReportIncomplete  = "build.sh: report-module verdict INCOMPLETE — a floor check (verify-module / schema-risk) did not run; extract the deployed baseline into <artifact>/.deploy-baseline (build-verify.md § Schema-risk deploy workflow) or pass --first-deploy for a never-deployed module"
+	msgReportIncomplete  = "build.sh: report-module verdict INCOMPLETE — a floor check (verify-module / schema-risk) did not run; extract the deployed baseline into <artifact>/.deploy-baseline (--schema-baseline-ref <deployed-ref> extracts it for the run; build-verify.md § Schema-risk deploy workflow) or pass --first-deploy for a never-deployed module"
 	// msgSchemaRiskCrossRef ends the INCOMPLETE line when an artifact lacks .deploy-baseline (schema-risk SKIPped).
 	msgSchemaRiskCrossRef = " (the schema-risk SKIP row above names the command that creates it)"
 	msgReportFails        = "build.sh: report-module punch-list has FAILs — not hand-off-ready (--no-report to skip)"
