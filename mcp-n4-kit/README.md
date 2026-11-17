@@ -273,6 +273,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_read_audit`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
+`n4_alarm_health`,
 `n4_alarm_text_check`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
 `n4_station_runtime`, `n4_read_tags`,
@@ -396,6 +397,18 @@ ack_state: {acked, unacked, ackPending}, records_counted, complete}` (`null` wit
 `state_counts_note` when that read fails).
 Alarm events: `n4_event_report(source | source_glob, history_id, since, until, margin_minutes=15, max_events=10)` answers "how high did it get during that alarm" in one call: it reads `select timestamp.encodeToString, uuid, source, ... normalTime.encodeToString, ackTime.encodeToString, user` (filters checked as `n4_read_alarms` checks them; every record, open or not), one event per record (the alarm database keeps one record per uuid, updated in place on return to normal and on ack), then for each event the `n4_read_history` summary (count, min, max with its time, first, last) over `[alarm_time - margin, normal_time + margin]` (up to now while still active). The history is `history_id`, or the history extension on the alarm extension's parent or on the source itself (`select slotPath, historyConfig.id from history:HistoryExt`, once per source); none found or a failed read is a null `summary` with `summary_note` on that event, never a failed report.
 Audit trail: `n4_read_audit(target | target_glob, slot, user, operation, period | start/end, limit=100)` answers "who changed overAmpsDelay from 5 s to 3 s" in one call. It reads `select timestamp.encodeToString, operation, target, slotName, oldValue, value, userName ... order by timestamp desc` over `history:/<station>/AuditHistory` (the history `AuditHistoryService` writes), and returns rows `{timestamp, operation, target, slot, old_value, value, user}`, newest first, with `truncated` and `total_records` (the same filters under `select count(*)`). `target` is stored as the component's slot path without the `slot:` scheme (`/Folder/Point`): the `target` argument takes a component ORD and matches it and everything below it, while `target_glob` is a like pattern over that stored path. `operation` is one of `Changed`, `Added`, `Removed`, `Renamed`, `Reordered`, `Flags Changed`, `Facets Changed` or `Invoked`; logins go to the security audit history, not here. Every filter is checked on its decoded form (`DecodeForBql`) before any request. By default the audit history keeps 500 records and rolls.
+Alarm health: `n4_alarm_health(window="24h", chatter_threshold=10, unacked_days=3, top=10)` answers
+"how healthy are my alarms" with two fixed reads of `alarm:` and no write:
+`select source, normalTime.encodeToString where timestamp.millis >= <now - window>` and
+`select source, sourceState.encodeToString, ackState.encodeToString, alarmClass, timestamp.encodeToString`
+over the open records (`(ackState != 'acked' or sourceState != 'normal')`), each capped at 100000
+records. The server groups them: `chattering` `[{source, transitions, records}]` (a record in the
+window is one transition out of normal, plus one back when its normal time is set; sources at or
+over `chatter_threshold`), `offnormal` `[{source, source_state, alarm_class, since}]` (open and not
+back to normal, oldest first), `unacked_older` `[{source, alarm_class, ack_state, alarm_time,
+age_days}]` (not acknowledged, alarm time at least `unacked_days` days old) and `top_sources`
+`[{source, count}]`. Each list keeps `top` entries (1-50); `counts` holds the full numbers and
+`truncated_note` names each cut list or capped read. `window` is a span (`30m`, `24h`, `7d`).
 `n4_list_alarm_classes()` runs `select slotPath, name, priority, ackRequired, totalAlarmCount,
 openAlarmCount, inAlarmCount, unackedAlarmCount from alarm:AlarmClass` and
 `select slotPath, type from alarm:AlarmRecipient` at the station root; `priority` is decoded to
