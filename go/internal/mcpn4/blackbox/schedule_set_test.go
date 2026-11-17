@@ -115,9 +115,10 @@ func TestSetScheduleRollbackRestoresThePreviousWeekExactly(t *testing.T) {
 	}
 }
 
-func TestSetScheduleIsListedAsAnIdempotentNonDestructiveWrite(t *testing.T) {
+// It replaces every event of the schedule (M19): destructive, though n4_rollback restores it exactly.
+func TestSetScheduleIsListedAsAnIdempotentDestructiveWrite(t *testing.T) {
 	ann := annotations(t, listedTools(scheduleWriteRig(t).Srv)["n4_set_schedule"], "n4_set_schedule")
-	if ann["readOnlyHint"] != false || ann["destructiveHint"] != false || ann["idempotentHint"] != true {
+	if ann["readOnlyHint"] != false || ann["destructiveHint"] != true || ann["idempotentHint"] != true {
 		t.Errorf("annotations %v", ann)
 	}
 }

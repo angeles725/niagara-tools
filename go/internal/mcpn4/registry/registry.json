@@ -2022,7 +2022,7 @@
    },
    "annotations": {
     "readOnlyHint": false,
-    "destructiveHint": false,
+    "destructiveHint": true,
     "openWorldHint": false
    },
    "needs_session": false
@@ -2237,7 +2237,7 @@
    },
    "annotations": {
     "readOnlyHint": false,
-    "destructiveHint": false,
+    "destructiveHint": true,
     "openWorldHint": false,
     "idempotentHint": true
    },

@@ -1,6 +1,7 @@
 package benchcall
 
-// A destructive tool (remove, rollback, save) only executes with --execute, --allow-destructive
+// A destructive tool (destructiveHint in tools/list: remove, rollback, save, ack_alarm, set_tags,
+// set_schedule, invoke_action) only executes with --execute, --allow-destructive
 // and its line's own "execute": true; the run says on stderr whether its writes execute (bench
 // retro 2026-11-15 delta 19 and retro 2026-11-16 row M17: a wrapper dropped --dry-run-only and a
 // destructive call planned as a dry run executed). execute_test.go holds the M17 cases.

@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	writeTools       = []string{"n4_create_component", "n4_set_slot", "n4_invoke_action", "n4_create_link"}
-	destructiveTools = []string{"n4_remove_component", "n4_rollback", "n4_save_station"}
+	writeTools       = []string{"n4_create_component", "n4_set_slot", "n4_create_link"}
+	destructiveTools = []string{"n4_remove_component", "n4_rollback", "n4_save_station", "n4_invoke_action"}
 	batchIDPattern   = regexp.MustCompile(`^[0-9a-f]{32}$`)
 )
 

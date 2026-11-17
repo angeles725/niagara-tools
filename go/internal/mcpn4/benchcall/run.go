@@ -51,7 +51,7 @@ func Main(argv []string, s cli.Stdio, environ []string) int {
 		fmt.Fprintf(s.Err, "%s: %s\n", prog, livesmoke.Scrub(err.Error(), secrets))
 		return 1
 	}
-	r := &runner{client: client, out: func(line string) { fmt.Fprintln(s.Out, livesmoke.Scrub(line, secrets)) }, dryRunOnly: !o.execute}
+	r := &runner{client: client, out: func(line string) { fmt.Fprintln(s.Out, livesmoke.Scrub(line, secrets)) }, writesExecute: o.execute}
 	for _, c := range calls {
 		if err := r.run(c); err != nil {
 			fmt.Fprintf(s.Err, "%s: %s: %s\n", prog, c.tool, livesmoke.Scrub(err.Error(), secrets))
@@ -126,10 +126,10 @@ func secretsOf(server, environ []string) []string {
 
 // runner sends calls and prints one line per request.
 type runner struct {
-	client     *livesmoke.Client
-	out        func(string)
-	dryRunOnly bool
-	failed     bool // a tool answered with an error
+	client        *livesmoke.Client
+	out           func(string)
+	writesExecute bool // the effective mode: true only with --execute (options.dryRunOnly is the explicit flag)
+	failed        bool // a tool answered with an error
 }
 
 func (r *runner) run(c call) error {
@@ -139,7 +139,7 @@ func (r *runner) run(c call) error {
 	}
 	c.args.Set("dry_run", true)
 	plan, err := r.request(c.tool, phaseDryRun, c.args)
-	if err != nil || r.failed || r.dryRunOnly {
+	if err != nil || r.failed || !r.writesExecute {
 		return err
 	}
 	obj, _ := plan.(*pyjson.Object)

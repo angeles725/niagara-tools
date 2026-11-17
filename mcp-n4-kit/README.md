@@ -860,9 +860,10 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
-`n4_save_station` and `n4_ack_alarm`. Example:
+`n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
+restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
 
 ```
 go/bin/mcp-n4 --allow-writes --write-scope 'station:|slot:/Sandbox'
@@ -1508,7 +1509,7 @@ with `dry_run=true` and, only when `--execute` is given, executed with the `conf
 that dry run returned. Without `--execute` every write is a dry run only (`--dry-run-only` says
 so explicitly and excludes `--execute`), so a flag lost on the way to n4call never executes a
 write. A destructive write (`n4_remove_component`, `n4_rollback`, `n4_save_station`,
-`n4_ack_alarm`, `n4_set_tags`: the server's `destructiveHint`) executes only when the run has
+`n4_ack_alarm`, `n4_set_tags`, `n4_set_schedule`, `n4_invoke_action`: the server's `destructiveHint`) executes only when the run has
 `--execute` and `--allow-destructive` AND its own line carries `"execute": true`
 (`{"tool": "n4_remove_component", "write": true, "execute": true, "args": {...}}`); a run with
 `--execute` that misses either is refused with exit 2 before the server starts, naming the line.
