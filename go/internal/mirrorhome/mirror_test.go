@@ -116,6 +116,11 @@ func TestSymlinkedMirrorDir(t *testing.T) {
 		f.wants(mir, f.mirror(f.path("nh"), dir), ExitRefused, "", "refusing: "+dir+" is a symlink, not a directory made by this script\n")
 		f.unchanged(mir, "", before)
 	}
+	f.symlink("gone/deeper/target", "deepdangling")
+	before = f.tree("")
+	f.wants("a dangling link whose target's parent is missing", f.mirror(f.path("nh"), f.path("deepdangling")), ExitRefused, "",
+		"refusing: "+f.path("deepdangling")+" is a symlink, not a directory made by this script\n")
+	f.unchanged("a dangling link whose target's parent is missing: nothing is made", "", before)
 	f.wants("loopa", f.mirror(f.path("nh"), f.path("loopa")), ExitRefused, "",
 		"refusing: mirror dir cannot be resolved (a link loop or a directory that cannot be searched): "+f.path("loopa")+"\n")
 	f.unchanged("loopa", "", before)

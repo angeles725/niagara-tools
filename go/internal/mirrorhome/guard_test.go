@@ -74,6 +74,11 @@ func TestGuardB(t *testing.T) {
 			"refusing to wipe "+f.path(dir)+": non-empty and not a mirror made by this script (no .niagara-mirror)\n")
 		f.unchanged(dir, dir, before)
 	}
+	before := f.tree("precious")
+	through := f.path("missing/../precious")
+	f.wants("spelled through a missing directory", f.mirror(nh, through), ExitRefused, "",
+		"refusing to wipe "+through+": non-empty and not a mirror made by this script (no .niagara-mirror)\n")
+	f.unchanged("spelled through a missing directory", "precious", before)
 	f.wants("a file", f.mirror(nh, f.path("file")), ExitRefused, "", "refusing: "+f.path("file")+" exists and is not a directory\n")
 	if st, err := os.Lstat(f.path("file")); err != nil || !st.Mode().IsRegular() {
 		t.Errorf("the file was touched: %v", err)

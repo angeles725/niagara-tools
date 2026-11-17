@@ -61,18 +61,18 @@ func (m *mirror) wipe() int {
 	if !m.exists {
 		return proceed
 	}
-	if !strings.HasSuffix(m.dir, "/") {
-		if err := os.RemoveAll(m.dir); err != nil {
+	if !strings.HasSuffix(m.at, "/") {
+		if err := os.RemoveAll(m.at); err != nil {
 			return m.fault(err)
 		}
 		return proceed
 	}
-	held, err := os.ReadDir(m.dir)
+	held, err := os.ReadDir(m.at)
 	if err != nil {
 		return m.fault(err)
 	}
 	for _, e := range held {
-		if err := os.RemoveAll(m.dir + e.Name()); err != nil {
+		if err := os.RemoveAll(m.at + e.Name()); err != nil {
 			return m.fault(err)
 		}
 	}

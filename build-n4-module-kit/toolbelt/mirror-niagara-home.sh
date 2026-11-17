@@ -20,7 +20,8 @@
 #   G-A  <mirror_dir> must not be the source install, live inside it, or contain it.        -> exit 20
 #        A <mirror_dir> not there yet is judged BEFORE anything is created (its longest existing
 #        ancestor resolved, the rest by its text): a refusal leaves no directory behind. One that
-#        cannot be resolved (a link loop, a directory that cannot be searched) is refused.
+#        cannot be resolved (a link loop, a directory that cannot be searched) is refused. The
+#        path judged is the one G-B checks and the mirror is written to, never the spelling.
 #   G-B  an existing non-empty <mirror_dir> is wiped ONLY if it holds the .niagara-mirror marker
 #        this script writes (source path + date); anything else is refused. A symlinked
 #        <mirror_dir> is refused whatever its spelling (link, link/, link/.) or target.      -> exit 20

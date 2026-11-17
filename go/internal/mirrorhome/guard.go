@@ -39,7 +39,8 @@ func sourceRefusal(srcAbs, dirAbs string) string {
 }
 
 // guardWipe is guard B: an existing mirror dir is wiped only when it is a directory that is empty or
-// holds the marker file this tool writes. A symlink is never one, whatever its spelling or target.
+// holds the marker file this tool writes. A symlink is never one, whatever its spelling or target. It looks
+// at at, where the mirror will be written (the message names the mirror dir as given).
 func (m *mirror) guardWipe() int {
 	if isLink(m.dir) {
 		return m.stop(ExitRefused, msgLink, m.dir)
@@ -47,14 +48,14 @@ func (m *mirror) guardWipe() int {
 	if !m.exists {
 		return proceed
 	}
-	if !lint.IsDir(m.dir) {
+	if !lint.IsDir(m.at) {
 		return m.stop(ExitRefused, msgNotDir, m.dir)
 	}
-	held, err := os.ReadDir(m.dir)
+	held, err := os.ReadDir(m.at)
 	if err != nil {
 		return m.fault(err)
 	}
-	if len(held) > 0 && !lint.IsFile(m.dir+"/"+Marker) {
+	if len(held) > 0 && !lint.IsFile(m.at+"/"+Marker) {
 		return m.stop(ExitRefused, msgNotMirror, m.dir)
 	}
 	return proceed
