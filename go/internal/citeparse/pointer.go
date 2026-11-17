@@ -29,6 +29,7 @@ const (
 	Archive      Kind = "archive"      // Target = path of a zip, File = the entry in it (`x.zip!entry`)
 	Course       Kind = "course"       // Target = path under the dev-course tree (or its course-text)
 	Bitacora     Kind = "bitacora"     // Target = slug of a client bitacora/<date>-<slug>.md
+	RepoPath     Kind = "repo-path"    // Target = a backticked toolbelt/, scripts/, go/ or tests/ path of prose
 	Bare         Kind = "bare"         // an ID with no source (OBS-2, WIR-G3, Δn TOKEN)
 	Unparsed     Kind = "unparsed"     // text the grammar does not cover
 	Template     Kind = "template"     // a placeholder (`<stem>`, `B<n>`, `…`): not a pointer
@@ -56,6 +57,7 @@ type Pointer struct {
 	Tokens   []string // words that must appear in the cited file
 	Notes    []string // locator text the tool does not check
 	Deferred bool     // read from a [deferred: …] tag
+	Evidence bool     // read from an [ev: …] tag (never from prose or a [deferred: …] tag)
 	// Unterminated: an Unparsed pointer for a tag with no closing ] within its wrap window (Raw is the opener
 	// and the rest of its line); the typed form of the "unterminated tag" note.
 	Unterminated bool

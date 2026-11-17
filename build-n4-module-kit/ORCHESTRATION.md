@@ -9,7 +9,7 @@ flows THROUGH all three. This file says WHEN each applies, WHICH model runs each
 
 | Tool | Use it to | Produces | Marker of "done" |
 |---|---|---|---|
-| **research-sdd** | answer an open technical question against the framework (three sources: corpus + niagara-help + decompiled code) | a numbered `[CERT]`/`[INFER]` block ending in a **Kit implication** | a self-verify table with every claim marked; a named gap if not closed `[ev: ~/investigacion/sdd-investigacion/research-sdd/METHODOLOGY.md §3 Provenance markers, §8 Stopping criterion, §11 Self-verification contract]` |
+| **research-sdd** | answer an open technical question against the framework (three sources: corpus + niagara-help + decompiled code) | a numbered `[CERT]`/`[INFER]` block ending in a **Kit implication** | a self-verify table with every claim marked; a named gap if not closed `[ev: live read of the research-sdd kit METHODOLOGY.md §3 Provenance markers, §8 Stopping criterion, §11 Self-verification contract]` |
 | **gentle SDD** | turn a decided change into a durable, reviewable contract | `proposal → spec → design → tasks`, ledgered attempts | spec requirements have scenarios; tasks map to spec; verify passes `[ev: CLAUDE.md SDD workflow]` |
 | **BUILD-LOOP** (this kit) | build / verify / deploy an actual N4 module | a signed Java-8 jar past the verify gate + a per-module `BUILD-STATE` envelope | `verify-module.sh` passes; the HARD close gate (§7) is satisfied `[ev: BUILD-LOOP.md §5/§7]` |
 
@@ -17,7 +17,7 @@ flows THROUGH all three. This file says WHEN each applies, WHICH model runs each
 
 Gentle-SDD phase models are fixed by the `model:` frontmatter of the installed gentle-ai agent definitions
 (`~/.claude/agents/sdd-*.md`, `jd-*.md`: user-level, outside this repo; the repo `CLAUDE.md` has no model table);
-the generic-delegation default row is team practice `[ev: ~/.claude/agents/ model: frontmatter, read 2026-10-24]`:
+the generic-delegation default row is team practice `[ev: live read of the agent definitions model: frontmatter, 2026-10-24]`:
 
 | Phase | Model | Why |
 |---|---|---|

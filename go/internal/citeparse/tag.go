@@ -86,7 +86,7 @@ func (sc *scan) tags(i int) []Pointer {
 			continue
 		}
 		for _, p := range Clauses(body, sc.aliases) {
-			p.Line, p.Deferred = i+1, deferred
+			p.Line, p.Deferred, p.Evidence = i+1, deferred, !deferred
 			out = append(out, p)
 		}
 	}

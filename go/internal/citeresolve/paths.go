@@ -13,6 +13,7 @@ import (
 // registerFiles adds the resolvers of the pointers that name a file in a tree.
 func (e *Engine) registerFiles() {
 	e.by[citeparse.Path] = pathResolver{e}
+	e.by[citeparse.RepoPath] = repoPathResolver{e}
 	e.by[citeparse.Code] = codeResolver{e}
 	e.by[citeparse.Devguide] = guideResolver{e, "devguide-clean"}
 	e.by[citeparse.Guide] = guideResolver{e, "guides-clean"}

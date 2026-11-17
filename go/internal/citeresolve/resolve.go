@@ -30,7 +30,8 @@ const (
 	Drift            Status = "DRIFT" // a quoted anchor is not on or near the cited line
 	BareID           Status = "BARE_ID"
 	Unparsed         Status = "UNPARSED"
-	Ambiguous        Status = "AMBIGUOUS" // a searched name matches several files: listed, never guessed
+	Ambiguous        Status = "AMBIGUOUS"    // a searched name matches several files: listed, never guessed
+	OutsideRepo      Status = "OUTSIDE_REPO" // an [ev: …] token names a home or absolute path: machine-dependent
 	ToolError        Status = "TOOL_ERROR"
 	HistoricalDrift  Status = "HISTORICAL_DRIFT"
 	UnverifiableKind Status = "UNVERIFIABLE_KIND"
@@ -104,7 +105,12 @@ func (e *Engine) Resolve(p citeparse.Pointer, c *Card) Result {
 	if !ok {
 		return Result{Status: Unparsed, Detail: "no resolver for kind " + string(p.Kind)}
 	}
-	res := r.Resolve(p, c)
+	var res Result
+	if path, ok := outsidePath(p); ok {
+		res = outside(path)
+	} else {
+		res = r.Resolve(p, c)
+	}
 	if res.Status == Resolved && res.File != "" {
 		c.files = append(c.files, res.File)
 	}

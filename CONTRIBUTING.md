@@ -118,7 +118,7 @@ over shared `go/internal/` packages (`internal/cli` holds the injectable stdio).
 - Every wrapper gets the binary from `go/go-tool.sh` (`. go/go-tool.sh; bin="$(go_tool_bin <go-dir> <tool>)" || exit 3`),
   never from its own copy of the rebuild logic; `tests/go-tool.bats` pins the rebuild paths. The first call after
   a source change pays one `go build`. `go/go-tool.sh` sits in `go/` so a fixture that symlinks `go/` next to a
-  copied wrapper still finds it. Second port: `scripts/lib/ci_steps.py` → `go/cmd/ci-steps`, used by
+  copied wrapper still finds it. Second port: scripts/lib/ci_steps.py → `go/cmd/ci-steps`, used by
   `scripts/ci-local.sh`. `[ev: retro go-ci-steps Δ1]`
 - Third tool, `toolbelt/gen-build-state.sh` → `go/internal/buildstate`: generates `BUILD-STATE.md` from
   `BUILD-STATE.src.md` + `build-n4-module-kit/ledger.d/` (§ 6.1). `[ev: retro ledger-fragments]` The reader

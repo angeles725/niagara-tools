@@ -24,7 +24,7 @@ const usage = "usage: kit-cite-resolve [--kit <dir>] [--research <dir>] [--modul
 	" [--clients <dir>] [--version <ver>] [--format tsv|json] [--strict] <card.md>...\n"
 
 // order is the status order of the summary line.
-var order = []Status{Resolved, MissingFile, MissingSection, MissingDelta, LineOutOfRange, Drift, BareID, Unparsed, Ambiguous, ToolError,
+var order = []Status{Resolved, MissingFile, MissingSection, MissingDelta, LineOutOfRange, Drift, BareID, Unparsed, Ambiguous, OutsideRepo, ToolError,
 	HistoricalDrift, UnverifiableKind, SkippedTemplate}
 
 // Row is one output row.
@@ -108,6 +108,9 @@ func resolveAll(e *Engine, classify Classifier, cards, texts []string) []Row {
 		c := e.NewCard(path)
 		scope, family := classify(path)
 		for _, p := range citeparse.Card(texts[i]) {
+			if !checked(p.Kind, scope) {
+				continue
+			}
 			res := scoped(e.Resolve(p, c), scope, family)
 			target := strings.TrimSpace(p.Target + " " + p.File)
 			rows = append(rows, Row{path, p.Line, string(p.Kind), target, p.Locator(), res.Status, res.Detail, scope})
