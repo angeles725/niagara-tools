@@ -20,7 +20,8 @@ func canonical(name, cwd string) (string, bool) { return resolve(name, cwd, fals
 // directory that cannot be searched). The mirror tool's guard A runs on it too, before it creates anything.
 func Reachable(name, cwd string) (string, bool) { return resolve(name, cwd, true) }
 
-// resolve walks name one component at a time, as gnulib's canonicalize does.
+// resolve walks name one component at a time, as gnulib's canonicalize does: each component is looked at
+// on disk, even after a missing one, so the walk resumes physically once a ".." re-enters what exists.
 func resolve(name, cwd string, pastMissing bool) (string, bool) {
 	if name == "" {
 		return "", false
@@ -29,7 +30,7 @@ func resolve(name, cwd string, pastMissing bool) (string, bool) {
 	if !strings.HasPrefix(name, "/") {
 		parts = components(cwd)
 	}
-	rest, links, missing := name, 0, false
+	rest, links := name, 0
 	for {
 		var comp string
 		if rest = strings.TrimLeft(rest, "/"); rest == "" {
@@ -46,9 +47,6 @@ func resolve(name, cwd string, pastMissing bool) (string, bool) {
 			continue
 		}
 		parts = append(parts, comp)
-		if missing {
-			continue
-		}
 		path := join(parts)
 		target, err := os.Readlink(path)
 		if err == nil {
@@ -71,7 +69,8 @@ func resolve(name, cwd string, pastMissing bool) (string, bool) {
 		switch {
 		case err == nil:
 		case pastMissing && (absent || errors.Is(err, syscall.ENOTDIR)):
-			missing = true
+			// missing: kept by its text. Every next component is still looked at, so after a ".." that
+			// climbs back into existing directories their symlinks are followed again (realpath -m).
 		case pastMissing || !absent || strings.TrimLeft(rest, "/") != "":
 			return "", false
 		}
