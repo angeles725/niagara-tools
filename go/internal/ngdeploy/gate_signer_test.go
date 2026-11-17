@@ -62,9 +62,8 @@ func TestTheGateIsToldTheSignerBuildShExpects(t *testing.T) {
 			f.zipJar(withHome(f.t, f, true)+"/demo-rt.jar", signedBy("OTHER"))
 			f.zipJar(f.deployedJar("rt"), signedBy("ACMESIGN"))
 		}, "ACMESIGN", ""},
-		{"no alias: the development signer of the station's jar is not expected", func(f *fixture) {
+		{"no alias: the development signer of the station's jar is never expected", func(f *fixture) {
 			noAlias(f)
-			f.zipJar(withHome(f.t, f, true)+"/demo-rt.jar", signedBy("ACMESIGN"))
 			f.zipJar(f.deployedJar("rt"), signedBy("NIAGARA4"))
 		}, "", devSignerWarn},
 		{"no alias: station jars of two signers give none", func(f *fixture) {
@@ -74,13 +73,15 @@ func TestTheGateIsToldTheSignerBuildShExpects(t *testing.T) {
 		}, "", noSignerWarn},
 		{"no alias: unsigned station jars leave the home's signer", func(f *fixture) {
 			noAlias(f)
-			f.deployed()
+			f.zipJar(f.deployedJar("rt"), signedBy()) // a zip: a jar that is not one gives no signer at all
+			f.zipJar(f.deployedJar("ux"), signedBy())
 			f.zipJar(withHome(f.t, f, true)+"/demo-rt.jar", signedBy("ACMESIGN"))
 		}, "ACMESIGN", ""},
 		{"no alias, the station is <NIAGARA_HOME>/modules: the jar there before the build, not the one it installed", func(f *fixture) {
 			noAlias(f)
 			modules := sameDir(f.t, f)
 			f.zipJar(modules+"/demo-rt.jar", signedBy("ACMESIGN"))
+			f.zipJar(modules+"/demo-ux.jar", signedBy())
 			f.zipJar(f.builtJar("rt"), signedBy("OTHER")) // gradle installs it there before the gate runs
 		}, "ACMESIGN", ""},
 		{"no alias: a station jar of a profile outside the mode gives no signer", func(f *fixture) {

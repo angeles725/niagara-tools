@@ -6,7 +6,7 @@ import "strings"
 // the tasks, then --no-daemon for a mirror build (isolate.go).
 func (d *deploy) gradleArgs(tasks []string) []string {
 	args := append([]string{
-		"-Pniagara_home=" + d.env("NIAGARA_HOME"),
+		"-Pniagara_home=" + d.niagaraHome,
 		"-Pniagara_user_home=" + d.env("NIAGARA_USER_HOME"),
 		"-Porg.gradle.java.installations.paths=" + d.env("JAVA_HOME"),
 	}, d.gradleProps...)

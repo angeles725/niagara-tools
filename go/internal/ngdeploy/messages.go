@@ -118,7 +118,9 @@ const (
 	// tool has to set the alias. warnDevSigner takes the development signer's name.
 	warnNoSigner  = "WARN " + modjar.WhyNoSigner + signerRemedy
 	warnDevSigner = "WARN " + modjar.WhyDevSigner + signerRemedy
-	signerRemedy  = " (set it: " + modjar.GradleEnvPrefix + modjar.AliasProperty + "=<alias> in the env file, or " + modjar.AliasProperty + "=<alias> in gradle.properties)"
+	// warnSignerUnknown takes a station jar and why its signer cannot be told.
+	warnSignerUnknown = "WARN the signer of %s cannot be told (%s), so the gate accepts any signature and the jars of <NIAGARA_HOME>/modules are not asked in its place" + signerRemedy
+	signerRemedy      = " (set it: " + modjar.GradleEnvPrefix + modjar.AliasProperty + "=<alias> in the env file, or " + modjar.AliasProperty + "=<alias> in gradle.properties)"
 
 	// the copy and its outcomes are in messages_copy.go; the deploy record and what follows it
 	// msgRecordFailed takes the record file and one of the three reasons after it.

@@ -14,7 +14,7 @@ import (
 // A value JAVA_TOOL_OPTIONS would carry with whitespace is exit 10 before gradle runs. A home that is not a
 // mirror (absent, or a real one opted in with --install-into-home) is left as it was.
 func (d *deploy) isolateMirror() int {
-	iso, err := gradleenv.Isolate(d.env("NIAGARA_HOME"), d.env)
+	iso, err := gradleenv.Isolate(d.niagaraHome, d.env)
 	var blank *gradleenv.BlankError
 	switch {
 	case errors.As(err, &blank) && blank.Of == gradleenv.MirrorPath:

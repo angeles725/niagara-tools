@@ -50,3 +50,39 @@ func TestANiagaraHomeThroughALinkToADirectoryDeploys(t *testing.T) {
 	f.set("NIAGARA_HOME", f.dir+"/home-link")
 	f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] copy ok\n")
 }
+
+// A NIAGARA_HOME under a directory the deploy may not search is a permission error, said as one, not a
+// home that is not there; exit 10 before gradle all the same.
+func TestANiagaraHomeThatCannotBeLookedAtSaysWhy(t *testing.T) {
+	f := newFixture(t)
+	home := f.dir + "/locked/home"
+	f.mkdir(home)
+	if err := os.Chmod(f.dir+"/locked", 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(f.dir+"/locked", 0o755) })
+	f.set("NIAGARA_HOME", `"`+home+`"`)
+	code := f.run("--no-backup")
+	line := "[ng-deploy] ERROR NIAGARA_HOME " + home + " cannot be looked at (Permission denied): gradle builds against <NIAGARA_HOME> and installs the jars in its modules/; " +
+		"let the deploy search every directory of its path, or point it elsewhere; nothing was built or changed\n"
+	if code != ExitEnv || f.err != line || f.exists(f.dir+"/calls.log") {
+		t.Errorf("exit %d, stderr %q, want %q", code, f.err, line)
+	}
+}
+
+// A relative NIAGARA_HOME reaches gradle as an absolute path, as build.sh hands it (gradle runs in the gradle
+// root, where the relative path names another directory); the lines of the deploy name it as given.
+func TestARelativeNiagaraHomeReachesGradleAbsolute(t *testing.T) {
+	f := newFixture(t)
+	f.set("NIAGARA_HOME", ".") // the fixture runs in f.work, a directory that is not a mirror
+	f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] copy ok\n")
+	if !strings.Contains(f.calls(), "gradlew <-Pniagara_home="+f.work+"> ") {
+		t.Errorf("gradle got:\n%s", f.calls())
+	}
+	f = newFixture(t)
+	f.ownHome = true // no --install-into-home: the refusal names the home as given
+	f.set("NIAGARA_HOME", ".")
+	if code := f.run("--no-backup"); code != ExitEnv || !strings.HasPrefix(f.err, "[ng-deploy] ERROR NIAGARA_HOME . is a real niagara_home") {
+		t.Errorf("exit %d, stderr %q", code, f.err)
+	}
+}
