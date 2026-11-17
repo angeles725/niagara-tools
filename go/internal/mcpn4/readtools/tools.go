@@ -71,6 +71,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_find_dangling_outputs"] = t.FindDanglingOutputs
 	s.Handlers["n4_bql_query"] = t.BqlQuery
 	s.Handlers["n4_read_history"] = t.ReadHistory
+	s.Handlers["n4_read_audit"] = t.ReadAudit
 	s.Handlers["n4_read_alarms"] = t.ReadAlarms
 	s.Handlers["n4_list_alarm_classes"] = t.ListAlarmClasses
 	s.Handlers["n4_event_report"] = t.EventReport
