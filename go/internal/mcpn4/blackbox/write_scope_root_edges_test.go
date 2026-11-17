@@ -43,11 +43,24 @@ func TestScopeRootThatAppearsAfterTheDryRunIsRefusedAtExecute(t *testing.T) {
 	}
 }
 
-func TestTheSameScopeCannotRollBackItsRootCreate(t *testing.T) { // pins the documented limit
+// The same scope rolls its root create back (the rollback undoes only what that batch created, checked on
+// the created path as the create was), but not once later work was written inside the root, and
+// n4_remove_component of the root stays refused: a scope never deletes itself and its contents in one call.
+func TestTheSameScopeRollsBackItsRootCreateOnlyWhileNothingWasWrittenInside(t *testing.T) {
 	r := rootScopeRig(t)
 	out := r.Srv.RunWrite("n4_create_component", Args{"parent_ord": Folder, "name": "Root", "type": "baja:Folder"})
-	if text := r.Srv.Err("n4_rollback", Args{"batch_id": out["batch_id"]}); !strings.Contains(text, "outside the write scope") {
-		t.Errorf("refusal = %s", text)
+	r.Srv.RunWrite("n4_create_component", Args{"parent_ord": Folder + "/Root", "name": "Inner", "type": "baja:Folder"})
+	if text := r.Srv.Err("n4_rollback", Args{"batch_id": out["batch_id"]}); !strings.Contains(text, "later") {
+		t.Errorf("rollback with later work inside: %s", text)
+	}
+	if text := r.Srv.Err("n4_remove_component", Args{"parent_ord": Folder, "name": "Root"}); !strings.Contains(text, "outside the write scope") {
+		t.Errorf("remove of the root: %s", text)
+	}
+	fresh := rootScopeRig(t)
+	first := fresh.Srv.RunWrite("n4_create_component", Args{"parent_ord": Folder, "name": "Root", "type": "baja:Folder"})
+	back := fresh.Srv.RunWrite("n4_rollback", Args{"batch_id": first["batch_id"]})
+	if back["verdict"] != "verified" || len(fresh.Children()) != 0 {
+		t.Errorf("rollback of the root create: %v, children %v", back["verdict"], fresh.Children())
 	}
 }
 
