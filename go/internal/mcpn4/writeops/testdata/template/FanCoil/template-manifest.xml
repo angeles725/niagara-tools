@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<template id="5f0c2a8e-3b7d-4c1e-9a62-1d8e4b7c9f30" version="1.2" vendor="Lab" title="FanCoil" description="Fan coil unit: setpoint, fan command, location" state="10" buildVersion="4.15.6.20" signature="4a1b2c3d">
+
+  <info i="Component template used by the mcp-n4 deploy tests"/>
+
+  <revisions>
+  </revisions>
+
+  <settings>
+    <p n="uID" req="true" typ="str"/>
+    <p n="version" req="true" typ="str"/>
+    <p n="versionDate" req="true" typ="str"/>
+    <p n="deployed" req="true" typ="bool"/>
+    <p n="propagated" req="true" typ="bool"/>
+    <p n="pxEditBindings" req="true" typ="str"/>
+    <p n="Setpoint" req="true" units="degrees Fahrenheit" min="50.0" max="90.0"/>
+    <p n="Location" req="true" typ="str"/>
+    <p n="FanAuto" req="false" typ="bool"/>
+    <p n="Deadband" req="false" min="0.0" max="10.0" slotPath="Control/deadband"/>
+  </settings>
+
+  <links>
+  </links>
+
+  <bindings>
+  </bindings>
+
+  <resources>
+  </resources>
+
+  <subtemplates>
+  </subtemplates>
+
+  <tags>
+  </tags>
+
+  <dependencies>
+    <dependency name="baja" vendorVersion="4.15" rel="minimum" vendor="Tridium"/>
+    <dependency name="control-rt" vendorVersion="4.15" rel="minimum" vendor="Tridium"/>
+    <dependency name="template-rt" vendorVersion="4.15" rel="minimum" vendor="Tridium"/>
+  </dependencies>
+
+  <optionals>
+  </optionals>
+
+</template>

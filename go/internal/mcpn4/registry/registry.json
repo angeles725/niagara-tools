@@ -1452,6 +1452,50 @@
    "needs_session": false
   },
   {
+   "name": "n4_deploy_template",
+   "description": "Deploy a component template (.ntpl, a file on this server's machine) under parent_ord: the template component's tree from template.bog is added in one op, with the template's settings filled. settings maps each exposed setting of the manifest to its value (num, bool or str; a num is checked against the manifest's min and max); a setting not given keeps the template's value, a required setting the template leaves empty must be given, and an unknown or metadata setting (uID, version...) is refused. A station or application template is refused, and so is a template that uses a type the station's registry does not describe (its module is not installed). Not carried, each listed in the plan notes: the template configuration (its bindings name template handles), links inside the template (create them with n4_create_link), ORD values naming a template handle, passwords, slot facets and categories; the deployed component is not linked to its template. The read-back checks every planned node on the station; the inverse removes the deployed component. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "template_file": {
+      "type": "string",
+      "description": "Path of the .ntpl file on the machine this server runs on"
+     },
+     "parent_ord": {
+      "type": "string",
+      "description": "ORD of the component that receives the deployed component"
+     },
+     "name": {
+      "type": "string",
+      "description": "Plain slot name of the deployed component (default: the template component's own name)"
+     },
+     "settings": {
+      "type": "object",
+      "description": "Setting name -> value for the template's exposed settings (the dry run lists them with their bound slots)"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "template_file",
+     "parent_ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_set_slot",
    "description": "Set one slot to a value. Status slots are always written whole (value and status). A slot the station omits because it holds its type default is typed from the station's type definition (registry channel), so a default-valued property such as a history extension's enabled, historyName or interval can be set. A nested slot is a path from ord (grp/sp). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
