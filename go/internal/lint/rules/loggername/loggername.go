@@ -47,7 +47,7 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 	declared := map[string]string{} // directory -> moduleName of a gradle file in it
 	for _, f := range files {
 		if strings.HasSuffix(f.Path, ".gradle") || strings.HasSuffix(f.Path, ".gradle.kts") {
-			if m := moduleName.FindStringSubmatch(strings.Join(f.Raw, "\n")); m != nil {
+			if m := moduleName.FindStringSubmatch(strings.Join(f.Stripped(), "\n")); m != nil { // comments blanked: a commented-out moduleName is no declaration
 				declared[dir(f.Path)] = m[1]
 			}
 		}

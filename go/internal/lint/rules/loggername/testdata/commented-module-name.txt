@@ -1,0 +1,12 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-logger-name  @DIR@/M/Pan-rt/src/R.java:1  Logger.getLogger("Old") is not the module name NewPan or a NewPan.<child> logger (types/observability.md § 1)
+-- stderr --
+-- M/Pan-rt/build.gradle.kts --
+// moduleName = "Old"
+/* moduleName.set("Old") */
+niagaraModule { moduleName = "NewPan" }
+-- M/Pan-rt/src/R.java --
+class R { java.util.logging.Logger l = java.util.logging.Logger.getLogger("Old"); }

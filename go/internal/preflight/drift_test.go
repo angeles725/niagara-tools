@@ -41,3 +41,18 @@ func TestVersionDrift(t *testing.T) {
 		t.Errorf("stderr %q, want find's line for the unreadable directory first", errOut)
 	}
 }
+
+// Retro kit-followups-rare-cases Δ3: a `<repo>-worktrees/` checkout of the same repository and the repository root
+// that holds the gradle root are not sibling modules, so a newer version there is no drift.
+func TestVersionDriftSkipsWorktreesAndTheRepoRoot(t *testing.T) {
+	d := t.TempDir()
+	mk(t, d, "nh/", "w/repo/me/build.gradle.kts=defaultModuleVersion(\"1.0.0\")",
+		"w/repo/other/build.gradle.kts=defaultModuleVersion(\"1.1.0\")",
+		"w/repo/settings.gradle.kts=defaultModuleVersion(\"7.0.0\")",
+		"w/repo-worktrees/feat/me/build.gradle.kts=defaultModuleVersion(\"2.0.0\")")
+	_, out, _ := pf((&fakeHost{}).host(), nil, "--jvm-dir", d, d+"/nh", d+"/w/repo/me")
+	if want := "sibling " + d + "/w/repo/other version 1.1.0"; !strings.Contains(out, want) ||
+		strings.Contains(out, "2.0.0") || strings.Contains(out, "7.0.0") {
+		t.Errorf("rows\n%s\nwant the real sibling (1.1.0) and no row for the worktrees checkout or the repo root", out)
+	}
+}
