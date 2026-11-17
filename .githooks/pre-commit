@@ -18,9 +18,12 @@
 # cannot be written refuses the commit. Plain bash + git + client-guard: no Go build, so a work tree whose
 # Go code does not compile can still commit.
 #
-# Message mode drops the scissors section (`commit -v`) and the comment lines, as git's default editor cleanup
-# does; a '#' line that `git commit -m`/`-F` keeps (cleanup whitespace) is not seen here, the pre-push guard
-# still reads it.
+# Message mode cannot see which cleanup git applies, so it guards every line git may store: comment lines too
+# (`-m`/`-F` and `--cleanup=verbatim` keep them; a comment naming a client is refused even where git would strip
+# it). Only the `commit -v` diff is dropped: from a scissors line with a comment line under it and a `diff --git`
+# line further down, the lines that are lines of the diff git appends there (staged against HEAD or, for
+# --amend, HEAD's parent; unstaged for -vv) are not message; every other line below the cut is still guarded,
+# since a -m/-F message that carries a cut-shaped line is stored whole.
 # Activated with scripts/install-hooks.sh (core.hooksPath .githooks); `git commit --no-verify` skips it,
 # and the pre-push guard still runs.
 #
@@ -100,17 +103,23 @@ else
   else
     tree=$(git hash-object -w -t tree /dev/null) || refuse "cannot write the empty tree"
   fi
-  # what git records from an edited message: no comment lines, and nothing from git's own cut line on, where
-  # `commit -v` appends the staged diff: a scissors line, a comment line after it (its text is translated) and a
-  # `diff --git` line further down; a scissors-shaped line a -m/-F message carries itself is kept
+  # the commit -v section (see the header): the lines from the cut on that are not lines of a diff git appends
   if [ ! -f "$msgfile" ] || [ ! -r "$msgfile" ]; then refuse "cannot read the message file $msgfile"; fi
-  raw=$(awk '
+  cut=$(awk '
     cand == "" && prev ~ /^. -+ >8 -+$/ && substr($0, 1, 1) == substr(prev, 1, 1) { cand = NR - 1 }
-    cand != "" && cut == "" && /^diff --git / { cut = cand }
-    { lines[NR] = $0; prev = $0 }
-    END { n = cut == "" ? NR : cut - 1; for (i = 1; i <= n; i++) print lines[i] }' "$msgfile") \
-    || refuse "cannot read the message file $msgfile"
-  message=$(printf '%s\n' "$raw" | git stripspace --strip-comments) || refuse "cannot clean the commit message"
+    cand != "" && /^diff --git / { print cand; exit }
+    { prev = $0 }' "$msgfile") || refuse "cannot read the message file $msgfile"
+  if [ -n "$cut" ]; then
+    { git diff --cached --no-color --no-ext-diff
+      [ -z "$head" ] || ! git rev-parse -q --verify "$head^" >/dev/null \
+        || git diff --cached --no-color --no-ext-diff "$head^"
+      git diff --no-color --no-ext-diff; } > "$tmp/diff" 2>/dev/null   # a failed diff drops nothing: fail closed
+    raw=$(awk -v cut="$cut" 'FILENAME == ARGV[1] { d[$0] = 1; next } FNR < cut || !($0 in d)' "$tmp/diff" "$msgfile") \
+      || refuse "cannot read the message file $msgfile"
+  else
+    raw=$(cat -- "$msgfile") || refuse "cannot read the message file $msgfile"
+  fi
+  message=$(printf '%s\n' "$raw" | git stripspace) || refuse "cannot clean the commit message"
   [ -n "$message" ] || exit 0   # an empty message: git aborts the commit itself
 fi
 # --no-gpg-sign: git versions whose commit-tree honours commit.gpgSign would sign every snapshot

@@ -1,0 +1,39 @@
+truth: a check guards a write only when it names the written receiver and its result is used (a condition or
+an assignment, not a bare statement); invoke(...) is a write; a requireTargetWrite defined in the file counts
+only when its body checks a permission on its first parameter (one defined elsewhere is trusted by name).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  no-target-permission  @DIR@/m/A.java:5  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:9  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:13  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:16  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:20  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+-- stderr --
+-- m/A.java --
+class A extends BWebServlet {
+  void a(WebOp op) {
+    CsrfUtil.verifyCsrfToken(op.getRequest());
+    if (!other.getPermissions(op).hasOperatorWrite()) return;
+    target.set(prop, v, op);
+  }
+  void b(WebOp op) {
+    target.getPermissions(op);
+    target.set(prop, v, op);
+  }
+  void c(WebOp op) {
+    target.getPermissions(op).hasOperatorWrite();
+    target.set(prop, v, op);
+  }
+  void d(WebOp op) {
+    target.invoke(action, arg, op);
+  }
+  void e(WebOp op) {
+    if (!requireTargetWrite(target, prop, op)) return;
+    target.set(prop, v, op);
+  }
+  static boolean requireTargetWrite(BComponent target, Property prop, Context cx) {
+    return cx != null;
+  }
+}

@@ -11,13 +11,22 @@
 #
 # Checks (web code only: a file naming BWebServlet, HttpServlet, WebOp or HttpServletRequest; comments and
 # string literals are not code, go/internal/javasrc):
-#   self-permission       FAIL  getPermissionsFor(this | user | <x>.getUser()), this.getPermissions(cx), an
-#                               unqualified getPermissions(cx), user.getPermissions(cx) / getUser().getPermissions(cx)
-#   no-target-permission  WARN  a slot write (.set / .setDouble / … ) with no target check earlier in the same
-#                               method: target.getPermissions(cx), getPermissionsFor(target), ordTarget.canWrite()
-#                               or the template's requireTargetWrite(…); a self-permission line is no check
-#   no-csrf               WARN  a BWebServlet that writes and names no CsrfUtil / x-niagara-csrfToken / csrfToken /
-#                               CsrfProtectedFilter (an X-Requested-With guard is lint-servlet csrf-xrw-only's row)
+#   self-permission       FAIL  getPermissionsFor(this | user | <x>.getUser()), this.getPermissions(cx),
+#                               super.getPermissions(cx), an unqualified getPermissions(cx), user.getPermissions(cx) /
+#                               getUser().getPermissions(cx), also through a local bound in the method to the user or the
+#                               servlet (BUser caller …; caller = op.getUser(); self = this; then caller.getPermissions(cx))
+#   no-target-permission  WARN  a slot write (.set / .setDouble / … ) or .invoke(…) with no target check earlier in the
+#                               same method: target.getPermissions(cx), getPermissionsFor(target), ordTarget.canWrite()
+#                               or the template's requireTargetWrite(target, …). The check must name a variable of the
+#                               written receiver (other.getPermissions(cx) does not guard target.set) and its result must
+#                               be used in a condition or an assignment (a bare `target.getPermissions(cx);` guards nothing);
+#                               a self-permission line is no check. A requireTargetWrite declared in the same file counts
+#                               only when its body checks a permission on its first parameter; one declared elsewhere is
+#                               trusted by name (the lint reads one file). A receiver it cannot read (getTarget().set(…))
+#                               matches any check.
+#   no-csrf               WARN  a BWebServlet that writes and calls no verifyCsrfToken( and names no CsrfProtectedFilter
+#                               (a token header or a local named csrfToken alone is no check; an X-Requested-With guard
+#                               is lint-servlet csrf-xrw-only's row)
 #   Scope limits (false negatives): a check in another method than the write (wrap it as requireTargetWrite and call
 #   it in the writing method); the global user map `getUser().getPermissions().has(OPERATOR_WRITE)` is no target check.
 #   no-csrf reads the servlet file only: an X-Requested-With guard in a separate dispatch class (types/dashboard.md
@@ -33,7 +42,8 @@
 # VCS-free by design (kit-links L2).
 # Mutation: SWG1 -- a types/servlet-write.md template whose requireTargetWrite call reads getPermissionsFor(this) fails SWG1
 # Mutation: SWG3 -- dropping `this` from the self-permission pattern passes getPermissionsFor(this) (SWG3 red)
-# The rule's own mutation pins (user receiver, guard order, the template helper, X-Requested-With, web scope) live in
+# The rule's own mutation pins (user receiver, aliases, guard order, receiver match, the template helper, X-Requested-With,
+# the csrf call, web scope) live in
 # the Go source with its golden cases (go/internal/lint/rules/servletwriteguard).
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
