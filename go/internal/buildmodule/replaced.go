@@ -31,8 +31,12 @@ var keptName = reportmodule.KeptName
 // keeps both replaced jars; the first one of the cycle (firstReplaced) is the one that matches the station, and
 // the line names it with its restore command. Only a mirror (the .niagara-mirror marker) is touched; a run
 // without a snapshot (--no-drift-check, a first deploy) or one that restored modules/ keeps nothing. A jar that
-// cannot be kept is one WARN; the exit code never changes. [ev: retro buildsh-mirror-baseline-b6 Δ1]
+// cannot be kept is one WARN; the exit code never changes. It runs under modulesMu. [ev: retro buildsh-mirror-baseline-b6 Δ1]
 func (b *build) keepReplaced() {
+	// modulesMu: a signal handler restoring modules/ at this moment must finish first, or the restored jar
+	// would be compared against a half-restored modules/ (retro p1-build-deploy-safety Δ11).
+	b.modulesMu.Lock()
+	defer b.modulesMu.Unlock()
 	if b.home == "" || !b.isMirror() {
 		return
 	}
