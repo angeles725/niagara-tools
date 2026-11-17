@@ -1,0 +1,2 @@
+### Fixed — mcp-n4: whole-range history extremes leave out null-status records (M16b)
+- When a range is larger than `summary_max_rows`, `range_min` / `range_max` now come from `select min(value), max(value) where status.null = false`, matching the summary's rule (a new COV history's `0.0 {null}` records no longer pull `range_min` to 0). A `nan` or `inf` record still counts in the station's aggregate, and the note says so.

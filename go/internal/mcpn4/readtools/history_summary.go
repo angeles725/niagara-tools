@@ -21,7 +21,8 @@ const (
 	msgSummaryEmpty    = "the range holds no records"
 	msgSummaryText     = "values are not numeric (e.g. %s): min and max are null"
 	msgSummaryPartial  = "computed from the newest %d of %s records (summary_max_rows); range_min and " +
-		"range_max are the station's select min(value), max(value) over the whole range, as it renders them"
+		"range_max are the station's select min(value), max(value) over the whole range without null-status " +
+		"records, as it renders them (a nan or inf record still counts there)"
 	msgSummaryAggFail = "; the whole-range select min(value), max(value) failed: %s"
 )
 
