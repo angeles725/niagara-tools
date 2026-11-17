@@ -49,9 +49,7 @@ func TestTheHomeStillGivesTheSignerWhenTheStationGivesNone(t *testing.T) {
 }
 
 // A station jar whose signer cannot be told (it cannot be read, is not a zip, or holds a signature file
-// without its block file) is not an unsigned one: the gate gets no signer, a warning names the jar and why,
-// and the home's signer is not taken in its place.
-// A station jar whose signer cannot be told (an interrupted copy, a damaged jar) does not switch the signer
+// without its block file: an interrupted copy, a damaged jar) is not an unsigned one and does not switch the signer
 // check off: the home's moved-aside jars give the expected signer, as they did before the station was read
 // (recheck of #787: a truncated station jar made the gate accept any signature).
 func TestAStationJarWhoseSignerCannotBeToldFallsBackToTheHome(t *testing.T) {
