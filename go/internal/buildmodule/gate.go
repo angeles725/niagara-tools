@@ -37,6 +37,9 @@ func (b *build) gate() int {
 		b.warn(msgGateFailed)
 		return ExitGate
 	}
+	// The gate passed: modules/ now holds a verified jar, which an interrupt during report-module must not
+	// undo (the gate returns an exit code, not proceed, so Main's own reset never runs).
+	b.unverified.Store(false)
 	if b.opt.skipReport {
 		return ExitOK
 	}

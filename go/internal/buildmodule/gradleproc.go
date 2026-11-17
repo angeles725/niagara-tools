@@ -26,10 +26,10 @@ type gradleRun struct {
 	stopping bool          // a signal arrived: no gradle starts any more
 }
 
-// runTracked starts cmd, records it for the signal handler while it runs, and waits for it. WaitDelay bounds
-// the wait for gradle's output pipes once it ended, so a child that keeps them open cannot hang the run.
+// runTracked starts cmd, records it for the signal handler while it runs, and waits for it. The wait has no
+// WaitDelay: a child gradle leaves holding the output open is waited for, as before; only the signal handler's
+// wait is bounded (stopGradle).
 func (b *build) runTracked(cmd *exec.Cmd) error {
-	cmd.WaitDelay = gradleStopWait
 	b.gradle.mu.Lock()
 	if b.gradle.stopping {
 		b.gradle.mu.Unlock()
