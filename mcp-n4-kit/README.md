@@ -765,6 +765,30 @@ scopes. Recipe:
    `n4_behavior_diff(before="before_<module>_<date>", tolerance=<the noise of the process>)`.
 4. Explain or fix every item; an intended change is still listed, so say which ones were expected.
 
+### Inventory diff
+
+`n4_inventory_snapshot(base="station:|slot:/", depth=6, max_components=20000, slots=None)` loads
+`base` once over BOX and writes every component down to `depth` levels below it (slot path, type,
+handle and recorded slots) to `<state-dir>/exports/inventory-<station>-<UTC time>.json` (0600, a
+name the server makes, never overwritten). The reply gives `name`, `path`, `components`, `bytes`,
+`truncated` (stopped at `max_components`) and `notes`. By default the recorded slots are the
+configured properties: the simple values directly on a component, without runtime state, so two
+snapshots of an unchanged station diff to empty. Left out: every Status value (`out`, inputs,
+`status`) and every slot flagged `t` transient on the instance or in its type contract (the rule
+the write tools use for runtime slots; readonly alone is configuration). When the contracts cannot
+be read, `notes` says so and only instance flags count. `slots=["facets", "out"]` records those
+slots instead, a Status slot as `value {status}`.
+
+`n4_inventory_diff(a, b, limit=200)` compares two snapshots by slot path and reads only the two
+files (no station request, no session). `a` and `b` are snapshot names as the snapshot reply gives
+them (`.json` optional); a name with `..` or a path separator, or one that is not under
+`<state-dir>/exports/`, is refused. The reply lists `added` and `removed` components
+`[{path, type}]`, `changed` slot values `[{path, slot, before, after}]` (`null`: not sent, at its
+default or absent), `type_changed` and `handle_changed` (informational: a re-created component),
+each cut to `limit` (`truncated`), `counts` of every list before the cut plus `unchanged`, and
+`notes` when the sides differ in station, subtree, recorded slots or contracts, or one was
+truncated. Recipe: snapshot before a change, snapshot after it, diff; explain every item.
+
 ### Refrigeration fault rules over history
 
 `n4_refrigeration_faults(rules, period | start/end, max_rows=5000, limit=50)` runs the rules named

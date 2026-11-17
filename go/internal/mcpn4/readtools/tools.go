@@ -93,6 +93,8 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_commissioning_report"] = t.CommissioningReport
 	s.Handlers["n4_behavior_snapshot"] = t.BehaviorSnapshot
 	s.Handlers["n4_behavior_diff"] = t.BehaviorDiff
+	s.Handlers["n4_inventory_snapshot"] = t.InventorySnapshot
+	s.Handlers["n4_inventory_diff"] = t.InventoryDiff
 	registerSchedules(s, t)
 	s.Handlers["n4_read_tags"] = t.ReadTags
 	s.Handlers["n4_neql_query"] = t.NeqlQuery
