@@ -50,6 +50,8 @@ func readUserSlots(kids *pyjson.Object) userSlots {
 		node := box.Node(kids, name)
 		_, isSafe := userSafeSlots[name]
 		switch {
+		case isSafe && !scalarValue(node):
+			out.masked = append(out.masked, name)
 		case isSafe:
 			if v, ok := node.Get("v"); ok {
 				out.safe[name] = pyjson.Str(v)
@@ -65,6 +67,24 @@ func readUserSlots(kids *pyjson.Object) userSlots {
 		}
 	}
 	return out
+}
+
+// scalarValue reports whether an allowlisted slot may be echoed: not typed baja:Password, and its
+// value (when sent) a string, boolean or number, never an object or a list whose Repr could carry
+// a nested secret. A slot that fails it is masked like any other slot.
+func scalarValue(node *pyjson.Object) bool {
+	if t, _ := node.Get("t"); pyjson.Str(t) == "baja:Password" {
+		return false
+	}
+	v, ok := node.Get("v")
+	if !ok {
+		return true
+	}
+	switch v.(type) {
+	case string, bool, int, int64, float64, pyjson.Number:
+		return true
+	}
+	return false
 }
 
 // hasText reports whether node holds a non-blank value; the value itself is never kept.

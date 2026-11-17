@@ -8,3 +8,4 @@
   `masked_slots` and `notes`. Fail closed: only allowlisted slots are returned, `email` and `cellPhoneNumber`
   show only `<set>` or `""`, and the authenticator, password hash, permissions and any other slot are only
   named in `masked_slots`. A verdict the evidence cannot support is null, never guessed.
+- An allowlisted user slot typed `baja:Password` or holding a non-scalar value is masked instead of echoed.

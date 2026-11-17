@@ -141,3 +141,25 @@ func TestLoginsOfKeepsTheNewestPerUser(t *testing.T) {
 		t.Errorf("empty note %q", note)
 	}
 }
+
+// An allowlisted slot that is typed baja:Password or whose value is not a scalar is masked, never
+// echoed (verifier note on PR #807: the pyjson.Str fallback would print an object's Repr).
+func TestUserSlotsMaskAnAllowlistedSlotWithAPasswordTypeOrANonScalarValue(t *testing.T) {
+	kids := pyjson.NewObject()
+	kids.Set("fullName", obj("t", "baja:Password", "v", "PW-TYPED-SECRET"))
+	kids.Set("prototypeName", obj("t", "baja:String", "v", obj("t", "baja:Password", "v", "PW-NESTED-SECRET")))
+	kids.Set("roles", obj("t", "baja:String", "v", "admin"))
+	u := readUserSlots(kids)
+	if u.safe["fullName"] != "" || u.safe["prototypeName"] != "" || u.safe["roles"] != "admin" {
+		t.Errorf("safe = %v", u.safe)
+	}
+	masked := pyjson.Repr(maskedUnion([]userSlots{u}))
+	for _, name := range []string{"fullName", "prototypeName"} {
+		if !strings.Contains(masked, "'"+name+"'") {
+			t.Errorf("masked_slots %s lacks %s", masked, name)
+		}
+	}
+	if strings.Contains(pyjson.Repr(u.safe), "SECRET") {
+		t.Errorf("secret reached the safe values: %v", u.safe)
+	}
+}
