@@ -3,7 +3,9 @@
 #
 # Asserts that <module-root> is under the sole legal build prefix
 # $HOME/modulos_niagara_n4/Cliente/ before any build or file-editing action.
-# Paths are canonicalized (symlinks + relative components resolved) before compare.
+# Paths are canonicalized (symlinks + relative components resolved) before compare: the longest existing
+# ancestor is resolved and the rest is applied by its text, so a new directory several levels deep inside
+# the prefix passes, and a ".." after a missing directory is judged where it leads.
 #
 # Usage:  orient-guard.sh <module-root>
 #
@@ -14,6 +16,9 @@
 #
 # Row format:  PASS|FAIL|WARN  orient-guard  <detail>
 # Exit:        0 (PASS or WARN) · 1 (FAIL) · 3 (usage error, or no HOME to derive the default prefix)
+#              An argument starting with '-' (but '-' alone) is a usage error: spell such a path ./-name.
+#              The FAIL row names the prefix that was compared (the seam one when it is set). Every final
+#              slash of $HOME is dropped before the default prefix is derived.
 #
 # This script is VCS-free by design. Version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
@@ -24,9 +29,9 @@
 # Mutation: OG4 -- skips canonicalization, comparing raw input instead of realpath
 # Mutation: OG10 -- a hardcoded home directory as the default prefix (fails under a temp HOME)
 #
-# Truth fix of the Go port: a path that cannot be resolved (a missing directory before the last component,
-# a path through a file, a link loop) is still compared as given, but it no longer PASSes on its text alone:
-# what does resolve of it must stay under the prefix too. The bash tool PASSed <prefix>/New/../../elsewhere.
+# Truth fix of the Go port: a path is never judged on its raw text. The bash tool PASSed
+# <prefix>/New/../../elsewhere and FAILed a relative New/Deeper inside the prefix; a path that cannot be
+# judged at all (a link loop, a directory that cannot be searched, an empty argument) FAILs (fail closed).
 # The path is always resolved by the tool itself (realpath on PATH is not needed).
 #
 # Implementation: the Go module at <repo>/go (go/cmd/orient-guard, go/internal/orientguard). This script is

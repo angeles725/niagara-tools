@@ -24,6 +24,7 @@ type mirror struct {
 	now     func() time.Time
 	src     string   // <source_niagara_home>
 	dir     string   // <mirror_dir>
+	at      string   // where the mirror is written: dir, or dir as guard A judged it when it was not there
 	exclude []string // jar names that get no link
 
 	srcAbs, dirAbs string   // both resolved, for guard A and the marker

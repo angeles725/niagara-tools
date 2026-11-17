@@ -57,7 +57,7 @@ func TestCanonical(t *testing.T) {
 			mode    string
 			resolve func(name, cwd string) (string, bool)
 			want    string
-		}{{"canonical", canonical, c.strict}, {"reachable", reachable, c.lenient}} {
+		}{{"canonical", canonical, c.strict}, {"reachable", Reachable, c.lenient}} {
 			got, ok := m.resolve(c.name, dir)
 			if !ok {
 				got = fails

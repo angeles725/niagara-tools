@@ -65,8 +65,13 @@ func (s *site) seamRow() string {
 	return "WARN  orient-guard  non-default legal root " + s.prefix + " (test seam)\n"
 }
 
+// failRow is the FAIL row for path: it names the prefix that was compared, the seam one when it is set.
 func (s *site) failRow(path string) string {
-	return "FAIL  orient-guard  " + path + " — must be under " + s.dir + "/home/modulos_niagara_n4/Cliente/; set BUILD_N4_CLIENTE_OVERRIDE=1 to override\n"
+	compared := s.dir + "/home/modulos_niagara_n4/Cliente/"
+	if seam := s.env[PrefixEnv]; seam != "" {
+		compared = withSlash(seam)
+	}
+	return "FAIL  orient-guard  " + path + " — must be under " + compared + "; set BUILD_N4_CLIENTE_OVERRIDE=1 to override\n"
 }
 
 // TestUsage: exactly one argument, else the usage line on stderr and exit 3.
@@ -140,6 +145,10 @@ func TestDefaultPrefix(t *testing.T) {
 	s.wants("outside", s.dir+"/other", ExitFail, s.failRow(s.dir+"/other"))
 	s.env["HOME"] = s.dir + "/home/"
 	s.wants("HOME with a final slash", s.dir+"/"+mod, ExitOK, "PASS  orient-guard  "+s.dir+"/"+mod+"\n")
+	s.env["HOME"] = s.dir + "/home///"
+	s.wants("HOME with a run of final slashes", s.dir+"/"+mod, ExitOK, "PASS  orient-guard  "+s.dir+"/"+mod+"\n")
+	s.wants("a run of final slashes, outside: the FAIL row names the normalised prefix", s.dir+"/other", ExitFail, s.failRow(s.dir+"/other"))
+	s.env["HOME"] = s.dir + "/home"
 	s.env[PrefixEnv] = ""
 	s.wants("an empty seam is no seam", s.dir+"/"+mod, ExitOK, "PASS  orient-guard  "+s.dir+"/"+mod+"\n")
 	s.env["HOME"] = ""
@@ -149,12 +158,12 @@ func TestDefaultPrefix(t *testing.T) {
 	s.env[PrefixEnv], s.env["HOME"] = s.prefix, s.dir+"/nowhere"
 	s.wants("the seam wins over HOME", s.dir+"/Cliente/DemoPan", ExitOK, s.seamRow()+"PASS  orient-guard  "+s.dir+"/Cliente/DemoPan\n")
 	s.env["HOME"] = ""
-	s.wants("the FAIL row names the default prefix, empty without HOME", s.dir+"/other", ExitFail,
-		s.seamRow()+"FAIL  orient-guard  "+s.dir+"/other — must be under ; set BUILD_N4_CLIENTE_OVERRIDE=1 to override\n")
+	s.wants("the FAIL row names the seam prefix it compared, not the default", s.dir+"/other", ExitFail,
+		s.seamRow()+"FAIL  orient-guard  "+s.dir+"/other — must be under "+s.prefix+"; set BUILD_N4_CLIENTE_OVERRIDE=1 to override\n")
 }
 
-// TestPathsThatDoNotExist: a missing last component is resolved like the rest; a path that cannot be
-// resolved is compared as given, and an option-like argument is never resolved.
+// TestPathsThatDoNotExist: the longest existing ancestor is resolved and the rest is judged by its text, so
+// a new directory several levels deep inside the prefix passes, spelled absolute or relative.
 func TestPathsThatDoNotExist(t *testing.T) {
 	s := newSite(t)
 	s.symlink("nowhere", "Cliente/dangling")
@@ -162,8 +171,10 @@ func TestPathsThatDoNotExist(t *testing.T) {
 	s.wants("dangling link", s.dir+"/Cliente/dangling", ExitOK, s.seamRow()+"PASS  orient-guard  "+s.dir+"/Cliente/nowhere\n")
 	s.wants("two missing levels", s.dir+"/Cliente/New/Deeper", ExitOK, s.seamRow()+"PASS  orient-guard  "+s.dir+"/Cliente/New/Deeper\n")
 	t.Chdir(s.dir)
-	s.wants("two missing levels, relative: compared as given", "Cliente/New/Deeper", ExitFail, s.seamRow()+s.failRow("Cliente/New/Deeper"))
-	s.wants("option-like", "-x", ExitFail, s.seamRow()+s.failRow("-x"))
+	s.wants("two missing levels, relative", "Cliente/New/Deeper", ExitOK, s.seamRow()+"PASS  orient-guard  "+s.dir+"/Cliente/New/Deeper\n")
+	s.wants("three missing levels, relative, a dot-dot among them", "Cliente/New/../Other/Deep/", ExitOK, s.seamRow()+"PASS  orient-guard  "+s.dir+"/Cliente/Other/Deep\n")
+	s.wants("missing levels, relative, leaving the prefix", "Cliente/New/../../other/x", ExitFail, s.seamRow()+s.failRow(s.dir+"/other/x"))
+	s.wants("missing levels under a sibling of the prefix", "ClienteX/New/Deeper", ExitFail, s.seamRow()+s.failRow(s.dir+"/ClienteX/New/Deeper"))
 	s.wants("empty", "", ExitFail, s.seamRow()+s.failRow(""))
 }
 

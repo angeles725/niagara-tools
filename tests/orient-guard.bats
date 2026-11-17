@@ -213,3 +213,40 @@ teardown() {
   [[ "${lines[0]}" == "WARN  orient-guard  non-default legal root ${PREFIX_DIR} (test seam)" ]]
   [[ "${lines[1]}" == PASS* ]]
 }
+
+# ---------------------------------------------------------------------------
+# OG11 — longest existing ancestor + lexical remainder; FAIL names the compared prefix;
+# option-like argument is a usage error (retro 2026-11-14-go-toolbelt-small-port Δ1)
+# ---------------------------------------------------------------------------
+@test "OG11a: a new directory several levels deep inside the prefix, relative, PASSes with its resolved path" {
+  cd "$PREFIX_DIR"
+  run env BUILD_N4_LEGAL_ROOT_PREFIX="$PREFIX_DIR" "$SCRIPT" New/Deeper/Mod
+  [ "$status" -eq 0 ]
+  [ "${lines[1]}" = "PASS  orient-guard  $(cd "$PREFIX_DIR" && pwd -P)/New/Deeper/Mod" ]
+  run env BUILD_N4_LEGAL_ROOT_PREFIX="$PREFIX_DIR" "$SCRIPT" New/../../elsewhere/Mod
+  [ "$status" -eq 1 ]
+  [ ! -e "${PREFIX_DIR}New" ]
+}
+
+@test "OG11b: the FAIL row names the seam prefix that was compared" {
+  mkdir -p "$TMPDIR_T/elsewhere"
+  run env BUILD_N4_LEGAL_ROOT_PREFIX="$PREFIX_DIR" HOME="$TMPDIR_T/home" "$SCRIPT" "$TMPDIR_T/elsewhere"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"must be under ${PREFIX_DIR};"* ]]
+}
+
+@test "OG11c: a run of final slashes in HOME is normalised" {
+  target="${TMPDIR_T}/modulos_niagara_n4/Cliente/Mod"
+  mkdir -p "$target"
+  run env -u BUILD_N4_LEGAL_ROOT_PREFIX HOME="$TMPDIR_T///" "$SCRIPT" "$target"
+  [ "$status" -eq 0 ]
+  [[ "$output" == PASS* ]]
+}
+
+@test "OG11d: an option-like argument is a usage error (exit 3, no row)" {
+  run --separate-stderr env BUILD_N4_LEGAL_ROOT_PREFIX="$PREFIX_DIR" "$SCRIPT" --help
+  [ "$status" -eq 3 ]
+  [ "$output" = "" ]
+  # shellcheck disable=SC2154  # $stderr is set by bats run --separate-stderr
+  [[ "$stderr" == *"looks like an option"* ]]
+}

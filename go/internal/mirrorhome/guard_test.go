@@ -3,6 +3,8 @@ package mirrorhome
 import (
 	"os"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
 // TestGuardA: a mirror dir that is the source, inside it or around it is refused with exit 20 and nothing
@@ -30,6 +32,36 @@ func TestGuardA(t *testing.T) {
 	f.wants("a name the source's starts", f.mirror(nh, nh+"2"), ExitOK, "mirror ready: "+nh+"2  (3 jars linked, modules/ writable, excluded: none)\n", "")
 }
 
+// TestGuardABeforeCreate: guard A judges a mirror dir that is not there yet before anything is created:
+// its longest existing ancestor resolved, the rest by its text. A refused mirror dir leaves no directory
+// behind, whichever way it reaches the source; one that cannot be resolved is refused (fail closed).
+func TestGuardABeforeCreate(t *testing.T) {
+	f := newFixture(t)
+	f.symlink("nh", "link")
+	f.symlink("loopb", "loopa")
+	f.symlink("loopa", "loopb")
+	nh := f.path("nh")
+	before := f.tree("")
+	inside := "refusing: mirror dir is the source install or inside it: "
+	cases := []struct{ name, mir, refusal string }{
+		{"two missing levels inside", nh + "/new/deeper/mir", inside},
+		{"through a link to the source", f.path("link/new/mir"), inside},
+		{"dot-dot after missing directories", f.path("away/x/../../nh/new/mir"), inside},
+		{"below a link loop", f.path("loopa/new/mir"), "refusing: mirror dir cannot be resolved (a link loop or a directory that cannot be searched): "},
+	}
+	for _, c := range cases {
+		f.wants(c.name, f.mirror(nh, c.mir), ExitRefused, "", c.refusal+c.mir+"\n")
+		f.unchanged(c.name, "", before)
+	}
+	source := f.tree("nh")
+	f.wants("dot-dot out of the source", f.mirror(nh, nh+"/new/../../out/mir"), ExitOK,
+		"mirror ready: "+nh+"/new/../../out/mir  (3 jars linked, modules/ writable, excluded: none)\n", "")
+	f.unchanged("dot-dot out of the source: nothing is made inside it", "nh", source)
+	if !lint.IsFile(f.path("out/mir/" + Marker)) {
+		t.Error("dot-dot out of the source: the mirror is not where the path leads")
+	}
+}
+
 // TestGuardB: an existing mirror dir is wiped only when it is empty or holds the marker file.
 func TestGuardB(t *testing.T) {
 	f := newFixture(t)
@@ -42,6 +74,11 @@ func TestGuardB(t *testing.T) {
 			"refusing to wipe "+f.path(dir)+": non-empty and not a mirror made by this script (no .niagara-mirror)\n")
 		f.unchanged(dir, dir, before)
 	}
+	before := f.tree("precious")
+	through := f.path("missing/../precious")
+	f.wants("spelled through a missing directory", f.mirror(nh, through), ExitRefused, "",
+		"refusing to wipe "+through+": non-empty and not a mirror made by this script (no .niagara-mirror)\n")
+	f.unchanged("spelled through a missing directory", "precious", before)
 	f.wants("a file", f.mirror(nh, f.path("file")), ExitRefused, "", "refusing: "+f.path("file")+" exists and is not a directory\n")
 	if st, err := os.Lstat(f.path("file")); err != nil || !st.Mode().IsRegular() {
 		t.Errorf("the file was touched: %v", err)
