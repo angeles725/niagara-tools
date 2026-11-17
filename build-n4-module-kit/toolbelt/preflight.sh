@@ -27,6 +27,9 @@
 #               -> PASS|FAIL row; detail names the found path or search dir
 #   plugin-pin  plugin version present in <niagara_home>/etc/m2: --plugin-version / $NIAGARA_PLUGIN_VERSION
 #               when given, else the first "x.y.z" quoted string in settings.gradle.kts -> PASS|FAIL
+#   remote-backup  WARN only when the gradle root's checkout has no VCS remote, or its branch no upstream
+#               (commits on this disk only; pushing or backing up is the operator's call); silent otherwise
+#               [ev: retro delivery-guards-and-ui-contrast Δ3]
 #   jar-lock    ONE filtered `lsof -Fn` pass over <niagara_home>/modules/*.jar
 #               -> PASS|WARN(locked)|SKIP(lsof absent or returning an empty listing, or niagara_home is
 #               9p/drvfs) — never a false PASS

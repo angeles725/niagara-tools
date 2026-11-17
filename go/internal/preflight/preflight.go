@@ -1,7 +1,8 @@
 // Package preflight is the BUILD-LOOP §0.b environment preflight of toolbelt/preflight.sh: before a
 // gradle build it checks the paths (win-path), the JDK (jdk8), the Niagara plugin pin (plugin-pin),
 // module jars held by a running station (jar-lock), a sibling checkout at a higher module version
-// (version-drift), with --sample the retarget of a project someone else shipped (sample-*) and, with
+// (version-drift), a checkout whose commits are on this disk only (remote-backup, WARN only when it applies),
+// with --sample the retarget of a project someone else shipped (sample-*) and, with
 // --toolchains, a full JDK 8 among Gradle's toolchains (toolchains).
 // Every check prints one `PASS|FAIL|WARN|SKIP  <check>  <detail>` row and the run continues after a
 // FAIL, so one run shows every problem. A check is one func in the checks list: a new row (BUILD-STATE
@@ -74,7 +75,7 @@ type run struct {
 }
 
 // checks run in this order after the win-path rows; a check reading the paths returns early on r.win.
-var checks = []func(*run){(*run).jdk8, (*run).pluginPin, (*run).jarLock, (*run).versionDrift, (*run).sampleRows, (*run).toolchains}
+var checks = []func(*run){(*run).jdk8, (*run).pluginPin, (*run).jarLock, (*run).versionDrift, (*run).remoteBackup, (*run).sampleRows, (*run).toolchains}
 
 // Command is preflight over the host h.
 func Command(h Host) cli.Main {
