@@ -18,13 +18,18 @@ import (
 var commBuilders = map[string]func(*commRun) (*commSection, error){
 	"points": (*commRun).pointsSection, "histories": (*commRun).historiesSection, "alarms": (*commRun).alarmsSection,
 	"links": (*commRun).linksSection, "naming": (*commRun).namingSection, "station": (*commRun).stationSection,
+	"spyder": (*commRun).spyderSection,
 }
 
-// sectionsArg is the sections to build, in reply order (default: all of them).
+// sectionsArg is the sections to build, in reply order (default: commDefaultSections, plus
+// spyder when spyder_spec is given).
 func sectionsArg(args *pyjson.Object) ([]string, error) {
 	v, ok := args.Get("sections")
 	if !ok {
-		return commSections, nil
+		if _, spec := args.Get("spyder_spec"); spec {
+			return commSections, nil
+		}
+		return commDefaultSections, nil
 	}
 	wanted := map[string]bool{}
 	for _, item := range v.([]any) { // an array of commSections names: the schema's enum
@@ -54,6 +59,9 @@ func (t *Tools) newCommRun(args *pyjson.Object) (*commRun, error) {
 		return nil, err
 	}
 	if r.expectAlarms, err = expectArg(args, "expect_alarms"); err != nil {
+		return nil, err
+	}
+	if r.spyderSpec, err = spyderSpecArg(args); err != nil {
 		return nil, err
 	}
 	return r, nil

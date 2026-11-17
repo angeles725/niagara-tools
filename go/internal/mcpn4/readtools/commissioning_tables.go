@@ -17,6 +17,7 @@ type commRun struct {
 	requests, rows, truncated      int // truncated: the rows of the first truncated table
 	tables                         map[string]*commTable
 	expectHistories, expectAlarms  *expectFilter
+	spyderSpec                     []spyderDevice // nil: no spyder_spec given
 }
 
 // commTable is one query's answer: its rows by column name, whether they were cut, or why the

@@ -56,7 +56,7 @@ func TestEveryToolRefusesAnEnumViolationWith32602NamingTheAllowedValues(t *testi
 		{"n4_read_tags", Args{"ord": Folder, "relations": "some"},
 			"argument relations must be one of direct, all, none; got 'some'"},
 		{"n4_commissioning_report", Args{"sections": []any{"points", "pumps"}},
-			"argument sections[1] must be one of points, histories, alarms, links, naming, station; got 'pumps'"},
+			"argument sections[1] must be one of points, histories, alarms, links, naming, station, spyder; got 'pumps'"},
 	}
 	for _, c := range cases {
 		code, msg := rpcRefusal(t, h.Srv, c.tool, c.args)
