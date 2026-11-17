@@ -5,7 +5,6 @@
 396 internal/buildstatefields/command.go
 386 internal/lint/rules/adaptercfgdefault/adaptercfgdefault.go
 372 internal/lint/rules/configsanity/configsanity.go
-360 internal/mcpn4/jsonrpc/server.go
 221 internal/mcpn4/writeops/rollback_readback.go
 347 internal/mcpn4/pyjson/decode.go
 328 internal/lint/rules/silentprotection/silentprotection.go
