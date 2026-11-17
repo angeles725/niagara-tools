@@ -33,6 +33,7 @@ var readTools = []string{
 	"n4_read_alarms",
 	"n4_list_alarm_classes",
 	"n4_event_report",
+	"n4_alarm_health",
 	"n4_refrigeration_faults",
 	"n4_alarm_text_check",
 	"n4_commissioning_report",

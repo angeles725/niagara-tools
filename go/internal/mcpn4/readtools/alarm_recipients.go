@@ -26,12 +26,13 @@ const (
 type alarmRouting struct {
 	recipients, unresolved []any
 	truncated              bool
+	total                  int // the recipients the station listed
 }
 
 // alarmRoutes reads the links into each recipient's routeAlarm action (at most
 // maxAlarmRecipients recipients) and adds {path, type, link_name} to the "recipients" of the class
-// each one comes from.
-func (t *Tools) alarmRoutes(classes, recipients []*pyjson.Object, timeout int) (*alarmRouting, error) {
+// each one comes from; audit adds each recipient's settings and problems (alarm_recipient_audit.go).
+func (t *Tools) alarmRoutes(classes, recipients []*pyjson.Object, timeout int, audit bool) (*alarmRouting, error) {
 	byPath := map[string]*pyjson.Object{}
 	for _, c := range classes {
 		byPath[pyjson.Str(get(c, "path"))] = c
@@ -40,7 +41,8 @@ func (t *Tools) alarmRoutes(classes, recipients []*pyjson.Object, timeout int) (
 	if err != nil {
 		return nil, err
 	}
-	out := &alarmRouting{recipients: []any{}, unresolved: []any{}, truncated: len(recipients) > maxAlarmRecipients}
+	out := &alarmRouting{recipients: []any{}, unresolved: []any{}, truncated: len(recipients) > maxAlarmRecipients,
+		total: len(recipients)}
 	for i, r := range recipients {
 		if i == maxAlarmRecipients {
 			break
@@ -72,7 +74,14 @@ func (t *Tools) alarmRoutes(classes, recipients []*pyjson.Object, timeout int) (
 			class.Set("recipients", append(get(class, "recipients").([]any), obj("path", path, "type", kind, "link_name", name)))
 			linked = append(linked, get(class, "name"))
 		}
-		out.recipients = append(out.recipients, obj("path", path, "type", kind, "classes", linked))
+		entry := obj("path", path, "type", kind, "classes", linked)
+		if audit {
+			found := recipientAudit(nodes, pyjson.Str(kind))
+			for _, k := range found.Keys() {
+				entry.Set(k, get(found, k))
+			}
+		}
+		out.recipients = append(out.recipients, entry)
 	}
 	return out, nil
 }
