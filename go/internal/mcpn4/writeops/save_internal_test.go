@@ -98,8 +98,9 @@ func TestPlanIsASaveOnTheRootHandleWithNoInverse(t *testing.T) {
 	if got := pyjson.Repr(get(p, "inverse")); got != "[]" || r.st.saves != 0 {
 		t.Errorf("inverse %s, %d saves", got, r.st.saves)
 	}
-	if got := pyjson.Repr(get(p, "notes")); got != "['the BOX reply to save is null and proves nothing; no --station-home "+
-		"for this station, so persistence cannot be checked', 'no inverse: a save cannot be undone']" {
+	if got, want := pyjson.Repr(get(p, "notes")), pyjson.Repr([]any{"the BOX reply to save is null and proves nothing; " +
+		"no --station-home for this station, so persistence is checked on the station's own save job (a new " +
+		"StationSaveJob under Services/JobService that ends success)", "no inverse: a save cannot be undone"}); got != want {
 		t.Errorf("notes %s", got)
 	}
 }
@@ -110,8 +111,9 @@ func TestWithoutAStationHomePersistenceIsUnknownAndSaysHowToConfigure(t *testing
 	if get(out, "persisted") != "unknown" || get(out, "verdict") != "unverified" || r.st.saves != 1 {
 		t.Fatal(pyjson.Repr(out))
 	}
-	if hint := get(get(out, "evidence").(*pyjson.Object), "hint"); hint != "configure --station-home FakeStation="+
-		"<directory containing config.bog> to check persistence" {
+	if hint := get(get(out, "evidence").(*pyjson.Object), "hint"); hint != "the station's save jobs could not be read "+
+		"before the save (no such component: station:|slot:/Services/JobService); configure --station-home FakeStation="+
+		"<directory containing config.bog> to check config.bog directly" {
 		t.Errorf("hint %v", hint)
 	}
 }
@@ -174,16 +176,17 @@ func TestTheReplyToSaveIsNeverTakenAsProof(t *testing.T) {
 	}
 }
 
-func TestAConfigBogThatBecomesUnreadableAfterTheSaveIsUnverified(t *testing.T) {
+// The unreadable config.bog is read again once after bogSettle, never twice.
+func TestAConfigBogStillUnreadableAfterItsOneRetryIsUnverified(t *testing.T) {
 	r := newSRig(t, "bog")
 	r.st.onSave = func() { os.Remove(r.st.bog) }
 	out := r.save(t)
 	ev := get(out, "evidence").(*pyjson.Object)
-	if get(out, "persisted") != "unknown" || get(out, "verdict") != "unverified" || r.sleeps != 0 ||
-		get(ev, "hint") != "config.bog became unreadable after the save" || ev.Len() != 4 {
+	if get(out, "persisted") != "unknown" || get(out, "verdict") != "unverified" || r.sleeps != 1 || r.now != bogSettle ||
+		get(ev, "hint") != "config.bog became unreadable after the save and stayed so after one retry" || ev.Len() != 5 {
 		t.Fatal(pyjson.Repr(out))
 	}
-	if after, ok := ev.Get("after"); !ok || after != nil || strings.Join(ev.Keys(), ",") != "path,before,after,hint" {
+	if after, ok := ev.Get("after"); !ok || after != nil || strings.Join(ev.Keys(), ",") != "path,before,after,retry,hint" {
 		t.Errorf("evidence %s", pyjson.Repr(ev))
 	}
 }
