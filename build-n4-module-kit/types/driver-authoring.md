@@ -944,7 +944,7 @@ only driver test template is the video driver's,
   out-of-process mock for a manual check, not a test fixture `[ev: corpus B1239 §1239.4]`.
 - Each codec test must bite: drop a bounds check or the tag override and see a test go red before calling the
   suite done (`types/moduleTest.md` § What to test in a moduleTest vs pure JUnit).
-- `toolbelt/scaffold-module.sh <Name> <out> --type driver` emits an NDriver module (fixture `fixtures/MinimalDriver`)
+- `toolbelt/scaffold-module.sh <Name> <out> --vendor <v> --type driver` emits an NDriver module (fixture `fixtures/MinimalDriver`)
   whose codec srcTest runs with `run-pure-test.sh`. Its `-rt` part needs `api(":alarm-rt")` (BDevice is an alarm
   source, javac stops without it) and its `-wb` part `api(":bajaui-wb")` for the manager's widget base
   `[ev: retro r10-dr2-driver-scaffold Δ1]`.

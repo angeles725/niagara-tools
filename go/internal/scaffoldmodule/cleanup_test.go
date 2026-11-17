@@ -33,7 +33,7 @@ func TestFailedEmitRemovesThePartialTree(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "out")
 	dest := out + "/Foo"
 	failWrite(t, 3, nil)
-	r := run(t, tb, "Foo", out)
+	r := run(t, tb, "Foo", out, "--vendor", "Angeles")
 	want := "scaffold-module: " + errDiskFull.Error() + "\nscaffold-module: removed the partial " + dest + "\n"
 	if r.code != 3 || r.out != "" || r.err != want {
 		t.Errorf("code=%d out=%q\n err %q\nwant %q", r.code, r.out, r.err, want)
@@ -44,7 +44,7 @@ func TestFailedEmitRemovesThePartialTree(t *testing.T) {
 	if !isDir(out) {
 		t.Errorf("the out-dir was removed")
 	}
-	if r := run(t, tb, "Foo", out); r.code != 0 { // the 4th and later writes are real again
+	if r := run(t, tb, "Foo", out, "--vendor", "Angeles"); r.code != 0 { // the 4th and later writes are real again
 		t.Errorf("rerun: code=%d err=%q", r.code, r.err)
 	}
 }
@@ -53,7 +53,7 @@ func TestFailedEmitRemovesThePartialTree(t *testing.T) {
 func TestMissingTemplateRemovesTheTree(t *testing.T) {
 	tb := newKit(t, "templates/VERSION-LEDGER.md")
 	out := t.TempDir()
-	r := run(t, tb, "Foo", out)
+	r := run(t, tb, "Foo", out, "--vendor", "Angeles")
 	want := "scaffold-module: version-ledger template not found: " + tb + "/../templates/VERSION-LEDGER.md\n" +
 		"scaffold-module: removed the partial " + out + "/Foo\n"
 	if r.code != 3 || r.out != "" || r.err != want {
@@ -79,7 +79,7 @@ func TestFailedEmitThatCannotRemoveSaysTheFilesStay(t *testing.T) {
 		}
 	})
 	t.Cleanup(func() { os.Chmod(locked, 0o755) })
-	r := run(t, tb, "Foo", out)
+	r := run(t, tb, "Foo", out, "--vendor", "Angeles")
 	head := "scaffold-module: " + errDiskFull.Error() + "\nscaffold-module: could not remove the partial " + out + "/Foo ("
 	tail := "): its files stay\n"
 	if r.code != 3 || r.out != "" || len(r.err) < len(head)+len(tail) || r.err[:len(head)] != head || r.err[len(r.err)-len(tail):] != tail {
@@ -103,7 +103,7 @@ func TestExistingDestinationDirectoryIsLeftWhole(t *testing.T) {
 		t.Fatal(err)
 	}
 	failWrite(t, 1, nil) // no write is reached
-	r := run(t, tb, "Foo", out)
+	r := run(t, tb, "Foo", out, "--vendor", "Angeles")
 	if r.code != 3 || r.out != "" || r.err != "scaffold-module: destination already exists: "+out+"/Foo\n" {
 		t.Errorf("code=%d out=%q err=%q", r.code, r.out, r.err)
 	}

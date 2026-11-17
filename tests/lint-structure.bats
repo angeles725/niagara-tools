@@ -217,7 +217,7 @@ setup() {
   SC="$KIT/toolbelt/scaffold-module.sh"
   [ -x "$SC" ] || skip "scaffold-module.sh not present"
   OUT="$BATS_TEST_TMPDIR/out"; mkdir -p "$OUT"
-  run "$SC" MinimalPan "$OUT"
+  run "$SC" MinimalPan "$OUT" --vendor Angeles
   [ "$status" -eq 0 ]
   # The scaffold emits MinimalPan/<module-subdir>/MinimalPan-rt; pass the module subdir as root
   run "$LS" "$OUT/MinimalPan/MinimalPan"

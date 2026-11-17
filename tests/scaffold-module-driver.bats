@@ -10,7 +10,7 @@ load lib/scaffold-setup
 # ---------------------------------------------------------------------------------------------------------
 
 @test "TC-DRV1: --type driver emits the MinimalDriver tree byte-equal to the bundled fixture (diff -r, minus build/.gradle)" {
-  run "$SC" MinimalDriver "$OUT" --type driver
+  run "$SC" MinimalDriver "$OUT" --type driver --vendor Angeles
   [ "$status" -eq 0 ]
   run diff -r --exclude=build --exclude=.gradle "$OUT/MinimalDriver" "$FIXTURE_DRV"
   [ "$status" -eq 0 ]
@@ -131,7 +131,7 @@ load lib/scaffold-setup
   [ -n "${NIAGARA_HOME:-}" ] || skip "no niagara_home/JDK 8 for the real round-trip (local-only bless evidence, never a fake PASS)"
   [ -n "${KIT_SIGNING_PROFILE:-}" ] && [ -n "${KIT_SIGNING_ALIAS:-}" ] \
     || skip "set KIT_SIGNING_PROFILE + KIT_SIGNING_ALIAS: the root signing block refuses the default profile"
-  run "$SC" MinimalDriver "$OUT" --type driver
+  run "$SC" MinimalDriver "$OUT" --type driver --vendor Angeles
   [ "$status" -eq 0 ]
   run bash "$KIT/toolbelt/mirror-niagara-home.sh" "$NIAGARA_HOME" "$BATS_TEST_TMPDIR/nh-mirror" MinimalDriver-rt.jar MinimalDriver-wb.jar
   [ "$status" -eq 0 ]

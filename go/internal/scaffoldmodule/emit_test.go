@@ -12,7 +12,7 @@ const signingLine = "scaffold-module: signing: set niagaraSigningAlias + niagara
 func TestEmitLogicDefaults(t *testing.T) {
 	tb := newKit(t)
 	out := filepath.Join(t.TempDir(), "new", "parent") // created like mkdir -p
-	r := run(t, tb, "DemoRoomPan", out)
+	r := run(t, tb, "DemoRoomPan", out, "--vendor", "Angeles")
 	dest := out + "/DemoRoomPan"
 	if r.code != 0 || r.err != "" || r.out != "scaffold-module: emitted DemoRoomPan -> "+dest+"\n"+signingLine {
 		t.Fatalf("code=%d err=%q out=%q", r.code, r.err, r.out)
@@ -75,7 +75,7 @@ func TestEnvFaults(t *testing.T) {
 	t.Run("fixture missing", func(t *testing.T) {
 		tb := newKit(t, "fixtures/MinimalDash")
 		out := filepath.Join(t.TempDir(), "out")
-		r := run(t, tb, "Foo", out, "--type", "dashboard")
+		r := run(t, tb, "Foo", out, "--type", "dashboard", "--vendor", "Angeles")
 		want := "scaffold-module: fixture skeleton not found: " + tb + "/../fixtures/MinimalDash\n"
 		if r.code != 3 || r.out != "" || r.err != want {
 			t.Errorf("code=%d out=%q err=%q", r.code, r.out, r.err)
@@ -91,7 +91,7 @@ func TestEnvFaults(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, out := range []string{file, file + "/sub", ""} {
-			r := run(t, tb, "Foo", out)
+			r := run(t, tb, "Foo", out, "--vendor", "Angeles")
 			if r.code != 3 || r.out != "" || r.err != "scaffold-module: cannot create out-dir: "+out+"\n" {
 				t.Errorf("%q: code=%d out=%q err=%q", out, r.code, r.out, r.err)
 			}
@@ -103,7 +103,7 @@ func TestEnvFaults(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(out, "Foo"), []byte("mine"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		r := run(t, tb, "Foo", out)
+		r := run(t, tb, "Foo", out, "--vendor", "Angeles")
 		if r.code != 3 || r.out != "" || r.err != "scaffold-module: destination already exists: "+out+"/Foo\n" {
 			t.Errorf("code=%d out=%q err=%q", r.code, r.out, r.err)
 		}

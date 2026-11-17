@@ -6,8 +6,8 @@
 // resolved it from its own location: <toolbelt>/../fixtures and <toolbelt>/../templates.
 //
 // One responsibility per file: types.go the type table and defaults (data), messages.go every printed
-// text, args.go the command line, name.go the ModuleName rule, values.go the option values (literal
-// text), subst.go the substitution rules, copytree.go the tree copy, cleanup.go the
+// text, args.go the command line, name.go the ModuleName rule, values.go the option gate (vendor required, version
+// shapes), subst.go the substitution rules, copytree.go the tree copy, cleanup.go the
 // claim of the destination and the removal of a failed emit, interrupt.go the signals held during the emit, overlay.go the station-test overlay
 // and the ledger, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
 package scaffoldmodule

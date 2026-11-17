@@ -16,8 +16,8 @@ var moduleTypes = []moduleType{
 	{name: "driver", fixture: "MinimalDriver"},
 }
 
-// Option names. substitutedOptions are the ones whose value is written into the emitted tree, in the order
-// a run checks them (checkValues); --type only selects a fixture.
+// Option names. --vendor, --target-version and --plugin-version are written into the emitted tree
+// (checkValues gates them); --type only selects a fixture.
 const (
 	optVendor        = "--vendor"
 	optTargetVersion = "--target-version"
@@ -25,12 +25,9 @@ const (
 	optType          = "--type"
 )
 
-var substitutedOptions = []string{optVendor, optTargetVersion, optPluginVersion}
-
-// Option defaults.
+// Option defaults. --vendor has none: the scaffold never guesses the module's identity.
 const (
 	defaultType          = "logic"
-	defaultVendor        = "Angeles"
 	defaultTargetVersion = "4.14"
 	defaultPluginVersion = "7.6.17"
 )

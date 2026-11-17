@@ -3,26 +3,29 @@
 # Fixture-driven (D1): copies the bundled fixtures/<Type> tree and substitutes
 # the fixture type name → <ModuleName> in paths and content (B790/B793 proven tree).
 #
-# Usage: scaffold-module.sh <ModuleName> <out-dir> [--vendor <v>] [--target-version <x.y>] [--plugin-version <v>] [--type <logic|dashboard|driver>]
+# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver>]
 #   ModuleName       Java identifier: uppercase-first, alphanumeric only (e.g. ColdRoomPan)
 #   out-dir          parent directory; emitted root is <out-dir>/<ModuleName>
-#   --vendor <v>     display vendor name (copyright, defaultVendor); default Angeles
-#   --target-version <x.y>  baja target version; default 4.14
-#   --plugin-version <v>    Niagara Gradle plugin version baked into settings.gradle.kts; default 7.6.17
+#   --vendor <v>     REQUIRED: the vendor (copyright, vendor) and, lowercased, the Java package segment; no default,
+#                    a run without it is exit 2 naming the option [ev: retro build-kit-bench-session Δ11]
+#   --target-version <x.y>  baja target version, <major>.<minor> digits only; default 4.14
+#   --plugin-version <x.y.z> Niagara Gradle plugin version baked into settings.gradle.kts, <major>.<minor>.<patch>
+#                    digits only; default 7.6.17 (use the one the installation ships in etc/m2)
 #   --type <logic|dashboard|driver>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay
 #                    driver    — NDriver -rt (UDP comm config subclass, codec, discovery) + -wb point manager
 #                                (MinimalDriver fixture; types/driver-authoring.md § 1.6-§ 1.11, § 5, § 12)
 #
-# Every type also gets the client version ledger <out-dir>/<ModuleName>/odd/VERSION-LEDGER.md (templates/, its
+# Every type also carries a .gitignore at the gradle root (.gradle/, build/, _backups/, .last-deploy-sha; from the
+# fixture) [ev: retro build-kit-bench-session Δ8], and the client version ledger <out-dir>/<ModuleName>/odd/VERSION-LEDGER.md (templates/, its
 # sample row dropped; check it with ledger-check.sh).
 # The emitted tree is pre-slotomatic. Run build.sh to generate the AUTO region and build the jar.
 # The root build.gradle.kts carries the signing block (templates/signing-root.gradle.kts, issue #266):
 # set niagaraSigningAlias and niagaraSigningProfile as gradle properties before the first build.
 # This script is VCS-free by design. version control is never invoked.
 #
-# Exit: 0 ok · 2 usage, invalid ModuleName, unknown --type or a refused option value · 3 env (skeleton missing,
+# Exit: 0 ok · 2 usage, invalid ModuleName, unknown --type, no --vendor or a refused option value · 3 env (skeleton missing,
 #        out-dir not creatable, or <out-dir>/<ModuleName> already exists) · 129, 130, 143 SIGHUP, SIGINT or SIGTERM
 #        while the module is emitted (`interrupted (<signal>)`; the partial tree is removed as below)
 # A run that fails after it created <out-dir>/<ModuleName> (a failed write, a missing template) removes that
@@ -38,8 +41,8 @@
 # Option values are literal text: every character of a value is written as typed (`&` is `&`, `\1` is `\1`, `|` is
 # `|`), and inserted text is never rewritten by another substitution. The substituted options are --vendor,
 # --target-version and --plugin-version. --vendor must be one Java package segment once lowercased (an ASCII letter
-# or _ first, then ASCII letters, digits or _); a --target-version or --plugin-version that holds a newline is
-# refused by name. Either refusal is exit 2 with nothing written; a failed write is exit 3.
+# or _ first, then ASCII letters, digits or _); a --target-version or --plugin-version of another shape than the one
+# above is refused by name. Either refusal is exit 2 with nothing written; a failed write is exit 3.
 #
 # Implementation: go/internal/scaffoldmodule (command go/cmd/scaffold-module; go/README.md). This wrapper is the
 # stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/scaffold-module when it is missing or older than a

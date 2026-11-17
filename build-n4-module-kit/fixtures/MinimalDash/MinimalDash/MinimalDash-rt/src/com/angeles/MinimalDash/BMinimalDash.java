@@ -3,12 +3,15 @@
  */
 package com.angeles.MinimalDash;
 
+import javax.baja.nre.annotations.Facet;
 import javax.baja.nre.annotations.NiagaraProperty;
 import javax.baja.nre.annotations.NiagaraType;
 import javax.baja.sys.BComponent;
+import javax.baja.sys.BFacets;
 import javax.baja.sys.Flags;
 import javax.baja.sys.Property;
 import javax.baja.sys.Type;
+import javax.baja.units.BUnit;
 
 /**
  * BMinimalDash — minimal dashboard facade component.
@@ -35,7 +38,8 @@ import javax.baja.sys.Type;
   name = "setpoint",
   type = "double",
   defaultValue = "0d",
-  flags = Flags.SUMMARY | Flags.OPERATOR
+  flags = Flags.SUMMARY | Flags.OPERATOR,
+  facets = @Facet("BFacets.makeNumeric(BUnit.getUnit(\"celsius\"), 1)")
 )
 @NiagaraProperty(
   name = "status",

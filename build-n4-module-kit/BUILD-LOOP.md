@@ -69,7 +69,7 @@ non-skippable check floor (§5) applies to every tier.
 ## 1. Design
 - State the module's job, its profiles (rt/ux/wb), and the slot/endpoint contract in one paragraph.
 - For a dashboard: the facade slots (display link-in + writable config), the servlet routes, the JSON `{v,st}` contract, the HMI resolution.
-- **New module skeleton:** run `toolbelt/scaffold-module.sh <ModuleName> <out-dir> [--type logic|dashboard|driver]` to emit a pre-slotomatic tree from `fixtures/MinimalPan` (logic, the default), `fixtures/MinimalDash` or `fixtures/MinimalDriver`; exits 0 ok / 2 usage / 3 env (skeleton missing). [ev: retro campaign7-tool-integration] The dashboard `-ux` servlet overrides `doGet`/`doPost(WebOp)`, never `doService(WebOp)`, which is not a `BWebServlet` method and failed `:<Mod>-ux:compileJava` on 4.14 and 4.15 (`types/dashboard.md` override contract; `tests/scaffold-module.bats` TC-DASH3). `[ev: retro r10-scaffold-station-test Δ6]`
+- **New module skeleton:** run `toolbelt/scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type logic|dashboard|driver]` to emit a pre-slotomatic tree from `fixtures/MinimalPan` (logic, the default), `fixtures/MinimalDash` or `fixtures/MinimalDriver`; exits 0 ok / 2 usage (also no `--vendor`, or a version of another shape, before anything is written) / 3 env (skeleton missing). `--vendor` has no default: it is the module's vendor and, lowercased, its Java package segment. [ev: retro campaign7-tool-integration] `[ev: retro build-kit-bench-session Δ11]` The dashboard `-ux` servlet overrides `doGet`/`doPost(WebOp)`, never `doService(WebOp)`, which is not a `BWebServlet` method and failed `:<Mod>-ux:compileJava` on 4.14 and 4.15 (`types/dashboard.md` override contract; `tests/scaffold-module.bats` TC-DASH3). `[ev: retro r10-scaffold-station-test Δ6]`
 - **Behavior decisions — HARD gate before the first source write of any rt control, protection, automatic action
   or operator-facing UI change:** list every behavior the code must decide that the user has not stated explicitly
   (generate the list from the question catalog in `METHODOLOGY.md` § Domain correctness, not from memory). Each one
@@ -81,28 +81,39 @@ non-skippable check floor (§5) applies to every tier.
 
 ### 1.a New-module bring-up (before the first build)
 
-After `scaffold-module.sh` generates the skeleton, three steps MUST happen before running
-`toolbelt/build.sh` for the first time. (Workbench's New Module wizard instead defaults to the Workbench user home;
-point it at the client tree that `orient-guard.sh` accepts, never the user home. `[ev: corpus B1417 §1417.3 p]`)
+`scaffold-module.sh <ModuleName> <out-dir> --vendor <v>` writes the gradle root at `<out-dir>/<ModuleName>`
+(`settings.gradle.kts`, `gradlew`, already executable, and a `.gitignore` for `.gradle/`, `build/`, `_backups/` and
+`.last-deploy-sha`); the module's parts are one level below, in `<out-dir>/<ModuleName>/<ModuleName>/`. Four steps
+MUST happen before running `toolbelt/build.sh` for the first time. (Workbench's New Module wizard instead defaults to
+the Workbench user home; point it at the client tree that `orient-guard.sh` accepts, never the user home.
+`[ev: corpus B1417 §1417.3 p]`) `[ev: retro build-kit-bench-session Δ18]`
 
-1. **`chmod +x gradlew`** — the scaffold copies the Gradle wrapper but does not set the execute
-   bit; `./gradlew` is non-functional without it.
+1. **Signing:** the scaffold's second output line asks for it. Set `niagaraSigningAlias` and
+   `niagaraSigningProfile` (gradle properties, user-level `gradle.properties` or `build.sh --gradle-prop k=v`) to the
+   module's own key before the first build: the emitted root sets `allowDefaultProfile.set(false)`, so `:jar` fails
+   without a profile, and the gate checks the signer against that alias (`build-verify.md` § Signing per deploy
+   target).
 2. **Set the host build-location keys once per machine, in the user-level `gradle.properties`:**
    `niagara_home`, `niagara_user_home`, `nodeHome`, and `org.gradle.java.installations.paths` go in
    `~/.gradle/gradle.properties` in WSL/Linux, `%USERPROFILE%\.gradle\gradle.properties` on Windows (`$GRADLE_USER_HOME/gradle.properties` when `GRADLE_USER_HOME` is set),
    never in the repository; the repository keeps only the machine-independent
    `org.gradle.java.installations.auto-detect=false` (lint-structure L12). Gradle reads that file before the build root's `gradle.properties` and a command-line `-P` beats both, so `build.sh -P…` keeps working (`[ev: https://docs.gradle.org/current/userguide/build_environment.html, read 2026-10-24]`).
-   lint-structure L10 WARNs any of the four keys left in a client `gradle.properties` (and FAILs them inside the kit's `fixtures/` or `templates/`, and `user_home` anywhere: `types/structure.md` L10). Also align
-   `gradlePluginVersion` / `settingsPluginVersion` in `settings.gradle.kts` to a sibling of the same
-   SDK family (each Niagara install ships exactly one plugin version — see
-   `build-verify.md §Build target & plugin version`). `[ev: retro r10-user-level-gradle-keys Δ1]`
+   lint-structure L10 WARNs any of the four keys left in a client `gradle.properties` (and FAILs them inside the kit's `fixtures/` or `templates/`, and `user_home` anywhere: `types/structure.md` L10). `[ev: retro r10-user-level-gradle-keys Δ1]`
    > **Superseded (2026-10-24, R10-D8):** "copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
    > `org.gradle.java.installations.paths` from an existing sibling … Do NOT leave the scaffold's
    > commented-out (auto-detect) JDK/node block: a commented block … fails reproducibility on a Windows
    > `gradlew` build." The user-level file gives the Windows build its paths without committing them.
-3. **Run `toolbelt/preflight.sh` + first build:** `preflight.sh <niagara_home> <gradle-root>`
-   validates the environment (§0.b); then `toolbelt/build.sh <group-dir> <MOD>` runs the first
-   full clean+slotomatic+jar+verify cycle.
+3. **Plugin version:** each Niagara installation ships exactly one niagara-module plugin version (its `etc/m2`).
+   Scaffold with `--target-version <x.y> --plugin-version <x.y.z>` of that installation, or align
+   `gradlePluginVersion` / `settingsPluginVersion` in `settings.gradle.kts` afterwards
+   (`build-verify.md §Build target & plugin version`); preflight's `plugin-pin` row FAILs a version the home does not
+   hold.
+4. **Run `toolbelt/preflight.sh` + first build, then commit:** `preflight.sh <niagara_home> <out-dir>/<ModuleName>`
+   validates the environment (§0.b); then `toolbelt/build.sh <out-dir>/<ModuleName> <ModuleName> <niagara_home>`
+   runs the first full clean+slotomatic+jar+verify cycle. The first build rewrites the scaffolded sources
+   (slotomatic adds the generated region), so `git init` (when the tree is new) and commit after it: the deploy
+   records the deployed commit in `.last-deploy-sha`, and outside a git work tree it only prints a NOTICE and records
+   nothing. `[ev: retro build-kit-bench-session Δ8]`
 
 `[ev: corpus B1016]`
 
@@ -125,7 +136,7 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
 
 ## 4. Build — the ONLY valid build
 - **ONE command does everything:** `toolbelt/build.sh <module-root=GROUP dir> <MOD> [niagara_home]` chains all four steps automatically: preflight (§0.b env checks) → gradle clean + slotomatic + jar → verify gate → report-module punch-list. It also runs the build-location WARN (§4.c) and the deployed-baseline drift gate (§4.c) around the gradle step. The agent runs one command, not four. Use `--no-preflight`, `--no-report`, and/or `--no-drift-check` to skip those bookend steps for inner rebuild loops where the environment is known-good and a full punch-list is not needed yet. `toolbelt/preflight.sh`, `toolbelt/verify-module.sh`, and `toolbelt/report-module.sh` remain available as standalone tools.
-- **`build.sh` argument order:** the first argument is the GROUP directory (the gradle root, e.g. `Cliente/Leon-Guanjuato/Paccadia`), NOT the module sub-directory. `niagara_home` (arg 3 or the env var `NIAGARA_HOME`) is REQUIRED — the script exits 10 (env) when it cannot resolve it. A client multi-project layout places `./gradlew` at the GROUP ancestor, so always pass the GROUP dir, not a profile dir. `[ev: retro tree-selection-and-schema-risk-baseline Δ3]`
+- **`build.sh` argument order:** the first argument is the GROUP directory (the gradle root, e.g. `<out-dir>/<ModuleName>` of a scaffold, or `Cliente/<site>/<client>`), NOT the module sub-directory. `niagara_home` (arg 3 or the env var `NIAGARA_HOME`) is REQUIRED — the script exits 10 (env) when it cannot resolve it. A client multi-project layout places `./gradlew` at the GROUP ancestor, so always pass the GROUP dir, not a profile dir. `[ev: retro tree-selection-and-schema-risk-baseline Δ3]`
 - Three roles (build-verify.md §Doctrine): `toolbelt/build.sh` is the recommended WSL build (clean + slotomatic for every profile with sources + jar, then it calls the gate); `scripts/ng-deploy.sh --strict-slotomatic` is the station deploy wrapper (backup→build→prechecks→type-count verify→verify-module gate→copy, so a failing check leaves the station untouched; strict aborts if annotations changed without slotomatic; modes A/C only run slotomatic, -rt plus -ux in mode A when -ux is annotated; the version-bump precheck runs in every mode, the schema-risk precheck and the gate in modes A/C — exits in §5 below); `toolbelt/verify-module.sh` is THE gate, run on the built jars.
 - Confirm: bytecode major **52**, jars **signed**, no raw-double facet. (build-verify.md)
 - A client module is signed with ITS alias, not the development key: configure `niagaraSigningAlias` so `build.sh` hands the gate `--expected-signer` (a different signer FAILs the `signed` row); a `build.sh: WARN — no niagaraSigningAlias is configured …` line means the gate accepted any signature. (build-verify.md)

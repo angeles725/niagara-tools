@@ -3,7 +3,7 @@
 # Emits the SMALLEST correct N4 module source tree (B790/B793 recipe) so a new module starts gate-green.
 #
 # SURFACE (provisional — the design owns the fixture location + exact flag set; rebase if it moves, kept in one file):
-#   scaffold-module.sh <ModuleName> <out-dir> [--vendor <v>] [--target-version 4.14] [--plugin-version 7.6.17]
+#   scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version 4.14] [--plugin-version 7.6.17]
 #   exit: 0 ok · 2 usage OR invalid name (name must be a Java identifier starting uppercase) · 3 env
 #         (out-dir not creatable, or already contains the module)
 #
@@ -35,22 +35,37 @@ load lib/scaffold-setup
   [ "$status" -eq 2 ]
 }
 
-@test "TC3: the emitted MinimalPan tree byte-equals the bundled fixture (diff -r, minus build/.gradle)" {
+@test "TC-V1: no --vendor exits 2 naming the option, and a version of the wrong shape exits 2, before anything is written" {
+  # Mutation: TC-V1 -- a default vendor (the old defaultVendor) emits com/<default>/ and exits 0.
   run "$SC" MinimalPan "$OUT"
+  [ "$status" -eq 2 ]
+  [[ "${lines[0]}" == "scaffold-module: --vendor is required: the module's vendor, also its Java package segment once lowercased (e.g. --vendor Acme)" ]]
+  [[ "${lines[1]}" == "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> "* ]]
+  run "$SC" MinimalPan "$OUT" --vendor Acme --target-version 4.99 --plugin-version banana
+  [ "$status" -eq 2 ]
+  [ "$output" = "scaffold-module: --plugin-version must be a plugin version <major>.<minor>.<patch>, digits only (e.g. 7.6.22): banana" ]
+  run "$SC" MinimalPan "$OUT" --vendor Acme --target-version 4
+  [ "$status" -eq 2 ]
+  [ "$output" = "scaffold-module: --target-version must be a Niagara release <major>.<minor>, digits only (e.g. 4.15): 4" ]
+  [ -z "$(ls -A "$OUT")" ]
+}
+
+@test "TC3: the emitted MinimalPan tree byte-equals the bundled fixture (diff -r, minus build/.gradle)" {
+  run "$SC" MinimalPan "$OUT" --vendor Angeles
   [ "$status" -eq 0 ]
   run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE "$OUT/MinimalPan" "$FIXTURE"
   [ "$status" -eq 0 ]
 }
 
 @test "TC-K8: the emitted tree is identical under HOME=/nonexistent (no \$HOME coupling)" {
-  HOME=/nonexistent run "$SC" MinimalPan "$OUT"
+  HOME=/nonexistent run "$SC" MinimalPan "$OUT" --vendor Angeles
   [ "$status" -eq 0 ]
   run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE "$OUT/MinimalPan" "$FIXTURE"
   [ "$status" -eq 0 ]
 }
 
 @test "TC-DASH1: --type dashboard emits MinimalDash tree byte-equals the bundled fixture (diff -r, minus build/.gradle)" {
-  run "$SC" MinimalDash "$OUT" --type dashboard
+  run "$SC" MinimalDash "$OUT" --type dashboard --vendor Angeles
   [ "$status" -eq 0 ]
   run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE "$OUT/MinimalDash" "$FIXTURE_DASH"
   [ "$status" -eq 0 ]
@@ -75,7 +90,7 @@ load lib/scaffold-setup
 
 @test "TC4: round-trip preflight->build.sh->verify-module ALL PASS->lint-timers PASS (SKIP without niagara_home/JDK8)" {
   [ -n "${NIAGARA_HOME:-}" ] || skip "no niagara_home/JDK 8 for the real round-trip (local-only bless evidence, never a fake PASS)"
-  run "$SC" MinimalPan "$OUT"
+  run "$SC" MinimalPan "$OUT" --vendor Angeles
   [ "$status" -eq 0 ]
   # D2 layout: emitted root = <out-dir>/<ModuleName>, and inside it the <Module>/<Module>-rt findProjects
   # nesting → the -rt artifact is at $OUT/MinimalPan/MinimalPan/MinimalPan-rt.
@@ -96,7 +111,7 @@ load lib/scaffold-setup
   # Named mutation: drop the niagaraSigning { aliases; signingProfileFile } part of the block from a fixture
   # root (keep allowDefaultProfile) -> the lint exits 0 with an L15 WARN on this root, and this test fails.
   for t in logic dashboard driver; do
-    run "$SC" "Sign${t^}" "$OUT/$t" --type "$t"
+    run "$SC" "Sign${t^}" "$OUT/$t" --type "$t" --vendor Example
     [ "$status" -eq 0 ]
     [[ "$output" == *"niagaraSigningAlias"* ]]
     root="$OUT/$t/Sign${t^}"
@@ -115,10 +130,10 @@ load lib/scaffold-setup
 
 @test "TC-S2a: a value holding a fixture token is written literally (a later substitution never rewrites it)" {
   # Mutation: S2 -- applying the substitution rules one after another rewrites the 4.14 inside the plugin version.
-  run "$SC" MinimalPan "$OUT" --plugin-version 4.14-p --target-version 9.9
+  run "$SC" MinimalPan "$OUT" --vendor Angeles --plugin-version 7.4.14 --target-version 9.9
   [ "$status" -eq 0 ]
-  grep -qF 'getOrElse("4.14-p")' "$OUT/MinimalPan/settings.gradle.kts"
-  grep -qF 'OptimizerSupervisor 9.9 -> 4.14-p (default)' "$OUT/MinimalPan/settings.gradle.kts"
+  grep -qF 'getOrElse("7.4.14")' "$OUT/MinimalPan/settings.gradle.kts"
+  grep -qF 'OptimizerSupervisor 9.9 -> 7.4.14 (default)' "$OUT/MinimalPan/settings.gradle.kts"
 }
 
 @test "TC-S2b: a failed emit leaves nothing in the out-dir and the next run is not refused" {
@@ -130,11 +145,11 @@ load lib/scaffold-setup
   for t in "$KIT"/templates/*; do
     [ "${t##*/}" = VERSION-LEDGER.md ] || ln -s "$t" "$kit/templates/${t##*/}"
   done
-  run "$kit/toolbelt/scaffold-module.sh" MinimalPan "$OUT"
+  run "$kit/toolbelt/scaffold-module.sh" MinimalPan "$OUT" --vendor Angeles
   [ "$status" -eq 3 ]
   [ "$output" = "scaffold-module: version-ledger template not found: $kit/toolbelt/../templates/VERSION-LEDGER.md
 scaffold-module: removed the partial $OUT/MinimalPan" ]
   [ -z "$(ls -A "$OUT")" ]
-  run "$SC" MinimalPan "$OUT"
+  run "$SC" MinimalPan "$OUT" --vendor Angeles
   [ "$status" -eq 0 ]
 }
