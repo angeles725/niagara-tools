@@ -769,10 +769,15 @@
   },
   {
    "name": "n4_list_alarm_classes",
-   "description": "List the station's alarm classes with their priority per transition ({toOffnormal, toFault, toNormal, toAlert}, 0-255), whether each transition needs an acknowledgement (ack_required), their alarm counts, and the recipients each one routes to. Recipients are the alarm:AlarmRecipient components (console, email, station and others) and a class routes to one through a link from the class's alarm topic to the recipient's routeAlarm action; each class lists {path, type, link_name} of its recipients, recipients lists each recipient with the classes linked to it, and unresolved_links the routeAlarm links whose source is not a listed class. At most 50 recipients are read for links (recipients_truncated says when more exist). A value the station renders in another form is returned as its text. Read-only: two BQL selects at the station root and one tree load per class folder and recipient. To create a class, see the README recipe (n4_create_component, n4_set_slot, n4_create_link).",
+   "description": "List the station's alarm classes with their priority per transition ({toOffnormal, toFault, toNormal, toAlert}, 0-255), whether each transition needs an acknowledgement (ack_required), their alarm counts, and the recipients each one routes to. Recipients are the alarm:AlarmRecipient components (console, email, station and others) and a class routes to one through a link from the class's alarm topic to the recipient's routeAlarm action; each class lists {path, type, link_name} of its recipients, recipients lists each recipient with the classes linked to it, and unresolved_links the routeAlarm links whose source is not a listed class. At most 50 recipients are read for links (recipients_truncated says when more exist). A value the station renders in another form is returned as its text. Read-only: two BQL selects at the station root and one tree load per class folder and recipient. audit=true (default false; no extra request) also answers \"where do my alarms go\": unrouted_classes lists the classes no recipient is linked to (with unrouted_note when a routeAlarm link is unresolved or recipients were left unread, since one of them may route it), audit_counts counts them, and each recipient gains settings (the slot values its load returned; to, cc, bcc and emailAccount of an email recipient and remoteStation of a station recipient as '' when the station omits them at their empty default, named in at_default), omitted_slots (slots named or typed like a password, secret, token, credential or key: named, never their value; URLs lose user info, Telegram bot tokens and secret query values) and problems (an email recipient with no address in to, cc or bcc or an address that is not an email, a station recipient with no remoteStation, empty transitions or daysOfWeek, an empty url, chatId or webhook slot, a last delivery failure). To create a class, see the README recipe (n4_create_component, n4_set_slot, n4_create_link).",
    "inputSchema": {
     "type": "object",
     "properties": {
+     "audit": {
+      "type": "boolean",
+      "description": "Add unrouted_classes, audit_counts and each recipient's settings and problems",
+      "default": false
+     },
      "timeout_s": {
       "type": "integer",
       "description": "HTTP timeout per request in seconds",

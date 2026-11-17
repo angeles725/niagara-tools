@@ -50,13 +50,21 @@ func (t *Tools) ListAlarmClasses(args *pyjson.Object) (*pyjson.Object, error) {
 		}
 		c.Set("recipients", []any{})
 	}
-	routes, err := t.alarmRoutes(classes, recipients, timeout)
+	audit := false
+	if v, ok := args.Get("audit"); ok {
+		audit = pyjson.Truthy(v)
+	}
+	routes, err := t.alarmRoutes(classes, recipients, timeout, audit)
 	if err != nil {
 		return nil, err
 	}
 	t.recordRead("n4_list_alarm_classes", "", args, len(classes))
-	return obj("classes", list(classes), "recipients", routes.recipients, "unresolved_links", routes.unresolved,
-		"recipients_truncated", routes.truncated), nil
+	out := obj("classes", list(classes), "recipients", routes.recipients, "unresolved_links", routes.unresolved,
+		"recipients_truncated", routes.truncated)
+	if audit {
+		addRoutingAudit(out, classes, routes)
+	}
+	return out, nil
 }
 
 // selectKeyed is one projected select at the station root, its rows keyed by position.

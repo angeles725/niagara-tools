@@ -420,6 +420,18 @@ is loaded two levels deep (at most 50, `recipients_truncated` beyond), a link so
 handle is resolved against one load of the folder holding the classes, and each class lists
 `recipients: [{path, type, link_name}]`; `recipients` lists each recipient with its `classes`,
 `unresolved_links` the `routeAlarm` links whose source is not a listed class.
+`n4_list_alarm_classes(audit=true)` answers "where do my alarms go" from the same reads (no extra
+request): `unrouted_classes` `[{path, name}]` are the classes no recipient is linked to
+(`unrouted_note` when an unresolved link or an unread recipient may route one of them),
+`audit_counts` counts classes, unrouted classes, recipients read and recipients with problems,
+and each recipient gains `settings` (the slot values its load returned; an email recipient's `to`,
+`cc`, `bcc`, `emailAccount` and a station recipient's `remoteStation` read as `""` when the station
+omits them at their empty default, named in `at_default`), `omitted_slots` (slots named or typed
+like a password, secret, token, credential or key: named, never their value; a URL loses its user
+info, a Telegram `/bot<token>` and secret query values) and `problems`: an email recipient with no
+address in `to`, `cc` or `bcc`, or one that is not an email address; a station recipient with no
+`remoteStation`; `transitions` or `daysOfWeek` empty; an empty `url`, `chatId` or `webhook` slot (a
+custom webhook or Telegram recipient); a last delivery failure (`lastFailureCause`).
 Creating an alarm class has no dedicated tool; the recipe is three ordinary writes, each with its
 dry run and token: `n4_create_component(parent_ord: "station:|slot:/Services/AlarmService",
 name: "Critical", type: "alarm:AlarmClass")`; `n4_set_slot(ord: "station:|slot:/Services/AlarmService/Critical",
