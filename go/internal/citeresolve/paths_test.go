@@ -55,7 +55,7 @@ func TestFilePointers(t *testing.T) {
 		{"infix ellipsis below a module part", "[ev: kitControl-rt/…/kitControl/BFoo.java:4]", []want{{Resolved, "// BFoo line 4"}}},
 		{"infix ellipsis with no match", "[ev: kitControl-rt/…/other/BFoo.java:4]", []want{{MissingFile, "no other/BFoo.java below kitControl-rt"}}},
 		{"organized-relative path", "[ev: kitControl/kitControl-rt/vineflower/com/tridium/kitControl/BFoo.java:5]", []want{{Resolved, "// BFoo line 5"}}},
-		{"absolute path is not joined to a root", "[ev: /METHODOLOGY.md]", []want{{MissingFile, "/METHODOLOGY.md"}}},
+		{"absolute path is not joined to a root", "[deferred: /METHODOLOGY.md]", []want{{MissingFile, "/METHODOLOGY.md"}}},
 		{"client module path", "[ev: Cliente/Pan/BPan.java:5]", []want{{Resolved, "// pan 5"}}},
 		{"missing path", "[ev: go/internal/nope/x.go:1]", []want{{MissingFile, "go/internal/nope/x.go"}}},
 		{"bare file name in no tree", "[ev: BEvaporatorUnit.java:1224]", []want{{MissingFile, "BEvaporatorUnit.java"}}},

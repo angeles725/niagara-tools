@@ -104,7 +104,7 @@ func (e *Engine) Resolve(p citeparse.Pointer, c *Card) Result {
 	if !ok {
 		return Result{Status: Unparsed, Detail: "no resolver for kind " + string(p.Kind)}
 	}
-	res := r.Resolve(p, c)
+	res := resolveInRepo(r, p, c)
 	if res.Status == Resolved && res.File != "" {
 		c.files = append(c.files, res.File)
 	}

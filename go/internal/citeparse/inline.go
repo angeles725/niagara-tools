@@ -22,6 +22,9 @@ var (
 	crossRef     = regexp.MustCompile("`?((?:[\\w.-]+/)*[\\w-]+(?:\\.[\\w-]+)*\\.md)`? (?:§§ (" + secListLoose + ")|§ (\"[^\"]+\"|`[^`]+`|" + secList + "|[^,;)\\]`|]+))")
 	tickedPath   = regexp.MustCompile("`((?:[\\w.$… -]+/)+[\\w.$ -]*\\.\\w{1,10}):(\\d[\\d,-]*)`(?:\\s+\"([^\"]+)\")?")
 	tickedAlias  = regexp.MustCompile("`([A-Z]{1,3}):(\\d[\\d,-]*)`")
+	// repoPath is a whole code span naming a repo-relative path under the roots retro
+	// 2026-11-13-remove-dead-bash-lint-libs Δ1 lists; a span with a space, glob or ellipsis is not one path.
+	repoPath = regexp.MustCompile("`((?:toolbelt|scripts|go|tests)/[\\w./-]*)`")
 )
 
 type hit struct {
@@ -82,6 +85,9 @@ func (sc *scan) inline(i int) []Pointer {
 		a, ok := sc.aliases[m[1]]
 		lines, _ := ParseRanges(m[2])
 		return Pointer{Kind: Path, Target: a, Lines: lines}, ok
+	})
+	take(repoPath, func(m []string) (Pointer, bool) {
+		return Pointer{Kind: RepoPath, Target: m[1]}, !strings.Contains(m[1], "..")
 	})
 	sort.SliceStable(hits, func(a, b int) bool { return hits[a].col < hits[b].col })
 	out := make([]Pointer, len(hits))

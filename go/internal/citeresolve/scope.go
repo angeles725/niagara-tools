@@ -3,6 +3,8 @@ package citeresolve
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/citeparse"
 )
 
 // Scope says whether a card states live doctrine or records history.
@@ -51,8 +53,9 @@ func NewClassifier(kit string, rules []PathRule) Classifier {
 }
 
 // drifting are the statuses that become HISTORICAL_DRIFT on a history card: the cited place moved or shrank,
-// or its anchored text moved.
-var drifting = map[Status]bool{MissingFile: true, MissingSection: true, MissingDelta: true, LineOutOfRange: true, Drift: true}
+// its anchored text moved, or it sits outside the repository (a retro records what was read where).
+var drifting = map[Status]bool{MissingFile: true, MissingSection: true, MissingDelta: true, LineOutOfRange: true, Drift: true,
+	OutsideRepo: true}
 
 // passing are the statuses --strict accepts.
 var passing = map[Status]bool{Resolved: true, HistoricalDrift: true, UnverifiableKind: true, SkippedTemplate: true}
@@ -64,4 +67,16 @@ func scoped(res Result, scope Scope, family string) Result {
 		res.Status = HistoricalDrift
 	}
 	return res
+}
+
+// checkedPointers are the pointers of a card text checked on a card of scope: a prose repo path only on live
+// doctrine, since history keeps the name a file had when it was written.
+func checkedPointers(text string, scope Scope) []citeparse.Pointer {
+	var out []citeparse.Pointer
+	for _, p := range citeparse.Card(text) {
+		if p.Kind != citeparse.RepoPath || scope == Live {
+			out = append(out, p)
+		}
+	}
+	return out
 }

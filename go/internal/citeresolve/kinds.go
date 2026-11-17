@@ -9,11 +9,12 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/citeparse"
 )
 
-// registerKinds adds the resolvers of the course, bitácora and archive pointers.
+// registerKinds adds the resolvers of the course, bitácora, archive and prose repo-path pointers.
 func (e *Engine) registerKinds() {
 	e.by[citeparse.Course] = courseResolver{e}
 	e.by[citeparse.Bitacora] = bitacoraResolver{e}
 	e.by[citeparse.Archive] = archiveResolver{e}
+	e.by[citeparse.RepoPath] = repoPathResolver{e}
 }
 
 func (e *Engine) course() string {

@@ -21,8 +21,8 @@ func TestIssue456Shapes(t *testing.T) {
 	})
 }
 
-// TestIssue456Roots pins the root shapes of kit issue #456: a directory of a module copy, a `~/` path,
-// and a javap jar in the Gradle cache.
+// TestIssue456Roots pins the root shapes of kit issue #456: a directory of a module copy, a `~/` path (in a
+// [deferred: …] tag; an [ev: …] one is OUTSIDE_REPO, outside_test.go), and a javap jar in the Gradle cache.
 func TestIssue456Roots(t *testing.T) {
 	t.Parallel()
 	check(t, []struct {
@@ -31,9 +31,9 @@ func TestIssue456Roots(t *testing.T) {
 	}{
 		{"directory in a module copy", "[ev: code gamma-ux imageOverrides/]", []want{{Resolved, "directory"}}},
 		{"directory missing from the module copies", "[ev: code gamma-ux nopeOverrides/]", []want{{MissingFile, "nopeOverrides/ in the copies of gamma-ux"}}},
-		{"home file with a section", "[ev: ~/notes/home-plan.md §3 Provenance markers]", []want{{Resolved, "## 3. Provenance markers"}}},
-		{"home directory", "[ev: ~/notes/ model: frontmatter]", []want{{Resolved, "directory"}}},
-		{"home file missing", "[ev: ~/notes/nope.md]", []want{{MissingFile, "nope.md does not exist"}}},
+		{"a deferred home file with a section still resolves", "[deferred: ~/notes/home-plan.md §3 Provenance markers]", []want{{Resolved, "## 3. Provenance markers"}}},
+		{"a deferred home directory still resolves", "[deferred: ~/notes/ model: frontmatter]", []want{{Resolved, "directory"}}},
+		{"a deferred home file missing", "[deferred: ~/notes/nope.md]", []want{{MissingFile, "nope.md does not exist"}}},
 		{"a kit path is never home-expanded", "[ev: kit ~/notes/home-plan.md]", []want{{MissingFile, "~/notes/home-plan.md"}}},
 		{"javap jar in the Gradle jars cache", "javap of fixture-plugins-1.0.jar from `~/.gradle/caches`",
 			[]want{{Resolved, "jars-9/0a1b2c/fixture-plugins-1.0.jar"}}},

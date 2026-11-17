@@ -73,7 +73,8 @@ func TestCardSources(t *testing.T) {
 		{"kit file with two dots and a section in a tag", "[ev: BUILD-STATE.src.md § How to read this file]", []full{{1, Path, "BUILD-STATE.src.md", "", "", "§How to read this file"}}},
 		{"a dotted name without a directory or section is not a citation", "see `BUILD-STATE.src.md:12` now", nil},
 		{"a version string is not a path", "N4 4.15.6.20 § 3 notes", nil},
-		{"a backticked path without lines is not a citation", "run `toolbelt/build.sh` now", nil},
+		{"a backticked path without lines is not a citation", "run `types/build.sh` now", nil},
+		{"a backticked toolbelt/ path is a repo path (dead-bash Δ1)", "run `toolbelt/build.sh` now", []full{{1, RepoPath, "toolbelt/build.sh", "", "", ""}}},
 		{"a tag is not read again as prose", "`[ev: code types/x.md:3]`", []full{{1, Code, "", "types/x.md", "", ":3"}}},
 	}
 	for _, tt := range cases {
