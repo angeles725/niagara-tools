@@ -2,6 +2,7 @@ package writeops
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
@@ -27,6 +28,7 @@ const (
 	copyChanged    = "changed"    // accepted, its name now holds another type: kept
 	copyUnverified = "unverified" // the add that failed: maybe applied, never removed blindly
 	copyNotSent    = "not_sent"   // after the failed add: never sent, a same-name one is not ours
+	copyLaterWork  = "later_work" // found as added, but a later batch wrote under it: kept
 )
 
 // viewReader is the journal's merged view of one batch (journal.Journal.Read).
@@ -48,8 +50,9 @@ func inDoubtReplicaOr(c plan.Client, w *plan.State, sess *session.Session, j bat
 		return nil, refused
 	}
 	accepted, isList := get(view, "accepted").([]any)
-	if _, partial := view.Get("failed_op"); !partial || !isList { // no record of what was accepted
-		return nil, refused
+	failed, partial := view.Get("failed_op") // the add that failed is the one after the accepted ones
+	if !partial || !isList || pyjson.Repr(failed) != strconv.Itoa(len(accepted)) {
+		return nil, refused // no consistent record of what was accepted
 	}
 	if st := get(view, "station_name"); !box.PyEqual(st, sess.StationName) {
 		return nil, plan.ToolError(fmt.Sprintf("batch %s was recorded on station %s, this session is on %s",
@@ -87,6 +90,11 @@ func replicaUndoPlan(c plan.Client, w *plan.State, view *pyjson.Object, bid stri
 				return nil, err
 			}
 			state = acceptedCopyState(nodes, name, get(asObj(get(op, "b")), "t"))
+			if state == copyFound {
+				if state, err = laterWorkState(w, view, bid, where, name); err != nil {
+					return nil, err
+				}
+			}
 		}
 		entry := obj("op", i+1, "target", where, "name", name, "state", state)
 		copies, notes = append(copies, entry), append(notes, copyNote(entry))
@@ -155,6 +163,7 @@ func copyNote(e *pyjson.Object) string {
 		copyChanged:    "accepted by the station, but its name now holds another type: kept",
 		copyUnverified: "this add failed and may or may not have been applied: kept, check it by hand",
 		copyNotSent:    "never sent (after the failed add): kept, a component of that name is not this batch's",
+		copyLaterWork:  "found as added, but a later batch wrote under it: kept, roll that batch back first",
 	}[pyjson.Str(get(e, "state"))]
 	return fmt.Sprintf("op %v, %s %s: %s (%s)", get(e, "op"), pyjson.Str(get(e, "target")),
 		pyjson.Repr(get(e, "name")), pyjson.Str(get(e, "state")), why)

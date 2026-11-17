@@ -8,7 +8,7 @@ import (
 
 // rollbackReadbackCopies is rollbackReadbackAll plus, for the rollback of an in-doubt replication,
 // each copy's outcome in observed.copies: a found copy reads back "removed" or "still_present";
-// any copy the rollback kept (changed, unverified, not sent) caps a verified verdict at partial.
+// any copy the rollback kept (changed, unverified, not sent, later work) caps a verified verdict at partial.
 func rollbackReadbackCopies(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, inverse []any) (any, any, any, string, error) {
 	requested, accepted, observed, verdict, err := rollbackReadbackAll(c, args, p, replies, inverse)
 	d := p.Data.(*rollbackData)
@@ -33,7 +33,7 @@ func rollbackReadbackCopies(c plan.Client, args *pyjson.Object, p *plan.Planned,
 				state = "still_present"
 			}
 		}
-		kept = kept || state == copyChanged || state == copyUnverified || state == copyNotSent
+		kept = kept || state == copyChanged || state == copyUnverified || state == copyNotSent || state == copyLaterWork
 		out = append(out, obj("op", get(entry, "op"), "target", get(entry, "target"), "name", get(entry, "name"), "state", state))
 	}
 	asObj(observed).Set("copies", out)

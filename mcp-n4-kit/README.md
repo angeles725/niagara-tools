@@ -1205,7 +1205,8 @@ Tool rules:
   (by the name its reply assigned) that the read-back finds with the type the batch added, and
   keeps the others with a per-copy verdict in the plan notes and in `observed.copies`: `found`
   (removed; it reads back `removed` or `still_present`), `gone` (no longer there), `changed`
-  (another type now holds the name), `unverified` (add k: it may or may not have been applied, so
+  (another type now holds the name), `later_work` (a later journaled batch wrote under it:
+  roll that one back first), `unverified` (add k: it may or may not have been applied, so
   a component under its name is never removed blindly) and `not_sent` (after add k). A rollback
   that keeps a copy is `partial`; one with no copy found as added is refused. A child that
   already exists under a target with a copy's name is refused. The plan notes writable Modbus

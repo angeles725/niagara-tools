@@ -154,3 +154,53 @@ func TestARollbackRunsWithTheBudgetSpentAndSpendsNoWrite(t *testing.T) {
 		}
 	}
 }
+
+// A copy a later journaled batch wrote under is kept (review R1-001, R3-001: removing it would
+// destroy that batch's work); an accepted copy no longer there is "gone".
+func TestAnInDoubtReplicationKeepsACopyALaterBatchWroteUnder(t *testing.T) {
+	r := newTRig(t, 200)
+	tg := r.targets("T1", "T2", "T3", "T4")
+	gw1 := r.st.add(tg[0], "Gw", "kitControl:NumericConst")
+	r.st.add(tg[1], "Gw", "kitControl:NumericConst") // T3/Gw is gone; op 4 failed
+	add := []any{obj("id", "a")}
+	r.journalReplica(t, tg, partial(add, add, add))
+	later := "fedcba9876543210fedcba9876543210"
+	for _, e := range []*pyjson.Object{
+		obj("batch_id", later, "ts", "2026-11-17T00:00:02Z", "tool", "n4_set_slot", "ops", []any{}, "inverse_plan", []any{},
+			"station_name", "FakeStation", "phase", "intent", "targets", obj(tFolder+"/T1/Gw", gw1.h)),
+		obj("batch_id", later, "ts", "2026-11-17T00:00:03Z", "phase", "result", "accepted", []any{}, "inverse", []any{},
+			"verdict", "verified"),
+	} {
+		if err := r.state.Journal.Append(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	text, isErr, out := r.write(t, "n4_rollback", obj("batch_id", replicaBatch))
+	if isErr || get(out, "verdict") != "partial" {
+		t.Fatalf("%s", text)
+	}
+	if tg[0].child("Gw") == nil || tg[1].child("Gw") != nil {
+		t.Errorf("T1/Gw (later work) must stay and T2/Gw go")
+	}
+	copies := pyjson.Repr(get(get(out, "observed").(*pyjson.Object), "copies"))
+	for _, want := range []string{"'name': 'Gw', 'state': 'later_work'", "'state': 'removed'", "'state': 'gone'", "'state': 'unverified'"} {
+		if !strings.Contains(copies, want) {
+			t.Errorf("observed copies %s lack %s", copies, want)
+		}
+	}
+}
+
+// A result record whose failed_op does not follow its accepted replies is not trusted: the batch
+// keeps the in-doubt refusal (review R3-002).
+func TestAnInDoubtReplicationWithAnInconsistentFailedOpKeepsTheRefusal(t *testing.T) {
+	r := newTRig(t, 200)
+	tg := r.targets("T1", "T2")
+	r.st.add(tg[0], "Gw", "kitControl:NumericConst")
+	rec := partial([]any{obj("id", "a")})
+	rec.Set("failed_op", 0)
+	r.journalReplica(t, tg, rec)
+	text, isErr, _ := r.call(t, "n4_rollback", obj("batch_id", replicaBatch))
+	if !isErr || !strings.Contains(text, "rolling it back blindly") || len(r.st.sent) != 0 {
+		t.Errorf("isErr %v: %s", isErr, text)
+	}
+}
