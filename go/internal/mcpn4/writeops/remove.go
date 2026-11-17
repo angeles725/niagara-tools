@@ -148,7 +148,11 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	}
 	p := &plan.Planned{Ops: []any{obj("nm", "v", "h", parentH, "n", nm)}, Inverse: inverse, Notes: notes,
 		Targets: targets, Keys: keys}
-	if add := s.hashedAdd(inverse[0].(*pyjson.Object)); add != nil { // retro 2026-11-16 row M15
+	first, ok := firstObj(inverse)
+	if !ok { // the snapshot always yields the re-add first; a broken invariant is a tool error, never a panic
+		return nil, plan.ToolError("internal: the remove plan of " + pyjson.StrRepr(nm) + " has no re-add op to hash")
+	}
+	if add := s.hashedAdd(first); add != nil { // retro 2026-11-16 row M15
 		p.HashInverse = append([]any{add}, inverse[1:]...)
 		p.Notes = append(p.Notes, msgRuntimeUnhashed)
 	}
@@ -168,4 +172,13 @@ func removeReadback(c plan.Client, args *pyjson.Object, _ *plan.Planned, replies
 		v = "mismatch"
 	}
 	return obj("removed", nm), replies[0], obj("gone", !still), v, nil
+}
+
+// firstObj is the first op of ops when it is an object.
+func firstObj(ops []any) (*pyjson.Object, bool) {
+	if len(ops) == 0 {
+		return nil, false
+	}
+	o, ok := ops[0].(*pyjson.Object)
+	return o, ok && o != nil
 }
