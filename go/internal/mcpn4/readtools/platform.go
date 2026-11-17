@@ -31,9 +31,9 @@ func (t *Tools) healthPlatform(a platformArgs, system, license *pyjson.Object) (
 			warnings = append(warnings, fmt.Sprintf(heapWarning, percent(f), lookup(h, "used_kb"), lookup(h, "max_kb")))
 		}
 	}
-	cpu, memory, note := systemItems(system)
-	setItem(out, "cpu", cpu, note)
-	setItem(out, "memory", memory, note)
+	cpu, cpuWhy, memory, memoryWhy := systemItems(system)
+	setItem(out, "cpu", cpu, cpuWhy)
+	setItem(out, "memory", memory, memoryWhy)
 	history, note, err := t.platformHistory(a.timeout)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,9 @@ func (t *Tools) healthPlatform(a platformArgs, system, license *pyjson.Object) (
 		return nil, err
 	}
 	setItem(out, "certificates", certs, note)
-	certCount(out, all)
+	if certs != nil {
+		out.Set("certificates_count", len(all))
+	}
 	warnings = append(warnings, certWarnings(all, a.warnDays)...)
 	modules, note, err := t.platformModules(a.timeout, a.includeModules)
 	if err != nil {
@@ -59,16 +61,20 @@ func (t *Tools) healthPlatform(a platformArgs, system, license *pyjson.Object) (
 	return out, nil
 }
 
-// systemItems are the cpu and memory items from the system section (null, with the note, when
-// it did not answer).
-func systemItems(system *pyjson.Object) (any, any, string) {
+// systemItems are the cpu and memory items from the system section, each null with its note
+// when the section did not answer; cpu is also null, with the section's cpu_note, when the CPU
+// usage was not measured.
+func systemItems(system *pyjson.Object) (cpu any, cpuWhy string, memory any, memoryWhy string) {
 	if text, failed := lookup(system, "error").(string); failed {
-		return nil, nil, fmt.Sprintf(cpuNote, text)
+		why := fmt.Sprintf(cpuNote, text)
+		return nil, why, nil, why
 	}
-	cpu := obj("current", lookup(system, "currentCpuUsage"), "overall", lookup(system, "overallCpuUsage"),
-		"cpus", lookup(system, "numCpus"))
-	memory := obj("total", lookup(system, totalMemorySlot), "free", lookup(system, freeMemorySlot))
-	return cpu, memory, ""
+	memory = obj("total", lookup(system, totalMemorySlot), "free", lookup(system, freeMemorySlot))
+	if why, unread := lookup(system, "cpu_note").(string); unread {
+		return nil, why, memory, ""
+	}
+	cpu = obj("current", lookup(system, cpuSlots[0]), "overall", lookup(system, cpuSlots[1]), "cpus", lookup(system, "numCpus"))
+	return cpu, "", memory, ""
 }
 
 // licenceItem is the licence item from the license section's nearest expiry, and its warning

@@ -125,3 +125,21 @@ func historyRecords(tables []spy.Table) (historyCount, bool) {
 
 // percent is a fraction as the text of a warning ("97.3%").
 func percent(fraction float64) string { return fmt.Sprintf("%.1f%%", fraction*100) }
+
+// expiryDays reads the value of a CertificateExpiryPoint as the station writes it: the days
+// to the certificate's notAfter (a whole number, written with the locale's decimal and
+// grouping marks, "329,0" or "1.234,0") and its status in braces ("329,0 {ok}").
+func expiryDays(text string) (int, string, bool) {
+	number, status, _ := strings.Cut(strings.TrimSpace(text), " {")
+	status = strings.TrimSuffix(status, "}")
+	number = strings.TrimSpace(number)
+	if i := strings.LastIndexAny(number, ".,"); i >= 0 && len(number)-i-1 < 3 {
+		number = number[:i] // the fraction: the point is a whole number of days
+	}
+	number = strings.NewReplacer(".", "", ",", "", " ", "", " ", "").Replace(number)
+	days, err := strconv.Atoi(number)
+	if err != nil {
+		return 0, "", false
+	}
+	return days, status, true
+}

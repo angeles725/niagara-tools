@@ -40,32 +40,51 @@ const (
 var heapPoolNames = []string{"Eden Space", "Survivor Space", "Old Gen", "Tenured Gen", "ZHeap", "Shenandoah"}
 
 // certStores maps the title of a Cryptography Info table to the store its rows are in.
-var certStores = [][2]string{{"Trusted System Certificates", "system"}, {"Trusted User Certificates", "user"}}
+var certStores = [][2]string{{"Trusted System Certificates", systemStore}, {"Trusted User Certificates", "user"}}
+
+// The certificate stores in reply order: the station's own first, the system trust store (the
+// JDK's roots, warned about in one summary line) last.
+const (
+	stationStore = "station"
+	systemStore  = "system"
+)
+
+var storeRank = map[string]int{stationStore: 0, "user": 1, systemStore: 2}
+
+// The station's own certificates: the SecurityService certificate infos and their slots.
+const (
+	stationCertsOrd   = "station:|slot:/Services/SecurityService/certificates"
+	stationAliasSlot  = "alias"
+	stationExpirySlot = "expiry"
+)
 
 // The sources and notes of the platform section.
 const (
-	heapSource        = "spy:/" + platformSysInfoPage + ", spy:/" + platformJmxPage
-	historySource     = "spy:/" + platformHistoryPage
-	certSource        = "spy:/" + platformCryptoPage
-	modulesSource     = "spy:/" + runtimeModulesPage
-	platformPageNote  = "the spy page %s did not answer (status %v, HTTP %v)%s"
-	platformPageCut   = "the spy page %s was cut (%s): %s"
-	heapNoMemory      = "the sysInfo page holds no totalMemory/freeMemory pair in KB (SysInfoSpy, 4.15)"
-	heapNoMax         = "the JMX Info page has no heap pool with a defined maximum (pools seen: %d)"
-	historyNoTable    = "the localHistory page holds no table with Name and Records columns (BLocalHistoryDatabase, 4.15)"
-	historyBytesNote  = "no read-only page or slot gives the size in bytes of the history files: the localHistory spy page gives record counts only; route: the size of the station's history directory (dbDir) on the host, through the platform's file transfer or a shell"
-	historyUnreadNote = "%d history row(s) whose Records cell is not a number are counted in histories but not in records"
-	certNoTable       = "the Cryptography Info page holds no Trusted System or Trusted User Certificates table with Alias and Expires columns (CryptoPlatformPage, 4.15)"
-	certScopeNote     = "certificates are the trust stores (system and user) of the Cryptography Info spy page; the station's own key store certificates (the TLS server certificate of WebService and FoxService) are on no read-only page: read them in Workbench Certificate Management (platform) or the Security Dashboard view"
-	certUnreadNote    = "%d certificate(s) whose Expires cell is not a date are listed with expires null"
-	certCutNote       = "%d certificate(s) listed of %d (nearest expiry first)"
-	cpuNote           = "the system section did not answer: %v"
-	licenceNote       = "the license section did not answer: %v"
-	heapWarning       = "heap %s used (%d of %d KB)"
-	licenceWarnSoon   = "licence: %s %s expires %s, in %d day(s) (window %d)"
-	licenceWarnPast   = "licence: %s %s expired %s, %d day(s) ago"
-	certWarnSoon      = "certificate %s (%s store) expires %s, in %d day(s) (window %d)"
-	certWarnPast      = "certificate %s (%s store) expired %s, %d day(s) ago"
-	certWarnMore      = "%d more certificate(s) expired or within %d day(s) are in certificates"
-	platformWarnCerts = 10 // certificate warnings given one by one
+	heapSource         = "spy:/" + platformSysInfoPage + ", spy:/" + platformJmxPage
+	historySource      = "spy:/" + platformHistoryPage
+	certSource         = "spy:/" + platformCryptoPage
+	modulesSource      = "spy:/" + runtimeModulesPage
+	platformPageNote   = "the spy page %s did not answer (status %v, HTTP %v)%s"
+	platformPageCut    = "the spy page %s was cut (%s): %s"
+	heapNoMemory       = "the sysInfo page holds no totalMemory/freeMemory pair in KB (SysInfoSpy, 4.15)"
+	heapNoMax          = "the JMX Info page has no heap pool with a defined maximum (pools seen: %d)"
+	historyNoTable     = "the localHistory page holds no table with Name and Records columns (BLocalHistoryDatabase, 4.15)"
+	historyBytesNote   = "no read-only page or slot gives the size in bytes of the history files: the localHistory spy page gives record counts only; route: the size of the station's history directory (dbDir) on the host, through the platform's file transfer or a shell"
+	historyUnreadNote  = "%d history row(s) whose Records cell is not a number are counted in histories but not in records"
+	certNoTable        = "the Cryptography Info page holds no Trusted System or Trusted User Certificates table with Alias and Expires columns (CryptoPlatformPage, 4.15)"
+	certScopeNote      = "station certificates are the station's own key store certificates, read from the CertificateExpiryPoint of each Services/SecurityService/certificates entry (its value is the days left, its status down once expired); user and system are the trust stores of the Cryptography Info spy page"
+	stationCertsFailed = "the station's own certificates (" + stationCertsOrd + ") could not be read: %v"
+	stationCertsNone   = "the station's own certificates: " + stationCertsOrd + " holds no certificate with an expiry point"
+	certSystemSummary  = "%d system trust-store certificates expired or expiring (JDK roots; informational)"
+	certUnreadNote     = "%d certificate(s) whose Expires cell is not a date are listed with expires null"
+	certCutNote        = "%d certificate(s) listed of %d (nearest expiry first)"
+	cpuNote            = "the system section did not answer: %v"
+	licenceNote        = "the license section did not answer: %v"
+	heapWarning        = "heap %s used (%d of %d KB)"
+	licenceWarnSoon    = "licence: %s %s expires %s, in %d day(s) (window %d)"
+	licenceWarnPast    = "licence: %s %s expired %s, %d day(s) ago"
+	certWarnSoon       = "certificate %s (%s store) expires %s, in %d day(s) (window %d)"
+	certWarnPast       = "certificate %s (%s store) expired %s, %d day(s) ago"
+	certWarnMore       = "%d more certificate(s) expired or within %d day(s) are in certificates"
+	platformWarnCerts  = 10 // certificate warnings given one by one
 )

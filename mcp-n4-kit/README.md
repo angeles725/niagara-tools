@@ -505,17 +505,22 @@ with several bits counts once in each of its categories. `drivers.totals` sums t
 adds `unassigned_points` (proxy points under no network), `proxy_unknown` and `rows_truncated`;
 `drivers` is `null` with a `drivers_note` when one of the three sections failed.
 `platform=true` adds `platform`, platform capacity and what is about to expire, from five more
-spy page reads (a station user allowed to read spy pages): `heap` (`used_kb` and `committed_kb`
+spy page reads (a station user allowed to read spy pages) and one BOX load: `heap` (`used_kb` and `committed_kb`
 from `spy:/sysInfo`, `max_kb` the sum of the defined maxima of the heap pools on
-`spy:/util/JMX Info`, `fraction` = used over max), `cpu` and `memory` (the system section again),
-`history_db` (`histories` and `records` summed from `spy:/localHistory`; `bytes` is always `null`:
-no read-only page gives the size of the history files), `licence` (the license section's nearest
-expiry; `never_expires: true` when nothing is dated), `certificates` (the trust store
-certificates of `spy:/securityInfo/Cryptography Info`, `{alias, store, issued_by, expires,
-days_left}`, nearest expiry first, up to 50; the station's own key store certificates are on no
-read-only page and `certificates_note` says so), `modules` (`count` of the loaded parts; the list
-too with `include_modules: true`) and `warnings` (heap at 90% or more, the licence and every
-certificate expired or within `expiry_warn_days`, default 30). An item that cannot be read is
+`spy:/util/JMX Info`, `fraction` = used over max), `cpu` and `memory` (the system section again;
+the CPU usage slots hold -1 until the SystemService is polled on subscription, so the system
+section loads it once more when they are missing, and `cpu` is `null` with `cpu_note` when they
+stay unmeasured), `history_db` (`histories` and `records` summed from `spy:/localHistory`; `bytes`
+is always `null`: no read-only page gives the size of the history files), `licence` (the license
+section's nearest expiry; `never_expires: true` when nothing is dated), `certificates` (the
+station's own key store certificates first, `store: "station"`, read from the
+`CertificateExpiryPoint` of each `Services/SecurityService/certificates` entry: its value is
+`days_left`, `expires` is the station's date plus it, `status` is the point's; then the user and
+system trust store certificates of `spy:/securityInfo/Cryptography Info`, `{alias, store,
+issued_by, expires, days_left}`; each store nearest expiry first, up to 50), `modules` (`count` of
+the loaded parts; the list too with `include_modules: true`) and `warnings` (heap at 90% or more;
+the licence and each station or user certificate expired or within `expiry_warn_days`, default 30;
+the system trust store, the JDK's roots, as one informational summary line). An item that cannot be read is
 `null` with a `*_note` saying why. Without `platform` the reply is unchanged.
 `capacity` is the Global Capacity table
 of the spy metrics page (`spy:/metrics`): `resources` (`type`, `used`, `limit`, `unlimited: true`

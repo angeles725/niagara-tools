@@ -4,6 +4,7 @@ package blackbox
 
 import (
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -44,11 +45,20 @@ func TestStationHealthPlatformReportsCapacityAndExpiries(t *testing.T) {
 	for _, c := range certs {
 		got = append(got, c["alias"].(string)+"|"+c["store"].(string)+"|"+c["expires"].(string))
 	}
-	want := []string{"oldvendor|user|2026-01-05", "labserverca|user|2026-12-01", "labrootca|system|2035-03-31"}
-	if !reflect.DeepEqual(got, want) || certs[0]["days_left"] != -314.0 || certs[1]["days_left"] != 16.0 {
+	want := []string{"tlsrenew|station|2026-11-25", "default|station|2027-10-10", "oldvendor|user|2026-01-05",
+		"labserverca|user|2026-12-01", "oldroot2 [jdk]|system|2019-07-09", "oldroot1 [jdk]|system|2020-05-30",
+		"oldroot3 [jdk]|system|2026-01-05", "labrootca|system|2035-03-31"}
+	if !reflect.DeepEqual(got, want) || certs[0]["days_left"] != 10.0 || certs[1]["days_left"] != 329.0 ||
+		certs[1]["status"] != "ok" || certs[2]["days_left"] != -314.0 || certs[3]["days_left"] != 16.0 {
 		t.Errorf("certificates = %v", certs)
 	}
-	if !pfWarned(p, "labserverca", "16 day") || !pfWarned(p, "oldvendor", "expired") || pfWarned(p, "labrootca") {
+	if !pfWarned(p, "labserverca", "16 day") || !pfWarned(p, "oldvendor", "expired") || pfWarned(p, "labrootca") ||
+		!pfWarned(p, "tlsrenew", "station", "10 day") || pfWarned(p, "default") {
+		t.Errorf("warnings = %v", p["warnings"])
+	}
+	// the expired JDK roots: one summary line, never one warning each
+	if !pfWarned(p, "3 system trust-store certificates expired or expiring (JDK roots; informational)") ||
+		pfWarned(p, "oldroot1") || len(p["warnings"].([]any)) != 4 {
 		t.Errorf("warnings = %v", p["warnings"])
 	}
 	if pfWarned(p, "licence") { // 136 days left: outside the default 30-day window
@@ -58,7 +68,7 @@ func TestStationHealthPlatformReportsCapacityAndExpiries(t *testing.T) {
 	if mods["count"] != 6.0 || mods["truncated"] != false || mods["items"] != nil {
 		t.Errorf("modules = %v", mods)
 	}
-	if !strings.Contains(p["certificates_note"].(string), "trust stores") {
+	if note := p["certificates_note"].(string); !strings.Contains(note, "trust stores") || !strings.Contains(note, "CertificateExpiryPoint") {
 		t.Errorf("certificates_note = %v", p["certificates_note"])
 	}
 }
@@ -105,12 +115,14 @@ func TestStationHealthPlatformUnavailableSourcesAreNullWithANote(t *testing.T) {
 		!strings.Contains(heap["max_note"].(string), "not_found") {
 		t.Errorf("heap = %v", heap)
 	}
-	for _, item := range []string{"history_db", "certificates"} {
-		v, present := p[item]
-		note, _ := p[item+"_note"].(string)
-		if !present || v != nil || !strings.Contains(note, "403") {
-			t.Errorf("%s = %v, note %q", item, v, note)
-		}
+	if v, present := p["history_db"]; !present || v != nil || !strings.Contains(p["history_db_note"].(string), "403") {
+		t.Errorf("history_db = %v, note %v", v, p["history_db_note"])
+	}
+	// the trust stores are unread; the station's own certificates still answer
+	certs := objects(p["certificates"])
+	if len(certs) != 2 || certs[0]["store"] != "station" || certs[1]["store"] != "station" ||
+		!strings.Contains(p["certificates_note"].(string), "403") {
+		t.Errorf("certificates = %v, note %v", certs, p["certificates_note"])
 	}
 	if p["licence"] == nil || p["cpu"] == nil {
 		t.Errorf("the other items must still answer: %v", p)
@@ -148,5 +160,52 @@ func TestStationHealthWithoutPlatformKeepsItsReply(t *testing.T) {
 				t.Errorf("args %v: read %s", args, req)
 			}
 		}
+	}
+}
+
+// Neither certificate source answers: certificates is null with a note naming both.
+func TestStationHealthPlatformCertificatesNullWhenNoSourceAnswers(t *testing.T) {
+	r, sv := pfRig(t, licRecorded(t))
+	shxServeSpy(sv, pfCryptoPath, boxstation.SpyPage{Status: 403})
+	r.Station.Do(func(st *boxstation.Station) {
+		services := st.Root().Child("Services")
+		services.Children = slices.DeleteFunc(services.Children, func(n *boxstation.Node) bool { return n.Name == "SecurityService" })
+	})
+	p := pfPlatform(t, r, Args{"platform": true})
+	note, _ := p["certificates_note"].(string)
+	if v, present := p["certificates"]; !present || v != nil || !strings.Contains(note, "403") || !strings.Contains(note, "SecurityService") {
+		t.Errorf("certificates = %v, note %q", v, note)
+	}
+}
+
+// Live 4.15: the first load of a SystemService not yet polled leaves the CPU usage slots out
+// (-1, their default); the load subscribes it, its poll measures them, and a second load reads them.
+func TestStationHealthReadsCPUUsageOnceTheServiceIsPolled(t *testing.T) {
+	r, _ := pfRig(t, licRecorded(t))
+	pfDropCPU(r.Station)
+	pfPollCPUOnSecondLoad(r.Station, "58", "62")
+	out := r.Srv.OK("n4_station_health", Args{"platform": true})
+	system := shxSection(t, out, "system")
+	if system["currentCpuUsage"] != 58.0 || system["overallCpuUsage"] != 62.0 || system["cpu_note"] != nil {
+		t.Errorf("system = %v", system)
+	}
+	cpu := shxSection(t, out, "platform")["cpu"]
+	if want := map[string]any{"current": 58.0, "overall": 62.0, "cpus": 16.0}; !reflect.DeepEqual(cpu, want) {
+		t.Errorf("cpu = %v", cpu)
+	}
+}
+
+// CPU usage never measured: cpu is null with a cpu_note, never a guessed number.
+func TestStationHealthCPUUnmeasuredIsNullWithANote(t *testing.T) {
+	r, _ := pfRig(t, licRecorded(t))
+	pfDropCPU(r.Station)
+	out := r.Srv.OK("n4_station_health", Args{"platform": true})
+	if note, _ := shxSection(t, out, "system")["cpu_note"].(string); !strings.Contains(note, "-1") {
+		t.Errorf("system cpu_note = %q", note)
+	}
+	p := shxSection(t, out, "platform")
+	note, _ := p["cpu_note"].(string)
+	if v, present := p["cpu"]; !present || v != nil || !strings.Contains(note, "poll") || p["memory"] == nil {
+		t.Errorf("cpu = %v, note %q, memory %v", v, note, p["memory"])
 	}
 }

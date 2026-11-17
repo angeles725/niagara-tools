@@ -95,3 +95,29 @@ func TestHeapFractionRoundsAndNeedsAMaximum(t *testing.T) {
 		t.Errorf("fraction without max = %v", got)
 	}
 }
+
+// A CertificateExpiryPoint's value is the days to the certificate's notAfter as a numeric
+// point's text with its status: "329,0 {ok}" on a Spanish-locale station.
+func TestExpiryDaysReadsTheNumericPointText(t *testing.T) {
+	cases := []struct {
+		text, status string
+		want         int
+		ok           bool
+	}{
+		{"329,0 {ok}", "ok", 329, true},
+		{"10.0 {ok}", "ok", 10, true},
+		{"-3,0 {down}", "down", -3, true},
+		{"1.234,0 {ok}", "ok", 1234, true},
+		{"1,234.0 {ok}", "ok", 1234, true},
+		{"0,0 {disabled}", "disabled", 0, true},
+		{"329", "", 329, true},
+		{"- {fault}", "", 0, false},
+		{"", "", 0, false},
+	}
+	for _, c := range cases {
+		days, status, ok := expiryDays(c.text)
+		if days != c.want || ok != c.ok || (ok && status != c.status) {
+			t.Errorf("expiryDays(%q) = %d, %q, %v", c.text, days, status, ok)
+		}
+	}
+}

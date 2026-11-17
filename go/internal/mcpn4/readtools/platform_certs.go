@@ -6,21 +6,20 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/spy"
 )
 
-// platformCert is one certificate of a trust store table: expires is yyyy-mm-dd ("" when the
-// cell is not a date) and days its days from the station's day (known false when either is
-// unknown).
+// platformCert is one certificate: its store (station, user or system), expires as yyyy-mm-dd
+// ("" when unknown), days its days from the station's day (known false when unknown) and, for a
+// station certificate, the status of its expiry point.
 type platformCert struct {
-	store, alias, issuer, expires string
-	days                          int
-	known                         bool
+	store, alias, issuer, expires, status string
+	days                                  int
+	known                                 bool
 }
 
-// readCerts is the certificates of the Cryptography Info trust store tables, nearest expiry
-// first (an undated one last); ok is false when the page has no such table.
+// readCerts is the certificates of the Cryptography Info trust store tables; ok is false when
+// the page has no such table.
 func readCerts(tables []spy.Table, clock licenseClock) ([]platformCert, bool) {
 	var certs []platformCert
 	found := false
@@ -49,13 +48,30 @@ func readCerts(tables []spy.Table, clock licenseClock) ([]platformCert, bool) {
 			certs = append(certs, c)
 		}
 	}
+	return certs, found
+}
+
+// sortCerts orders certificates by store (station, user, system), then nearest expiry first,
+// an undated one last in its store.
+func sortCerts(certs []platformCert) {
 	slices.SortStableFunc(certs, func(a, b platformCert) int {
+		if r := cmp.Compare(storeRank[a.store], storeRank[b.store]); r != 0 {
+			return r
+		}
+		if a.known != b.known {
+			if a.known {
+				return -1
+			}
+			return 1
+		}
+		if a.known && a.days != b.days {
+			return cmp.Compare(a.days, b.days)
+		}
 		if (a.expires == "") != (b.expires == "") {
-			return cmp.Compare(len(b.expires), len(a.expires)) // the dated first
+			return cmp.Compare(len(b.expires), len(a.expires))
 		}
 		return cmp.Compare(a.expires, b.expires)
 	})
-	return certs, found
 }
 
 // certStore is the store a table title names ("" when it names none).
@@ -69,74 +85,101 @@ func certStore(title string) string {
 }
 
 // platformCertificates is the certificates item (the first platformMaxCerts) and its note, and
-// every certificate read, for the warnings.
+// every certificate read, for the warnings: the station's own (one BOX load) and the trust
+// stores (the Cryptography Info page). The item is null only when neither source answered.
 func (t *Tools) platformCertificates(timeout int, clock licenseClock) (any, string, []platformCert, error) {
-	page, note, err := t.platformPage(platformCryptoPage, timeout)
-	if page == nil {
-		return nil, note, nil, err
+	certs, stationNote, err := t.stationCerts(clock)
+	if err != nil {
+		return nil, "", nil, err
 	}
-	certs, ok := readCerts(page.Tables, clock)
-	if !ok {
-		return nil, certNoTable, nil, nil
+	page, pageNote, err := t.platformPage(platformCryptoPage, timeout)
+	if err != nil {
+		return nil, "", nil, err
 	}
+	trusted := page != nil
+	if trusted {
+		read, ok := readCerts(page.Tables, clock)
+		trusted = ok
+		if !ok {
+			pageNote = certNoTable
+		}
+		certs = append(certs, read...)
+	}
+	notes := []string{certScopeNote}
+	for _, n := range []string{stationNote, pageNote} {
+		if n != "" {
+			notes = append(notes, n)
+		}
+	}
+	if certs == nil && !trusted {
+		return nil, strings.Join(notes[1:], "; "), nil, nil
+	}
+	sortCerts(certs)
 	items, unread := make([]any, 0, min(len(certs), platformMaxCerts)), 0
 	for i, c := range certs {
 		if c.expires == "" {
 			unread++
 		}
-		if i >= platformMaxCerts {
-			continue
+		if i < platformMaxCerts {
+			items = append(items, certEntry(c))
 		}
-		entry := obj("alias", c.alias, "store", c.store, "issued_by", c.issuer, "expires", nil, "days_left", nil)
-		if c.expires != "" {
-			entry.Set("expires", c.expires)
-		}
-		if c.known {
-			entry.Set("days_left", c.days)
-		}
-		items = append(items, entry)
 	}
-	notes := []string{certScopeNote}
 	if len(certs) > platformMaxCerts {
 		notes = append(notes, fmt.Sprintf(certCutNote, platformMaxCerts, len(certs)))
 	}
 	if unread > 0 {
 		notes = append(notes, fmt.Sprintf(certUnreadNote, unread))
 	}
-	if cut := pageRowsCut(page); cut != "" {
-		notes = append(notes, fmt.Sprintf(platformPageCut, platformCryptoPage, cut, "certificates may be missing"))
+	if page != nil {
+		if cut := pageRowsCut(page); cut != "" {
+			notes = append(notes, fmt.Sprintf(platformPageCut, platformCryptoPage, cut, "certificates may be missing"))
+		}
 	}
 	return items, strings.Join(notes, "; "), certs, nil
 }
 
-// certWarnings are the certificates expired or expiring within days, one by one up to
-// platformWarnCerts and then counted.
+// certEntry is one certificate as the reply lists it.
+func certEntry(c platformCert) any {
+	entry := obj("alias", c.alias, "store", c.store, "issued_by", c.issuer, "expires", nil, "days_left", nil)
+	if c.store == stationStore {
+		entry = obj("alias", c.alias, "store", c.store, "expires", nil, "days_left", nil, "status", c.status)
+	}
+	if c.expires != "" {
+		entry.Set("expires", c.expires)
+	}
+	if c.known {
+		entry.Set("days_left", c.days)
+	}
+	return entry
+}
+
+// certWarnings are the station and user certificates expired or expiring within days, one by
+// one up to platformWarnCerts and then counted, and the system trust store's (the JDK's roots)
+// in one summary line.
 func certWarnings(certs []platformCert, days int) []string {
 	var out []string
-	more := 0
+	more, system := 0, 0
 	for _, c := range certs {
-		if !c.known || c.days > days {
+		switch {
+		case !c.known || c.days > days:
 			continue
-		}
-		if len(out) >= platformWarnCerts {
+		case c.store == systemStore:
+			system++
+			continue
+		case len(out) >= platformWarnCerts:
 			more++
 			continue
-		}
-		if c.days < 0 {
+		case c.days < 0:
 			out = append(out, fmt.Sprintf(certWarnPast, c.alias, c.store, c.expires, -c.days))
-		} else {
+		default:
 			out = append(out, fmt.Sprintf(certWarnSoon, c.alias, c.store, c.expires, c.days, days))
 		}
 	}
 	if more > 0 {
 		out = append(out, fmt.Sprintf(certWarnMore, more, days))
 	}
-	return out
-}
-
-// certCount is the count of certificates read, beside the listed ones.
-func certCount(out *pyjson.Object, certs []platformCert) {
-	if certs != nil {
-		out.Set("certificates_count", len(certs))
+	if system > 0 {
+		out = append(out, fmt.Sprintf(certSystemSummary, system))
 	}
+	return out
 }
