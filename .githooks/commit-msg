@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# commit-msg — the client-identifier guard on the proposed commit message: .githooks/pre-commit guards
+# the staged changes, this hook runs it in message mode on the message file git passes ($1), so a client
+# name in a commit message is refused before the commit exists. The contract is pre-commit's header.
+# [ev: retro 2026-11-10-delivery-guards-and-ui-contrast Δ1]
+set -u
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)" \
+  || { echo "commit-msg: cannot resolve the hook directory; refusing to commit unchecked" >&2; exit 1; }
+[ -f "$here/pre-commit" ] || { echo "commit-msg: $here/pre-commit is missing; refusing to commit unchecked" >&2; exit 1; }
+exec bash "$here/pre-commit" --message "${1:-}"

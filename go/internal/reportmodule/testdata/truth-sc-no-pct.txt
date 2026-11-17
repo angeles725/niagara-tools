@@ -28,6 +28,7 @@ A  SKIP  lint-lifecycle-guard  no src/
 A  SKIP  lint-intrinsic-lock  no src/
 A  SKIP  lint-service-types  no src/
 A  SKIP  lint-driver-scaffold  no src/
+A  SKIP  lint-servlet-write-guards  no src/
 A  SKIP  lint-no-md5-credential-digest  no src/
 A  SKIP  lint-size  no src/
 A  SKIP  lint-license-isoperational-gate  no src/
@@ -59,6 +60,7 @@ B  SKIP  lint-lifecycle-guard  no src/
 B  SKIP  lint-intrinsic-lock  no src/
 B  SKIP  lint-service-types  no src/
 B  SKIP  lint-driver-scaffold  no src/
+B  SKIP  lint-servlet-write-guards  no src/
 B  SKIP  lint-no-md5-credential-digest  no src/
 B  SKIP  lint-size  no src/
 B  SKIP  lint-license-isoperational-gate  no src/
@@ -76,7 +78,7 @@ B  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from 
 (module)  PASS  lint-permissions-xml  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 11 PASS · 0 FAIL · 0 WARN · 59 SKIP · 0 ADVISORY  ->  INCOMPLETE
+report-module: 2 artifacts · 11 PASS · 0 FAIL · 0 WARN · 61 SKIP · 0 ADVISORY  ->  INCOMPLETE
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

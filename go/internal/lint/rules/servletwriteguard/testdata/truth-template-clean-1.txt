@@ -1,0 +1,32 @@
+truth: the types/servlet-write.md template verbatim (CSRF token, target resolved with the caller's
+Context, permission on the TARGET, OPERATOR flag) reports nothing.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/BPanelServlet.java --
+public final class BPanelServlet extends BWebServlet {
+  @Override
+  public void doPost(WebOp op) throws Exception {
+    try {
+      CsrfUtil.verifyCsrfToken(op.getRequest());
+    } catch (CsrfException e) {
+      op.getResponse().sendError(403);
+      return;
+    }
+    BComponent target = (BComponent) BOrd.make(ordParam(op)).resolve(Sys.getStation(), op).get();
+    Property prop = target.getProperty(op.getRequest().getParameter("slot"));
+    if (!requireTargetWrite(target, prop, op)) {
+      op.getResponse().sendError(403);
+      return;
+    }
+    target.set(prop, BDouble.make(value(op)), op);
+  }
+
+  static boolean requireTargetWrite(BComponent target, Property prop, Context cx) {
+    if (cx == null || cx.getUser() == null || prop == null) return false;
+    if (!target.getPermissions(cx).hasOperatorWrite()) return false;
+    return (target.getFlags(prop) & Flags.OPERATOR) != 0;
+  }
+}

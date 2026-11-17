@@ -33,6 +33,7 @@ A-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
 A-rt  SKIP  lint-recovery-path  no src/
 A-rt  SKIP  lint-config-sanity  no src/
 A-rt  SKIP  lint-status-parity  no src/
+A-rt  SKIP  lint-servlet-write-guards  no src/
 A-rt  SKIP  lint-no-md5-credential-digest  no src/
 A-rt  SKIP  lint-size  no src/
 A-rt  SKIP  lint-license-isoperational-gate  no src/
@@ -67,6 +68,7 @@ B-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
 B-rt  SKIP  lint-recovery-path  no src/
 B-rt  SKIP  lint-config-sanity  no src/
 B-rt  SKIP  lint-status-parity  no src/
+B-rt  SKIP  lint-servlet-write-guards  no src/
 B-rt  SKIP  lint-no-md5-credential-digest  no src/
 B-rt  SKIP  lint-size  no src/
 B-rt  SKIP  lint-license-isoperational-gate  no src/
@@ -101,6 +103,7 @@ C-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
 C-rt  SKIP  lint-recovery-path  no src/
 C-rt  SKIP  lint-config-sanity  no src/
 C-rt  SKIP  lint-status-parity  no src/
+C-rt  SKIP  lint-servlet-write-guards  no src/
 C-rt  SKIP  lint-no-md5-credential-digest  no src/
 C-rt  SKIP  lint-size  no src/
 C-rt  SKIP  lint-license-isoperational-gate  no src/
@@ -135,6 +138,7 @@ D-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
 D-rt  SKIP  lint-recovery-path  no src/
 D-rt  SKIP  lint-config-sanity  no src/
 D-rt  SKIP  lint-status-parity  no src/
+D-rt  SKIP  lint-servlet-write-guards  no src/
 D-rt  SKIP  lint-no-md5-credential-digest  no src/
 D-rt  SKIP  lint-size  no src/
 D-rt  SKIP  lint-license-isoperational-gate  no src/
@@ -152,7 +156,7 @@ D-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it fr
 (module)  PASS  lint-permissions-xml  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 4 artifacts · 11 PASS · 0 FAIL · 0 WARN · 134 SKIP · 0 ADVISORY  ->  INCOMPLETE
+report-module: 4 artifacts · 11 PASS · 0 FAIL · 0 WARN · 138 SKIP · 0 ADVISORY  ->  INCOMPLETE
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

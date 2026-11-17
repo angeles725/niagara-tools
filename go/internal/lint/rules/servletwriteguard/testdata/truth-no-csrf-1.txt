@@ -1,0 +1,25 @@
+truth: a BWebServlet that writes and verifies no CSRF token (no CsrfUtil / x-niagara-csrfToken / csrfToken,
+and no X-Requested-With guard, which lint-servlet csrf-xrw-only owns) WARNs once, at the class line; a
+token only in a comment is no check. B.java has the X-Requested-With guard: lint-servlet reports it.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  no-csrf  @DIR@/m/A.java:2  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+-- stderr --
+-- m/A.java --
+// csrfToken in a comment is no check
+public class A extends BWebServlet {
+  void doPost(WebOp op) {
+    if (!target.getPermissions(op).hasOperatorWrite()) return;
+    target.set(p, v, op);
+  }
+}
+-- m/B.java --
+public class B extends BWebServlet {
+  void doPost(WebOp op) {
+    if (!"XMLHttpRequest".equals(op.getRequest().getHeader("X-Requested-With"))) return;
+    if (!target.getPermissions(op).hasOperatorWrite()) return;
+    target.set(p, v, op);
+  }
+}

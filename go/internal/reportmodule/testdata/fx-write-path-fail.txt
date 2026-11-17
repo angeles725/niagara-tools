@@ -42,6 +42,7 @@ docs  SKIP  lint-lifecycle-guard  no src/
 docs  SKIP  lint-intrinsic-lock  no src/
 docs  SKIP  lint-service-types  no src/
 docs  SKIP  lint-driver-scaffold  no src/
+docs  SKIP  lint-servlet-write-guards  no src/
 docs  SKIP  lint-no-md5-credential-digest  no src/
 docs  SKIP  lint-size  no src/
 docs  SKIP  lint-license-isoperational-gate  no src/
@@ -61,7 +62,7 @@ docs  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it fr
 (module)  SKIP  lint-structural-tests  no *.java under a srcTest/
 (module)  SKIP  lint-ntpl-manifest-deps  no *.gradle.kts and no *.ntpl under the root
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 19 PASS · 1 FAIL · 1 WARN · 36 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 2 artifacts · 19 PASS · 1 FAIL · 1 WARN · 37 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	activated = "install-hooks: activated — core.hooksPath = .githooks; live: the retro-enforcement pre-push gate and the\n" +
+	activated = "install-hooks: activated — core.hooksPath = .githooks; live: the retro-enforcement pre-push gate, the\n" +
+		"              client-identifier guard at commit time (pre-commit, commit-msg) and the\n" +
 		"              kit-state regenerate hooks (post-merge, post-checkout, post-rewrite, post-commit).\n"
 	undoLine = "              Undo with: scripts/install-hooks.sh --uninstall\n"
 )

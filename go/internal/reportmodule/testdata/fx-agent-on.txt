@@ -33,6 +33,7 @@ DemoPan-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
 DemoPan-rt  SKIP  lint-recovery-path  no src/
 DemoPan-rt  SKIP  lint-config-sanity  no src/
 DemoPan-rt  SKIP  lint-status-parity  no src/
+DemoPan-rt  SKIP  lint-servlet-write-guards  no src/
 DemoPan-rt  SKIP  lint-no-md5-credential-digest  no src/
 DemoPan-rt  SKIP  lint-size  no src/
 DemoPan-rt  SKIP  lint-license-isoperational-gate  no src/
@@ -60,7 +61,7 @@ DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create
 (module)  SKIP  lint-adapter-cfg-default  no *.java under a -rt part's src/
 (module)  SKIP  lint-ntpl-manifest-deps  no *.gradle.kts and no *.ntpl under the root
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 6 PASS · 2 FAIL · 1 WARN · 47 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 6 PASS · 2 FAIL · 1 WARN · 48 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

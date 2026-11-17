@@ -1,0 +1,29 @@
+truth: a permission read off the servlet itself (this / an unqualified getPermissions(cx)) or off the
+user itself (user.getPermissionsFor(user), getPermissionsFor(cx.getUser()), user.getPermissions(cx))
+FAILs: none of them is the written target's permission (BUser.java:810-837, BIProtected.java:14), so
+none guards the write either (no-target-permission at line 10).
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  self-permission  @DIR@/m/A.java:4  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+FAIL  self-permission  @DIR@/m/A.java:5  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+FAIL  self-permission  @DIR@/m/A.java:6  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+FAIL  self-permission  @DIR@/m/A.java:7  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+FAIL  self-permission  @DIR@/m/A.java:8  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+FAIL  self-permission  @DIR@/m/A.java:9  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:10  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+-- stderr --
+-- m/A.java --
+class A extends BWebServlet {
+  void doPost(WebOp op) {
+    CsrfUtil.verifyCsrfToken(op.getRequest());
+    if (!getPermissionsFor(this).hasOperatorWrite()) return;
+    if (!user.getPermissionsFor(user).hasOperatorWrite()) return;
+    if (!u.getPermissionsFor(op.getUser()).hasOperatorWrite()) return;
+    if (!getPermissions(op).hasOperatorWrite()) return;
+    if (!this.getPermissions(op).hasOperatorWrite()) return;
+    if (!op.getUser().getPermissions(op).hasOperatorWrite()) return;
+    target.set(prop, v, op);
+  }
+}

@@ -61,7 +61,8 @@ func Main(args []string, s cli.Stdio) int {
 	if _, status := installtools.GitStatus(here, s.Err, "config", "--local", hooksPathKey, hooksDir); status != 0 {
 		return status
 	}
-	fmt.Fprintf(s.Out, "%s: activated — %s = %s; live: the retro-enforcement pre-push gate and the\n", hooksTool, hooksPathKey, hooksDir)
+	fmt.Fprintf(s.Out, "%s: activated — %s = %s; live: the retro-enforcement pre-push gate, the\n", hooksTool, hooksPathKey, hooksDir)
+	fmt.Fprintf(s.Out, "%sclient-identifier guard at commit time (pre-commit, commit-msg) and the\n", installIndent)
 	fmt.Fprintf(s.Out, "%skit-state regenerate hooks (post-merge, post-checkout, post-rewrite, post-commit).\n", installIndent)
 	// materialize the generated kit state now (the hook never fails; it warns and removes stale files)
 	top, status := installtools.GitStatus(here, s.Err, "rev-parse", "--show-toplevel")
