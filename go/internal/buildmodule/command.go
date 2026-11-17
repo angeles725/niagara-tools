@@ -4,7 +4,7 @@
 // stream, same exit codes, and the same commands run with the same arguments, environment and directory.
 //
 // One file per responsibility, in chain order: options.go (flags), inputs.go (roots, JDK, niagara_home),
-// location.go (WSL mount warning, preflight), profiles.go and gradleconf.go (what gradle builds and with which
+// baselineref.go (--schema-baseline-ref), location.go (WSL mount warning, preflight), profiles.go and gradleconf.go (what gradle builds and with which
 // arguments), mirror.go (user.home isolation), baseline.go (pre-build snapshot and restore), replaced.go (the
 // mirror jar a passing build replaced: kept, and --restore-mirror), gradle.go and
 // diagnose.go (the run and its log), drift.go (drift verdict), gate.go (verify gate, report-module). The data
@@ -56,6 +56,7 @@ type build struct {
 // steps is the chain; each returns an exit code, or proceed.
 var steps = []func(*build) int{
 	(*build).resolveInputs,
+	(*build).extractBaselines,
 	(*build).warnSlowMounts,
 	(*build).preflight,
 	(*build).warnPluginNotInM2,

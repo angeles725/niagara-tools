@@ -5,7 +5,7 @@
 #
 # Usage: build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] [--ui-profile P] [--legacy]
 #                 [--gradle-prop k=v]... [--werror] [--no-preflight] [--no-report] [--no-drift-check]
-#                 [--install-into-home]
+#                 [--install-into-home] [--first-deploy | --schema-baseline-ref <deployed-ref>]
 #                 <module-root> <MOD> [niagara_home]
 #        build.sh --restore-mirror <mirror>/.mirror-replaced/<MOD>-<profile>.jar.<sha12>
 #   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/ (the GROUP dir). When neither it nor
@@ -32,6 +32,16 @@
 #   --first-deploy  forwarded to report-module.sh: a never-deployed module has no baseline for schema-risk
 #                   (otherwise a missing <artifact>/.deploy-baseline is INCOMPLETE, exit 53; its schema-risk SKIP row
 #                   names the archive command that creates it from the deployed ref) [ev: audit-2026-10-03 A2]
+#   --schema-baseline-ref <deployed-ref>  that archive command, done for the run: before gradle, every artifact
+#                   under <module-root>/<MOD> is extracted as it is at <deployed-ref> (a tag or commit) into a temporary
+#                   directory and <artifact>/.deploy-baseline links to it, so report-module's schema-risk floor check runs;
+#                   the link and the extraction are removed when the run ends, whatever the exit (a link left by a killed
+#                   run dangles and reads as no baseline). One "==> schema-risk baseline: <artifact> from <ref>" line per
+#                   artifact; an artifact absent at the ref gets an INFO line and no baseline (its row stays SKIP). Exit 2
+#                   before gradle when <deployed-ref> is not a commit of the module's repository, <MOD> does not exist at
+#                   it, an artifact already has a .deploy-baseline (remove it, or drop the option to use it), or with
+#                   --first-deploy; a missing version-control tool is exit 10, a failed extraction exit 1.
+#                   [ev: retro mcpn4-history-batch-tools Δ4]
 #   --restore-mirror <kept-jar>  builds nothing: copies a jar a mirror build kept (below) back into that mirror's
 #                   modules/, leaves the kept copy and ends the cycle (below). Refuses a path not shaped
 #                   <mirror>/.mirror-replaced/<name>.<sha12> (exit 2); a missing kept jar, one whose sha256 prefix is
@@ -88,7 +98,8 @@
 #   .mirror-replaced/ and pick the one the station runs). A jar that cannot be kept is one WARN ("was NOT kept").
 #   The exit code never changes. Nothing is kept for a
 #   real niagara_home, under --no-drift-check (no snapshot), on a first deploy, or when the run restored modules/.
-#   An INCOMPLETE report ends with a pointer to the schema-risk SKIP row only when an artifact lacks .deploy-baseline.
+#   An INCOMPLETE report ends with a pointer to the schema-risk SKIP row only when an artifact lacks .deploy-baseline;
+#   the INCOMPLETE line names --schema-baseline-ref <deployed-ref> as the way to supply it.
 # Post-jar copy lock (exit 32): the plugin's last step copies the jar into <niagara_home>/modules; a Windows
 #   process (Workbench, station) holding the old jar open on /mnt/c makes it fail with FileAlreadyExistsException.
 #   build.sh names the build/libs jar(s) rebuilt THIS run as the artifact of record (a stale one is flagged
@@ -111,8 +122,8 @@
 #   Before the restore the signal is passed on to the gradle the run started, which is waited for (killed after
 #   10 s), and no gradle starts after it. A gradle daemon (outside a mirror home) cancels on its own, so prefer
 #   interrupting the process group (Ctrl-C, kill -- -<pgid>). [ev: retro p1-build-deploy-safety Δ4]
-# Exit: 0 chain passed (or mirror restored) · 1 a copy the run needs failed (temporary dir, baseline, --restore-mirror) ·
-#   2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
+# Exit: 0 chain passed (or mirror restored) · 1 a copy the run needs failed (temporary dir, baseline, --restore-mirror,
+#   --schema-baseline-ref extraction) · 2 usage (and the --schema-baseline-ref refusals above) · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
 #   without --install-into-home, no profile) ·
 #   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 33 mirror path or $HOME has whitespace ·
 #   34 Slot-o-Matic skipped a file in a passing gradle run · 50 gate or report-module FAIL ·
