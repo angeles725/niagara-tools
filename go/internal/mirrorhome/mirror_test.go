@@ -99,32 +99,24 @@ func TestRefresh(t *testing.T) {
 	}
 }
 
-// TestSymlinkedMirrorDir: a mirror dir that is a symlink to a mirror is replaced by a real directory; what
-// the link pointed at is left alone.
+// TestSymlinkedMirrorDir: a mirror dir that is a symlink exists and is not a directory made by this tool,
+// whatever its spelling (a final slash, a final "/.", a dangling link): exit 20, and neither the link nor
+// what it points at is touched. A looping link cannot be resolved, so guard A refuses it first.
 func TestSymlinkedMirrorDir(t *testing.T) {
 	f := newFixture(t)
-	f.touch("real/"+Marker, "real/old/file")
+	f.touch("real/"+Marker, "real/old/file", "precious/keep.txt")
 	f.symlink("real", "mir")
-	before := f.tree("real")
-	f.wants("link", f.mirror(f.path("nh"), f.path("mir")), ExitOK, "mirror ready: "+f.path("mir")+"  (3 jars linked, modules/ writable, excluded: none)\n", "")
-	f.unchanged("link", "real", before)
-	if st, err := os.Lstat(f.path("mir")); err != nil || !st.IsDir() {
-		t.Errorf("mir is not a real directory: %v", err)
+	f.symlink("precious", "other")
+	f.symlink("gone", "dangling")
+	f.symlink("loopb", "loopa")
+	f.symlink("loopa", "loopb")
+	before := f.tree("")
+	for _, mir := range []string{"mir", "mir/", "mir//", "mir/.", "mir/./", "other", "other/", "dangling", "dangling/"} {
+		dir := f.path(mir)
+		f.wants(mir, f.mirror(f.path("nh"), dir), ExitRefused, "", "refusing: "+dir+" is a symlink, not a directory made by this script\n")
+		f.unchanged(mir, "", before)
 	}
-}
-
-// TestSymlinkedMirrorDirWithSlash: the same link spelled with a final slash names its target: the target
-// is emptied and rebuilt as the mirror, and the link stays.
-func TestSymlinkedMirrorDirWithSlash(t *testing.T) {
-	f := newFixture(t)
-	f.touch("real/"+Marker, "real/old/file")
-	f.symlink("real", "mir")
-	f.wants("link/", f.mirror(f.path("nh"), f.path("mir")+"/"), ExitOK, "mirror ready: "+f.path("mir")+"/  (3 jars linked, modules/ writable, excluded: none)\n", "")
-	if target, err := os.Readlink(f.path("mir")); err != nil || target != "real" {
-		t.Errorf("mir is no longer the link: %q %v", target, err)
-	}
-	got := f.tree("real")
-	if strings.Contains(got, "real/old") || !strings.Contains(got, "real/modules/baja.jar L") || !strings.Contains(got, "real/"+Marker) {
-		t.Errorf("the target was not rebuilt as the mirror:\n%s", got)
-	}
+	f.wants("loopa", f.mirror(f.path("nh"), f.path("loopa")), ExitRefused, "",
+		"refusing: mirror dir cannot be resolved (a link loop or a directory that cannot be searched): "+f.path("loopa")+"\n")
+	f.unchanged("loopa", "", before)
 }

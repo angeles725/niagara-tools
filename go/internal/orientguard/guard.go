@@ -14,6 +14,10 @@ func Main(args []string, s cli.Stdio) int {
 		fmt.Fprint(s.Err, msgUsage)
 		return ExitUsage
 	}
+	if optionLike(args[0]) { // a mistyped flag is never judged as a path
+		fmt.Fprintf(s.Err, msgOption, args[0], args[0])
+		return ExitUsage
+	}
 	row := func(status, detail string, a ...any) {
 		fmt.Fprintf(s.Out, rowFormat, status, tool, fmt.Sprintf(detail, a...))
 	}
@@ -33,19 +37,19 @@ func Main(args []string, s cli.Stdio) int {
 	case s.Env(OverrideEnv) == OverrideOn:
 		row(warn, detailOther, path)
 	default:
-		row(fail, detailFail, path, byDefault)
+		row(fail, detailFail, path, prefix) // the prefix that was compared
 		return ExitFail
 	}
 	return ExitOK
 }
 
-// defaultPrefix is the legal prefix below home ("" without one). One final slash of home is dropped, as
-// the bash tool's ${HOME%/} did.
+// defaultPrefix is the legal prefix below home ("" without one). Every final slash of home is dropped, so
+// a home of "/x//" gives "/x/modulos_niagara_n4/Cliente/" (the bash tool's ${HOME%/} dropped only one).
 func defaultPrefix(home string) string {
 	if home == "" {
 		return ""
 	}
-	return strings.TrimSuffix(home, "/") + legalSuffix
+	return strings.TrimRight(home, "/") + legalSuffix
 }
 
 // withSlash is p ending in a slash.
@@ -64,30 +68,22 @@ func under(path, prefix string) bool {
 
 // locate is the path the rows name for arg and whether it is under prefix.
 //
-// A resolved path (canonical) decides by itself. A path that cannot be resolved is compared as given,
-// as the bash tool did when realpath failed; but its text alone never passes: what does resolve of it
-// (reachable) must stay under prefix too, else the row names where it leads.
+// The longest existing ancestor of arg is resolved (every symlink followed) and the rest is applied by its
+// text (reachable), so a new directory several levels deep inside the prefix passes, and a ".." after a
+// missing directory is judged where it leads. A path that cannot be judged at all (a link loop, a directory
+// that cannot be searched, an empty argument) fails closed and the row names it as given.
 func locate(arg, prefix string) (path string, inside bool) {
 	cwd, _ := syscall.Getwd() // the physical directory, as realpath reads it
-	if optionLike(arg) {
-		return arg, under(arg, prefix)
-	}
 	if path, ok := canonical(arg, cwd); ok {
 		path = strings.TrimRight(path, "\n") // lost in the bash tool's $(realpath …)
 		return path, under(path, prefix)
-	}
-	if !under(arg, prefix) {
-		return arg, false
 	}
 	leads, ok := reachable(arg, cwd)
 	if !ok {
 		return arg, false
 	}
-	if !under(leads, prefix) {
-		return leads, false
-	}
-	return arg, true
+	return leads, under(leads, prefix)
 }
 
-// optionLike reports an argument realpath and cd took as an option: the bash tool compared it as given.
+// optionLike reports an argument that starts with a dash ("-" alone is a path): a usage error.
 func optionLike(arg string) bool { return strings.HasPrefix(arg, "-") && arg != "-" }

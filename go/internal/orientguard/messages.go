@@ -7,7 +7,7 @@ package orientguard
 const (
 	ExitOK    = 0 // a PASS row, or a WARN row under the override
 	ExitFail  = 1 // a FAIL row
-	ExitUsage = 3 // usage error, or no HOME to derive the default prefix from
+	ExitUsage = 3 // usage error (an option-like argument too), or no HOME to derive the default prefix from
 )
 
 // The environment the guard reads.
@@ -34,10 +34,11 @@ const rowFormat = "%-4s  %-12s  %s\n"
 
 const tool = "orient-guard"
 
-// Texts: the row details are fmt formats, the other two go to stderr as they are.
+// Texts: the row details and msgOption are fmt formats; msgUsage and msgNoHome go to stderr as they are.
 const (
 	msgUsage    = "usage: orient-guard.sh <module-root>\n"
 	msgNoHome   = "orient-guard: HOME is not set; cannot derive the legal root\n"
+	msgOption   = "orient-guard: %s looks like an option, not a module root; spell a path that starts with - as ./%s\n"
 	detailSeam  = "non-default legal root %s (test seam)"
 	detailOther = "non-standard path: %s"
 	detailFail  = "%s — must be under %s; set " + OverrideEnv + "=" + OverrideOn + " to override"

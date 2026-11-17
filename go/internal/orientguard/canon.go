@@ -20,6 +20,10 @@ func canonical(name, cwd string) (string, bool) { return resolve(name, cwd, fals
 // directory that cannot be searched).
 func reachable(name, cwd string) (string, bool) { return resolve(name, cwd, true) }
 
+// Reachable is reachable for other path guards (the mirror tool's guard A runs on it before it creates
+// anything): the longest existing ancestor of name resolved, the rest applied by its text.
+func Reachable(name, cwd string) (string, bool) { return reachable(name, cwd) }
+
 // resolve walks name one component at a time, as gnulib's canonicalize does.
 func resolve(name, cwd string, pastMissing bool) (string, bool) {
 	if name == "" {

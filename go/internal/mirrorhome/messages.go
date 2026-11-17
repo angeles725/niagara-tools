@@ -34,6 +34,8 @@ const (
 	msgInsideSrc   = "refusing: mirror dir is the source install or inside it: %s\n"
 	msgContainsSrc = "refusing: mirror dir contains the source install: %s\n"
 	msgNotDir      = "refusing: %s exists and is not a directory\n"
+	msgLink        = "refusing: %s is a symlink, not a directory made by this script\n"
+	msgUnresolved  = "refusing: mirror dir cannot be resolved (a link loop or a directory that cannot be searched): %s\n"
 	msgNotMirror   = "refusing to wipe %s: non-empty and not a mirror made by this script (no " + Marker + ")\n"
 	msgRelative    = "refusing: source_niagara_home must be an absolute path (the mirror's links would dangle): %s\n"
 	msgFault       = "mirror-niagara-home: %s\n"

@@ -30,6 +30,31 @@ func TestGuardA(t *testing.T) {
 	f.wants("a name the source's starts", f.mirror(nh, nh+"2"), ExitOK, "mirror ready: "+nh+"2  (3 jars linked, modules/ writable, excluded: none)\n", "")
 }
 
+// TestGuardABeforeCreate: guard A judges a mirror dir that is not there yet before anything is created:
+// its longest existing ancestor resolved, the rest by its text. A refused mirror dir leaves no directory
+// behind, whichever way it reaches the source; one that cannot be resolved is refused (fail closed).
+func TestGuardABeforeCreate(t *testing.T) {
+	f := newFixture(t)
+	f.symlink("nh", "link")
+	f.symlink("loopb", "loopa")
+	f.symlink("loopa", "loopb")
+	nh := f.path("nh")
+	before := f.tree("")
+	inside := "refusing: mirror dir is the source install or inside it: "
+	cases := []struct{ name, mir, refusal string }{
+		{"two missing levels inside", nh + "/new/deeper/mir", inside},
+		{"through a link to the source", f.path("link/new/mir"), inside},
+		{"dot-dot after missing directories", f.path("away/x/../../nh/new/mir"), inside},
+		{"below a link loop", f.path("loopa/new/mir"), "refusing: mirror dir cannot be resolved (a link loop or a directory that cannot be searched): "},
+	}
+	for _, c := range cases {
+		f.wants(c.name, f.mirror(nh, c.mir), ExitRefused, "", c.refusal+c.mir+"\n")
+		f.unchanged(c.name, "", before)
+	}
+	f.wants("dot-dot out of the source", f.mirror(nh, nh+"/new/../../out/mir"), ExitOK,
+		"mirror ready: "+nh+"/new/../../out/mir  (3 jars linked, modules/ writable, excluded: none)\n", "")
+}
+
 // TestGuardB: an existing mirror dir is wiped only when it is empty or holds the marker file.
 func TestGuardB(t *testing.T) {
 	f := newFixture(t)

@@ -18,19 +18,31 @@ func (m *mirror) checkSource() int {
 // guardSource is guard A: the mirror dir is never the source install, a place inside it, or a place
 // around it. Both are compared resolved and by whole components (the final slash).
 func (m *mirror) guardSource() int {
-	src, dir := m.srcAbs+"/", m.dirAbs+"/"
-	if strings.HasPrefix(dir, src) {
-		return m.stop(ExitRefused, msgInsideSrc, m.dir)
-	}
-	if strings.HasPrefix(src, dir) {
-		return m.stop(ExitRefused, msgContainsSrc, m.dir)
+	if refusal := sourceRefusal(m.srcAbs, m.dirAbs); refusal != "" {
+		return m.stop(ExitRefused, refusal, m.dir)
 	}
 	return proceed
 }
 
+// sourceRefusal is guard A's message for a resolved mirror dir against the resolved source ("" when it
+// passes): the source or inside it, or around it, by whole components (the final slash).
+func sourceRefusal(srcAbs, dirAbs string) string {
+	src, dir := strings.TrimSuffix(srcAbs, "/")+"/", strings.TrimSuffix(dirAbs, "/")+"/"
+	switch {
+	case strings.HasPrefix(dir, src):
+		return msgInsideSrc
+	case strings.HasPrefix(src, dir):
+		return msgContainsSrc
+	}
+	return ""
+}
+
 // guardWipe is guard B: an existing mirror dir is wiped only when it is a directory that is empty or
-// holds the marker file this tool writes.
+// holds the marker file this tool writes. A symlink is never one, whatever its spelling or target.
 func (m *mirror) guardWipe() int {
+	if isLink(m.dir) {
+		return m.stop(ExitRefused, msgLink, m.dir)
+	}
 	if !m.exists {
 		return proceed
 	}
@@ -45,4 +57,19 @@ func (m *mirror) guardWipe() int {
 		return m.stop(ExitRefused, msgNotMirror, m.dir)
 	}
 	return proceed
+}
+
+// isLink reports whether dir names a symlink however it is spelled: final slashes and final "/." are
+// dropped before the link itself is looked at (Lstat), so "link/" and "link/." are the link too.
+func isLink(dir string) bool {
+	name := dir
+	for {
+		trimmed := strings.TrimSuffix(strings.TrimRight(name, "/"), "/.")
+		if trimmed == name || trimmed == "" {
+			break
+		}
+		name = trimmed
+	}
+	st, err := os.Lstat(name)
+	return err == nil && st.Mode()&os.ModeSymlink != 0
 }

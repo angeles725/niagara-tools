@@ -82,3 +82,22 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ -f "$TMPDIR_T/mir/.niagara-mirror" ]
   [ ! -e "$TMPDIR_T/nh/.mirror-user-home" ]
 }
+
+@test "M7: a refused mirror dir inside the source leaves no directory behind (guard A before create)" {
+  before="$(find "$TMPDIR_T/nh" | sort)"
+  run "$M" "$TMPDIR_T/nh" "$TMPDIR_T/nh/new/deeper/mir"
+  [ "$status" -eq 20 ]
+  [[ "$output" == *"inside it"* ]]
+  [ "$(find "$TMPDIR_T/nh" | sort)" = "$before" ]
+}
+
+@test "M8: a symlinked mirror dir is refused whatever its spelling; the link and its target are untouched" {
+  mkdir -p "$TMPDIR_T/real/old"; : > "$TMPDIR_T/real/.niagara-mirror"
+  ln -s real "$TMPDIR_T/mir"
+  for spelling in "$TMPDIR_T/mir" "$TMPDIR_T/mir/" "$TMPDIR_T/mir/."; do
+    run "$M" "$TMPDIR_T/nh" "$spelling"
+    [ "$status" -eq 20 ]
+    [[ "$output" == *"is a symlink"* ]]
+    [ -L "$TMPDIR_T/mir" ] && [ -d "$TMPDIR_T/real/old" ]
+  done
+}
