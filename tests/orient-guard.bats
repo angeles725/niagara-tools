@@ -247,5 +247,6 @@ teardown() {
   run --separate-stderr env BUILD_N4_LEGAL_ROOT_PREFIX="$PREFIX_DIR" "$SCRIPT" --help
   [ "$status" -eq 3 ]
   [ "$output" = "" ]
+  # shellcheck disable=SC2154  # $stderr is set by bats run --separate-stderr
   [[ "$stderr" == *"looks like an option"* ]]
 }
