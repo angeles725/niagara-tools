@@ -13,7 +13,7 @@ import (
 // to it. A re-created subtree gets one add per nested component and its links back as ops of
 // the same batch (Run); the read-back reports what the snapshot could not bring back.
 var Rollback = plan.Impl{ScopeOrds: func(*pyjson.Object) []any { return nil }, PlanWith: rollbackPlan,
-	Run: rollbackRuns, Inverse: rollbackInverse, Readback: rollbackReadbackAll}
+	Run: rollbackRuns, Inverse: rollbackInverse, Readback: rollbackReadbackCopies}
 
 // batchJournal is what the rollback reads of the journal (journal.Journal).
 type batchJournal interface {
@@ -35,11 +35,13 @@ type rollbackData struct {
 	hasCreated                    bool
 	skipped                       []any
 	report                        *pyjson.Object
+	copies                        []any // per-copy verdicts of an in-doubt replication's rollback (rollback_replica.go)
 }
 
 // rollbackPlan is _rollback_plan: the journal checks, the station check of every recorded
 // target under today's scope, the unchanged-since check of restored slots, then one add per
-// nested component, the budget and the scope of every re-created component and relink end.
+// nested component and the scope of every re-created component and relink end (no budget: a
+// rollback is outside --max-writes, plan.spendsBudget).
 func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *session.Session) (*plan.Planned, error) {
 	j, ok := w.Journal.(batchJournal)
 	if !ok {
@@ -48,7 +50,7 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 	bidArg, _ := args.Get("batch_id")
 	view, err := j.RollbackTarget(bidArg)
 	if err != nil {
-		return nil, err
+		return inDoubtReplicaOr(c, w, sess, j, bidArg, err)
 	}
 	bid := bidArg.(string)
 	if st := get(view, "station_name"); !box.PyEqual(st, sess.StationName) {
@@ -130,12 +132,7 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 			own = append(own, obj("nm", "v", "h", h, "n", n))
 		}
 	}
-	relinkWrites, outgoingWrites := len(relinks)*len(own), len(outgoing)*len(own)
-	frozenWrites := planFrozenConfig(c, ops, components)
-	if need := 1 + len(components) + frozenWrites + relinkWrites + outgoingWrites; w.WritesExecuted+need > w.MaxWrites {
-		return nil, plan.ToolError(budgetRefusal(need, len(components), frozenWrites, relinkWrites, outgoingWrites,
-			w.MaxWrites-w.WritesExecuted, w.MaxWrites))
-	}
+	planFrozenConfig(c, ops, components) // no budget check: a rollback is outside --max-writes (plan.spendsBudget)
 	if err := checkRestoredEnds(w, targets, ops, own, components, relinks); err != nil {
 		return nil, err
 	}

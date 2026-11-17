@@ -5,7 +5,6 @@ package blackbox
 
 import (
 	"slices"
-	"strings"
 	"sync"
 	"testing"
 )
@@ -64,16 +63,18 @@ func TestTheRelinkIntentIsOnDiskBeforeTheRelinkIsSent(t *testing.T) {
 	}
 }
 
-func TestARollbackWhoseRelinksExceedTheBudgetIsRefusedBeforeSending(t *testing.T) {
+// A rollback is outside --max-writes (retro 2026-11-17 Δ6): with the budget spent by the remove, it
+// still re-creates the group and its relinks and spends no write.
+func TestARollbackWithRelinksRunsWithTheBudgetSpent(t *testing.T) {
 	d := destructiveRig(t, nil)
-	d.restart(func(o *Options) { o.MaxWrites = 2 })
+	d.restart(func(o *Options) { o.MaxWrites = 1 })
 	nn, removed := d.removeGroup()
-	text := d.Srv.Err("n4_rollback", Args{"batch_id": removed["batch_id"]})
-	if !strings.Contains(text, "--max-writes") || !strings.Contains(text, "relink") {
-		t.Errorf("text = %s", text)
+	back := d.Srv.RunWrite("n4_rollback", Args{"batch_id": removed["batch_id"]})
+	if !slices.Contains(d.children(), nn) || back["relinks"] == nil {
+		t.Errorf("children = %v, rollback = %v", d.children(), back)
 	}
-	if slices.Contains(d.children(), nn) { // nothing was re-created
-		t.Errorf("children = %v", d.children())
+	if b, _ := back["write_budget"].(map[string]any); b["executed"] != float64(1) {
+		t.Errorf("write_budget = %v: the rollback must not spend a write", back["write_budget"])
 	}
 }
 

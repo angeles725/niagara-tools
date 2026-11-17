@@ -13,8 +13,8 @@ import (
 
 // rollbackRuns runs a rollback's follow-up ops in its own batch, after its top-level adds: the
 // nested components (_run_components), then the links between restored components
-// (_run_relinks). Each op is scope-checked, journaled before it is sent and counted against
-// the budget; a failure leaves the batch in-doubt and lists the components that exist now.
+// (_run_relinks). Each op is scope-checked and journaled before it is sent (a rollback is outside
+// --max-writes); a failure leaves the batch in-doubt and lists the components that exist now.
 func rollbackRuns(b *plan.Batch, p *plan.Planned, replies []any) (*plan.Runs, error) {
 	d, runs := p.Data.(*rollbackData), &plan.Runs{}
 	if len(d.components) == 0 && len(d.relinks) == 0 && len(d.outgoing) == 0 {
@@ -124,7 +124,6 @@ func runComponents(b *plan.Batch, d *rollbackData, base map[int]string) ([]any, 
 					return nil, withCreated(plan.InDoubtBecause(b.ID, "the component intent could not be written, "+
 						"nothing more was sent"), base, created)
 				}
-				b.State.WritesExecuted++
 				reply, err := b.Client.Sync(op)
 				if err != nil {
 					return nil, withCreated(plan.InDoubtOf(b.ID, err), base, created)

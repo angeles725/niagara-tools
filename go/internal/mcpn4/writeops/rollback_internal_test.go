@@ -293,7 +293,7 @@ func (r *trig) removed(t *testing.T) string {
 }
 
 // The registered n4_rollback re-creates the subtree one add per component, journaling each
-// before it is sent, skips frozen children, relinks, counts every op against the budget and
+// before it is sent, skips frozen children, relinks, spends no write of the budget (Δ6) and
 // reports the frozen gap: the verdict is partial.
 func TestRollbackOfARemoveRecreatesTypeSlotsAnnotationAndLinks(t *testing.T) {
 	r := newTRig(t, 200)
@@ -305,10 +305,8 @@ func TestRollbackOfARemoveRecreatesTypeSlotsAnnotationAndLinks(t *testing.T) {
 	if isErr || get(out, "verdict") != "partial" {
 		t.Fatalf("%s %s", text, pyjson.Repr(out))
 	}
-	// 1 batch + 6 nested adds (Src, Tgt, Sp, En, Sub, Deep; the two frozen proxyExts are
-	// skipped) + 1 relink
-	if got := r.state.WritesExecuted - before; got != 1+6+1 {
-		t.Errorf("writes executed %d, want 8", got)
+	if got := r.state.WritesExecuted - before; got != 0 {
+		t.Errorf("writes executed %d, want 0: a rollback is outside the budget", got)
 	}
 	want := []string{"intent", "component-intent", "component-intent", "component-intent", "component-intent",
 		"component-intent", "component-intent", "relink-intent", "result"}
@@ -329,14 +327,14 @@ func TestRollbackOfARemoveRecreatesTypeSlotsAnnotationAndLinks(t *testing.T) {
 	}
 }
 
-// A budget too small for the components and relinks is refused before anything is sent.
-func TestTheComponentBudgetIsCheckedBeforeAnythingIsSent(t *testing.T) {
-	r := newTRig(t, 10)
+// A rollback is outside --max-writes (retro 2026-11-17 Δ6): with the budget spent by the remove it
+// undoes, it still re-creates every component and link and spends no write.
+func TestARollbackRunsWithTheBudgetSpent(t *testing.T) {
+	r := newTRig(t, 1)
 	bid := r.removed(t)
-	sent := len(r.st.sent)
-	text, isErr, _ := r.call(t, "n4_rollback", obj("batch_id", bid))
-	if !isErr || !strings.Contains(text, "needs 10 write(s) (1 batch + 8 component(s) + 1 relink(s)) but only 9 remain (--max-writes 10)") || len(r.st.sent) != sent {
-		t.Fatalf("%v %s", isErr, text)
+	text, isErr, out := r.write(t, "n4_rollback", obj("batch_id", bid))
+	if isErr || get(out, "verdict") != "partial" || r.state.WritesExecuted != 1 {
+		t.Fatalf("%v %s, executed %d", isErr, text, r.state.WritesExecuted)
 	}
 }
 

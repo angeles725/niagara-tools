@@ -23,8 +23,8 @@ func linkOp(src, ss, tgt, ts any) *pyjson.Object {
 	return obj("ssc", "checkLinks", "arg", obj("s", src, "ss", ss, "t", tgt, "ts", ts, "c", true))
 }
 
-// sendLinks journals ops as the batch's relink intent before the first is sent, counts them
-// against the budget and sends them in order; each restored link's remove joins runs.Inverse
+// sendLinks journals ops as the batch's relink intent before the first is sent and sends them in
+// order (outside --max-writes, as every rollback op); each restored link's remove joins runs.Inverse
 // (targets[i] holds op i's link). A reply that cannot be read leaves the batch in-doubt.
 func sendLinks(b *plan.Batch, d *rollbackData, base map[int]string, ops, targets []any, runs *plan.Runs) ([]int, error) {
 	states := make([]int, len(ops))
@@ -35,7 +35,6 @@ func sendLinks(b *plan.Batch, d *rollbackData, base map[int]string, ops, targets
 		return nil, withCreated(plan.InDoubtBecause(b.ID, "nothing more was sent: the relink intent could "+
 			"not be written (components were re-created, links were not)"), base, d.created)
 	}
-	b.State.WritesExecuted += len(ops)
 	for i, op := range ops {
 		result, err := relinkResult(b.Client, get(op.(*pyjson.Object), "arg"))
 		if err != nil {

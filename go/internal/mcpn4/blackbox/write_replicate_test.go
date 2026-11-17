@@ -3,7 +3,8 @@ package blackbox
 // n4_replicate_points copies M points of one parent onto N target parents in one batch under one
 // confirmation token (field retro 2026-11-16, row U10: a client B field job spent 630 calls and
 // 39 minutes on 112 points, one token per copy, and ran out of budget). Each add is one write of
-// --max-writes: the dry run shows the count and is refused up front when it exceeds what remains.
+// --max-writes (its n4_rollback is outside the budget): the dry run shows the count and is refused up
+// front when it exceeds what remains.
 
 import (
 	"strings"
@@ -59,7 +60,7 @@ func TestAReplicationLargerThanTheRemainingBudgetIsRefusedUpFront(t *testing.T) 
 	d, _ := replicaRig(t, 3)
 	before := d.childNames(d.node("A"))
 	text := d.Srv.Err("n4_replicate_points", replicateArgs())
-	if !strings.Contains(text, "write budget too small") || !strings.Contains(text, "needs 5 write(s)") ||
+	if !strings.Contains(text, "write budget too small") || !strings.Contains(text, "needs 4 write(s)") ||
 		!strings.Contains(text, "only 3 remain") {
 		t.Errorf("refusal = %s", text)
 	}
@@ -77,24 +78,25 @@ func TestAReplicaThatWouldShadowAnExistingChildIsRefused(t *testing.T) {
 	}
 }
 
-// A replication keeps one write of the budget for its own n4_rollback: one that used the last write
-// could not be rolled back until the server restarted (verifier of #772, advisory 1).
-func TestAReplicationKeepsOneWriteForItsRollback(t *testing.T) {
-	d, _ := replicaRig(t, 4)
-	text := d.Srv.Err("n4_replicate_points", replicateArgs())
-	if !strings.Contains(text, "needs 5 write(s)") || !strings.Contains(text, "only 4 remain") ||
-		!strings.Contains(text, "1 kept for its n4_rollback") {
+// A replication of N adds needs N writes and its n4_rollback none (retro 2026-11-17 Δ6, superseding
+// #777's one write kept for the rollback): with the budget spent by the replication, the rollback still
+// removes every copy and leaves the count where it was.
+func TestAReplicationOfNAddsNeedsNWritesAndItsRollbackNone(t *testing.T) {
+	d, _ := replicaRig(t, 3)
+	if text := d.Srv.Err("n4_replicate_points", replicateArgs()); !strings.Contains(text, "this replication needs 4 write(s) but only 3 remain") {
 		t.Errorf("refusal = %s", text)
 	}
-	d2, _ := replicaRig(t, 5)
-	dry := d2.Srv.Dry("n4_replicate_points", replicateArgs())
-	done := d2.Srv.OK("n4_replicate_points", Execute(replicateArgs(), dry["confirmation_token"]))
+	d2, a := replicaRig(t, 4)
+	done := d2.Srv.RunWrite("n4_replicate_points", replicateArgs())
 	if done["verdict"] != "verified" {
 		t.Fatalf("verdict = %v (%v)", done["verdict"], done)
 	}
-	rb := d2.Srv.Dry("n4_rollback", Args{"batch_id": done["batch_id"]})
-	if rb["confirmation_token"] == nil {
-		t.Errorf("rollback dry run after a full replicate was refused: %v", rb)
+	back := d2.Srv.RunWrite("n4_rollback", Args{"batch_id": done["batch_id"]})
+	if back["verdict"] != "verified" || len(d2.childNames(d2.node(a.Name))) != 0 {
+		t.Errorf("rollback = %v, A holds %v", back, d2.childNames(d2.node(a.Name)))
+	}
+	if b, _ := back["write_budget"].(map[string]any); b["executed"] != float64(4) || b["remaining"] != float64(0) {
+		t.Errorf("write_budget = %v: the rollback must not spend a write", back["write_budget"])
 	}
 }
 

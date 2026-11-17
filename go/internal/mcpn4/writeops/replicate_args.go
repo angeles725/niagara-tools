@@ -9,8 +9,9 @@ import (
 )
 
 // maxReplicas bounds one replication (points x targets). Each add spends one write of --max-writes
-// (200 by default). A failure at add k leaves the batch in doubt with k copies on the station: n4_rollback
-// refuses an in-doubt batch, and its error lists the inverse ops to remove them by hand.
+// (200 by default); its rollback is outside the budget. A failure at add k leaves the batch in doubt: its
+// n4_rollback removes the copies the station accepted that the read-back finds as added, and keeps
+// add k and the ones never sent, each with its verdict (rollback_replica.go).
 const maxReplicas = 200
 
 // replicaTarget is one targets[] entry: the parent that receives the copies and, by source point

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
 // outgoingNote is the plan note of a rollback that re-creates n recorded outgoing links.
@@ -83,18 +82,4 @@ func laterWorkRefusal(bid, created string, batches, extras []string) string {
 	return "batch " + bid + " created " + created + "; rolling it back removes it with everything under it, and " +
 		strings.Join(found, "; ") + ". Roll back the later batches first (newest first) and remove by hand what no " +
 		"batch made, then retry; to drop it all instead, n4_remove_component it (its snapshot keeps an inverse): refusing"
-}
-
-// budgetRefusal is the refusal of a rollback the write budget cannot hold; the outgoing links are
-// named only when there are some (the Python port's text has none: native review R2-budget-label).
-func budgetRefusal(need, components, frozen, relinks, outgoing, left, max int) string {
-	links := fmt.Sprintf("%d relink(s)", relinks)
-	if frozen > 0 {
-		links = fmt.Sprintf("%d frozen config write(s) + ", frozen) + links
-	}
-	if outgoing > 0 {
-		links += fmt.Sprintf(" + %d outgoing link(s)", outgoing)
-	}
-	return fmt.Sprintf("%s: this rollback needs %d write(s) (1 batch + %d component(s) + %s) but only %d remain "+
-		"(--max-writes %d)", safety.ReasonBudgetSmall, need, components, links, left, max)
 }

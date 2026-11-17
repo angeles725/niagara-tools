@@ -66,7 +66,6 @@ func restoreFrozen(b *plan.Batch, d *rollbackData, spec *pyjson.Object, parent, 
 		"ops", ops)) != nil {
 		return plan.InDoubtBecause(b.ID, "the frozen-config intent could not be written, nothing more was sent")
 	}
-	b.State.WritesExecuted += len(ops)
 	var refused []any
 	for i, op := range ops {
 		_, err := b.Client.Sync(op)
