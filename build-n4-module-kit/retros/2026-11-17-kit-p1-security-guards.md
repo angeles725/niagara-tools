@@ -1,11 +1,11 @@
 <!-- review-status: pending -->
 <!-- module: kit -->
-<!-- deltas: 4 -->
+<!-- deltas: 6 -->
 # 2026-11-17 · kit · kit-p1-security-guards
 
 **Session**: open-deltas backlog rows OD004 (retro 2026-11-10-delivery-guards-and-ui-contrast Δ1) and OD005
 (retro 2026-11-10-mcpn4-history-batch-tools Δ6), both P1 security gaps.
-**Delta count**: 4
+**Delta count**: 6
 
 ## What happened
 The client-identifier guard ran only at pre-push, so a client name could sit in a local commit (and in its
@@ -42,6 +42,12 @@ with both servlet lints so they cannot drift apart.
   `BUser.getPermissions(Context)` / `getPermissionsFor(BIProtected)` (`BUser.java:810-840`),
   `BComponent.getPermissions(Context)` (`BComponent.java:896-903`). `[ev: corpus B612 §612.2]` `[ev: corpus B602 §602.3]`
 
+- Native review (lenses risk, resilience, reliability) approved the first candidate with advisory findings. Four
+  were hook defects, fixed in a follow-up commit (Δ5): `git commit -v` put the staged diff below the scissors line
+  into the scanned message, so scrubbing a name was refused (PC11 red before the fix); an empty array under
+  `set -u` aborts bash before 4.4; `git rev-parse --path-format` needs git 2.31; and the guard's own exit status is
+  now read before the SIGPIPE status of the line handed to it. `[ev: tests/pre-commit-client-guard.bats]`
+
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
@@ -49,3 +55,5 @@ with both servlet lints so they cannot drift apart.
 | Δ2 | APPLIED 2026-11-17. A servlet write template with the CSRF token and the permission on the TARGET, and a lint for `getPermissionsFor` misuse | `build-n4-module-kit/types/servlet-write.md` § `Template` | `[ev: tests/lint-servlet-write-guards.bats]` |
 | Δ3 | niagara-go `client-guard` takes a context word so a commit-time refusal does not say "push refused" / "pushed commits" | niagara-go `internal/clientguard/prepush.go` | `[ev: .githooks/pre-commit]` |
 | Δ4 | lint-servlet-write-guards reads the servlet's dispatch class too (a TreeRule), so a token check in a DUX1 router counts for its servlet | `go/internal/lint/rules/servletwriteguard/servletwriteguard.go` | `[ev: build-n4-module-kit/toolbelt/lint-servlet-write-guards.sh]` |
+| Δ5 | APPLIED 2026-11-17. The commit-msg guard drops the `commit -v` scissors section, and the hook runs on bash before 4.4 and git before 2.31 | `.githooks/pre-commit` | `[ev: tests/pre-commit-client-guard.bats]` |
+| Δ6 | lint-servlet-write-guards narrows `write` to component writes (a JDBC `setInt`, `List.set` or `AtomicReference.set` in web code WARNs today) and accepts a target check only when it names the written receiver or guards it in a condition | `go/internal/lint/rules/servletwriteguard/patterns.go` | `[ev: go/internal/lint/rules/servletwriteguard/testdata/truth-target-checks-1.txt]` |

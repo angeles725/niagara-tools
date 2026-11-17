@@ -18,7 +18,9 @@
 # cannot be written refuses the commit. Plain bash + git + client-guard: no Go build, so a work tree whose
 # Go code does not compile can still commit.
 #
-# Message mode strips comment lines (`git stripspace --strip-comments`) as git's default cleanup does.
+# Message mode drops the scissors section (`commit -v`) and the comment lines, as git's default editor cleanup
+# does; a '#' line that `git commit -m`/`-F` keeps (cleanup whitespace) is not seen here, the pre-push guard
+# still reads it.
 # Activated with scripts/install-hooks.sh (core.hooksPath .githooks); `git commit --no-verify` skips it,
 # and the pre-push guard still runs.
 #
@@ -58,9 +60,12 @@ if ! command -v client-guard >/dev/null 2>&1; then
   exit 0
 fi
 
-objects=$(git rev-parse --path-format=absolute --git-path objects) || refuse "cannot find the object store"
+# abs_dir <dir>: the directory as an absolute path (git rev-parse --path-format needs git 2.31; this does not)
+abs_dir() { (cd -- "$1" && pwd); }
+objects=$(git rev-parse --git-path objects) || refuse "cannot find the object store"
+objects=$(abs_dir "$objects") || refuse "cannot enter the object store $objects"
 index="${GIT_INDEX_FILE:-}"
-[ -n "$index" ] || index=$(git rev-parse --path-format=absolute --git-path index) || refuse "cannot find the index"
+[ -n "$index" ] || index=$(git rev-parse --git-path index) || refuse "cannot find the index"
 tmp=$(mktemp -d) || refuse "mktemp failed"
 trap 'rm -rf "$tmp"' EXIT
 # New objects go to the throwaway directory; the repository's objects stay readable as an alternate.
@@ -74,6 +79,7 @@ head=""
 if git rev-parse -q --verify 'HEAD^{commit}' >/dev/null; then
   head=$(git rev-parse --verify 'HEAD^{commit}') || refuse "cannot read HEAD"
 fi
+# Arrays are expanded as ${a[@]+"${a[@]}"}: bash before 4.4 calls an empty "${a[@]}" unbound under set -u.
 parents=()
 [ -z "$head" ] || parents=(-p "$head")
 
@@ -94,20 +100,24 @@ else
   else
     tree=$(git hash-object -w -t tree /dev/null) || refuse "cannot write the empty tree"
   fi
-  message=$(git stripspace --strip-comments < "$msgfile") || refuse "cannot read the message file"
+  # what git records by default: no comment lines and nothing from the scissors line on (`commit -v` puts the
+  # staged diff there), whatever the comment character
+  message=$(sed '/^. -\{24\} >8 -\{24\}$/,$d' "$msgfile" | git stripspace --strip-comments) \
+    || refuse "cannot read the message file"
   [ -n "$message" ] || exit 0   # an empty message: git aborts the commit itself
 fi
-snapshot=$(git commit-tree "$tree" "${parents[@]}" -m "$message") || refuse "cannot write the snapshot commit"
+snapshot=$(git commit-tree "$tree" ${parents[@]+"${parents[@]}"} -m "$message") || refuse "cannot write the snapshot commit"
 
 args=()
 if url=$(git remote get-url --push origin 2>/dev/null); then args=(origin "$url"); fi
 printf 'refs/heads/pre-commit %s refs/heads/pre-commit %s\n' "$snapshot" "${head:-0000000000000000000000000000000000000000}" \
-  | client-guard "${args[@]}"
+  | client-guard ${args[@]+"${args[@]}"}
 statuses=("${PIPESTATUS[@]}")
-[ "${statuses[0]}" -eq 0 ] || refuse "cannot hand the snapshot to client-guard"
+# the guard's own status first: a guard that exits before reading its stdin kills the printf with SIGPIPE
 if [ "${statuses[1]}" -ne 0 ]; then
   printf '%s: client-guard refused the %s (exit %d, above); commit refused — rewrite or unstage what it names\n' \
     "$hook" "$([ -z "$msgfile" ] && echo "staged changes" || echo "commit message")" "${statuses[1]}" >&2
   exit 1
 fi
+[ "${statuses[0]}" -eq 0 ] || refuse "cannot hand the snapshot to client-guard"
 exit 0

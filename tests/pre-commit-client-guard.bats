@@ -28,9 +28,12 @@ while read -r _ lsha _ rsha; do
   [ -n "$lsha" ] || continue
   printf 'line:%s %s\n' "$lsha" "$rsha" >> "$GUARD_LOG"
   revs=("$lsha"); case "$rsha" in *[!0]*) revs+=(--not "$rsha") ;; esac
-  out=$(git log -p -U0 --format='msg:%B' "${revs[@]}") || exit 2
+  # added lines of the patches (never the +++ header), and every line of every message
+  out=$(git log -p -U0 --format= "${revs[@]}") || exit 2
+  msgs=$(git log --format=%B "${revs[@]}") || exit 2
   printf '%s\n' "$out" >> "$GUARD_LOG.scan"
-  if grep -E '^(\+|msg:).*ZZDENY' <<<"$out" >/dev/null; then
+  printf '%s\n' "$msgs" >> "$GUARD_LOG.msgs"
+  if grep -E '^\+[^+].*ZZDENY|^\+ZZDENY' <<<"$out" >/dev/null || grep -q ZZDENY <<<"$msgs"; then
     echo "client-guard: f:1: rule #1 (commit ${lsha:0:10})" >&2; rc=1
   fi
 done
@@ -150,5 +153,17 @@ head_count() { git -C "$GR" rev-list --count HEAD 2>/dev/null || echo 0; }
   commit -m clean
   [ "$status" -eq 0 ]
   [[ "$output" == *"client-identifier check skipped"* ]]
+  [ "$(head_count)" -eq 2 ]
+}
+
+@test "PC11: commit -v: the staged diff git appends below the scissors line is not part of the message" {
+  with_guard
+  printf 'hello ZZDENY\n' > "$GR/f"; git -C "$GR" add f
+  run env PATH="$FAKEBIN:$(dirname "$(command -v git)"):/usr/bin:/bin" NIAGARA_CLIENT_DENYLIST="$DENYLIST" \
+    git -C "$GR" commit -q --no-verify -m base
+  [ "$status" -eq 0 ]
+  printf 'clean\n' > "$GR/f"; git -C "$GR" add f   # scrub the name: its removed line is in the -v diff
+  GIT_EDITOR=true commit -v -e -m "scrub a name"
+  [ "$status" -eq 0 ]
   [ "$(head_count)" -eq 2 ]
 }
