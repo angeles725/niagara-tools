@@ -89,7 +89,8 @@ func (c licenseClock) daysLeft(expires string) any {
 
 // LicenseInfo is n4_license_info.
 func (t *Tools) LicenseInfo(args *pyjson.Object) (*pyjson.Object, error) {
-	out, info, notes, err := t.licenseRead(intArg(args, "timeout_s", 60))
+	timeout := intArg(args, "timeout_s", 60)
+	out, info, notes, err := t.licenseRead(timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +107,7 @@ func (t *Tools) LicenseInfo(args *pyjson.Object) (*pyjson.Object, error) {
 			out.Set("note", joinNotes(notes))
 		}
 	}
+	t.licenseUsage(out, info, args, timeout)
 	t.recordRead("n4_license_info", "feature", args, rows)
 	return out, nil
 }

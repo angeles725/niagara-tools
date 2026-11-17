@@ -78,7 +78,12 @@ func createPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := typesKnown(c, typ, proxyExt); err != nil {
+	contracts, err := typesKnown(c, typ, proxyExt)
+	if err != nil {
+		return nil, err
+	}
+	licenceNote, err := deviceWithinLicence(c, contracts, typ)
+	if err != nil {
 		return nil, err
 	}
 	slots, data := []any{}, createData{parentH: h, proxyExt: proxyExt, children: childNames(nodes)}
@@ -91,6 +96,9 @@ func createPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, h)
 	notes := []any{"The station may rename on collision; the real inverse uses the assigned name."}
+	if licenceNote != "" {
+		notes = append(notes, licenceNote)
+	}
 	if data.children[name] {
 		notes = append([]any{fmt.Sprintf(msgNameTaken, pyjson.StrRepr(name), parentOrd)}, notes...)
 	}

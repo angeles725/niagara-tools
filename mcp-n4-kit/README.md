@@ -638,6 +638,20 @@ characters for a name, an expiry, a state or the host id; 64 for an attribute ke
 value), a feature keeps 30 attributes (`attributes_truncated`), 100 certificates and 100 licences
 are read (`certificates_count`, `licenses_count` when the page has more), every list also stops at
 a byte budget, and the whole reply stays under 2 MiB for any page up to the 2 MiB read cap.
+Licence usage and planning: the reply also carries `usage` (two BQL selects, read-only), one
+entry per global capacity rule of the `tridium:globalCapacity` feature: `{rule, used, limit,
+headroom, excluded_modules, note?}` for `devices` and `points`. `used` counts as the station's own
+capacity recount does (`com.tridium.sys.metrics.Metrics`): every `driver:Device` (devices) or
+`driver:ProxyExt` (proxy points) station-wide, less those whose type's module the licence lists in
+`excludedDevices` / `excludedPoints`. `limit` is `device.limit` / `point.limit`, `null` when the
+licence states `none`, states no limit, or has no global capacity feature, and `null` with a
+`note` when it cannot be read; `headroom` is `limit - used` (negative when already over). A count
+that cannot be read, or was cut, is `used: null` with a `note`, never a guess. Unlike the
+`n4_station_health` capacity tally, which only grows until a recount, this is what the station
+holds now. `plan: {add_devices?, add_points?}` adds `plan_result: {fits, over: [{rule, by}],
+note?}`: `fits` is false when a named rule would exceed its limit, `null` when a named rule's
+count or limit is unknown and none is surely over, true otherwise; an unlimited rule never fails a
+plan. Per-driver sub-group capacity features are not read.
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
 children of those types or of their subtypes (`history:HistoryExt` keeps every history extension)
@@ -1033,7 +1047,11 @@ Every write call goes through these layers:
    Before a token is issued the dry run refuses what it can check by reading:
    `n4_create_component` an unknown `type` or `proxy_ext` (one the station's type
    registry does not describe, named in the error instead of the station's generic
-   "Unable to process request"); `n4_create_link` a source or target slot that
+   "Unable to process request") and a device (a `driver:Device` subtype, as the type
+   registry describes it) whose module the licence does not exclude when the counted
+   devices already reach the `globalCapacity` `device.limit` (a device over the limit
+   is added but sits in fault at start; when the licence or the count cannot be read
+   the create is not refused and the plan says so in a note); `n4_create_link` a source or target slot that
    neither the component nor its type contract has (checked only when the station
    describes the type), and a link identical to one the target already has (same
    source handle, source slot and target slot). Whether the parent accepts a child
