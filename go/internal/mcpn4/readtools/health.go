@@ -66,6 +66,15 @@ func (t *Tools) StationHealth(args *pyjson.Object) (*pyjson.Object, error) {
 		totals.Set("rows_truncated", cut) // a cut query makes these lower bounds
 		out.Set("totals", totals)
 	}
+	if v, _ := args.Get("drivers"); v == true {
+		if len(failed) > 0 {
+			out.Set("drivers", nil)
+			out.Set("drivers_note", fmt.Sprintf(driversNote, strings.Join(failed, ", ")))
+		} else {
+			out.Set("drivers", driversSection(keyed["networks"], keyed["devices"], keyed["points"],
+				intArg(args, "max_bad", defaultMaxBad), cut))
+		}
+	}
 	capacity, err := t.healthCapacity(timeout, live)
 	if err != nil {
 		return nil, err

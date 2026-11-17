@@ -493,7 +493,18 @@ answer as a number counts under `unknown` and as not ok, never as ok. `points` a
 `proxy`, the points whose proxy extension is not `control:NullProxyExt` (the same query selects
 `proxyExt.type`; `proxy_unknown` appears when the station left that cell empty): a licence counts
 proxy points, not every control point. `totals` are the `n4_inventory` totals of the same rows,
-with `rows_truncated` when a query feeding them was cut. `capacity` is the Global Capacity table
+with `rows_truncated` when a query feeding them was cut. `drivers=true` (no extra request: it
+groups the rows of those three sections) adds `drivers`, driver health per network: each entry is
+`network` (its slot path), `name`, `type`, `status` (its flags), `enabled`, `devices` (its field
+devices, the local device left out: `total`, `down`, `fault`, `disabled` (the flag or `enabled`
+false), `unknown`), `points` (its proxy points only, a control point with `control:NullProxyExt`
+counting nowhere: `total`, `stale`, `fault`, `down`, `disabled`, `unknown`), and `devices_bad`
+(`{device, status}`, plus `enabled: false` when so) and `points_bad` (`{point, status}`), the ones
+in any category, up to `max_bad` each (default 20; `*_bad_truncated` says a list was cut). A status
+with several bits counts once in each of its categories. `drivers.totals` sums the networks and
+adds `unassigned_points` (proxy points under no network), `proxy_unknown` and `rows_truncated`;
+`drivers` is `null` with a `drivers_note` when one of the three sections failed.
+`capacity` is the Global Capacity table
 of the spy metrics page (`spy:/metrics`): `resources` (`type`, `used`, `limit`, `unlimited: true`
 where the station shows no limit, and `live`) and `recount` (when the capacity recount last ran
 or failed). The two counts of a resource are different things. `used` is the licence's own tally:

@@ -38,6 +38,18 @@ const (
 	proxyColumn   = "Proxy"
 )
 
+// The driver categories of the drivers section: a device and a proxy point counted per category
+// of its status, each once; disabledCategory also counts a device whose enabled is false.
+const disabledCategory = "disabled"
+
+var (
+	deviceCategories = []string{"down", "fault", disabledCategory}
+	pointCategories  = []string{"stale", "fault", "down", disabledCategory}
+)
+
+// defaultMaxBad caps each network's devices_bad and points_bad lists.
+const defaultMaxBad = 20
+
 // nullProxyExt is the proxy extension of a control point that is no proxy point: the licence
 // counts proxy points only.
 const nullProxyExt = "control:NullProxyExt"
@@ -70,5 +82,6 @@ const (
 	capacityNoPageWhy = "capacity is read from " + capacitySource + ", which needs a station user allowed to read spy pages"
 	capacityFailed    = "the spy metrics page could not be read: %s"
 	totalsNote        = "the inventory totals need the networks, devices and points sections; failed: %s"
+	driversNote       = "the drivers section needs the networks, devices and points sections; failed: %s"
 	systemNoSlots     = "the SystemService at " + systemServiceOrd + " has none of the expected slots"
 )
