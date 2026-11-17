@@ -79,6 +79,10 @@ func (t *Tools) Connect(args *pyjson.Object) (*pyjson.Object, error) {
 			pyjson.StrRepr(expected), pyjson.Repr(stationName))
 	}
 	version, versionError := detectVersion(client)
+	if err := checkExpectedVersion(args, version); err != nil {
+		client.Close()
+		return nil, err
+	}
 	ctx.Session = session.NewSession(client, expected, client.BaseURL(), root, version, ctx.Scrub(versionError))
 	out := obj("station_name", expected, "base_url", client.BaseURL(), "root_handle", root, "mode", ctx.Mode())
 	ctx.AddTierReport(out, ctx.Session)

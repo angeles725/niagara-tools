@@ -183,7 +183,12 @@ Flags:
 
 - `--station NAME=URL` (repeatable): the only stations `n4_connect` may open. `URL`
   must be `https://`. Set NAME to the station's real `stationName`: `n4_connect`
-  checks it by default (override per call with `expected_station`).
+  checks it by default (override per call with `expected_station`). To pin the version too, pass
+  `expected_version` to `n4_connect` (the full version or a dotted prefix: `4.14` matches
+  `4.14.0.162`, `4.1` does not); a mismatch or an undetected version closes the session. When
+  two stations share a tunnel port, a per-station launcher (for example `site-run.sh`) should
+  connect with both, e.g. `n4_connect(station="JACE_SITE", expected_station="JACE_SITE",
+  expected_version="4.14.0.162")`, so the agent never assumes which station answered.
 - `--credential-env PREFIX`: env var prefix for `<PREFIX>_USER` / `<PREFIX>_PASSWORD`
   (default `MCP_N4`).
 - `--insecure-tls NAME` (repeatable): skip certificate verification for that
