@@ -69,8 +69,14 @@ func scoped(res Result, scope Scope, family string) Result {
 	return res
 }
 
-// checked reports whether a pointer of kind is checked on a card of scope: a prose repo path only on live
+// checkedPointers are the pointers of a card text checked on a card of scope: a prose repo path only on live
 // doctrine, since history keeps the name a file had when it was written.
-func checked(kind citeparse.Kind, scope Scope) bool {
-	return kind != citeparse.RepoPath || scope == Live
+func checkedPointers(text string, scope Scope) []citeparse.Pointer {
+	var out []citeparse.Pointer
+	for _, p := range citeparse.Card(text) {
+		if p.Kind != citeparse.RepoPath || scope == Live {
+			out = append(out, p)
+		}
+	}
+	return out
 }

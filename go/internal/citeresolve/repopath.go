@@ -52,3 +52,15 @@ func outsidePath(p citeparse.Pointer) (string, bool) {
 func outside(path string) Result {
 	return Result{Status: OutsideRepo, Detail: path + " is outside the repository: cite a repo-relative path, or record it as live evidence (`[ev: live read of …]`)"}
 }
+
+// OutsideRepo is the status of an [ev: …] token that names a home or absolute path (machine-dependent): a
+// strict finding on live doctrine, HISTORICAL_DRIFT on a history card.
+const OutsideRepo Status = "OUTSIDE_REPO"
+
+// resolveInRepo is r's result for p, or OUTSIDE_REPO without any lookup when p is such a token.
+func resolveInRepo(r Resolver, p citeparse.Pointer, c *Card) Result {
+	if path, ok := outsidePath(p); ok {
+		return outside(path)
+	}
+	return r.Resolve(p, c)
+}
