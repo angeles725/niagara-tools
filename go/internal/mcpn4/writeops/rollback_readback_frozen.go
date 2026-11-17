@@ -18,8 +18,9 @@ const FrozenCheckDepth = 3
 
 // frozenCheck is _frozen_check: nil when the live frozen child holds the captured
 // configuration, else the gap. A station read error proves nothing either way: the gap carries
-// readback_error and no `missing`.
-func frozenCheck(c plan.Client, check *pyjson.Object) (*pyjson.Object, error) {
+// readback_error and no `missing`. The slots the plan ignored (transient, status) are not
+// compared; a readonly slot is (it is never written, so a difference stays a gap); the sets the station refused are listed in refused, with its reason.
+func frozenCheck(c plan.Client, check *pyjson.Object, refused []any) (*pyjson.Object, error) {
 	path := get(check, "path").(string)
 	head, leaf := rpartition(path)
 	body := get(check, "b").(*pyjson.Object)
@@ -50,10 +51,14 @@ func frozenCheck(c plan.Client, check *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, err
 	}
+	slots = without(slots, get(check, "ignored"))
 	if box.PyEqual(get(live, "t"), get(body, "t")) && len(slots) == 0 && box.PyEqual(get(live, "v"), get(body, "v")) {
 		return nil, nil
 	}
 	set(gap, "missing", false, "live_type", get(live, "t"), "slots", slots)
+	if len(refused) > 0 {
+		gap.Set("refused", refused)
+	}
 	return gap, nil
 }
 
@@ -136,6 +141,25 @@ func configV(live, slot *pyjson.Object) any {
 		return strings.SplitN(pyjson.Str(v), ";", 2)[0]
 	}
 	return v
+}
+
+// without is names less the ones listed in drop (a list of names, or nil).
+func without(names []any, drop any) []any {
+	skip, _ := drop.([]any)
+	if len(skip) == 0 {
+		return names
+	}
+	out := []any{}
+	for _, n := range names {
+		keep := true
+		for _, s := range skip {
+			keep = keep && s != n
+		}
+		if keep {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 func has(o *pyjson.Object, k string) bool { _, ok := o.Get(k); return ok }
