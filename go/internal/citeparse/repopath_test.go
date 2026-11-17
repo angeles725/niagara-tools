@@ -22,6 +22,9 @@ func TestCardRepoPaths(t *testing.T) {
 		{"a path with lines stays a path pointer", "`tests/kit.bats:12`", []brief{{1, Path, "tests/kit.bats", ":12"}}},
 		{"a tag is not prose", "[ev: tests/awk.bats AWB1]", []brief{{1, Path, "tests/awk.bats", "AWB1"}}},
 		{"a fenced block is skipped", "```\n`toolbelt/x.sh`\n```", nil},
+		{"text between two adjacent code spans is not a span", "`--src`go/x.sh`--y`", nil},
+		{"a span after a closed one is a span", "`a`b`toolbelt/x.sh`", []brief{{1, RepoPath, "toolbelt/x.sh", ""}}},
+		{"adjacent spans, the second a path", "`--src``go/x.sh`", []brief{{1, RepoPath, "go/x.sh", ""}}},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
