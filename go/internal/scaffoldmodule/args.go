@@ -21,6 +21,7 @@ func parseArgs(args []string) (options, *failure) {
 	valued := map[string]*string{
 		optVendor: &o.vendor, optTargetVersion: &o.targetVersion, optPluginVersion: &o.pluginVersion, optType: &o.typ,
 	}
+	pluginGiven := false
 	for rest := args[2:]; len(rest) > 0; rest = rest[2:] {
 		target, known := valued[rest[0]]
 		if !known {
@@ -31,6 +32,10 @@ func parseArgs(args []string) (options, *failure) {
 		}
 		*target = rest[1]
 		o.vendorGiven = o.vendorGiven || rest[0] == optVendor
+		pluginGiven = pluginGiven || rest[0] == optPluginVersion
+	}
+	if p, known := pluginForTarget[o.targetVersion]; known && !pluginGiven {
+		o.pluginVersion = p
 	}
 	return o, nil
 }
