@@ -27,6 +27,7 @@ var readTools = []string{
 	"n4_spy_page",
 	"n4_station_health",
 	"n4_read_history",
+	"n4_export_history",
 	"n4_read_audit",
 	"n4_histories_audit",
 	"n4_license_info",
