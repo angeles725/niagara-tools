@@ -27,6 +27,17 @@ func TestAnEnvFileMayNotSkipTheGateWithModeBOrAnotherGate(t *testing.T) {
 	}
 }
 
+// A CRLF env file is refused the same way: the carriage return is not a way around the MODE=B check.
+func TestACRLFEnvFileMayNotSkipTheGateWithModeB(t *testing.T) {
+	f := newFixture(t)
+	f.write(f.env, strings.ReplaceAll(f.read(f.env)+"MODE=B\n", "\n", "\r\n"))
+	code := f.run("--no-backup")
+	want := "[ng-deploy] ERROR env file " + f.env + ": line 10: MODE=B would switch the verify-module gate off, which an env file may not do: give --mode B on the command line\n"
+	if code != ExitEnv || f.err != want || f.calls() != "" {
+		t.Errorf("exit %d, stderr %q, calls %q", code, f.err, f.calls())
+	}
+}
+
 // What stays allowed: a MODE that keeps the gate, MODE=B when --mode is given (the flag wins over the file),
 // VERIFY_MODULE_BIN with --no-gate (the gate does not run) or from the environment of the command.
 func TestTheGateKeysStillWorkWhereTheyCannotSkipTheGate(t *testing.T) {

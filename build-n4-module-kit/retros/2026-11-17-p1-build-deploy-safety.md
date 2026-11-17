@@ -22,6 +22,11 @@ deploy could leave jars no check had passed where a station loads them.
   Foo-ux.jar left), `TestNoDeployIntoTheStationThatIsTheHomeModulesDirectoryIsRefused` (exit 0, gradle ran, the
   station holds the new jars), `TestAnEnvFileMayNotSkipTheGateWithModeBOrAnotherGate` (exit 0, `copy ok` with a
   failing gate).
+- Native review (risk, resilience, reliability) approved with non-blocking findings, handled in a follow-up
+  commit: the chain's restores and cleanup and the signal handler now share one mutex (`modulesMu`), so the
+  snapshot cannot be removed mid-restore and two restores cannot write one jar at once; the snapshot marks the
+  window open only once it is whole; SIGHUP got its test case. The claim that a CRLF env file slips `MODE=B` past
+  the guard was refuted (`envfile.TrimCR` strips during the read) and pinned by `TestACRLFEnvFileMayNotSkipTheGateWithModeB`.
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |

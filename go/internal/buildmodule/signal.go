@@ -14,8 +14,9 @@ var signalNames = map[syscall.Signal]string{syscall.SIGINT: "SIGINT", syscall.SI
 
 // cleanupOnSignal watches for SIGINT, SIGTERM and SIGHUP. When one arrives while modules/ may hold a jar that
 // has not passed the gate (from the baseline snapshot until the chain passed), the pre-build jars are put back
-// first, as a failing gate does (build-mod Δ6); then the temporary directory, which holds the snapshot, is
-// removed and the run ends as bash does for that signal. The returned function stops watching and waits for
+// first, as a failing gate does (retro go-build-module-port Δ6); then the temporary directory, which holds
+// the snapshot, is removed and the run ends as bash does for that signal. modulesMu keeps a restore or a
+// cleanup of the chain from running at the same time (command.go). The returned function stops watching and waits for
 // a handler in progress. A gradle that ignores the signal (it reaches only this process, as a kill of its
 // pid does) can still install its jar after the restore; a terminal's Ctrl-C reaches both.
 func (b *build) cleanupOnSignal() (stop func()) {
@@ -24,16 +25,18 @@ func (b *build) cleanupOnSignal() (stop func()) {
 	go func() {
 		defer close(done)
 		if sig, ok := <-ch; ok {
+			b.modulesMu.Lock() // held to the end: the chain's own restore or cleanup waits, then the run exits
 			b.undoUnverified(sig.(syscall.Signal))
-			b.cleanup()
+			b.cleanupHeld()
 			exitProcess(signalBase + int(sig.(syscall.Signal)))
+			b.modulesMu.Unlock() // reached only when a test replaced exitProcess
 		}
 	}()
 	return func() { signal.Stop(ch); close(ch); <-done }
 }
 
 // undoUnverified puts modules/ back as it was before the build when the run is interrupted between the
-// baseline snapshot and a passing chain; outside that window it does nothing.
+// baseline snapshot and a passing chain; outside that window it does nothing. The caller holds modulesMu.
 func (b *build) undoUnverified(sig syscall.Signal) {
 	if !b.unverified.Load() {
 		return
@@ -44,7 +47,7 @@ func (b *build) undoUnverified(sig syscall.Signal) {
 	}
 	b.warn(msgInterrupted, signalNames[sig])
 	for _, p := range b.profiles {
-		b.restoreBaseline(p, restoredPlain)
-		b.removeFirstDeploy(p)
+		b.restoreBaselineHeld(p, restoredPlain)
+		b.removeFirstDeployHeld(p)
 	}
 }

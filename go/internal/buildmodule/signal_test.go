@@ -20,14 +20,15 @@ func interruptGradle(t *testing.T, f *fixture, sig string, install string) (exit
 	return code
 }
 
-// A SIGINT or SIGTERM while gradle runs (after it installed the new jar into modules/, before the gate passed)
+// A SIGINT, SIGTERM or SIGHUP while gradle runs (after it installed the new jar into modules/, before the gate passed)
 // puts the pre-build jar back, takes out a jar that had no predecessor, then cleans up and ends with 128 +
-// the signal: an interrupted run must not leave an unverified jar where the station loads it (build-mod Δ6).
+// the signal: an interrupted run must not leave an unverified jar where the station loads it
+// (retro go-build-module-port Δ6).
 func TestASignalBeforeTheGateRestoresThePreBuildJars(t *testing.T) {
 	for _, tc := range []struct {
 		sig  string
 		code int
-	}{{"INT", 130}, {"TERM", 143}} {
+	}{{"INT", 130}, {"TERM", 143}, {"HUP", 129}} {
 		f := newFixture(t)
 		f.signs()
 		f.jar(f.deployed("rt"), "1.0.0", "old")

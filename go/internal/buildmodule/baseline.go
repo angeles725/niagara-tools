@@ -34,8 +34,8 @@ type snapshot struct {
 // byte, and the gate would silently pass on the retry (R4-drift-gate-not-retry-safe).
 // [ev: client A retro "defrost sequencing and HMI reload" Δ2]
 func (b *build) snapshotBaseline() int {
-	defer b.unverified.Store(true) // gradle runs next: from here on modules/ may hold an unverified jar
 	if b.opt.skipDrift {
+		b.unverified.Store(true) // gradle runs next: from here on modules/ may hold an unverified jar
 		return proceed
 	}
 	dir, code := b.makeTemp(true)
@@ -58,6 +58,7 @@ func (b *build) snapshotBaseline() int {
 		}
 		b.baseline[p] = snap
 	}
+	b.unverified.Store(true) // the snapshot is whole and gradle runs next (a failed one ends the chain)
 	return proceed
 }
 
@@ -127,6 +128,13 @@ func (b *build) copyPreserving(src, dst string) (reason string, code int) {
 // pre-build jar, or something else such as the new jar gradle's :jar step installed), because a bare retry
 // would snapshot a new jar as its own baseline.
 func (b *build) restoreBaseline(profile, restoredSuffix string) {
+	b.modulesMu.Lock()
+	defer b.modulesMu.Unlock()
+	b.restoreBaselineHeld(profile, restoredSuffix)
+}
+
+// restoreBaselineHeld is restoreBaseline for a caller that holds modulesMu (the signal handler).
+func (b *build) restoreBaselineHeld(profile, restoredSuffix string) {
 	snap, ok := b.baseline[profile]
 	if !ok {
 		return
@@ -153,6 +161,13 @@ func (b *build) restoreBaseline(profile, restoredSuffix string) {
 // and its signer the expected one. A profile that had a jar, or a run without the snapshot
 // (--no-drift-check), is left alone.
 func (b *build) removeFirstDeploy(profile string) {
+	b.modulesMu.Lock()
+	defer b.modulesMu.Unlock()
+	b.removeFirstDeployHeld(profile)
+}
+
+// removeFirstDeployHeld is removeFirstDeploy for a caller that holds modulesMu (the signal handler).
+func (b *build) removeFirstDeployHeld(profile string) {
 	dst := b.deployedJar(profile)
 	if !b.undeployed[profile] || !lint.IsFile(dst) {
 		return
