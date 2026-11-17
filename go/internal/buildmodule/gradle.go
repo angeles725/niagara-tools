@@ -26,7 +26,7 @@ func (b *build) runGradle() int {
 	if wd, err := os.Getwd(); err == nil {
 		cmd.Env = b.environ("OLDPWD="+wd, "PWD="+b.gradleRoot) // as after bash's `cd <gradle root>`
 	}
-	err := cmd.Run()
+	err := b.runTracked(cmd)
 	if err == nil {
 		return b.afterGradlePassed(log.String())
 	}

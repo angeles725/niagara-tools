@@ -45,6 +45,7 @@ type build struct {
 	// modulesMu serialises what puts modules/ back (restoreBaseline, removeFirstDeploy) and the removal of
 	// the snapshot (cleanup) between the chain and the signal handler, which holds it until the run ends.
 	modulesMu  sync.Mutex
+	gradle     gradleRun // the running gradle, which a signal stops before the restore (gradleproc.go)
 	baseline   map[string]snapshot
 	undeployed map[string]bool // the profiles with no jar in modules/ before gradle ran (a first deploy)
 	// unverified is set from the baseline snapshot until the chain passed: modules/ may then hold a jar the
