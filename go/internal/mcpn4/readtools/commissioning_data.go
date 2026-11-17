@@ -5,7 +5,11 @@ import "regexp"
 // What n4_commissioning_report reads, bounds and says (data only).
 
 // The report's sections, in reply order.
-var commSections = []string{"points", "histories", "alarms", "links", "naming", "station"}
+var commSections = []string{"points", "histories", "alarms", "links", "naming", "station", "spyder"}
+
+// commDefaultSections are the sections built when the caller names none: spyder is added only
+// when spyder_spec is given (a station without Spyders would only answer a failed query).
+var commDefaultSections = commSections[:6:6]
 
 // Defaults of the report (the registry schema bounds the arguments).
 const (
@@ -45,6 +49,8 @@ var commQueries = map[string]commQuery{
 		[]string{"Slot Path", "Name", "Type", "Class"}},
 	"classes": {"select slotPath, name, openAlarmCount, unackedAlarmCount from alarm:AlarmClass", alarmServiceOrd,
 		[]string{"Slot Path", "Name", "Open", "Unacked"}},
+	"spyders":   {spyderDeviceQuery, "", spyderDeviceColumns},
+	"spyder_io": {spyderIOQuery, "", spyderIOColumns},
 }
 
 const displayColumn = "Display"
