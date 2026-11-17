@@ -4,7 +4,8 @@ import "github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 
 // PlanKeys are the Planned.Keys a token authorizes: a truthy one joins the hashed plan, in
 // this order (_process).
-var PlanKeys = []string{"relinks", "unlinked_inputs", "components", "outgoing_links_broken", "snapshot_truncated"}
+var PlanKeys = []string{"relinks", "unlinked_inputs", "components", "outgoing_links_broken", "snapshot_truncated",
+	"incoming_links"}
 
 // IntentKeys are the Planned.Keys a truthy value of which the intent records.
 var IntentKeys = []string{"rollback_of", "relinks", "components"}

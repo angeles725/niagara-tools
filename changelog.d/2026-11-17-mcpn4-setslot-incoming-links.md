@@ -1,0 +1,2 @@
+### Added — mcp-n4: n4_set_slot dry run lists the links that will overwrite the value (OD001)
+- When links write the target slot, the plan carries `incoming_links` (`source_ord`, `source_slot`, `target_slot`, `enabled`) and a note that the written value is overwritten at the link's next update. The token covers the list, so a link added after the dry run refuses the execute. The write itself is still planned.
