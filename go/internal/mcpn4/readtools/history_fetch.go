@@ -65,7 +65,12 @@ func unreadable(id string, err error) error {
 
 // countHistory is the number of records the range holds, or nil and a note saying why not.
 func (t *Tools) countHistory(id, params string, timeout int) (any, string, int) {
-	ord, err := bql.ComposeHistoryOrd(id, params, bql.HistoryCountQuery)
+	return t.countHistoryWhere(id, params, "", timeout)
+}
+
+// countHistoryWhere is the number of records of the range that match where ("" for all).
+func (t *Tools) countHistoryWhere(id, params, where string, timeout int) (any, string, int) {
+	ord, err := bql.ComposeFilteredHistoryOrd(id, params, bql.HistoryCountQuery, where, "")
 	if err != nil {
 		return nil, err.Error(), 0
 	}
