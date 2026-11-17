@@ -2,7 +2,6 @@ package plan
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
@@ -73,9 +72,8 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	if tierBlock != "" && !dry {
 		return nil, "", ToolError(tierBlock)
 	}
-	if w.WritesExecuted >= w.MaxWrites {
-		return nil, "", ToolError(fmt.Sprintf("%s: %d writes already executed by this server process "+
-			"(--max-writes; a reconnect does not reset it)", safety.ReasonBudget, w.MaxWrites))
+	if spendsBudget(name) && w.WritesExecuted >= w.MaxWrites {
+		return nil, "", budgetRefusal(w.MaxWrites)
 	}
 	if err := checkScope(impl, w.Scope, args); err != nil {
 		return nil, "", err
@@ -122,7 +120,9 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 		return nil, "", ToolError("nothing was sent: the journal intent could not be written (batch " + batchID +
 			"); the confirmation token is spent, run the dry run again")
 	}
-	w.WritesExecuted++ // counted once sent, whatever the station answers
+	if spendsBudget(name) {
+		w.WritesExecuted++ // counted once sent, whatever the station answers
+	}
 	// From here on the batch exists: every failure is its in-doubt error, a panic (Python's
 	// unexpected exception) too.
 	out, err = jsonrpc.Recover(func() (*pyjson.Object, error) { return e.execute(client, impl, args, planned, batchID) })
@@ -130,6 +130,9 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	var refused *Refused
 	if err != nil && !errors.As(err, &doubt) && !errors.As(err, &refused) {
 		err = inDoubt(batchID, err)
+	}
+	if out != nil {
+		out.Set("write_budget", w.budgetReport())
 	}
 	return out, batchID, err
 }

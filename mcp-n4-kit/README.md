@@ -197,7 +197,10 @@ Flags:
 - `--auth-cooldown SECONDS`: after an authentication failure, refuse station calls this long
   (default and minimum 30, the lock-out window).
 - `--max-writes N`: executed writes allowed per server process (default 200; must be >= 1);
-  a reconnect does not reset it.
+  a reconnect does not reset it. `n4_save_station` neither needs nor spends a write, so a job
+  that spent the budget can still save; every write reply (dry run and execution) carries
+  `write_budget` `{executed, max, remaining, save_counts: false}`. Plan a bulk job against
+  `remaining`; restart the server for a new budget.
 - `--station-home NAME=PATH` (repeatable): directory holding the `config.bog` of configured
   station NAME; lets `n4_save_station` prove persistence (see Destructive tools).
 - `--niagara-home NAME=PATH` (repeatable): Niagara installation directory of configured station
@@ -788,7 +791,7 @@ Every write call goes through these layers:
    still works and carries `tier_gate` saying the execution would be refused. An
    undetected version is tier C. Tier A (4.13, 4.14) is unaffected.
 3. **Budget.** At most `--max-writes` executed writes per server process (a reconnect does
-   not reset it).
+   not reset it). The save is outside the budget; the refusal says so.
 4. **Scope.** Every target ORD must sit under a `--write-scope` prefix, matched on
    slot boundaries (`/A` does not cover `/AB`). With no prefix, every write is refused.
    Only plain slot ORDs pass: a `|` after `station:|slot:` (`|h:…`, `|slot:../…`) is
