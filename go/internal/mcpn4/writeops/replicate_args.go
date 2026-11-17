@@ -8,8 +8,9 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// maxReplicas bounds one replication (points x targets): a failure at add k leaves k copies to
-// roll back, and each add spends one write of --max-writes (200 by default).
+// maxReplicas bounds one replication (points x targets). Each add spends one write of --max-writes
+// (200 by default). A failure at add k leaves the batch in doubt with k copies on the station: n4_rollback
+// refuses an in-doubt batch, and its error lists the inverse ops to remove them by hand.
 const maxReplicas = 200
 
 // replicaTarget is one targets[] entry: the parent that receives the copies and, by source point
@@ -60,10 +61,11 @@ func replicaArgs(args *pyjson.Object) ([]string, []replicaTarget, error) {
 	for _, v := range targetList {
 		entry, _ := v.(*pyjson.Object)
 		o, _ := get(entry, "parent_ord").(string)
-		if strings.TrimSpace(o) == "" || ords[o] {
+		key := strings.TrimRight(strings.TrimSpace(o), "/") // "<ord>" and "<ord>/" name one parent
+		if key == "" || ords[key] {
 			return nil, nil, plan.ToolError("targets[].parent_ord must be distinct, non-empty ORDs; got " + pyjson.Repr(get(entry, "parent_ord")))
 		}
-		ords[o] = true
+		ords[key] = true
 		t, err := replicaCopies(o, get(entry, "copies"), seen)
 		if err != nil {
 			return nil, nil, err

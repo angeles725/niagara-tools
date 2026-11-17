@@ -59,7 +59,7 @@ func TestAReplicationLargerThanTheRemainingBudgetIsRefusedUpFront(t *testing.T) 
 	d, _ := replicaRig(t, 3)
 	before := d.childNames(d.node("A"))
 	text := d.Srv.Err("n4_replicate_points", replicateArgs())
-	if !strings.Contains(text, "write budget too small") || !strings.Contains(text, "needs 4 write(s)") ||
+	if !strings.Contains(text, "write budget too small") || !strings.Contains(text, "needs 5 write(s)") ||
 		!strings.Contains(text, "only 3 remain") {
 		t.Errorf("refusal = %s", text)
 	}
@@ -73,6 +73,38 @@ func TestAReplicaThatWouldShadowAnExistingChildIsRefused(t *testing.T) {
 	d.Add(a.Handle, "K2", "")
 	text := d.Srv.Err("n4_replicate_points", replicateArgs())
 	if !strings.Contains(text, "'K2' already exists under "+Folder+"/A") {
+		t.Errorf("refusal = %s", text)
+	}
+}
+
+// A replication keeps one write of the budget for its own n4_rollback: one that used the last write
+// could not be rolled back until the server restarted (verifier of #772, advisory 1).
+func TestAReplicationKeepsOneWriteForItsRollback(t *testing.T) {
+	d, _ := replicaRig(t, 4)
+	text := d.Srv.Err("n4_replicate_points", replicateArgs())
+	if !strings.Contains(text, "needs 5 write(s)") || !strings.Contains(text, "only 4 remain") ||
+		!strings.Contains(text, "1 kept for its n4_rollback") {
+		t.Errorf("refusal = %s", text)
+	}
+	d2, _ := replicaRig(t, 5)
+	dry := d2.Srv.Dry("n4_replicate_points", replicateArgs())
+	done := d2.Srv.OK("n4_replicate_points", Execute(replicateArgs(), dry["confirmation_token"]))
+	if done["verdict"] != "verified" {
+		t.Fatalf("verdict = %v (%v)", done["verdict"], done)
+	}
+	rb := d2.Srv.Dry("n4_rollback", Args{"batch_id": done["batch_id"]})
+	if rb["confirmation_token"] == nil {
+		t.Errorf("rollback dry run after a full replicate was refused: %v", rb)
+	}
+}
+
+// Two targets that name the same parent, one with a trailing slash, are one target (verifier of
+// #772, advisory 3: the station renamed the second copy and both landed under A).
+func TestATrailingSlashDoesNotMakeASecondTarget(t *testing.T) {
+	d, _ := replicaRig(t, 200)
+	args := Args{"source_parent_ord": Folder, "points": []any{"K1"}, "targets": []any{
+		map[string]any{"parent_ord": Folder + "/A"}, map[string]any{"parent_ord": Folder + "/A/"}}}
+	if text := d.Srv.Err("n4_replicate_points", args); !strings.Contains(text, "must be distinct") {
 		t.Errorf("refusal = %s", text)
 	}
 }

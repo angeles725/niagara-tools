@@ -82,12 +82,13 @@ func replicaPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.S
 			inverse = append(inverse, obj("nm", "v", "h", r.parent, "n", r.name))
 		}
 	}
-	if err := w.CheckRoom(len(ops), "this replication"); err != nil {
+	if err := w.CheckRoom(len(ops)+rollbackReserve, "this replication (1 kept for its n4_rollback)"); err != nil {
 		return nil, err
 	}
 	head := "replicates " + strconv.Itoa(len(points)) + " point(s) onto " + strconv.Itoa(len(targets)) +
 		" target(s): " + strconv.Itoa(len(ops)) + " add(s) in one batch under one confirmation token, " +
-		strconv.Itoa(len(ops)) + " write(s) of the budget (one per add; write_budget.remaining shows what is left)"
+		strconv.Itoa(len(ops)) + " write(s) of the budget (one per add; write_budget.remaining shows what is left), " +
+		"and it needs 1 more left over, kept for its n4_rollback"
 	notes = append([]any{head, "The station may rename on collision; the real inverse uses the assigned name."}, notes...)
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: handles, Data: d, Writes: len(ops)}, nil
 }
@@ -137,3 +138,7 @@ func prefixed(point string, notes []any) []any {
 	}
 	return out
 }
+
+// rollbackReserve is the write a replication leaves in the budget so that its own n4_rollback can still
+// run: one that spent the last write could be rolled back only after a server restart.
+const rollbackReserve = 1

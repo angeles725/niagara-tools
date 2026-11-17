@@ -93,7 +93,7 @@ func TestAReplicationOverTheRemainingBudgetIsRefusedInThePlan(t *testing.T) {
 	w := budget(5)
 	w.WritesExecuted = 4
 	_, err := writeops.ReplicatePoints.PlanWith(c, replicaArgs("T1", "T2"), w, nil)
-	if err == nil || !strings.Contains(err.Error(), "this replication needs 2 write(s) but only 1 remain") {
+	if err == nil || !strings.Contains(err.Error(), "this replication (1 kept for its n4_rollback) needs 3 write(s) but only 1 remain") {
 		t.Errorf("err = %v", err)
 	}
 }

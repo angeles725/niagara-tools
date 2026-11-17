@@ -1093,8 +1093,11 @@ Tool rules:
   `n4_copy_component` would add (address and `dataType` kept). Per target,
   `copies=[{"point": "Setpoint", "new_name": "SP", "data_address": "40010",
   "address_format": "modbus"}]` overrides one point's name and/or address in the same add.
-  Each add spends one `--max-writes` write: the plan notes the count and a replication larger
-  than `write_budget.remaining` is refused before any token. A child that already exists
+  Each add spends one `--max-writes` write: the plan notes the count and a replication that
+  would leave no write for its own `n4_rollback` (adds + 1 > `write_budget.remaining`) is refused
+  before any token. Two targets that differ only by a trailing `/` are one target (refused). A
+  failure at add k leaves the batch in doubt: `n4_rollback` refuses it and its error lists the
+  inverse ops to remove the k copies by hand. A child that already exists
   under a target with a copy's name is refused. The plan notes writable Modbus copies that
   would share a register on one device (the station resets the later one to `Hex:-1`) and
   writable points with a non-null fallback, as `n4_copy_component` does; points already on a
