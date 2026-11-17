@@ -2,6 +2,7 @@ package buildmodule
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -145,5 +146,17 @@ func TestAModuleRootThatCannotBeEnteredIsRefused(t *testing.T) {
 	}
 	if code := f.run("--install-into-home", f.dir+"/locked", "Foo", f.home); code != ExitEnv || f.err != "build.sh: cannot enter module root: "+f.dir+"/locked\n" {
 		t.Errorf("exit %d stderr %q", code, f.err)
+	}
+}
+
+// A relative niagara_home reaches gradle as an absolute path: gradle runs in the gradle root, where the
+// relative path names another directory or none (retro r9 bench Δ9, backlog OD017).
+func TestARelativeNiagaraHomeIsMadeAbsolute(t *testing.T) {
+	f := newFixture(t)
+	t.Chdir(filepath.Dir(f.home))
+	rel := filepath.Base(f.home)
+	f.wants("relative niagara_home", f.run("--install-into-home", f.root, "Foo", rel), ExitOK)
+	if !strings.Contains(f.call("gradlew"), "<-Pniagara_home="+f.home+">") {
+		t.Errorf("gradlew call %q, want the absolute %s", f.call("gradlew"), f.home)
 	}
 }
