@@ -14,7 +14,16 @@ func TestSchemaBaselineRefReplacesADanglingLeftover(t *testing.T) {
 	f.signs()
 	f.deployedRepo()
 	link := f.artifact("ux") + "/.deploy-baseline"
-	f.link(f.dir+"/tmp.gone/baseline", link)
+	// The leftover is a link a real run made: the first run's report copies it, and it is put back after that
+	// run removed it and its extraction, as a SIGKILL would have left it.
+	f.does(reportScript, `cp -P "$1/Foo-ux/.deploy-baseline" "`+f.dir+`/kept-link"`)
+	f.wants("first run", f.build("--schema-baseline-ref", "v1"), ExitOK)
+	if err := os.Rename(f.dir+"/kept-link", link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(link); err == nil {
+		t.Fatalf("the kept link is not dangling: %s", link)
+	}
 	f.seesBaselines("0")
 	f.wants("leftover", f.build("--schema-baseline-ref", "v1"), ExitOK,
 		"build.sh: INFO — removed "+link+", a dangling link a killed --schema-baseline-ref run left",
