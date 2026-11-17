@@ -26,9 +26,10 @@ func backupPlan(d *saveData, args *pyjson.Object) ([]any, error) {
 	}
 	d.backup = true
 	return []any{"after the save, " + d.home + " is zipped to " + d.w.StateDir + "/" + backupSubdir +
-		"/<station>-<UTC time>.zip (0600) without what the station's BackupService leaves out: files " +
+		"/<station>-<UTC time>.zip (0600) without what the BackupService leaves out by default: files " +
 		pyjson.Repr(stringsAny(backupExcludeFiles)) + " and the directories " + pyjson.Repr(stringsAny(backupExcludeDirs)) +
-		"; the zip holds config.bog as found on disk, so read persisted before relying on it"}, nil
+		"; the zip holds config.bog as found on disk, so read persisted before relying on it; a failed backup " +
+		"makes the verdict mismatch, with the reason in backup.error"}, nil
 }
 
 // backupAfterSave zips the station directory and reports it, or the failure as {error}.

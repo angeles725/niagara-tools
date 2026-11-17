@@ -1808,7 +1808,7 @@
   },
   {
    "name": "n4_save_station",
-   "description": "Save the station (persist the running config to disk). The BOX reply proves nothing; persisted is true/false/unknown from config.bog when the server has --station-home for this station. With backup=true (needs --station-home), after the save the station directory is zipped to <state-dir>/backups/<station>-<UTC time>.zip (0600) without what the station's BackupService leaves out (*.hdb, *.adb, *.lock, *backup*, console.*, config.bog.b*, config_backup*, and the history, alarm and webFileCache directories); the reply's backup gives path, files, bytes, sha256 and the excluded entries, or {error}. Use it before a destructive batch. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Save the station (persist the running config to disk). The BOX reply proves nothing; persisted is true/false/unknown from config.bog when the server has --station-home for this station. With backup=true (needs --station-home), after the save the station directory is zipped to <state-dir>/backups/<station>-<UTC time>.zip (0600) without what the BackupService leaves out by default (*.hdb, *.adb, *.lock, *backup*, console.*, config.bog.b*, config_backup*, and the history, alarm and webFileCache directories); the reply's backup gives path, files, bytes, sha256 and the excluded entries, or {error} with verdict mismatch. Use it before a destructive batch. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {

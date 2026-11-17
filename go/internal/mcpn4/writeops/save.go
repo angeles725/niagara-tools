@@ -84,7 +84,11 @@ func saveReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, 
 	requested, accepted, observed, verdict, err := savePersisted(c, args, p, replies, inverse)
 	if d := p.Data.(saveData); err == nil && d.backup {
 		requested.(*pyjson.Object).Set("backup", true)
-		observed.(*pyjson.Object).Set("backup", backupAfterSave(d))
+		b := backupAfterSave(d)
+		observed.(*pyjson.Object).Set("backup", b)
+		if _, failed := b.Get("error"); failed { // a backup was asked for and none exists: never a verified call
+			verdict = "mismatch"
+		}
 	}
 	return requested, accepted, observed, verdict, err
 }
