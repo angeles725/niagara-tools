@@ -1016,7 +1016,8 @@ Every write call goes through these layers:
    under its parent (scope `…/Sandbox`, `parent_ord` its parent, `name` `Sandbox`), so a
    scope can name a folder that does not exist yet; it is refused when that root already
    exists, since the station would rename the new one outside the scope. The same scope
-   can roll that create back (`n4_rollback` checks the created path, as the create did)
+   can roll that create back (`n4_rollback` checks the created path, as the create did;
+   only for an `n4_create_component` batch, never a copy, replicate or deploy named like the root)
    while nothing was written inside the root later; it cannot remove the root with
    `n4_remove_component`, which checks `parent_ord`, so a scope never deletes itself and
    its contents in one call: remove it later under a wider scope or by hand.
