@@ -25,7 +25,7 @@ func (d *deploy) guardHome() int {
 	if code := d.homeIsDir(home); code != proceed {
 		return code
 	}
-	if !modjar.IsMirror(home) && !modjar.IsMirror(home) && !d.isOn(optIntoHome) {
+	if !modjar.IsMirror(home) && !d.isOn(optIntoHome) {
 		return d.fail(ExitEnv, msgRealHome, home, modjar.MirrorMarker, intoHomeFlag)
 	}
 	if isDir(home + homeModules) { // else there is nothing there for gradle to replace

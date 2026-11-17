@@ -77,6 +77,12 @@ func TestTheGateIsToldTheSignerBuildShExpects(t *testing.T) {
 			f.deployed()
 			f.zipJar(withHome(f.t, f, true)+"/demo-rt.jar", signedBy("ACMESIGN"))
 		}, "ACMESIGN", ""},
+		{"no alias, the station is <NIAGARA_HOME>/modules: the jar there before the build, not the one it installed", func(f *fixture) {
+			noAlias(f)
+			modules := sameDir(f.t, f)
+			f.zipJar(modules+"/demo-rt.jar", signedBy("ACMESIGN"))
+			f.zipJar(f.builtJar("rt"), signedBy("OTHER")) // gradle installs it there before the gate runs
+		}, "ACMESIGN", ""},
 		{"no alias: a station jar of a profile outside the mode gives no signer", func(f *fixture) {
 			noAlias(f)
 			f.zipJar(f.modules+"/demo-wb.jar", signedBy("ACMESIGN"))
@@ -90,7 +96,7 @@ func TestTheGateIsToldTheSignerBuildShExpects(t *testing.T) {
 		if tc.signer != "" {
 			option = " <--expected-signer> <" + tc.signer + ">"
 		}
-		f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] gate ok\n[ng-deploy] copy ok\n")
+		f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] gate ok\n", "[ng-deploy] copy ok\n")
 		if want := "vm.sh <--src> <" + f.src + "/demo>" + option + " <" + f.builtJar("rt") + "> <" + f.builtJar("ux") + ">\n"; !strings.Contains(f.calls(), want) {
 			t.Errorf("%s: the gate call is not %q:\n%s", tc.name, want, f.calls())
 		}
