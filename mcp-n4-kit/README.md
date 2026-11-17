@@ -643,6 +643,26 @@ while it runs, so a jar it loaded changes only after a restart. Measured on Niag
 loaded parts of 740 jars, under 1 s with the installation on a local disk and 13 to 20 s through
 a mounted Windows drive.
 
+### Runbooks: MCP prompts and resources
+
+Besides its tools, the server offers three recurring procedures as MCP prompts (`prompts/list`,
+`prompts/get`) and as Markdown resources (`resources/list`, `resources/read`, URI
+`runbook://<name>`), in read-only and write mode alike; `initialize` advertises the `prompts` and
+`resources` capabilities. A client shows them as slash commands or attachable documents; the
+prompt fills the `{{argument}}` placeholders, the resource is the text as written.
+
+| Name | Arguments | What it walks through |
+|---|---|---|
+| `post-deploy-check` | `station` (required), `scope`, `module` | after a module deploy and restart: `n4_station_runtime` (`restart_needed`, module version), health deltas, new alarms, the commissioning summary; read-only |
+| `alarm-triage` | `station` (required), `source`, `since` | open alarms grouped by source and class, classes without a recipient, each event sized with `n4_event_report`, acknowledgements proposed, never performed without approval |
+| `commissioning` | `station`, `scope` (both required) | the commissioning report recipe below, every fix through dry run and token, save with persistence evidence |
+
+The runbooks are files under `go/internal/mcpn4/runbooks/files/` (front matter `title`,
+`description`, `arg name[!]: description [= default]`, then the body). A test refuses a runbook that
+names a tool the registry does not hold, a placeholder that is not a declared argument, or an
+argument never used. An unknown prompt or a missing required argument is a JSON-RPC invalid-params
+error; an unknown resource URI answers `-32002`.
+
 ### Finishing a job: the commissioning report
 
 `n4_commissioning_report(scope="station:|slot:/", sections=None, limit=20, expect_histories=None,

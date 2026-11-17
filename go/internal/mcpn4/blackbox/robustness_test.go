@@ -17,6 +17,11 @@ import (
 // recording (recorded before S17 removed that server; it cannot be re-recorded; its former kit
 // copy, tests/fixtures/oracles/protocol.json, was deleted in T9). Its tools/list reply holds
 // toolsMarker: assembleTools fills in the per-tool descriptors (toolsgolden_test.go).
+const (
+	pythonCapabilities = `"capabilities": {"tools": {"listChanged": false}}`
+	goCapabilities     = `"capabilities": {"tools": {"listChanged": false}, "prompts": {"listChanged": false}, "resources": {"listChanged": false}}`
+)
+
 func TestRepliesAreTheBytesThePythonServerWrites(t *testing.T) {
 	data, err := os.ReadFile("testdata/protocol.json")
 	if err != nil {
@@ -38,6 +43,9 @@ func TestRepliesAreTheBytesThePythonServerWrites(t *testing.T) {
 		if strings.Contains(want, toolsMarker) {
 			want = assembleTools(t, want, readTools)
 		}
+		// The Go server also serves the runbooks as prompts and resources (opportunity O8),
+		// which the recorded Python server never offered: its initialize bytes gain them.
+		want = strings.Replace(want, pythonCapabilities, goCapabilities, 1)
 		if got := s.Line(c[0]); got != want {
 			t.Errorf("%q:\n got %.200s\nwant %.200s", c[0], got, want)
 		}

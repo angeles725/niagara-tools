@@ -12,7 +12,8 @@ func TestInitializeReportsServerInfoAndCapabilities(t *testing.T) {
 	res := Start(t, Options{}).Request("initialize", Args{"protocolVersion": "2025-03-26"})
 	result, _ := res["result"].(map[string]any)
 	want := map[string]any{"serverInfo": map[string]any{"name": "mcp-n4", "version": serverVersion},
-		"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
+		"capabilities": map[string]any{"tools": map[string]any{"listChanged": false},
+			"prompts": map[string]any{"listChanged": false}, "resources": map[string]any{"listChanged": false}},
 		"protocolVersion": "2025-03-26"}
 	if res["id"] != 1.0 || !reflect.DeepEqual(result, want) {
 		t.Errorf("initialize = %v", res)
