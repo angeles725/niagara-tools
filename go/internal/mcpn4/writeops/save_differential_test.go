@@ -330,7 +330,7 @@ func saveOutcome(line string) string {
 	switch {
 	case strings.Contains(line, `"error"`):
 		return "error"
-	case strings.Contains(line, "to check persistence"):
+	case strings.Contains(line, "save jobs could not be read before the save"): // no home, no station client
 		return "no home"
 	case strings.Contains(line, "before the save; check"):
 		return "unreadable before"

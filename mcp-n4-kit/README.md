@@ -1232,8 +1232,17 @@ Destructive tools use the same pipeline:
   and proves nothing, so with `--station-home NAME=PATH` (directory holding
   `config.bog`, repeatable) the tool compares mtime and sha256 before and after,
   polling up to 30 s, and returns `persisted: true|false|unknown` plus the
-  `evidence`. Without a station home it returns `unknown` and says how to configure
-  it. It needs at least one `--write-scope` like every write.
+  `evidence`. A `config.bog` that is unreadable right after the save (the station
+  moves it to its backup before renaming `config.bog.working` over it) is read once
+  more after 1 s; `evidence.retry` records it. Without a station home the station's
+  own save job is the proof (the file servlet never serves `.bog` files): the tool
+  lists the `baja:StationSaveJob` children of `Services/JobService` before the save
+  and polls them after it; a new job that ends `success` gives `persisted: true`,
+  `failed` or `canceled` gives `false`, and no new job, a job still running at the
+  timeout or an unreadable JobService gives `unknown` with a `hint` that says why
+  (`evidence.route` is `station save job`, `evidence.job` the job). A station that is
+  already saving skips the new save, and a restart clears the jobs. It needs at least
+  one `--write-scope` like every write.
   `backup: true` is the backup before a destructive batch, in the same call: after the
   save the station directory (`--station-home`) is zipped to
   `<state-dir>/backups/<station>-<UTC time>.zip` (0600, never over an existing file)
