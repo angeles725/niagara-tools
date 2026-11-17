@@ -33,6 +33,7 @@ A-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
 A-rt  SKIP  lint-recovery-path  no src/
 A-rt  SKIP  lint-config-sanity  no src/
 A-rt  SKIP  lint-status-parity  no src/
+A-rt  SKIP  lint-servlet-write-guards  no src/
 A-rt  SKIP  lint-no-md5-credential-digest  no src/
 A-rt  SKIP  lint-size  no src/
 A-rt  SKIP  lint-license-isoperational-gate  no src/
@@ -56,7 +57,7 @@ SKIP
 ADVISORY  a  b  c
 random noise
 stderr noise
-report-module: 1 artifact · 10 PASS · 1 FAIL · 1 WARN · 35 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 10 PASS · 1 FAIL · 1 WARN · 36 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

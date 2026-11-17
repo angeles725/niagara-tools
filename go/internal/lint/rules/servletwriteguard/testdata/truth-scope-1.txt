@@ -1,0 +1,19 @@
+truth: only web code is read (a file that names BWebServlet, HttpServlet, WebOp or HttpServletRequest):
+a plain component's set() is out of scope (lint-null-context-write and others own it); a route handler
+class taking a WebOp is in scope (types/dashboard.md DUX1 moves writes there).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  no-target-permission  @DIR@/m/route/SetpointHandler.java:3  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+-- stderr --
+-- m/BLogic.java --
+class BLogic extends BComponent {
+  void onExecute(Context cx) { target.set(p, v, cx); }
+}
+-- m/route/SetpointHandler.java --
+final class SetpointHandler {
+  void handle(WebOp op) {
+    target.set(p, v, op);
+  }
+}

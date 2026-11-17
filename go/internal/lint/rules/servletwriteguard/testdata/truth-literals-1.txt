@@ -1,0 +1,15 @@
+truth: code shapes inside string literals and comments are not code: "getPermissionsFor(this)" in a
+message and a commented-out set() report nothing.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/A.java --
+class A extends BWebServlet {
+  void doGet(WebOp op) {
+    log("never call getPermissionsFor(this) here");
+    // target.set(p, v, op);
+    /* this.getPermissions(op) */
+  }
+}

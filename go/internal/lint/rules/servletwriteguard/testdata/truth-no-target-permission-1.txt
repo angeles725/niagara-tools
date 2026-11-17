@@ -1,0 +1,30 @@
+truth: a write with no permission check on a target earlier in the SAME method WARNs (the global
+OPERATOR_WRITE map of the user is not a target check, B763 §763.2 residual); a check in another
+method, or after the write (on a later line or later on the same line), guards nothing. --strict makes the WARN fail.
+-- args --
+--strict
+@DIR@/m
+-- want --
+exit 1
+WARN  no-target-permission  @DIR@/m/A.java:5  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:8  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:13  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:15  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+-- stderr --
+-- m/A.java --
+class A extends BWebServlet {
+  void doPost(WebOp op) {
+    CsrfUtil.verifyCsrfToken(op.getRequest());
+    if (!op.getUser().getPermissions().has(BPermissions.OPERATOR_WRITE)) return;
+    target.set(prop, v, op);
+  }
+  void late(WebOp op) {
+    target.setDouble(1.0);
+    if (!target.getPermissions(op).hasOperatorWrite()) return;
+  }
+  void check(WebOp op) { target.getPermissions(op).hasOperatorWrite(); }
+  void other(WebOp op) {
+    target.set(prop, v, op);
+  }
+  void same(WebOp op) { target.set(prop, v, op); target.getPermissions(op).hasOperatorWrite(); }
+}

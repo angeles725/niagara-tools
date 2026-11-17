@@ -31,6 +31,7 @@ A-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
 A-rt  SKIP  lint-recovery-path  no src/
 A-rt  SKIP  lint-config-sanity  no src/
 A-rt  SKIP  lint-status-parity  no src/
+A-rt  SKIP  lint-servlet-write-guards  no src/
 A-rt  SKIP  lint-no-md5-credential-digest  no src/
 A-rt  SKIP  lint-size  no src/
 A-rt  SKIP  lint-license-isoperational-gate  no src/
@@ -63,6 +64,7 @@ B-ux  SKIP  lint-service-types  no src/
 B-ux  SKIP  lint-driver-scaffold  no src/
 B-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
 B-ux  SKIP  lint-servlet  no src/
+B-ux  SKIP  lint-servlet-write-guards  no src/
 B-ux  SKIP  rc-scan  no src/rc/
 B-ux  SKIP  lint-no-md5-credential-digest  no src/
 B-ux  SKIP  lint-size  no src/
@@ -95,6 +97,7 @@ C-wb  SKIP  lint-intrinsic-lock  no src/
 C-wb  SKIP  lint-service-types  no src/
 C-wb  SKIP  lint-driver-scaffold  no src/
 C-wb  SKIP  lint-wb-external-ord-value  no src/
+C-wb  SKIP  lint-servlet-write-guards  no src/
 C-wb  SKIP  lint-wb-threading  no src/
 C-wb  SKIP  lint-no-md5-credential-digest  no src/
 C-wb  SKIP  lint-wb-file-chooser  no src/
@@ -128,6 +131,7 @@ D-se  SKIP  lint-intrinsic-lock  no src/
 D-se  SKIP  lint-service-types  no src/
 D-se  SKIP  lint-driver-scaffold  no src/
 D-se  SKIP  lint-se-display  no src/
+D-se  SKIP  lint-servlet-write-guards  no src/
 D-se  SKIP  lint-no-md5-credential-digest  no src/
 D-se  SKIP  lint-size  no src/
 D-se  SKIP  lint-license-isoperational-gate  no src/
@@ -158,6 +162,7 @@ E  SKIP  lint-lifecycle-guard  no src/
 E  SKIP  lint-intrinsic-lock  no src/
 E  SKIP  lint-service-types  no src/
 E  SKIP  lint-driver-scaffold  no src/
+E  SKIP  lint-servlet-write-guards  no src/
 E  SKIP  lint-no-md5-credential-digest  no src/
 E  SKIP  lint-size  no src/
 E  SKIP  lint-license-isoperational-gate  no src/
@@ -175,7 +180,7 @@ E  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from 
 (module)  PASS  lint-permissions-xml  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 5 artifacts · 9 PASS · 0 FAIL · 0 WARN · 162 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 5 artifacts · 9 PASS · 0 FAIL · 0 WARN · 167 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

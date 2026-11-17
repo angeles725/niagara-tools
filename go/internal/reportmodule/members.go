@@ -97,6 +97,8 @@ var perArtifact = []member{
 	{script: "lint-config-sanity", suffix: "-rt", f: failWarn, v: failRows},
 	{script: "lint-status-parity", suffix: "-rt", f: warnOnly},
 	{script: "lint-servlet", suffix: "-ux", special: (*report).servlet},
+	// retro 2026-11-10-mcpn4-history-batch-tools Δ6: the write guards of any artifact's web code (a servlet can live in -rt).
+	{script: "lint-servlet-write-guards", f: failWarn},
 	{script: "rc-scan", suffix: "-ux", special: (*report).rcScan},
 	{suffix: "-ux", special: (*report).eslint},
 	{script: "lint-vendor-floor", suffix: "-ux", special: (*report).vendorFloor},

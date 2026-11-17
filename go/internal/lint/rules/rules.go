@@ -49,6 +49,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servlet"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servletwriteguard"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sessionstore"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
@@ -80,6 +81,7 @@ func All() []lint.Spec {
 		extordvalue.Spec(),
 		servicetypes.Spec(),
 		servlet.Spec(),
+		servletwriteguard.Spec(),
 		silentprotection.Spec(),
 		nosystemout.Spec(),
 		uberjarapi.Spec(),

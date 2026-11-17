@@ -1,0 +1,24 @@
+truth: each accepted target check before the write clears no-target-permission: target.getPermissions(cx),
+cx.getUser().getPermissionsFor(target), ordTarget.canWrite(), the template's requireTargetWrite(...).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/A.java --
+class A extends BWebServlet {
+  void a(WebOp op) { CsrfUtil.verifyCsrfToken(op.getRequest()); if (target.getPermissions(op).hasOperatorWrite()) target.set(p, v, op); }
+  void b(WebOp op) {
+    if (!op.getUser().getPermissionsFor(target).hasOperatorWrite()) return;
+    target.set(p, v, op);
+  }
+  void c(WebOp op) {
+    OrdTarget t = ord.resolve(base, op);
+    if (!t.canWrite()) return;
+    ((BComponent) t.get()).set(p, v, op);
+  }
+  void d(WebOp op) {
+    if (!requireTargetWrite(target, p, op)) return;
+    target.setDouble(2.0);
+  }
+}

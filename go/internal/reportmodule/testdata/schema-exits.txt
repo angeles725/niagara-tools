@@ -26,6 +26,7 @@ N1  SKIP  lint-lifecycle-guard  no src/
 N1  SKIP  lint-intrinsic-lock  no src/
 N1  SKIP  lint-service-types  no src/
 N1  SKIP  lint-driver-scaffold  no src/
+N1  SKIP  lint-servlet-write-guards  no src/
 N1  SKIP  lint-no-md5-credential-digest  no src/
 N1  SKIP  lint-size  no src/
 N1  SKIP  lint-license-isoperational-gate  no src/
@@ -56,6 +57,7 @@ S0  SKIP  lint-lifecycle-guard  no src/
 S0  SKIP  lint-intrinsic-lock  no src/
 S0  SKIP  lint-service-types  no src/
 S0  SKIP  lint-driver-scaffold  no src/
+S0  SKIP  lint-servlet-write-guards  no src/
 S0  SKIP  lint-no-md5-credential-digest  no src/
 S0  SKIP  lint-size  no src/
 S0  SKIP  lint-license-isoperational-gate  no src/
@@ -86,6 +88,7 @@ S1  SKIP  lint-lifecycle-guard  no src/
 S1  SKIP  lint-intrinsic-lock  no src/
 S1  SKIP  lint-service-types  no src/
 S1  SKIP  lint-driver-scaffold  no src/
+S1  SKIP  lint-servlet-write-guards  no src/
 S1  SKIP  lint-no-md5-credential-digest  no src/
 S1  SKIP  lint-size  no src/
 S1  SKIP  lint-license-isoperational-gate  no src/
@@ -116,6 +119,7 @@ S2  SKIP  lint-lifecycle-guard  no src/
 S2  SKIP  lint-intrinsic-lock  no src/
 S2  SKIP  lint-service-types  no src/
 S2  SKIP  lint-driver-scaffold  no src/
+S2  SKIP  lint-servlet-write-guards  no src/
 S2  SKIP  lint-no-md5-credential-digest  no src/
 S2  SKIP  lint-size  no src/
 S2  SKIP  lint-license-isoperational-gate  no src/
@@ -146,6 +150,7 @@ S3  SKIP  lint-lifecycle-guard  no src/
 S3  SKIP  lint-intrinsic-lock  no src/
 S3  SKIP  lint-service-types  no src/
 S3  SKIP  lint-driver-scaffold  no src/
+S3  SKIP  lint-servlet-write-guards  no src/
 S3  SKIP  lint-no-md5-credential-digest  no src/
 S3  SKIP  lint-size  no src/
 S3  SKIP  lint-license-isoperational-gate  no src/
@@ -176,6 +181,7 @@ S4  SKIP  lint-lifecycle-guard  no src/
 S4  SKIP  lint-intrinsic-lock  no src/
 S4  SKIP  lint-service-types  no src/
 S4  SKIP  lint-driver-scaffold  no src/
+S4  SKIP  lint-servlet-write-guards  no src/
 S4  SKIP  lint-no-md5-credential-digest  no src/
 S4  SKIP  lint-size  no src/
 S4  SKIP  lint-license-isoperational-gate  no src/
@@ -206,6 +212,7 @@ S5  SKIP  lint-lifecycle-guard  no src/
 S5  SKIP  lint-intrinsic-lock  no src/
 S5  SKIP  lint-service-types  no src/
 S5  SKIP  lint-driver-scaffold  no src/
+S5  SKIP  lint-servlet-write-guards  no src/
 S5  SKIP  lint-no-md5-credential-digest  no src/
 S5  SKIP  lint-size  no src/
 S5  SKIP  lint-license-isoperational-gate  no src/
@@ -236,6 +243,7 @@ S6  SKIP  lint-lifecycle-guard  no src/
 S6  SKIP  lint-intrinsic-lock  no src/
 S6  SKIP  lint-service-types  no src/
 S6  SKIP  lint-driver-scaffold  no src/
+S6  SKIP  lint-servlet-write-guards  no src/
 S6  SKIP  lint-no-md5-credential-digest  no src/
 S6  SKIP  lint-size  no src/
 S6  SKIP  lint-license-isoperational-gate  no src/
@@ -253,7 +261,7 @@ S6  ERROR  schema-risk  unexpected exit 127
 (module)  PASS  lint-permissions-xml  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 8 artifacts · 10 PASS · 1 FAIL · 1 WARN · 234 SKIP · 0 ADVISORY  ->  ISSUES (+INCOMPLETE)
+report-module: 8 artifacts · 10 PASS · 1 FAIL · 1 WARN · 242 SKIP · 0 ADVISORY  ->  ISSUES (+INCOMPLETE)
 -- stderr --
 -- @kind --
 recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)

@@ -13,6 +13,8 @@ DemoPan-ux  PASS  lint-slotomatic-markers  clean
 DemoPan-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
 DemoPan-ux  FAIL  auth  BMyServlet.java:5  handler writes without getRemoteUser()/getUser() auth gate
 DemoPan-ux  WARN  unbounded-set  BMyServlet.java:5  typed set* in handler without MIN/MAX facet enforcement
+DemoPan-ux  WARN  no-target-permission  BMyServlet.java:5  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+DemoPan-ux  WARN  no-csrf  BMyServlet.java:4  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
 DemoPan-ux  SKIP  rc-scan  no src/rc/
 DemoPan-ux  PASS  lint-no-md5-credential-digest  clean
 DemoPan-ux  PASS  lint-size  clean
@@ -36,7 +38,7 @@ DemoPan-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run); create
 (module)  SKIP  lint-adapter-cfg-default  no *.java under a -rt part's src/
 (module)  SKIP  lint-ntpl-manifest-deps  no *.gradle.kts and no *.ntpl under the root
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 16 PASS · 1 FAIL · 2 WARN · 13 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 1 artifact · 16 PASS · 1 FAIL · 4 WARN · 13 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
