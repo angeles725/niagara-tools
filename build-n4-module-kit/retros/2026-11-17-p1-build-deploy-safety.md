@@ -1,11 +1,11 @@
 <!-- review-status: pending -->
 <!-- module: kit -->
-<!-- deltas: 6 -->
+<!-- deltas: 7 -->
 # 2026-11-17 · kit · p1-build-deploy-safety
 
 **Session**: P1 backlog rows OD002 (build-mod Δ6), OD003 (bench Δ23) and ng-deploy Δ12, three ways a build or
 deploy could leave jars no check had passed where a station loads them.
-**Delta count**: 3
+**Delta count**: 7
 
 ## What happened
 - build.sh: a SIGINT/SIGTERM/SIGHUP while gradle ran removed the temporary directory (which holds the baseline
@@ -37,6 +37,7 @@ deploy could leave jars no check had passed where a station loads them.
 | Δ4 | Open. A signal sent to build.sh's pid alone (not its process group) does not reach gradle, which can install its jar after the restore; the handler could kill and wait for the running gradle first | `go/internal/buildmodule/signal.go` · `gradle.go` | `[ev: code go/internal/buildmodule/signal.go]` |
 | Δ5 | Open. `SCHEMA_RISK_BIN` in the env file can put any executable in the place of the schema-risk precheck, the same shape as Δ3; decide whether to refuse it the same way | `go/internal/ngdeploy/envguard.go` | `[ev: code go/internal/ngdeploy/optiontable.go]` |
 | Δ6 | Open. build.sh's usage header (`toolbelt/build.sh`) does not say what an interrupt does; add the two lines `build-verify.md` now carries | `build-n4-module-kit/toolbelt/build.sh` | `[ev: code go/internal/buildmodule/signal.go]` |
+| Δ7 | Open. No test drives a signal while the chain itself is inside restoreBaseline, removeFirstDeploy or cleanup, so the `modulesMu` ordering is unpinned (native review of the follow-up, R3-001) | `go/internal/buildmodule/signal_test.go` | `[ev: code go/internal/buildmodule/signal.go]` |
 
 ## Lessons
 - A signal handler that runs beside the chain shares its state: anything it reads (temporary paths, the snapshot)
