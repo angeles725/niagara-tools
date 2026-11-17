@@ -108,8 +108,9 @@
 #   like a drift FAIL, and the gate is not run (METHODOLOGY K15). [ev: retro r10-slotomatic-skip-fail-open Δ1]
 # Interrupt: SIGINT, SIGTERM or SIGHUP from the baseline snapshot until the chain passed puts the pre-build
 #   modules/ jars back (a first-deploy jar is removed), then removes the temporary directory; exit 128 + the signal.
-#   The signal is first passed on to a running gradle, which is waited for (killed after 10 s), so a kill of
-#   build.sh's pid alone cannot let gradle install its jar after the restore. [ev: retro p1-build-deploy-safety Δ4]
+#   Before the restore the signal is passed on to the gradle the run started, which is waited for (killed after
+#   10 s), and no gradle starts after it. A gradle daemon (outside a mirror home) cancels on its own, so prefer
+#   interrupting the process group (Ctrl-C, kill -- -<pgid>). [ev: retro p1-build-deploy-safety Δ4]
 # Exit: 0 chain passed (or mirror restored) · 1 a copy the run needs failed (temporary dir, baseline, --restore-mirror) ·
 #   2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
 #   without --install-into-home, no profile) ·

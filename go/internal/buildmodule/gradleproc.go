@@ -1,6 +1,7 @@
 package buildmodule
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"sync"
@@ -9,24 +10,36 @@ import (
 )
 
 // gradleStopWait is how long the signal handler waits for gradle to end after passing the signal on, before
-// it kills it; a test may shorten it.
+// it kills it, and again after the kill; a test may shorten it.
 var gradleStopWait = 10 * time.Second
 
+// errInterrupted is runTracked's answer when a signal arrived before gradle could start: it is not started.
+var errInterrupted = errors.New("interrupted before gradle started")
+
 // gradleRun is the gradle the chain is running, so the signal handler can stop it before it puts modules/
-// back (retro p1-build-deploy-safety Δ4).
+// back (retro p1-build-deploy-safety Δ4). mu makes starting gradle and recording it one step, so a signal
+// either finds gradle recorded or stops it from starting.
 type gradleRun struct {
-	mu   sync.Mutex
-	proc *os.Process
-	done chan struct{} // closed when gradle has ended
+	mu       sync.Mutex
+	proc     *os.Process
+	done     chan struct{} // closed when gradle has ended
+	stopping bool          // a signal arrived: no gradle starts any more
 }
 
-// runTracked starts cmd, records it for the signal handler while it runs, and waits for it.
+// runTracked starts cmd, records it for the signal handler while it runs, and waits for it. WaitDelay bounds
+// the wait for gradle's output pipes once it ended, so a child that keeps them open cannot hang the run.
 func (b *build) runTracked(cmd *exec.Cmd) error {
+	cmd.WaitDelay = gradleStopWait
+	b.gradle.mu.Lock()
+	if b.gradle.stopping {
+		b.gradle.mu.Unlock()
+		return errInterrupted
+	}
 	if err := cmd.Start(); err != nil {
+		b.gradle.mu.Unlock()
 		return err
 	}
 	done := make(chan struct{})
-	b.gradle.mu.Lock()
 	b.gradle.proc, b.gradle.done = cmd.Process, done
 	b.gradle.mu.Unlock()
 	err := cmd.Wait()
@@ -37,11 +50,13 @@ func (b *build) runTracked(cmd *exec.Cmd) error {
 	return err
 }
 
-// stopGradle passes sig on to a running gradle and waits for it to end; one that is still running after
-// gradleStopWait is killed. A signal sent to build.sh's pid alone does not reach gradle, which could
-// otherwise install its jar after the restore. With no gradle running it does nothing.
+// stopGradle keeps any later gradle from starting, passes sig on to a running one and waits for it to end;
+// one still running after gradleStopWait is killed, and the wait after the kill is bounded too. The signal
+// reaches the gradle the run started (the wrapper's client); a gradle daemon, used outside a mirror home,
+// cancels its build on its own. With no gradle running it does nothing.
 func (b *build) stopGradle(sig syscall.Signal) {
 	b.gradle.mu.Lock()
+	b.gradle.stopping = true
 	proc, done := b.gradle.proc, b.gradle.done
 	b.gradle.mu.Unlock()
 	if proc == nil {
@@ -50,8 +65,12 @@ func (b *build) stopGradle(sig syscall.Signal) {
 	_ = proc.Signal(sig) // a gradle that already ended is not an error here
 	select {
 	case <-done:
+		return
 	case <-time.After(gradleStopWait):
-		_ = proc.Kill()
-		<-done
+	}
+	_ = proc.Kill()
+	select {
+	case <-done:
+	case <-time.After(gradleStopWait):
 	}
 }

@@ -1,7 +1,11 @@
 package buildmodule
 
 import (
+	"errors"
 	"os"
+	"os/exec"
+	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -28,6 +32,14 @@ func TestASignalReachesTheRunningGradleBeforeTheRestore(t *testing.T) {
 	}
 	if f.read(f.deployed("rt")) != before {
 		t.Errorf("modules/Foo-rt.jar is the jar gradle installed after the restore, not the pre-build one\nstderr: %s", f.err)
+	}
+	for _, text := range []string{
+		"build.sh: interrupted (SIGTERM) before the gate passed; putting modules/ back as it was before the build",
+		"  Restored the previously-deployed Foo-rt.jar into " + f.home + "/modules.",
+	} {
+		if strings.Count(f.err, text) != 1 {
+			t.Errorf("stderr should carry %q once:\n%s", text, f.err)
+		}
 	}
 }
 
@@ -57,5 +69,19 @@ func TestAGradleThatIgnoresTheSignalIsKilledBeforeTheRestore(t *testing.T) {
 	}
 	if f.read(f.deployed("rt")) != before {
 		t.Errorf("modules/Foo-rt.jar is the jar the unkilled gradle installed\nstderr: %s", f.err)
+	}
+}
+
+// Once a signal arrived, no gradle starts: one that would start after the handler looked finds the run
+// stopping, so it cannot install a jar after the restore either.
+func TestNoGradleStartsOnceASignalArrived(t *testing.T) {
+	b := &build{}
+	b.stopGradle(syscall.SIGTERM)
+	marker := t.TempDir() + "/ran"
+	if err := b.runTracked(exec.Command("touch", marker)); !errors.Is(err, errInterrupted) {
+		t.Errorf("runTracked after a signal: %v, want errInterrupted", err)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Error("gradle was started after the signal")
 	}
 }

@@ -204,8 +204,9 @@ Then `READY TO LOAD: <MOD> <version> for Niagara <x> (sha256 <12>)` when no row 
   snapshot until the chain passed does the same before the temporary directory goes (one `build.sh: interrupted
   (<signal>) before the gate passed; putting modules/ back as it was before the build` line, then the `Restored` /
   `Removed` lines, exit 128 + the signal); under `--no-drift-check` one line says `modules/` is left as the build left
-  it. The signal is first passed on to a running gradle, which is waited for (killed after 10 s) before the restore, so
-  a signal sent to build.sh's pid alone cannot let gradle install its jar afterwards
+  it. Before the restore the signal is passed on to the gradle the run started, which is waited for (killed after 10 s),
+  and no gradle starts after it; a gradle daemon (builds outside a mirror home, which use `--no-daemon`) cancels on its
+  own, so interrupting the process group stays the safe way
   `[ev: code go/internal/buildmodule/signal.go]` `[ev: retro go-build-module-port Δ6]`. The development signer is recognised in the
   compared form, so a deployed `niagara4.SF` is never expected either. The check compares the signature FILE NAME,
   not the certificate: two aliases that share their first 8 characters name the same file, and whether the key is
