@@ -111,7 +111,7 @@ func TestSymlinkedMirrorDir(t *testing.T) {
 	f.symlink("loopb", "loopa")
 	f.symlink("loopa", "loopb")
 	before := f.tree("")
-	for _, mir := range []string{"mir", "mir/", "mir//", "mir/.", "mir/./", "other", "other/", "dangling", "dangling/"} {
+	for _, mir := range []string{"mir", "mir/", "mir//", "mir/.", "mir/./", "missing/../mir", "other", "other/", "dangling", "dangling/", "missing/../dangling"} {
 		dir := f.path(mir)
 		f.wants(mir, f.mirror(f.path("nh"), dir), ExitRefused, "", "refusing: "+dir+" is a symlink, not a directory made by this script\n")
 		f.unchanged(mir, "", before)
@@ -124,4 +124,17 @@ func TestSymlinkedMirrorDir(t *testing.T) {
 	f.wants("loopa", f.mirror(f.path("nh"), f.path("loopa")), ExitRefused, "",
 		"refusing: mirror dir cannot be resolved (a link loop or a directory that cannot be searched): "+f.path("loopa")+"\n")
 	f.unchanged("loopa", "", before)
+}
+
+// TestMirrorReachedThroughMissingDir: a mirror made by this tool, spelled through a missing directory, is
+// wiped and rebuilt where the spelling leads; the missing directory is never made.
+func TestMirrorReachedThroughMissingDir(t *testing.T) {
+	f := newFixture(t)
+	f.touch("marked/"+Marker, "marked/old/file")
+	through := f.path("missing/../marked")
+	f.wants("through", f.mirror(f.path("nh"), through), ExitOK, "mirror ready: "+through+"  (3 jars linked, modules/ writable, excluded: none)\n", "")
+	got := f.tree("")
+	if strings.Contains(got, "marked/old") || !strings.Contains(got, "marked/modules/baja.jar L") || strings.Contains(got, "missing") {
+		t.Errorf("the mirror was not rebuilt in place, or the missing directory was made:\n%s", got)
+	}
 }

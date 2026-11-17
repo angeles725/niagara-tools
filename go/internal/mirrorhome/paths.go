@@ -61,7 +61,7 @@ func (m *mirror) resolve() int {
 		if code := m.guardAhead(); code != proceed {
 			return code
 		}
-		if isLink(m.dir) {
+		if m.isLink() {
 			return m.stop(ExitRefused, msgLink, m.dir)
 		}
 	}

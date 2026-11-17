@@ -42,7 +42,7 @@ func sourceRefusal(srcAbs, dirAbs string) string {
 // holds the marker file this tool writes. A symlink is never one, whatever its spelling or target. It looks
 // at at, where the mirror will be written (the message names the mirror dir as given).
 func (m *mirror) guardWipe() int {
-	if isLink(m.dir) {
+	if m.isLink() {
 		return m.stop(ExitRefused, msgLink, m.dir)
 	}
 	if !m.exists {
@@ -60,6 +60,10 @@ func (m *mirror) guardWipe() int {
 	}
 	return proceed
 }
+
+// isLink reports whether the mirror dir is a symlink, as spelled or where guard A judged it ("missing/../link"
+// keeps link lexically, unresolved).
+func (m *mirror) isLink() bool { return isLink(m.dir) || isLink(m.at) }
 
 // isLink reports whether dir names a symlink however it is spelled: final slashes and final "/." are
 // dropped before the link itself is looked at (Lstat), so "link/" and "link/." are the link too.
