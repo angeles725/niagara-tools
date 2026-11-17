@@ -74,7 +74,7 @@ public final class LogicSeries
         double got = model.output(outNames.get(o));
         if (!matches(want, got, tol))
           throw new AssertionError(source + ":" + row.line() + ": step " + (s + 1) + " (t=" + row.timeMs()
-              + " ms) out:" + outNames.get(o) + " expected " + want + (tol > 0d ? " ±" + tol : "")
+              + " ms) out:" + outNames.get(o) + " expected " + want + (tol > 0d ? " +/-" + tol : "")
               + ", actual " + got);
         checked++;
       }

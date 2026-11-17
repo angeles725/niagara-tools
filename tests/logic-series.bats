@@ -54,14 +54,14 @@ run_series() { run "$RUN" "$RT" com.example.thermo.ThermostatSeriesTest; }
   [[ "$output" != *"step 3"* ]]
 }
 
-@test "LS3: tolerance: a value within ~tol passes, one beyond it fails and the message shows ±tol" {
+@test "LS3: tolerance: a value within ~tol passes, one beyond it fails and the message shows +/-tol in ASCII" {
   series "$HEAD" '0, 5.5, 4, true, true, 37.9'
   run_series
   [ "$status" -eq 0 ]
   series "$HEAD" '0, 5.5, 4, true, true, 38.1'
   run_series
   [ "$status" -eq 1 ]
-  [[ "$output" == *"out:demand expected 38.1 ±0.5, actual 37.5"* ]]
+  [[ "$output" == *"out:demand expected 38.1 +/-0.5, actual 37.5"* ]]
 }
 
 @test "LS4: an exact column (no ~tol) refuses any difference" {
@@ -126,4 +126,16 @@ bad() {
   cd "$BATS_TEST_TMPDIR/elsewhere"
   run_series
   [ "$status" -eq 0 ]
+}
+
+@test "LS14: a UTF-8 byte order mark before the header is ignored (a series saved by a Windows editor)" {
+  series "$(printf '\xef\xbb\xbf')$HEAD" '0, 5.5, 4, true, true, 37.5'
+  run_series
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"series checked 2 values"* ]]
+}
+
+@test "LS15: bad series refused: a time beyond the long range names its line, never a raw NumberFormatException" {
+  bad "2: time '99999999999999999999' is out of range (ms)" "$HEAD" '99999999999999999999, 4, 4, true, false, 0'
+  [[ "$output" != *"NumberFormatException"* ]]
 }

@@ -18,7 +18,8 @@ import java.util.regex.Pattern;
  * The header starts with {@code time_ms}; every other column is {@code in:<name>} or {@code out:<name>},
  * an output optionally with a tolerance {@code ~<tol>} (default 0: exact). A cell is a number, {@code true}
  * or {@code false}; an output cell may be {@code -} (not checked at that step) or {@code NaN}. Times never
- * decrease. Anything else is refused with the source name and line, never skipped.
+ * decrease and fit a long. A UTF-8 byte order mark before the header is ignored. Anything else is refused with
+ * the source name and line, never skipped.
  */
 final class SeriesParser
 {
@@ -27,6 +28,7 @@ final class SeriesParser
   private static final Pattern TIME = Pattern.compile("[-+]?\\d+");
   static final String TIME_COLUMN = "time_ms";
   static final String SKIP = "-";
+  private static final String BOM = "\uFEFF";
 
   private final String source;
   private final List<String> inNames = new ArrayList<String>();
@@ -43,7 +45,9 @@ final class SeriesParser
     SeriesParser p = new SeriesParser(source);
     boolean header = false;
     for (int i = 0; i < lines.size(); i++) {
-      String text = lines.get(i).trim();
+      String text = lines.get(i);
+      if (!header && text.startsWith(BOM)) text = text.substring(1);
+      text = text.trim();
       if (text.isEmpty() || text.startsWith("#")) continue;
       String[] cells = text.split(",", -1);
       for (int c = 0; c < cells.length; c++) cells[c] = cells[c].trim();
@@ -60,36 +64,54 @@ final class SeriesParser
     if (!TIME_COLUMN.equals(cells[0]))
       throw bad(line, "first column must be " + TIME_COLUMN + ", got '" + cells[0] + "'");
     Set<String> seen = new HashSet<String>();
-    for (int c = 1; c < cells.length; c++) {
-      String col = cells[c];
-      boolean out = col.startsWith("out:");
-      if (!out && !col.startsWith("in:"))
-        throw bad(line, "column '" + col + "' must start with in: or out:");
-      String name = col.substring(out ? 4 : 3);
-      double tol = 0d;
-      int tilde = name.indexOf('~');
-      if (tilde >= 0) {
-        if (!out) throw bad(line, "column '" + col + "': a tolerance applies to an out: column only");
-        String t = name.substring(tilde + 1);
-        if (!NUMBER.matcher(t).matches() || Double.parseDouble(t) < 0d)
-          throw bad(line, "column '" + col + "': tolerance must be a number >= 0");
-        tol = Double.parseDouble(t);
-        name = name.substring(0, tilde);
-      }
-      if (!NAME.matcher(name).matches()) throw bad(line, "column '" + col + "': bad name");
-      if (!seen.add(col.substring(0, out ? 4 : 3) + name)) throw bad(line, "duplicate column '" + col + "'");
-      isOut.add(out);
-      if (out) { outNames.add(name); outTols.add(tol); } else inNames.add(name);
-    }
+    for (int c = 1; c < cells.length; c++) column(line, cells[c], seen);
     if (outNames.isEmpty()) throw bad(line, "no out: column — a series must expect at least one output");
+  }
+
+  /** Reads one in:/out: header column (an out: column may carry ~tolerance) and records it. */
+  private void column(int line, String col, Set<String> seen)
+  {
+    boolean out = col.startsWith("out:");
+    if (!out && !col.startsWith("in:"))
+      throw bad(line, "column '" + col + "' must start with in: or out:");
+    String name = col.substring(out ? 4 : 3);
+    double tol = 0d;
+    int tilde = name.indexOf('~');
+    if (tilde >= 0) {
+      if (!out) throw bad(line, "column '" + col + "': a tolerance applies to an out: column only");
+      tol = tolerance(line, col, name.substring(tilde + 1));
+      name = name.substring(0, tilde);
+    }
+    if (!NAME.matcher(name).matches()) throw bad(line, "column '" + col + "': bad name");
+    if (!seen.add((out ? "out:" : "in:") + name)) throw bad(line, "duplicate column '" + col + "'");
+    isOut.add(out);
+    if (out) { outNames.add(name); outTols.add(tol); } else inNames.add(name);
+  }
+
+  private double tolerance(int line, String col, String t)
+  {
+    if (!NUMBER.matcher(t).matches() || Double.parseDouble(t) < 0d)
+      throw bad(line, "column '" + col + "': tolerance must be a number >= 0");
+    return Double.parseDouble(t);
+  }
+
+  /** The row's time in ms: an integer that fits a long. */
+  private long time(int line, String cell)
+  {
+    if (!TIME.matcher(cell).matches()) throw bad(line, "time '" + cell + "' is not an integer (ms)");
+    try {
+      return Long.parseLong(cell.startsWith("+") ? cell.substring(1) : cell);
+    }
+    catch (NumberFormatException e) {
+      throw bad(line, "time '" + cell + "' is out of range (ms)");
+    }
   }
 
   private void row(int line, String[] cells)
   {
     if (cells.length != isOut.size() + 1)
       throw bad(line, cells.length + " cells, header has " + (isOut.size() + 1));
-    if (!TIME.matcher(cells[0]).matches()) throw bad(line, "time '" + cells[0] + "' is not an integer (ms)");
-    long time = Long.parseLong(cells[0].startsWith("+") ? cells[0].substring(1) : cells[0]);
+    long time = time(line, cells[0]);
     if (!rows.isEmpty() && time < rows.get(rows.size() - 1).timeMs())
       throw bad(line, "time " + time + " goes back (previous " + rows.get(rows.size() - 1).timeMs() + ")");
     Map<String, Double> in = new LinkedHashMap<String, Double>();
