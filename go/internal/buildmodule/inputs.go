@@ -51,6 +51,11 @@ func (b *build) resolveInputs() int {
 	case !isExecutable(gate):
 		b.warn(msgNoGate, gate)
 	default:
+		// Messages above name niagara_home as given; gradle runs in the gradle root, where a relative
+		// path names another directory, so it gets the absolute one (bench Δ9).
+		if abs, err := filepath.Abs(b.home); err == nil {
+			b.home = abs
+		}
 		return proceed
 	}
 	return ExitEnv
