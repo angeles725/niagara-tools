@@ -1,6 +1,6 @@
 <!-- review-status: pending -->
 <!-- module: kit -->
-<!-- deltas: 2 -->
+<!-- deltas: 6 -->
 # 2026-11-17 · kit · mcpn4-replicate-points
 
 **Session**: a client B field job that replicated the same Modbus points onto many devices with
@@ -25,3 +25,7 @@ dry run said so.
 |---|---|---|---|
 | Δ1 | APPLIED 2026-11-17. `n4_replicate_points`: N x M adds under one token, per-target `copies[]` name/address overrides, one budget write per add, refused up front when over `write_budget.remaining` | `mcp-n4-kit/README.md` write tools; `mcp-n4-kit/skill/SKILL.md` bulk | `[ev: retro mcpn4-replicate-points Δ1]` |
 | Δ2 | APPLIED 2026-11-17. Copy/replicate dry runs note writable points with a non-null fallback | `mcp-n4-kit/README.md` `n4_copy_component`; `mcp-n4-kit/skill/SKILL.md` | `[ev: retro mcpn4-replicate-points Δ2]` |
+| Δ3 | APPLIED 2026-11-17. A replication keeps one write of `--max-writes` for its own `n4_rollback` (independent verifier of #772: one that spent the last write could be rolled back only after a restart) | `go/internal/mcpn4/writeops/replicate.go` | `[ev: code go/internal/mcpn4/writeops/replicate.go]` |
+| Δ4 | APPLIED 2026-11-17. Targets that differ only by a trailing `/` are one target (verifier: both copies landed under one parent, verdict still verified) | `go/internal/mcpn4/writeops/replicate_args.go` | `[ev: code go/internal/mcpn4/writeops/replicate_args.go]` |
+| Δ5 | Open. A mid-batch failure leaves up to 199 copies in doubt and `n4_rollback` refuses an in-doubt batch; offer a rollback of the copies the read-back finds (per-copy `unverified`, reviewer R4-002) | `go/internal/mcpn4/writeops/replicate_readback.go` | `[ev: code go/internal/mcpn4/writeops/replicate_readback.go]` |
+| Δ6 | Open. Rolling back an N-add replication is charged one write; the shared-register note does not read points already on a target device | `go/internal/mcpn4/plan/budget.go` | `[ev: code go/internal/mcpn4/plan/budget.go]` |
