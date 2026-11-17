@@ -2,6 +2,7 @@ package reportmodule
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -111,12 +112,29 @@ func assess(o options, x runner, a artifact, jar string) readyJar {
 	return j
 }
 
-// isModuleArtifact says whether a directory of the module root is one of its artifacts (an <MOD>-rt/-ux/-wb
-// subproject: module-include.xml, its own <name>.gradle.kts or a build.gradle[.kts]), so a docs/ or gradle/
-// directory beside them is never reported as an unbuilt artifact.
+// isModuleArtifact says whether a directory of the module root is one of its artifacts: it holds a
+// module-include.xml, or its name is a module part (<MOD>-rt/-ux/-wb/-se/-doc) and it holds its own
+// <name>.gradle.kts or a build.gradle[.kts]. A docs/ directory or a gradle directory beside the parts (buildSrc/, a
+// shared conventions build) is never reported as an unbuilt artifact.
 func isModuleArtifact(a artifact) bool {
-	for _, f := range []string{"module-include.xml", a.name + ".gradle.kts", "build.gradle.kts", "build.gradle"} {
+	if isFile(a.dir + "/module-include.xml") {
+		return true
+	}
+	if !isPartName(a.name) {
+		return false
+	}
+	for _, f := range []string{a.name + ".gradle.kts", "build.gradle.kts", "build.gradle"} {
 		if isFile(a.dir + "/" + f) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPartName says whether name ends with a Niagara module part suffix.
+func isPartName(name string) bool {
+	for _, p := range []string{"-rt", "-ux", "-wb", "-se", "-doc"} {
+		if strings.HasSuffix(name, p) && len(name) > len(p) {
 			return true
 		}
 	}
@@ -126,7 +144,7 @@ func isModuleArtifact(a artifact) bool {
 // unbuilt is the assessment of an artifact with no built jar: one FAIL row naming it, so the module is not ready
 // while one of its parts would not be loaded.
 func unbuilt(a artifact) readyJar {
-	j := readyJar{Artifact: a.name, Rows: []readyRow{{failed, "jar",
+	j := readyJar{Artifact: a.name, notBuilt: true, Rows: []readyRow{{failed, "jar",
 		"no built jar under build/libs: this artifact of the module would not be loaded (build it first)"}}}
 	j.conclude()
 	return j
