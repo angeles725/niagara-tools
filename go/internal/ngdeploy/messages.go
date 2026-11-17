@@ -119,8 +119,10 @@ const (
 	warnNoSigner  = "WARN " + modjar.WhyNoSigner + signerRemedy
 	warnDevSigner = "WARN " + modjar.WhyDevSigner + signerRemedy
 	// warnSignerUnknown takes a station jar and why its signer cannot be told.
-	warnSignerUnknown = "WARN the signer of %s cannot be told (%s), so the gate accepts any signature and the jars of <NIAGARA_HOME>/modules are not asked in its place" + signerRemedy
-	signerRemedy      = " (set it: " + modjar.GradleEnvPrefix + modjar.AliasProperty + "=<alias> in the env file, or " + modjar.AliasProperty + "=<alias> in gradle.properties)"
+	warnSignerUnknown = "WARN the signer of %s cannot be told (%s), and the jars of <NIAGARA_HOME>/modules give none either, so the gate accepts any signature" + signerRemedy
+	// warnSignerUnknownHome takes a station jar and why its signer cannot be told; the home gave the signer.
+	warnSignerUnknownHome = "WARN the signer of %s cannot be told (%s), so the jars of <NIAGARA_HOME>/modules give the expected signer"
+	signerRemedy          = " (set it: " + modjar.GradleEnvPrefix + modjar.AliasProperty + "=<alias> in the env file, or " + modjar.AliasProperty + "=<alias> in gradle.properties)"
 
 	// the copy and its outcomes are in messages_copy.go; the deploy record and what follows it
 	// msgRecordFailed takes the record file and one of the three reasons after it.

@@ -135,8 +135,10 @@ The signer the gate expects:
   else, when those give none (none signed, two signers, or only the development signer), of those that were in
   <NIAGARA_HOME>/modules before the build; the two are never mixed in one decision, and the signing plugin's
   default development signer (NIAGARA4) is never expected. A station jar whose signer cannot be told (it
-  cannot be read, is not a zip, or holds a .SF without its block file) gives no signer and no fallback to the
-  home: "WARN the signer of <jar> cannot be told (<why>), so the gate accepts any signature ...". A jar signed with another key then fails the gate (exit 50).
+  cannot be read, is not a zip, or holds a .SF without its block file: an interrupted copy) does not decide:
+  the home's jars give the signer, with "WARN the signer of <jar> cannot be told (<why>), so the jars of
+  <NIAGARA_HOME>/modules give the expected signer"; when they give none either, the gate accepts any signature
+  and the WARN says so. A jar signed with another key then fails the gate (exit 50).
   When neither names a signer the gate accepts any signature and, after the gate's rows, the deploy prints
   "WARN no niagaraSigningAlias is configured and no deployed jar gives a signer, ..." (or "... the deployed
   jar itself carries the signing plugin's default development signer (NIAGARA4), ..."); the exit code is the

@@ -49,9 +49,10 @@ func TestTheHomeStillGivesTheSignerWhenTheStationGivesNone(t *testing.T) {
 }
 
 // A station jar whose signer cannot be told (it cannot be read, is not a zip, or holds a signature file
-// without its block file) is not an unsigned one: the gate gets no signer, a warning names the jar and why,
-// and the home's signer is not taken in its place.
-func TestAStationJarWhoseSignerCannotBeToldGivesNoSignerAndAWarning(t *testing.T) {
+// without its block file: an interrupted copy, a damaged jar) is not an unsigned one and does not switch the signer
+// check off: the home's moved-aside jars give the expected signer, as they did before the station was read
+// (recheck of #787: a truncated station jar made the gate accept any signature).
+func TestAStationJarWhoseSignerCannotBeToldFallsBackToTheHome(t *testing.T) {
 	for _, tc := range []struct {
 		name, why string
 		station   func(f *fixture)
@@ -80,9 +81,24 @@ func TestAStationJarWhoseSignerCannotBeToldGivesNoSignerAndAWarning(t *testing.T
 			jar = f.deployedJar("rt")
 		})
 		want := "[ng-deploy] WARN the signer of " + jar + " cannot be told (" + strings.ReplaceAll(tc.why, "{jar}", jar) + "), " +
-			"so the gate accepts any signature and the jars of <NIAGARA_HOME>/modules are not asked in its place" + remedySaid
-		if signer != "" || warning != want {
-			t.Errorf("%s: --expected-signer %q, stderr %q, want none and %q", tc.name, signer, warning, want)
+			"so the jars of <NIAGARA_HOME>/modules give the expected signer\n"
+		if signer != "OTHER" || warning != want {
+			t.Errorf("%s: --expected-signer %q, stderr %q, want OTHER and %q", tc.name, signer, warning, want)
 		}
+	}
+}
+
+// Without a signer in the home either, the gate runs without one and the warning says the station jar's
+// signer could not be told.
+func TestAStationJarWhoseSignerCannotBeToldAndNoHomeSignerWarns(t *testing.T) {
+	var jar string
+	signer, warning := signerGiven(t, func(f *fixture) {
+		f.write(f.deployedJar("rt"), "garbage")
+		jar = f.deployedJar("rt")
+	})
+	want := "[ng-deploy] WARN the signer of " + jar + " cannot be told (it cannot be read as a jar: zip: not a valid zip file), " +
+		"and the jars of <NIAGARA_HOME>/modules give none either, so the gate accepts any signature" + remedySaid
+	if signer != "" || warning != want {
+		t.Errorf("--expected-signer %q, stderr %q, want none and %q", signer, warning, want)
 	}
 }

@@ -17,18 +17,20 @@ import (
 // (deployedJar: the ones it runs, bench Δ24); else, when those give none (none signed, two signers, or the
 // development key), the one signer of the jars that were in <NIAGARA_HOME>/modules before the build (home.go
 // moved them aside), as before the station was read. The two sources are never mixed in one decision, and
-// the development signer is never expected. A station jar whose signer cannot be told (unknownSigner) gives
-// no signer and no fallback to the home. When the deploy knows none, signer is "" and warning says why: the
-// gate then accepts any signature.
+// the development signer is never expected. A station jar whose signer cannot be told (unknownSigner: an
+// interrupted copy, a damaged jar) does not decide: the home's jars give the signer, with a warning, so the
+// check stays on. When the deploy knows none, signer is "" and warning says why: the gate then accepts any
+// signature.
 func (d *deploy) expectedSigner() (signer, warning string) {
 	if alias := modjar.ConfiguredAlias(d.gradleProps, d.env, dirname(d.env("GRADLEW_PATH"))); alias != "" {
 		return alias, ""
 	}
 	var station, home [][]string
+	unknownJar, unknownWhy := "", ""
 	for _, profile := range profilesOf[d.raw[optMode]] {
 		jar := d.deployedJar(d.jarName(profile))
-		if why := unknownSigner(jar); why != "" {
-			return "", fmt.Sprintf(warnSignerUnknown, jar, why)
+		if why := unknownSigner(jar); why != "" && unknownJar == "" {
+			unknownJar, unknownWhy = jar, why
 		}
 		station = append(station, modjar.Signers(jar))
 	}
@@ -36,6 +38,12 @@ func (d *deploy) expectedSigner() (signer, warning string) {
 		if jar.moved && d.inMode(jar.name) {
 			home = append(home, modjar.Signers(jar.aside))
 		}
+	}
+	if unknownJar != "" { // the station cannot decide: the home's jars still keep the check on
+		if fromHome, whyHome := modjar.ExpectedSigner("", home); whyHome == modjar.Known {
+			return fromHome, fmt.Sprintf(warnSignerUnknownHome, unknownJar, unknownWhy)
+		}
+		return "", fmt.Sprintf(warnSignerUnknown, unknownJar, unknownWhy)
 	}
 	fromStation, whyStation := modjar.ExpectedSigner("", station)
 	if whyStation == modjar.Known {
