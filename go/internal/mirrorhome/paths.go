@@ -45,62 +45,54 @@ func pathErr(err error) error {
 	return err
 }
 
-// resolve sets srcAbs, at and dirAbs. A mirror dir its spelling does not reach (a missing directory on the
-// way, a dangling link) is first judged by guard A where it leads (its longest existing ancestor resolved,
-// the rest by its text), and from then on at, the path judged, is the one looked at and written: so
-// "<src>/new/../../out" makes nothing inside <src>, and "missing/../dir" meets guard B at dir. A dangling
-// link is refused before anything is made. The mirror dir at at is then resolved itself when it is a
-// directory, else its parent is made (when it is not there) and resolved, with its own name appended.
+// resolve sets srcAbs and at: the mirror dir as guard A judges it, every symlink followed where components
+// exist and the rest applied by its text (orientguard.Reachable, `realpath -m`). Every later step looks at
+// and writes to at, never the spelling, so "ml/../o" and "missing/../dir" are the directories they lead to.
+// Nothing is created here: build makes the mirror once every guard has passed on at. A mirror dir that
+// cannot be resolved at all (a link loop, a directory that cannot be searched) is refused.
 func (m *mirror) resolve() int {
 	var err error
 	if m.srcAbs, err = physical(m.src); err != nil {
 		return m.fault(err)
 	}
-	m.at = m.dir
-	if _, err := os.Stat(m.dir); err != nil { // test -e: a dangling symlink is not there
-		if code := m.guardAhead(); code != proceed {
-			return code
-		}
-		if m.isLink() {
-			return m.stop(ExitRefused, msgLink, m.dir)
-		}
-	}
-	st, statErr := os.Stat(m.at)
-	m.exists = statErr == nil
-	if m.exists && st.IsDir() {
-		if m.dirAbs, err = physical(m.at); err != nil {
-			return m.fault(err)
-		}
-		return proceed
-	}
-	parent := lint.Dirname(m.at)
-	if !m.exists {
-		if err := os.MkdirAll(parent, 0o777); err != nil {
-			return m.fault(err)
-		}
-	}
-	if parent, err = physical(parent); err != nil {
-		return m.fault(err)
-	}
-	m.dirAbs = parent + "/" + lint.Basename(m.at)
-	return proceed
-}
-
-// guardAhead is guard A on a mirror dir its spelling does not reach, before anything is created; the path
-// it judged becomes at. A mirror dir that cannot be resolved at all (a link loop, a directory that cannot be
-// searched) is refused.
-func (m *mirror) guardAhead() int {
 	cwd, err := syscall.Getwd()
 	if err != nil {
 		return m.fault(&fs.PathError{Op: "getcwd", Path: ".", Err: err})
 	}
-	leads, ok := orientguard.Reachable(m.dir, cwd)
+	at, ok := orientguard.Reachable(m.dir, cwd)
 	if !ok {
 		return m.stop(ExitRefused, msgUnresolved, m.dir)
 	}
-	if refusal := sourceRefusal(m.srcAbs, leads); refusal != "" {
-		return m.stop(ExitRefused, refusal, m.dir)
-	}
-	m.at = leads
+	m.at = at
+	_, err = os.Stat(m.at)
+	m.exists = err == nil
 	return proceed
+}
+
+// linkAt reports whether the mirror dir's last component is a symlink, looked at where its parent leads:
+// final slashes and final "/." are dropped first, so "link/", "link/." and "missing/../link" are the link.
+// A last component ".." names a directory, never a link.
+func (m *mirror) linkAt() bool {
+	name := m.dir
+	for {
+		trimmed := strings.TrimSuffix(strings.TrimRight(name, "/"), "/.")
+		if trimmed == name || trimmed == "" {
+			break
+		}
+		name = trimmed
+	}
+	base := lint.Basename(name)
+	if base == ".." || base == "." || base == "/" {
+		return false
+	}
+	cwd, err := syscall.Getwd()
+	if err != nil {
+		return false
+	}
+	parent, ok := orientguard.Reachable(lint.Dirname(name), cwd)
+	if !ok {
+		return false
+	}
+	st, err := os.Lstat(strings.TrimSuffix(parent, "/") + "/" + base)
+	return err == nil && st.Mode()&os.ModeSymlink != 0
 }

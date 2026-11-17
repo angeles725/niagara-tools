@@ -73,9 +73,8 @@ func under(path, prefix string) bool {
 // missing directory is judged where it leads. A path that cannot be judged at all (a link loop, a directory
 // that cannot be searched, an empty argument) fails closed and the row names it as given.
 func locate(arg, prefix string) (path string, inside bool) {
-	cwd, _ := syscall.Getwd() // the physical directory, as realpath reads it
-	if path, ok := canonical(arg, cwd); ok {
-		path = strings.TrimRight(path, "\n") // lost in the bash tool's $(realpath …)
+	cwd, _ := syscall.Getwd()                // the physical directory, as realpath reads it
+	if path, ok := canonical(arg, cwd); ok { // a final newline is part of the name: never trimmed
 		return path, under(path, prefix)
 	}
 	leads, ok := Reachable(arg, cwd)

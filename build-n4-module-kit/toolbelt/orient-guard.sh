@@ -5,7 +5,8 @@
 # $HOME/modulos_niagara_n4/Cliente/ before any build or file-editing action.
 # Paths are canonicalized (symlinks + relative components resolved) before compare: the longest existing
 # ancestor is resolved and the rest is applied by its text, so a new directory several levels deep inside
-# the prefix passes, and a ".." after a missing directory is judged where it leads.
+# the prefix passes, and a ".." after a missing directory is judged where it leads: once it climbs back into
+# existing directories their symlinks are followed again (realpath -m). A final newline is part of a name.
 #
 # Usage:  orient-guard.sh <module-root>
 #

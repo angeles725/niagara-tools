@@ -18,13 +18,16 @@
 #
 # SAFETY (both guards run before any rm; there is no --force):
 #   G-A  <mirror_dir> must not be the source install, live inside it, or contain it.        -> exit 20
-#        A <mirror_dir> not there yet is judged BEFORE anything is created (its longest existing
-#        ancestor resolved, the rest by its text): a refusal leaves no directory behind. One that
-#        cannot be resolved (a link loop, a directory that cannot be searched) is refused. The
-#        path judged is the one G-B checks and the mirror is written to, never the spelling.
+#        <mirror_dir> is judged where it leads (every symlink followed where components exist,
+#        also after a ".." that climbs back into them; the rest by its text, as realpath -m). That
+#        judged path is the one G-B checks, the wipe removes and the mirror is written to, never the
+#        spelling; nothing is created until every check has passed, so a refusal leaves nothing
+#        behind. One that cannot be resolved (a link loop, an unsearchable directory) is refused.
 #   G-B  an existing non-empty <mirror_dir> is wiped ONLY if it holds the .niagara-mirror marker
 #        this script writes (source path + date); anything else is refused. A symlinked
-#        <mirror_dir> is refused whatever its spelling (link, link/, link/.) or target.      -> exit 20
+#        <mirror_dir> is refused whatever its spelling (link, link/, link/., missing/../link). -> exit 20
+# An argument <source_niagara_home> or <mirror_dir> that starts with '-' ('-' alone too) is a usage
+# error (exit 1): spell such a path ./-name.
 # Exit: 0 mirror ready · 1 usage / not a niagara_home / a step failed · 3 no Go toolchain · 20 guard refused
 #
 # Truth fixes of the Go port (each was a "mirror ready" or a bare shell error in the bash tool):

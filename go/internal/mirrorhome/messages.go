@@ -7,7 +7,7 @@ package mirrorhome
 // Exit codes of mirror-niagara-home.sh (unchanged from the bash tool; its header lists them).
 const (
 	ExitOK      = 0  // mirror ready
-	ExitUsage   = 1  // usage, not a niagara_home, a relative source, or a step that failed
+	ExitUsage   = 1  // usage (an argument starting with -), not a niagara_home, a relative source, or a step that failed
 	ExitRefused = 20 // a guard refused: nothing was removed
 )
 
@@ -38,6 +38,7 @@ const (
 	msgUnresolved  = "refusing: mirror dir cannot be resolved (a link loop or a directory that cannot be searched): %s\n"
 	msgNotMirror   = "refusing to wipe %s: non-empty and not a mirror made by this script (no " + Marker + ")\n"
 	msgRelative    = "refusing: source_niagara_home must be an absolute path (the mirror's links would dangle): %s\n"
+	msgOption      = "mirror-niagara-home: %s looks like an option, not a path; spell a path that starts with - as ./%s\n"
 	msgFault       = "mirror-niagara-home: %s\n"
 	msgReady       = "mirror ready: %s  (%d jars linked, modules/ writable, excluded: %s)\n"
 	noneExcluded   = "none"

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -24,12 +25,12 @@ type mirror struct {
 	now     func() time.Time
 	src     string   // <source_niagara_home>
 	dir     string   // <mirror_dir>
-	at      string   // where the mirror is written: dir, or dir as guard A judged it when it was not there
+	at      string   // <mirror_dir> as guard A judged it: what every guard looks at and build writes to
 	exclude []string // jar names that get no link
 
-	srcAbs, dirAbs string   // both resolved, for guard A and the marker
-	exists         bool     // <mirror_dir> is there (through a symlink too) and has to be wiped
-	entries, jars  []string // what will be linked: top-level names, and names under modules/
+	srcAbs        string   // the source resolved, for guard A and the marker
+	exists        bool     // <mirror_dir> is there (through a symlink too) and has to be wiped
+	entries, jars []string // what will be linked: top-level names, and names under modules/
 }
 
 // run is Main with the clock the marker is dated by.
@@ -37,6 +38,12 @@ func run(args []string, s cli.Stdio, now func() time.Time) int {
 	if len(args) < 2 {
 		fmt.Fprint(s.Err, msgUsage)
 		return ExitUsage
+	}
+	for _, a := range args[:2] {
+		if strings.HasPrefix(a, "-") { // a mistyped flag is never a path ("-" alone too)
+			fmt.Fprintf(s.Err, msgOption, a, a)
+			return ExitUsage
+		}
 	}
 	m := &mirror{s: s, now: now, src: args[0], dir: args[1], exclude: args[2:]}
 	// Every refusal comes before wipe, the first step that removes anything.
