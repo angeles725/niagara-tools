@@ -29,3 +29,8 @@ const modeNoGate = "B"
 
 // guardGate is what NO_GATE, MODE=B and VERIFY_MODULE_BIN switch off (msgEnvFileGuarded).
 const guardGate = "the verify-module gate"
+
+// replacesSchemaTool reports whether the env-file line key=value would put another program in the place of
+// the schema-risk precheck. No flag lifts it: the environment of the command still sets SCHEMA_RISK_BIN
+// (retro p1-build-deploy-safety Δ5).
+func replacesSchemaTool(key, value string) bool { return key == optSchemaBin && value != "" }

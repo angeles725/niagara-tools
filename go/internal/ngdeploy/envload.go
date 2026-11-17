@@ -19,7 +19,8 @@ var owned = map[string]bool{"SCRIPT_DIR": true, "VERSION_FILE": true, "SCRIPT_VE
 // of the environment of this process and of every command it runs, and one named like an option global
 // sets that option unless a flag of the command line did (the flag wins). A line that would switch the
 // backup, the verify-module gate or the refusal of a real niagara_home off is refused with file and line
-// unless its flag was given (guardedSkip, envguard.go): the file alone does not skip any of them. $NAME, ${NAME} and a leading ~ expand as bash expanded them (shellVariable). A
+// unless its flag was given (guardedSkip, envguard.go): the file alone does not skip any of them, and it may not
+// name the schema-risk tool (replacesSchemaTool). $NAME, ${NAME} and a leading ~ expand as bash expanded them (shellVariable). A
 // missing file is tolerated; a directory is not (exit 10: the wrong path was named). A line that is not a plain assignment, and a variable that is not set, are
 // refused with file and line (the bash tool ran the first and stopped on the second); no message quotes a
 // value of the file.
@@ -39,6 +40,9 @@ func (d *deploy) loadEnvFile() int {
 	for _, a := range assignments {
 		if owned[a.Key] {
 			return d.fail(ExitEnv, msgEnvFileOwned, path, a.Line, a.Key)
+		}
+		if replacesSchemaTool(a.Key, a.Value) {
+			return d.fail(ExitEnv, msgEnvFileSchemaTool, path, a.Line)
 		}
 		if guard, skips := guardedSkip(a.Key, a.Value); skips && !d.byFlag[guard.liftedBy] {
 			return d.fail(ExitEnv, msgEnvFileGuarded, path, a.Line, guard.label, guard.step, guard.flag)

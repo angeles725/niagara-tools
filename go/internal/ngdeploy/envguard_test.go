@@ -72,3 +72,19 @@ func TestTheGateKeysStillWorkWhereTheyCannotSkipTheGate(t *testing.T) {
 		t.Errorf("VERIFY_MODULE_BIN from the environment: exit %d, stderr %q", code, f.err)
 	}
 }
+
+// Retro p1-build-deploy-safety Δ5: SCHEMA_RISK_BIN in the env file would put any executable in the place of
+// the schema-risk precheck; no flag lifts it (the environment of the command still sets it, as every fixture
+// here does). FIRST_DEPLOY=1 stays allowed: it only speaks when there is no baseline to diff.
+func TestAnEnvFileMayNotReplaceTheSchemaRiskTool(t *testing.T) {
+	f := newFixture(t)
+	f.deployed()
+	t.Setenv("FAKE_OLD_VERSION", "1.0")
+	t.Setenv("FAKE_NEW_VERSION", "1.1")
+	f.set("SCHEMA_RISK_BIN", "/bin/true")
+	code := f.run("--no-backup", "--first-deploy")
+	want := "[ng-deploy] ERROR env file " + f.env + ": line 10: SCHEMA_RISK_BIN would put another program in the place of the schema-risk precheck, which an env file may not do: set it in the environment of the command\n"
+	if code != ExitEnv || f.out != "" || f.err != want || f.calls() != "" {
+		t.Errorf("exit %d, stdout %q, stderr %q, calls %q", code, f.out, f.err, f.calls())
+	}
+}

@@ -141,6 +141,8 @@ The env file and the flags:
   --no-gate, --no-backup or --install-into-home is given. The two other ways a file could skip the gate are refused
   the same way: MODE=B (a mode without the gate) unless --mode is given, and VERIFY_MODULE_BIN (any executable in
   the place of the gate) unless --no-gate is given; set VERIFY_MODULE_BIN in the environment of the command instead.
+  SCHEMA_RISK_BIN (any executable in the place of the schema-risk precheck) is refused in the env file with no
+  flag to lift it; set it in the environment of the command.
 
 Optional:
   BUILD_ID             — when set, verifies index.html in ux jar contains ?v=$BUILD_ID
@@ -152,7 +154,7 @@ Exit codes:
   0   success (or --help)
   10  missing required env var, invalid path or option value, or an env file that is a directory, cannot be
       read, holds a line that is not a plain assignment, or sets NO_GATE=1 / NO_BACKUP=1 / MODE=B /
-      VERIFY_MODULE_BIN without the flag; or --no-deploy when STATION_MODULES_DIR is <NIAGARA_HOME>/modules;
+      VERIFY_MODULE_BIN without the flag, or SCHEMA_RISK_BIN; or --no-deploy when STATION_MODULES_DIR is <NIAGARA_HOME>/modules;
       or a modules directory another run holds the lock of (.ng-deploy.lock: "The run lock" above);
       or, after the checks and before the copy, a .last-deploy-sha that is a directory or cannot be written
       (nothing was copied; SLOTOMATIC_DETECTION=off makes the record optional)
