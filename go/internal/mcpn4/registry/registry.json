@@ -1631,6 +1631,41 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_tag_coverage",
+   "description": "Report how far the Haystack tagging below base reaches, in one read-only call (station-audits S9). points_without_tags lists the control points missing hs:point (a direct or implied marker) or an outbound hs:equipRef relation (direct, or implied when the client can call the session handler) as {point, missing: [hs:point, hs:equipRef]}; the ORDs feed n4_set_tags ords. equips_without_points lists the hs:equip components (NEQL hs:equip, implied tags included) that no point read names in an hs:equipRef, by handle (h:5) or slot ({equip}); it is null with a note when the points or equips were not all read. unknown_tags lists the direct tags of those points and equips that no installed dictionary defines ({tag, count, example, why}, most frequent first); the tags of a namespace no dictionary installs are ONE entry ns:* (why: no dictionary installed for namespace ..., ad hoc tags), so a station without a Haystack dictionary says so once. dictionary limits the check to one installed dictionary (name or namespace). Points under slot:/Services are left out unless exclude_services is false. Each list keeps at most 100 items; counts holds the totals (points, equips, points_without_tags, missing_point_tag, missing_equip_ref, equips_without_points, unknown_tags, services_excluded, unreadable). truncated is true when a read stopped at max_points. It reads select slotPath from control:ControlPoint, neql:hs:equip, the dictionaries under TagDictionaryService, then one load per component plus, for points, one impliedTags and one impliedRelations call (implied_unavailable when the client cannot). A component that cannot be read is listed under unreadable. Read-only.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "base": {
+      "type": "string",
+      "description": "Slot ORD of the folder to audit, itself and below, e.g. station:|slot:/Drivers (default: the whole station)"
+     },
+     "dictionary": {
+      "type": "string",
+      "description": "Name or namespace of the one installed dictionary to check tags against (default: all installed)"
+     },
+     "max_points": {
+      "type": "integer",
+      "description": "Most control points read, and most equips",
+      "minimum": 1,
+      "maximum": 2000,
+      "default": 2000
+     },
+     "exclude_services": {
+      "type": "boolean",
+      "description": "Leave the control points under slot:/Services out",
+      "default": true
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [

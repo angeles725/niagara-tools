@@ -47,4 +47,5 @@ var readTools = []string{
 	"n4_neql_query",
 	"n4_semantic_export",
 	"n4_list_tag_dictionaries",
+	"n4_tag_coverage",
 }
