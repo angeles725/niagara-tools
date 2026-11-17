@@ -273,7 +273,7 @@ Example MCP client entry (Claude Code `.mcp.json`):
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
-`n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
+`n4_list_px_views`, `n4_px_summary`, `n4_px_binding_audit`, `n4_spy_page`, `n4_station_health`,
 `n4_read_history`, `n4_export_history`, `n4_read_audit`, `n4_histories_audit`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
 `n4_alarm_health`,
 `n4_alarm_text_check`,
@@ -476,6 +476,18 @@ never overwritten; a truncated read is not saved). `n4_px_summary(file_ord, max_
 max_items=200)` fetches a `.px` and returns its media, imported modules, canvases and
 `viewSize`, layers, widget and binding counts, bound ORDs grouped by component, images,
 included Px, charts and label texts, without the XML.
+`n4_px_binding_audit(root, file_ord, base, max_views=50, max_bindings=500)` (station-audits
+S15) reports the Px bindings whose ORD does not resolve: every view below `root` (the
+`n4_list_px_views` query; relative ORDs such as `slot:a`, `slot:../a` and `../a` are read
+against the component the view is on), or one `file_ord` with an optional `base`. A binding is
+the `ord` of an element whose tag ends in `Binding`. Each distinct target is loaded once: it
+`resolves` when it loads, and is `missing` (listed under `broken`) only when its deepest ancestor
+that loads holds no slot by that name, neither loaded nor declared by its type contract.
+Everything else is `unknown` with a `why` and never counted as broken: another scheme
+(`history:`, `file:`), a chained ORD, a relative ORD with no base, a handle that does not load,
+or a failed load whose parent still holds the name. `views` gives each file's `status`
+(`ok`, `not_found`, `forbidden`, `truncated`, `unparsable`, `no_file`); `counts` and
+`truncated` bound the reply.
 Station health in one call: `n4_station_health(base="station:|slot:/", max_not_ok=50)` composes
 the reads above into one reply, each section answered on its own. `system` is the station's
 SystemService (`/Services/PlatformServices/SystemService`) by its slot names: `currentCpuUsage`

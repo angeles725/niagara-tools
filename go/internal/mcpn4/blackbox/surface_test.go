@@ -22,6 +22,7 @@ var readTools = []string{
 	"n4_read_file",
 	"n4_list_px_views",
 	"n4_px_summary",
+	"n4_px_binding_audit",
 	"n4_list_batches",
 	"n4_session_retro_draft",
 	"n4_spy_page",

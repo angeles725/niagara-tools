@@ -13,19 +13,9 @@ func strip(s string) string { return strings.TrimFunc(s, pyjson.IsSpace) }
 // Parse is parse_px: the summary of one .px document, or the ValueError that refuses it (a
 // DOCTYPE or ENTITY declaration before parsing, malformed XML, a root other than <px>).
 func Parse(text string, maxItems int) (*pyjson.Object, error) {
-	if declaration(text) {
-		return nil, &pyjson.ValueError{Msg: "refusing a Px document with a DOCTYPE or ENTITY declaration"}
-	}
-	root, err := pyxml.Parse(text)
-	var pe *pyxml.Error
-	if errors.As(err, &pe) {
-		return nil, &pyjson.ValueError{Msg: "not well-formed Px XML: " + pe.Error()}
-	}
+	root, err := parseRoot(text)
 	if err != nil {
 		return nil, err
-	}
-	if root.Tag != "px" {
-		return nil, &pyjson.ValueError{Msg: "not a Px document: the root element is <" + root.Tag + ">, expected <px>"}
 	}
 	imports := newBounded(maxItems)
 	for _, el := range root.Iter() {
@@ -33,13 +23,7 @@ func Parse(text string, maxItems int) (*pyjson.Object, error) {
 			imports.add(name)
 		}
 	}
-	scope := root
-	for _, c := range root.Children {
-		if c.Tag == "content" {
-			scope = c
-			break
-		}
-	}
+	scope := contentOf(root)
 	widgets, bindings, bound := pyjson.NewObject(), pyjson.NewObject(), pyjson.NewObject()
 	canvases, layers, images, included := newBounded(maxItems), newBounded(maxItems), newBounded(maxItems), newBounded(maxItems)
 	labels, others, charts := newBounded(maxItems), newBounded(maxItems), newBounded(maxItems)
@@ -120,6 +104,36 @@ func Parse(text string, maxItems int) (*pyjson.Object, error) {
 		out.Set("bound_components_truncated", true)
 	}
 	return out, nil
+}
+
+// parseRoot is the <px> root of text, or the ValueError that refuses it (a DOCTYPE or ENTITY
+// declaration before parsing, malformed XML, a root other than <px>).
+func parseRoot(text string) (*pyxml.Element, error) {
+	if declaration(text) {
+		return nil, &pyjson.ValueError{Msg: "refusing a Px document with a DOCTYPE or ENTITY declaration"}
+	}
+	root, err := pyxml.Parse(text)
+	var pe *pyxml.Error
+	if errors.As(err, &pe) {
+		return nil, &pyjson.ValueError{Msg: "not well-formed Px XML: " + pe.Error()}
+	}
+	if err != nil {
+		return nil, err
+	}
+	if root.Tag != "px" {
+		return nil, &pyjson.ValueError{Msg: "not a Px document: the root element is <" + root.Tag + ">, expected <px>"}
+	}
+	return root, nil
+}
+
+// contentOf is the first <content> child of root, or root itself.
+func contentOf(root *pyxml.Element) *pyxml.Element {
+	for _, c := range root.Children {
+		if c.Tag == "content" {
+			return c
+		}
+	}
+	return root
 }
 
 func contains(list []any, v string) bool {
