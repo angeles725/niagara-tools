@@ -40,7 +40,7 @@ func TestTheStateActionsKeepTheirNoteAndTheRefusalListsPing(t *testing.T) {
 		t.Errorf("notes = %s", got)
 	}
 	_, err = writeops.InvokeAction.Plan(c, obj("ord", gw, "action", "discover"))
-	if want := "action 'discover' is not allowed in this version (allowed: set, active, inactive, auto, ping)"; err == nil || err.Error() != want {
+	if want := "action 'discover' is not allowed in this version (allowed: set, active, inactive, auto, ping, writeDeviceInstance)"; err == nil || err.Error() != want {
 		t.Errorf("err = %v, want %q", err, want)
 	}
 }

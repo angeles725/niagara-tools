@@ -1873,7 +1873,7 @@
      },
      "name": {
       "type": "string",
-      "description": "Requested slot name (the station may rename on collision)"
+      "description": "Requested slot name (the station may rename on collision). A display name the station stores escaped (a leading digit, a space) is created under its SlotPath escape and the plan says so: 2012 is stored as $32012"
      },
      "type": {
       "type": "string",
@@ -2541,7 +2541,7 @@
   },
   {
    "name": "n4_invoke_action",
-   "description": "Invoke a control action. Only set, active, inactive, auto, and ping (a driver network, device or point device ext checks its device; no setting changes) are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Invoke a control action. Only set, active, inactive, auto, and ping (a driver network, device or point device ext checks its device; no setting changes) and writeDeviceInstance (only on a honeywellBacnetSpyder:BacnetSpyder: writes the component's config/deviceObject/objectId into the controller at the component's address, renumbering a controller that still has a duplicate factory instance; no inverse, unverified) are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -2625,6 +2625,62 @@
     "readOnlyHint": false,
     "destructiveHint": false,
     "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_rename_component",
+   "description": "Rename up to 50 dynamic slots (components) in one batch, each sent as the station's RenameOp (parent handle, old name, new name). The plan refuses a missing source, a target name already taken or requested twice, a source renamed twice and an unchanged name; links and history extensions stay with the component (a history id built from %parent.name% or %name% takes the new name when next resolved). The inverse renames back in reverse order; the read-back checks every new name is present and every old one gone. A frozen slot cannot be renamed (the station refuses). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+       "type": "object",
+       "properties": {
+        "parent_ord": {
+         "type": "string",
+         "description": "ORD of the component that holds the slot"
+        },
+        "name": {
+         "type": "string",
+         "description": "Current slot name as the station stores it (escapes allowed, e.g. Numeric$20Writable40001)"
+        },
+        "new_name": {
+         "type": "string",
+         "description": "New plain slot name (letters, digits, underscore)"
+        }
+       },
+       "required": [
+        "parent_ord",
+        "name",
+        "new_name"
+       ]
+      },
+      "description": "Renames to apply, in order"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "items"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": false
    },
    "needs_session": false
   },

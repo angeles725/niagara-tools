@@ -10,6 +10,9 @@ import (
 // restored when that default is the recorded value (lab retro 2026-11-15 row 2). A type
 // contract that cannot be read is a read-back error (readback_error), not a station that differs.
 func restoredOrDefault(c plan.Client, nodes, op *pyjson.Object) (bool, error) {
+	if get(op, "nm") == "r" {
+		return renamedBack(nodes, op)
+	}
 	if slot, ok := get(op, "n").(string); ok {
 		filled, err := plan.Resolve(c, nodes, slot)
 		if err != nil {

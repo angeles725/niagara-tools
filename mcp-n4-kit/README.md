@@ -993,7 +993,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
 restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
@@ -1157,14 +1157,30 @@ Tool rules:
   dynamic slot, a frozen property and a frozen action (set, save, `config.bog`,
   rollback); on another build, try it on a scratch slot first.
   The station applies it only for a user with admin write on the component.
-- `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto` and `ping`. `set`
+- `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto`, `ping` and
+  `writeDeviceInstance`. `set`
   restores the previous `fallback` as its inverse; the others have none and the plan
   says so. `ping` on a driver network, device or point device ext asks the driver to
-  check the device and changes no setting.
+  check the device and changes no setting. `writeDeviceInstance` is accepted only on a
+  `honeywellBacnetSpyder:BacnetSpyder`: it writes the component's
+  `config/deviceObject/objectId` into the controller at the component's `address`
+  (MS/TP network and MAC), so it renumbers a Spyder that still has a duplicate factory
+  instance (e.g. three units at `device:9999`). Register a new Spyder by creating the
+  component already at its final instance and address (never at the duplicate instance:
+  every I-Am of that instance would rebind it), then invoke `writeDeviceInstance`, one unit
+  at a time.
+- `n4_rename_component(items: [{parent_ord, name, new_name}])` renames up to 50 dynamic
+  slots in one batch (the station's RenameOp). The plan refuses a missing source, a taken
+  or repeated target, a source renamed twice and an unchanged name; the inverse renames
+  back in reverse order and the read-back checks every new name is present and every old
+  one gone. Links and history extensions stay with the component; a history id built from
+  `%parent.name%` or `%name%` takes the new name when it is next resolved.
   `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
 - `n4_create_component` follows a station rename on collision (the inverse and the
-  read-back use the assigned name). With `proxy_ext` (a type spec such as
+  read-back use the assigned name). A display name the station can only store escaped (a
+  leading digit, a space) is created under its SlotPath escape and the plan says so:
+  `2012` is stored as `$32012`, like the devices Workbench adds. With `proxy_ext` (a type spec such as
   `modbusCore:ModbusClientNumericProxyExt`) the point is created with that driver
   extension in the same add, so a read-only field register is a `control:NumericPoint`
   that never writes; the read-back checks the extension type. A Modbus proxy created this

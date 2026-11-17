@@ -13,6 +13,7 @@ const (
 		"then reconnect with n4_connect"
 	// msgNameTaken is the first dry-run note when the name is taken under the parent: not a
 	// refusal, the station renames on collision (a pinned contract) and the inverse follows it.
-	msgNameTaken = "name %s is already taken under %s: the station will assign another name; " +
+	msgNameEscaped = "display name %s is stored as %s (SlotPath escape); read it back by the stored name"
+	msgNameTaken   = "name %s is already taken under %s: the station will assign another name; " +
 		"the read-back and the inverse follow it"
 )
