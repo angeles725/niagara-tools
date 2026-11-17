@@ -16,6 +16,7 @@ type refrigSeries struct {
 	id        string
 	samples   refrig.Series
 	records   int
+	nulls     int // records with status null (no value): left out of the series
 	truncated bool
 	loc       *time.Location
 	failed    string
@@ -23,7 +24,7 @@ type refrigSeries struct {
 
 // readSeries reads history id over params with the locale-free summary query (ISO timestamps,
 // encodeToString values). A boolean value is 1 or 0; a record whose value is neither a number
-// nor a boolean is skipped (a null status writes no value).
+// nor a boolean is skipped, and so is a record whose status is null (it carries no value).
 func (t *Tools) readSeries(id, params string, maxRows, timeout int) (*refrigSeries, error) {
 	s := &refrigSeries{id: id, loc: time.UTC}
 	full, err := bql.ResolveHistoryId(id, t.Ctx.Session.StationName)
@@ -49,6 +50,10 @@ func (t *Tools) readSeries(id, params string, maxRows, timeout int) (*refrigSeri
 	}
 	s.records, s.truncated = len(rows), cut
 	for i, r := range rows {
+		if strings.Contains(cellText(r, "status"), "null") {
+			s.nulls++ // a null status writes no value (a new COV history starts with two 0.0 {null}): never a sample
+			continue
+		}
 		ts, err := time.Parse(time.RFC3339Nano, cellText(r, "timestamp"))
 		v, ok := sampleValue(cellText(r, "value"))
 		if err != nil || !ok {

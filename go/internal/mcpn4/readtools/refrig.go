@@ -25,6 +25,7 @@ type refrigRun struct {
 	maxRows, timeout, limit int
 	end                     time.Time
 	read                    map[string]*refrigSeries
+	order                   []string // ids in the order first read: a stable reply
 	requests                int
 }
 
@@ -73,13 +74,15 @@ func (r *refrigRun) series(id string) (*refrigSeries, error) {
 		return nil, err
 	}
 	r.read[id] = s
+	r.order = append(r.order, id)
 	return s, nil
 }
 
 func (r *refrigRun) historiesRead() []any {
 	out := []any{}
-	for _, s := range r.read {
-		o := obj("id", s.id, "records", s.records, "truncated", s.truncated)
+	for _, id := range r.order {
+		s := r.read[id]
+		o := obj("id", s.id, "records", s.records, "null_records", s.nulls, "truncated", s.truncated)
 		if s.failed != "" {
 			o.Set("error", s.failed)
 		}

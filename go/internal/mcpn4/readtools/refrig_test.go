@@ -120,3 +120,27 @@ func TestRefrigerationFaultsRefusesAnEmptyRuleSetAndAMissingThreshold(t *testing
 }
 
 func lookupT(o *pyjson.Object, k string) any { v, _ := o.Get(k); return v }
+
+// A new COV history starts with 0.0 {null} records (live 2026-11-17 on /Prueba_4_15/P3Lab_Amps):
+// they carry no value, so they are no sample; histories lists each read in order with the count.
+func TestRefrigerationFaultsLeavesOutNullRecordsAndListsReadsInOrder(t *testing.T) {
+	body := history("10:21.0", "20:12.0") + "2026-11-16T10:05:00.000-06:00,0.0,{null}\n"
+	s, _ := refrigServer(t,
+		readtoolstest.OrdRoute{Needle: "/FakeStation/Amps?", Body: body},
+		readtoolstest.OrdRoute{Needle: "/FakeStation/Temp?", Body: history("0:3.0")})
+	rules := spec("over_amps", spec("amps_history", "Amps", "limit", num("20")),
+		"setpoint_not_reached", spec("temp_history", "Temp", "setpoint", num("2"), "band", num("2"), "min_minutes", num("5")))
+	text, isErr, out := s.Call(t, "n4_refrigeration_faults", "rules", rules, "period", "today")
+	if isErr {
+		t.Fatal(text)
+	}
+	item := lookupT(lookupT(out, "over_amps").(*pyjson.Object), "items").([]any)[0].(*pyjson.Object)
+	if got := marshal(t, lookupT(item, "samples")); got != "2" {
+		t.Errorf("samples %s (the null record counted)", got)
+	}
+	want := `[{"id": "/FakeStation/Amps", "records": 3, "null_records": 1, "truncated": false}, ` +
+		`{"id": "/FakeStation/Temp", "records": 1, "null_records": 0, "truncated": false}]`
+	if got := marshal(t, lookupT(out, "histories")); got != want {
+		t.Errorf("histories %s", got)
+	}
+}

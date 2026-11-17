@@ -710,8 +710,8 @@ for some and under 10 for others).
 | `door_drift` | `door_history` (boolean), `temp_history` | `max_rise`, `after_minutes` | an opening after which the room rose more than `max_rise` until close + `after_minutes` |
 
 Each rule is `{count, items, more}`, `summary` has one line per rule (`ok`, `N finding(s)`,
-`not checked: why`), and `histories` lists each read with `records` and `truncated` (more records
-existed; the oldest were cut). A history that could not be read makes its rule `not_checked`,
+`not checked: why`), and `histories` lists each read with `records`, `null_records` (records with a null status carry no
+value and are left out) and `truncated` (more records existed; the oldest were cut). A history that could not be read makes its rule `not_checked`,
 never clean. An event still open at `end` is cut there.
 
 ### Finishing a job: the commissioning report
