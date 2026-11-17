@@ -294,6 +294,9 @@ queried `name` column is decoded by its position in the select list, `n4_invento
 columns by position, and a repeated header is kept as `Type#2`, `Type#3`. With
 `output_file: "<name>.csv|.json"`, `n4_bql_query` writes the rows to `<state-dir>/bql/<name>`
 (directory 0700, file 0600, never overwritten) and replies without `rows`.
+A `where` literal is decoded by BQL (`$20` is a space) while slot names are stored escaped: to
+match `Numeric$20Writable40005` write `name = 'Numeric$2420Writable40005'` (`$24` is a literal `$`).
+An empty result whose quoted literal holds a `$xx` escape carries a `hint` naming that form.
 Besides a station subtree, `base` may be `alarm:` (the alarm database) or
 `history:/<station>/<history name>` (one history; the id as `n4_read_history` checks it), each
 also accepted after `station:|`. The query there is `select <columns> [where ...] [order by ...]`:

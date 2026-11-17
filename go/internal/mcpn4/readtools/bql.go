@@ -117,6 +117,11 @@ func (t *Tools) BqlQuery(args *pyjson.Object) (*pyjson.Object, error) {
 	t.recordRead("n4_bql_query", "base", args, len(rows))
 	out := obj("base", base, "query", bql.Strip(q), "columns", strs(columns), "row_count", len(rows),
 		"truncated", truncated, "elapsed_ms", elapsed)
+	if len(rows) == 0 {
+		if hint := bql.EscapeHint(q); hint != "" {
+			out.Set("hint", hint)
+		}
+	}
 	if path == "" {
 		out.Set("rows", list(rows))
 		return out, nil
