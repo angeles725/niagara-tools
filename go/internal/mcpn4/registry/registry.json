@@ -1446,6 +1446,79 @@
    "needs_session": false
   },
   {
+   "name": "n4_inventory_snapshot",
+   "description": "Snapshot the inventory of a subtree to a local file, for n4_inventory_diff later (read-only on the station). One BOX load of base: every component down to depth levels below it (at most max_components, beyond it truncated) with its slot path, type, handle and recorded slots. By default the recorded slots are the configured properties: the simple and Status values directly on the component (a Status as 'value {status}'), leaving out runtime state so two snapshots of an unchanged station diff to empty. The type contract decides, not the slot type (a writable's fallback is recorded): left out are slots flagged transient on the instance or in the contract (a point's out, the inputs other than in1 and in8, a history extension's lastRecord and status), a Status out its contract does not declare as configuration, and inputs a link drives; a component below a transient slot is left out with everything below it. When the contracts cannot be read, notes says so and only instance flags, Status outs and linked inputs count. slots names the slots to record instead. The file is written under <state-dir>/exports/ with a name the server makes (inventory-<station>-<UTC time>.json, 0600, never overwritten); the reply gives name, path, components, bytes, truncated, base, depth and notes.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "base": {
+      "type": "string",
+      "default": "station:|slot:/",
+      "description": "Station ORD of the subtree"
+     },
+     "depth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 12,
+      "default": 6,
+      "description": "Component levels below base"
+     },
+     "max_components": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200000,
+      "default": 20000,
+      "description": "Most components recorded; beyond it the snapshot is truncated"
+     },
+     "slots": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Slot names to record instead of the configured properties (e.g. [\"facets\", \"out\"])"
+     }
+    }
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_inventory_diff",
+   "description": "Compare two inventory snapshots (n4_inventory_snapshot) by slot path; reads only the two local files (no station request, needs no session). a and b are snapshot names as the snapshot reply gives them, files under <state-dir>/exports/: a name with '..' or a path separator, or one that is not there, is refused. The reply lists added and removed components [{path, type}], changed slot values [{path, slot, before, after}] (null: the slot was not sent, at its default or absent), type_changed [{path, before, after}] and handle_changed (informational: a re-created component), each cut to limit items (truncated says one was), counts of every list before the cut plus unchanged, and notes when the two sides differ in station, subtree, recorded slots or contracts, or one was truncated. Read-only.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "a": {
+      "type": "string",
+      "description": "Name of the earlier snapshot"
+     },
+     "b": {
+      "type": "string",
+      "description": "Name of the later snapshot"
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5000,
+      "default": 200,
+      "description": "Most items listed per list"
+     }
+    },
+    "required": [
+     "a",
+     "b"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_list_schedule_kinds",
    "description": "Which kinds of schedule a station can hold and how each works, so no type name has to be known (reads no station, needs no session). schedule_kinds: boolean, numeric, enum, string (weekly schedules with special events: out follows the weekly time ranges, special events override them, a default output fills the rest), calendar (a list of days other schedules reference) and trigger (fires a topic at times of day on chosen days); each with its station type, value_type, the plain value it takes, default_output, which parts it has (weekly, special_events, dates, times), purpose, behaviour and what its out is usually linked to (by convention a writable's in16). event_kinds: date, date_range, week_and_day, custom and reference (the days of a calendar), each with its type, purpose, whether a calendar can hold it (in_calendar) and its fields with their allowed values. Also priority (top special event first), cleanup (passed date and date-range events are deleted by the station) and export_import (the station types that copy schedules between stations; no tool here).",
    "inputSchema": {
