@@ -13,7 +13,11 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest/boxstation"
 )
 
-const haDev = "slot:/Plant/Dev1/points/"
+const (
+	haDev = "slot:/Plant/Dev1/points/"
+	// haService is a control point of a station service (live check 2026-11-17: 52 of 53 such points)
+	haService = "slot:/Services/SecurityService/certificates/default/expiry"
+)
 
 // haAgo is the encodeToString text of the time d before now (the server reads its own clock).
 func haAgo(d time.Duration) string {
@@ -23,7 +27,7 @@ func haAgo(d time.Duration) string {
 // haTables are the points and history extensions of the fake station, and each history's count.
 func haTables() (points, exts []string, counts map[string]string) {
 	points = []string{haDev + "Temp", haDev + "NoHist", haDev + "Off", haDev + "Press", haDev + "Door",
-		haDev + "Level", haDev + "Amps", "slot:/Plant/Dev2/points/Amps"}
+		haDev + "Level", haDev + "Amps", "slot:/Plant/Dev2/points/Amps", haService}
 	ext := func(point, typ, enabled, id, capacity, policy, interval, last string) string {
 		return strings.Join([]string{point + "/hist", "history:" + typ, enabled, id, capacity, policy, interval, last}, ",")
 	}
@@ -80,7 +84,7 @@ func TestHistoriesAuditListsEveryFindingOfTheStation(t *testing.T) {
 	if got := haPaths(out["stale"], "history_id"); !reflect.DeepEqual(got, []string{"/FakeStation/Press", "/FakeStation/Door"}) {
 		t.Fatalf("stale = %v", out["stale"])
 	}
-	if stale[0]["interval"] != "1m" || stale[0]["threshold"] != "3m" || stale[1]["interval"] != "cov" || stale[1]["threshold"] != "1d" {
+	if stale[0]["interval"] != "1m" || stale[0]["threshold"] != "10m" || stale[1]["interval"] != "cov" || stale[1]["threshold"] != "1d" {
 		t.Errorf("stale items = %v", stale)
 	}
 	near := objects(out["near_capacity"])
@@ -99,11 +103,33 @@ func TestHistoriesAuditListsEveryFindingOfTheStation(t *testing.T) {
 	if !reflect.DeepEqual(counts, want) {
 		t.Errorf("counts = %v, want %v", counts, want)
 	}
+	if out["stale_min"] != "10m" || out["services_excluded"] != 1.0 {
+		t.Errorf("stale_min %v services_excluded %v", out["stale_min"], out["services_excluded"])
+	}
 	if out["truncated"] != false || out["count_reads"] != 5.0 || out["requests"] != 7.0 {
 		t.Errorf("truncated %v count_reads %v requests %v", out["truncated"], out["count_reads"], out["requests"])
 	}
 	if n := len(ordRequests(sv)); n != 7 {
 		t.Errorf("station requests = %d, want 7 (2 tables, 5 distinct record-capped ids)", n)
+	}
+}
+
+func TestHistoriesAuditListsServicePointsOnlyWhenAsked(t *testing.T) {
+	r, _ := haRig(t)
+	out := r.Srv.OK("n4_histories_audit", Args{"exclude_services": false})
+	if got := haPaths(out["no_history"], "point"); !reflect.DeepEqual(got, []string{haDev + "NoHist", haService}) {
+		t.Errorf("no_history = %q", got)
+	}
+	if out["services_excluded"] != 0.0 {
+		t.Errorf("services_excluded = %v", out["services_excluded"])
+	}
+}
+
+func TestHistoriesAuditStaleMinIsAFloorUnderTheIntervalThreshold(t *testing.T) {
+	r, _ := haRig(t)
+	out := r.Srv.OK("n4_histories_audit", Args{"stale_min": "3h"}) // Press: 1 m interval, 2 h old
+	if got := haPaths(out["stale"], "history_id"); !reflect.DeepEqual(got, []string{"/FakeStation/Door"}) {
+		t.Errorf("stale = %q", got)
 	}
 }
 
@@ -133,8 +159,10 @@ func TestHistoriesAuditRefusesABadBaseOrSpanBeforeAnyRequest(t *testing.T) {
 	if !res.IsError || len(ordRequests(sv)) != 0 {
 		t.Errorf("bad base: %v, requests %v", res.Raw, ordRequests(sv))
 	}
-	res = r.Srv.Call("n4_histories_audit", Args{"cov_max_age": "1w"})
-	if !res.IsError || len(ordRequests(sv)) != 0 {
-		t.Errorf("bad cov_max_age: %v, requests %v", res.Raw, ordRequests(sv))
+	for _, bad := range []Args{{"cov_max_age": "1w"}, {"stale_min": "0m"}} {
+		res = r.Srv.Call("n4_histories_audit", bad)
+		if !res.IsError || len(ordRequests(sv)) != 0 {
+			t.Errorf("%v: %v, requests %v", bad, res.Raw, ordRequests(sv))
+		}
 	}
 }

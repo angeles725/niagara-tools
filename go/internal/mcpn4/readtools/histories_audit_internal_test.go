@@ -131,3 +131,27 @@ func TestNeedsCountOnlyForRecordingRecordCappedHistories(t *testing.T) {
 		}
 	}
 }
+
+func TestStaleMinKeepsShortIntervalHistoriesFromFalsePositives(t *testing.T) {
+	// live check 2026-11-17: a 5 s history's newest record shows about 20 s late (batched writes)
+	fast := haExt("slot:/F/h", "history:NumericIntervalHistoryExt", "/S/F", "1:500", "roll", "false:5000",
+		"2026-11-17T11:59:38.000Z") // 22 s old
+	cfg := haCfg
+	cfg.staleMin = 10 * time.Minute
+	if item, why := cfg.stale(fast); item != nil || why != "" {
+		t.Errorf("default stale_min: %s, %q", pyjson.Repr(item), why)
+	}
+	cfg.staleMin = 10 * time.Second
+	item, _ := cfg.stale(fast)
+	if lookup(item, "threshold") != "15s" || lookup(item, "age") != "22s" {
+		t.Errorf("stale_min 10s: %s", pyjson.Repr(item))
+	}
+}
+
+func TestServicePointsAreLeftOutWhenExcluded(t *testing.T) {
+	points := []string{"slot:/Services/SecurityService/certificates/default/expiry", "slot:/Servicesx/P", "slot:/A/P"}
+	kept, dropped := withoutServices(points)
+	if !reflect.DeepEqual(kept, []string{"slot:/Servicesx/P", "slot:/A/P"}) || dropped != 1 {
+		t.Errorf("withoutServices = %q, %d", kept, dropped)
+	}
+}

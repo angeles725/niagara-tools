@@ -6,6 +6,7 @@ package readtools
 const (
 	haDefaultStaleFactor  = 3.0
 	haDefaultCovMaxAge    = "24h"
+	haDefaultStaleMin     = "10m"
 	haDefaultCapacityWarn = 0.9
 	haDefaultMaxHistories = 500
 	haDefaultTimeout      = 60
@@ -28,7 +29,7 @@ var haLists = []string{"no_history", "disabled", "stale", "near_capacity", "coll
 // Messages of n4_histories_audit.
 const (
 	haBadBase      = "base must be a plain slot path such as station:|slot:/Drivers (default: the whole station), got %s"
-	haBadSpan      = "cov_max_age must be a span such as 30m, 24h or 7d, got %s"
+	haBadSpan      = "%s must be a span such as 30m, 24h or 7d, got %s"
 	haExtFailed    = "the history extensions could not be read (%s): %s"
 	haPointsFailed = "the control points could not be read (%s): %s; no_history is not checked"
 	haCutAbsence   = "the %s read stopped at %d rows (max_histories or the response cap): a point's missing " +

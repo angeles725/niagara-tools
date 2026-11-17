@@ -32,6 +32,8 @@ type haRun struct {
 	pointsCut          bool
 	pointCount         int // -1 when the points read failed
 	noHistoryNote      string
+	excludeServices    bool
+	servicesExcluded   int
 }
 
 // HistoriesAudit is n4_histories_audit.
@@ -41,17 +43,23 @@ func (t *Tools) HistoriesAudit(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, toolError(haBadBase, pyjson.StrRepr(base))
 	}
-	span := strArg(args, "cov_max_age", haDefaultCovMaxAge)
+	span, minSpan := strArg(args, "cov_max_age", haDefaultCovMaxAge), strArg(args, "stale_min", haDefaultStaleMin)
 	covMaxAge, ok := bql.ParseSpan(span)
 	if !ok {
-		return nil, toolError(haBadSpan, pyjson.StrRepr(span))
+		return nil, toolError(haBadSpan, "cov_max_age", pyjson.StrRepr(span))
+	}
+	staleMin, ok := bql.ParseSpan(minSpan)
+	if !ok {
+		return nil, toolError(haBadSpan, "stale_min", pyjson.StrRepr(minSpan))
 	}
 	r := &haRun{t: t, scope: bql.StationSlot + slot, notAnswered: map[string]int{},
 		maxHistories: intArg(args, "max_histories", haDefaultMaxHistories),
 		timeout:      intArg(args, "timeout_s", haDefaultTimeout),
 		lists:        map[string][]*pyjson.Object{}, totals: map[string]any{}, notes: []any{},
+		excludeServices: boolArg(args, "exclude_services", true),
 		cfg: histAuditCfg{staleFactor: floatArg(args, "stale_factor", haDefaultStaleFactor), covMaxAge: covMaxAge,
-			warn: floatArg(args, "capacity_warn", haDefaultCapacityWarn), now: bql.Now()}}
+			staleMin: staleMin,
+			warn:     floatArg(args, "capacity_warn", haDefaultCapacityWarn), now: bql.Now()}}
 	start := t.Ctx.Clock()
 	exts, err := r.readExts()
 	if err != nil {
@@ -61,8 +69,11 @@ func (t *Tools) HistoriesAudit(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, err
 	}
+	if r.excludeServices {
+		points, r.servicesExcluded = withoutServices(points)
+	}
 	r.classify(points, exts)
-	out := r.reply(base, span, len(exts))
+	out := r.reply(base, span, minSpan, len(exts))
 	out.Set("elapsed_ms", int(math.RoundToEven((t.Ctx.Clock()-start)*1000)))
 	t.recordRead("n4_histories_audit", "base", args, len(exts)+len(points))
 	return out, nil
@@ -133,6 +144,16 @@ func floatArg(args *pyjson.Object, key string, def float64) float64 {
 	if v, ok := args.Get(key); ok {
 		if f, err := v.(pyjson.Number).Float64(); err == nil {
 			return f
+		}
+	}
+	return def
+}
+
+// boolArg is args.get(key, def) for a boolean the schema checked.
+func boolArg(args *pyjson.Object, key string, def bool) bool {
+	if v, ok := args.Get(key); ok {
+		if b, ok := v.(bool); ok {
+			return b
 		}
 	}
 	return def

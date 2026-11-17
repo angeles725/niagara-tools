@@ -23,6 +23,7 @@ type histExt struct {
 // histAuditCfg holds the thresholds of one audit and the time it measures ages from.
 type histAuditCfg struct {
 	staleFactor float64       // a regular history is stale past staleFactor x its interval
+	staleMin    time.Duration // ... but never before this age (records show up in batches)
 	covMaxAge   time.Duration // a COV history is stale past this age
 	warn        float64       // a record-capped history is near capacity from this fraction
 	now         time.Time
@@ -41,6 +42,20 @@ func pointsWithoutHistory(points []string, exts []histExt) []string {
 		}
 	}
 	return out
+}
+
+// servicesPrefix is the slot path of the station's services folder.
+const servicesPrefix = "slot:/Services"
+
+// withoutServices is points without those under the services folder, and how many it dropped.
+func withoutServices(points []string) ([]string, int) {
+	kept := []string{}
+	for _, p := range points {
+		if p != servicesPrefix && !strings.HasPrefix(p, servicesPrefix+"/") {
+			kept = append(kept, p)
+		}
+	}
+	return kept, len(points) - len(kept)
 }
 
 // collidingIds are the history ids two or more extensions record into, sorted by id.
@@ -83,7 +98,7 @@ func (c histAuditCfg) stale(e histExt) (item *pyjson.Object, why string) {
 	}
 	kind, limit := "cov", c.covMaxAge
 	if !cov {
-		kind, limit = spanText(every), time.Duration(c.staleFactor*float64(every))
+		kind, limit = spanText(every), max(time.Duration(c.staleFactor*float64(every)), c.staleMin)
 	}
 	out := obj("history_id", e.id, "ext", e.path)
 	if strings.TrimSpace(e.last) == "null" {

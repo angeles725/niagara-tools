@@ -69,8 +69,9 @@ func (r *haRun) countedNearCapacity(e histExt) *pyjson.Object {
 }
 
 // reply is the audit's reply: its arguments, every list capped at haListCap, the totals, notes.
-func (r *haRun) reply(base, span string, extRows int) *pyjson.Object {
-	out := obj("base", base, "stale_factor", r.cfg.staleFactor, "cov_max_age", span, "capacity_warn", r.cfg.warn)
+func (r *haRun) reply(base, span, minSpan string, extRows int) *pyjson.Object {
+	out := obj("base", base, "stale_factor", r.cfg.staleFactor, "stale_min", minSpan, "cov_max_age", span,
+		"capacity_warn", r.cfg.warn, "exclude_services", r.excludeServices, "services_excluded", r.servicesExcluded)
 	counts, cut := obj("points", nil, "history_exts", extRows), []string{}
 	for _, name := range haLists {
 		items := r.lists[name]
@@ -85,7 +86,7 @@ func (r *haRun) reply(base, span string, extRows int) *pyjson.Object {
 		counts.Set(name, len(r.lists[name]))
 	}
 	if r.pointCount >= 0 {
-		counts.Set("points", r.pointCount)
+		counts.Set("points", r.pointCount-r.servicesExcluded)
 	}
 	if !r.pointsRead {
 		counts.Set("no_history", nil)
