@@ -146,6 +146,7 @@ const (
 	msgBaselineRefExists      = "build.sh: --schema-baseline-ref: %s already exists — remove it to take the baseline from the ref, or drop the option to use it"
 	msgBaselineRefNewArtifact = "build.sh: INFO — %s does not exist at %s: no schema-risk baseline for it (a first deploy of that artifact)"
 	msgBaselineRefFailed      = "build.sh: --schema-baseline-ref %s: cannot extract %s (exit %d)"
+	msgBaselineRefDangling    = "build.sh: INFO — removed %s, a dangling link a killed --schema-baseline-ref run left"
 	msgBaselineRefLink        = "build.sh: --schema-baseline-ref: cannot link %s: %v"
 	msgBaselineRefDone        = "==> schema-risk baseline: %s from %s (removed when the run ends)"
 )

@@ -25,7 +25,7 @@ func (b *build) extractBaselines() int {
 	}
 	artifacts := walkedArtifacts(source)
 	for _, a := range artifacts {
-		if _, err := os.Lstat(a + "/.deploy-baseline"); err == nil {
+		if b.baselineTaken(a + "/.deploy-baseline") {
 			b.warn(msgBaselineRefExists, a+"/.deploy-baseline")
 			return ExitUsage
 		}
@@ -61,13 +61,15 @@ func (b *build) extractBaseline(a, ref string) int {
 		return ExitFault
 	}
 	link := a + "/.deploy-baseline"
+	// Made and registered under tempsMu, which the signal handler's cleanup takes: an interrupt cannot fall
+	// between the two, and a path this run did not make (Symlink failed) is never registered for removal.
 	b.tempsMu.Lock()
-	b.temps = append(b.temps, link) // registered first: an interrupt right after the link is made removes it too
-	b.tempsMu.Unlock()
+	defer b.tempsMu.Unlock()
 	if err := os.Symlink(tree, link); err != nil {
 		b.warn(msgBaselineRefLink, link, err)
 		return ExitFault
 	}
+	b.temps = append(b.temps, link)
 	return proceed
 }
 
@@ -98,4 +100,21 @@ func walkedArtifacts(source string) []string {
 		}
 	}
 	return dirs
+}
+
+// baselineTaken reports whether link is a .deploy-baseline the run must not replace. A dangling symlink is the
+// leftover of a killed run (its extraction is gone, and report-module reads it as no baseline): it is removed,
+// with one INFO line, so a retry does not need a manual cleanup.
+func (b *build) baselineTaken(link string) bool {
+	st, err := os.Lstat(link)
+	if err != nil {
+		return false
+	}
+	if st.Mode()&os.ModeSymlink != 0 {
+		if _, err := os.Stat(link); err != nil && os.Remove(link) == nil {
+			b.warn(msgBaselineRefDangling, link)
+			return false
+		}
+	}
+	return true
 }
