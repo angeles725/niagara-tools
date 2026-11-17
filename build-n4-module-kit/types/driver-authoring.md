@@ -876,6 +876,11 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   (0-3: the JACE and spare masters), one above the trunk's `maxMaster`, one the switches cannot set, or a MAC /
   device ID already on the trunk (`--existing` CSV `mac,device_id`). One field job recomputed the table by hand
   three times. `[ev: retro mstp-plan Δ1]`
+- **BACnet Discover finds nothing on a second trunk until its network is selected:** the Discover dialog's
+  Networks filter defaults to the first network; select the MS/TP network (Send Global, wait ~20 s) before
+  concluding the controllers are offline. A point's `binaryInput:N` / `analogInput:N` is the BACnet object
+  instance, not the controller's terminal number: map terminals from the controller's own IO configuration.
+  `[ev: retro field-commissioning-notes Δ2]`
 - **Large MS/TP trunks:** a Boolean `skipUpload=true` slot on a `BacnetDevice` skips the device-object upload
   at station start (`Bacnet/TroubleshootingBACnet-4FF09FBA.txt:27,57-58` "Any BacnetDevice with a Boolean slot named Skip"); a duplicate Device ID faults the
   device (`:17`).
@@ -894,6 +899,12 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   not rounded) (`Modbus/ModbusData-5FD097AE.txt:64-79` "The Modbus driver’s NumericWritable proxy points, which write").
 - Wire addresses are zero-based: holding register 108 in a vendor sheet is address 107
   (`Modbus/ModbusRegisters-5E427D5B.txt:33` "Data addressing (at least in decimal and hex").
+- **One writable proxy point per register per device:** `BModbusClientProxyExt` checks it in `started()` and
+  `changed(dataAddress)`; a second writable point on the same register logs "Duplicate Writable point for register
+  address" and its address is reset to `Hex:-1` (fault "Illegal Modbus address"). A copy of a writable point on
+  its own device therefore lands at `Hex:-1` until it gets its own register; read-only points are not checked
+  (live 4.15 lab). Add Modbus devices and points with the stock Modbus Async Device/Point Manager — a vendor
+  manager view can throw on a device without the vendor's device config. `[ev: retro field-commissioning-notes Δ3]`
 - Modbus has no priority array: the 16 N4 levels resolve to one value before the wire (corpus B544 §544.5).
   `[ev: corpus B1327 row 10]`
 
