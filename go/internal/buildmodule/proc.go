@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
 	"syscall"
 
@@ -96,20 +95,6 @@ func (b *build) output(name string, args ...string) (out []byte, ok bool) {
 
 // homeDir is $HOME as bash reads it: the variable, else the user's home directory.
 func (b *build) homeDir() string { return modjar.HomeDir(b.s.Env) }
-
-// cleanupOnSignal removes the temporary directory when the run is interrupted, then ends as bash does
-// for that signal. The returned function stops watching.
-func (b *build) cleanupOnSignal() (stop func()) {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	go func() {
-		if sig, ok := <-ch; ok {
-			b.cleanup()
-			os.Exit(signalBase + int(sig.(syscall.Signal)))
-		}
-	}()
-	return func() { signal.Stop(ch); close(ch) }
-}
 
 // isExecutable is test -x.
 func isExecutable(path string) bool { return syscall.Access(path, 1) == nil }

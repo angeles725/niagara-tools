@@ -74,6 +74,12 @@ const (
 	restoredRetry       = " — a retry will catch this again."
 )
 
+// An interrupt between the baseline snapshot and a passing chain. %[1]s the signal, %[2]s niagara_home.
+const (
+	msgInterrupted           = "build.sh: interrupted (%[1]s) before the gate passed; putting modules/ back as it was before the build"
+	msgInterruptedNoSnapshot = "build.sh: interrupted (%[1]s) under --no-drift-check: no pre-build snapshot, %[2]s/modules is left as the build left it"
+)
+
 // The mirror jar a build replaced (retro row B6). keepReplaced: %[1]s module-profile, %[2]s niagara_home, then
 // the old and new vendorVersion and sha256 prefix, those of the first jar replaced this cycle, the build.sh path
 // and that first kept jar.

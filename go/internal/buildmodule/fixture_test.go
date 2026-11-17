@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -67,7 +68,7 @@ func newFixture(t *testing.T) *fixture {
 // run is Main over args; the streams are kept in f.out and f.err.
 func (f *fixture) run(args ...string) int {
 	f.t.Helper()
-	var out, errs bytes.Buffer
+	var out, errs lockedBuffer // the signal handler writes while gradle's output is copied (signal_test.go)
 	code := Main(args, cli.Stdio{Out: &out, Err: &errs, Getenv: func(name string) string {
 		if v, ok := f.env[name]; ok {
 			return v
@@ -76,6 +77,24 @@ func (f *fixture) run(args ...string) int {
 	}})
 	f.out, f.err = out.String(), errs.String()
 	return code
+}
+
+// lockedBuffer is a bytes.Buffer two goroutines may write.
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (l *lockedBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.buf.Write(p)
+}
+
+func (l *lockedBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.buf.String()
 }
 
 // signs configures a signing alias, which keeps the no-signer WARN out of a test about other messages.
