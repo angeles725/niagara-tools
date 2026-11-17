@@ -23,6 +23,7 @@ var SaveStation = plan.Impl{ScopeOrds: func(*pyjson.Object) []any { return nil }
 // write state whose timing the read-back polls with.
 type saveData struct {
 	home, station string
+	backup        bool // zip the station directory after the save (save_backup.go)
 	before        *pyjson.Object
 	w             *plan.State
 }
@@ -58,8 +59,12 @@ func bogState(home string) *pyjson.Object {
 }
 
 // savePlan is _save_plan with the write state _process adds to its data.
-func savePlan(_ plan.Client, _ *pyjson.Object, w *plan.State, sess *session.Session) (*plan.Planned, error) {
+func savePlan(_ plan.Client, args *pyjson.Object, w *plan.State, sess *session.Session) (*plan.Planned, error) {
 	d := saveData{home: w.StationHomes[sess.StationName], station: sess.StationName, w: w}
+	notes, err := backupPlan(&d, args)
+	if err != nil {
+		return nil, err
+	}
 	note := "the BOX reply to save is null and proves nothing; "
 	if d.home != "" {
 		note += "persistence is checked on " + bogPath(d.home)
@@ -68,14 +73,28 @@ func savePlan(_ plan.Client, _ *pyjson.Object, w *plan.State, sess *session.Sess
 		note += "no --station-home for this station, so persistence cannot be checked"
 	}
 	op := obj("ssc", "invokeAction", "arg", obj("h", sess.RootHandle, "a", "save"))
-	return &plan.Planned{Ops: []any{op}, Notes: []any{note, "no inverse: a save cannot be undone"},
-		Data: d}, nil
+	notes = append([]any{note, "no inverse: a save cannot be undone"}, notes...)
+	return &plan.Planned{Ops: []any{op}, Notes: notes, Data: d}, nil
 }
 
 // saveReadback is _save_readback: unknown without a home or a readable config.bog before the
 // save; else config.bog is polled until it is unreadable, changed (sha256 or a later mtime) or
 // the timeout passes: persisted, unknown or not.
-func saveReadback(_ plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _ []any) (any, any, any, string, error) {
+func saveReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, inverse []any) (any, any, any, string, error) {
+	requested, accepted, observed, verdict, err := savePersisted(c, args, p, replies, inverse)
+	if d := p.Data.(saveData); err == nil && d.backup {
+		requested.(*pyjson.Object).Set("backup", true)
+		b := backupAfterSave(d)
+		observed.(*pyjson.Object).Set("backup", b)
+		if _, failed := b.Get("error"); failed { // a backup was asked for and none exists: never a verified call
+			verdict = "mismatch"
+		}
+	}
+	return requested, accepted, observed, verdict, err
+}
+
+// savePersisted is the persistence half of the read-back (config.bog before and after).
+func savePersisted(_ plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _ []any) (any, any, any, string, error) {
 	d := p.Data.(saveData)
 	requested := obj("action", "save")
 	unknown := func(hint string) (any, any, any, string, error) {

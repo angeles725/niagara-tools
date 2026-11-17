@@ -49,6 +49,8 @@ type State struct {
 	// StationHomes maps a station NAME to the directory holding its config.bog (--station-home,
 	// operator policy): n4_save_station proves persistence there.
 	StationHomes map[string]string
+	// StateDir is the --state-dir this state was opened on (n4_save_station's backups go under it).
+	StateDir string
 	// SaveTimeout and SaveInterval (seconds) bound the save's read-back poll, Sleep and Monotonic
 	// are its clock (time.sleep, time.monotonic).
 	SaveTimeout, SaveInterval float64
@@ -75,7 +77,7 @@ func NewState(scopes []string, stateDir string, tokenTTL, maxWrites int) (*State
 		return nil, err
 	}
 	return &State{Scope: scope, Tokens: token.New(tokenTTL, nil), Journal: journal.New(stateDir),
-		Audit: journal.NewAuditLog(stateDir), MaxWrites: maxWrites, NewBatchID: uuid4Hex,
+		Audit: journal.NewAuditLog(stateDir), MaxWrites: maxWrites, NewBatchID: uuid4Hex, StateDir: stateDir,
 		StationHomes: map[string]string{}, SaveTimeout: 30.0, SaveInterval: 0.5, Sleep: sleep, Monotonic: monotonic}, nil
 }
 

@@ -80,7 +80,7 @@ func (e *Engine) execute(c Client, impl Impl, args *pyjson.Object, planned *Plan
 	inverse = append(list(runs.Inverse), inverse...) // links first: undoing must precede removing their ends
 	out.Set("inverse", inverse)
 	if o, ok := get(out, "observed").(*pyjson.Object); ok { // promote the headline evidence of a tool
-		for _, k := range []string{"persisted", "evidence", "relinks", "frozen_config_not_restored",
+		for _, k := range []string{"persisted", "evidence", "backup", "relinks", "frozen_config_not_restored",
 			"link_inputs_not_restored"} {
 			if v, ok := o.Get(k); ok {
 				out.Set(k, v)

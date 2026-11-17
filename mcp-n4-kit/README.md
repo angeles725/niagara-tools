@@ -1140,6 +1140,21 @@ Destructive tools use the same pipeline:
   polling up to 30 s, and returns `persisted: true|false|unknown` plus the
   `evidence`. Without a station home it returns `unknown` and says how to configure
   it. It needs at least one `--write-scope` like every write.
+  `backup: true` is the backup before a destructive batch, in the same call: after the
+  save the station directory (`--station-home`) is zipped to
+  `<state-dir>/backups/<station>-<UTC time>.zip` (0600, never over an existing file)
+  without what the BackupService leaves out of its backups by default (files
+  `*.hdb`, `*.adb`, `*.lock`, `*backup*`, `console.*`, `config.bog.b*`,
+  `config_backup*`; the `history`, `alarm` and `webFileCache` directories of the
+  station home; a site may have changed its station's lists; a station home given as a
+  symbolic link is resolved, links inside it are listed, not followed; a directory
+  without `config.bog` is refused). The reply's `backup` gives
+  `path`, `files`, `bytes`, `sha256`, `excluded_files`, `excluded_dirs` and the rules,
+  or `{error}` when the zip failed: the save stands and the verdict is `mismatch`
+  (the backup asked for does not exist). Without a station home the dry
+  run refuses it. The zip is a copy of the files on disk, not the `.dist` Workbench's
+  Backup Station streams through Fox or the platform; it serves stations whose
+  directory this machine can read (a local or mounted station), not a remote JACE.
 - `n4_ack_alarm(uuids, notes)` acknowledges 1 to 100 alarm records by uuid (as
   `n4_read_alarms` returns them) with one call on the station's alarm channel:
   `ackAlarms` with body `{ids: [<uuid>...], notes?}` (box-rt `BAlarmChannel.ackAlarms`;
