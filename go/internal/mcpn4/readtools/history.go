@@ -56,12 +56,7 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 		return nil, unreadable(id, err)
 	}
 	total, note, countMs := t.countHistory(id, params, timeout)
-	var summary any
-	summaryNote, summaryMs := "", 0
-	if v, ok := args.Get("summary"); ok && pyjson.Truthy(v) {
-		maxRows := intArg(args, "summary_max_rows", summaryDefaultRows)
-		summary, summaryNote, summaryMs = t.historySummary(id, params, maxRows, timeout, total)
-	}
+	ex := t.historyExtras(args, id, params, timeout, total)
 	t.recordRead("n4_read_history", key, args, len(rows))
 	out := obj("history_id", id)
 	if hasExt {
@@ -84,12 +79,7 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 	if note != "" {
 		out.Set("total_records_note", note)
 	}
-	if summary != nil || summaryNote != "" {
-		out.Set("summary", summary)
-	}
-	if summaryNote != "" {
-		out.Set("summary_note", summaryNote)
-	}
-	out.Set("elapsed_ms", elapsed+ms+countMs+summaryMs)
+	ex.set(out)
+	out.Set("elapsed_ms", elapsed+ms+countMs+ex.ms)
 	return out, nil
 }

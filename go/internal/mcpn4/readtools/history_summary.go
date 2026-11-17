@@ -26,20 +26,47 @@ const (
 	msgSummaryAggFail = "; the whole-range select min(value), max(value) failed: %s"
 )
 
-// historySummary is the summary of the range, or nil and a note saying why there is none.
-// total is the range's record count (nil when unknown).
-func (t *Tools) historySummary(id, params string, maxRows, timeout int, total any) (any, string, int) {
+// summaryRead is the one read of every record of the range, machine-encoded, that the summary
+// and cov_hint share; failure is the note of a read that did not answer ("" when it did).
+type summaryRead struct {
+	columns []string
+	rows    []*pyjson.Object
+	capped  bool
+	elapsed int
+	failure string
+}
+
+// readSummaryRows is the summary read of the range (at most maxRows records, newest first).
+func (t *Tools) readSummaryRows(id, params string, maxRows, timeout int) summaryRead {
 	ord, err := bql.ComposeHistoryOrd(id, params, bql.HistorySummaryQuery)
 	if err != nil {
-		return nil, err.Error(), 0
+		return summaryRead{failure: err.Error()}
 	}
 	columns, rows, capped, elapsed, err := t.fetchHistory(ord, maxRows, timeout)
 	if err == nil && len(rows) > 0 && len(columns) < 3 {
 		err = fmt.Errorf("the answer has %d column(s), expected 3", len(columns))
 	}
 	if err != nil {
-		return nil, fmt.Sprintf(msgSummaryFailed, bql.HistorySummaryQuery, err.Error()), elapsed
+		return summaryRead{elapsed: elapsed, failure: fmt.Sprintf(msgSummaryFailed, bql.HistorySummaryQuery, err.Error())}
 	}
+	return summaryRead{columns: columns, rows: rows, capped: capped, elapsed: elapsed}
+}
+
+// historySummary is the summary of the range, or nil and a note saying why there is none.
+// total is the range's record count (nil when unknown).
+func (t *Tools) historySummary(id, params string, maxRows, timeout int, total any) (any, string, int) {
+	read := t.readSummaryRows(id, params, maxRows, timeout)
+	summary, note, ms := t.summaryOf(id, params, read, timeout, total)
+	return summary, note, read.elapsed + ms
+}
+
+// summaryOf is the summary of one summary read; the latency it returns is the whole-range
+// aggregate's, when a cut read needed it.
+func (t *Tools) summaryOf(id, params string, read summaryRead, timeout int, total any) (any, string, int) {
+	if read.failure != "" {
+		return nil, read.failure, 0
+	}
+	columns, rows, capped, elapsed := read.columns, read.rows, read.capped, 0
 	sum := summarize(columns, rows)
 	count := total
 	if !capped || count == nil {
