@@ -41,7 +41,7 @@ func (r *commRun) linksSection() (*commSection, error) {
 	}
 	r.linkSources(s.check(names[0]), nodes, links, depth)
 	severalLinks(s.check(names[1]), links)
-	dangling, unknown, _, err := danglingOutputs(ord, nodes, links, depth)
+	dangling, unknown, _, _, err := danglingOutputs(ord, nodes, links, depth) // an extension consumer is no finding
 	if err != nil {
 		return nil, err
 	}

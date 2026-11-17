@@ -137,7 +137,7 @@
   },
   {
    "name": "n4_find_dangling_outputs",
-   "description": "List components (up to depth levels below ord) with an 'out' slot that no link in the subtree uses as a source. Links from outside the subtree are not seen. A source ORD that is neither a handle nor an absolute slot path cannot be resolved: outputs it may feed are listed as unknown, not dangling.",
+   "description": "List components (up to depth levels below ord) with an 'out' slot that no link in the subtree uses as a source. Links from outside the subtree are not seen. A source ORD that is neither a handle nor an absolute slot path cannot be resolved: outputs it may feed are listed as unknown, not dangling. A component with an alarm or history extension child (alarm:...AlarmExt, history:...HistoryExt) has its out read by that extension without a link: it is listed in consumed_by_extension (with the extension type), not as dangling.",
    "inputSchema": {
     "type": "object",
     "properties": {
