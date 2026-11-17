@@ -277,7 +277,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_read_history`, `n4_export_history`, `n4_read_audit`, `n4_histories_audit`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
 `n4_alarm_health`,
 `n4_alarm_text_check`,
-`n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
+`n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`, `n4_schedule_audit`,
 `n4_station_runtime`, `n4_read_tags`,
 `n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
@@ -1528,6 +1528,26 @@ the station holds without a value is listed with `value: null, ignored: true`. T
 out every slot that holds its type's default (a 00:00 start, a false `alwaysEffective`); the tool
 fills those from the station's type registry and refuses, naming the slot, rather than guess one
 the registry does not describe.
+
+### Auditing every schedule
+
+`n4_schedule_audit(base, horizon="7d", max_schedules=500)` (station-audits S12) reads every
+boolean, numeric, enum and string schedule and every calendar below `base` in one read-only call:
+one BQL read `select slotPath, knobCount from schedule:ControlSchedule` (trigger schedules are not
+listed), the station's date from `SystemService`, then each schedule decoded as `n4_read_schedule`
+does. Each entry is `{schedule, type, kind, out_value, next_time, next_value, special_events:
+{count, upcoming}, linked_targets, notes}`. `upcoming` holds the special events (a calendar: its
+dates) whose first day falls within `horizon` days of the station's date, as `{name, kind, date,
+rule, ranges}`; a reference event is followed to its calendar (`calendars: [{ord, resolves}]`) and
+placed on that calendar's first matching date. A rule the audit does not evaluate (calendar weeks,
+the weeks before the last, a date range with other wildcards) is left out with a note, never
+guessed. `linked_targets` is the schedule's knob count (`BComponent.getKnobCount`: the links that
+read it, held on the source, so no subtree scan can miss a far target); `unlinked` lists the
+non-calendar schedules with none, and a calendar reports `referenced_by` instead. A station that
+refuses `knobCount` leaves `linked_targets` and `unlinked` null with a note. `no_next_event` lists
+the schedules whose `next_time` is the null time; a `next_time` that cannot be read is null with a
+note and is not listed there. `counts` holds the totals; `truncated` marks a list cut at
+`max_schedules`.
 
 ### Writing a weekly schedule and its default output
 

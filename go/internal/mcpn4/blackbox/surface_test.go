@@ -43,6 +43,7 @@ var readTools = []string{
 	"n4_behavior_diff",
 	"n4_list_schedule_kinds",
 	"n4_read_schedule",
+	"n4_schedule_audit",
 	"n4_read_tags",
 	"n4_neql_query",
 	"n4_semantic_export",
