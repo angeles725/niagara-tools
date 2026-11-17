@@ -193,3 +193,21 @@ head_count() { git -C "$GR" rev-list --count HEAD 2>/dev/null || echo 0; }
     bash "$HOOKS/commit-msg" "$BATS_TEST_TMPDIR/msg"
   [ "$status" -eq 0 ]
 }
+
+@test "PC15: commit.gpgSign does not sign the snapshot (no signing prompt, no refusal from a missing key)" {
+  with_guard; seed
+  git -C "$GR" config commit.gpgSign true
+  git -C "$GR" config gpg.program false   # any signing attempt fails
+  printf 'x\n' > "$GR/g"; git -C "$GR" add g
+  commit --no-gpg-sign -m clean
+  [ "$status" -eq 0 ]
+  [ "$(head_count)" -eq 2 ]
+}
+
+@test "PC16: commit -a (git's temporary index) guards the changes it stages" {
+  with_guard; seed
+  printf 'hello ZZDENY\n' >> "$GR/f"   # tracked, not staged: commit -a stages it
+  commit -a -m clean
+  [ "$status" -ne 0 ]
+  [ "$(head_count)" -eq 1 ]
+}

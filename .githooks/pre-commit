@@ -113,7 +113,8 @@ else
   message=$(printf '%s\n' "$raw" | git stripspace --strip-comments) || refuse "cannot clean the commit message"
   [ -n "$message" ] || exit 0   # an empty message: git aborts the commit itself
 fi
-snapshot=$(git commit-tree "$tree" ${parents[@]+"${parents[@]}"} -m "$message") || refuse "cannot write the snapshot commit"
+# --no-gpg-sign: git versions whose commit-tree honours commit.gpgSign would sign every snapshot
+snapshot=$(git commit-tree --no-gpg-sign "$tree" ${parents[@]+"${parents[@]}"} -m "$message") || refuse "cannot write the snapshot commit"
 
 args=()
 if url=$(git remote get-url --push origin 2>/dev/null); then args=(origin "$url"); fi
