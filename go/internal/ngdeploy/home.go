@@ -18,7 +18,8 @@ import (
 // (lock.go). Only with the locks held does it look: a jar of the module left aside in the home by a run
 // that was killed is refused as the copy refuses one in the station. When STATION_MODULES_DIR is that same
 // directory (sameDirectory), a line says so, the copy step only verifies (copySame), and what the copy
-// refuses under the name of a jar is refused here, before the build moves it.
+// refuses under the name of a jar is refused here, before the build moves it; --no-deploy there is refused
+// (exit 10): it keeps what gradle installed, and the station would get jars no check has passed.
 func (d *deploy) guardHome() int {
 	home := d.env("NIAGARA_HOME")
 	if isDir(home) && !modjar.IsMirror(home) && !d.isOn(optIntoHome) {
@@ -45,10 +46,10 @@ func (d *deploy) guardHome() int {
 	if !d.sameDir {
 		return d.homeJarFiles()
 	}
-	d.say(msgSameDir, d.homeDir)
-	if d.isOn(optNoDeploy) {
-		return proceed
+	if d.isOn(optNoDeploy) { // it would keep unchecked jars in the station (bench Δ23)
+		return d.fail(ExitEnv, msgSameDirNoDeploy, d.homeDir)
 	}
+	d.say(msgSameDir, d.homeDir)
 	for _, profile := range profilesOf[d.raw[optMode]] {
 		if _, code := d.jarFileAt(d.jarName(profile), d.station+"/"+d.jarName(profile)); code != proceed {
 			return code

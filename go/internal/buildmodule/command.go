@@ -14,6 +14,8 @@ package buildmodule
 import (
 	"fmt"
 	"os"
+	"sync"
+	"sync/atomic"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -39,8 +41,12 @@ type build struct {
 	setenv     map[string]string // environment the chain adds for every command it runs
 	signingXML string            // the mirror user home's signing profile; "" outside a mirror
 	temps      []string          // temporary paths of the run, removed when Main returns
+	tempsMu    sync.Mutex        // temps is appended by the chain and read by the signal handler
 	baseline   map[string]snapshot
 	undeployed map[string]bool // the profiles with no jar in modules/ before gradle ran (a first deploy)
+	// unverified is set from the baseline snapshot until the chain passed: modules/ may then hold a jar the
+	// gate has not passed, which an interrupt puts back (signal.go).
+	unverified atomic.Bool
 }
 
 // steps is the chain; each returns an exit code, or proceed.
@@ -77,6 +83,7 @@ func Main(args []string, s cli.Stdio) int {
 		}
 	}
 	if code == proceed {
+		b.unverified.Store(false)
 		code = ExitOK
 	}
 	b.keepReplaced() // whatever the exit: it looks at what modules/ holds now, before cleanup drops the snapshot
@@ -115,13 +122,17 @@ func (b *build) makeTemp(directory bool) (path string, code int) {
 		args = []string{"-d"}
 	}
 	if path, code = b.run("mktemp", args...); code == 0 {
+		b.tempsMu.Lock()
 		b.temps = append(b.temps, path)
+		b.tempsMu.Unlock()
 	}
 	return path, code
 }
 
 // cleanup removes the temporary paths.
 func (b *build) cleanup() {
+	b.tempsMu.Lock()
+	defer b.tempsMu.Unlock()
 	for _, path := range b.temps {
 		_ = os.RemoveAll(path)
 	}

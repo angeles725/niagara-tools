@@ -9,6 +9,10 @@ const (
 		"build against a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>), or pass %s"
 	// msgSameDir takes the directory both settings name.
 	msgSameDir = "STATION_MODULES_DIR is <NIAGARA_HOME>/modules (%s): the build installs the jars there, so the copy step only verifies them"
+	// msgSameDirNoDeploy takes that directory, when --no-deploy (or NO_DEPLOY=1) names it too.
+	msgSameDirNoDeploy = "--no-deploy refused: STATION_MODULES_DIR is <NIAGARA_HOME>/modules (%s): gradle's :jar step installs the built jars there " +
+		"and --no-deploy keeps them, so the station would get jars no check has passed; deploy without --no-deploy (the copy step then verifies them), " +
+		"or point STATION_MODULES_DIR or NIAGARA_HOME elsewhere; nothing was built or changed"
 	// msgHomeAsideFound is msgAsideFound for <NIAGARA_HOME>/modules, before anything is built.
 	msgHomeAsideFound = "build refused: a deploy that did not finish left previous jars aside in %s; nothing was built or changed"
 	// msgHomeNotAJar is msgCopyFailed for <NIAGARA_HOME>/modules, before anything is built.

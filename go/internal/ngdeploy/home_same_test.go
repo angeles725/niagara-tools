@@ -126,3 +126,27 @@ func TestAStationThatIsTheHomeModulesDirectoryRefusesADirectoryUnderAJarName(t *
 		t.Errorf("exit %d, stderr:\n%scalls %q", code, f.err, f.calls())
 	}
 }
+
+// --no-deploy builds without the prechecks, the gate or the copy, and keeps what gradle installed in
+// <NIAGARA_HOME>/modules: when that directory is the station's, the station would get the unchecked jars.
+// The run is refused before the backup and before gradle (exit 10), the directory left as it was; the same
+// directory without --no-deploy still deploys through the checks (bench Δ23).
+func TestNoDeployIntoTheStationThatIsTheHomeModulesDirectoryIsRefused(t *testing.T) {
+	for _, viaEnv := range []bool{false, true} {
+		f := newFixture(t)
+		modules := sameDir(t, f)
+		args := []string{"--no-backup", "--no-deploy"}
+		if viaEnv {
+			f.set("NO_DEPLOY", "1")
+			args = args[:1]
+		}
+		before := tree(t, modules)
+		code := f.run(args...)
+		want := "[ng-deploy] ERROR --no-deploy refused: STATION_MODULES_DIR is <NIAGARA_HOME>/modules (" + modules +
+			"): gradle's :jar step installs the built jars there and --no-deploy keeps them, so the station would get jars no check has passed; " +
+			"deploy without --no-deploy (the copy step then verifies them), or point STATION_MODULES_DIR or NIAGARA_HOME elsewhere; nothing was built or changed\n"
+		if code != ExitEnv || f.err != want || f.calls() != "" || tree(t, modules) != before {
+			t.Errorf("env=%v: exit %d, stderr %q, calls %q, the directory holds:\n%s", viaEnv, code, f.err, f.calls(), tree(t, modules))
+		}
+	}
+}

@@ -891,10 +891,32 @@ _real_jar() {
 }
 
 @test "NG-env-mode: without a flag the env file still sets the option" {
-    printf 'MODE=B\n' >> "$TMPDIR_T/dot_env_local"
+    printf 'MODE=C\n' >> "$TMPDIR_T/dot_env_local"
     run bash "$SCRIPT" --env-file "$TMPDIR_T/dot_env_local" --no-backup --no-deploy
     [ "$status" -eq 0 ]
+    [[ "$output" == *"build: mode C"* ]]
+}
+
+@test "NG-env-guard-gate: MODE=B or VERIFY_MODULE_BIN in the env file is refused with file and line (exit 10) unless the flag is given" {
+    _gate_env; _fake_gate 1   # the gate would fail if it ran
+    printf 'MODE=B\n' >> "$TMPDIR_T/env_gate"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"env file $TMPDIR_T/env_gate: line 10: MODE=B would switch the verify-module gate off"* ]]
+    [[ "$output" == *"give --mode B on the command line"* ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --no-deploy --mode B
+    [ "$status" -eq 0 ]
     [[ "$output" == *"build: mode B"* ]]
+
+    _gate_env; _fake_gate 1; rm -f "$TMPDIR_T/gradlew.calls.log"
+    printf 'VERIFY_MODULE_BIN=/bin/true\n' >> "$TMPDIR_T/env_gate"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"env file $TMPDIR_T/env_gate: line 10: VERIFY_MODULE_BIN would switch the verify-module gate off"* ]]
+    [[ "$output" == *"give --no-gate on the command line"* ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
 }
 
 @test "NG-env-guard: NO_GATE=1 or NO_BACKUP=1 in the env file is refused with file and line (exit 10) unless the flag is given" {

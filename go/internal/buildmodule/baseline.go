@@ -34,6 +34,7 @@ type snapshot struct {
 // byte, and the gate would silently pass on the retry (R4-drift-gate-not-retry-safe).
 // [ev: client A retro "defrost sequencing and HMI reload" Δ2]
 func (b *build) snapshotBaseline() int {
+	defer b.unverified.Store(true) // gradle runs next: from here on modules/ may hold an unverified jar
 	if b.opt.skipDrift {
 		return proceed
 	}

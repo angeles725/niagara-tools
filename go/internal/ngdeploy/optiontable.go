@@ -10,7 +10,7 @@ type flagOption struct {
 
 // optionTable is every flag that sets an option variable: the values first, then the switches in the order
 // their values are checked. A variable a flag set is not replaced by the env file (the flag wins), and a
-// guarded one is refused in the env file unless its flag was given (envload.go). VERIFY_MODULE_BIN and
+// guarded one is refused in the env file unless its flag was given (envguard.go). VERIFY_MODULE_BIN and
 // SCHEMA_RISK_BIN are option variables with no flag: the environment or the env file sets them.
 var optionTable = []flagOption{
 	{flag: "--mode", variable: optMode, value: true},
@@ -20,7 +20,7 @@ var optionTable = []flagOption{
 	{flag: "--no-deploy", variable: optNoDeploy},
 	{flag: "--with-slotomatic", variable: optWithSlot},
 	{flag: "--strict-slotomatic", variable: optStrictSlot},
-	{flag: "--no-gate", variable: optNoGate, guards: "the verify-module gate"},
+	{flag: "--no-gate", variable: optNoGate, guards: guardGate},
 	{flag: "--first-deploy", variable: optFirstDeploy},
 	{flag: "--accept-lossy", variable: optAcceptLossy},
 	{flag: "--full-backup", variable: optFullBackup},

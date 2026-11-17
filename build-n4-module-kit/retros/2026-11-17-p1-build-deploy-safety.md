@@ -1,0 +1,38 @@
+<!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
+# 2026-11-17 · kit · p1-build-deploy-safety
+
+**Session**: P1 backlog rows OD002 (build-mod Δ6), OD003 (bench Δ23) and ng-deploy Δ12, three ways a build or
+deploy could leave jars no check had passed where a station loads them.
+**Delta count**: 3
+
+## What happened
+- build.sh: a SIGINT/SIGTERM/SIGHUP while gradle ran removed the temporary directory (which holds the baseline
+  snapshot) and exited, leaving the new, unverified jar in `<niagara_home>/modules`. The handler now restores the
+  pre-build jars (and removes a first-deploy jar) first. Writing the test surfaced a pre-existing data race: the
+  handler read the list of temporary paths the chain was appending to; it is now under a mutex.
+- ng-deploy: `--no-deploy` with `STATION_MODULES_DIR` = `<NIAGARA_HOME>/modules` built straight into the
+  station's directory and kept the jars with no precheck, gate or copy. It is now refused before gradle (exit 10).
+- ng-deploy: the env file could still skip the gate with `MODE=B` or `VERIFY_MODULE_BIN`; both are now refused like
+  `NO_GATE=1` (exit 10, file and line) unless the command line says the same thing.
+
+## Evidence
+- RED before the fix: `TestASignalBeforeTheGateRestoresThePreBuildJars` (modules/Foo-rt.jar not the pre-build jar,
+  Foo-ux.jar left), `TestNoDeployIntoTheStationThatIsTheHomeModulesDirectoryIsRefused` (exit 0, gradle ran, the
+  station holds the new jars), `TestAnEnvFileMayNotSkipTheGateWithModeBOrAnotherGate` (exit 0, `copy ok` with a
+  failing gate).
+
+## Proposed kit deltas (propose-never-apply)
+| Δ | Delta | Target file / § | Token |
+|---|---|---|---|
+| Δ1 | APPLIED 2026-11-17. build.sh restores the pre-build modules/ jars on SIGINT/SIGTERM/SIGHUP between the baseline snapshot and a passing chain, before the temporary directory goes | `go/internal/buildmodule/signal.go` | `[ev: retro go-build-module-port Δ6]` |
+| Δ2 | APPLIED 2026-11-17. ng-deploy refuses `--no-deploy` when `STATION_MODULES_DIR` is `<NIAGARA_HOME>/modules` (exit 10, before gradle) | `go/internal/ngdeploy/home.go` | `[ev: retro build-kit-bench-session Δ23]` |
+| Δ3 | APPLIED 2026-11-17. The env file may not set `MODE=B` (unless `--mode`) or `VERIFY_MODULE_BIN` (unless `--no-gate`): exit 10 with file and line | `go/internal/ngdeploy/envguard.go` · `usage.txt` | `[ev: retro go-ng-deploy-port Δ12]` |
+| Δ4 | Open. A signal sent to build.sh's pid alone (not its process group) does not reach gradle, which can install its jar after the restore; the handler could kill and wait for the running gradle first | `go/internal/buildmodule/signal.go` · `gradle.go` | `[ev: code go/internal/buildmodule/signal.go]` |
+| Δ5 | Open. `SCHEMA_RISK_BIN` in the env file can put any executable in the place of the schema-risk precheck, the same shape as Δ3; decide whether to refuse it the same way | `go/internal/ngdeploy/envguard.go` | `[ev: code go/internal/ngdeploy/optiontable.go]` |
+| Δ6 | Open. build.sh's usage header (`toolbelt/build.sh`) does not say what an interrupt does; add the two lines `build-verify.md` now carries | `build-n4-module-kit/toolbelt/build.sh` | `[ev: code go/internal/buildmodule/signal.go]` |
+
+## Lessons
+- A signal handler that runs beside the chain shares its state: anything it reads (temporary paths, the snapshot)
+  needs a happens-before edge, and `go test -race` with a real signal is what shows it.
