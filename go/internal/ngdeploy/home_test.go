@@ -36,6 +36,7 @@ func withHome(t *testing.T, f *fixture, mirror bool) (modules string) {
 		f.mkdir(home + "/.mirror-user-home") // the user.home a mirror build makes (isolate.go), as build.sh does
 	}
 	f.set("NIAGARA_HOME", home)
+	f.ownHome = true
 	f.write(f.dir+"/do/gradlew", installing(home, "", "rt", "ux"))
 	return modules
 }
@@ -77,11 +78,11 @@ func TestAHomeThatIsNotAMirrorIsRefusedBeforeGradleRuns(t *testing.T) {
 	}
 }
 
-// What a deploy printed and did before the guard still holds for a mirror and for a NIAGARA_HOME that
-// names no directory (gradle fails on that one by itself): the same calls, apart from the mirror isolation
-// (its one line and --no-daemon, isolate.go).
-func TestAMirrorHomeAndAHomeThatIsNotThereDeployAsBefore(t *testing.T) {
-	f := newFixture(t) // the fixture's NIAGARA_HOME names no directory
+// What a deploy printed and did before the guard still holds for a mirror and for a NIAGARA_HOME that is a
+// directory with no modules/, opted in with --install-into-home: the same calls, apart from the mirror
+// isolation (its one line and --no-daemon, isolate.go). One that names no directory is refused (home_dir_test.go).
+func TestAMirrorHomeAndAnOptedInHomeDeployAsBefore(t *testing.T) {
+	f := newFixture(t) // the fixture's NIAGARA_HOME is a directory that is not a mirror, opted in
 	f.want(f.run("--no-backup"), ExitOK)
 	out, calls := strings.ReplaceAll(f.out, f.dir, "DIR"), strings.ReplaceAll(strings.ReplaceAll(f.calls(), "/n4/niagara home", "HOME"), f.dir, "DIR")
 	if f.err != warnNoBackup {

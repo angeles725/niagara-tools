@@ -4,6 +4,12 @@ package ngdeploy
 // before any check of the deploy has run (home.go). The states of a jar and the outcomes are the copy's
 // (messages_copy.go), said of homeSite.
 const (
+	// msgHomeMissing and msgHomeNotADir take NIAGARA_HOME: gradle builds against it and installs the jars in its
+	// modules/, so a value that is not a directory is refused before the backup and before gradle (bench Δ25).
+	msgHomeMissing = "NIAGARA_HOME %s names no directory: gradle builds against <NIAGARA_HOME> and installs the jars in its modules/; " +
+		"point it at a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>) or a niagara_home; nothing was built or changed"
+	msgHomeNotADir = "NIAGARA_HOME %s is not a directory: gradle builds against <NIAGARA_HOME> and installs the jars in its modules/; " +
+		"point it at a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>) or a niagara_home; nothing was built or changed"
 	// msgRealHome takes NIAGARA_HOME, the marker of a mirror and the flag that opts in.
 	msgRealHome = "NIAGARA_HOME %s is a real niagara_home (no %s): gradle's :jar step would replace the jars of its modules/ before any check runs; " +
 		"build against a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>), or pass %s"

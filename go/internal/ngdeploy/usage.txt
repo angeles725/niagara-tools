@@ -77,7 +77,9 @@ After a deploy:
 
 NIAGARA_HOME and its modules directory:
   gradle's :jar step installs the built jars into <NIAGARA_HOME>/modules before any check of the deploy has run,
-  and in a real installation that directory is a station's. So NIAGARA_HOME must be a mirror (a directory made
+  and in a real installation that directory is a station's. A NIAGARA_HOME that names no directory, or names
+  a file, is refused before the backup and before gradle runs (exit 10, "NIAGARA_HOME <value> names no
+  directory: ..." or "... is not a directory: ..."); a symbolic link to a directory is one. NIAGARA_HOME must be a mirror (a directory made
   by build-n4-module-kit/toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>, which holds .niagara-mirror);
   a NIAGARA_HOME that is a directory without that file is refused before the backup and before gradle runs
   (exit 10) unless --install-into-home is given. A mirror build gets the isolation build.sh gives it (one
@@ -127,8 +129,9 @@ The signer the gate expects:
   The verify-module gate is told who must have signed the jars, resolved as toolbelt/build.sh resolves it: the
   niagaraSigningAlias gradle property (ORG_GRADLE_PROJECT_niagaraSigningAlias in the environment or the env
   file, else GRADLE_USER_HOME/gradle.properties, else gradle.properties beside gradlew), else the one signer of
-  the module's jars of the mode that were in <NIAGARA_HOME>/modules before the build, never the signing
-  plugin's default development signer (NIAGARA4). A jar signed with another key then fails the gate (exit 50).
+  the module's jars of the mode that STATION_MODULES_DIR holds before the copy (the ones the station runs),
+  else, when none of those is signed, of those that were in <NIAGARA_HOME>/modules before the build; the two
+  are never mixed, and the signing plugin's default development signer (NIAGARA4) is never expected. A jar signed with another key then fails the gate (exit 50).
   When neither names a signer the gate accepts any signature and, after the gate's rows, the deploy prints
   "WARN no niagaraSigningAlias is configured and no deployed jar gives a signer, ..." (or "... the deployed
   jar itself carries the signing plugin's default development signer (NIAGARA4), ..."); the exit code is the
@@ -158,7 +161,8 @@ Exit codes:
       or a modules directory another run holds the lock of (.ng-deploy.lock: "The run lock" above);
       or, after the checks and before the copy, a .last-deploy-sha that is a directory or cannot be written
       (nothing was copied; SLOTOMATIC_DETECTION=off makes the record optional)
-      or, before the backup and before gradle runs, a NIAGARA_HOME that is a directory and not a mirror without
+      or, before the backup and before gradle runs, a NIAGARA_HOME that names no directory or names a file, or one
+      that is a directory and not a mirror without
       --install-into-home, or a <jar>.ng-deploy-old file of the module in <NIAGARA_HOME>/modules (a run that was
       killed left it; rename it over its jar or delete it); or, just before the build, a jar of the module there
       that cannot be moved aside

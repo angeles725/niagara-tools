@@ -17,7 +17,7 @@ func TestEnvFileValuesWinOverTheEnvironmentAndReachEveryCommand(t *testing.T) {
 
 func TestAMissingEnvFileIsToleratedAndTheEnvironmentIsUsed(t *testing.T) {
 	f := newFixture(t)
-	for k, v := range map[string]string{"MODULE_NAME": "demo", "GRADLEW_PATH": f.src + "/gradlew", "NIAGARA_HOME": "/n", "NIAGARA_USER_HOME": "/u",
+	for k, v := range map[string]string{"MODULE_NAME": "demo", "GRADLEW_PATH": f.src + "/gradlew", "NIAGARA_HOME": f.home, "NIAGARA_USER_HOME": "/u",
 		"JAVA_HOME": "/j", "STATION_MODULES_DIR": f.modules, "EXPECTED_RT_TYPES": "9"} {
 		t.Setenv(k, v)
 	}
@@ -77,12 +77,13 @@ func TestAnEnvFileLineThatIsNotAPlainAssignmentIsRefusedWithFileAndLine(t *testi
 // deploy (as the flags left them), the script's own variables and the environment.
 func TestAnEnvFileExpandsPlainVariablesAsBashDid(t *testing.T) {
 	f := newFixture(t)
-	t.Setenv("HOME", "/hm")
+	t.Setenv("HOME", f.dir+"/hm")
+	f.mkdir(f.dir + "/hm/niagara") // NIAGARA_HOME=~/niagara names a directory
 	t.Setenv("AMBIENT", "from env")
 	f.write(f.env, f.read(f.env)+"BASE=/n4\nNIAGARA_USER_HOME=\"${BASE}/user $AMBIENT\"\nNIAGARA_HOME=~/niagara\nJAVA_HOME='$BASE'\n"+
 		"FILEKEY=$MODE:$KEEP_N:$FIRST_DEPLOY:${SCRIPT_DIR}\n")
 	f.want(f.run("--no-backup", "--no-deploy", "--mode", "C", "--keep", "7"), ExitOK)
-	want := "gradlew <-Pniagara_home=/hm/niagara> <-Pniagara_user_home=/n4/user from env> <-Porg.gradle.java.installations.paths=$BASE> <:demo-rt:clean> <:demo-rt:jar>\n"
+	want := "gradlew <-Pniagara_home=" + f.dir + "/hm/niagara> <-Pniagara_user_home=/n4/user from env> <-Porg.gradle.java.installations.paths=$BASE> <:demo-rt:clean> <:demo-rt:jar>\n"
 	if !strings.HasSuffix(f.calls(), want) {
 		t.Errorf("calls:\n%s", f.calls())
 	}
