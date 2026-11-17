@@ -44,6 +44,9 @@ func (sc *scan) inline(i int) []Pointer {
 					m[k] = l[loc[2*k]:loc[2*k+1]]
 				}
 			}
+			if re == repoPath && !opensSpan(sc.lines[i], loc[0]) {
+				continue // the backtick closes an earlier span: the text after it is prose, not a code span
+			}
 			p, ok := mk(m)
 			if !ok {
 				continue
@@ -95,6 +98,12 @@ func (sc *scan) inline(i int) []Pointer {
 		out[k] = h.p
 	}
 	return out
+}
+
+// opensSpan reports whether the backtick at col of line opens a code span: an even number of backticks
+// comes before it. Masking keeps columns, so col of the masked line is col of the line.
+func opensSpan(line string, col int) bool {
+	return strings.Count(line[:col], "`")%2 == 0
 }
 
 // onePath reports whether a backticked path is one path. A path with spaces is, when its first space falls
