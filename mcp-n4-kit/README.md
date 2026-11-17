@@ -600,7 +600,11 @@ below `depth`; an out slot used only by a deeper target, or from outside the
 subtree, is reported as dangling. A link source given by handle (`h:`) or by absolute
 slot path (`station:|slot:/Folder/A`) is resolved; while any link reading `out` has a
 source in another form (listed in `unresolved_links`), every out slot not proven used
-is reported under `unknown`, never as dangling.
+is reported under `unknown`, never as dangling. An alarm or history extension reads its
+point's `out` without a link, so a component with an `alarm:...AlarmExt` or
+`history:...HistoryExt` child is listed in `consumed_by_extension` (with the extension type)
+instead of `dangling`; the commissioning report's `dangling_outputs` check skips it too
+(backlog OD007).
 
 ### Registering the server per harness
 
