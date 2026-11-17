@@ -31,6 +31,7 @@ type rollbackData struct {
 	outgoingSent, outgoingSkipped []any             // filled by the runs for the read-back
 	ordOf                         map[string]string // handle (as a dict key) -> ORD
 	created, frozenChecks         []any             // created: an ORD per spec, nil when skipped
+	frozenRefused                 map[string][]any  // frozen path -> the frozen-config sets refused
 	hasCreated                    bool
 	skipped                       []any
 	report                        *pyjson.Object
@@ -130,8 +131,9 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 		}
 	}
 	relinkWrites, outgoingWrites := len(relinks)*len(own), len(outgoing)*len(own)
-	if need := 1 + len(components) + relinkWrites + outgoingWrites; w.WritesExecuted+need > w.MaxWrites {
-		return nil, plan.ToolError(budgetRefusal(need, len(components), relinkWrites, outgoingWrites,
+	frozenWrites := planFrozenConfig(c, ops, components)
+	if need := 1 + len(components) + frozenWrites + relinkWrites + outgoingWrites; w.WritesExecuted+need > w.MaxWrites {
+		return nil, plan.ToolError(budgetRefusal(need, len(components), frozenWrites, relinkWrites, outgoingWrites,
 			w.MaxWrites-w.WritesExecuted, w.MaxWrites))
 	}
 	if err := checkRestoredEnds(w, targets, ops, own, components, relinks); err != nil {

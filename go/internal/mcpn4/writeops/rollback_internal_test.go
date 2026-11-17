@@ -495,17 +495,17 @@ func TestTheFrozenCheckTreatsOmittedDefaultsAsEqualAndAReadErrorAsUnread(t *test
 	ext := sp.child("proxyExt")
 	ext.kids = []*tnode{{name: "readValue", t: "baja:StatusNumeric"}, {name: "tuningPolicyName", t: "baja:String", v: "Fast"}}
 	check := obj("path", tFolder+"/Sp/proxyExt", "b", captured)
-	if gap, err := frozenCheck(st, check); gap != nil || err != nil {
+	if gap, err := frozenCheck(st, check, nil); gap != nil || err != nil {
 		t.Fatalf("defaults: %s %v", pyjson.Repr(gap), err)
 	}
 	ext.kids[1].v = "Slow"
 	ext.kids = ext.kids[1:] // readValue omitted whole: still at its default
 	captured.Set("s", []any{status("21.5"), obj("nm", "p", "n", "tuningPolicyName", "t", "baja:String", "v", "Fast")})
-	if gap, _ := frozenCheck(st, check); pyjson.Repr(get(gap, "slots")) != "['readValue', 'tuningPolicyName']" || get(gap, "missing") != false {
+	if gap, _ := frozenCheck(st, check, nil); pyjson.Repr(get(gap, "slots")) != "['readValue', 'tuningPolicyName']" || get(gap, "missing") != false {
 		t.Errorf("differs: %s", pyjson.Repr(gap))
 	}
 	st.failLoad = func(string, int) error { return &box.Error{Kind: box.KindBox, Msg: "HTTP 503 from station"} }
-	gap, _ := frozenCheck(st, check)
+	gap, _ := frozenCheck(st, check, nil)
 	if _, missing := gap.Get("missing"); missing || get(gap, "readback_error") != "HTTP 503 from station" {
 		t.Errorf("read error: %s", pyjson.Repr(gap))
 	}

@@ -1180,9 +1180,19 @@ Destructive tools use the same pipeline:
   component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
   `relinks: {restored, skipped}`; the outgoing links a remove recorded are re-created
-  too, see `n4_remove_component`). A frozen child (e.g. a writable's `proxyExt`) is
-  never re-added: the read-back compares it with the snapshot and lists any
-  difference in `frozen_config_not_restored`. A link-driven input whose link is not
+  too, see `n4_remove_component`). A frozen child (e.g. a writable's `proxyExt`, an
+  alarm extension's `offnormalAlgorithm`) is never re-added. When the station's type
+  contracts (registry channel) declare it, the dry run puts `frozen_config` on its
+  component spec (so the token covers it): after its parent's add, a set op swaps the
+  captured type in (as `n4_add_alarm` does) and set ops write the captured configuration
+  slots the fresh child does not already hold, e.g. `highLimit`/`lowLimit`; readonly,
+  transient and `status` slots are never written and not compared (`ignored`). The
+  read-back compares it with the snapshot and lists any difference in
+  `frozen_config_not_restored`, with the station's reason in `refused` for a value it
+  refused; without contracts nothing is written. What the remove's snapshot did not
+  capture (below depth 3, `snapshot_truncated`: e.g. an out-of-range algorithm's
+  `limitEnable/highLimitEnable`) cannot come back: such a child stays listed and the
+  operator re-enters it. A link-driven input whose link is not
   re-created (an end is missing, or its source was outside the removed subtree) is
   listed in `link_inputs_not_restored` with the value captured when the confirmed
   remove ran (the dry run previews it as `link_input_values`, outside the

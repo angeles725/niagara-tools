@@ -144,8 +144,16 @@ func runComponents(b *plan.Batch, d *rollbackData, base map[int]string) ([]any, 
 		}
 		where[here] = path
 		body := get(spec, "b").(*pyjson.Object)
+		if err := restoreFrozen(b, d, spec, parent, n, path); err != nil { // its planned config
+			doubt, ok := err.(*plan.InDoubt)
+			if !ok {
+				doubt = plan.InDoubtOf(b.ID, err)
+			}
+			return nil, withCreated(doubt, base, created)
+		}
 		frozenOut = append(frozenOut, obj("path", path, "n", n, "type", get(body, "t")))
-		d.frozenChecks = append(d.frozenChecks, obj("path", path, "b", body))
+		d.frozenChecks = append(d.frozenChecks, obj("path", path, "b", body,
+			"ignored", get(asObj(get(spec, "frozen_config")), "ignored")))
 		created = append(created, nil)
 	}
 	d.created, d.hasCreated = list(created), true

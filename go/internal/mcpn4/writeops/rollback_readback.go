@@ -114,7 +114,7 @@ func rollbackReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies,
 	var frozen []any
 	unread := false
 	for _, check := range d.frozenChecks {
-		gap, err := frozenCheck(c, check.(*pyjson.Object))
+		gap, err := frozenCheck(c, check.(*pyjson.Object), d.frozenRefused[pyjson.Str(get(check.(*pyjson.Object), "path"))])
 		if err != nil {
 			return fail(err)
 		}
