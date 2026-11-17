@@ -572,6 +572,56 @@
    "needs_session": true
   },
   {
+   "name": "n4_export_history",
+   "description": "Export a range of one or more histories to ONE CSV file for client reports (station-audits S2). history_ids lists 1 to 20 ids, each checked like n4_read_history's history_id (/<station>/<history name>, or a bare history name of the connected station; anything else, '..', quotes and '|' included, is refused before any request). Optional range: period (today, last24Hours, yesterday, weekToDate, lastWeek, last7Days, monthToDate, lastMonth, yearToDate, lastYear) or start and/or end (BAbsTime or a span back from now such as 30m, 24h, 7d), not both; no range is the whole history. Each history is one read of select timestamp.encodeToString, value.encodeToString, status (machine-encoded: timestamp ISO-8601 with the station's offset, value 21.0 not '21,0'); the newest max_rows records of each (default 100000) are written oldest first. The server names and places the file: <state-dir>/exports/<station>-<UTC time>.csv (directory 0700, file 0600, never overwritten; the caller never passes a path). Columns: history_id,timestamp,value,status (header first, CSV quoting where a cell holds a comma, quote or newline, lines end in CRLF). Reply: path, rows_total, per_history [{history_id, rows, truncated}] (truncated: the range held more than max_rows records), bytes. A history that cannot be read stops the export with an error naming it, and no file is left. Reads the station only; the one write is that local file.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "history_ids": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "1 to 20 history ids, e.g. [\"/MyStation/Temp\", \"Humidity\"] (a bare name is a history of the connected station)"
+     },
+     "period": {
+      "type": "string",
+      "description": "Period id: today, last24Hours, yesterday, weekToDate, lastWeek, last7Days, monthToDate, lastMonth, yearToDate or lastYear"
+     },
+     "start": {
+      "type": "string",
+      "description": "Range start as a BAbsTime, e.g. 2026-11-15T00:00:00.000-06:00, or a span back from now: 30m, 24h, 7d"
+     },
+     "end": {
+      "type": "string",
+      "description": "Range end as a BAbsTime, or a span back from now: 30m, 24h, 7d"
+     },
+     "max_rows": {
+      "type": "integer",
+      "description": "Most records written per history (the newest of the range)",
+      "minimum": 1,
+      "maximum": 1000000,
+      "default": 100000
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout per request in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": [
+     "history_ids"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
    "name": "n4_read_audit",
    "description": "Answer who changed what on the connected station, in one call: the records of its audit trail (history /<station>/AuditHistory, written by Config/Services/AuditHistoryService), newest first, each {timestamp, operation, target, slot, old_value, value, user}: timestamp is ISO-8601 with the station's offset; target is the component's slot path as the station stores it (/Folder/Point, no slot: scheme); slot is the property or action name (a/b for a nested property); old_value and value are the station's text of the values (empty for an action or an added slot). Narrow it with target (a component ORD such as station:|slot:/Folder/Point; matches it and everything below it) or target_glob (a BQL like pattern over the stored slot path such as /Folder/*/Point; no quote, space, '$' or '|'), at most one; slot (exact slotName, e.g. overAmpsDelay); user (exact userName); operation (Changed, Added, Removed, Renamed, Reordered, Flags Changed, Facets Changed or Invoked; logins and recategorizations go to the security audit history instead); and either period or start/end (BAbsTime, e.g. 2026-11-15T00:00:00.000-06:00, or a span back from now such as 30m, 24h or 7d). limit (default 100, 1 to 1000) caps the records returned. truncated is true when more records match than were returned; total_records is their count (select count(*) with the same filters), null with total_records_note when that count failed. The audit history keeps 500 records and rolls by default, so old changes may be gone. Every filter value is checked on its decoded form before any request. Read-only: fixed queries over the history: ORD.",
    "inputSchema": {

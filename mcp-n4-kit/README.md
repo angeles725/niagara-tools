@@ -272,7 +272,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
-`n4_read_history`, `n4_read_audit`, `n4_histories_audit`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
+`n4_read_history`, `n4_export_history`, `n4_read_audit`, `n4_histories_audit`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
 `n4_alarm_health`,
 `n4_alarm_text_check`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
@@ -362,7 +362,8 @@ range (localized text, no time: 4.15 has no `group by` and no aggregate that ret
 The `where` leaves out null-status records as the summary does (retro M16b; checked live on
 4.15.6.20); a `nan` or `inf` record still counts in the station's aggregate. A failed summary read is
 `summary: null` with `summary_note`; the rows are still returned.
-There is no `output_file`: it is not an export of whole histories.
+There is no `output_file`: an export of whole histories is `n4_export_history`.
+History export: `n4_export_history(history_ids, period | start/end, max_rows=100000)` (station-audits S2) writes 1 to 20 histories (ids checked like `history_id`, before any request) to ONE CSV file for client reports: one `select timestamp.encodeToString, value.encodeToString, status order by timestamp desc` per history, the newest `max_rows` records of each written oldest first as `history_id,timestamp,value,status` (ISO-8601 times with the station's offset, `21.0` not `21,0`; CSV quoting, CRLF). The server names the file `<state-dir>/exports/<station>-<UTC time>.csv` (directory 0700, file 0600, never overwritten; the caller never passes a path) and replies `{path, rows_total, per_history [{history_id, rows, truncated}], bytes}`; a history that cannot be read stops the export and removes the file. It reads the station only (`readOnlyHint`, like `n4_bql_query`'s `output_file` and `n4_semantic_export`).
 Alarms: `n4_read_alarms(limit=50, source, source_glob, alarm_class, source_state, ack_state, since,
 until, open_only=true, state_counts=false)` returns alarm records newest first (`order: newest_first`), by default the open
 ones: it sends `GET /ord/<url-encoded alarm:|bql:select timestamp, uuid, source, sourceState,
