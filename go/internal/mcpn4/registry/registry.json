@@ -2796,7 +2796,7 @@
   },
   {
    "name": "n4_ack_alarm",
-   "description": "Acknowledge alarm records by uuid (1 to 100, as n4_read_alarms returns them), with optional notes, through the station's alarm channel (ackAlarms): the station sets the acking user, the ack time and ackState ackPending, updates the alarm database and routes the ack. The dry run reads each record first and refuses, naming them, any uuid with no record, any record whose source is outside the write scope (or is not a slot path), and any record already acknowledged or ack pending. The read-back re-reads the records: verified when none is still unacked and each has a user; mismatch when any stayed unacked or the station names alarm classes the user may not acknowledge (it needs operatorWrite on the record's class; those names are returned in observed.permission_failed_classes). An acknowledgement cannot be undone: there is no inverse and n4_rollback cannot reverse it. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Acknowledge alarm records, chosen either by uuid (uuids: 1 to 100, as n4_read_alarms returns them) or by a selection (select: {source?, alarm_class?, before?, max?}), with optional notes, through the station's alarm channel (ackAlarms): the station sets the acking user, the ack time and ackState ackPending, updates the alarm database and routes the ack. Give exactly one of uuids or select. A selection reads only unacknowledged records with the same records query n4_read_alarms uses, newest first: source is a component ORD (station:|slot:/a, slot:/a or local:|station:|slot:/a) matching the record source exactly or below it in both stored spellings, alarm_class a class name, before a BAbsTime or a span back from now (24h) selecting records at or before it, max at most 100 (default 100); at least one of source, alarm_class or before is required. The dry run resolves the selection to exact uuids and returns them in plan.selection.records as {uuid, source, alarm_class, timestamp}, with matched (the count of matching records) and truncated (more matched than max); the confirmation token is bound to that exact list, so executing acknowledges those uuids and never re-runs the selection (an alarm raised after the dry run is left alone; execute without the matching dry run is refused). A selection that matches nothing is a dry run with no token. The dry run reads each record first and refuses, naming them, any uuid with no record, any record whose source is outside the write scope (or is not a slot path), and any record already acknowledged or ack pending. The read-back re-reads the records: verified when none is still unacked and each has a user; mismatch when any stayed unacked or the station names alarm classes the user may not acknowledge (it needs operatorWrite on the record's class; those names are returned in observed.permission_failed_classes). An acknowledgement cannot be undone: there is no inverse and n4_rollback cannot reverse it. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -2805,7 +2805,32 @@
       "items": {
        "type": "string"
       },
-      "description": "Alarm record uuids (1 to 100), e.g. b65e6bcf-0b8a-4d0c-9a77-3c1d2e4f5a6b"
+      "description": "Alarm record uuids (1 to 100), e.g. b65e6bcf-0b8a-4d0c-9a77-3c1d2e4f5a6b; give uuids or select, not both"
+     },
+     "select": {
+      "type": "object",
+      "description": "Choose the unacknowledged records to acknowledge instead of uuids; resolved to exact uuids in the dry run",
+      "properties": {
+       "source": {
+        "type": "string",
+        "description": "Component ORD such as station:|slot:/Drivers/Net; matches the record source and everything below it"
+       },
+       "alarm_class": {
+        "type": "string",
+        "description": "Alarm class name, e.g. defaultAlarmClass"
+       },
+       "before": {
+        "type": "string",
+        "description": "BAbsTime (2026-11-15T00:00:00.000-06:00) or a span back from now (30m, 24h, 7d): records at or before it"
+       },
+       "max": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100,
+        "default": 100,
+        "description": "At most this many records, newest first (default 100)"
+       }
+      }
      },
      "notes": {
       "type": "string",
@@ -2820,10 +2845,7 @@
       "type": "string",
       "description": "Token returned by the matching dry run (single use)"
      }
-    },
-    "required": [
-     "uuids"
-    ]
+    }
    },
    "annotations": {
     "readOnlyHint": false,

@@ -25,6 +25,9 @@ type Planned struct {
 	// Writes is what executing the batch spends of --max-writes: 0 counts as one write, the
 	// cost of an ordinary batch; a bulk tool sets one per station change (n4_replicate_points).
 	Writes int
+	// Nothing, when not nil, is a plan with nothing to do: the engine returns it as the reply,
+	// with no token, no journal and no station call (n4_ack_alarm's selection matching nothing).
+	Nothing *pyjson.Object
 }
 
 // Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only; PlanWith
