@@ -19,6 +19,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/runbooks"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
@@ -80,6 +81,7 @@ func NewServer(cfg Config) (*jsonrpc.Server, error) { return newServer(context.B
 func newServer(interrupt context.Context, cfg Config) (*jsonrpc.Server, error) {
 	reg := registry.Default()
 	srv := jsonrpc.New(reg)
+	srv.Runbooks = runbooks.All()
 	ctx := NewContext(cfg)
 	factory := func(bc box.Config, onAuthError func(*box.Error)) (readtools.Client, error) {
 		bc.Interrupt = interrupt
