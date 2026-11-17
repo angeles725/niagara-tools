@@ -1,11 +1,11 @@
 <!-- review-status: pending -->
 <!-- module: kit -->
-<!-- deltas: 6 -->
+<!-- deltas: 7 -->
 # 2026-11-17 · kit · kit-p1-security-guards
 
 **Session**: open-deltas backlog rows OD004 (retro 2026-11-10-delivery-guards-and-ui-contrast Δ1) and OD005
 (retro 2026-11-10-mcpn4-history-batch-tools Δ6), both P1 security gaps.
-**Delta count**: 6
+**Delta count**: 7
 
 ## What happened
 The client-identifier guard ran only at pre-push, so a client name could sit in a local commit (and in its
@@ -47,10 +47,14 @@ with both servlet lints so they cannot drift apart.
   into the scanned message, so scrubbing a name was refused (PC11 red before the fix); an empty array under
   `set -u` aborts bash before 4.4; `git rev-parse --path-format` needs git 2.31; and the guard's own exit status is
   now read before the SIGPIPE status of the line handed to it. `[ev: tests/pre-commit-client-guard.bats]`
-- The review of that fix approved it with two more advisories, also fixed: the cut now needs git's own cut line (the
-  scissors line followed by "Do not modify or remove the line above.", checked against git 2.56's `commit -v`
-  file), so a scissors-shaped line in a -m/-F message no longer hides the lines below it (PC12 red before); and a
-  message file that cannot be read refuses instead of reading as an empty message (PC13 red before).
+- The review of that fix approved it with two more advisories, also fixed: the cut no longer fires on any
+  scissors-shaped line, so a -m/-F message cannot hide lines below one (PC12 red before), and a message file that
+  cannot be read refuses instead of reading as an empty message (PC13 red before). The next review asked for one
+  bounded correction: the cut had matched git's English comment under the scissors line, which a localized git
+  translates; it now needs a scissors line, a comment line under it and a `diff --git` line further down (PC14 red
+  before; the targeted validator approved it). `[ev: tests/pre-commit-client-guard.bats]`
+- Known limit, not changed: message mode cannot see which cleanup git will apply, so a '#' line that `commit -m`
+  or `-F` keeps is not scanned at commit time; the pre-push guard reads the recorded message.
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
@@ -59,5 +63,6 @@ with both servlet lints so they cannot drift apart.
 | Δ2 | APPLIED 2026-11-17. A servlet write template with the CSRF token and the permission on the TARGET, and a lint for `getPermissionsFor` misuse | `build-n4-module-kit/types/servlet-write.md` § `Template` | `[ev: tests/lint-servlet-write-guards.bats]` |
 | Δ3 | niagara-go `client-guard` takes a context word so a commit-time refusal does not say "push refused" / "pushed commits" | niagara-go `internal/clientguard/prepush.go` | `[ev: .githooks/pre-commit]` |
 | Δ4 | lint-servlet-write-guards reads the servlet's dispatch class too (a TreeRule), so a token check in a DUX1 router counts for its servlet | `go/internal/lint/rules/servletwriteguard/servletwriteguard.go` | `[ev: build-n4-module-kit/toolbelt/lint-servlet-write-guards.sh]` |
-| Δ5 | APPLIED 2026-11-17. The commit-msg guard drops the `commit -v` scissors section, and the hook runs on bash before 4.4 and git before 2.31 | `.githooks/pre-commit` | `[ev: tests/pre-commit-client-guard.bats]` |
+| Δ5 | APPLIED 2026-11-17. The commit-msg guard drops the `commit -v` diff section (found by structure, not by git's translated text), refuses an unreadable message file, and runs on bash before 4.4 and git before 2.31 | `.githooks/pre-commit` | `[ev: tests/pre-commit-client-guard.bats]` |
 | Δ6 | lint-servlet-write-guards narrows `write` to component writes (a JDBC `setInt`, `List.set` or `AtomicReference.set` in web code WARNs today) and accepts a target check only when it names the written receiver or guards it in a condition | `go/internal/lint/rules/servletwriteguard/patterns.go` | `[ev: go/internal/lint/rules/servletwriteguard/testdata/truth-target-checks-1.txt]` |
+| Δ7 | niagara-go `client-guard` reads a commit message file itself with git's cleanup mode (or the hook passes it), so a '#' line that `commit -m`/`-F` keeps is guarded at commit time too | `.githooks/pre-commit` | `[ev: tests/pre-commit-client-guard.bats]` |
