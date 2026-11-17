@@ -666,6 +666,30 @@ names a tool the registry does not hold, a placeholder that is not a declared ar
 argument never used. An unknown prompt or a missing required argument is a JSON-RPC invalid-params
 error; an unknown resource URI answers `-32002`.
 
+### Behaviour diff around a deploy
+
+`n4_behavior_snapshot(name, scope="station:|slot:/", max_points=5000, timeout_s=60)` reads every
+control point below `scope` once (`select slotPath, out.value, status.bits from
+control:ControlPoint`) and writes it to `<state-dir>/snapshots/<name>.json` (0600, never
+overwritten: a taken name is refused). Take it before a module deploy.
+
+After the deploy and restart, `n4_behavior_diff(before, after=None, tolerance=0, limit=50)`
+compares that snapshot with a second one (`after`, no station read) or, without `after`, with a
+live read of the same scope (needs `n4_connect`). It lists `status_changed` (the status flags by
+name, before and after), `value_changed` (the out value text differs), `missing` and `new` points,
+each as `{count, items, more}` sorted by path, and `summary` with `unchanged`. Values are compared
+as the station writes them; with `tolerance`, two values that both read as numbers (a locale
+decimal comma such as `21,5` and a trailing unit such as `21.5 °C` allowed; `1,234.5` is text)
+count as equal within it. When either side was truncated by `max_points`, `missing` and `new` are
+`{not_checked: why}`, never a zero. `notes` say when the two sides come from different stations or
+scopes. Recipe:
+
+1. `n4_behavior_snapshot(name="before_<module>_<date>", scope=<the part the module drives>)`.
+2. Deploy, restart, `n4_station_runtime` (`restart_needed: false`).
+3. Wait for the drivers to poll (a point read right after the restart may still be `stale`), then
+   `n4_behavior_diff(before="before_<module>_<date>", tolerance=<the noise of the process>)`.
+4. Explain or fix every item; an intended change is still listed, so say which ones were expected.
+
 ### Finishing a job: the commissioning report
 
 `n4_commissioning_report(scope="station:|slot:/", sections=None, limit=20, expect_histories=None,
