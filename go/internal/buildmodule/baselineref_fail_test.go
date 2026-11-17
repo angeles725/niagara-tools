@@ -14,9 +14,7 @@ func TestSchemaBaselineRefReplacesADanglingLeftover(t *testing.T) {
 	f.signs()
 	f.deployedRepo()
 	link := f.artifact("ux") + "/.deploy-baseline"
-	if err := os.Symlink(f.dir+"/gone/baseline", link); err != nil {
-		t.Fatal(err)
-	}
+	f.link(f.dir+"/tmp.gone/baseline", link)
 	f.seesBaselines("0")
 	f.wants("leftover", f.build("--schema-baseline-ref", "v1"), ExitOK,
 		"build.sh: INFO — removed "+link+", a dangling link a killed --schema-baseline-ref run left",
@@ -25,6 +23,40 @@ func TestSchemaBaselineRefReplacesADanglingLeftover(t *testing.T) {
 		t.Errorf("Foo-ux: the report saw %q, want the v1 tree", got)
 	}
 	f.noBaselineLeft("leftover")
+}
+
+// TestSchemaBaselineRefKeepsOperatorLinks: a link that is not a killed run's leftover (a live link, a dangling
+// link not shaped like this tool's extraction) is refused like a directory and left in place; a refusal also
+// leaves a leftover on another artifact in place (a refusal changes nothing).
+func TestSchemaBaselineRefKeepsOperatorLinks(t *testing.T) {
+	for _, c := range []struct{ name, target string }{
+		{"live link", "/live"}, {"dangling operator link", "/share/baseline"},
+	} {
+		f := newFixture(t)
+		f.signs()
+		f.deployedRepo()
+		f.mkdir(f.dir + "/live")
+		ux, rt := f.artifact("ux")+"/.deploy-baseline", f.artifact("rt")+"/.deploy-baseline"
+		f.link(f.dir+c.target, ux)
+		f.link(f.dir+"/tmp.gone/baseline", rt)
+		f.wants(c.name, f.build("--schema-baseline-ref", "v1"), ExitUsage, "Foo-ux/.deploy-baseline already exists")
+		for link, target := range map[string]string{ux: f.dir + c.target, rt: f.dir + "/tmp.gone/baseline"} {
+			if got, err := os.Readlink(link); err != nil || got != target {
+				t.Errorf("%s: %s now reads %q (%v), want it kept -> %s", c.name, link, got, err, target)
+			}
+		}
+		if strings.Contains(f.err, "INFO — removed") || f.call("gradlew") != "" {
+			t.Errorf("%s: the refusal changed something:\n%s\n%s", c.name, f.err, f.calls())
+		}
+	}
+}
+
+// link makes a symlink at path pointing to target.
+func (f *fixture) link(target, path string) {
+	f.t.Helper()
+	if err := os.Symlink(target, path); err != nil {
+		f.t.Fatal(err)
+	}
 }
 
 // TestSchemaBaselineRefToolFailures: git that cannot be started is exit 10 naming it; an extraction that fails

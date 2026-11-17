@@ -1,7 +1,10 @@
 package buildmodule
 
 import (
+	"errors"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -24,11 +27,8 @@ func (b *build) extractBaselines() int {
 		return b.refRefusal(code, msgBaselineRefNoModule, ref, source)
 	}
 	artifacts := walkedArtifacts(source)
-	for _, a := range artifacts {
-		if b.baselineTaken(a + "/.deploy-baseline") {
-			b.warn(msgBaselineRefExists, a+"/.deploy-baseline")
-			return ExitUsage
-		}
+	if code := b.clearLeftovers(artifacts); code != proceed {
+		return code
 	}
 	for _, a := range artifacts {
 		name := a[strings.LastIndex(a, "/")+1:]
@@ -102,19 +102,47 @@ func walkedArtifacts(source string) []string {
 	return dirs
 }
 
-// baselineTaken reports whether link is a .deploy-baseline the run must not replace. A dangling symlink is the
-// leftover of a killed run (its extraction is gone, and report-module reads it as no baseline): it is removed,
-// with one INFO line, so a retry does not need a manual cleanup.
-func (b *build) baselineTaken(link string) bool {
-	st, err := os.Lstat(link)
-	if err != nil {
-		return false
-	}
-	if st.Mode()&os.ModeSymlink != 0 {
-		if _, err := os.Stat(link); err != nil && os.Remove(link) == nil {
-			b.warn(msgBaselineRefDangling, link)
-			return false
+// clearLeftovers refuses (exit 2) when an artifact holds a .deploy-baseline the run must not replace, and only
+// then removes the leftovers of a killed run, one INFO line each: a refusal changes nothing.
+func (b *build) clearLeftovers(artifacts []string) int {
+	var leftovers []string
+	for _, a := range artifacts {
+		link := a + "/.deploy-baseline"
+		switch free, leftover := baselineSlot(link); {
+		case leftover:
+			leftovers = append(leftovers, link)
+		case !free:
+			b.warn(msgBaselineRefExists, link)
+			return ExitUsage
 		}
 	}
-	return true
+	for _, link := range leftovers {
+		if err := os.Remove(link); err != nil {
+			b.warn(msgBaselineRefExists, link)
+			return ExitUsage
+		}
+		b.warn(msgBaselineRefDangling, link)
+	}
+	return proceed
+}
+
+// baselineSlot says whether link is free (nothing there) or the leftover of a killed run: a symlink this tool
+// made (an absolute target <mktemp dir>/baseline, the mktemp dir named tmp.*) whose target no longer exists, which
+// report-module already reads as no baseline. Anything else, an operator's link to an unreachable target
+// included, is neither, and is never removed.
+func baselineSlot(link string) (free, leftover bool) {
+	st, err := os.Lstat(link)
+	if errors.Is(err, fs.ErrNotExist) {
+		return true, false
+	}
+	if err != nil || st.Mode()&os.ModeSymlink == 0 {
+		return false, false
+	}
+	target, err := os.Readlink(link)
+	if err != nil || !filepath.IsAbs(target) || filepath.Base(target) != "baseline" ||
+		!strings.HasPrefix(filepath.Base(filepath.Dir(target)), "tmp.") {
+		return false, false
+	}
+	_, err = os.Stat(link)
+	return false, errors.Is(err, fs.ErrNotExist)
 }

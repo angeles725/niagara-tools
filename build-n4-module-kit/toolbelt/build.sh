@@ -36,7 +36,7 @@
 #                   under <module-root>/<MOD> is extracted as it is at <deployed-ref> (a tag or commit) into a temporary
 #                   directory and <artifact>/.deploy-baseline links to it, so report-module's schema-risk floor check runs;
 #                   the link and the extraction are removed when the run ends, whatever the exit (a link left by a killed
-#                   run dangles and reads as no baseline; the next run with the option removes it, INFO line). One "==> schema-risk baseline: <artifact> from <ref>" line per
+#                   run dangles and reads as no baseline; the next run with the option removes such a link, INFO line; an operator link is kept and refused). One "==> schema-risk baseline: <artifact> from <ref>" line per
 #                   artifact; an artifact absent at the ref gets an INFO line and no baseline (its row stays SKIP). Exit 2
 #                   before gradle when <deployed-ref> is not a commit of the module's repository, <MOD> does not exist at
 #                   it, an artifact already has a .deploy-baseline (remove it, or drop the option to use it), or with
