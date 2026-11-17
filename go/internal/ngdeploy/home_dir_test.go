@@ -54,6 +54,9 @@ func TestANiagaraHomeThroughALinkToADirectoryDeploys(t *testing.T) {
 // A NIAGARA_HOME under a directory the deploy may not search is a permission error, said as one, not a
 // home that is not there; exit 10 before gradle all the same.
 func TestANiagaraHomeThatCannotBeLookedAtSaysWhy(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root searches every directory")
+	}
 	f := newFixture(t)
 	home := f.dir + "/locked/home"
 	f.mkdir(home)

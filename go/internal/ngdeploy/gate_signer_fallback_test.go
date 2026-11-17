@@ -70,6 +70,9 @@ func TestAStationJarWhoseSignerCannotBeToldGivesNoSignerAndAWarning(t *testing.T
 			f.zipJar(f.deployedJar("rt"), map[string]string{"META-INF/MANIFEST.MF": "Manifest-Version: 1.0\r\n\r\n", "META-INF/ACMESIGN.SF": "x"})
 		}},
 	} {
+		if strings.Contains(tc.why, "permission denied") && os.Geteuid() == 0 {
+			continue // root reads every file
+		}
 		var jar string
 		signer, warning := signerGiven(t, func(f *fixture) {
 			f.zipJar(withHome(f.t, f, true)+"/demo-rt.jar", signedBy("OTHER"))
