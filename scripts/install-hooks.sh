@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # install-hooks.sh — opt-in activation of the kit's git hooks.
 # Points git at the kit's hooks: `git config --local core.hooksPath .githooks`, which activates every
-# hook there: the retro-enforcement pre-push gate, and post-merge / post-checkout / post-rewrite /
-# post-commit, which regenerate the kit's generated state (BUILD-STATE.md, retros/INDEX.md,
+# hook there: the retro-enforcement pre-push gate, the client-identifier guard at commit time (pre-commit
+# and commit-msg: the staged changes and the message, before a local commit exists), and post-merge /
+# post-checkout / post-rewrite / post-commit, which regenerate the kit's generated state (BUILD-STATE.md, retros/INDEX.md,
 # toolbelt/INDEX.md — not committed, R10-D1) with toolbelt/kit-state.sh after every pull, checkout,
 # rebase/amend and commit. The install runs post-merge once
 # so the state is materialized right away. The hooks ship INERT; this is what makes them live in a

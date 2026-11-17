@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# pre-commit — the client-identifier guard at commit time: a client name in the STAGED changes is refused
+# before a local commit exists, not only when it is pushed (.githooks/pre-push step 1). .githooks/commit-msg
+# runs this file with `--message <file>` to guard the proposed commit message the same way.
+# [ev: retro 2026-11-10-delivery-guards-and-ui-contrast Δ1]
+#
+# It reuses niagara-go's client-guard, the pre-push guard, unchanged: the hook writes a snapshot commit of
+# the staged tree (parents HEAD and any MERGE_HEAD; a message snapshot keeps HEAD's tree and carries the
+# message) into a throwaway object directory, with a COPY of the index, and hands the guard one pre-push
+# stdin line "refs/heads/pre-commit <snapshot> refs/heads/pre-commit <HEAD or 0…0>" plus `origin <push url>`
+# when the repository has an origin (so already-public lines stay exempt, as at pre-push). The guard prints
+# file:line and the denylist rule number only, never the matched text. The repository's object store and
+# index are never written; the throwaway directory is removed on every exit.
+#
+# Without client-guard on PATH the commit goes on only when this machine has no client denylist
+# ($NIAGARA_CLIENT_DENYLIST, else ~/.config/niagara-private/client-denylist.txt); a denylist that cannot
+# be examined counts as present. A guard refusal, a broken guard (any non-zero exit) or a snapshot that
+# cannot be written refuses the commit. Plain bash + git + client-guard: no Go build, so a work tree whose
+# Go code does not compile can still commit.
+#
+# Message mode strips comment lines (`git stripspace --strip-comments`) as git's default cleanup does.
+# Activated with scripts/install-hooks.sh (core.hooksPath .githooks); `git commit --no-verify` skips it,
+# and the pre-push guard still runs.
+#
+# Usage: pre-commit                    (git pre-commit hook: no arguments)
+#        pre-commit --message <file>   (from .githooks/commit-msg)
+# Exit:  0 clean or skipped · 1 refused (a match, a broken guard, a missing guard with a denylist, or a
+#        snapshot failure)
+set -u
+
+hook=pre-commit msgfile=""
+if [ "${1:-}" = "--message" ]; then
+  hook=commit-msg msgfile="${2:-}"
+  [ -n "$msgfile" ] || { echo "commit-msg: no message file given; refusing to commit unchecked" >&2; exit 1; }
+fi
+refuse() { printf '%s: %s; refusing to commit unchecked\n' "$hook" "$1" >&2; exit 1; }
+
+# denylist_present: the denylist exists, or cannot be examined (the deepest existing ancestor of its
+# path is a directory this user cannot search). Only "no such file" means this machine has none.
+denylist_present() {
+  local list="${NIAGARA_CLIENT_DENYLIST:-}" d
+  [ -n "$list" ] || list="${HOME:-}/.config/niagara-private/client-denylist.txt"
+  if [ -e "$list" ] || [ -L "$list" ]; then return 0; fi
+  d=$(dirname -- "$list")
+  while [ ! -e "$d" ]; do d=$(dirname -- "$d"); done
+  [ -d "$d" ] && [ ! -x "$d" ]
+}
+
+if ! command -v client-guard >/dev/null 2>&1; then
+  if denylist_present; then
+    printf '%s: client-guard is not on PATH but a client denylist exists; refusing to commit unchecked.\n' "$hook" >&2
+    # shellcheck disable=SC2016  # the hint names $HOME literally, as pre-push prints it
+    printf '%s  install it from a niagara-go checkout: GOBIN=$HOME/.local/bin go install ./cmd/client-guard\n' \
+      "${hook//?/ }" >&2
+    exit 1
+  fi
+  printf '%s: client-guard not installed and no client denylist; client-identifier check skipped\n' "$hook" >&2
+  exit 0
+fi
+
+objects=$(git rev-parse --path-format=absolute --git-path objects) || refuse "cannot find the object store"
+index="${GIT_INDEX_FILE:-}"
+[ -n "$index" ] || index=$(git rev-parse --path-format=absolute --git-path index) || refuse "cannot find the index"
+tmp=$(mktemp -d) || refuse "mktemp failed"
+trap 'rm -rf "$tmp"' EXIT
+# New objects go to the throwaway directory; the repository's objects stay readable as an alternate.
+export GIT_ALTERNATE_OBJECT_DIRECTORIES="$objects${GIT_ALTERNATE_OBJECT_DIRECTORIES:+:$GIT_ALTERNATE_OBJECT_DIRECTORIES}"
+export GIT_OBJECT_DIRECTORY="$tmp/objects"
+export GIT_AUTHOR_NAME=client-guard GIT_AUTHOR_EMAIL=client-guard@localhost
+export GIT_COMMITTER_NAME=client-guard GIT_COMMITTER_EMAIL=client-guard@localhost
+mkdir "$GIT_OBJECT_DIRECTORY" || refuse "cannot create the snapshot object directory"
+
+head=""
+if git rev-parse -q --verify 'HEAD^{commit}' >/dev/null; then
+  head=$(git rev-parse --verify 'HEAD^{commit}') || refuse "cannot read HEAD"
+fi
+parents=()
+[ -z "$head" ] || parents=(-p "$head")
+
+if [ -z "$msgfile" ]; then
+  # the staged tree, written from a copy of the index so the real index (and its cache-tree) is never touched
+  if [ -e "$index" ]; then cp -- "$index" "$tmp/index" || refuse "cannot copy the index"; fi
+  tree=$(GIT_INDEX_FILE="$tmp/index" git write-tree) || refuse "cannot snapshot the staged tree (git write-tree)"
+  merge_head=$(git rev-parse --git-path MERGE_HEAD) || refuse "cannot find MERGE_HEAD"
+  if [ -f "$merge_head" ]; then
+    while read -r sha; do
+      [ -z "$sha" ] || parents+=(-p "$sha")
+    done < "$merge_head" || refuse "cannot read MERGE_HEAD"
+  fi
+  message="client-guard staged snapshot"
+else
+  if [ -n "$head" ]; then
+    tree=$(git rev-parse --verify "$head^{tree}") || refuse "cannot read HEAD's tree"
+  else
+    tree=$(git hash-object -w -t tree /dev/null) || refuse "cannot write the empty tree"
+  fi
+  message=$(git stripspace --strip-comments < "$msgfile") || refuse "cannot read the message file"
+  [ -n "$message" ] || exit 0   # an empty message: git aborts the commit itself
+fi
+snapshot=$(git commit-tree "$tree" "${parents[@]}" -m "$message") || refuse "cannot write the snapshot commit"
+
+args=()
+if url=$(git remote get-url --push origin 2>/dev/null); then args=(origin "$url"); fi
+printf 'refs/heads/pre-commit %s refs/heads/pre-commit %s\n' "$snapshot" "${head:-0000000000000000000000000000000000000000}" \
+  | client-guard "${args[@]}"
+statuses=("${PIPESTATUS[@]}")
+[ "${statuses[0]}" -eq 0 ] || refuse "cannot hand the snapshot to client-guard"
+if [ "${statuses[1]}" -ne 0 ]; then
+  printf '%s: client-guard refused the %s (exit %d, above); commit refused — rewrite or unstage what it names\n' \
+    "$hook" "$([ -z "$msgfile" ] && echo "staged changes" || echo "commit message")" "${statuses[1]}" >&2
+  exit 1
+fi
+exit 0
