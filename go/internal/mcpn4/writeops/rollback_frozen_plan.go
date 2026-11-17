@@ -17,9 +17,14 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// notConfigFlags are the declared flags of a slot the rollback never writes: r readonly, t
-// transient (runtime state, never persisted).
-const notConfigFlags = "rt"
+// The declared flags that keep a slot out of the frozen-config restore. A slot flagged
+// neverWrittenFlags (r readonly, t transient) is never written; only a slot flagged
+// notComparedFlags (t: runtime state, never persisted) also leaves the read-back's comparison, so
+// a readonly slot that differs still makes the verdict partial. A status slot is neither.
+const (
+	neverWrittenFlags = "rt"
+	notComparedFlags  = "t"
+)
 
 // planFrozenConfig sets "frozen_config" on each component spec the contracts declare as a frozen
 // slot of its parent and that has something to restore; it returns the writes they may need.
@@ -70,7 +75,8 @@ func planFrozenConfig(c plan.Client, ops, components []any) int {
 
 // frozenConfig is the restore of one frozen component of captured type ctype (declared with a
 // default of type dtype): swap when the types differ, a set per configuration slot whose captured
-// value is not the declared default, and the slots the read-back must not compare (ignored);
+// value is not the declared default, and the slots the read-back must not compare (ignored:
+// transient and status; a readonly slot is not written but is still compared);
 // nil when there is nothing to record.
 func frozenConfig(ct *plan.Contracts, body *pyjson.Object, ctype string, dtype any) *pyjson.Object {
 	swap := dtype != nil && !box.PyEqual(dtype, ctype)
@@ -84,8 +90,11 @@ func frozenConfig(ct *plan.Contracts, body *pyjson.Object, ctype string, dtype a
 			continue
 		}
 		flags, _ := get(slot, "f").(string)
-		if n == "status" || get(kid, "t") == "baja:Status" || strings.ContainsAny(flags, notConfigFlags) {
+		if n == "status" || get(kid, "t") == "baja:Status" || strings.ContainsAny(flags, notComparedFlags) {
 			ignored = append(ignored, n)
+			continue
+		}
+		if strings.ContainsAny(flags, neverWrittenFlags) { // readonly: compared, never written
 			continue
 		}
 		def := asObj(get(slot, "v"))

@@ -1186,7 +1186,8 @@ Destructive tools use the same pipeline:
   component spec (so the token covers it): after its parent's add, a set op swaps the
   captured type in (as `n4_add_alarm` does) and set ops write the captured configuration
   slots the fresh child does not already hold, e.g. `highLimit`/`lowLimit`; readonly,
-  transient and `status` slots are never written and not compared (`ignored`). The
+  transient and `status` slots are never written; transient and `status` slots are not
+  compared (`ignored`), while a readonly slot that differs stays listed. The
   read-back compares it with the snapshot and lists any difference in
   `frozen_config_not_restored`, with the station's reason in `refused` for a value it
   refused; without contracts nothing is written. What the remove's snapshot did not

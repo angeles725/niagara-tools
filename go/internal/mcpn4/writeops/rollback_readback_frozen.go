@@ -18,8 +18,8 @@ const FrozenCheckDepth = 3
 
 // frozenCheck is _frozen_check: nil when the live frozen child holds the captured
 // configuration, else the gap. A station read error proves nothing either way: the gap carries
-// readback_error and no `missing`. The slots the plan ignored (readonly, transient, status) are
-// not compared; the sets the station refused are listed in refused, with its reason.
+// readback_error and no `missing`. The slots the plan ignored (transient, status) are not
+// compared; a readonly slot is (it is never written, so a difference stays a gap); the sets the station refused are listed in refused, with its reason.
 func frozenCheck(c plan.Client, check *pyjson.Object, refused []any) (*pyjson.Object, error) {
 	path := get(check, "path").(string)
 	head, leaf := rpartition(path)

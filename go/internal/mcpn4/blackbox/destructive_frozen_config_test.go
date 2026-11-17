@@ -151,3 +151,33 @@ func TestARollbackRestoresAnAlarmAlgorithmAndItsLimits(t *testing.T) {
 		}
 	}
 }
+
+// A readonly (r, persisted) slot is never written, but it is still compared: a difference keeps
+// the frozen child in frozen_config_not_restored and the verdict partial (verifier probe P3).
+func TestAReadonlyFrozenConfigDifferenceIsNotWrittenAndStaysNotRestored(t *testing.T) {
+	d := destructiveRig(t, nil)
+	contracts := map[string]any{}
+	for k, v := range frozenContracts {
+		contracts[k] = v
+	}
+	contracts["control:NullProxyExt"] = map[string]any{"c": []any{frozenSlot("tuningPolicyName", "baja:String", "r")},
+		"p": "baja:Component"}
+	d.withContractsOf(contracts)
+	nn := d.writableGroup()
+	d.configureProxyExt(nn)
+	removed := d.Srv.RunWrite("n4_remove_component", removeArgs(nn))
+	sent := d.f.record()
+	back := d.rollback(removed["batch_id"])
+	for _, op := range sent() {
+		if n, _ := op["n"].(string); strings.HasSuffix(n, "tuningPolicyName") {
+			t.Errorf("a readonly slot was written: %v", op)
+		}
+	}
+	if back["verdict"] != "partial" {
+		t.Errorf("verdict = %v", back["verdict"])
+	}
+	lost := objects(back["frozen_config_not_restored"])
+	if len(lost) != 1 || !same(lost[0]["slots"], []any{"tuningPolicyName"}) {
+		t.Errorf("frozen_config_not_restored = %v", back["frozen_config_not_restored"])
+	}
+}

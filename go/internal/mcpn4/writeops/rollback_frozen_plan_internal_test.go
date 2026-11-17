@@ -22,8 +22,9 @@ func mustJSON(t *testing.T, s string) *pyjson.Object {
 }
 
 // The frozen-config plan writes only configuration that is off its declared default: a status
-// slot and a readonly or transient slot are ignored, a dynamic slot is not planned, and a slot
-// at its declared default needs no write (the fresh child holds it).
+// or transient slot is ignored (not compared), a readonly slot is neither written nor ignored (it
+// is still compared), a dynamic slot is not planned, and a slot at its declared default needs no
+// write (the fresh child holds it).
 func TestTheFrozenConfigPlanKeepsOnlyConfigurationOffItsDefault(t *testing.T) {
 	ct := plan.NewContracts(fixedTypes{mustJSON(t, `{"x:Algo": {"c": [
 		{"st": "p", "n": "highLimit", "v": {"nm": "p", "t": "baja:Double"}},
@@ -40,7 +41,7 @@ func TestTheFrozenConfigPlanKeepsOnlyConfigurationOffItsDefault(t *testing.T) {
 		{"nm": "p", "n": "note", "t": "baja:String", "v": "dynamic"}]}`)
 	cfg := frozenConfig(ct, body, "x:Algo", "x:Algo")
 	want := `{'type': 'x:Algo', 'swap': False, 'sets': [{'n': 'highLimit', 'b': {'nm': 'p', 'v': '80.0', 't': 'baja:Double'}}], ` +
-		`'ignored': ['status', 'alarmState', 'lastSeen']}`
+		`'ignored': ['status', 'lastSeen']}`
 	if got := pyjson.Repr(cfg); got != want {
 		t.Errorf("frozen_config =\n %s\nwant\n %s", got, want)
 	}

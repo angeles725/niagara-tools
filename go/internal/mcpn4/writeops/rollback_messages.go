@@ -64,8 +64,8 @@ func frozenConfigNote(components []any) string {
 		"writable's proxyExt, an alarm extension's offnormalAlgorithm): it is never re-added and is listed as "+
 		"frozen_children_not_restored. %d of them carry frozen_config (from the station's type contracts): after "+
 		"the parent's add, set ops swap in the captured type and write the captured configuration slots the "+
-		"fresh child does not hold; readonly, transient and status slots are never written and are not "+
-		"compared (ignored). A value the station refuses keeps the child in frozen_config_not_restored, "+
+		"fresh child does not hold; readonly, transient and status slots are never written, transient "+
+		"and status slots are not compared (ignored), and a readonly slot that differs stays a gap. A value the station refuses keeps the child in frozen_config_not_restored, "+
 		"with the station's reason in refused, and the verdict is partial; a frozen child without frozen_config "+
 		"is not written, and when it differs from the snapshot it is listed there too", n)
 }
