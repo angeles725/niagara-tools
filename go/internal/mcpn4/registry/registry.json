@@ -765,6 +765,35 @@
    "needs_session": true
   },
   {
+   "name": "n4_users_audit",
+   "description": "Audit the station's user accounts (station-audits S14), read-only and without a credential. One load of Services/UserService (each baja:User and its slots, two levels: an authenticator's own slots are never loaded), one of Services/RoleService and one fixed query of the /<station>/SecurityHistory Login records (where 4.x keeps logins; the AuditHistory does not). Fail closed: only fullName, enabled, expiration, lockOut, roles, authenticationSchemeName and prototypeName are returned; email and cellPhoneNumber show only \"<set>\" or \"\" under contact; every other slot (authenticator, password, permissions, vendor or dynamic slots) is never returned and is only named in masked_slots. Reply: users [{user, full_name, enabled, locked_out, expiration (null for never), roles, role_resolves, unresolved_roles, admin_role (a role that is baja:AdminRole or grants super), auth_scheme, prototype, last_login (null when no record), last_login_source (SecurityHistory, or null when it could not be read), contact {email, cell_phone}, flags (disabled, expired, locked, never_logged_in, unused, admin, unknown_role)}], unused [{user, last_login}] (enabled users with no login within unused_days), unused_days, counts (users and one per flag), masked_slots, notes, truncated (users past max_users) and elapsed_ms. A verdict the evidence cannot support is null, never guessed: role_resolves and admin_role need the RoleService; never_logged_in needs every login record read. Read-only.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "unused_days": {
+      "type": "integer",
+      "description": "An enabled user with no login in this many days is unused",
+      "minimum": 1,
+      "maximum": 3650,
+      "default": 90
+     },
+     "max_users": {
+      "type": "integer",
+      "description": "Most users audited",
+      "minimum": 1,
+      "maximum": 5000,
+      "default": 500
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
    "name": "n4_histories_audit",
    "description": "Audit the histories of the connected station below base, in one read-only call (station-audits S1). It lists: no_history, the control points with no history extension right below them ({point}), leaving out the points under slot:/Services unless exclude_services is false (services_excluded counts them); disabled, the history extensions whose enabled is false ({ext, history_id}); stale, the enabled histories whose last record is older than the larger of stale_factor x the collection interval and stale_min (interval histories; stale_min, default 10m, keeps short-interval histories whose records show up in batches from false positives) or than cov_max_age (COV histories), or that never recorded ({history_id, ext, last_record ISO-8601 or null, interval as a span such as 5m or cov, threshold, age, note}); near_capacity, the histories capped by record count holding at least capacity_warn of it ({history_id, ext, records, capacity, fraction, full_policy, severity, effect}: severity warning for full policy stop, where recording stops when full, info for roll, where the oldest records are overwritten); and colliding_ids, the history ids two or more extensions record into ({history_id, exts}). Each list keeps at most 100 items; counts holds the totals (points, history_exts and one per list). It reads select slotPath, type, enabled, historyConfig.id, historyConfig.capacity, fullPolicy, interval and lastRecord.timestamp (each as encodeToString) from history:HistoryExt (at most max_histories rows) and select slotPath from control:ControlPoint, then one select count(*) per distinct record-capped history id that has recorded (count_reads; requests is the total). truncated is true when a read stopped at its cap: then no_history is not checked (counts.no_history null, no_history_note says why). not_answered counts cells the station answered in no known form, per column; notes say what was left out. Read-only: fixed queries.",
    "inputSchema": {
