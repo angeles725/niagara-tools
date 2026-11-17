@@ -9,6 +9,11 @@ const systemServiceOrd = "station:|slot:/Services/PlatformServices/SystemService
 var systemSlots = []string{"stationName", "hostId", "model", "niagaraVersion", "osName", "javaVmVersion",
 	"systemTime", "numCpus", "currentCpuUsage", "overallCpuUsage", "totalPhysicalMemory", "freePhysicalMemory"}
 
+// cpuSlots are the CPU usage slots the service refreshes only while subscribed (-1 until then).
+var cpuSlots = []string{"currentCpuUsage", "overallCpuUsage"}
+
+const cpuNotMeasured = "the SystemService CPU usage slots were not measured in two loads: they hold -1 (their declared default, which a load leaves out) until the service's poll runs, which it does when the service is subscribed (BPlatformService.subscribed); call again"
+
 // The memory slots the derived percentage reads, and the BOX type whose values are whole numbers
 // (a station omits one at its default, 0).
 const (
