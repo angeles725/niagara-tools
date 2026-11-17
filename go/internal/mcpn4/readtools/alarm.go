@@ -13,11 +13,9 @@ import (
 // validated filters. Read-only: fixed queries over the alarm: ORD (one BQL GET for the records
 // and one select count(*)), never a caller's query, never a write.
 
-// alarmFields name the record columns by position (a localized station translates headers).
-// The last three are machine text (encodeToString): the alarm time, the time it went back to
-// normal and the ack time as ISO-8601 with the station's offset, null when not set.
-var alarmFields = []string{"timestamp", "uuid", "source", "source_state", "ack_state", "alarm_class",
-	"priority", "msg_text", "timestamp_iso", "normal_time", "ack_time"}
+// alarmFields name the record columns by position: timestamp_iso, normal_time and ack_time are
+// ISO-8601 with the station's offset, null when not set.
+var alarmFields = bql.AlarmRecordFields
 
 // Defaults of n4_read_alarms (the registry schema caps limit at 1000).
 const (

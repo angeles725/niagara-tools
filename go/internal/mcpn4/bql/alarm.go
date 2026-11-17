@@ -28,6 +28,12 @@ const (
 		"source like 'local:*slot:%[1]s' or source like 'local:*slot:%[1]s/*')"
 )
 
+// AlarmRecordFields name the columns of AlarmRecordsQuery by position (a localized station
+// translates headers). The last three are machine text (encodeToString): the alarm time, the
+// time it went back to normal and the ack time.
+var AlarmRecordFields = []string{"timestamp", "uuid", "source", "source_state", "ack_state", "alarm_class",
+	"priority", "msg_text", "timestamp_iso", "normal_time", "ack_time"}
+
 // alarmGlobRe is a source_glob: ORD characters and '*' only; no quote, space or '|' (the ORD
 // separator would cut the bql part, so '*' stands for it).
 // No '$' either: the station would decode $xx into any character ('*' matches an escaped one).

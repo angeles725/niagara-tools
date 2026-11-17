@@ -94,6 +94,9 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	if err != nil {
 		return nil, "", err
 	}
+	if planned.Nothing != nil {
+		return planned.Nothing, "", nil
+	}
 	plan, planHash, err := Hashed(name, planned, sess)
 	if err != nil {
 		return nil, "", err

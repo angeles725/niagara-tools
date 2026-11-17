@@ -53,20 +53,32 @@ type ordReader interface {
 	GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error)
 }
 
-// ackPlan checks the uuids, that the client can Call the alarm channel, and that every record
-// exists and is unacked; the plan is the one channel op, with no inverse.
-func ackPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.Session) (*plan.Planned, error) {
-	ids, err := ackIDs(args)
+// ackPlan checks the uuids (or resolves the selection), that the client can Call the alarm
+// channel, and that every record exists, is in scope and is unacked; the plan is the one channel
+// op, with no inverse. A selection also joins the hashed plan as its selection report.
+func ackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *session.Session) (*plan.Planned, error) {
+	rawSel, bySelect := args.Get("select")
+	_, byIDs := args.Get("uuids")
+	switch {
+	case bySelect && byIDs:
+		return nil, plan.ToolError(msgSelBoth)
+	case !bySelect && !byIDs:
+		return nil, plan.ToolError(msgSelNone)
+	}
+	var ids []any
+	var selection *ackSelection
+	var err error
+	if bySelect {
+		selection, err = parseSelect(rawSel)
+	} else {
+		ids, err = ackIDs(args)
+	}
 	if err != nil {
 		return nil, err
 	}
-	body := obj("ids", ids)
-	if v, ok := args.Get("notes"); ok {
-		notes, isStr := v.(string)
-		if !isStr {
-			return nil, plan.ToolError(msgAckNotes)
-		}
-		body.Set("notes", notes)
+	notes, hasNotes := args.Get("notes")
+	if _, isStr := notes.(string); hasNotes && !isStr {
+		return nil, plan.ToolError(msgAckNotes)
 	}
 	if !plan.CanCall(c) {
 		return nil, plan.NoChannelError(ackChannel, ackKey)
@@ -75,13 +87,41 @@ func ackPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.Sessi
 	if !ok {
 		return nil, plan.ToolError(msgAckNoReader)
 	}
+	var keys *pyjson.Object
+	if bySelect {
+		var nothing *pyjson.Object
+		ids, keys, nothing, err = ackSelected(r, selection, args, w, sess)
+		if err != nil {
+			return nil, err
+		}
+		if nothing != nil {
+			return &plan.Planned{Nothing: nothing}, nil
+		}
+	}
+	if err := checkAckRecords(r, ids, w); err != nil {
+		return nil, err
+	}
+	if err := holdDrySelection(args, w, sess, ids, keys); err != nil {
+		return nil, err
+	}
+	body := obj("ids", ids)
+	if hasNotes {
+		body.Set("notes", notes)
+	}
+	return &plan.Planned{Ops: []any{plan.ChannelOp(ackChannel, ackKey, body)}, Notes: []any{noteAckUndo, noteAckUser},
+		Keys: keys, Data: ids}, nil
+}
+
+// checkAckRecords refuses, naming them, the uuids with no record, a source outside the write
+// scope or not a slot path, or a record already acknowledged or ack pending.
+func checkAckRecords(r ordReader, ids []any, w *plan.State) error {
 	exists, err := readAcks(r, ids, false)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	unacked, err := readAcks(r, ids, true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var missing, outside, unparsed, done []string
 	for _, id := range ids {
@@ -100,23 +140,18 @@ func ackPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.Sessi
 		}
 	}
 	var why []string
-	if missing != nil {
-		why = append(why, fmt.Sprintf(msgAckMissing, strings.Join(missing, ", ")))
-	}
-	if outside != nil {
-		why = append(why, fmt.Sprintf(msgAckOutside, strings.Join(outside, ", ")))
-	}
-	if unparsed != nil {
-		why = append(why, fmt.Sprintf(msgAckUnparsed, strings.Join(unparsed, ", ")))
-	}
-	if done != nil {
-		why = append(why, fmt.Sprintf(msgAckDone, strings.Join(done, ", ")))
+	for _, g := range []struct {
+		msg  string
+		list []string
+	}{{msgAckMissing, missing}, {msgAckOutside, outside}, {msgAckUnparsed, unparsed}, {msgAckDone, done}} {
+		if g.list != nil {
+			why = append(why, fmt.Sprintf(g.msg, strings.Join(g.list, ", ")))
+		}
 	}
 	if why != nil {
-		return nil, plan.ToolError(fmt.Sprintf(msgAckRefused, strings.Join(why, "; ")))
+		return plan.ToolError(fmt.Sprintf(msgAckRefused, strings.Join(why, "; ")))
 	}
-	return &plan.Planned{Ops: []any{plan.ChannelOp(ackChannel, ackKey, body)}, Notes: []any{noteAckUndo, noteAckUser},
-		Data: ids}, nil
+	return nil
 }
 
 // sourceOrd is the station slot ORD of a record source in either stored form

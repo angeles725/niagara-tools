@@ -1412,6 +1412,23 @@ Destructive tools use the same pipeline:
   acknowledge (operatorWrite on the class), is not empty
   (`observed.permission_failed_classes`). An acknowledgement cannot be undone: the plan has
   no inverse and `n4_rollback` cannot reverse it. It needs at least one `--write-scope`.
+- `n4_ack_alarm(select, notes)` chooses the records by a selection instead of uuids (give
+  exactly one of `uuids` or `select`): `select: {source?, alarm_class?, before?, max?}`, at
+  least one of the first three. `source` is a component ORD (`station:|slot:/a`, `slot:/a` or
+  `local:|station:|slot:/a`) matching the record source and everything below it in both
+  stored spellings; `alarm_class` a class name; `before` a BAbsTime or a span back from now
+  (`24h`) selecting records at or before it; `max` 1 to 100 (default 100). The dry run reads
+  only unacknowledged records with the records query and where clause `n4_read_alarms` uses
+  (`bql.AlarmWhere`, every value checked on its BQL-decoded form, so no quote, wildcard or `|`
+  of the caller reaches the station), newest first, and returns them in
+  `plan.selection.records` as `{uuid, source, alarm_class, timestamp}` with `matched` (one
+  `select count(*)`) and `truncated` (more matched than `max`). Every resolved record then
+  goes through the uuid checks above (scope, already acknowledged). The resolved uuids are
+  the op's `ids` and the selection report joins the hashed plan, so the token authorizes that
+  exact list; the execution re-plans from the list its dry run resolved (held per session and
+  exact arguments) and never runs the selection again: an alarm raised after the dry run is
+  left alone, and an execution without its dry run is refused. A selection that matches
+  nothing answers `{dry_run: true, selection, note}` with no token.
 
 ### Semantic export: Haystack JSON
 

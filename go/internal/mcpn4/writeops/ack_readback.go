@@ -57,6 +57,9 @@ func readAcks(r ordReader, ids []any, unackedOnly bool) (map[string]*pyjson.Obje
 func ackReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, _ []any) (any, any, any, string, error) {
 	ids := p.Data.([]any)
 	requested := obj("uuids", ids)
+	if v, ok := args.Get("select"); ok {
+		requested.Set("select", v)
+	}
 	if v, ok := args.Get("notes"); ok {
 		requested.Set("notes", v)
 	}
