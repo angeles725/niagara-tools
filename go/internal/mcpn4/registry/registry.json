@@ -1407,7 +1407,7 @@
   },
   {
    "name": "n4_copy_component",
-   "description": "Copy one configured component (e.g. a Modbus device with its points and their addresses) under the same parent once per new name, in one batch under one confirmation token (1 to 30 copies). The copy holds the type, plain slots and child components up to 6 levels deep. Runtime slots are left out by flags read from the station's type definitions: a frozen slot declared readonly, transient or default-on-clone (e.g. status, health, out, read and write values) or made transient, and a dynamic slot flagged transient or remove-on-clone; flags an integrator set otherwise travel with the copy. The plan notes list each slot left out with its flags, calling out a readonly slot that holds a non-default value; actions, slots the station lists by name only and links are not copied either; a deeper source is refused. The read-back compares each copy's whole configured subtree with the plan. The source may carry station escapes (Numeric$20Writable40001); new names are plain. A Modbus device allows one writable point per register: a copy of a writable Modbus point keeps its source's address, so the station resets it to Hex:-1 (\"Duplicate Writable point for register address\"); give each such copy its own proxyExt/dataAddress with copies[] (applied in the same add, so the read-back can verify it). The plan notes such copies and the read-back names the cause. Change what else differs per copy afterwards (e.g. deviceAddress with n4_set_slot). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Copy one configured component (e.g. a Modbus device with its points and their addresses) under the same parent once per new name, in one batch under one confirmation token (1 to 30 copies). The copy holds the type, plain slots and child components up to 6 levels deep. Runtime slots are left out by flags read from the station's type definitions: a frozen slot declared readonly, transient or default-on-clone (e.g. status, health, out, read and write values) or made transient, and a dynamic slot flagged transient or remove-on-clone; flags an integrator set otherwise travel with the copy. The plan notes list each slot left out with its flags, calling out a readonly slot that holds a non-default value; actions, slots the station lists by name only and links are not copied either; a deeper source is refused. The read-back compares each copy's whole configured subtree with the plan. The source may carry station escapes (Numeric$20Writable40001); new names are plain. A Modbus device allows one writable point per register: a copy of a writable Modbus point keeps its source's address, so the station resets it to Hex:-1 (\"Duplicate Writable point for register address\"); give each such copy its own proxyExt/dataAddress with copies[] (applied in the same add, so the read-back can verify it). The plan notes such copies and the read-back names the cause. The plan also notes every writable point with a non-null fallback: each copy commands its device with it on first communication. Change what else differs per copy afterwards (e.g. deviceAddress with n4_set_slot). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -1473,6 +1473,97 @@
      "parent_ord",
      "name",
      "new_names"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_replicate_points",
+   "description": "Replicate M configured points of one parent (e.g. the points of a Modbus device) onto N target parents (the points of other devices): N x M adds in one batch under one confirmation token, at most 200 copies. Each copy is what n4_copy_component would add (type, plain slots and child components up to 6 levels deep, address and dataType included; runtime slots and links left out, listed in the notes). Per target, copies[] gives a point's copy its own name and/or proxyExt/dataAddress (applied in the same add). Every add spends one write of --max-writes: the plan notes the count and a replication larger than write_budget.remaining is refused before any token is issued (n4_save_station stays outside the budget). A child that already exists under a target with a copy's name is refused. The plan notes copies of writable Modbus points that would share a register on one device (the station resets the later one to Hex:-1) and every writable point with a non-null fallback (each copy commands its device with it on first communication). The read-back compares every copy's configured subtree with the plan; the inverse removes every copy. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "source_parent_ord": {
+      "type": "string",
+      "description": "ORD of the parent that holds the source points (e.g. a device's points folder); it is only read"
+     },
+     "points": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1,
+      "description": "Slot names of the source points under source_parent_ord, distinct (station escapes accepted)"
+     },
+     "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "object",
+       "properties": {
+        "parent_ord": {
+         "type": "string",
+         "description": "ORD of the parent that receives one copy of every point"
+        },
+        "copies": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "point": {
+            "type": "string",
+            "description": "One of points"
+           },
+           "new_name": {
+            "type": "string",
+            "description": "Plain slot name of this point's copy under this target; default: the source's name"
+           },
+           "data_address": {
+            "type": "string",
+            "description": "Address this copy's proxyExt/dataAddress holds (e.g. 40010); the source must be a point whose proxyExt declares dataAddress"
+           },
+           "address_format": {
+            "type": "string",
+            "enum": [
+             "hex",
+             "decimal",
+             "modbus"
+            ],
+            "description": "Format of data_address; default: the source's format"
+           }
+          },
+          "required": [
+           "point"
+          ]
+         },
+         "description": "Optional per-target overrides, at most one per point; a point not listed keeps the source's name and address"
+        }
+       },
+       "required": [
+        "parent_ord"
+       ]
+      },
+      "description": "Distinct target parents; points x targets is at most 200"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "source_parent_ord",
+     "points",
+     "targets"
     ]
    },
    "annotations": {

@@ -121,7 +121,7 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 			"); the confirmation token is spent, run the dry run again")
 	}
 	if spendsBudget(name) {
-		w.WritesExecuted++ // counted once sent, whatever the station answers
+		w.WritesExecuted += planned.cost() // counted once sent, whatever the station answers
 	}
 	// From here on the batch exists: every failure is its in-doubt error, a panic (Python's
 	// unexpected exception) too.

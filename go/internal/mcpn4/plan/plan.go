@@ -22,6 +22,9 @@ type Planned struct {
 	HashInverse         []any
 	Targets, Keys       *pyjson.Object
 	Data                any
+	// Writes is what executing the batch spends of --max-writes: 0 counts as one write, the
+	// cost of an ordinary batch; a bulk tool sets one per station change (n4_replicate_points).
+	Writes int
 }
 
 // Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only; PlanWith

@@ -200,7 +200,8 @@ Flags:
   a reconnect does not reset it. `n4_save_station` neither needs nor spends a write, so a job
   that spent the budget can still save; every write reply (dry run and execution) carries
   `write_budget` `{executed, max, remaining, save_counts: false}`. Plan a bulk job against
-  `remaining`; restart the server for a new budget.
+  `remaining`; restart the server for a new budget. A batch is one write, except
+  `n4_replicate_points` (one per add) and `n4_rollback` (one per re-created component and link).
 - `--station-home NAME=PATH` (repeatable): directory holding the `config.bog` of configured
   station NAME; lets `n4_save_station` prove persistence (see Destructive tools).
 - `--niagara-home NAME=PATH` (repeatable): Niagara installation directory of configured station
@@ -822,7 +823,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_invoke_action`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station` and `n4_ack_alarm`. Example:
 
@@ -1045,6 +1046,23 @@ Tool rules:
   per copy afterwards (e.g. `deviceAddress` with `n4_set_slot`). The
   inverse removes every copy under its assigned name; the read-back loads each copy
   and compares its whole configured subtree with the plan, listing the paths that differ.
+  The plan also notes every writable point (the source or one inside it) whose `fallback`
+  is not null: the fallback is the output when no priority input is set, so each copy
+  commands its device with it on first communication. A note, never a refusal.
+- `n4_replicate_points(source_parent_ord, points, targets)` copies M points of one parent
+  (a device's points folder) onto N target parents (other devices' points folders): N x M
+  adds in one batch under one confirmation token (at most 200), each the body
+  `n4_copy_component` would add (address and `dataType` kept). Per target,
+  `copies=[{"point": "Setpoint", "new_name": "SP", "data_address": "40010",
+  "address_format": "modbus"}]` overrides one point's name and/or address in the same add.
+  Each add spends one `--max-writes` write: the plan notes the count and a replication larger
+  than `write_budget.remaining` is refused before any token. A child that already exists
+  under a target with a copy's name is refused. The plan notes writable Modbus copies that
+  would share a register on one device (the station resets the later one to `Hex:-1`) and
+  writable points with a non-null fallback, as `n4_copy_component` does; points already on a
+  target are not read for that check. The read-back compares every copy with the plan; the
+  inverse removes every copy. A client B field job replicated 112 points with 630 calls
+  in 39 minutes and ran out of budget; this is one dry run and one execution.
 - `n4_deploy_template(template_file, parent_ord, name?, settings?)` deploys a component
   template (`.ntpl`, a file on the machine the server runs on) under `parent_ord` in one
   add op, client-side as Workbench does (the station's TemplateService has no deploy
