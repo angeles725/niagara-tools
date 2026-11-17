@@ -13,7 +13,7 @@ import (
 // auditServer is classesServer plus a class nobody routes (Orphan), a mail recipient whose
 // to-list is empty and whose cc holds a bad address and two credential slots, a console routing no
 // transition, and a webhook recipient with an empty chat id and a failed delivery.
-func auditServer(t *testing.T) *pyjson.Object {
+func routingAuditReply(t *testing.T) *pyjson.Object {
 	t.Helper()
 	s := classesServer(t)
 	s.Station.OrdRoutes[0].Body += "slot:/Services/AlarmService/Orphan,Orphan,toOffnormal=1;toFault=1;toNormal=1;toAlert=1;,{},0,0,0,0\n"
@@ -32,7 +32,7 @@ func auditServer(t *testing.T) *pyjson.Object {
 }
 
 func TestListAlarmClassesAuditFindsUnroutedClassesAndBrokenRecipients(t *testing.T) {
-	out := auditServer(t)
+	out := routingAuditReply(t)
 	if got := pyjson.Repr(field(out, "unrouted_classes")); got != "[{'path': '/Services/AlarmService/Orphan', 'name': 'Orphan'}]" {
 		t.Errorf("unrouted %s", got)
 	}
