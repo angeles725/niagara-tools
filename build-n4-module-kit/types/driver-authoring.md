@@ -871,6 +871,11 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 - **COV is a tuning-policy setting:** `Use Cov`, `Cov Subscription Lifetime` (default 15 min) and `Accept
   Unsolicited Cov` (default false) live on the BACnet tuning policy (`Bacnet/bacnet-BacnetTuningPolicy.txt:24-29` "Cov Subscription Lifetime");
   bind MS/TP and IP devices to separate policies (`Bacnet/AddingATuningPolicyBACnet-4FD602EE.txt:11` "Configuring BACnet proxy points to reference different tuning").
+- **Plan MS/TP addresses with `toolbelt/mstp-plan.sh`, never by hand:** for controllers addressed by DIP
+  switches it prints MAC, switches ON and device ID (`--id-base` + MAC) per device, and refuses a reserved MAC
+  (0-3: the JACE and spare masters), one above the trunk's `maxMaster`, one the switches cannot set, or a MAC /
+  device ID already on the trunk (`--existing` CSV `mac,device_id`). One field job recomputed the table by hand
+  three times. `[ev: retro mstp-plan Δ1]`
 - **Large MS/TP trunks:** a Boolean `skipUpload=true` slot on a `BacnetDevice` skips the device-object upload
   at station start (`Bacnet/TroubleshootingBACnet-4FF09FBA.txt:27,57-58` "Any BacnetDevice with a Boolean slot named Skip"); a duplicate Device ID faults the
   device (`:17`).
