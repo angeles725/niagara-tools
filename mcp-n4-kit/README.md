@@ -504,6 +504,19 @@ in any category, up to `max_bad` each (default 20; `*_bad_truncated` says a list
 with several bits counts once in each of its categories. `drivers.totals` sums the networks and
 adds `unassigned_points` (proxy points under no network), `proxy_unknown` and `rows_truncated`;
 `drivers` is `null` with a `drivers_note` when one of the three sections failed.
+`platform=true` adds `platform`, platform capacity and what is about to expire, from five more
+spy page reads (a station user allowed to read spy pages): `heap` (`used_kb` and `committed_kb`
+from `spy:/sysInfo`, `max_kb` the sum of the defined maxima of the heap pools on
+`spy:/util/JMX Info`, `fraction` = used over max), `cpu` and `memory` (the system section again),
+`history_db` (`histories` and `records` summed from `spy:/localHistory`; `bytes` is always `null`:
+no read-only page gives the size of the history files), `licence` (the license section's nearest
+expiry; `never_expires: true` when nothing is dated), `certificates` (the trust store
+certificates of `spy:/securityInfo/Cryptography Info`, `{alias, store, issued_by, expires,
+days_left}`, nearest expiry first, up to 50; the station's own key store certificates are on no
+read-only page and `certificates_note` says so), `modules` (`count` of the loaded parts; the list
+too with `include_modules: true`) and `warnings` (heap at 90% or more, the licence and every
+certificate expired or within `expiry_warn_days`, default 30). An item that cannot be read is
+`null` with a `*_note` saying why. Without `platform` the reply is unchanged.
 `capacity` is the Global Capacity table
 of the spy metrics page (`spy:/metrics`): `resources` (`type`, `used`, `limit`, `unlimited: true`
 where the station shows no limit, and `live`) and `recount` (when the capacity recount last ran

@@ -93,6 +93,14 @@ func (t *Tools) StationHealth(args *pyjson.Object) (*pyjson.Object, error) {
 		return nil, err
 	}
 	out.Set("license", license)
+	if boolArg(args, "platform", false) {
+		platform, err := t.healthPlatform(platformArgs{timeout: timeout, warnDays: intArg(args, "expiry_warn_days", platformWarnDays),
+			includeModules: boolArg(args, "include_modules", false)}, system, license)
+		if err != nil {
+			return nil, err
+		}
+		out.Set("platform", platform)
+	}
 	out.Set("elapsed_ms", int(math.RoundToEven((t.Ctx.Clock()-start)*1000)))
 	t.recordRead("n4_station_health", "base", args, rowCount)
 	return out, nil

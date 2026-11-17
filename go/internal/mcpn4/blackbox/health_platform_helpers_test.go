@@ -1,0 +1,84 @@
+package blackbox
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest/boxstation"
+)
+
+// The spy pages n4_station_health platform=true reads, in the layouts of their 4.15 sources
+// (SysInfoSpy, UtilSpy.JmxInfo, BLocalHistoryDatabase.SpyLocalHistoryDatabase,
+// CryptoPlatformPage), every name neutral. The station's day (shxHealthRig) is 2026-11-15.
+const (
+	pfJmxPath     = "util/JMX Info"
+	pfHistoryPath = "localHistory"
+	pfCryptoPath  = "securityInfo/Cryptography Info"
+)
+
+// pfJmxPage is a JMX Info page with a G1 heap of maximum oldMax KB (eden and survivor maxima
+// undefined, printed 0) and two non-heap pools.
+func pfJmxPage(oldMax string) []byte {
+	pool := func(name, max string) string {
+		return "<table><tr><th colspan='5'>" + name + " (KB)</th></tr><tr><th>Type</th><th>init</th><th>used</th>" +
+			"<th>committed</th><th>max</th></tr><tr><td>current</td><td>1</td><td>2</td><td>3</td><td>" + max +
+			"</td></tr><tr><td>peak</td><td>1</td><td>2</td><td>3</td><td>" + max + "</td></tr></table>"
+	}
+	return []byte("<html><body><table><tr><th colspan='2'>JMX Thread Info</th></tr><tr><td>peak thread count</td><td>90</td></tr></table>" +
+		pool("G1 Eden Space", "0") + pool("G1 Survivor Space", "0") + pool("G1 Old Gen", oldMax) +
+		pool("Metaspace", "0") + pool("CodeHeap 'non-nmethods'", "5836") + "</body></html>")
+}
+
+// pfHistoryPage is a localHistory page with two histories of 100 and 250 records.
+func pfHistoryPage() []byte {
+	return []byte("<html><body><table><tr><th colspan='2'>LocalHistoryDatabase</th></tr><tr><td>dbDir</td><td>file:^history</td></tr>" +
+		"<tr><td>closing</td><td>false</td></tr></table>NOTE: Statistics are collected only since station boot AND while history is open" +
+		"<table><tr><th>Name</th><th>Records</th><th>Total Appends</th><th>Header Writes</th><th>Page Writes</th></tr>" +
+		"<tr><td><a href='/ord?spy:/localHistory/AhuTemp'>AhuTemp</a></td><td>100</td><td>4</td><td>1</td><td>2</td></tr>" +
+		"<tr><td><a href='/ord?spy:/localHistory/AhuFan'>AhuFan</a></td><td>250</td><td>0</td><td>0</td><td>0</td></tr>" +
+		"</table></body></html>")
+}
+
+// pfCryptoPage is a Cryptography Info page: one system CA valid to 2035 and two user
+// certificates, one expiring 2026-12-01 (16 days) and one expired 2026-01-05 (314 days ago).
+func pfCryptoPage() []byte {
+	head := func(title string) string {
+		return "<table><tr><th colspan='4'>" + title + "</th></tr><tr><th>Alias</th><th>Issued To</th><th>Issued By</th><th>Expires</th></tr>"
+	}
+	row := func(alias, issuer, expires string) string {
+		return "<tr><td><a href='/ord?spy:/securityInfo/Cryptography%20Info/" + alias + "'>" + alias + "</a></td><td>" + alias +
+			"</td><td>" + issuer + "</td><td>" + expires + "</td></tr>"
+	}
+	return []byte("<html><body><table><tr><th colspan='2'>FIPS</th></tr><tr><td>FIPS enabled</td><td>false</td></tr></table>" +
+		head("Trusted System Certificates (1 certs)") + row("labrootca", "CN=Lab Root CA", "Sat Mar 31 17:59:59 CST 2035") + "</table>" +
+		head("Trusted User Certificates (2 certs)") + row("labserverca", "CN=Lab Server CA", "Tue Dec 01 10:00:00 CST 2026") +
+		row("oldvendor", "CN=Old Vendor", "Mon Jan 05 10:00:00 CST 2026") + "</table></body></html>")
+}
+
+// pfRig is the health rig with every page platform=true reads, the licence page given.
+func pfRig(t *testing.T, licence []byte) (*Rig, *boxstation.Servlets) {
+	t.Helper()
+	r, sv := shxHealthRig(t)
+	shxServeSpy(sv, "sysInfo", boxstation.SpyPage{Body: shxSpyFixture(t, "sysinfo.html")})
+	shxServeSpy(sv, pfJmxPath, boxstation.SpyPage{Body: pfJmxPage("2097152")})
+	shxServeSpy(sv, pfHistoryPath, boxstation.SpyPage{Body: pfHistoryPage()})
+	shxServeSpy(sv, pfCryptoPath, boxstation.SpyPage{Body: pfCryptoPage()})
+	shxServeSpy(sv, "sysManagers/moduleManager", boxstation.SpyPage{Body: shxSpyFixture(t, "module-manager.html")})
+	shxServeSpy(sv, licPath, boxstation.SpyPage{Body: licence})
+	return r, sv
+}
+
+// pfWarned reports whether a warning of the platform section holds every needle.
+func pfWarned(platform map[string]any, needles ...string) bool {
+	for _, w := range platform["warnings"].([]any) {
+		s, _ := w.(string)
+		all := true
+		for _, n := range needles {
+			all = all && strings.Contains(s, n)
+		}
+		if all {
+			return true
+		}
+	}
+	return false
+}
