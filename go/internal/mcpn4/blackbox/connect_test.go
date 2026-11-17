@@ -51,7 +51,7 @@ func TestCredentialEnvIsNotAToolArgument(t *testing.T) {
 		props = append(props, name)
 	}
 	sort.Strings(props)
-	if !reflect.DeepEqual(props, []string{"expected_station", "station"}) ||
+	if !reflect.DeepEqual(props, []string{"expected_station", "expected_version", "station"}) ||
 		!reflect.DeepEqual(schema["required"], []any{"station"}) {
 		t.Errorf("properties %v, required %v", props, schema["required"])
 	}
