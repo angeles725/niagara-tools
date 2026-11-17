@@ -100,12 +100,13 @@ else
   else
     tree=$(git hash-object -w -t tree /dev/null) || refuse "cannot write the empty tree"
   fi
-  # what git records from an edited message: no comment lines, and nothing from git's own cut line on (the
-  # scissors line followed by its "Do not modify or remove the line above." line, any comment character), where
-  # `commit -v` appends the staged diff; a scissors-shaped line a -m/-F message carries itself is kept
+  # what git records from an edited message: no comment lines, and nothing from git's own cut line on, where
+  # `commit -v` appends the staged diff: a scissors line, a comment line after it (its text is translated) and a
+  # `diff --git` line further down; a scissors-shaped line a -m/-F message carries itself is kept
   [ -f "$msgfile" ] && [ -r "$msgfile" ] || refuse "cannot read the message file $msgfile"
   raw=$(awk '
-    cut == "" && prev ~ /^. -+ >8 -+$/ && $0 ~ /^. Do not modify or remove the line above\.$/ { cut = NR - 1 }
+    cand == "" && prev ~ /^. -+ >8 -+$/ && substr($0, 1, 1) == substr(prev, 1, 1) { cand = NR - 1 }
+    cand != "" && cut == "" && /^diff --git / { cut = cand }
     { lines[NR] = $0; prev = $0 }
     END { n = cut == "" ? NR : cut - 1; for (i = 1; i <= n; i++) print lines[i] }' "$msgfile") \
     || refuse "cannot read the message file $msgfile"

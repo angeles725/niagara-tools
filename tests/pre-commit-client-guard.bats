@@ -185,3 +185,11 @@ head_count() { git -C "$GR" rev-list --count HEAD 2>/dev/null || echo 0; }
   [ "$status" -ne 0 ]
   [[ "$output" == *"refusing to commit unchecked"* ]]
 }
+
+@test "PC14: the commit -v cut is found whatever the language of git's comment under it" {
+  with_guard; seed; cd "$GR"
+  printf 'subject\n# ------------------------ >8 ------------------------\n# No modifique la línea de arriba.\ndiff --git a/f b/f\n-ZZDENY\n' > "$BATS_TEST_TMPDIR/msg"
+  run env PATH="$FAKEBIN:$(dirname "$(command -v git)"):/usr/bin:/bin" NIAGARA_CLIENT_DENYLIST="$DENYLIST" \
+    bash "$HOOKS/commit-msg" "$BATS_TEST_TMPDIR/msg"
+  [ "$status" -eq 0 ]
+}
