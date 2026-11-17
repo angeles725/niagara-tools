@@ -30,17 +30,20 @@ func TestLinkScanOrdOutsideTheDefaultRootRefuses(t *testing.T) {
 	}
 }
 
-func TestTheRollbackBudgetRefusalNamesTheOutgoingLinks(t *testing.T) {
+// The outgoing links a rollback re-creates are outside --max-writes too (retro 2026-11-17 Δ6): a budget
+// of 1 that once refused this rollback (it needed 3 writes) now runs it without spending one.
+func TestARollbackRecreatesTheOutgoingLinksBeyondTheBudget(t *testing.T) {
 	d := destructiveRig(t, nil)
 	k, _, _ := d.linkedConst()
 	_, out := d.removeAcknowledged(Folder, k.Name)
-	d.restart(func(o *Options) { o.MaxWrites = 2 })
-	text := d.Srv.Err("n4_rollback", Args{"batch_id": out["batch_id"]})
-	if !strings.Contains(text, "needs 3 write(s) (1 batch + 0 component(s) + 0 relink(s) + 2 outgoing link(s)) but only 2 remain") {
-		t.Errorf("text = %s", text)
+	d.restart(func(o *Options) { o.MaxWrites = 1 })
+	back := d.Srv.RunWrite("n4_rollback", Args{"batch_id": out["batch_id"]})
+	obs, _ := back["observed"].(map[string]any)
+	if links, _ := obs["outgoing_links"].(map[string]any); d.node(k.Name) == nil || links["restored"] != float64(2) {
+		t.Errorf("the rollback did not re-create K and its links: %v", back)
 	}
-	if d.node(k.Name) != nil {
-		t.Errorf("the refused rollback re-created K")
+	if b, _ := back["write_budget"].(map[string]any); b["executed"] != float64(0) {
+		t.Errorf("write_budget = %v: the rollback must not spend a write", back["write_budget"])
 	}
 }
 

@@ -13,8 +13,9 @@ import (
 // copied onto N target parents (other devices' points), N x M adds in one batch under one
 // confirmation token (field retro 2026-11-16, row U10). Each copy is n4_copy_component's
 // configured body (address and dataType included), with a per-target copies[] name or
-// proxyExt/dataAddress override. Every add spends one write of --max-writes: the dry run shows the
-// count, and a plan larger than the remaining budget is refused before any token.
+// proxyExt/dataAddress override. Every add spends one write of --max-writes (its n4_rollback is
+// outside the budget): the dry run shows the count, and a plan larger than the remaining budget is
+// refused before any token.
 var ReplicatePoints = plan.Impl{ScopeOrds: replicaScope, PlanWith: replicaPlan, Inverse: replicaInverse,
 	Readback: replicaReadback}
 
@@ -66,12 +67,12 @@ func replicaPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.S
 	d := replicaData{shared: map[int]string{}}
 	ops, inverse, handles := []any{}, []any{}, pyjson.NewObject()
 	for _, t := range targets {
-		copies, err := replicaTargetCopies(c, t, points, sources)
+		copies, held, err := replicaTargetCopies(c, t, points, sources, srcOrd)
 		if err != nil {
 			return nil, err
 		}
 		handles.Set(t.ord, copies[0].parent)
-		dupNotes, shared := targetRegisters(t, points, sources, srcOrd)
+		dupNotes, shared := targetRegisters(t, points, sources, srcOrd, held)
 		notes = append(notes, dupNotes...)
 		for i, r := range copies {
 			if text, ok := shared[points[i]]; ok {
@@ -82,34 +83,35 @@ func replicaPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.S
 			inverse = append(inverse, obj("nm", "v", "h", r.parent, "n", r.name))
 		}
 	}
-	if err := w.CheckRoom(len(ops)+rollbackReserve, "this replication (1 kept for its n4_rollback)"); err != nil {
+	if err := w.CheckRoom(len(ops), "this replication"); err != nil {
 		return nil, err
 	}
 	head := "replicates " + strconv.Itoa(len(points)) + " point(s) onto " + strconv.Itoa(len(targets)) +
 		" target(s): " + strconv.Itoa(len(ops)) + " add(s) in one batch under one confirmation token, " +
-		strconv.Itoa(len(ops)) + " write(s) of the budget (one per add; write_budget.remaining shows what is left), " +
-		"and it needs 1 more left over, kept for its n4_rollback"
+		strconv.Itoa(len(ops)) + " write(s) of the budget (one per add; write_budget.remaining shows what is left); " +
+		"its n4_rollback is outside the budget"
 	notes = append([]any{head, "The station may rename on collision; the real inverse uses the assigned name."}, notes...)
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: handles, Data: d, Writes: len(ops)}, nil
 }
 
 // replicaTargetCopies is the copy of each point under target t, in points order: t's own name and address
 // for the point when its copies[] gives them. A name that already exists under t, or that two
-// points would share, is refused.
-func replicaTargetCopies(c plan.Client, t replicaTarget, points []string, sources map[string]*copySource) ([]replica, error) {
-	h, nodes, err := plan.Handle(c, t.ord, 1)
+// points would share, is refused. t is read once, deep enough to see the register each writable
+// Modbus point already on it holds (held, retro 2026-11-17 Δ6).
+func replicaTargetCopies(c plan.Client, t replicaTarget, points []string, sources map[string]*copySource, srcOrd string) ([]replica, map[string]string, error) {
+	h, nodes, err := plan.Handle(c, t.ord, registerDepth)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	out, taken := []replica{}, map[string]bool{}
 	for _, p := range points {
 		n := t.newName(p)
 		if _, err := plan.Name("new_name", n); err != nil {
-			return nil, plan.ToolError("point " + pyjson.StrRepr(p) + " has a station-escaped name: give its copy " +
+			return nil, nil, plan.ToolError("point " + pyjson.StrRepr(p) + " has a station-escaped name: give its copy " +
 				"a plain new_name in copies[] of target " + t.ord)
 		}
 		if box.Node(nodes, n) != nil || taken[n] {
-			return nil, plan.ToolError("a child named " + pyjson.StrRepr(n) + " already exists under " + t.ord +
+			return nil, nil, plan.ToolError("a child named " + pyjson.StrRepr(n) + " already exists under " + t.ord +
 				" (or two points would share it): give the copy its own new_name in copies[]")
 		}
 		taken[n] = true
@@ -121,13 +123,13 @@ func replicaTargetCopies(c plan.Client, t replicaTarget, points []string, source
 					"dataAddress; " + pyjson.StrRepr(p) + " has none")
 			}
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			body = withAddress(body, ov, addrType)
 		}
 		out = append(out, replica{t.ord, n, h, get(src.root, "t"), body})
 	}
-	return out, nil
+	return out, heldRegisters(nodes, t.ord == srcOrd, points), nil
 }
 
 // prefixed is each note led by the point it is about.
@@ -138,7 +140,3 @@ func prefixed(point string, notes []any) []any {
 	}
 	return out
 }
-
-// rollbackReserve is the write a replication leaves in the budget so that its own n4_rollback can still
-// run: one that spent the last write could be rolled back only after a server restart.
-const rollbackReserve = 1

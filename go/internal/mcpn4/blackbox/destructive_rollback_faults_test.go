@@ -28,13 +28,15 @@ func TestRelinksAreSkippedWhenAnEndIsMissing(t *testing.T) {
 	}
 }
 
-func TestTheComponentBudgetIsCheckedBeforeAnythingIsSent(t *testing.T) {
+// The nested components a rollback re-creates are outside --max-writes (retro 2026-11-17 Δ6): with
+// the budget spent by the remove, the whole group comes back.
+func TestTheComponentsOfARollbackRunWithTheBudgetSpent(t *testing.T) {
 	d := destructiveRig(t, nil)
-	d.restart(func(o *Options) { o.MaxWrites = 4 }) // remove 1 + rollback needs 1 + 2 components + 1 relink
+	d.restart(func(o *Options) { o.MaxWrites = 1 })
 	nn, removed := d.removeGroup()
-	text := d.Srv.Err("n4_rollback", Args{"batch_id": removed["batch_id"]})
-	if !strings.Contains(text, "2 component(s)") || slices.Contains(d.children(), nn) {
-		t.Errorf("text %s, children %v", text, d.children())
+	d.Srv.RunWrite("n4_rollback", Args{"batch_id": removed["batch_id"]})
+	if !slices.Contains(d.children(), nn) {
+		t.Errorf("children %v", d.children())
 	}
 }
 

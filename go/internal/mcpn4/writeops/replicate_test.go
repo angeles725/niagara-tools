@@ -93,7 +93,7 @@ func TestAReplicationOverTheRemainingBudgetIsRefusedInThePlan(t *testing.T) {
 	w := budget(5)
 	w.WritesExecuted = 4
 	_, err := writeops.ReplicatePoints.PlanWith(c, replicaArgs("T1", "T2"), w, nil)
-	if err == nil || !strings.Contains(err.Error(), "this replication (1 kept for its n4_rollback) needs 3 write(s) but only 1 remain") {
+	if err == nil || !strings.Contains(err.Error(), "this replication needs 2 write(s) but only 1 remain") {
 		t.Errorf("err = %v", err)
 	}
 }
@@ -109,5 +109,58 @@ func TestReplicaArgumentsAreValidatedBeforeTheStation(t *testing.T) {
 		if _, err := writeops.ReplicatePoints.PlanWith(c, args, budget(200), nil); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: err = %v, want %q", js(t, args), err, want)
 		}
+	}
+}
+
+// existingPoint is a target folder holding the point name at address (a writable one with a
+// Modbus client proxy when typ ends in Writable), as a flat load of depth 4 returns it.
+func existingPoint(h, name, typ, address string) *pyjson.Object {
+	return obj("", obj("h", h, "t", "modbusCore:ModbusClientPointDeviceExt"),
+		name, obj("n", name, "t", typ),
+		name+"/proxyExt", obj("n", "proxyExt", "t", "modbusCore:ModbusClientNumericProxyExt"),
+		name+"/proxyExt/dataAddress", obj("n", "dataAddress", "t", "modbusCore:FlexAddress"),
+		name+"/proxyExt/dataAddress/addressFormat", obj("n", "addressFormat", "t", "modbusCore:AddressFormatEnum", "v", "modbus"),
+		name+"/proxyExt/dataAddress/address", obj("n", "address", "t", "baja:String", "v", address))
+}
+
+func TestACopyAtTheRegisterOfAPointAlreadyOnTheTargetIsNoted(t *testing.T) {
+	c := replicaClient(t, pointTree("control:NumericWritable", "40002"), "T1", "T2")
+	c.loads.nodes.Set(net+"/T1", existingPoint("50", "Old", "control:NumericWritable", "40002"))
+	p, err := writeops.ReplicatePoints.PlanWith(c, replicaArgs("T1", "T2"), budget(200), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	notes := js(t, p.Notes)
+	want := net + "/T1: 'Gw' would use the register address Modbus:40002, which the writable point 'Old' already on that device uses"
+	if !strings.Contains(notes, want) {
+		t.Errorf("notes %s lack %q", notes, want)
+	}
+	if strings.Contains(notes, net+"/T2: 'Gw'") {
+		t.Errorf("T2 holds no point at 40002 but is noted: %s", notes)
+	}
+}
+
+func TestAReadOnlyPointAlreadyOnTheTargetDoesNotHoldTheRegister(t *testing.T) {
+	c := replicaClient(t, pointTree("control:NumericWritable", "40002"), "T1")
+	c.loads.nodes.Set(net+"/T1", existingPoint("50", "Old", "control:NumericPoint", "40002"))
+	p, err := writeops.ReplicatePoints.PlanWith(c, replicaArgs("T1"), budget(200), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if notes := js(t, p.Notes); strings.Contains(notes, "Duplicate Writable") {
+		t.Errorf("a read-only point is noted as holding the register: %s", notes)
+	}
+}
+
+// A replication of N adds needs N writes: its n4_rollback is outside the budget, so none is kept
+// for it (retro 2026-11-17 Δ6, superseding #777's one write kept).
+func TestAReplicationOfNAddsNeedsNWrites(t *testing.T) {
+	c := replicaClient(t, pointTree("control:NumericWritable", "40002"), "T1", "T2")
+	if _, err := writeops.ReplicatePoints.PlanWith(c, replicaArgs("T1", "T2"), budget(2), nil); err != nil {
+		t.Errorf("2 adds fit a budget of 2: %v", err)
+	}
+	if _, err := writeops.ReplicatePoints.PlanWith(c, replicaArgs("T1", "T2"), budget(1), nil); err == nil ||
+		!strings.Contains(err.Error(), "this replication needs 2 write(s) but only 1 remain") {
+		t.Errorf("err = %v", err)
 	}
 }

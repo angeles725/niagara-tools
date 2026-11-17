@@ -197,11 +197,13 @@ Flags:
 - `--auth-cooldown SECONDS`: after an authentication failure, refuse station calls this long
   (default and minimum 30, the lock-out window).
 - `--max-writes N`: executed writes allowed per server process (default 200; must be >= 1);
-  a reconnect does not reset it. `n4_save_station` neither needs nor spends a write, so a job
-  that spent the budget can still save; every write reply (dry run and execution) carries
-  `write_budget` `{executed, max, remaining, save_counts: false}`. Plan a bulk job against
-  `remaining`; restart the server for a new budget. A batch is one write, except
-  `n4_replicate_points` (one per add) and `n4_rollback` (one per re-created component and link).
+  a reconnect does not reset it. The budget caps forward changes, never recovery:
+  `n4_save_station` and `n4_rollback` neither need nor spend a write (a rollback stays bounded:
+  each batch can be rolled back once), so a job that spent the budget can still save and undo;
+  every write reply (dry run and execution) carries `write_budget`
+  `{executed, max, remaining, save_counts: false, rollback_counts: false}`. Plan a bulk job
+  against `remaining`; restart the server for a new budget. A batch is one write, except
+  `n4_replicate_points` (one per add).
 - `--station-home NAME=PATH` (repeatable): directory holding the `config.bog` of configured
   station NAME; lets `n4_save_station` prove persistence (see Destructive tools).
 - `--niagara-home NAME=PATH` (repeatable): Niagara installation directory of configured station
@@ -963,7 +965,7 @@ Every write call goes through these layers:
    still works and carries `tier_gate` saying the execution would be refused. An
    undetected version is tier C. Tier A (4.13, 4.14) is unaffected.
 3. **Budget.** At most `--max-writes` executed writes per server process (a reconnect does
-   not reset it). The save is outside the budget; the refusal says so.
+   not reset it). The save and every rollback are outside the budget; the refusal says so.
 4. **Scope.** Every target ORD must sit under a `--write-scope` prefix, matched on
    slot boundaries (`/A` does not cover `/AB`). With no prefix, every write is refused.
    Only plain slot ORDs pass: a `|` after `station:|slot:` (`|h:…`, `|slot:../…`) is
@@ -1195,15 +1197,23 @@ Tool rules:
   `n4_copy_component` would add (address and `dataType` kept). Per target,
   `copies=[{"point": "Setpoint", "new_name": "SP", "data_address": "40010",
   "address_format": "modbus"}]` overrides one point's name and/or address in the same add.
-  Each add spends one `--max-writes` write: the plan notes the count and a replication that
-  would leave no write for its own `n4_rollback` (adds + 1 > `write_budget.remaining`) is refused
-  before any token. Two targets that differ only by a trailing `/` are one target (refused). A
-  failure at add k leaves the batch in doubt: `n4_rollback` refuses it and its error lists the
-  inverse ops to remove the k copies by hand. A child that already exists
-  under a target with a copy's name is refused. The plan notes writable Modbus copies that
-  would share a register on one device (the station resets the later one to `Hex:-1`) and
-  writable points with a non-null fallback, as `n4_copy_component` does; points already on a
-  target are not read for that check. The read-back compares every copy with the plan; the
+  Each add spends one `--max-writes` write: a replication of N adds needs N
+  `write_budget.remaining` or it is refused before any token; its `n4_rollback` is outside the
+  budget, so it runs even when the replication spent the last write.
+  Two targets that differ only by a trailing `/` are one target (refused). A failure at add k
+  leaves the batch in doubt; its `n4_rollback` then removes only the copies the station accepted
+  (by the name its reply assigned) that the read-back finds with the type the batch added, and
+  keeps the others with a per-copy verdict in the plan notes and in `observed.copies`: `found`
+  (removed; it reads back `removed` or `still_present`), `gone` (no longer there), `changed`
+  (another type now holds the name), `later_work` (a later journaled batch wrote under it:
+  roll that one back first), `unverified` (add k: it may or may not have been applied, so
+  a component under its name is never removed blindly) and `not_sent` (after add k). A rollback
+  that keeps a copy is `partial`; one with no copy found as added is refused. A child that
+  already exists under a target with a copy's name is refused. The plan notes writable Modbus
+  copies that would share a register on one device (the station resets the later one to
+  `Hex:-1`): with a writable Modbus point already on the target (each target is read once, four
+  levels deep), with another copy, or with a source point on its own device; and writable points
+  with a non-null fallback, as `n4_copy_component` does. The read-back compares every copy with the plan; the
   inverse removes every copy. A client B field job replicated 112 points with 630 calls
   in 39 minutes and ran out of budget; this is one dry run and one execution.
 - `n4_deploy_template(template_file, parent_ord, name?, settings?)` deploys a component
@@ -1262,9 +1272,12 @@ Destructive tools use the same pipeline:
   recorded slots, and reports `outgoing_links: {restored, missing}`; any missing one
   makes the verdict `mismatch`.
 - `n4_rollback(batch_id)` plans the inverse recorded in the journal as a new batch
-  (`rollback_of` points to the original). It refuses an unknown batch, one already
+  (`rollback_of` points to the original). It is outside `--max-writes`, like the save: it runs
+  with the budget spent and spends no write, nested components and links included
+  (`write_budget.rollback_counts: false`). It refuses an unknown batch, one already
   rolled back, a rollback itself, an `in-doubt` batch (it shows the journaled
-  intent so a human decides), a `refused` batch (the station applied nothing, so
+  intent so a human decides; an in-doubt `n4_replicate_points` batch whose failed add is journaled
+  is the exception: see that tool), a `refused` batch (the station applied nothing, so
   there is nothing to roll back) and a batch from another station. A refused
   rollback does not count as an earlier rollback. The current
   `--write-scope` is enforced on every ORD the batch touched, and each recorded
