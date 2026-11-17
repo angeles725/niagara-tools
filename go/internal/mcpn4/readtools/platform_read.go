@@ -117,7 +117,11 @@ func (t *Tools) platformHistory(timeout int) (any, string, error) {
 func (t *Tools) platformModules(timeout int, include bool) (any, string, error) {
 	section, _, _, err := t.runtimeLoaded(timeout, platformMaxModules)
 	if err != nil {
-		return nil, "", err
+		failed, fatal := t.sectionError(err)
+		if fatal != nil {
+			return nil, "", fatal
+		}
+		return nil, fmt.Sprintf(platformPageNote, runtimeModulesPage, "error", nil, ": "+lookup(failed, "error").(string)), nil
 	}
 	if lookup(section, "status") != runtimeStatusOK {
 		return nil, fmt.Sprintf(platformPageNote, runtimeModulesPage, lookup(section, "status"),

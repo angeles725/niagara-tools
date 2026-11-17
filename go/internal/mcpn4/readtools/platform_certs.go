@@ -117,7 +117,7 @@ func (t *Tools) platformCertificates(timeout int, clock licenseClock) (any, stri
 	sortCerts(certs)
 	items, unread := make([]any, 0, min(len(certs), platformMaxCerts)), 0
 	for i, c := range certs {
-		if c.expires == "" {
+		if c.expires == "" && c.store != stationStore { // a station one lacks a date only when the clock does
 			unread++
 		}
 		if i < platformMaxCerts {
@@ -169,10 +169,8 @@ func certWarnings(certs []platformCert, days int) []string {
 		case len(out) >= platformWarnCerts:
 			more++
 			continue
-		case c.days < 0:
-			out = append(out, fmt.Sprintf(certWarnPast, c.alias, c.store, c.expires, -c.days))
 		default:
-			out = append(out, fmt.Sprintf(certWarnSoon, c.alias, c.store, c.expires, c.days, days))
+			out = append(out, certWarning(c, days))
 		}
 	}
 	if more > 0 {
@@ -182,4 +180,20 @@ func certWarnings(certs []platformCert, days int) []string {
 		out = append(out, fmt.Sprintf(certSystemSummary, system))
 	}
 	return out
+}
+
+// certWarning is the warning of one certificate: expired when its days are past or, for a
+// station certificate, its expiry point is down (BCertificateExpiryPoint sets down once
+// notAfter passed, also on the last day); worded from the days alone when the date is unknown.
+func certWarning(c platformCert, days int) string {
+	expired := c.days < 0 || strings.Contains(c.status, "down")
+	switch {
+	case expired && c.expires == "":
+		return fmt.Sprintf(certWarnPastDays, c.alias, c.store, max(-c.days, 0))
+	case expired:
+		return fmt.Sprintf(certWarnPast, c.alias, c.store, c.expires, max(-c.days, 0))
+	case c.expires == "":
+		return fmt.Sprintf(certWarnSoonDays, c.alias, c.store, c.days, days)
+	}
+	return fmt.Sprintf(certWarnSoon, c.alias, c.store, c.expires, c.days, days)
 }

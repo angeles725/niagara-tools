@@ -85,6 +85,8 @@ const (
 	licenceWarnPast    = "licence: %s %s expired %s, %d day(s) ago"
 	certWarnSoon       = "certificate %s (%s store) expires %s, in %d day(s) (window %d)"
 	certWarnPast       = "certificate %s (%s store) expired %s, %d day(s) ago"
+	certWarnSoonDays   = "certificate %s (%s store) expires in %d day(s) (window %d)"
+	certWarnPastDays   = "certificate %s (%s store) expired %d day(s) ago"
 	certWarnMore       = "%d more certificate(s) expired or within %d day(s) are in certificates"
 	platformWarnCerts  = 10 // certificate warnings given one by one
 )
