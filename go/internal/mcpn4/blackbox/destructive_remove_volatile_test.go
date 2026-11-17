@@ -113,3 +113,51 @@ func TestARemovePlanMarksEachRuntimeSlot(t *testing.T) {
 		t.Errorf("timeDelay = %v", delay)
 	}
 }
+
+// transientCache gives the alarm extension a dynamic Folder "Cache" flagged transient on the
+// instance, holding a child value "count": the whole subtree is runtime (row M15b).
+func (d *dRig) transientCache(ext string) string {
+	d.T.Helper()
+	cache := d.Add(ext, "Cache", "baja:Folder")
+	if _, err := d.sync(map[string]any{"nm": "f", "h": ext, "n": "Cache", "f": "t"}); err != nil {
+		d.T.Fatal(err)
+	}
+	d.Set(cache.Handle, "count", relTime("1"))
+	return cache.Handle
+}
+
+// A child value below a transient slot is runtime too: its change keeps the token.
+func TestARemoveTokenSurvivesAChildValueBelowATransientSlot(t *testing.T) {
+	d := destructiveRig(t, nil)
+	nn, ext := d.alarmed()
+	cache := d.transientCache(ext)
+	dry := d.Srv.Dry("n4_remove_component", removeArgs(nn))
+	d.Set(cache, "count", relTime("2"))
+	if done := d.Srv.Call("n4_remove_component", Execute(removeArgs(nn), dry["confirmation_token"])); done.IsError {
+		t.Fatalf("execute refused: %s", done.Text)
+	}
+}
+
+// Structure below a transient slot still counts: a child added there refuses the token.
+func TestARemoveTokenIsRefusedWhenAChildIsAddedBelowATransientSlot(t *testing.T) {
+	d := destructiveRig(t, nil)
+	nn, ext := d.alarmed()
+	cache := d.transientCache(ext)
+	dry := d.Srv.Dry("n4_remove_component", removeArgs(nn))
+	d.Set(cache, "extra", relTime("1"))
+	if err := d.Srv.Err("n4_remove_component", Execute(removeArgs(nn), dry["confirmation_token"])); !strings.Contains(err, "does not match") {
+		t.Errorf("error = %q", err)
+	}
+}
+
+// A child retyped below a transient slot refuses the token: types stay hashed.
+func TestARemoveTokenIsRefusedWhenAChildIsRetypedBelowATransientSlot(t *testing.T) {
+	d := destructiveRig(t, nil)
+	nn, ext := d.alarmed()
+	cache := d.transientCache(ext)
+	dry := d.Srv.Dry("n4_remove_component", removeArgs(nn))
+	d.Set(cache, "count", map[string]any{"nm": "p", "t": "baja:Integer", "v": "1"})
+	if err := d.Srv.Err("n4_remove_component", Execute(removeArgs(nn), dry["confirmation_token"])); !strings.Contains(err, "does not match") {
+		t.Errorf("error = %q", err)
+	}
+}

@@ -52,9 +52,32 @@ func (s *snapshot) hashedAdd(add *pyjson.Object) *pyjson.Object {
 		return nil
 	}
 	body, _ := get(add, "b").(*pyjson.Object)
+	if body == nil {
+		return nil
+	}
+	hashed := s.unvalued(body, false)
+	if !marked(hashed) {
+		// every runtime slot the snapshot saw left the body (a link-driven one moves to prior):
+		// the plan shows none, so it carries no runtime note (retro 2026-11-16 row M15b)
+		return nil
+	}
 	out := copyObj(add)
-	out.Set("b", s.unvalued(body, false))
+	out.Set("b", hashed)
 	return out
+}
+
+// marked says whether node or a node below it carries the "runtime" marker.
+func marked(node *pyjson.Object) bool {
+	if get(node, "runtime") == true {
+		return true
+	}
+	kids, _ := get(node, "s").([]any)
+	for _, k := range kids {
+		if o, ok := k.(*pyjson.Object); ok && marked(o) {
+			return true
+		}
+	}
+	return false
 }
 
 // unvalued is a copy of node without the values of runtime slots (all values when below one).
