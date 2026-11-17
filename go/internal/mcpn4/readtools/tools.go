@@ -86,6 +86,8 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_license_info"] = t.LicenseInfo
 	s.Handlers["n4_station_runtime"] = t.StationRuntime
 	s.Handlers["n4_commissioning_report"] = t.CommissioningReport
+	s.Handlers["n4_behavior_snapshot"] = t.BehaviorSnapshot
+	s.Handlers["n4_behavior_diff"] = t.BehaviorDiff
 	registerSchedules(s, t)
 	s.Handlers["n4_read_tags"] = t.ReadTags
 	s.Handlers["n4_neql_query"] = t.NeqlQuery

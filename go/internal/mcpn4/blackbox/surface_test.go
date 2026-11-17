@@ -34,6 +34,8 @@ var readTools = []string{
 	"n4_event_report",
 	"n4_alarm_text_check",
 	"n4_commissioning_report",
+	"n4_behavior_snapshot",
+	"n4_behavior_diff",
 	"n4_list_schedule_kinds",
 	"n4_read_schedule",
 	"n4_read_tags",
