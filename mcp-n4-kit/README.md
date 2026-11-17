@@ -772,11 +772,16 @@ scopes. Recipe:
 handle and recorded slots) to `<state-dir>/exports/inventory-<station>-<UTC time>.json` (0600, a
 name the server makes, never overwritten). The reply gives `name`, `path`, `components`, `bytes`,
 `truncated` (stopped at `max_components`) and `notes`. By default the recorded slots are the
-configured properties: the simple values directly on a component, without runtime state, so two
-snapshots of an unchanged station diff to empty. Left out: every Status value (`out`, inputs,
-`status`) and every slot flagged `t` transient on the instance or in its type contract (the rule
-the write tools use for runtime slots; readonly alone is configuration). When the contracts cannot
-be read, `notes` says so and only instance flags count. `slots=["facets", "out"]` records those
+configured properties: the simple and Status values directly on a component (a Status as
+`value {status}`), without runtime state, so two snapshots of an unchanged station diff to empty.
+The type contract decides, not the slot type: a writable's `fallback` (flags 0) is recorded. Left
+out: a slot flagged `t` transient on the instance or in its contract (a point's `out` 267 = `rtso`,
+the inputs other than `in1` and `in8`, a history extension's `status` and `lastRecord`), a Status `out` its contract does not
+declare without `r` and `t` (a constant block's configured `out` stays), and an input a link drives
+(its `targetSlotName`; `in1` and `in8` are readonly, not transient). A component below a transient
+slot (such as the `lastRecord` record) is left out with everything below it. Readonly alone is
+configuration. When the contracts cannot be read, `notes` says so and only instance flags, Status
+outs and linked inputs count. `slots=["facets", "out"]` records those
 slots instead, a Status slot as `value {status}`.
 
 `n4_inventory_diff(a, b, limit=200)` compares two snapshots by slot path and reads only the two

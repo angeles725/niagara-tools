@@ -91,11 +91,9 @@ func TestInventorySnapshotsOfAnUnchangedStationDiffToEmpty(t *testing.T) {
 	r.addProp(tick.Handle, "ticks", "baja:Long", "1", "")          // declared transient
 	r.addProp(calc.Handle, "elapsed", "baja:RelTime", "5", "t")    // transient on the instance
 	r.addProp(calc.Handle, "facets", "baja:Facets", "units=C", "") // configuration, unchanged
-	r.addProp(calc.Handle, "health", "baja:Status", "0", "")       // status bits: runtime
 	a := r.snapshotName()
 	r.Set(calc.Handle, "out", StatusNumeric(7, "2"))
 	r.Set(tick.Handle, "ticks", map[string]any{"nm": "p", "t": "baja:Long", "v": "2"})
-	r.Set(calc.Handle, "health", map[string]any{"nm": "p", "t": "baja:Status", "v": "2"})
 	r.Set(calc.Handle, "elapsed", map[string]any{"nm": "p", "t": "baja:RelTime", "v": "6"})
 	b := r.snapshotName()
 	out := r.Srv.OK("n4_inventory_diff", Args{"a": a, "b": b})
