@@ -31,17 +31,14 @@ func TestGridExportsHsTagsAndRelationsAsHayson(t *testing.T) {
 }
 
 func TestRefIDEscapesAndDisambiguates(t *testing.T) {
-	if got := RefID("station:|slot:/Drivers/Room$20A/Temp"); got != "Drivers.Room_20A.Temp" {
+	// $20 is decoded to a space first, then the space becomes '_'
+	if got := RefID("station:|slot:/Drivers/Room$20A/Temp"); got != "Drivers.Room_A.Temp" {
 		t.Errorf("%s", got)
 	}
 	if got := RefID("station:|slot:/"); got != "root" {
 		t.Errorf("%s", got)
 	}
-	ids := uniqueIDs([]Entity{{Ord: "station:|slot:/a$20b"}, {Ord: "station:|slot:/a$2Cb"}})
-	if ids[0] != "a_20b" || ids[1] != "a_2Cb" {
-		t.Errorf("%v", ids)
-	}
-	ids = uniqueIDs([]Entity{{Ord: "station:|slot:/a b"}, {Ord: "station:|slot:/a?b"}})
+	ids := uniqueIDs([]Entity{{Ord: "station:|slot:/a b"}, {Ord: "station:|slot:/a?b"}})
 	if ids[0] != "a_b" || ids[1] != "a_b~2" {
 		t.Errorf("%v", ids)
 	}

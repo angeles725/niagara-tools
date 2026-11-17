@@ -24,6 +24,7 @@ type Relation struct {
 // Entity is one exported component.
 type Entity struct {
 	Ord       string
+	Handle    string // the component handle: a relation endpoint may name it as h:<handle>
 	Dis       string
 	Tags      []Tag
 	Relations []Relation

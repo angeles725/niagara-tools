@@ -1,6 +1,7 @@
 package semantic
 
 import (
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/bql"
 	"sort"
 	"strconv"
 	"strings"
@@ -9,14 +10,14 @@ import (
 // Namespace is the tag namespace exported (Project Haystack); other namespaces are left out.
 const Namespace = "hs"
 
-// RefID is the Haystack id of a station ORD: the slot path with '/' as '.', every character a
-// Haystack ref does not allow (a-z A-Z 0-9 _ : - . ~) as '_'.
+// RefID is the Haystack id of a station ORD: the slot path with its $-escapes decoded, '/' as
+// '.', every character a Haystack ref does not allow (a-z A-Z 0-9 _ : - . ~) as '_'.
 func RefID(ord string) string {
 	p := ord
 	if i := strings.Index(p, "slot:"); i >= 0 {
 		p = p[i+len("slot:"):]
 	}
-	p = strings.Trim(p, "/")
+	p = SlotText(strings.Trim(p, "/"))
 	var b strings.Builder
 	for _, r := range p {
 		switch {
@@ -43,6 +44,9 @@ func Grid(entities []Entity) (map[string]any, []Skipped) {
 	byOrd := map[string]int{}
 	for i, e := range entities {
 		byOrd[e.Ord] = i
+		if e.Handle != "" {
+			byOrd["h:"+e.Handle] = i
+		}
 	}
 	var skipped []Skipped
 	names := map[string]bool{}
@@ -98,4 +102,13 @@ func uniqueIDs(entities []Entity) []string {
 		out[i] = id
 	}
 	return out
+}
+
+// SlotText is a slot name or path with its $-escapes decoded as the station decodes them
+// ($20 is a space); text that is not a valid escape stays as written.
+func SlotText(s string) string {
+	if d, err := bql.DecodeForBql(s); err == nil {
+		return d
+	}
+	return s
 }

@@ -1218,12 +1218,13 @@ query matches as a Haystack grid in the Haystack 4 JSON encoding (Hayson), read-
 finds the components; each is then read as `n4_read_tags` reads it (one load, plus one
 `impliedTags` call unless `implied` is false).
 
-- `id` is a ref made from the slot path (`/Drivers/AHU1/SAT` → `Drivers.AHU1.SAT`; characters a
-  Haystack ref does not allow become `_`; a clash gets `~2`, `~3`). `dis` is `hs:dis` when set,
-  else the slot name.
+- `id` is a ref made from the slot path with its `$` escapes decoded (`/Plant/Supply$20Temp` →
+  `Plant.Supply_Temp`; characters a Haystack ref does not allow become `_`; a clash gets `~2`,
+  `~3`). `dis` is `hs:dis` when set, else the decoded slot name.
 - Every `hs:` tag becomes a column with the namespace stripped: markers, numbers, booleans and
   strings. Outbound `hs:` relations (`hs:equipRef`, `hs:siteRef`) become refs, pointing at the
-  exported row's `id` when the other end is exported too.
+  exported row's `id` when the other end is exported too (a station names it by slot path or
+  as `h:<handle>`).
 - Tags of other namespaces are left out. A value that cannot be converted (for example a
   `baja:TimeZone`) is listed in `skipped` with why, never dropped silently. `truncated` says the
   match list was cut at `max_entities`.

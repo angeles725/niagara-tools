@@ -20,14 +20,14 @@ const pointTree = `{"": {"h": "6", "t": "control:NumericWritable"},
 	"tst$3alabel": {"nm": "p", "n": "tst$3alabel", "f": "m", "t": "baja:String", "v": "hello"},
 	"r1": {"nm": "p", "n": "r1", "t": "baja:Relation"},
 	"r1/relationId": {"nm": "p", "n": "relationId", "v": "hs:equipRef"},
-	"r1/sourceOrd": {"nm": "p", "n": "sourceOrd", "v": "station:|slot:/AHU1"}}`
+	"r1/sourceOrd": {"nm": "p", "n": "sourceOrd", "v": "h:5"}}`
 
 func semanticServer(t *testing.T) (*readtoolstest.Server, *readtoolstest.Station) {
 	t.Helper()
 	s, st := neqlServer(t, readtoolstest.OrdRoute{Needle: "neql:",
-		Body: "\xef\xbb\xbfOrd\nlocal:|station:|slot:/AHU1\nlocal:|station:|slot:/AHU1/SAT\n"})
+		Body: "\xef\xbb\xbfOrd\nlocal:|station:|slot:/AHU1\nlocal:|station:|slot:/AHU1/Supply$20Temp\n"})
 	st.Trees = map[string]*pyjson.Object{}
-	for ord, tree := range map[string]string{"station:|slot:/AHU1": equipTree, "station:|slot:/AHU1/SAT": pointTree} {
+	for ord, tree := range map[string]string{"station:|slot:/AHU1": equipTree, "station:|slot:/AHU1/Supply$20Temp": pointTree} {
 		n, err := pyjson.Unmarshal([]byte(tree))
 		if err != nil {
 			t.Fatal(err)
@@ -48,13 +48,13 @@ func TestSemanticExportBuildsAHaystackGrid(t *testing.T) {
 	}
 	want := `{"_kind": "grid", "cols": [{"name": "id"}, {"name": "dis"}, {"name": "equip"}, {"name": "equipRef"}, ` +
 		`{"name": "maxVal"}, {"name": "point"}], "meta": {"ver": "3.0"}, "rows": [{"dis": "Air handler 1", ` +
-		`"equip": {"_kind": "marker"}, "id": {"_kind": "ref", "dis": "Air handler 1", "val": "AHU1"}}, {"dis": "SAT", ` +
-		`"equipRef": {"_kind": "ref", "val": "AHU1"}, "id": {"_kind": "ref", "dis": "SAT", "val": "AHU1.SAT"}, ` +
+		`"equip": {"_kind": "marker"}, "id": {"_kind": "ref", "dis": "Air handler 1", "val": "AHU1"}}, {"dis": "Supply Temp", ` +
+		`"equipRef": {"_kind": "ref", "val": "AHU1"}, "id": {"_kind": "ref", "dis": "Supply Temp", "val": "AHU1.Supply_Temp"}, ` +
 		`"maxVal": {"_kind": "number", "val": 40.5}, "point": {"_kind": "marker"}}]}`
 	if got := marshal(t, exportField(out, "grid")); got != want {
 		t.Errorf("grid\n%s\nwant\n%s", got, want)
 	}
-	if got := marshal(t, exportField(out, "skipped")); got != `[{"ord": "station:|slot:/AHU1/SAT", "tag": "hs:tz", "why": "type baja:TimeZone has no Haystack conversion here"}]` {
+	if got := marshal(t, exportField(out, "skipped")); got != `[{"ord": "station:|slot:/AHU1/Supply$20Temp", "tag": "hs:tz", "why": "type baja:TimeZone has no Haystack conversion here"}]` {
 		t.Errorf("skipped %s", got)
 	}
 	if got := marshal(t, exportField(out, "entities")); got != "2" {

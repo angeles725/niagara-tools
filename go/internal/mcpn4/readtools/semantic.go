@@ -83,7 +83,8 @@ func (t *Tools) SemanticExport(args *pyjson.Object) (*pyjson.Object, error) {
 // wins over an implied one with the same id) and direct relations; dis is hs:dis when set,
 // else the slot name.
 func entityOf(ord string, entry *pyjson.Object) semantic.Entity {
-	e := semantic.Entity{Ord: ord, Dis: ord[strings.LastIndex(ord, "/")+1:]}
+	e := semantic.Entity{Ord: ord, Dis: semantic.SlotText(ord[strings.LastIndex(ord, "/")+1:])}
+	e.Handle, _ = lookup(entry, "handle").(string)
 	seen := map[string]bool{}
 	for _, key := range []string{"direct", "implied"} {
 		list, _ := lookup(entry, key).([]any)
