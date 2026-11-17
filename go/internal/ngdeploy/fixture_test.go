@@ -21,14 +21,16 @@ import (
 type fixture struct {
 	t                                 *testing.T
 	dir, env, modules, work, src, bin string
+	home                              string // the fixture's NIAGARA_HOME, a directory that is not a mirror
 	noEnvFile                         bool
+	ownHome                           bool   // withHome gave NIAGARA_HOME a home of its own: run without --install-into-home
 	out, err                          string // streams of the last run
 }
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	d := t.TempDir()
-	f := &fixture{t: t, dir: d, env: d + "/env", modules: d + "/modules", work: d + "/work", src: d + "/src", bin: d + "/bin"}
+	f := &fixture{t: t, dir: d, env: d + "/env", modules: d + "/modules", work: d + "/work", src: d + "/src", bin: d + "/bin", home: d + "/n4/niagara home"}
 	keepEnvironment(t)
 	for _, name := range fakeVariables {
 		os.Unsetenv(name)
@@ -54,13 +56,13 @@ func newFixture(t *testing.T) *fixture {
 			t.Fatal(err)
 		}
 	}
-	for _, dir := range []string{f.modules, f.work, d + "/baseline"} {
+	for _, dir := range []string{f.modules, f.work, d + "/baseline", f.home} {
 		f.mkdir(dir)
 	}
 	f.write(f.builtJar("rt"), "rtjar")
 	f.write(f.builtJar("ux"), "uxjar")
 	f.write(d+"/repo/VERSION", "9.8.7\n")
-	f.write(f.env, "MODULE_NAME=demo\nGRADLEW_PATH="+f.src+"/gradlew\nNIAGARA_HOME=\"/n4/niagara home\"\n"+
+	f.write(f.env, "MODULE_NAME=demo\nGRADLEW_PATH="+f.src+"/gradlew\nNIAGARA_HOME=\""+f.home+"\"\n"+
 		"NIAGARA_USER_HOME=/n4/user\nJAVA_HOME=/n4/jdk8\nSTATION_MODULES_DIR="+f.modules+"\n"+
 		"EXPECTED_RT_TYPES=9\nEXPECTED_UX_TYPES=9\nFIRST_DEPLOY=1\n")
 	// The module names its signer as the kit's signing block reads it, and no gradle.properties of the host is read.
@@ -90,6 +92,9 @@ func keepEnvironment(t *testing.T) {
 // run is Main over args, after --env-file <the fixture's env file> unless noEnvFile.
 func (f *fixture) run(args ...string) int {
 	f.t.Helper()
+	if !f.ownHome { // the fixture's home is a directory that is not a mirror and has no modules/: a run opts in
+		args = append([]string{intoHomeFlag}, args...)
+	}
 	if !f.noEnvFile {
 		args = append([]string{"--env-file", f.env}, args...)
 	}
@@ -175,7 +180,9 @@ func (f *fixture) exists(path string) bool {
 }
 
 // calls is the log of every stub call, one "name <arg>..." line each; envLog the environment they saw.
-func (f *fixture) calls() string  { return f.read(f.dir + "/calls.log") }
+func (f *fixture) calls() string {
+	return strings.ReplaceAll(f.read(f.dir+"/calls.log"), f.home, "/n4/niagara home") // as gradleProps spells it
+}
 func (f *fixture) envLog() string { return f.read(f.dir + "/env.log") }
 
 // reset forgets the calls of the runs so far.

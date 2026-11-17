@@ -8,8 +8,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
-// guardHome looks at NIAGARA_HOME before the backup and before gradle runs. gradle's :jar step installs the
-// built jars into <NIAGARA_HOME>/modules before any check of the deploy has run, and in a real installation
+// guardHome looks at NIAGARA_HOME before the backup and before gradle runs. A value that is not a directory
+// is refused (homeIsDir). gradle's :jar step installs the built jars into <NIAGARA_HOME>/modules before any check of the deploy has run, and in a real installation
 // that directory is a station's: a home that is there and is not a mirror (modjar.IsMirror, the marker
 // build.sh reads) is refused with exit 10 unless --install-into-home, the option build.sh has.
 //
@@ -22,7 +22,10 @@ import (
 // (exit 10): it keeps what gradle installed, and the station would get jars no check has passed.
 func (d *deploy) guardHome() int {
 	home := d.env("NIAGARA_HOME")
-	if isDir(home) && !modjar.IsMirror(home) && !d.isOn(optIntoHome) {
+	if code := d.homeIsDir(home); code != proceed {
+		return code
+	}
+	if !modjar.IsMirror(home) && !modjar.IsMirror(home) && !d.isOn(optIntoHome) {
 		return d.fail(ExitEnv, msgRealHome, home, modjar.MirrorMarker, intoHomeFlag)
 	}
 	if isDir(home + homeModules) { // else there is nothing there for gradle to replace
@@ -54,6 +57,19 @@ func (d *deploy) guardHome() int {
 		if _, code := d.jarFileAt(d.jarName(profile), d.station+"/"+d.jarName(profile)); code != proceed {
 			return code
 		}
+	}
+	return proceed
+}
+
+// homeIsDir refuses a NIAGARA_HOME that names no directory, or names a file, with exit 10 (bench Δ25): gradle
+// builds against it and installs the built jars in its modules/, and what it does with a value that is not
+// a directory is not the deploy's to find out after the build. A symbolic link to a directory is one.
+func (d *deploy) homeIsDir(home string) int {
+	switch info, err := os.Stat(home); {
+	case err != nil:
+		return d.fail(ExitEnv, msgHomeMissing, home)
+	case !info.IsDir():
+		return d.fail(ExitEnv, msgHomeNotADir, home)
 	}
 	return proceed
 }
