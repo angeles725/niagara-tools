@@ -378,7 +378,9 @@ LC11). A plain cold boot proves neither: with default timers and steady inputs t
 an unwatched boot hides a command that lasts seconds. This recipe found both defects of LC11 on client A's
 compressor control module after a plain restart had passed. On a LAB station only, never production:
 1. **Set NON-default timers** (power-on delay, minimum off, anti-short-cycle, start delays). A default of 0 disables
-   the hold, so a boot bug in it cannot show.
+   the hold, so a boot bug in it cannot show. To tell two holds apart, set them far apart: a minimum-off of 5 min
+   against a stage delay plus power-on delay of seconds shows which hold kept an output OFF; with close values the
+   proof cannot say which one did. `[ev: retro lp1-lab-proof-traps Δ1]`
 2. **Link EVERY input that gates demand**, each from a writable point. An unlinked numeric input reads `0.0 {ok}`,
    not null, and can win a min or lower-of-two choice, so the module never has demand and never commands an
    output: the proof then passes for the wrong reason.
@@ -397,7 +399,19 @@ compressor control module after a plain restart had passed. On a LAB station onl
    so the seed runs from the slots alone and a "restore if newer" guard is exercised against the slot.
 7. **Clean up and prove it**: remove the proof folder and save, remove the module jar if it was installed only for
    the proof, move the module's backup files out of `shared/`, restart, and show that the station is back
-   (`Station Started` in the log, a `config.bog` grep for the proof names returns 0).
+   (`Station Started` in the log, a `config.bog` grep for the proof names returns 0). Grep the module's TYPE
+   PREFIX as it is written in `config.bog` (the `prefix` of the module's `module.xml`, e.g. `ABCPAN:` for a
+   module named `AbcPan`), not the module name: a grep for `AbcPan:` can never match and passes for the wrong
+   reason.
+
+Two traps that make the proof pass without testing what it claims `[ev: retro lp1-lab-proof-traps Δ2]`:
+- **A rollback is not a restart.** Removing the proof component and restoring it with `n4_rollback` creates a NEW
+  instance (`started()` on a fresh object); it never runs `stopped()` then `started()` on the same object. To prove
+  the stop/start path, restart the station, or disable and re-enable the component from Workbench.
+- **Touch the jar after swapping a module under the same file name.** Removing and re-adding a jar with the same
+  name can leave the module registry "Up-to-date" so the station runs the old classes. Run `touch` on the jar before
+  the start and check that the log shows `Module changed … Rebuilding registry` (mcp-n4 METHODOLOGY, lab module
+  swap, M14).
 
 Keep the log (setup, every read, the station log lines, cleanup) as the proof's evidence file.
 
