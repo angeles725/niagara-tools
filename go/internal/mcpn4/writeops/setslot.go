@@ -18,6 +18,7 @@ import (
 type setSlotData struct {
 	requested any
 	wireType  string
+	key       string // the slot's canonical identity in a batch (slotKey)
 }
 
 func ordArg(args *pyjson.Object) []any { return []any{str(args, "ord")} }
@@ -112,7 +113,7 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	return &plan.Planned{
 		Ops:     []any{setOp(h, slot, op)},
 		Inverse: []any{setOp(h, slot, inverse)},
-		Notes:   notes, Targets: targets, Keys: obj("incoming_links", links), Data: setSlotData{requested, wireType}}, nil
+		Notes:   notes, Targets: targets, Keys: obj("incoming_links", links), Data: setSlotData{requested, wireType, slotKey(h, nodes, slot)}}, nil
 }
 
 func known(valueType string) bool {

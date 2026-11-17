@@ -3,7 +3,9 @@ package writeops
 import (
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -33,7 +35,7 @@ func setSlotBatchPlan(c plan.Client, entries []*pyjson.Object) (*plan.Planned, e
 		if err != nil {
 			return nil, entryError(i, err)
 		}
-		key := fmt.Sprintf("%v\x00%s", get(p.Ops[0].(*pyjson.Object), "h"), str(e, "slot"))
+		key := p.Data.(setSlotData).key
 		if j, dup := seen[key]; dup {
 			return nil, plan.ToolError(fmt.Sprintf("%s sets slot %s of %s twice (%s already does); one entry per slot",
 				entryName(i), pyjson.StrRepr(str(e, "slot")), str(e, "ord"), entryName(j)))
@@ -54,6 +56,21 @@ func setSlotBatchPlan(c plan.Client, entries []*pyjson.Object) (*plan.Planned, e
 	}
 	out.Keys, out.Data = obj("incoming_links", links), d
 	return out, nil
+}
+
+// slotKey is the identity of slot on the component with handle h: the handle of the deepest
+// node along the slot path that has its own handle (a child component), and the rest of the path.
+// A nested path through a child component (A, "B/out") and that component's own slot (A/B, "out")
+// get the same key, whatever ORD spelling reached them (verifier probe 2, PR #780).
+func slotKey(h any, nodes *pyjson.Object, slot string) string {
+	parts := strings.Split(slot, "/")
+	rest := slot
+	for i := range parts[:len(parts)-1] {
+		if kh := get(box.Node(nodes, strings.Join(parts[:i+1], "/")), "h"); kh != nil {
+			h, rest = kh, strings.Join(parts[i+1:], "/")
+		}
+	}
+	return fmt.Sprintf("%v\x00%s", h, rest)
 }
 
 // entryError prefixes a refusal with the entry it refuses; any other error is kept as it is.
