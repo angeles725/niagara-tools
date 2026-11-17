@@ -35,7 +35,7 @@ func TestVersionLedger(t *testing.T) {
 	tb := newKit(t)
 	for _, typ := range []string{"logic", "dashboard", "driver"} {
 		out := t.TempDir()
-		if r := run(t, tb, "Foo", out, "--type", typ); r.code != 0 {
+		if r := run(t, tb, "Foo", out, "--type", typ, "--vendor", "Angeles"); r.code != 0 {
 			t.Fatalf("%s: code=%d err=%q", typ, r.code, r.err)
 		}
 		wantFile(t, tree(t, filepath.Join(out, "Foo")), "odd/VERSION-LEDGER.md", ledgerWant)
@@ -47,20 +47,20 @@ func TestMissingTemplates(t *testing.T) {
 	t.Run("station-test", func(t *testing.T) {
 		tb := newKit(t, "templates/station-test")
 		out := t.TempDir()
-		r := run(t, tb, "Foo", out)
+		r := run(t, tb, "Foo", out, "--vendor", "Angeles")
 		want := "scaffold-module: station-test template not found: " + tb + "/../templates/station-test\n" +
 			"scaffold-module: removed the partial " + out + "/Foo\n"
 		if r.code != 3 || r.out != "" || r.err != want {
 			t.Errorf("code=%d out=%q err=%q", r.code, r.out, r.err)
 		}
-		if r := run(t, tb, "Bar", out, "--type", "driver"); r.code != 0 { // the driver never reads it
+		if r := run(t, tb, "Bar", out, "--type", "driver", "--vendor", "Angeles"); r.code != 0 { // the driver never reads it
 			t.Errorf("driver: code=%d err=%q", r.code, r.err)
 		}
 	})
 	t.Run("version ledger", func(t *testing.T) {
 		tb := newKit(t, "templates/VERSION-LEDGER.md")
 		out := t.TempDir()
-		r := run(t, tb, "Foo", out, "--type", "driver")
+		r := run(t, tb, "Foo", out, "--type", "driver", "--vendor", "Angeles")
 		want := "scaffold-module: version-ledger template not found: " + tb + "/../templates/VERSION-LEDGER.md\n" +
 			"scaffold-module: removed the partial " + out + "/Foo\n"
 		if r.code != 3 || r.out != "" || r.err != want {

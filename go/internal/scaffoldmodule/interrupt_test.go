@@ -37,7 +37,7 @@ func TestASignalDuringTheCopyRemovesThePartialTree(t *testing.T) {
 			out := filepath.Join(t.TempDir(), "out")
 			dest := out + "/Foo"
 			signalAtWrite(t, 3, sig)
-			r := run(t, tb, "Foo", out)
+			r := run(t, tb, "Foo", out, "--vendor", "Angeles")
 			want := "scaffold-module: interrupted (" + name + ")\nscaffold-module: removed the partial " + dest + "\n"
 			if r.code != 128+int(sig) || r.out != "" || r.err != want {
 				t.Errorf("code=%d out=%q\n err %q\nwant %q", r.code, r.out, r.err, want)
@@ -46,7 +46,7 @@ func TestASignalDuringTheCopyRemovesThePartialTree(t *testing.T) {
 				t.Errorf("the partial tree stays: %v (err %v)", keys(tree(t, dest)), err)
 			}
 			createFile = os.WriteFile
-			if r := run(t, tb, "Foo", out); r.code != 0 {
+			if r := run(t, tb, "Foo", out, "--vendor", "Angeles"); r.code != 0 {
 				t.Errorf("rerun: code=%d err=%q", r.code, r.err)
 			}
 		})

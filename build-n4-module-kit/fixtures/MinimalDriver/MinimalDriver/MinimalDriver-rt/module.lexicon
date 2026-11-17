@@ -1,16 +1,20 @@
 #
 # Lexicon for the MinimalDriver module (rt).
-# Display names shown in Workbench. Key = type or slot name.
+# Display names shown in Workbench. Key = <Type>.displayName for a type, else the slot name.
 #
 
 # --- Component type display names ---
-MinimalDriverNetwork=Minimal Driver Network
-MinimalDriverDevice=Minimal Driver Device
-MinimalDriverDeviceFolder=Minimal Driver Device Folder
-MinimalDriverPointDeviceExt=Minimal Driver Points
-MinimalDriverPointFolder=Minimal Driver Point Folder
-MinimalDriverProxyExt=Minimal Driver Proxy Ext
-MinimalDriverUdpCommConfig=Minimal Driver UDP Config
+MinimalDriverNetwork.displayName=Minimal Driver Network
+MinimalDriverDevice.displayName=Minimal Driver Device
+MinimalDriverDeviceFolder.displayName=Minimal Driver Device Folder
+MinimalDriverPointDeviceExt.displayName=Minimal Driver Points
+MinimalDriverPointFolder.displayName=Minimal Driver Point Folder
+MinimalDriverProxyExt.displayName=Minimal Driver Proxy Ext
+MinimalDriverUdpCommConfig.displayName=Minimal Driver UDP Config
+MinimalDriverDeviceDiscoveryPreferences.displayName=Minimal Driver Device Discovery Preferences
+MinimalDriverDeviceDiscoveryLeaf.displayName=Minimal Driver Device Discovery Leaf
+MinimalDriverPointDiscoveryPreferences.displayName=Minimal Driver Point Discovery Preferences
+MinimalDriverPointDiscoveryLeaf.displayName=Minimal Driver Point Discovery Leaf
 
 # --- Slots ---
 udpConfig=UDP Config

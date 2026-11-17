@@ -3,11 +3,13 @@
  */
 package com.angeles.MinimalPan;
 
+import javax.baja.nre.annotations.Facet;
 import javax.baja.nre.annotations.NiagaraAction;
 import javax.baja.nre.annotations.NiagaraProperty;
 import javax.baja.nre.annotations.NiagaraType;
 import javax.baja.sys.Action;
 import javax.baja.sys.BComponent;
+import javax.baja.sys.BFacets;
 import javax.baja.sys.BRelTime;
 import javax.baja.sys.Clock;
 import javax.baja.sys.Context;
@@ -15,6 +17,7 @@ import javax.baja.sys.Flags;
 import javax.baja.sys.Property;
 import javax.baja.sys.Sys;
 import javax.baja.sys.Type;
+import javax.baja.units.BUnit;
 
 import com.angeles.MinimalPan.model.MinimalPanLogic;
 
@@ -34,13 +37,15 @@ import com.angeles.MinimalPan.model.MinimalPanLogic;
   name = "setpoint",
   type = "double",
   defaultValue = "0d",
-  flags = Flags.SUMMARY | Flags.OPERATOR
+  flags = Flags.SUMMARY | Flags.OPERATOR,
+  facets = @Facet("BFacets.makeNumeric(BUnit.getUnit(\"celsius\"), 1)")
 )
 @NiagaraProperty(
   name = "interval",
   type = "BRelTime",
   defaultValue = "BRelTime.makeSeconds(30)",
-  flags = Flags.SUMMARY | Flags.OPERATOR
+  flags = Flags.SUMMARY | Flags.OPERATOR,
+  facets = @Facet("BFacets.make(BFacets.MIN, BRelTime.makeSeconds(1))")
 )
 @NiagaraAction(name = "tickExpired", flags = Flags.HIDDEN)
 public class BMinimalPan
@@ -120,8 +125,9 @@ public class BMinimalPan
   private void arm()
   {
     if (ticket != null) { ticket.cancel(); ticket = null; }
-    if (!MinimalPanLogic.isValidInterval(getInterval().getMillis())) return;
-    ticket = Clock.schedulePeriodically(this, getInterval(), tickExpired, null);
+    // The MIN facet keeps an operator from setting 0; the guard is the floor lint-delays reads at the call.
+    if (getInterval().getMillis() > 0 && MinimalPanLogic.isValidInterval(getInterval().getMillis()))
+      ticket = Clock.schedulePeriodically(this, getInterval(), tickExpired, null);
   }
 
   /**

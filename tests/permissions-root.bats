@@ -31,7 +31,7 @@ root_of() {
 @test "PR2: a scaffolded module's permissions files have a <permissions> root (logic and dashboard)" {
   for type in logic dashboard; do
     out="$BATS_TEST_TMPDIR/$type"
-    run bash "$KIT/toolbelt/scaffold-module.sh" DemoPerm "$out" --type "$type"
+    run bash "$KIT/toolbelt/scaffold-module.sh" DemoPerm "$out" --type "$type" --vendor Example
     [ "$status" -eq 0 ] || { echo "$output"; false; }
     mapfile -t files < <(find "$out" -name module-permissions.xml)
     [ "${#files[@]}" -ge 1 ]

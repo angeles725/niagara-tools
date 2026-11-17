@@ -66,16 +66,18 @@ func TestUsageAndNameErrors(t *testing.T) {
 	}
 }
 
-// The last value of a repeated option wins, and an option value may look like an option.
+// The last value of a repeated option wins. A value that looks like an option is taken as the value (and
+// a version of that shape is refused: TestVersionShapes).
 func TestOptionValues(t *testing.T) {
 	tb := newKit(t)
 	out := t.TempDir()
-	r := run(t, tb, "Foo", out, "--type", "driver", "--target-version", "--type", "--type", "logic")
+	r := run(t, tb, "Foo", out, "--type", "driver", "--vendor", "--type", "--target-version", "4.15", "--target-version", "4.16",
+		"--vendor", "Angeles", "--type", "logic")
 	if r.code != 0 {
 		t.Fatalf("code=%d err=%q", r.code, r.err)
 	}
 	got := tree(t, filepath.Join(out, "Foo"))
-	wantFile(t, got, "settings.gradle.kts", "plugin 7.6.17 target --type root Foo\nno final newline 7x6y17 4x14")
+	wantFile(t, got, "settings.gradle.kts", "plugin 7.6.17 target 4.16 root Foo\nno final newline 7x6y17 4x14")
 	wantFile(t, got, "Foo/Foo-rt/src/com/angeles/Foo/BFoo.java", // logic: the last --type won
 		"package com.angeles.Foo;\n// Copyright Angeles. Foo-rt fooTimer f=a f:b\n")
 }
@@ -83,7 +85,7 @@ func TestOptionValues(t *testing.T) {
 // Without the launcher's variable the fixtures cannot be found: env fault, never a guess.
 func TestToolbeltUnset(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "out")
-	r := run(t, "", "Foo", out)
+	r := run(t, "", "Foo", out, "--vendor", "Angeles")
 	want := "scaffold-module: SCAFFOLD_MODULE_TOOLBELT is unset (run through toolbelt/scaffold-module.sh)\n"
 	if r.code != 3 || r.out != "" || r.err != want {
 		t.Errorf("code=%d out=%q err=%q", r.code, r.out, r.err)

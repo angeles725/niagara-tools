@@ -4,9 +4,10 @@ package scaffoldmodule
 type options struct {
 	module, outDir                            string
 	vendor, targetVersion, pluginVersion, typ string
+	vendorGiven                               bool // --vendor has no default: checkValues refuses a run without it
 }
 
-// parseArgs reads `<ModuleName> <out-dir> [--vendor v] [--target-version v] [--plugin-version v]
+// parseArgs reads `<ModuleName> <out-dir> --vendor v [--target-version v] [--plugin-version v]
 // [--type t]`. Options come after the two positionals; a repeated option keeps its last value and a value
 // is taken as it is, even when it looks like an option.
 func parseArgs(args []string) (options, *failure) {
@@ -15,7 +16,7 @@ func parseArgs(args []string) (options, *failure) {
 	}
 	o := options{
 		module: args[0], outDir: args[1],
-		vendor: defaultVendor, targetVersion: defaultTargetVersion, pluginVersion: defaultPluginVersion, typ: defaultType,
+		targetVersion: defaultTargetVersion, pluginVersion: defaultPluginVersion, typ: defaultType,
 	}
 	valued := map[string]*string{
 		optVendor: &o.vendor, optTargetVersion: &o.targetVersion, optPluginVersion: &o.pluginVersion, optType: &o.typ,
@@ -29,6 +30,7 @@ func parseArgs(args []string) (options, *failure) {
 			return options{}, failf(ExitUsage, usageText)
 		}
 		*target = rest[1]
+		o.vendorGiven = o.vendorGiven || rest[0] == optVendor
 	}
 	return o, nil
 }

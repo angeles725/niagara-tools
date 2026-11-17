@@ -14,7 +14,7 @@ func TestRealKitRoundTrip(t *testing.T) {
 	}
 	for typ, fixture := range map[string]string{"logic": "MinimalPan", "dashboard": "MinimalDash", "driver": "MinimalDriver"} {
 		out := t.TempDir()
-		r := run(t, kit+"/toolbelt", fixture, out, "--type", typ)
+		r := run(t, kit+"/toolbelt", fixture, out, "--type", typ, "--vendor", "Angeles")
 		if r.code != 0 || r.err != "" {
 			t.Fatalf("%s: code=%d err=%q", typ, r.code, r.err)
 		}

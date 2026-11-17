@@ -1,19 +1,30 @@
 package scaffoldmodule
 
-import "strings"
+import "regexp"
 
-// checkValues is the one gate of the option values a run writes into the emitted tree (substitutedOptions):
-// --vendor must be one Java package segment (checkVendor); every other value is literal text and is only
-// refused when it holds a newline, which no emitted line can carry.
+// The shapes of the version options: a Niagara release <major>.<minor> and a niagara-module plugin version
+// <major>.<minor>.<patch>, digits only. A value of another shape would be written into settings.gradle.kts
+// and only fail later, in gradle.
+var (
+	targetVersionShape = regexp.MustCompile(`^[0-9]+\.[0-9]+$`)
+	pluginVersionShape = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
+)
+
+// checkValues is the one gate of the option values a run writes into the emitted tree the vendor and the two
+// versions, in that order: --vendor must be given (it has no default) and be one Java package segment (checkVendor);
+// --target-version and --plugin-version must have their shape. Nothing is written before it passes.
 func checkValues(o options) *failure {
+	if !o.vendorGiven {
+		return failf(ExitUsage, vendorRequired+usageText)
+	}
 	if f := checkVendor(o.vendor); f != nil {
 		return f
 	}
-	typed := map[string]string{optTargetVersion: o.targetVersion, optPluginVersion: o.pluginVersion}
-	for _, option := range substitutedOptions {
-		if v, literal := typed[option]; literal && strings.Contains(v, "\n") {
-			return failf(ExitUsage, valueNewline, option, v)
-		}
+	if !targetVersionShape.MatchString(o.targetVersion) {
+		return failf(ExitUsage, targetShape, o.targetVersion)
+	}
+	if !pluginVersionShape.MatchString(o.pluginVersion) {
+		return failf(ExitUsage, pluginShape, o.pluginVersion)
 	}
 	return nil
 }

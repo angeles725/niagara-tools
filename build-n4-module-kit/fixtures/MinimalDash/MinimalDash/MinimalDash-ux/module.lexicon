@@ -4,4 +4,4 @@
 #
 
 # --- Type display names ---
-MinimalDashServlet=MinimalDash Servlet
+MinimalDashServlet.displayName=MinimalDash Servlet
