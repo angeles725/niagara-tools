@@ -106,6 +106,10 @@
 #   at WARNING level and gradle still ends BUILD SUCCESSFUL; the jar then carries stale generated code. A passing
 #   run whose log names a skipped file (go/internal/slotomaticskip) FAILs, the pre-build modules/ jar is restored
 #   like a drift FAIL, and the gate is not run (METHODOLOGY K15). [ev: retro r10-slotomatic-skip-fail-open Δ1]
+# Interrupt: SIGINT, SIGTERM or SIGHUP from the baseline snapshot until the chain passed puts the pre-build
+#   modules/ jars back (a first-deploy jar is removed), then removes the temporary directory; exit 128 + the signal.
+#   Interrupt the process group (a terminal's Ctrl-C, or kill -- -<pgid>): a kill of build.sh's pid alone leaves
+#   gradle running, and it can install its jar after the restore. [ev: retro p1-build-deploy-safety Δ6]
 # Exit: 0 chain passed (or mirror restored) · 1 a copy the run needs failed (temporary dir, baseline, --restore-mirror) ·
 #   2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
 #   without --install-into-home, no profile) ·
