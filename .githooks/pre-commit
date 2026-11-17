@@ -100,10 +100,16 @@ else
   else
     tree=$(git hash-object -w -t tree /dev/null) || refuse "cannot write the empty tree"
   fi
-  # what git records by default: no comment lines and nothing from the scissors line on (`commit -v` puts the
-  # staged diff there), whatever the comment character
-  message=$(sed '/^. -\{24\} >8 -\{24\}$/,$d' "$msgfile" | git stripspace --strip-comments) \
-    || refuse "cannot read the message file"
+  # what git records from an edited message: no comment lines, and nothing from git's own cut line on (the
+  # scissors line followed by its "Do not modify or remove the line above." line, any comment character), where
+  # `commit -v` appends the staged diff; a scissors-shaped line a -m/-F message carries itself is kept
+  [ -f "$msgfile" ] && [ -r "$msgfile" ] || refuse "cannot read the message file $msgfile"
+  raw=$(awk '
+    cut == "" && prev ~ /^. -+ >8 -+$/ && $0 ~ /^. Do not modify or remove the line above\.$/ { cut = NR - 1 }
+    { lines[NR] = $0; prev = $0 }
+    END { n = cut == "" ? NR : cut - 1; for (i = 1; i <= n; i++) print lines[i] }' "$msgfile") \
+    || refuse "cannot read the message file $msgfile"
+  message=$(printf '%s\n' "$raw" | git stripspace --strip-comments) || refuse "cannot clean the commit message"
   [ -n "$message" ] || exit 0   # an empty message: git aborts the commit itself
 fi
 snapshot=$(git commit-tree "$tree" ${parents[@]+"${parents[@]}"} -m "$message") || refuse "cannot write the snapshot commit"

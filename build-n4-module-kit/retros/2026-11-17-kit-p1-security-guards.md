@@ -47,6 +47,10 @@ with both servlet lints so they cannot drift apart.
   into the scanned message, so scrubbing a name was refused (PC11 red before the fix); an empty array under
   `set -u` aborts bash before 4.4; `git rev-parse --path-format` needs git 2.31; and the guard's own exit status is
   now read before the SIGPIPE status of the line handed to it. `[ev: tests/pre-commit-client-guard.bats]`
+- The review of that fix approved it with two more advisories, also fixed: the cut now needs git's own cut line (the
+  scissors line followed by "Do not modify or remove the line above.", checked against git 2.56's `commit -v`
+  file), so a scissors-shaped line in a -m/-F message no longer hides the lines below it (PC12 red before); and a
+  message file that cannot be read refuses instead of reading as an empty message (PC13 red before).
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |

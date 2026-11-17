@@ -167,3 +167,21 @@ head_count() { git -C "$GR" rev-list --count HEAD 2>/dev/null || echo 0; }
   [ "$status" -eq 0 ]
   [ "$(head_count)" -eq 2 ]
 }
+
+@test "PC12: a scissors-shaped line in a -F message is not git's cut line: the lines below it are still guarded" {
+  with_guard; seed
+  printf 'x\n' > "$GR/g"; git -C "$GR" add g
+  printf 'subject\n# ------------------------ >8 ------------------------\nZZDENY below\n' > "$BATS_TEST_TMPDIR/msg"
+  commit -F "$BATS_TEST_TMPDIR/msg"
+  [ "$status" -ne 0 ]
+  [ "$(head_count)" -eq 1 ]
+}
+
+@test "PC13: a message file that cannot be read refuses the commit (never an empty, clean message)" {
+  with_guard; seed
+  cd "$GR"
+  run env PATH="$FAKEBIN:$(dirname "$(command -v git)"):/usr/bin:/bin" NIAGARA_CLIENT_DENYLIST="$DENYLIST" \
+    bash "$HOOKS/commit-msg" "$BATS_TEST_TMPDIR/no-such-message"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"refusing to commit unchecked"* ]]
+}
