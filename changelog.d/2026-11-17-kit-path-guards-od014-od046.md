@@ -5,6 +5,7 @@
   names the prefix that was compared (the seam one when set), every final slash of `HOME` is dropped, and an
   argument starting with `-` is a usage error (exit 3; spell such a path `./-name`).
 - `mirror-niagara-home.sh` runs guard A on a mirror dir that is not there yet before it creates anything, so a
-  refused mirror dir leaves no directory behind; one that cannot be resolved is refused (exit 20). A symlinked
+  refused mirror dir leaves no directory behind; one that cannot be resolved is refused (exit 20). A mirror dir
+  that passes is made where guard A judged it, so `<src>/new/../../out` no longer creates `<src>/new`. A symlinked
   mirror dir is refused (exit 20) whatever its spelling: `link`, `link/` and `link/.` no longer replace the link
   or empty its target.

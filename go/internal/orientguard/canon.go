@@ -15,14 +15,10 @@ const maxLinks = 255
 // realpath fails.
 func canonical(name, cwd string) (string, bool) { return resolve(name, cwd, false) }
 
-// reachable is name resolved as far as it exists: symlinks are followed while components exist and the
+// Reachable is name resolved as far as it exists: symlinks are followed while components exist and the
 // rest is applied by text (`realpath -m`). ok is false when even that cannot be told (a link loop, a
-// directory that cannot be searched).
-func reachable(name, cwd string) (string, bool) { return resolve(name, cwd, true) }
-
-// Reachable is reachable for other path guards (the mirror tool's guard A runs on it before it creates
-// anything): the longest existing ancestor of name resolved, the rest applied by its text.
-func Reachable(name, cwd string) (string, bool) { return reachable(name, cwd) }
+// directory that cannot be searched). The mirror tool's guard A runs on it too, before it creates anything.
+func Reachable(name, cwd string) (string, bool) { return resolve(name, cwd, true) }
 
 // resolve walks name one component at a time, as gnulib's canonicalize does.
 func resolve(name, cwd string, pastMissing bool) (string, bool) {

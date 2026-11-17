@@ -3,6 +3,8 @@ package mirrorhome
 import (
 	"os"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
 // TestGuardA: a mirror dir that is the source, inside it or around it is refused with exit 20 and nothing
@@ -51,8 +53,13 @@ func TestGuardABeforeCreate(t *testing.T) {
 		f.wants(c.name, f.mirror(nh, c.mir), ExitRefused, "", c.refusal+c.mir+"\n")
 		f.unchanged(c.name, "", before)
 	}
+	source := f.tree("nh")
 	f.wants("dot-dot out of the source", f.mirror(nh, nh+"/new/../../out/mir"), ExitOK,
 		"mirror ready: "+nh+"/new/../../out/mir  (3 jars linked, modules/ writable, excluded: none)\n", "")
+	f.unchanged("dot-dot out of the source: nothing is made inside it", "nh", source)
+	if !lint.IsFile(f.path("out/mir/" + Marker)) {
+		t.Error("dot-dot out of the source: the mirror is not where the path leads")
+	}
 }
 
 // TestGuardB: an existing mirror dir is wiped only when it is empty or holds the marker file.

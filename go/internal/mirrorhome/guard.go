@@ -24,8 +24,9 @@ func (m *mirror) guardSource() int {
 	return proceed
 }
 
-// sourceRefusal is guard A's message for a resolved mirror dir against the resolved source ("" when it
-// passes): the source or inside it, or around it, by whole components (the final slash).
+// sourceRefusal is guard A's message for a mirror dir against the resolved source ("" when it passes): the
+// source or inside it, or around it, by whole components (the final slash). The mirror dir is resolved, or
+// reachable when it is not there yet (its longest existing ancestor resolved, the rest by its text).
 func sourceRefusal(srcAbs, dirAbs string) string {
 	src, dir := strings.TrimSuffix(srcAbs, "/")+"/", strings.TrimSuffix(dirAbs, "/")+"/"
 	switch {

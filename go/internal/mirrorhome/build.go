@@ -55,9 +55,8 @@ func visible(dir string) ([]string, error) {
 	return names, err
 }
 
-// wipe removes the mirror dir the guards allowed. A symlink to one is removed itself and its target is
-// left alone; spelled with a final slash it is the target that is emptied and the mirror is built there,
-// through the link (what `rm -rf <link>/` and `mkdir -p <link>/modules` did).
+// wipe removes the mirror dir the guards allowed (never a symlink: guard B refuses one). Spelled with a
+// final slash, the directory is emptied rather than removed (what `rm -rf <dir>/` did).
 func (m *mirror) wipe() int {
 	if !m.exists {
 		return proceed
@@ -83,20 +82,20 @@ func (m *mirror) wipe() int {
 // build makes the mirror: the real modules/, the marker, the links (each to the source as given + the
 // name), then the ready line.
 func (m *mirror) build() int {
-	if err := os.MkdirAll(m.dir+"/"+modules, 0o777); err != nil {
+	if err := os.MkdirAll(m.at+"/"+modules, 0o777); err != nil {
 		return m.fault(err)
 	}
 	marker := fmt.Sprintf(markerFormat, m.srcAbs, m.now().Format(markerTime))
-	if err := os.WriteFile(m.dir+"/"+Marker, []byte(marker), 0o666); err != nil {
+	if err := os.WriteFile(m.at+"/"+Marker, []byte(marker), 0o666); err != nil {
 		return m.fault(err)
 	}
 	for _, name := range m.entries {
-		if err := os.Symlink(m.src+"/"+name, m.dir+"/"+name); err != nil {
+		if err := os.Symlink(m.src+"/"+name, m.at+"/"+name); err != nil {
 			return m.fault(err)
 		}
 	}
 	for _, name := range m.jars {
-		if err := os.Symlink(m.src+"/"+modules+"/"+name, m.dir+"/"+modules+"/"+name); err != nil {
+		if err := os.Symlink(m.src+"/"+modules+"/"+name, m.at+"/"+modules+"/"+name); err != nil {
 			return m.fault(err)
 		}
 	}

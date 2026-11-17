@@ -69,7 +69,7 @@ func under(path, prefix string) bool {
 // locate is the path the rows name for arg and whether it is under prefix.
 //
 // The longest existing ancestor of arg is resolved (every symlink followed) and the rest is applied by its
-// text (reachable), so a new directory several levels deep inside the prefix passes, and a ".." after a
+// text (Reachable), so a new directory several levels deep inside the prefix passes, and a ".." after a
 // missing directory is judged where it leads. A path that cannot be judged at all (a link loop, a directory
 // that cannot be searched, an empty argument) fails closed and the row names it as given.
 func locate(arg, prefix string) (path string, inside bool) {
@@ -78,7 +78,7 @@ func locate(arg, prefix string) (path string, inside bool) {
 		path = strings.TrimRight(path, "\n") // lost in the bash tool's $(realpath …)
 		return path, under(path, prefix)
 	}
-	leads, ok := reachable(arg, cwd)
+	leads, ok := Reachable(arg, cwd)
 	if !ok {
 		return arg, false
 	}
