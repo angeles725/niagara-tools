@@ -272,7 +272,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
 `n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
 `n4_list_px_views`, `n4_px_summary`, `n4_spy_page`, `n4_station_health`,
-`n4_read_history`, `n4_read_audit`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
+`n4_read_history`, `n4_read_audit`, `n4_histories_audit`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
 `n4_alarm_health`,
 `n4_alarm_text_check`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`,
@@ -410,6 +410,7 @@ with an open record not back to normal, once per source, `since` the earliest, o
 age_days}]` (not acknowledged, alarm time more than `unacked_days` days old) and `top_sources`
 `[{source, count}]`. Each list keeps `top` entries (1-50); `counts` holds the full numbers and
 `truncated_note` names each cut list or capped read. `window` is a span (`30m`, `24h`, `7d`).
+Histories audit: `n4_histories_audit(base, exclude_services=true, stale_factor=3, stale_min=10m, cov_max_age=24h, capacity_warn=0.9, max_histories=500)` answers "what is wrong with the histories" in one read-only call. It reads `select slotPath, type, enabled, historyConfig.id, historyConfig.capacity.encodeToString, historyConfig.fullPolicy.encodeToString, historyConfig.interval.encodeToString, lastRecord.timestamp.encodeToString from history:HistoryExt` and `select slotPath from control:ControlPoint` below `base`, then one `select count(*)` per distinct record-capped history id that has recorded (`count_reads`, at most `max_histories`). It returns `no_history` (control points with no history extension right below them; points under `slot:/Services` are left out unless `exclude_services` is false, `services_excluded` counts them), `disabled` (`enabled` false), `stale` (last record older than the larger of `stale_factor` x the collection interval and `stale_min`, or than `cov_max_age` for a COV history, or never recorded; `stale_min` exists because the history service writes in batches, so a 5 s history's newest record shows up about 20 s late), `near_capacity` (records at least `capacity_warn` of a `1:<records>` capacity; `severity` warning for full policy `stop`, where recording stops when full, info for `roll`, where the oldest records are overwritten) and `colliding_ids` (one history id recorded by several extensions), each capped at 100 items with `counts` holding the totals. A read cut at its cap sets `truncated` and leaves `no_history` unchecked (`counts.no_history` null with `no_history_note`). Capacity `0:0` (unlimited) and `2:<bytes>` histories are not measured.
 `n4_list_alarm_classes()` runs `select slotPath, name, priority, ackRequired, totalAlarmCount,
 openAlarmCount, inAlarmCount, unackedAlarmCount from alarm:AlarmClass` and
 `select slotPath, type from alarm:AlarmRecipient` at the station root; `priority` is decoded to
