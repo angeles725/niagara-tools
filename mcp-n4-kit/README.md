@@ -211,6 +211,8 @@ Flags:
   station loaded; only `META-INF/module.xml` of a jar is read.
 - `--allow-tier-b NAME` (repeatable): let writes run on that configured station although
   its version is tier B (4.15, 4.3). Only after a PoC matched that build.
+  A 4.15 laboratory station is tier B too: its launcher needs `--allow-tier-b NAME`, or
+  every execution is refused with "version tier refuses writes" (dry runs still work).
 - `--allow-tier-c NAME` (repeatable): the same for tier C (any other or undetected
   version). Only after `reg.loadContract`, `loadRoot` and a harmless scratch write
   succeeded on that build (METHODOLOGY section 5).
@@ -973,7 +975,13 @@ Tool rules:
   read-back use the assigned name). With `proxy_ext` (a type spec such as
   `modbusCore:ModbusClientNumericProxyExt`) the point is created with that driver
   extension in the same add, so a read-only field register is a `control:NumericPoint`
-  that never writes; the read-back checks the extension type.
+  that never writes; the read-back checks the extension type. A Modbus proxy created this
+  way starts at its type's default address (`addressFormat` `hex`, `address` `0`);
+  set it on the proxy's ORD with a slot path, because the station leaves out a
+  `dataAddress` still at its default: `n4_set_slot(ord=<point>/proxyExt,
+  slot="dataAddress/addressFormat", value="modbus", value_type="baja:Simple",
+  simple_type="modbusCore:AddressFormatEnum")`, then `slot="dataAddress/address"`
+  (`baja:String`).
 - `n4_add_history(points, history_name, interval_ms)` adds one interval history
   extension per point (1 to 50), created already configured (`historyName`,
   `interval`, `enabled`, default true) in one batch under one confirmation token.
@@ -1024,8 +1032,17 @@ Tool rules:
   computed output (a writable's `out`, declared `rtso`) is not. The plan notes list each slot left
   out with its flags and call out a readonly slot holding a non-default value.
   Links are not copied either; the plan counts the links left behind, and a deeper
-  source is refused, as is a station whose type definitions cannot be read. Change
-  what differs per copy afterwards (e.g. `deviceAddress` with `n4_set_slot`). The
+  source is refused, as is a station whose type definitions cannot be read. A Modbus
+  device allows one writable point per register address: a copy of a writable Modbus
+  point keeps its source's address, and the station resets it to `Hex:-1` (log
+  "Duplicate Writable point for register address", `BModbusClientProxyExt`), even when
+  the address is set again afterwards. `copies` gives each such copy its own address
+  inside the same add: `copies=[{"name": "M10", "data_address": "40010"}]`, with an
+  optional `address_format` (`hex`, `decimal`, `modbus`; default the source's). The plan
+  notes every copy that would share a register with its source or an earlier copy, and
+  the read-back of such a copy names that cause next to its differences. A read-only
+  point (`control:NumericPoint`) is not subject to the rule. Change what else differs
+  per copy afterwards (e.g. `deviceAddress` with `n4_set_slot`). The
   inverse removes every copy under its assigned name; the read-back loads each copy
   and compares its whole configured subtree with the plan, listing the paths that differ.
 - `n4_deploy_template(template_file, parent_ord, name?, settings?)` deploys a component

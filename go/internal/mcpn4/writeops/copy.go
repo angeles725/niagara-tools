@@ -28,7 +28,8 @@ type copyData struct {
 	parent     any
 	sourceType any
 	names      []string
-	body       *pyjson.Object // the configured subtree each copy must hold
+	bodies     []*pyjson.Object  // the configured subtree each copy must hold, by new name
+	shared     map[string]string // the writable register a copy would share, by new name
 }
 
 func copyScope(args *pyjson.Object) []any { return []any{str(args, "parent_ord")} }
@@ -78,9 +79,13 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
+	bodies, dupNotes, shared, err := copyAddresses(ct, root, body, source, names, args)
+	if err != nil {
+		return nil, err
+	}
 	ops, inverse := []any{}, []any{}
-	for _, n := range names {
-		ops = append(ops, obj("nm", "a", "h", parentH, "n", n, "b", body))
+	for i, n := range names {
+		ops = append(ops, obj("nm", "a", "h", parentH, "n", n, "b", bodies[i]))
 		inverse = append(inverse, obj("nm", "v", "h", parentH, "n", n))
 	}
 	notes := append(strippedNotes(stripped),
@@ -89,10 +94,11 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		notes = append(notes, strconv.Itoa(len(s.links))+" link(s) inside "+pyjson.StrRepr(source)+
 			" are not copied: create them on each copy with n4_create_link")
 	}
+	notes = append(notes, dupNotes...)
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, parentH)
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: targets,
-		Data: copyData{parentH, get(root, "t"), names, body}}, nil
+		Data: copyData{parentH, get(root, "t"), names, bodies, shared}}, nil
 }
 
 // copyNames validates new_names: 1 to maxCopies distinct plain slot names.

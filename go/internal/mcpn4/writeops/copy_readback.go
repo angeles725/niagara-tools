@@ -45,11 +45,15 @@ func copyReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, 
 		diffs := []any{"(copy not found)"}
 		if n := box.Node(nodes, nn); n != nil {
 			t = get(n, "t")
-			if diffs, err = copyDifferences(c, parentOrd, nn, d.body); err != nil {
+			if diffs, err = copyDifferences(c, parentOrd, nn, d.bodies[i]); err != nil {
 				return nil, nil, nil, "", err
 			}
 		}
-		observed = append(observed, obj("name", nn, "type", t, "differences", diffs))
+		entry := obj("name", nn, "type", t, "differences", diffs)
+		if text, ok := d.shared[d.names[i]]; ok && touchesAddress(diffs) {
+			entry.Set("cause", duplicateCause(text))
+		}
+		observed = append(observed, entry)
 		if !box.PyEqual(t, d.sourceType) || len(diffs) > 0 {
 			verdict = "mismatch"
 		}
