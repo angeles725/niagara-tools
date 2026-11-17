@@ -40,7 +40,7 @@ done
 exit "$rc"
 GUARD
   chmod +x "$BATS_TEST_TMPDIR/client-guard"
-  DENYLIST="$BATS_TEST_TMPDIR/denylist.txt"
+  DENYLIST="$BATS_TEST_TMPDIR/lists/denylist.txt"; mkdir -p "$BATS_TEST_TMPDIR/lists"
   GR="$BATS_TEST_TMPDIR/repo"
   git init -q "$GR"
   git -C "$GR" config user.email t@e.st
@@ -138,11 +138,10 @@ head_count() { git -C "$GR" rev-list --count HEAD 2>/dev/null || echo 0; }
 @test "PC9: no client-guard and a denylist that cannot be examined counts as present (fail closed)" {
   [ "$(id -u)" -ne 0 ] || skip "running as root: chmod 000 does not block the check"
   seed
-  mkdir -p "$BATS_TEST_TMPDIR/locked"; DENYLIST="$BATS_TEST_TMPDIR/locked/denylist.txt"; : > "$DENYLIST"
-  chmod 000 "$BATS_TEST_TMPDIR/locked"
+  : > "$DENYLIST"; chmod 000 "$BATS_TEST_TMPDIR/lists"
   printf 'x\n' > "$GR/g"; git -C "$GR" add g
   commit -m clean
-  chmod 755 "$BATS_TEST_TMPDIR/locked"
+  chmod 755 "$BATS_TEST_TMPDIR/lists"
   [ "$status" -ne 0 ]
   [[ "$output" == *"client-guard is not on PATH"* ]]
 }

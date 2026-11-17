@@ -103,7 +103,7 @@ else
   # what git records from an edited message: no comment lines, and nothing from git's own cut line on, where
   # `commit -v` appends the staged diff: a scissors line, a comment line after it (its text is translated) and a
   # `diff --git` line further down; a scissors-shaped line a -m/-F message carries itself is kept
-  [ -f "$msgfile" ] && [ -r "$msgfile" ] || refuse "cannot read the message file $msgfile"
+  if [ ! -f "$msgfile" ] || [ ! -r "$msgfile" ]; then refuse "cannot read the message file $msgfile"; fi
   raw=$(awk '
     cand == "" && prev ~ /^. -+ >8 -+$/ && substr($0, 1, 1) == substr(prev, 1, 1) { cand = NR - 1 }
     cand != "" && cut == "" && /^diff --git / { cut = cand }
