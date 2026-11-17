@@ -35,7 +35,7 @@ const (
 	noteNoLogins  = "last login unavailable: the security history %s could not be read: %s"
 	noteNoRecords = "last login unavailable: no login records in %s"
 	notePartial   = "only the newest %d login records were read (back to %s): a user with no login among them " +
-		"has last_login null and is not flagged never_logged_in"
+		"has last_login null and no_recorded_login means no login since then"
 	noteTruncated = "only the first %d of %d users are audited (max_users)"
 )
 
@@ -91,7 +91,11 @@ func (t *Tools) UsersAudit(args *pyjson.Object) (*pyjson.Object, error) {
 	for _, f := range []string{flagDisabled, flagExpired, flagLocked, flagNever, flagUnused, flagAdmin, flagUnknown} {
 		countObj.Set(f, counts[f])
 	}
-	return obj("users", users, "unused", unused, "unused_days", unusedDays, "counts", countObj,
+	var since any
+	if !logins.oldest.IsZero() {
+		since = logins.since
+	}
+	return obj("users", users, "unused", unused, "unused_days", unusedDays, "logins_since", since, "counts", countObj,
 		"masked_slots", maskedUnion(read), "notes", notes, "truncated", len(names) > maxUsers,
 		"elapsed_ms", int(math.RoundToEven((t.Ctx.Clock()-start)*1000))), nil
 }
@@ -154,6 +158,7 @@ func loginsOf(id string, rows []*pyjson.Object, truncated bool) (loginView, stri
 		}
 		view.oldest, oldest = at, text
 	}
+	view.since = oldest
 	switch {
 	case truncated:
 		return view, fmt.Sprintf(notePartial, len(rows), oldest), nil

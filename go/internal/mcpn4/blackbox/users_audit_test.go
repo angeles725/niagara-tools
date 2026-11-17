@@ -86,7 +86,7 @@ func TestUsersAuditClassifiesEachAccount(t *testing.T) {
 	r, sv := uaRig(t, uaLogins())
 	out := r.Srv.OK("n4_users_audit", nil)
 	want := map[string]string{"admin": `["admin"]`, "off": `["disabled"]`, "old": `["expired"]`,
-		"idle": `["never_logged_in","unused"]`, "ghost": `["locked","unknown_role"]`}
+		"idle": `["no_recorded_login","unused"]`, "ghost": `["locked","unknown_role"]`}
 	for name, flags := range want {
 		if got := uaFlags(t, out, name); got != flags {
 			t.Errorf("%s flags = %s, want %s", name, got, flags)
@@ -109,7 +109,10 @@ func TestUsersAuditClassifiesEachAccount(t *testing.T) {
 	if u := jsonOf(t, out["unused"]); u != `[{"last_login":null,"user":"idle"}]` {
 		t.Errorf("unused = %s", u)
 	}
-	counts := `{"admin":1,"disabled":1,"expired":1,"locked":1,"never_logged_in":1,"unknown_role":1,"unused":1,"users":5}`
+	if since, _ := out["logins_since"].(string); !strings.HasPrefix(since, time.Now().Add(-400*24*time.Hour).Format("2006-01-02")) {
+		t.Errorf("logins_since = %v (the oldest login record read)", out["logins_since"])
+	}
+	counts := `{"admin":1,"disabled":1,"expired":1,"locked":1,"no_recorded_login":1,"unknown_role":1,"unused":1,"users":5}`
 	if c := jsonOf(t, out["counts"]); c != counts {
 		t.Errorf("counts = %s", c)
 	}

@@ -91,25 +91,33 @@ func TestAuditUserFlagsEachCondition(t *testing.T) {
 }
 
 func TestAuditUserLoginVerdicts(t *testing.T) {
-	old := loginView{read: true, complete: true, last: map[string]string{"u": "2026-01-01T00:00:00.000-06:00"}}
+	old := loginView{read: true, complete: true, last: map[string]string{"u": "2026-01-01T00:00:00.000-06:00"},
+		oldest: usersNow.Add(-400 * 24 * time.Hour)}
 	if entry, unused := verdict(t, map[string]string{}, old); !unused || flagsOf(entry) != "['unused']" {
 		t.Errorf("old login: %s %v", flagsOf(entry), unused)
 	}
-	none := loginView{read: true, complete: true, last: map[string]string{}}
-	if entry, unused := verdict(t, map[string]string{}, none); !unused || flagsOf(entry) != "['never_logged_in', 'unused']" {
-		t.Errorf("no login: %s %v", flagsOf(entry), unused)
+	// An empty SecurityHistory proves nothing about any user: no flag, not unused (review R3).
+	empty := loginView{read: true, complete: true, last: map[string]string{}}
+	if entry, unused := verdict(t, map[string]string{}, empty); unused || flagsOf(entry) != "[]" {
+		t.Errorf("empty history: %s %v", flagsOf(entry), unused)
 	}
-	if entry, unused := verdict(t, map[string]string{"enabled": "false"}, none); unused ||
-		flagsOf(entry) != "['disabled', 'never_logged_in']" {
+	// Every record read, but the history rolled 5 days back: a login 10 days ago may have rolled
+	// off, so the user has no recorded login and is NOT unused within 90 days (review R3).
+	rolled := loginView{read: true, complete: true, last: map[string]string{}, oldest: usersNow.Add(-5 * 24 * time.Hour)}
+	if entry, unused := verdict(t, map[string]string{}, rolled); unused || flagsOf(entry) != "['no_recorded_login']" {
+		t.Errorf("rolled history: %s %v", flagsOf(entry), unused)
+	}
+	if entry, unused := verdict(t, map[string]string{"enabled": "false"}, rolled); unused ||
+		flagsOf(entry) != "['disabled', 'no_recorded_login']" {
 		t.Errorf("disabled, no login: %s %v", flagsOf(entry), unused)
 	}
 	recent := loginView{read: true, last: map[string]string{}, oldest: usersNow.Add(-24 * time.Hour)}
-	if entry, unused := verdict(t, map[string]string{}, recent); unused || flagsOf(entry) != "[]" {
+	if entry, unused := verdict(t, map[string]string{}, recent); unused || flagsOf(entry) != "['no_recorded_login']" {
 		t.Errorf("partial records within the window: %s %v", flagsOf(entry), unused)
 	}
 	deep := loginView{read: true, last: map[string]string{}, oldest: usersNow.Add(-200 * 24 * time.Hour)}
-	if entry, unused := verdict(t, map[string]string{}, deep); !unused || flagsOf(entry) != "['unused']" {
-		t.Errorf("partial records past the window: %s %v", flagsOf(entry), unused)
+	if entry, unused := verdict(t, map[string]string{}, deep); !unused || flagsOf(entry) != "['no_recorded_login', 'unused']" {
+		t.Errorf("records past the window: %s %v", flagsOf(entry), unused)
 	}
 	entry, unused := verdict(t, map[string]string{}, loginView{})
 	if unused || get(entry, "last_login") != nil || get(entry, "last_login_source") != nil || flagsOf(entry) != "[]" {

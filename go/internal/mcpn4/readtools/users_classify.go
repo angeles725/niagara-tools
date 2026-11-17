@@ -17,7 +17,7 @@ const (
 	flagDisabled = "disabled"
 	flagExpired  = "expired"
 	flagLocked   = "locked"
-	flagNever    = "never_logged_in"
+	flagNever    = "no_recorded_login"
 	flagUnused   = "unused"
 	flagAdmin    = "admin"
 	flagUnknown  = "unknown_role"
@@ -37,7 +37,8 @@ type roleView struct {
 type loginView struct {
 	read, complete bool
 	last           map[string]string // BAbsTime text as the station wrote it
-	oldest         time.Time
+	oldest         time.Time         // the oldest record read; zero when none
+	since          string            // oldest as the station wrote it (logins_since)
 }
 
 // auditUser is the reply entry of user name, and whether it is unused.
@@ -89,8 +90,10 @@ func auditUser(name string, u userSlots, roles roleView, logins loginView, now t
 }
 
 // loginVerdict is the user's last login and its source (nil when unknown) and whether an enabled
-// user is unused: no login within unusedDays. never_logged_in needs every record read; unused
-// needs the records read to reach back past the cut-off.
+// user is unused: no login within unusedDays. The SecurityHistory has a capacity and rolls, so
+// reading every record proves nothing older than its oldest record: no_recorded_login only says
+// no Login record since that oldest record (logins_since), and an empty history proves nothing.
+// A user with no login record is unused only when the records read reach back past the cut-off.
 func loginVerdict(name string, enabled bool, logins loginView, now time.Time, unusedDays int, flags *[]any) (any, any, bool) {
 	if !logins.read {
 		return nil, nil, false
@@ -100,8 +103,9 @@ func loginVerdict(name string, enabled bool, logins loginView, now time.Time, un
 		at, _ := bql.ParseAbsTime(text)
 		return text, bql.SecurityHistoryName, enabled && at.Before(cutoff)
 	}
-	if logins.complete {
-		*flags = append(*flags, flagNever)
+	if logins.oldest.IsZero() {
+		return nil, bql.SecurityHistoryName, false
 	}
-	return nil, bql.SecurityHistoryName, enabled && (logins.complete || logins.oldest.Before(cutoff))
+	*flags = append(*flags, flagNever)
+	return nil, bql.SecurityHistoryName, enabled && logins.oldest.Before(cutoff)
 }
