@@ -91,6 +91,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	registerSchedules(s, t)
 	s.Handlers["n4_read_tags"] = t.ReadTags
 	s.Handlers["n4_neql_query"] = t.NeqlQuery
+	s.Handlers["n4_semantic_export"] = t.SemanticExport
 	s.Handlers["n4_list_tag_dictionaries"] = t.ListTagDictionaries
 }
 

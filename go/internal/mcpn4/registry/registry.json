@@ -1080,6 +1080,54 @@
    "needs_session": true
   },
   {
+   "name": "n4_semantic_export",
+   "description": "Export the Project Haystack (hs:) tags of the components a NEQL query matches as a Haystack grid in the Haystack 4 JSON encoding (Hayson), read-only. One NEQL GET finds the components (default neql: hs:site or hs:space or hs:equip or hs:point; base_ord as n4_neql_query takes it), then each is read as n4_read_tags reads it (one load, plus one impliedTags call unless implied is false). Each row has id (a ref made from the slot path: '/' as '.', any character a Haystack ref does not allow as '_', ~2, ~3 on a clash), dis (hs:dis when set, else the slot name), every hs: tag with the namespace stripped (marker, number, bool, string) and every outbound hs: relation as a ref (to the row's id when its endpoint is exported too). Tags of other namespaces are left out; a value that cannot be converted is listed in skipped with why, never dropped silently. truncated says the NEQL match list was cut at max_entities. With save_as the grid is written as <state-dir>/exports/<save_as>.json (mode 600, never over an existing file) and the reply carries path and bytes; without it the reply carries the grid. Brick output is not produced.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "neql": {
+      "type": "string",
+      "description": "NEQL filter of the components to export",
+      "default": "hs:site or hs:space or hs:equip or hs:point"
+     },
+     "base_ord": {
+      "type": "string",
+      "description": "Search below this station ORD",
+      "default": "station:|slot:/"
+     },
+     "implied": {
+      "type": "boolean",
+      "default": true,
+      "description": "Also export implied tags (one impliedTags call per component)"
+     },
+     "max_entities": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 500,
+      "default": 100,
+      "description": "Most components exported"
+     },
+     "save_as": {
+      "type": "string",
+      "description": "Write the grid to <state-dir>/exports/<save_as>.json instead of the reply (letters, digits, _ and -, up to 80)"
+     },
+     "timeout_s": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60,
+      "description": "NEQL read timeout, seconds"
+     }
+    },
+    "additionalProperties": false
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
    "name": "n4_list_tag_dictionaries",
    "description": "List the tag dictionaries installed under the TagDictionaryService (one BQL query), each with its namespace, enabled, frozen, version and status, and what it defines: tag definitions (id, info type, value type, default, validity condition; type null for a smart tag the station computes), tag groups (id, the group_ord a tag group relation points at, the tags it implies) and relation ids. dictionary (a name such as Niagara, or a namespace such as n) lists one. max_items (default 200, at most 2000) bounds the definitions listed across all dictionaries; truncated says some were left out. Use it before n4_set_tags to see which tags, values and groups a station defines.",
    "inputSchema": {
