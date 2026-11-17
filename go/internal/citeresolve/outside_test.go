@@ -36,7 +36,9 @@ func TestRepoPath(t *testing.T) {
 		want       []want
 	}{
 		{"repo file", "see `tests/awk.bats`", []want{{Resolved, ""}}},
-		{"kit file", "see `types/ok.md` and `toolbelt/../types/ok.md`", nil},
+		{"kit-only file", "see `toolbelt/kit-only.md`", []want{{Resolved, "# Kit-only toolbelt fixture"}}},
+		{"directory", "see `tests/`", []want{{Resolved, "directory"}}},
+		{"not one of the four roots, or a traversal", "see `types/ok.md` and `toolbelt/../types/ok.md`", nil},
 		{"deleted file", "reuse `toolbelt/lib/awk-lint.sh`", []want{{MissingFile, "toolbelt/lib/awk-lint.sh under the kit or the repository"}}},
 		{"no basename search", "reuse `tests/kit/awk.bats`", []want{{MissingFile, ""}}},
 		{"generated lint index", "see `toolbelt/INDEX.md`", []want{{Resolved, "generated, not committed"}}},
