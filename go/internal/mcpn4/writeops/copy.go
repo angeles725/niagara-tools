@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -49,7 +48,7 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
-	if box.Node(parentNodes, source) == nil {
+	if box.Node(parentNodes, source) == nil { // before the names, as ever: the first refusal wins
 		return nil, plan.ToolError("component " + pyjson.StrRepr(source) + " not found under " + parentOrd)
 	}
 	for _, n := range names {
@@ -57,29 +56,12 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 			return nil, plan.ToolError("a child named " + pyjson.StrRepr(n) + " already exists under " + parentOrd)
 		}
 	}
-	childOrd, err := ord.ChildOrd(parentOrd, source)
+	src, err := loadCopySource(c, parentOrd, source, parentNodes)
 	if err != nil {
 		return nil, err
 	}
-	// One level more than the copy keeps: anything there means the copy would be partial.
-	_, nodes, err := plan.Handle(c, childOrd, CopyDepth+1)
-	if err != nil {
-		return nil, err
-	}
-	root := box.Node(nodes, "")
-	if treeDepth(root) > CopyDepth {
-		return nil, plan.ToolError(pyjson.StrRepr(source) + " is deeper than the copy depth (" +
-			strconv.Itoa(CopyDepth) + " levels): a copy would miss part of it; copy a smaller component")
-	}
-	ct, err := copyContracts(c, root)
-	if err != nil {
-		return nil, err
-	}
-	body, stripped, s, err := configured(ct, root)
-	if err != nil {
-		return nil, err
-	}
-	bodies, dupNotes, shared, err := copyAddresses(ct, root, body, source, names, args)
+	root, body := src.root, src.body
+	bodies, dupNotes, shared, err := copyAddresses(src.ct, root, body, source, names, args)
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +70,11 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		ops = append(ops, obj("nm", "a", "h", parentH, "n", n, "b", bodies[i]))
 		inverse = append(inverse, obj("nm", "v", "h", parentH, "n", n))
 	}
-	notes := append(strippedNotes(stripped),
+	notes := append(strippedNotes(src.stripped),
 		"The station may rename on collision; the real inverse uses the assigned name.")
-	if len(s.links) > 0 {
-		notes = append(notes, strconv.Itoa(len(s.links))+" link(s) inside "+pyjson.StrRepr(source)+
-			" are not copied: create them on each copy with n4_create_link")
-	}
+	notes = append(notes, src.linksNote()...)
 	notes = append(notes, dupNotes...)
+	notes = append(notes, fallbackNotes(source, body)...)
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, parentH)
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: targets,

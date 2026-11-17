@@ -30,3 +30,19 @@ func (w *State) budgetReport() any {
 	}
 	return obj("executed", w.WritesExecuted, "max", w.MaxWrites, "remaining", left, "save_counts", false)
 }
+
+// cost is what executing the batch spends of the budget: Writes, at least one.
+func (p *Planned) cost() int { return max(p.Writes, 1) }
+
+// CheckRoom refuses a plan of need writes that the remaining budget cannot hold, before its dry
+// run issues a token (field retro 2026-11-16, row U7): what refuses is the plan, never a batch
+// already half sent. what names the batch in the refusal ("this replication").
+func (w *State) CheckRoom(need int, what string) error {
+	left := max(w.MaxWrites-w.WritesExecuted, 0)
+	if need <= left {
+		return nil
+	}
+	return ToolError(fmt.Sprintf("%s: %s needs %d write(s) but only %d remain (--max-writes %d; "+
+		"n4_save_station is outside the budget): split it, or save and restart the server for a new budget",
+		safety.ReasonBudgetSmall, what, need, left, w.MaxWrites))
+}

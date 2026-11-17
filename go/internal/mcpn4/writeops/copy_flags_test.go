@@ -51,7 +51,7 @@ func TestACopyListsEveryNodeItLeavesOutByItsFlags(t *testing.T) {
 	want := `["Not copied (flags r readonly, t transient, d default-on-clone, R remove-on-clone): ` +
 		`status (rtsd), health (rd), points/Setpoint/out (rtso), points/Setpoint/proxyExt/status (rt), ` +
 		`points/Setpoint/proxyExt/readValue (rt)", ` +
-		`"The station may rename on collision; the real inverse uses the assigned name."]`
+		`"The station may rename on collision; the real inverse uses the assigned name.", ` + setpointFallback + `]`
 	if notes != want {
 		t.Errorf("notes\n got  %s\n want %s", notes, want)
 	}
