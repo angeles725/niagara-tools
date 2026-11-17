@@ -107,12 +107,13 @@ head_count() { git -C "$GR" rev-list --count HEAD 2>/dev/null || echo 0; }
   [ "$(head_count)" -eq 1 ]
 }
 
-@test "PC6: commit-msg ignores comment lines git strips from the message" {
+@test "PC6: commit-msg reads comment lines too: a '#' line naming a client refuses even under --cleanup=strip" {
   with_guard; seed
   printf 'x\n' > "$GR/g"; git -C "$GR" add g
-  printf 'clean subject\n# ZZDENY in a comment git strips\n' > "$BATS_TEST_TMPDIR/msg"
+  printf 'clean subject\n# ZZDENY in a comment\n' > "$BATS_TEST_TMPDIR/msg"
   commit -F "$BATS_TEST_TMPDIR/msg" --cleanup=strip
-  [ "$status" -eq 0 ]
+  [ "$status" -ne 0 ]
+  [ "$(head_count)" -eq 1 ]
 }
 
 @test "PC7: a guard that breaks (exit 2) refuses the commit" {
@@ -186,8 +187,14 @@ head_count() { git -C "$GR" rev-list --count HEAD 2>/dev/null || echo 0; }
 }
 
 @test "PC14: the commit -v cut is found whatever the language of git's comment under it" {
-  with_guard; seed; cd "$GR"
-  printf 'subject\n# ------------------------ >8 ------------------------\n# No modifique la línea de arriba.\ndiff --git a/f b/f\n-ZZDENY\n' > "$BATS_TEST_TMPDIR/msg"
+  with_guard; cd "$GR"
+  printf 'ZZDENY\n' > f; git add f
+  run env PATH="$FAKEBIN:$(dirname "$(command -v git)"):/usr/bin:/bin" git commit -q --no-verify -m base
+  [ "$status" -eq 0 ]
+  printf 'clean\n' > f; git add f   # the staged diff git appends under the cut removes the name
+  { printf 'subject\n# ------------------------ >8 ------------------------\n# No modifique la línea de arriba.\n'
+    git diff --cached; } > "$BATS_TEST_TMPDIR/msg"
+  grep -qx -- '-ZZDENY' "$BATS_TEST_TMPDIR/msg"
   run env PATH="$FAKEBIN:$(dirname "$(command -v git)"):/usr/bin:/bin" NIAGARA_CLIENT_DENYLIST="$DENYLIST" \
     bash "$HOOKS/commit-msg" "$BATS_TEST_TMPDIR/msg"
   [ "$status" -eq 0 ]
@@ -207,6 +214,50 @@ head_count() { git -C "$GR" rev-list --count HEAD 2>/dev/null || echo 0; }
   with_guard; seed
   printf 'hello ZZDENY\n' >> "$GR/f"   # tracked, not staged: commit -a stages it
   commit -a -m clean
+  [ "$status" -ne 0 ]
+  [ "$(head_count)" -eq 1 ]
+}
+
+@test "PC17: a fake cut line in a -m message (no -v) hides nothing: the lines git stores below it are guarded" {
+  with_guard; seed
+  printf 'x\n' > "$GR/g"; git -C "$GR" add g
+  commit -m "$(printf 'subj\n# ------------------------ >8 ------------------------\n# x\nZZDENY\ndiff --git a b')"
+  [ "$status" -ne 0 ]
+  [ "$(head_count)" -eq 1 ]
+}
+
+@test "PC18: a '#' line that commit -m keeps (cleanup whitespace) is guarded at commit time" {
+  with_guard; seed
+  printf 'x\n' > "$GR/g"; git -C "$GR" add g
+  commit -m "$(printf 'subj\n\n# ZZDENY')"
+  [ "$status" -ne 0 ]
+  [ "$(head_count)" -eq 1 ]
+}
+
+@test "PC19: a '#' line an editor writes under --cleanup=verbatim is guarded at commit time" {
+  with_guard; seed
+  printf 'x\n' > "$GR/g"; git -C "$GR" add g
+  GIT_EDITOR="sed -i '1s/^/subj\\n#ZZDENY\\n/'" commit --cleanup=verbatim
+  [ "$status" -ne 0 ]
+  [ "$(head_count)" -eq 1 ]
+}
+
+@test "PC20: commit --amend -v of a scrub: the diff git appends against HEAD's parent is not part of the message" {
+  with_guard
+  printf 'hello ZZDENY\n' > "$GR/f"; git -C "$GR" add f
+  run env PATH="$FAKEBIN:$(dirname "$(command -v git)"):/usr/bin:/bin" git -C "$GR" commit -q --no-verify -m base
+  [ "$status" -eq 0 ]
+  printf 'clean\n' > "$GR/f"; git -C "$GR" add f
+  commit -m "scrub a name"
+  [ "$status" -eq 0 ]
+  GIT_EDITOR=true commit --amend -v -e -m "scrub a name, amended"
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$GR" log -1 --format=%s)" = "scrub a name, amended" ]
+}
+
+@test "PC21: a fake cut line with no diff to drop (commit --allow-empty) still guards the lines below it" {
+  with_guard; seed
+  commit --allow-empty -m "$(printf 'subj\n# ------------------------ >8 ------------------------\n# x\nZZDENY\ndiff --git a b')"
   [ "$status" -ne 0 ]
   [ "$(head_count)" -eq 1 ]
 }

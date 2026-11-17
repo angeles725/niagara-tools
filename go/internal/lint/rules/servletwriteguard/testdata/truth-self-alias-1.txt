@@ -1,0 +1,38 @@
+truth: a permission read off a local that aliases the user (declared BUser, or assigned from getUser()) or
+the servlet (assigned from this), or off super, is a self-permission too (FAIL), and guards nothing.
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  self-permission  @DIR@/m/A.java:5  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+FAIL  self-permission  @DIR@/m/A.java:10  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+FAIL  self-permission  @DIR@/m/A.java:14  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+FAIL  self-permission  @DIR@/m/A.java:19  permission read off the servlet or the user itself, not the written target: use target.getPermissions(cx) or cx.getUser().getPermissionsFor(target) (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:6  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:11  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:15  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:20  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+-- stderr --
+-- m/A.java --
+class A extends BWebServlet {
+  void a(WebOp op) {
+    CsrfUtil.verifyCsrfToken(op.getRequest());
+    BUser caller = op.getUser();
+    if (!caller.getPermissions(op).hasOperatorWrite()) return;
+    target.set(prop, v, op);
+  }
+  void b(WebOp op) {
+    BComponent self = this;
+    if (!self.getPermissions(op).hasOperatorWrite()) return;
+    target.set(prop, v, op);
+  }
+  void c(WebOp op) {
+    if (!super.getPermissions(op).hasOperatorWrite()) return;
+    target.set(prop, v, op);
+  }
+  void d(WebOp op) {
+    Object who = (BUser) op.getUser();
+    if (!who.getPermissionsFor(who).hasOperatorWrite()) return;
+    target.set(prop, v, op);
+  }
+}

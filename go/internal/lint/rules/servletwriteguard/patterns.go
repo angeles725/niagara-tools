@@ -25,20 +25,24 @@ var (
 	selfPermission = []*regexp.Regexp{
 		regexp.MustCompile(`getPermissionsFor\(` + sp + `(this|` + userExpr + `|` + userVar + `)` + sp + `\)`),
 		regexp.MustCompile(stmtStart + `getPermissions` + anArg),
-		regexp.MustCompile(`(^|[^A-Za-z0-9_$.])this\.getPermissions` + anArg),
+		regexp.MustCompile(`(^|[^A-Za-z0-9_$.])(this|super)\.getPermissions` + anArg),
 		regexp.MustCompile(`(` + userExpr + `|` + notQual + userVar + `)\.getPermissions` + anArg),
 	}
 
-	// targetCheck: a permission check that can name the written target (unless it is a selfPermission).
-	targetCheck = regexp.MustCompile(`getPermissionsFor\(|\.getPermissions` + anArg + `|\.canWrite\(` + sp + `\)|` +
+	// targetCall: a permission check that can name the written target (unless it is a selfPermission): the
+	// receiver of getPermissions(cx) / canWrite(), the argument of getPermissionsFor(x), or the first argument
+	// of requireTargetWrite(x, ...) is what it checks (checks.go).
+	targetCall = regexp.MustCompile(`getPermissionsFor\(|\.getPermissions` + anArg + `|\.canWrite\(` + sp + `\)|` +
 		notQual + `requireTargetWrite\(`)
 
-	// write: a component slot write.
-	write = regexp.MustCompile(`\.(set|setBoolean|setDouble|setFloat|setInt|setLong|setRelTime|setString)\(`)
+	// write: a component slot write, or an action invoked on a component.
+	write = regexp.MustCompile(`\.(set|setBoolean|setDouble|setFloat|setInt|setLong|setRelTime|setString|invoke)\(`)
 
-	// csrf: a CSRF token check (CsrfUtil, the token header or parameter, the framework filter) or the
-	// X-Requested-With guard that lint-servlet csrf-xrw-only already reports.
-	csrf = regexp.MustCompile(`CsrfUtil|x-niagara-csrfToken|csrfToken|CsrfProtectedFilter|X-Requested-With`)
+	// csrfCall: a CSRF token check in code (literals blanked): a verifyCsrfToken( call or the framework filter.
+	// A name alone (a local called csrfToken) is no check.
+	csrfCall = regexp.MustCompile(`verifyCsrfToken` + sp + `\(|CsrfProtectedFilter`)
+	// xrw: the X-Requested-With guard that lint-servlet csrf-xrw-only already reports (a string literal).
+	xrw = regexp.MustCompile(`X-Requested-With`)
 )
 
 const (
@@ -48,12 +52,13 @@ const (
 	msgNoCsrf  = "servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs" + doc
 )
 
-// isSelf reports whether line s reads a permission off the servlet or the user itself.
-func isSelf(s string) bool {
+// isSelf reports whether line s reads a permission off the servlet or the user itself, directly or through
+// one of the method's aliases (alias.go).
+func isSelf(s string, al aliases) bool {
 	for _, re := range selfPermission {
 		if re.MatchString(s) {
 			return true
 		}
 	}
-	return false
+	return al.self(s)
 }
