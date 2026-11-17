@@ -1231,6 +1231,28 @@ Destructive tools use the same pipeline:
   (`observed.permission_failed_classes`). An acknowledgement cannot be undone: the plan has
   no inverse and `n4_rollback` cannot reverse it. It needs at least one `--write-scope`.
 
+### Semantic export: Haystack JSON
+
+`n4_semantic_export(neql="hs:site or hs:space or hs:equip or hs:point", base_ord, implied=true,
+max_entities=100, save_as)` exports the Project Haystack (`hs:`) tags of the components a NEQL
+query matches as a Haystack grid in the Haystack 4 JSON encoding (Hayson), read-only. One NEQL GET
+finds the components; each is then read as `n4_read_tags` reads it (one load, plus one
+`impliedTags` call unless `implied` is false).
+
+- `id` is a ref made from the slot path with its `$` escapes decoded (`/Plant/Supply$20Temp` →
+  `Plant.Supply_Temp`; characters a Haystack ref does not allow become `_`; a clash gets `~2`,
+  `~3`). `dis` is `hs:dis` when set, else the decoded slot name.
+- Every `hs:` tag becomes a column with the namespace stripped: markers, numbers, booleans and
+  strings. Outbound `hs:` relations (`hs:equipRef`, `hs:siteRef`) become refs, pointing at the
+  exported row's `id` when the other end is exported too (a station names it by slot path or
+  as `h:<handle>`).
+- Tags of other namespaces are left out. A value that cannot be converted (for example a
+  `baja:TimeZone`) is listed in `skipped` with why, never dropped silently. `truncated` says the
+  match list was cut at `max_entities`.
+- With `save_as` the grid is written to `<state-dir>/exports/<save_as>.json` (mode 600, never
+  over an existing file) and the reply carries `path` and `bytes`.
+- Brick output is not produced.
+
 ### Alarm extension recipe
 
 Every palette alarm extension is one type, `alarm:AlarmSourceExt`; what makes it an
