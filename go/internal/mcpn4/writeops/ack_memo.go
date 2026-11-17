@@ -59,6 +59,22 @@ func holdSelection(key string, s heldSelection) {
 	}
 }
 
+// dropSelection forgets the resolution held for key, if any.
+func dropSelection(key string) {
+	held.Lock()
+	defer held.Unlock()
+	if _, ok := held.byKey[key]; !ok {
+		return
+	}
+	delete(held.byKey, key)
+	for i, k := range held.order {
+		if k == key {
+			held.order = append(held.order[:i], held.order[i+1:]...)
+			break
+		}
+	}
+}
+
 // heldFor is the resolution held for key.
 func heldFor(key string) (heldSelection, error) {
 	held.Lock()
@@ -81,6 +97,9 @@ func ackSelected(r ordReader, s *ackSelection, args *pyjson.Object, w *plan.Stat
 	}
 	var h heldSelection
 	if isDryRun(args) {
+		// A new dry run replaces the held list; until it is held again (a selection that matches
+		// nothing or is refused never is) the older token has nothing to execute.
+		dropSelection(key)
 		h.ids, h.report, err = s.resolve(r)
 	} else {
 		h, err = heldFor(key)
