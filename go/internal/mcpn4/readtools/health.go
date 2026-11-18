@@ -33,6 +33,9 @@ func (t *Tools) StationHealth(args *pyjson.Object) (*pyjson.Object, error) {
 	base := strArg(args, "base", RootOrd)
 	maxRows, timeout := intArg(args, "max_rows", bql.DefaultMaxRows), intArg(args, "timeout_s", 60)
 	maxNotOk := intArg(args, "max_not_ok", 50)
+	if boolArg(args, deviceDetailArg, false) && !boolArg(args, "drivers", false) {
+		return nil, toolError("%s", detailNeedsDrivers)
+	}
 	start := t.Ctx.Clock()
 	out := pyjson.NewObject()
 	system, err := t.healthSystem()
@@ -71,8 +74,14 @@ func (t *Tools) StationHealth(args *pyjson.Object) (*pyjson.Object, error) {
 			out.Set("drivers", nil)
 			out.Set("drivers_note", fmt.Sprintf(driversNote, strings.Join(failed, ", ")))
 		} else {
-			out.Set("drivers", driversSection(keyed["networks"], keyed["devices"], keyed["points"],
-				intArg(args, "max_bad", defaultMaxBad), cut))
+			drivers := driversSection(keyed["networks"], keyed["devices"], keyed["points"],
+				intArg(args, "max_bad", defaultMaxBad), cut)
+			if boolArg(args, deviceDetailArg, false) {
+				if err := t.addDeviceDetail(drivers, keyed["devices"], keyed["points"], base, maxRows, timeout); err != nil {
+					return nil, err
+				}
+			}
+			out.Set("drivers", drivers)
 		}
 	}
 	capacity, err := t.healthCapacity(timeout, live)

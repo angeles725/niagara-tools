@@ -81,7 +81,7 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 		return nil, err
 	}
 	for _, o := range targets.Keys() {
-		if err := checkTargetScope(w.Scope, o, get(targets, o), ops); err != nil { // today's scope, not the batch's
+		if err := checkTargetScope(w.Scope, o, get(targets, o), ops, get(view, "tool")); err != nil { // today's scope, not the batch's
 			return nil, err
 		}
 		current, _, err := plan.Handle(c, o, 1)
