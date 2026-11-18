@@ -111,6 +111,8 @@ func discoverStation(state string) *loads {
 	job := []any{"", obj("h", "9", "t", "bacnet:BacnetDiscoverDevicesJob"),
 		"jobState", obj("t", "baja:JobState", "v", state)}
 	job = append(job, row("DiscoveryDevice", "device:2004", "2", "04", "$32004")...)
+	job = append(job, "DiscoveryDevice/listSize", obj("t", "baja:Integer", "v", "46"),
+		"DiscoveryDevice/address/addressType", obj("t", "baja:Integer", "v", "3"))
 	job = append(job, row("DiscoveryDevice1", "device:2012", "2", "0c", "")...)
 	job = append(job, row("DiscoveryDevice2", "device:2009", "2", "1f", "$32009")...)
 	dev := func(name, mac, id string) []any {
@@ -153,8 +155,8 @@ func TestDiscoverReadbackRowsAgainstTheDatabase(t *testing.T) {
 	got := js(t, o)
 	for _, part := range []string{
 		`"job": "` + discJob + `"`, `"job_state": "success"`, `"found": 3`,
-		`{"instance": 2004, "network": 2, "mac": "04", "name": "2004", "vendor_id": 17, "vendor": "Honeywell", "model": "Spyder", "in_database": "$32004", "status": "registered"}`,
-		`{"instance": 2012, "network": 2, "mac": "0c", "name": "", "vendor_id": 17, "vendor": "Honeywell", "model": "Spyder", "in_database": null, "status": "new"}`,
+		`{"instance": 2004, "network": 2, "mac": "04", "mac_display": "4", "name": "2004", "vendor_id": 17, "vendor": "Honeywell", "model": "Spyder", "objects": 46, "in_database": "$32004", "status": "registered"}`,
+		`{"instance": 2012, "network": 2, "mac": "0c", "mac_display": "12", "name": "", "vendor_id": 17, "vendor": "Honeywell", "model": "Spyder", "objects": null, "in_database": null, "status": "new"}`,
 		`"status": "address_differs", "database_address": "2:09"`,
 		`"not_answering": [{"name": "$32010", "instance": 2010, "address": "2:0a"}]`,
 	} {
@@ -178,5 +180,18 @@ func TestDiscoverReadbackJobStates(t *testing.T) {
 	}
 	if o, v := discReadback(t, discoverStation("success"), nil); v != "unverified" || !strings.Contains(js(t, o), "no job ORD") {
 		t.Errorf("null reply: %s %s", v, js(t, o))
+	}
+}
+
+// The MAC is also given as Workbench's Device Manager shows it: an MS/TP station number in
+// decimal ("0f" is 15), a BACnet/IP address as a.b.c.d:port, anything else as the station's octets.
+func TestDiscoverMacDisplayLikeWorkbench(t *testing.T) {
+	for _, tc := range []struct{ kind, mac, want string }{
+		{"3", "0f", "15"}, {"", "0f", "15"}, {"2", "c0 a8 01 0a ba c0", "192.168.1.10:47808"},
+		{"", "c0 a8 01 0a ba c0", "192.168.1.10:47808"}, {"1", "00 11 22 33 44 55", "00 11 22 33 44 55"},
+	} {
+		if got := writeops.MacDisplay(tc.kind, tc.mac); got != tc.want {
+			t.Errorf("type %q mac %q: %q, want %q", tc.kind, tc.mac, got, tc.want)
+		}
 	}
 }

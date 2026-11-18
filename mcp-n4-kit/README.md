@@ -1193,7 +1193,10 @@ Tool rules:
   station waits `wait_seconds` (default 10) for I-Am replies, reads each device (about 8
   ReadProperty requests) and keeps the rows as children of a transient
   `BacnetDiscoverDevicesJob<N>` under `Services/JobService`; the read-back waits for that job
-  (`wait_seconds` + 30 s) and lists each device as `registered` (same instance and address
+  (`wait_seconds` + 30 s) and lists each device (with `mac` as the station stores it, lowercase
+  hex octets, plus `mac_display` as Workbench's "MAC Addr" column shows it: an MS/TP station
+  number in decimal, `0f` is `15`, a BACnet/IP address as `a.b.c.d:port`; and `objects`, the
+  objectList length of Workbench's "Objects" column, null when unread) as `registered` (same instance and address
   as a device under the network), `new`, or `address_differs` (a registered instance
   answering from another address: that I-Am also rewrites the device's address, B1165), and
   the registered devices that did not answer under `not_answering`. No device is added; it is

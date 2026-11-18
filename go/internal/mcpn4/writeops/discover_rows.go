@@ -128,8 +128,9 @@ func discoveredRow(nodes *pyjson.Object, name string, known []knownDevice) *pyjs
 	network, _ := wholeNumberText(sub("networkNumber"))
 	mac := pyjson.Str(sub("macAddress"))
 	vendor, _ := wholeNumberText(val("vendorId"))
-	row := obj("instance", inst, "network", network, "mac", mac, "name", unescapeSlot(strOr(val("deviceName"))),
-		"vendor_id", vendor, "vendor", strOr(val("vendorName")), "model", strOr(val("modelName")))
+	row := obj("instance", inst, "network", network, "mac", mac, "mac_display", MacDisplay(strOr(sub("addressType")), mac),
+		"name", unescapeSlot(strOr(val("deviceName"))), "vendor_id", vendor, "vendor", strOr(val("vendorName")),
+		"model", strOr(val("modelName")), "objects", objectCount(val("listSize")))
 	row.Set("in_database", nil)
 	row.Set("status", "new")
 	address := strconv.Itoa(network) + ":" + mac
