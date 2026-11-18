@@ -18,8 +18,8 @@ import (
 const sessionLostText = "Could not find Server Session"
 
 const (
-	msgSessionLost      = "the station dropped this server's BOX session (" + sessionLostText + ")"
-	msgSessionLostRedo  = msgSessionLost + "; mcp-n4 reconnected with the last n4_connect, which invalidates every confirmation token: " +
+	msgSessionLost     = "the station dropped this server's BOX session (" + sessionLostText + ")"
+	msgSessionLostRedo = msgSessionLost + "; mcp-n4 reconnected with the last n4_connect, which invalidates every confirmation token: " +
 		"ops sent before the loss may have applied, so check n4_list_batches and read the targets back, then redo the dry run and execute with its new token"
 	msgSessionLostRetry = msgSessionLost + "; reconnecting with the last n4_connect failed: "
 )
