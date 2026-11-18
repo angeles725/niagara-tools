@@ -999,7 +999,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
 restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
@@ -1198,6 +1198,16 @@ Tool rules:
   answering from another address: that I-Am also rewrites the device's address, B1165), and
   the registered devices that did not answer under `not_answering`. No device is added; it is
   a write because it puts traffic on the field network. No inverse.
+- `n4_discover_points(device_ord, wait_seconds?)` runs the BACnet point discovery Workbench's
+  Point Manager runs on one device (give the device or its `points` extension, a vendor
+  subclass such as the Spyder's included), through the hidden `submitPointDiscoveryJob`.
+  The station reads the device's `objectList`, then each object's name, primary value and
+  description; the read-back waits for the job (`wait_seconds`, default 120, plus 30 s) and
+  lists one row per object (`object_name`, `object_id`, `value`, `description`), with
+  `in_database` naming the point that already proxies that object under the extension
+  (folders included) or null. Rows the station could not read (`object_name` `--`, common
+  before the device's I-Am was heard) are flagged `unread` and counted, with a hint to run
+  `n4_discover_devices` first. No point is added. No inverse.
 - `n4_create_component` follows a station rename on collision (the inverse and the
   read-back use the assigned name). A display name the station can only store escaped (a
   leading digit, a space) is created under its SlotPath escape and the plan says so:

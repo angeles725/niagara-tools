@@ -26,7 +26,7 @@ Branch: feat/mcpn4-rename-spyder-register (worktree niagara-tools-worktrees/mcpn
 | T7 | S3 | explore → probe → inline | map done (L9), read-only probe done (L10); next: PoC on 2012 after the operator picks the source app and authorises the download |
 | T6 | S2 R7 R8, S4.8 | inline | todo: docs + launcher comment | |
 | T8 | S4.2 | inline | done: jsonrpc/session_loss.go reconnects once with the last n4_connect args; read/dry run retried, execution answers redo-the-dry-run (ops may have applied) | RED 4 tests; GREEN 5 tests; go test ./internal/mcpn4/... ./cmd/mcp-n4/... ok |
-| T9 | S4.3 | inline | todo: n4_discover_points + add points from rows | |
+| T9 | S4.3 | inline | n4_discover_points done (plan + rows + in_database + unread); next: live certify on $32008, then add points from rows | RED build fail; GREEN 2 tests; full suite ok |
 | T10 | S4.5 | inline | todo: typed struct args for Spyder actions, explicit device allow-list | |
 | T11 | S4.6 | inline | todo: subscribe/poll a fresh proxy point | |
 | T12 | S4.7 | inline (client module + mcp-n4) | todo: per-minisplit schedules | |

@@ -2747,6 +2747,45 @@
    "needs_session": false
   },
   {
+   "name": "n4_discover_points",
+   "description": "Run the BACnet point discovery Workbench's Point Manager runs on one device, through its points extension's hidden submitPointDiscoveryJob action: the station reads the device's objectList, then each object's name, primary value and description. Waits for the job and lists one row per object (object_name, object_id, value, description), with in_database naming the point that already proxies that object under the extension (folders included) or null, and unread rows (object_name \"--\", common before the device's I-Am was heard) counted. No point is added; the job stays under Services/JobService. It puts ReadProperty traffic on the field network and needs admin invoke rights. No inverse. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "device_ord": {
+      "type": "string",
+      "description": "ORD of the BACnet device or of its points extension, e.g. station:|slot:/Drivers/BacnetNetwork/$32008"
+     },
+     "wait_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 120,
+      "description": "Seconds to wait for the discovery job to end"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "device_ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_remove_component",
    "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. The dry run scans the write-scope prefix that holds parent_ord (or link_scan_ord) to depth 6 for links from the subtree into components outside it; when it finds any it refuses unless acknowledge_links is true, and then records them so n4_rollback re-creates them. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
