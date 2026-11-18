@@ -140,9 +140,9 @@ func declared(line string) string {
 	const python = "baja:StatusNumeric, baja:StatusBoolean\""
 	line = strings.ReplaceAll(line, python, "baja:StatusNumeric, baja:StatusBoolean, baja:Format, baja:RelTime, baja:Integer, baja:Simple\"")
 	// declared difference: n4_invoke_action also allows ping (Modbus writes, 2026-11-12) and the
-	// Spyder writeDeviceInstance (Spyder registration, 2026-11-17).
+	// Spyder writeDeviceInstance (Spyder registration, 2026-11-17) and modelChange (2026-11-18).
 	return strings.ReplaceAll(line, "(allowed: set, active, inactive, auto)",
-		"(allowed: set, active, inactive, auto, ping, writeDeviceInstance)")
+		"(allowed: set, active, inactive, auto, ping, writeDeviceInstance, modelChange)")
 }
 
 // outcome classifies a Python result line, so the corpus provably reaches every branch class.

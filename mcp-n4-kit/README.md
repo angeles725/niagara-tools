@@ -1178,7 +1178,14 @@ Tool rules:
   every I-Am of that instance would rebind it), then invoke `writeDeviceInstance`, one unit
   at a time. Its read-back asks the controller its instance (`getOnlineDeviceInstanceNumber`)
   and reports `configured_instance` and `online_instance`: equal is `verified`, different is
-  `mismatch`, and a failed question stays `unverified` with a hint. `emergency*`, `save` and `restart` are refused; saving has its own tool,
+  `mismatch`, and a failed question stays `unverified` with a hint. `modelChange` is accepted
+  only on a Spyder, with `arg` = the model display name (`PUB6438S`, `PUB1012S`, ...): it is
+  the Workbench Controller Summary "Device Model" save (the station sets the configured model
+  and `compiledFwModel`, drops unsupported Sylk devices, reassigns the program's terminals and
+  marks it modified; nothing reaches the controller until a download). Its inverse changes
+  back; the read-back checks the model and `compiledFwModel` (the model's latest model id).
+  Run `n4_discover_points` first: its `hardware` block names the model the controller really
+  is. `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
 - `n4_rename_component(items: [{parent_ord, name, new_name}])` renames up to 50 dynamic
   slots in one batch (the station's RenameOp). The plan refuses a missing source, a taken

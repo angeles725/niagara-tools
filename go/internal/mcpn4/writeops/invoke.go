@@ -12,7 +12,7 @@ import (
 // AllowedActions is ALLOWED_ACTIONS: the actions n4_invoke_action may call in this version. ping
 // (a driver network, device or point device ext checks its device; no setting changes) was added
 // after the Python port; the differential declares that difference.
-var AllowedActions = []string{"set", "active", "inactive", "auto", "ping", writeDeviceInstance}
+var AllowedActions = []string{"set", "active", "inactive", "auto", "ping", writeDeviceInstance, modelChange}
 
 // writeDeviceInstance is the Honeywell BACnet Spyder action that writes the component's
 // config/deviceObject/objectId into the controller found at the component's address (MS/TP
@@ -87,6 +87,9 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	arg := pyjson.NewObject()
 	arg.Set("h", h)
 	arg.Set("a", action)
+	if action == modelChange {
+		return modelChangePlan(ordText, h, nodes, args)
+	}
 	_, hasArg := args.Get("arg")
 	_, hasArgType := args.Get("arg_type")
 	if action != "set" {
@@ -172,6 +175,9 @@ func invokeReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies
 	if action != "set" {
 		requested := pyjson.NewObject()
 		requested.Set("action", action)
+		if action == modelChange {
+			return modelChangeReadback(c, str(args, "ord"), p, replies[0])
+		}
 		if action == writeDeviceInstance {
 			ordText := str(args, "ord")
 			h, _ := p.Targets.Get(ordText)
