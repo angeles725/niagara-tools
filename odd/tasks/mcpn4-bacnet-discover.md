@@ -25,7 +25,7 @@ Branch: feat/mcpn4-rename-spyder-register (worktree niagara-tools-worktrees/mcpn
 | T5 | S2 R3 | inline | todo | |
 | T7 | S3 | explore → probe → inline | map done (L9), read-only probe done (L10); next: PoC on 2012 after the operator picks the source app and authorises the download |
 | T6 | S2 R7 R8, S4.8 | inline | todo: docs + launcher comment | |
-| T8 | S4.2 | inline | todo: session-loss auto-reconnect (reads) and clear redo-the-dry-run error (writes) | |
+| T8 | S4.2 | inline | done: jsonrpc/session_loss.go reconnects once with the last n4_connect args; read/dry run retried, execution answers redo-the-dry-run (ops may have applied) | RED 4 tests; GREEN 5 tests; go test ./internal/mcpn4/... ./cmd/mcp-n4/... ok |
 | T9 | S4.3 | inline | todo: n4_discover_points + add points from rows | |
 | T10 | S4.5 | inline | todo: typed struct args for Spyder actions, explicit device allow-list | |
 | T11 | S4.6 | inline | todo: subscribe/poll a fresh proxy point | |
@@ -46,3 +46,4 @@ Branch: feat/mcpn4-rename-spyder-register (worktree niagara-tools-worktrees/mcpn
 - L11 (2026-11-18 live, client B station, installed 7b694d92): n4_discover_devices dry run then execute, batch 7856f3d6, verdict verified: job BacnetDiscoverDevicesJob3 success, found 9 (2004-2009, 2012-2014, all registered, net 2), not_answering [$32010 2:0a]. The accepted reply carried the baja:Ord as expected.
 - L12: BOX has a server-side copy: BTransferChannel case "copy" -> util/PasteRecord mark.copyTo (box-rt), the same Mark copy Workbench uses; candidate route for the Spyder ControlProgram (links included), to probe before any tool. n4_copy_component cannot carry it (links are not copied, CopyDepth bound).
 - L13 (2026-11-18, user): "Si tambien agregalo: [the 8-row table] , pero primero vamos a checar otra vez el discover, haz discover para ver que spyders salen". Discover rerun: batch 4ccc11d8 verified, the same 9 found, 2010 not answering; one more "Could not find Server Session" before it (4th today, T8 evidence).
+- L14: S4.8 correction: the launcher comment already named the _PASSWORD variable; the "_PASS" seen earlier was produced by my own masking filter, and the probe's 401 was the probe reading the wrong variable. No launcher change needed.

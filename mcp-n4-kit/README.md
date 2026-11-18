@@ -670,7 +670,13 @@ default the reader could not decode, which is left out; the read itself never fa
 `n4_rollback` read-back counts an omitted frozen property as its declared default; when the
 contract cannot be read the read-back reports `readback_error` instead of a `mismatch`. One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
-first, so a failed reconnect leaves no session). `n4_describe_session` lists the
+first, so a failed reconnect leaves no session). When the station drops the BOX session
+(every call then answers `Could not find Server Session`, common behind a tunnel), the server
+reconnects once with the arguments of the last `n4_connect` that succeeded (its identity,
+credential and lock-out checks run again) and retries a read or a dry run once; an execution
+(`dry_run=false`) is not retried, because its token belonged to the lost session: the reply says
+so, ops sent before the loss may have applied, so check `n4_list_batches`, read the targets
+back and redo the dry run. `n4_describe_session` lists the
 configured station names and, with or without a session, a `server` block: `build` (the git
 revision the binary was built from, `+modified` for a dirty tree, `unknown` without a VCS
 stamp), `built_at` (the commit time, else the binary's mtime at start), `started_at` and
