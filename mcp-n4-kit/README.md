@@ -1210,7 +1210,12 @@ Tool rules:
   `in_database` naming the point that already proxies that object under the extension
   (folders included) or null. Rows the station could not read (`object_name` `--`, common
   before the device's I-Am was heard) are flagged `unread` and counted, with a hint to run
-  `n4_discover_devices` first. No point is added. No inverse.
+  `n4_discover_devices` first. The station's placeholder for a missing description
+  (`Property:Unknown Property:...`) is returned as an empty string. On a Honeywell Spyder the
+  `hardware` block names its model from `analogValue:0` `AV_HardwareID` (hw_id 33 `PUB6438S`,
+  54 `PUB1012S`, ... with the I/O it supports): the model the station's download compares,
+  so a program for another model is caught before a download; `hardware` is null on other
+  devices. Live 2026-11-18: a PUB6438S Spyder lists 87 objects. No point is added. No inverse.
 - `n4_create_component` follows a station rename on collision (the inverse and the
   read-back use the assigned name). A display name the station can only store escaped (a
   leading digit, a space) is created under its SlotPath escape and the plan says so:

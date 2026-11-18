@@ -41,6 +41,7 @@ func pointsReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _
 		return nil, nil, nil, "", err
 	}
 	rows, unread := []any{}, 0
+	var hardware any
 	for _, name := range box.Children(nodes, "").Keys() {
 		if !strings.Contains(pyjson.Str(get(box.Node(nodes, name), "t")), "DiscoveryPoint") {
 			continue
@@ -48,7 +49,10 @@ func pointsReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _
 		val := func(slot string) any { return box.ChildValue(box.Children(nodes, name), slot, nil) }
 		id := strOr(val("objectId"))
 		row := obj("object_name", strOr(val("objectName")), "object_id", id, "value", val("value"),
-			"description", strOr(val("description")), "in_database", nil)
+			"description", cleanDescription(strOr(val("description"))), "in_database", nil)
+		if hw := spyderHardware(strOr(val("objectName")), id, val("value")); hw != nil {
+			hardware = hw
+		}
 		if path, ok := known[id]; ok {
 			row.Set("in_database", path)
 		}
@@ -63,6 +67,7 @@ func pointsReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _
 	if unread > 0 {
 		observed.Set("hint", "unread rows: the device may not have sent an I-Am yet; run n4_discover_devices, then discover the points again")
 	}
+	observed.Set("hardware", hardware)
 	observed.Set("points", rows)
 	return requested, replies[0], observed, "verified", nil
 }

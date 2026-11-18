@@ -96,3 +96,72 @@ func TestDiscoverPointsReadbackRows(t *testing.T) {
 		}
 	}
 }
+
+// A Honeywell Spyder publishes its hardware id as analogValue:0 "AV_HardwareID" (live 2008: 33);
+// the read-back names the model the station's download check compares (hw_id 33 PUB6438S, 54
+// PUB1012S) with its I/O, and drops the "Property:Unknown Property:" text the station puts in
+// place of a missing description.
+func TestDiscoverPointsNamesTheSpyderHardwareModel(t *testing.T) {
+	c := ptsStation("success")
+	job, _ := c.nodes.Get(ptsJob)
+	jo := job.(*pyjson.Object)
+	for _, kv := range [][2]any{
+		{"dc3", obj("h", "rdc3", "t", "bacnet:DiscoveryPoint")},
+		{"dc3/objectName", obj("t", "baja:String", "v", "AV_HardwareID")},
+		{"dc3/objectId", obj("t", "bacnet:BacnetObjectIdentifier", "v", "analogValue:0")},
+		{"dc3/value", obj("t", "baja:Double", "v", "54.0")},
+		{"dc3/description", obj("t", "baja:String", "v", "Property:Unknown Property:analogValue:0 [description]")},
+	} {
+		jo.Set(kv[0].(string), kv[1])
+	}
+	args := obj("device_ord", ptsDevice)
+	p, err := writeops.DiscoverPoints.PlanWith(c, args, clock(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reply := obj("t", "baja:Ord", "v", "slot:/Services/JobService/BacnetDiscoverPointsJob2")
+	_, _, observed, _, err := writeops.DiscoverPoints.Readback(c, args, p, []any{reply}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := js(t, observed)
+	for _, want := range []string{
+		`"hardware": {"hw_id": 54, "model": "PUB1012S", "io": "1 Universal Inputs, 1 Modulating Outputs, 2 Binary Outputs"}`,
+		`"object_name": "AV_HardwareID", "object_id": "analogValue:0", "value": "54.0", "description": ""`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %s in %s", want, got)
+		}
+	}
+	if !strings.Contains(js(t, mustReadback(t, ptsStation("success"))), `"hardware": null`) {
+		t.Errorf("a device without AV_HardwareID must report hardware null")
+	}
+}
+
+func mustReadback(t *testing.T, c *loads) any {
+	t.Helper()
+	args := obj("device_ord", ptsDevice)
+	p, err := writeops.DiscoverPoints.PlanWith(c, args, clock(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, o, _, err := writeops.DiscoverPoints.Readback(c, args, p, []any{obj("v", "slot:/Services/JobService/BacnetDiscoverPointsJob2")}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return o
+}
+
+// The micro models name the same object differently (live 2012, a PUB1012S: "AV0MObjHardwareI" = 54).
+func TestDiscoverPointsHardwareOnAMicroSpyder(t *testing.T) {
+	c := ptsStation("success")
+	job, _ := c.nodes.Get(ptsJob)
+	jo := job.(*pyjson.Object)
+	jo.Set("dc3", obj("h", "rdc3", "t", "bacnet:DiscoveryPoint"))
+	jo.Set("dc3/objectName", obj("t", "baja:String", "v", "AV0MObjHardwareI"))
+	jo.Set("dc3/objectId", obj("t", "bacnet:BacnetObjectIdentifier", "v", "analogValue:0"))
+	jo.Set("dc3/value", obj("t", "baja:Double", "v", "54.0"))
+	if got := js(t, mustReadback(t, c)); !strings.Contains(got, `"hardware": {"hw_id": 54, "model": "PUB1012S"`) {
+		t.Errorf("observed %s", got)
+	}
+}
