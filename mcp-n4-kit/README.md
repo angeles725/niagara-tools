@@ -698,7 +698,13 @@ default the reader could not decode, which is left out; the read itself never fa
 `n4_rollback` read-back counts an omitted frozen property as its declared default; when the
 contract cannot be read the read-back reports `readback_error` instead of a `mismatch`. One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
-first, so a failed reconnect leaves no session). `n4_describe_session` lists the
+first, so a failed reconnect leaves no session). When the station drops the BOX session
+(every call then answers `Could not find Server Session`, common behind a tunnel), the server
+reconnects once with the arguments of the last `n4_connect` that succeeded (its identity,
+credential and lock-out checks run again) and retries a read or a dry run once; an execution
+(`dry_run=false`) is not retried, because its token belonged to the lost session: the reply says
+so, ops sent before the loss may have applied, so check `n4_list_batches`, read the targets
+back and redo the dry run. `n4_describe_session` lists the
 configured station names and, with or without a session, a `server` block: `build` (the git
 revision the binary was built from, `+modified` for a dirty tree, `unknown` without a VCS
 stamp), `built_at` (the commit time, else the binary's mtime at start), `started_at` and
@@ -1021,7 +1027,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
 restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
@@ -1129,7 +1135,9 @@ server never chmods a directory it did not create.
 Tool rules:
 
 - `n4_set_slot` writes Status slots whole (value plus status) and refuses a path
-  ending in `/value` or `/status`. A nested slot (`grp/sp`) is loaded one level deeper
+  ending in `/value` or `/status`. A `bacnet:BacnetOctetString` (a Spyder's MS/TP
+  `address/macAddress`) is read back by its octets: the station stores `0C` as `0c` and
+  `C0A80101BAC0` as `c0 a8 01 01 ba c0`, and both are `verified`. A nested slot (`grp/sp`) is loaded one level deeper
   so its previous value is the real one. A frozen property whose value equals its
   declared default (whatever its type declares, e.g. a 10 s `RelTime`, not only 0, `false`
   or an empty string) is omitted by
@@ -1204,14 +1212,83 @@ Tool rules:
   dynamic slot, a frozen property and a frozen action (set, save, `config.bog`,
   rollback); on another build, try it on a scratch slot first.
   The station applies it only for a user with admin write on the component.
-- `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto` and `ping`. `set`
+- `n4_invoke_action` allows only `set`, `active`, `inactive`, `auto`, `ping` and
+  `writeDeviceInstance`. `set`
   restores the previous `fallback` as its inverse; the others have none and the plan
   says so. `ping` on a driver network, device or point device ext asks the driver to
-  check the device and changes no setting.
+  check the device and changes no setting. `writeDeviceInstance` is accepted only on a
+  `honeywellBacnetSpyder:BacnetSpyder`: it writes the component's
+  `config/deviceObject/objectId` into the controller at the component's `address`
+  (MS/TP network and MAC), so it renumbers a Spyder that still has a duplicate factory
+  instance (e.g. three units at `device:9999`). Register a new Spyder by creating the
+  component already at its final instance and address (never at the duplicate instance:
+  every I-Am of that instance would rebind it), then invoke `writeDeviceInstance`, one unit
+  at a time. Its read-back asks the controller its instance (`getOnlineDeviceInstanceNumber`)
+  and reports `configured_instance` and `online_instance`: equal is `verified`, different is
+  `mismatch`, and a failed question stays `unverified` with a hint. `modelChange` is accepted
+  only on a Spyder, with `arg` = the model display name (`PUB6438S`, `PUB1012S`, ...): it is
+  the Workbench Controller Summary "Device Model" save (the station sets the configured model
+  and `compiledFwModel`, drops unsupported Sylk devices, reassigns the program's terminals and
+  marks it modified; nothing reaches the controller until a download). Its inverse changes
+  back; the read-back checks the model and `compiledFwModel` (the model's latest model id).
+  Run `n4_discover_points` first: its `hardware` block names the model the controller really
+  is. `spyderDownload` is accepted only on a Spyder, with `arg` = `full` or `quick`: the
+  station validates and compiles the program, checks the controller's model (a mismatch is
+  refused before any write), writes the program and restarts the controller, which stops
+  controlling until the job ends (about 2 min per unit on MS/TP; download one unit at a time
+  on a shared bus). No inverse. The read-back waits up to 600 s for the job and returns
+  `job`, `job_state` and the job's `log` lines: `success` is `verified`, `failed` or
+  `canceled` is `mismatch`, still running is `unverified`; a successful log without
+  "Compiling the logic" adds a `hint`: the controller got the program compiled earlier.
+  `compile` (Spyder only, no `arg`) rebuilds the compiled program (a CompilationJob; nothing
+  reaches the controller) with the same read-back. A Spyder's program is a `ControlProgram`
+  the station loads on demand and unloads later. Renaming an input point does not rename its
+  BACnet object: set the object's `objectName` (`.../BacnetNIFolder/<slot>`), leave the
+  `BacnetNIFolder` slot name as it is (renaming that slot made the compiler fail live), then
+  `compile` and `spyderDownload`: an `objectName` edit does not mark the program modified, so
+  a download alone sends the old object name.
   `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
+- `n4_rename_component(items: [{parent_ord, name, new_name}])` renames up to 50 dynamic
+  slots in one batch (the station's RenameOp). The plan refuses a missing source, a taken
+  or repeated target, a source renamed twice and an unchanged name; the inverse renames
+  back in reverse order and the read-back checks every new name is present and every old
+  one gone. Links and history extensions stay with the component; a history id built from
+  `%parent.name%` or `%name%` takes the new name when it is next resolved.
+- `n4_discover_devices(network_ord, networks?, low_instance?, high_instance?, wait_seconds?)`
+  runs the BACnet device discovery Workbench's Device Manager runs, through the network's
+  hidden `submitDeviceManagerJob` action (admin invoke). Without `networks` it is the
+  Workbench "Send Global": one Who-Is to the global broadcast address, every network. The
+  station waits `wait_seconds` (default 20; Workbench offers 10, which missed MS/TP Spyders) for I-Am replies, reads each device (about 8
+  ReadProperty requests) and keeps the rows as children of a transient
+  `BacnetDiscoverDevicesJob<N>` under `Services/JobService`; the read-back waits for that job
+  (`wait_seconds` + 30 s) and lists each device (with `mac` as the station stores it, lowercase
+  hex octets, plus `mac_display` as Workbench's "MAC Addr" column shows it: an MS/TP station
+  number in decimal, `0f` is `15`, a BACnet/IP address as `a.b.c.d:0xPORT` (port in hex, `192.168.1.10:0xBAC0`, as `BBacnetAddress.bytesToString` prints it); and `objects`, the
+  objectList length of Workbench's "Objects" column, null when unread) as `registered` (same instance and address
+  as a device under the network), `new`, or `address_differs` (a registered instance
+  answering from another address: that I-Am also rewrites the device's address, B1165), and
+  the registered devices that did not answer under `not_answering`. No device is added; it is
+  a write because it puts traffic on the field network. No inverse.
+- `n4_discover_points(device_ord, wait_seconds?)` runs the BACnet point discovery Workbench's
+  Point Manager runs on one device (give the device or its `points` extension, a vendor
+  subclass such as the Spyder's included), through the hidden `submitPointDiscoveryJob`.
+  The station reads the device's `objectList`, then each object's name, primary value and
+  description; the read-back waits for the job (`wait_seconds`, default 120, plus 30 s) and
+  lists one row per object (`object_name`, `object_id`, `value`, `description`), with
+  `in_database` naming the point that already proxies that object under the extension
+  (folders included) or null. Rows the station could not read (`object_name` `--`, common
+  before the device's I-Am was heard) are flagged `unread` and counted, with a hint to run
+  `n4_discover_devices` first. The station's placeholder for a missing description
+  (`Property:Unknown Property:...`) is returned as an empty string. On a Honeywell Spyder the
+  `hardware` block names its model from `analogValue:0` `AV_HardwareID` (hw_id 33 `PUB6438S`,
+  54 `PUB1012S`, ... with the I/O it supports): the model the station's download compares,
+  so a program for another model is caught before a download; `hardware` is null on other
+  devices. Live 2026-11-18: a PUB6438S Spyder lists 87 objects. No point is added. No inverse.
 - `n4_create_component` follows a station rename on collision (the inverse and the
-  read-back use the assigned name). With `proxy_ext` (a type spec such as
+  read-back use the assigned name). A display name the station can only store escaped (a
+  leading digit, a space) is created under its SlotPath escape and the plan says so:
+  `2012` is stored as `$32012`, like the devices Workbench adds. With `proxy_ext` (a type spec such as
   `modbusCore:ModbusClientNumericProxyExt`) the point is created with that driver
   extension in the same add, so a read-only field register is a `control:NumericPoint`
   that never writes; the read-back checks the extension type. A Modbus proxy created this

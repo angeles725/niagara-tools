@@ -66,6 +66,9 @@ type Server struct {
 	// Runbooks are served as MCP prompts and resources (runbooks.go); none: those methods and
 	// capabilities are absent.
 	Runbooks []Runbook
+	// lastConnect is the arguments of the last n4_connect that succeeded: a lost BOX session is
+	// reopened with them (session_loss.go).
+	lastConnect *pyjson.Object
 }
 
 // New returns the read-only server over reg: the read tools are listed and callable, and a

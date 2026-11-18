@@ -35,3 +35,16 @@ func simpleBSON(t string, encoded any) *pyjson.Object {
 	o.Set("v", encoded)
 	return o
 }
+
+// octetStringType is a BACnet octet string: BBacnetOctetString.encodeToString writes it as
+// lowercase hex octets separated by spaces, so "0C" is stored as "0c".
+const octetStringType = "bacnet:BacnetOctetString"
+
+// sameOctets is true when two octet-string texts hold the same octets: hex case and the spaces
+// between octets do not count.
+func sameOctets(a, b any) bool {
+	x, ok1 := a.(string)
+	y, ok2 := b.(string)
+	norm := func(s string) string { return strings.ToLower(strings.Join(strings.Fields(s), "")) }
+	return ok1 && ok2 && norm(x) == norm(y)
+}

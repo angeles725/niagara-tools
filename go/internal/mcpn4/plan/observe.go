@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -75,6 +76,36 @@ func Name(label string, value any) (string, error) {
 			pyjson.Repr(value))
 	}
 	return s, nil
+}
+
+// NewName is Name for a component about to be created, plus the display names a station can only
+// store escaped: printable ASCII other than '/', '|', '$' and "..", escaped the way SlotPath.escape
+// does (a leading digit and every character outside letters, digits and underscore become $ and
+// two hex digits: "2012" is stored as "$32012", "Room Temp" as "Room$20Temp"). It returns the
+// stored name.
+func NewName(label string, value any) (string, error) {
+	if s, err := Name(label, value); err == nil {
+		return s, nil
+	}
+	s, ok := value.(string)
+	if !ok || s == "" || s == ".." || strings.ContainsAny(s, "/|$") {
+		return Name(label, value)
+	}
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if ch < 0x20 || ch > 0x7e {
+			return Name(label, value)
+		}
+		letter := ch == '_' || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
+		digit := ch >= '0' && ch <= '9'
+		if letter || (digit && i > 0) {
+			b.WriteByte(ch)
+		} else {
+			fmt.Fprintf(&b, "$%02x", ch)
+		}
+	}
+	return b.String(), nil
 }
 
 // escapedNamePattern is a slot name as a station stores it: letters, digits, underscore and

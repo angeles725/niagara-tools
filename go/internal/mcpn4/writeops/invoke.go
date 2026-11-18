@@ -12,11 +12,23 @@ import (
 // AllowedActions is ALLOWED_ACTIONS: the actions n4_invoke_action may call in this version. ping
 // (a driver network, device or point device ext checks its device; no setting changes) was added
 // after the Python port; the differential declares that difference.
-var AllowedActions = []string{"set", "active", "inactive", "auto", "ping"}
+var AllowedActions = []string{"set", "active", "inactive", "auto", "ping", writeDeviceInstance, modelChange, spyderDownload, spyderCompile}
+
+// writeDeviceInstance is the Honeywell BACnet Spyder action that writes the component's
+// config/deviceObject/objectId into the controller found at the component's address (MS/TP
+// network and MAC), so it renumbers a controller that still has a duplicate factory instance
+// (BBacnetSpyder.doWriteDeviceInstance; niagara-research B1165). Only spyderType may call it.
+const (
+	writeDeviceInstance = "writeDeviceInstance"
+	spyderType          = "honeywellBacnetSpyder:BacnetSpyder"
+	msgWriteInstance    = "no inverse: writeDeviceInstance writes config/deviceObject/objectId into the controller " +
+		"at the component's address (field write). To undo, set objectId back and invoke it again. " +
+		"The read-back asks the controller its instance (getOnlineDeviceInstanceNumber) and compares it with objectId"
+)
 
 // InvokeAction is n4_invoke_action: set (its previous fallback is the inverse) or a state
 // change (no inverse, unverified).
-var InvokeAction = plan.Impl{ScopeOrds: ordArg, Plan: invokePlan, Readback: invokeReadback}
+var InvokeAction = plan.Impl{ScopeOrds: ordArg, Plan: invokePlan, PlanWith: invokePlanWith, Readback: invokeReadback}
 
 // fallbackTypes is _FALLBACK and argTypes _ARG_TYPES.
 var (
@@ -75,6 +87,14 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	arg := pyjson.NewObject()
 	arg.Set("h", h)
 	arg.Set("a", action)
+	switch action {
+	case modelChange:
+		return modelChangePlan(ordText, h, nodes, args)
+	case spyderDownload:
+		return spyderDownloadPlan(ordText, h, nodes, args)
+	case spyderCompile:
+		return spyderCompilePlan(ordText, h, nodes, args)
+	}
 	_, hasArg := args.Get("arg")
 	_, hasArgType := args.Get("arg_type")
 	if action != "set" {
@@ -82,8 +102,15 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 			return nil, plan.ToolError("action " + pyjson.StrRepr(action) + " takes no arg")
 		}
 		note := "no inverse: " + action + " changes the control state and is not restored automatically"
-		if action == "ping" {
+		switch action {
+		case "ping":
 			note = "no inverse: ping only asks the driver to check the device and changes no setting"
+		case writeDeviceInstance:
+			if t := rootType(nodes); t != spyderType {
+				return nil, plan.ToolError("action " + pyjson.StrRepr(action) + " needs a " + spyderType +
+					", got " + pyjson.StrRepr(t) + " at " + ordText)
+			}
+			note = msgWriteInstance
 		}
 		return &plan.Planned{Ops: []any{invokeOp(arg)}, Inverse: []any{}, Targets: targets, Notes: []any{note}}, nil
 	}
@@ -123,6 +150,15 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		Notes: []any{}, Targets: targets, Data: invokeData{value, fbType}}, nil
 }
 
+// rootType is the type of the loaded component itself ("" when the station did not send it).
+func rootType(nodes *pyjson.Object) string {
+	if root := box.Node(nodes, ""); root != nil {
+		t, _ := get(root, "t").(string)
+		return t
+	}
+	return ""
+}
+
 func allowed(action string) bool {
 	for _, a := range AllowedActions {
 		if a == action {
@@ -137,27 +173,4 @@ func invokeOp(arg *pyjson.Object) *pyjson.Object {
 	o.Set("ssc", "invokeAction")
 	o.Set("arg", arg)
 	return o
-}
-
-func invokeReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, _ []any) (any, any, any, string, error) {
-	action := str(args, "action")
-	if action != "set" {
-		requested := pyjson.NewObject()
-		requested.Set("action", action)
-		return requested, replies[0], nil, "unverified", nil
-	}
-	_, nodes, err := plan.Handle(c, str(args, "ord"), 2)
-	if err != nil {
-		return nil, nil, nil, "", err
-	}
-	d := p.Data.(invokeData)
-	o, err := plan.Observe(nodes, "fallback", d.fbType)
-	if err != nil {
-		return nil, nil, nil, "", err
-	}
-	got, _ := o.(*pyjson.Object).Get("value")
-	observed, requested := pyjson.NewObject(), pyjson.NewObject()
-	observed.Set("fallback", got)
-	requested.Set("fallback", d.value)
-	return requested, replies[0], observed, verdict(observed, requested), nil
 }

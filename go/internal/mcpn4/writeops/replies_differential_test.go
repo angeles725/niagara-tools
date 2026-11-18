@@ -116,6 +116,11 @@ func TestInverseRecoverAndReadbackDifferentialPython(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if escapedNameDeclared(c.(*pyjson.Object), sc.Text()) {
+			kinds["declared"]++
+			n++
+			continue
+		}
 		got, _ := pyjson.Marshal(goReplies(c.(*pyjson.Object)), pyjson.Options{})
 		if string(got) != sc.Text() {
 			t.Errorf("case %d %s:\n go     %s\n python %s", i, cases[i], got, sc.Text())
@@ -154,4 +159,23 @@ func replyOutcome(line string) string {
 		return "failed"
 	}
 	return "other"
+}
+
+// escapedNameDeclared is the declared difference of 2026-11-17: n4_create_component creates a
+// display name the station stores escaped (a leading digit, a space) under its SlotPath escape,
+// where the Python port refused every name that was not plain. Only such cases are skipped.
+func escapedNameDeclared(c *pyjson.Object, python string) bool {
+	if tool, _ := c.Get("tool"); tool != "n4_create_component" ||
+		!strings.Contains(python, `"name must be a plain slot name`) {
+		return false
+	}
+	args, _ := c.Get("args")
+	a, _ := args.(*pyjson.Object)
+	if a == nil {
+		return false
+	}
+	name, _ := a.Get("name")
+	_, plainErr := plan.Name("name", name)
+	_, newErr := plan.NewName("name", name)
+	return plainErr != nil && newErr == nil
 }

@@ -56,7 +56,7 @@ func wireSheet(v any) (*pyjson.Object, error) {
 
 func createPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	nameArg, _ := args.Get("name")
-	name, err := plan.Name("name", nameArg)
+	name, err := plan.NewName("name", nameArg)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +96,9 @@ func createPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, h)
 	notes := []any{"The station may rename on collision; the real inverse uses the assigned name."}
+	if display, _ := nameArg.(string); display != name {
+		notes = append(notes, fmt.Sprintf(msgNameEscaped, pyjson.StrRepr(display), pyjson.StrRepr(name)))
+	}
 	if licenceNote != "" {
 		notes = append(notes, licenceNote)
 	}

@@ -37,7 +37,7 @@ func TestCollisionRenameIsFollowedInReadBackAndInverse(t *testing.T) {
 
 func TestBadNameOrTypeIsRefused(t *testing.T) {
 	r := verifiedRig(t)
-	for _, bad := range []Args{{"name": "../x"}, {"name": "a b"}, {"name": ""}, {"type": "NoModule"},
+	for _, bad := range []Args{{"name": "../x"}, {"name": "a/b"}, {"name": "a$20b"}, {"name": ""}, {"type": "NoModule"},
 		{"type": "a:b:c"}} {
 		r.Srv.Err("n4_create_component", withArgs(createPump, bad))
 	}

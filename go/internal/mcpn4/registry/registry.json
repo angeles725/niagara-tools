@@ -1895,7 +1895,7 @@
      },
      "name": {
       "type": "string",
-      "description": "Requested slot name (the station may rename on collision)"
+      "description": "Requested slot name (the station may rename on collision). A display name the station stores escaped (a leading digit, a space) is created under its SlotPath escape and the plan says so: 2012 is stored as $32012"
      },
      "type": {
       "type": "string",
@@ -2563,7 +2563,7 @@
   },
   {
    "name": "n4_invoke_action",
-   "description": "Invoke a control action. Only set, active, inactive, auto, and ping (a driver network, device or point device ext checks its device; no setting changes) are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Invoke a control action. Only set, active, inactive, auto, and ping (a driver network, device or point device ext checks its device; no setting changes) and writeDeviceInstance (only on a honeywellBacnetSpyder:BacnetSpyder: writes the component's config/deviceObject/objectId into the controller at the component's address, renumbering a controller that still has a duplicate factory instance; no inverse; the read-back compares the instance the controller reports with objectId), modelChange (only on a honeywellBacnetSpyder:BacnetSpyder, arg = the model display name such as PUB1012S: the Workbench Controller Summary \"Device Model\" save; the station changes the configured model and compiledFwModel and reassigns the program's terminals, nothing reaches the controller until a download; partial inverse: back to the previous model, without the Sylk devices and terminal assignments the change dropped), spyderDownload (only on a honeywellBacnetSpyder:BacnetSpyder, arg = full or quick: validates, compiles and writes the station's program into the controller and restarts it, about 2 min on MS/TP; the station refuses a controller whose model differs from the configured one; no inverse; the read-back waits up to 600 s for the job and returns its state and log) and compile (only on a honeywellBacnetSpyder:BacnetSpyder, no arg: rebuilds the station's compiled program for the next download, needed after an edit that does not mark the program modified such as a BACnet objectName; nothing reaches the controller; the read-back waits for the CompilationJob) are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -2576,7 +2576,7 @@
       "description": "Action name"
      },
      "arg": {
-      "description": "Argument, only for set"
+      "description": "Argument: the value for set, the model display name (e.g. PUB1012S) for modelChange, full or quick for spyderDownload"
      },
      "arg_type": {
       "type": "string",
@@ -2674,6 +2674,163 @@
     "readOnlyHint": false,
     "destructiveHint": false,
     "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_rename_component",
+   "description": "Rename up to 50 dynamic slots (components) in one batch, each sent as the station's RenameOp (parent handle, old name, new name). The plan refuses a missing source, a target name already taken or requested twice, a source renamed twice and an unchanged name; links and history extensions stay with the component (a history id built from %parent.name% or %name% takes the new name when next resolved). The inverse renames back in reverse order; the read-back checks every new name is present and every old one gone. A frozen slot cannot be renamed (the station refuses). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+       "type": "object",
+       "properties": {
+        "parent_ord": {
+         "type": "string",
+         "description": "ORD of the component that holds the slot"
+        },
+        "name": {
+         "type": "string",
+         "description": "Current slot name as the station stores it (escapes allowed, e.g. Numeric$20Writable40001)"
+        },
+        "new_name": {
+         "type": "string",
+         "description": "New plain slot name (letters, digits, underscore)"
+        }
+       },
+       "required": [
+        "parent_ord",
+        "name",
+        "new_name"
+       ]
+      },
+      "description": "Renames to apply, in order"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "items"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_discover_devices",
+   "description": "Run the BACnet device discovery Workbench's Device Manager runs (Who-Is, by default the global broadcast to every network: the Workbench \"Send Global\") through the network's hidden submitDeviceManagerJob action, wait for the station's discovery job and list what answered: instance, network, MAC (mac as stored hex octets, mac_display as Workbench shows it: MS/TP station number in decimal, BACnet/IP as a.b.c.d:0xPORT with the port in hex, e.g. 192.168.1.10:0xBAC0), device name, vendor, model and object count, each marked registered (in the station database at the same address), new, or address_differs (a registered instance answering from another address; that I-Am also rewrites the device's address, B1165). Registered devices that did not answer are listed under not_answering. No device is added; the job is a transient child of Services/JobService. It puts Who-Is and ReadProperty traffic on the field network and needs admin invoke rights. No inverse. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "network_ord": {
+      "type": "string",
+      "description": "ORD of the bacnet:BacnetNetwork, e.g. station:|slot:/Drivers/BacnetNetwork"
+     },
+     "networks": {
+      "type": "array",
+      "items": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 65534
+      },
+      "description": "BACnet network numbers to ask; omitted or empty = global broadcast to every network (default)"
+     },
+     "low_instance": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4194302,
+      "default": 0,
+      "description": "Lowest device instance to ask for"
+     },
+     "high_instance": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4194302,
+      "default": 4194302,
+      "description": "Highest device instance to ask for"
+     },
+     "wait_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 60,
+      "default": 20,
+      "description": "Seconds the station waits for I-Am replies (waitResponseTime); 20 by default, as 10 missed MS/TP devices"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "network_ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_discover_points",
+   "description": "Run the BACnet point discovery Workbench's Point Manager runs on one device, through its points extension's hidden submitPointDiscoveryJob action: the station reads the device's objectList, then each object's name, primary value and description. Waits for the job and lists one row per object (object_name, object_id, value, description), with in_database naming the point that already proxies that object under the extension (folders included) or null, and unread rows (object_name \"--\", common before the device's I-Am was heard) counted. On a Honeywell Spyder, hardware names its model (from analogValue:0 AV_HardwareID, e.g. 33 PUB6438S, 54 PUB1012S) with its I/O. No point is added; the job stays under Services/JobService. It puts ReadProperty traffic on the field network and needs admin invoke rights. No inverse. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "device_ord": {
+      "type": "string",
+      "description": "ORD of the BACnet device or of its points extension, e.g. station:|slot:/Drivers/BacnetNetwork/$32008"
+     },
+     "wait_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 120,
+      "description": "Seconds to wait for the discovery job to end"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "device_ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": false
    },
    "needs_session": false
   },
