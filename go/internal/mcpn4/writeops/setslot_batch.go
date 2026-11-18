@@ -74,10 +74,13 @@ func slotKey(h any, nodes *pyjson.Object, slot string) string {
 }
 
 // entryError prefixes a refusal with the entry it refuses; any other error is kept as it is.
-func entryError(i int, err error) error {
+func entryError(i int, err error) error { return namedError(entryName(i), err) }
+
+// namedError prefixes a refusal with the batch entry name it refuses; any other error is kept.
+func namedError(name string, err error) error {
 	var te *jsonrpc.ToolError
 	if errors.As(err, &te) {
-		return plan.ToolError(entryName(i) + ": " + te.Msg)
+		return plan.ToolError(name + ": " + te.Msg)
 	}
 	return err
 }

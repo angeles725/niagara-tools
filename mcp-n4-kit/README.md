@@ -1168,6 +1168,21 @@ Tool rules:
   unchanged, except that a missing `ord`, `slot`, `value` or `value_type` is now refused as a
   tool error with the same text (`missing required argument: ord`) instead of a -32602 error,
   because the schema no longer lists them as required.
+- `n4_create_link(links: [{source_ord, source_slot, target_ord, target_slot}, ...])` is the
+  batch form (field retro delta U11): 1 to 50 links, each planned exactly as the single form,
+  under one dry run and one `confirmation_token`. `links` cannot be combined with the single-form
+  arguments; the same link twice is refused, keyed on the station's handles so another spelling of
+  the same ORD (a trailing slash, a slot path that loads its component) counts as the same link; an
+  entry identical to a link its target already has is refused, as the single form refuses it;
+  every entry's `target_ord` must be under the write scope (one outside refuses the call); a
+  refused entry refuses the batch and its message names it (`links[1]: ...`). The batch spends one
+  write of `--max-writes` per link, and a plan larger than `write_budget.remaining` is refused
+  before its token. The read-back lists `{source_ord, source_slot, target_ord, target_slot,
+  requested, observed, verdict}` per entry; the batch takes the entries' verdict when they all
+  agree, else `partial` (some links verified, others missing, changed or refused by the station).
+  `n4_rollback` of the batch removes every link it created. The single form's reply is unchanged,
+  except that a missing argument is now refused as a tool error with the same text (`missing
+  required argument: source_ord`) instead of a -32602 error.
 - `n4_set_flags(ord, slot, flags | add/remove)` sets the flags of one slot of a component (a
   property, an action or a topic; a name, not a path) with the station's set-flags
   sync op. `flags` is the complete new set as letters, each once, in any order; `""`
