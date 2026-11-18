@@ -1190,7 +1190,7 @@ Tool rules:
   runs the BACnet device discovery Workbench's Device Manager runs, through the network's
   hidden `submitDeviceManagerJob` action (admin invoke). Without `networks` it is the
   Workbench "Send Global": one Who-Is to the global broadcast address, every network. The
-  station waits `wait_seconds` (default 10) for I-Am replies, reads each device (about 8
+  station waits `wait_seconds` (default 20; Workbench offers 10, which missed MS/TP Spyders) for I-Am replies, reads each device (about 8
   ReadProperty requests) and keeps the rows as children of a transient
   `BacnetDiscoverDevicesJob<N>` under `Services/JobService`; the read-back waits for that job
   (`wait_seconds` + 30 s) and lists each device (with `mac` as the station stores it, lowercase

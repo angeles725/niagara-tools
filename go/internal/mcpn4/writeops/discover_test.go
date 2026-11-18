@@ -30,14 +30,14 @@ func discPlan(t *testing.T, args *pyjson.Object) *plan.Planned {
 	return p
 }
 
-// The default discover is the Workbench "Send Global": all networks, every instance, 10 s.
+// The default discover is the Workbench "Send Global": all networks, every instance, 20 s (a 10 s wait missed MS/TP Spyders, retro 2026-11-16 P2).
 func TestDiscoverDefaultsToAGlobalWhoIsOverEveryInstance(t *testing.T) {
 	p := discPlan(t, obj("network_ord", bacnetNet))
 	want := `{"ssc": "invokeAction", "arg": {"h": "3a", "a": "submitDeviceManagerJob", "b": {"nm": "p", "t": "bacnet:DeviceDiscoveryConfig", "s": [` +
 		`{"nm": "p", "n": "deviceLowLimit", "t": "baja:Integer", "v": "0"}, ` +
 		`{"nm": "p", "n": "deviceHighLimit", "t": "baja:Integer", "v": "4194302"}, ` +
 		`{"nm": "p", "n": "networks", "t": "bacnet:DiscoveryNetworks", "v": "all;"}, ` +
-		`{"nm": "p", "n": "waitResponseTime", "t": "baja:Integer", "v": "10"}]}}}`
+		`{"nm": "p", "n": "waitResponseTime", "t": "baja:Integer", "v": "20"}]}}}`
 	if got := js(t, p.Ops[0]); got != want {
 		t.Errorf("op =\n%s\nwant\n%s", got, want)
 	}

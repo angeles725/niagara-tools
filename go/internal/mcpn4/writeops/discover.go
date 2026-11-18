@@ -25,7 +25,7 @@ const (
 	discoverMaxInst  = 4194302 // BDeviceDiscoveryConfig deviceHighLimit default: every instance
 	discoverMaxNet   = 65534   // BACnet network numbers 1..65534 (65535 is the broadcast network)
 	discoverMaxWait  = 60
-	discoverDefWait  = 10
+	discoverDefWait  = 20 // Workbench offers 10 s; on MS/TP that missed Spyders (retro 2026-11-16 P2)
 	discoverSlack    = 30.0 // seconds past waitResponseTime the read-back waits for the job
 	bacnetNetworkTyp = "bacnet:BacnetNetwork"
 )
