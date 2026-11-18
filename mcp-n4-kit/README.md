@@ -1176,7 +1176,9 @@ Tool rules:
   instance (e.g. three units at `device:9999`). Register a new Spyder by creating the
   component already at its final instance and address (never at the duplicate instance:
   every I-Am of that instance would rebind it), then invoke `writeDeviceInstance`, one unit
-  at a time. `emergency*`, `save` and `restart` are refused; saving has its own tool,
+  at a time. Its read-back asks the controller its instance (`getOnlineDeviceInstanceNumber`)
+  and reports `configured_instance` and `online_instance`: equal is `verified`, different is
+  `mismatch`, and a failed question stays `unverified` with a hint. `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
 - `n4_rename_component(items: [{parent_ord, name, new_name}])` renames up to 50 dynamic
   slots in one batch (the station's RenameOp). The plan refuses a missing source, a taken

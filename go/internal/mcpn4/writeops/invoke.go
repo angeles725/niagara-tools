@@ -23,7 +23,7 @@ const (
 	spyderType          = "honeywellBacnetSpyder:BacnetSpyder"
 	msgWriteInstance    = "no inverse: writeDeviceInstance writes config/deviceObject/objectId into the controller " +
 		"at the component's address (field write). To undo, set objectId back and invoke it again. " +
-		"Check it with ping and the device health, or a fresh Discover"
+		"The read-back asks the controller its instance (getOnlineDeviceInstanceNumber) and compares it with objectId"
 )
 
 // InvokeAction is n4_invoke_action: set (its previous fallback is the inverse) or a state
@@ -172,6 +172,11 @@ func invokeReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies
 	if action != "set" {
 		requested := pyjson.NewObject()
 		requested.Set("action", action)
+		if action == writeDeviceInstance {
+			ordText := str(args, "ord")
+			h, _ := p.Targets.Get(ordText)
+			return writeInstanceReadback(c, ordText, h, requested, replies[0])
+		}
 		return requested, replies[0], nil, "unverified", nil
 	}
 	_, nodes, err := plan.Handle(c, str(args, "ord"), 2)

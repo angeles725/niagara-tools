@@ -21,7 +21,7 @@ Branch: feat/mcpn4-rename-spyder-register (worktree niagara-tools-worktrees/mcpn
 | T1 | S1 | explore (delegated, read-only) | done: map (L5) | explorer handoff 2026-11-18 |
 | T2 | S1 | inline | probe done (L6); next: RED tests + tool n4_discover_bacnet_devices (plan + token, global by default) | |
 | T3 | S2 R1 | inline | done: octet strings compared by octets (hex case and spaces ignored), single and batch set_slot | RED: 3 of 6 cases mismatch ("0C" vs "0c"); GREEN; go test ./internal/mcpn4/... ok |
-| T4 | S2 R2 | inline | todo | |
+| T4 | S2 R2 | inline | done: writeDeviceInstance read-back asks getOnlineDeviceInstanceNumber and compares with objectId (verified / mismatch / unverified on a failed question) | RED: 3 cases unverified, no question sent; GREEN; full suite ok |
 | T5 | S2 R3 | inline | todo | |
 | T7 | S3 | explore → probe → inline | map done (L9), read-only probe done (L10); next: PoC on 2012 after the operator picks the source app and authorises the download |
 | T6 | S2 R7 R8, S4.8 | inline | todo: docs + launcher comment | |
