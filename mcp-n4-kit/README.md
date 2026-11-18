@@ -993,7 +993,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
 restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
@@ -1168,15 +1168,26 @@ Tool rules:
   instance (e.g. three units at `device:9999`). Register a new Spyder by creating the
   component already at its final instance and address (never at the duplicate instance:
   every I-Am of that instance would rebind it), then invoke `writeDeviceInstance`, one unit
-  at a time.
+  at a time. `emergency*`, `save` and `restart` are refused; saving has its own tool,
+  `n4_save_station`.
 - `n4_rename_component(items: [{parent_ord, name, new_name}])` renames up to 50 dynamic
   slots in one batch (the station's RenameOp). The plan refuses a missing source, a taken
   or repeated target, a source renamed twice and an unchanged name; the inverse renames
   back in reverse order and the read-back checks every new name is present and every old
   one gone. Links and history extensions stay with the component; a history id built from
   `%parent.name%` or `%name%` takes the new name when it is next resolved.
-  `emergency*`, `save` and `restart` are refused; saving has its own tool,
-  `n4_save_station`.
+- `n4_discover_devices(network_ord, networks?, low_instance?, high_instance?, wait_seconds?)`
+  runs the BACnet device discovery Workbench's Device Manager runs, through the network's
+  hidden `submitDeviceManagerJob` action (admin invoke). Without `networks` it is the
+  Workbench "Send Global": one Who-Is to the global broadcast address, every network. The
+  station waits `wait_seconds` (default 10) for I-Am replies, reads each device (about 8
+  ReadProperty requests) and keeps the rows as children of a transient
+  `BacnetDiscoverDevicesJob<N>` under `Services/JobService`; the read-back waits for that job
+  (`wait_seconds` + 30 s) and lists each device as `registered` (same instance and address
+  as a device under the network), `new`, or `address_differs` (a registered instance
+  answering from another address: that I-Am also rewrites the device's address, B1165), and
+  the registered devices that did not answer under `not_answering`. No device is added; it is
+  a write because it puts traffic on the field network. No inverse.
 - `n4_create_component` follows a station rename on collision (the inverse and the
   read-back use the assigned name). A display name the station can only store escaped (a
   leading digit, a space) is created under its SlotPath escape and the plan says so:
