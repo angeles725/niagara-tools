@@ -1191,10 +1191,15 @@ Tool rules:
   controlling until the job ends (about 2 min per unit on MS/TP; download one unit at a time
   on a shared bus). No inverse. The read-back waits up to 600 s for the job and returns
   `job`, `job_state` and the job's `log` lines: `success` is `verified`, `failed` or
-  `canceled` is `mismatch`, still running is `unverified`. A Spyder's program is a
-  `ControlProgram` the station loads on demand and unloads later: renaming an input point
-  does not rename its BACnet object (`BacnetNIFolder/<name>` and its `objectName`), so set
-  both before the download or the controller keeps the old object name.
+  `canceled` is `mismatch`, still running is `unverified`; a successful log without
+  "Compiling the logic" adds a `hint`: the controller got the program compiled earlier.
+  `compile` (Spyder only, no `arg`) rebuilds the compiled program (a CompilationJob; nothing
+  reaches the controller) with the same read-back. A Spyder's program is a `ControlProgram`
+  the station loads on demand and unloads later. Renaming an input point does not rename its
+  BACnet object: set the object's `objectName` (`.../BacnetNIFolder/<slot>`), leave the
+  `BacnetNIFolder` slot name as it is (renaming that slot made the compiler fail live), then
+  `compile` and `spyderDownload`: an `objectName` edit does not mark the program modified, so
+  a download alone sends the old object name.
   `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
 - `n4_rename_component(items: [{parent_ord, name, new_name}])` renames up to 50 dynamic

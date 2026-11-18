@@ -85,3 +85,43 @@ func TestSpyderDownloadReadsTheJobBack(t *testing.T) {
 		}
 	}
 }
+
+// Live 2026-11-18: an objectName edit does not mark the program modified, so spyderDownload sent
+// the old compiled files (no "Compiling the logic" line) until compile(BBoolean true) ran; the
+// compile job logged "Compilation ended" and "Job Success". compile is Spyder-only, takes no arg,
+// and its read-back waits for the CompilationJob like a download.
+func TestSpyderCompileRunsTheCompilationJob(t *testing.T) {
+	c := dlStation("success", "Message|t|Compilation started on device - $32012|\nSuccess|t|Job Success|\n")
+	args := obj("ord", bacnetNet+"/$32012", "action", "compile")
+	p, err := writeops.InvokeAction.PlanWith(c, args, clock(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := js(t, p.Ops[0]); got != `{"ssc": "invokeAction", "arg": {"h": "3e50d", "a": "compile", "b": {"nm": "p", "t": "baja:Boolean", "v": "true"}}}` {
+		t.Errorf("op = %s", got)
+	}
+	reply := obj("t", "baja:Ord", "v", "slot:/Services/JobService/SpyderDownloadJob4")
+	_, _, observed, v, err := writeops.InvokeAction.Readback(c, args, p, []any{reply}, nil)
+	if err != nil || v != "verified" || !strings.Contains(js(t, observed), `"Success: Job Success"`) {
+		t.Errorf("verdict %q err %v observed %s", v, err, js(t, observed))
+	}
+	if _, err := writeops.InvokeAction.PlanWith(c, obj("ord", bacnetNet+"/$32012", "action", "compile", "arg", "x"), clock(), nil); err == nil {
+		t.Errorf("compile with an arg accepted")
+	}
+	other := &loads{nodes: obj(bacnetNet+"/Dev", obj("", obj("h", "d", "t", "bacnet:BacnetDevice")))}
+	if _, err := writeops.InvokeAction.PlanWith(other, obj("ord", bacnetNet+"/Dev", "action", "compile"), clock(), nil); err == nil {
+		t.Errorf("compile on a non-Spyder accepted")
+	}
+}
+
+// A download whose log has no "Compiling the logic" line sent the program compiled earlier: the
+// read-back says so, because an edit that did not mark the program modified is not in it.
+func TestSpyderDownloadWithoutACompileStepSaysSo(t *testing.T) {
+	c := dlStation("success", "Message|t|Validation success|\nSuccess|t|Job Success|\n")
+	args := obj("ord", bacnetNet+"/$32012", "action", "spyderDownload", "arg", "full")
+	p, _ := writeops.InvokeAction.PlanWith(c, args, clock(), nil)
+	_, _, observed, _, _ := writeops.InvokeAction.Readback(c, args, p, []any{obj("v", "slot:/Services/JobService/SpyderDownloadJob4")}, nil)
+	if got := js(t, observed); !strings.Contains(got, `"hint": "no compile step`) {
+		t.Errorf("observed %s", got)
+	}
+}
