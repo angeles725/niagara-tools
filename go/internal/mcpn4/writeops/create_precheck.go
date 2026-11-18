@@ -12,11 +12,12 @@ import (
 // typesKnown refuses, before a token, a type spec (the component's, its proxy_ext's) that the
 // station's type registry does not describe, so an unknown type names itself instead of the
 // station's generic "Unable to process request". A client without the registry, or a registry
-// call that fails (an older station may lack the channel), leaves the check to the station.
-func typesKnown(c plan.Client, specs ...string) error {
+// call that fails (an older station may lack the channel), leaves the check to the station. The
+// contracts it read are returned for further checks (nil without a registry).
+func typesKnown(c plan.Client, specs ...string) (*plan.Contracts, error) {
 	tl, ok := c.(plan.TypeLoader)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	contracts := plan.NewContracts(tl)
 	for _, spec := range specs {
@@ -26,10 +27,10 @@ func typesKnown(c plan.Client, specs ...string) error {
 		var unknown *plan.UnansweredType
 		errored, err := contracts.Errored(spec)
 		if errors.As(err, &unknown) || errored {
-			return plan.ToolError(fmt.Sprintf(msgUnknownType, spec))
+			return nil, plan.ToolError(fmt.Sprintf(msgUnknownType, spec))
 		}
 	}
-	return nil
+	return contracts, nil
 }
 
 // childNames is the set of the names of a loaded component's children.
