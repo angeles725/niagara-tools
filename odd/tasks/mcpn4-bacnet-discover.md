@@ -12,6 +12,7 @@ Branch: feat/mcpn4-rename-spyder-register (worktree niagara-tools-worktrees/mcpn
   - R3 (MEDIUM): composite `n4_register_bacnet_spyder` (create + address + objectId check + writeDeviceInstance + ping, one token).
   - R4-R6 research (Spyder app copy, compile/download actions, points discover), R7 doc (stale Workbench views), R8 close retro U1/U2.
 - S3 (L3): "y tambien trabaja con el mcp para la parte de cargarle codigo a los spyder, pero primero es el discover" → mcp-n4 loads a Spyder application without Workbench (retro R4 copy the logic from a programmed Spyder; R5 compile / validate / spyderDownload actions; R6 points discover). Order: after S1.
+- S4 (L13, user accepted the ranked list verbatim with "Si tambien agregalo"): 1 load a Spyder program without Workbench (BOX transfer copy, spyderDownload job, submitOfflineDiscoveryJob points); 2 auto-reconnect on "Could not find Server Session" (U4); 3 n4_discover_points + create points from the rows; 4 one-step Spyder registration (R3) + writeDeviceInstance read-back (R2); 5 typed-argument actions in n4_invoke_action (compile, validate, spyderDownload) limited to Spyders and an explicit device list, never batchDownload; 6 force a fresh point to poll for N seconds (U5); 7 per-minisplit schedules with n4_set_schedule (dashboard D8); 8 minor: credential variable name in the launcher comment (_PASS vs _PASSWORD), stale Workbench views doc (R7).
 
 ## Tasks
 
@@ -23,7 +24,12 @@ Branch: feat/mcpn4-rename-spyder-register (worktree niagara-tools-worktrees/mcpn
 | T4 | S2 R2 | inline | todo | |
 | T5 | S2 R3 | inline | todo | |
 | T7 | S3 | explore → probe → inline | map done (L9), read-only probe done (L10); next: PoC on 2012 after the operator picks the source app and authorises the download |
-| T6 | S2 R7 R8 | inline | todo: docs | |
+| T6 | S2 R7 R8, S4.8 | inline | todo: docs + launcher comment | |
+| T8 | S4.2 | inline | todo: session-loss auto-reconnect (reads) and clear redo-the-dry-run error (writes) | |
+| T9 | S4.3 | inline | todo: n4_discover_points + add points from rows | |
+| T10 | S4.5 | inline | todo: typed struct args for Spyder actions, explicit device allow-list | |
+| T11 | S4.6 | inline | todo: subscribe/poll a fresh proxy point | |
+| T12 | S4.7 | inline (client module + mcp-n4) | todo: per-minisplit schedules | |
 
 ## Log
 
@@ -39,3 +45,4 @@ Branch: feat/mcpn4-rename-spyder-register (worktree niagara-tools-worktrees/mcpn
 - L10 (live read-only 2026-11-18): every Spyder controllerModel ModelBACnet3, compiledFwModel 13. 2012-2014: appUUID "" lastGUID "", compileStatusFlag 4, validateStatus 1, deviceStatus 4, logicLoaded false, no ControlProgram child (empty, not loaded), each already has its own virtualFileName. Programmed units: compileStatusFlag 0, appUUID = lastGUID, deviceStatus 1, except 2006 (compileStatusFlag 4, appUUID != lastGUID, deviceStatus 4: its last download did not complete, matches the pending Full Download) and 2004 (deviceStatus 4). 2010 logicLoaded true (its program is loaded on the station).
 - L11 (2026-11-18 live, client B station, installed 7b694d92): n4_discover_devices dry run then execute, batch 7856f3d6, verdict verified: job BacnetDiscoverDevicesJob3 success, found 9 (2004-2009, 2012-2014, all registered, net 2), not_answering [$32010 2:0a]. The accepted reply carried the baja:Ord as expected.
 - L12: BOX has a server-side copy: BTransferChannel case "copy" -> util/PasteRecord mark.copyTo (box-rt), the same Mark copy Workbench uses; candidate route for the Spyder ControlProgram (links included), to probe before any tool. n4_copy_component cannot carry it (links are not copied, CopyDepth bound).
+- L13 (2026-11-18, user): "Si tambien agregalo: [the 8-row table] , pero primero vamos a checar otra vez el discover, haz discover para ver que spyders salen". Discover rerun: batch 4ccc11d8 verified, the same 9 found, 2010 not answering; one more "Could not find Server Session" before it (4th today, T8 evidence).
