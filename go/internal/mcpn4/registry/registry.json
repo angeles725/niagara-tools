@@ -2589,13 +2589,13 @@
   },
   {
    "name": "n4_create_link",
-   "description": "Create a link from a source slot to a target slot. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Create a link from a source slot to a target slot. A link identical to one the target already has is refused before the token. Batch form: links, a list of 1 to 50 entries {source_ord, source_slot, target_ord, target_slot} planned exactly as the single form, under one dry run and one confirmation_token; links cannot be combined with source_ord, source_slot, target_ord or target_slot, the same link twice (by the station's handles, whatever the ORD spelling) is refused, every entry's target_ord must be under the write scope (one outside refuses the call), a refused entry refuses the batch, the batch spends one write of --max-writes per link (a plan larger than the remaining budget is refused before its token), the read-back lists {source_ord, source_slot, target_ord, target_slot, requested, observed, verdict} per entry (the batch takes the entries' verdict when they all agree, else partial) and n4_rollback removes every link. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
      "source_ord": {
       "type": "string",
-      "description": "Source component ORD"
+      "description": "Source component ORD (single form: required unless links is given)"
      },
      "source_slot": {
       "type": "string",
@@ -2609,6 +2609,38 @@
       "type": "string",
       "description": "Target slot name"
      },
+     "links": {
+      "type": "array",
+      "description": "Batch form, instead of source_ord/source_slot/target_ord/target_slot: 1 to 50 entries, each one link with the single form's arguments",
+      "maxItems": 50,
+      "items": {
+       "type": "object",
+       "properties": {
+        "source_ord": {
+         "type": "string",
+         "description": "Source component ORD"
+        },
+        "source_slot": {
+         "type": "string",
+         "description": "Source slot name"
+        },
+        "target_ord": {
+         "type": "string",
+         "description": "Target component ORD"
+        },
+        "target_slot": {
+         "type": "string",
+         "description": "Target slot name"
+        }
+       },
+       "required": [
+        "source_ord",
+        "source_slot",
+        "target_ord",
+        "target_slot"
+       ]
+      }
+     },
      "dry_run": {
       "type": "boolean",
       "default": true,
@@ -2619,12 +2651,7 @@
       "description": "Token returned by the matching dry run (single use)"
      }
     },
-    "required": [
-     "source_ord",
-     "source_slot",
-     "target_ord",
-     "target_slot"
-    ]
+    "required": []
    },
    "annotations": {
     "readOnlyHint": false,

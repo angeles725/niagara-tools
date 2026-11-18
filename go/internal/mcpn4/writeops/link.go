@@ -6,17 +6,12 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// CreateLink is n4_create_link: one checkLinks call that makes the link; the inverse removes
-// the link the station named. A reply that cannot be trusted is in-doubt, and Recover looks
-// for the new link by its slots.
-var CreateLink = plan.Impl{ScopeCheck: linkScope,
-	Plan: linkPlan, Inverse: linkInverse, Recover: linkRecover, Readback: linkReadback, Unapplied: linkUnapplied}
-
 type linkData struct {
 	srcH, tgtH any
 	existing   map[string]bool // the links the target had when planned
 }
 
+// linkPlan plans one link: the single form's arguments, or one entry of links (same keys).
 func linkPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	ssArg, _ := args.Get("source_slot")
 	ss, err := plan.Name("source_slot", ssArg)
