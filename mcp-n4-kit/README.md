@@ -1212,7 +1212,7 @@ Tool rules:
   `BacnetDiscoverDevicesJob<N>` under `Services/JobService`; the read-back waits for that job
   (`wait_seconds` + 30 s) and lists each device (with `mac` as the station stores it, lowercase
   hex octets, plus `mac_display` as Workbench's "MAC Addr" column shows it: an MS/TP station
-  number in decimal, `0f` is `15`, a BACnet/IP address as `a.b.c.d:port`; and `objects`, the
+  number in decimal, `0f` is `15`, a BACnet/IP address as `a.b.c.d:0xPORT` (port in hex, `192.168.1.10:0xBAC0`, as `BBacnetAddress.bytesToString` prints it); and `objects`, the
   objectList length of Workbench's "Objects" column, null when unread) as `registered` (same instance and address
   as a device under the network), `new`, or `address_differs` (a registered instance
   answering from another address: that I-Am also rewrites the device's address, B1165), and

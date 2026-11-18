@@ -187,8 +187,12 @@ func TestDiscoverReadbackJobStates(t *testing.T) {
 // decimal ("0f" is 15), a BACnet/IP address as a.b.c.d:port, anything else as the station's octets.
 func TestDiscoverMacDisplayLikeWorkbench(t *testing.T) {
 	for _, tc := range []struct{ kind, mac, want string }{
-		{"3", "0f", "15"}, {"", "0f", "15"}, {"2", "c0 a8 01 0a ba c0", "192.168.1.10:47808"},
-		{"", "c0 a8 01 0a ba c0", "192.168.1.10:47808"}, {"1", "00 11 22 33 44 55", "00 11 22 33 44 55"},
+		// BBacnetAddress.bytesToString (bacnet-rt :217), which the Device Manager's MAC Addr
+		// column calls (bacnet-wb BacnetDeviceModel.MacAddr, BacnetDeviceLearn :235): one byte in
+		// decimal, BacnetIP with its port in hex, Ethernet colon-separated, the rest upper-case hex.
+		{"3", "0f", "15"}, {"", "0f", "15"}, {"2", "c0 a8 01 0a ba c0", "192.168.1.10:0xBAC0"},
+		{"", "c0 a8 01 0a ba c0", "192.168.1.10:0xBAC0"}, {"2", "c0 a8 01 0a", "192.168.1.10"},
+		{"1", "00 11 aa 33 44 55", "00:11:AA:33:44:55"}, {"3", "0a 0b", "0A 0B"}, {"4", "ab", "171"},
 	} {
 		if got := writeops.MacDisplay(tc.kind, tc.mac); got != tc.want {
 			t.Errorf("type %q mac %q: %q, want %q", tc.kind, tc.mac, got, tc.want)
