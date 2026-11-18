@@ -57,13 +57,19 @@ func TestCheckTargetScopeRefusesAnythingButRemovingTheRoot(t *testing.T) {
 		name  string
 		ops   []any
 		admit bool
+		tool  string
 	}{
-		{"remove of the root", []any{obj("nm", "v", "h", "3", "n", "New")}, true},
-		{"remove of the root and a value restore", []any{obj("nm", "v", "h", "3", "n", "New"), obj("nm", "s", "h", "3", "n", "x")}, false},
-		{"remove of another child", []any{obj("nm", "v", "h", "3", "n", "Other")}, false},
-		{"no op on the target", []any{obj("nm", "v", "h", "9", "n", "New")}, false},
+		{"remove of the root", []any{obj("nm", "v", "h", "3", "n", "New")}, true, ""},
+		{"remove of the root by a copy batch", []any{obj("nm", "v", "h", "3", "n", "New")}, false, "n4_copy_component"},
+		{"remove of the root and a value restore", []any{obj("nm", "v", "h", "3", "n", "New"), obj("nm", "s", "h", "3", "n", "x")}, false, ""},
+		{"remove of another child", []any{obj("nm", "v", "h", "3", "n", "Other")}, false, ""},
+		{"no op on the target", []any{obj("nm", "v", "h", "9", "n", "New")}, false, ""},
 	} {
-		err := checkTargetScope(s, tFolder, "3", c.ops)
+		tool := c.tool
+		if tool == "" {
+			tool = createTool
+		}
+		err := checkTargetScope(s, tFolder, "3", c.ops, tool)
 		if (err == nil) != c.admit {
 			t.Errorf("%s: err %v, want admit %v", c.name, err, c.admit)
 		}

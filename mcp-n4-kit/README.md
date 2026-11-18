@@ -183,7 +183,12 @@ Flags:
 
 - `--station NAME=URL` (repeatable): the only stations `n4_connect` may open. `URL`
   must be `https://`. Set NAME to the station's real `stationName`: `n4_connect`
-  checks it by default (override per call with `expected_station`).
+  checks it by default (override per call with `expected_station`). To pin the version too, pass
+  `expected_version` to `n4_connect` (the full version or a dotted prefix: `4.14` matches
+  `4.14.0.162`, `4.1` does not); a mismatch or an undetected version closes the session. When
+  two stations share a tunnel port, a per-station launcher (for example `site-run.sh`) should
+  connect with both, e.g. `n4_connect(station="JACE_SITE", expected_station="JACE_SITE",
+  expected_version="4.14.0.162")`, so the agent never assumes which station answered.
 - `--credential-env PREFIX`: env var prefix for `<PREFIX>_USER` / `<PREFIX>_PASSWORD`
   (default `MCP_N4`).
 - `--insecure-tls NAME` (repeatable): skip certificate verification for that
@@ -521,6 +526,20 @@ in any category, up to `max_bad` each (default 20; `*_bad_truncated` says a list
 with several bits counts once in each of its categories. `drivers.totals` sums the networks and
 adds `unassigned_points` (proxy points under no network), `proxy_unknown` and `rows_truncated`;
 `drivers` is `null` with a `drivers_note` when one of the three sections failed.
+`device_detail=true` (needs `drivers=true`, refused otherwise) adds what a technician needs to fix a
+down device, from two more requests at most (one BQL query over every device, one over every
+network, sent only when a network lists a bad device): each `devices_bad` entry gains
+`fault_cause`, `last_fail_cause`, `last_ok`, `last_fail` (`faultCause` and `health.lastFailCause`,
+`health.lastOkTime`, `health.lastFailTime`; a ping failure fills `last_fail_cause` and leaves
+`fault_cause` empty), `address` (`deviceAddress` for Modbus devices, `address` as network:mac for
+BACnet devices, `null` for any other type) and `stale_points` (its stale proxy points); each network
+gains `port` (`serialPortConfig.portName`; `null` on a network with no serial port) and `pattern`:
+`{kind: "bus", down, total, hint}` when 2 or more devices and all but at most one are down (on a
+serial network: check bus wiring, termination, polarity and the port; on any other, such as
+BACnet/IP: check the shared network path, the station's interface, switches or routers, and the
+devices' power), `{kind: "single", ...}` when exactly one of 2 or more devices is bad and it is down (check
+that device's address and power), else `null`. A value the station did not give is `null`, never a
+guess; `drivers.device_detail_note` names a detail query that failed.
 `platform=true` adds `platform`, platform capacity and what is about to expire, from five more
 spy page reads (a station user allowed to read spy pages) and one BOX load: `heap` (`used_kb` and `committed_kb`
 from `spy:/sysInfo`, `max_kb` the sum of the defined maxima of the heap pools on
@@ -1016,7 +1035,8 @@ Every write call goes through these layers:
    under its parent (scope `…/Sandbox`, `parent_ord` its parent, `name` `Sandbox`), so a
    scope can name a folder that does not exist yet; it is refused when that root already
    exists, since the station would rename the new one outside the scope. The same scope
-   can roll that create back (`n4_rollback` checks the created path, as the create did)
+   can roll that create back (`n4_rollback` checks the created path, as the create did;
+   only for an `n4_create_component` batch, never a copy, replicate or deploy named like the root)
    while nothing was written inside the root later; it cannot remove the root with
    `n4_remove_component`, which checks `parent_ord`, so a scope never deletes itself and
    its contents in one call: remove it later under a wider scope or by hand.
