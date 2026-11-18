@@ -1097,7 +1097,9 @@ server never chmods a directory it did not create.
 Tool rules:
 
 - `n4_set_slot` writes Status slots whole (value plus status) and refuses a path
-  ending in `/value` or `/status`. A nested slot (`grp/sp`) is loaded one level deeper
+  ending in `/value` or `/status`. A `bacnet:BacnetOctetString` (a Spyder's MS/TP
+  `address/macAddress`) is read back by its octets: the station stores `0C` as `0c` and
+  `C0A80101BAC0` as `c0 a8 01 01 ba c0`, and both are `verified`. A nested slot (`grp/sp`) is loaded one level deeper
   so its previous value is the real one. A frozen property whose value equals its
   declared default (whatever its type declares, e.g. a 10 s `RelTime`, not only 0, `false`
   or an empty string) is omitted by

@@ -153,6 +153,9 @@ func setSlotReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replie
 	}
 	data := p.Data.(setSlotData)
 	v := verdict(observed, data.requested)
+	if data.wireType == octetStringType && sameOctets(observed, data.requested) {
+		v = "verified"
+	}
 	if data.wireType != "" {
 		if n := box.Node(nodes, slot); n != nil {
 			if t, _ := n.Get("t"); pyjson.Str(t) != data.wireType {
