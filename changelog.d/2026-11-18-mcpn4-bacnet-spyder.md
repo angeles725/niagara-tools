@@ -18,6 +18,8 @@
 - The server reconnects once when the station drops the BOX session ("Could not find Server Session"): a
   read or dry run is retried, an execution is not (its token died with the session) and says to redo the
   dry run.
+- `modelChange` calls its undo partial: changing the model back does not restore the Sylk devices or terminal
+  assignments the first change dropped.
 
 ### Fixed — mcp-n4: BACnet octet strings are read back by their octets
 

@@ -46,7 +46,7 @@ func modelChangePlan(ordText string, h any, nodes *pyjson.Object, args *pyjson.O
 		"changes the configured model from " + from.name + " (" + from.io + ") to " + to.name + " (" + to.io +
 			"); the station reassigns the program's terminals, drops unsupported Sylk devices and marks the program modified",
 		"station-side only: nothing reaches the controller until a full download; check the program's I/O fits the new model first",
-		"inverse: modelChange back to " + from.name,
+		"inverse (partial): modelChange back to " + from.name + "; Sylk devices the station dropped and the terminal assignments it changed are not restored",
 	}
 	return &plan.Planned{Ops: []any{invokeOp(modelChangeArg(h, to))}, Inverse: []any{invokeOp(modelChangeArg(h, from))},
 		Targets: targets, Notes: notes, Data: modelChangeData{to: to, from: from}}, nil
