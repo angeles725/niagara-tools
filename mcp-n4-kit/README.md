@@ -1185,7 +1185,17 @@ Tool rules:
   marks it modified; nothing reaches the controller until a download). Its inverse changes
   back; the read-back checks the model and `compiledFwModel` (the model's latest model id).
   Run `n4_discover_points` first: its `hardware` block names the model the controller really
-  is. `emergency*`, `save` and `restart` are refused; saving has its own tool,
+  is. `spyderDownload` is accepted only on a Spyder, with `arg` = `full` or `quick`: the
+  station validates and compiles the program, checks the controller's model (a mismatch is
+  refused before any write), writes the program and restarts the controller, which stops
+  controlling until the job ends (about 2 min per unit on MS/TP; download one unit at a time
+  on a shared bus). No inverse. The read-back waits up to 600 s for the job and returns
+  `job`, `job_state` and the job's `log` lines: `success` is `verified`, `failed` or
+  `canceled` is `mismatch`, still running is `unverified`. A Spyder's program is a
+  `ControlProgram` the station loads on demand and unloads later: renaming an input point
+  does not rename its BACnet object (`BacnetNIFolder/<name>` and its `objectName`), so set
+  both before the download or the controller keeps the old object name.
+  `emergency*`, `save` and `restart` are refused; saving has its own tool,
   `n4_save_station`.
 - `n4_rename_component(items: [{parent_ord, name, new_name}])` renames up to 50 dynamic
   slots in one batch (the station's RenameOp). The plan refuses a missing source, a taken

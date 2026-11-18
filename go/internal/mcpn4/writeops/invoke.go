@@ -12,7 +12,7 @@ import (
 // AllowedActions is ALLOWED_ACTIONS: the actions n4_invoke_action may call in this version. ping
 // (a driver network, device or point device ext checks its device; no setting changes) was added
 // after the Python port; the differential declares that difference.
-var AllowedActions = []string{"set", "active", "inactive", "auto", "ping", writeDeviceInstance, modelChange}
+var AllowedActions = []string{"set", "active", "inactive", "auto", "ping", writeDeviceInstance, modelChange, spyderDownload}
 
 // writeDeviceInstance is the Honeywell BACnet Spyder action that writes the component's
 // config/deviceObject/objectId into the controller found at the component's address (MS/TP
@@ -28,7 +28,7 @@ const (
 
 // InvokeAction is n4_invoke_action: set (its previous fallback is the inverse) or a state
 // change (no inverse, unverified).
-var InvokeAction = plan.Impl{ScopeOrds: ordArg, Plan: invokePlan, Readback: invokeReadback}
+var InvokeAction = plan.Impl{ScopeOrds: ordArg, Plan: invokePlan, PlanWith: invokePlanWith, Readback: invokeReadback}
 
 // fallbackTypes is _FALLBACK and argTypes _ARG_TYPES.
 var (
@@ -87,8 +87,11 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	arg := pyjson.NewObject()
 	arg.Set("h", h)
 	arg.Set("a", action)
-	if action == modelChange {
+	switch action {
+	case modelChange:
 		return modelChangePlan(ordText, h, nodes, args)
+	case spyderDownload:
+		return spyderDownloadPlan(ordText, h, nodes, args)
 	}
 	_, hasArg := args.Get("arg")
 	_, hasArgType := args.Get("arg_type")
@@ -175,8 +178,11 @@ func invokeReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies
 	if action != "set" {
 		requested := pyjson.NewObject()
 		requested.Set("action", action)
-		if action == modelChange {
+		switch action {
+		case modelChange:
 			return modelChangeReadback(c, str(args, "ord"), p, replies[0])
+		case spyderDownload:
+			return spyderDownloadReadback(c, p, replies[0])
 		}
 		if action == writeDeviceInstance {
 			ordText := str(args, "ord")

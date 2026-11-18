@@ -2541,7 +2541,7 @@
   },
   {
    "name": "n4_invoke_action",
-   "description": "Invoke a control action. Only set, active, inactive, auto, and ping (a driver network, device or point device ext checks its device; no setting changes) and writeDeviceInstance (only on a honeywellBacnetSpyder:BacnetSpyder: writes the component's config/deviceObject/objectId into the controller at the component's address, renumbering a controller that still has a duplicate factory instance; no inverse; the read-back compares the instance the controller reports with objectId) and modelChange (only on a honeywellBacnetSpyder:BacnetSpyder, arg = the model display name such as PUB1012S: the Workbench Controller Summary \"Device Model\" save; the station changes the configured model and compiledFwModel and reassigns the program's terminals, nothing reaches the controller until a download; inverse: back to the previous model) are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Invoke a control action. Only set, active, inactive, auto, and ping (a driver network, device or point device ext checks its device; no setting changes) and writeDeviceInstance (only on a honeywellBacnetSpyder:BacnetSpyder: writes the component's config/deviceObject/objectId into the controller at the component's address, renumbering a controller that still has a duplicate factory instance; no inverse; the read-back compares the instance the controller reports with objectId), modelChange (only on a honeywellBacnetSpyder:BacnetSpyder, arg = the model display name such as PUB1012S: the Workbench Controller Summary \"Device Model\" save; the station changes the configured model and compiledFwModel and reassigns the program's terminals, nothing reaches the controller until a download; inverse: back to the previous model) and spyderDownload (only on a honeywellBacnetSpyder:BacnetSpyder, arg = full or quick: validates, compiles and writes the station's program into the controller and restarts it, about 2 min on MS/TP; the station refuses a controller whose model differs from the configured one; no inverse; the read-back waits up to 600 s for the job and returns its state and log) are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -2554,7 +2554,7 @@
       "description": "Action name"
      },
      "arg": {
-      "description": "Argument: the value for set, the model display name (e.g. PUB1012S) for modelChange"
+      "description": "Argument: the value for set, the model display name (e.g. PUB1012S) for modelChange, full or quick for spyderDownload"
      },
      "arg_type": {
       "type": "string",
