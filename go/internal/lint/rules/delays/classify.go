@@ -42,7 +42,11 @@ func (r *file) classify(lnum int, arg string) {
 			}
 		}
 		if comma >= 0 {
-			if k := digits.FindString(strings.TrimLeft(seg[comma+1:], " \t\n\v\f\r")); k != "" {
+			k := digits.FindString(strings.TrimLeft(seg[comma+1:], " \t\n\v\f\r"))
+			if k == "" { // retro lint-dashboard-write-save Δ3: a bare literal first argument, Math.max(1L, x), is the floor too
+				k = firstLiteral(seg[:comma])
+			}
+			if k != "" {
 				if n, _ := strconv.ParseFloat(k, 64); n <= 0 {
 					r.emit(lint.Fail, lnum, "zero-floor  Math.max floor="+num(n)+" (<=0) — use Math.max(x,1L)")
 				}

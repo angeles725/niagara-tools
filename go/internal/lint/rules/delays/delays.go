@@ -60,6 +60,7 @@ var (
 	ident      = re(`^[A-Za-z_][A-Za-z0-9_]*`)
 	floors     = []*regexp.Regexp{
 		re(`Math\.max\([^)]+,[[:space:]]*[1-9]`),
+		re(`Math\.max\([[:space:]]*[1-9][0-9]*[lL]?[[:space:]]*,`),
 		re(`>=[[:space:]]*1[^0-9]`),
 		re(`<[[:space:]]*1[L]?[[:space:]]*\?[[:space:]]*1`),
 		re(`return[[:space:]]+1[L]?[[:space:]]*;`),
@@ -67,7 +68,7 @@ var (
 )
 
 // positiveHelpers adds to set every `static [final] long <fn>(` method of one file whose body holds a
-// strictly-positive floor: Math.max(.., N>=1), a >= 1 comparison, a `< 1 ? 1` ternary or a `return 1;`
+// strictly-positive floor: Math.max(.., N>=1) or Math.max(N>=1, ..), a >= 1 comparison, a `< 1 ? 1` ternary or a `return 1;`
 // branch (D2b). Bodies are javasrc.Methods over comment-free code (Strip), so a brace in a literal or a
 // comment never moves a body's end and a floor in a comment never counts; a method is a helper when the
 // text from the previous body's end to its opening line (its signature) declares it `static [final] long`.

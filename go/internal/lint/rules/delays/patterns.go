@@ -24,6 +24,7 @@ var (
 	makeVar    = re(`BRelTime\.make\([^)]+\)`)
 	maxBinding = re(`Math\.max\([^,]+,[[:space:]]*`)
 	digits     = re(`^[0-9]+`)
+	bareLong   = re(`^[0-9]+[lL]?$`)
 	assign     = re(`^[[:space:]]*=[^=]`)
 	getterCall = re(`^get[A-Za-z0-9_]+[[:space:]]*\([[:space:]]*\)`)
 	getterArgs = re(`[[:space:]]*\(.*`)
