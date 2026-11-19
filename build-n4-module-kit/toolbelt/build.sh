@@ -37,7 +37,10 @@
 #                   directory and <artifact>/.deploy-baseline links to it, so report-module's schema-risk floor check runs;
 #                   the link and the extraction are removed when the run ends, whatever the exit (a link left by a killed
 #                   run dangles and reads as no baseline; the next run with the option removes such a link, INFO line; an operator link is kept and refused). One "==> schema-risk baseline: <artifact> from <ref>" line per
-#                   artifact; an artifact absent at the ref gets an INFO line and no baseline (its row stays SKIP). Exit 2
+#                   artifact; an artifact absent at the ref gets an INFO line and no baseline (its row stays SKIP). An
+#                   artifact is a directory with module-include.xml, or a <MOD>-rt/-ux/-wb/-se/-doc part with its build file
+#                   (report-module's set): a docs/ folder beside the parts gets an INFO line, no baseline and no report rows,
+#                   never a schema-risk ERROR (exit 10) or INCOMPLETE (exit 53). [ev: retro client-2.3.0 K4] Exit 2
 #                   before gradle when <deployed-ref> is not a commit of the module's repository, <MOD> does not exist at
 #                   it, an artifact already has a .deploy-baseline (remove it, or drop the option to use it), or with
 #                   --first-deploy; a missing version-control tool is exit 10, a failed extraction exit 1.
@@ -63,7 +66,9 @@
 #   not change. A configured alias is passed as given, whatever its value.
 #   Retry-safe: when the gate FAILs, the pre-build modules/ jar the drift gate backed up is restored (one "Restored
 #   the previously-deployed" line, exit 50 as before), so a bare re-run still expects the deployed signer and FAILs
-#   again. Under --no-drift-check there is no backup: nothing is restored and the deployed-jar signer is unavailable.
+#   again. A report-module punch-list with FAILs (exit 50) restores it the same way, so a fix rebuilt at the same
+#   version is not drift (exit 51) and needs no --no-drift-check; INCOMPLETE (53) leaves the new jar.
+#   [ev: retro client-persist-writes P4] Under --no-drift-check there is no backup: nothing is restored and the deployed-jar signer is unavailable.
 #   First deploy: when modules/ held no jar of the profile before the build there is nothing to restore, so a gate
 #   FAIL removes the jar gradle just installed (one "Removed the newly-installed" line, exit 50 as before); left there,
 #   a later run without the alias would take its signer as the expected one and pass. A gate PASS leaves it. Under

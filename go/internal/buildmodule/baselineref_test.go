@@ -167,6 +167,7 @@ func TestSchemaBaselineRefSkipsAnArtifactNewSinceTheRef(t *testing.T) {
 	f.signs()
 	f.deployedRepo()
 	f.write(f.root+"/Foo/Foo-se/marker", "new")
+	f.write(f.root+"/Foo/Foo-se/Foo-se.gradle.kts", "") // a real part: its build file makes it an artifact (K4)
 	f.seesBaselines("4")
 	f.wants("new artifact", f.build("--schema-baseline-ref", "v1"), ExitReportPartial,
 		"build.sh: INFO — Foo-se does not exist at v1: no schema-risk baseline for it (a first deploy of that artifact)",
