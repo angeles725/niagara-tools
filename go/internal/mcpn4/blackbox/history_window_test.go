@@ -73,9 +73,9 @@ func TestReadHistoryStatusNotOkKeepsOnlyTheNonOkRecords(t *testing.T) {
 	out := r.Srv.OK("n4_read_history", Args{"history_id": "/FakeStation/Setpoint", "status": "not-ok"})
 	reqs := ordRequests(sv)
 	if len(reqs) != 2 ||
-		!strings.Contains(reqs[0], "|bql:select timestamp, value, status where status.ok = false order by timestamp desc|") ||
-		!strings.Contains(reqs[1], "|bql:select count(*) where status.ok = false|") {
-		t.Fatalf("station requests = %q, want the records and the count filtered by status.ok = false", reqs)
+		!strings.Contains(reqs[0], "|bql:select timestamp, value, status where status.isOk = false order by timestamp desc|") ||
+		!strings.Contains(reqs[1], "|bql:select count(*) where status.isOk = false|") {
+		t.Fatalf("station requests = %q, want the records and the count filtered by status.isOk = false", reqs)
 	}
 	if out["status"] != "not-ok" || out["total_records"] != 2.0 {
 		t.Errorf("status %v total_records %v", out["status"], out["total_records"])
