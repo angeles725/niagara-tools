@@ -5,6 +5,13 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
+// setNullColumnWarnings sets the reply's "warnings" when a projected column is no slot (M1).
+func (t *Tools) setNullColumnWarnings(out *pyjson.Object, query string, columns []string, rows []*pyjson.Object) {
+	if warnings := t.nullColumnWarnings(query, columns, rows); len(warnings) > 0 {
+		out.Set("warnings", strs(warnings))
+	}
+}
+
 // nullColumnWarnings are n4_bql_query's warnings for projected columns NULL on every row that are
 // no slot of the queried type (field retro 2026-11-19 M1). The type contract is read through the
 // session's registry cache (loadContracts, once per session); only when some column is NULL on
