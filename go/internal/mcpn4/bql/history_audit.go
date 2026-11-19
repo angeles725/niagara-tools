@@ -28,12 +28,13 @@ const HistoryTypeQuery = "select slotPath, historyConfig.id, type, historyConfig
 	"from history:HistoryExt"
 
 // HistoryStatusNames are the n4_read_history status filters, in order; HistoryStatusWhere is the
-// BQL where of each ("all" has none). BQL lists BStatus.isOk/isFault/... as the fields ok, fault,
-// ...; the null form (status.null) is live-checked on 4.15.6.20, the others follow its shape.
+// BQL where of each ("all" has none). Live-checked on 4.14.0.162 (2026-11-19): status.isOk,
+// status.fault and status.null select records; status.ok matches nothing and returns zero rows
+// with no error, so ok / not-ok use isOk. status.null is also live-checked on 4.15.6.20.
 var (
 	HistoryStatusNames = []string{"all", "ok", "not-ok", "fault", "down", "stale", "alarm", "overridden",
 		"disabled", "null"}
-	HistoryStatusWhere = map[string]string{"all": "", "ok": "status.ok = true", "not-ok": "status.ok = false",
+	HistoryStatusWhere = map[string]string{"all": "", "ok": "status.isOk = true", "not-ok": "status.isOk = false",
 		"fault": "status.fault = true", "down": "status.down = true", "stale": "status.stale = true",
 		"alarm": "status.alarm = true", "overridden": "status.overridden = true",
 		"disabled": "status.disabled = true", "null": "status.null = true"}
