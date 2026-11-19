@@ -26,13 +26,7 @@ func (b *build) gate() int {
 		b.warn("%s", warning) // after the gate's rows, where the operator reads the verdict
 	}
 	if code != 0 {
-		// gradle's :jar step already put the new jar into modules/: put the pre-build one back, as a drift
-		// FAIL does, or a bare re-run would take the failed jar as its baseline and its signer as expected.
-		// On a first deploy there is none to put back: the new jar is taken out again.
-		for _, p := range b.profiles {
-			b.restoreBaseline(p, restoredPlain)
-			b.removeFirstDeploy(p)
-		}
+		b.rollBack()
 		b.warn(msgGateFailed)
 		return ExitGate
 	}
@@ -79,15 +73,29 @@ func (b *build) report(source string) int {
 		}
 		return ExitReportPartial
 	}
+	// A FAILed punch-list is a jar that does not go to a station either: put the pre-build jar back as a failed
+	// gate does, or a fix at the same version would read as drift (exit 51). [ev: retro client-persist-writes P4]
+	b.rollBack()
 	b.warn(msgReportFails)
 	return ExitGate
 }
 
-// baselineMissing reports whether an artifact report-module walks (a directory under source that is not a
-// symlink and not a dot-directory) has no .deploy-baseline directory: then its schema-risk row is a floor SKIP
-// naming the command that creates it.
+// rollBack undoes what gradle's :jar step put into modules/ for a jar that failed the gate or the punch-list:
+// the pre-build jar goes back, as a drift FAIL does, or a bare re-run would take the failed jar as its baseline
+// and its signer as expected; on a first deploy there is none to put back, so the new jar is taken out again.
+// keepReplaced then finds modules/ unchanged and keeps nothing under .mirror-replaced/.
+func (b *build) rollBack() {
+	for _, p := range b.profiles {
+		b.restoreBaseline(p, restoredPlain)
+		b.removeFirstDeploy(p)
+	}
+}
+
+// baselineMissing reports whether an artifact report-module walks (walkedArtifacts: a docs/ folder is none) has
+// no .deploy-baseline directory: then its schema-risk row is a floor SKIP naming the command that creates it.
 func baselineMissing(source string) bool {
-	for _, a := range walkedArtifacts(source) {
+	artifacts, _ := walkedArtifacts(source)
+	for _, a := range artifacts {
 		if st, err := os.Stat(a + "/.deploy-baseline"); err != nil || !st.IsDir() {
 			return true
 		}
