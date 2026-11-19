@@ -69,7 +69,9 @@ func linkBatchInverse(d *linkBatch, replies []any) ([]any, error) {
 }
 
 // linkBatchRecover keeps the inverse of every entry whose reply can be trusted and looks for the
-// others' links by their slots (linkRecover); observed lists what each entry found.
+// others' links by their slots (linkRecover); observed lists what each entry found. An entry whose
+// lookup fails carries lookup_error and no inverse; the other entries keep theirs, so n4_rollback
+// still removes the links that were found.
 func linkBatchRecover(c plan.Client, d *linkBatch, replies []any) (any, []any, error) {
 	observed, inverse := []any{}, []any{}
 	for i := range replies {
@@ -78,7 +80,8 @@ func linkBatchRecover(c plan.Client, d *linkBatch, replies []any) (any, []any, e
 		var found any
 		if err != nil {
 			if found, inv, err = linkRecover(c, e, d.plans[i], replies[i:i+1]); err != nil {
-				return nil, nil, err
+				observed = append(observed, linkEntryView(e, "observed", nil, "lookup_error", err.Error()))
+				continue
 			}
 		}
 		observed = append(observed, linkEntryView(e, "observed", found))
