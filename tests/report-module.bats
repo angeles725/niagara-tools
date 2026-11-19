@@ -982,3 +982,21 @@ _vf_module() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"A-ux  ERROR  vendor-floor  env fault (exit 3)"* ]]
 }
+
+# retro kit-gzip-bundle-writer-briefs Δ1: a -ux part whose src/rc/dist/*.js is over 300 KB with no .gz twin WARNs (advisory, exit 0);
+# a twin is PASS; a part with no dist/ has no bundle-gzip row.
+@test "RM-bundle-gzip: a 400 KB dist/app.js with no .gz twin WARNs; its twin makes it PASS; no dist/ prints no row" {
+  # Mutation: RM-bundle-gzip-twin -- dropping the twin test WARNs a bundle that ships its .gz
+  local t="$BATS_TEST_TMPDIR/rmgz"; _ux_tree "$t"
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t"
+  [[ "$output" != *"bundle-gzip"* ]]
+  mkdir -p "$t/DemoPan-ux/src/rc/dist"
+  head -c 409600 /dev/zero > "$t/DemoPan-ux/src/rc/dist/app.js"
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-ux  WARN  bundle-gzip  dist/app.js  400 KB over 300 KB with no app.js.gz twin"* ]]
+  gzip -n -c "$t/DemoPan-ux/src/rc/dist/app.js" > "$t/DemoPan-ux/src/rc/dist/app.js.gz"
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-ux  PASS  bundle-gzip  no dist/*.js over 300 KB without a .gz twin"* ]]
+}

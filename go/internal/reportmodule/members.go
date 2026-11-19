@@ -102,6 +102,8 @@ var perArtifact = []member{
 	{script: "rc-scan", suffix: "-ux", special: (*report).rcScan},
 	{suffix: "-ux", special: (*report).eslint},
 	{script: "lint-vendor-floor", suffix: "-ux", special: (*report).vendorFloor},
+	// retro kit-gzip-bundle-writer-briefs Δ1: a dist/*.js over 300 KB ships its .gz twin (native, no toolbelt script; WARN only).
+	{suffix: "-ux", special: (*report).bundleGzip},
 	{script: "lint-wb-threading", suffix: "-wb", f: filter{mode: swap, keep: "WARN"}},
 	{script: "lint-no-md5-credential-digest", f: warnOnly, v: rows},
 	{script: "lint-wb-file-chooser", suffix: "-wb", f: warnOnly},
