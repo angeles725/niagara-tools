@@ -1,0 +1,21 @@
+truth (Δ1): a -ux part that only reads (gets, list adds, a JSON builder) has nothing to save, and a write with a
+Context in the -rt part is the -rt logic's business, not the dashboard's: no row, exit 0.
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-ux/src/com/x/ux/BReadServlet.java --
+package com.x.ux;
+public final class BReadServlet extends BWebServlet {
+  public void doGet(WebOp op) {
+    java.util.List<String> out = new java.util.ArrayList<>();
+    out.add(point.get("out").toString());
+    reply(op, out);
+  }
+}
+-- Mod/Mod-rt/src/com/x/BLogic.java --
+package com.x;
+public final class BLogic extends BComponent {
+  void apply(BValue v, Context cx) { set("out", v, cx); }
+}

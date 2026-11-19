@@ -1,0 +1,23 @@
+truth (Δ1): the same writes with a station save requested anywhere in the module pass: the reference shape
+Clock.schedule(station, delay, BStation.save, null) on the servlet component (Ux.java), or a
+Sys.getStation().save() in the -rt part (RtSaver.java of Mod2). No row, exit 0.
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-ux/src/com/x/ux/Writer.java --
+package com.x.ux;
+final class Writer {
+  static void write(BComponent point, BValue v, WebOp op) {
+    point.set("out", v, op);
+  }
+}
+-- Mod/Mod-ux/src/com/x/ux/BDashServlet.java --
+package com.x.ux;
+public final class BDashServlet extends BWebServlet {
+  private Clock.Ticket saveTicket = Clock.expiredTicket;
+  void requestSave(BStation station, long delay) {
+    saveTicket = Clock.schedule(station, BRelTime.make(Math.max(delay, 1L)), BStation.save, null);
+  }
+}

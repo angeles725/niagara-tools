@@ -1,0 +1,43 @@
+truth (retro lint-dashboard-write-save Δ1, issue #821): a -ux part that writes station state with a
+request Context (a Context or WebOp declared in the file) and no save anywhere in the module FAILs once per write
+line: .set(, .add(, .remove(, .invoke( whose last argument is that Context, and any addSpecialEvent(. A call whose
+last argument is no request Context (a list add, a null-Context write, a one-argument remove) is no write here; a
+write in a comment or a string literal is not code. The shape of a dashboard that shipped three releases without
+a save path.
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-dashboard-write-save  @DIR@/Mod/Mod-ux/src/com/x/ux/CommandInvoker.java:6  writes station state with the request Context and nothing in the module requests a station save (lost on the next restart): schedule BStation.save after the write (types/dashboard.md § Write path) or declare persistence: <where> in MODULE-MAP.md
+FAIL  lint-dashboard-write-save  @DIR@/Mod/Mod-ux/src/com/x/ux/ScheduleWriter.java:6  writes station state with the request Context and nothing in the module requests a station save (lost on the next restart): schedule BStation.save after the write (types/dashboard.md § Write path) or declare persistence: <where> in MODULE-MAP.md
+FAIL  lint-dashboard-write-save  @DIR@/Mod/Mod-ux/src/com/x/ux/ScheduleWriter.java:7  writes station state with the request Context and nothing in the module requests a station save (lost on the next restart): schedule BStation.save after the write (types/dashboard.md § Write path) or declare persistence: <where> in MODULE-MAP.md
+FAIL  lint-dashboard-write-save  @DIR@/Mod/Mod-ux/src/com/x/ux/ScheduleWriter.java:10  writes station state with the request Context and nothing in the module requests a station save (lost on the next restart): schedule BStation.save after the write (types/dashboard.md § Write path) or declare persistence: <where> in MODULE-MAP.md
+FAIL  lint-dashboard-write-save  @DIR@/Mod/Mod-ux/src/com/x/ux/ScheduleWriter.java:11  writes station state with the request Context and nothing in the module requests a station save (lost on the next restart): schedule BStation.save after the write (types/dashboard.md § Write path) or declare persistence: <where> in MODULE-MAP.md
+-- stderr --
+-- Mod/Mod-ux/src/com/x/ux/CommandInvoker.java --
+package com.x.ux;
+import javax.baja.sys.*;
+final class CommandInvoker {
+  static void invokeSet(BComponent point, BValue arg, WebOp op) {
+    Action set = point.getAction("set");
+    point.invoke(set, arg, op);
+    // point.invoke(set, arg, op); in a comment is not code
+    String s = "point.invoke(set, arg, op)";
+  }
+}
+-- Mod/Mod-ux/src/com/x/ux/ScheduleWriter.java --
+package com.x.ux;
+import javax.baja.sys.*;
+final class ScheduleWriter {
+  static void write(BComponent schedule, BComponent day, BComponent events, BValue out, Context cx) {
+    java.util.List<String> rows = new java.util.ArrayList<>();
+    schedule.set("defaultOutput", out, cx);
+    day.add(start(), finish(),
+        out, cx);
+    rows.add(name(out, 1));
+    events.remove("ev1", cx);
+    schedule.addSpecialEvent("h", out, null);
+    rows.remove(0);
+    point.set("x", out, null);
+  }
+}

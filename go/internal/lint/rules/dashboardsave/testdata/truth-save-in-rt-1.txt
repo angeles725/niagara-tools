@@ -1,0 +1,19 @@
+truth (Δ1): a save requested from another part of the module (Sys.getStation().save() in -rt) counts: the rule
+asks whether any path in the module saves, not where.
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-ux/src/com/x/ux/Writer.java --
+package com.x.ux;
+final class Writer {
+  static void write(BComponent point, BValue v, Context cx) {
+    point.set("out", v, cx);
+  }
+}
+-- Mod/Mod-rt/src/com/x/BSaver.java --
+package com.x;
+public final class BSaver extends BComponent {
+  void persist() { Sys.getStation().save(); }
+}

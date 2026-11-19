@@ -1,0 +1,25 @@
+truth (Δ1): a save named only in a comment or a string literal is no save, a save in srcTest/ is not module
+code, and an empty persistence: line declares nothing: the write still FAILs.
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-dashboard-write-save  @DIR@/Mod/Mod-ux/src/com/x/ux/Writer.java:6  writes station state with the request Context and nothing in the module requests a station save (lost on the next restart): schedule BStation.save after the write (types/dashboard.md § Write path) or declare persistence: <where> in MODULE-MAP.md
+-- stderr --
+-- Mod/MODULE-MAP.md --
+modularity: strict
+persistence:
+-- Mod/Mod-ux/src/com/x/ux/Writer.java --
+package com.x.ux;
+final class Writer {
+  // TODO Clock.schedule(station, d, BStation.save, null);
+  static final String HINT = "Sys.getStation().save()";
+  static void write(BComponent point, BValue v, Context cx) {
+    point.set("out", v, cx);
+  }
+}
+-- Mod/Mod-ux/srcTest/com/x/ux/WriterTest.java --
+package com.x.ux;
+class WriterTest {
+  void t() { Sys.getStation().save(); }
+}

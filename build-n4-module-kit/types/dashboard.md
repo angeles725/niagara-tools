@@ -112,6 +112,76 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **The reader's group arrays are the AUTHORITY for what a dashboard shows/controls — not the property sheet or the facade class:** a slot is on the HMI only if it appears in `DashboardReader`'s arrays (`TEMP_SLOTS`, `NUM/RELTIME/BOOL_CONFIG_SLOTS`, `DOOR_SLOTS`, `STATE_SLOTS`, `HOA_MODE_SLOTS`). Read those to document/verify a dashboard's surface; flag 1→N facade slots (e.g. `startDelay` fanning to N evaporators) for the wirer. [ev: retro dashboard-servlet-write-surface-and-reader-authority · U6]
 - **A dashboard-written value's slot type is load-bearing:** a `double`/`BRelTime`/`boolean` is oBIX-writable directly; a `BStatusNumeric` needs the wrapped `<obj><real name="value">` body (never attr-only → silent 0.0) or the servlet/action path — see `types/logic-authoring.md` §"Slot types for externally written values". `[ev: corpus B823]`
 - **One audit sink for every write surface.** A dashboard with two write surfaces (an external write-server and the in-station servlet) keeps ONE canonical table (`public.change_log`): write-server rows carry `surface='write-server'` and an opaque `config_session` id; servlet writes are audited by the framework (`AuditEvent` fires only when the `Context` carries a user, `ComplexSlotMap.set`) and MIRRORED into the same table with `surface='servlet'`, `config_session` NULL (the framework record has no session field), deduplicated on the full `(ts, user, target, old, new)` tuple, behind a flag that is OFF by default. Audit-append never fails the write (spool + replay); enabling the mirror live is a station gate (the B829-live gate), not a PR gate. `[ev: corpus B829]` `[ev: openspec/changes/archive/2026-09-06-build-n4-module-campaign9/design.md:361,373 (campaign 9 design D7/D7a)]`
+### Write path — a station save after every write `[ev: retro lint-dashboard-write-save Δ1 Δ2]`
+
+A dashboard write (a command, a setpoint, a schedule range, a special event) changes the running station only:
+it reaches `config.bog` when the station is SAVED. A dashboard that wrote without saving lost every change on the
+next restart, and the Modbus driver then re-sent the stale saved fallback (`writeOnStart`/`writeOnUp`) and switched
+an HVAC unit ON with nobody in the building. Rule: **every successful write from the servlet is followed by a
+station save request**, unless another module owns that save (§ Facade contract & commissioning links: a facade
+slot linked into a control slot is saved by the control module's `ConfigSaveScheduler`), which the module then
+declares in its `MODULE-MAP.md`:
+
+```
+persistence: <who saves, e.g. the control module's ConfigSaveScheduler; or "none: momentary commands only">
+```
+
+Gate: `lint-dashboard-write-save` (Go rule `go/internal/lint/rules/dashboardsave`, over the module root; its
+`n4lint` registration and report-module member are retro lint-dashboard-write-save Δ4, open) FAILs every write line of a `-ux` part (`.set(`, `.add(`, `.remove(`, `.invoke(` whose last argument is the
+request `Context`/`WebOp`, and `addSpecialEvent(`) when nothing in the module requests a station save
+(`BStation.save`, `Sys.getStation().save()`, `Station.save*(`) and the map holds no non-empty `persistence:` line.
+
+Exemplar — a debounced save owned by the servlet component (anonymized from the 2.2.2 fix):
+
+```java
+public final class BDashServlet extends BWebServlet {
+  private final Object saveLock = new Object();          // never lock the component itself
+  private Clock.Ticket saveTicket = Clock.expiredTicket;  // the pending save; expired = none
+  private long lastSaveAt = SaveDelayPolicy.NEVER;
+
+  /** Called by a handler after a write SUCCEEDED; never throws (the write is already done). */
+  void requestSave() {
+    synchronized (saveLock) {
+      try {
+        if (!saveTicket.isExpired()) return;              // a pending save absorbs this request
+        BStation station = Sys.getStation();
+        if (station == null) return;
+        long now = Clock.millis();
+        long delay = SaveDelayPolicy.delayMillis(now, lastSaveAt);
+        saveTicket = Clock.schedule(station, BRelTime.make(Math.max(delay, 1L)), BStation.save, null);
+        lastSaveAt = now + delay;
+      } catch (Exception e) {
+        LOG.warning("station save not scheduled (the write itself succeeded): " + e);
+      }
+    }
+  }
+
+  @Override public void stopped() throws Exception {
+    synchronized (saveLock) { saveTicket.cancel(); }      // the ticket lives on this component, not a static helper
+    super.stopped();
+  }
+}
+
+/** Pure, unit-tested: 5 s settle, at most one save per minute, a clock moved back never waits longer. */
+final class SaveDelayPolicy {
+  static final long NEVER = Long.MIN_VALUE, SETTLE_MS = 5_000L, MIN_GAP_MS = 60_000L;
+  static long delayMillis(long now, long lastSaveAt) {
+    if (lastSaveAt == NEVER) return SETTLE_MS;
+    return Math.min(MIN_GAP_MS, Math.max(SETTLE_MS, lastSaveAt + MIN_GAP_MS - now));
+  }
+}
+```
+
+- **The ticket is a field of the servlet component, cancelled in `stopped()`:** a static helper that owned it had
+  no `stopped()` and `lint-timers` (`timer-ticket`) FAILed it.
+- **`Math.max(delay, 1L)` at the call:** a floor hidden in a named constant or a policy class is invisible to
+  `lint-delays`; a literal floor in either argument of `Math.max` is read.
+- **A one-shot ticket expires right before it invokes the action** (`NClockTicket.process`: cancel, then invoke),
+  so a request during the wait joins the pending save and a request after it schedules the next one.
+- **Never fail the write if the save cannot be scheduled:** log it; the next save (Workbench, the station's own)
+  persists the change. One save per operator change per station still holds (BUILD-LOOP §6.b item 10): a
+  dashboard that forwards into a control module that saves declares `persistence:` instead of saving twice.
+
 ### Reference exemplar (our own module) — DashboardPan-ux `[ev: corpus B796]` [ev: retro campaign7-dashboard-exemplar]
 
 Tridium ships no vendor exemplar for the SPA/servlet split — DashboardPan-ux is the reference (B796 scope; B791's THIN verdict is about the corpus residue, the Tridium web-tier mechanism itself is covered — § Web-tier exemplars). [ev: corpus B796]
