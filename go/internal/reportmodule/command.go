@@ -70,6 +70,7 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 	}
 	r := &report{out: s.Out, errw: s.Err, o: o, getenv: s.Env, n: map[string]int{},
 		x: runner{tb: tb, env: memberEnv(environ)}, bl: bl}
+	artifacts = lintArtifacts(r, artifacts) // a docs/ folder beside the parts is no artifact (retro K4)
 	for _, a := range artifacts {
 		for _, m := range perArtifact {
 			r.step(a, m)

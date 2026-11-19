@@ -2,7 +2,6 @@ package reportmodule
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -110,35 +109,6 @@ func assess(o options, x runner, a artifact, jar string) readyJar {
 	}
 	j.conclude()
 	return j
-}
-
-// isModuleArtifact says whether a directory of the module root is one of its artifacts: it holds a
-// module-include.xml, or its name is a module part (<MOD>-rt/-ux/-wb/-se/-doc) and it holds its own
-// <name>.gradle.kts or a build.gradle[.kts]. A docs/ directory or a gradle directory beside the parts (buildSrc/, a
-// shared conventions build) is never reported as an unbuilt artifact.
-func isModuleArtifact(a artifact) bool {
-	if isFile(a.dir + "/module-include.xml") {
-		return true
-	}
-	if !isPartName(a.name) {
-		return false
-	}
-	for _, f := range []string{a.name + ".gradle.kts", "build.gradle.kts", "build.gradle"} {
-		if isFile(a.dir + "/" + f) {
-			return true
-		}
-	}
-	return false
-}
-
-// isPartName says whether name ends with a Niagara module part suffix.
-func isPartName(name string) bool {
-	for _, p := range []string{"-rt", "-ux", "-wb", "-se", "-doc"} {
-		if strings.HasSuffix(name, p) && len(name) > len(p) {
-			return true
-		}
-	}
-	return false
 }
 
 // unbuilt is the assessment of an artifact with no built jar: one FAIL row naming it, so the module is not ready

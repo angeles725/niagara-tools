@@ -1,6 +1,9 @@
 package buildmodule
 
-import "github.com/angeles725/niagara-tools/go/internal/modjar"
+import (
+	"github.com/angeles725/niagara-tools/go/internal/modjar"
+	"github.com/angeles725/niagara-tools/go/internal/reportmodule"
+)
 
 // Every line build.sh prints, byte for byte as the bash tool printed it. A message of several lines is one
 // constant with its lines joined by "\n"; say and warn add the final newline.
@@ -145,6 +148,7 @@ const (
 	msgBaselineRefNoModule    = "build.sh: --schema-baseline-ref %s: %s does not exist at that commit (pass the commit that was deployed)"
 	msgBaselineRefExists      = "build.sh: --schema-baseline-ref: %s already exists — remove it to take the baseline from the ref, or drop the option to use it"
 	msgBaselineRefNewArtifact = "build.sh: INFO — %s does not exist at %s: no schema-risk baseline for it (a first deploy of that artifact)"
+	msgBaselineRefNotArtifact = "build.sh: INFO — %s is " + reportmodule.NotArtifactDetail + ": no schema-risk baseline for it"
 	msgBaselineRefFailed      = "build.sh: --schema-baseline-ref %s: cannot extract %s (exit %d)"
 	msgBaselineRefDangling    = "build.sh: INFO — removed %s, a dangling link a killed --schema-baseline-ref run left"
 	msgBaselineRefLink        = "build.sh: --schema-baseline-ref: cannot link %s: %v"

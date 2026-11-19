@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/reportmodule"
 )
 
 // extractBaselines is --schema-baseline-ref <ref>: what the schema-risk SKIP row tells the operator to run, done
@@ -26,7 +28,10 @@ func (b *build) extractBaselines() int {
 	if code := b.gitQuiet(source, "rev-parse", "--verify", "--quiet", ref+":./"); code != 0 {
 		return b.refRefusal(code, msgBaselineRefNoModule, ref, source)
 	}
-	artifacts := walkedArtifacts(source)
+	artifacts, other := walkedArtifacts(source)
+	for _, d := range other {
+		b.warn(msgBaselineRefNotArtifact, filepath.Base(d))
+	}
 	if code := b.clearLeftovers(artifacts); code != proceed {
 		return code
 	}
@@ -90,8 +95,9 @@ func (b *build) refRefusal(code int, format string, a ...any) int {
 }
 
 // walkedArtifacts are the artifact directories report-module walks under source: directories that are not
-// symlinks and not dot-directories (baselineMissing reads the same set).
-func walkedArtifacts(source string) []string {
+// symlinks and not dot-directories, parted by reportmodule.SplitArtifacts (the one artifact definition; a docs/
+// folder beside the parts is other). baselineMissing reads the same set.
+func walkedArtifacts(source string) (artifacts, other []string) {
 	entries, _ := os.ReadDir(source)
 	var dirs []string
 	for _, e := range entries {
@@ -99,7 +105,7 @@ func walkedArtifacts(source string) []string {
 			dirs = append(dirs, source+"/"+e.Name())
 		}
 	}
-	return dirs
+	return reportmodule.SplitArtifacts(dirs)
 }
 
 // clearLeftovers refuses (exit 2) when an artifact holds a .deploy-baseline the run must not replace, and only
