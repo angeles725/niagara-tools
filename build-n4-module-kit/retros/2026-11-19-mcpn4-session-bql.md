@@ -19,7 +19,7 @@ The station restarted at 04:40. mcp-n4 calls at 04:43 were answered `com.tridium
 |---|---|---|---|
 | Δ1 | APPLIED 2026-11-19. A second session loss in a row after the one reconnect is a named error (never looped, never raw BOX text); an execution answers "session lost ... redo the dry run" and is not retried | `go/internal/mcpn4/jsonrpc/session_loss.go` | `[ev: retro mcpn4-session-bql Δ1]` |
 | Δ2 | APPLIED 2026-11-19. `n4_bql_query` warns on a column NULL on every row whose name is no slot of the queried type (type contract via the session registry cache); unchecked contract gives the weaker warning | `go/internal/mcpn4/bql/nullcolumns.go`, `readtools/bql_columns.go` | `[ev: retro mcpn4-session-bql Δ2]` |
-| Δ3 | OPEN. State both behaviours in the `n4_connect` and `n4_bql_query` descriptions (registry.json and the mirrored `testdata/tools/*.json` goldens) | `go/internal/mcpn4/registry/registry.json`, `go/internal/mcpn4/testdata/tools/` | `[ev: retro mcpn4-session-bql Δ3]` |
+| Δ3 | APPLIED 2026-11-19. State both behaviours in the `n4_connect` and `n4_bql_query` descriptions (registry.json and the mirrored `testdata/tools/*.json` goldens) | `go/internal/mcpn4/registry/registry.json`, `go/internal/mcpn4/testdata/tools/` | `[ev: retro mcpn4-session-bql Δ3]` |
 
 ## Lessons
 - A BQL `NULL` is not evidence: check the column names a slot before reading it as "not set".
