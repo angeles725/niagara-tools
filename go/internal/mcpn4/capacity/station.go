@@ -41,16 +41,21 @@ func ReadLicence(s SpyGetter, timeout float64) (*license.Info, string) {
 }
 
 // DeviceAdd checks one device to add: the usage of the devices rule (nil when the licence
-// could not be read: why says so) and whether one more device surely exceeds its limit.
+// could not be read: why says so) and whether one more device surely exceeds its limit. It counts
+// the station's devices only when the licence sets a limit the new device counts against.
 func DeviceAdd(s SpyGetter, g OrdGetter, module string, timeout float64) (u *Usage, over bool, why string) {
 	info, why := ReadLicence(s, timeout)
 	if info == nil {
 		return nil, false, why
 	}
 	term := TermOf(info, Devices)
+	uncounted := &Usage{Rule: Devices.Name, Limit: term.Limit, Unlimited: term.Unlimited, Excluded: term.Excluded}
+	if term.Unlimited { // no device.limit: nothing to exceed, so no station-wide count
+		return uncounted, false, ""
+	}
 	for _, m := range term.Excluded {
 		if m == module { // the station does not count this device (Metrics.incrementDevice)
-			return &Usage{Rule: Devices.Name, Limit: term.Limit, Unlimited: term.Unlimited, Excluded: term.Excluded}, false, ""
+			return uncounted, false, ""
 		}
 	}
 	m := MeasureRule(g, info, Devices, timeout)

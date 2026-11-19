@@ -93,3 +93,18 @@ func TestCreateOfANonDeviceTypeReadsNoLicence(t *testing.T) {
 		t.Errorf("a non-device create read spy %v and ords %v", spy, ords)
 	}
 }
+
+// A licence with no device.limit sets no ceiling: the dry run plans the device without the
+// station-wide device count (verifier note on PR #814), and adds no licence note.
+func TestCreateOfADeviceUnderAnUnlimitedLicenceSkipsTheCount(t *testing.T) {
+	r, sv := licWriteRig(t, licCapacity("point.limit=500", "excludedDevices=ndio;nrio;niagaraDriver"), devicesCSV(30))
+	plan := r.Srv.Dry("n4_create_component", createDevice)
+	if tok, _ := plan["confirmation_token"].(string); tok == "" || strings.Contains(pyjsonText(plan["plan"]), "licence") {
+		t.Fatalf("plan = %v", plan)
+	}
+	for _, q := range ordRequests(sv) {
+		if strings.Contains(q, "driver:Device") {
+			t.Errorf("the dry run counted the devices: %s", q)
+		}
+	}
+}
