@@ -128,6 +128,14 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
 - **A path mapped twice belongs in a recipe:** a read-only indicator carried from rt to the dashboard follows the
   cached hop list in `skill/SKILL.md` § Recipe — add a read-only indicator (rt → dashboard); start from the sibling
   slot you are mirroring instead of re-tracing the path. `[ev: retro change-tier-time-budgets Δ2]`
+- **Parallel writer checklist (one module, several writers):** each writer, before it reports done:
+  1. edits only the paths its brief lists, each under the `<module-root>/MODULE-MAP.md` row the brief names for it
+     (`ORCHESTRATION.md` §3.c, Parallel SPA writers);
+  2. runs `toolbelt/lint-module-map.sh <module-root>` and gets no FAIL row (a new file in no row is MM4);
+  3. runs the whole `npm test` of the `-ux` part (and the whole Java suite for a Java part), not only its own
+     tests, and reports the counts.
+  After the merge the parent runs the seam check once: the full suite plus `build.sh`.
+  `[ev: retro kit-gzip-bundle-writer-briefs Δ3]`
 
 ## 3. Preview (UI types) — BEFORE compiling
 - `~/.local/lib/niagara-go/bin/dashboard-preview --rc <mod>/src/rc --prefix /<mount>`

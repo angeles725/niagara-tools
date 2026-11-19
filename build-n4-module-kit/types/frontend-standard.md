@@ -91,6 +91,9 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
 - [both] Images ship as separate cacheable files under `rc/img/`, referenced with `?v=`; measure
   page weight before reasoning about performance (base64 data URIs made ~95% of one audited page).
   Budgets are stricter on the HMI.
+- [both] A bundled `dist/*.js` over 300 KB ships a deterministic `.gz` twin that the servlet serves with
+  `Content-Encoding: gzip` and `Vary: Accept-Encoding` (`dashboard.md` § Static serving).
+  `[ev: retro kit-gzip-bundle-writer-briefs Δ2]`
 - [both] No secrets in JS; config (base path, poll period, timeouts) in one `config.js`.
 
 ### 6. Writes and commands
@@ -331,6 +334,10 @@ warning → WARN). This covers the function-length and dead-local rule; a dead T
 
 Vendored libraries: `toolbelt/lint-vendor-floor.sh` (§ Vendored libraries), also run by
 `report-module.sh` on `src/rc/vendor`. `[ev: retro dashboard-frontend-standard Δ16]`
+
+Pre-compressed bundle: `report-module.sh` row `bundle-gzip` (native, no toolbelt script) WARNs a
+`src/rc/dist/*.js` over 300 KB with no `.gz` twin (§ 5, `dashboard.md` § Static serving).
+`[ev: retro kit-gzip-bundle-writer-briefs Δ2]`
 
 HMI layout fit: `toolbelt/hmi-sweep.js` sweeps every nav view (and declared sub-tabs) at 1280×800 for
 document scroll, unnamed inner scrollers and an occluded target such as the alarm banner

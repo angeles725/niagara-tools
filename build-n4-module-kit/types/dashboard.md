@@ -222,6 +222,28 @@ unminified sources to the browser debugger (webdev mode, keyed by the `BJsBuild`
 
 Whether a NEW SPA should use a framework build at all (plain classic scripts vs. Vite + TypeScript built outside gradle with `build.target` = the panel engine; no Spring Boot on a JACE; framework stacks belong to off-station viewers) is decided in `frontend-standard.md` § Technology choices. `[ev: retro dashboard-frontend-standard Δ12]`
 
+### Static serving — a pre-compressed twin for a large bundle `[ev: retro kit-gzip-bundle-writer-briefs Δ2]`
+A bundled SPA served plain is slow through a site tunnel: an 832 KB `dist/app.js` delayed the whole page, and
+its gzip twin is 241 KB. The servlet does not compress on the fly, so the bundle step writes the twin and the
+static handler picks it.
+- **The bundle step writes `dist/app.js.gz` and `dist/app.css.gz` next to the plain files, deterministically:**
+  Node's `zlib.gzipSync(buf, { level: constants.Z_BEST_COMPRESSION })` writes no timestamp, so the same input
+  gives the same bytes and a bundle manifest of hashes stays stable (the shell form is `gzip -n -9`). Keep the
+  plain file too: a client that does not accept gzip gets it.
+- **The static handler serves the twin only when the request accepts it:** a pure helper (the exemplar's
+  `GzipVariant.of(path, acceptEncoding)`) returns the `.gz` path for the listed bundle files when
+  `Accept-Encoding` names `gzip` with no `q` or `q > 0` (RFC 9110 §12.5.3), else null. With the twin, set
+  `Content-Encoding: gzip` (a twin missing from the jar falls back to the plain file) and keep the Content-Type of the PLAIN file (`application/javascript`, never
+  `application/gzip`). Set `Vary: Accept-Encoding` on every response of a file that has a twin, the plain one
+  included, so a cache never hands the gzip bytes to a client that did not ask. Unit-test the helper (gzip,
+  `gzip;q=0`, absent header, a path with no twin).
+- **Enforced:** `report-module` row `bundle-gzip` WARNs a `-ux` part whose `src/rc/dist/` holds a `*.js` over
+  300 KB with no `<name>.gz` next to it (a `.js.map` is not checked), one PASS row otherwise; a part with no
+  `src/rc/dist/` gets no row. The row is advisory and never fails the report.
+- Exemplar (a client dashboard, `-ux`): `GzipVariant.java` + `StaticHandler.java` (twin lookup, then
+  `Content-Encoding` and `Vary`), and `webtest/tools/bundle.mjs` (gzip after the esbuild step, both twins listed
+  in the manifest outputs).
+
 - Frontend: ES5 + `fetch`, REST poll. **Every fetch (reads too) sends `X-Requested-With`** or the guard 302s it → page loads but data shows "--". Use ABSOLUTE `/<prefix>/...` URLs (relative break without a trailing slash). Write via `POST /api/setpoint {ord,value}`.
   > **BOX/WebSocket push-burst rate-limit (context for live-data choice):** a browser `subscriberMixIn` / `ProxyBroker.subscribeOp` subscription goes through a `BrokerPoller` with a 2000 ms server-side rate-limit — push bursts are batched, not per-change. High-frequency slots (1 Hz control tick) are throttled to one push burst per 2 s over BOX/WebSocket. A REST-poll at 5 s is therefore equivalent in effective latency for a slow-moving dashboard; the extra BOX complexity (session management, `ssession` lifecycle) is worth it only when sub-2 s latency actually matters and a bajaux `@AgentOn` context is already in use. `[ev: corpus B512 §512.4]`
 

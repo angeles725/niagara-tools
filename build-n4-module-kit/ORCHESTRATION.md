@@ -76,6 +76,15 @@ artifact in the feature doc — or an explicit waiver `Design shard: waived (<re
   shared `odd/tasks/<feature-name>.md`, resolve by APPEND per the fragment-merge rule (`METHODOLOGY.md` § Kit
   maintenance) — keep both sections, never overwrite — or name one doc owner per checkout who applies every writer's
   section text serially. `[ev: retro comppan-fase2-amps-alarms Δ8]`
+- **Parallel SPA writers — the brief names the MODULE-MAP row of every path:** for each path a writer may
+  create or edit, the brief names the `<module-root>/MODULE-MAP.md` row whose `Files` owns it (a glob row such as `frontend`
+  owns `src/rc/**`), and a new file goes under a path an existing row already owns; a file no row owns, or two
+  rows own, is an MM4 FAIL in a strict module (`types/structure.md` § Module map). Before reporting done, each
+  writer runs `toolbelt/lint-module-map.sh <module-root>` and the WHOLE `npm test`, not only its own test files:
+  writers that each passed their own tests still broke each other's pinned lists, and the merge of four SPA
+  writers showed an MM4 FAIL on 19 files that only `build.sh` caught. The parent still runs the seam check
+  (the full suite plus the gate) once after the merge (`BUILD-LOOP.md` § 2, Parallel writer checklist).
+  `[ev: retro kit-gzip-bundle-writer-briefs Δ3]`
 - **Keep-both only for whole-line additions:** an automatic keep-both conflict resolution applies only to hunks where
   both sides add whole lines; a test file or an edited line needs a human merge, then a compile and a test run before
   the commit (a keep-both cut two test functions and PR #409 shipped a file that did not compile).
