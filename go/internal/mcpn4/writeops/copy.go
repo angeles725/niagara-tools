@@ -11,7 +11,8 @@ import (
 // CopyComponent is n4_copy_component: the configuration of one child of parent_ord (type, plain
 // slots and child components, CopyDepth levels deep) added again under each new name, all in one
 // batch under one confirmation token. Slots flagged readonly, transient, default-on-clone or
-// remove-on-clone (stripFlags) and links are not copied; the plan lists them. The inverse removes
+// remove-on-clone (stripFlags) and links are not copied; the plan lists them. The status of a
+// Status value off its default is carried whole with its value (carriedStatus). The inverse removes
 // every copy under the name the station assigned.
 var CopyComponent = plan.Impl{ScopeOrds: copyScope, Plan: copyPlan, Inverse: copyInverse, Readback: copyReadback}
 
