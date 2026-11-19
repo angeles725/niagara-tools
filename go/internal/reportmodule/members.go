@@ -137,6 +137,10 @@ var perModule = []member{
 	{script: "lint-structural-tests", in: inArtifact, f: warnOnly, noSource: "no *.java under a srcTest/"},
 	{script: "lint-logger-name", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt, -ux, -wb or -se part's src/"},
 	{script: "lint-adapter-cfg-default", in: inArtifact, f: warnOnly, noSource: "no *.java under a -rt part's src/"},
+	// issue #821: a -ux part that writes with the request Context and no station save in the module FAILs; a module
+	// with no -ux part has no dashboard writes, so its exit 3 is a SKIP row.
+	// Mutation: RM-dashboard-save-nosource -- dropping noSource turns every module without a -ux part into an env fault
+	{script: "lint-dashboard-write-save", in: inArtifact, f: failOnly, v: rows, noSource: "no *.java under a -ux part's src/"},
 	// retro coordination-stretch-deltas K2/K8: the template lint, with the installation report-module is given.
 	// Mutation: RM-ntpl-home -- dropping home runs it without the installation, so a missing module is WARN and never blocks
 	{script: ntplScript, in: inArtifact, f: filter{sel: "FAIL|WARN", mode: whole}, v: failRows, home: true, noSource: "no *.gradle.kts and no *.ntpl under the root"},

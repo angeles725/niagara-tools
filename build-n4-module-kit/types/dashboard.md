@@ -120,14 +120,14 @@ next restart, and the Modbus driver then re-sent the stale saved fallback (`writ
 an HVAC unit ON with nobody in the building. Rule: **every successful write from the servlet is followed by a
 station save request**, unless another module owns that save (§ Facade contract & commissioning links: a facade
 slot linked into a control slot is saved by the control module's `ConfigSaveScheduler`), which the module then
-declares in its `MODULE-MAP.md`:
+declares in its module map, `<module-root>/MODULE-MAP.md` (`types/structure.md` § Module map):
 
 ```
 persistence: <who saves, e.g. the control module's ConfigSaveScheduler; or "none: momentary commands only">
 ```
 
-Gate: `lint-dashboard-write-save` (Go rule `go/internal/lint/rules/dashboardsave`, over the module root; its
-`n4lint` registration and report-module member are retro lint-dashboard-write-save Δ4, open) FAILs every write line of a `-ux` part (`.set(`, `.add(`, `.remove(`, `.invoke(` whose last argument is the
+Enforced: `toolbelt/lint-dashboard-write-save.sh <module-root>` (Go rule `go/internal/lint/rules/dashboardsave`, a
+report-module member, so `build.sh` runs it) FAILs every write line of a `-ux` part (`.set(`, `.add(`, `.remove(`, `.invoke(` whose last argument is the
 request `Context`/`WebOp`, and `addSpecialEvent(`) when nothing in the module requests a station save
 (`BStation.save`, `Sys.getStation().save()`, `Station.save*(`) and the map holds no non-empty `persistence:` line.
 

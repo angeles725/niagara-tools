@@ -12,9 +12,10 @@
 #
 # The delay (second argument) is classified in this order:
 #   literal       BRelTime.make(N) / make<Unit>(N): FAIL literal-zero when 0, else clean.
-#   Math.max      BRelTime.make(Math.max(x, k)): FAIL zero-floor when k <= 0 or k is not a literal.
+#   Math.max      BRelTime.make(Math.max(x, k)) or Math.max(k, x): FAIL zero-floor when the literal k <= 0, or when
+#                 neither argument is a bare literal (the floor may be in either; retro lint-dashboard-write-save Δ3).
 #   helper (D2b)  BRelTime.make([Class.]fn(...)): clean when fn is a `static [final] long fn(` method, in any
-#                 file under the root, whose body holds Math.max(.., N>=1), `>= 1`, `< 1 ? 1` or `return 1;`.
+#                 file under the root, whose body holds Math.max(.., N>=1) or Math.max(N>=1, ..), `>= 1`, `< 1 ? 1` or `return 1;`.
 #                 Bodies are javasrc.Methods over comment-free code (fixed 2026-10-24: raw brace counting let a
 #                 "{" in a string stretch a helper over the next method's floor, and a floor in a comment counted).
 #   variable      BRelTime.make(v): the nearest assignment of v (`v = ...`) in the same method or class-level
@@ -57,6 +58,8 @@
 # Mutation: LD25 -- walking 50 lines back past the method start lets second() borrow first()'s Math.max(p, 1L)
 # Mutation: LD26 -- walking 80 lines back past the method start lets first()'s ms == 0 guard second()'s call
 # Mutation: LD27 -- counting braces in raw text lets open() borrow later()'s Math.max(y, 1L) and pass
+# Mutation: LD28 -- reading the floor only in the second argument FAILs Math.max(1L, delayMs) zero-floor
+# Mutation: LD29 -- accepting any literal first argument as a floor passes Math.max(0L, delayMs)
 # Mutation: LD13 -- drop Minutes from the facet_min unit alternation -> makeMinutes MIN reads as unreadable, FAIL
 # Mutation: LD16 -- stop accumulating continuation lines -> a multi-line Clock.schedule( FAILs unfloored
 #

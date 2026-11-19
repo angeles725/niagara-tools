@@ -263,6 +263,27 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [ "$output" = "FAIL  lint-delays     $ONE/H.java:11  zero-floor  helper open has no visible strictly-positive floor" ]
 }
 
+@test "LD28: Math.max(1L, delayMs), the floor in the FIRST argument, is a floor (no row, exit 0)" {
+  # Mutation: LD28 -- reading the floor only in the second argument FAILs this call zero-floor
+  # Go golden: go/internal/lint/rules/delays/testdata/truth-max-floor-first-arg-1.txt
+  printf '%s\n' 'package com.x;' 'public class F extends BComponent {' '  private Clock.Ticket t;' '  void arm(long delayMs) {' \
+    '    t = Clock.schedule(this, BRelTime.make(Math.max(1L, delayMs)), a, null);' '  }' '}' > "$ONE/F.java"
+  run "$LD" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "LD29: Math.max(0L, delayMs) and Math.max(delayMs, 0L) both FAIL zero-floor, whichever argument holds the 0" {
+  # Mutation: LD29 -- accepting any literal first argument as a floor passes Math.max(0L, delayMs)
+  printf '%s\n' 'package com.x;' 'public class Z extends BComponent {' '  private Clock.Ticket t, u;' '  void arm(long delayMs) {' \
+    '    t = Clock.schedule(this, BRelTime.make(Math.max(0L, delayMs)), a, null);' \
+    '    u = Clock.schedule(this, BRelTime.make(Math.max(delayMs, 0L)), a, null);' '  }' '}' > "$ONE/Z.java"
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [ "${lines[0]}" = "FAIL  lint-delays     $ONE/Z.java:5  zero-floor  Math.max floor=0 (<=0) — use Math.max(x,1L)" ]
+  [ "${lines[1]}" = "FAIL  lint-delays     $ONE/Z.java:6  zero-floor  Math.max floor=0 (<=0) — use Math.max(x,1L)" ]
+}
+
 @test "LD-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
   # Mutation: LD-locked -- a raw find walk skips the locked directory and passes clean.
   printf "class A {}\n" > "$ONE/A.java"

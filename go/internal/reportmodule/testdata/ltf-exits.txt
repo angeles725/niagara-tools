@@ -68,9 +68,10 @@ A-3  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it fro
 (module)  PASS  lint-bundled-jar-class-version  clean
 (module)  PASS  lint-vacuous-tests  clean
 (module)  PASS  lint-permissions-xml  clean
+(module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 5 artifacts · 45 PASS · 3 FAIL · 1 WARN · 16 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 5 artifacts · 46 PASS · 3 FAIL · 1 WARN · 16 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
