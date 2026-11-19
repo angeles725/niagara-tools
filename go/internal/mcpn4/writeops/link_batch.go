@@ -28,7 +28,7 @@ func linkBatchPlan(c plan.Client, entries []*pyjson.Object) (*plan.Planned, erro
 		Notes: []any{"creates " + n + " link(s) in one batch under one confirmation token, " + n + " write(s) of " +
 			"the budget (one per link; write_budget.remaining shows what is left); n4_rollback removes every " +
 			"link and is outside the budget"}}
-	d, seen := &linkBatch{entries: entries}, map[string]int{}
+	d, seen, sources := &linkBatch{entries: entries}, map[string]int{}, []any{}
 	for i, e := range entries {
 		p, err := linkPlan(c, e)
 		if err != nil {
@@ -48,8 +48,9 @@ func linkBatchPlan(c plan.Client, entries []*pyjson.Object) (*plan.Planned, erro
 			out.Targets.Set(k, v)
 		}
 		d.plans = append(d.plans, p)
+		sources = append(sources, get(p.Preview, "link_sources").([]any)...)
 	}
-	out.Data = d
+	out.Data, out.Preview = d, obj("link_sources", sources)
 	return out, nil
 }
 

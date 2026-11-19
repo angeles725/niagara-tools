@@ -28,6 +28,10 @@ type Planned struct {
 	// Nothing, when not nil, is a plan with nothing to do: the engine returns it as the reply,
 	// with no token, no journal and no station call (n4_ack_alarm's selection matching nothing).
 	Nothing *pyjson.Object
+	// Preview, when not nil, is volatile state shown to the operator (a link source's current
+	// value): its keys join the dry-run reply, never the hashed plan, so a token stays valid while
+	// that state moves.
+	Preview *pyjson.Object
 }
 
 // Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only; PlanWith
@@ -96,7 +100,8 @@ func Hashed(name string, p *Planned, sess *session.Session) (*pyjson.Object, str
 	return plan, hex.EncodeToString(sum[:]), nil
 }
 
-func (e *Engine) dryRun(name string, args, plan *pyjson.Object, planHash, tierBlock string, inverse []any) (*pyjson.Object, string, error) {
+func (e *Engine) dryRun(name string, args, plan *pyjson.Object, planHash, tierBlock string, inverse []any,
+	extra *pyjson.Object) (*pyjson.Object, string, error) {
 	tok, expires, err := e.State.Tokens.Issue(name, args, planHash)
 	if err != nil {
 		return nil, "", err
@@ -109,6 +114,14 @@ func (e *Engine) dryRun(name string, args, plan *pyjson.Object, planHash, tierBl
 	}
 	if len(preview) > 0 { // volatile: shown to the operator, outside what the token authorizes
 		out.Set("link_input_values", preview)
+	}
+	if extra != nil { // volatile, like link_input_values: outside the hash
+		for _, k := range extra.Keys() {
+			if _, taken := out.Get(k); !taken {
+				v, _ := extra.Get(k)
+				out.Set(k, v)
+			}
+		}
 	}
 	if tierBlock != "" { // outside the plan hash: the gate is policy, not part of the plan
 		sess := e.Ctx.Session
