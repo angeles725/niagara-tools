@@ -88,7 +88,8 @@ func configured(ct *plan.Contracts, root *pyjson.Object) (*pyjson.Object, []stri
 
 // stripTree is node (of type typ) without each child stripReason leaves out, with its subtree,
 // at every level; children listed by name only are left out silently. A frozen child without "t"
-// is evaluated as the type of its declared default.
+// is evaluated as the type of its declared default. The status of a Status value off its default
+// is kept whatever its flags (carriedStatus).
 func stripTree(ct *plan.Contracts, node *pyjson.Object, typ, path string, out *[]strippedNode) (*pyjson.Object, error) {
 	kids, err := childObjects(node, path)
 	if err != nil {
@@ -110,7 +111,8 @@ func stripTree(ct *plan.Contracts, node *pyjson.Object, typ, path string, out *[
 			return nil, err
 		}
 		p, def := joinPath(path, name(kid)), asObj(get(slot, "v"))
-		if flags, strip, readonly := stripReason(kid, slot); strip {
+		carried := carriedStatus(typ, kid, def)
+		if flags, strip, readonly := stripReason(kid, slot); strip && !carried {
 			*out = append(*out, strippedNode{p, flags, readonly && !sameValue(kid, def)})
 			continue
 		}
@@ -121,6 +123,9 @@ func stripTree(ct *plan.Contracts, node *pyjson.Object, typ, path string, out *[
 		stripped, err := stripTree(ct, kid, kt, p, out)
 		if err != nil {
 			return nil, err
+		}
+		if carried {
+			stripped = asStatusChild(stripped)
 		}
 		kept = append(kept, stripped)
 	}
