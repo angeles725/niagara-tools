@@ -17,6 +17,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/charsetdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/dashboardsave"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
@@ -139,5 +140,6 @@ func All() []lint.Spec {
 		lexiconapostrophe.Spec(),
 		slotdefaulttype.Spec(),
 		ntplmanifest.Spec(),
+		dashboardsave.Spec(),
 	}
 }

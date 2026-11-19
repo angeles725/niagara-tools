@@ -69,7 +69,7 @@ func summaryLine(out string) string {
 func TestNoBaselineFileLeavesTheReportAsItWas(t *testing.T) {
 	root := baselineModule(t)
 	code, out, errs := baselineRun(t, twoLints, root)
-	want := "report-module: 1 artifact · 19 PASS · 3 FAIL · 0 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES"
+	want := "report-module: 1 artifact · 20 PASS · 3 FAIL · 0 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES"
 	if code != ExitFail || errs != "" || summaryLine(out) != want || !strings.Contains(out, rowDelays+"A-rt  PASS  lint-link-target-flags") ||
 		!strings.Contains(out, rowsSysOut) || strings.Contains(out, "NEW") || strings.Contains(out, "BASE") || strings.Contains(out, "baseline") {
 		t.Errorf("exit %d, stderr %q, want exit 1, the rows in place and %q:\n%s", code, errs, want, out)
@@ -108,7 +108,7 @@ func TestBaselineGroupsNewAndBaseRows(t *testing.T) {
 	groups := "(run)  SKIP  triage-console  no --console-dir\n" +
 		"report-module: NEW FAIL rows (not in " + path + "):\n" + rowsSysOut +
 		"report-module: BASE FAIL rows (listed in " + path + ", not part of the verdict):\n" + rowDelays +
-		"report-module: 1 artifact · 19 PASS · 3 FAIL (2 new, 1 base in " + path + ") · 0 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES\n"
+		"report-module: 1 artifact · 20 PASS · 3 FAIL (2 new, 1 base in " + path + ") · 0 WARN · 2 SKIP · 0 ADVISORY  ->  ISSUES\n"
 	if code != ExitFail || errs != "" || !strings.HasSuffix(out, groups) || strings.Count(out, "  FAIL  ") != 3 {
 		t.Errorf("exit %d, stderr %q, want exit 1 and the report to end with\n%s\ngot\n%s", code, errs, groups, out)
 	}
@@ -116,7 +116,7 @@ func TestBaselineGroupsNewAndBaseRows(t *testing.T) {
 	code, out, errs = baselineRun(t, twoLints, root)
 	groups = "report-module: NEW FAIL rows (not in " + path + "):\n(none)\n" +
 		"report-module: BASE FAIL rows (listed in " + path + ", not part of the verdict):\n" + rowDelays + rowsSysOut +
-		"report-module: 1 artifact · 19 PASS · 3 FAIL (0 new, 3 base in " + path + ") · 0 WARN · 2 SKIP · 0 ADVISORY  ->  CLEAN\n"
+		"report-module: 1 artifact · 20 PASS · 3 FAIL (0 new, 3 base in " + path + ") · 0 WARN · 2 SKIP · 0 ADVISORY  ->  CLEAN\n"
 	if code != ExitClean || errs != "" || !strings.HasSuffix(out, groups) {
 		t.Errorf("exit %d, stderr %q, want exit 0 and the report to end with\n%s\ngot\n%s", code, errs, groups, out)
 	}
@@ -129,7 +129,7 @@ func TestStaleBaselineLineIsAWarnRow(t *testing.T) {
 	code, out, errs := baselineRun(t, map[string]string{"lint-delays": stubDelays}, root)
 	want := rowDelays +
 		"(module)  WARN  report-baseline  stale baseline line (no current FAIL row matches it; remove it): A-rt  lint-gone  Old.java:N  fixed long ago\n" +
-		"report-module: 1 artifact · 20 PASS · 1 FAIL (0 new, 1 base in " + path + ") · 1 WARN · 2 SKIP · 0 ADVISORY  ->  CLEAN\n"
+		"report-module: 1 artifact · 21 PASS · 1 FAIL (0 new, 1 base in " + path + ") · 1 WARN · 2 SKIP · 0 ADVISORY  ->  CLEAN\n"
 	if code != ExitClean || errs != "" || !strings.HasSuffix(out, want) {
 		t.Errorf("exit %d, stderr %q, want exit 0 and the report to end with\n%s\ngot\n%s", code, errs, want, out)
 	}

@@ -60,3 +60,12 @@ func helperName(s string) string {
 	}
 	return ""
 }
+
+// firstLiteral is the digits of a Math.max first argument that is a bare integer literal (1, 1L), "" for
+// anything else (an expression such as 1 + x is no floor). Retro lint-dashboard-write-save Δ3.
+func firstLiteral(arg string) string {
+	if t := trimSpace(arg); bareLong.MatchString(t) {
+		return digits.FindString(t)
+	}
+	return ""
+}

@@ -17,7 +17,12 @@ func (r *file) binding(lnum int, v, ln string) bool {
 		return false
 	}
 	if loc := maxBinding.FindStringIndex(rhs); loc != nil {
-		if k := digits.FindString(rhs[loc[1]:]); k != "" {
+		k := digits.FindString(rhs[loc[1]:])
+		if k == "" { // Δ3: Math.max(1L, x), the floor in the first argument
+			head := rhs[loc[0]+len("Math.max(") : loc[1]]
+			k = firstLiteral(head[:strings.LastIndexByte(head, ',')])
+		}
+		if k != "" {
 			if n, _ := strconv.ParseFloat(k, 64); n <= 0 {
 				r.emit(lint.Fail, lnum, "zero-floor  local "+v+"=Math.max(.,k) k="+num(n)+" (<=0)")
 			}

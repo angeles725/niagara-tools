@@ -1,0 +1,30 @@
+truth (retro lint-dashboard-write-save Δ3): a literal floor in the FIRST argument of Math.max is read
+like one in the second, inline in BRelTime.make and in a local binding: Math.max(1L, x) passes, Math.max(0L, x)
+FAILs zero-floor. The second-argument order stays pinned by LD1/LD2. A first argument that is not a bare literal
+(Math.max(1 + x, y)) is no floor. A helper whose body floors first (settle) is a proven helper (D2b).
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/Either.java:10  zero-floor  Math.max floor=0 (<=0) — use Math.max(x,1L)
+FAIL  lint-delays     @DIR@/t/Either.java:13  zero-floor  local z=Math.max(.,k) k=0 (<=0)
+FAIL  lint-delays     @DIR@/t/Either.java:14  zero-floor  cannot determine Math.max floor in: BRelTime.make(Math.max(1 + delayMs, delayMs))
+-- stderr --
+-- t/Either.java --
+package demo;
+import javax.baja.sys.*;
+public final class Either extends BComponent {
+  private Clock.Ticket a, b, c, d, e, f, g;
+  static long settle(long d) { return Math.max(1L, d); }
+  public void arm(long delayMs) {
+    a = Clock.schedule(this, BRelTime.make(Math.max(1L, delayMs)), null, null);   // PASS: floor first
+    long p = Math.max(1L, delayMs);
+    b = Clock.schedule(this, BRelTime.make(p), null, null);                       // PASS: local, floor first
+    c = Clock.schedule(this, BRelTime.make(Math.max(0L, delayMs)), null, null);   // FAIL: zero floor first
+    d = Clock.schedule(this, BRelTime.make(Math.max(delayMs, 1L)), null, null);   // PASS: floor second
+    long z = Math.max(0L, delayMs);
+    e = Clock.schedule(this, BRelTime.make(z), null, null);                       // FAIL: local zero floor first
+    f = Clock.schedule(this, BRelTime.make(Math.max(1 + delayMs, delayMs)), null, null);
+    g = Clock.schedule(this, BRelTime.make(settle(delayMs)), null, null);         // PASS: helper floors first
+  }
+}

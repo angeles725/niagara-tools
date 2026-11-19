@@ -1,0 +1,22 @@
+truth (Δ1 escape hatch): a module that saves on purpose elsewhere (a station-side scheduler, another module)
+declares it in MODULE-MAP.md with a non-empty persistence: line; its writes pass.
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/MODULE-MAP.md --
+# Mod module map
+
+modularity: strict
+persistence: the station's own SaveScheduler service saves every 10 minutes (site decision 2026-11)
+
+| Concern | Part | Files | Tests | When |
+|---|---|---|---|---|
+-- Mod/Mod-ux/src/com/x/ux/Writer.java --
+package com.x.ux;
+final class Writer {
+  static void write(BComponent point, BValue v, Context cx) {
+    point.set("out", v, cx);
+  }
+}

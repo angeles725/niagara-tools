@@ -1,0 +1,11 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 3
+ERROR  lint-dashboard-write-save  @DIR@/Mod  no *.java under a -ux part's src/ (wrong path: pass the module root; a module with no -ux part has no dashboard writes)
+-- stderr --
+-- Mod/Mod-rt/src/com/x/BLogic.java --
+package com.x;
+public final class BLogic extends BComponent {
+  void apply(BValue v, Context cx) { set("out", v, cx); }
+}
