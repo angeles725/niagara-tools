@@ -18,7 +18,7 @@ The source schedules had `in` and `defaultOutput` at {null}. Every copy landed w
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
 | Δ1 | APPLIED 2026-11-19. `n4_copy_component` carries a Status value's status when it is off its default (encoded like `n4_set_slot`), and the read-back compares value and status | `go/internal/mcpn4/writeops/copy_strip.go`, `copy_status.go`; registry description | `[ev: retro mcpn4-copy-keeps-status Δ1]` |
-| Δ2 | OPEN. `n4_create_link` dry run states what the source commands the target to right now (source `out` value and status), and notes a link from an {ok} control source into a writable slot | `go/internal/mcpn4/writeops/link*.go` | `[ev: retro mcpn4-copy-keeps-status Δ2]` |
+| Δ2 | APPLIED 2026-11-19 (retro mcpn4-link-commanded-value Δ1). `n4_create_link` dry run states what the source commands the target to right now (source `out` value and status), and notes a link from an {ok} control source into a writable slot | `go/internal/mcpn4/writeops/link*.go` | `[ev: retro mcpn4-copy-keeps-status Δ2]` |
 
 ## Lessons
 - A "verified" read-back that strips the same fields as the copy cannot see what the copy lost. The read-back must compare what matters in the field (here, status), not the copied body.

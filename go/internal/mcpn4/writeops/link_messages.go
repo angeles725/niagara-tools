@@ -11,4 +11,7 @@ const (
 	// target ORD, the link's name, the source slot and the target slot.
 	msgIdenticalLink = "an identical link already exists on %s: %s links the same source slot %s to " +
 		"target slot %s; nothing to create"
+	// msgLinkCommands is a link from an {ok} source into a writable's control input: the target
+	// slot's ORD, the source's value as the station encodes it and its status.
+	msgLinkCommands = "this link will command %s to %s %s as soon as it is made"
 )

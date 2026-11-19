@@ -23,7 +23,7 @@ func linkPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
-	srcH, srcNodes, err := plan.Handle(c, str(args, "source_ord"), 1)
+	srcH, srcNodes, err := plan.Handle(c, str(args, "source_ord"), 2) // depth 2: the source slot's value
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,8 @@ func linkPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	return &plan.Planned{
 		Ops:     []any{obj("ssc", "checkLinks", "arg", obj("s", srcH, "ss", ss, "t", tgtH, "ts", ts, "c", true))},
 		Inverse: []any{obj("nm", "v", "h", tgtH, "n", "<link name assigned by the station>")},
-		Notes:   []any{}, Targets: targets, Data: data}, nil
+		Notes:   []any{}, Targets: targets, Data: data,
+		Preview: obj("link_sources", []any{linkSource(args, srcNodes, nodes, ss, ts)})}, nil
 }
 
 // links is the names of the baja:Link children of a loaded component, in load order.
