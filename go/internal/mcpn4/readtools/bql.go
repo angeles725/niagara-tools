@@ -122,6 +122,7 @@ func (t *Tools) BqlQuery(args *pyjson.Object) (*pyjson.Object, error) {
 			out.Set("hint", hint)
 		}
 	}
+	t.setNullColumnWarnings(out, q, columns, rows)
 	if path == "" {
 		out.Set("rows", list(rows))
 		return out, nil

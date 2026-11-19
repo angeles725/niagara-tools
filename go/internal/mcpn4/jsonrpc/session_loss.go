@@ -12,16 +12,19 @@ import (
 // find Server Session" (retro 2026-11-16 U4: four drops in about 40 minutes; again four in one
 // afternoon on 2026-11-18). The server reconnects once with the arguments of the last n4_connect
 // that succeeded, so the identity, credential and lock-out checks of n4_connect all run again.
-// A read or a dry run is then retried once; an execution is not: its token was spent before any op
-// was sent and ops sent before the loss may have applied, so the operator checks and redoes the dry run.
+// A read or a dry run is then retried once, and a second loss in a row is reported, never looped.
+// An execution is not retried: its token was spent before any op was sent and ops sent before the
+// loss may have applied, so the operator checks and redoes the dry run.
 
 const sessionLostText = "Could not find Server Session"
 
 const (
 	msgSessionLost     = "the station dropped this server's BOX session (" + sessionLostText + ")"
-	msgSessionLostRedo = msgSessionLost + "; mcp-n4 reconnected with the last n4_connect; the execution is not retried because its confirmation token was spent and " +
+	msgSessionLostRedo = "session lost: " + msgSessionLost + "; mcp-n4 reconnected with the last n4_connect; the execution is not retried because its confirmation token was spent and " +
 		"ops sent before the loss may have applied, so check n4_list_batches and read the targets back, then redo the dry run and execute with its new token"
 	msgSessionLostRetry = msgSessionLost + "; reconnecting with the last n4_connect failed: "
+	msgSessionLostAgain = msgSessionLost + "; mcp-n4 reconnected with the last n4_connect and retried once, but the session was lost again, " +
+		"so it is not retried further: check that the station is up (a restart can take minutes), then call n4_connect and repeat the call"
 )
 
 // run is the tool handler call, with one reconnect after a lost session.
@@ -43,7 +46,11 @@ func (s *Server) run(name string, args *pyjson.Object, h Handler) (*pyjson.Objec
 	if s.writeNames[name] && executes(args) {
 		return nil, &ToolError{Msg: msgSessionLostRedo}
 	}
-	return Recover(func() (*pyjson.Object, error) { return h(args) })
+	out, err = Recover(func() (*pyjson.Object, error) { return h(args) })
+	if sessionLost(err) {
+		return nil, &ToolError{Msg: msgSessionLostAgain}
+	}
+	return out, err
 }
 
 // sessionLost is true for the station's lost-session reply, also when a tool passed it on as its
