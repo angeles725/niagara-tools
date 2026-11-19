@@ -21,6 +21,24 @@ const HistoriesAuditExtQuery = "select slotPath, type, enabled, historyConfig.id
 // HistoriesAuditPointQuery reads the slot path of each control point.
 const HistoriesAuditPointQuery = "select slotPath from control:ControlPoint"
 
+// HistoryTypeQuery reads each history extension's slot path, history id, type and collection
+// interval (encodeToString, as in HistoriesAuditExtQuery), by position: n4_read_history
+// history_type (mcp-n4 delta M2).
+const HistoryTypeQuery = "select slotPath, historyConfig.id, type, historyConfig.interval.encodeToString " +
+	"from history:HistoryExt"
+
+// HistoryStatusNames are the n4_read_history status filters, in order; HistoryStatusWhere is the
+// BQL where of each ("all" has none). BQL lists BStatus.isOk/isFault/... as the fields ok, fault,
+// ...; the null form (status.null) is live-checked on 4.15.6.20, the others follow its shape.
+var (
+	HistoryStatusNames = []string{"all", "ok", "not-ok", "fault", "down", "stale", "alarm", "overridden",
+		"disabled", "null"}
+	HistoryStatusWhere = map[string]string{"all": "", "ok": "status.ok = true", "not-ok": "status.ok = false",
+		"fault": "status.fault = true", "down": "status.down = true", "stale": "status.stale = true",
+		"alarm": "status.alarm = true", "overridden": "status.overridden = true",
+		"disabled": "status.disabled = true", "null": "status.null = true"}
+)
+
 // The BCapacity restrictions (BCapacity.RESTRICT_NONE, RESTRICT_RECORD_COUNT, RESTRICT_STORAGE_SIZE).
 const (
 	CapacityUnlimited = 0
