@@ -26,7 +26,11 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 		return nil, toolError("%s", msgOneSource)
 	}
 	period := strArg(args, "period", "")
-	params, err := bql.HistoryParams(period, strArg(args, "start", ""), strArg(args, "end", ""))
+	params, echo, err := historyWindow(args)
+	if err != nil {
+		return nil, toolError("%s", err.Error())
+	}
+	status, where, err := historyStatus(args)
 	if err != nil {
 		return nil, toolError("%s", err.Error())
 	}
@@ -43,7 +47,7 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 			return nil, err
 		}
 	}
-	ord, err := bql.ComposeHistoryOrd(id, params, bql.HistoryRecordsQuery)
+	ord, err := historyRecordsOrd(id, params, where)
 	if err != nil {
 		return nil, toolError("%s", err.Error())
 	}
@@ -55,20 +59,30 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, unreadable(id, err)
 	}
-	total, note, countMs := t.countHistory(id, params, timeout)
+	total, note, countMs := t.countHistoryWhere(id, params, where, timeout)
+	var kind any
+	kindNote, kindMs, wantKind := "", 0, truthyArg(args, "history_type")
+	if wantKind {
+		if kind, kindNote, kindMs, err = t.historyType(id, timeout); err != nil {
+			return nil, err
+		}
+	}
 	ex := t.historyExtras(args, id, params, timeout, total)
 	t.recordRead("n4_read_history", key, args, len(rows))
 	out := obj("history_id", id)
 	if hasExt {
 		out.Set("ext_ord", extOrd)
 	}
-	for _, k := range []string{"period", "start", "end"} {
+	for _, k := range echo {
 		if v, ok := args.Get(k); ok {
 			out.Set(k, v)
 		}
 	}
 	if params != "" && period == "" { // the resolved start/end; a period is already echoed
 		out.Set("range", params)
+	}
+	if _, ok := args.Get("status"); ok {
+		out.Set("status", status)
 	}
 	out.Set("columns", strs(columns))
 	out.Set("rows", list(keyed))
@@ -79,7 +93,13 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 	if note != "" {
 		out.Set("total_records_note", note)
 	}
+	if wantKind {
+		out.Set("history_type", kind)
+		if kindNote != "" {
+			out.Set("history_type_note", kindNote)
+		}
+	}
 	ex.set(out)
-	out.Set("elapsed_ms", elapsed+ms+countMs+ex.ms)
+	out.Set("elapsed_ms", elapsed+ms+countMs+kindMs+ex.ms)
 	return out, nil
 }

@@ -73,7 +73,11 @@ func (r *haRun) reply(base, span, minSpan string, extRows int) *pyjson.Object {
 	out := obj("base", base, "stale_factor", r.cfg.staleFactor, "stale_min", minSpan, "cov_max_age", span,
 		"capacity_warn", r.cfg.warn, "exclude_services", r.excludeServices, "services_excluded", r.servicesExcluded)
 	counts, cut := obj("points", nil, "history_exts", extRows), []string{}
-	for _, name := range haLists {
+	names := haLists
+	if r.flat {
+		names = append(names[:len(names):len(names)], "flat")
+	}
+	for _, name := range names {
 		items := r.lists[name]
 		if items == nil {
 			items = []*pyjson.Object{}
@@ -93,6 +97,9 @@ func (r *haRun) reply(base, span, minSpan string, extRows int) *pyjson.Object {
 		out.Set("no_history_note", r.noHistoryNote)
 	}
 	out.Set("counts", counts)
+	if r.flat {
+		r.flatReply(out)
+	}
 	if len(cut) > 0 {
 		r.notes = append(r.notes, fmt.Sprintf(haListsCut, strings.Join(cut, ", ")))
 	}

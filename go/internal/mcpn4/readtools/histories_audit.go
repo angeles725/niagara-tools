@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/bql"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -34,6 +35,12 @@ type haRun struct {
 	noHistoryNote      string
 	excludeServices    bool
 	servicesExcluded   int
+	flat               bool          // flat=true: list the histories holding one value (M3)
+	flatDays           float64       // ... for more than this many days
+	flatSpan           time.Duration // flatDays as a span
+	flatReads          int
+	flatFails          int
+	flatNote           string
 }
 
 // HistoriesAudit is n4_histories_audit.
@@ -60,6 +67,7 @@ func (t *Tools) HistoriesAudit(args *pyjson.Object) (*pyjson.Object, error) {
 		cfg: histAuditCfg{staleFactor: floatArg(args, "stale_factor", haDefaultStaleFactor), covMaxAge: covMaxAge,
 			staleMin: staleMin,
 			warn:     floatArg(args, "capacity_warn", haDefaultCapacityWarn), now: bql.Now()}}
+	r.flatArgs(args)
 	start := t.Ctx.Clock()
 	exts, err := r.readExts()
 	if err != nil {
@@ -73,6 +81,9 @@ func (t *Tools) HistoriesAudit(args *pyjson.Object) (*pyjson.Object, error) {
 		points, r.servicesExcluded = withoutServices(points)
 	}
 	r.classify(points, exts)
+	if r.flat {
+		r.flatCheck(exts)
+	}
 	out := r.reply(base, span, minSpan, len(exts))
 	out.Set("elapsed_ms", int(math.RoundToEven((t.Ctx.Clock()-start)*1000)))
 	t.recordRead("n4_histories_audit", "base", args, len(exts)+len(points))
