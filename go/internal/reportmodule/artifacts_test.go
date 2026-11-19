@@ -82,3 +82,50 @@ func TestNoRecognizableArtifactWalksEveryDirectory(t *testing.T) {
 		t.Errorf("an INFO artifact line without a recognizable artifact:\n%s", out)
 	}
 }
+
+// TestDocsWithABaselineIsNoArtifact (verifier probe, S1 real shape): a docs/ folder that even holds a
+// .deploy-baseline is no artifact, so schema-risk never runs on it; the one real part makes the run clean.
+func TestDocsWithABaselineIsNoArtifact(t *testing.T) {
+	files := map[string]string{"docs/.deploy-baseline/README.md": "old notes", "docs/README.md": "notes"}
+	builtPart(files, "Foo-rt")
+	code, out := stubbedRun(t, moduleTree(t, files))
+	if code != ExitClean {
+		t.Errorf("exit %d, want %d\n%s", code, ExitClean, out)
+	}
+	if strings.Contains(out, "docs  PASS  schema-risk") || strings.Contains(out, "docs  SKIP  schema-risk") ||
+		strings.Contains(out, "docs  ERROR  schema-risk") {
+		t.Errorf("docs/ got a schema-risk row:\n%s", out)
+	}
+	if !strings.Contains(out, "report-module: 1 artifact · ") {
+		t.Errorf("want 1 artifact:\n%s", out)
+	}
+}
+
+// TestOtherFolderBesideThePartsIsNoArtifact (verifier probe): any non-part folder (openspec/) is skipped like
+// docs/: one INFO line, not counted.
+func TestOtherFolderBesideThePartsIsNoArtifact(t *testing.T) {
+	files := map[string]string{"openspec/spec.md": "spec"}
+	builtPart(files, "Foo-rt")
+	code, out := stubbedRun(t, moduleTree(t, files))
+	if code != ExitClean {
+		t.Errorf("exit %d, want %d\n%s", code, ExitClean, out)
+	}
+	for _, want := range []string{"openspec  INFO  artifact  " + NotArtifactDetail + ": skipped\n", "report-module: 1 artifact · "} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q\n%s", want, out)
+		}
+	}
+}
+
+// TestGradleOnlyPartBesideDocsIsAnArtifact (verifier probe): a -wb part with only its <name>.gradle.kts (no
+// module-include.xml) is still an artifact beside docs/: 2 artifacts, its rows present.
+func TestGradleOnlyPartBesideDocsIsAnArtifact(t *testing.T) {
+	files := map[string]string{"docs/README.md": "notes", "Foo-wb/Foo-wb.gradle.kts": ""}
+	builtPart(files, "Foo-rt")
+	_, out := stubbedRun(t, moduleTree(t, files))
+	for _, want := range []string{"report-module: 2 artifacts · ", "Foo-wb  SKIP  schema-risk  ", "docs  INFO  artifact  "} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q\n%s", want, out)
+		}
+	}
+}

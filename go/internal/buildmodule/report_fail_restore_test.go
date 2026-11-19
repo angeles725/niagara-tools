@@ -38,3 +38,41 @@ func TestReportIncompleteKeepsTheNewJar(t *testing.T) {
 		}
 	}
 }
+
+// firstDeployBuild is a mirror fixture with no Foo-rt in modules/ before the build, whose gradle installs one.
+func firstDeployBuild(t *testing.T) *fixture {
+	f := newFixture(t)
+	f.signs()
+	f.write(f.home+"/"+mirrorMarker, "")
+	f.jar(f.built("rt"), "1.0.1", "NEW payload")
+	f.does("gradlew", `cp "`+f.built("rt")+`" "`+f.deployed("rt")+`"`)
+	return f
+}
+
+// TestReportFailOnAFirstDeployRemovesTheNewJar (verifier probe, P4 first deploy): with no jar of the profile in
+// the mirror before the build, a report FAIL takes the newly-installed jar out of modules/.
+func TestReportFailOnAFirstDeployRemovesTheNewJar(t *testing.T) {
+	f := firstDeployBuild(t)
+	f.does(reportScript, "exit 1")
+	f.wants("first-deploy report FAIL", f.run(f.root, "Foo", f.home), ExitGate, msgReportFails,
+		"  Removed the newly-installed Foo-rt.jar from "+f.home+"/modules (none was deployed before this build).")
+	if exists(f.deployed("rt")) {
+		t.Errorf("the jar that failed the report is left in modules/")
+	}
+}
+
+// TestUnexpectedReportExitRollsBackAsAFail (verifier probe) pins the CURRENT behaviour: any report-module status
+// other than 0, 3 and 4 (here 2 and 127, a missing script) reads as a FAIL, so the chain exits 50 and rolls the
+// mirror jar back like one.
+func TestUnexpectedReportExitRollsBackAsAFail(t *testing.T) {
+	for _, code := range []string{"2", "127"} {
+		f, _ := mirrorBuild(t)
+		before := f.read(f.deployed("rt"))
+		f.does(reportScript, "exit "+code)
+		f.wants("report exit "+code, f.run(f.root, "Foo", f.home), ExitGate, msgReportFails,
+			"  Restored the previously-deployed Foo-rt.jar into "+f.home+"/modules.")
+		if f.read(f.deployed("rt")) != before {
+			t.Errorf("report exit %s: the mirror was not rolled back", code)
+		}
+	}
+}
