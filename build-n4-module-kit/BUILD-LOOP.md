@@ -318,6 +318,12 @@ station holds the lock (`toolbelt/build.sh:15,:82-88`). Fix:
 `toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>` creates a writable mirror so the plugin can copy freely
 without touching the live install (see §0.b). `[ev: corpus B807]`
 
+**Module dependencies from the install (no station):** `toolbelt/nre-tool.sh deps <niagara_home> <module>` lists the
+module parts `<module>` depends on, one per line. It runs the install's own `nre devkit:com.tridium.devkit.util.DependencyChecker`
+(read-only, about 35 s to boot the runtime, `bin/nre.exe` from WSL). Exit codes: 1 when the install holds no such module;
+3 when there is no `bin/nre` or the module name is bad. Run it after an install to check the `module-include.xml`
+dependencies the station will resolve. (issue #851) `[ev: corpus B1453]`
+
 **Post-jar copy lock (exit 32):** the plugin's LAST step copies the new jar into `<niagara_home>/modules/`; a
 Windows-side process (Workbench, a station) holding the old jar open on a `/mnt/c` mount makes that copy fail with
 `FileAlreadyExistsException` — invisible to `preflight.sh`'s jar-lock scan, which SKIPs 9p/drvfs mounts by design.
