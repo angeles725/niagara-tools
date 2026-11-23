@@ -6,7 +6,8 @@
 # retro's lesson was never folded into a kit file — this audit makes that
 # visible so it becomes a PR7 follow-up item, not a silent gap.
 #
-# Usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>
+# Usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]...
+#                           [--alias <stem>=<ALIAS>]... <INDEX.md> <kit-root>
 # exit:  0 clean or WARN-only · 1 uncited rows (or uncited Δ, or --exact-stems alias FAIL) AND --strict · 3 usage/env
 #
 # --deltas-since <date>: Δ-granular reconcile check. Every folded row whose filename date is on or
@@ -21,6 +22,20 @@
 #   fold-audit: WARN <file> pending, but all <n> deltas are cited: set `<!-- review-status: folded -->` in the retro
 # plus a `fold-audit: pending: N fully cited` summary line; it fails --strict, so a fold that forgot the flip is seen.
 # A pending row with a Δ still uncited, or with no Δ, is not reported. [ev: retro build-kit-bench-session Δ19]
+#
+# Retro deltas are GitHub issues (CONTRIBUTING.md § 6.3, toolbelt/retro-issues.sh): under --deltas-since a delta row of a kit retro
+# that ends in `#N` counts as cited when issue #N is closed (gh issue view; gh is called only for such rows). gh unreachable prints
+#   fold-audit: UNVERIFIED <file> Δk (issue #N state unavailable: <why>)   and   fold-audit: issues: N unverified
+# and the delta stays uncited: an offline run never passes silently.
+#
+# --external-root <dir> (repeatable; also `root <dir>` lines of <kit-root>/fold-roots.conf, absent by default, local-only; CI configures
+# none) audits the retros of other projects: those with a delta row that names mcp-n4 / build-n4-module (n4_* tool, build-n4-module, kit,
+# toolbelt, BUILD-LOOP, go/internal). Each such row not applied must be cited as `[ev: retro <name> Δ<id>]` / `[deferred: retro <name>
+# Δ<id>]` in the corpus, or be tracked by a closed issue (`#N` on the row, or a closed retro-delta issue carrying the marker
+# `<!-- retro-delta: <name> Δ<id> -->`). <name> is the retro's alias (--alias <stem>=<ALIAS>, or `alias <stem>=<ALIAS>` in the config)
+# when given, else its stem, so a client-named stem never prints into a CI log; an uncited one prints
+#   fold-audit: WARN external <name> Δ<id> not cited   then   fold-audit: external: R retros, D deltas checked, M not cited
+# (fails --strict). A root that cannot be read exits 3 naming its position, never its path.
 #
 # Corpus: every *.md under <kit-root> excluding */retros/* and INDEX.md (ledger.d/ fragments count).
 # Stem: filename minus leading YYYY-MM-DD- and trailing .md. A stem token T (6-char floor) credits

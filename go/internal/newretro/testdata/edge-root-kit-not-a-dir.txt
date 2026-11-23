@@ -42,6 +42,7 @@ retro_pending: true
 - <console row / test name / commit / file:line>, each with a token: `[ev: corpus B<n>]` / `[ev: <console file>]` / `[ev: <commit sha>]`
 
 ## Proposed kit deltas (propose-never-apply)
+<!-- every kit/mcp-n4 delta becomes a GitHub issue: toolbelt/retro-issues.sh --apply --write-back <this retro> appends its #N to the row (CONTRIBUTING.md § 6.3) -->
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
 

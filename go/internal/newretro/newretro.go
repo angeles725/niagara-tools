@@ -261,7 +261,7 @@ func (r retro) stub() string {
 		"## What happened\n<one paragraph: the TRIGGER — what run/change/defect produced this retro>\n\n" +
 		"## Evidence\n- <console row / test name / commit / file:line>, each with a token: `[ev: corpus B<n>]` / " +
 		"`[ev: <console file>]` / `[ev: <commit sha>]`\n\n" +
-		"## Proposed kit deltas (propose-never-apply)\n| Δ | Delta | Target file / § | Token |\n|---|---|---|---|\n" +
+		"## Proposed kit deltas (propose-never-apply)\n<!-- every kit/mcp-n4 delta becomes a GitHub issue: toolbelt/retro-issues.sh --apply --write-back <this retro> appends its #N to the row (CONTRIBUTING.md § 6.3) -->\n| Δ | Delta | Target file / § | Token |\n|---|---|---|---|\n" +
 		rows.String() + "\n## Lessons\n- <≤5 bullets; each a durable rule, not a narration>\n\n" +
 		"---\n**Status**: PENDING — INDEX row generated from the header: `" + row + "`\n"
 }

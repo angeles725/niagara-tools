@@ -374,6 +374,51 @@ behaviour. Exits: 0 pass or not applicable, 1 refused, 3 a malformed range or no
 live-doctrine citation gate and before the retro exits, so a `Retro: none (trivial: …)` trailer does not waive it.
 `[ev: retro r10-changelog-gate Δ1]`
 
+### 6.3 Retro deltas are GitHub issues
+
+A delta that lives only in a retro file is lost. **Every kit / mcp-n4 delta gets a GitHub issue when the retro is
+written**; the issue is the durable record, the retro row keeps its number. Folding a delta is a PR whose commit says
+`Fixes #N` (or closes the issue with the evidence).
+
+```sh
+build-n4-module-kit/toolbelt/retro-issues.sh <retro.md>...                    # dry run: the plan, nothing written
+build-n4-module-kit/toolbelt/retro-issues.sh --apply --write-back <retro.md>  # file them; append " #N" to each kit row
+build-n4-module-kit/toolbelt/retro-issues.sh --check                          # list the retro-delta issues still open
+```
+
+- **Which rows.** The rows of a retro's delta table (`## Proposed kit deltas`, `## Deltas`, ...) whose target is
+  `mcp-n4` or `build-n4-module`: an explicit name (`mcp-n4`, `n4_*` tool, `build-n4-module`) wins, then the kit words
+  (`kit`, `toolbelt`, `BUILD-LOOP`, `go/internal`) unless the row is about the research kit; `--area` overrides,
+  `--only <id>` picks rows. An `APPLIED`/`DISMISSED` row is skipped; a row that already ends in `#N` is tracked and
+  skipped.
+- **Issue shape.** Title `<area>: <delta summary>` (at most 100 characters); body with the delta, its target and
+  evidence, `**Source:** retro <stem> Δ<id>` and the hidden marker `<!-- retro-delta: <stem> Δ<id> -->`; labels
+  `retro-delta` and `area:mcp-n4` / `area:build-n4-module` (created when missing).
+- **Search before filing; one issue per root cause; extra sources become comments.** The marker is the exact key: an
+  issue or a comment that carries it is `exists #N` (open or closed) and nothing is filed. Otherwise the tool also
+  searches by meaning (`gh issue list --state all --search`, key terms: `n4_*` names, lint ids, `--options`, file
+  names, the significant title words) and scores the candidates: a match at or above `--dup-threshold` (default 0.5)
+  is a *probable duplicate*: not filed, and under `--apply` the new source is added as a comment on #N (`also proposed
+  by retro <stem> Δ<id>`, with its marker, and the `retro-delta` label) and the row points at #N. A closed match is
+  `already fixed in #N (closed)`: never reopened, commented the same way, counted as cited by the fold audit. Deltas
+  of different retros in one run that describe the same change become ONE issue listing every source. `--new <id>`
+  files a delta on its own despite a semantic match (never past an exact marker).
+- **Nothing client-named reaches GitHub.** Before any search or create, every title, body and comment is checked
+  against the private denylist (`$NIAGARA_CLIENT_DENYLIST`, default `~/.config/niagara-private/client-denylist.txt`,
+  the client guard's format); a hit refuses that issue, exit 1, naming the field and the rule number only. `--apply`
+  without a denylist on the machine refuses (exit 3). A retro outside the kit is named by `--alias <stem>=<ALIAS>`
+  (required: the stem never leaves the machine); for it the tool prints `mapping: <ALIAS> Δ<id> -> #N` and never
+  rewrites the file. `--write-back` rewrites only retros under `build-n4-module-kit/retros/`.
+- **The fold audit follows the issue.** `toolbelt/sweep-fold-audit.sh --deltas-since` counts a delta row that ends in
+  `#N` as cited when issue #N is closed; gh unreachable prints `fold-audit: UNVERIFIED ...` and the delta stays
+  uncited, never passes silently. CI never calls gh unless a row carries a `#N`.
+- **Retros outside the kit.** `sweep-fold-audit.sh --external-root <dir>` (repeatable; or `root <dir>` lines in
+  `build-n4-module-kit/fold-roots.conf`, absent by default and local-only, with `alias <stem>=<ALIAS>` lines) also
+  audits the retros of other projects that name `mcp-n4` / `build-n4-module`: each uncited delta prints as
+  `fold-audit: WARN external <ALIAS> Δ<id> not cited` (the alias, never the stem, when one is given), and is cited by
+  `[ev: retro <ALIAS> Δ<id>]`, `[deferred: retro <ALIAS> Δ<id>]` or a closed issue carrying its marker. CI never
+  configures an external root.
+
 ---
 
 ## 7. Content boundary (CLAUDE.md vs CONTRIBUTING.md vs README.md)
