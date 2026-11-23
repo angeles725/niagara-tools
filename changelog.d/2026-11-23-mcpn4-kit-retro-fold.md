@@ -1,0 +1,9 @@
+### Changed — mcp-n4: read timeouts retried once, slot filter, status flag names, terminal outputs, set-flags note
+
+- A read that times out is asked again once after 0.5 s: the `loadSlots` request of a load and the GET of a BQL or ORD read. A write (`syncTo`, `invokeAction`, `save`) is never sent twice by the client, and a failure that is not a timeout (an HTTP status, a refused connection, a login) is final.
+- `n4_read_slots` takes `slots` (1 to 100 names) and returns only those slots, in station order, with `slots_not_found` for the names the component neither holds nor declares. Without `slots` the reply is unchanged.
+- `n4_set_slot` `status` accepts flag names (`fault`, `down,overridden`, `{alarm,unackedAlarm}`, `ok`) besides the hex bits, written whole with the value; the refusal of a bad status names the flags. The recorded plan goldens carry the new refusal text.
+- `n4_find_dangling_outputs` lists a writable point with a proxy extension and a `schedule:CalendarSchedule` under `terminal_by_design` (with the reason) instead of `dangling`, only when there is one; the commissioning report skips them too.
+- `n4_set_flags` adds a plan note when a slot with no flags that no contract declares sits under a type chain that ends at a module type the station answered with `{}`: the slot is taken as dynamic, but may be a frozen slot of an undescribed type, and the inverse `""` would not restore it. A `baja` type answered with `{}` ends every normal chain and adds no note.
+- The `n4_bql_query` refusal of a `|` in the query names the fix: put the subtree in `base`. The recorded bql goldens carry the new text.
+- The four pending retros of 2026-11-10 to 2026-11-15 are folded: every delta is APPLIED, ALREADY LANDED, DECLINED or DEFERRED (live station) in its row; README, METHODOLOGY section 3 and the skill say so, and the skill adds that what a wire sheet or a Px page draws only a person can confirm.
