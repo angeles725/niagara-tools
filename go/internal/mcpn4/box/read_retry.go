@@ -39,10 +39,13 @@ func (c *Client) retryRead(err error) bool {
 }
 
 // loadSlotsRequest sends loadSlots for ord; loadSlots only asks for data, so it is asked again once
-// after a timeout (retryRead).
+// after a timeout (retryRead). A timeout does not prove the station dropped the first request, so the
+// second is one more load outstanding (the caller counted the first): a stray second load event is never
+// trusted as the one asked for (loadOnce).
 func (c *Client) loadSlotsRequest(ord string, depth int) error {
 	_, err := c.SSC("loadSlots", obj("o", ord, "d", depth))
 	if c.retryRead(err) {
+		c.loadsOutstanding++
 		_, err = c.SSC("loadSlots", obj("o", ord, "d", depth))
 	}
 	return err

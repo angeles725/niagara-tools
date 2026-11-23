@@ -4,6 +4,8 @@
 // The header of that script has the why and the two guards.
 package mirrorhome
 
+import "github.com/angeles725/niagara-tools/go/internal/modulejars"
+
 // Exit codes of mirror-niagara-home.sh (unchanged from the bash tool; its header lists them).
 const (
 	ExitOK      = 0  // mirror ready
@@ -17,7 +19,7 @@ const Marker = ".niagara-mirror"
 // The layout of a niagara_home the tool reads.
 const (
 	repository = "etc/m2/repository" // what makes a directory a niagara_home
-	modules    = "modules"           // the one directory that is not linked: the mirror gets a real one
+	modules    = modulejars.Dir      // the one directory that is not linked: the mirror gets a real one
 )
 
 // markerFormat is the marker's content: the resolved source and when the mirror was made (markerTime).

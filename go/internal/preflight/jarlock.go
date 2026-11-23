@@ -34,9 +34,10 @@ func (r *run) jarLock() {
 		held[ln] = true
 	}
 	locked := ""
-	jars, _ := modulejars.Regular(r.nh + "/modules")
+	dir := r.nh + "/" + modulejars.Dir
+	jars, _ := modulejars.Regular(dir)
 	for _, name := range jars {
-		if held["n"+r.nh+"/modules/"+name] {
+		if held["n"+dir+"/"+name] {
 			locked += " " + name
 		}
 	}

@@ -111,3 +111,18 @@ func TestNoDeployDoesNotCompareTheTarget(t *testing.T) {
 		t.Errorf("--no-deploy looked at the target:\n%s%s", f.out, f.err)
 	}
 }
+
+// A station directory that is <NIAGARA_HOME>/modules holds the jars the build installed, which were built against
+// that very installation: there is nothing to compare, and a mismatch it would otherwise be refused for passes.
+func TestAStationThatIsTheHomeModulesDirectoryIsNotComparedWithItself(t *testing.T) {
+	f := newFixture(t)
+	modules := sameDir(t, f)
+	f.zipJar(modules+"/baja.jar", map[string]string{"META-INF/module.xml": `<module name="baja" vendor="Tridium" vendorVersion="4.15.6.20"/>`})
+	compiledFor(f, "4.14")
+	t.Setenv("FAKE_OLD_VERSION", "1.0")
+	t.Setenv("FAKE_NEW_VERSION", "1.1")
+	f.want(f.run("--no-backup"), ExitOK, "[ng-deploy] copy ok\n")
+	if strings.Contains(f.out, "target-version") || strings.Contains(f.err, "target-version") {
+		t.Errorf("the home's own modules directory was compared with itself:\n%s%s", f.out, f.err)
+	}
+}

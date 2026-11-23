@@ -1,0 +1,23 @@
+truth: java.util.Properties continues a line only when it ends in an ODD number of backslashes (the last one is the
+continuation, each pair before it an escaped backslash). a/ ends in two (an escaped backslash: no continuation, so
+the -Duser.home= on the next line is a property of its own and the jvmargs of line 1 hold none), b/ in three
+(continues: GU1 at the first physical line), c/ in four (no continuation), d/ in five (continues).
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-gradle-userhome  @DIR@/b/gradle.properties:1  GU1 org.gradle.jvmargs sets -Duser.home=: an already-running gradle daemon never sees it; set it through JAVA_TOOL_OPTIONS and run with --no-daemon (toolbelt/build.sh mirror mode does)
+WARN  lint-gradle-userhome  @DIR@/d/gradle.properties:1  GU1 org.gradle.jvmargs sets -Duser.home=: an already-running gradle daemon never sees it; set it through JAVA_TOOL_OPTIONS and run with --no-daemon (toolbelt/build.sh mirror mode does)
+-- stderr --
+-- a/gradle.properties --
+org.gradle.jvmargs=-Xmx2g C:\\
+-Duser.home=/tmp/x
+-- b/gradle.properties --
+org.gradle.jvmargs=-Xmx2g C:\\\
+-Duser.home=/tmp/x
+-- c/gradle.properties --
+org.gradle.jvmargs=-Xmx2g C:\\\\
+-Duser.home=/tmp/x
+-- d/gradle.properties --
+org.gradle.jvmargs=-Xmx2g C:\\\\\
+-Duser.home=/tmp/x

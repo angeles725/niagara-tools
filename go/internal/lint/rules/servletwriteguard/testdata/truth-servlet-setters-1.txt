@@ -1,0 +1,34 @@
+truth: a one-argument set* call on a servlet response or request or on a StringBuilder is no component write: the write
+shapes name set, setBoolean, setDouble, setFloat, setInt, setLong, setRelTime and setString exactly, so
+resp.setContentType("x"), resp.setStatus(200), resp.setCharacterEncoding("x"), resp.setIntHeader(...), req.setAttribute(...)
+and sb.setLength(0) give no no-target-permission row and no no-csrf row. A.java holds only those calls (no rows);
+B.java adds a generated setter (comp.setDouble(42.0)) beside them, which is the only row (and the no-csrf row).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  no-target-permission  @DIR@/m/B.java:7  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-csrf  @DIR@/m/B.java:1  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+-- stderr --
+-- m/A.java --
+public class A extends BWebServlet {
+  void doGet(HttpServletRequest req, HttpServletResponse resp) {
+    resp.setContentType("text/html");
+    resp.setStatus(200);
+    resp.setCharacterEncoding("UTF-8");
+    resp.setIntHeader("X-N", 1);
+    req.setAttribute("k", v);
+    StringBuilder sb = new StringBuilder();
+    sb.setLength(0);
+  }
+}
+-- m/B.java --
+public class B extends BWebServlet {
+  void doGet(HttpServletRequest req, HttpServletResponse resp) {
+    resp.setContentType("text/html");
+    resp.setStatus(200);
+    sb.setLength(0);
+    resp.setCharacterEncoding("UTF-8");
+    comp.setDouble(42.0);
+  }
+}

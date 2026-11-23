@@ -42,7 +42,8 @@ const (
 )
 
 // ModuleVersionFromZip is ModuleVersion read with archive/zip, so the host needs no unzip. Every entry of
-// that name is read in order and one that fails midway keeps what it yielded, as `unzip -p` printed it.
+// that name is read in order, all of them under one shared bound of maxModuleXML bytes, and one that fails
+// midway keeps what it yielded, as `unzip -p` printed it.
 func ModuleVersionFromZip(jar string) string {
 	zr, err := zip.OpenReader(jar)
 	if err != nil {
@@ -50,12 +51,14 @@ func ModuleVersionFromZip(jar string) string {
 	}
 	defer zr.Close()
 	var xml strings.Builder
+	left := io.LimitedReader{N: maxModuleXML} // one bound for every entry of the name, not one each
 	for _, entry := range zr.File {
 		if entry.Name != moduleXMLEntry {
 			continue
 		}
 		if r, err := entry.Open(); err == nil {
-			_, _ = io.Copy(&xml, io.LimitReader(r, maxModuleXML)) // a failed read keeps what it printed
+			left.R = r
+			_, _ = io.Copy(&xml, &left) // a failed read keeps what it printed
 			r.Close()
 		}
 	}

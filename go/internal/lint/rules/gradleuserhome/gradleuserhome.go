@@ -3,7 +3,7 @@
 // wrapper and its header is the user-facing contract.
 //
 // A per-file rule over every gradle.properties under the root, read as java.util.Properties reads it: a line whose
-// first non-blank character is # or ! is a comment, a line ending in a backslash continues on the next one, and a key
+// first non-blank character is # or ! is a comment, a line ending in an odd number of backslashes continues on the next one, and a key
 // ends at the first = or : or blank. Rows:
 //   - GU1: org.gradle.jvmargs whose value holds -Duser.home= (the daemon is forked with the jvmargs of its first
 //     start; a daemon that is already up keeps its own user.home).
@@ -56,7 +56,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if t := strings.TrimLeft(line, " \t\f"); t == "" || t[0] == '#' || t[0] == '!' {
 			continue
 		}
-		for strings.HasSuffix(line, "\\") && !strings.HasSuffix(line, "\\\\") && i+1 < len(f.Raw) {
+		for continued(line) && i+1 < len(f.Raw) {
 			i++
 			line = strings.TrimSuffix(line, "\\") + strings.TrimLeft(strings.TrimRight(f.Raw[i], "\r"), " \t\f")
 		}
@@ -69,6 +69,12 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 	return out, nil
+}
+
+// continued reports whether a physical line continues on the next: it ends in an odd number of backslashes (the
+// last is the continuation, each pair before it an escaped backslash), as java.util.Properties reads it.
+func continued(line string) bool {
+	return (len(line)-len(strings.TrimRight(line, "\\")))%2 == 1
 }
 
 // splitProperty is a logical property line's key and value: the key ends at the first = : or blank, and the value
