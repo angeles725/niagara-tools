@@ -83,6 +83,8 @@ func TestAreaOrder(t *testing.T) {
 		{"research-sdd rows are not ours", Row{Target: "toolbelt/scan.sh", Text: "research-sdd loop"}, "x.md", "", ""},
 		{"strong beats weak", Row{Target: "toolbelt/x.sh", Text: "n4_foo"}, "x.md", "", "mcp-n4"},
 		{"file name", Row{Text: "t"}, "2026-01-01-mcpn4-foo.md", "", "mcp-n4"},
+		{"kit target beats a name only in the evidence", Row{Target: "`toolbelt` fold audit", Text: "make the fold audit warn", Evidence: "~40 mcp-n4 deltas unfolded"}, "x.md", "", "build-n4-module"},
+		{"evidence still decides when nothing else does", Row{Text: "t", Evidence: "seen in n4_read_slots"}, "x.md", "", "mcp-n4"},
 		{"default for a kit retro", Row{Text: "t"}, "2026-01-01-foo.md", "build-n4-module", "build-n4-module"},
 	}
 	for _, c := range cases {
