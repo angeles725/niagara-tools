@@ -46,6 +46,7 @@ func (b *build) extractBaselines() int {
 		}
 		b.say(msgBaselineRefDone, name, ref)
 	}
+	b.warnBaselineVersion(ref)
 	return proceed
 }
 
