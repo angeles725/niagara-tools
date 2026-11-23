@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -128,7 +129,7 @@ func ExistingName(label string, value any) (string, error) {
 func Handle(c Client, ord string, depth int) (any, *pyjson.Object, error) {
 	nodes, err := c.LoadTree(ord, depth, box.LoadOptions{})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nameUnloadedProgram(ord, err)
 	}
 	var h any
 	if root := box.Node(nodes, ""); root != nil {
@@ -138,4 +139,22 @@ func Handle(c Client, ord string, depth int) (any, *pyjson.Object, error) {
 		return nil, nil, ToolError("station returned no handle for " + ord)
 	}
 	return h, nodes, nil
+}
+
+// msgProgramUnloaded is the cause a station's refusal of a path below a Spyder's ControlProgram
+// hides: the program unloads on its own and the station then answers with the bare path as the
+// error (retro mcpn4-spyder-commissioning-over-box Δ4, live 2026-11-18).
+const msgProgramUnloaded = "; this path is below a Spyder ControlProgram, which unloads on its own and then answers a path " +
+	"below it with only the path: load it again (open the Spyder's program in Workbench) and repeat the call"
+
+// nameUnloadedProgram is err with the unloaded-program cause added when it is the station's own
+// refusal of a path below a ControlProgram slot; any other error is returned as it was.
+func nameUnloadedProgram(ord string, err error) error {
+	var be *box.Error
+	if !errors.As(err, &be) || !be.Station || !strings.Contains(ord, "/ControlProgram/") {
+		return err
+	}
+	named := *be
+	named.Msg += msgProgramUnloaded
+	return &named
 }

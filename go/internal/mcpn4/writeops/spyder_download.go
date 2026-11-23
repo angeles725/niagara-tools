@@ -103,8 +103,11 @@ func spyderDownloadReadback(c plan.Client, p *plan.Planned, reply any) (any, any
 	if err != nil {
 		return nil, nil, nil, "", err
 	}
-	log := jobLog(c, nodes)
+	log, logErr := jobLog(c, nodes)
 	observed := obj("job", job, "job_state", state, "log", log)
+	if state == "failed" || state == "canceled" {
+		failureDetail(c, p, observed, logErr)
+	}
 	if d.action == spyderDownload && state == "success" && !logHas(log, "Compiling the logic") {
 		observed.Set("hint", msgNoCompile)
 	}
@@ -118,15 +121,16 @@ func spyderDownloadReadback(c plan.Client, p *plan.Planned, reply any) (any, any
 }
 
 // jobLog is the job's readLog as lines: "message", or "Kind: message" for any kind but Message
-// (each raw line is Kind|timestamp|message|). A log that cannot be read is an empty list.
-func jobLog(c plan.Client, nodes *pyjson.Object) []any {
+// (each raw line is Kind|timestamp|message|). A log that cannot be read is an empty list and the
+// station's error text, so a failed job never hides why its log is empty.
+func jobLog(c plan.Client, nodes *pyjson.Object) ([]any, string) {
 	root := box.Node(nodes, "")
 	if root == nil {
-		return []any{}
+		return []any{}, ""
 	}
 	r, err := c.SSC("invokeAction", obj("h", get(root, "h"), "a", "readLog"))
 	if err != nil {
-		return []any{}
+		return []any{}, err.Error()
 	}
 	text := r
 	if o, ok := r.(*pyjson.Object); ok {
@@ -144,7 +148,44 @@ func jobLog(c plan.Client, nodes *pyjson.Object) []any {
 			out = append(out, parts[0]+": "+parts[2])
 		}
 	}
-	return out
+	return out, ""
+}
+
+// spyderErrorSlots are the Spyder's own slots that keep what a failed compile or download left
+// (the commissioning report's spyder section reads the same ones).
+var spyderErrorSlots = []string{"deviceStatus", "compileStatusFlag", "sErrorStatus"}
+
+// msgJobFailed is the hint of a failed job: the job's log is where Workbench shows the cause, and
+// live 2026-11-18 a compile that broke answered only "due to compilation error" with the log
+// unreadable; the known cause is a renamed BacnetNIFolder slot.
+const msgJobFailed = "the job failed: its log, log_error and device_state above are all the station keeps; the compiler's own " +
+	"message is in the station log. A compile error after a rename usually means a BacnetNIFolder slot was renamed: " +
+	"rename the BACnet objectName only, never the slot, then compile and download again"
+
+// failureDetail adds what a failed or canceled job leaves to observed: why the log is empty
+// (log_error), the Spyder's error slots (device_state, when they can be read) and the hint.
+func failureDetail(c plan.Client, p *plan.Planned, observed *pyjson.Object, logErr string) {
+	if logErr != "" {
+		observed.Set("log_error", logErr)
+	}
+	for _, ordText := range p.Targets.Keys() {
+		nodes, err := c.LoadTree(ordText, 1, box.LoadOptions{})
+		if err != nil {
+			break
+		}
+		state := pyjson.NewObject()
+		kids := box.Children(nodes, "")
+		for _, slot := range spyderErrorSlots {
+			if v := box.ChildValue(kids, slot, nil); v != nil {
+				state.Set(slot, pyjson.Str(v))
+			}
+		}
+		if len(state.Keys()) > 0 {
+			observed.Set("device_state", state)
+		}
+		break
+	}
+	observed.Set("hint", msgJobFailed)
 }
 
 func logHas(log []any, text string) bool {

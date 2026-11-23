@@ -109,8 +109,9 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	}
 	tok, _ := args.Get("confirmation_token")
 	if err := w.Tokens.Consume(name, args, planHash, tok); err != nil {
-		return nil, "", err
+		return nil, "", w.offerReplan(err, name, tok, sess.SessionID)
 	}
+	w.forgetIssued(tok)
 	batchID = w.NewBatchID()
 	targets := planned.Targets
 	if targets == nil {

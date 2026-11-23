@@ -184,6 +184,14 @@ Then `READY TO LOAD: <MOD> <version> for Niagara <x> (sha256 <12>)` when no row 
 
 ## Signing per deploy target
 - **Check the deploy target's signing policy before assuming a Workbench re-sign:** a Honeywell supervisor ACCEPTS gradle's per-machine DEV cert — no re-sign needed (chihuahua's `deploy.sh` only builds + copies and runs on the same supervisor). A JACE field controller enforces the project CA (e.g. `angelessigner`), so a JACE-bound module IS re-signed. [CERT-live 2026-09-01 · retro 5rooms #9]
+- **Run the signing doctor on the exported material BEFORE the build:** `toolbelt/signing-doctor.sh --cert <certificate> [--key <private key export>]`
+  (`go/internal/signingdoctor`, one row each: `cert-parse`, `cert-ca`, `cert-usage`, `cert-validity`, `key-format`; exit 0 pass /
+  1 a FAIL row / 2 usage). A certificate that is a CA (`CA:TRUE`: the export took the CA that issued the signing key, not the
+  signing certificate), has an extended key usage without code signing, or is expired is a FAIL, so a signing round is not
+  spent finding it; a certificate with no usage extension at all is a WARN. A key export that is PBES2 with AES-GCM (what the
+  Workbench private key export writes) is a FAIL: OpenSSL 3 cannot read it, convert it with Java, never with OpenSSL.
+  Pinned by `go/internal/signingdoctor/command_test.go`. `[ev: retro mcpn4-history-batch-tools Δ5]`
+  `[ev: code go/internal/signingdoctor/checks.go]`
 - **A jar signed with the development key passes the default `signed` check — name the signer the module must carry:**
   `verify-module.sh --expected-signer ALIAS` FAILs the `signed` row unless the jar's complete signatures (an `.SF` with
   its block file) are exactly that one signer: another alias, a second signer next to the expected one, or no signature.
