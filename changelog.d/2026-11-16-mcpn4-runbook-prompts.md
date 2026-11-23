@@ -1,4 +1,0 @@
-### Added — mcp-n4: runbooks served as MCP prompts and resources (O8)
-- The server answers `prompts/list`, `prompts/get`, `resources/list` and `resources/read`, and `initialize` advertises the `prompts` and `resources` capabilities. Three runbooks ship: `post-deploy-check` (read-only check after a module deploy and restart), `alarm-triage` (open alarms grouped, sized and acknowledgements proposed) and `commissioning` (the commissioning report recipe through dry runs and the save).
-- A prompt fills its `{{argument}}` placeholders (required arguments refused when missing, unknown ones refused); a resource `runbook://<name>` returns the Markdown as written; an unknown URI answers `-32002`.
-- The runbooks are Markdown files under `go/internal/mcpn4/runbooks/files/`; tests refuse a runbook naming a tool the registry does not hold or a placeholder that is not a declared argument.
