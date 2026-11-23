@@ -92,6 +92,12 @@ func (a *app) match(g *group, candidates []retrogh.Issue) {
 		if s := retrodup.Score(p.tok, retrodup.Tokens(c.Title, body)); s > bestScore {
 			best, bestScore = c, s
 		}
+		// An issue that holds a whole retro as a table: each row is one change, scored with the title.
+		for _, row := range tableRows(c.Body) {
+			if s := retrodup.Score(p.tok, retrodup.Tokens(c.Title, row)); s > bestScore {
+				best, bestScore = c, s
+			}
+		}
 	}
 	if bestScore < a.o.threshold {
 		return
@@ -100,6 +106,18 @@ func (a *app) match(g *group, candidates []retrogh.Issue) {
 	if best.Closed() {
 		g.kind = "fixed"
 	}
+}
+
+// tableRows lists the data rows of the markdown tables in body (lines that start with "|", minus the separator).
+func tableRows(body string) []string {
+	var rows []string
+	for _, l := range strings.Split(body, "\n") {
+		l = strings.TrimSpace(l)
+		if strings.HasPrefix(l, "|") && strings.Trim(l, "|-: ") != "" {
+			rows = append(rows, l)
+		}
+	}
+	return rows
 }
 
 // summary is the closing line.

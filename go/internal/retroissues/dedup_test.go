@@ -146,3 +146,24 @@ func TestNewKeepsTwoRetrosApart(t *testing.T) {
 		t.Errorf("exit %d (%s), calls %q", code, errs, e.gh.calls)
 	}
 }
+
+// An older issue can hold a whole retro as a table, one row per delta. A row far down the body (past the first 800
+// characters) is still a probable duplicate of the delta it describes, and an unrelated row does not lift the score.
+func TestARowOfATableIssueIsAProbableDuplicate(t *testing.T) {
+	filler := strings.Repeat("| K0 | History charts hold the last value to the chart end and read every series at the cursor time | `types/dashboard.md` | e | doc | HIGH |\\n", 8)
+	body := `Retro deltas from a dashboard upgrade.\n\n| # | Proposed change | Target | Evidence | Type | Priority |\n|---|---|---|---|---|---|\n` +
+		filler + "| K9 | The n4_read_slots filter loses the key when the slot name is long | `go/internal/mcpn4/slots.go` | t | fix | HIGH |\\n"
+	e := newEnv(t)
+	e.gh.searched = issueJSON(822, "OPEN", "build-n4-module: dashboard retro deltas K1-K12", body)
+	_, out, _ := e.run(e.kitRetro("2026-02-01-alpha.md", slotsRetro))
+	if !strings.Contains(out, "probable duplicate of #822 (open)") || strings.Contains(out, "create:") {
+		t.Errorf("the K9 row was not seen:\n%s", out)
+	}
+	e2 := newEnv(t)
+	e2.gh.searched = issueJSON(822, "OPEN", "build-n4-module: dashboard retro deltas K1-K12",
+		`Retro deltas.\n\n| # | Proposed change |\n|---|---|\n`+filler)
+	_, out, _ = e2.run(e2.kitRetro("2026-02-01-alpha.md", slotsRetro))
+	if strings.Contains(out, "probable duplicate of") {
+		t.Errorf("unrelated rows matched:\n%s", out)
+	}
+}
