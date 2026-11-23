@@ -86,6 +86,18 @@ func replicaPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.S
 	if err := w.CheckRoom(len(ops), "this replication"); err != nil {
 		return nil, err
 	}
+	licenceNotes, err := withinLicence(c, "this replication", func(a capacityAdd) error {
+		for _, p := range points {
+			if err := a.addTree(kinds{}, sources[p].ct, sources[p].root, len(targets)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	notes = append(notes, licenceNotes...)
 	head := "replicates " + strconv.Itoa(len(points)) + " point(s) onto " + strconv.Itoa(len(targets)) +
 		" target(s): " + strconv.Itoa(len(ops)) + " add(s) in one batch under one confirmation token, " +
 		strconv.Itoa(len(ops)) + " write(s) of the budget (one per add; write_budget.remaining shows what is left); " +

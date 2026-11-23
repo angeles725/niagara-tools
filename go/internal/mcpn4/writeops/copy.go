@@ -66,6 +66,12 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
+	licenceNotes, err := withinLicence(c, "this copy", func(a capacityAdd) error {
+		return a.addTree(kinds{}, src.ct, root, len(names))
+	})
+	if err != nil {
+		return nil, err
+	}
 	ops, inverse := []any{}, []any{}
 	for i, n := range names {
 		ops = append(ops, obj("nm", "a", "h", parentH, "n", n, "b", bodies[i]))
@@ -76,6 +82,7 @@ func copyPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	notes = append(notes, src.linksNote()...)
 	notes = append(notes, dupNotes...)
 	notes = append(notes, fallbackNotes(source, body)...)
+	notes = append(notes, licenceNotes...)
 	targets := pyjson.NewObject()
 	targets.Set(parentOrd, parentH)
 	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: targets,

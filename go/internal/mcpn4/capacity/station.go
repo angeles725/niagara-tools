@@ -2,6 +2,7 @@ package capacity
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
@@ -48,17 +49,27 @@ func DeviceAdd(s SpyGetter, g OrdGetter, module string, timeout float64) (u *Usa
 	if info == nil {
 		return nil, false, why
 	}
-	term := TermOf(info, Devices)
-	uncounted := &Usage{Rule: Devices.Name, Limit: term.Limit, Unlimited: term.Unlimited, Excluded: term.Excluded}
-	if term.Unlimited { // no device.limit: nothing to exceed, so no station-wide count
-		return uncounted, false, ""
-	}
-	for _, m := range term.Excluded {
-		if m == module { // the station does not count this device (Metrics.incrementDevice)
-			return uncounted, false, ""
+	u, _, over, why = Add(g, info, Devices, map[string]int{module: 1}, timeout)
+	return u, over, why
+}
+
+// Add checks components to add to rule r on the licence info, counted per module of their type
+// (modules -> how many): the usage of the rule, how many of them the station counts (a module the
+// licence excludes is not counted, Metrics.incrementDevice) and whether they surely exceed the
+// limit. The station's components are counted only when the licence sets a limit and some added
+// component counts against it.
+func Add(g OrdGetter, info *license.Info, r Rule, modules map[string]int, timeout float64) (u *Usage, n int, over bool, why string) {
+	term := TermOf(info, r)
+	uncounted := &Usage{Rule: r.Name, Limit: term.Limit, Unlimited: term.Unlimited, Excluded: term.Excluded}
+	for m, k := range modules {
+		if !slices.Contains(term.Excluded, m) {
+			n += k
 		}
 	}
-	m := MeasureRule(g, info, Devices, timeout)
-	res := Check([]Usage{m}, map[string]int{Devices.Name: 1})
-	return &m, res.Fits != nil && !*res.Fits, m.Note
+	if term.Unlimited || n == 0 { // nothing to exceed, so no station-wide count
+		return uncounted, n, false, ""
+	}
+	m := MeasureRule(g, info, r, timeout)
+	res := Check([]Usage{m}, map[string]int{r.Name: n})
+	return &m, n, res.Fits != nil && !*res.Fits, m.Note
 }

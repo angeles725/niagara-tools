@@ -130,3 +130,17 @@ func TestReadAuditSaysWhenMoreRecordsMatchThanTheLimit(t *testing.T) {
 		t.Errorf("reply %s", pyjson.Repr(out))
 	}
 }
+
+func TestReadAuditWarnsWhenAFilteredReadIsEmptyAndItsCountFailed(t *testing.T) {
+	s := auditServer(t, strings.SplitAfterN(auditRecords, "\n", 2)[0], "null")
+	out := callOK(t, s, "n4_read_audit", "user", "nobody")
+	const want = "no rows came back and the record count (select count(*)) did not answer: " +
+		"the filter may name no field, so this empty list does not show that no record matches"
+	if got := field(out, "warning"); got != want || field(out, "row_count") != 0 {
+		t.Errorf("warning %v, reply %s", got, pyjson.Repr(out))
+	}
+	s = auditServer(t, strings.SplitAfterN(auditRecords, "\n", 2)[0], "0")
+	if _, has := callOK(t, s, "n4_read_audit", "user", "nobody").Get("warning"); has {
+		t.Error("warning when the count answered 0")
+	}
+}

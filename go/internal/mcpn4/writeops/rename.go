@@ -23,7 +23,10 @@ const msgRenameLinks = "Only dynamic slots can be renamed (the station refuses a
 
 type renameItem struct{ parentOrd, oldName, newName string }
 
-type renameData struct{ items []renameItem }
+type renameData struct {
+	items  []renameItem
+	frozen []frozenName
+}
 
 // renameItems reads the items argument; it does not touch the station.
 func renameItems(args *pyjson.Object) ([]renameItem, error) {
@@ -99,8 +102,18 @@ func renamePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		notes = append(notes, it.parentOrd+": "+it.oldName+" -> "+it.newName)
 	}
 	notes = append(notes, msgRenameLinks)
-	return &plan.Planned{Ops: ops, Inverse: inverse, Notes: notes, Targets: targets,
-		Data: renameData{items}}, nil
+	frozen, historyNotes, err := renameHistory(c, items, pyjson.Truthy(get(args, "freeze_history_names")))
+	if err != nil {
+		return nil, err
+	}
+	var freeze, unfreeze []any // the names are frozen before the renames and thawed after their inverse
+	for _, f := range frozen {
+		freeze = append(freeze, setOp(f.h, "historyName", obj("nm", "p", "t", "baja:Format", "v", f.text)))
+		unfreeze = append(unfreeze, setOp(f.h, "historyName", obj("nm", "p", "t", "baja:Format", "v", f.pattern)))
+		targets.Set("station:|slot:"+f.path, f.h)
+	}
+	return &plan.Planned{Ops: append(freeze, ops...), Inverse: append(inverse, unfreeze...),
+		Notes: append(notes, historyNotes...), Targets: targets, Data: renameData{items, frozen}}, nil
 }
 
 // renameCheck refuses a rename whose source is missing (or already renamed by an earlier item)
@@ -129,7 +142,7 @@ func renameOp(h any, oldName, newName string) *pyjson.Object {
 // renameReadback loads each parent again: verified only when every new name is present and every
 // old name is gone; observed lists, per item, the names the parent holds.
 func renameReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _ []any) (any, any, any, string, error) {
-	items := p.Data.(renameData).items
+	items, frozen := p.Data.(renameData).items, p.Data.(renameData).frozen
 	verdict, requested, observed := "verified", []any{}, []any{}
 	for _, it := range items {
 		_, nodes, err := plan.Handle(c, it.parentOrd, 1)
@@ -141,6 +154,21 @@ func renameReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _
 		observed = append(observed, obj("parent_ord", it.parentOrd, "new_name_present", held[it.newName],
 			"old_name_present", held[it.oldName], "old_name", it.oldName))
 		if !held[it.newName] || held[it.oldName] {
+			verdict = "mismatch"
+		}
+	}
+	for _, f := range frozen { // a frozen name still holds its text under the renamed path
+		_, nodes, err := plan.Handle(c, "station:|slot:"+f.newPath, 1)
+		if err != nil {
+			return fail(err)
+		}
+		got, err := plan.Observe(nodes, "historyName", "baja:Format")
+		if err != nil {
+			return fail(err)
+		}
+		requested = append(requested, obj("history_ext", f.newPath, "historyName", f.text))
+		observed = append(observed, obj("history_ext", f.newPath, "historyName", got))
+		if got != f.text {
 			verdict = "mismatch"
 		}
 	}
