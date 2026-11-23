@@ -3,6 +3,15 @@
 # [ev: retro client-source-of-truth Δ3] — the close gate fails on drift; the remedy is
 # scripts/install-skill.sh --force. Every test passes --home so the real $HOME is never read.
 
+# The script is the launcher of go/cmd/check-skill-drift: build the binary once, with the real environment, so a case that
+# changes HOME never pays the build with a fresh Go cache. [ev: retro go-toolbelt-small-port Δ4]
+setup_file() {
+  local root; root="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via root
+  . "$root/go/go-tool.sh"
+  go_tool_bin "$root/go" check-skill-drift >/dev/null
+}
+
 setup() {
   TMPDIR_T="$(mktemp -d)"
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"

@@ -6,6 +6,15 @@
 
 bats_require_minimum_version 1.5.0
 
+# The script is the launcher of go/cmd/kit-resolve: build the binary once, with the real environment, so a case that
+# changes HOME never pays the build with a fresh Go cache. [ev: retro go-toolbelt-small-port Δ4]
+setup_file() {
+  local root; root="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via root
+  . "$root/go/go-tool.sh"
+  go_tool_bin "$root/go" kit-resolve >/dev/null
+}
+
 setup() {
   TMPDIR_T="$(mktemp -d)"
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
