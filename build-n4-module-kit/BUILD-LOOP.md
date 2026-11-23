@@ -137,6 +137,10 @@ non-skippable check floor (§5) applies to every tier.
   under the review), then open one PR for the chain (PR #270). After review, bring main in with
   `git merge origin/main` into the branch, never a rebase: a rebase rewrites the reviewed commits, so their review
   no longer covers the bytes that merge. `[ev: retro r8-t22-retro-deltas Δ6]`
+- **Keep the generated bundle out of a reviewable slice:** commit the generated `dist/` bundle
+  (`types/frontend-standard.md` § 5) in its own commit, or exclude it from the review candidate. With the bundle
+  inside, a dashboard feature cannot be reviewed whole: its candidate stopped with `lens_context_budget_exceeded`,
+  and only the range after the bundle's commit was reviewed. `[ev: issue #919]` (retro R11 ΔB4)
 
 ## 1. Design
 - State the module's job, its profiles (rt/ux/wb), and the slot/endpoint contract in one paragraph.
@@ -171,6 +175,11 @@ non-skippable check floor (§5) applies to every tier.
   the feature doc (question, options shown, answer, who, date). This extends the field-terms confirmation of an
   ambiguous phrase (`types/logic.md` § RT control logic) to EVERY unstated behavior.
   `[ev: retro behavior-decisions-ask-dont-assume Δ1]`
+- **Start the feature doc from the template:** copy `templates/feature-doc/feature-doc.md` to
+  `odd/tasks/<feature-name>.md`. It carries `## Specs`, `## Behavior decisions` and `## Tasks` in that order, so the
+  decisions table exists before the first task is coded and the gate cannot be met only in the `## Log`; it also
+  carries the `## Checks skipped`, `## Assumptions still open` and `## Consumer impact` sections that §5, §7 and
+  `METHODOLOGY.md` ask for. `[ev: issue #921]` (retro R11 ΔB7)
 
 ### 1.a New-module bring-up (before the first build)
 
@@ -582,6 +591,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     export>]` FAILs a CA certificate, a certificate with no code-signing usage, an
     expired one and an AES-GCM key export (`build-verify.md` § Signing per deploy target).
     `[ev: retro mcpn4-history-batch-tools Δ5]`
+  - **Rolling out a new FAIL lint:** it ships with a sweep over the client modules under `Cliente/` that lists
+    the modules it will fail on their next build, and one ticket per module. The public repository records only the
+    counts, never a module name. A FAIL lint that lands without the sweep breaks client builds that nobody was
+    told about (two modules failed on their next build). `[ev: issue #914]` (retro R9 ΔB6)
   - **What to port.** Port every tool to Go, first the ones that PARSE structured input (Java, XML, jars, ledgers)
     or have had a parsing bug; orchestration glue is ported too (`toolbelt/build.sh` is a launcher over
     `go/cmd/build-module`), and a bash script stays only as a launcher that builds and execs its Go binary.
