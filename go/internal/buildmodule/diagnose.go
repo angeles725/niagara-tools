@@ -80,7 +80,7 @@ func (b *build) afterGradleFailed(log string, started time.Time) int {
 				b.warn(msgJarStale, jar)
 			}
 		}
-		b.warn(msgCopyLockedNext)
+		b.warn(msgCopyLockedNext, b.home)
 		return ExitCopyLocked
 	case logCleanLocked.MatchString(log):
 		// A running station LOCKS modules/<mod>.jar so :clean fails: tell the operator how to free it.

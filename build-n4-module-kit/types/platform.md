@@ -46,3 +46,12 @@ not boot: `types/distribution.md` § 10; File Transfer Client is not an install 
   history intervals and alarm rates at what the site needs; never log a fast-changing value COV without a tolerance.
 - A Supervisor's station heap is `-Xmx` in `station.java.options` of Daemon Home `etc/nre.properties` — one key for
   every daemon-started station (corpus B1284 §1284.2.1).
+
+## 4 · Which installation a module belongs in `[ev: retro deploy-target-version Δ4]`
+
+A host can hold several Niagara installations side by side (one directory per version, plus the WSL mirrors a build uses). A built module jar goes into the `modules/` directory of the installation whose Niagara version it was compiled against.
+
+- **Installation side:** `modules/baja.jar` → `META-INF/module.xml`, root tag `vendorVersion="4.14.0.162"` (the same number is in `nre-core-*`). That, not the directory name, is the version of the installation.
+- **Jar side:** the niagara-module plugin writes a `<dependency name="baja" vendor="Tridium" vendorVersion="4.14"/>` floor (major.minor) for every Tridium module the code uses; the highest one is the version the jar was compiled against. No `niagara_home` path, JDK or plugin version is in the jar. A floor is a minimum, so a 4.15 station satisfies a 4.14 floor (`BVersion.MEETS_MINIMUM`, `build-verify.md` § Module versioning & release); the kit still installs a jar only into the installation of its own major.minor, because that is the API it was compiled against.
+- **Both at once:** `toolbelt/check-target-version.sh <jar> <niagara_home | its modules directory>` prints one PASS or FAIL row with both versions; `ng-deploy.sh` runs the same comparison before the copy (exit 55).
+- **A mirror is not the installation it was made from** (`toolbelt/mirror-niagara-home.sh`): a build against a mirror leaves its jars in the mirror's `modules/`, and `build.sh` ends by naming the installation the mirror was made from and the command that installs them there. Stop that installation's station (a Windows service, or `station.exe`) and its Workbench first: a running one holds the jars open and the copy fails with Permission denied (`BUILD-LOOP.md` § 6).

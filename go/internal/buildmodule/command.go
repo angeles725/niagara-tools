@@ -6,7 +6,7 @@
 // One file per responsibility, in chain order: options.go (flags), inputs.go (roots, JDK, niagara_home),
 // baselineref.go (--schema-baseline-ref), location.go (WSL mount warning, preflight), profiles.go and gradleconf.go (what gradle builds and with which
 // arguments), mirror.go (user.home isolation), baseline.go (pre-build snapshot and restore), replaced.go (the
-// mirror jar a passing build replaced: kept, and --restore-mirror), gradle.go and
+// mirror jar a passing build replaced: kept, and --restore-mirror; the installation the mirror was made from), gradle.go and
 // diagnose.go (the run and its log), drift.go (drift verdict), gate.go (verify gate, report-module). The data
 // lives apart: exit.go, messages.go, patterns.go; the usage text is the launcher header (usage.go). This file only composes them.
 package buildmodule
@@ -93,6 +93,9 @@ func Main(args []string, s cli.Stdio) int {
 		code = ExitOK
 	}
 	b.keepReplaced() // whatever the exit: it looks at what modules/ holds now, before cleanup drops the snapshot
+	if code == ExitOK {
+		b.sayMirrorSource() // the last line of a passing mirror build
+	}
 	return code
 }
 

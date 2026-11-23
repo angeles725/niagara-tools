@@ -104,12 +104,23 @@
 #   .mirror-replaced/ and pick the one the station runs). A jar that cannot be kept is one WARN ("was NOT kept").
 #   The exit code never changes. Nothing is kept for a
 #   real niagara_home, under --no-drift-check (no snapshot), on a first deploy, or when the run restored modules/.
+# Mirror source line (Δ2): a mirror is NOT the installation it was made from, so a passing mirror build ends (after the
+#   line above, when there is one) with one "==> mirror: <mirror> was made from <installation> (Niagara <version>); the
+#   jars built this run were NOT installed in <installation>/modules — to install them, stop the station and close
+#   Workbench of that installation, then run: <toolbelt>/check-target-version.sh <jar> <installation> && cp <jars>
+#   <installation>/modules/" line (paths shell-quoted). The installation is the marker's "source=" line, its version
+#   that of its modules/baja.jar ("unknown" when unreadable). Nothing is printed for a real niagara_home, a marker
+#   with no source, or a build that did not pass; the exit code never changes. check-target-version.sh refuses an
+#   installation of another Niagara major.minor than the jar was compiled against (exit 1).
+#   [ev: retro deploy-target-version Δ2]
 #   An INCOMPLETE report ends with a pointer to the schema-risk SKIP row only when an artifact lacks .deploy-baseline;
 #   the INCOMPLETE line names --schema-baseline-ref <deployed-ref> as the way to supply it.
 # Post-jar copy lock (exit 32): the plugin's last step copies the jar into <niagara_home>/modules; a Windows
 #   process (Workbench, station) holding the old jar open on /mnt/c makes it fail with FileAlreadyExistsException.
 #   build.sh names the build/libs jar(s) rebuilt THIS run as the artifact of record (a stale one is flagged
 #   "not rebuilt"). [ev: retro panccadia-restart-seq-comp-lockout-hours Δ3]
+#   The line after them says to stop the station and close Workbench of that installation (on Windows the station is
+#   a service or station.exe) before re-running. [ev: retro deploy-target-version Δ3]
 # Independent gradle groups (different gradle roots) may be built CONCURRENTLY: one build.sh per group in the
 #   background, then wait — never two runs on the SAME gradle root (BUILD-LOOP.md §4).
 #   [ev: retro change-tier-time-budgets Δ5]

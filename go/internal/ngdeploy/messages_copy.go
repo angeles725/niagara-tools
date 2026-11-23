@@ -15,7 +15,7 @@ const (
 	msgCopyInterrupted = "copy interrupted (%s); %s"
 	// hintHeldOpen follows, indented, a jar that could not be replaced or moved with EBUSY or ETXTBSY, or with
 	// EACCES or EPERM in a directory this user may write (the Windows sharing violation on a WSL mount).
-	hintHeldOpen = "a running station or Workbench holds its module jars open; stop it and run again"
+	hintHeldOpen = "a running station or Workbench of that installation holds its module jars open: stop it first (on Windows the station is a service or station.exe: stop the service or end the process, and close Workbench), then run again"
 	// hintNoPermission follows, indented, EACCES or EPERM in a directory (its argument) this user may not write.
 	hintNoPermission = "%s does not let this user create, rename or remove files (no write permission): fix its permissions or ownership, then run again; a running station is not the cause"
 	// msgProbeRefused takes the jar, the station directory and why it could not be moved before the build.

@@ -99,7 +99,11 @@ const (
 	msgKeptChanged         = "build.sh: --restore-mirror refuses %s: its sha256 starts with %s, not %s (the jar was changed after it was kept)"
 	msgRestoreNotMirror    = "build.sh: --restore-mirror refuses %s: no .niagara-mirror marker (only a mirror is restored)"
 	msgRestoreMirrorFailed = "build.sh: --restore-mirror: could not write %s (%s)"
-	msgMirrorRestored      = "==> mirror: restored %[1]s/modules/%[2]s from %[3]s (vendorVersion %[4]s sha256:%[5]s)"
+	// msgMirrorSource takes the mirror, the installation it was made from, that installation's Niagara version,
+	// and the command that installs the jars built this run there (check the version, then copy).
+	msgMirrorSource = "==> mirror: %[1]s was made from %[2]s (Niagara %[3]s); the jars built this run were NOT installed in %[2]s/modules" +
+		" — to install them, stop the station and close Workbench of that installation, then run: %[4]s"
+	msgMirrorRestored = "==> mirror: restored %[1]s/modules/%[2]s from %[3]s (vendorVersion %[4]s sha256:%[5]s)"
 )
 
 // Gradle run and its log.
@@ -110,9 +114,10 @@ const (
 	msgDevKey     = "==> WARN: the jar is signed with a throwaway dev key created in the mirror user home (%s) — do not deploy it; add the signing block (templates/signing-root.gradle.kts, lint-structure L15)"
 	msgCopyLocked = "build.sh: the plugin's post-jar copy into %s/modules failed — a local process (Workbench,\n" +
 		"  a station) holds the old jar open (FileAlreadyExistsException). The build/libs jar is the artifact of record:"
-	msgJarBuilt       = "    %s (built this run)"
-	msgJarStale       = "    %s — not rebuilt this run (missing or stale): gradle stopped before this profile"
-	msgCopyLockedNext = "  Close the process holding modules/<jar> and re-run to refresh the modules/ copy — or use the build/libs\n" +
+	msgJarBuilt = "    %s (built this run)"
+	msgJarStale = "    %s — not rebuilt this run (missing or stale): gradle stopped before this profile"
+	// msgCopyLockedNext takes the niagara_home whose modules/ is locked.
+	msgCopyLockedNext = "  Stop the station and close Workbench of the installation %s (on Windows the station is a service or station.exe), then re-run to refresh the modules/ copy — or use the build/libs\n" +
 		"  jar directly (the verify gate was NOT run: run verify-module.sh on it before any deploy)."
 	msgCleanLocked = "build.sh: :clean could not delete a modules/<jar> — a running station has it locked.\n" +
 		"  Free the lock first: close Workbench, or stop the station, then build directly; or build against a\n" +
