@@ -95,7 +95,15 @@ func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 	if prop != nil && len(slots) == 0 {
 		slots = append(slots, prop.self)
 	}
+	var notFound []any
+	wanted, filtered := slotFilter(args)
+	if filtered {
+		slots, notFound = keepSlots(slots, wanted)
+	}
 	out := obj("ord", ord, "slots", slots, "elapsed_ms", elapsed)
+	if filtered && len(notFound) > 0 {
+		out.Set("slots_not_found", notFound)
+	}
 	if prop != nil {
 		prop.describe(out, slots)
 	}
@@ -152,4 +160,46 @@ func statusEntry(entry *pyjson.Object, value any) (*pyjson.Object, error) {
 	entry.Set("status_null", null)
 	entry.Set("status_flags", names)
 	return entry, nil
+}
+
+// slotFilter is the slots argument: the names asked for and whether a filter was given (the
+// schema guarantees a list of strings).
+func slotFilter(args *pyjson.Object) ([]string, bool) {
+	raw, ok := args.Get("slots")
+	list, _ := raw.([]any)
+	if !ok || len(list) == 0 {
+		return nil, false
+	}
+	names := make([]string, 0, len(list))
+	for _, v := range list {
+		if n, ok := v.(string); ok {
+			names = append(names, n)
+		}
+	}
+	return names, true
+}
+
+// keepSlots is the entries of slots named in wanted, in their own (station) order, and the
+// wanted names no entry carries, in the order asked and once each.
+func keepSlots(slots []any, wanted []string) (kept, notFound []any) {
+	want := map[string]bool{}
+	for _, n := range wanted {
+		want[n] = true
+	}
+	kept, found := []any{}, map[string]bool{}
+	for _, e := range slots {
+		name, _ := e.(*pyjson.Object).Get("name")
+		if n, _ := name.(string); want[n] {
+			kept = append(kept, e)
+			found[n] = true
+		}
+	}
+	seen := map[string]bool{}
+	for _, n := range wanted {
+		if !found[n] && !seen[n] {
+			notFound = append(notFound, n)
+		}
+		seen[n] = true
+	}
+	return kept, notFound
 }

@@ -19,14 +19,14 @@ const danglingScopeNote = "Components are reported up to depth levels below ord.
 // danglingOutputs is the dangling-output check over one scan: the components up to depth below
 // ord whose out slot no seen link reads (dangling), the same while a link that may read out has
 // an unresolved source (unknown, never dangling), and those unresolved links.
-func danglingOutputs(ord string, nodes *pyjson.Object, links []link, depth int) (dangling, unknown, unresolved, byExt []any, err error) {
+func danglingOutputs(ord string, nodes *pyjson.Object, links []link, depth int) (dangling, unknown, unresolved, byExt, terminal []any, err error) {
 	used := map[string]bool{} // the (source_path, "out") pairs, by path
-	dangling, unknown, unresolved, byExt = []any{}, []any{}, []any{}, []any{}
+	dangling, unknown, unresolved, byExt, terminal = []any{}, []any{}, []any{}, []any{}, []any{}
 	undecided := false
 	for _, l := range links {
 		switch slot := l.sourceSlot.(type) {
 		case []any, *pyjson.Object: // an unhashable set member
-			return nil, nil, nil, nil, typeError
+			return nil, nil, nil, nil, nil, typeError
 		case string:
 			if p, ok := l.sourcePath.(string); ok && slot == "out" {
 				used[p] = true
@@ -54,6 +54,11 @@ func danglingOutputs(ord string, nodes *pyjson.Object, links []link, depth int) 
 				byExt = append(byExt, entry)
 				continue
 			}
+			if why := terminalReason(nodes, p, kind); why != "" {
+				entry.Set("reason", why)
+				terminal = append(terminal, entry)
+				continue
+			}
 			if undecided {
 				unknown = append(unknown, entry)
 			} else {
@@ -61,7 +66,7 @@ func danglingOutputs(ord string, nodes *pyjson.Object, links []link, depth int) 
 			}
 		}
 	}
-	return dangling, unknown, unresolved, byExt, nil
+	return dangling, unknown, unresolved, byExt, terminal, nil
 }
 
 // FindDanglingOutputs is n4_find_dangling_outputs: the components up to depth below ord whose
@@ -72,7 +77,7 @@ func (t *Tools) FindDanglingOutputs(args *pyjson.Object) (*pyjson.Object, error)
 	if err != nil {
 		return nil, err
 	}
-	dangling, unknown, unresolved, byExt, err := danglingOutputs(ord, nodes, links, depth)
+	dangling, unknown, unresolved, byExt, terminal, err := danglingOutputs(ord, nodes, links, depth)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +88,9 @@ func (t *Tools) FindDanglingOutputs(args *pyjson.Object) (*pyjson.Object, error)
 		"scope_note", danglingScopeNote)
 	if len(byExt) > 0 { // only then: the reply of a subtree without extensions is unchanged
 		out.Set("consumed_by_extension", byExt)
+	}
+	if len(terminal) > 0 { // likewise: a subtree with no terminal point answers as before
+		out.Set("terminal_by_design", terminal)
 	}
 	return out, nil
 }
