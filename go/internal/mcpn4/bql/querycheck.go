@@ -42,7 +42,8 @@ func checkQueryText(q string) error {
 	}
 	switch {
 	case strings.Contains(q, "|"):
-		return valueError("query must not contain '|': only one select is composed into the ORD")
+		return valueError("query must not contain '|': only one select is composed into the ORD; to query a subtree put it in " +
+			"base (for example base station:|slot:/Drivers/Net) and keep only 'select ... from ...' in query")
 	case controlRe.MatchString(q):
 		return valueError("query must not contain control characters")
 	case pyjson.Len(q) > MaxQueryLength:

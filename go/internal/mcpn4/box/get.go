@@ -35,6 +35,9 @@ func (c *Client) GetOrd(ord string, timeout float64, maxBytes int) (string, bool
 		return "", false, err
 	}
 	resp, err := c.do(c.interrupt, "GET", "/ord/"+path, nil, map[string]string{"Accept": "text/csv"}, timeout, maxBytes+1)
+	if c.retryRead(err) { // a read asked again once after a timeout (read_retry.go)
+		resp, err = c.do(c.interrupt, "GET", "/ord/"+path, nil, map[string]string{"Accept": "text/csv"}, timeout, maxBytes+1)
+	}
 	if err != nil {
 		return "", false, c.mapError(err, "ord", "get", true)
 	}
