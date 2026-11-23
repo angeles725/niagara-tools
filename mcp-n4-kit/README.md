@@ -296,7 +296,9 @@ below `base`: with a base above the driver container it is named by its path bel
 (`Plant/Drivers/BacnetNetwork`), a device or point under no network has `network: null`, and a
 plain folder is never listed as a network.
 Both send `GET /ord/<url-encoded station:|slot:<base>|bql:select ...|view:file:ITableToCsv>`.
-The query must be one `select`, `|` is refused, and rows are capped (default 5000).
+The query must be one `select`, `|` is refused (the refusal names the fix: a subtree goes in `base`,
+e.g. `base: station:|slot:/Drivers/Net`, never in the query; retro 2026-11-10 row 7), and rows are
+capped (default 5000).
 A body over 32 MB is cut at its last complete record (a newline inside a quoted cell does not
 end one), so a truncated result (`truncated: true`) never carries a torn last row.
 An answer that is not a CSV table is an error, never zero rows: an HTML page (by Content-Type
@@ -690,6 +692,11 @@ supertypes; a type the station answers as unknown, or leaves out of a reply that
 types, is not asked for again; one left out of a reply that answered nothing, or after a failed
 call, is). The sub-entries of a declared struct default are marked `default` too and may show
 `type: null` (the contract gives their value, not their type).
+`n4_read_slots` takes an optional `slots` list (1 to 100 names, for example `["alarmInhibit"]`):
+it then returns only those slots, in station order and each as complete as without the list
+(loaded ones and declared defaults alike), and `slots_not_found` names the ones the component
+neither holds nor declares (present only when there is one). Without `slots` every slot is read
+and the reply is unchanged (retro 2026-11-15 alarms and kit module, row 7).
 Each is marked `default: true` with the contract's default value; when the contract gives no
 default value (a component default such as `proxyExt` is not sent) `value` is null and a `note`
 says so, never an invented value. `defaults_note` says when a contract could not be read (the
@@ -725,6 +732,10 @@ point's `out` without a link, so a component with an `alarm:...AlarmExt` or
 `history:...HistoryExt` child is listed in `consumed_by_extension` (with the extension type)
 instead of `dangling`; the commissioning report's `dangling_outputs` check skips it too
 (backlog OD007).
+A writable point (`control:...Writable`) whose proxy extension is a real one (not the default
+`control:NullProxyExt` every control point holds), so its `out` is written to a device, and a `schedule:CalendarSchedule`, which other schedules read by ORD, are listed in
+`terminal_by_design` with their `reason` instead of `dangling` (the field is present only when
+there is one; the commissioning report skips them too; retro 2026-11-15 row 14).
 
 ### Registering the server per harness
 
@@ -1119,6 +1130,11 @@ Every write call goes through these layers:
    is `refused`. A transport failure, a timeout, a read-back that fails or shows a
    change, and every other tool stay `in-doubt`. The station's text is decoded from
    HTML entities (`&quot;`, `&lt;`, `&amp;`) in every error a tool reports.
+   A read the client sends (the `loadSlots` request of a dry run's or a read's load, and the GET of a
+   BQL or ORD read) that times out is asked again once after 0.5 s: a read changes nothing on the
+   station. A write (`syncTo`, `invokeAction`, `save`) is never sent twice by the client, and a
+   failure that is not a timeout (an HTTP status, a refused connection, a login) is final
+   (retro 2026-11-10 row 6).
    Journal states, as `n4_list_batches` shows them: `completed`, `in-doubt`,
    `refused`.
 8. **Audit.** Every write call, dry, executed or refused, appends a line to
@@ -1141,7 +1157,11 @@ server never chmods a directory it did not create.
 Tool rules:
 
 - `n4_set_slot` writes Status slots whole (value plus status) and refuses a path
-  ending in `/value` or `/status`. A `bacnet:BacnetOctetString` (a Spyder's MS/TP
+  ending in `/value` or `/status`. `status` is the hex bits the station writes (default `0`) or
+  flag names separated by commas (`disabled`, `fault`, `down`, `alarm`, `stale`, `overridden`,
+  `null`, `unackedAlarm`; `ok` for none; braces allowed), so `status: "fault"` forces a fault on a
+  test point and a status read with `status_flags` can be written back by name (retro 2026-11-15
+  alarms row 5). A `bacnet:BacnetOctetString` (a Spyder's MS/TP
   `address/macAddress`) is read back by its octets: the station stores `0C` as `0c` and
   `C0A80101BAC0` as `c0 a8 01 01 ba c0`, and both are `verified`. A nested slot (`grp/sp`) is loaded one level deeper
   so its previous value is the real one. A frozen property whose value equals its
@@ -1197,6 +1217,13 @@ Tool rules:
   `n4_rollback` of the batch removes every link it created. The single form's reply is unchanged,
   except that a missing argument is now refused as a tool error with the same text (`missing
   required argument: source_ord`) instead of a -32602 error.
+- Moving or resizing wire-sheet blocks has no dedicated tool: it is `n4_set_slot` on the block's
+  `wsAnnotation` with `value_type` `baja:Simple`, `simple_type` `baja:WsAnnotation` and the value
+  `"x,y,w"` (the same text `n4_create_component` `wire_sheet` writes), and the batch form `writes`
+  (1 to 50 entries) moves many blocks under one dry run and one token. The rows a block shows are
+  its SUMMARY-flagged slots and its height follows from them. The read-back proves the stored
+  annotation only; what the sheet draws is for a person to confirm (METHODOLOGY section 3; retro
+  `2026-11-15-lab-415-bench-session-2.md` rows 17 and 18).
 - `n4_set_flags(ord, slot, flags | add/remove)` sets the flags of one slot of a component (a
   property, an action or a topic; a name, not a path) with the station's set-flags
   sync op. `flags` is the complete new set as letters, each once, in any order; `""`
@@ -1212,7 +1239,11 @@ Tool rules:
   (registry channel). The inverse restores exactly those flags. Refused: an unknown
   or repeated letter, a slot the component does not have, a set equal to the current
   one, and a slot whose current flags cannot be read (no flags on the slot and no
-  readable type contract), because no faithful inverse exists. The read-back loads
+  readable type contract), because no faithful inverse exists. When the slot carries no flags and
+  its type chain ends at a module type the station answered with no contract (`{}`), the plan
+  adds a note: the slot is taken as a dynamic slot with no flags, but it may be a frozen slot of
+  an undescribed type, and then the inverse `""` would not restore it (a `baja` type answered
+  with `{}` is the normal end of a chain and adds no note; retro 2026-11-14 row 10). The read-back loads
   the slot again: `verified` only when the flags it holds are the requested set,
   else `mismatch` with `requested` and `observed`. Proven live on 4.15.6.20 for a
   dynamic slot, a frozen property and a frozen action (set, save, `config.bog`,
