@@ -142,6 +142,9 @@ func (r *runner) run(c call) error {
 	if err != nil || r.failed || !r.writesExecute {
 		return err
 	}
+	if err := dryRunProved(plan); err != nil {
+		return err
+	}
 	obj, _ := plan.(*pyjson.Object)
 	var token any
 	if obj != nil {
@@ -154,6 +157,17 @@ func (r *runner) run(c call) error {
 	c.args.Set("confirmation_token", token)
 	_, err = r.request(c.tool, phaseExecute, c.args)
 	return err
+}
+
+// dryRunProved is nil when a dry run's reply shows dry_run: true: the proof, before a write executes,
+// that the call that came first was a dry run (retro R15 delta M17).
+func dryRunProved(reply any) error {
+	if o, ok := reply.(*pyjson.Object); ok {
+		if v, _ := o.Get("dry_run"); v == true {
+			return nil
+		}
+	}
+	return fmt.Errorf("the dry run's reply does not show dry_run: true, so it is not proof of a dry run: not executing")
 }
 
 // request is one tools/call and its output line.
