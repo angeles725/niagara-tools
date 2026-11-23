@@ -1,0 +1,10 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 1
+WARN  lint-rdbms-dialect-descriptor  @DIR@/M/M-rt/src/com/x/BExport.java:2  hard-coded dialect descriptor: take it from getHistories().getExportDescriptorType().getInstance() (types/cloud-connector.md § 11)
+-- stderr --
+-- M/M-rt/src/com/x/BExport.java --
+package com.x;
+class BExport { Object e = new BSqlServerHistoryExport(); }

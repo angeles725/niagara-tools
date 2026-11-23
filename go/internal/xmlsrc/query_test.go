@@ -112,3 +112,35 @@ func TestEmpty(t *testing.T) {
 		t.Fatalf("Empty = %v, want %v", got, want)
 	}
 }
+
+// TestSlotPath: the slot path of element i is the decoded n of each <p> from below the root down to it, joined
+// with "/" and led by one; an element with no n (the root, a non-<p>) adds no segment.
+func TestSlotPath(t *testing.T) {
+	d := parseQuery(t)
+	for i, want := range []string{"", "/station", "/station/a&b", "/station/text", "/station/text"} {
+		if got := d.SlotPath(i); got != want {
+			t.Errorf("SlotPath(%d) = %q, want %q", i, got, want)
+		}
+	}
+	e, err := Parse("e.bog", []byte(`<g><p n="Cold$20Room"><p n="x$2eY"/></p></g>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := e.SlotPath(2); got != "/Cold Room/x.Y" {
+		t.Errorf("an escaped name: SlotPath = %q, want /Cold Room/x.Y", got)
+	}
+}
+
+// TestSlotValue: the v of the direct child <p n="name"> of element i; "" when there is no such child, when it has
+// no v, or when the name only matches a grandchild or a non-<p> child.
+func TestSlotValue(t *testing.T) {
+	d, err := Parse("s.bog", []byte(`<g><p n="c"><p n="a" v="1"/><p n="b"/><x n="x" v="no"/><p n="d"><p n="deep" v="2"/></p></p></g>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{"a": "1", "b": "", "x": "", "deep": "", "missing": ""} {
+		if got := d.SlotValue(1, name); got != want {
+			t.Errorf("SlotValue(1, %q) = %q, want %q", name, got, want)
+		}
+	}
+}

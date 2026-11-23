@@ -1,0 +1,24 @@
+-- args --
+@DIR@/S
+-- want --
+exit 0
+WARN  lint-mqtt-tls-port  @DIR@/S/config.bog:5  /Services/Default TLS connection on port 1883: set brokerPort to the broker's TLS port, 8883 (types/cloud-connector.md § 9)
+WARN  lint-mqtt-tls-port  @DIR@/S/config.bog:6  /Services/Login1883 TLS connection on port 1883: set brokerPort to the broker's TLS port, 8883 (types/cloud-connector.md § 9)
+WARN  lint-mqtt-tls-port  @DIR@/S/config.bog:9  /Services/AnonSsl TLS connection on port 1883: set brokerPort to the broker's TLS port, 8883 (types/cloud-connector.md § 9)
+WARN  lint-mqtt-tls-port  @DIR@/S/config.bog:10  /Services/RangeTag TLS connection on port 1883: set brokerPort to the broker's TLS port, 8883 (types/cloud-connector.md § 9)
+-- stderr --
+-- S/config.bog --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version='4.0'>
+ <p m='b=baja' t='b:Station'>
+  <p n='Services' m='mq=abstractMqttDriver' t='b:ServiceContainer'>
+   <p n='Default' t='mq:GenericMqttAuthenticator'/>
+   <p n='Login1883' t='mq:GenericMqttAuthenticator'><p n='connectionType' v='UserLoginOverSSL'/><p n='brokerPort' v='1883'/></p>
+   <p n='Tls8883' t='mq:GenericMqttAuthenticator'><p n='brokerPort' v='8883'/></p>
+   <p n='Plain1883' t='mq:GenericMqttAuthenticator'><p n='connectionType' v='Anonymous'/><p n='brokerPort' v='1883'/></p>
+   <p n='AnonSsl' t='mq:GenericMqttAuthenticator'><p n='connectionType' v='AnonymousOverSSL'/></p>
+   <p n='RangeTag' t='mq:GenericMqttAuthenticator'><p n='connectionType' v='UserLoginOverSSL@range'/></p>
+   <p n='Jitp' t='mq:AwsJitpMqttAuthenticator'/>
+  </p>
+ </p>
+</bajaObjectGraph>
