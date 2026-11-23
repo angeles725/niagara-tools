@@ -490,3 +490,22 @@ JAVA
   [[ "$output" != *"commentedOut"* && "$output" != *"slot opInComment"* ]]
   [ "$status" -eq 1 ]
 }
+
+@test "WP-stale-nofacade: a row marked (no facade slot) is no STALE, any case; a plain row of the same slot still is (issue #900)" {
+  d="$BATS_TEST_TMPDIR/nofacade"; _mk_wp "$d" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| `swingV` | sibling device point (no facade slot) | n/a | — |
+| `swingH` | sibling point (No Facade Slot) | n/a | — |
+MD
+  run "$LW" --strict "$d"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"STALE"* ]]
+  # shellcheck disable=SC2016  # backticks are Markdown, not a command substitution
+  printf '| `swingV` | D | mid | wY |\n' >> "$d/docs/write-path-matrix.md"
+  run "$LW" --strict "$d"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"STALE"*"slot swingV: no source slot with that name"* ]]
+}

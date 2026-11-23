@@ -343,7 +343,10 @@ Under a module map (`types/structure.md` § Module map) two structure checks joi
 `rc/js/services/` file `[ev: retro modularity-gaps Δ2]`, and `js-file-size`, a `.js` file over 400 lines (the
 allow marker goes on its line 1) `[ev: retro modularity-gaps Δ3]`.
 `toolbelt/lint-spa-poll-no-recovery.sh` gates the success-time watchdog (`dashboard.md` § Poll loop
-reliability). `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
+reliability). Doctrine: reload only when the station still answers HTTP, and keep polling on network loss. A poll file
+may call a probe-then-reload helper (a name holding `probe` and `reload`, e.g. `probeThenReload()`) in place of a bare
+`location.reload()`; the lint takes that call as the recovery, and it still needs the `lastOk*` key.
+`[ev: issue #895]` `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
 `[ev: retro dashboard-frontend-standard Δ5]` `[ev: retro dashboard-rc-file-split Δ6]`
 
 `toolbelt/report-module.sh` passes the module's `ui_profile` (read by the caller from the module's

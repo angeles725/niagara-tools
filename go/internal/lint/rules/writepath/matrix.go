@@ -18,6 +18,9 @@ var (
 	htmlComment = regexp.MustCompile(`<!--[^>]*-->`)
 )
 
+// noFacadeMarker is the lower-cased row marker of a control with no facade slot (a sibling device point).
+const noFacadeMarker = "(no facade slot)"
+
 // space is awk's [[:space:]] in the C locale.
 const space = " \t\n\v\f\r"
 
@@ -111,7 +114,8 @@ func (m *matrix) slots() map[string]bool {
 }
 
 // stale is the per-row pass: a row whose backticked first-cell slot is in no source (covered) is STALE
-// unless that row, comments stripped, carries [concept]; a [concept] row whose slot is covered is DRIFT.
+// unless that row, comments stripped, carries [concept] or the (no facade slot) marker (a control that is a
+// sibling device point, not a facade slot; any case); a [concept] row whose slot is covered is DRIFT.
 func (m *matrix) stale(covered map[string]bool) []lint.Finding {
 	var out []lint.Finding
 	for i, ln := range m.lines {
@@ -120,6 +124,7 @@ func (m *matrix) stale(covered map[string]bool) []lint.Finding {
 		}
 		row := htmlComment.ReplaceAllString(ln, "")
 		concept := strings.Contains(row, "[concept]")
+		noFacade := strings.Contains(strings.ToLower(row), noFacadeMarker)
 		g := backticked.FindStringSubmatch(cell(row)) // only a backticked first cell names a slot here
 		if g == nil || !slotName.MatchString(g[1]) {
 			continue
@@ -129,7 +134,7 @@ func (m *matrix) stale(covered map[string]bool) []lint.Finding {
 		switch {
 		case covered[name] && concept:
 			at.Status, at.Msg = "DRIFT", "slot "+name+": concept marker but a source slot exists"
-		case !covered[name] && !concept:
+		case !covered[name] && !concept && !noFacade:
 			at.Status, at.Msg = "STALE", "slot "+name+": no source slot with that name"
 		default:
 			continue

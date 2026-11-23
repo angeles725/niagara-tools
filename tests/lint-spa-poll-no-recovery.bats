@@ -317,3 +317,15 @@ JEOF
   [[ "$output" == *"concise2.js:5"* ]]
   [[ "$output" == *"no location.reload("* ]]
 }
+
+@test "SPR16: a call to a probe-then-reload helper is the recovery (issue #895); only a declaration or a comment is not" {
+  # Mutation: SPR16 -- reading a `function probeThenReload(` declaration as a call takes it for the recovery
+  d="$TMPDIR_T/Mod/src/rc"
+  printf 'function poll() { lastOkAt = Date.now(); a().catch(e => 0); }\nsetInterval(poll, 1);\nif (Date.now() - lastOkAt > 6e4) probeThenReload();\n' > "$d/a.js"
+  run "$SPR" "$d"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  printf 'function poll() { lastOkAt = Date.now(); a().catch(e => 0); }\nsetInterval(poll, 1);\nfunction probeThenReload() { return 1; }\n// probeThenReload();\n' > "$d/a.js"
+  run "$SPR" "$d"
+  [[ "$output" == *"a.js:2"*"no location.reload("* ]]
+}

@@ -74,3 +74,17 @@ map() {  # map <mode-lines> <files-cell>
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  lint-module-map  $M/M-rt/src/a/model/cooling  MM7: concern folder in 2 rows (control, valves); one row owns a concern folder"* ]]
 }
+
+@test "MMB5: a src/rc row counts a webtest/**/*.test.mjs test for MM5 (issue #899); an rt row and a non-test file do not" {
+  mkdir -p "$M/M-ux/src/rc" "$M/M-ux/webtest"
+  printf 'x\n' > "$M/M-ux/src/rc/app.js"; printf 'x\n' > "$M/M-ux/webtest/app.test.mjs"; printf 'x\n' > "$M/M-ux/webtest/bundle.mjs"
+  map 'modularity: strict' 'M-rt/src/A.java'
+  printf '| frontend | ux | M-ux/src/rc/app.js | M-ux/webtest/app.test.mjs | the page |\n' >> "$M/MODULE-MAP.md"
+  run "$LMM" "$M"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  sed -i 's#M-ux/webtest/app.test.mjs#M-ux/webtest/bundle.mjs#' "$M/MODULE-MAP.md"
+  run "$LMM" "$M"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  lint-module-map  $M/MODULE-MAP.md:6  MM5: concern frontend names no existing srcTest path in Tests" ]]
+}

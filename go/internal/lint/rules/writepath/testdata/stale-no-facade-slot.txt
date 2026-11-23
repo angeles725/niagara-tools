@@ -1,0 +1,23 @@
+-- args --
+--strict
+@DIR@/16/nofacade
+-- want --
+exit 1
+STALE  lint-write-path  @DIR@/16/nofacade/docs/write-path-matrix.md:7  slot ghostSlot: no source slot with that name
+STALE  lint-write-path  @DIR@/16/nofacade/docs/write-path-matrix.md:8  slot swingV: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- 16/nofacade/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| `swingV` | sibling device point (no facade slot) | n/a | — |
+| `swingH` | sibling point (No Facade Slot) | n/a | — |
+| `ghostSlot` | D <!-- (no facade slot) --> | mid | wX |
+| `swingV` | D | mid | wY |
+-- 16/nofacade/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

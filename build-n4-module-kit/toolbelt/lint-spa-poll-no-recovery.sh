@@ -22,7 +22,8 @@
 #     2. its declaration body -- `function <name>(`, or `const|let|var <name> = [async] function(`
 #        / an arrow function -- is brace-extracted; it must contain `catch (`/
 #        `.catch(` — no catch, no shape to flag;
-#     3. recovery = `location.reload(` or `location.href =` ANYWHERE in the file;
+#     3. recovery = `location.reload(` or `location.href =` ANYWHERE in the file, or a call to a probe-then-reload
+#        helper (a name holding `probe` and `reload`, e.g. `probeThenReload(`; a `function` declaration is no call);
 #     4. success-time key = a `lastOk*` identifier assigned from a clock (`Date.now()`,
 #        `performance.now()`, `new Date`) INSIDE the poll fn body (the success path; a timestamp
 #        set only at load is not a success time) AND read in a subtraction/comparison
@@ -55,6 +56,7 @@
 # go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-spa-poll-no-recovery <args>`.
 # Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design (kit-links L2). LC_ALL=C.
+# Mutation: SPR16 -- reading a `function probeThenReload(` declaration as a call takes it for the recovery
 # Mutation: SPR15 -- matching location.href = also inside location.href == takes a comparison for the recovery
 # Mutation: SPR14 -- searching minified lines takes a bundled library's setTimeout(n,0) for the poll call
 # Mutation: SPR13 -- reading block comments as code takes /* location.reload(); */ for the recovery

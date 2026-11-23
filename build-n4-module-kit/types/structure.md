@@ -326,7 +326,8 @@ modularity: strict
 | MM3 | a listed path does not exist, is a directory, is absolute or leaves the module root, or a glob matches no file | FAIL | FAIL |
 | MM4 | every `src/**/*.java` and `src/rc/**/*.{js,html,css}` of every `-rt`/`-ux`/`-wb`/`-se` part (minus `vendor/`, `ext/` and `*.min.*`) is in exactly one row's `Files`: unlisted | FAIL | WARN |
 | MM4 | the same file is in two rows | FAIL | FAIL |
-| MM5 | a non-`plumbing` row names no existing `srcTest/` path in `Tests` | FAIL | WARN |
+| MM5 | a non-`plumbing` row names no existing `srcTest/` path in `Tests` (a row whose `Files` are under `src/rc/` also
+counts an existing `webtest/**/*.test.mjs` path) | FAIL | WARN |
 | MM6 | a `srcTest/**/*.java` file is in no row | WARN | WARN |
 | MM7 | a concern folder's files are in two rows, or a non-`plumbing` row lists files in concern folders of two names, or two non-`plumbing` rows share a concern and a part (case-insensitive; one row per part is fine) | FAIL | WARN |
 
