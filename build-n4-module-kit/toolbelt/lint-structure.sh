@@ -19,10 +19,13 @@
 #   L3b FAIL  strict only: a model/ class imports a type of the module's own non-model package
 #             [ev: retro modularity-gaps Δ1]
 #   L4  FAIL  module.lexicon non-empty (>=1 key=value) when >=1 type is declared
-#   L5  FAIL  module.palette non-empty for -rt profile
+#   L5  FAIL  module.palette non-empty for -rt profile. A module whose MODULE-MAP.md header declares
+#             `type: library` may ship none; the undeclared row says how to declare it [ev: retro doc-coverage-audit Δ22]
 #   L6  FAIL  module-include.xml present; no hand-authored META-INF/module.xml in source
 #   L7  FAIL  dependency version is a 3-part floor (4.14.0), not 2-part (4.14)
-#   L9  FAIL  no empty skeleton artifact: -wb/-ux with 0 Java classes AND empty palette
+#   L9  FAIL  no empty skeleton artifact: -wb/-ux with 0 Java classes AND empty palette. The -ux part of a
+#             module whose MODULE-MAP.md header declares `type: theme` passes when it holds a .nss file; the
+#             kind is declared, never inferred (types/structure.md § Module map) [ev: retro doc-coverage-audit Δ1]
 #   L10 FAIL  no absolute host paths in gradle.properties (module root + upward to .git root). R10-D8: one of
 #             the four host build-location keys (niagara_home, niagara_user_home, nodeHome,
 #             org.gradle.java.installations.paths; props.BuildLocationKeys) outside build-n4-module-kit/fixtures/

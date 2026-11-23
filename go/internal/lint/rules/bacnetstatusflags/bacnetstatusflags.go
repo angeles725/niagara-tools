@@ -87,7 +87,7 @@ func check(path string, doc *xmlsrc.Doc) []lint.Finding {
 	byDevice := map[int]*tally{}
 	for i, e := range elems {
 		if name, ok := bacnet(i); !ok || e.Name != "p" || !proxyType.MatchString(name) || !presentValue(doc, i) ||
-			slot(doc, i, "useStatusFlags") == "true" || e.Parent < 0 || statusFlags(slot(doc, e.Parent, "facets")) {
+			doc.SlotValue(i, "useStatusFlags") == "true" || e.Parent < 0 || statusFlags(doc.SlotValue(e.Parent, "facets")) {
 			continue
 		}
 		dev := -1 // the parent of the point's bacnet …PointDeviceExt (a vendor device subtype too), else a bacnet …Device
@@ -102,9 +102,9 @@ func check(path string, doc *xmlsrc.Doc) []lint.Finding {
 		}
 		t := byDevice[dev]
 		if t == nil {
-			t = &tally{device: "(no BACnet device)", first: slotPath(elems, e.Parent)}
+			t = &tally{device: "(no BACnet device)", first: doc.SlotPath(e.Parent)}
 			if dev >= 0 {
-				t.device = slotPath(elems, dev)
+				t.device = doc.SlotPath(dev)
 			}
 			byDevice[dev] = t
 			order = append(order, t)
@@ -118,22 +118,10 @@ func check(path string, doc *xmlsrc.Doc) []lint.Finding {
 	return out
 }
 
-// slot is the v attribute of the child <p n="name"> of element i, "" when there is none.
-func slot(doc *xmlsrc.Doc, i int, name string) string {
-	elems := doc.Elements()
-	for _, c := range doc.Children(i) {
-		if n, _ := elems[c].Attr("n"); n == name && elems[c].Name == "p" {
-			v, _ := elems[c].Attr("v")
-			return v
-		}
-	}
-	return ""
-}
-
 // presentValue reports a proxy whose propertyId is absent (Present_Value, 85, by default) or names ordinal 85,
 // written "85", "85@bacnet:BacnetPropertyIdentifier" or as the tag presentValue.
 func presentValue(doc *xmlsrc.Doc, i int) bool {
-	v := slot(doc, i, "propertyId")
+	v := doc.SlotValue(i, "propertyId")
 	ord, _, _ := strings.Cut(v, "@")
 	return v == "" || ord == "85" || ord == "presentValue"
 }
@@ -146,19 +134,4 @@ func statusFlags(facets string) bool {
 		}
 	}
 	return false
-}
-
-// slotPath is the slot path of element i: the decoded n of each <p> from below the root down to it.
-func slotPath(elems []xmlsrc.Element, i int) string {
-	var parts []string
-	for ; i >= 0; i = elems[i].Parent {
-		if n, ok := elems[i].Attr("n"); ok && elems[i].Name == "p" {
-			parts = append(parts, xmlsrc.UnescapeName(n))
-		}
-	}
-	var b strings.Builder
-	for k := len(parts) - 1; k >= 0; k-- {
-		b.WriteString("/" + parts[k])
-	}
-	return b.String()
 }

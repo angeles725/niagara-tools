@@ -331,7 +331,8 @@ Stock driver first (§ 2.1 "MQTT: native first"). Guide paths are
 **Set the port explicitly.** The Generic authenticator defaults to `connectionType=UserLoginOverSSL` but
 `brokerPort` defaults to 1883 (javap of `abstractMqttDriver-rt.jar` 4.15.6.20, `BAbstractMqttAuthenticator`
 static init: `sipush 1883`; guide `abstractMqttDriver-GenericMqttAuthenticator.txt:19`). A TLS broker listens
-on 8883: set it, or the connection fails against a TLS listener. Owed Go lint G87 `mqtt-tls-port` (ledger).
+on 8883: set it, or the connection fails against a TLS listener. Go lint G87 `lint-mqtt-tls-port` WARNs a station file
+that leaves it at 1883 (§ 12).
 
 | Authenticator | Credentials | Note |
 |---|---|---|
@@ -396,7 +397,45 @@ db.getHistories().add("exp_" + historyName, e, 0, cx);   // engine thread, a Con
 The recipe is corpus B1352 §1352.1 `[INFER]` (not executed). The licence gate is on the database:
 `BRdbms.started()` runs `checkLicense()` and an unlicensed database goes `configFatal("Unlicensed: …")`
 (vineflower rdb-rt 4.14.0.162 `javax/baja/rdb/BRdbms.java:256-301`; same methods in the 4.15.6.20 jar), so its
-exports never run. Owed Go lint G88 `rdbms-dialect-descriptor` (ledger).
+exports never run. Go lint G88 `lint-rdbms-dialect-descriptor` checks the source side (§ 12).
+
+## 12 · Testing and checking a cloud connector `[ev: retro doc-coverage-audit Δ16]`
+
+A connector's faults are the quiet ones: a closed gate returns an empty reply (§ 7), an unlicensed service starts and
+does nothing (§ 11), a TLS broker on 1883 fails at connect (§ 9). The recipe tests each against a loopback peer, never
+a real cloud endpoint or a site address.
+
+**Test recipe**
+1. **Pure JUnit for the payload.** Build and parse the message in a Baja-free `model/` class and test it with JUnit
+   (`types/moduleTest.md` § What to test in a moduleTest vs pure JUnit; `types/structure.md` § Module map for the
+   role packages). The transport only carries bytes.
+2. **A station test with a loopback peer.** `BTestNgStation` (`types/moduleTest.md` § TEST-G1) adds the service under
+   the Services container (`BIRestrictedComponent`, § 1); the peer is a `ServerSocket` (HTTP) or a canned-frame socket on
+   `127.0.0.1` port 0, as for a driver (`types/driver-authoring.md` § 12, § 12.1, Fox off for a loopback-only test).
+   Assert with `TestHelper.assertWillBeTrue` (§ TEST-G2), never a sleep.
+3. **Each failure path, driven by the peer.** The peer closes: `doPing` must throw when the endpoint is unreachable
+   (§ 8), so assert what your connector does then. The peer answers 503: assert a growing back-off, not a retry at the poll
+   rate (§ 10). Fill the queue to `pendingMessageLimit` (§ 2) and assert the behaviour your connector documents at that
+   ceiling.
+4. **The gates, closed.** Route 2 of § 7 with `enableNonDriverClients` false: assert the client's health reads the fault
+   and the caller does not take the empty reply for an empty payload. The unlicensed path: `types/security.md` § 5.3
+   (`isFatalFault()`, no output written).
+5. **No credential in the tree.** The test config holds a placeholder; a credential lives in the KeyRing or a key-store
+   alias (§ 3), never in a component property or a committed file.
+
+**Checklist before the hand-off** (each row names the section that holds the evidence)
+
+| Check | How |
+|---|---|
+| The service sits inside the Services container, never free-standing | § 1; the station test starts it there |
+| The authenticator's `canAuthenticate()` and `isRegistered()` are asserted before a send | § 3 |
+| `module-permissions.xml` carries a `KeyRingPermission` named for the backend and the `FilePermission` rows the module writes | § 5 |
+| okhttp comes from `bin/ext` with `nre(...)`, not bundled | § 2.1 |
+| An MQTT broker port is set, 8883 for TLS | § 9; `lint-mqtt-tls-port` over the station file |
+| The outbound HTTP gate state is in the runbook | § 7 |
+| A database export names its dialect from the database, not in code; a Postgres URL has a dialect of the module | § 11; `lint-rdbms-dialect-descriptor` over the `-rt` source |
+| The licence feature of the module is checked on the ongoing path, not only at start | `types/security.md` § 5.1 |
+| `lint-structure`, `lint-permissions-xml` and `verify-module.sh` pass | `BUILD-LOOP.md` § 5 |
 
 **See also:** `types/module-wiring.md` (fat-jar vs api-dep decision),
 `types/third-party-libraries.md` (uberjar rules), `types/security.md` (KeyRing,

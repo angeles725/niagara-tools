@@ -10,9 +10,10 @@ const (
 	themeSheet  = "*.nss"   // what a declared theme part must hold: the picker lists nss/*.nss files
 )
 
-// The L5 and L9 row texts. l5Missing and l5Empty are the bash lint's, byte for byte.
+// The L5 and L9 row texts. l5Empty is the bash lint's, byte for byte; l5Missing says how to declare a library,
+// as l9ThemeHint does for a theme (the bash text is the part before the hint).
 const (
-	l5Missing = "L5: module.palette missing for -rt profile"
+	l5Missing = "L5: module.palette missing for -rt profile (a library module declares `type: library` in its MODULE-MAP.md header, types/utility-lib.md § 6)"
 	l5Empty   = "L5: module.palette has no named component entries (empty palette — see B788)"
 	l9Empty   = "L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile"
 	// l9ThemeHint closes l9Empty on a -ux part, the only part a theme has; a -wb part keeps the bash text.

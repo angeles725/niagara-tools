@@ -107,10 +107,10 @@ load lib/scaffold-setup
   [ "$status" -eq 0 ]
 }
 
-@test "TC-SIGN: both scaffold types emit the root signing block, so lint-structure L15 stays silent (issue #266)" {
+@test "TC-SIGN: every scaffold type emits the root signing block, so lint-structure L15 stays silent (issue #266)" {
   # Named mutation: drop the niagaraSigning { aliases; signingProfileFile } part of the block from a fixture
   # root (keep allowDefaultProfile) -> the lint exits 0 with an L15 WARN on this root, and this test fails.
-  for t in logic dashboard driver; do
+  for t in logic dashboard driver library; do
     run "$SC" "Sign${t^}" "$OUT/$t" --type "$t" --vendor Example
     [ "$status" -eq 0 ]
     [[ "$output" == *"niagaraSigningAlias"* ]]

@@ -567,7 +567,7 @@ define(["nmodule/mymod/rc/myWidget", "nmodule/bajaui/rc/bajaui"], function(myWid
 
 See `types/dashboard.md §JS build strategy` for the full decision matrix. `[ev: corpus B1132]`
 
-### Edit-and-reload without rebuilding the jar — moduledev mode and webdev mode
+### Edit-and-reload without rebuilding the jar — moduledev mode and webdev mode `[ev: retro doc-coverage-audit Δ12]`
 
 Two development switches, often confused. Both belong on a workstation or laboratory station and **never on a
 production station**. Source: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/js/buildingJS.txt` (under
@@ -628,7 +628,7 @@ guide page), and in webdev mode the BajaScript bundles are sent `no-cache` inste
 A release check: `etc/moduledev.properties` and `etc/webdev.properties` absent or empty, and no `niagara.module.dev`
 key in `system.properties`.
 
-## Hx view authoring — `BHxView` `[ev: corpus B433]`
+## Hx view authoring — `BHxView` `[ev: corpus B433]` `[ev: retro doc-coverage-audit Δ13]`
 
 Source: [CERT-doc] the Hx pages of the developer guide, `niagara-help/versions/4.15.6.20/devguide-clean/hx-hxView.txt`,
 `hx-hxOp.txt`, `hx-events.txt`, `hx-dialogs.txt`, `hx-hxProfile.txt`, `hx-theming.txt` (under niagara-research); the
@@ -707,7 +707,7 @@ by a redirect to a GET, `update` answers the periodic background poll and must r
 - **A custom `BHxProfile`** overrides the page chrome through its hooks (`doBody`, `updateDocument`,
   `processDocument`, `saveDocument`) and must create the ops in the same order in all of them.
 
-## Custom-painted Workbench widget — `BWidget.paint` `[ev: corpus B427]`
+## Custom-painted Workbench widget — `BWidget.paint` `[ev: corpus B427]` `[ev: retro doc-coverage-audit Δ14]`
 
 Source: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/bajaui.txt`, `gx.txt` and `workbench.txt` (under
 niagara-research); code model: corpus B427.

@@ -3,7 +3,7 @@
 -- want --
 exit 1
 FAIL  lint-structure  chihuahua-rt/module.lexicon  L4: lexicon empty (1 type(s) declared, zero key=value entries)
-FAIL  lint-structure  chihuahua-rt  L5: module.palette missing for -rt profile
+FAIL  lint-structure  chihuahua-rt  L5: module.palette missing for -rt profile (a library module declares `type: library` in its MODULE-MAP.md header, types/utility-lib.md § 6)
 -- stderr --
 -- chihuahua-rt/chihuahua-rt/module-include.xml --
 <types>

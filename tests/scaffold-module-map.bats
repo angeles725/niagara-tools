@@ -12,7 +12,7 @@ load lib/scaffold-setup
 
 @test "TC-MAP1: a fresh scaffold of every type passes lint-module-map with no row at all (0 FAIL, 0 WARN)" {
   # Named mutation: drop the control row from the logic fixture map -> MM4 FAIL rows for its files, exit 1.
-  for t in logic dashboard driver; do
+  for t in logic dashboard driver library; do
     run "$SC" ModuleA "$OUT/$t" --type "$t" --vendor Example
     [ "$status" -eq 0 ]
     root="$OUT/$t/ModuleA/ModuleA"
@@ -179,3 +179,23 @@ load lib/scaffold-setup
   [ "$status" -eq 0 ] || { echo "$output"; false; }
 }
 
+
+@test "TC-MAP-LIB: --type library emits a map that declares type: library, and lint-structure passes it clean (L5 needs the declaration)" {
+  # Named mutation: drop the `type: library` line from the fixture map -> L5 FAILs the -rt part, exit 1, and this test fails.
+  # [ev: retro doc-coverage-audit Δ10] [ev: retro doc-coverage-audit Δ23]
+  run "$SC" ModuleA "$OUT" --type library --vendor Example
+  [ "$status" -eq 0 ]
+  root="$OUT/ModuleA/ModuleA"
+  grep -qx 'type: library' "$root/MODULE-MAP.md"
+  [ ! -e "$root/ModuleA-rt/module.palette" ]
+  [ ! -d "$root/ModuleA-rt/src" ]
+  mkdir -p "$OUT/ModuleA/.git"
+  run "$KIT/toolbelt/lint-structure.sh" "$root"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  # positive control: undeclared, the same tree FAILs L5 and the row says how to declare the library
+  sed -i '/^type: library$/d' "$root/MODULE-MAP.md"
+  run "$KIT/toolbelt/lint-structure.sh" "$root"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-structure  ModuleA-rt  L5: module.palette missing for -rt profile (a library module declares \`type: library\` in its MODULE-MAP.md header"* ]]
+}
