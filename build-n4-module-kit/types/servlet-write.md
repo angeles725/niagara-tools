@@ -98,8 +98,10 @@ web-module servlet (`HttpServlet` + `WEB-INF/web.xml`, the web-module recipe of 
   `BComponent self = this; self.getPermissions(op)`), FAIL too. `[ev: retro kit-p1-security-guards Δ9]`
 - A `set(…)` / `setDouble(…)` / `invoke(…)` with no target check earlier in the same method (`no-target-permission`,
   WARN): keep the check in the writing method, or call `requireTargetWrite(…)` there. Only a component write counts: a
-  `set(v)` with one argument, a numeric first argument (JDBC `setInt(1, v)`, `List.set(0, x)`), and a receiver the file
-  declares only as a `PreparedStatement`, `List`, `Atomic*`, `Calendar` or `ThreadLocal` are not writes, and a file with
+  bare `set(v)` with one argument, a numeric first argument followed by a value (JDBC `setInt(1, v)`, `List.set(0, x)`),
+  and a receiver the file
+  declares only as a `PreparedStatement`, `List`, `Atomic*`, `Calendar` or `ThreadLocal` are not writes (a generated one-argument
+  setter, `comp.setDouble(42.0)`, is one), and a file with
   only those is no "servlet writes" either. `[ev: retro kit-p1-security-guards Δ6]` The check must name the written
   receiver (`other.getPermissions(op)` does not guard `target.set(…)`) and its result must be used in a condition or
   an assignment; a `requireTargetWrite` declared in the same file counts only when it checks its first parameter.
