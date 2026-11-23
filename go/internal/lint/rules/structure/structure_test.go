@@ -114,7 +114,7 @@ func TestRowLines(t *testing.T) {
 	m := filepath.Join(dir, "M")
 	want := "FAIL  lint-structure  " + m + "/gradle.properties:2  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)\n" +
 		"WARN  lint-structure  " + m + "/gradle.properties:3  " + l10Warn("nodeHome") + "\n" +
-		"FAIL  lint-structure  A-rt  L5: module.palette missing for -rt profile\n" +
+		"FAIL  lint-structure  A-rt  " + l5Missing + "\n" +
 		"FAIL  lint-structure  gradle.properties  " + l12Msg + "\n" +
 		"FAIL  lint-structure  " + m + "/settings.gradle.kts:2  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty(\"niagaraPluginVersion\").getOrElse(...) so -PniagaraPluginVersion applies)\n"
 	if code, out, errs := run(m); code != 1 || out != want || errs != "" {

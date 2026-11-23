@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@
+-- want --
+exit 1
+WARN  lint-gradle-userhome  @DIR@/gradle.properties:1  GU2 systemProp.user.home sets the home of no already-running gradle daemon; set -Duser.home= through JAVA_TOOL_OPTIONS and run with --no-daemon (toolbelt/build.sh mirror mode does)
+-- stderr --
+-- gradle.properties --
+systemProp.user.home=/tmp/x

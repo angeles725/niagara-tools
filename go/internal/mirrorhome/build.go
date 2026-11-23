@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"syscall"
+
+	"github.com/angeles725/niagara-tools/go/internal/modulejars"
 )
 
 // plan reads what the mirror will link, before anything is wiped: the source's top-level entries but
@@ -28,12 +30,12 @@ func (m *mirror) plan() int {
 			m.entries = append(m.entries, name)
 		}
 	}
-	jars, err := visible(m.src + "/" + modules)
+	jars, err := modulejars.Names(m.src + "/" + modules)
 	if err != nil && !errors.Is(err, syscall.ENOENT) && !errors.Is(err, syscall.ENOTDIR) {
 		return m.fault(err)
 	}
 	for _, name := range jars {
-		if !strings.HasSuffix(name, jarSuffix) || slices.Contains(m.exclude, name) {
+		if slices.Contains(m.exclude, name) {
 			continue
 		}
 		if _, err := os.Stat(m.src + "/" + modules + "/" + name); err == nil { // a dangling link is no jar

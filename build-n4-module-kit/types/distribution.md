@@ -381,7 +381,7 @@ module-verification check on next boot, even if the JAR bytes are correct.
 
 ---
 
-## 10a · Removing a module from a station — checklist
+## 10a · Removing a module from a station — checklist `[ev: retro doc-coverage-audit Δ19]`
 
 Uninstalling a jar is a platform operation; what it does to the **station** is decided by whether the station file
 still holds components of the module's types. Check first, remove second.

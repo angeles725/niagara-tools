@@ -44,22 +44,29 @@ provision_shellcheck() {
   printf 'ci-local: %s\n' "$(shellcheck --version | grep '^version:')"
 }
 
-# provision_bats <install step body> — run the bats-core version ci.yml installs (BATS_VER= and BATS_SHA256= of
-# its "Install bats*" step): CI's bats 1.10.0 refuses a file that bats 1.14 accepts (a here-document line that
-# starts with the test keyword is read as a duplicate case). The bats on PATH is used when it already is that
-# version; otherwise the pinned tarball is fetched and its bin/ put first on PATH. With no install step (a
-# fixture workflow) the bats on PATH runs, named on stderr. GNU parallel for -j still comes from PATH.
+# bats_pin — set BATS_PIN_VER and BATS_PIN_SHA from the BATS_VER= / BATS_SHA256= lines of the workflow's "Install bats*"
+# step (`ci-steps bats-pin`, go/internal/cisteps/batspin.go: the reading is Go, with a test per failure). Both are ""
+# when the workflow has no such step. A step whose pin is missing, malformed or set twice exits 3 with the parser's
+# message. Needs CI_STEPS (the ci-steps binary) and CI_FILE, which ci-local.sh sets.
+bats_pin() {
+  local out rc=0
+  out="$("$CI_STEPS" bats-pin "$CI_FILE")" || rc=$?
+  [ "$rc" -eq 0 ] || exit 3
+  BATS_PIN_VER="${out%% *}" BATS_PIN_SHA=""
+  [ -z "$out" ] || BATS_PIN_SHA="${out#* }"
+}
+
+# provision_bats — run the bats-core version ci.yml installs (bats_pin): CI's bats 1.10.0 refuses a file that bats 1.14
+# accepts (a here-document line that starts with the test keyword is read as a duplicate case). The bats on PATH is
+# used when it already is that version; otherwise the pinned tarball is fetched and its bin/ put first on PATH. With
+# no install step (a fixture workflow) the bats on PATH runs, named on stderr. GNU parallel for -j still comes from
+# PATH.
 provision_bats() {
-  local ver sha
-  ver="$(sed -nE 's/^[[:space:]]*BATS_VER=([0-9.]+)[[:space:]]*$/\1/p' <<< "$1" | head -n 1)"
-  sha="$(sed -nE 's/^[[:space:]]*BATS_SHA256=([0-9a-f]{64})[[:space:]]*$/\1/p' <<< "$1" | head -n 1)"
-  if [ -z "$1" ]; then
+  bats_pin
+  local ver="$BATS_PIN_VER" sha="$BATS_PIN_SHA"
+  if [ -z "$ver" ]; then
     printf 'ci-local: the workflow installs no bats; using the bats on PATH\n' >&2
     return 0
-  fi
-  if [ -z "$ver" ] || [ -z "$sha" ]; then
-    printf 'ci-local: the bats install step has no BATS_VER= / BATS_SHA256= line\n' >&2
-    exit 3
   fi
   if [ "$(bats --version 2>/dev/null)" = "Bats $ver" ]; then
     printf 'ci-local: bats %s (on PATH, the CI pin)\n' "$ver"
@@ -70,13 +77,4 @@ provision_bats() {
   tar -xzf "$CACHE/bats-core-v${ver}.tar.gz" -C "$WORK"
   PATH="$WORK/bats-core-${ver}/bin:$PATH"
   printf 'ci-local: bats %s (pinned by ci.yml, from %s)\n' "$ver" "$CACHE"
-}
-
-# bats_install_body — the script of the workflow's "Install bats*" step ("" when it has none), from the
-# NAMES / BODIES arrays ci-local.sh parsed.
-bats_install_body() {
-  local i
-  for i in "${!NAMES[@]}"; do
-    if [[ "${NAMES[$i]}" == "Install bats"* ]]; then printf '%s' "${BODIES[$i]}"; return; fi
-  done
 }

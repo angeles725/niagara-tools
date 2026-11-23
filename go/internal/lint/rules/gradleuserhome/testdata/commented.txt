@@ -1,0 +1,9 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- gradle.properties --
+# org.gradle.jvmargs=-Duser.home=/x
+! systemProp.user.home=/x
+org.gradle.jvmargs=-Xmx2g

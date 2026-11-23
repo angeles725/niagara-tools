@@ -1,19 +1,23 @@
 package scaffoldmodule
 
 // moduleType is one --type: the bundled fixture it copies and the link-in slots of the fixture's
-// component, which the station-test overlay tests ("" = the type gets no overlay).
+// component, which the station-test overlay tests ("" = the type gets no overlay). kind is the `type:` line
+// the fixture's MODULE-MAP.md declares for a module that is not a component module ("" = none); the structure
+// lint exempts such a module from a rule only when its map declares the kind (types/structure.md § Module map).
 type moduleType struct {
 	name        string
 	fixture     string
 	linkInSlots string
+	kind        string
 }
 
 // moduleTypes is the --type table. The driver fixture ships its own loopback station test, so it has no
-// overlay (types/driver-authoring.md § 12.1).
+// overlay (types/driver-authoring.md § 12.1); the library fixture holds no Java, so it has none either.
 var moduleTypes = []moduleType{
 	{name: "logic", fixture: "MinimalPan", linkInSlots: `"setpoint", "interval"`},
 	{name: "dashboard", fixture: "MinimalDash", linkInSlots: `"setpoint", "status"`},
 	{name: "driver", fixture: "MinimalDriver"},
+	{name: "library", fixture: "MinimalLibrary", kind: "library"},
 }
 
 // Option names. --vendor, --target-version and --plugin-version are written into the emitted tree

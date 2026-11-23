@@ -4,7 +4,7 @@
 exit 1
 WARN  lint-structure  @DIR@/client-gradleprops/gradle.properties:2  L10: niagara_home is a host build-location key: migrate it to the user-level gradle.properties (BUILD-LOOP.md bring-up step 2)
 FAIL  lint-structure  Foo-rt  L4: module.lexicon missing (1 type(s) declared in module-include.xml)
-FAIL  lint-structure  Foo-rt  L5: module.palette missing for -rt profile
+FAIL  lint-structure  Foo-rt  L5: module.palette missing for -rt profile (a library module declares `type: library` in its MODULE-MAP.md header, types/utility-lib.md § 6)
 FAIL  lint-structure  gradle.properties  L12: absent/commented org.gradle.java.installations.auto-detect=false (pin it in the repo; the JDK paths go in the user-level gradle.properties)
 -- stderr --
 -- client-gradleprops/Foo-rt/module-include.xml --

@@ -67,14 +67,22 @@ func (m Modularity) String() string {
 	return "none"
 }
 
-// MapHeader reads a module map's header: the lines before its first table row (a line starting with "|"),
-// outside ``` fences. The first "modularity:" line decides (a trailing "# comment" is dropped): strict, or
-// legacy with a non-empty "legacy-reason:" line anywhere in the header. It returns the mode and the 1-based
-// line of that modularity line; for a header that is not valid, ModularityNone, that line (0 when there is
-// none) and the problem, worded for an MM2 row of lint-module-map.
-func MapHeader(lines []string) (Modularity, int, string) {
-	var value, reason string
-	at, fenced, hasReason := 0, false, false
+// MapHeaderInfo is what the header of a module map declares: its modularity, and its kind.
+type MapHeaderInfo struct {
+	Mode    Modularity // the mode of the first modularity: line (ModularityNone when the header is not valid)
+	At      int        // the 1-based line of that modularity: line; 0 when there is none
+	Problem string     // why the header is not valid, worded for an MM2 row of lint-module-map; "" when it is
+	Kind    string     // the value of the first type: line (theme, library): "" when there is none; never validated
+}
+
+// ReadMapHeader reads a module map's header, the one reader of the modularity and the kind: the lines before
+// its first table row (a line starting with "|"), outside ``` fences. The first "modularity:" line decides
+// (a trailing "# comment" is dropped): strict, or legacy with a non-empty "legacy-reason:" line anywhere in
+// the header; the first "type:" line, read the same way, is the Kind. For a header that is not valid, Mode is
+// ModularityNone, At the modularity line (0 when there is none) and Problem is set; Kind is still read.
+func ReadMapHeader(lines []string) MapHeaderInfo {
+	var value, reason, kind string
+	at, fenced, hasReason, hasKind := 0, false, false, false
 	for i, raw := range lines {
 		l := strings.TrimSpace(raw)
 		if strings.HasPrefix(l, "```") {
@@ -96,18 +104,31 @@ func MapHeader(lines []string) (Modularity, int, string) {
 		if v, ok := strings.CutPrefix(l, "legacy-reason:"); ok && !hasReason {
 			reason, hasReason = strings.TrimSpace(v), true
 		}
+		if v, ok := strings.CutPrefix(l, "type:"); ok && !hasKind {
+			v, _, _ = strings.Cut(v, "#")
+			kind, hasKind = strings.TrimSpace(v), true
+		}
 	}
+	h := MapHeaderInfo{At: at, Kind: kind}
 	switch {
 	case at == 0:
-		return ModularityNone, 0, "no modularity: line before the table (want modularity: strict or modularity: legacy)"
+		h.Problem = "no modularity: line before the table (want modularity: strict or modularity: legacy)"
 	case value == "strict":
-		return ModularityStrict, at, ""
+		h.Mode = ModularityStrict
 	case value != "legacy":
-		return ModularityNone, at, "modularity: " + value + " is not strict or legacy"
+		h.Problem = "modularity: " + value + " is not strict or legacy"
 	case reason == "":
-		return ModularityNone, at, "modularity: legacy needs a non-empty legacy-reason: line"
+		h.Problem = "modularity: legacy needs a non-empty legacy-reason: line"
+	default:
+		h.Mode = ModularityLegacy
 	}
-	return ModularityLegacy, at, ""
+	return h
+}
+
+// MapHeader returns the mode, the modularity line and the problem of ReadMapHeader.
+func MapHeader(lines []string) (Modularity, int, string) {
+	h := ReadMapHeader(lines)
+	return h.Mode, h.At, h.Problem
 }
 
 // ModuleMode is the modularity mode that applies to path (a file or a directory), for a per-file lint that
