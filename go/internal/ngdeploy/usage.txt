@@ -194,8 +194,9 @@ Exit codes:
       build in every case ("build refused for <jar>"). A jar that could not be replaced or moved (exit 40, or exit 10 for a
       jar of <NIAGARA_HOME>/modules) with Device or resource busy or Text file busy, or with Permission denied or
       Operation not permitted in a directory this user may write (how a Windows drive mounted in WSL answers for
-      a jar a running station holds open), is followed by the line "a running station or Workbench holds its
-      module jars open; stop it and run again". The same two errors in a directory this user may not write are
+      a jar a running station holds open), is followed by the line "a running station or Workbench of that
+      installation holds its module jars open: stop it first (on Windows the station is a service or station.exe:
+      stop the service or end the process, and close Workbench), then run again". The same two errors in a directory this user may not write are
       followed by "<dir> does not let this user create, rename or remove files (no write permission): ...". Before the build, each
       station jar the run will replace is renamed to <jar>.ng-probe and straight back: a jar that cannot be moved
       is exit 40 there, with no build ("copy refused: <jar> in <dir> cannot be moved"); one that could not be
@@ -239,3 +240,12 @@ Exit codes:
       8388608 bytes (8 MiB))
   53  schema-risk precheck: verdict OUTAGE, LOSSY without --accept-lossy, or a schema-risk env fault
   54  version-bump precheck: the built jar's vendorVersion is LOWER than the deployed jar's (a downgrade)
+  55  target-version precheck, after the version-bump precheck and before the schema-risk precheck, the gate and the
+      copy: STATION_MODULES_DIR holds a baja.jar (it is the modules directory of a Niagara installation) and the
+      Niagara version that installation is (the vendorVersion of that baja.jar, e.g. 4.15.6.20) differs in major or
+      minor from the one a built jar was compiled against (the highest Tridium dependency floor in its module.xml,
+      e.g. 4.14); the ERROR line says both and the installation, and nothing was copied. The same exit is a jar
+      that records no Tridium dependency floor, or a baja.jar that cannot be read: nothing is compared, never a
+      pass. A STATION_MODULES_DIR with no baja.jar is not checked (a NOTICE says so); --no-deploy and a station
+      directory that is <NIAGARA_HOME>/modules are not checked. The same comparison, for any jar and installation:
+      build-n4-module-kit/toolbelt/check-target-version.sh <jar> <niagara_home>

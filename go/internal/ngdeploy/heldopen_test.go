@@ -9,7 +9,7 @@ import (
 
 // heldOpenLine is the line after the ERROR of a jar that could not be replaced or moved because a program
 // holds it open (retro 2026-11-15-coordination-stretch-deltas D1).
-const heldOpenLine = "[ng-deploy]   a running station or Workbench holds its module jars open; stop it and run again\n"
+const heldOpenLine = "[ng-deploy]   a running station or Workbench of that installation holds its module jars open: stop it first (on Windows the station is a service or station.exe: stop the service or end the process, and close Workbench), then run again\n"
 
 // A jar of the station that cannot be renamed in (Permission denied, as Windows answers for a jar a running
 // station holds) is the exit 40 line, then the line that names the likely cause.

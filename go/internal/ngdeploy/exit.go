@@ -17,6 +17,7 @@ const (
 	ExitVersionUnknown = 52 // the version-bump precheck cannot verify, or the build left no jar
 	ExitSchema         = 53 // schema-risk OUTAGE, LOSSY without --accept-lossy, or a schema-risk fault
 	ExitVersionDown    = 54 // the built vendorVersion is lower than the deployed one
+	ExitTargetVersion  = 55 // the target installation is another Niagara version than the one the jars were compiled against, or that cannot be told
 )
 
 // proceed is what a phase returns when the deploy goes on to the next one.

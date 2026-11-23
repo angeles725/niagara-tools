@@ -93,6 +93,15 @@ const (
 	whyFileTooLarge = "%s: %s is over %d bytes"
 	whyNoRoot       = "%s: %s cannot be read as a descriptor (%s)"
 
+	// target-version precheck (target.go)
+	msgTargetOK       = "target-version ok (%s: compiled against Niagara %s, %s is Niagara %s)"
+	msgTargetMismatch = "target-version precheck: %s was compiled against Niagara %s but the target installation %s is Niagara %s; nothing was copied: " +
+		"build it against an installation of %s (mirror-niagara-home.sh), or deploy into one of %s"
+	msgTargetJar    = "target-version precheck cannot verify %s: %v; nothing was copied"
+	msgTargetTarget = "target-version precheck cannot verify the target installation: %v; nothing was copied"
+	// noticeTargetNone takes the station directory and baja.jar.
+	noticeTargetNone = "NOTICE: %s holds no %s, so it is not the modules directory of a Niagara installation: the Niagara version of the target is not checked"
+
 	// schema-risk precheck
 	msgSchemaFirstDeploy = "schema-risk: N/A (--first-deploy: no deployed baseline)"
 	msgSchemaNeeds       = "schema-risk precheck needs SCHEMA_BASELINE_DIR (the deployed -rt source baseline), or --first-deploy for a module never deployed"

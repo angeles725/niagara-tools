@@ -7,7 +7,7 @@
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
 // file), config.go (required settings and paths), home.go with lock.go, settle.go and isolate.go (NIAGARA_HOME: a mirror, the run locks, and its modules directory
 // put back when the deploy stops), probe.go (the station jars can be moved), annotations.go (the slotomatic
-// reminder), slotomatic.go, build.go, version.go with jarcontent.go and descriptor.go, and schema.go (the two prechecks), verify.go, gate.go,
+// reminder), slotomatic.go, build.go, version.go with jarcontent.go and descriptor.go, target.go (the target installation is the Niagara version the jars were compiled against), and schema.go (the two prechecks), verify.go, gate.go,
 // backup.go and purge.go (just before the copy), copy.go with aside.go, restore.go, heldopen.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go, messages_home.go and messages_lock.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
 package ngdeploy
@@ -63,6 +63,7 @@ var phases = []func(*deploy) int{
 	(*deploy).asideHome,
 	(*deploy).build,
 	(*deploy).precheckVersion,
+	(*deploy).checkTargetVersion,
 	(*deploy).precheckSchema,
 	(*deploy).verify,
 	(*deploy).gate,
