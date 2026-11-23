@@ -1,0 +1,32 @@
+# Live doctrine cards not yet wrapped at 120 characters: "<card> <lines over the limit>".
+# The number may only go down (go/internal/cardwidth TestTheLiveCardsStayWithinTheirBaseline): wrap a card,
+# then delete its line here. BUILD-LOOP.md and skill/SKILL.md are wrapped and not listed; keep them so.
+# [ev: retro go-toolbelt-small-port Δ5]
+CONTRIBUTING.md 14
+build-n4-module-kit/METHODOLOGY.md 143
+build-n4-module-kit/ORCHESTRATION.md 3
+build-n4-module-kit/README.md 7
+build-n4-module-kit/SOURCES.md 6
+build-n4-module-kit/build-verify.md 94
+build-n4-module-kit/corpus-index.md 3
+build-n4-module-kit/types/actions.md 3
+build-n4-module-kit/types/cloud-connector.md 10
+build-n4-module-kit/types/dashboard.md 146
+build-n4-module-kit/types/distribution.md 12
+build-n4-module-kit/types/driver-authoring.md 45
+build-n4-module-kit/types/frontend-standard.md 3
+build-n4-module-kit/types/horizons.md 1
+build-n4-module-kit/types/issues-and-gotchas.md 28
+build-n4-module-kit/types/logic-authoring.md 202
+build-n4-module-kit/types/logic.md 201
+build-n4-module-kit/types/module-wiring.md 1
+build-n4-module-kit/types/moduleTest.md 11
+build-n4-module-kit/types/observability.md 8
+build-n4-module-kit/types/platform.md 10
+build-n4-module-kit/types/security.md 29
+build-n4-module-kit/types/structure.md 23
+build-n4-module-kit/types/theme.md 4
+build-n4-module-kit/types/third-party-libraries.md 1
+build-n4-module-kit/types/utility-lib.md 6
+build-n4-module-kit/types/wb-widgets.md 128
+go/README.md 6
