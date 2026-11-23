@@ -267,6 +267,66 @@ static handler picks it.
 - The per-Ord write lock / HTTP 423 for a critical write is tracked as the client gate-4 gap (issue #49, § Reference exemplar, DWS1 gate 4). `[ev: corpus B763]`
 - OPEN (requires-execution): **B803-G1** (confirm the live SAML mid-session re-auth block on a station) and **B803-G2** (whether gauth's `BPasswordCache.validate` accepts a TOTP token mid-session). `[ev: corpus B803]`
 
+## The module ships its own login `[ev: issue #847]`
+A dashboard is the first page its users see, so it carries the sign-in page too. The `-rt` part holds a
+`BLoginTemplate` subclass (`B<Mod>LoginTemplate`, `com.<vendor>.<Mod>.login`), not a separate login module: the
+station selects it through `Services/WebService.loginTemplate`. Proven live on a 4.14 lab station (2026-11-23): the
+template was selected on a station with no custom login, kept on one that had its own, and a sign-in landed on the
+dashboard. `scaffold-module.sh --type dashboard` emits it all (below); nothing else in this section is hand work.
+- **What the template does.** Niagara calls `write(req, resp)` for `/prelogin` and `/login` (content type already set)
+  and `resourceToOrd(path)` for every `/login/<path>` file.
+  - **Origin URI:** every rendering sets the web session's `originURI` to the dashboard (`LoginRedirect`: a page of
+    the dashboard is kept, anything else becomes its home), and `NiagaraAuthenticator` redirects there after the
+    password checks out. Only a station-relative path is ever stored, so the redirect cannot leave the station. The
+    path is the `-ux` servlet's mount (`getServletName()`, the lower-cased module name): change both together.
+  - **Assets from the jar:** CSS, JS, images and fonts sit in `-rt` `src/rc/<mod>-login/` (the `-rt` gradle file
+    copies only that directory into `rc/`, so it never collides with the `-ux` part's own `rc/`) and are served
+    through `resourceToOrd` as `module://<Mod>/rc/<mod>-login/...`; any other path maps to Niagara's own login
+    files. No remote URL or font: a JACE may have no internet. `LoginFileServlet` serves only
+    css/js/png/svg/gif/jpg/jpeg/txt/ico, and only `module://` ORDs.
+  - **Fallback:** a screen the page cannot draw is left to Niagara's own template
+    (`BDefaultLoginTemplate.INSTANCE.write(req, resp)`): two-factor, an authentication scheme that is not digest,
+    and a network (LDAP/AD) user's expiry notice, which is OK-only. A missing user name draws the first screen.
+  - **SCRAM stays:** the password never posts in clear. The page loads `/login/core/auth.min.js`, runs
+    `ScramShaClient`, then goes to `/j_security_check/` whatever the outcome (the server decides). The forced
+    password change posts only the base64 of the new password as `resetToken` (the new-password fields have no
+    `name`), and the expiry screen posts `yes-reset` / `no-reset`. The field names, ids and form targets are
+    Niagara's contract (`preLoginFormN4.vm`, `digestLoginFormN4.vm`, `passwordResetFormN4.vm`,
+    `passwordExpirationFormN4.vm`): restyle the markup and CSS, never those.
+- **Activation rule (the service's `stationStarted`).** `B<Mod>Service` calls `LoginActivator.apply(getApplyLogin())`
+  once all components started, so `WebService` exists. The pure `LoginActivation.decide` answers, on the slot's
+  `module:Type` text:
+  - `applyLogin` false: `OFF`, nothing is touched whatever the slot holds;
+  - the slot already names our template: `ALREADY`, no write and no save at every start;
+  - the slot is empty (`null`), the stock `web:DefaultLoginTemplate`, or a retired type of this module (listed in
+    `LoginActivation.RETIRED`: add a template's spec there in the change that renames or removes it): `SET`;
+  - any other type: `KEEP_CUSTOM`, never overwritten and logged as a WARNING that names it.
+  The boolean slot `applyLogin` (default `true`) is the switch. After a `SET` the service saves the station (the
+  station's own `save` action, scheduled a few seconds after the start sequence, as the dashboard's writes do), so
+  the template survives a restart. A service dropped into a running station does nothing until the next start. The
+  activator never throws: a failure is logged and the station keeps starting.
+- **Rollback:** set `applyLogin` to false AND clear `Services/WebService.loginTemplate` (the slot stays set
+  otherwise, and a false switch leaves it alone); the station then shows Niagara's own page. **Remove the module only
+  after the slot no longer names its type:** with the slot still set, `/login` answers HTTP 500 for everyone (Niagara
+  cannot load the type), and the way back is to clear the slot from Workbench. `LoginActivation`
+  treats a retired type of the same module as replaceable for the same reason, so a rename heals itself at the next
+  start.
+- **What the scaffold emits** (`-rt`, dashboard only; the module map's `login` row lists every file): the template
+  with `static INSTANCE` declared BEFORE `TYPE`; `LoginActivator`, `LoginRequest`, `B<Mod>Service` and the pure
+  `login/model/` classes (`LoginActivation`, `LoginView`, `LoginRedirect`, `LoginAssets`, `LoginPage`, `Html`) each
+  with its pure test, plus `TypeInitOrderTest`; a neutral card in `src/rc/<mod>-login/login.{css,js}` (no brand, no
+  photo: restyle it); the `module-include.xml`, palette, lexicon and `web-rt` gradle lines. Drop the service under the
+  station's `Services` from the palette. The login imports `com.tridium.web.*` classes (the session, `LoginSupport`,
+  `BDefaultLoginTemplate`): there is no `javax.baja` equal, so `lint-private-api-import` WARNs those lines; record them
+  in the module README and pin the `web-rt` `vendorVersion` floor to the release you tested on.
+- **INSTANCE before TYPE:** `Sys.loadType` reads a type's static `INSTANCE`. A `@NiagaraType` class that declares it
+  after `TYPE` (the line Slot-o-Matic writes) fails to load on a station, `INSTANCE field is null; insure getType()
+  comes last`, while the pure tests, the build and `verify-module` all pass. The scaffold's source has no region
+  before the first `:slotomatic` run (a hand-written empty one breaks it, `METHODOLOGY.md` K15): after that first run
+  check that the generated region sits BELOW the `INSTANCE` line (move the line up if not). `TypeInitOrderTest` reads
+  `src/` (zero-Baja, so it runs under `run-pure-test.sh` from the `-rt` directory, not by reflection, which would need
+  the Baja classpath) and fails when any class declares `INSTANCE` after `TYPE`.
+
 ## Session lifetime — the auto-logoff activity monitor `[ev: retro t9c-reference-gaps Δ1]`
 Full derivation: corpus B1344 (idle timer from source), B1334 (panel-user recipe), B1315 (the gap). Official
 pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
