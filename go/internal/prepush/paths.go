@@ -93,3 +93,7 @@ const (
 	denylistEnv       = "NIAGARA_CLIENT_DENYLIST"
 	denylistUnderHome = "/.config/niagara-private/client-denylist.txt"
 )
+
+// IsLiveDoctrine reports whether the repository-relative path is a live doctrine card (the one definition
+// of the set, for the tools that must agree with the citation gate on which cards are live).
+func IsLiveDoctrine(path string) bool { return liveDoctrine.MatchString(path) }

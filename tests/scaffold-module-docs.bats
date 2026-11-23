@@ -50,9 +50,11 @@ section() {
 
 @test "TC-DOC4: skill/SKILL.md describes scaffold-module.sh once in the Toolbelt, by its own job" {
   # Mutation: TC-DOC4 -- the old "run in step 5 before lint-timers" description borrowed from lint-delays.
-  run grep -c 'toolbelt/scaffold-module.sh` (' "$SKILL"
-  [ "$output" = "1" ]
-  run grep -oE 'toolbelt/scaffold-module\.sh` \([^)]*\)' "$SKILL"
+  # The card is wrapped at 120 columns, so the description is read over the joined text, not line by line.
+  joined="$(tr '\n' ' ' < "$SKILL" | tr -s ' ')"
+  run grep -o 'toolbelt/scaffold-module.sh` (' <<<"$joined"
+  [ "${#lines[@]}" -eq 1 ]
+  run grep -oE 'toolbelt/scaffold-module\.sh` \([^)]*\)' <<<"$joined"
   [[ "$output" == *"--vendor"* && "$output" != *"lint-timers"* ]] || { echo "$output"; false; }
 }
 
