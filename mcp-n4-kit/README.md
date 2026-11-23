@@ -1464,7 +1464,11 @@ Tool rules:
 
 Destructive tools use the same pipeline:
 
-- `n4_remove_component(parent_ord, name)` removes a child and its subtree. The plan
+- `n4_remove_component(parent_ord, name, compact?)` removes a child and its subtree.
+  `compact: true` makes the dry run reply `plan.inverse_summary` (`components`, `links_inside`,
+  `unlinked_inputs`, `outgoing_links`, `inverse_ops`) in place of the snapshot in `plan.inverse`
+  (about 4k tokens per component); `plan_hash` and the journaled inverse are the same, so the token and
+  `n4_rollback` do not change. Repeat `compact` on the executing call, like any argument. The plan
   snapshots the subtree to depth 3 (type, plain slots, `wsAnnotation`, and the links
   whose target is inside it) as data; it is the recorded inverse. A Status `out` is
   kept by the same rule as a copy (a constant block's configured value, read from the
@@ -1495,7 +1499,7 @@ Destructive tools use the same pipeline:
   read-back looks for each such link on its target, from the restored source with the
   recorded slots, and reports `outgoing_links: {restored, missing}`; any missing one
   makes the verdict `mismatch`.
-- `n4_rollback(batch_id)` plans the inverse recorded in the journal as a new batch
+- `n4_rollback(batch_id, chain?)` plans the inverse recorded in the journal as a new batch
   (`rollback_of` points to the original). It is outside `--max-writes`, like the save: it runs
   with the budget spent and spends no write, nested components and links included
   (`write_budget.rollback_counts: false`). It refuses an unknown batch, one already
@@ -1517,8 +1521,17 @@ Destructive tools use the same pipeline:
   count). The refusal names the component, each later batch (`batch_id (tool)`,
   newest first) and each extra child or link: roll the later batches back first,
   newest first, and remove by hand what no batch made; to drop it all instead,
-  `n4_remove_component` it (its snapshot keeps an inverse). The live check reads the
-  component's direct children only: a hand edit deeper down is not seen. Inverses: remove a created
+  `n4_remove_component` it (its snapshot keeps an inverse), or pass `chain: true` (below).
+  The live check reads the
+  component's direct children only: a hand edit deeper down is not seen.
+  `chain: true` removes a created component that later batches wrote under in one step, under one token:
+  the dry run's plan note names those batches newest first (`batch_id (tool)`) and the remove takes them with
+  the component. They are not rolled back one by one and stay in the journal as they were; a later
+  `n4_rollback` of one of them is refused because its component is gone. It still refuses a later batch
+  that also wrote outside the created component (name it and roll it back first) and a child or link no
+  batch made; a link on the component counts as made by a later `n4_create_link` batch onto it. Repeat `chain`
+  on the executing call; on a batch that is not a create it changes nothing and a note says so.
+  Inverses: remove a created
   component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
   `relinks: {restored, skipped}`; the outgoing links a remove recorded are re-created

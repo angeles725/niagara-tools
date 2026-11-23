@@ -2881,7 +2881,7 @@
   },
   {
    "name": "n4_remove_component",
-   "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. The dry run scans the write-scope prefix that holds parent_ord (or link_scan_ord) to depth 6 for links from the subtree into components outside it; when it finds any it refuses unless acknowledge_links is true, and then records them so n4_rollback re-creates them. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. The dry run scans the write-scope prefix that holds parent_ord (or link_scan_ord) to depth 6 for links from the subtree into components outside it; when it finds any it refuses unless acknowledge_links is true, and then records them so n4_rollback re-creates them. compact=true summarises the snapshot in the dry run instead of listing it. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -2901,6 +2901,11 @@
       "type": "boolean",
       "default": false,
       "description": "true removes even though the scan found links from the subtree into components outside it (the dry run lists them); false (default) refuses such a remove"
+     },
+     "compact": {
+      "type": "boolean",
+      "default": false,
+      "description": "true makes the dry run reply plan.inverse_summary (components, links_inside, unlinked_inputs, outgoing_links, inverse_ops) instead of the whole snapshot in plan.inverse; the plan_hash and the recorded inverse are the same. Repeat it on the executing call; false (default) lists the snapshot"
      },
      "dry_run": {
       "type": "boolean",
@@ -2926,13 +2931,18 @@
   },
   {
    "name": "n4_rollback",
-   "description": "Undo a journaled batch by running its recorded inverse through the same dry run / token pipeline, as a new batch linked to the original. Refuses unknown, already rolled back, in-doubt and other-station batches. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "Undo a journaled batch by running its recorded inverse through the same dry run / token pipeline, as a new batch linked to the original. Refuses unknown, already rolled back, in-doubt and other-station batches. A create with later batches under it is refused; chain=true removes it with them in one step. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
      "batch_id": {
       "type": "string",
       "description": "batch_id returned by an earlier write"
+     },
+     "chain": {
+      "type": "boolean",
+      "default": false,
+      "description": "true rolls back a create batch that later batches wrote under in one step: the dry run names those batches newest first and the remove takes them with the created component; a later batch that also wrote outside it, or a child or link no batch made, still refuses. Repeat it on the executing call. No effect on a batch that is not a create (a note says so); false (default) refuses a create with later work"
      },
      "dry_run": {
       "type": "boolean",

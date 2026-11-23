@@ -102,7 +102,7 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 		return nil, "", err
 	}
 	if dry {
-		return e.dryRun(name, args, plan, planHash, tierBlock, list(planned.Inverse), planned.Preview)
+		return e.dryRun(name, args, plan, planHash, tierBlock, list(planned.Inverse), planned.Preview, planned.Summary)
 	}
 	if err := w.checkStateFiles(); err != nil { // a loose file fails before the token and any send
 		return nil, "", err

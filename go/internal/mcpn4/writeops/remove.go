@@ -152,6 +152,11 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if !ok { // the snapshot always yields the re-add first; a broken invariant is a tool error, never a panic
 		return nil, plan.ToolError("internal: the remove plan of " + pyjson.StrRepr(nm) + " has no re-add op to hash")
 	}
+	if compact, _ := args.Get("compact"); compact == true {
+		if p.Summary, err = inverseSummary(inverse, first); err != nil {
+			return nil, err
+		}
+	}
 	if add := s.hashedAdd(first); add != nil { // retro 2026-11-16 row M15
 		p.HashInverse = append([]any{add}, inverse[1:]...)
 		p.Notes = append(p.Notes, msgRuntimeUnhashed)
@@ -181,4 +186,22 @@ func firstObj(ops []any) (*pyjson.Object, bool) {
 	}
 	o, ok := ops[0].(*pyjson.Object)
 	return o, ok && o != nil
+}
+
+// inverseSummary is plan.inverse_summary of a compact dry run: what the snapshot holds, counted.
+func inverseSummary(inverse []any, first *pyjson.Object) (*pyjson.Object, error) {
+	_, nested, err := flatten(0, get(first, "b"))
+	if err != nil {
+		return nil, err
+	}
+	_, relinks, unlinked, err := inverseParts(inverse)
+	if err != nil {
+		return nil, err
+	}
+	outgoing, err := outgoingParts(inverse)
+	if err != nil {
+		return nil, err
+	}
+	return obj("components", 1+len(nested), "links_inside", len(relinks), "unlinked_inputs", len(unlinked),
+		"outgoing_links", len(outgoing), "inverse_ops", len(inverse)), nil
 }

@@ -32,6 +32,9 @@ type Planned struct {
 	// value): its keys join the dry-run reply, never the hashed plan, so a token stays valid while
 	// that state moves.
 	Preview *pyjson.Object
+	// Summary, when not nil, replaces plan.inverse in the dry-run reply (compact=true): the
+	// hash and the journal keep the whole inverse, so the token and the rollback are unchanged.
+	Summary *pyjson.Object
 }
 
 // Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only; PlanWith
@@ -100,13 +103,29 @@ func Hashed(name string, p *Planned, sess *session.Session) (*pyjson.Object, str
 	return plan, hex.EncodeToString(sum[:]), nil
 }
 
+// summarised is plan with its inverse replaced, in place, by inverse_summary.
+func summarised(plan, summary *pyjson.Object) *pyjson.Object {
+	out := pyjson.NewObject()
+	for _, k := range plan.Keys() {
+		v, _ := plan.Get(k)
+		if k == "inverse" {
+			k, v = "inverse_summary", summary
+		}
+		out.Set(k, v)
+	}
+	return out
+}
+
 func (e *Engine) dryRun(name string, args, plan *pyjson.Object, planHash, tierBlock string, inverse []any,
-	extra *pyjson.Object) (*pyjson.Object, string, error) {
+	extra, summary *pyjson.Object) (*pyjson.Object, string, error) {
 	tok, expires, err := e.State.Tokens.Issue(name, args, planHash)
 	if err != nil {
 		return nil, "", err
 	}
 	e.State.noteIssued(tok, e.Ctx.Session.SessionID)
+	if summary != nil {
+		plan = summarised(plan, summary)
+	}
 	out := obj("dry_run", true, "plan", plan, "plan_hash", planHash, "confirmation_token", tok, "expires_at", expires,
 		"write_budget", e.State.budgetReport())
 	preview, err := LinkInputValues(inverse)

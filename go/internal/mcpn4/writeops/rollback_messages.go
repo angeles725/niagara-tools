@@ -79,7 +79,29 @@ func laterWorkRefusal(bid, created string, batches, extras []string) string {
 	if len(extras) > 0 {
 		found = append(found, "it holds child(ren) or link(s) its create did not make: "+strings.Join(extras, ", "))
 	}
+	hint := ""
+	if len(batches) > 0 {
+		hint = "; n4_rollback chain=true removes it with the later batches in one step"
+	}
 	return "batch " + bid + " created " + created + "; rolling it back removes it with everything under it, and " +
 		strings.Join(found, "; ") + ". Roll back the later batches first (newest first) and remove by hand what no " +
-		"batch made, then retry; to drop it all instead, n4_remove_component it (its snapshot keeps an inverse): refusing"
+		"batch made, then retry; to drop it all instead, n4_remove_component it (its snapshot keeps an inverse)" +
+		hint + ": refusing"
+}
+
+// chainNote is the plan note of a chain rollback: the later batches the remove takes with it.
+func chainNote(created string, batches []string) string {
+	return "chain: removes the created " + created + " with the later batch(es) under it, newest first: " +
+		strings.Join(batches, ", ")
+}
+
+// chainNotCreateNote is the plan note of chain=true on a batch that is not a create.
+func chainNotCreateNote(bid string) string {
+	return "chain: batch " + bid + " is not a create: nothing to chain"
+}
+
+// chainOutsideRefusal refuses a chain whose later batch also wrote outside the created component.
+func chainOutsideRefusal(batch, outside, created string) string {
+	return "batch " + batch + " also wrote " + outside + ", outside " + created + ": roll it back first, " +
+		"chain=true only removes batches that stay under the created component: refusing"
 }
