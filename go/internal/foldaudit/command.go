@@ -63,6 +63,7 @@ func audits(run retrogh.Runner, args []string, s cli.Stdio) int {
 	}
 	t.aliases(indexStems(lines))
 	t.summary()
+	t.degraded()
 	if msg := t.external(); msg != "" {
 		fmt.Fprint(s.Err, msg)
 		return ExitEnv
