@@ -7,13 +7,14 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/findwalk"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
-	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // versionDrift warns when a sibling tree declares a higher defaultModuleVersion("X.Y.Z") than the gradle
 // root: the siblings of its parent, then of the next two ancestors (3 levels), each tree's version being
 // the first one in its *.gradle.kts files down to depth 3; `<repo>-worktrees/` checkouts and the gradle root's
-// own ancestors are skipped. WARN only [ev: retro B832].
+// own ancestors are skipped. The walk stays inside the tree of the gradle root: it stops at a shared directory
+// (sharedDir) and skips, without a line, a directory it cannot read [ev: retro build-kit-bench-session Δ16].
+// WARN only [ev: retro B832].
 func (r *run) versionDrift() {
 	if r.win {
 		return
@@ -23,7 +24,7 @@ func (r *run) versionDrift() {
 		return
 	}
 	parent := lint.Dirname(r.gr)
-	for lvl := 0; lvl < 3 && lint.IsDir(parent); lvl++ {
+	for lvl := 0; lvl < 3 && lint.IsDir(parent) && !sharedDir(parent); lvl++ {
 		for _, sib := range globDirs(parent) {
 			if sib == r.gr || notASibling(sib, r.gr) {
 				continue
@@ -38,6 +39,22 @@ func (r *run) versionDrift() {
 		}
 		parent = next
 	}
+}
+
+// sharedDir says whether dir holds other people's trees, not the siblings of a module: the filesystem root, the
+// temporary directories and the home directory. The drift walk does not look at their entries.
+func sharedDir(dir string) bool {
+	dir = strings.TrimRight(dir, "/")
+	if dir == "" {
+		return true // the filesystem root
+	}
+	home, _ := os.UserHomeDir()
+	for _, shared := range []string{"/tmp", "/var/tmp", os.TempDir(), home} {
+		if shared != "" && dir == strings.TrimRight(shared, "/") {
+			return true
+		}
+	}
+	return false
 }
 
 // notASibling says whether sib is another checkout of the same repository (a `<repo>-worktrees/` directory) or
@@ -57,9 +74,7 @@ func (r *run) treeVersion(dir string) string {
 			kts = append(kts, e.Path)
 		}
 		return true
-	}, func(p string, err error) {
-		r.s.Err.Write([]byte("find: " + strerror.FindQuote(p) + ": " + strerror.Text(err) + "\n"))
-	})
+	}, func(string, error) {}) // a directory it cannot read is skipped without a line
 	for _, f := range kts {
 		b, _ := os.ReadFile(f) // a directory or an unreadable file holds no line, as for grep
 		for _, ln := range strings.Split(grepText(b), "\n") {
