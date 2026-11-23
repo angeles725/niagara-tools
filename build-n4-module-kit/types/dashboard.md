@@ -165,10 +165,11 @@ request `Context`/`WebOp`, and `addSpecialEvent(`) when nothing in the module re
 (`BStation.save`, `Sys.getStation().save()`, `Station.save*(`) and the map holds no non-empty `persistence:` line.
 
 **Switching a driver off by disabling a link does not release its target.** A write path that stops a schedule or
-another driver by disabling the link into the target slot must also write the target slot null: a disabled link
-leaves the target at its last value, and re-enabling the link propagates the source value at once
-(`EngineUtil.java:73-79`, `SlotKnobs.java:37`, `ComplexSlotMap.java:780-788`; `types/logic-authoring.md` §
-Link lifecycle callbacks). `[ev: issue #920]` (retro R11 ΔB5)
+another driver by disabling the link into the target slot must also write the target slot null, after the disable:
+the disable re-activates the link, which writes the source value once more, and a disabled link then leaves the
+target at that value; re-enabling the link propagates the source value at once (`BLink.java:208-209`,
+`SlotKnobs.java:41`, `ComplexSlotMap.java:815-818`; `types/logic-authoring.md` § Link lifecycle callbacks).
+`[ev: issue #920]` (retro R11 ΔB5)
 
 Exemplar — a debounced save owned by the servlet component (anonymized from the 2.2.2 fix):
 
