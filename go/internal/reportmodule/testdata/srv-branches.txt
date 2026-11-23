@@ -83,6 +83,7 @@ F-ux  SKIP  lint-link-target-flags  no src/
 F-ux  SKIP  lint-ext-writable-shape  no src/
 F-ux  SKIP  lint-no-system-out  no src/
 F-ux  SKIP  lint-slotomatic-markers  no src/
+F-ux  SKIP  lint-instance-type-order  no src/
 F-ux  SKIP  lint-clock-zero-floor  no src/
 F-ux  SKIP  lint-null-context-write  no src/
 F-ux  SKIP  lint-bql-string-concat  no src/
@@ -120,7 +121,7 @@ F-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it fr
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 6 artifacts · 52 PASS · 1 FAIL · 1 WARN · 61 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 6 artifacts · 52 PASS · 1 FAIL · 1 WARN · 62 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

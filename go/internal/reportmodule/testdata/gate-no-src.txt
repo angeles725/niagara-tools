@@ -12,6 +12,7 @@ A-rt  SKIP  lint-link-target-flags  no src/
 A-rt  SKIP  lint-ext-writable-shape  no src/
 A-rt  SKIP  lint-no-system-out  no src/
 A-rt  SKIP  lint-slotomatic-markers  no src/
+A-rt  SKIP  lint-instance-type-order  no src/
 A-rt  SKIP  lint-clock-zero-floor  no src/
 A-rt  SKIP  lint-null-context-write  no src/
 A-rt  SKIP  lint-bql-string-concat  no src/
@@ -47,6 +48,7 @@ B-ux  SKIP  lint-link-target-flags  no src/
 B-ux  SKIP  lint-ext-writable-shape  no src/
 B-ux  SKIP  lint-no-system-out  no src/
 B-ux  SKIP  lint-slotomatic-markers  no src/
+B-ux  SKIP  lint-instance-type-order  no src/
 B-ux  SKIP  lint-clock-zero-floor  no src/
 B-ux  SKIP  lint-null-context-write  no src/
 B-ux  SKIP  lint-bql-string-concat  no src/
@@ -81,6 +83,7 @@ C-wb  SKIP  lint-link-target-flags  no src/
 C-wb  SKIP  lint-ext-writable-shape  no src/
 C-wb  SKIP  lint-no-system-out  no src/
 C-wb  SKIP  lint-slotomatic-markers  no src/
+C-wb  SKIP  lint-instance-type-order  no src/
 C-wb  SKIP  lint-clock-zero-floor  no src/
 C-wb  SKIP  lint-null-context-write  no src/
 C-wb  SKIP  lint-bql-string-concat  no src/
@@ -115,6 +118,7 @@ D-se  SKIP  lint-link-target-flags  no src/
 D-se  SKIP  lint-ext-writable-shape  no src/
 D-se  SKIP  lint-no-system-out  no src/
 D-se  SKIP  lint-slotomatic-markers  no src/
+D-se  SKIP  lint-instance-type-order  no src/
 D-se  SKIP  lint-clock-zero-floor  no src/
 D-se  SKIP  lint-null-context-write  no src/
 D-se  SKIP  lint-bql-string-concat  no src/
@@ -147,6 +151,7 @@ E  SKIP  lint-link-target-flags  no src/
 E  SKIP  lint-ext-writable-shape  no src/
 E  SKIP  lint-no-system-out  no src/
 E  SKIP  lint-slotomatic-markers  no src/
+E  SKIP  lint-instance-type-order  no src/
 E  SKIP  lint-clock-zero-floor  no src/
 E  SKIP  lint-null-context-write  no src/
 E  SKIP  lint-bql-string-concat  no src/
@@ -181,7 +186,7 @@ E  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from 
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 5 artifacts · 10 PASS · 0 FAIL · 0 WARN · 167 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 5 artifacts · 10 PASS · 0 FAIL · 0 WARN · 172 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
