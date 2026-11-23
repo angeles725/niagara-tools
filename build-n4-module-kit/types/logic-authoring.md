@@ -71,9 +71,11 @@ so a station restart that starts the target before the source does not leave the
 `[ev: corpus B958 §958.2]`
 
 **Link `enabled` semantics:** disabling a link does not release its target; re-enabling it propagates the source
-value at once (`EngineUtil.java:73-79`, `SlotKnobs.java:37`, `ComplexSlotMap.java:780-788`). A module that switches a
-schedule or any other driver off by disabling a link must also write the target slot null, or the target keeps its
-last value (`types/dashboard.md` § Write path). `[ev: issue #920]` (retro R11 ΔB5)
+value at once. Any set of a running link's property re-activates it (`ComplexSlotMap.java:815-818`), and activation
+propagates a property-to-property link once with no `enabled` check (`BLink.java:208-209`); only later changes skip a
+disabled link (`SlotKnobs.java:41`). So the disable itself writes the source value one last time. A module that
+switches a schedule or any other driver off by disabling a link must write the target slot null AFTER the disable, or
+the target keeps the source's last value (`types/dashboard.md` § Write path). `[ev: issue #920]` (retro R11 ΔB5)
 
 → See `types/moduleTest.md` for the station-test recipe that covers `doCheckLink` and `added`/`removed`
   (the only tier that can exercise these hooks in WSL-equivalent isolation with a real NRE).
