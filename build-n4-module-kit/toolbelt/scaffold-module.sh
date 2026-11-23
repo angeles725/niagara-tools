@@ -23,7 +23,8 @@
 # sample row dropped; check it with ledger-check.sh).
 # The emitted tree is pre-slotomatic. Run build.sh to generate the AUTO region and build the jar.
 # The root build.gradle.kts carries the signing block (templates/signing-root.gradle.kts, issue #266):
-# set niagaraSigningAlias and niagaraSigningProfile as gradle properties before the first build.
+# set niagaraSigningAlias and niagaraSigningProfile as gradle properties before the first build. The signing line names
+# templates/signing-profile.xml, a throwaway profile to copy (fully qualified profileType, store keys, keytool command).
 # This script is VCS-free by design. version control is never invoked.
 #
 # Exit: 0 ok · 2 usage, invalid ModuleName, unknown --type, no --vendor or a refused option value · 3 env (skeleton missing,
