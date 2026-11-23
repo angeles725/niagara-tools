@@ -1,0 +1,10 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-gradle-userhome  @DIR@/gradle.properties:1  GU1 org.gradle.jvmargs sets -Duser.home=: an already-running gradle daemon never sees it; set it through JAVA_TOOL_OPTIONS and run with --no-daemon (toolbelt/build.sh mirror mode does)
+-- stderr --
+-- gradle.properties --
+org.gradle.jvmargs=-Xmx2g \
+    -Duser.home=/tmp/x
+a.b=c

@@ -37,8 +37,10 @@ type StateFile interface {
 // State is WriteState: the write scope, tokens, journal, audit log and budget of one server
 // process.
 type State struct {
-	Scope          *ord.Scope
-	Tokens         *token.Tokens
+	Scope  *ord.Scope
+	Tokens *token.Tokens
+	// issuedIn is the station session id each unspent token was issued in (replan.go).
+	issuedIn       map[string]string
 	Journal, Audit StateFile
 	MaxWrites      int
 	// WritesExecuted counts the executed writes of this process (audit F5): a reconnect does not

@@ -38,6 +38,34 @@ func (d *Doc) Children(i int) []int {
 	return out
 }
 
+// SlotValue returns the v attribute of the direct child <p n="name"> of element i, "" when there is no such
+// child or it has no v.
+func (d *Doc) SlotValue(i int, name string) string {
+	for _, c := range d.Children(i) {
+		if n, _ := d.elems[c].Attr("n"); n == name && d.elems[c].Name == "p" {
+			v, _ := d.elems[c].Attr("v")
+			return v
+		}
+	}
+	return ""
+}
+
+// SlotPath returns the slot path of element i: the decoded n (UnescapeName) of each <p> from below the root down
+// to it, every segment led by "/"; an element with no n, or that is not a <p>, adds no segment.
+func (d *Doc) SlotPath(i int) string {
+	var parts []string
+	for ; i >= 0; i = d.elems[i].Parent {
+		if n, ok := d.elems[i].Attr("n"); ok && d.elems[i].Name == "p" {
+			parts = append(parts, UnescapeName(n))
+		}
+	}
+	var b strings.Builder
+	for k := len(parts) - 1; k >= 0; k-- {
+		b.WriteString("/" + parts[k])
+	}
+	return b.String()
+}
+
 // Text returns the character data directly inside element i (not its descendants'), entity-
 // decoded, CDATA included. It re-reads the element's content on each call, so only rules that ask
 // for text pay for it.

@@ -2,11 +2,11 @@ package scaffoldmodule
 
 // Every text scaffold-module prints. The tool name in the usage lines is the launcher's.
 const (
-	usageText = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver>]\n" +
+	usageText = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library>]\n" +
 		"       scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]\n"
 
 	unknownOption  = "scaffold-module: unknown option: %s\n"
-	unknownType    = "scaffold-module: unknown --type: %s (must be logic, dashboard or driver)\n"
+	unknownType    = "scaffold-module: unknown --type: %s (must be logic, dashboard, driver or library)\n"
 	nameFirst      = "scaffold-module: ModuleName must start with an uppercase letter: %s\n"
 	nameAlnum      = "scaffold-module: ModuleName must contain only alphanumeric characters: %s\n"
 	vendorSegment  = "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): %s\n"

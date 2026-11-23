@@ -195,7 +195,7 @@ Key NSS rules:
 
 ---
 
-## 8 · The official authoring flow
+## 8 · The official authoring flow `[ev: retro doc-coverage-audit Δ15]`
 
 Source for §§ 8-10: [CERT-doc] the two theme pages of the developer guide,
 `niagara-help/versions/4.15.6.20/devguide-clean/themes/themeCreation.txt` and

@@ -3,7 +3,7 @@
 # Fixture-driven (D1): copies the bundled fixtures/<Type> tree and substitutes
 # the fixture type name → <ModuleName> in paths and content (B790/B793 proven tree).
 #
-# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver>]
+# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library>]
 #   ModuleName       Java identifier: uppercase-first, alphanumeric only (e.g. ColdRoomPan)
 #   out-dir          parent directory; emitted root is <out-dir>/<ModuleName>
 #   --vendor <v>     REQUIRED: the vendor (copyright, vendor) and, lowercased, the Java package segment; no default,
@@ -12,11 +12,13 @@
 #   --plugin-version <x.y.z> Niagara Gradle plugin version baked into settings.gradle.kts, <major>.<minor>.<patch>
 #                    digits only; default: the plugin the --target-version release ships in etc/m2 (4.13 7.3.40,
 #                    4.14 7.6.17, 4.15 7.6.22; another release 7.6.17)
-#   --type <logic|dashboard|driver>  scaffold type (default: logic)
+#   --type <logic|dashboard|driver|library>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay
 #                    driver    — NDriver -rt (UDP comm config subclass, codec, discovery) + -wb point manager
 #                                (MinimalDriver fixture; types/driver-authoring.md § 1.6-§ 1.11, § 5, § 12)
+#                    library   — a classpath-carrier -rt part: no Java, `<types/>`, no palette, `type: library` in its MODULE-MAP.md
+#                                header (MinimalLibrary fixture; types/utility-lib.md § 1 and § 6) [ev: retro doc-coverage-audit Δ10]
 #
 # Every type also carries a .gitignore at the gradle root (.gradle/, build/, _backups/, .last-deploy-sha; from the
 # fixture) [ev: retro build-kit-bench-session Δ8], and the client version ledger <out-dir>/<ModuleName>/odd/VERSION-LEDGER.md (templates/, its

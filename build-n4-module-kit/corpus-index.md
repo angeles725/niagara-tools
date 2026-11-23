@@ -209,6 +209,214 @@ Blocks the type cards cite for the running-station and authoring topics added on
 | **B427** | The Workbench widget model: `BWidget` is a `BComponent`, layout by `doLayout`, painting through the `gx` `Graphics` interface, event dispatch, the theme families | wb |
 | **B1086** | Field-editor extras: `BIPopupEditor`, `BWbFieldEditor.dialog()`, the `fieldEditor` facet override, `IDialogContentProvider`, the profile filter | wb |
 
+
+## Cited by the guides — every other block a kit guide names in an `[ev: corpus …]` tag
+
+The sections above rank blocks by when to read them. This one lists the remaining blocks the guides cite, so a
+citation always resolves to a line here: the second column is the block's title in the corpus catalog
+(`cnav list`, 2026-11-23, shortened), the third the guide(s) that cite it, the place to read what the block
+proves. `tests/corpus-index.bats` (CI-ALL) fails when a guide cites a block this index does not hold.
+`[ev: retro doc-coverage-audit Δ20]`
+
+| Block | What the corpus catalog says it is | Cited in |
+|---|---|---|
+| **B4** | Baja Object Model | `types/logic-authoring.md`, `types/logic.md` +1 |
+| **B12** | Build System + Module Development Lifecycle | `METHODOLOGY.md` |
+| **B14** | Point counting + License limits + Templates + Batch Editor + EasyTemplates | `types/driver-authoring.md` |
+| **B15** | Workbench editing deep (wiresheet + property sheet + nav + point/device manager) | `types/logic.md` |
+| **B18** | Module signing standalone + module-permissions + CSRF + Header Auth | `build-verify.md`, `types/distribution.md` +2 |
+| **B26** | NRE launcher C++ + DLLs nativas + standalone module signing ops | `types/ml-libraries.md`, `types/third-party-libraries.md` |
+| **B28** | Discovery cross-protocol + Virtual Components | `types/driver-authoring.md` |
+| **B35** | Nav + Workbench shell + views registry | `types/logic-authoring.md`, `types/module-wiring.md` +1 |
+| **B36** | PX widgets deep + EasyTemplates + BajaScript BOX wire + browser lifecycle | `types/dashboard.md` |
+| **B46** | Writes con priority array desde SPA externa | `types/dashboard.md` |
+| **B67** | Analytics deep dive para construir módulo MX60: librerías + 56 algorithm blocks + 17 combiners + 22 trend wrappers + Psychrometric HVAC + Degree-Day + veredictos PID/ML/Forecasting/Anomaly … | `types/math-control-libraries.md`, `types/ml-libraries.md` +1 |
+| **B92** | `lonhoneywellAXWizards`: suite de wizards Workbench para dispositivos LON Honeywell Excel 10 / XL15C / T7350, sobre el driver `lonworks` estándar de Tridium, deofuscado | `types/observability.md` |
+| **B106** | `honeywellSpyderTool` / `XL10NextGen`: la herramienta de programación del Spyder (3er motor de Function Blocks Honeywell — modelo **compilar→binario→descargar**), deofuscada | `types/observability.md` |
+| **B143** | nmodsreflow.77 (`-rt`): subsistema sync (colaboración config multiusuario JSON-Patch, favoritos por-usuario, sin locking) | `types/issues-and-gotchas.md` |
+| **B145** | nmodsreflow.77 (`-rt`): superficie REST de config (read con `?file=` traversal, overwrite total, delta = 2ª puerta a applyConfig) | `types/issues-and-gotchas.md` |
+| **B289** | The live station's file space: `^` resolves to `shared/`, and why a `.px` cannot live in `Drivers/` | `types/logic.md` |
+| **B301** | Licensing: there is no `modbus` feature — there are four, one per palette; the TCP gateway spends the `modbusTcp` licence; and the guide's limits topic quotes an MS/TP example | `types/driver-authoring.md` |
+| **B347** | The UI layers: bajaux field editors + one unrestricted-but-benign preview RPC (ux), and a Swing output widget that pretty-prints via bundled Gson with NO typed deserialization (wb) | `types/third-party-libraries.md` |
+| **B402** | Station Save Trigger and Dirty-Flag Propagation: BStationSaveJob, StationManager, and BBogSpace | `types/logic.md` |
+| **B405** | BOG Version Migration: BIBogElementConverter, ConverterRegistry, BBogMigrator, and MigratorRegistry | `types/distribution.md` |
+| **B408** | BComponentSpace Internal Lifecycle: LoadCallbacks, SubscribeCallbacks, TrapCallbacks, AuditableSpace Annotation, and BHandleScheme Resolution | `types/logic-authoring.md` |
+| **B426** | How the `program` module compiles a Program: a spawned `bin/javac` subprocess, with tools.jar one level removed | `types/math-control-libraries.md` |
+| **B459** | JACE-8000 architecture: a QNX/ARM embedded controller, not Linux or Windows (focus jace8000 bootstrap, J1) | `types/structure.md` |
+| **B473** | J8 DEMONSTRATED END-TO-END: a hand-rolled Fox client pulled the live station's config.bog over foxs:4911 with no Workbench (read-only save=false) — plus live corrections: the JACE runs QNX … | `types/structure.md` |
+| **B507** | `apis` API1: `@NiagaraRpc` — N4's annotation-driven server-side RPC API (`POST /rpc/{method}/{ord}`, JSON in/out, three transports web/box/fox, four-layer auth: session + CSRF + HTTPS + … | `types/actions.md` |
+| **B512** | `apis` API4: the BOX protocol wire — N4's live-subscription substrate (`BBoxServlet` at `/box`, **JSON** frames not binary, a `ProxyBroker`-backed sub/event model, HTTP-poll v1 + … | `types/dashboard.md`, `types/logic-authoring.md` |
+| **B517** | `framework-drivers` FD11: `basicDriver` — the shared serial-driver base that 12 drivers ride, layering a message-dispatch/transaction engine (`BBasicNetwork`) + a serial binding … | `types/driver-authoring.md` |
+| **B536** | The `control` module writable-point model: `WritableSupport`, the 16-level priority-array arbitration, override actions, and the point-extension execution chain | `types/logic.md` |
+| **B537** | The kitControl function-block catalog: 151 classes → ~130 deployable blocks across 10 packages, with the PID loop, the latch/switch/select mux family, and the multi-input null contract … | `types/logic.md` |
+| **B539** | BLoopPoint deep: ramp-aware anti-windup, direct/reverse sign, the four disable actions, the deviation loop alarm, propagateFlags masking, and the official P/PI/PID tuning methodology | `types/logic.md`, `types/math-control-libraries.md` |
+| **B541** | The `program` module runtime: BProgram execution, freeform vs Robot, source+bytecode stored in the `.bog`, and the code-signing/SecurityManager sandbox | `types/logic-authoring.md` |
+| **B543** | HVAC control-logic SAFETY / fail-safe analysis: the five defensive layers, and the six default-UNSAFE gaps an engineer must close | `types/logic.md` |
+| **B552** | The control-point alarm + history extension chain: BAlarmSourceExt + the offnormal-algorithm family, interval-vs-COV history, and the confirmation that alarms are notification-only | `types/logic.md` |
+| **B553** | N4 real-time / push transports consolidated (API10): Fox, BOX (HTTP-poll v1 + WebSocket-push v2), WebSocket — and Server-Sent Events PROVEN-ABSENT | `types/dashboard.md` |
+| **B587** | The `hierarchy:` ORD scheme: a `BSpaceScheme` whose body is a slash-path (`/Hierarchy/seg/seg…`) resolved level-by-level — a grouping segment resolves to a `BLevelElem`, an escaped … | `types/logic-authoring.md` |
+| **B617** | graphql-admin (GQL-G5): module classloader isolation — a standalone module can safely bundle graphql-java | `types/ml-libraries.md`, `types/module-wiring.md` +1 |
+| **B630** | Niagara N4 — module-anatomy (MA2): the module BOOT scan — `modules/` is enumerated by manifest `runtimeProfile` (not filename), dependency-resolved recursively, and loaded from a PREBUILT … | `types/structure.md` |
+| **B635** | Niagara N4 — module-anatomy (MA7): module `<permissions>` → Java security policy — two tracks (`<java-permissions>` enforced by the SecurityManager per-CodeSource … | `types/logic.md` |
+| **B793** | B793 · Building B790's minimal module: the skeleton is gate-green [CERT], and the 10 corrections the build forced | `METHODOLOGY.md`, `types/logic-authoring.md` |
+| **B795** | B795 · MM3 decision table — the slot-change survival matrix as a machine-readable classifier for schema-risk.sh (mechanizes B754) | `BUILD-LOOP.md`, `METHODOLOGY.md` |
+| **B796** | B796 · The `-ux` write-surface seam, captured as THE kit exemplar — the dashboard module -ux walked with file:line (document-mode §20) | `types/dashboard.md` |
+| **B797** | B797 · `verify-module.sh --plano`: pinning the four-value agreement check (issue #47 spec) `[CERT]` | `types/dashboard.md` |
+| **B800** | B800 · Console-log census: exceptions through the operator's OWN modules (triage-console.sh contract input) `[CERT]` | `BUILD-LOOP.md`, `METHODOLOGY.md` +2 |
+| **B801** | B801 · The `Clock` timer delay/period floor — `schedule`/`schedulePeriodically` reject a non-positive value with `IllegalArgumentException` (extends B775) `[CERT]` | `METHODOLOGY.md`, `ORCHESTRATION.md` +3 |
+| **B802** | B802 · Inter-module communication is module-AGNOSTIC within a station — links, service discovery, and subscription never check the module; the only real boundaries are the compile-time Type … | `types/logic-authoring.md` |
+| **B803** | B803 · Step-up / re-authentication for a critical dashboard write — Niagara ships NO core step-up primitive; the clean `-ux` pattern re-verifies the session user through their auth scheme … | `METHODOLOGY.md`, `types/dashboard.md` |
+| **B804** | B804 · History-extension authoring — a `BHistoryExt` IS a point extension; pick Interval vs COV; `BHistoryConfig` sets capacity + rollover; ONE ext per logged slot `[CERT]` | `types/logic-authoring.md` |
+| **B805** | B805 · RT control-logic exemplars — how Tridium implements PID / deadband / latch / protection, the control-physics WHY behind each line, a one-bit fault trace from point to console, and … | `skill/SKILL.md`, `types/logic.md` |
+| **B806** | B806 · Resource budget for a JACE/station — what oversaturates it, and the viability of our module logic `[CERT]` | `METHODOLOGY.md`, `ORCHESTRATION.md` +2 |
+| **B807** | B807 · The N4 build pipeline + module versioning — plugin-source-cited task matrix, the station-lock copy, and the reload code path `[CERT]` | `BUILD-LOOP.md`, `METHODOLOGY.md` +2 |
+| **B808** | B808 · Who watches the logic — feedback surfaces, traced from the cold-room module BEvaporatorUnit fault to the operator `[CERT]` | `types/logic.md` |
+| **B809** | B809 · Tridium `-wb` authoring conventions — the 5 checks (off-UI-thread traversal, @AgentOn breadth, wb lexicon, load/save lifecycle, deps) + a "good -wb artifact" doctrine, Tridium … | `types/wb-widgets.md` |
+| **B810** | B810 · Driver-module authoring — the BNetwork→BDevice→BPointDeviceExt→BProxyExt hierarchy, BPingMonitor as the device-health "quién vigila", and the critical finding that a write to a DOWN … | `BUILD-LOOP.md`, `types/driver-authoring.md` +1 |
+| **B811** | B811 · Station snapshot automation — how to copy a running station (bog, logs, logic, links) to inspect it, without mounting the filesystem `[CERT]` | `BUILD-LOOP.md` |
+| **B812** | B812 · The heartbeat/liveness watchdog pattern — an author-built independent monitor that detects a STALLED producer (not a bad value) `[INFER, primitive-grounded]` | `METHODOLOGY.md`, `types/logic.md` |
+| **B813** | B813 · UX servlet authoring conventions — registration/routing/lifecycle, the JSON+facet+CSRF contract, from Tridium's own BWebServlet vs our dashboards `[CERT]` | `types/dashboard.md` |
+| **B814** | B814 · Authoring a MODULE tag dictionary — ship a smart dictionary so your components are nav/search/hierarchy addressable `[CERT]` | `types/logic.md` |
+| **B815** | B815 · Authoring a STATION-LEVEL / component-lifecycle test — mount the component, drive the interval, catch what lint and pure-JUnit cannot `[CERT]` | `BUILD-LOOP.md`, `METHODOLOGY.md` +2 |
+| **B816** | B816 · Write-path & overlap testing — the threading/link-override mechanism (a dashboard write to a LINK-TARGET slot lands then is SILENTLY overwritten; servlet `set()` and the engine … | `METHODOLOGY.md`, `types/logic-authoring.md` +1 |
+| **B818** | B818 · Forensics: `Missing class for "<module>:HoaMode"` was a DANGLING module-include.xml registration (a dead `<type>` for a class never built), not a bog retype — the runtime triage … | `types/logic-authoring.md` |
+| **B819** | B819 · Zero-demand / idle-state doctrine for staged processes — demand decides WHETHER, a process variable only modulates HOW MUCH; NaN never counts as demand; every staged process has an … | `types/logic.md`, `types/math-control-libraries.md` +1 |
+| **B821** | B821 · Protection anatomy of our RT modules — every protection trip as (WHAT fires · WHO fires · WHO watches), one-bit-traced at `fbe9009`; the RT control logic raises ZERO alarm-console … | `types/logic.md`, `types/ml-libraries.md` |
+| **B822** | B822 · Making the room setpoint remotely settable — the ADDITIVE-code options (a `setpointCmd` writable-double slot, or an `applySetpoint(BDouble)` OPERATOR action) vs the OUTAGE of … | `types/actions.md`, `types/logic-authoring.md` |
+| **B823** | B823 · Can the EXISTING `BRoomPanel.setpoint` be written from the mini-PC with NO module change? — every no-code write channel enumerated, one-bit-traced `[CERT]` | `types/dashboard.md`, `types/logic-authoring.md` |
+| **B825** | B825 · Why an oBIX wrapped-`<obj>` PUT of a `BStatusNumeric` façade slot PROPAGATES to the linked control point — and why the read can lag: the write is a TOP-SLOT REPLACEMENT (decode into … | `types/logic-authoring.md` |
+| **B826** | B826 · Is a `/setpoint/value` CHILD ORD routable over oBIX? — closes [B825]-G2 by read-only reasoning: the `BStatusValue` agent COLLAPSES the struct to a leaf `<real>` so the child is NEVER … | `types/logic-authoring.md` |
+| **B827** | B827 · Raising an OPERATOR ALARM for a protection trip in an -rt module — the concrete fix for [B821]'s zero-alarm finding (seed S18): `BAlarmSourceExt` needs a `BControlPoint` parent, so a … | `types/logic.md` |
+| **B828** | B828 · HOA modes as a real `BFrozenEnum` over oBIX (for future modules) — a `@NiagaraEnum(@Range …)` `BHoaMode` renders `<enum val="hand" display="…" range="…"/>` and decodes `<enum … | `types/logic-authoring.md` |
+| **B829** | B829 · One audit trail for a client site — what Niagara's config-audit records for each write path, settled by CODE: a slot `set()` fires an `AuditEvent` ONLY inside `if (context != null && … | `types/dashboard.md`, `types/security.md` |
+| **B853** | A vendor Px in the BROWSER: the Hx web profile (EC-Net 4.3.58.18 ≈ N4.4) — ActionBinding/set limits, Paste Special, and the working stock-Px HOA/selector recipe | `types/issues-and-gotchas.md` |
+| **B872** | Driver poll-scheduler, tuning policy, and history/schedule/file extensions (fills B810) | `types/driver-authoring.md`, `types/logic-authoring.md` |
+| **B873** | The `event` module: the wired event-routing substrate (sources → filters → recipients) | `types/logic-authoring.md` |
+| **B874** | The Niagara `schedule` framework: time-based control primitive (hierarchy, recalc, priority) | `types/logic-authoring.md` |
+| **B909** | DDF comm concurrency: the transaction manager (single-outstanding queue vs tag-correlated multiple) + the unsolicited-frame manager (async request correlation) | `types/logic-authoring.md` |
+| **B928** | The converter catalog as a type-conversion MATRIX: 104 classes / 102 `@Adapter` pairs over ~17 core baja value types (String/StatusString are the hubs) | `types/logic.md` |
+| **B1004** | JACE-8000 QNX `moduleVerificationMode` default is `medium` — STRICTER than the Win Supervisor's explicit `low` | `build-verify.md` |
+| **B1010** | `Nre.java` compiled-in fallback for `niagara.moduleVerificationMode` is `medium` for N4 ≥ 4.10 — Confirms B1004 at [CERT] level | `build-verify.md` |
+| **B1016** | The client's canonical N4 module build configuration: `gradle.properties` + `settings.gradle.kts` (SDK pin, JDK toolchain, gradle-plugin pin) across the four module groups | `BUILD-LOOP.md`, `build-verify.md` +2 |
+| **B1017** | Modeling equipment status on a dashboard module: operating STATE (rt slot) vs point HEALTH (BStatus), and how the -ux reader + SPA reflect both | `types/dashboard.md` |
+| **B1028** | SDE7-G1: Conformance of our three modules vs the SDK Exemplars — moduleTest, ux Specs, module.palette (confirmed against live source) | `types/issues-and-gotchas.md`, `types/moduleTest.md` |
+| **B1054** | vendor pure-resource -wb palette modules: WB profile with only images and a declarative `module.palette` | `METHODOLOGY.md` |
+| **B1055** | andoverAC256-wb: Tridium driver WB with DeviceManager, PointManager, Console view, and BackupManager | `types/wb-widgets.md` |
+| **B1057** | ccn-wb: Carrier CCN driver WB — nine agents across BDeviceManager, BFolderManager, BPointManager, and custom BWbComponentView with agent-slot override pattern | `types/driver-authoring.md`, `types/wb-widgets.md` |
+| **B1058** | andoverInfinity-wb: VT100 terminal emulator as BWbComponentView — RT topic-fire pattern, screen-scraping intelligence, and backup/restore menu agent | `types/logic-authoring.md`, `types/wb-widgets.md` |
+| **B1060** | clCBus-wb: Honeywell C-Bus driver WB — nDriver-based device + point managers, parameter file tree-table, rich 5-tab schedule editor, and PX-editor alarm-hyperlink listener | `types/logic-authoring.md` |
+| **B1061** | WV8 synthesis: cross-vendor WB intuitive-UI pattern catalog and PROPOSED-DELTA list for build-n4-module kit | `METHODOLOGY.md`, `types/dashboard.md` +2 |
+| **B1064** | ODA3: the dashboard module data path and frontend quality — REST-POLL, {v,st} JSON contract, no external libraries, preview server, portability | `types/dashboard.md` |
+| **B1066** | ndriver-wb deep: MVC internals, agent-command extension point, column reflection, state persistence, and DnD absence | `types/driver-authoring.md` |
+| **B1067** | bacnet-wb: BBacnetDeviceManager, BBacnetHistoryImportManager, field editor family, and protocol-specific WB anatomy | `types/wb-widgets.md` |
+| **B1069** | Gateway web-serving: servlet live-view, auto-refresh options, oBIX surface, outbound HTTP, and auth for API consumers | `types/cloud-connector.md`, `types/issues-and-gotchas.md` |
+| **B1070** | Multi-tab BWbComponentView: BTabbedPane pattern for components that own multiple child collections | `types/wb-widgets.md` |
+| **B1072** | ndriver child gaps: subscribeDepth contract + getDatabaseInstanceDefault factory + NMgrModelUtil column assembly | `types/driver-authoring.md` |
+| **B1073** | bacnet-wb child gaps: BacnetDeviceLearn 14-column learn table + BBacnetPointManager 18-column point set | `types/wb-widgets.md` |
+| **B1075** | Gateway follow-up: BHttpClient send-only API, BWebServlet sync-only (no native SSE), BAuthenticationScheme SPI | `types/security.md` |
+| **B1076** | BTabbedPane edge cases + MQTT/cloud SPI hierarchy | `types/cloud-connector.md`, `types/wb-widgets.md` |
+| **B1077** | honeywellDeviceManager-wb: shared Honeywell WB device manager base | `types/driver-authoring.md`, `types/wb-widgets.md` |
+| **B1078** | honeywellBacnetDeviceManager-wb + honeywellModbusDeviceManager-wb: Honeywell OEM WB specialization | `types/wb-widgets.md` |
+| **B1079** | galileoKitPx-wb: Galileo PX binding system (pin-level authorization + EasyPicture) | `types/security.md`, `types/wb-widgets.md` |
+| **B1080** | honPlantControllerHMI-wb: BACnet export table manager + writable-slots editor + firmware OTA menu | `types/distribution.md`, `types/logic-authoring.md` |
+| **B1082** | cloudLinkHonSbp: Honeywell SBP cloud connector RT architecture | `types/logic-authoring.md`, `types/observability.md` +1 |
+| **B1087** | Custom BWbFieldEditor recipe: @AgentOn, station-component chooser, and BComponent.add() for creating points from WB | `types/wb-widgets.md` |
+| **B1088** | BAbstractManager: class anatomy, init protocol, lifecycle, and support-object wiring | `types/wb-widgets.md` |
+| **B1089** | MgrModel and MgrColumn: database-table model, column taxonomy, and addInstances | `types/wb-widgets.md` |
+| **B1091** | MgrController commands, the discovery/learn split-pane, and the minimal custom-manager recipe | `types/wb-widgets.md` |
+| **B1094** | obixDriver-wb: the oBIX CLIENT driver Workbench profile (station-as-oBIX-client managers, local-vs-remote discover, and the client-over-REST WB pattern) | `types/driver-authoring.md` |
+| **B1095** | lonworks-wb: the Tridium core LonWorks driver Workbench profile (NV-binding managers, changeable-NV type editing, LNML/XIF import, and the LON commissioning UX) | `types/driver-authoring.md` |
+| **B1096** | honBACnetUtilities-wb: Honeywell's BACnet extension Workbench profile (device type-float over stock managers, notification-class alarm manager, batch export view, dual bitstring FE, and the … | `types/driver-authoring.md`, `types/wb-widgets.md` |
+| **B1097** | niagaraDriver-wb: the Supervisor→JACE Workbench surface (station manager, bidirectional history/schedule/user sync, file transfer over the point channel, and the N-space path-bar agent) | `types/driver-authoring.md`, `types/wb-widgets.md` |
+| **B1098** | ace-wb: the Tridium ACE (Distech "Titan") driver Workbench profile — the richest vendor WB pattern (own wire sheet, app-creation wizard, catalog palette, opcode expression editor, and … | `types/wb-widgets.md` |
+| **B1099** | platPower-wb: the Workbench PlatformServicePlugin SPI (a platform-daemon-connection extension point, distinct from station component views) — JACE battery/power monitoring UI | `types/wb-widgets.md` |
+| **B1100** | mbus-wb: the M-Bus (EN 13757) metering driver Workbench profile (dual primary/secondary addressing, the 5-mode discovery wizard, multi-baud scan, and the manufacturer-specific data-record … | `types/driver-authoring.md`, `types/issues-and-gotchas.md` |
+| **B1101** | nSnmp-wb: the SNMP v3 driver Workbench profile (USM/VACM security-manager cluster, MIB-browser discovery, and the station-as-SNMP-agent export surface) | `types/wb-widgets.md` |
+| **B1102** | zwave-wb: the Z-Wave mesh-wireless driver Workbench profile (two-level scene management, node inclusion/exclusion + failed-node recovery, firmware-gated options, and battery wake-up … | `types/driver-authoring.md`, `types/wb-widgets.md` |
+| **B1103** | opc-wb: the OPC DA classic client driver Workbench profile (the DCOM/NT security-config view, lazy hierarchical COM browse, and the parallel device/point MVC quartet) | `types/driver-authoring.md` |
+| **B1104** | honAdvWirelessCfg-wb: Honeywell BEATS wireless platform-config Workbench profile (WiFi + BLE radio provisioning over the platform-daemon file channel, from the Workbench Platform tab) | `types/security.md`, `types/wb-widgets.md` |
+| **B1105** | wb-vendor-ux wave-3 synthesis: the cross-vendor WB pattern catalog (11 driver/platform profiles), the WB "target" taxonomy, and the consolidated kit-delta list | `types/wb-widgets.md` |
+| **B1106** | module-hardening REF3: the complete BFacets key catalogue (reference card) — every facet key a module author can set, with string literal, purpose, and factory method | `types/logic-authoring.md` |
+| **B1108** | module-hardening REF1: the complete BQL function catalogue (5 aggregates + 7 expression scalars + the 24-function BBqlTime library) and why the names are un-greppable (reflective resolution) | `types/logic.md` |
+| **B1109** | module-hardening REF4: the BEnumRange authoring & encoding grammar (`facets="range=…"`, the `frozen+{dynamic}?options` BNF, and the `E:` BOG facet form) | `types/logic-authoring.md` |
+| **B1110** | module-hardening REF7: the SlotPath slot-name grammar (what `isValidName` accepts/rejects, the `$xx`/`$uXXXX` escaping, and why programmatic names from field data fail silently) | `types/logic-authoring.md` |
+| **B1112** | module-hardening REF5: the BFormat pattern language (`%script%` reflective calls, the `?` fallback, special functions, and the reflection-resolution order) — used in alarm/history/display … | `types/logic.md` |
+| **B1124** | module-hardening BLD2: a newer-bytecode (major ≥ 53) class throws a RAW UnsupportedClassVersionError — N4's ModuleClassLoader does not wrap it, and catch(Exception) won't catch it (it's a … | `types/issues-and-gotchas.md` |
+| **B1125** | module-hardening BLD3: split-package resolution is first-dependency-wins (declaration order, with a lastModuleScanned cache) — a same-FQCN class in a second module is silently shadowed; N4 … | `types/issues-and-gotchas.md` |
+| **B1128** | module-hardening BLD6: a `<type>` in module-include.xml whose class has no @NiagaraType (thus no generated `TYPE = Sys.loadType()`) is caught at registry-build with SEVERE "Missing … | `types/module-wiring.md` |
+| **B1134** | module-hardening UXS4: CORS on a Niagara servlet — `BGenericHttpHeaderProvider` CAN inject `Access-Control-Allow-Origin` (static value), but `BProfileFilterFactory` is closed to third-party … | `types/security.md` |
+| **B1135** | module-hardening BLD7: signing alias/profile absent at build — the Gradle plugin's behavior is PROFILE-TYPE-DEPENDENT (Local auto-generates a dev cert → silently signed-but-untrusted … | `types/issues-and-gotchas.md` |
+| **B1137** | module-hardening PER1: dynamic-slot ghost accumulation — the prune API exists (`getDynamicPropertiesArray` + `remove`), but there is NO framework "prune-orphans" utility; non-transient … | `types/logic-authoring.md` |
+| **B1138** | module-hardening PER4: a worked `started()` self-migration recipe — detect an orphan dynamic slot, copy its value to the new frozen slot, remove the orphan (safely, via a snapshot) — closes … | `types/logic-authoring.md` |
+| **B1140** | BWbComponentView subscription gap vs BAbstractManager: why child slot values show defaults on first paint and the minimal fix | `types/wb-widgets.md` |
+| **B1141** | Reading a control point's `out` value in rt: typed extraction, BStatus semantics, BOrd resolution, and facets | `types/logic-authoring.md`, `types/wb-widgets.md` |
+| **B1142** | Creating control points from wb code: direct `BComponent.add()` on a BFolder, MgrController/Mark.moveTo path, BEnumRange.make, and unique slot naming | `types/wb-widgets.md` |
+| **B1146** | SES1-G2: the advisory license fault IS honored in practice — well-behaved services gate their work on `isOperational()` — but it is a CONVENTION the framework never enforces | `types/security.md` |
+| **B1158** | module-hardening RUN8: the HOT `changed()` + non-transient WRITE anti-pattern — a control component that re-runs its full cycle on every NRIO-linked input update (~18/s) and writes … | `types/issues-and-gotchas.md` |
+| **B1159** | module-hardening PER8: the PERSISTED-ACCUMULATOR-written-every-cycle anti-pattern — a monotonic counter slot declared non-transient (so it survives restart) and re-written on every control … | `types/issues-and-gotchas.md` |
+| **B1160** | module-hardening UXS7: the STATIC `-ux` session/token store with lazy-only eviction — a `static ConcurrentHashMap<jsessionId,Entry>` that inserts on login, removes on explicit logout, and … | `types/issues-and-gotchas.md` |
+| **B1172** | n4-agent-mcp AM5: placing a component on the wire sheet — `BWsAnnotation` ("p,q,w[,h]" wixels), the add-or-set recipe (flags READONLY, Transaction batch), default auto-stagger, drop/paste … | `METHODOLOGY.md`, `types/dashboard.md` +1 |
+| **B1176** | n4-agent-mcp AM9: saving, persistence, transactional safety, undo and audit — the station `save` action is an ASYNCHRONOUS job (`config.bog.working` → backup → rename), `Transaction` … | `types/logic.md` |
+| **B1177** | n4-agent-mcp AM10: the BOX write path as a wire recipe an external client can implement — session bootstrap (`ssession` make/makessc/callssc), handle discovery … | `types/dashboard.md` |
+| **B1222** | OPC DA (classic) end-to-end connection recipe: Windows-only host, OPCEnum + DCOM server/client hardening, firewall, and the OpcNetwork → OpcDaClient → points sequence, with every … | `types/driver-authoring.md` |
+| **B1231** | n4-dev-course DC2: Slots as Tridium teaches them — properties/actions/topics, Slot-o-Matic output, frozen vs dynamic CRUD, slot names, flags, facets (and the rules the deck leaves implicit) | `types/actions.md`, `types/logic.md` |
+| **B1232** | n4-dev-course DC3: Components (deck 3 + Labs 1–4) — callbacks, validation, lifecycle, services, palettes, and the BFirstComponent → BAdd → BTstat lab ladder | `types/logic.md` |
+| **B1233** | n4-dev-course DC4: "Niagara Fundamentals" as taught — modules, the Type system, the BObject hierarchy decision rules, common classes and BOG; plus the code that ENFORCES Tridium's rules … | `types/module-wiring.md`, `types/structure.md` |
+| **B1234** | DC5 Code Signing as Tridium teaches it: the internal-CA lab recipe (createProfile → generateCertificate → CSR → importCertificate → niagaraSigning), why the lab flips … | `build-verify.md` |
+| **B1244** | OPC UA client child-gap bundle OCC2: the first-connect certificate path decompiled (`DefaultExemptionApprover` always says no, `CoreClientTrustManager` writes an UNAPPROVED `host:port` row … | `types/driver-authoring.md` |
+| **B1252** | n4-dev-course DC15: the 41 course files no block cited — the 25-test slide suite read as Tridium's testing style guide (BTestNg vs BTestNgStation, fixed `Thread.sleep` waits instead of … | `types/value-types.md` |
+| **B1253** | n4-dev-course DC16: the written answer key for every lab exercise (Labs 1–11, Bonus driver labs, Appendix A) — 273 items answered from code without execution, 17 shipped-solution defects … | `types/logic.md` |
+| **B1254** | n4-dev-course DC17: written solutions to Review Assignments 1 and 2 (`BComponentWithId`, `BPointSummaryService`) — design decisions, traceability, traps, and the code findings the decoding … | `types/logic-authoring.md` |
+| **B1273** | data-egress DE4: READ+WRITE bidirectional applications on N4 — seven architectures (station servlet, split oBIX, BOX, OPC UA/BACnet, Supervisor proxies, MQTT/cloudLink, Haystack) compared … | `types/security.md` |
+| **B1280** | data-egress B1278-G2 + B1262-G1: the N4.14 → N4.15.3.28 → N4.15.6.20 parity pass over every class behind the data-egress decision guide (22 jars, 2 615 CRC-changed Tridium class files … | `types/driver-authoring.md` |
+| **B1284** | OptimizerSupervisor post-install parameter map (OS3): every file you can tune after install, which copy wins, and the live N4.14.0.162 values — nre.properties heap, system.properties … | `types/platform.md` |
+| **B1304** | Threads, workers and Jobs: what the 4.15.6.20 Developer Guide and `javax.baja` source let a module do, mapped against the build-n4-module kit — the kit teaches a … | `types/logic-authoring.md`, `types/logic.md` |
+| **B1305** | Lexicons: the 4.15.6.20 lookup chain, key shapes, overrides, locale, diagnostics and the JS `lex!` plugin mapped against the build-n4-module kit — the kit's `Type.slot` prefixing advice is … | `skill/SKILL.md`, `types/dashboard.md` +1 |
+| **B1306** | Subscriptions, leases and watch: what the 4.15.6.20 Developer Guide and source let a module do (Subscriber, event masks, the three causes of "subscribed", leases, virtual components … | `types/driver-authoring.md`, `types/logic-authoring.md` |
+| **B1307** | Trees and nav (BINavNode, BNavContainer, spaces, NavEvent, nav files, subtree traversal, bajaScript nav) per the 4.15.6.20 docs and source, mapped against the build-n4-module kit — the … | `types/structure.md` |
+| **B1308** | BQL from code and ORDs/resolve per the 4.15.6.20 Developer Guide and `javax.baja.naming` source, mapped against the build-n4-module kit — `BOrd.make` neither parses nor normalizes (the kit … | `types/logic-authoring.md`, `types/security.md` |
+| **B1309** | Links (BLink, direct vs indirect, LinkCheck, makeLink/BConversionLink, knobs, activation, link capacity) per the 4.15.6.20 Developer Guide and source, mapped against the build-n4-module kit … | `types/logic.md` |
+| **B1310** | Facets, formats, units and collections (BFacets keys and builders, BFormat scripts, BUnit/BUnitConversion, BITable/TableCursor/Tables, BEnumRange/BDynamicEnum, BOrdList) per the 4.15.6.20 … | `types/logic-authoring.md` |
+| **B1311** | Tags, relations, tag dictionaries, NEQL, search and hierarchies from code per the 4.15.6.20 docs and source, mapped against the build-n4-module kit — the kit's "ship a tag dictionary" … | `types/logic-authoring.md`, `types/logic.md` |
+| **B1312** | Module permissions, the Security Manager, user permissions and code signing per the 4.15.6.20 Developer Guide and source, mapped against the build-n4-module kit — SIX permission groups … | `build-verify.md`, `types/distribution.md` +2 |
+| **B1313** | Third-party libraries, API stability and module authoring files (uberjar, apiInfo, `moduleManifest`, `module-include.xml`, parts and profiles, the `-doc` part, registry) per the 4.15.6.20 … | `types/module-wiring.md`, `types/structure.md` +1 |
+| **B1314** | Control points, priority arrays and status handling (BStatus bits, `propagateFlags`, kitControl math/switch/loop status rules, alarm-extension bits) per the 4.15.6.20 Developer Guide and … | `types/logic.md` |
+| **B1315** | Horizons: 4.15.6.20 Developer Guide capabilities the build-n4-module kit never teaches (module web apps via `WEB-INF/web.xml`, the auto-logoff activity monitor, js-ux helpers, history … | `types/horizons.md`, `types/wb-widgets.md` |
+| **B1316** | Engine contract child gaps closed from source: the engine action queue is FIRST-wins while `CoalesceQueue` is LAST-wins (B1304-G1), a null Context or null user makes … | `types/actions.md`, `types/logic.md` +1 |
+| **B1317** | UI and format child gaps closed from source: `Command`/`ToggleCommand` read exactly `<keyBase>.label/.icon/.accelerator/.description` (B1305-G2), nav files load only through explicit ORD … | `types/logic.md`, `types/structure.md` +1 |
+| **B1318** | Shipped-artifact child gaps closed: in the 26 readable 4.15.6.20 `dist.xml` manifests `noStation` is the live alias of the devguide's `noRunningApp` and `true` means the station MUST be … | `types/dashboard.md`, `types/distribution.md` |
+| **B1319** | kitControl status behaviour of Select/MuxSwitch/Switch and the new 4.15 Hysteresis/Limiter (B1314-G2): with the default `propagateFlags` (`nullStatus` for switches, `ok` for logic/math) a … | `types/logic.md` |
+| **B1320** | Shipped libraries I (SL1a): the third-party jars in the 4.15.6.20 `bin/ext` (httpclient5 5.3.1, okhttp 4.12.0 + okio 3.9.1 + kotlin-stdlib 2.0.20, jose4j 0.9.6, commons-lang3 3.19.0 … | `types/cloud-connector.md`, `types/third-party-libraries.md` |
+| **B1321** | Shipped libraries II (SL1b): the Tridium modules that wrap third-party libraries in 4.15.6.20 — jsonSmart-rt (json-smart 2.6.0), jsonToolkit-rt/wb (jayway jsonpath, Gson 2.13.2) … | `types/third-party-libraries.md` |
+| **B1322** | UG JsonToolkit (4.15.6.20 guide, byte-identical to 4.13.2.18) as a module author reads it: five Java extension points (`BJsonSchemaProperty<T>.getJsonValue`, `BQueryResultWriter` registered … | `types/json-toolkit.md` |
+| **B1323** | UG MQTT (`abstractMqttDriver`, 4.15.6.20 guide): the stock driver is licensed (`tridium:mqtt`) and caps devices at 25 on a JACE and 50 (max 500) on a Supervisor, publishes ONE scalar per … | `types/cloud-connector.md` |
+| **B1324** | UG Alarms + Histories (4.15.6.20) for cold-room/compressor modules: `timeDelay` never debounces FAULT, `alarmInhibit` is a linkable `BStatusBoolean` (defrost/compressor-off can suppress … | `types/logic.md` |
+| **B1325** | UG Templates + Provisioning (4.15.6.20) for module authors: a template module is a `.jar` of read-only `.ntpl` files; the manifest `<dependencies>` must list every module the logic and Px … | `types/distribution.md`, `types/logic-authoring.md` +2 |
+| **B1327** | UG BACnet + Modbus (4.15.6.20) for modules that read/write field points or expose values: `staleTime=0` makes points stale immediately when unsubscribed (the kit says "0 (off)") … | `types/driver-authoring.md`, `types/issues-and-gotchas.md` +1 |
+| **B1328** | UG web UI and theming (Graphics, JavaWebClients, the web-profile/theme pages of User) for a dashboard-style module: a theme module is found by the registry def `themeName` whose VALUE is … | `types/security.md`, `types/theme.md` |
+| **B1331** | UG KitControl (4.15.6.20) for cold-room/compressor control — reuse vs hand-roll: LeadLagRuntime/Cycles rotate ONE output every `maxRuntime` (default 6 min) with TRANSIENT outputs and no … | `types/logic.md` |
+| **B1332** | UG ModuleSign + SigningService (4.15.6.20) reconciled with [Block 1312]: the Signing Service signs X.509 TLS/MQTT certificates by CSR and NEVER module jars; verification modes Low (warn) / … | `build-verify.md` |
+| **B1333** | UG HttpClient (4.15.6.20): the shipped HTTP client driver does REST without Java (standalone `HttpClient` or `HttpClientNetwork` string points), is licensed (`http` feature + SMA, 1 … | `types/cloud-connector.md` |
+| **B1334** | UG Touch (4.15.6.20) for our wall HMI: the guide documents the Android Niagara Touch kiosk display, not generic touch rules — its panel-user recipe is one user per display with Auto Logoff … | `types/dashboard.md` |
+| **B1335** | UG Scheduling (4.15.6.20) as the replacement for hand-made Clock timers in cold-room modules: a `TriggerSchedule` fires `trigger` at fixed wall-clock times (one entry per defrost), keeps … | `types/logic.md` |
+| **B1336** | UG EngNotes (4.15.6.20: 151 files, mostly oBIX R2 migration, BACnet MS/TP diagnostics, Expr components and display-name operator notes) mined for module-author rules only: the vendor … | `types/cloud-connector.md`, `types/driver-authoring.md` |
+| **B1337** | UG Drivers (the generic driver framework behind NDriver, 4.15.6.20): `BPingMonitor` never pings a disabled or faulted device (a `configFail`ed device cannot self-clear by ping), gates … | `types/driver-authoring.md` |
+| **B1339** | UG WebCharts + SeriesTransform (4.15.6.20) for the dashboard module: the stock webChart `ChartWidget` embeds in Px/Hx/Dashboard panes and its rt servlet (`/query/*`, `/file/*` with CSRF on POST) is … | `types/history-transforms.md` |
+| **B1340** | UG Rdbms (4.15.6.20): the RDBMS driver supports exactly MySQL, Oracle, SQL Server and HSQLDB — no Postgres/Supabase — runs on a Supervisor only (controllers get HSQLDB), needs a … | `types/cloud-connector.md` |
+| **B1341** | UG Platform (4.15.6.20) for module authors: `se` jars "can run on Windows-based hosts only", so a JACE never loads `-se` (the kit lists JACE as an `-se` host); a JACE's `-ux`/`-wb` jars … | `types/platform.md`, `types/structure.md` |
+| **B1343** | UG Obix (4.15.6.20) for the client viewer/write-server: the guide is mostly about the oBIX CLIENT driver; its server content is the licence (`obixDriver` with `export=true` + the `web` … | `types/security.md` |
+| **B1344** | Web session lifetime from source (closes B1334-G1, static half of B1315-G1): Niagara runs its own idle timer on `NiagaraSuperSession.lastActivity` (Jetty's max-inactive is never set) … | `types/dashboard.md` |
+| **B1345** | dist.xml `noRunningApp` is ENFORCED, not reported (closes B1318-G1): `BDistribution.getProcessingFlags` turns it into bit `1L`, and both the headless `PlatformInstallManager` and … | `types/distribution.md` |
+| **B1346** | httpClient-rt has no OAuth2 auth type and an unmounted `HttpClientBuilder` client is NOT silently allowed (closes B1333-G1): the 125-class jar is identical in 4.14 and 4.15 and offers … | `types/cloud-connector.md` |
+| **B1347** | oBIX server and HIDDEN slots (closes B1343-G1): `ObixEncoder.getKids` lists a component's children only through `canSee`, which drops topics and `Flags.HIDDEN` slots, then keeps a child … | `types/security.md` |
+| **B1348** | Driver health from source (closes B1337-G1 and B1327-G1): generic driver-rt never turns a failed poll into a ping fail — `BProxyExt.readFail` only marks the point and `Tuning.readFail()` is … | `types/driver-authoring.md`, `types/logic-authoring.md` |
+| **B1349** | Security headers and themes on a module `BWebServlet` (closes B1328-G1): Jetty gives every `BWebServlet` (and every `web.xml` war module) its own context and `configureNiagaraWebApp` adds … | `types/frontend-standard.md`, `types/security.md` +1 |
+| **B1350** | jsonToolkit extension contract, exact (closes B1322-G1): a custom property extends `BJsonSchemaProperty<T>` and implements ONE method, `T getJsonValue()` (from `BIJsonProperty`; `process` … | `types/json-toolkit.md` |
+| **B1351** | kitControl lead/lag and interstart, from 4.15 source (closes B1331-G1): `BInterstartDelayControl` declares only `delay`, `master`, `startPending` — its min-on/min-off are … | `types/logic.md` |
+| **B1353** | Two verification closes (B1317-G1, B1336-G1): none of the 728 module jars of the 4.15.6.20 install contains a `*.nav` resource and none of `baja`/`workbench-wb`/`web-rt`/`fox-rt` contains … | `types/logic.md` |
+| **B1365** | Driver-framework docs vs code: the guide's `Stale Time = 0` ("stale immediately when unsubscribed") and `Num Retries Until Ping Fail` ("a ping does not fail until…") are not what driver-rt … | `types/driver-authoring.md` |
+| **B1384** | Z-Wave doc-vs-code: the missed-wake-up "device down" rule never fires (doPingTimeout only logs), the documented `Configure As Sis` slot does not exist, the FLiRS policy is named … | `types/driver-authoring.md` |
+
 ---
 
 Maintenance: this index is a curated pointer, not a copy — when a block's content is folded into a kit guide

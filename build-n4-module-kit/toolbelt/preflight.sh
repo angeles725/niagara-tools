@@ -30,6 +30,10 @@
 #   remote-backup  WARN only when the gradle root's checkout has no VCS remote, or its branch no upstream
 #               (commits on this disk only; pushing or backing up is the operator's call); silent otherwise
 #               [ev: retro delivery-guards-and-ui-contrast Δ3]
+#   delivery    PASS only when the gradle root lies in a kit checkout (a work tree under version control holding changelog.d/ and
+#               build-n4-module-kit/ledger.d/): names what pre-push asks of a kit change (changelog.d fragment, a
+#               ledger.d fragment committed alone, a pending retro, or the trailers); information, never a failure
+#               [ev: retro delivery-guards-and-ui-contrast Δ2]
 #   jar-lock    ONE filtered `lsof -Fn` pass over <niagara_home>/modules/*.jar
 #               -> PASS|WARN(locked)|SKIP(lsof absent or returning an empty listing, or niagara_home is
 #               9p/drvfs) — never a false PASS
