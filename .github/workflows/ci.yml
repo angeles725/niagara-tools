@@ -306,12 +306,19 @@ jobs:
 
       - name: scaffold-diff (dashboard — scaffold MinimalDash → diff -r vs fixture — issue #115)
         run: |
-          # TC-DASH1 round-trip: scaffold MinimalDash with --type dashboard into RUNNER_TEMP,
-          # then diff -r the output against the bundled MinimalDash fixture (excluding build/ and .gradle/).
+          # TC-DASH1 round-trip: scaffold MinimalDash with --type dashboard into RUNNER_TEMP, then diff -r the output
+          # against the bundled MinimalDash fixture (excluding build/ and .gradle/). The login overlay
+          # (templates/dashboard-login, #847) adds -rt files and inserts lines into five plumbing files: those are
+          # left out here and checked by tests/scaffold-module.bats TC-DASH1 and tests/scaffold-module-login.bats.
           OUT="$RUNNER_TEMP/scaffold-ci-dash"
+          F=build-n4-module-kit/fixtures/MinimalDash
+          R=MinimalDash-rt
           mkdir -p "$OUT"
           bash build-n4-module-kit/toolbelt/scaffold-module.sh MinimalDash "$OUT" --type dashboard --vendor Angeles
-          diff -r --exclude=build --exclude=.gradle "$OUT/MinimalDash" build-n4-module-kit/fixtures/MinimalDash
+          diff -r --exclude=build --exclude=.gradle --exclude=$R --exclude=MODULE-MAP.md "$OUT/MinimalDash" "$F"
+          diff -r --exclude=build --exclude=.gradle --exclude=login --exclude=rc --exclude=BMinimalDashService.java \
+            --exclude=module-include.xml --exclude=module.palette --exclude=module.lexicon --exclude=$R.gradle.kts \
+            "$OUT/MinimalDash/MinimalDash/$R" "$F/MinimalDash/$R"
 
       - name: schema-risk fixtures (B799 pairs — non-strict, asserts mapped exit + verdict token — Campaign 7 PR5)
         run: |
