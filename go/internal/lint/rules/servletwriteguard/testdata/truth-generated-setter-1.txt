@@ -1,0 +1,35 @@
+truth: Niagara's generated property setters are one-argument slot writes (comp.setDouble(42.0), n.setBoolean(true)),
+so a one-argument call is no write only for the bare name set (AtomicReference.set(v), ThreadLocal.set(v)): the
+count exemption does not reach setDouble & co. A numeric first argument of set(0, v) (List.set) is no write either, and
+comp.set("slot", v) with a slot name and a value is one. A.java holds the writes (a row per method: the call after x.set(v) is the write), B.java only calls that
+are no component write (no rows, no no-csrf).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  no-target-permission  @DIR@/m/A.java:3  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:7  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/A.java:11  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-csrf  @DIR@/m/A.java:1  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+-- stderr --
+-- m/A.java --
+public class A extends BWebServlet {
+  void a(WebOp op) {
+    comp.setDouble(42.0);
+    x.set(v);
+  }
+  void b(WebOp op) {
+    n.setBoolean(true);
+  }
+  void c(WebOp op) {
+    x.set(v);
+    comp.set("slot", v);
+  }
+}
+-- m/B.java --
+public class B extends BWebServlet {
+  void doGet(WebOp op) {
+    x.set(v);
+    list.set(0, v);
+  }
+}
