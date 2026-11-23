@@ -53,7 +53,10 @@ kit_refs() {
 @test "L3: the launcher's default kit path exists and holds METHODOLOGY.md, BUILD-LOOP.md, types/, toolbelt/" {
   skill="$HOME/.claude/skills/build-n4-module/SKILL.md"
   [ -f "$skill" ] || skip "launcher not installed on this machine"
-  def=$(grep -oE '/home/[A-Za-z0-9_./-]*build-n4-module-kit' "$skill" | head -1)
+  # The launcher names its default kit either as an absolute /home/... path or as $HOME/... (the installed form).
+  # shellcheck disable=SC2016  # the pattern matches a literal $HOME in the launcher text
+  def=$(grep -oE '(\$HOME|/home/[A-Za-z0-9_.-]+)/[A-Za-z0-9_./-]*build-n4-module-kit' "$skill" | head -1)
+  def=${def/#\$HOME/$HOME}
   [ -n "$def" ]
   [ -f "$def/METHODOLOGY.md" ] && [ -f "$def/BUILD-LOOP.md" ] && [ -d "$def/types" ] && [ -d "$def/toolbelt" ]
 }
