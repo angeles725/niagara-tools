@@ -1,4 +1,4 @@
-# Corpus index — the curated map of the niagara-research corpus for module builders (B5–B1420)
+# Corpus index — the curated map of the niagara-research corpus for module builders (B5–B1453)
 
 The niagara-research corpus carries a COMPLETE N4 module-authoring body — the RT campaign (B729–B746),
 the Wire-Sheet + organization work (B747–B750), the WB/UX authoring taxonomy (B751–B753), and the
@@ -416,6 +416,7 @@ proves. `tests/corpus-index.bats` (CI-ALL) fails when a guide cites a block this
 | **B1353** | Two verification closes (B1317-G1, B1336-G1): none of the 728 module jars of the 4.15.6.20 install contains a `*.nav` resource and none of `baja`/`workbench-wb`/`web-rt`/`fox-rt` contains … | `types/logic.md` |
 | **B1365** | Driver-framework docs vs code: the guide's `Stale Time = 0` ("stale immediately when unsubscribed") and `Num Retries Until Ping Fail` ("a ping does not fail until…") are not what driver-rt … | `types/driver-authoring.md` |
 | **B1384** | Z-Wave doc-vs-code: the missed-wake-up "device down" rule never fires (doPingTimeout only logs), the documented `Configure As Sis` slot does not exist, the FLiRS policy is named … | `types/driver-authoring.md` |
+| **B1453** | The `bin\` launchers and the `nre <class>` tool set from code: which class each exe boots, the full `hdbt` and `n4mig` usage, and the headless tools with no exe of their own (DependencyChecker, PaletteGenerator, RecompileTool) | BUILD-LOOP |
 
 ---
 
