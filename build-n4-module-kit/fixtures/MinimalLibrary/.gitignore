@@ -1,0 +1,6 @@
+# Build outputs and deploy state: never commit them. Commit the module after its first build, which
+# rewrites the scaffolded sources (slotomatic adds the generated region). [ev: retro build-kit-bench-session Δ8]
+.gradle/
+build/
+_backups/
+.last-deploy-sha
