@@ -31,7 +31,19 @@ const (
 	msgExtRoot     = "ext_ord must name a history extension below the root, got %s"
 	msgCountFailed = "the record count (select count(*)) failed: %s"
 	msgCountShape  = "the record count (select count(*)) answered no whole number"
+	// msgFilterEmpty is the warning of a filtered read of no rows whose count did not answer (retro
+	// R8 ΔN2: a where that names no field answers zero rows with no error).
+	msgFilterEmpty = "no rows came back and the record count (select count(*)) did not answer: " +
+		"the filter may name no field, so this empty list does not show that no record matches"
 )
+
+// warnEmptyFilter sets the reply's "warning" when a filtered read (where not empty) returned no
+// rows and its count is unknown; any other read has no such warning.
+func warnEmptyFilter(out *pyjson.Object, where string, rows int, total any) {
+	if where != "" && rows == 0 && total == nil {
+		out.Set("warning", msgFilterEmpty)
+	}
+}
 
 // fetchHistory is one GET of a history ORD: the columns, rows (at most maxRows), whether more
 // records exist than were returned, and the latency in whole milliseconds.

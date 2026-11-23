@@ -75,6 +75,7 @@ func (t *Tools) ReadAudit(args *pyjson.Object) (*pyjson.Object, error) {
 	if note != "" {
 		out.Set("total_records_note", note)
 	}
+	warnEmptyFilter(out, where, len(rows), total)
 	out.Set("elapsed_ms", ms+countMs)
 	return out, nil
 }

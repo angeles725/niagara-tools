@@ -342,7 +342,8 @@ escaped, so a `$xx` escape in it is a name character and is never decoded) or `e
 `select slotPath, historyConfig.id from history:HistoryExt` at the component holding it). It
 sends `GET /ord/<url-encoded history:<id>[?<range>]|bql:select timestamp, value, status order by
 timestamp desc|view:file:ITableToCsv>`, then the same ORD with `select count(*)` for
-`total_records` (`null` with `total_records_note` when that count fails). The range is
+`total_records` (`null` with `total_records_note` when that count fails; a filtered read with no rows
+whose count failed also carries `warning`: the filter may name no field). The range is
 `period=<id>` (`today`, `last24Hours`, `yesterday`, `weekToDate`, `lastWeek`, `last7Days`,
 `monthToDate`, `lastMonth`, `yearToDate`, `lastYear`: the ids `BDynamicTimeRange` accepts) or
 `start=<t>;end=<t>` (BAbsTime text such as `2026-11-15T00:00:00.000-06:00`, or a span back from now,
@@ -1094,7 +1095,10 @@ Every write call goes through these layers:
    registry describes it) whose module the licence does not exclude when the counted
    devices already reach the `globalCapacity` `device.limit` (a device over the limit
    is added but sits in fault at start; when the licence or the count cannot be read
-   the create is not refused and the plan says so in a note); `n4_create_link` a source or target slot that
+   the create is not refused and the plan says so in a note); `n4_copy_component` and
+   `n4_replicate_points` the same for the copies' devices and proxy points (`driver:ProxyExt`
+   subtypes) against `device.limit` and `point.limit`: a refusal names the plan, the count
+   and the limit, and an unreadable licence leaves the plan as it was; `n4_create_link` a source or target slot that
    neither the component nor its type contract has (checked only when the station
    describes the type), and a link identical to one the target already has (same
    source handle, source slot and target slot). Whether the parent accepts a child
@@ -1291,7 +1295,11 @@ Tool rules:
   or repeated target, a source renamed twice and an unchanged name; the inverse renames
   back in reverse order and the read-back checks every new name is present and every old
   one gone. Links and history extensions stay with the component; a history id built from
-  `%parent.name%` or `%name%` takes the new name when it is next resolved.
+  `%parent.name%` or `%name%` takes the new name when it is next resolved. The plan lists
+  those extensions below a renamed component with their old and new history id (one BQL read;
+  a note says when it failed). `freeze_history_names: true` also sets each one's `historyName`
+  to its current text in the same batch, before the renames, so trends do not split; the
+  read-back checks the frozen text and the inverse restores the patterns.
 - `n4_discover_devices(network_ord, networks?, low_instance?, high_instance?, wait_seconds?)`
   runs the BACnet device discovery Workbench's Device Manager runs, through the network's
   hidden `submitDeviceManagerJob` action (admin invoke). Without `networks` it is the

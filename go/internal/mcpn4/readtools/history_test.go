@@ -139,3 +139,46 @@ func TestReadHistorySaysWhenTheCountFailed(t *testing.T) {
 		t.Errorf("reply %s", pyjson.Repr(out))
 	}
 }
+
+// Retro R8 ΔN2: a filtered read of no rows whose count also failed warns that the filter may
+// name no field; an unfiltered read, or one that returned rows or whose count answered, does not.
+const filterWarning = "no rows came back and the record count (select count(*)) did not answer: " +
+	"the filter may name no field, so this empty list does not show that no record matches"
+
+func TestReadHistoryWarnsWhenAFilteredReadIsEmptyAndItsCountFailed(t *testing.T) {
+	for name, route := range map[string]readtoolstest.OrdRoute{
+		"count error":  {Needle: "select count(*)", Code: 500},
+		"count no int": {Needle: "select count(*)", Body: "count(toString)\nnull\n"},
+	} {
+		s := historyServer(t, 0)
+		s.Station.OrdRoutes = append([]readtoolstest.OrdRoute{route}, s.Station.OrdRoutes...)
+		out := readOK(t, s, "history_id", "/FakeStation/NW", "status", "fault")
+		if got := field(out, "warning"); got != filterWarning || field(out, "row_count") != 0 {
+			t.Errorf("%s: warning %v, reply %s", name, got, pyjson.Repr(out))
+		}
+	}
+}
+
+func TestReadHistoryDoesNotWarnWhenTheEmptyReadIsExplained(t *testing.T) {
+	failed := readtoolstest.OrdRoute{Needle: "select count(*)", Code: 500}
+	cases := map[string]struct {
+		n      int
+		route  *readtoolstest.OrdRoute
+		kv     []any
+		reason string
+	}{
+		"unfiltered": {0, &failed, []any{}, "no filter"},
+		"count ok":   {0, nil, []any{"status", "fault"}, "the count answered 0"},
+		"has rows":   {2, &failed, []any{"status", "fault"}, "rows came back"},
+	}
+	for name, c := range cases {
+		s := historyServer(t, c.n)
+		if c.route != nil {
+			s.Station.OrdRoutes = append([]readtoolstest.OrdRoute{*c.route}, s.Station.OrdRoutes...)
+		}
+		out := readOK(t, s, append([]any{"history_id", "/FakeStation/NW"}, c.kv...)...)
+		if _, has := out.Get("warning"); has {
+			t.Errorf("%s (%s): warning %v", name, c.reason, field(out, "warning"))
+		}
+	}
+}

@@ -93,6 +93,7 @@ func (t *Tools) ReadHistory(args *pyjson.Object) (*pyjson.Object, error) {
 	if note != "" {
 		out.Set("total_records_note", note)
 	}
+	warnEmptyFilter(out, where, len(rows), total)
 	if wantKind {
 		out.Set("history_type", kind)
 		if kindNote != "" {
