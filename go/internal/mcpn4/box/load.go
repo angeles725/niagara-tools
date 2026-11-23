@@ -138,11 +138,7 @@ func (c *Client) loadOnce(ord string, depth, attempts int, delay float64, handle
 	}
 	trusted := c.loadsOutstanding == 0
 	c.loadsOutstanding++
-	_, err = c.SSC("loadSlots", obj("o", ord, "d", depth))
-	if c.retryRead(err) { // loadSlots only asks for data: asked again once after a timeout (read_retry.go)
-		_, err = c.SSC("loadSlots", obj("o", ord, "d", depth))
-	}
-	if err != nil {
+	if err = c.loadSlotsRequest(ord, depth); err != nil {
 		c.loadsOutstanding = max(0, c.loadsOutstanding-1) // rejected or never sent
 		return nil, err
 	}

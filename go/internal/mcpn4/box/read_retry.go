@@ -37,3 +37,13 @@ func (c *Client) retryRead(err error) bool {
 	c.Sleep(ReadRetryDelay)
 	return true
 }
+
+// loadSlotsRequest sends loadSlots for ord; loadSlots only asks for data, so it is asked again once
+// after a timeout (retryRead).
+func (c *Client) loadSlotsRequest(ord string, depth int) error {
+	_, err := c.SSC("loadSlots", obj("o", ord, "d", depth))
+	if c.retryRead(err) {
+		_, err = c.SSC("loadSlots", obj("o", ord, "d", depth))
+	}
+	return err
+}
