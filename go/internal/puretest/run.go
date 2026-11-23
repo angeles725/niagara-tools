@@ -25,18 +25,21 @@ func Main(args []string, s cli.Stdio) int {
 		return r.die(ExitEnv, msgNoJavac)
 	}
 	cache := s.Env("HOME") + "/" + gradleDir
-	junit, hamcrest := findJar(cache, junitJar), findJar(cache, hamcrestJar)
-	if junit == "" {
+	junits, hamcrests := findJar(cache, junitJar), findJar(cache, hamcrestJar)
+	if len(junits) == 0 {
 		return r.die(ExitEnv, msgNoJUnit)
 	}
-	if hamcrest == "" {
+	if len(hamcrests) == 0 {
 		return r.die(ExitEnv, msgNoHamcrest)
 	}
-	pkgPath, simple := splitClass(class)
-	root := sourceRoot(rt, pkgPath, simple)
+	junit, hamcrest := junits[0], hamcrests[0]
+	rel := sourceRel(class)
+	root := sourceRoot(rt, rel)
 	if root == "" {
-		return r.die(ExitEnv, msgNoSource, rt, pkgPath, simple)
+		return r.die(ExitEnv, msgNoSource, rt, rel)
 	}
+	r.noticeCopies(junitJar, junits)
+	r.noticeCopies(hamcrestJar, hamcrests)
 	// The classes go to a temporary directory: the module tree may be another session's working tree.
 	tmp, err := os.MkdirTemp("", tempPattern)
 	if err != nil {
@@ -44,7 +47,7 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	defer os.RemoveAll(tmp)
 	defer removeOnSignal(tmp)()
-	if r.compile(tmp, junit, sourcePath(rt, root, s.Env(kitJavaEnv)), root+"/"+pkgPath+"/"+simple+".java") != 0 {
+	if r.compile(tmp, junit, sourcePath(rt, root, s.Env(kitJavaEnv)), root+"/"+rel+".java") != 0 {
 		// Exit 1 is kept for a JUnit failure: a test that does not compile proves nothing.
 		return r.die(ExitEnv, msgNoCompile, class)
 	}
@@ -68,6 +71,14 @@ func (r *run) compile(out, junit, sourcepath, source string) int {
 	args := append([]string{}, compileFlags...)
 	args = append(args, "-cp", junit, "-sourcepath", sourcepath, "-d", out, source)
 	return r.exec("", javac, args...)
+}
+
+// noticeCopies says which copy of a jar is used when the cache holds more than one (the first in name
+// order, so the choice is the same on every host).
+func (r *run) noticeCopies(name string, found []string) {
+	if len(found) > 1 {
+		fmt.Fprintf(r.s.Err, prefix+msgSeveralJars+"\n", name, len(found), found[0])
+	}
 }
 
 // die prints a message on stderr and returns code.

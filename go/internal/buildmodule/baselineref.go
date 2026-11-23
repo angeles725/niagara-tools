@@ -57,7 +57,7 @@ func (b *build) extractBaseline(a, ref string) int {
 	}
 	tree := tmp + "/baseline"
 	if _, code = b.run("git", "-C", a, "archive", "-o", tmp+"/b.tar", ref, "."); code == 0 {
-		if _, code = b.run("mkdir", tree); code == 0 {
+		if code = b.makeDir(tree, false); code == 0 {
 			_, code = b.run("tar", "-x", "-f", tmp+"/b.tar", "-C", tree)
 		}
 	}

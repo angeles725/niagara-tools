@@ -7,38 +7,36 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-// findJar is `find <root> -name <name>`, first hit: the path of an entry called name under root, "" when
-// there is none. A root that is a symlink is not followed, as find does not. Where find took the first
-// hit in directory order, this takes the first in name order.
-func findJar(root, name string) string {
-	found := ""
-	findwalk.Walk(root, false, findwalk.NoLimit, func(e findwalk.Entry) bool {
-		if found == "" && e.Name == name {
-			found = e.Path
+// findJar is `find -H <root> -name <name>`: every path of an entry called name under root, in name order
+// (find took directory order), none when there is no such entry. A root that is a symlink is followed, as
+// find -H does, so a relocated or shared Gradle cache is read like a directory.
+func findJar(root, name string) []string {
+	var found []string
+	findwalk.Walk(root, true, findwalk.NoLimit, func(e findwalk.Entry) bool {
+		if e.Name == name {
+			found = append(found, e.Path)
 		}
-		return found == ""
+		return true
 	}, nil)
 	return found
 }
 
-// splitClass is the source location of <pkg.TestClass> below a source root: the packages as a path and
-// the class name. A class without a package is looked up in a directory of its own name, as the bash
-// tool's ${fqcn%.*} left it.
-func splitClass(fqcn string) (pkgPath, simple string) {
-	pkg := fqcn
-	if i := strings.LastIndex(fqcn, "."); i >= 0 {
-		pkg, simple = fqcn[:i], fqcn[i+1:]
-	} else {
-		simple = fqcn
+// sourceRel is the source location of <pkg.TestClass> below a source root: the file path without the
+// extension (the packages as a path, then the class name). A class in the default package sits directly
+// under the root.
+func sourceRel(fqcn string) string {
+	i := strings.LastIndex(fqcn, ".")
+	if i < 0 {
+		return fqcn
 	}
-	return strings.ReplaceAll(pkg, ".", "/"), simple
+	return strings.ReplaceAll(fqcn[:i], ".", "/") + "/" + fqcn[i+1:]
 }
 
-// sourceRoot is the first test root under the module dir rt that holds the test's source file, "" when
-// none does.
-func sourceRoot(rt, pkgPath, simple string) string {
+// sourceRoot is the first test root under the module dir rt that holds the test's source file rel + ".java",
+// "" when none does.
+func sourceRoot(rt, rel string) string {
 	for _, root := range testRoots {
-		if lint.IsFile(rt + "/" + root + "/" + pkgPath + "/" + simple + ".java") {
+		if lint.IsFile(rt + "/" + root + "/" + rel + ".java") {
 			return rt + "/" + root
 		}
 	}

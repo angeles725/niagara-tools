@@ -53,7 +53,7 @@ func (b *build) keepReplaced() {
 			continue
 		}
 		script := reportmodule.ShellWord(b.here + "/" + scriptName)
-		newVersion, newSum := shown(vendorversion.ModuleVersion(now)), fileSum(now)
+		newVersion, newSum := shown(vendorversion.ModuleVersionFromZip(now)), fileSum(now)
 		first, why := b.firstReplaced(dir, name, oldSum)
 		if why != "" {
 			b.warn(msgFirstUnrecorded, b.jarName(p), dir+"/"+name+firstSuffix, why)
@@ -63,7 +63,7 @@ func (b *build) keepReplaced() {
 		}
 		firstKept := dir + "/" + name + "." + first
 		b.say(msgReplaced, b.jarName(p), b.home, shown(snap.version), oldSum, newVersion, newSum,
-			shown(vendorversion.ModuleVersion(firstKept)), first, script, reportmodule.ShellWord(firstKept))
+			shown(vendorversion.ModuleVersionFromZip(firstKept)), first, script, reportmodule.ShellWord(firstKept))
 	}
 }
 
@@ -139,7 +139,7 @@ func (b *build) restoreMirror(kept string) int {
 		return ExitFault
 	}
 	_ = os.Remove(dir + "/" + m[1] + firstSuffix) // the cycle ends: the next replaced jar starts a new one
-	b.say(msgMirrorRestored, home, m[1], kept, shown(vendorversion.ModuleVersion(dst)), fileSum(dst))
+	b.say(msgMirrorRestored, home, m[1], kept, shown(vendorversion.ModuleVersionFromZip(dst)), fileSum(dst))
 	return ExitOK
 }
 
