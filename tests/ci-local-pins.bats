@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# ci-local-pins.bats — scripts/ci-local.sh, the tool versions ci.yml pins and the options around them (CL20-CL24).
+# ci-local-pins.bats — scripts/ci-local.sh, the tool versions ci.yml pins and the options around them (CL20-CL24, CL40-CL41).
 # Split from tests/ci-local.bats (same setup), which holds the step-replay cases. [ev: retro 2026-10-22-ci-local-replay]
 
 setup() {
@@ -65,6 +65,29 @@ fake_bats_tarball() {
   [ "$(grep -xF -A1 -- "--connect-timeout" "$TMPDIR_T/curl.args" | tail -n 1)" = 10 ]
   [ "$(grep -xF -A1 -- "--max-time" "$TMPDIR_T/curl.args" | tail -n 1)" = 120 ]
   [ "$(grep -xF -A1 -- "--retry-max-time" "$TMPDIR_T/curl.args" | tail -n 1)" = 60 ]
+}
+
+@test "CL40: an install step with no BATS_VER= or BATS_SHA256= line exits 3 with the parser's message, before the step runs" {
+  # Mutation: CL40 -- reading a missing pin as "no install step" runs the step on whatever bats is on PATH.
+  printf 'name: CI\non: pull_request\njobs:\n  bats:\n    runs-on: ubuntu-latest\n    steps:\n' > "$TMPDIR_T/nopin.yml"
+  printf '      - name: Install bats-core\n        run: |\n          BATS_VER=1.10.0\n          sudo true\n' >> "$TMPDIR_T/nopin.yml"
+  printf '      - name: bats run\n        run: bats tests/x.bats\n' >> "$TMPDIR_T/nopin.yml"
+  run "$CL" --ci-file "$TMPDIR_T/nopin.yml" --cache-dir "$TMPDIR_T/cache" --only 'bats run'
+  [ "$status" -eq 3 ]
+  [[ "$output" == *'ci-steps bats-pin: step "Install bats-core" has no BATS_SHA256=<64 hex> line'* ]]
+  [[ "$output" != *"== bats run"* ]]
+}
+
+@test "CL41: an install step that sets BATS_VER= twice exits 3 instead of taking the first" {
+  # Mutation: CL41 -- taking the first of two pins runs a bats version the second assignment (the one a shell uses) overrides.
+  printf 'name: CI\non: pull_request\njobs:\n  bats:\n    runs-on: ubuntu-latest\n    steps:\n' > "$TMPDIR_T/dup.yml"
+  printf '      - name: Install bats-core\n        run: |\n          BATS_VER=1.10.0\n          BATS_VER=1.11.0\n          BATS_SHA256=%s\n' \
+    "$(printf '0%.0s' $(seq 64))" >> "$TMPDIR_T/dup.yml"
+  printf '      - name: bats run\n        run: bats tests/x.bats\n' >> "$TMPDIR_T/dup.yml"
+  run "$CL" --ci-file "$TMPDIR_T/dup.yml" --cache-dir "$TMPDIR_T/cache" --only 'bats run'
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"sets BATS_VER= more than once"* ]]
+  [[ "$output" != *"== bats run"* ]]
 }
 
 @test "CL22: --range without --changed, and --changed with --list or --only, are usage errors (exit 2)" {

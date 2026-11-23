@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck shell=bash
 # lib/ci-local-kitlinks.sh — the kit-links step of `scripts/ci-local.sh --changed [--range <from>..<to>]`. Sourced
-# only, by ci-local.sh, after lib/ci-local-tools.sh, with ROOT, WORK, RANGE, NAMES and BODIES set. It runs only when
+# only, by ci-local.sh, after lib/ci-local-tools.sh, with ROOT, WORK, RANGE, NAMES, BODIES, CI_FILE and CI_STEPS set. It runs only when
 # kit_docs_changed finds a changed (or deleted) kit *.md, ledger.d or changelog.d file; any other change is unchanged.
 #
 # #706 failed CI on tests/kit-links.bats L1 ("dangling reference: prompt.md"): a ledger.d fragment named a bare
@@ -80,13 +80,13 @@ kit_state_write() { bash "$1/toolbelt/kit-state.sh" --write "$1" >/dev/null; }
 # snapshot could resolve a relative PATH entry to another binary than the one checked here. On a mismatch KL_BATS_MSG
 # names the pin and what was found. (retro 2026-11-15 coordination-stretch T36)
 kit_links_bats() {
-  local body ver got
+  local ver got
   KL_BATS_MSG=""
-  body="$(bats_install_body)"
-  provision_bats "$body" || return 1
+  bats_pin  # the pin is read here, not taken from provision_bats, so a test stub of the provisioner is still version-checked
+  provision_bats || return 1
   KL_BATS="$(command -v bats)" || { KL_BATS_MSG=" (no bats on PATH)"; return 1; }
   case "$KL_BATS" in /*) ;; *) KL_BATS="$PWD/$KL_BATS" ;; esac
-  ver="$(sed -nE 's/^[[:space:]]*BATS_VER=([0-9.]+)[[:space:]]*$/\1/p' <<< "$body" | head -n 1)"
+  ver="$BATS_PIN_VER"
   [ -n "$ver" ] || return 0
   got="$("$KL_BATS" --version 2>/dev/null)"
   [ "$got" = "Bats $ver" ] && return 0

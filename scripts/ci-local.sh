@@ -163,7 +163,7 @@ for i in "${selected[@]}"; do
   if grep -q shellcheck <<< "${BODIES[$i]}"; then provision_shellcheck; break; fi
 done
 for i in "${selected[@]}"; do
-  if grep -qE '(^|[;&|[:space:]])bats[[:space:]]' <<< "${BODIES[$i]}"; then provision_bats "$(bats_install_body)"; break; fi
+  if grep -qE '(^|[;&|[:space:]])bats[[:space:]]' <<< "${BODIES[$i]}"; then provision_bats; break; fi
 done
 
 BATS_ALL='bats tests/*.bats' BATS_CI_J='bats -j 4 --no-parallelize-within-files '
