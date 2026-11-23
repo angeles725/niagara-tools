@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 )
 
 // maxOutput bounds what one member run may hand back (bash kept all of it), so a runaway member cannot exhaust
@@ -63,10 +64,26 @@ func trimOutput(b []byte) string {
 func (x runner) quiet(path string, args ...string) int { return x.exec("", io.Discard, path, args...) }
 
 func (x runner) exec(dir string, w io.Writer, path string, args ...string) int {
-	cmd := exec.Command(path, args...)
-	cmd.Dir, cmd.Stdout, cmd.Stderr, cmd.Env = dir, w, w, x.env
-	return exitCode(cmd.Run())
+	var err error
+	for try := 0; ; try++ {
+		cmd := exec.Command(path, args...)
+		cmd.Dir, cmd.Stdout, cmd.Stderr, cmd.Env = dir, w, w, x.env
+		if err = cmd.Run(); !textBusy(err) || try == busyTries {
+			return exitCode(err)
+		}
+		time.Sleep(busyWait)
+	}
 }
+
+// A process forked while the executable is still open for writing (a stub just written, a jar tool being
+// replaced) holds that write descriptor until its own exec, and exec(2) fails ETXTBSY meanwhile: the program never
+// ran, so it is retried, up to busyTries times busyWait apart (about one second), before it counts as 126.
+const (
+	busyTries = 50
+	busyWait  = 20 * time.Millisecond
+)
+
+func textBusy(err error) bool { return errors.Is(err, syscall.ETXTBSY) }
 
 // firstLine runs path in the cwd and returns the first line of its stdout, like `cmd 2>/dev/null | head -1`
 // in "$(...)": the pipe is closed after that line (the writer gets SIGPIPE, as when head exits) and the line
@@ -78,7 +95,17 @@ func (x runner) firstLine(path string, args ...string) string {
 	if err != nil {
 		return ""
 	}
-	if cmd.Start() != nil {
+	err = cmd.Start()
+	for try := 0; textBusy(err) && try < busyTries; try++ {
+		time.Sleep(busyWait)
+		cmd = exec.Command(path, args...)
+		cmd.Env = x.env
+		if out, err = cmd.StdoutPipe(); err != nil {
+			return ""
+		}
+		err = cmd.Start()
+	}
+	if err != nil {
 		return ""
 	}
 	line, _ := bufio.NewReaderSize(io.LimitReader(out, maxOutput), 4096).ReadString('\n')
