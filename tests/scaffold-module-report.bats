@@ -34,6 +34,10 @@ stand_in_jar() {
       other="$(printf '%s\n' "$output" | grep '  WARN  ' | grep -v 'lint-private-api-import  .*com\.tridium\.' || true)"
       [ -z "$other" ] || { echo "$t: $other"; false; }
       [[ "$output" == *"WARN  lint-private-api-import  LoginRequest.java"* ]]
+      # and only from the two login classes that need it, never from any other file
+      stray="$(printf '%s\n' "$output" | grep 'WARN  lint-private-api-import' \
+        | grep -v -E 'lint-private-api-import  (LoginRequest|BModuleALoginTemplate)\.java' || true)"
+      [ -z "$stray" ] || { echo "$t: $stray"; false; }
     else
       [[ "$output" == *" · 0 FAIL · 0 WARN · "*"->  CLEAN"* ]] || { echo "$t:"; echo "$output"; false; }
     fi

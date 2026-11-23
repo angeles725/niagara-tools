@@ -26,6 +26,13 @@ public final class LoginRedirect
     if (origin == null || !origin.startsWith(DASHBOARD_ROOT)) return DASHBOARD;
     String rest = origin.substring(DASHBOARD_ROOT.length());
     if (rest.isEmpty()) return DASHBOARD;
-    return rest.charAt(0) == '/' ? origin : DASHBOARD;
+    return SAFE_PAGE.matcher(rest).matches() && !rest.contains("..") && !rest.contains("//") ? origin : DASHBOARD;
   }
+
+  /**
+   * A page of the dashboard: a slash, then plain path characters and an optional plain query. Anything else (dot
+   * segments, a second slash, a backslash, a percent escape, a space or a control character) lands on the dashboard.
+   */
+  private static final java.util.regex.Pattern SAFE_PAGE =
+      java.util.regex.Pattern.compile("/[A-Za-z0-9._~/-]*(\\?[A-Za-z0-9._~=&-]*)?");
 }

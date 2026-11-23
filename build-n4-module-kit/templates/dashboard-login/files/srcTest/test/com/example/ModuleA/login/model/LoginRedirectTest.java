@@ -40,4 +40,15 @@ public class LoginRedirectTest
   {
     assertEquals('/', HOME.charAt(0));
   }
+
+  @Test
+  public void dotSegmentsSlashesAndControlChars_landOnTheDashboard()
+  {
+    for (String o : new String[] {"/modulea/../login", "/modulea//evil.invalid", "/modulea/\\evil.invalid",
+        "/modulea/%2e%2e/x", "/modulea/a\r\nSet-Cookie: x=1", "/modulea/a b"})
+    {
+      assertEquals(o, HOME, LoginRedirect.target(o));
+    }
+    assertEquals("/modulea/index.html?demo=1", LoginRedirect.target("/modulea/index.html?demo=1"));
+  }
 }
