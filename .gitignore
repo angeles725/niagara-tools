@@ -35,3 +35,6 @@ go/bin/
 build-n4-module-kit/BUILD-STATE.md
 build-n4-module-kit/retros/INDEX.md
 build-n4-module-kit/toolbelt/INDEX.md
+
+# fold audit external roots and aliases: local only, may name client retros
+build-n4-module-kit/fold-roots.conf

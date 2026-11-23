@@ -1564,6 +1564,9 @@ disabled. A Spyder is not done until its state is read back:
     `[ev: retro review2-signing-build-route Δ6]` `toolbelt/new-retro.sh` writes that header block into its stub and
     regenerates the local index (it never appends a row). `[ev: retro generated-retro-index Δ1]`
     `[ev: retro generated-retro-index Δ2]` `[ev: retro ledger-generated-not-committed]`
+  - **Every mcp-n4 or kit delta is a GitHub issue** — `toolbelt/retro-issues.sh <retro>...` (dry run; `--apply`
+    files them, `--write-back` appends `#N` to the row) searches open and closed issues first: one issue per root
+    cause, a probable duplicate gets a comment instead. `--check` lists the open ones (CONTRIBUTING.md § 6.3).
   - (b) it declared the change TRIVIAL: `Retro: none (trivial: <reason>)` in the commit trailer AND
     `retro_required: false` in the envelope. A push that only records evidence in a feature doc (`odd/tasks/*.md`) is
     this case: `.githooks/pre-push` counts every kit file except `BUILD-STATE.src.md`, `ledger.d/**` and `retros/**`,
