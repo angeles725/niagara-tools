@@ -59,3 +59,24 @@ func declaredFlagsSlot(c plan.Client, typ, slot string) (declared *pyjson.Object
 	}
 	return declared, "", err
 }
+
+// undescribedEnd is, for a listed slot that carries no flags and that no contract declares (taken
+// for a dynamic slot with no flags by currentFlags), the type the contract walk ended at when the
+// station answered it with no contract; "" when the slot carries its flags, the walk ended at
+// described types or the registry cannot be read. Retro 2026-11-14 row 10; a baja type answered with {} is not flagged (see Contracts.UndescribedEnd).
+func undescribedEnd(c plan.Client, nodes *pyjson.Object, slot string) string {
+	node := box.Node(nodes, slot)
+	tl, ok := c.(plan.TypeLoader)
+	if node == nil || has(node, "f") || !ok {
+		return ""
+	}
+	typ, _ := get(box.Node(nodes, ""), "t").(string)
+	if declared, _, err := declaredFlagsSlot(c, typ, slot); err != nil || declared != nil || typ == "" {
+		return ""
+	}
+	end, err := plan.NewContracts(tl).UndescribedEnd(typ)
+	if err != nil {
+		return ""
+	}
+	return end
+}

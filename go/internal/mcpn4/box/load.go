@@ -138,7 +138,7 @@ func (c *Client) loadOnce(ord string, depth, attempts int, delay float64, handle
 	}
 	trusted := c.loadsOutstanding == 0
 	c.loadsOutstanding++
-	if _, err := c.SSC("loadSlots", obj("o", ord, "d", depth)); err != nil {
+	if err = c.loadSlotsRequest(ord, depth); err != nil {
 		c.loadsOutstanding = max(0, c.loadsOutstanding-1) // rejected or never sent
 		return nil, err
 	}

@@ -83,3 +83,18 @@ func TestSelectedSlotsNameTheQueriedColumnsInOrder(t *testing.T) {
 		t.Errorf("*: %q", got)
 	}
 }
+
+// Field retro 2026-11-10 row 7: a query written as station:|slot:/Drivers/...|bql:select ... was
+// refused with a bare "query must not contain '|'". The refusal says where the subtree goes.
+func TestThePipeRefusalNamesTheBaseAsTheFix(t *testing.T) {
+	_, err := bql.ValidateQuery("station:|slot:/Drivers/Net|bql:select name from control:ControlPoint")
+	want := "query must not contain '|': only one select is composed into the ORD; to query a subtree put it in " +
+		"base (for example base station:|slot:/Drivers/Net) and keep only 'select ... from ...' in query"
+	if err == nil || err.Error() != want {
+		t.Fatalf("err = %v, want %q", err, want)
+	}
+	// A query with no '|' is unchanged.
+	if _, err := bql.ValidateQuery("select name from control:ControlPoint"); err != nil {
+		t.Errorf("a plain select refused: %v", err)
+	}
+}

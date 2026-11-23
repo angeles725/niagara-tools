@@ -1,6 +1,10 @@
 package plan
 
-import "github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+import (
+	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+)
 
 // UnansweredType is a type spec the registry channel's reply left out. The station answers every
 // requested type, a common baja type with {} (box-rt RegistryEncoderVisitor.doVisit), so a
@@ -124,4 +128,32 @@ func isErrEntry(e *pyjson.Object) bool {
 	}
 	v, _ := e.Get("isErr")
 	return v == true
+}
+
+// UndescribedEnd follows typeSpec and its supertypes and returns the first type of a module other
+// than baja that the station answered with no contract (no declared slots "c" and no supertype
+// "p") or with an error entry: a walk for a slot ended there says nothing about the slots above
+// it. A baja type answered with {} is not one: the station answers a common baja type that
+// declares nothing (baja:PointExtension, baja:Struct, baja:Component) that way, so it ends every
+// walk and flagging it would flag every dynamic slot. "" when the chain is described to its end.
+func (c *Contracts) UndescribedEnd(typeSpec string) (string, error) {
+	for i := 0; i < maxSupertypes && typeSpec != ""; i++ {
+		if err := c.Load([]string{typeSpec}); err != nil {
+			return "", err
+		}
+		e, _ := lookup(c.types, typeSpec)
+		if isErrEntry(e) {
+			return typeSpec, nil
+		}
+		_, hasSlots := e.Get("c")
+		super, hasSuper := e.Get("p")
+		if !hasSlots && !hasSuper {
+			if strings.HasPrefix(typeSpec, "baja:") {
+				return "", nil
+			}
+			return typeSpec, nil
+		}
+		typeSpec, _ = super.(string)
+	}
+	return "", nil
 }

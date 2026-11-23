@@ -95,7 +95,15 @@ func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 	if prop != nil && len(slots) == 0 {
 		slots = append(slots, prop.self)
 	}
+	var notFound []any
+	wanted, filtered := slotFilter(args)
+	if filtered {
+		slots, notFound = keepSlots(slots, wanted)
+	}
 	out := obj("ord", ord, "slots", slots, "elapsed_ms", elapsed)
+	if filtered && len(notFound) > 0 {
+		out.Set("slots_not_found", notFound)
+	}
 	if prop != nil {
 		prop.describe(out, slots)
 	}

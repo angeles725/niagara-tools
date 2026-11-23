@@ -24,3 +24,30 @@ func extConsumer(nodes *pyjson.Object, p string) string {
 	}
 	return ""
 }
+
+// Reasons an out nothing links is not dangling (retro 2026-11-15 row 14: terminal points and
+// calendar schedules were listed as dangling).
+const (
+	reasonProxyTerminal = "its out drives a device through its proxy extension"
+	reasonCalendar      = "a calendar schedule is read by other schedules by ORD, never by a link"
+)
+
+// terminalReason says why the out of p (of type kind) has no link by design, "" when it has no
+// such reason: a writable point with a proxy extension child (not the default control:NullProxyExt every control point holds) (its out is written to a device), or
+// a schedule:CalendarSchedule (other schedules refer to it by ORD).
+func terminalReason(nodes *pyjson.Object, p string, kind any) string {
+	t, _ := kind.(string)
+	if t == "schedule:CalendarSchedule" {
+		return reasonCalendar
+	}
+	if !strings.HasPrefix(t, "control:") || !strings.HasSuffix(t, "Writable") {
+		return ""
+	}
+	kids := box.Children(nodes, p)
+	for _, k := range kids.Keys() {
+		if s, _ := lookup(box.Node(kids, k), "t").(string); strings.HasSuffix(s, "ProxyExt") && s != nullProxyExt {
+			return reasonProxyTerminal
+		}
+	}
+	return ""
+}

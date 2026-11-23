@@ -73,10 +73,14 @@ func Coerce(valueType string, value, status any) (any, error) {
 	if !IsStatusType(valueType) {
 		return norm, nil
 	}
-	if s, ok := status.(string); !ok || !statusPattern.MatchString(s) {
-		return nil, ToolError("status must be a hex status string such as '0'")
+	s, ok := status.(string)
+	if ok && !statusPattern.MatchString(s) {
+		s, ok = statusFromNames(s) // flag names: "fault", "down,overridden", "{alarm,unackedAlarm}"
 	}
-	return obj("value", norm, "status", status), nil
+	if !ok || !statusPattern.MatchString(s) {
+		return nil, ToolError(statusRule)
+	}
+	return obj("value", norm, "status", s), nil
 }
 
 func finite(f float64) bool { return f-f == 0 }
