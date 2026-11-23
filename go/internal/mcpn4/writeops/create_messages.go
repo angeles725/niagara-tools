@@ -11,6 +11,10 @@ const (
 		"If the module is installed and running, the station's registry may be stale: stop the station, " +
 		"touch the module jar, start it until its log shows \"Rebuilding registry\", " +
 		"then reconnect with n4_connect"
+	// msgAlarmExtHint follows msgUnknownType for an unknown alarm:...Ext type: an alarm extension has
+	// one palette type, and its algorithm is a child of it (retro R1 delta M2).
+	msgAlarmExtHint = "; the palette type of an alarm extension is alarm:AlarmSourceExt, with its algorithm " +
+		"(alarm:OutOfRangeAlgorithm, alarm:BooleanChangeOfStateAlgorithm, ...) as a child"
 	// msgNameTaken is the first dry-run note when the name is taken under the parent: not a
 	// refusal, the station renames on collision (a pinned contract) and the inverse follows it.
 	msgNameEscaped = "display name %s is stored as %s (SlotPath escape); read it back by the stored name"

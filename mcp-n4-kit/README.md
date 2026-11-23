@@ -423,6 +423,11 @@ age_days}]` (not acknowledged, alarm time more than `unacked_days` days old) and
 `[{source, count}]`. Each list keeps `top` entries (1-50); `counts` holds the full numbers and
 `truncated_note` names each cut list or capped read. `window` is a span (`30m`, `24h`, `7d`).
 Histories audit: `n4_histories_audit(base, exclude_services=true, stale_factor=3, stale_min=10m, cov_max_age=24h, capacity_warn=0.9, max_histories=500)` answers "what is wrong with the histories" in one read-only call. It reads `select slotPath, type, enabled, historyConfig.id, historyConfig.capacity.encodeToString, historyConfig.fullPolicy.encodeToString, historyConfig.interval.encodeToString, lastRecord.timestamp.encodeToString from history:HistoryExt` and `select slotPath from control:ControlPoint` below `base`, then one `select count(*)` per distinct record-capped history id that has recorded (`count_reads`, at most `max_histories`). It returns `no_history` (control points with no history extension right below them; points under `slot:/Services` are left out unless `exclude_services` is false, `services_excluded` counts them), `disabled` (`enabled` false), `stale` (last record older than the larger of `stale_factor` x the collection interval and `stale_min`, or than `cov_max_age` for a COV history, or never recorded; `stale_min` exists because the history service writes in batches, so a 5 s history's newest record shows up about 20 s late), `near_capacity` (records at least `capacity_warn` of a `1:<records>` capacity; `severity` warning for full policy `stop`, where recording stops when full, info for `roll`, where the oldest records are overwritten) and `colliding_ids` (one history id recorded by several extensions), each capped at 100 items with `counts` holding the totals. A read cut at its cap sets `truncated` and leaves `no_history` unchecked (`counts.no_history` null with `no_history_note`). Capacity `0:0` (unlimited) and `2:<bytes>` histories are not measured.
+`flat=true` adds `flat`, the histories that held one value for `flat_days`. `flat_scope=sensors` keeps interval
+histories and COV histories of a temperature, humidity, pressure, flow, ppm or lux point, so settings and enums
+that hold one value are not listed; `flat_down=true` moves a flat history whose point is down, stale or in fault
+to `flat_down` (a device that is down, not a placeholder). Both read the control points' `status.bits` and `facets`
+once; if that read fails, `flat` keeps every history and a note says so.
 `n4_list_alarm_classes()` runs `select slotPath, name, priority, ackRequired, totalAlarmCount,
 openAlarmCount, inAlarmCount, unackedAlarmCount from alarm:AlarmClass` and
 `select slotPath, type from alarm:AlarmRecipient` at the station root; `priority` is decoded to
@@ -684,6 +689,8 @@ supertype, so `baja:Component` does not keep a `baja:Folder`.
 `value` for complexes it cannot decode (e.g. a Modbus `dataAddress`: `Decimal:302`). A slot that
 is itself a `baja:Status` (a proxy extension's `status`, for example) reads `status_flags`, the names of the
 flags set (`fault`, `down`, `alarm`, `unackedAlarm`, ...), and `status_ok` false when any is set.
+A `baja:Facets` slot (a point's `facets`) also adds `facets_parsed`, its parts as key to value without the type
+prefix (`precision`, `units`, `maxOverrideDuration`), so override limits can be audited per point.
 A BOX load leaves out a declared (frozen) property still at its default, so a fresh component
 would read no slots: `n4_read_slots` lists those after the loaded slots, and `n4_navigate` under
 each component or struct slot whose children it lists (with `handle` null), from the type contract

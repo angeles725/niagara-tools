@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func script(t *testing.T, dir, name, body string, mode os.FileMode) string {
@@ -135,5 +136,24 @@ func TestToJudge(t *testing.T) {
 		if got := toJudge(filepath.Join(d, c.vendor)); got != c.want {
 			t.Errorf("%s: toJudge = %v, want %v", c.name, got, c.want)
 		}
+	}
+}
+
+// A parallel test that forks while another one still holds a stub open for writing makes exec fail with ETXTBSY
+// ("text file busy"): the child holds the write descriptor until its own exec. That transient refusal is retried, so
+// a member is never reported as "unexpected exit 126" for it (TestReadyVerifyModule failed so in CI).
+func TestRunRetriesATextFileBusyExec(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "member")
+	if err := os.WriteFile(p, []byte("#!/bin/sh\necho ran\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	w, err := os.OpenFile(p, os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() { time.Sleep(40 * time.Millisecond); w.Close() }()
+	x := runner{env: []string{"PATH=/usr/bin:/bin"}}
+	if out, code, _ := x.run("", p); code != 0 || out != "ran" {
+		t.Fatalf("exit %d, out %q: a busy executable must be retried until it can run", code, out)
 	}
 }

@@ -883,6 +883,10 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   concluding the controllers are offline. A point's `binaryInput:N` / `analogInput:N` is the BACnet object
   instance, not the controller's terminal number: map terminals from the controller's own IO configuration.
   `[ev: retro field-commissioning-notes Δ2]`
+- **A Spyder's Load from Library moves the FILT input to DI1:** after loading a library application, read the
+  controller's input assignments again before trusting a point that was mapped earlier; the Discover Networks filter
+  (Send Global, ~20 s), `binaryInput:N` as the object instance and the stock Modbus Async Device Manager are the
+  rules above and under § 11.3. `[ev: issue #881]` (retro R3 ΔU21)
 - **Large MS/TP trunks:** a Boolean `skipUpload=true` slot on a `BacnetDevice` skips the device-object upload
   at station start (`Bacnet/TroubleshootingBACnet-4FF09FBA.txt:27,57-58` "Any BacnetDevice with a Boolean slot named Skip"); a duplicate Device ID faults the
   device (`:17`).

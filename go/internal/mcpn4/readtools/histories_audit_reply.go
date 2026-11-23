@@ -76,6 +76,9 @@ func (r *haRun) reply(base, span, minSpan string, extRows int) *pyjson.Object {
 	names := haLists
 	if r.flat {
 		names = append(names[:len(names):len(names)], "flat")
+		if r.flatDown {
+			names = append(names, "flat_down")
+		}
 	}
 	for _, name := range names {
 		items := r.lists[name]

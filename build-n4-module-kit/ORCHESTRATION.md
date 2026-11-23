@@ -65,6 +65,11 @@ artifact in the feature doc — or an explicit waiver `Design shard: waived (<re
 6. For an automatic protective action: the latch slot, its operator-owned clear condition and its HMI rendering
    (`METHODOLOGY.md` § Domain correctness). When HOA is a release path, the lock indicator must NOT disable the HOA
    buttons, and a structural test pins it (`types/dashboard.md` § Config panel UX). `[ev: issue #870]` (retro R1 ΔB8)
+7. For a protection timer or limit the HMI shows: no slot stays that nothing reads. When a protection moves to
+   another timer, the superseded slot leaves in the same change (a slot removal is a schema change:
+   `BUILD-LOOP.md` §4.c) and its HMI field with it. A cached page still shows the old field and the operator
+   keeps tuning a value the code ignores (a live slot kept a 10 min delay that nothing read).
+   `[ev: issue #865]` (retro R1 ΔB1)
 `[ev: retro panccadia-commissioning-lessons Δ7]`
 
 ### 3.c Writer prompt template — fixed clauses
@@ -86,6 +91,12 @@ artifact in the feature doc — or an explicit waiver `Design shard: waived (<re
   writers showed an MM4 FAIL on 19 files that only `build.sh` caught. The parent still runs the seam check
   (the full suite plus the gate) once after the merge (`BUILD-LOOP.md` § 2, Parallel writer checklist).
   `[ev: retro kit-gzip-bundle-writer-briefs Δ3]`
+- **Registry-backed tools: the brief carries two facts a writer otherwise learns from a failure.** A writer that
+  changes a read tool's description also owns its golden file `go/internal/mcpn4/testdata/tools/<tool>.json` (the
+  `toolsgolden` tests join one file per read tool into the `tools/list` replies). Every non-test Go file stays at
+  200 lines or fewer (`go/internal/filesize`, enforced by CI only, so a local run does not show it). Both go in the
+  brief: a file one line over failed CI, and three writers stopped to ask where the golden file lives.
+  `[ev: issue #915]` (retro R9 ΔB7)
 - **Keep-both only for whole-line additions:** an automatic keep-both conflict resolution applies only to hunks where
   both sides add whole lines; a test file or an edited line needs a human merge, then a compile and a test run before
   the commit (a keep-both cut two test functions and PR #409 shipped a file that did not compile).

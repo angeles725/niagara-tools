@@ -89,3 +89,56 @@ func TestApplySummaryCountsOnlyWhatWasCreated(t *testing.T) {
 		t.Errorf("exit %d\n%s", code, out)
 	}
 }
+
+// With no denylist nothing can be scrubbed, so a dry run sends no search term to GitHub: the dedup falls back to the
+// markers and the labeled issues it already listed, and says so (retro R17 delta D3).
+func TestDryRunWithoutADenylistSendsNoSearchTerms(t *testing.T) {
+	e := newEnv(t)
+	e.denylist += ".missing"
+	p := e.kitRetro("2026-02-01-alpha.md", alphaRetro)
+	code, out, errs := e.run(p)
+	for _, c := range e.gh.calls {
+		if strings.Contains(c, "--search=") {
+			t.Errorf("a gh call carries search terms without a denylist: %q", c)
+		}
+	}
+	want := "note: dedup search skipped: no denylist on this machine, so no search term is sent to GitHub\n"
+	if code != 0 || strings.Count(out, want) != 1 || !strings.Contains(out, "scrub: no denylist") {
+		t.Errorf("exit %d, out %q, stderr %q", code, out, errs)
+	}
+}
+
+func TestDryRunWithADenylistStillSearches(t *testing.T) {
+	e := newEnv(t)
+	p := e.kitRetro("2026-02-01-alpha.md", alphaRetro)
+	if code, out, _ := e.run(p); code != 0 || strings.Contains(out, "dedup search skipped") || !searched(e.gh) {
+		t.Errorf("exit %d, out %q, calls %q", code, out, e.gh.calls)
+	}
+}
+
+func searched(g *fakeGH) bool {
+	for _, c := range g.calls {
+		if strings.Contains(c, "--search=") {
+			return true
+		}
+	}
+	return false
+}
+
+// Without a denylist the dedup still finds a listed issue that describes the same change (review R3-004), and the
+// skipped-search note is printed only when a search was really skipped: --new on every delta searches nothing (R3-003).
+func TestNoDenylistFallbackStillFindsTheListedDuplicate(t *testing.T) {
+	e := newEnv(t)
+	e.denylist += ".missing"
+	e.gh.labeled = issueJSON(30, "OPEN", "mcp-n4: n4_read_slots drops a key", `The n4_read_slots filter loses the key when the slot name is long (go/internal/mcpn4/slots.go)`)
+	code, out, _ := e.run(e.kitRetro("2026-02-01-alpha.md", slotsRetro))
+	if code != 0 || !strings.Contains(out, "probable duplicate of #30 (open)") || strings.Contains(out, "create:") {
+		t.Errorf("exit %d, the listed duplicate was not found:\n%s", code, out)
+	}
+	e2 := newEnv(t)
+	e2.denylist += ".missing"
+	_, out, _ = e2.run("--new", "1", e2.kitRetro("2026-02-01-alpha.md", slotsRetro))
+	if strings.Contains(out, "dedup search skipped") {
+		t.Errorf("no search was due, yet the note says one was skipped:\n%s", out)
+	}
+}

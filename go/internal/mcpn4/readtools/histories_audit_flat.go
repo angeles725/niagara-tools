@@ -20,11 +20,13 @@ const (
 	haDefaultFlatDays = 2.0
 	haFlatNote        = "possible device placeholder: one value for more than %s"
 	haFlatFailNote    = "%d flat read(s) failed, those histories are not in flat; first: %s"
+	haFlatDownNote    = "device down, not a placeholder: the point's status has down, stale or fault set"
 	haFlatShape       = "the min/max answer has %d row(s) and %d column(s), expected 1 and 2"
 )
 
 // flatCheck fills the flat list from the recording histories in exts.
 func (r *haRun) flatCheck(exts []histExt) {
+	r.readFlatPoints()
 	windowStart := r.cfg.now.Add(-r.flatSpan)
 	start := windowStart.UTC().Format(windowSent)
 	seen := map[string]bool{}
@@ -34,11 +36,20 @@ func (r *haRun) flatCheck(exts []histExt) {
 			continue
 		}
 		seen[e.id] = true
+		if !r.flatInScope(e) {
+			continue
+		}
 		if at, ok := bql.ParseAbsTime(last); ok && at.Before(windowStart) {
 			continue // no record in the window: stale says so, there is no value to compare
 		}
 		if item := r.flatItem(e, start); item != nil {
-			r.lists["flat"] = append(r.lists["flat"], item)
+			list := "flat"
+			if flags, down := r.flatPointDown(e); down {
+				list = "flat_down"
+				item.Set("status", flags)
+				item.Set("note", haFlatDownNote)
+			}
+			r.lists[list] = append(r.lists[list], item)
 		}
 	}
 }
@@ -113,12 +124,17 @@ func (r *haRun) flatArgs(args *pyjson.Object) {
 	r.flat = boolArg(args, "flat", false)
 	r.flatDays = floatArg(args, "flat_days", haDefaultFlatDays)
 	r.flatSpan = time.Duration(r.flatDays * float64(24*time.Hour))
+	r.flatSensors = strArg(args, "flat_scope", "all") == "sensors"
+	r.flatDown = boolArg(args, "flat_down", false)
 }
 
 // flatReply adds the flat list's arguments, read count and failure note to out.
 func (r *haRun) flatReply(out *pyjson.Object) {
 	out.Set("flat_days", r.flatDays)
 	out.Set("flat_reads", r.flatReads)
+	if r.flatSensors {
+		out.Set("flat_scope", "sensors")
+	}
 	if r.flatFails > 0 {
 		r.notes = append(r.notes, fmt.Sprintf(haFlatFailNote, r.flatFails, r.flatNote))
 	}
