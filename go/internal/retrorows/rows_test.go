@@ -139,3 +139,20 @@ func TestAppendIssue(t *testing.T) {
 		t.Error("a line that is not a delta row must be refused")
 	}
 }
+
+// A table whose change is not the second column is read by its header, and a Status column marks the row done.
+func TestParseReadsTheChangeAndStatusColumnsByHeader(t *testing.T) {
+	data := "## Deltas\n| ID | Target | Delta | Evidence | Priority | Status |\n|---|---|---|---|---|---|\n" +
+		"| M1 | /mcp-n4 n4_bql_query | Accept alarm bases | live | HIGH | APPLIED (#713 31d1670a) |\n" +
+		"| M3 | /mcp-n4 n4_read_slots | A struct path returned the parent's slots | live read | MEDIUM | OPEN |\n"
+	rows := Parse(data)
+	if len(rows) != 2 {
+		t.Fatalf("rows = %d", len(rows))
+	}
+	if rows[0].Done != "APPLIED" || rows[1].Done != "" {
+		t.Errorf("status column: done = %q, %q", rows[0].Done, rows[1].Done)
+	}
+	if rows[1].Text != "A struct path returned the parent's slots" || rows[1].Target != "/mcp-n4 n4_read_slots" || rows[1].Evidence != "live read" {
+		t.Errorf("columns by header: %+v", rows[1])
+	}
+}
