@@ -49,7 +49,7 @@ func discoverReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies,
 	}
 	silent := []any{}
 	for _, k := range known {
-		if !answered[k.name] {
+		if !answered[k.name] && d.inRange(k) {
 			silent = append(silent, obj("name", k.name, "instance", k.instance, "address", k.address))
 		}
 	}
@@ -57,6 +57,17 @@ func discoverReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies,
 	observed.Set("devices", rows)
 	observed.Set("not_answering", silent)
 	return requested, replies[0], observed, "verified", nil
+}
+
+// inRange is whether a registered device is inside the instance range the discover asked: a
+// device that was not asked is no business of the not_answering list (retro R12 M6, #929). A
+// device whose instance is unknown is kept only when the range is every instance.
+func (d discoverData) inRange(k knownDevice) bool {
+	n, ok := k.instance.(int)
+	if !ok {
+		return d.low == 0 && d.high == discoverMaxInst
+	}
+	return n >= d.low && n <= d.high
 }
 
 // jobOrd is the station ORD of the reply's job ("" when the reply holds none).

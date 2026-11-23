@@ -75,8 +75,14 @@ func (t *Tools) Connect(args *pyjson.Object) (*pyjson.Object, error) {
 	}
 	if s, ok := stationName.(string); !ok || s != expected {
 		client.Close()
-		return nil, toolError("station identity mismatch: expected %s but connected to %s",
-			pyjson.StrRepr(expected), pyjson.Repr(stationName))
+		msg := "station identity mismatch: expected " + pyjson.StrRepr(expected) + " but connected to " + pyjson.Repr(stationName)
+		if found, ok := stationName.(string); ok && found != "" {
+			// about/serverName is the host name, not the station's (retro R1 M6, #860)
+			msg += ". The name compared is the station's own (stationName), not about/serverName, which is the host name. " +
+				"If " + pyjson.StrRepr(found) + " is the station you meant, call n4_connect again with expected_station " +
+				pyjson.StrRepr(found)
+		}
+		return nil, toolError("%s", msg)
 	}
 	version, versionError := detectVersion(client)
 	if err := checkExpectedVersion(args, version); err != nil {

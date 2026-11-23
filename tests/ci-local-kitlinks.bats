@@ -177,3 +177,14 @@ stub_provisioner() {
   [ "$(grep -c 'kit-links: bats could not be provisioned' <<< "$output")" -eq 1 ]
   [[ "$output" == *"pins 0.0.1, found \"$(bats --version)\" at $(command -v bats)"* ]]
 }
+
+@test "CL40: a kit doc citing a corpus block the corpus index does not hold fails --changed (corpus-index CI-ALL)" {
+  # Mutation: CL40 -- dropping the corpus-index check from run_kit_links lets this through to CI (#948 failed there).
+  # shellcheck disable=SC2016  # backticks are markdown, not a command substitution
+  printf '\nA new rule. `[ev: corpus B9998]`\n' >> "$R/build-n4-module-kit/BUILD-LOOP.md"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL corpus-index"* ]] || { echo "$output" | tail -15; false; }
+  [[ "$output" == *"B9998"* ]]
+}

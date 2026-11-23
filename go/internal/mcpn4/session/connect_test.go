@@ -82,7 +82,10 @@ func TestDefaultExpectedNameMismatchIsRefused(t *testing.T) {
 func TestExpectedStationMismatchClosesSessionAndNamesBoth(t *testing.T) {
 	s := server()
 	text := mustErr(t, s, "n4_connect", "station", "FakeStation", "expected_station", "OtherStation")
-	if want := "station identity mismatch: expected 'OtherStation' but connected to 'FakeStation'"; text != want {
+	want := "station identity mismatch: expected 'OtherStation' but connected to 'FakeStation'. The name compared is " +
+		"the station's own (stationName), not about/serverName, which is the host name. If 'FakeStation' is the " +
+		"station you meant, call n4_connect again with expected_station 'FakeStation'"
+	if text != want {
 		t.Errorf("got %q", text)
 	}
 	if s.Ctx.Session != nil || len(s.Station.Sessions) != 0 {

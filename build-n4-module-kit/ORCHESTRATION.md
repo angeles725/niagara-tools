@@ -63,7 +63,8 @@ artifact in the feature doc — or an explicit waiver `Design shard: waived (<re
 5. Boot-critical expressions — a facet's `BUnit.getUnit(...)` id, a static initializer, anything that can fail at
    station load.
 6. For an automatic protective action: the latch slot, its operator-owned clear condition and its HMI rendering
-   (`METHODOLOGY.md` § Domain correctness).
+   (`METHODOLOGY.md` § Domain correctness). When HOA is a release path, the lock indicator must NOT disable the HOA
+   buttons, and a structural test pins it (`types/dashboard.md` § Config panel UX). `[ev: issue #870]` (retro R1 ΔB8)
 7. For a protection timer or limit the HMI shows: no slot stays that nothing reads. When a protection moves to
    another timer, the superseded slot leaves in the same change (a slot removal is a schema change:
    `BUILD-LOOP.md` §4.c) and its HMI field with it. A cached page still shows the old field and the operator

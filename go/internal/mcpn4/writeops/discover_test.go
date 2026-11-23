@@ -146,6 +146,34 @@ func discReadback(t *testing.T, c *loads, reply any) (*pyjson.Object, string) {
 	return observed.(*pyjson.Object), verdict
 }
 
+// A ranged discover lists as not_answering only the registered devices whose instance is inside
+// the range (retro R12 M6, #929): 2010 answers nothing here, but is no business of a 2011.. discover.
+func TestDiscoverReadbackNotAnsweringKeepsToTheRange(t *testing.T) {
+	ord := obj("t", "baja:Ord", "v", "slot:/Services/JobService/BacnetDiscoverDevicesJob3")
+	for _, c := range []struct {
+		low, high int
+		want      string
+	}{
+		{2011, 9999, `"not_answering": []`},
+		{0, 2009, `"not_answering": []`},
+		{2010, 2010, `"not_answering": [{"name": "$32010", "instance": 2010, "address": "2:0a"}]`},
+		{0, 4194302, `"not_answering": [{"name": "$32010", "instance": 2010, "address": "2:0a"}]`},
+	} {
+		args := obj("network_ord", bacnetNet, "low_instance", c.low, "high_instance", c.high)
+		p, err := writeops.DiscoverDevices.PlanWith(&loads{nodes: discNetwork()}, args, clock(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _, observed, _, err := writeops.DiscoverDevices.Readback(discoverStation("success"), args, p, []any{ord}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := js(t, observed.(*pyjson.Object)); !strings.Contains(got, c.want) {
+			t.Errorf("range %d..%d: observed misses %s:\n%s", c.low, c.high, c.want, got)
+		}
+	}
+}
+
 func TestDiscoverReadbackRowsAgainstTheDatabase(t *testing.T) {
 	ord := obj("t", "baja:Ord", "v", "slot:/Services/JobService/BacnetDiscoverDevicesJob3")
 	o, verdict := discReadback(t, discoverStation("success"), ord)

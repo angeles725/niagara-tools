@@ -21,6 +21,7 @@
 #     path) and exit 3; kit-links runs that checked binary by its absolute path.
 # changelog.d fragments reach no file L1 scans (CHANGELOG.md takes them only at release); a change to one still
 # runs kit-links, so a fragment cannot be the one change a push leaves unchecked.
+# The same snapshot also runs tests/corpus-index.bats (every block a guide cites in an [ev: corpus] tag is indexed), first.
 # Returns 0 pass or nothing to check, 1 kit-state or kit-links failed, 3 the snapshot could not be made, bats could
 # not be provisioned, or git failed while detecting the change. (retro 2026-11-15 coordination-stretch T32)
 
@@ -102,5 +103,9 @@ run_kit_links() {
   kit_links_bats || { printf 'ci-local: --changed: kit-links: bats could not be provisioned at the version ci.yml pins%s\n' "$KL_BATS_MSG" >&2; return 3; }
   kit_links_check "kit-state --write (the generated BUILD-STATE.md kit-links scans)" "$snap" \
     kit_state_write "$snap/build-n4-module-kit" || return 1
+  # #948 failed CI on corpus-index CI-ALL: a guide cited [ev: corpus B1453] and the index had no row for it.
+  [ ! -f "$snap/tests/corpus-index.bats" ] ||
+    kit_links_check "corpus-index (tests/corpus-index.bats: every cited corpus block is indexed)" "$snap" "$KL_BATS" \
+      tests/corpus-index.bats || return 1
   kit_links_check "kit-links (tests/kit-links.bats over the changed kit docs)" "$snap" "$KL_BATS" tests/kit-links.bats || return 1
 }
