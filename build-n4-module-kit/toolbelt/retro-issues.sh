@@ -6,6 +6,7 @@
 #                        [--only <id>[,<id>...]]... [--new <id>[,<id>...]]... [--dup-threshold <0..1>] <retro.md>...
 #        retro-issues.sh --check            list the retro-delta issues still open (exit 1 when any)
 #   Default is a dry run: it prints the planned issues and calls only read-only gh commands.
+#   With no denylist the dry run sends no search term to GitHub (dedup uses the markers only); --apply needs one.
 #   A retro outside the kit needs --alias <stem>=<ALIAS> so its stem never reaches GitHub.
 # exit:  0 planned / done · 1 an issue refused by the scrub, a gh failure under --apply, or open issues under --check · 3 usage/env
 #

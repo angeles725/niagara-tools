@@ -3,6 +3,7 @@ package writeops
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
@@ -27,10 +28,21 @@ func typesKnown(c plan.Client, specs ...string) (*plan.Contracts, error) {
 		var unknown *plan.UnansweredType
 		errored, err := contracts.Errored(spec)
 		if errors.As(err, &unknown) || errored {
-			return nil, plan.ToolError(fmt.Sprintf(msgUnknownType, spec))
+			return nil, plan.ToolError(fmt.Sprintf(msgUnknownType, spec) + unknownTypeHint(spec))
 		}
 	}
 	return contracts, nil
+}
+
+// unknownTypeHint is the extra sentence for an unknown type spec that names an alarm extension
+// ("alarm:OutOfRangeAlarmExt"): the palette has alarm:AlarmSourceExt only. "" for any other spec,
+// and for alarm:AlarmSourceExt itself (an unknown real type means a stale registry).
+func unknownTypeHint(spec string) string {
+	module, name, ok := strings.Cut(spec, ":")
+	if ok && module == "alarm" && name != "AlarmSourceExt" && strings.HasSuffix(name, "Ext") {
+		return msgAlarmExtHint
+	}
+	return ""
 }
 
 // childNames is the set of the names of a loaded component's children.

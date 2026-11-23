@@ -21,6 +21,10 @@ const HistoriesAuditExtQuery = "select slotPath, type, enabled, historyConfig.id
 // HistoriesAuditPointQuery reads the slot path of each control point.
 const HistoriesAuditPointQuery = "select slotPath from control:ControlPoint"
 
+// HistoriesAuditFlatPointQuery reads each control point's slot path, status bits (the status as a number,
+// which no locale translates) and facets string, by position: n4_histories_audit flat_scope and flat_down.
+const HistoriesAuditFlatPointQuery = "select slotPath, status.bits, facets from control:ControlPoint"
+
 // HistoryTypeQuery reads each history extension's slot path, history id, type and collection
 // interval (encodeToString, as in HistoriesAuditExtQuery), by position: n4_read_history
 // history_type (mcp-n4 delta M2).

@@ -40,6 +40,9 @@ func slotEntry(nodes *pyjson.Object, name string) (*pyjson.Object, error) {
 		return nil, err
 	}
 	if !status {
+		if s, ok := value.(string); ok && (kind == "baja:Facets" || name == "facets") {
+			entry.Set("facets_parsed", parseFacets(s))
+		}
 		if value == nil && display != nil {
 			// a complex the reader does not decode (FlexAddress, BacnetAddress, ...): its
 			// display string beats a bare None (retro 2026-10-02 D4)
@@ -62,6 +65,24 @@ func slotEntry(nodes *pyjson.Object, name string) (*pyjson.Object, error) {
 	entry.Set("status_ok", ok)
 	entry.Set("status_null", null)
 	return entry, nil
+}
+
+// parseFacets is a baja:Facets string ("units=u:fahrenheit;...|precision=i:1|maxOverrideDuration=r:3600000")
+// as key to value, each value without its one-letter type prefix ("1", "3600000"). A part without
+// "=" is left out.
+func parseFacets(s string) *pyjson.Object {
+	out := pyjson.NewObject()
+	for _, part := range strings.Split(s, "|") {
+		key, val, ok := strings.Cut(part, "=")
+		if !ok || key == "" {
+			continue
+		}
+		if len(val) >= 2 && val[1] == ':' {
+			val = val[2:]
+		}
+		out.Set(key, val)
+	}
+	return out
 }
 
 // ReadSlots is n4_read_slots: every slot of ord, Status complexes decoded (depth 2: the slots
