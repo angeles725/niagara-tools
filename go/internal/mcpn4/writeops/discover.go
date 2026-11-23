@@ -30,11 +30,13 @@ const (
 	bacnetNetworkTyp = "bacnet:BacnetNetwork"
 )
 
-// discoverData is what the read-back needs: the network, the wait and the write state's clock.
+// discoverData is what the read-back needs: the network, the wait, the instance range asked
+// and the write state's clock.
 type discoverData struct {
-	network string
-	wait    int
-	w       *plan.State
+	network   string
+	wait      int
+	low, high int
+	w         *plan.State
 }
 
 func discoverPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.Session) (*plan.Planned, error) {
@@ -78,7 +80,7 @@ func discoverPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.
 		"no inverse: field traffic cannot be undone",
 	}
 	return &plan.Planned{Ops: []any{invokeOp(obj("h", h, "a", discoverAction, "b", cfg))}, Notes: notes,
-		Data: discoverData{network: network, wait: wait, w: w}}, nil
+		Data: discoverData{network: network, wait: wait, low: low, high: high, w: w}}, nil
 }
 
 func discoverInt(name string, v int) *pyjson.Object {
