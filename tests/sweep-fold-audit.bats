@@ -22,7 +22,18 @@ bats_require_minimum_version 1.5.0
 #   core.md           — corpus: cites rt-hardening, 5rooms, ender-doors
 #   retros/self-cite.md — self-citation of self-ref-only (excluded from corpus)
 
+setup_file() {
+  # the launcher is built once here with the real HOME; a test below runs it under another HOME
+  local root; root="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via root
+  . "$root/go/go-tool.sh"
+  go_tool_bin "$root/go" sweep-fold-audit >/dev/null
+}
+
 setup() {
+  # no research retros of the real home may reach a test: HOME is a fresh empty directory, the launcher binary is built
+  HOME="$BATS_TEST_TMPDIR"
+  export HOME
   FIXDIR="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/fold-audit"
   SCRIPT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit/toolbelt/sweep-fold-audit.sh"
   INDEX="$FIXDIR/INDEX.md"
@@ -268,4 +279,21 @@ _alias_fixture() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"fold-audit: NOTE ambiguous citation token credits 2026-10-22-go-sweep-fold-audit.md: fold-audit go-sweep-fold-audit"* ]]
   [[ "$output" == *"4 folded, 4 cited, 0 uncited"* ]]
+}
+
+@test "F21: no external root but pending retros in the home's niagara-research/retros: a typed DEGRADED line, --strict exits 1" {
+  mkdir -p "$HOME/niagara-research/retros"
+  printf '## Deltas\n| # | Delta | Target |\n|---|---|---|\n| D1 | the toolbelt lint misses a case | toolbelt/lint-x.sh |\n' \
+    > "$HOME/niagara-research/retros/2026-03-01-somestem.md"
+  run "$SCRIPT" "$INDEX" "$KITROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"fold-audit: DEGRADED external-roots-unconfigured: niagara-research/retros has 1 retro(s) with 1 pending kit delta(s); not audited — pass --external-root <dir> or add \`root <dir>\` to fold-roots.conf"* ]]
+  [[ "$output" != *"somestem"* ]]
+  run "$SCRIPT" --strict "$INDEX" "$KITROOT"
+  [ "$status" -eq 1 ]
+}
+
+@test "F22: no research retros directory: no DEGRADED line (the previous output)" {
+  run "$SCRIPT" --strict "$INDEX" "$KITROOT"
+  [[ "$output" != *"DEGRADED"* ]]
 }

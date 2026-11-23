@@ -37,6 +37,12 @@
 #   fold-audit: WARN external <name> Δ<id> not cited   then   fold-audit: external: R retros, D deltas checked, M not cited
 # (fails --strict). A root that cannot be read exits 3 naming its position, never its path.
 #
+# No external root configured (no --external-root, no `root` line) while a niagara-research/retros directory (in $HOME,
+# beside the repository or beside the kit root) holds a retro with a pending mcp-n4 / build-n4-module delta: the audit
+# cannot see those retros, so it says so instead of a clean-looking report:
+#   fold-audit: DEGRADED external-roots-unconfigured: niagara-research/retros has <R> retro(s) with <D> pending ...
+# (the directory by its label, never its path; fails --strict; exit codes are otherwise unchanged).
+#
 # Corpus: every *.md under <kit-root> excluding */retros/* and INDEX.md (ledger.d/ fragments count).
 # Stem: filename minus leading YYYY-MM-DD- and trailing .md. A stem token T (6-char floor) credits
 # a row when "-T-" is a hyphen-segment-aligned part of "-<stem>-".

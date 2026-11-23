@@ -419,6 +419,11 @@ build-n4-module-kit/toolbelt/retro-issues.sh --check                          # 
   `root<N>-retro<K>` by position, never by its stem, with a WARN asking for one), and is cited by
   `[ev: retro <ALIAS> Δ<id>]`, `[deferred: retro <ALIAS> Δ<id>]` or a closed issue carrying its marker. CI never
   configures an external root.
+- **No external root, but research retros wait.** With no `--external-root` and no `root` line, the audit looks for
+  `niagara-research/retros` in `$HOME`, beside the repository and beside the kit. When it holds a retro with a pending
+  mcp-n4 / build-n4-module delta, the report says so, never a silent zero: `fold-audit: DEGRADED
+  external-roots-unconfigured: niagara-research/retros has <R> retro(s) with <D> pending kit delta(s); not audited ...`
+  (it fails `--strict`). List that directory in the local `fold-roots.conf` to audit it.
 
 ---
 
