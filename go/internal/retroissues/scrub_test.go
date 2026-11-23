@@ -45,3 +45,47 @@ func TestDupThresholdRejectsNaN(t *testing.T) {
 		}
 	}
 }
+
+// Two retros under one alias would share every marker: the second's deltas would read as already filed.
+func TestTwoStemsCannotShareAnAlias(t *testing.T) {
+	e := newEnv(t)
+	p := e.outRetro("2026-02-01-sample.md", alphaRetro)
+	q := e.outRetro("2026-02-02-other.md", alphaRetro)
+	code, _, errs := e.run("--alias", "sample=ALPHA", "--alias", "other=ALPHA", p, q)
+	if code != 3 || !strings.Contains(errs, "--alias ALPHA names two retros") || len(e.gh.calls) != 0 {
+		t.Errorf("exit %d, stderr %q, calls %q", code, errs, e.gh.calls)
+	}
+}
+
+// A run that only comments (every delta a duplicate) still makes sure the labels exist before the first write:
+// the comment adds the retro-delta label, which a fresh repository lacks.
+func TestDuplicateOnlyRunEnsuresTheLabelsFirst(t *testing.T) {
+	e := newEnv(t)
+	p := e.kitRetro("2026-02-01-alpha.md", slotsRetro)
+	e.gh.searched = issueJSON(30, "OPEN", "mcp-n4: n4_read_slots drops a key", `The n4_read_slots filter loses the key when the slot name is long (go/internal/mcpn4/slots.go)`)
+	if code, out, _ := e.run("--apply", p); code != 0 {
+		t.Fatalf("exit %d\n%s", code, out)
+	}
+	label, comment := -1, -1
+	for i, c := range e.gh.calls {
+		if strings.HasPrefix(c, "label list") && label < 0 {
+			label = i
+		}
+		if strings.HasPrefix(c, "issue comment") && comment < 0 {
+			comment = i
+		}
+	}
+	if label < 0 || comment < 0 || label > comment {
+		t.Errorf("labels must be ensured before the first comment; calls %q", e.gh.calls)
+	}
+}
+
+// The closing line of --apply counts what gh created, not what was planned.
+func TestApplySummaryCountsOnlyWhatWasCreated(t *testing.T) {
+	e := newEnv(t)
+	e.gh.createErr = errGH
+	code, out, _ := e.run("--apply", e.kitRetro("2026-02-01-alpha.md", alphaRetro))
+	if code != 1 || !strings.Contains(out, "retro-issues: 0 created") {
+		t.Errorf("exit %d\n%s", code, out)
+	}
+}

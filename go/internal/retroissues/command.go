@@ -73,11 +73,17 @@ func Command(run retrogh.Runner) cli.Main {
 			return ExitUsage
 		}
 		a.rules, a.noRules = rules, !found
+		seen := map[string]bool{}
 		for _, alias := range o.aliases { // an alias is printed and published: it is scrubbed before anything else
 			if r := scrub(rules, "--alias value", alias); r != "" {
 				a.errf("%s", r)
 				return ExitUsage
 			}
+			if seen[alias] { // two retros under one alias would share every marker
+				a.errf("--alias %s names two retros: give each retro its own alias", alias)
+				return ExitUsage
+			}
+			seen[alias] = true
 		}
 		ds, sk, err := collect(o)
 		if err != nil {

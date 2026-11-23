@@ -106,6 +106,9 @@ func (a *app) match(g *group, candidates []retrogh.Issue) {
 func summary(gs []*group, sk skipped, apply bool) string {
 	n := map[string]int{}
 	for _, g := range gs {
+		if apply && g.kind == "create" && g.number == 0 {
+			continue // planned, but gh stopped before creating it
+		}
 		n[g.kind]++
 	}
 	verb := "to create"

@@ -63,9 +63,8 @@ func (a *app) report(gs []*group) int {
 func (a *app) execute(gs []*group) int {
 	labelled := false
 	for _, g := range gs {
-		switch g.kind {
-		case "create":
-			if !labelled {
+		if g.kind == "create" || g.kind == "dup" || g.kind == "fixed" {
+			if !labelled { // a comment adds the retro-delta label too: ensure the labels before any write
 				if err := retrogh.EnsureLabels(a.run, map[string]string{
 					retrogh.Label:          "A delta proposed by a retro",
 					"area:mcp-n4":          "retro delta for mcp-n4",
@@ -76,6 +75,9 @@ func (a *app) execute(gs []*group) int {
 				}
 				labelled = true
 			}
+		}
+		switch g.kind {
+		case "create":
 			n, err := retrogh.Create(a.run, g.primary().title, g.body(), g.labels())
 			if err != nil {
 				a.errf("cannot create %q: %v", g.primary().title, err)
