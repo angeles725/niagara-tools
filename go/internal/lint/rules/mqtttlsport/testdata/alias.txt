@@ -1,0 +1,11 @@
+-- args --
+@DIR@/S
+-- want --
+exit 0
+WARN  lint-mqtt-tls-port  @DIR@/S/config.bog:2  /Services/Mine TLS connection on port 1883: set brokerPort to the broker's TLS port, 8883 (types/cloud-connector.md § 9)
+-- stderr --
+-- S/config.bog --
+<bajaObjectGraph version='4.0'><p m='b=baja' t='b:Station'><p n='Services' m='x=abstractMqttDriver other=vendorMqtt' t='b:ServiceContainer'>
+<p n='Mine' t='x:GenericMqttAuthenticator'/>
+<p n='Theirs' t='other:GenericMqttAuthenticator'/>
+</p></p></bajaObjectGraph>

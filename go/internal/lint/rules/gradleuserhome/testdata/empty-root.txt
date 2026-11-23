@@ -1,0 +1,8 @@
+-- args --
+@DIR@
+-- want --
+exit 3
+ERROR  lint-gradle-userhome  @DIR@  no gradle.properties found (wrong path: pass a module or gradle root)
+-- stderr --
+-- build.gradle.kts --
+plugins {}

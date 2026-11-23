@@ -72,6 +72,33 @@ func TestMapHeader(t *testing.T) {
 	}
 }
 
+// TestReadMapHeaderKind: the declared kind is the value of the first type: line of the header, read as the
+// modularity line is (before the first table row, outside ``` fences, a trailing # comment dropped), and
+// the same call returns the mode, its line and its problem that MapHeader returns.
+func TestReadMapHeaderKind(t *testing.T) {
+	for _, tc := range []struct{ name, text, kind string }{
+		{"theme", "modularity: strict\ntype: theme\n", "theme"},
+		{"before the modularity line", "type: library\nmodularity: strict\n", "library"},
+		{"a trailing comment", "modularity: strict\ntype: theme   # zero-Java\n", "theme"},
+		{"no space after the colon", "modularity: strict\ntype:theme\n", "theme"},
+		{"the first type line wins", "modularity: strict\ntype: library\ntype: theme\n", "library"},
+		{"no type line", "modularity: strict\n", ""},
+		{"a fenced example is not read", "modularity: strict\n```\ntype: theme\n```\n", ""},
+		{"after the table is not read", "modularity: strict\n| Concern |\ntype: theme\n", ""},
+		{"an invalid modularity line still reads the kind", "modularity: loose\ntype: theme\n", "theme"},
+		{"the value is not folded or validated", "type: Theme\n", "Theme"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lines := strings.Split(tc.text, "\n")
+			h := ReadMapHeader(lines)
+			mode, line, problem := MapHeader(lines)
+			if h.Kind != tc.kind || h.Mode != mode || h.At != line || h.Problem != problem {
+				t.Errorf("ReadMapHeader = %+v; want kind %q and MapHeader's %v, %d, %q", h, tc.kind, mode, line, problem)
+			}
+		})
+	}
+}
+
 // TestModuleMode: the walk goes up from a file or directory to the first directory holding MODULE-MAP.md and
 // returns its header's mode; it stops at a directory holding .git (a directory or a worktree's .git file),
 // after reading a map in that same directory. No map, or a map with an invalid header, is ModularityNone.

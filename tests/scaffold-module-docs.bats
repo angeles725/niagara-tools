@@ -41,9 +41,9 @@ section() {
   [[ "$(head -1 <<<"$table")" == "| Building | Read | Scaffold \`--type\` |" ]] || { head -1 <<<"$table"; false; }
   rows="$(tail -n +3 <<<"$table")"
   [ "$(wc -l <<<"$rows")" -ge 10 ]
-  bad="$(awk -F'|' '{ c = $4; gsub(/^ +| +$/, "", c); if (c !~ /^(`(logic|dashboard|driver)`( \+ `(logic|dashboard|driver)`)*|no scaffold)( \(.*\))?$/) print }' <<<"$rows")"
+  bad="$(awk -F'|' '{ c = $4; gsub(/^ +| +$/, "", c); if (c !~ /^(`(logic|dashboard|driver|library)`( \+ `(logic|dashboard|driver|library)`)*|no scaffold)( \(.*\))?$/) print }' <<<"$rows")"
   [ -z "$bad" ] || { echo "$bad"; false; }
-  for t in logic dashboard driver; do
+  for t in logic dashboard driver library; do
     grep -qF "\`$t\`" <<<"$rows" || { echo "no row maps to $t"; false; }
   done
 }

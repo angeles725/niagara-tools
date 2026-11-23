@@ -148,8 +148,8 @@ run on every station start even on platforms that have no active consumer.
 
 ## 6 · Structure lint — declare `type: library`
 
-`lint-structure` L5 FAILs an `-rt` part with no `module.palette` (`L5: module.palette missing for -rt profile`): on a
-component module that is the empty-palette footgun. Both shapes above ship no palette on purpose, and the lint never
+`lint-structure` L5 FAILs an `-rt` part with no `module.palette` (`L5: module.palette missing for -rt profile`, followed by how to declare a library): on a
+component module that is the empty-palette footgun. `[ev: retro doc-coverage-audit Δ22]` Both shapes above ship no palette on purpose, and the lint never
 infers a library from the missing file. The module says it in the header of `<module-root>/MODULE-MAP.md`
 (`types/structure.md` § Module map):
 
@@ -168,6 +168,12 @@ With `type: library` an `-rt` part may ship no `module.palette`. A palette it do
 (no named entry is still an L5 FAIL), and every other rule applies unchanged: Shape B still needs its lexicon (L4)
 and, in a strict module, its `model/` classes and tests (L3). Pinned by the `kind-library-*` golden cases of
 `go/internal/lint/rules/structure` and `TestDeclaredKindMapPassesModuleMap`.
+
+**Start from the scaffold:** `toolbelt/scaffold-module.sh <ModuleName> <out-dir> --vendor <v> --type library` emits Shape A
+(the `-rt` part of `<types/>`, a permissions file and the gradle root, from `fixtures/MinimalLibrary`) with the
+`type: library` line already in its `<module-root>/MODULE-MAP.md`; `lint-structure`, `lint-module-map` and the permissions lint pass it
+clean (`tests/scaffold-module-map.bats` TC-MAP-LIB). The fixture has not been built with gradle (no Niagara install
+in the session that added it): run `build.sh` on the first scaffold before relying on it. `[ev: retro doc-coverage-audit Δ10]`
 
 ---
 

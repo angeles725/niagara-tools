@@ -70,3 +70,16 @@ func TestDeclaredKindMapPassesModuleMap(t *testing.T) {
 		}
 	}
 }
+
+// TestUndeclaredLibraryRowSaysHow: an -rt part with no palette and no declaration FAILs L5, and the row says
+// how to declare a library, as the -ux L9 row does for a theme (types/utility-lib.md § 6). The row text before
+// the hint is unchanged.
+func TestUndeclaredLibraryRowSaysHow(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, map[string]string{".git/HEAD": "x\n", "M/A-rt/module-include.xml": "<types/>\n"})
+	want := "FAIL  lint-structure  A-rt  L5: module.palette missing for -rt profile" +
+		" (a library module declares `type: library` in its MODULE-MAP.md header, types/utility-lib.md § 6)\n"
+	if code, out, errs := run(filepath.Join(dir, "M")); code != 1 || out != want || errs != "" {
+		t.Errorf("exit %d err %q out\n%s\nwant\n%s", code, errs, out, want)
+	}
+}

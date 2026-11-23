@@ -6,7 +6,10 @@
 # control (kit-links L2); the read and the compare are the shared Go package go/internal/vendorversion
 # (fragment rule: one comparator for build, deploy and this guard).
 # Local refs only — never fetches. Paths are read NUL-separated, so a group under a path git would quote (a
-# non-ASCII directory) is compared like any other. [ev: retro r10-installed-line-guard Δ1]
+# non-ASCII directory) is compared like any other. Each `git show <ref>:<path>` is closed with `--`, so a
+# working-tree entry of that name never hides a group (git otherwise answers "ambiguous argument"), and a row
+# prints a path holding a control character, a double quote or a backslash quoted with C escapes (one row per
+# group, one line per row). [ev: retro r10-installed-line-guard Δ1]
 # [ev: retro go-check-scripts-ports Δ1]
 #
 # Rows: ok|DOWNGRADE|INCOMPARABLE <file> <installed> -> <branch>  ·  MISSING <file> <installed>

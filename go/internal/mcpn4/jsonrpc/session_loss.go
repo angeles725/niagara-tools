@@ -21,7 +21,7 @@ const sessionLostText = "Could not find Server Session"
 const (
 	msgSessionLost     = "the station dropped this server's BOX session (" + sessionLostText + ")"
 	msgSessionLostRedo = "session lost: " + msgSessionLost + "; mcp-n4 reconnected with the last n4_connect; the execution is not retried because its confirmation token was spent and " +
-		"ops sent before the loss may have applied, so check n4_list_batches and read the targets back, then redo the dry run and execute with its new token"
+		"ops sent before the loss may have applied, so check n4_list_batches and read the targets back, then redo the dry run (same arguments, dry_run=true) and execute with its new token"
 	msgSessionLostRetry = msgSessionLost + "; reconnecting with the last n4_connect failed: "
 	msgSessionLostAgain = msgSessionLost + "; mcp-n4 reconnected with the last n4_connect and retried once, but the session was lost again, " +
 		"so it is not retried further: check that the station is up (a restart can take minutes), then call n4_connect and repeat the call"

@@ -2,7 +2,7 @@
 @DIR@/kind-library-undeclared/acmeJdbc
 -- want --
 exit 1
-FAIL  lint-structure  acmeJdbc-rt  L5: module.palette missing for -rt profile
+FAIL  lint-structure  acmeJdbc-rt  L5: module.palette missing for -rt profile (a library module declares `type: library` in its MODULE-MAP.md header, types/utility-lib.md § 6)
 -- stderr --
 -- kind-library-undeclared/.git/HEAD --
 ref: refs/heads/main

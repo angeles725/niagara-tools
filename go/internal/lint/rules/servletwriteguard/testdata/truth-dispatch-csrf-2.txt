@@ -1,0 +1,94 @@
+truth: the dispatch class must be named in code by the servlet, sit in its directory and check the token in
+code. WARN no-csrf: ADispatch checks nothing (BAServlet); BBServlet never names BDispatch, which does check;
+BCServlet names CDispatch only in a comment and a string; DDispatch checks but sits in another directory
+(BDServlet); EDispatch names verifyCsrfToken( only in a comment (BEServlet).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  no-csrf  @DIR@/m/BAServlet.java:1  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+WARN  no-csrf  @DIR@/m/BBServlet.java:1  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+WARN  no-csrf  @DIR@/m/BCServlet.java:2  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+WARN  no-csrf  @DIR@/m/BDServlet.java:1  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+WARN  no-csrf  @DIR@/m/BEServlet.java:1  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+-- stderr --
+-- m/BAServlet.java --
+public class BAServlet extends BWebServlet {
+  void doPost(WebOp op) {
+    if (!ADispatch.accept(op)) return;
+    if (!target.getPermissions(op).hasOperatorWrite()) return;
+    target.set(p, v, op);
+  }
+}
+-- m/ADispatch.java --
+final class ADispatch {
+  static boolean accept(WebOp op) {
+    // nothing to check
+    return true;
+  }
+}
+-- m/BBServlet.java --
+public class BBServlet extends BWebServlet {
+  void doPost(WebOp op) {
+    if (!Other.accept(op)) return;
+    if (!target.getPermissions(op).hasOperatorWrite()) return;
+    target.set(p, v, op);
+  }
+}
+-- m/Other.java --
+final class Other {
+  static boolean accept(WebOp op) { return true; }
+}
+-- m/BDispatch.java --
+final class BDispatch {
+  static boolean accept(WebOp op) {
+    CsrfUtil.verifyCsrfToken(op.getRequest());
+    return true;
+  }
+}
+-- m/BCServlet.java --
+// CDispatch checks the token
+public class BCServlet extends BWebServlet {
+  void doPost(WebOp op) {
+    String n = "CDispatch";
+    if (!target.getPermissions(op).hasOperatorWrite()) return;
+    target.set(p, v, op);
+  }
+}
+-- m/CDispatch.java --
+final class CDispatch {
+  static boolean accept(WebOp op) {
+    CsrfUtil.verifyCsrfToken(op.getRequest());
+    return true;
+  }
+}
+-- m/BDServlet.java --
+public class BDServlet extends BWebServlet {
+  void doPost(WebOp op) {
+    if (!DDispatch.accept(op)) return;
+    if (!target.getPermissions(op).hasOperatorWrite()) return;
+    target.set(p, v, op);
+  }
+}
+-- m/other/DDispatch.java --
+final class DDispatch {
+  static boolean accept(WebOp op) {
+    CsrfUtil.verifyCsrfToken(op.getRequest());
+    return true;
+  }
+}
+-- m/BEServlet.java --
+public class BEServlet extends BWebServlet {
+  void doPost(WebOp op) {
+    if (!EDispatch.accept(op)) return;
+    if (!target.getPermissions(op).hasOperatorWrite()) return;
+    target.set(p, v, op);
+  }
+}
+-- m/EDispatch.java --
+final class EDispatch {
+  static boolean accept(WebOp op) {
+    // CsrfUtil.verifyCsrfToken(op.getRequest());
+    return true;
+  }
+}

@@ -329,14 +329,29 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
   Give it the installation (`--niagara-home`, or `NIAGARA_HOME`): a template lists stock modules that no build file
   declares, and without the installation's `modules/` the lint cannot tell them from a missing module, so it
   reports undeclared dependencies as WARN and exits 0. The archive is read as untrusted input (size bounds, unsafe
-  entry names refused), and a symlinked template is read through the link. The report does not run it yet: run it
-  by hand at the verify gate. `[ev: retro gate-followups-and-template-lints Δ7]` `[ev: retro gate-followups-and-template-lints Δ12]`
+  entry names refused). A symlink is followed only when its real target is inside the module root (a symlinked `.ntpl`
+  or directory is read through the link, each directory once); a link to a sibling module or to `/` is one `WARN ntpl-link`
+  row, never "nothing to check", and a `.ntpl` link that leads nowhere, or a `.ntpl` that is no regular file, is exit 3;
+  an empty `--niagara-home ""` is a usage error (exit 3) and a module jar ships only when it is a readable regular file.
+  `report-module` runs it once per module root, relayed whole, with the installation `build.sh` passes
+  (`--niagara-home <dir>`, else `NIAGARA_HOME`), so a stock module a station template lists is no finding there.
+  `[ev: retro gate-followups-and-template-lints Δ7]` `[ev: retro gate-followups-and-template-lints Δ12]`
+  `[ev: retro gate-followups-and-template-lints Δ11]` `[ev: retro gate-followups-and-template-lints Δ18]`
+  `[ev: retro ntpl-lint-walk-k-rows Δ2]` `[ev: retro ntpl-lint-walk-k-rows Δ5]`
   Given a template module `.jar` (the Make Module output), it checks each `*.ntpl` and `*.napl` entry as a shipped
   template, each row naming `<jar>!/<entry>`, within the bounds of a `.ntpl` (32 MiB per template inflated, 128 MiB
   for all, and at most 100,000 entries read in the whole run: past it one FAIL row `100000 entries read in all, the
   bound of one run -- <entry> and everything after it not read`, since each tiny entry still costs an open and a
   parse); a jar declares no build dependencies, so its dependencies are judged against the installation alone.
-  Both items the first G92 spec left owed (`ledger.d/2026-10-23-r8-u10-platform-templates.md`) are delivered: a
+  A second sub-check, `ntpl-uses`, reads what the template itself uses: a module that `template.bog` (each
+  `m="<alias>=<module>"`, each `module://` ORD) or a `*.px` entry (imports, `module://` ORDs) names, that no
+  `<dependency>` names (a part counts) and the installation does not ship, is one row per entry (FAIL with the
+  installation's list, WARN without); `baja` and the module's own parts are exempt, an entry that does not parse is a
+  FAIL row, and `.napl` application archives are read like `.ntpl` (any letter case). `[ev: retro gate-followups-and-template-lints Δ13]`
+  `[ev: retro ntpl-alias-napl-k4 Δ3]` The entries of one run draw on one 128 MiB inflate budget and at most 1000
+  templates are read per run (past them one FAIL `ntpl-entries` row), so a jar of many tiny, highly inflating
+  templates stops at a count and a byte bound, not at wall time. `[ev: retro ntpl-jar-manifest-k4b Δ5]`
+  `[ev: retro ntpl-alias-napl-k4 Δ4]` Both items the first G92 spec left owed (`ledger.d/2026-10-23-r8-u10-platform-templates.md`) are delivered: a
   module the bog or a Px uses with no `<dependency>` row, and the template module jar as input.
   `[ev: retro ntpl-jar-manifest-k4b Δ2]` `[ev: retro ntpl-jar-manifest-k4b Δ3]`
 
@@ -357,7 +372,11 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
 
 Read from the decompiled 4.14 template modules and the official Templates guide for 4.15 (its pages on the deploy
 process, on upgrading a deployed template and on bulk deployment). The method bodies were not re-verified on 4.15:
-confirm on the target release before a site depends on a detail below.
+confirm on the target release before a site depends on a detail below. The 4.15 re-check (the upgrade job's save
+and restore list, which module holds deploy, whether a station without the Workbench template module can upgrade)
+needs a 4.15 installation to decompile and a station to run it on, neither of which a repository change has: parked
+out of repo until a session has that installation (the caveat stays until then).
+`[deferred: retro gate-followups-and-template-lints Δ17]`
 
 - **Deploy is Workbench client code.** Deploying a component or device template, and bulk deploy from the
   spreadsheet, run in the Workbench template module: it copies the template's root component into the target,

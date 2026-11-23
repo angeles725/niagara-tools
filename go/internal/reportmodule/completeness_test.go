@@ -16,8 +16,13 @@ var notInReport = map[string]string{
 	"lint-bacnet-status-flags": "reads a station config.bog, which a module root does not hold",
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",
+	"lint-gradle-userhome":     "reads gradle.properties (build configuration, not a module artifact); run it on a gradle root on demand",
 	"lint-guard-pins":          "a kit meta-check of the toolbelt's own lint headers, run by the kit gates",
 	"split-package-check":      "a project-level check across every module of a project, not of one module",
+
+	// G87 and G88: advisories run by hand (a station file, and a module that exports histories to a database).
+	"lint-mqtt-tls-port":            "reads a station config.bog, which a module root does not hold (G87)",
+	"lint-rdbms-dialect-descriptor": "an advisory for a module that exports histories to a database (G88), run by hand",
 }
 
 // TestEveryLintIsAMemberOrListed (issue #459): every n4lint rule in rules.All() and every

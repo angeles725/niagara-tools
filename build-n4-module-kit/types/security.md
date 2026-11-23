@@ -183,7 +183,7 @@ The README names the category and role each module user needs (read user, write 
 
 A servlet write path needs both the CSRF token and the caller's permission on the written TARGET (never on the
 servlet or the user): the copy-ready template is `types/servlet-write.md`, linted by
-`toolbelt/lint-servlet-write-guards.sh`. `[ev: retro 2026-11-10-mcpn4-history-batch-tools Δ6]`
+`toolbelt/lint-servlet-write-guards.sh`. `[ev: retro mcpn4-history-batch-tools Δ6]`
 
 ### 3.1 Official CSRF filter (preferred)
 
@@ -442,7 +442,7 @@ calls is not followed, so such a row is cleared by moving the gate into the call
 `lint-status-parity` (config/status slot ratio) or `lint-silent-protection` (an unsurfaced protection trip): neither
 reads the license feature or the operational gate. [ev: retro secure-authoring-isoperational-gate Δ1]
 
-### 5.2 · How a feature name reaches a licence, and what validates it
+### 5.2 · How a feature name reaches a licence, and what validates it `[ev: retro doc-coverage-audit Δ18]`
 
 Sources: [CERT-doc] `niagara-help/versions/4.15.6.20/devguide-clean/licensing.txt` (under niagara-research), the
 contract; corpus B1144, the 4.14.0.162 code behind it. They agree; where the code adds detail the bullet says so.

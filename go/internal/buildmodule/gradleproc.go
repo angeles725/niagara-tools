@@ -53,7 +53,8 @@ func (b *build) runTracked(cmd *exec.Cmd) error {
 // stopGradle keeps any later gradle from starting, passes sig on to a running one and waits for it to end;
 // one still running after gradleStopWait is killed, and the wait after the kill is bounded too. The signal
 // reaches the gradle the run started (the wrapper's client); a gradle daemon, used outside a mirror home,
-// cancels its build on its own. With no gradle running it does nothing.
+// cancels its build on its own. What gradle itself started (a single-use daemon) is ended once gradle has
+// (procs.go). With no gradle running it does nothing.
 func (b *build) stopGradle(sig syscall.Signal) {
 	b.gradle.mu.Lock()
 	b.gradle.stopping = true
@@ -62,7 +63,9 @@ func (b *build) stopGradle(sig syscall.Signal) {
 	if proc == nil {
 		return
 	}
-	_ = proc.Signal(sig) // a gradle that already ended is not an error here
+	kin := descendants(proc.Pid) // read before gradle ends: its children are children of init after that
+	defer killAll(kin)           // a job gradle left running must not install a jar after the restore (procs.go)
+	_ = proc.Signal(sig)         // a gradle that already ended is not an error here
 	select {
 	case <-done:
 		return
