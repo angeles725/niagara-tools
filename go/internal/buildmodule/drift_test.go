@@ -1,6 +1,8 @@
 package buildmodule
 
 import (
+	"archive/zip"
+	"bytes"
 	"os"
 	"strings"
 	"testing"
@@ -113,15 +115,23 @@ func TestFailedRestoreSaysWhatModulesHolds(t *testing.T) {
 // The cases that stubbed unzip on PATH in tests/build-sh.bats (BS-drift-unverifiable-unzip, -restore-fail,
 // BS-drift-empty-listing) are these. [ev: retro go-build-module-port Δ3]
 func TestAJarTheGateCannotReadIsNeverEqualToItself(t *testing.T) {
-	for _, name := range []string{"unreadable", "empty"} {
+	var noEntries bytes.Buffer // a well-formed zip (only the end-of-central-directory record) with no entry
+	if err := zip.NewWriter(&noEntries).Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ name, body string }{
+		{"unreadable", "this is not a zip"},
+		{"empty", ""},
+		{"zip with zero entries", noEntries.String()},
+	} {
+		name := c.name
 		f := newFixture(t)
 		f.signs()
-		if name == "unreadable" {
-			f.write(f.deployed("rt"), "this is not a zip")
-		} else {
-			f.write(f.deployed("rt"), "")
-		}
+		f.write(f.deployed("rt"), c.body)
 		f.jar(f.built("rt"), "1.0.0", "NEW payload")
+		if c.body == noEntries.String() {
+			f.write(f.built("rt"), c.body) // both sides list as nothing: an empty listing must not read as "equal"
+		}
 		before := f.read(f.deployed("rt"))
 		f.does("gradlew", `cp "`+f.built("rt")+`" "`+f.deployed("rt")+`"`)
 		f.wants(name, f.build(), ExitDriftUnknown, "drift gate cannot verify Foo-rt", "  Restored the previously-deployed Foo-rt.jar into "+f.home+"/modules")
