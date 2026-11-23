@@ -1,6 +1,7 @@
 package writeops
 
 import (
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -40,10 +41,15 @@ func setFlagsPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	}
 	targets := pyjson.NewObject()
 	targets.Set(ordText, h)
+	notes := []any{flagsChangeNote(slot, ordText, current, requested)}
+	if end := undescribedEnd(c, nodes, slot); end != "" {
+		typ, _ := get(box.Node(nodes, ""), "t").(string)
+		notes = append(notes, flagsUndescribedNote(slot, typ, end))
+	}
 	return &plan.Planned{
 		Ops:     []any{flagsOp(h, slot, requested)},
 		Inverse: []any{flagsOp(h, slot, current)}, // the station's own string: restored exactly
-		Notes:   []any{flagsChangeNote(slot, ordText, current, requested)},
+		Notes:   notes,
 		Targets: targets, Data: setFlagsData{requested}}, nil
 }
 

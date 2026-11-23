@@ -41,3 +41,12 @@ func flagsChangedSinceMsg(slot any, ord string, batch any, wrote, now string) st
 		" set them (the batch set " + shownFlags(wrote) + ", the station now holds " + shownFlags(now) +
 		"): refusing to overwrite a later change. Restore them by hand with n4_set_flags if that is still wanted"
 }
+
+// flagsUndescribedNote warns that a slot taken for a dynamic one may be a frozen slot of a type the
+// station left undescribed.
+func flagsUndescribedNote(slot, typ, end string) string {
+	return "slot " + pyjson.StrRepr(slot) + " carries no flags and " + typ + " declares no such slot, so it is taken as a " +
+		"dynamic slot with no flags; but the contract walk ended at " + pyjson.StrRepr(end) + ", which the station " +
+		"answered with no contract, so it may be a frozen slot of an undescribed type at flags nobody can read: " +
+		"then the inverse \"\" (and the rollback) would not restore them; read the slot's flags another way first"
+}
