@@ -62,6 +62,22 @@ func TestAnUnknownTypeRefusalNamesTheStaleRegistryRoute(t *testing.T) {
 		"Rebuilding registry", "reconnect with n4_connect")
 }
 
+// An alarm extension has one palette type, alarm:AlarmSourceExt, with its algorithm as a child
+// (retro R1 delta M2): an unknown alarm:...Ext type names it; other unknown types get no such hint.
+func TestAnUnknownAlarmExtTypeNamesThePaletteType(t *testing.T) {
+	r := verifiedRig(t)
+	r.Station.SetRegistry(map[string]any{"alarm:OutOfRangeAlarmExt": map[string]any{"c": "", "isErr": true, "m": "alarm:OutOfRangeAlarmExt", "s": ""}})
+	refusedDry(t, r, "n4_create_component", withArgs(createPump, Args{"type": "alarm:OutOfRangeAlarmExt"}),
+		"alarm:OutOfRangeAlarmExt", "not known to the station",
+		"the palette type of an alarm extension is alarm:AlarmSourceExt, with its algorithm "+
+			"(alarm:OutOfRangeAlgorithm, alarm:BooleanChangeOfStateAlgorithm, ...) as a child")
+	r.Station.SetRegistry(map[string]any{"kitControl:NoSuchType": map[string]any{"c": "", "isErr": true, "m": "kitControl:NoSuchType", "s": ""}})
+	text := r.Srv.Err("n4_create_component", withArgs(createPump, Args{"type": "kitControl:NoSuchType"}))
+	if strings.Contains(text, "AlarmSourceExt") {
+		t.Errorf("a non-alarm type got the alarm hint: %s", text)
+	}
+}
+
 func TestLinkToAMissingSlotIsRefused(t *testing.T) {
 	r, _, _, args := linkRig(t)
 	r.Station.SetRegistry(map[string]any{"kitControl:NumericConst": numericConst})

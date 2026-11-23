@@ -124,3 +124,21 @@ func TestAStatusComplexKeepsItsValueStatusAndFlagsReply(t *testing.T) {
 		t.Errorf("out = %s", got)
 	}
 }
+
+func TestAFacetsSlotIsAlsoReturnedAsKeyValuePairs(t *testing.T) {
+	const f = "units=u:fahrenheit;°F;(K);*0.5555555555555556+255.37222222222223;|precision=i:1|" +
+		"maxOverrideDuration=r:3600000"
+	s := serve(t, ord, `{"": {}, "facets": {"t": "baja:Facets", "v": "`+f+`"}, "other": {"t": "baja:String", "v": "a=b"}}`)
+	got := slots(t, s, ord)
+	want(t, got["facets"], "value", f)
+	pairs, _ := got["facets"].Get("facets_parsed")
+	p, _ := pairs.(*pyjson.Object)
+	if p == nil {
+		t.Fatalf("facets_parsed missing: %s", pyjson.Repr(got["facets"]))
+	}
+	want(t, p, "precision", "1", "maxOverrideDuration", "3600000",
+		"units", "fahrenheit;°F;(K);*0.5555555555555556+255.37222222222223;")
+	if _, has := got["other"].Get("facets_parsed"); has {
+		t.Errorf("a non-facets slot got facets_parsed")
+	}
+}

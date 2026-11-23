@@ -41,6 +41,9 @@ type haRun struct {
 	flatReads          int
 	flatFails          int
 	flatNote           string
+	flatSensors        bool                 // flat_scope=sensors: only sensor readings (R8 N4)
+	flatDown           bool                 // flat_down=true: a flat history of a down point goes to flat_down (R8 N3)
+	flatPoints         map[string]flatPoint // the point read of flat_scope / flat_down, by point path; nil when none
 }
 
 // HistoriesAudit is n4_histories_audit.

@@ -19,8 +19,9 @@ const (
 // haExtFields and haPointFields name the columns of the two reads by position (a localized
 // station translates headers, and every encodeToString column is headed alike).
 var (
-	haExtFields   = []string{"path", "type", "enabled", "id", "capacity", "policy", "interval", "last"}
-	haPointFields = []string{"path"}
+	haFlatPointFields = []string{"path", "status", "facets"}
+	haExtFields       = []string{"path", "type", "enabled", "id", "capacity", "policy", "interval", "last"}
+	haPointFields     = []string{"path"}
 )
 
 // haLists are the finding lists of the reply, in order.
