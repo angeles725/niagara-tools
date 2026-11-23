@@ -10,7 +10,8 @@
 #
 # USAGE: run-pure-test.sh <module-rt-dir> <pkg.TestClass>
 #   <module-rt-dir>  e.g. .../CompPan/CompPan-rt   (holds src/ and srcTest/)
-#   <pkg.TestClass>  e.g. com.angeles.CompPan.CompressorControlTest
+#   <pkg.TestClass>  e.g. com.angeles.CompPan.CompressorControlTest (a class in the default package is
+#                    srcTest[/test]/<Class>.java)
 #
 # Compiles the test + any pure sources it references (via -sourcepath) into a TEMP dir
 # — never writes into the module tree (a parallel session's working tree is off-limits)
@@ -21,8 +22,10 @@
 #   compile: a compile error is never reported as the exit-1 bite). [ev: audit-2026-10-03 A1]
 #   A JDK without `java` on PATH is exit 127, as a shell reports a missing command.
 #
-# Go port: with several copies of a jar under ~/.gradle the first in name order is used (find's directory
-# order chose it before, so the pick depended on the filesystem).
+# ~/.gradle may be a symlink (a shared or relocated cache): it is followed. With several copies of a jar
+# under it the first in name order is used and a NOTICE on stderr names the jar, the count and the copy
+# used (find's directory order chose it before, so the pick depended on the filesystem).
+# [ev: retro go-toolbelt-small-port Δ3]
 #
 # Implementation: the Go module at <repo>/go (go/cmd/run-pure-test, go/internal/puretest). This script is only
 # the launcher: go/go-tool.sh `go_tool_bin` builds go/bin/run-pure-test when the binary is missing or older
