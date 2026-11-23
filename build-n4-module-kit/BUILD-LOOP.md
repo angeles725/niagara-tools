@@ -159,6 +159,9 @@ non-skippable check floor (§5) applies to every tier.
   overrides `doGet`/`doPost(WebOp)`, never `doService(WebOp)`, which is not a `BWebServlet` method and failed
   `:<Mod>-ux:compileJava` on 4.14 and 4.15 (`types/dashboard.md` override contract; `tests/scaffold-module.bats`
   TC-DASH3). `[ev: retro r10-scaffold-station-test Δ6]`
+- **A dashboard ships its own login:** a `BLoginTemplate` subclass in its `-rt` part, selected through
+  `Services/WebService.loginTemplate`; the dashboard scaffold emits it with its activation rule and tests
+  (`types/dashboard.md` § The module ships its own login). `[ev: issue #847]`
 - **Behavior decisions — HARD gate before the first source write of any rt control, protection, automatic action
   or operator-facing UI change:** list every behavior the code must decide that the user has not stated explicitly
   (generate the list from the question catalog in `METHODOLOGY.md` § Domain correctness, not from memory). Each one
