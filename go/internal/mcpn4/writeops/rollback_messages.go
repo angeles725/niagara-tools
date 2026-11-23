@@ -71,7 +71,7 @@ func frozenConfigNote(components []any) string {
 
 // laterWorkRefusal is the refusal of a create rollback that would remove later work: the later
 // batches (newest first) and the children or links its create did not make.
-func laterWorkRefusal(bid, created string, batches, extras []string) string {
+func laterWorkRefusal(bid, created string, batches, extras []string, chain bool) string {
 	var found []string
 	if len(batches) > 0 {
 		found = append(found, "later batch(es) wrote under it: "+strings.Join(batches, ", "))
@@ -80,7 +80,7 @@ func laterWorkRefusal(bid, created string, batches, extras []string) string {
 		found = append(found, "it holds child(ren) or link(s) its create did not make: "+strings.Join(extras, ", "))
 	}
 	hint := ""
-	if len(batches) > 0 {
+	if len(batches) > 0 && !chain { // a chain call that is refused cannot be helped by chain=true
 		hint = "; n4_rollback chain=true removes it with the later batches in one step"
 	}
 	return "batch " + bid + " created " + created + "; rolling it back removes it with everything under it, and " +

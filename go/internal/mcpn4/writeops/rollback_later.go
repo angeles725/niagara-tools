@@ -60,7 +60,7 @@ func laterWork(c plan.Client, w *plan.State, view *pyjson.Object, ops []any, tar
 	if len(batches) == 0 && len(extras) == 0 {
 		return nil, nil
 	}
-	return nil, plan.ToolError(laterWorkRefusal(bid, created, batches, extras))
+	return nil, plan.ToolError(laterWorkRefusal(bid, created, batches, extras, chain))
 }
 
 // laterBatches is "<batch id> (<tool>)" of every batch journaled after bid on the same station,
@@ -137,19 +137,28 @@ func chainStaysUnder(later []*pyjson.Object, created string) error {
 }
 
 // uncovered is the extra children no later chain batch made: a component one of them added under
-// created, or a link when one of them is a link batch onto created.
+// created, or a link a later n4_create_link batch made on created, matched by the link name its inverse
+// removes. A link added by hand beside a batch-made one stays uncovered, so chain refuses it.
 func uncovered(extras []extraChild, later []*pyjson.Object, created string) []string {
-	added, linked := map[string]bool{}, false
+	added, links := map[string]bool{}, map[string]bool{}
 	for _, v := range later {
 		t, _ := get(v, "targets").(*pyjson.Object)
-		if get(v, "tool") == "n4_create_link" && t != nil {
-			if _, ok := t.Get(created); ok {
-				linked = true
+		if t == nil {
+			continue
+		}
+		if get(v, "tool") == "n4_create_link" {
+			inv, _ := get(v, "inverse").([]any)
+			for _, e := range inv {
+				if op, ok := e.(*pyjson.Object); ok && get(op, "nm") == "v" && ordOf(t, get(op, "h")) == created {
+					if n, ok := get(op, "n").(string); ok {
+						links[n] = true
+					}
+				}
 			}
 		}
 		ops, _ := get(v, "ops").([]any)
 		for _, e := range ops {
-			if op, ok := e.(*pyjson.Object); ok && get(op, "nm") == "a" && t != nil && ordOf(t, get(op, "h")) == created {
+			if op, ok := e.(*pyjson.Object); ok && get(op, "nm") == "a" && ordOf(t, get(op, "h")) == created {
 				if n, ok := get(op, "n").(string); ok {
 					added[n] = true
 				}
@@ -158,7 +167,7 @@ func uncovered(extras []extraChild, later []*pyjson.Object, created string) []st
 	}
 	var out []string
 	for _, x := range extras {
-		if !(added[x.name] || x.link && linked) {
+		if !(added[x.name] || x.link && links[x.name]) {
 			out = append(out, x.name)
 		}
 	}

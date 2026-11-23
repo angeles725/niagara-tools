@@ -1529,8 +1529,9 @@ Destructive tools use the same pipeline:
   the component. They are not rolled back one by one and stay in the journal as they were; a later
   `n4_rollback` of one of them is refused because its component is gone. It still refuses a later batch
   that also wrote outside the created component (name it and roll it back first) and a child or link no
-  batch made; a link on the component counts as made by a later `n4_create_link` batch onto it. Repeat `chain`
-  on the executing call; on a batch that is not a create it changes nothing and a note says so.
+  batch made; a link on the component counts as made only when a later `n4_create_link` batch made that link
+  (by its name), so a link added by hand beside it is still refused. Repeat `chain` on the executing call; on a
+  batch that is not a create it changes nothing and a note says so.
   Inverses: remove a created
   component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports

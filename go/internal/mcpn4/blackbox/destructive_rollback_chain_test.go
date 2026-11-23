@@ -5,6 +5,7 @@ package blackbox
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -105,5 +106,37 @@ func TestRollbackChainOnANonCreateBatchRollsBackAsBefore(t *testing.T) {
 	}
 	if v := d.value(h, "out", "value"); v != "1.0" {
 		t.Errorf("out = %v", v)
+	}
+}
+
+// A link added by hand on the created component, next to a link a later batch made there, is not covered by that
+// batch: chain refuses and names it, and the refusal does not suggest chain=true again (review R1/R3 advisories).
+func TestRollbackChainRefusesAHandMadeLinkBesideABatchLink(t *testing.T) {
+	d := destructiveRig(t, nil)
+	out := d.Srv.RunWrite("n4_create_component", Args{"parent_ord": Folder, "name": "W", "type": "kitControl:NumericConst"})
+	src, _ := d.addOut("Src", "", num(1.0))
+	d.Srv.RunWrite("n4_create_link", Args{"source_ord": Folder + "/" + src, "source_slot": "out",
+		"target_ord": Folder + "/W", "target_slot": "in10"})
+	d.Add(d.node("W").Handle, "HandLink", "baja:Link")
+	text := d.Srv.Err("n4_rollback", chainArgs(out["batch_id"].(string)))
+	wantAll(t, text, "it holds child(ren) or link(s) its create did not make: HandLink")
+	if strings.Contains(text, "chain=true removes it") {
+		t.Errorf("a chain refusal suggests chain=true again: %s", text)
+	}
+	if d.node("W") == nil {
+		t.Errorf("W was removed")
+	}
+}
+
+// The link a later batch made on the created component is covered by name: chain plans the remove.
+func TestRollbackChainCoversTheLinkABatchMadeOnTheCreated(t *testing.T) {
+	d := destructiveRig(t, nil)
+	out := d.Srv.RunWrite("n4_create_component", Args{"parent_ord": Folder, "name": "W", "type": "kitControl:NumericConst"})
+	src, _ := d.addOut("Src", "", num(1.0))
+	d.Srv.RunWrite("n4_create_link", Args{"source_ord": Folder + "/" + src, "source_slot": "out",
+		"target_ord": Folder + "/W", "target_slot": "in10"})
+	dry := d.Srv.Dry("n4_rollback", chainArgs(out["batch_id"].(string)))
+	if dry["confirmation_token"] == nil {
+		t.Errorf("no token for a chain whose only extra is the batch-made link: %v", dry)
 	}
 }
