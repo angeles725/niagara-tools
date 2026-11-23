@@ -83,6 +83,8 @@ func TestAreaOrder(t *testing.T) {
 		{"research-sdd rows are not ours", Row{Target: "toolbelt/scan.sh", Text: "research-sdd loop"}, "x.md", "", ""},
 		{"strong beats weak", Row{Target: "toolbelt/x.sh", Text: "n4_foo"}, "x.md", "", "mcp-n4"},
 		{"file name", Row{Text: "t"}, "2026-01-01-mcpn4-foo.md", "", "mcp-n4"},
+		{"kit target beats a name only in the evidence", Row{Target: "`toolbelt` fold audit", Text: "make the fold audit warn", Evidence: "~40 mcp-n4 deltas unfolded"}, "x.md", "", "build-n4-module"},
+		{"evidence still decides when nothing else does", Row{Text: "t", Evidence: "seen in n4_read_slots"}, "x.md", "", "mcp-n4"},
 		{"default for a kit retro", Row{Text: "t"}, "2026-01-01-foo.md", "build-n4-module", "build-n4-module"},
 	}
 	for _, c := range cases {
@@ -135,5 +137,22 @@ func TestAppendIssue(t *testing.T) {
 	}
 	if _, err := AppendIssue(kitRetro, 3, 1); err == nil {
 		t.Error("a line that is not a delta row must be refused")
+	}
+}
+
+// A table whose change is not the second column is read by its header, and a Status column marks the row done.
+func TestParseReadsTheChangeAndStatusColumnsByHeader(t *testing.T) {
+	data := "## Deltas\n| ID | Target | Delta | Evidence | Priority | Status |\n|---|---|---|---|---|---|\n" +
+		"| M1 | /mcp-n4 n4_bql_query | Accept alarm bases | live | HIGH | APPLIED (#713 31d1670a) |\n" +
+		"| M3 | /mcp-n4 n4_read_slots | A struct path returned the parent's slots | live read | MEDIUM | OPEN |\n"
+	rows := Parse(data)
+	if len(rows) != 2 {
+		t.Fatalf("rows = %d", len(rows))
+	}
+	if rows[0].Done != "APPLIED" || rows[1].Done != "" {
+		t.Errorf("status column: done = %q, %q", rows[0].Done, rows[1].Done)
+	}
+	if rows[1].Text != "A struct path returned the parent's slots" || rows[1].Target != "/mcp-n4 n4_read_slots" || rows[1].Evidence != "live read" {
+		t.Errorf("columns by header: %+v", rows[1])
 	}
 }

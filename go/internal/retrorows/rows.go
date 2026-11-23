@@ -29,6 +29,7 @@ var (
 	notDelta   = regexp.MustCompile(`(?i)\b(not (a )?(kit )?delta|no delta|already|reinforced|rationale|verdict|summary|run quality|state, not)`)
 	sepCell    = regexp.MustCompile(`^:?-+:?$`)
 	trailIssue = regexp.MustCompile(`\s+#([0-9]+)\s*$`)
+	changeHead = regexp.MustCompile(`\b(delta|change|proposal|proposed)\b`)
 	doneRe     = regexp.MustCompile(`^\**(APPLIED|DISMISSED|SHIPPED|REJECTED|FOLDED|PARKED)\b`)
 )
 
@@ -51,7 +52,7 @@ func splitCells(line string) []string {
 func Parse(data string) []Row {
 	var rows []Row
 	heading, in := "", false
-	target, evidence := -1, -1
+	target, evidence, text, status := -1, -1, 1, -1
 	started := false
 	for i, line := range strings.Split(data, "\n") {
 		if m := headingRe.FindStringSubmatch(strings.TrimRight(line, "\r")); m != nil {
@@ -69,7 +70,8 @@ func Parse(data string) []Row {
 		}
 		cells := splitCells(line)
 		if !started {
-			started, target, evidence = true, -1, -1
+			started, target, evidence, text, status = true, -1, -1, 1, -1
+			found := false
 			for j, h := range cells {
 				h = strings.ToLower(h)
 				switch {
@@ -77,20 +79,26 @@ func Parse(data string) []Row {
 					target = j
 				case strings.Contains(h, "evidence") || strings.Contains(h, "token"):
 					evidence = j
+				case strings.Contains(h, "status"):
+					status = j
+				case j > 0 && !found && changeHead.MatchString(h):
+					text, found = j, true // the change is read by its header, not by position
 				}
 			}
 			continue
 		}
 		m := idRe.FindStringSubmatch(cells[0])
-		if m == nil || len(cells) < 2 {
+		if m == nil || len(cells) <= text {
 			continue
 		}
-		r := Row{Line: i + 1, ID: "Δ" + m[1], Text: cells[1], Heading: heading}
+		r := Row{Line: i + 1, ID: "Δ" + m[1], Text: cells[text], Heading: heading}
 		if mi := trailIssue.FindStringSubmatchIndex(r.Text); mi != nil {
 			r.Issue, _ = strconv.Atoi(r.Text[mi[2]:mi[3]])
 			r.Text = strings.TrimSpace(r.Text[:mi[0]])
 		}
 		if d := doneRe.FindStringSubmatch(r.Text); d != nil {
+			r.Done = d[1]
+		} else if d := doneRe.FindStringSubmatch(cell(cells, status)); d != nil {
 			r.Done = d[1]
 		}
 		r.Target, r.Evidence = cell(cells, target), cell(cells, evidence)

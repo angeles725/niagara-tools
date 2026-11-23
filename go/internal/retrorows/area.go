@@ -32,21 +32,29 @@ func strong(s string) string {
 }
 
 // Area says which area a row belongs to: "mcp-n4", "build-n4-module" or "" (not ours). An explicit name (mcp-n4,
-// n4_* tool names, build-n4-module) in the target, the heading, the text or evidence, then the retro's file name
-// decides first; then the kit words (kit, toolbelt, BUILD-LOOP, go/internal) in the target, then in the text, unless
-// the row talks about the research kit (research-sdd, rsdd, PROMPT-LOOP). def is what a row with no signal gets
-// (a retro inside this kit passes build-n4-module; others pass "").
+// n4_* tool names, build-n4-module) in the target, the heading, the text, then the retro's file name decides first;
+// then the kit words (kit, toolbelt, BUILD-LOOP, go/internal) in the target, then in the text; the evidence column,
+// which only cites where a delta was seen, decides last. Rows about the research kit (research-sdd, rsdd,
+// PROMPT-LOOP) get no kit area. def is what a row with no signal gets (a retro inside this kit passes
+// build-n4-module; others pass "").
 func Area(r Row, file, def string) string {
 	body := r.Text + " " + r.Evidence
-	for _, s := range []string{r.Target, r.Heading, body, file} {
+	for _, s := range []string{r.Target, r.Heading, r.Text, file} {
 		if a := strong(s); a != "" {
 			return a
 		}
 	}
-	for _, s := range []string{r.Target, body} {
+	for _, s := range []string{r.Target, r.Text} {
 		if weakKit.MatchString(s) && !foreign.MatchString(r.Target+" "+body) {
 			return AreaBuild
 		}
+	}
+	// the evidence only cites where a delta was seen ("~40 mcp-n4 deltas"): it decides only when nothing above did
+	if a := strong(r.Evidence); a != "" {
+		return a
+	}
+	if weakKit.MatchString(r.Evidence) && !foreign.MatchString(r.Target+" "+body) {
+		return AreaBuild
 	}
 	return def
 }
