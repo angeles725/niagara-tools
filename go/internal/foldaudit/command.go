@@ -74,6 +74,7 @@ type audit struct {
 	s      cli.Stdio
 
 	nFolded, nCited, nUncited, dChecked, dMissing, dUnreadable int
+	nPendingDone                                               int
 	nAlias, nAmbiguous                                         int
 	warned                                                     bool
 }
@@ -145,7 +146,14 @@ func (t *audit) aliases(stems map[string]bool) {
 func (t *audit) row(line string) {
 	file := indexRow(line)
 	line = strings.ReplaceAll(line, "\x00", "")
-	if file == "" || rowStatus(line) != "folded" {
+	if file == "" {
+		return
+	}
+	if rowStatus(line) == "pending" {
+		t.pending(line, file)
+		return
+	}
+	if rowStatus(line) != "folded" {
 		return
 	}
 	t.nFolded++
@@ -166,6 +174,28 @@ func (t *audit) row(line string) {
 			fmt.Fprintf(t.s.Out, "fold-audit: NOTE ambiguous citation token credits %s: %s\n", file, strings.Join(hits, " "))
 		}
 	}
+}
+
+// pending reports a pending row since --deltas-since whose every delta is cited (or deferred) as landed: the fold
+// is done and only the flip to folded is missing, which fails --strict (retro build-kit-bench-session Δ19). A
+// pending row with a delta not yet cited, a row with no delta and a row before the cutoff are left alone.
+func (t *audit) pending(line, file string) {
+	if t.o.since == "" || prefix(file, 10) < t.o.since {
+		return
+	}
+	deltas, err := retrocells.ParseDeltasCell(cellAfter(line, "pending"))
+	if err != nil || len(deltas) == 0 {
+		return
+	}
+	st := stem(file)
+	for _, d := range deltas {
+		if !t.h.deltas[st+" "+d.String()] {
+			return
+		}
+	}
+	fmt.Fprintf(t.s.Out, "fold-audit: WARN %s pending, but all %d deltas are cited: set `<!-- review-status: folded -->` in the retro\n", file, len(deltas))
+	t.nPendingDone++
+	t.warned = true
 }
 
 // deltas checks that every Δk of a folded row is cited as "<stem> Δk".
@@ -198,6 +228,9 @@ func (t *audit) summary() {
 		// Mutation: R2-unreadable -- folding dUnreadable back into dMissing hides a corrupt cell as a citation gap.
 		if t.dUnreadable > 0 {
 			fmt.Fprintf(t.s.Out, "fold-audit: deltas: %d unreadable cells\n", t.dUnreadable)
+		}
+		if t.nPendingDone > 0 {
+			fmt.Fprintf(t.s.Out, "fold-audit: pending: %d fully cited\n", t.nPendingDone)
 		}
 	}
 	if t.nAlias > 0 {

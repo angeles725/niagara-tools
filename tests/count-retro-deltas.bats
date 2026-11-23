@@ -34,3 +34,23 @@ setup() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"no INDEX.md beside"* ]]
 }
+
+# retro build-kit-bench-session Δ21: a mismatch already on the main branch is caught here, not by the next author who
+# runs the counter on a retro. The retros before 2026-10-25 predate the header contract and are not read; the two
+# named below are known mismatches owed to their own folds.
+@test "CRD4: every retro dated after 2026-10-24 agrees with its INDEX row, header and Delta count, bar the two named" {
+  local kit retros f b bad
+  kit="$BATS_TEST_TMPDIR/kit"
+  retros="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit/retros"
+  mkdir -p "$kit/retros"
+  for f in "$retros"/????-??-??-*.md; do
+    b="${f##*/}"
+    if [[ "${b:0:10}" > 2026-10-24 ]]; then cp "$f" "$kit/retros/"; fi
+  done
+  run "$(dirname "$T")/gen-retro-index.sh" "$kit"
+  [ "$status" -eq 0 ]
+  run "$T" "$kit"/retros/????-??-??-*.md
+  [[ "$output" == *"TOTAL  rows="* ]]
+  bad="$(printf '%s\n' "$output" | grep ' MISMATCH$' | grep -v -e 'mcpn4-replicate-points' -e 'p1-build-deploy-safety' || true)"
+  [ -z "$bad" ] || { printf '%s\n' "$bad" >&2; false; }
+}

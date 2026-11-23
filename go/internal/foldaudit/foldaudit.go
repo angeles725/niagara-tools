@@ -194,10 +194,14 @@ func rowStatus(line string) string {
 
 // deltasCell is the cell right after the first "folded" cell, with every space removed (tabs kept);
 // "" when there is no such cell.
-func deltasCell(line string) string {
+func deltasCell(line string) string { return cellAfter(line, "folded") }
+
+// cellAfter is the cell right after the first cell that reads status, with every space removed (tabs kept);
+// "" when there is no such cell.
+func cellAfter(line, status string) string {
 	cs := cells(line)
 	for i, c := range cs {
-		if trimSpaces(c) == "folded" {
+		if trimSpaces(c) == status {
 			if i+1 < len(cs) {
 				return strings.ReplaceAll(cs[i+1], " ", "")
 			}

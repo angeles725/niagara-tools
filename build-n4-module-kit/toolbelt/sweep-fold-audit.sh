@@ -17,6 +17,10 @@
 # too (fail closed), counted on its own `fold-audit: deltas: N unreadable cells` line (shown when N>0).
 # The cell parser is go/internal/retrocells ParseDeltasCell, shared with the other INDEX sweeps.
 # Older rows cite by stem only (the pre-Δ convention), hence the cutoff.
+# The converse (same cutoff): a PENDING row whose every Δ is cited or deferred is
+#   fold-audit: WARN <file> pending, but all <n> deltas are cited: set `<!-- review-status: folded -->` in the retro
+# plus a `fold-audit: pending: N fully cited` summary line; it fails --strict, so a fold that forgot the flip is seen.
+# A pending row with a Δ still uncited, or with no Δ, is not reported. [ev: retro build-kit-bench-session Δ19]
 #
 # Corpus: every *.md under <kit-root> excluding */retros/* and INDEX.md (ledger.d/ fragments count).
 # Stem: filename minus leading YYYY-MM-DD- and trailing .md. A stem token T (6-char floor) credits
