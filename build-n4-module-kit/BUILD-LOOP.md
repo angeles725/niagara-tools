@@ -335,6 +335,14 @@ module parts `<module>` depends on, one per line. It runs the install's own `nre
 3 when there is no `bin/nre` or the module name is bad. Run it after an install to check the `module-include.xml`
 dependencies the station will resolve. (issue #851) `[ev: corpus B1453]`
 
+**Restart a lab station from the loop (no console window):** `toolbelt/lab-station.sh start|stop|restart <station>`
+runs `<niagara_home>/bin/station.exe <station>` with its console on a named pipe the station holds, and waits for
+`*** Station Started`. `stop` writes `quit` to the pipe and waits for `*** Station shutdown ***` (an orderly shutdown,
+about 9 s on a 4.14 lab station), so the loop is: `build.sh` installs the jar (the replaced one is kept), then
+`lab-station.sh restart <station>`. `console <station> heap|threads|version` reads one console verb; `--dry-run` prints
+the plan. It stops only a station it started; a station run as a Windows service needs the platform daemon instead.
+(issue #848)
+
 **Post-jar copy lock (exit 32):** the plugin's LAST step copies the new jar into `<niagara_home>/modules/`; a
 Windows-side process (Workbench, a station) holding the old jar open on a `/mnt/c` mount makes that copy fail with
 `FileAlreadyExistsException` — invisible to `preflight.sh`'s jar-lock scan, which SKIPs 9p/drvfs mounts by design.
