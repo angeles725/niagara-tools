@@ -12,6 +12,7 @@ A  SKIP  lint-link-target-flags  no src/
 A  SKIP  lint-ext-writable-shape  no src/
 A  SKIP  lint-no-system-out  no src/
 A  SKIP  lint-slotomatic-markers  no src/
+A  SKIP  lint-instance-type-order  no src/
 A  SKIP  lint-clock-zero-floor  no src/
 A  SKIP  lint-null-context-write  no src/
 A  SKIP  lint-bql-string-concat  no src/
@@ -43,6 +44,7 @@ B  SKIP  lint-link-target-flags  no src/
 B  SKIP  lint-ext-writable-shape  no src/
 B  SKIP  lint-no-system-out  no src/
 B  SKIP  lint-slotomatic-markers  no src/
+B  SKIP  lint-instance-type-order  no src/
 B  SKIP  lint-clock-zero-floor  no src/
 B  SKIP  lint-null-context-write  no src/
 B  SKIP  lint-bql-string-concat  no src/
@@ -77,7 +79,7 @@ B  PASS  schema-risk  verdict=SAFE
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 2 artifacts · 11 PASS · 0 FAIL · 0 WARN · 62 SKIP · 0 ADVISORY  ->  INCOMPLETE
+report-module: 2 artifacts · 11 PASS · 0 FAIL · 0 WARN · 64 SKIP · 0 ADVISORY  ->  INCOMPLETE
 -- stderr --
 -- @kind --
 recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)

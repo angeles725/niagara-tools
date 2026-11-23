@@ -43,6 +43,8 @@
 # module-include.xml <type> line lacks one of its <on type> entries (types/module-wiring.md § 2).
 # lint-slotomatic-markers.sh <artifact>/src (FAIL; a WARN unclosed-region row relayed): a generated region
 # whose stamp count is not 1 is skipped by Slot-o-Matic while the build stays green (METHODOLOGY.md K15).
+# lint-instance-type-order.sh <artifact>/src (FAIL): a @NiagaraType class that declares a static INSTANCE after its
+# static TYPE is refused by the station ("INSTANCE field is null; insure getType() comes last"), issue #847.
 # Go-ported members (issue #459): lint-persist-hot-write, lint-changed-hot-write, lint-inert-coordination,
 # lint-session-store-lazy-evict, lint-bformat-call (WARN), lint-service-types and lint-driver-scaffold (FAIL/WARN)
 # on <artifact>/src; lint-wb-external-ord-value on a -wb src/; lint-spa-poll-no-recovery on a -ux src/rc/; once

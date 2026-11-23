@@ -1,0 +1,4 @@
+  <!--com.example.ModuleA.login-->
+  <type class="com.example.ModuleA.login.BModuleALoginTemplate" name="ModuleALoginTemplate"/>
+  <!--com.example.ModuleA (the service that applies it)-->
+  <type class="com.example.ModuleA.BModuleAService" name="ModuleAService"/>

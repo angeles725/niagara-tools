@@ -271,6 +271,15 @@ there.
 [ev: gradle URISyntaxException 2026-09-21; structure.md §L10] — **Kit coverage: this entry
 (FOLDED); fix already in types/structure.md §L10**
 
+### D6 · A `@NiagaraType` class declares `static INSTANCE` after `static Type TYPE` → the station refuses the type `[ev: issue #847]`
+
+**Symptom:** pure tests, build, verify and report all pass, but the station will not load the type:
+`INSTANCE field is null; insure getType() comes last` (seen on a 4.14 lab station, 2026-11-23).
+**Fix:** declare `INSTANCE` before `TYPE`, so `TYPE` (the Slot-o-Matic `Sys.loadType(...)` field) is the last
+static of the class. `lint-instance-type-order` (`go/internal/lint/rules/instancetypeorder`) FAILs a `@NiagaraType`
+class, or one holding a `TYPE = Sys.loadType(...)` field, whose `INSTANCE` comes after its `TYPE`. A class with no
+`INSTANCE`, or `INSTANCE` first, is not flagged; comments and string literals are not read.
+
 ---
 
 ## E — Client / HMI compatibility

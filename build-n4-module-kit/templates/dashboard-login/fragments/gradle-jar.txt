@@ -1,0 +1,11 @@
+
+// The login page's assets (css, js) from src/rc/modulea-login into rc/modulea-login inside the jar. Niagara serves
+// them to a browser without a session through LoginFileServlet -> resourceToOrd -> module://ModuleA/rc/modulea-login/...
+// (only css/js/png/svg/gif/jpg/jpeg/txt/ico pass its whitelist). Only modulea-login/ is copied: it never collides
+// with the ux part's own rc/ files. Keep any image of the page (a logo) under src/rc/modulea-login/ too.
+tasks.named<Jar>("jar") {
+  from("src/rc") {
+    include("modulea-login/**")
+    into("rc")
+  }
+}

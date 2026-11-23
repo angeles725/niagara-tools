@@ -12,6 +12,7 @@ A-clean  SKIP  lint-link-target-flags  no src/
 A-clean  SKIP  lint-ext-writable-shape  no src/
 A-clean  SKIP  lint-no-system-out  no src/
 A-clean  SKIP  lint-slotomatic-markers  no src/
+A-clean  SKIP  lint-instance-type-order  no src/
 A-clean  SKIP  lint-clock-zero-floor  no src/
 A-clean  SKIP  lint-null-context-write  no src/
 A-clean  SKIP  lint-bql-string-concat  no src/
@@ -43,6 +44,7 @@ A-deep  SKIP  lint-link-target-flags  no src/
 A-deep  SKIP  lint-ext-writable-shape  no src/
 A-deep  SKIP  lint-no-system-out  no src/
 A-deep  SKIP  lint-slotomatic-markers  no src/
+A-deep  SKIP  lint-instance-type-order  no src/
 A-deep  SKIP  lint-clock-zero-floor  no src/
 A-deep  SKIP  lint-null-context-write  no src/
 A-deep  SKIP  lint-bql-string-concat  no src/
@@ -74,6 +76,7 @@ A-env  SKIP  lint-link-target-flags  no src/
 A-env  SKIP  lint-ext-writable-shape  no src/
 A-env  SKIP  lint-no-system-out  no src/
 A-env  SKIP  lint-slotomatic-markers  no src/
+A-env  SKIP  lint-instance-type-order  no src/
 A-env  SKIP  lint-clock-zero-floor  no src/
 A-env  SKIP  lint-null-context-write  no src/
 A-env  SKIP  lint-bql-string-concat  no src/
@@ -107,6 +110,7 @@ A-fail  SKIP  lint-link-target-flags  no src/
 A-fail  SKIP  lint-ext-writable-shape  no src/
 A-fail  SKIP  lint-no-system-out  no src/
 A-fail  SKIP  lint-slotomatic-markers  no src/
+A-fail  SKIP  lint-instance-type-order  no src/
 A-fail  SKIP  lint-clock-zero-floor  no src/
 A-fail  SKIP  lint-null-context-write  no src/
 A-fail  SKIP  lint-bql-string-concat  no src/
@@ -138,6 +142,7 @@ A-none  SKIP  lint-link-target-flags  no src/
 A-none  SKIP  lint-ext-writable-shape  no src/
 A-none  SKIP  lint-no-system-out  no src/
 A-none  SKIP  lint-slotomatic-markers  no src/
+A-none  SKIP  lint-instance-type-order  no src/
 A-none  SKIP  lint-clock-zero-floor  no src/
 A-none  SKIP  lint-null-context-write  no src/
 A-none  SKIP  lint-bql-string-concat  no src/
@@ -169,6 +174,7 @@ A-toodeep  SKIP  lint-link-target-flags  no src/
 A-toodeep  SKIP  lint-ext-writable-shape  no src/
 A-toodeep  SKIP  lint-no-system-out  no src/
 A-toodeep  SKIP  lint-slotomatic-markers  no src/
+A-toodeep  SKIP  lint-instance-type-order  no src/
 A-toodeep  SKIP  lint-clock-zero-floor  no src/
 A-toodeep  SKIP  lint-null-context-write  no src/
 A-toodeep  SKIP  lint-bql-string-concat  no src/
@@ -203,7 +209,7 @@ A-toodeep  SKIP  schema-risk  no .deploy-baseline (floor check not run); create 
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 6 artifacts · 12 PASS · 2 FAIL · 0 WARN · 183 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 6 artifacts · 12 PASS · 2 FAIL · 0 WARN · 189 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

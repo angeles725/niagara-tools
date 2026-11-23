@@ -1,0 +1,33 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-instance-type-order  @DIR@/src/com/example/BBad.java:14  static INSTANCE is declared after TYPE: the station refuses to load the type with "INSTANCE field is null; insure getType() comes last" -- declare INSTANCE before TYPE
+-- stderr --
+-- src/com/example/BBad.java --
+package com.example;
+
+@NiagaraType
+public class BBad extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.example.BBad(2979906276)1.0$ @*/
+  //region Type
+
+  public Type getType() { return TYPE; }
+  public static final Type TYPE = Sys.loadType(BBad.class);
+  //endregion Type
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+  public static final BBad INSTANCE = new BBad();
+}
+-- src/com/example/BGood.java --
+package com.example;
+
+@NiagaraType
+public class BGood extends BComponent
+{
+  public static final BGood INSTANCE = new BGood();
+
+  public Type getType() { return TYPE; }
+  public static final Type TYPE = Sys.loadType(BGood.class);
+}

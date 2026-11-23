@@ -55,6 +55,8 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
   work start from B760's punch-list.
 - **Read the REAL source** (ColdRoomPan/chihuahua), never from memory.
 - **Preview before compiling** (`~/.local/lib/niagara-go/bin/dashboard-preview`, open `/hmi` at 1280×800).
+- **A dashboard ships its own login** (a `BLoginTemplate` in its `-rt`, set as `WebService.loginTemplate` at
+  station start, never over another custom one): `$KIT/types/dashboard.md` § The module ships its own login.
 - **Verify gate = `$KIT/toolbelt/verify-module.sh`** (major 52 on every class outside `META-INF/versions/`, a
   `META-INF/<ALIAS>.SF` signature with its key file, module.xml types resolve; `--target-version`, `--stored`, `--src`
   opt-in). A jar that has not passed it does not go to a station. `--src` sub-checks: `typecount`, `facets` (raw-number

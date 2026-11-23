@@ -1,6 +1,6 @@
 // Package scaffoldmodule implements scaffold-module: it copies the bundled fixtures/<Type> tree of the kit
 // to <out-dir>/<ModuleName>, renaming the fixture's names in paths and text, then adds the station-test
-// overlay (logic, dashboard) and the client version ledger. It never invokes version control.
+// overlay (logic, dashboard), the login overlay (dashboard) and the client version ledger. It never invokes version control.
 //
 // The kit is found from the toolbelt directory the launcher exports (ToolbeltEnv), exactly as the bash tool
 // resolved it from its own location: <toolbelt>/../fixtures and <toolbelt>/../templates.
@@ -9,7 +9,7 @@
 // text, args.go the command line, name.go the ModuleName rule, values.go the option gate (vendor required, version
 // shapes), subst.go the substitution rules, copytree.go the tree copy, cleanup.go the
 // claim of the destination and the removal of a failed emit, interrupt.go the signals held during the emit, overlay.go the station-test overlay
-// and the ledger, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
+// and the ledger, login.go the dashboard's login overlay, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
 package scaffoldmodule
 
 import (
@@ -105,12 +105,15 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 	return dest, nil
 }
 
-// emit fills the claimed dest: the fixture copy, the station-test overlay, the version ledger.
+// emit fills the claimed dest: the fixture copy, the station-test overlay, the login overlay, the version ledger.
 func emit(toolbelt, fixture, dest string, n names, typ moduleType) *failure {
 	if err := copyTree(fixture, dest, n.fixturePathRules(), n.fixtureTextRules(), verbatimFixtureFile); err != nil {
 		return failf(ExitEnv, writeFault, err)
 	}
 	if f := stationTestOverlay(toolbelt, dest, n, typ); f != nil {
+		return f
+	}
+	if f := loginOverlay(toolbelt, dest, n, typ); f != nil {
 		return f
 	}
 	return versionLedger(toolbelt, dest)

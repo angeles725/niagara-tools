@@ -71,6 +71,7 @@ var perArtifact = []member{
 	{script: "lint-ext-writable-shape", f: failWarn},
 	{script: "lint-no-system-out", f: failOnly, v: rows},
 	{script: "lint-slotomatic-markers", f: failWarn, v: rows},
+	{script: "lint-instance-type-order", f: failWarn},
 	{script: "lint-clock-zero-floor", f: warnOnly},
 	{script: "lint-null-context-write", f: warnOnly},
 	{script: "lint-bql-string-concat", f: warnOnly},

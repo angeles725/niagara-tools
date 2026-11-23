@@ -1,0 +1,25 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/BText.java --
+@NiagaraType
+public class BText extends BComponent
+{
+  public static final Type TYPE = Sys.loadType(BText.class);
+  // public static final BText INSTANCE = new BText();
+  /* static BText INSTANCE; */
+  static final String S = "static BText INSTANCE = null;";
+  static final String T = """
+    static BText INSTANCE = null;
+    """;
+  void m() { BText INSTANCE = null; }
+}
+-- src/BQuoted.java --
+public class BQuoted
+{
+  static final String S = "static final Type TYPE = Sys.loadType(X.class);";
+  // static final Type TYPE = Sys.loadType(X.class);
+  static BQuoted INSTANCE = new BQuoted();
+}

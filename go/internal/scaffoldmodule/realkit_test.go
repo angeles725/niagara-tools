@@ -30,7 +30,17 @@ func TestRealKitRoundTrip(t *testing.T) {
 			// The overlay files come from templates/station-test (pinned by TestStationTestOverlay and the
 			// bats goldens); the fixture's own copies need not be byte-equal, only present.
 			overlay := base == "moduleTest-include.xml" || strings.HasSuffix(base, "StationTestBase.java") || strings.HasSuffix(base, "LinkTest.java")
-			if _, inFixture := want[rel]; !inFixture || !overlay && want[rel] != content {
+			_, inFixture := want[rel]
+			if typ == "dashboard" {
+				// The login overlay (templates/dashboard-login, pinned by TestLoginOverlay and
+				// tests/scaffold-module-login.bats) adds files to -rt and inserts lines into five fixture files:
+				// a new file is the overlay's, an inserted-into file keeps every fixture line in its order.
+				if !inFixture && isLoginFile(rel) || inFixture && keepsEveryLine(want[rel], content) {
+					delete(want, rel)
+					continue
+				}
+			}
+			if !inFixture || !overlay && want[rel] != content {
 				t.Errorf("%s: %s differs from the fixture (or is not in it)", typ, rel)
 			}
 			delete(want, rel)
@@ -63,4 +73,25 @@ func TestEmittedMapDeclaresTheTypesKind(t *testing.T) {
 			t.Errorf("%s: map declares kind %q mode %v, want kind %q and strict", typ.name, h.Kind, h.Mode, typ.kind)
 		}
 	}
+}
+
+// isLoginFile: a file of the login overlay in the dashboard's -rt part (the module's own name, MinimalDash).
+func isLoginFile(rel string) bool {
+	return strings.Contains(rel, "/login/") || strings.Contains(rel, "-login/") || strings.HasSuffix(rel, "/BMinimalDashService.java")
+}
+
+// keepsEveryLine: every line of want is in got, in the same order (got may hold more).
+func keepsEveryLine(want, got string) bool {
+	rest := strings.Split(got, "\n")
+	for _, line := range strings.Split(want, "\n") {
+		i := 0
+		for i < len(rest) && rest[i] != line {
+			i++
+		}
+		if i == len(rest) {
+			return false
+		}
+		rest = rest[i+1:]
+	}
+	return true
 }

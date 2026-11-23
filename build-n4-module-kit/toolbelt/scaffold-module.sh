@@ -15,6 +15,8 @@
 #   --type <logic|dashboard|driver|library>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay
+#                                + the module's own login in -rt (templates/dashboard-login; types/dashboard.md § The module
+#                                ships its own login)
 #                    driver    — NDriver -rt (UDP comm config subclass, codec, discovery) + -wb point manager
 #                                (MinimalDriver fixture; types/driver-authoring.md § 1.6-§ 1.11, § 5, § 12)
 #                    library   — a classpath-carrier -rt part: no Java, `<types/>`, no palette, `type: library` in its MODULE-MAP.md

@@ -26,7 +26,21 @@ stand_in_jar() {
     [ "$status" -eq 0 ]
     run "$KIT/toolbelt/report-module.sh" --lint-only "$OUT/$t/ModuleA/ModuleA"
     [ "$status" -eq 0 ] || { echo "$t: exit $status"; echo "$output"; false; }
-    [[ "$output" == *" · 0 FAIL · 0 WARN · "*"->  CLEAN"* ]] || { echo "$t:"; echo "$output"; false; }
+    if [ "$t" = dashboard ]; then
+      # The login template reads Niagara's session and servlet-support classes, which are com.tridium (private)
+      # API with no javax.baja equal: the only WARN rows allowed are those imports (types/dashboard.md § The
+      # module ships its own login: record them in the module README, pin the vendorVersion floor).
+      [[ "$output" == *" · 0 FAIL · "*"->  CLEAN"* ]] || { echo "$t:"; echo "$output"; false; }
+      other="$(printf '%s\n' "$output" | grep '  WARN  ' | grep -v 'lint-private-api-import  .*com\.tridium\.' || true)"
+      [ -z "$other" ] || { echo "$t: $other"; false; }
+      [[ "$output" == *"WARN  lint-private-api-import  LoginRequest.java"* ]]
+      # and only from the two login classes that need it, never from any other file
+      stray="$(printf '%s\n' "$output" | grep 'WARN  lint-private-api-import' \
+        | grep -v -E 'lint-private-api-import  (LoginRequest|BModuleALoginTemplate)\.java' || true)"
+      [ -z "$stray" ] || { echo "$t: $stray"; false; }
+    else
+      [[ "$output" == *" · 0 FAIL · 0 WARN · "*"->  CLEAN"* ]] || { echo "$t:"; echo "$output"; false; }
+    fi
   done
 }
 

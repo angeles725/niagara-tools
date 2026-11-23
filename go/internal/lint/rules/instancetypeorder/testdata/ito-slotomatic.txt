@@ -1,0 +1,20 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-instance-type-order  @DIR@/src/BNoAnno.java:6  static INSTANCE is declared after TYPE: the station refuses to load the type with "INSTANCE field is null; insure getType() comes last" -- declare INSTANCE before TYPE
+-- stderr --
+-- src/BNoAnno.java --
+public class BNoAnno extends BComponent
+{
+  public static final Type TYPE =
+    Sys.loadType(BNoAnno.class);
+
+  static BNoAnno INSTANCE;
+}
+-- src/BPlain.java --
+public class BPlain
+{
+  static final Type TYPE = Foo.make();
+  static BPlain INSTANCE = new BPlain();
+}

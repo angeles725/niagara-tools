@@ -1,0 +1,5 @@
+
+# --- ModuleAService (the module service: applies the login at station start) ---
+ModuleAService.displayName=ModuleA Service
+ModuleALoginTemplate.displayName=ModuleA Login Template
+ModuleAService.applyLogin=Apply Login
