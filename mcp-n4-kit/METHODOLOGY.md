@@ -92,6 +92,7 @@ Default mode is read-only: write tools exist only with `--allow-writes`
    `unverified`) is reported as it is and not retried blindly. `partial` (rollback only)
    names what was not restored (section 3); a rollback is `unverified` when a frozen child
    could not be read back (`readback_error` in its gap): read it again before deciding. An `in-doubt` batch is inspected first.
+   For a create that answered "Unable to process request" (in-doubt: the station may have applied it): read the parent (`n4_read_slots`), list its children (`n4_navigate`) and compare them with the plan. The component is there: treat the create as applied and read its slots back. It is not: redo the dry run (the old token is dead) and decide again. Never repeat the create blind.
 7. `n4_find_dangling_outputs` over the touched subtree. After a history rollout, `n4_read_history`
    (last N records of a few of the new histories) proves records arrive; the configuration read-back alone does not.
 8. `n4_save_station` and report `persisted` with its `evidence`; `unknown` is not success.

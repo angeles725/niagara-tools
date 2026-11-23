@@ -1305,7 +1305,8 @@ Tool rules:
   objectList length of Workbench's "Objects" column, null when unread) as `registered` (same instance and address
   as a device under the network), `new`, or `address_differs` (a registered instance
   answering from another address: that I-Am also rewrites the device's address, B1165), and
-  the registered devices that did not answer under `not_answering`. No device is added; it is
+  the registered devices that did not answer under `not_answering` (only those whose instance is
+  inside `low_instance..high_instance`: a device outside the range was not asked). No device is added; it is
   a write because it puts traffic on the field network. No inverse.
 - `n4_discover_points(device_ord, wait_seconds?)` runs the BACnet point discovery Workbench's
   Point Manager runs on one device (give the device or its `points` extension, a vendor
