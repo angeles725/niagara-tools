@@ -73,3 +73,24 @@ func TestExpectedSignerPrecedence(t *testing.T) {
 		}
 	}
 }
+
+// A mirror's marker records the installation it was made from (mirror-niagara-home.sh writes "source=<path>");
+// a marker without that line, an empty one and a home that is no mirror name none.
+func TestMirrorSourceIsTheInstallationTheMarkerNames(t *testing.T) {
+	for name, tc := range map[string]struct{ marker, want string }{
+		"source and date":       {"source=/mnt/c/Niagara/Niagara-4.14.0.162\ncreated=2026-11-23T10:00:00\n", "/mnt/c/Niagara/Niagara-4.14.0.162"},
+		"a path with a space":   {"source=/mnt/c/Program Files/N 4\ncreated=x\n", "/mnt/c/Program Files/N 4"},
+		"an empty marker":       {"", ""},
+		"no source line":        {"created=2026-11-23T10:00:00\n", ""},
+		"an empty source value": {"source=\ncreated=x\n", ""},
+	} {
+		home := t.TempDir()
+		write(t, home+"/"+MirrorMarker, tc.marker)
+		if got := MirrorSource(home); got != tc.want {
+			t.Errorf("%s: MirrorSource = %q, want %q", name, got, tc.want)
+		}
+	}
+	if got := MirrorSource(t.TempDir()); got != "" {
+		t.Errorf("a home with no marker: MirrorSource = %q, want none", got)
+	}
+}
