@@ -415,7 +415,8 @@ build-n4-module-kit/toolbelt/retro-issues.sh --check                          # 
 - **Retros outside the kit.** `sweep-fold-audit.sh --external-root <dir>` (repeatable; or `root <dir>` lines in
   `build-n4-module-kit/fold-roots.conf`, absent by default and local-only, with `alias <stem>=<ALIAS>` lines) also
   audits the retros of other projects that name `mcp-n4` / `build-n4-module`: each uncited delta prints as
-  `fold-audit: WARN external <ALIAS> Δ<id> not cited` (the alias, never the stem, when one is given), and is cited by
+  `fold-audit: WARN external <ALIAS> Δ<id> not cited` (the alias; a retro with no alias is named
+  `root<N>-retro<K>` by position, never by its stem, with a WARN asking for one), and is cited by
   `[ev: retro <ALIAS> Δ<id>]`, `[deferred: retro <ALIAS> Δ<id>]` or a closed issue carrying its marker. CI never
   configures an external root.
 

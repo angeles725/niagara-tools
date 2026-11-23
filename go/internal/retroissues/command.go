@@ -73,6 +73,12 @@ func Command(run retrogh.Runner) cli.Main {
 			return ExitUsage
 		}
 		a.rules, a.noRules = rules, !found
+		for _, alias := range o.aliases { // an alias is printed and published: it is scrubbed before anything else
+			if r := scrub(rules, "--alias value", alias); r != "" {
+				a.errf("%s", r)
+				return ExitUsage
+			}
+		}
 		ds, sk, err := collect(o)
 		if err != nil {
 			a.errf("%v", err)

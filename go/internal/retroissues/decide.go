@@ -63,7 +63,12 @@ func (a *app) decide(ds []delta) (gs []*group, notes []string, err error) {
 		if a.remoteErr != nil || a.forceNew(p) {
 			continue
 		}
-		found, serr := retrogh.Search(a.run, retrodup.Terms(p.tok, 3)+" in:title,body")
+		query := retrodup.Terms(p.tok, 3)
+		if r := scrub(a.rules, "search query", query); r != "" {
+			g.kind, g.reason = "refused", r
+			continue
+		}
+		found, serr := retrogh.Search(a.run, query+" in:title,body")
 		if serr != nil {
 			if a.o.apply {
 				return nil, nil, serr

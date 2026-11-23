@@ -91,11 +91,14 @@ func TestExternalDeltaCitedByAliasIsNotReported(t *testing.T) {
 	}
 }
 
-func TestExternalDeltaWithoutAliasIsReportedByStem(t *testing.T) {
+func TestExternalDeltaWithoutAliasNeverPrintsTheStem(t *testing.T) {
 	root, ext := extKit(t, "")
-	_, out, _ := runGH(&fakeGH{}, "--external-root", ext, root+"/retros/INDEX.md", root)
-	if !strings.Contains(out, w+"external outsidestem ΔB1 not cited") {
-		t.Errorf("without an alias map the stem is the name:\n%s", out)
+	_, out, errs := runGH(&fakeGH{}, "--external-root", ext, root+"/retros/INDEX.md", root)
+	if strings.Contains(out+errs, "outsidestem") {
+		t.Errorf("a stem with no alias was printed:\n%s%s", out, errs)
+	}
+	if !strings.Contains(out, w+"external root1-retro1 ΔB1 not cited") || !strings.Contains(out, "no --alias for 1 retro(s)") {
+		t.Errorf("without an alias the retro is named by its position and the alias is asked for:\n%s", out)
 	}
 }
 

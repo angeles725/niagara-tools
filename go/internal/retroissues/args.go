@@ -108,7 +108,7 @@ func (o *options) set(flag, v string) string {
 		addIDs(o.renew, v)
 	case "--dup-threshold":
 		f, err := strconv.ParseFloat(v, 64)
-		if err != nil || f <= 0 || f > 1 {
+		if err != nil || !(f > 0 && f <= 1) { // also refuses NaN
 			return fmt.Sprintf("--dup-threshold must be a number in (0, 1], not %q", v)
 		}
 		o.threshold = f

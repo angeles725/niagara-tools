@@ -20,8 +20,9 @@ func (t *audit) external() string {
 	if len(t.o.externals) == 0 {
 		return ""
 	}
-	retros, checked, missing := 0, 0, 0
+	retros, checked, missing, unaliased := 0, 0, 0, 0
 	for i, dir := range t.o.externals {
+		k := 0
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			return fmt.Sprintf("fold-audit: external root #%d not found or unreadable\n", i+1)
@@ -34,7 +35,12 @@ func (t *audit) external() string {
 			if err != nil {
 				continue
 			}
+			k++
 			name := t.externalName(e.Name())
+			aliased := name != ""
+			if !aliased {
+				name = fmt.Sprintf("root%d-retro%d", i+1, k)
+			}
 			counted := false
 			for _, r := range retrorows.Parse(string(b)) {
 				if r.Done != "" || retrorows.Area(r, "", "") == "" {
@@ -43,6 +49,9 @@ func (t *audit) external() string {
 				if !counted {
 					counted = true
 					retros++
+					if !aliased {
+						unaliased++
+					}
 				}
 				checked++
 				if !t.externalCited(name, r) {
@@ -53,11 +62,16 @@ func (t *audit) external() string {
 			}
 		}
 	}
+	if unaliased > 0 {
+		fmt.Fprintf(t.s.Out, "fold-audit: WARN external: no --alias for %d retro(s): named root<N>-retro<K>, never by stem; "+
+			"give each an alias so its citations can match\n", unaliased)
+	}
 	fmt.Fprintf(t.s.Out, "fold-audit: external: %d retros, %d deltas checked, %d not cited\n", retros, checked, missing)
 	return ""
 }
 
-// externalName is the alias of a retro file (given by its stem or its dated name), else its stem.
+// externalName is the alias of a retro file (given by its stem or its dated name), else "": a stem may name a client,
+// so it is never printed.
 func (t *audit) externalName(file string) string {
 	base := strings.TrimSuffix(file, ".md")
 	if a := t.o.aliases[base]; a != "" {
@@ -66,7 +80,7 @@ func (t *audit) externalName(file string) string {
 	if a := t.o.aliases[retrorows.Stem(file)]; a != "" {
 		return a
 	}
-	return retrorows.Stem(file)
+	return ""
 }
 
 // externalCited reports whether the kit accounts for the delta; a lookup gh cannot answer is reported UNVERIFIED and
