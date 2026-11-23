@@ -1,2 +1,0 @@
-### Added — mcp-n4: n4_set_schedule adds and removes special events
-- `add_special_event` ([{name, kind, rule, ranges}], every kind of `n4_list_schedule_kinds`) and `remove_special_event` ([names]) change the special events in one set of the whole list, keeping the order (the priority); new events go last. A date or date range that ends before today is refused unless `allow_expired: true`. The read-back compares each event's name and ranges; `n4_rollback` restores the list exactly.

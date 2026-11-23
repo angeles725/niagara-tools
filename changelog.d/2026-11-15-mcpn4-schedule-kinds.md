@@ -1,3 +1,0 @@
-### Added — mcp-n4: n4_list_schedule_kinds says which schedules exist and how each works
-- `n4_list_schedule_kinds` (no station, no session) lists the six schedule kinds an integrator creates (boolean, numeric, enum, string, calendar, trigger) with their station type, value type, default output, parts, purpose, behaviour and usual link, and the five special-event kinds (date, date_range, week_and_day, custom, reference) with their fields and allowed values, plus the priority, cleanup and export/import rules.
-- The kit README gains a "Schedules / Kinds of schedules" section: how many kinds there are, what each is for, how `out` is chosen, and how a station stores schedules, with the facts confirmed live on a 4.15.6.20 station.

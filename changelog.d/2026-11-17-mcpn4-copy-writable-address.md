@@ -1,5 +1,0 @@
-### Fixed — mcp-n4 n4_copy_component of a writable Modbus point can keep a valid address
-- A Modbus client device allows one writable point per register: a copy of a writable Modbus point keeps its source's address, and the station resets it to `Hex:-1` ("Duplicate Writable point for register address"). Proven on a 4.15.6.20 lab station; the copy body was not the cause.
-- New optional `copies[]` (`name`, `data_address`, `address_format`): each listed copy gets its own `proxyExt/dataAddress` inside the same add, so the read-back can verify it. Refused for a source whose proxyExt declares no `dataAddress`, a name outside `new_names` or given twice, and an empty address.
-- The plan notes each copy that would share a register with its source or an earlier copy; the read-back of such a copy adds a `cause` next to its differences.
-- Docs: a Modbus proxy created with `proxy_ext` starts at `hex` address `0` (set it through the proxy's ORD with `slot="dataAddress/..."`); a 4.15 lab station needs `--allow-tier-b NAME`.
