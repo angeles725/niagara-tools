@@ -1,0 +1,33 @@
+declared difference (issue #895): a call to a probe-then-reload helper (a name with both "probe" and "reload") is
+the recovery, so p1 is clean; p2 has the call but no lastOk* key (NOT-KEYED); p3's call is in a comment and p4 only
+declares the helper (NO-RECOVERY); p5's name has no "probe" (NO-RECOVERY).
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/p2.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+WARN  lint-spa-poll-no-recovery  @DIR@/p3.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/p4.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/p5.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+-- stderr --
+-- p1.js --
+import { probeThenReload } from "./recover.js";
+function poll() { lastOkAt = Date.now(); a().catch(e => 0); }
+setInterval(poll, 1);
+if (Date.now() - lastOkAt > 60000) probeThenReload();
+-- p2.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+reloadAfterProbe();
+-- p3.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+// probeThenReload();
+-- p4.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+function probeThenReload() { return 1; }
+-- p5.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+reloadNow();

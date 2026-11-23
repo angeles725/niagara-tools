@@ -10,7 +10,8 @@
 //	MM4  a part's src/**/*.java or src/rc/**/*.{js,html,css} (minus vendor/,
 //	     ext/, *.min.*) is in no row's Files (FAIL strict, WARN legacy)
 //	     or in two rows' Files (FAIL)
-//	MM5  a non-plumbing row names no existing srcTest/ path in Tests           FAIL strict, WARN legacy
+//	MM5  a non-plumbing row names no existing srcTest/ path in Tests (a row of
+//	     src/rc/ files also counts a webtest/**/*.test.mjs path)               FAIL strict, WARN legacy
 //	MM6  a part's srcTest/**/*.java is in no row                               WARN
 //	MM7  a concern folder (the directory right under a role folder: rt model/ or
 //	     adapter/; ux route/, service/ or model/; wb and se model/) has files in
@@ -100,7 +101,10 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 	listed := map[string]bool{}  // every exact entry of any cell
 	for _, r := range rows {
 		s.entries(r, r.files, owners, listed)
-		tests := s.entries(r, r.tests, nil, listed)
+		tests, spa := s.entries(r, r.tests, nil, listed)
+		if underRC(r.files) { // an SPA row's test lives in webtest/, not srcTest/
+			tests += spa
+		}
 		if !strings.EqualFold(r.concern, "plumbing") && tests == 0 {
 			s.add(s.strictSev(), s.mapPath, r.line, "MM5: concern "+r.concern+" names no existing srcTest path in Tests")
 		}

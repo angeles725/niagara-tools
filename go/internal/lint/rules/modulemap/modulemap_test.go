@@ -17,8 +17,9 @@ import (
 // unlisted-strict, unlisted-legacy, dup, no-test-strict, java-glob, glob-segment, and MM7: mm7-clean, mm7-strict,
 // mm7-legacy, mm7-plumbing (a plumbing row may span concern folders), mm7-dup-concern and mm7-dup-exact (a second
 // row of one concern and part, case-only and exact), mm7-concern-two-parts (one concern, one row per part: clean)
-// and mm7-plumbing-per-part (plumbing rows repeat: clean).
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 23) }
+// and mm7-plumbing-per-part (plumbing rows repeat: clean); and mm5-spa-webtest (a src/rc row counts a
+// webtest/**/*.test.mjs test, any other row or file does not).
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 24) }
 
 // strictMap is a one-concern strict map over M-rt/src/A.java and its test.
 const strictMap = "modularity: strict\n\n| Concern | Part | Files | Tests | Change here when |\n|---|---|---|---|---|\n" +

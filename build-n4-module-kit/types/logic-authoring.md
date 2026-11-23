@@ -1579,6 +1579,9 @@ Every writable slot a dashboard/operator can hit gets a ROW: (writable slot × w
 
 (All rows above credited to `[ev: corpus B816]` — the section header token covers the table.)
 
+A row for a control that has no facade slot (a sibling device point the dashboard writes) says `(no facade slot)` in
+its text, any case: `lint-write-path` then prints no STALE for a slot absent from source. `[ev: issue #900]`
+
 **Coverage legend for the Test cell:** a real `srcTest/` test name (lint checks it exists); `🔶` an earlier-campaign test; `❌ C9` for an invariant that needs the rt-lifecycle seam (issue #815 — `changed()`-ordering, minOff/minOn, seedRestart). `[ev: corpus B816]`
 
 ## rt point READ path — reference card (Δ4) `[ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ4]`

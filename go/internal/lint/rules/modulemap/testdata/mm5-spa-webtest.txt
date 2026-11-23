@@ -1,0 +1,37 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:7  MM5: concern decoy names no existing srcTest path in Tests
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:8  MM5: concern backend names no existing srcTest path in Tests
+FAIL  lint-module-map  @DIR@/M/MODULE-MAP.md:9  MM5: concern notest names no existing srcTest path in Tests
+-- stderr --
+-- M/MODULE-MAP.md --
+modularity: strict
+
+| Concern | Part | Files | Tests | Change here when |
+|---|---|---|---|---|
+| frontend | ux | M-ux/src/rc/js/app.js | M-ux/webtest/app.test.mjs | the page |
+| globbed | ux | M-ux/src/rc/js/g.js | M-ux/webtest/**/*.test.mjs | the glob |
+| decoy | ux | M-ux/src/rc/js/d.js | M-ux/webtest/tools/bundle.mjs | not a test file |
+| backend | rt | M-rt/src/A.java | M-ux/webtest/app.test.mjs | a webtest is no rt test |
+| notest | ux | M-ux/src/rc/js/n.js | — | nothing |
+| Plumbing | rt | M-rt/module-include.xml | — | build only |
+-- M/M-rt/module-include.xml --
+<types/>
+-- M/M-rt/src/A.java --
+class A {}
+-- M/M-ux/src/rc/js/app.js --
+x
+-- M/M-ux/src/rc/js/g.js --
+x
+-- M/M-ux/src/rc/js/d.js --
+x
+-- M/M-ux/src/rc/js/n.js --
+x
+-- M/M-ux/webtest/app.test.mjs --
+x
+-- M/M-ux/webtest/sub/g.test.mjs --
+x
+-- M/M-ux/webtest/tools/bundle.mjs --
+x

@@ -1,9 +1,9 @@
 // Package spapoll is the lint-spa-poll-no-recovery rule: a browser poll loop (the first setInterval/
 // setTimeout(<name>, ...) of a .html/.js file) whose function has a catch path WARNs when the file has no
-// location.reload(/location.href recovery, or when that recovery is not keyed on the time since the last
-// success (a lastOk* timestamp set from a clock in the poll body and compared). Port of the awk in
-// toolbelt/lint-spa-poll-no-recovery.sh (the wrapper keeps the user-facing contract and its header documents
-// the rule and its mutation pins).
+// location.reload(/location.href recovery (or a call to a probe-then-reload helper), or when that recovery is
+// not keyed on the time since the last success (a lastOk* timestamp set from a clock in the poll body and
+// compared). Port of the awk in toolbelt/lint-spa-poll-no-recovery.sh (the wrapper keeps the user-facing contract
+// and its header documents the rule and its mutation pins).
 package spapoll
 
 import (
@@ -58,6 +58,13 @@ var (
 	okCompare = rx(`lastOk[A-Za-z0-9_]*[[:space:]]*[<>]`)
 )
 
+// helperCall is a call to a probe-then-reload helper (a name holding "probe" and "reload", e.g. probeThenReload(),
+// reloadAfterProbe()): it reloads only when the station still answers, so it is the recovery as a bare reload is.
+var (
+	helperCall = rx(`(?i)(probe[A-Za-z0-9_]*reload|reload[A-Za-z0-9_]*probe)[A-Za-z0-9_]*[[:space:]]*\(`)
+	fnKeyword  = rx(`function[[:space:]]+$`)
+)
+
 const (
 	tailNoRecovery = " has a catch path with no location.reload(/location.href recovery anywhere in the file --" +
 		" kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success" +
@@ -96,7 +103,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	prefix := "setInterval/setTimeout poll loop '" + fn + "()'"
 	recovery := false
 	for _, ln := range lines {
-		if reload.MatchString(ln) || hrefSet.MatchString(ln) {
+		if reload.MatchString(ln) || hrefSet.MatchString(ln) || callsHelper(ln) {
 			recovery = true
 			break
 		}
@@ -113,6 +120,16 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		return nil, nil
 	}
 	return []lint.Finding{{Line: call + 1, Msg: prefix + tailNotKeyed}}, nil
+}
+
+// callsHelper: ln calls a probe-then-reload helper; `function probeThenReload(` declares one and is no call.
+func callsHelper(ln string) bool {
+	for _, at := range helperCall.FindAllStringIndex(ln, -1) {
+		if !fnKeyword.MatchString(ln[:at[0]]) {
+			return true
+		}
+	}
+	return false
 }
 
 // body finds fn's declaration (`function fn(`, or `const|let|var fn = [async] function(` / `(...) =>` /
