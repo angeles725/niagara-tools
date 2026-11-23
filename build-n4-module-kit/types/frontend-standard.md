@@ -82,6 +82,9 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   conveniences (last tab).
 - [both] Time series store `(t, v)` pairs (or explicit nulls) so a sensor gap never misaligns
   timestamps.
+- [both] A history chart holds each value until the next record and the last value to the chart end, and reads every
+  series at the cursor time (`valueAt`), never by array index; `held()` / `valueAt()` and their test are in
+  `dashboard.md` § Charts on an HMI. `[ev: issue #822]` (K1)
 
 ### 5. Network and transfer
 - [both] One `apiFetch` helper (base URL, `X-Requested-With`, timeout, error mapping); no `fetch`

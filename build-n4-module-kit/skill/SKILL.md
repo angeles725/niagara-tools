@@ -204,6 +204,10 @@ strict happens only on request, in the order of `$KIT/types/structure.md` § Leg
    Confirm: bytecode major 52, signed jars — signed by the module's own alias: with `niagaraSigningAlias` configured
    `build.sh` passes `verify-module.sh --expected-signer` and another signer FAILs; a
    `WARN — no niagaraSigningAlias is configured` line means any signature (the development key included) was accepted.
+   On WSL, sign with the module's alias through the explicit profile: `--gradle-prop niagaraSigningAlias=<alias>
+   --gradle-prop niagaraSigningProfile=$HOME/.config/n4-signing/<alias>.signing.xml`. Never report signing as
+   unavailable (or as needing Windows) before running it: the only valid "unavailable" is a missing profile file, and
+   the report quotes that path. `[ev: issue #917]` (retro R11 ΔB1)
    In a fresh `git worktree add` checkout run `chmod +x gradlew` first: a client repo that stores `gradlew` as 100644
    (`core.fileMode=false`) checks it out non-executable, and `build.sh` fails fast with
    `gradlew exists but is not executable … fix: chmod +x <path>` — run that command, or store the wrapper as 100755 in
