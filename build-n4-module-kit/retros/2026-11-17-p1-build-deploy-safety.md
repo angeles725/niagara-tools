@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 7 -->
 # 2026-11-17 · kit · p1-build-deploy-safety
