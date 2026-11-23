@@ -150,3 +150,84 @@ JAVA
   run "$RUN" "$RT" com.example.demo.AdderTest
   [ "$status" -eq 1 ]
 }
+
+# #944: the kit's servlet-free request/response recorder (toolbelt/java/n4kit/http), put on the javac source path
+# by the launcher, so StaticHandler-style header logic is unit-tested with no servlet API jar. The module code
+# reaches it through the two small interfaces; its servlet doGet is a thin adapter that implements them.
+write_static_headers() {
+  cat > "$RT/src/$PKG/StaticHeaders.java" <<'JAVA'
+package com.example.demo;
+import n4kit.http.HttpRequestView;
+import n4kit.http.HttpResponseSink;
+final class StaticHeaders {
+  static void apply(HttpRequestView req, HttpResponseSink out, String path) {
+    String ae = req.getHeader("Accept-Encoding");
+    boolean gz = path.endsWith(".js") && ae != null && ae.contains("gzip");
+    out.setStatus(200);
+    out.setContentType("application/javascript");
+    out.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    out.addHeader("Vary", "Accept-Encoding");
+    if (gz) out.setHeader("Content-Encoding", "gzip");
+  }
+}
+JAVA
+}
+
+@test "H1: the recorder keeps the status and the headers a StaticHandler-style helper sets, with no servlet API" {
+  write_static_headers
+  cat > "$RT/srcTest/test/com/example/demo/StaticHeadersTest.java" <<'JAVA'
+package com.example.demo;
+import n4kit.http.HttpRecorder;
+import org.junit.Test; import static org.junit.Assert.*;
+public class StaticHeadersTest {
+  @Test public void gzip_twin_headers() {
+    HttpRecorder r = HttpRecorder.get("/rc/dist/app.js").withHeader("accept-encoding", "gzip, br");
+    StaticHeaders.apply(r, r, "/rc/dist/app.js");
+    assertEquals(200, r.status());
+    assertEquals("gzip", r.header("Content-Encoding"));
+    assertEquals("public, max-age=31536000, immutable", r.header("cache-control"));
+    assertEquals("Accept-Encoding", r.header("VARY"));
+    assertEquals("application/javascript", r.contentType());
+  }
+  @Test public void plain_file_has_vary_and_no_content_encoding() {
+    HttpRecorder r = HttpRecorder.get("/rc/dist/app.js");
+    StaticHeaders.apply(r, r, "/rc/dist/app.js");
+    assertNull(r.header("Content-Encoding"));
+    assertEquals("Accept-Encoding", r.header("Vary"));
+  }
+  @Test public void set_replaces_add_appends_and_an_unset_status_is_200() {
+    HttpRecorder r = HttpRecorder.get("/x");
+    assertEquals(200, r.status());
+    r.setHeader("A", "1"); r.setHeader("a", "2"); r.addHeader("A", "3");
+    assertEquals(java.util.Arrays.asList("2", "3"), r.headers("A"));
+    assertEquals("2", r.header("A"));
+    r.setStatus(304);
+    assertEquals(304, r.status());
+    assertTrue(r.headers("Absent").isEmpty());
+    assertNull(r.header("Absent"));
+  }
+}
+JAVA
+  run "$RUN" "$RT" com.example.demo.StaticHeadersTest
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"OK (3 tests)"* ]]
+}
+
+@test "H2: a header assertion on the recorder BITES: a wrong Vary is exit 1, not a pass" {
+  write_static_headers
+  cat > "$RT/srcTest/test/com/example/demo/StaticHeadersTest.java" <<'JAVA'
+package com.example.demo;
+import n4kit.http.HttpRecorder;
+import org.junit.Test; import static org.junit.Assert.*;
+public class StaticHeadersTest {
+  @Test public void wrong_vary() {
+    HttpRecorder r = HttpRecorder.get("/a.js");
+    StaticHeaders.apply(r, r, "/a.js");
+    assertEquals("Origin", r.header("Vary"));
+  }
+}
+JAVA
+  run "$RUN" "$RT" com.example.demo.StaticHeadersTest
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"expected:<[Origin]> but was:<[Accept-Encoding]>"* ]]
+}

@@ -299,6 +299,15 @@ static handler picks it.
   `application/gzip`). Set `Vary: Accept-Encoding` on every response of a file that has a twin, the plain one
   included, so a cache never hands the gzip bytes to a client that did not ask. Unit-test the helper (gzip,
   `gzip;q=0`, absent header, a path with no twin).
+- **Header logic is unit-tested without the servlet API, through two small interfaces:** keep the Cache-Control,
+  Content-Encoding and Vary logic in a pure helper that takes `n4kit.http.HttpRequestView` and
+  `n4kit.http.HttpResponseSink` (the method names are the servlet's: `getHeader`, `setStatus`, `setHeader`,
+  `addHeader`, `setContentType`); the `StaticHandler` servlet only adapts its request and response to them, one line
+  per method. The kit ships `n4kit.http.HttpRecorder`, one object that is both, with no `javax.servlet` import:
+  `HttpRecorder r = HttpRecorder.get("/rc/dist/app.js").withHeader("Accept-Encoding", "gzip"); apply(r, r, path);`
+  then `r.status()`, `r.header("Vary")`, `r.headers(name)`, `r.contentType()`. `run-pure-test.sh` puts it on the
+  javac source path, so no copy goes into the module. Code that takes `HttpServletResponse` directly cannot use it:
+  that is the pattern to adopt, not a stub of the servlet. `[ev: issue #944]` (retro R17 ΔD7)
 - **Enforced:** `report-module` row `bundle-gzip` WARNs a `-ux` part whose `src/rc/dist/` holds a `*.js` over
   300 KB with no `<name>.gz` next to it (a `.js.map` is not checked), one PASS row otherwise; a part with no
   `src/rc/dist/` gets no row. The row is advisory and never fails the report.
