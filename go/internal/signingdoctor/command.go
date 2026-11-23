@@ -36,6 +36,18 @@ func Main(args []string, s cli.Stdio) int {
 		fmt.Fprint(s.Err, usage)
 		return ExitUsage
 	}
+	// A given but empty option (an unset variable in --cert "$CERT") is refused, never read as
+	// "not given": the other file's rows alone would pass the gate without checking it.
+	empty := ""
+	fs.Visit(func(f *flag.Flag) {
+		if f.Value.String() == "" && empty == "" {
+			empty = f.Name
+		}
+	})
+	if empty != "" {
+		fmt.Fprintf(s.Err, "signing-doctor: --%s is empty\n", empty)
+		return ExitUsage
+	}
 	var rows []Row
 	if *certPath != "" {
 		data, err := os.ReadFile(*certPath)

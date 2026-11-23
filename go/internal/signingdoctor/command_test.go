@@ -172,6 +172,21 @@ func TestAnUnrecognisedKeyFileIsRefused(t *testing.T) {
 	}
 }
 
+// An option given with an empty value (an unset variable in --cert "$CERT") is a usage error, never
+// read as "not given": the other file's rows alone must not pass the gate.
+func TestAnEmptyOptionIsAUsageError(t *testing.T) {
+	key := filepath.Join(t.TempDir(), "wb-export.txt")
+	if err := os.WriteFile(key, []byte("not a key"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"--cert", "", "--key", key}, {"--cert=", "--key", key}, {"--key", "", "--cert", key}} {
+		code, out, errOut := run(t, args...)
+		if code != ExitUsage || out != "" || !strings.Contains(errOut, "is empty") {
+			t.Errorf("%v: exit %d out %q err %q", args, code, out, errOut)
+		}
+	}
+}
+
 func TestUsageErrors(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "absent")
 	for _, args := range [][]string{{}, {"extra"}, {"--cert", missing}, {"--key", missing}, {"--nope"}} {
