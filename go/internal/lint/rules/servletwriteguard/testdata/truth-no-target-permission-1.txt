@@ -19,7 +19,7 @@ class A extends BWebServlet {
     target.set(prop, v, op);
   }
   void late(WebOp op) {
-    target.setDouble(1.0);
+    target.setDouble(prop, 1.0, op);
     if (!target.getPermissions(op).hasOperatorWrite()) return;
   }
   void check(WebOp op) { target.getPermissions(op).hasOperatorWrite(); }

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 11 -->
 # 2026-11-17 · kit · kit-p1-security-guards
