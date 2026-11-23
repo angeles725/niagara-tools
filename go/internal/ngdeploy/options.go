@@ -89,6 +89,11 @@ func (d *deploy) parseArgs(args []string) int {
 				return code
 			}
 			args = args[1:]
+		case flag == pluginFlag:
+			if code := d.pluginVersion(args[1:]); code != proceed {
+				return code
+			}
+			args = args[1:]
 		case d.setByFlag(flag, args[1:]):
 			if option, _ := optionOf(flag); option.value {
 				args = args[1:]

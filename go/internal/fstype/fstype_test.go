@@ -63,3 +63,46 @@ func TestIsWindowsMount(t *testing.T) {
 		}
 	}
 }
+
+// TestOfPathReadsTheMountTableByWholeComponents: no df; the longest mountpoint that holds the path by whole
+// components wins, a blank in a mountpoint is its \040 escape, a link is followed, a missing table is "".
+func TestOfPathReadsTheMountTableByWholeComponents(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	table := filepath.Join(dir, "mounts")
+	body := mounts + "C: /mnt/my\\040drive 9p rw 0 0\n"
+	if err := os.WriteFile(table, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ path, want string }{
+		{"/home/u/proj", "ext4"},
+		{"/mnt/c", "9p"},
+		{"/mnt/c/Niagara", "9p"},
+		{"/mnt/c/deep/er/x", "ext4"},
+		{"/mnt/cc/x", "ext4"}, // not under /mnt/c: a whole-component prefix
+		{"/mnt/my drive/x", "9p"},
+	} {
+		if got := OfPath(c.path, table); got != c.want {
+			t.Errorf("OfPath(%q) = %q, want %q", c.path, got, c.want)
+		}
+	}
+	real, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(real, "mnt"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(real, "mnt"), filepath.Join(real, "link")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(table, []byte("rootfs / ext4 rw 0 0\nC: "+real+"/mnt 9p rw 0 0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := OfPath(filepath.Join(real, "link"), table); got != "9p" {
+		t.Errorf("a link into a mount: %q, want 9p", got)
+	}
+	if got := OfPath("/x", filepath.Join(dir, "absent")); got != OfPath("/x", ProcMounts) {
+		t.Errorf("a table that is no file falls back to %s: %q", ProcMounts, got)
+	}
+}

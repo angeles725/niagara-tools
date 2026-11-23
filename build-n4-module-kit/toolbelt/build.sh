@@ -11,6 +11,7 @@
 #   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/ (the GROUP dir). When neither it nor
 #                   an ancestor holds ./gradlew (the REPO root was passed), the error lists every gradle root
 #                   found up to 3 levels BELOW it — descend into one. [ev: retro comppan-fase2-amps-alarms Δ2]
+#                   (report-module.sh's <module-root> is one level down, <module-root>/<MOD>: the module directory.)
 #   niagara_home    arg 3, else $niagara_home. It must be a mirror (mirror-niagara-home.sh, holds .niagara-mirror):
 #                   gradle's :jar step copies the jar into <niagara_home>/modules, so a marker-less home exits 10.
 #   --install-into-home  opt in to building into a real (marker-less) niagara_home; its modules/ jar is replaced.

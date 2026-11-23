@@ -26,7 +26,7 @@ func (b *build) driftVerdict() int {
 			continue
 		}
 		hash, _ := b.contentHash(jar)
-		version := vendorversion.ModuleVersion(jar)
+		version := vendorversion.ModuleVersionFromZip(jar)
 		if why := unverifiable(old, hash, version); why != "" {
 			b.warn(msgCannotVerify, b.jarName(p), why)
 			b.restoreBaseline(p, restoredPlain)

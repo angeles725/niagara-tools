@@ -9,9 +9,11 @@ import (
 // matches a JDBC setInt(1, v), a List.set(i, x) or an AtomicReference.set(v). A call is dropped from the
 // writes only on evidence that it is not a BComponent write (retro kit-p1-security-guards Δ6); a call it
 // cannot read stays a write, so the lint keeps its false positives rather than its false negatives:
-//   - a slot write takes a slot and a value (set(Property, BValue[, Context]), setDouble(…)): a call with one
-//     argument or none is not one (AtomicReference.set(v), ThreadLocal.set(v), BitSet.set(i));
-//   - the first argument of a slot write is a slot, never a numeric literal (JDBC setInt(1, v), List.set(0, x));
+//   - a bare set takes a slot and a value (set(Property, BValue[, Context])): set with one argument or none is
+//     not a write (AtomicReference.set(v), ThreadLocal.set(v), BitSet.set(i)); a generated property setter
+//     (setDouble(42.0), setBoolean(true)) takes one argument and stays a write;
+//   - the first argument of a slot write is a slot, never a numeric literal when a value follows it
+//     (JDBC setInt(1, v), List.set(0, x)); setDouble(42.0) alone is a generated setter;
 //   - a receiver that is a variable of this file declared only with a type that has no slots (plainTypes).
 //
 // invoke(…) is always an action on a component.
@@ -77,13 +79,20 @@ func hasWrite(lines []string, plain map[string]bool) bool {
 
 // componentWrite reports whether the call at loc (the `.name(` token of ln) may be a component write.
 func componentWrite(ln string, loc []int, plain map[string]bool) bool {
-	if ln[loc[0]+1:loc[1]-1] == "invoke" {
+	name := ln[loc[0]+1 : loc[1]-1]
+	if name == "invoke" {
 		return true
 	}
 	open := loc[1] - 1
 	if end := argEnd(ln, open); end < len(ln) { // a call that spans lines has an argument count nobody read
 		args := topLevelArgs(ln[open+1 : end])
-		if len(args) < 2 || numericArg.MatchString(args[0]) {
+		// Niagara's generated property setters are one argument (comp.setDouble(42.0)) and ARE slot writes:
+		// only the bare set is dropped for having fewer than two arguments, and a numeric first argument drops
+		// a call only when a second argument follows (JDBC setInt(1, v), List.set(0, x)).
+		if name == "set" && len(args) < 2 {
+			return false
+		}
+		if len(args) >= 2 && numericArg.MatchString(args[0]) {
 			return false
 		}
 	}

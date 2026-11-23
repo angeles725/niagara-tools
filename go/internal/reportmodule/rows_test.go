@@ -46,6 +46,13 @@ func TestParseRows(t *testing.T) {
 		{"nosite", "WARN  j  /m/A-ux  no specs  add", filter{sel: "WARN", mode: nosite}, []row{{"WARN", "j", "no specs  add"}}},
 		{"ws", "FAIL\ttypecount\t/p/x.jar\t3   declared   2 found\nSKIP  facets", filter{sel: "PASS|FAIL|SKIP|WARN", mode: ws},
 			[]row{{"FAIL", "typecount", "3 declared 2 found"}, {"SKIP", "facets", ""}}},
+		// retro build-kit-bench-session Δ14: the jar column is read to the next tab or two-space run, so a path with a space
+		// (a module root under a directory with a space) stays in its column and out of the detail.
+		{"ws keeps a jar path with a space whole", "WARN  facets-req  /w/with space/M6-rt.jar  /w/with space/BM6.java:33 no facets\nPASS  bytecode   /w/a b/x.jar  all 3 classes",
+			filter{sel: "PASS|FAIL|SKIP|WARN", mode: ws},
+			[]row{{"WARN", "facets-req", "/w/with space/BM6.java:33 no facets"}, {"PASS", "bytecode", "all 3 classes"}}},
+		{"ws still reads a row whose fields are one space apart", "FAIL signature /p/x.jar unsigned jar",
+			filter{sel: "FAIL", mode: ws}, []row{{"FAIL", "signature", "unsigned jar"}}},
 		{"swap keeps the exact status", "t  WARN  /w/P.java:7  d\nt  FAIL  /w/B.java:1  x\nx  WARN|y  /w/C.java:2  z\n\n   ",
 			filter{mode: swap, keep: "WARN"}, []row{{"WARN", "t", "P.java:7  d"}, {"WARN", "y", "x|C.java:2  z"}}},
 		{"as-WARN relay", "STALE  wp  /m.md:4  gone\nFAIL  wp  /B.java:1  x\nWARN  wp  /x:1  no", filter{sel: "FAIL", asw: "STALE|DRIFT"},

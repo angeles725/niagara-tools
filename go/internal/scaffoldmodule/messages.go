@@ -28,5 +28,5 @@ const (
 
 	// emittedLines takes the ModuleName and the destination.
 	emittedLines = "scaffold-module: emitted %s -> %s\n" +
-		"scaffold-module: signing: set niagaraSigningAlias + niagaraSigningProfile (gradle properties) before the first build\n"
+		"scaffold-module: signing: set niagaraSigningAlias + niagaraSigningProfile (gradle properties) before the first build (a throwaway profile to copy: build-n4-module-kit/templates/signing-profile.xml)\n"
 )

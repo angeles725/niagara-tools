@@ -64,7 +64,7 @@ func TestCountRetroDeltas(t *testing.T) {
 		{"only the deltas header disagrees", map[string]string{"r.md": retro("3", "2", two...), "INDEX.md": index + "| r.md | kit | 2026-10-27 | pending | 2 |\n"}, 1,
 			"r.md  rows=2  count=2  header=3  index=2  MISMATCH\nTOTAL  rows=2  files=1  mismatches=1\n", ""},
 		{"no INDEX row for the retro", map[string]string{"r.md": retro("2", "2", two...), "INDEX.md": index}, 1,
-			"r.md  rows=2  count=2  header=2  index=-  MISMATCH\nTOTAL  rows=2  files=1  mismatches=1\n", ""},
+			"r.md  rows=2  count=2  header=2  index=-  MISMATCH\nTOTAL  rows=2  files=1  mismatches=1\n", "INDEX.md has no row for r.md: it was generated before the retro existed; regenerate it with toolbelt/kit-state.sh --write"},
 		{"no INDEX.md beside the retro", map[string]string{"r.md": retro("2", "2", two...)}, 3, "", "no INDEX.md"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

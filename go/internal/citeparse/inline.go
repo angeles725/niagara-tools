@@ -20,7 +20,7 @@ var (
 	devguideRef  = regexp.MustCompile("\\(devguide `([^`]+)`")
 	certPath     = regexp.MustCompile("\\[CERT[^\\]]*\\]\\s+`?(organized/[^\\s`]+)")
 	crossRef     = regexp.MustCompile("`?((?:[\\w.-]+/)*[\\w-]+(?:\\.[\\w-]+)*\\.md)`? (?:§§ (" + secListLoose + ")|§ (\"[^\"]+\"|`[^`]+`|" + secList + "|[^,;)\\]`|]+))")
-	tickedPath   = regexp.MustCompile("`((?:[\\w.$… -]+/)+[\\w.$ -]*\\.\\w{1,10}):(\\d[\\d,-]*)`(?:\\s+\"([^\"]+)\")?")
+	tickedPath   = regexp.MustCompile("`((?:[\\w.$… -]+/)+[\\w.$ -]*\\.\\w{1,10}):(\\d[\\d,:-]*)`(?:\\s+\"([^\"]+)\")?")
 	tickedAlias  = regexp.MustCompile("`([A-Z]{1,3}):(\\d[\\d,-]*)`")
 	// repoPath is a whole code span naming a repo-relative path under the roots retro
 	// 2026-11-13-remove-dead-bash-lint-libs Δ1 lists; a span with a space, glob or ellipsis is not one path.
@@ -81,7 +81,7 @@ func (sc *scan) inline(i int) []Pointer {
 		return Pointer{Kind: Path, Target: m[1], Sections: s}, len(s) > 0
 	})
 	take(tickedPath, func(m []string) (Pointer, bool) { // the path may hold spaces, so it is not split into words
-		lines, _ := ParseRanges(m[2])
+		lines, _ := ParseRanges(strings.ReplaceAll(m[2], ":", "")) // `f:15,:82-88` repeats the colon
 		return Pointer{Kind: Path, Target: expand(m[1], sc.aliases), Lines: lines, Anchor: strings.TrimSpace(m[3])}, onePath(m[1])
 	})
 	take(tickedAlias, func(m []string) (Pointer, bool) {

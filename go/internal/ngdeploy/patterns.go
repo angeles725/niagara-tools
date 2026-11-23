@@ -76,10 +76,12 @@ const (
 	manifestEntryName = "Name:"
 )
 
-// profilesOf lists the jar profiles each mode builds and deploys, in order.
-var profilesOf = map[string][]string{"A": {"rt", "ux"}, "B": {"ux"}, "C": {"rt"}}
+// profilesOf lists the jar profiles each mode builds and deploys, in order. Mode D is a module with a workbench
+// part (the driver scaffold builds -rt and -wb): its -rt and -wb jars [ev: retro build-kit-bench-session Δ5].
+var profilesOf = map[string][]string{"A": {"rt", "ux"}, "B": {"ux"}, "C": {"rt"}, "D": {"rt", "wb"}}
 
-// deployable are the profiles whose jars the tool can put in a station, whatever the mode.
+// deployable are the profiles whose jars every mode keeps clear of a left-over .ng-deploy-old (refuseAside); a
+// mode that deploys another profile adds it for its own run (asideProfiles).
 var deployable = []string{"rt", "ux"}
 
 // signalNames are the signals the deploy watches for, as a message names them (SIGHUP only across the probe).
@@ -95,4 +97,4 @@ var buildVerbs = []string{"clean", "jar"}
 var required = []string{"MODULE_NAME", "GRADLEW_PATH", "NIAGARA_HOME", "NIAGARA_USER_HOME", "JAVA_HOME", "STATION_MODULES_DIR"}
 
 // expectedTypes names the setting holding the expected type count of a profile's jar.
-var expectedTypes = map[string]string{"rt": "EXPECTED_RT_TYPES", "ux": "EXPECTED_UX_TYPES"}
+var expectedTypes = map[string]string{"rt": "EXPECTED_RT_TYPES", "ux": "EXPECTED_UX_TYPES", "wb": "EXPECTED_WB_TYPES"}

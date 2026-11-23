@@ -30,3 +30,14 @@ func TestHeaderListsEveryCheck(t *testing.T) {
 		t.Errorf("verify-module.sh header checks:\n %s\nregistered checks (checks.go):\n %s", got, want)
 	}
 }
+
+// TestUsageStartsAtItsOwnFirstLine (retro build-kit-bench-session Δ15): the usage a bare `verify-module.sh` prints
+// opens with the tool's own title, not with a shellcheck directive and the rationale for it.
+func TestUsageStartsAtItsOwnFirstLine(t *testing.T) {
+	if !strings.HasPrefix(usage, "verify-module.sh — ") {
+		t.Errorf("usage opens with %q, want the tool's title line", strings.SplitN(usage, "\n", 2)[0])
+	}
+	if strings.Contains(usage, "shellcheck disable") {
+		t.Error("usage carries a shellcheck directive")
+	}
+}

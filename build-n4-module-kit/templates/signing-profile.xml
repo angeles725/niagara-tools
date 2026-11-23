@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<!--
+  Signing profile for a THROWAWAY key (a first build, a bench, a laboratory station). Not a release profile.
+  Copy it OUTSIDE the repository (the store path below is a host path: lint-structure L10 keeps those out of
+  tracked files), edit the three values marked EDIT, then pass it to the build:
+
+    build.sh <gradle-prop option> niagaraSigningAlias=CodeSigning <gradle-prop option> niagaraSigningProfile=<this file> ...
+
+  (the option is written with two hyphens and `gradle-prop`, once per property; a comment cannot hold two hyphens).
+
+  1. Make the key. A plain `keytool -genkeypair` key FAILS `:jar` ("Certificate for <alias> is not valid for code
+     signing"); the two -ext options are the key usage the plugin needs (types/driver-authoring.md):
+
+       keytool -genkeypair -alias CodeSigning -keyalg RSA -keysize 2048 -validity 365 -storetype JCEKS \
+         -keystore <storepath> -storepass <storepass> -keypass <storepass> -dname "CN=Throwaway Dev" \
+         -ext EKU=codeSigning -ext KU=digitalSignature
+
+  2. profileType is the FULLY QUALIFIED class name. The short name makes `:jar` fail with "Could not determine
+     class for profile" (exit 30). A LocalSigningProfile with no store entries mints and keeps its own key, which
+     a station refuses as untrusted: this profile names the store, so the jar carries the key above.
+  3. validity - refresh must be at least 32 days (lint-structure L16 FAILs a profile with less): keep 365 / 183.
+  4. A station decides trust by its own policy (types/distribution.md): a throwaway key is signed, not trusted.
+     build-verify.md § Signing per deploy target says what the gate checks.
+-->
+<properties>
+<entry key="niagara.signing.profileType">com.tridium.gradle.plugins.signing.profile.LocalSigningProfile</entry>
+<entry key="niagara.signing.storetype">JCEKS</entry>
+<!-- EDIT: the keystore made in step 1, an absolute path on this machine -->
+<entry key="niagara.signing.storepath">/path/to/throwaway.jceks</entry>
+<!-- EDIT: the store password, and the password of the key, named after its alias (CodeSigning in step 1) -->
+<entry key="niagara.signing.storepass">changeit</entry>
+<entry key="niagara.signing.keypass.CodeSigning">changeit</entry>
+<entry key="niagara.signing.validity">365</entry>
+<entry key="niagara.signing.refresh">183</entry>
+</properties>

@@ -6,7 +6,7 @@
 -- want --
 exit 1
 PASS  jdk8          JDK 8 found: @DIR@/jvm/java-8-openjdk-amd64/
-FAIL  plugin-pin    plugin 7.6.17 missing from @DIR@/nh22/etc/m2 — copy from Niagara install
+FAIL  plugin-pin    plugin 7.6.17 missing from @DIR@/nh22/etc/m2 — this install ships 7.6.22: pass --plugin-version 7.6.22 (build.sh, preflight.sh, ng-deploy.sh) or pin it in settings.gradle.kts
 PASS  jar-lock      no locked jars under @DIR@/nh22/modules/
 -- stderr --
 -- @kind --

@@ -37,6 +37,8 @@ func TestCardPathGaps(t *testing.T) {
 			[]full{{1, Code, "themeDistech-ux", "extracted/hx/theme.css", "", ":4-16"}}},
 		{"a section range is its two ends", "`types/a.md` § 11.1-11.3, x", []full{{1, Path, "types/a.md", "", "", "§11.1 §11.3"}}},
 		{"a backticked path with spaces", "see `Dir with space/file.md:3` x", []full{{1, Path, "Dir with space/file.md", "", "", ":3"}}},
+		{"a backticked file whose ranges repeat the colon", "see `toolbelt/build.sh:15,:82-88` x",
+			[]full{{1, Path, "toolbelt/build.sh", "", "", ":15,82-88"}}}, // retro go-build-module-port Δ4
 		{"a label before a path is not one spaced path", "`code x-rt a/B.java:3` and `FMT …/y.sh:1`", nil},
 		{"a list of sections", "`types/a.md` § 3, § 5.2, § 7 list", []full{{1, Path, "types/a.md", "", "", "§3 §5.2 §7"}}},
 		{"a §§ list of sections", "`types/a.md` §§ 3, 5 list", []full{{1, Path, "types/a.md", "", "", "§3 §5"}}},

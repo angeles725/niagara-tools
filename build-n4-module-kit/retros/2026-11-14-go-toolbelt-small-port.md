@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 5 -->
 # 2026-11-14 · kit · go-toolbelt-small-port

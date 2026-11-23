@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
-	"github.com/angeles725/niagara-tools/go/internal/retrocells"
 )
 
 // Exit codes of sweep-fold-audit (unchanged from the bash tool).
@@ -74,6 +73,7 @@ type audit struct {
 	s      cli.Stdio
 
 	nFolded, nCited, nUncited, dChecked, dMissing, dUnreadable int
+	nPendingDone                                               int
 	nAlias, nAmbiguous                                         int
 	warned                                                     bool
 }
@@ -145,7 +145,14 @@ func (t *audit) aliases(stems map[string]bool) {
 func (t *audit) row(line string) {
 	file := indexRow(line)
 	line = strings.ReplaceAll(line, "\x00", "")
-	if file == "" || rowStatus(line) != "folded" {
+	if file == "" {
+		return
+	}
+	if rowStatus(line) == "pending" {
+		t.pending(line, file)
+		return
+	}
+	if rowStatus(line) != "folded" {
 		return
 	}
 	t.nFolded++
@@ -168,29 +175,6 @@ func (t *audit) row(line string) {
 	}
 }
 
-// deltas checks that every Δk of a folded row is cited as "<stem> Δk".
-func (t *audit) deltas(line, file, st string) {
-	cell := deltasCell(line)
-	// Decimal (bash arithmetic read a leading zero as octal); an unreadable or oversize cell is
-	// counted on its own, never as a "not cited" Δ, and still fails --strict (fail closed).
-	deltas, perr := retrocells.ParseDeltasCell(cell)
-	if perr != nil {
-		fmt.Fprintf(t.s.Out, "fold-audit: WARN %s deltas cell unreadable (%s)\n", file, cell)
-		t.dUnreadable++
-		t.warned = true
-	}
-	for _, d := range deltas {
-		t.dChecked++
-		// Mutation: F9 -- substring matching credits another stem's Δk, or Δ10 for Δ1.
-		if !t.h.deltas[st+" "+d.String()] {
-			fmt.Fprintf(t.s.Out, "fold-audit: WARN %s %s not cited\n", file, d)
-			t.dMissing++
-			t.warned = true
-		}
-	}
-}
-
-// summary prints the folded/cited totals and, since --deltas-since, the deltas totals.
 func (t *audit) summary() {
 	fmt.Fprintf(t.s.Out, "fold-audit: %d folded, %d cited, %d uncited\n", t.nFolded, t.nCited, t.nUncited)
 	if t.o.since != "" {
@@ -198,6 +182,9 @@ func (t *audit) summary() {
 		// Mutation: R2-unreadable -- folding dUnreadable back into dMissing hides a corrupt cell as a citation gap.
 		if t.dUnreadable > 0 {
 			fmt.Fprintf(t.s.Out, "fold-audit: deltas: %d unreadable cells\n", t.dUnreadable)
+		}
+		if t.nPendingDone > 0 {
+			fmt.Fprintf(t.s.Out, "fold-audit: pending: %d fully cited\n", t.nPendingDone)
 		}
 	}
 	if t.nAlias > 0 {

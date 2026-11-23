@@ -72,7 +72,7 @@ const (
 	msgRestored         = "  Restored the previously-deployed %[1]s.jar into %[2]s/modules%[3]s"
 	msgRestoreFailedOld = "  FAILED TO RESTORE %[1]s.jar (%[3]s); %[2]s/modules still holds the pre-build jar, so a retry is still safe."
 	msgRestoreFailedNew = "  FAILED TO RESTORE the previously-deployed %[1]s.jar (%[3]s) — %[2]s/modules no longer holds it (likely the NEW jar); restore it manually before retrying."
-	restoreNoReason     = "cp failed"
+	restoreNoReason     = "the copy failed"
 	restoredPlain       = "."
 	restoredRetry       = " — a retry will catch this again."
 )
@@ -178,6 +178,9 @@ const (
 // A command the chain could not start, or a step that failed outside any gate.
 const (
 	msgCannotRun = "build.sh: %s: %s"
+	msgNoTemp    = "build.sh: cannot make a temporary %s in %s: %s"
+	msgNoDir     = "build.sh: cannot create directory %s: %s"
+	msgNoBackup  = "build.sh: cannot keep the pre-build jar: %s"
 	whyNoCommand = "command not found"
 	msgFault     = "build.sh: %s"
 )

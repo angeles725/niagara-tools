@@ -8,7 +8,7 @@
 -- want --
 exit 1
 PASS  jdk8          JDK 8 found: @DIR@/jvm/java-8-openjdk-amd64/
-FAIL  plugin-pin    plugin 9.9.9 (from --plugin-version) missing from @DIR@/nh/etc/m2 — pick the version this install ships
+FAIL  plugin-pin    plugin 9.9.9 (from --plugin-version) missing from @DIR@/nh/etc/m2 — this install ships 7.6.17: pick one for --plugin-version
 PASS  jar-lock      no locked jars under @DIR@/nh/modules/
 -- stderr --
 -- @kind --

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const signingLine = "scaffold-module: signing: set niagaraSigningAlias + niagaraSigningProfile (gradle properties) before the first build\n"
+const signingLine = "scaffold-module: signing: set niagaraSigningAlias + niagaraSigningProfile (gradle properties) before the first build (a throwaway profile to copy: build-n4-module-kit/templates/signing-profile.xml)\n"
 
 // The default (logic) run renames paths, rewrites text, copies binaries verbatim and reports on stdout.
 func TestEmitLogicDefaults(t *testing.T) {

@@ -63,6 +63,25 @@ func TestModuleVersionReadsTheJar(t *testing.T) {
 	}
 }
 
+// TestModuleVersionFromZipAgreesWithUnzip: the archive/zip reader answers every case the unzip reader does.
+func TestModuleVersionFromZipAgreesWithUnzip(t *testing.T) {
+	t.Parallel()
+	for _, c := range moduleXMLs {
+		if got := ModuleVersionFromZip(writeJar(t, c.xml)); got != c.want {
+			t.Errorf("%s: ModuleVersionFromZip = %q, want %q", c.name, got, c.want)
+		}
+	}
+	notAJar := filepath.Join(t.TempDir(), "x.jar")
+	if err := os.WriteFile(notAJar, []byte("not a zip"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, jar := range []string{notAJar, filepath.Join(t.TempDir(), "missing.jar")} {
+		if got := ModuleVersionFromZip(jar); got != "" {
+			t.Errorf("ModuleVersionFromZip(%s) = %q, want empty", jar, got)
+		}
+	}
+}
+
 func TestModuleVersionOfAnUnreadableJarIsEmpty(t *testing.T) {
 	t.Parallel()
 	notAJar := filepath.Join(t.TempDir(), "x.jar")

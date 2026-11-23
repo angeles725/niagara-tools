@@ -59,6 +59,10 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 	if err != nil {
 		fmt.Fprintf(s.Err, "find: '%s': %s\n", o.root, errText(err))
 	}
+	if dirs := moduleDirsBelow(artifacts); len(dirs) > 0 { // a gradle root: the parts are one level down
+		fmt.Fprintf(s.Err, "report-module: %s is a gradle root, not a module root: pass %s\n", o.root, strings.Join(dirs, " or "))
+		return ExitEnv
+	}
 	if len(artifacts) == 0 {
 		fmt.Fprintf(s.Err, "report-module: no artifacts found under %s\n", o.root)
 		return ExitEnv
@@ -112,6 +116,26 @@ func discover(root string) ([]artifact, error) {
 		}
 	}
 	return out, err
+}
+
+// moduleDirsBelow are the directories among found that are no artifact themselves but hold one: the module
+// directories under a gradle root, which this tool is not given (retro build-kit-bench-session Δ10). It is empty
+// when any of found is an artifact: the root is then a module root, whatever else it holds.
+func moduleDirsBelow(found []artifact) []string {
+	var dirs []string
+	for _, a := range found {
+		if IsModuleArtifact(a.dir) {
+			return nil
+		}
+		subs, _ := discover(a.dir)
+		for _, sub := range subs {
+			if IsModuleArtifact(sub.dir) {
+				dirs = append(dirs, a.dir)
+				break
+			}
+		}
+	}
+	return dirs
 }
 
 // errText is the strerror text of a file error ("Permission denied").

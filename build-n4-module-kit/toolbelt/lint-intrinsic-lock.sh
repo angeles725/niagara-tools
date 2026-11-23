@@ -7,7 +7,8 @@
 # A Niagara class is a named class whose own or superclass name is B + an upper-case letter (Buffer is not).
 # Rows: IL1 a synchronized instance method of a Niagara class; IL2 synchronized (this) or (<Class>.this) whose this is
 # a Niagara class (an anonymous class's this is not judged); IL3 a synchronized block inside another synchronized
-# block or method, in any class. A static synchronized method is not judged. Java is read as tokens
+# block or method, in any class, unless a block lambda body or an anonymous class's method lies between them (that body
+# runs later, not under the outer lock). A static synchronized method is not judged. Java is read as tokens
 # (go/internal/javasrc): a comment or a string never matches. Advisory: Tridium's own source does all three (a smoke
 # on the organized tree gives 1827 IL1, 253 IL2, 579 IL3 rows), so WARN, never FAIL. [ev: corpus B1242 §1242.7]
 # [ev: corpus B1238 §1238.7] [ev: retro course-coverage Δ24]

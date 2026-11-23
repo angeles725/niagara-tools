@@ -23,7 +23,7 @@ func (b *build) isolateMirror() int {
 	case iso == nil:
 		return proceed
 	}
-	if _, code := b.run("mkdir", "-p", iso.UserHome); code != 0 {
+	if code := b.makeDir(iso.UserHome, true); code != 0 {
 		return code // as under bash's set -e
 	}
 	b.signingXML = iso.SigningXML

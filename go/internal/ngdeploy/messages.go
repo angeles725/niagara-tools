@@ -13,8 +13,8 @@ const (
 	// options and env file
 	msgUnknownFlag   = "unknown flag: %s"
 	msgNeedsArgument = "%s requires an argument"
-	msgInvalidMode   = "invalid --mode '%s'; valid values are A, B, C"
-	msgFileMode      = "MODE set by the env file is not A, B or C"
+	msgInvalidMode   = "invalid --mode '%s'; valid values are A, B, C, D"
+	msgFileMode      = "MODE set by the env file is not A, B, C or D"
 	msgEnvFileSyntax = "env file %s" // a envfile.SyntaxError: "<path>: line N: <reason>"
 	msgEnvFileRead   = "env file %s cannot be read: %s"
 	msgEnvFileDir    = "env file %s is a directory"
@@ -63,7 +63,8 @@ const (
 	msgMirrorBlank    = "mirror niagara_home path contains whitespace: %s: JAVA_TOOL_OPTIONS cannot carry -Duser.home=<path> with whitespace (the JVM splits it); move the mirror"
 	msgHomeBlank      = "HOME contains whitespace: %s: JAVA_TOOL_OPTIONS cannot carry -Dmaven.repo.local=$HOME/.m2/repository with whitespace (the JVM splits it); " +
 		"set -Dmaven.repo.local=<path without whitespace> in JAVA_TOOL_OPTIONS yourself, or use a HOME without whitespace"
-	msgGradleProp = "--gradle-prop needs k=v (got: %s)"
+	msgGradleProp    = "--gradle-prop needs k=v (got: %s)"
+	msgPluginVersion = "--plugin-version needs <major>.<minor>.<patch> (got: %s)"
 
 	// build
 	msgBuild       = "build: mode %s — %s"

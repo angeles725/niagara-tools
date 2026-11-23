@@ -3,10 +3,12 @@ Usage: ng-deploy.sh [OPTIONS]
 Deploy a Niagara N4 module jar to a station modules directory.
 
 Options:
-  --mode <A|B|C>           Build mode (default: A)
+  --mode <A|B|C|D>         Build mode (default: A)
                              A = rt + ux jars (both)
                              B = ux jar only  (JS/CSS/Java servlet changes)
                              C = rt jar only  (Java BComponent changes)
+                             D = rt + wb jars (a module with a workbench part, as the driver scaffold builds:
+                                 the same build, backup, verify, gate and all-or-nothing copy for both jars)
   --env-file <PATH>        Source env from PATH instead of .env.local
   --no-deploy              Build only; do not copy or verify (jars stay in build/libs/)
   --no-backup              Skip the backup step (opt-in; prints a one-line rollback WARN).
@@ -18,7 +20,7 @@ Options:
   --i-know-what-im-doing   Accepted no-op (kept for backward compatibility; --no-backup no longer gates)
   --with-slotomatic        Run :MODULE-rt:slotomatic (and :MODULE-ux:slotomatic when -ux is annotated) BEFORE build_jars (opt-in; ignored on mode B)
   --strict-slotomatic      Abort with exit 15 if annotation changes detected without --with-slotomatic
-  --no-gate                Skip the verify-module.sh gate (default: on for mode A/C). Without
+  --no-gate                Skip the verify-module.sh gate (default: on for mode A/C/D). Without
                              --no-gate a MISSING gate binary blocks the deploy (exit 50).
                              The gate is run with --src and with --expected-signer <signer>: see
                              "The signer the gate expects" below.
@@ -29,6 +31,10 @@ Options:
   --gradle-prop <k=v>      Repeatable; forwarded to every gradlew call as -Pk=v, as build.sh forwards it
                              (niagaraSigningAlias=<alias>, niagaraSigningProfile=<profile file>). The gate
                              expects the last niagaraSigningAlias given. Not k=v: exit 10.
+  --plugin-version <V>     The niagara plugin version gradle builds with (<major>.<minor>.<patch>), forwarded as
+                             -PniagaraPluginVersion=<V>, as build.sh forwards it: a module whose settings.gradle.kts
+                             pins another one than the installation ships (preflight: "plugin-pin ... missing from
+                             etc/m2"; gradle: "Plugin ... version: '7.6.17' was not found") builds with this one.
   --install-into-home      Build although NIAGARA_HOME is a real installation and not a mirror (no
                              .niagara-mirror): the build then replaces the module's jars in its modules/
                              directory before any check runs. Command line only; build.sh has the same option.
@@ -40,8 +46,9 @@ Required env vars (from .env.local or --env-file):
   JAVA_HOME, STATION_MODULES_DIR
   EXPECTED_RT_TYPES  (required for mode A or C)
   EXPECTED_UX_TYPES  (required for mode A or B)
+  EXPECTED_WB_TYPES  (required for mode D)
 
-Required for mode A or C unless --first-deploy:
+Required for mode A, C or D unless --first-deploy:
   SCHEMA_BASELINE_DIR  — the DEPLOYED -rt source baseline (module-include.xml + *.java), diffed by
                          schema-risk.sh against the -rt module dir before the copy (build-verify.md
                          § Schema-risk deploy workflow)
@@ -162,6 +169,7 @@ Optional:
 
 Exit codes:
   0   success (or --help)
+  1   the backup directory (_backups) could not be made (mkdir's own status, usually 1); nothing was copied
   10  missing required env var, invalid path or option value, or an env file that is a directory, cannot be
       read, holds a line that is not a plain assignment, or sets NO_GATE=1 / NO_BACKUP=1 / MODE=B /
       VERIFY_MODULE_BIN without the flag, or SCHEMA_RISK_BIN; or --no-deploy when STATION_MODULES_DIR is <NIAGARA_HOME>/modules;
@@ -216,7 +224,7 @@ Exit codes:
       that is not a git repository (git says "not a git repository" and no .git is there or above) has no commit
       to record: a NOTICE says so and the deploy ends 0. A repository git refuses to open (dubious ownership, a
       corrupt .git) is still exit 41
-  12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
+  12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C/D)
   50  verify failed: type count mismatch (a jar with no type entry counts 0), a module.xml that unzip cannot
       read, BUILD_ID not found, or verify-module gate failed/missing (a jar not signed by the expected signer
       fails the gate)
