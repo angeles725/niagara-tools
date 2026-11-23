@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 25 -->
 # 2026-11-15 · kit · build-kit-bench-session

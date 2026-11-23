@@ -10,6 +10,9 @@
 # what Go and GNU grep -E read differently: {,2}, {}, an interval bound with a leading zero ({02}), a class name
 # in single brackets ([:alpha:]), a star right after a start anchor that opens a branch (^* at the line's start,
 # after ( or |: GNU grep warns "* at start of expression"); a^* inside a branch is read alike and accepted.
+# GNU grep warns there but matches the same lines as Go: the refusal rests on POSIX leaving that star undefined, not on a
+# different reading. To compare with GNU grep call /usr/bin/grep (or check `grep --version`): on a dev host the `grep` on
+# PATH may be ugrep, which rejects ^* outright.
 # The CI bats job installs Java 8, JUnit, bats, GNU parallel, Go, CPython and the pinned npm tools
 # (toolbelt/eslint/package.json), so "no javac", "junit not in ~/.gradle", "eslint not installed" and
 # "acorn not installed" are deliberately NOT here: one of them in CI means a setup step broke.
