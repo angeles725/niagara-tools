@@ -7,7 +7,9 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
   `KIT=<path> SHA=<sha> (origin/main, clean)`. A clean kit-main worktree strictly behind origin/main is fast-forwarded
   automatically (`kit-resolve: refreshed <old>→<new>`). Exit 2 = the chosen kit is dirty, unfetchable, ahead of or
   diverged from origin/main (unmerged commits), or a stale `$BUILD_N4_KIT`/default checkout (never touched): fix as
-  printed before any build or gate. It lives in `scripts/` because toolbelt scripts never call version control
+  printed before any build or gate. `toolbelt/build.sh` runs it too, on its own kit: the first stdout line is
+  `==> kit: KIT=<path> SHA=<sha> (origin/main, clean)`, a kit behind origin/main is a FAIL (exit 10) before gradle, and
+  `BUILD_N4_KIT_CHECK=0` skips it. It lives in `scripts/` because toolbelt scripts never call version control
   (kit-links L2). `[ev: retro r10-stale-kit-resolution Δ1]`
 - `corpus-nav find "<topic>"` — read the matching blocks. 90% is already documented; don't re-derive.
 - Read the EXEMPLAR source for the type (SOURCES.md), verbatim — not from memory.

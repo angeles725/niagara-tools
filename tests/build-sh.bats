@@ -50,6 +50,7 @@ setup() {
   make_fake_gradlew "$ROOT"
   make_niagara_home "$TMPDIR_T/nh" 7.6.17
   mkdir -p "$TMPDIR_T/j8"; export JAVA8="$TMPDIR_T/j8"
+  export BUILD_N4_KIT_CHECK=0   # the kit freshness check (tests K1-K4 below) would fetch from origin on every case
 }
 teardown() { rm -rf "$TMPDIR_T"; }
 
@@ -1119,4 +1120,43 @@ _install_gradlew() {
   [ "$status" -eq 10 ]
   [[ "$output" == *"the jar was changed after it was kept"* ]]
   [ "$(cat "$TMPDIR_T/nh/modules/Foo-rt.jar")" = "deployed" ]
+}
+
+# ================= kit freshness: first stdout line names the kit revision; a stale kit is a FAIL (retro R9 ΔB5) =================
+# Mutation: BS-kit-stale -- dropping the REFUSED stale/diverged case turns K2 red (the run goes on, exit 0).
+_kit_resolver() { # <exit> <stdout> <stderr>
+  printf '#!/usr/bin/env bash\n[ -z "%s" ] || printf "%%s\\n" "%s"\n[ -z "%s" ] || printf "%%s\\n" "%s" >&2\nexit %s\n' \
+    "$2" "$2" "$3" "$3" "$1" > "$TMPDIR_T/resolve.sh"
+  chmod +x "$TMPDIR_T/resolve.sh"
+  export BUILD_N4_KIT_CHECK=1 BUILD_N4_KIT_RESOLVE="$TMPDIR_T/resolve.sh"
+}
+
+@test "K1: a fresh kit: the first stdout line is '==> kit: KIT=<dir> SHA=<sha> (origin/main, clean)' and the chain runs" {
+  _kit_resolver 0 "KIT=/k/build-n4-module-kit SHA=abc1234 (origin/main, clean)" ""
+  run bash -c '"$0" "$@" 2>/dev/null' "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "==> kit: KIT=/k/build-n4-module-kit SHA=abc1234 (origin/main, clean)" ]
+  [ -f "$TMPDIR_T/gradlew.calls.log" ]
+}
+
+@test "K2: a kit behind origin/main is a FAIL (exit 10) before gradle" {
+  _kit_resolver 2 "" "kit-resolve: REFUSED stale: /k is 3 commit(s) behind origin/main — run kit-resolve.sh --refresh"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"build.sh: FAIL — the kit is behind origin/main (a stale kit runs old gates): kit-resolve: REFUSED stale: /k is 3 commit(s) behind origin/main — run kit-resolve.sh --refresh"* ]]
+  [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+}
+
+@test "K3: a dirty kit is not a stale one: '==> kit: <dir> freshness unchecked — <why>' and the chain runs" {
+  _kit_resolver 2 "" "kit-resolve: REFUSED dirty: /k has uncommitted changes (2 path(s))"
+  run bash -c '"$0" "$@" 2>/dev/null' "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "==> kit: $KIT freshness unchecked — kit-resolve: REFUSED dirty: /k has uncommitted changes (2 path(s))" ]
+}
+
+@test "K4: BUILD_N4_KIT_CHECK=0 skips the check: no kit line, the resolver is not run" {
+  _kit_resolver 2 "" "kit-resolve: REFUSED stale: /k is 3 commit(s) behind origin/main"
+  BUILD_N4_KIT_CHECK=0 run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"==> kit:"* ]]
 }

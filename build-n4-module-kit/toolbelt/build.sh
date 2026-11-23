@@ -139,6 +139,15 @@
 #   Before the restore the signal is passed on to the gradle the run started, which is waited for (killed after
 #   10 s), and no gradle starts after it. A gradle daemon (outside a mirror home) cancels on its own, so prefer
 #   interrupting the process group (Ctrl-C, kill -- -<pgid>). [ev: retro p1-build-deploy-safety Δ4]
+# Kit freshness (retro R9 ΔB5): a stale kit runs old report-module and build-module gates silently (a rebuild at an
+#   old kit read "docs ERROR schema-risk env fault"; after kit-resolve it was CLEAN). Before anything else this
+#   launcher runs ../../scripts/kit-resolve.sh (version control lives there, never in toolbelt/) on THIS kit with
+#   --offline-ok and prints one first stdout line "==> kit: KIT=<dir> SHA=<sha> (origin/main, clean)". A kit behind
+#   origin/main ("stale") or diverged from it is "build.sh: FAIL — the kit is behind origin/main (...): <why>" and
+#   exit 10 before gradle. Any other answer (dirty, ahead of origin/main, not a work tree, no resolver) is not a stale
+#   kit: the line is "==> kit: <dir> freshness unchecked — <why>" and the run goes on. $BUILD_N4_KIT_CHECK=0 skips the
+#   check (inner rebuild loops, CI); $BUILD_N4_KIT_RESOLVE names another resolver (tests). -h and --restore-mirror
+#   skip it. The Go binary never sees these lines.
 # Exit: 0 chain passed (or mirror restored) · 1 a copy the run needs failed (temporary dir, baseline, --restore-mirror,
 #   --schema-baseline-ref extraction) · 2 usage (and the --schema-baseline-ref refusals above) · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
 #   without --install-into-home, no profile) ·
@@ -161,4 +170,32 @@ GO_DIR="$(cd "$here/../.." && pwd)/go"
 BIN="$(go_tool_bin "$GO_DIR" build-module)" || exit 3
 BUILD_MODULE_TOOLBELT="$(CDPATH='' cd -- "$(dirname "$0")" >/dev/null && pwd)"
 export BUILD_MODULE_TOOLBELT
+# Kit freshness check (header above): the first stdout line names the kit and its revision.
+kit_check() {
+  local a kit resolver out rc line why
+  [ "${BUILD_N4_KIT_CHECK:-1}" = 0 ] && return 0
+  for a in "$@"; do case "$a" in -h | --help | --restore-mirror) return 0 ;; esac; done
+  kit="$(cd "$here/.." && pwd)"
+  resolver="${BUILD_N4_KIT_RESOLVE:-$here/../../scripts/kit-resolve.sh}"
+  if [ ! -x "$resolver" ]; then
+    printf '==> kit: %s freshness unchecked — no kit-resolve.sh beside this kit\n' "$kit"
+    return 0
+  fi
+  out="$(BUILD_N4_KIT="$kit" "$resolver" --offline-ok 2>&1)"; rc=$?
+  line="$(printf '%s\n' "$out" | grep '^KIT=' | head -1)"
+  if [ "$rc" -eq 0 ] && [ -n "$line" ]; then
+    printf '%s\n' "$out" | grep -v '^KIT=' >&2
+    printf '==> kit: %s\n' "$line"
+    return 0
+  fi
+  why="$(printf '%s\n' "$out" | grep 'REFUSED' | head -1)"
+  [ -n "$why" ] || why="$(printf '%s\n' "$out" | head -1)"
+  case "$why" in
+    *"REFUSED stale:"* | *"REFUSED diverged:"*)
+      printf 'build.sh: FAIL — the kit is behind origin/main (a stale kit runs old gates): %s\n' "$why" >&2
+      return 10 ;;
+  esac
+  printf '==> kit: %s freshness unchecked — %s\n' "$kit" "$why"
+}
+kit_check "$@" || exit $?
 exec "$BIN" "$@"
