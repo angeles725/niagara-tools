@@ -76,6 +76,24 @@ func TestGradlePropIsForwardedAsBuildShForwardsIt(t *testing.T) {
 	}
 }
 
+// --plugin-version V (retro build-kit-bench-session Δ7) is the option build.sh has: gradle gets -PniagaraPluginVersion=V on
+// every call, so a module whose settings pin another plugin builds against the one the installation ships. A value
+// that is not <major>.<minor>.<patch>, or none, is exit 10 before anything runs.
+func TestPluginVersionIsForwardedAsBuildShForwardsIt(t *testing.T) {
+	f := newFixture(t)
+	f.want(f.run("--no-backup", "--mode", "C", "--plugin-version", "7.6.22"), ExitOK)
+	if !strings.Contains(f.calls(), gradleProps+" <-PniagaraPluginVersion=7.6.22> <:demo-rt:clean>") {
+		t.Errorf("calls:\n%s", f.calls())
+	}
+	for _, bad := range [][]string{{"--plugin-version", "banana"}, {"--plugin-version", "7.6"}, {"--plugin-version"}} {
+		f = newFixture(t)
+		code := f.run(bad...)
+		if code != ExitEnv || !strings.Contains(f.err, "--plugin-version needs <major>.<minor>.<patch>") || f.calls() != "" {
+			t.Errorf("%v: exit %d, stderr %q", bad, code, f.err)
+		}
+	}
+}
+
 // The isolation goes to the commands the deploy starts, never into this process: after a mirror run the
 // process environment is as it was, and a second run in the same process hands gradle the same values, not
 // a second -Duser.home (review R3-env-leak).

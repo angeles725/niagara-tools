@@ -60,7 +60,7 @@ func TestAnInvalidModeFromTheEnvFileIsRefused(t *testing.T) {
 	f := newFixture(t)
 	f.set("MODE", "Z")
 	code := f.run("--no-backup")
-	if code != ExitEnv || f.out != "" || f.err != "[ng-deploy] ERROR MODE set by the env file is not A, B or C\n" || f.calls() != "" {
+	if code != ExitEnv || f.out != "" || f.err != "[ng-deploy] ERROR MODE set by the env file is not A, B, C or D\n" || f.calls() != "" {
 		t.Errorf("exit %d, stdout %q, stderr %q", code, f.out, f.err)
 	}
 }

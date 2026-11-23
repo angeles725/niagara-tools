@@ -37,6 +37,8 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 
 **Driver modules with NO Hx/UX intent MUST state that explicitly (PD-13):** when a driver module deliberately ships no `-ux` profile and relies entirely on the base Niagara hx-wb for its browser view, add a comment in the module's `SKILL.md` / README: `# UX: none — relies on base hx-wb`. This prevents a future developer from adding a redundant `-ux` scaffold when the driver's intent is station-side only. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ13]` `[ev: corpus B1061]`
 
+**Deploying the `-wb` jar:** the `driver` scaffold builds `-rt` and `-wb`, and `scripts/ng-deploy.sh --mode D` is the mode for that pair: the same build, backup, type-count verify, `verify-module.sh` gate and all-or-nothing copy as mode A, for `<MOD>-rt.jar` and `<MOD>-wb.jar`, with `EXPECTED_RT_TYPES` and `EXPECTED_WB_TYPES` in the env file (before it, mode C copied `-rt` only and mode A failed on the missing `-ux` project). The deploy's closing lines (the station restart for the `-rt` classes) are those of mode C. `[ev: retro build-kit-bench-session Δ5]`
+
 ### 1.4 · Plugin-extensible manager SPI — multi-device-family alternative [ev: retro honeywell-wb-rt-wb-deltas Δ1]
 
 When multiple device families share one `BAbstractManager` container (wb side), avoid subclassing the manager once per family. Instead, implement a **plugin SPI** (`BIHonDeviceModel` or equivalent `BIHonBacnetDeviceModel`) per family module; the shared framework discovers all registered implementations via Honeywell's own helper `NiagaraRegistryUtil.instance().getImplementersOfTypeSpec(String)`.

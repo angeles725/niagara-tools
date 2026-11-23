@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"slices"
 )
 
 // jarsToCopy describes the jars of the mode, after two looks at the station that change nothing in it and
@@ -69,7 +70,19 @@ func moveAside(target, aside string) error {
 // module, beside its jar (which may be the new one of a deploy that was killed) or without it: nothing is
 // removed or renamed. The lines say what the station holds for each such jar, and the two ways out.
 func (d *deploy) refuseAside() int {
-	return d.refuseAsideIn(d.station, deployable, ExitCopy, msgAsideFound)
+	return d.refuseAsideIn(d.station, d.asideProfiles(), ExitCopy, msgAsideFound)
+}
+
+// asideProfiles are the profiles refuseAside looks at: the deployable ones, and the profiles of the mode that
+// are not (the -wb jar of mode D), so a mode never meets another profile's left-over it does not touch.
+func (d *deploy) asideProfiles() []string {
+	profiles := append([]string{}, deployable...)
+	for _, p := range profilesOf[d.raw[optMode]] {
+		if !slices.Contains(profiles, p) {
+			profiles = append(profiles, p)
+		}
+	}
+	return profiles
 }
 
 // refuseAsideIn is that refusal for the jars of some profiles in one modules directory: the exit code and the

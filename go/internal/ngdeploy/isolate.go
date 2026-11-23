@@ -2,6 +2,7 @@ package ngdeploy
 
 import (
 	"errors"
+	"regexp"
 
 	"github.com/angeles725/niagara-tools/go/internal/gradleenv"
 )
@@ -30,6 +31,26 @@ func (d *deploy) isolateMirror() int {
 	d.childEnv, d.isolation = iso.Env, iso.Args
 	d.say(msgMirrorIsolated, iso.UserHome, iso.Env["GRADLE_USER_HOME"])
 	return proceed
+}
+
+// pluginFlag is the option build.sh has: the niagara plugin version gradle builds with, forwarded as
+// -PniagaraPluginVersion (retro build-kit-bench-session Δ7).
+const pluginFlag = "--plugin-version"
+
+// pluginVersionShape is the version --plugin-version takes: digits only, as scaffold-module checks it.
+var pluginVersionShape = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
+
+// pluginVersion reads the value of --plugin-version into the -PniagaraPluginVersion every gradlew call gets.
+func (d *deploy) pluginVersion(rest []string) int {
+	got := "nothing"
+	if len(rest) > 0 {
+		if pluginVersionShape.MatchString(rest[0]) {
+			d.gradleProps = append(d.gradleProps, "-PniagaraPluginVersion="+rest[0])
+			return proceed
+		}
+		got = rest[0]
+	}
+	return d.fail(ExitEnv, msgPluginVersion, got)
 }
 
 // gradleProp reads one --gradle-prop k=v of the command line into the -Pk=v every gradlew call gets, as
