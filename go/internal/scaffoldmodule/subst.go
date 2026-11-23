@@ -56,6 +56,7 @@ func (n names) fixtureTextRules() []rule {
 	return append(n.profileRules(),
 		rule{n.fixtureLower, n.moduleLower},
 		rule{n.fixture, n.module},
+		rule{asciiLower(n.fixture), asciiLower(n.module)}, // the dashboard servlet's mount, "minimaldash"
 		rule{fixtureVendor, n.vendor},
 		rule{fixtureVendorLower, n.vendorLower},
 		rule{n.fixtureSym + "=", n.moduleSym + "="},
@@ -81,4 +82,17 @@ func (n names) templateTextRules(linkInSlots string) []rule {
 		{templateModule, n.module},
 		{templateVendor, n.vendor},
 	}
+}
+
+// loginPathRules rewrite a templates/dashboard-login relative path (station-test's, plus the lower-case module
+// name of the asset directory).
+func (n names) loginPathRules() []rule {
+	return append(n.templatePathRules(), rule{templateModuleLower, asciiLower(n.module)})
+}
+
+// loginTextRules rewrite a templates/dashboard-login text file (the dashboard has no link-in token there); a
+// fragment may name a source path (the module map row), so the package path is a rule too.
+func (n names) loginTextRules() []rule {
+	return append(n.templateTextRules(""), rule{templatePackagePath, "com/" + n.vendorLower + "/"},
+		rule{templateModuleLower, asciiLower(n.module)}, rule{templateSym, n.moduleSym})
 }

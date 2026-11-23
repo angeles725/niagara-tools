@@ -59,6 +59,9 @@ func kitFiles() map[string]string {
 			files[root+fixture+"/"+fixture+"-"+second+"/"+fixture+"-"+second+".gradle.kts"] = "api(project(\":" + fixture + "-rt\")) // " + fixture + "-" + second + "\n"
 		}
 	}
+	for rel, content := range loginKitFiles() {
+		files[rel] = content
+	}
 	return files
 }
 
