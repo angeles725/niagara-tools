@@ -15,8 +15,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-// usage is what `sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'` printed: lines 2-20 of the bash script. The
-// --expected-signer lines under `signed` were added to it with the option.
+// usage is the header of the bash script as `sed -n '2,20p'` printed it, minus the shellcheck directive and its
+// rationale (retro build-kit-bench-session Δ15). The --expected-signer lines under `signed` were added with the option.
 //
 //go:embed usage.txt
 var usage string

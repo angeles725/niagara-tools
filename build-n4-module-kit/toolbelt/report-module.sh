@@ -66,6 +66,9 @@
 #                         [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline]
 #        report-module.sh <module-root> --ready [--niagara-home <dir>] [--expect-niagara <ver>] [--expect-signer <alias>]
 #                         [--target-version x.y] [--first-deploy] [--json]
+# <module-root>: the MODULE directory, <gradle root>/<MOD>, the one holding <MOD>-rt/ -ux/ -wb/ (build.sh's <module-root> is the
+# gradle root above it and passes <gradle root>/<MOD> here). Given a gradle root it exits 3 naming the directory to pass.
+# [ev: retro build-kit-bench-session Δ10]
 # --niagara-home <dir>: the installation lint-ntpl-manifest-deps reads the stock modules from (build.sh passes its
 # niagara_home); without it that member reads NIAGARA_HOME from the environment, and with neither its ntpl-deps
 # rows are WARN. [ev: retro ntpl-lint-walk-k-rows Δ4]
