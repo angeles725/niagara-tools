@@ -16,11 +16,12 @@ proven on a 4.14 lab station on 2026-11-23. No client name may appear in this re
 
 | ID | Specs | Route | Commit |
 |---|---|---|---|
-| T1 | S5, S6 (lint part) | worker, Go lint rule + fixture + golden | |
-| T2 | S1-S4, S6 (doctrine + scaffold part) | worker, kit docs + scaffold-module.sh templates | |
+| T1 | S5, S6 (lint part) | worker, Go lint rule + fixture + golden | feat(lint) lint-instance-type-order |
+| T2 | S1-S4, S6 (doctrine + scaffold part) | worker, kit docs + scaffold-module.sh templates | docs(kit) + feat(scaffold) dashboard login |
 
 ## Log
 
 - L1 (2026-11-23, operator, verbatim): "Una cosa, para que se quede como issue, los modulos deben de tener su propio login dirigidos al dashboard, en caso de que sea un modulo para un dashboard"
 - L2 (2026-11-23, operator, verbatim): "Trabaja con las issues, por favor"
 - L3 (2026-11-23): live root cause behind S5 — the reference module declared `INSTANCE` after `TYPE` in its `BLoginTemplate` subclass; the station logged `TypeIntrospectionException: INSTANCE field is null; insure getType() comes last`; moving `INSTANCE` above `TYPE` fixed it (reference module 2.5.1).
+- L4 (2026-11-23): T1 and T2 done; the scaffold commit is ~1500 lines, mostly generated template files (one reviewable unit: the overlay and its tests). The scaffold output was not compiled against a Niagara install; the source-order test and the lint catch the INSTANCE/TYPE trap.
