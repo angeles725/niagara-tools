@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 5 -->
 # 2026-11-16 · kit · ntpl-jar-manifest-k4b

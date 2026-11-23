@@ -6,7 +6,7 @@ import (
 	"syscall"
 
 	"github.com/angeles725/niagara-tools/go/internal/fstype"
-	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/modulejars"
 )
 
 // jarLock warns about module jars a process holds open (a running station), from ONE `lsof -Fn`
@@ -34,11 +34,10 @@ func (r *run) jarLock() {
 		held[ln] = true
 	}
 	locked := ""
-	entries, _ := os.ReadDir(r.nh + "/modules")
-	for _, e := range entries {
-		jar := r.nh + "/modules/" + e.Name()
-		if strings.HasSuffix(e.Name(), ".jar") && !strings.HasPrefix(e.Name(), ".") && lint.IsFile(jar) && held["n"+jar] {
-			locked += " " + e.Name()
+	jars, _ := modulejars.Regular(r.nh + "/modules")
+	for _, name := range jars {
+		if held["n"+r.nh+"/modules/"+name] {
+			locked += " " + name
 		}
 	}
 	switch {
