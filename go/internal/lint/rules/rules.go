@@ -27,6 +27,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/gradleuserhome"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inertcoordination"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/instancetypeorder"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/intrinsiclock"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/jasmineux"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconapostrophe"
@@ -147,5 +148,6 @@ func All() []lint.Spec {
 		rdbmsdialect.Spec(),
 		mqtttlsport.Spec(),
 		gradleuserhome.Spec(),
+		instancetypeorder.Spec(),
 	}
 }

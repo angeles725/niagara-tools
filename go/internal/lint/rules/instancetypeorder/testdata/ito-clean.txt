@@ -1,0 +1,32 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/BNone.java --
+@NiagaraType
+public class BNone extends BComponent
+{
+  public static final Type TYPE = Sys.loadType(BNone.class);
+  public Type getType() { return TYPE; }
+}
+-- src/BBefore.java --
+@NiagaraType
+public class BBefore extends BComponent
+{
+  public static final BBefore INSTANCE = new BBefore();
+  public static final Type TYPE = Sys.loadType(BBefore.class);
+}
+-- src/BInstanceOnly.java --
+@NiagaraType
+public class BInstanceOnly extends BComponent
+{
+  public static final BInstanceOnly INSTANCE = new BInstanceOnly();
+}
+-- src/BNonStatic.java --
+@NiagaraType
+public class BNonStatic extends BComponent
+{
+  public static final Type TYPE = Sys.loadType(BNonStatic.class);
+  public final Object INSTANCE = null;
+}

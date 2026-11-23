@@ -1,0 +1,25 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-instance-type-order  @DIR@/src/BOuter.java:11  static INSTANCE is declared after TYPE: the station refuses to load the type with "INSTANCE field is null; insure getType() comes last" -- declare INSTANCE before TYPE
+-- stderr --
+-- src/BOuter.java --
+@NiagaraType
+public class BOuter extends BComponent
+{
+  public static final BOuter INSTANCE = new BOuter();
+  public static final Type TYPE = Sys.loadType(BOuter.class);
+
+  @NiagaraType
+  public static class BInner extends BComponent
+  {
+    public static final Type TYPE = Sys.loadType(BInner.class);
+    public static final BInner INSTANCE = new BInner();
+  }
+
+  static class Helper
+  {
+    static final Object INSTANCE = new Object();
+  }
+}

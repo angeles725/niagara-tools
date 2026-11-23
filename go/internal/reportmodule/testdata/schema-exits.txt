@@ -11,6 +11,7 @@ N1  SKIP  lint-link-target-flags  no src/
 N1  SKIP  lint-ext-writable-shape  no src/
 N1  SKIP  lint-no-system-out  no src/
 N1  SKIP  lint-slotomatic-markers  no src/
+N1  SKIP  lint-instance-type-order  no src/
 N1  SKIP  lint-clock-zero-floor  no src/
 N1  SKIP  lint-null-context-write  no src/
 N1  SKIP  lint-bql-string-concat  no src/
@@ -42,6 +43,7 @@ S0  SKIP  lint-link-target-flags  no src/
 S0  SKIP  lint-ext-writable-shape  no src/
 S0  SKIP  lint-no-system-out  no src/
 S0  SKIP  lint-slotomatic-markers  no src/
+S0  SKIP  lint-instance-type-order  no src/
 S0  SKIP  lint-clock-zero-floor  no src/
 S0  SKIP  lint-null-context-write  no src/
 S0  SKIP  lint-bql-string-concat  no src/
@@ -73,6 +75,7 @@ S1  SKIP  lint-link-target-flags  no src/
 S1  SKIP  lint-ext-writable-shape  no src/
 S1  SKIP  lint-no-system-out  no src/
 S1  SKIP  lint-slotomatic-markers  no src/
+S1  SKIP  lint-instance-type-order  no src/
 S1  SKIP  lint-clock-zero-floor  no src/
 S1  SKIP  lint-null-context-write  no src/
 S1  SKIP  lint-bql-string-concat  no src/
@@ -104,6 +107,7 @@ S2  SKIP  lint-link-target-flags  no src/
 S2  SKIP  lint-ext-writable-shape  no src/
 S2  SKIP  lint-no-system-out  no src/
 S2  SKIP  lint-slotomatic-markers  no src/
+S2  SKIP  lint-instance-type-order  no src/
 S2  SKIP  lint-clock-zero-floor  no src/
 S2  SKIP  lint-null-context-write  no src/
 S2  SKIP  lint-bql-string-concat  no src/
@@ -135,6 +139,7 @@ S3  SKIP  lint-link-target-flags  no src/
 S3  SKIP  lint-ext-writable-shape  no src/
 S3  SKIP  lint-no-system-out  no src/
 S3  SKIP  lint-slotomatic-markers  no src/
+S3  SKIP  lint-instance-type-order  no src/
 S3  SKIP  lint-clock-zero-floor  no src/
 S3  SKIP  lint-null-context-write  no src/
 S3  SKIP  lint-bql-string-concat  no src/
@@ -166,6 +171,7 @@ S4  SKIP  lint-link-target-flags  no src/
 S4  SKIP  lint-ext-writable-shape  no src/
 S4  SKIP  lint-no-system-out  no src/
 S4  SKIP  lint-slotomatic-markers  no src/
+S4  SKIP  lint-instance-type-order  no src/
 S4  SKIP  lint-clock-zero-floor  no src/
 S4  SKIP  lint-null-context-write  no src/
 S4  SKIP  lint-bql-string-concat  no src/
@@ -197,6 +203,7 @@ S5  SKIP  lint-link-target-flags  no src/
 S5  SKIP  lint-ext-writable-shape  no src/
 S5  SKIP  lint-no-system-out  no src/
 S5  SKIP  lint-slotomatic-markers  no src/
+S5  SKIP  lint-instance-type-order  no src/
 S5  SKIP  lint-clock-zero-floor  no src/
 S5  SKIP  lint-null-context-write  no src/
 S5  SKIP  lint-bql-string-concat  no src/
@@ -228,6 +235,7 @@ S6  SKIP  lint-link-target-flags  no src/
 S6  SKIP  lint-ext-writable-shape  no src/
 S6  SKIP  lint-no-system-out  no src/
 S6  SKIP  lint-slotomatic-markers  no src/
+S6  SKIP  lint-instance-type-order  no src/
 S6  SKIP  lint-clock-zero-floor  no src/
 S6  SKIP  lint-null-context-write  no src/
 S6  SKIP  lint-bql-string-concat  no src/
@@ -262,7 +270,7 @@ S6  ERROR  schema-risk  unexpected exit 127
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 8 artifacts · 11 PASS · 1 FAIL · 1 WARN · 242 SKIP · 0 ADVISORY  ->  ISSUES (+INCOMPLETE)
+report-module: 8 artifacts · 11 PASS · 1 FAIL · 1 WARN · 250 SKIP · 0 ADVISORY  ->  ISSUES (+INCOMPLETE)
 -- stderr --
 -- @kind --
 recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
