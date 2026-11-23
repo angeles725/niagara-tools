@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-11-16 · kit · skillinstall-t3-t4
