@@ -503,6 +503,7 @@ MD
   run "$LW" --strict "$d"
   [ "$status" -eq 0 ]
   [[ "$output" != *"STALE"* ]]
+  # shellcheck disable=SC2016  # backticks are Markdown, not a command substitution
   printf '| `swingV` | D | mid | wY |\n' >> "$d/docs/write-path-matrix.md"
   run "$LW" --strict "$d"
   [ "$status" -eq 1 ]
