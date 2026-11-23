@@ -261,6 +261,17 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     (`tests/go-tool.bats` GT10-GT14). `[ev: retro r10-go-tool-walk-scope Δ1]` Before a cache or stamp replaces such a
     walk, count its stat calls: a check that is fail-safe against later edits stats the same files (a prebuilt stamp
     measured 12.5-16 ms against a 16-25 ms walk), so narrow the walked set instead. `[ev: retro r10-go-tool-walk-scope Δ2]`
+  - **A BQL predicate a tool ships carries its live-check note.** A BQL where-clause naming a field the station does not
+    resolve is an empty answer, never an error, and a fake station accepts any string, so no offline test can tell a
+    predicate the station understands from one it silently drops (`status.ok = false` matched nothing on a live 4.14
+    while every mcp-n4 test was green; `status.isOk` is the form that selects). A source file that ships a BQL predicate
+    says in a comment the station version it was live-checked on (`Live-checked on 4.14.0.162 (<date>)`):
+    `go/internal/mcpn4/bql` `TestEveryBqlPredicateInThePackageCarriesALiveCheckNote` fails a predicate literal in a
+    file without that note, and a feature whose predicate is not live-checked yet lists it as an open delta in its retro.
+    `[ev: retro mcpn4-status-isok Δ2]` `[ev: code go/internal/mcpn4/bql/live_check_test.go]`
+  - **Signing material is checked before the build, not found by a failed signing round:** `toolbelt/signing-doctor.sh
+    --cert <certificate> [--key <private key export>]` FAILs a CA certificate, a certificate with no code-signing usage, an
+    expired one and an AES-GCM key export (`build-verify.md` § Signing per deploy target). `[ev: retro mcpn4-history-batch-tools Δ5]`
   - **What to port.** Port every tool to Go, first the ones that PARSE structured input (Java, XML, jars, ledgers)
     or have had a parsing bug; orchestration glue is ported too (`toolbelt/build.sh` is a launcher over
     `go/cmd/build-module`), and a bash script stays only as a launcher that builds and execs its Go binary.
@@ -762,6 +773,14 @@ disabled. A Spyder is not done until its state is read back:
    good download and say nothing about it.
 4. A check `not_checked` (a station without the Spyder modules, an IOComp query the station refuses) is
    work left: verify that Spyder's IOComp by hand and say so in the job notes.
+5. Over mcp-n4 (`n4_invoke_action` `compile` / `spyderDownload`) a job that fails is a `mismatch` and its read-back says
+   why: the job `log`, `log_error` (the station's own error when the log itself could not be read, which is how a broken
+   compile lost its message live), `device_state` (the Spyder's `deviceStatus`, `compileStatusFlag`, `sErrorStatus`) and
+   a hint naming the known cause, a renamed `BacnetNIFolder` slot (rename the BACnet `objectName`, never the slot).
+   `[ev: retro mcpn4-spyder-commissioning-over-box Δ3]` `[ev: code go/internal/mcpn4/writeops/spyder_download.go]`
+6. A Spyder's `ControlProgram` unloads on its own; a write whose path is below it then fails with only the path as the
+   station's error, and mcp-n4 names that cause in the error (load the program again, then repeat the call).
+   `[ev: code go/internal/mcpn4/plan/observe.go]`
 
 ## 7. Retro + close (HARD close gate — not optional)
 - **Lead merge/settle order:** merge ff-only → verify `git log -1` equals the blessed tip → THEN settle the ledger; a ledger settle on a reported-but-unverified merge records the wrong evidence revision. For parallel workers: rebase onto the new main tip before the QA ping so the blessed tip is the one that merges, not the pre-rebase base. `[ev: retro campaign8-close-process-meta-lessons]`
