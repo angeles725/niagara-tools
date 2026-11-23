@@ -24,6 +24,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/duplicatehelper"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/gradleuserhome"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inertcoordination"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/intrinsiclock"
@@ -145,5 +146,6 @@ func All() []lint.Spec {
 		dashboardsave.Spec(),
 		rdbmsdialect.Spec(),
 		mqtttlsport.Spec(),
+		gradleuserhome.Spec(),
 	}
 }

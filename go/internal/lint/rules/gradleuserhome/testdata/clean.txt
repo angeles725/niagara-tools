@@ -1,0 +1,9 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- gradle.properties --
+org.gradle.jvmargs=-Xmx2g
+org.gradle.parallel=true
+note=use -Duser.home=/x on the cli

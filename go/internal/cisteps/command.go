@@ -16,7 +16,8 @@ const ExitBad = 2
 
 // Main implements `ci-steps <workflow.yml>`: one record per step on stdout, three NUL-terminated
 // fields <kind> <name> <body>, read by scripts/ci-local.sh. Two subcommands serve
-// `scripts/ci-local.sh --changed`: `changed` (changedMain) and `lint-bats-heredoc` (lintMain).
+// `scripts/ci-local.sh --changed`: `changed` (changedMain) and `lint-bats-heredoc` (lintMain); `bats-pin`
+// (batsPinMain) prints the bats-core pin of the workflow's install step for the replay's bats provisioning.
 func Main(args []string, s cli.Stdio) int {
 	if len(args) > 0 {
 		switch args[0] {
@@ -24,6 +25,8 @@ func Main(args []string, s cli.Stdio) int {
 			return changedMain(args[1:], s)
 		case "lint-bats-heredoc":
 			return lintMain(args[1:], s)
+		case "bats-pin":
+			return batsPinMain(args[1:], s)
 		}
 	}
 	if len(args) != 1 {
