@@ -119,10 +119,26 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **DWS1 — Write-surface: five gates (HIGH — apply to every mutating endpoint):** (1) `checkCanWrite` first line = `OPERATOR_WRITE` fail-closed (deny on no-user / no-service / `catch(Exception)`); (2) hand-rolled `X-Requested-With` guard IN the pure `route()` (framework CSRF filter covers `/rpc/*` only) — a CRITICAL-write endpoint should ALSO verify the real x-niagara-csrfToken token (CsrfUtil double-submit), not rely on X-Requested-With alone. [ev: corpus B803]; (3) pin the write ORD under a `SERVICE_ORD` facade + traversal reject OR an explicit slot allowlist; (4) mutate under a per-Ord lock → HTTP **423** on contention; (5) audit every mutation (who/what/when/old→new), fire-and-forget, audit-failure never fails the write. [ev: corpus B763]
 - **DWS1b — the write template: CSRF token + permission on the TARGET:** `types/servlet-write.md` is the copy-ready `doPost` (CsrfUtil token, target resolved with the caller's Context, `target.getPermissions(cx).hasOperatorWrite()`, `Flags.OPERATOR`); `toolbelt/lint-servlet-write-guards.sh` flags `getPermissionsFor(this)`/on the user, a write with no target check and a writing servlet with no CSRF token. `[ev: retro mcpn4-history-batch-tools Δ6]`
 - **DWS2 — Pure RBAC test seam `canWrite(boolean)` (HIGH):** extract the auth DECISION as a Baja-free `canWrite(boolean)` / `getRole` / `buildForbiddenJson` seam so write-auth is unit-testable off-station. `DashboardRbacHelper`'s collapsed Baja-only form (no pure `canWrite`) is the anti-pattern; chihuahua's `ChiRbacHelper` ADR D1 is the proven seam. [ev: corpus B763]
+- **A write handler is a station-free plan plus a thin executor, so its order and its rollback are JUnit-testable:** a
+  handler that flips a link, releases an `in16` override and rolls back on a refusal in one method has its order
+  tested only on a station, and a reviewer found no test for the link flip → `in16` release → rollback order. Build a
+  pure `ApplyPlan` (zero-Baja: an ordered list of steps, each with its undo, built from the request and the current
+  values) and let the handler only execute it step by step, running the undos in reverse order when a step refuses.
+  Test the plan with `toolbelt/run-pure-test.sh` (one case for the order, one for the rollback after each step that
+  can refuse, one for an empty plan). The executor stays a loop over the plan, so it holds no decision of its own.
+  `[ev: issue #924]` (retro R11 ΔB10)
 - **A generic per-ORD write endpoint MUST gate on more than the global RBAC bit — whitelist writable slots AND/OR check the target's `Flags.OPERATOR` before `set()`:** `POST /api/setpoint` doing `parent.set(prop, coerce(...))` on ANY settable property under the service ORD, guarded only by the single global `OPERATOR_WRITE` bit + the XHR header + anti-traversal, lets anyone with that bit write display/state slots the HMI treats as read-only — the write-surface is wider than the read-surface. Before `set()`, whitelist the writable slots or check `(parent.getFlags(prop) & Flags.OPERATOR) != 0` on the target (`BComplex.getFlags(Slot)` returns an `int`, `BComplex.java:913`), and declare the single-global-bit RBAC as an explicit decision. [ev: retro dashboard-servlet-write-surface-and-reader-authority · U5]
 - **The reader's group arrays are the AUTHORITY for what a dashboard shows/controls — not the property sheet or the facade class:** a slot is on the HMI only if it appears in `DashboardReader`'s arrays (`TEMP_SLOTS`, `NUM/RELTIME/BOOL_CONFIG_SLOTS`, `DOOR_SLOTS`, `STATE_SLOTS`, `HOA_MODE_SLOTS`). Read those to document/verify a dashboard's surface; flag 1→N facade slots (e.g. `startDelay` fanning to N evaporators) for the wirer. [ev: retro dashboard-servlet-write-surface-and-reader-authority · U6]
 - **A dashboard-written value's slot type is load-bearing:** a `double`/`BRelTime`/`boolean` is oBIX-writable directly; a `BStatusNumeric` needs the wrapped `<obj><real name="value">` body (never attr-only → silent 0.0) or the servlet/action path — see `types/logic-authoring.md` §"Slot types for externally written values". `[ev: corpus B823]`
 - **One audit sink for every write surface.** A dashboard with two write surfaces (an external write-server and the in-station servlet) keeps ONE canonical table (`public.change_log`): write-server rows carry `surface='write-server'` and an opaque `config_session` id; servlet writes are audited by the framework (`AuditEvent` fires only when the `Context` carries a user, `ComplexSlotMap.set`) and MIRRORED into the same table with `surface='servlet'`, `config_session` NULL (the framework record has no session field), deduplicated on the full `(ts, user, target, old, new)` tuple, behind a flag that is OFF by default. Audit-append never fails the write (spool + replay); enabling the mirror live is a station gate (the B829-live gate), not a PR gate. `[ev: corpus B829]` `[ev: openspec/changes/archive/2026-09-06-build-n4-module-campaign9/design.md:361,373 (campaign 9 design D7/D7a)]`
+- **The audit trail of the in-station servlet is a history, not a string slot:** a `BString` ring on the facade (the
+  last N changes as text) is rewritten on every write and saved with `config.bog`; the string ring of an older
+  dashboard grew `config.bog` on every save. Write each operator change as a record of a `BStringTrendRecord`
+  history that the audit store creates on the first write (`AuditStore`); a history is bounded by its own capacity and
+  lives outside `config.bog`. The record timestamps are strictly increasing: a write whose time is not after the last
+  record's takes a later time (`AuditPolicy`, a pure class with a test for each case). The read side asks the history
+  first and reads the old ring as the fallback for the changes made before the upgrade; nothing writes to the ring
+  again. Like every audit append, it never fails the write. `[ev: issue #912]` (retro R9 ΔB4)
 ### Write path — a station save after every write `[ev: retro lint-dashboard-write-save Δ1] [ev: retro lint-dashboard-write-save Δ2]`
 
 A dashboard write (a command, a setpoint, a schedule range, a special event) changes the running station only:
@@ -196,6 +212,14 @@ final class SaveDelayPolicy {
   (power, default value, holidays, a setpoint) applies every part to a copy first; only when the whole copy passed
   does it write the live components, so a refusal in a later part leaves nothing half-written. Validate on the copy,
   write once, then request the station save. `[ev: issue #901]` (retro R7 ΔK11)
+- **Rapid operator steps (a setpoint ±0.5) send ONE command after the last click, and only the final value is
+  confirmed:** the SPA keeps the value the operator is stepping to, restarts a debounce timer on each click and sends
+  one write when it runs out; the intermediate values are never sent. The receipt is a small state machine
+  (`idle → pending → confirmed | rejected | timeout`) that compares the device read-back with the FINAL value only: a
+  read-back of an earlier step is not a confirmation, and a new click while pending restarts the cycle. Keep both as
+  pure modules with tests (`debounce.js`, `receipt.js` in the exemplar). The receipt timeout, how long the dashboard
+  waits for the device before it calls the value unconfirmed, is a behavior question asked in BUILD-LOOP §1
+  (`METHODOLOGY.md` § Domain correctness). `[ev: issue #898]` (retro R7 ΔK8)
 - **A timed override never becomes permanent by accident when its schedule is empty:** an override on a writable whose
   own schedule has no ranges has no "next event" to end at, so it holds forever. Decide it per module and ask when
   unknown: until when does a manual value hold when its schedule has no events? Default: fall back to the next event of
@@ -463,8 +487,32 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   (GD as in § ux Px rules). The series-transform servlet path (`/seriesTransformQuery/*` in its jar) is not called
   live yet [INFER] (B1339-G1). `[ev: retro devguide415-r2-web-ui-hmi Δ8]`
 - **Size the SVG chart's `viewBox` to the MEASURED box in real px each render — do not carry a fixed art-board viewBox with `preserveAspectRatio="none"`:** measure `getBoundingClientRect()` (guard width>60) and set `viewBox="0 0 <w> <h>"` so 1 unit = 1px and strokes/axis text stop distorting. [ev: retro dashboardpan-hmi-touch-ux Δ5]
-- **On a capacitive HMI the chart read-out is a TOUCH crosshair (pointer events + `touch-action:none`), never hover:** `pointerdown/move` map touch X back to a reading index, drawing a vertical line + per-series dots + a tooltip with the time and each visible series' friendly name (`equipo`) and value; double-tap clears. Label points by the operator's name, never the raw tag. [ev: retro dashboardpan-hmi-touch-ux Δ7]
+- **On a capacitive HMI the chart read-out is a TOUCH crosshair (pointer events + `touch-action:none`), never hover:** `pointerdown/move` map touch X back to a time (each series read there with `valueAt`, below), drawing a vertical line + per-series dots + a tooltip with the time and each visible series' friendly name (`equipo`) and value; double-tap clears. Label points by the operator's name, never the raw tag. [ev: retro dashboardpan-hmi-touch-ux Δ7]
 - **Assign each series a distinct color explicitly and mark the shown series bold — never inherited `currentColor` or hover-only emphasis:** a `SERIE_COL` palette per series (and its legend chip); visible series get `.on` (opacity 1, wider stroke) applied on filter, not only on hover. [ev: retro dashboardpan-hmi-touch-ux Δ6]
+- **A history chart holds a value until the next record, and the last value holds to the chart end:** a COV history
+  records a change, not a sample, so the value of a series at time `t` is the record in force at `t`. Read every series
+  at the cursor time with `valueAt(series, t)`, never by index: the touch crosshair above maps X to a time, not to an
+  array index, because series of different histories have different record times. Draw the last segment to the right
+  edge of the chart. A record with a fault status is a point of the series with no value (`null`), not a zero and not
+  a dropped point. The question comes before the drawing: what kind of history is it (COV or interval) and what does
+  a gap marker mean? A chart that drops a point is a data-model fault first. `[ev: issue #822]` (K1)
+
+  ```js
+  // series: [{ t, v }] sorted by t; v === null is a fault or a gap marker; t in one unit (ms)
+  function held(series, t) {                 // the record in force at t, or null before the first record
+    let lo = 0, hi = series.length - 1, hit = null;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (series[mid].t <= t) { hit = series[mid]; lo = mid + 1; } else { hi = mid - 1; }
+    }
+    return hit;
+  }
+  function valueAt(series, t) { const r = held(series, t); return r === null ? null : r.v; }
+  ```
+
+  Test it with a fault record followed by an ok record: before the fault `valueAt` is `null`, between the two
+  records it is `null` (the fault holds), at and after the ok record it is the ok value, and past the last record
+  (the chart end) it is still the last value.
 
 ## Plano overlay
 - **The frame must carry EXACTLY ONE `aspect-ratio` declaration, equal to `IMG_W/IMG_H` — and the fix for a stale one is to DELETE it, never to shadow it:** the zone overlay aligns only when four values agree with the plano image (the `#plano` image, `IMG_W/IMG_H`, the zones `viewBox`, and the frame `aspect-ratio`); a leftover `.frame{aspect-ratio:1247/771}` masked by a higher-specificity `#frame` rule silently returns the offset if the id is renamed. Treat the four as one atomic unit; check `grep -c 'aspect-ratio'` for the plano frame == 1. [ev: retro dashboardpan-hmi-touch-ux Δ9] `[ev: corpus B797 §797.1, §797.2]`

@@ -63,6 +63,10 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   - **Rollback:** how is a bad version recovered?
   - **Timed overrides:** until when does a manual value hold when the writable's schedule has no events (the next
     event of a sibling schedule, an operator-given end time, or refuse)? `[ev: issue #910]`
+  - **Rapid operator steps:** when the operator steps a value several times in a row (a setpoint ±0.5), how long
+    does the dashboard wait for the device read-back of the FINAL value (the receipt timeout) before it calls the
+    write unconfirmed, and what does the operator see then (`types/dashboard.md` § Write path)?
+    `[ev: issue #898]` (retro R7 ΔK8)
   [ev: retro behavior-decisions-ask-dont-assume Δ2]
 - [ ] **Site and station data live in one data table, never inline in logic:** room counts, ORDs, IPs, point names,
   defrost types and per-site defaults sit in one named table (a constants class, a `BFacets`/config slot set, or a
