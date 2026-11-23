@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
 )
@@ -123,5 +124,49 @@ func TestSpyderDownloadWithoutACompileStepSaysSo(t *testing.T) {
 	_, _, observed, _, _ := writeops.InvokeAction.Readback(c, args, p, []any{obj("v", "slot:/Services/JobService/SpyderDownloadJob4")}, nil)
 	if got := js(t, observed); !strings.Contains(got, `"hint": "no compile step`) {
 		t.Errorf("observed %s", got)
+	}
+}
+
+// Retro mcpn4-spyder-commissioning-over-box Δ3 (live 2026-11-18): a download whose compile broke
+// answered "due to compilation error" and the job's readLog itself failed, so the real message was
+// lost behind an empty log. A failed job now says why the log is empty and reads the Spyder's own
+// error slots back, so the operator is told where the cause is.
+func TestAFailedDownloadSurfacesWhatTheStationStillKnows(t *testing.T) {
+	spyder := bacnetNet + "/$32012"
+	c := &asks{loads: loads{nodes: obj(
+		spyder, obj("", obj("h", "3e50d", "t", "honeywellBacnetSpyder:BacnetSpyder"),
+			"deviceStatus", obj("t", "baja:Integer", "v", "0"),
+			"compileStatusFlag", obj("t", "baja:Integer", "v", "1"),
+			"sErrorStatus", obj("t", "baja:String", "v", "Compilation failed: bad terminal")),
+		dlJob, obj("", obj("h", "j4", "t", "honeywellSpyderTool:SpyderDownloadJob"), "jobState", obj("t", "baja:JobState", "v", "failed")),
+	)}, err: &box.Error{Kind: box.KindBox, Msg: "java.lang.IllegalArgumentException: JobLog.failed"}}
+	args := obj("ord", spyder, "action", "spyderDownload", "arg", "full")
+	p, err := writeops.InvokeAction.PlanWith(c, args, clock(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reply := obj("t", "baja:Ord", "v", "slot:/Services/JobService/SpyderDownloadJob4")
+	_, _, observed, verdict, err := writeops.InvokeAction.Readback(c, args, p, []any{reply}, nil)
+	if err != nil || verdict != "mismatch" {
+		t.Fatalf("verdict %q err %v", verdict, err)
+	}
+	got := js(t, observed)
+	for _, want := range []string{`"log_error": "`, "JobLog.failed", `"device_state"`, `"compileStatusFlag": "1"`,
+		`"sErrorStatus": "Compilation failed: bad terminal"`, "BacnetNIFolder"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %s in %s", want, got)
+		}
+	}
+}
+
+// A job that succeeded carries none of it (the existing read-back is unchanged).
+func TestASuccessfulDownloadCarriesNoFailureDetail(t *testing.T) {
+	c := dlStation("success", "Message|t|Compiling the logic|\nSuccess|t|Job Success|\n")
+	args := obj("ord", bacnetNet+"/$32012", "action", "spyderDownload", "arg", "full")
+	p, _ := writeops.InvokeAction.PlanWith(c, args, clock(), nil)
+	_, _, observed, v, _ := writeops.InvokeAction.Readback(c, args, p, []any{obj("v", "slot:/Services/JobService/SpyderDownloadJob4")}, nil)
+	got := js(t, observed)
+	if v != "verified" || strings.Contains(got, "device_state") || strings.Contains(got, "log_error") || strings.Contains(got, "hint") {
+		t.Errorf("verdict %q observed %s", v, got)
 	}
 }
