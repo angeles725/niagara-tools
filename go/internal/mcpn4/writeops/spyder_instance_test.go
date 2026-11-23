@@ -55,3 +55,49 @@ func TestWriteDeviceInstanceReadsTheControllerInstanceBack(t *testing.T) {
 		}
 	}
 }
+
+// faulted is a Spyder at 2012 whose own status and faultCause slots are as given ("" leaves the
+// slot out, as a station omits a default).
+func faulted(status, cause string) *asks {
+	spyder := bacnetNet + "/$32012"
+	root := obj("", obj("h", "77", "t", "honeywellBacnetSpyder:BacnetSpyder"))
+	if status != "" {
+		root.Set("status", obj("t", "baja:Status", "v", status))
+	}
+	if cause != "" {
+		root.Set("faultCause", obj("t", "baja:String", "v", cause))
+	}
+	return &asks{loads: loads{nodes: obj(spyder, root)}}
+}
+
+// A faulted Spyder is refused at the dry run with its faultCause: the write would end in the BOX
+// error "raise() failed. Cannot find vmUuid" and leave the controller as it was (retro R12 M4,
+// batch 11768118 left in doubt by a licence capacity fault).
+func TestWriteDeviceInstanceIsRefusedOnAFaultedSpyderWithItsCause(t *testing.T) {
+	spyder := bacnetNet + "/$32012"
+	args := obj("ord", spyder, "action", "writeDeviceInstance")
+	for _, tc := range []struct{ status, cause, want string }{
+		{"2", "Device limit exceeded", "writeDeviceInstance refused: " + spyder + " is in fault (faultCause: Device limit " +
+			"exceeded). The write would fail with \"raise() failed. Cannot find vmUuid\" and the controller would not be " +
+			"written. Clear the fault, then redo the dry run"},
+		{"2;activeLevel=e", "", "writeDeviceInstance refused: " + spyder + " is in fault (faultCause is empty). The write " +
+			"would fail with \"raise() failed. Cannot find vmUuid\" and the controller would not be written. Clear the " +
+			"fault, then redo the dry run"},
+	} {
+		p, err := writeops.InvokeAction.Plan(faulted(tc.status, tc.cause), args)
+		if err == nil || err.Error() != tc.want || p != nil {
+			t.Errorf("status %q: plan %v, err %v\nwant %s", tc.status, p, err, tc.want)
+		}
+	}
+}
+
+// Any other status plans as before: a down or disabled Spyder, one with no status slot (ok).
+func TestWriteDeviceInstanceStillPlansOnASpyderThatIsNotInFault(t *testing.T) {
+	args := obj("ord", bacnetNet+"/$32012", "action", "writeDeviceInstance")
+	for _, status := range []string{"", "0", "1", "4"} {
+		p, err := writeops.InvokeAction.Plan(faulted(status, "left over from an old fault"), args)
+		if err != nil || len(p.Ops) != 1 || !strings.Contains(js(t, p.Notes), "no inverse: writeDeviceInstance") {
+			t.Errorf("status %q: %v %v", status, p, err)
+		}
+	}
+}
