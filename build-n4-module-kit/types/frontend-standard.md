@@ -134,6 +134,19 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
 - [both] Labels on every input; touch targets ≥ 44 px. [HMI] Contrast is checked on the panel, not
   the desktop.
 - [both] Error feedback persists until acknowledged (a 3 s toast is too short on a kiosk).
+- [both] Contrast is a property of a token PAIR (text on the background it sits on), so it is checked pairwise and
+  mechanically, never by eye. The SPA ships a WCAG AA contrast check next to its Node tests (Playwright over each
+  screen: the colour of every visible text node against the first opaque background above it, with any ancestor
+  `opacity` blended in; disabled controls are exempt; 4.5:1, or 3:1 for large text, 24 px or 18.66 px bold).
+  `[ev: retro delivery-guards-and-ui-contrast Δ4]`
+- [both] A theme change re-maps EVERY colour token the screens consume: list the consumers with a grep before the
+  change (`grep -rn 'var(--<token>' src/rc/`) and pair each text token with the backgrounds it may sit on. A token
+  left on the old theme is a contrast defect: a light theme that re-mapped every legacy token except the status-bar
+  background left instruction text on a dark bar at about 1.3:1, in 10 of 10 screens.
+  `[ev: retro delivery-guards-and-ui-contrast Δ5]`
+- [both] Faded state (pending, done, disabled-looking items) is a muted colour that still meets 4.5:1 on its
+  background, never `opacity` on text: `opacity` multiplies the contrast down below the floor and the check above
+  has to blend it back. `[ev: retro delivery-guards-and-ui-contrast Δ6]`
 
 ### 11. Quality, tests and versioning
 - [both] Pure logic (classification, unit conversion, timing) is unit-tested in Node (DJS1);
