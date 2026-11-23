@@ -33,10 +33,14 @@ func TestParseArgs(t *testing.T) {
 		{"date with a trailing newline", []string{"--deltas-since", "2026-09-24\n", "I", "K"}, options{}, badDate},
 		{"one positional", []string{"I"}, options{}, usage + "\n"},
 		{"flags after the positionals", []string{"I", "--strict", "K"}, options{}, usage + "\n"},
+		{"external roots and aliases", []string{"--external-root", "D1", "--alias", "s=A", "--external-root", "D2", "I", "K"},
+			options{externals: []string{"D1", "D2"}, aliases: map[string]string{"s": "A"}, index: "I", root: "K"}, ""},
+		{"missing external root", []string{"--external-root"}, options{}, "fold-audit: --external-root needs a directory\n" + usage + "\n"},
+		{"malformed alias", []string{"--alias", "nostem", "I", "K"}, options{}, "fold-audit: --alias needs <stem>=<ALIAS> (ALIAS: letters, digits, . _ -)\n" + usage + "\n"},
 	}
 	for _, c := range cases {
 		got, errText := parseArgs(c.args)
-		if errText != c.err || (c.err == "" && got != c.want) {
+		if errText != c.err || (c.err == "" && !reflect.DeepEqual(got, c.want)) {
 			t.Errorf("%s: got (%+v, %q), want (%+v, %q)", c.name, got, errText, c.want, c.err)
 		}
 	}
