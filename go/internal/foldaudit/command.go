@@ -3,10 +3,11 @@ package foldaudit
 import (
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/retrogh"
+	"github.com/angeles725/niagara-tools/go/internal/retrorows"
 )
 
 // Exit codes of sweep-fold-audit (unchanged from the bash tool).
@@ -16,10 +17,19 @@ const (
 	ExitEnv    = 3 // usage or environment error
 )
 
-const usage = "usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>"
+const usage = "usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]... [--alias <stem>=<ALIAS>]... <INDEX.md> <kit-root>"
 
-// Main implements `sweep-fold-audit [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>`.
-func Main(args []string, s cli.Stdio) int {
+// Main implements `sweep-fold-audit [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]...
+// [--alias <stem>=<ALIAS>]... <INDEX.md> <kit-root>` over the real gh.
+func Main(args []string, s cli.Stdio) int { return Command(retrogh.Exec)(args, s) }
+
+// Command is sweep-fold-audit with an injectable gh runner (used only for rows that carry an issue number and for
+// retros outside the kit).
+func Command(run retrogh.Runner) cli.Main {
+	return func(args []string, s cli.Stdio) int { return audits(run, args, s) }
+}
+
+func audits(run retrogh.Runner, args []string, s cli.Stdio) int {
 	o, usageErr := parseArgs(args)
 	if usageErr != "" {
 		fmt.Fprint(s.Err, usageErr)
@@ -33,7 +43,11 @@ func Main(args []string, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "fold-audit: kit-root not found: %s\n", o.root)
 		return ExitEnv
 	}
-	h := harvestCorpus(o.root, o.since != "")
+	if msg := o.addConfig(s.Env("HOME")); msg != "" {
+		fmt.Fprint(s.Err, msg)
+		return ExitEnv
+	}
+	h := harvestCorpus(o.root, o.since != "" || len(o.externals) > 0)
 	tokens := h.sortedTokens()
 
 	// An unreadable INDEX is an environment error: auditing it as empty would pass under --strict.
@@ -42,13 +56,18 @@ func Main(args []string, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "fold-audit: cannot read INDEX: %v\n", err)
 		return ExitEnv
 	}
-	t := audit{o: o, h: h, tokens: tokens, s: s}
+	t := audit{o: o, h: h, tokens: tokens, s: s, gh: &lookup{run: run}}
 	lines := indexLines(data)
 	for _, line := range lines {
 		t.row(line)
 	}
 	t.aliases(indexStems(lines))
 	t.summary()
+	if msg := t.external(); msg != "" {
+		fmt.Fprint(s.Err, msg)
+		return ExitEnv
+	}
+	t.issueSummary()
 	if t.warned && o.strict {
 		return ExitStrict
 	}
@@ -75,6 +94,8 @@ type audit struct {
 	nFolded, nCited, nUncited, dChecked, dMissing, dUnreadable int
 	nPendingDone                                               int
 	nAlias, nAmbiguous                                         int
+	gh                                                         *lookup
+	retroRows                                                  map[string][]retrorows.Row
 	warned                                                     bool
 }
 
@@ -96,48 +117,6 @@ func indexStems(lines []string) map[string]bool {
 		}
 	}
 	return stems
-}
-
-// aliases reports every corpus tag whose token is not an exact stem but is a segment-aligned part
-// of one (#419, CONTRIBUTING.md:261): an advisory WARN row by default, a FAIL row that fails
-// --strict under --exact-stems. A token that matches no stem is left alone, as before.
-func (t *audit) aliases(stems map[string]bool) {
-	sorted := make([]string, 0, len(stems))
-	for s := range stems {
-		sorted = append(sorted, s)
-	}
-	sort.Strings(sorted)
-	kind, memo := "WARN", map[string][]string{}
-	if t.o.exactStems {
-		kind = "FAIL"
-	}
-	for _, c := range t.h.cites {
-		cands, ok := memo[c.token]
-		if !ok {
-			cands = aliasOf(c.token, stems, sorted)
-			memo[c.token] = cands
-		}
-		if len(cands) == 0 {
-			continue
-		}
-		t.nAlias++
-		where := fmt.Sprintf("fold-audit: %s %s:%d retro alias %q", kind, c.path, c.line, c.token)
-		if len(cands) == 1 {
-			fmt.Fprintf(t.s.Out, "%s — use the exact stem %q (CONTRIBUTING.md:261)\n", where, cands[0])
-		} else {
-			t.nAmbiguous++
-			quoted := make([]string, len(cands))
-			for i, s := range cands {
-				quoted[i] = fmt.Sprintf("%q", s)
-			}
-			fmt.Fprintf(t.s.Out, "%s is ambiguous — use one exact stem of %s (CONTRIBUTING.md:261)\n", where, strings.Join(quoted, " "))
-		}
-		// Mutation: F21 -- treating a FAIL alias row as advisory lets --exact-stems --strict exit 0.
-		// Mutation: F20 -- setting warned for the default WARN rows turns the CI run (--strict) red.
-		if t.o.exactStems {
-			t.warned = true
-		}
-	}
 }
 
 // row audits one INDEX line: a folded dated row must be cited, and since --deltas-since each of its

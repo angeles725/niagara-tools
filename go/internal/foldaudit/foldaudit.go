@@ -26,12 +26,11 @@ var (
 	tokenRe = regexp.MustCompile(`\[ev: retro ([A-Za-z0-9][A-Za-z0-9._-]*)`)
 	// Every retro tag, [ev: ...] or [deferred: ...], for the alias check (#419).
 	citeRe  = regexp.MustCompile(`\[(?:ev|deferred): retro ([A-Za-z0-9][A-Za-z0-9._-]*)`)
-	deltaRe = regexp.MustCompile(`\[(?:ev|deferred): retro ([A-Za-z0-9][A-Za-z0-9._-]* Δ[0-9]+)\]`)
+	deltaRe = regexp.MustCompile(`\[(?:ev|deferred): retro ([A-Za-z0-9][A-Za-z0-9._-]* Δ[A-Za-z]{0,2}[0-9]+)\]`)
 	// INDEX row filters.
 	datedRe = regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}[^|]*\.md`)
 	fileRe  = regexp.MustCompile(`[A-Za-z0-9._-]+\.md`)
 	stemRe  = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}-`)
-	dateArg = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`)
 )
 
 func init() { fileRe.Longest() } // grep -o is leftmost-longest
@@ -232,47 +231,4 @@ func aliasOf(t string, stems map[string]bool, sorted []string) []string {
 		}
 	}
 	return out
-}
-
-// options is the parsed command line.
-type options struct {
-	strict, exactStems bool
-	since, index, root string
-}
-
-// parseArgs reads `[--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>`; on a usage
-// error it returns the exact stderr text of the bash tool.
-func parseArgs(args []string) (options, string) {
-	var o options
-	i := 0
-loop:
-	for i < len(args) {
-		a := args[i]
-		switch {
-		case a == "--strict":
-			o.strict = true
-			i++
-		case a == "--exact-stems":
-			o.exactStems = true
-			i++
-		case a == "--deltas-since":
-			if i+1 >= len(args) || !dateArg.MatchString(args[i+1]) {
-				return options{}, "fold-audit: --deltas-since needs a YYYY-MM-DD date\n" + usage + "\n"
-			}
-			o.since = args[i+1]
-			i += 2
-		case a == "--":
-			i++
-			break loop
-		case strings.HasPrefix(a, "-"):
-			return options{}, "fold-audit: unknown flag: " + a + "\n" + usage + "\n"
-		default:
-			break loop
-		}
-	}
-	if len(args)-i != 2 {
-		return options{}, usage + "\n"
-	}
-	o.index, o.root = args[i], args[i+1]
-	return o, ""
 }

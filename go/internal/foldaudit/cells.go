@@ -43,7 +43,7 @@ func (t *audit) deltas(line, file, st string) {
 	for _, d := range deltas {
 		t.dChecked++
 		// Mutation: F9 -- substring matching credits another stem's Δk, or Δ10 for Δ1.
-		if !t.h.deltas[st+" "+d.String()] {
+		if !t.h.deltas[st+" "+d.String()] && !t.trackedClosed(file, d.String()) {
 			fmt.Fprintf(t.s.Out, "fold-audit: WARN %s %s not cited\n", file, d)
 			t.dMissing++
 			t.warned = true
