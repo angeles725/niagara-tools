@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-28 · kit · kit-followups-rare-cases

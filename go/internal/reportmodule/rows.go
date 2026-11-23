@@ -42,9 +42,7 @@ func parseRows(out string, f filter) []row {
 		if f.mode == ws { // keep and asw never apply here (ROW_AWK printed the ws record first)
 			w := awkFields(ln)
 			st, chk = field(w, 0), field(w, 1)
-			if len(w) > 3 {
-				det = strings.Join(w[3:], " ")
-			}
+			det = wsDetail(ln, st, chk)
 		} else {
 			a := splitRuns(ln)
 			st, chk = field(a, 0), field(a, 1)
@@ -84,6 +82,28 @@ func parseRows(out string, f filter) []row {
 		rows = append(rows, row{s, c, d})
 	}
 	return rows
+}
+
+// wsDetail is the detail of a whitespace-split row `<st> <check> <path>  <detail...>`: what follows the path
+// column, its words one space apart. The path column runs to the next tab or run of two spaces (the gate prints
+// its columns that way), so a path with a space in it stays whole and out of the detail (retro
+// build-kit-bench-session Δ14). A row with no such break is read word by word, the path being one word.
+func wsDetail(ln, st, chk string) string {
+	rest := strings.TrimLeft(ln, " \t")
+	for _, word := range []string{st, chk} {
+		rest = strings.TrimLeft(strings.TrimPrefix(rest, word), " \t")
+	}
+	end := strings.IndexAny(rest, "\t")
+	if two := strings.Index(rest, "  "); two >= 0 && (end < 0 || two < end) {
+		end = two
+	}
+	if end < 0 { // no column break: a row whose fields are one space apart, the path one word
+		if w := awkFields(ln); len(w) > 3 {
+			return strings.Join(w[3:], " ")
+		}
+		return ""
+	}
+	return strings.Join(awkFields(rest[end:]), " ")
 }
 
 // hasPrefixIn reports whether s starts with one of the "|"-separated prefixes.

@@ -59,7 +59,7 @@ func TestAnInvalidModeExits10BeforeTheEnvFileIsRead(t *testing.T) {
 	f.write(f.env, "echo not an assignment\n")
 	for _, mode := range []string{"Z", "a", ""} {
 		code := f.run("--mode", mode)
-		if code != ExitEnv || f.err != "[ng-deploy] ERROR invalid --mode '"+mode+"'; valid values are A, B, C\n" {
+		if code != ExitEnv || f.err != "[ng-deploy] ERROR invalid --mode '"+mode+"'; valid values are A, B, C, D\n" {
 			t.Errorf("mode %q: exit %d, stderr %q", mode, code, f.err)
 		}
 	}

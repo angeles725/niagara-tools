@@ -56,7 +56,6 @@
 215 internal/lint/rules/servicetypes/servicetypes.go
 214 internal/bogaudit/bogaudit.go
 213 internal/citeresolve/resolve.go
-213 internal/foldaudit/command.go
 209 internal/lint/rules/sessionstore/sessionstore.go
 208 internal/buildstate/fragment.go
 208 internal/citeresolve/command.go

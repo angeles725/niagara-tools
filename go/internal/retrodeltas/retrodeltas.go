@@ -62,6 +62,8 @@ func Main(args []string, s cli.Stdio) int {
 		index := idx[filepath.Base(p)]
 		if index == "" {
 			index = "-"
+			// A stale index is not a wrong retro: say how to tell them apart (retro build-kit-bench-session Δ21).
+			fmt.Fprintf(s.Err, "count-retro-deltas: INDEX.md has no row for %s: it was generated before the retro existed; regenerate it with toolbelt/kit-state.sh --write\n", filepath.Base(p))
 		}
 		verdict := "OK"
 		// Mutation: CRD-count -- ignoring the Delta count line passes a retro that declares 3 and lists 2

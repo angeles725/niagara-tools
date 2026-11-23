@@ -93,7 +93,10 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
    `niagaraSigningProfile` (gradle properties, user-level `gradle.properties` or `build.sh --gradle-prop k=v`) to the
    module's own key before the first build: the emitted root sets `allowDefaultProfile.set(false)`, so `:jar` fails
    without a profile, and the gate checks the signer against that alias (`build-verify.md` § Signing per deploy
-   target).
+   target). For a first build or a bench,
+   `templates/signing-profile.xml` is a throwaway profile to copy outside the repository: the fully qualified
+   `profileType` (the short class name fails `:jar` with `Could not determine class for profile`), the store keys and
+   the one `keytool` command with the code-signing key usage. `[ev: retro build-kit-bench-session Δ6]`
 2. **Set the host build-location keys once per machine, in the user-level `gradle.properties`:**
    `niagara_home`, `niagara_user_home`, `nodeHome`, and `org.gradle.java.installations.paths` go in
    `~/.gradle/gradle.properties` in WSL/Linux, `%USERPROFILE%\.gradle\gradle.properties` on Windows (`$GRADLE_USER_HOME/gradle.properties` when `GRADLE_USER_HOME` is set),

@@ -37,8 +37,22 @@ func TestVersionDrift(t *testing.T) {
 	if !strings.Contains(out, want) || strings.Contains(out, "6.0.0") || strings.Contains(out, "0.9.0") {
 		t.Errorf("rows\n%s\nwant %q and no row for b (depth 4) or c (lower)", out, want)
 	}
-	if lock := "find: '" + d + "/w/p/c/locked': Permission denied\n"; !strings.HasPrefix(errOut, lock) {
-		t.Errorf("stderr %q, want find's line for the unreadable directory first", errOut)
+	if errOut != "" { // retro build-kit-bench-session Δ16: a directory it cannot read is skipped without a line
+		t.Errorf("stderr %q, want none for the unreadable directory", errOut)
+	}
+}
+
+// Retro build-kit-bench-session Δ16: the walk stays inside the tree of the gradle root. A level whose parent is the
+// temporary directory (or the filesystem root, or the home) is not walked: its entries are other people's trees,
+// and walking them took 28 s on a gradle root two levels below a temporary directory.
+func TestVersionDriftDoesNotWalkASharedDirectory(t *testing.T) {
+	d := t.TempDir()
+	t.Setenv("TMPDIR", d)
+	mk(t, d, "nh/", "x/out/me/build.gradle.kts=defaultModuleVersion(\"1.0.0\")",
+		"x/other/build.gradle.kts=defaultModuleVersion(\"1.2.0\")", "stranger/build.gradle.kts=defaultModuleVersion(\"9.9.9\")")
+	_, out, _ := pf((&fakeHost{}).host(), nil, "--jvm-dir", d, d+"/nh", d+"/x/out/me")
+	if want := "sibling " + d + "/x/other version 1.2.0"; !strings.Contains(out, want) || strings.Contains(out, "9.9.9") {
+		t.Errorf("rows\n%s\nwant the sibling inside the tree (1.2.0) and no row for a tree beside it in the temporary directory", out)
 	}
 }
 
