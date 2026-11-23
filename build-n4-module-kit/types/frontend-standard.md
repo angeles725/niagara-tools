@@ -88,12 +88,20 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   anywhere else. Timeout and scheduling rules: `dashboard.md` § Poll loop reliability.
 - [both] No overlapping polls; poll scope follows the visible page; secondary data (alarms) at its
   own slower cadence.
+- [both] A poll repaint that rebuilds a scrolling page restores its scroll position: after the render, after an
+  async render, and on later frames while the content grows back; operator input (wheel, touch, key) cancels the
+  restore. A repaint that clears a scroll container with no restore is a defect. No
+  lint or webtest pattern flags it yet; that check is owed.
+  `[ev: issue #909]` (retro R9 ΔB1)
 - [both] Images ship as separate cacheable files under `rc/img/`, referenced with `?v=`; measure
   page weight before reasoning about performance (base64 data URIs made ~95% of one audited page).
   Budgets are stricter on the HMI.
 - [both] A bundled `dist/*.js` over 300 KB ships a deterministic `.gz` twin that the servlet serves with
   `Content-Encoding: gzip` and `Vary: Accept-Encoding` (`dashboard.md` § Static serving).
   `[ev: retro kit-gzip-bundle-writer-briefs Δ2]`
+- [both] The generated `dist/` bundle goes in its own commit (or out of the review candidate): a whole-feature
+  review that includes it stops with `lens_context_budget_exceeded` (`BUILD-LOOP.md` §0.c).
+  `[ev: issue #919]` (retro R11 ΔB4)
 - [both] No secrets in JS; config (base path, poll period, timeouts) in one `config.js`.
 
 ### 6. Writes and commands
@@ -115,6 +123,10 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   the cap is documented.
 - [HMI] Unattended recovery after a station restart (see the kiosk checklist in `dashboard.md`
   § Poll loop reliability). [LAN] Recovery is the user's reload plus session handling (§ LAN profile).
+- [both] Boot order of a dashboard with a 3D scene: create the dashboard first, then the 3D scene. Build the 3D in
+  phases and release one frame (`requestAnimationFrame`) before each phase, so the page stays responsive. The
+  loading overlay covers only the 3D view, never the dashboard. Print each phase's timing to the console.
+  `[ev: issue #896]` (retro R7 ΔK6)
 
 ### 8. Robustness and security
 - [both] Server-derived text goes through `textContent` or an `esc()` helper only — never

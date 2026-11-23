@@ -70,6 +70,11 @@ canonical reference (with code examples) and is not duplicated here.
 so a station restart that starts the target before the source does not leave the link dangling.
 `[ev: corpus B958 §958.2]`
 
+**Link `enabled` semantics:** disabling a link does not release its target; re-enabling it propagates the source
+value at once (`EngineUtil.java:73-79`, `SlotKnobs.java:37`, `ComplexSlotMap.java:780-788`). A module that switches a
+schedule or any other driver off by disabling a link must also write the target slot null, or the target keeps its
+last value (`types/dashboard.md` § Write path). `[ev: issue #920]` (retro R11 ΔB5)
+
 → See `types/moduleTest.md` for the station-test recipe that covers `doCheckLink` and `added`/`removed`
   (the only tier that can exercise these hooks in WSL-equivalent isolation with a real NRE).
 
@@ -801,6 +806,11 @@ slotomatic builds the generated Javadoc of a `@NiagaraProperty` / `newProperty(.
 
 **Not `BFacets` keys** (an older card listed them): `editorTemplate`, `editorClass`, `editorArgs`, `editorColumns`, `editorRows`, `nullText`, `format`, `icon`, `help`, `category`, `history`, `alarm`, `trended`, `locked`, `persistent`, `sparse`, `summary`. The framework gives them no meaning; a facet with one of these names is read only by code that looks it up itself.
 
+**Override limits are a facet:** `maxOverrideDuration` is a facet of a control point (or sysInfo), not a slot. Read
+`facets` for it: a BQL select of an unknown column returns `NULL`, not an error, so
+`select maxOverrideDuration` looks like a point with no value. In one audit 30 of 30 power and setpoint points
+held only units, precision, min and max in `facets`. `[ev: issue #902]` (retro R7 ΔK12)
+
 **Factory methods** (all `static` on `BFacets`; a `BFacets` is immutable, so every "change" returns a new instance):
 - `make(String key, BIDataValue value)` (plus `boolean` / `int` / `long` / `String` value overloads); `make(String[] keys, BIDataValue[] values)`; `make(Map<String, ? extends BIDataValue>)`; `make(String encoding)`
 - `make(BFacets orig, String key, BIDataValue value)`, `make(BFacets orig, BFacets toAdd)`, `makeRemove(BFacets orig, String key)` / `makeRemove(BFacets orig, String[] keys)`
@@ -847,6 +857,10 @@ Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/log
 - **Size it:** `capacity` defaults to 500 records (`javax/baja/history/BHistoryConfig.java:93`, same copy) — at a
   15 min interval that is about five days; set it for defrost and compressor trends. Counters (run hours, kWh) set
   Min/Max Rollover for delta logging (corpus B1324 row 10).
+- **Capacity × interval must cover the window a view reads:** a dashboard view of N days (run hours, a chart) needs
+  `capacity` × `interval` ≥ N days (500 records at 5 min hold 42 h, not 7 days). Check it for every history a view
+  uses, raise `capacity` or move the view to a longer interval, and say so when a window is not covered
+  (`types/dashboard.md` § Charts on an HMI). `[ev: issue #911]` (retro R9 ΔB3)
 - **Readers use `out.value`** in BQL, not the `out` display string; units and min/max facets on the point give the
   implied tags (`n:qudtUnit`, `h4:minVal`/`maxVal`) for free (corpus B1256 §1256.2, §1256.6).
 - **CSV export needs no servlet code:** the stock `…|view:file:ITableToCsv?fileName=<name>` ORD view downloads any
