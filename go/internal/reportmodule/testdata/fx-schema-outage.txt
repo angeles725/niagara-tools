@@ -19,7 +19,7 @@ DemoPan-rt  FAIL  schema-risk  verdict=OUTAGE
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
 (module)  FAIL  lint-structure  DemoPan-rt:  L4: module.lexicon missing (1 type(s) declared in module-include.xml)
-(module)  FAIL  lint-structure  DemoPan-rt:  L5: module.palette missing for -rt profile
+(module)  FAIL  lint-structure  DemoPan-rt:  L5: module.palette missing for -rt profile (a library module declares `type: library` in its MODULE-MAP.md header, types/utility-lib.md § 6)
 (module)  WARN  lint-module-map  schema-outage  MM1: no MODULE-MAP.md (a legacy module: add one with modularity: legacy and legacy-reason:, types/structure.md § Module map)
 (module)  PASS  lint-module-map  clean
 (module)  INFO  modularity  mode=none concerns=- unlisted=- largest=DemoPan-rt/src/com/x/BFoo.java (3 hand-written lines)

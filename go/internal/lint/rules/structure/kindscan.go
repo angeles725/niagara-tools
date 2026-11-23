@@ -7,28 +7,14 @@ import (
 )
 
 // declaredKind is the module's declared kind: the value of the first "type:" line of the header of the module
-// root's MODULE-MAP.md (the lines before its first table row, outside ``` fences, as lint.MapHeader reads the
-// modularity line; a trailing "# comment" is dropped). No map or no such line is "": no kind, no exemption.
+// root's MODULE-MAP.md, read by lint.ReadMapHeader as the modularity line is (the lines before its first table
+// row, outside ``` fences; a trailing "# comment" is dropped). No map or no such line is "": no kind, no exemption.
 func (s *scan) declaredKind() string {
 	m := s.root + "/" + lint.MapFile
 	if !lint.IsFile(m) {
 		return ""
 	}
-	fenced := false
-	for _, raw := range s.lines(m) {
-		l := strings.TrimSpace(raw)
-		switch {
-		case strings.HasPrefix(l, "```"):
-			fenced = !fenced
-		case fenced:
-		case strings.HasPrefix(l, "|"):
-			return ""
-		case strings.HasPrefix(l, kindKey):
-			v, _, _ := strings.Cut(strings.TrimPrefix(l, kindKey), "#")
-			return strings.TrimSpace(v)
-		}
-	}
-	return ""
+	return lint.ReadMapHeader(s.lines(m)).Kind
 }
 
 // rtPalette is L5 on one -rt part: a palette with at least one named entry. A module declared `type: library`
