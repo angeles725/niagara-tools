@@ -48,6 +48,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/permissionsxml"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/pollscrollrestore"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/privateapiimport"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/rdbmsdialect"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
@@ -119,6 +120,7 @@ func All() []lint.Spec {
 		inertcoordination.Spec(),
 		changedhotwrite.Spec(),
 		persisthotwrite.Spec(),
+		pollscrollrestore.Spec(),
 		slotomaticmarkers.Spec(),
 		agentonshape.Spec(),
 		agentonincludesync.Spec(),

@@ -1,0 +1,17 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-poll-scroll-restore  @DIR@/index.html:6  poll repaint 'render()' (run by 'tick()') clears a container on every repaint, the file has a scrolling container (overflow auto|scroll) and it never reads or sets a scroll position (scrollTop/scrollTo/scrollIntoView): the repaint puts the operator back at the top; save the position before the clear and restore it after the render, after an async render and on later frames, and let wheel/touch/key input cancel the restore (types/frontend-standard.md section 5)
+-- stderr --
+-- index.html --
+<style>
+.list { overflow: auto; height: 300px; }
+</style>
+<script>
+function render() {
+  box.replaceChildren();
+}
+function tick() { render(); }
+setTimeout(tick, 5000);
+</script>

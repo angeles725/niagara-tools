@@ -1,0 +1,15 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- vendor/lib.js --
+list.style.overflowY = "auto";
+function poll() { list.innerHTML = ""; }
+setInterval(poll, 5000);
+-- dist/app.js --
+list.style.overflowY = "auto";
+function poll() { list.innerHTML = ""; }
+setInterval(poll, 5000);
+-- index.html --
+<p>no script</p>

@@ -1,0 +1,14 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- index.html --
+<style>
+.list { overflow: auto; height: 300px; }
+</style>
+<script>
+function reset() { list.innerHTML = ""; }
+function poll() { rows.forEach(add); }
+setInterval(poll, 5000);
+</script>
