@@ -85,6 +85,7 @@ dangling_fragment() {
 
 @test "CL33: a changelog.d-only change runs kit-links" {
   # Mutation: CL33 -- dropping changelog.d from kit_docs_changed's pathspec skips kit-links on a fragment-only push.
+  mkdir -p "$R/changelog.d"
   printf '%s\n' '### Fixed' '- a fixture fragment.' > "$R/changelog.d/2026-11-16-fixture.md"
   cd "$R"
   run bash scripts/ci-local.sh --changed
