@@ -106,6 +106,7 @@ func (e *Engine) dryRun(name string, args, plan *pyjson.Object, planHash, tierBl
 	if err != nil {
 		return nil, "", err
 	}
+	e.State.noteIssued(tok, e.Ctx.Session.SessionID)
 	out := obj("dry_run", true, "plan", plan, "plan_hash", planHash, "confirmation_token", tok, "expires_at", expires,
 		"write_budget", e.State.budgetReport())
 	preview, err := LinkInputValues(inverse)

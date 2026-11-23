@@ -63,7 +63,7 @@ func TestAWriteExecutionThatLosesItsSessionIsNotRetried(t *testing.T) {
 	plan := r.Srv.Dry("n4_set_slot", args)
 	refused := loseSession(r, "syncTo", -1)
 	text := r.Srv.Err("n4_set_slot", Execute(args, plan["confirmation_token"]))
-	for _, part := range []string{"session lost", "redo the dry run", "not retried"} {
+	for _, part := range []string{"session lost", "redo the dry run", "same arguments", "dry_run=true", "not retried"} {
 		if !strings.Contains(text, part) {
 			t.Errorf("missing %q: %s", part, text)
 		}

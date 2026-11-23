@@ -1036,6 +1036,12 @@ restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inv
 go/bin/mcp-n4 --allow-writes --write-scope 'station:|slot:/Sandbox'
 ```
 
+`n4_add_history` also sets the history capacity (`capacity`, in records or `"unlimited"`) in the same one-token batch,
+so a dashboard's 7 d / 30 d views are covered; the extension default of 500 records is about 41 h at 5 min. A token
+belongs to the station session it was issued in: after a lost session or a new `n4_connect` its execution is refused
+and the refusal says to call the same tool with the same arguments and `dry_run=true` to get a new plan and token.
+The server never re-plans or sends anything by itself.
+
 Every write call goes through these layers:
 
 1. **Identity.** Refused unless the session's real `stationName` matched

@@ -45,9 +45,9 @@ SEVERE `Grave`, WARNING `Advertencia`, INFO `Información`, CONFIG `Configurar`,
 station printed them upper-case (`INFORMACIÓN`, `GRAVE`, `DETALLADO`). `triage-console.sh` recognises all seven,
 upper-case, in UTF-8 and in Latin-1, the two-word FINER and FINEST included (`isLevel`,
 `go/internal/triageconsole`; golden cases `truth-es-levels` and `truth-informacion-level`, `TestLevelFieldTwoWord`).
-Matching is exact: the unaccented `INFORMACION` is no level. `[ev: retro n4-course-lexicon-logging-testing Δ4]`
+Matching is exact: the unaccented `INFORMACION` is no level. `[ev: retro n4-course-lexicon-logging-testing Δ4]` `[ev: retro doc-coverage-audit Δ4]`
 
-## 4 · Debugging a running module: thread dumps, remote debugger, launcher flags
+## 4 · Debugging a running module: thread dumps, remote debugger, launcher flags `[ev: retro doc-coverage-audit Δ11]`
 
 **Development or laboratory station only for § 4.2, and for every verb of § 4.1 except `threads`, `version`, `heap`
 and `help`.** A debugger breakpoint suspends station threads, and a station whose engine thread is suspended runs no

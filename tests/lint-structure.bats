@@ -213,7 +213,7 @@ setup() {
   rm -rf "$ROOT"
 }
 
-@test "LS-PASS: scaffold-module.sh output passes L1-L11 -> exit 0 (SKIP if scaffold absent)" {
+@test "LS-PASS: scaffold-module.sh output passes L1-L17 -> exit 0 (SKIP if scaffold absent)" {
   SC="$KIT/toolbelt/scaffold-module.sh"
   [ -x "$SC" ] || skip "scaffold-module.sh not present"
   OUT="$BATS_TEST_TMPDIR/out"; mkdir -p "$OUT"
@@ -518,4 +518,13 @@ _ls17_mod() {
   run "$LS" "$M"
   [ "$status" -eq 0 ]
   [ "$output" = 'WARN  lint-structure  Acme-rt/module.palette:4  L17: module.palette m="ac=Other" redeclares symbol ac (first ac=Acme at line 3): every later t="ac:..." resolves in Other' ]
+}
+
+@test "LS-KINDS: the script header states the two declared kinds and where they are declared (Δ22)" {
+  # a theme's zero-Java -ux part (L9) and a library's palette-less -rt part (L5) are exempt only when declared
+  run grep -c -E '^#.*type: theme|^#.*type: library' "$KIT/toolbelt/lint-structure.sh"
+  [ "$status" -eq 0 ]
+  [ "$output" -ge 2 ]
+  run grep -c -E '^#.*MODULE-MAP\.md' "$KIT/toolbelt/lint-structure.sh"
+  [ "$output" -ge 1 ]
 }

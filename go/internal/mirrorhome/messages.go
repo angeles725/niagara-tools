@@ -18,7 +18,6 @@ const Marker = ".niagara-mirror"
 const (
 	repository = "etc/m2/repository" // what makes a directory a niagara_home
 	modules    = "modules"           // the one directory that is not linked: the mirror gets a real one
-	jarSuffix  = ".jar"
 )
 
 // markerFormat is the marker's content: the resolved source and when the mirror was made (markerTime).

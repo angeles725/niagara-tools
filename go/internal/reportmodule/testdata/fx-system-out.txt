@@ -20,7 +20,7 @@ DemoPan-rt  PASS  lint-ws-placement  clean
 DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it from the deployed commit (put its tag or commit in place of <deployed-ref>): T=$(mktemp -d) && git -C @REPO@/tests/fixtures/report-module/system-out/DemoPan-rt archive -o "$T/b.tar" <deployed-ref> . && mkdir @REPO@/tests/fixtures/report-module/system-out/DemoPan-rt/.deploy-baseline && tar -x -f "$T/b.tar" -C @REPO@/tests/fixtures/report-module/system-out/DemoPan-rt/.deploy-baseline; rm -rf "$T" — or --first-deploy for a never-deployed module (build-verify.md § Schema-risk deploy workflow)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
-(module)  FAIL  lint-structure  DemoPan-rt:  L5: module.palette missing for -rt profile
+(module)  FAIL  lint-structure  DemoPan-rt:  L5: module.palette missing for -rt profile (a library module declares `type: library` in its MODULE-MAP.md header, types/utility-lib.md § 6)
 (module)  WARN  lint-module-map  system-out  MM1: no MODULE-MAP.md (a legacy module: add one with modularity: legacy and legacy-reason:, types/structure.md § Module map)
 (module)  PASS  lint-module-map  clean
 (module)  INFO  modularity  mode=none concerns=- unlisted=- largest=DemoPan-rt/src/com/x/BOut.java (5 hand-written lines)

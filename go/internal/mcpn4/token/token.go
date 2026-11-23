@@ -125,6 +125,12 @@ func (t *Tokens) Issue(tool string, args *pyjson.Object, planHash string) (strin
 	return strconv.FormatInt(expiry, 10) + "." + nonce + "." + mac, expiry, nil
 }
 
+// Pending reports whether nonce belongs to an issued token that is neither spent nor expired.
+func (t *Tokens) Pending(nonce string) bool {
+	expiry, ok := t.pending[nonce]
+	return ok && float64(expiry) > t.clock()
+}
+
 // Consume spends token, any value the caller passed: a *safety.Error unless it is a string that
 // is authentic, bound to tool, args and planHash, not expired and not spent before.
 func (t *Tokens) Consume(tool string, args *pyjson.Object, planHash string, token any) error {

@@ -5,7 +5,7 @@ needs beyond the global `OPERATOR_WRITE` bit of `types/dashboard.md` § DWS1: th
 and the caller's permission **on the component being written**, never on the servlet or on the user.
 `toolbelt/lint-servlet-write-guards.sh` flags code that drops either one; `tests/lint-servlet-write-guards.bats`
 lints the template below, so the template and the lint cannot drift apart.
-`[ev: retro 2026-11-10-mcpn4-history-batch-tools Δ6]` `[ev: retro kit-p1-security-guards Δ2]`
+`[ev: retro mcpn4-history-batch-tools Δ6]` `[ev: retro kit-p1-security-guards Δ2]`
 
 ## Template
 

@@ -3,7 +3,7 @@
 -- want --
 exit 1
 FAIL  lint-structure  ColdRoomPan-rt  L4: module.lexicon missing (1 type(s) declared in module-include.xml)
-FAIL  lint-structure  ColdRoomPan-rt  L5: module.palette missing for -rt profile
+FAIL  lint-structure  ColdRoomPan-rt  L5: module.palette missing for -rt profile (a library module declares `type: library` in its MODULE-MAP.md header, types/utility-lib.md § 6)
 FAIL  lint-structure  ColdRoomPan-rt  L11: mixed BTest+JUnit srcTest without both :test-wb and junit gradle declarations
 -- stderr --
 -- coldroompan-rt/.deploy-baseline/gradle.properties --

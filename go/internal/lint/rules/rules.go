@@ -24,6 +24,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/duplicatehelper"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/gradleuserhome"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inertcoordination"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/intrinsiclock"
@@ -37,6 +38,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/manuallabels"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/modulemap"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/mqtttlsport"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndriverstaticcollection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndrivertaglesscorrelation"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
@@ -46,6 +48,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/permissionsxml"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/privateapiimport"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/rdbmsdialect"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
@@ -141,5 +144,8 @@ func All() []lint.Spec {
 		slotdefaulttype.Spec(),
 		ntplmanifest.Spec(),
 		dashboardsave.Spec(),
+		rdbmsdialect.Spec(),
+		mqtttlsport.Spec(),
+		gradleuserhome.Spec(),
 	}
 }
