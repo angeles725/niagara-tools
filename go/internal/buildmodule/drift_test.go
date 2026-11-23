@@ -106,3 +106,43 @@ func TestFailedRestoreSaysWhatModulesHolds(t *testing.T) {
 		f.wants(name, f.build(), ExitDrift, "FAILED TO RESTORE", "Permission denied", fill(c.want))
 	}
 }
+
+// TestAJarTheGateCannotReadIsNeverEqualToItself: a deployed jar that is no readable zip (the host has no
+// unzip to stub, so the fault is injected into the file) makes the comparison "cannot verify" (52), never
+// two equal empty hashes; the pre-build jar is put back, and a restore that fails is reported, never silent.
+// The cases that stubbed unzip on PATH in tests/build-sh.bats (BS-drift-unverifiable-unzip, -restore-fail,
+// BS-drift-empty-listing) are these. [ev: retro go-build-module-port Δ3]
+func TestAJarTheGateCannotReadIsNeverEqualToItself(t *testing.T) {
+	for _, name := range []string{"unreadable", "empty"} {
+		f := newFixture(t)
+		f.signs()
+		if name == "unreadable" {
+			f.write(f.deployed("rt"), "this is not a zip")
+		} else {
+			f.write(f.deployed("rt"), "")
+		}
+		f.jar(f.built("rt"), "1.0.0", "NEW payload")
+		before := f.read(f.deployed("rt"))
+		f.does("gradlew", `cp "`+f.built("rt")+`" "`+f.deployed("rt")+`"`)
+		f.wants(name, f.build(), ExitDriftUnknown, "drift gate cannot verify Foo-rt", "  Restored the previously-deployed Foo-rt.jar into "+f.home+"/modules")
+		if f.read(f.deployed("rt")) != before {
+			t.Errorf("%s: modules/ does not hold the pre-build jar", name)
+		}
+		if f.call(gateScript) != "" {
+			t.Errorf("%s: the gate ran after a failed comparison", name)
+		}
+	}
+}
+
+// TestAFailedRestoreAfterACannotVerifyIsReported: the same, with a modules/ jar the copy cannot overwrite.
+func TestAFailedRestoreAfterACannotVerifyIsReported(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: a read-only jar does not block the copy")
+	}
+	f := newFixture(t)
+	f.signs()
+	f.write(f.deployed("rt"), "this is not a zip")
+	f.jar(f.built("rt"), "1.0.0", "NEW payload")
+	f.does("gradlew", `chmod 444 "`+f.deployed("rt")+`"`)
+	f.wants("cannot verify, restore fails", f.build(), ExitDriftUnknown, "drift gate cannot verify Foo-rt", "FAILED TO RESTORE", "Permission denied")
+}

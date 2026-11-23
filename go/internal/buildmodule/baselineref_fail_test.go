@@ -79,7 +79,7 @@ func TestSchemaBaselineRefToolFailures(t *testing.T) {
 		want  string
 	}{
 		{"git missing", map[string]string{}, ExitEnv, "build.sh: git: command not found"},
-		{"tar fails", map[string]string{"git": "git", "mktemp": "mktemp", "mkdir": "mkdir", "tar": ""}, ExitFault,
+		{"tar fails", map[string]string{"git": "git", "tar": ""}, ExitFault,
 			"build.sh: --schema-baseline-ref v1: cannot extract "},
 	} {
 		t.Setenv("PATH", path) // the previous case narrowed it

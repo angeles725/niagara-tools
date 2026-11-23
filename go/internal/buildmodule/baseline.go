@@ -49,12 +49,12 @@ func (b *build) snapshotBaseline() int {
 			b.undeployed[p] = !exists(old)
 			continue
 		}
-		snap := snapshot{version: vendorversion.ModuleVersion(old), backup: dir + "/" + p + ".old.jar"}
+		snap := snapshot{version: vendorversion.ModuleVersionFromZip(old), backup: dir + "/" + p + ".old.jar"}
 		snap.hash, _ = b.contentHash(old)
 		snap.signers = verifymodule.Signers(old)
 		if reason, code := b.copyPreserving(old, snap.backup); code != 0 {
-			b.warn("%s", reason)
-			return code // the chain cannot go on without the backup; cp's own status, as under bash's set -e
+			b.warn(msgNoBackup, reason)
+			return code // the chain cannot go on without the backup, as under bash's set -e
 		}
 		b.baseline[p] = snap
 	}
@@ -110,17 +110,6 @@ func hashEntry(sum io.Writer, entry *zip.File) bool {
 	defer r.Close()
 	_, err = io.Copy(sum, r)
 	return err == nil
-}
-
-// copyPreserving is `cp -p src dst`: cp's exit status (0 copied) and, on failure, what cp printed — or why
-// cp could not be run.
-func (b *build) copyPreserving(src, dst string) (reason string, code int) {
-	out, err := b.command("cp", "-p", src, dst).CombinedOutput()
-	why, code := exitStatus(err)
-	if why != "" {
-		return fmt.Sprintf(msgCannotRun, "cp", why), code
-	}
-	return strings.TrimRight(string(out), "\n"), code
 }
 
 // restoreBaseline puts a profile's pre-build jar back into modules/ and says so; a profile without a

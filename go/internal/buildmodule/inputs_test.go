@@ -119,13 +119,13 @@ func TestToolbeltEnvIsNotHandedOn(t *testing.T) {
 	}
 }
 
-// TestHostToolFailuresEndTheChain: a temporary path mktemp cannot make ends the chain with mktemp's own row
-// and status, before gradle (with the drift gate) or right after the build row (without it).
+// TestHostToolFailuresEndTheChain: a temporary path that cannot be made ends the chain with its own row and
+// exit 1, before gradle (with the drift gate) or right after the build row (without it).
 func TestHostToolFailuresEndTheChain(t *testing.T) {
 	for _, flags := range [][]string{nil, {"--no-drift-check"}} {
 		f := newFixture(t)
 		t.Setenv("TMPDIR", f.dir+"/no-tmp")
-		f.wants("no TMPDIR", f.build(flags...), 1, "mktemp: failed to create ")
+		f.wants("no TMPDIR", f.build(flags...), ExitFault, "build.sh: cannot make a temporary ", " in "+f.dir+"/no-tmp: No such file or directory")
 		if f.call("gradlew") != "" {
 			t.Errorf("%v: gradlew ran", flags)
 		}

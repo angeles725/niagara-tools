@@ -6,6 +6,15 @@ load helpers/n4-fixtures
 
 load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
 
+# The script is the launcher of go/cmd/build-module: build the binary once, with the real environment, so a case that
+# changes HOME never pays the build with a fresh Go cache. [ev: retro go-toolbelt-small-port Δ4]
+setup_file() {
+  local root; root="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # shellcheck disable=SC1091  # go/ helper, resolved at runtime via root
+  . "$root/go/go-tool.sh"
+  go_tool_bin "$root/go" build-module >/dev/null
+}
+
 setup() {
   TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
@@ -607,40 +616,15 @@ GRADLEW
   [ ! -e "$TMPDIR_T/verify.args" ]
 }
 
-@test "BS-drift-unverifiable-unzip: a jar the gate cannot list (unzip fails) -> exit 52, never equal empty hashes" {
-  # Mutation: BS-drift-unverifiable-unzip -- hashing an empty listing makes both sides equal (silent pass).
-  mkdir -p "$TMPDIR_T/nh/modules"
-  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
-  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
-  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
-  mkdir -p "$TMPDIR_T/nounzip"
-  printf '#!/usr/bin/env bash\nexit 9\n' > "$TMPDIR_T/nounzip/unzip"; chmod +x "$TMPDIR_T/nounzip/unzip"
-  PATH="$TMPDIR_T/nounzip:$PATH" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
-  [ "$status" -eq 52 ]
-  [[ "$output" == *"cannot verify"* ]]
-}
-
-@test "BS-drift-unverifiable-restore-fail: a failed restore in the cannot-verify path is reported, never silent" {
-  # Mutation: BS-drift-unverifiable-restore-fail -- dropping the FAILED TO RESTORE branch leaves the new jar in
-  # modules/ with no message, and a retry would snapshot it as its own baseline.
-  mkdir -p "$TMPDIR_T/nh/modules"
-  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
-  chmod 444 "$TMPDIR_T/nh/modules/Foo-rt.jar"
-  if [ -w "$TMPDIR_T/nh/modules/Foo-rt.jar" ]; then skip "running as root: chmod 444 does not block writes"; fi
-  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
-  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
-  mkdir -p "$TMPDIR_T/nounzip"
-  printf '#!/usr/bin/env bash\nexit 9\n' > "$TMPDIR_T/nounzip/unzip"; chmod +x "$TMPDIR_T/nounzip/unzip"
-  PATH="$TMPDIR_T/nounzip:$PATH" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
-  chmod 644 "$TMPDIR_T/nh/modules/Foo-rt.jar"
-  [ "$status" -eq 52 ]
-  [[ "$output" == *"FAILED TO RESTORE"* ]]
-}
-
-# Fault injection for the restore-failure pins below: a read-only modules/<jar> (chmod 444) makes build.sh's
-# `cp -p <backup> modules/<jar>` fail exactly as a station or Workbench lock would. The stock fake gradlew never
+# The cannot-verify cases that stubbed unzip on PATH (a jar the gate cannot read, an empty listing, a failed
+# restore after them) are Go tests now: the chain reads jars itself, so there is no unzip to stub
+# (go/internal/buildmodule TestAJarTheGateCannotReadIsNeverEqualToItself, TestAFailedRestoreAfterACannotVerifyIsReported).
+# [ev: retro go-build-module-port Δ3]
+#
+# Fault injection for the restore-failure pins below: a read-only modules/<jar> (chmod 444) makes the copy of the
+# pre-build jar back into modules/<jar> fail exactly as a station or Workbench lock would. The stock fake gradlew never
 # writes modules/, so the jar there is still the pre-build one afterwards.
-@test "BS-drift-restore-fail-truth: a failed restore names cp's cause and says what modules/ really holds (#226)" {
+@test "BS-drift-restore-fail-truth: a failed restore names the cause and says what modules/ really holds (#226)" {
   # Mutation: BS-drift-restore-fail-truth -- the old unconditional text claimed modules/ "now holds the NEW jar"
   # and dropped cp's stderr, so the operator could neither trust the message nor see why the restore failed.
   mkdir -p "$TMPDIR_T/nh/modules"
@@ -672,19 +656,6 @@ GRADLEW
   run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]
   [ -e "$TMPDIR_T/verify.args" ]
-}
-
-@test "BS-drift-empty-listing: unzip that succeeds with an EMPTY listing is cannot-verify (exit 52), never equal hashes (#226)" {
-  # Mutation: BS-drift-empty-listing -- dropping the empty-listing check hashes two empty lists equal (silent pass).
-  mkdir -p "$TMPDIR_T/nh/modules"
-  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
-  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
-  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
-  mkdir -p "$TMPDIR_T/emptyunzip"
-  printf '#!/usr/bin/env bash\nexit 0\n' > "$TMPDIR_T/emptyunzip/unzip"; chmod +x "$TMPDIR_T/emptyunzip/unzip"
-  PATH="$TMPDIR_T/emptyunzip:$PATH" run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
-  [ "$status" -eq 52 ]
-  [[ "$output" == *"cannot verify"* ]]
 }
 
 # audit-2026-10-03 A2: report-module exit 4 (INCOMPLETE — a floor check SKIPped) is its own build.sh exit, never a pass.

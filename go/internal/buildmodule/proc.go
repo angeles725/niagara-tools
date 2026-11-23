@@ -86,13 +86,6 @@ func (b *build) run(name string, args ...string) (stdout string, code int) {
 	return strings.TrimRight(string(out), "\n"), b.status(name, err)
 }
 
-// output is the stdout of a helper command (unzip, df) run in the chain's environment with its stderr
-// dropped; ok is whether it exited 0.
-func (b *build) output(name string, args ...string) (out []byte, ok bool) {
-	out, err := b.command(name, args...).Output()
-	return out, err == nil
-}
-
 // homeDir is $HOME as bash reads it: the variable, else the user's home directory.
 func (b *build) homeDir() string { return modjar.HomeDir(b.s.Env) }
 

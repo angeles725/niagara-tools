@@ -8,10 +8,7 @@ import "github.com/angeles725/niagara-tools/go/internal/fstype"
 func (b *build) warnSlowMounts() int {
 	places := []struct{ label, path string }{{"gradle-root", b.gradleRoot}, {"niagara_home", b.home}}
 	for _, p := range places {
-		typ := fstype.For(p.path, b.s.Env(fstype.MountsEnv), func() []byte {
-			out, _ := b.output("df", "-T", "--", p.path)
-			return out
-		})
+		typ := fstype.OfPath(p.path, b.s.Env(fstype.MountsEnv))
 		if fstype.IsWindowsMount(typ) {
 			b.warn(msgSlowMount, p.label, p.path, typ)
 		}

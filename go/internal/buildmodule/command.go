@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // ToolbeltEnv names the directory of the invoked build.sh, unresolved: the gate, preflight and report-module
@@ -119,19 +120,32 @@ func (b *build) deployedJar(profile string) string {
 	return b.home + "/modules/" + b.jarName(profile) + ".jar"
 }
 
-// makeTemp creates a temporary directory (`mktemp -d`) or file (`mktemp`) that cleanup removes. code is
-// mktemp's status when it fails: the chain cannot go on, and ends with it as under bash's set -e.
+// makeTemp creates a temporary directory or file under $TMPDIR (else /tmp) that cleanup removes, as `mktemp
+// [-d]` did. code is 1 when it cannot: the chain cannot go on, and ends with it as under bash's set -e.
 func (b *build) makeTemp(directory bool) (path string, code int) {
-	var args []string
+	dir, kind := b.s.Env("TMPDIR"), "file"
+	if dir == "" {
+		dir = "/tmp"
+	}
+	var err error
 	if directory {
-		args = []string{"-d"}
+		kind = "directory"
+		path, err = os.MkdirTemp(dir, tempPattern)
+	} else {
+		var f *os.File
+		if f, err = os.CreateTemp(dir, tempPattern); err == nil {
+			path = f.Name()
+			err = f.Close()
+		}
 	}
-	if path, code = b.run("mktemp", args...); code == 0 {
-		b.tempsMu.Lock()
-		b.temps = append(b.temps, path)
-		b.tempsMu.Unlock()
+	if err != nil {
+		b.warn(msgNoTemp, kind, dir, strerror.Text(err))
+		return "", ExitFault
 	}
-	return path, code
+	b.tempsMu.Lock()
+	b.temps = append(b.temps, path)
+	b.tempsMu.Unlock()
+	return path, 0
 }
 
 // cleanup removes the temporary paths (the baseline snapshot among them).
