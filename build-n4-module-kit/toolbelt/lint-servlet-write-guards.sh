@@ -15,7 +15,10 @@
 #                               super.getPermissions(cx), an unqualified getPermissions(cx), user.getPermissions(cx) /
 #                               getUser().getPermissions(cx), also through a local bound in the method to the user or the
 #                               servlet (BUser caller …; caller = op.getUser(); self = this; then caller.getPermissions(cx))
-#   no-target-permission  WARN  a slot write (.set / .setDouble / … ) or .invoke(…) with no target check earlier in the
+#   no-target-permission  WARN  a component write (.set / .setDouble / … ; not a call that cannot be one: a one-argument
+#                               set(v), a numeric first argument as in JDBC setInt(1, v) or List.set(0, x), or a variable
+#                               of this file declared only as a PreparedStatement, List, Atomic*, Calendar or ThreadLocal)
+#                               or .invoke(…) with no target check earlier in the
 #                               same method: target.getPermissions(cx), getPermissionsFor(target), ordTarget.canWrite()
 #                               or the template's requireTargetWrite(target, …). The check must name a variable of the
 #                               written receiver (other.getPermissions(cx) does not guard target.set) and its result must
@@ -26,11 +29,14 @@
 #                               matches any check.
 #   no-csrf               WARN  a BWebServlet that writes and calls no verifyCsrfToken( and names no CsrfProtectedFilter
 #                               (a token header or a local named csrfToken alone is no check; an X-Requested-With guard
-#                               is lint-servlet csrf-xrw-only's row)
+#                               is lint-servlet csrf-xrw-only's row). A servlet that is a thin adapter over its dispatch
+#                               class (types/dashboard.md DUX1) takes the check from it: a type the servlet names in code,
+#                               declared in the servlet's own directory by a file named after it, that calls verifyCsrfToken(
+#                               or names CsrfProtectedFilter in code. One in another directory is not seen.
 #   Scope limits (false negatives): a check in another method than the write (wrap it as requireTargetWrite and call
 #   it in the writing method); the global user map `getUser().getPermissions().has(OPERATOR_WRITE)` is no target check.
-#   no-csrf reads the servlet file only: an X-Requested-With guard in a separate dispatch class (types/dashboard.md
-#   DUX1) is not seen, and the row is still true there, since X-Requested-With is no session-bound token (B813 §813.4).
+#   An X-Requested-With guard in a separate dispatch class (types/dashboard.md DUX1) is not seen, and the no-csrf row is
+#   still true there, since X-Requested-With is no session-bound token (B813 §813.4).
 #
 # Implementation: go/internal/lint/rules/servletwriteguard on the Go lint engine (go/README.md); this wrapper execs
 # `n4lint lint-servlet-write-guards <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise).
