@@ -106,3 +106,19 @@ func TestOfPathReadsTheMountTableByWholeComponents(t *testing.T) {
 		t.Errorf("a table that is no file falls back to %s: %q", ProcMounts, got)
 	}
 }
+
+// TestOfPathTheLastEntryOfAMountpointWins: two entries for one mountpoint are a mount stacked on a mount,
+// and the last one (the topmost, the one a path really reads through) is the type, as df answers.
+func TestOfPathTheLastEntryOfAMountpointWins(t *testing.T) {
+	t.Parallel()
+	table := filepath.Join(t.TempDir(), "mounts")
+	body := "rootfs / ext4 rw 0 0\nC: /mnt/c ext4 rw 0 0\nC: /mnt/c 9p rw 0 0\nnone /mnt/d tmpfs rw 0 0\nD: /mnt/d drvfs rw 0 0\n"
+	if err := os.WriteFile(table, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for path, want := range map[string]string{"/mnt/c/x": "9p", "/mnt/d": "drvfs", "/home/u": "ext4"} {
+		if got := OfPath(path, table); got != want {
+			t.Errorf("OfPath(%q) = %q, want %q", path, got, want)
+		}
+	}
+}

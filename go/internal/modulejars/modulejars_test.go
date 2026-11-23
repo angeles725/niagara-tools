@@ -76,3 +76,48 @@ func TestAFileInPlaceOfTheDirectoryIsENOTDIR(t *testing.T) {
 		t.Errorf("Names(file) error = %v, want ENOTDIR", err)
 	}
 }
+
+// A directory that cannot be listed is the list error (EACCES), never an empty list: the jars it holds are
+// not known, and a caller that reads "no jars" from it would ship or lock-check nothing without saying so.
+func TestAnUnlistableDirectoryIsTheListErrorNotAnEmptyList(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: a directory without permissions is still listed")
+	}
+	dir := fixture(t)
+	if err := os.Chmod(dir, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+	for name, list := range map[string]func(string) ([]string, error){"Names": Names, "Regular": Regular} {
+		got, err := list(dir)
+		if !errors.Is(err, syscall.EACCES) || len(got) != 0 {
+			t.Errorf("%s(unlistable) = %v, %v; want no names and EACCES", name, got, err)
+		}
+	}
+}
+
+// A directory that is listed but not searched (r--): Names still names the entries, and Regular, which must
+// stat each, keeps none, so a jar it cannot see is not one it counts.
+func TestAListableButUnsearchableDirectoryShipsNothing(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: a directory without permissions is still searched")
+	}
+	dir := fixture(t)
+	if err := os.Chmod(dir, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+	if names, err := Names(dir); err != nil || len(names) != 5 {
+		t.Errorf("Names = %v, %v; want the five names and no error", names, err)
+	}
+	if files, err := Regular(dir); err != nil || len(files) != 0 {
+		t.Errorf("Regular = %v, %v; want no jar and no error", files, err)
+	}
+}
+
+// The layout the three readers share is spelled once, here.
+func TestTheSharedLayoutIsModulesAndDotJar(t *testing.T) {
+	if Dir != "modules" || Suffix != ".jar" {
+		t.Errorf("Dir %q, Suffix %q", Dir, Suffix)
+	}
+}

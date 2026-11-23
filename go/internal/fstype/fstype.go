@@ -58,7 +58,8 @@ const ProcMounts = "/proc/mounts"
 // OfPath is the filesystem type of path read from a mount table (mountsFile, else ProcMounts) with no
 // helper command: the type of the mount whose mountpoint is the longest whole-component prefix of the
 // path, spelled as the kernel resolves it (symlinks followed, a relative path made absolute). "" when
-// the table cannot be read or names no mount for it. Unlike For, which keeps the bash lib's string
+// the table cannot be read or names no mount for it; of two entries of one mountpoint the last (the topmost,
+// as df answers) wins. Unlike For, which keeps the bash lib's string
 // prefix for preflight, "/mnt/cc" is not under a mount at "/mnt/c".
 func OfPath(path, mountsFile string) string {
 	if mountsFile == "" || !lint.IsFile(mountsFile) {
@@ -77,7 +78,7 @@ func OfPath(path, mountsFile string) string {
 	best, typ := -1, ""
 	for _, ln := range strings.Split(string(table), "\n") {
 		mp := unescapeMount(field(ln, 1))
-		if mp == "" || !under(path, mp) || len(mp) <= best {
+		if mp == "" || !under(path, mp) || len(mp) < best {
 			continue
 		}
 		best, typ = len(mp), field(ln, 2)

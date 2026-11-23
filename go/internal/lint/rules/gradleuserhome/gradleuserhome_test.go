@@ -10,4 +10,4 @@ import (
 // uncommented org.gradle.jvmargs holding -Duser.home= and GU2 an uncommented systemProp.user.home WARN; a plain
 // jvmargs, a commented key (a comment ending in a backslash does not continue), a continued value, a nested file and a `key : value` spelling; --strict; the empty
 // root and usage.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 10) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 11) }

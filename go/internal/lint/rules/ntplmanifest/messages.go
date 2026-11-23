@@ -1,5 +1,7 @@
 package ntplmanifest
 
+import "github.com/angeles725/niagara-tools/go/internal/modulejars"
+
 // ID is the lint name n4lint accepts and the check column of a row that names no sub-check.
 const ID = "lint-ntpl-manifest-deps"
 
@@ -36,8 +38,8 @@ const (
 	usage      = "usage: lint-ntpl-manifest-deps.sh [--niagara-home <dir>] <module-root | template-module.jar>"
 	homeOption = "--niagara-home"
 	homeEnv    = "NIAGARA_HOME"
-	modulesDir = "modules" // under the installation: one <module>.jar per module part it ships
-	jarSuffix  = ".jar"
+	modulesDir = modulejars.Dir // under the installation: one <module>.jar per module part it ships
+	jarSuffix  = modulejars.Suffix
 )
 
 // templateNames select a template archive by its name: a station or component template (.ntpl) and an
