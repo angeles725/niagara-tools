@@ -183,7 +183,7 @@ The README names the category and role each module user needs (read user, write 
 
 A servlet write path needs both the CSRF token and the caller's permission on the written TARGET (never on the
 servlet or the user): the copy-ready template is `types/servlet-write.md`, linted by
-`toolbelt/lint-servlet-write-guards.sh`. `[ev: retro 2026-11-10-mcpn4-history-batch-tools Δ6]`
+`toolbelt/lint-servlet-write-guards.sh`. `[ev: retro mcpn4-history-batch-tools Δ6]`
 
 ### 3.1 Official CSRF filter (preferred)
 
