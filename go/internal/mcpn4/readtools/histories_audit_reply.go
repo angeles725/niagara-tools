@@ -20,6 +20,7 @@ func (r *haRun) classify(points []string, exts []histExt) {
 		}
 	}
 	counted := map[string]bool{}
+	var toCount []histExt // the record counts to read, in extension order
 	for _, e := range exts {
 		switch e.enabled {
 		case false:
@@ -46,26 +47,41 @@ func (r *haRun) classify(points []string, exts []histExt) {
 			continue
 		}
 		counted[e.id] = true
-		if item := r.countedNearCapacity(e); item != nil {
-			add("near_capacity", item)
-		}
+		toCount = append(toCount, e)
 	}
+	r.nearCapacity(toCount, add)
 	r.lists["colliding_ids"] = collidingIds(exts)
 }
 
-// countedNearCapacity reads e's record count and is its near-capacity item, if any.
-func (r *haRun) countedNearCapacity(e histExt) *pyjson.Object {
-	r.requests++
-	r.countReads++
-	total, note, _ := r.t.countHistory(e.id, "", r.timeout)
-	records, ok := total.(int)
-	if !ok {
-		if r.countFails++; r.countNote == "" {
-			r.countNote = e.id + ": " + note
+// countResult is one record count read: the count, or why there is none.
+type countResult struct {
+	records int
+	note    string
+	ok      bool
+}
+
+// nearCapacity reads the record count of each of exts, haWorkers at a time, and adds the
+// near-capacity items in the order of exts; the first failed read (in that order) is the one noted.
+func (r *haRun) nearCapacity(exts []histExt, add func(string, *pyjson.Object)) {
+	results := make([]countResult, len(exts))
+	runPool(len(exts), func(i int) {
+		total, note, _ := r.t.countHistory(exts[i].id, "", r.timeout)
+		records, ok := total.(int)
+		results[i] = countResult{records, note, ok}
+	})
+	for i, e := range exts {
+		r.requests++
+		r.countReads++
+		if !results[i].ok {
+			if r.countFails++; r.countNote == "" {
+				r.countNote = e.id + ": " + results[i].note
+			}
+			continue
 		}
-		return nil
+		if item := r.cfg.nearCapacity(e, results[i].records); item != nil {
+			add("near_capacity", item)
+		}
 	}
-	return r.cfg.nearCapacity(e, records)
 }
 
 // reply is the audit's reply: its arguments, every list capped at haListCap, the totals, notes.

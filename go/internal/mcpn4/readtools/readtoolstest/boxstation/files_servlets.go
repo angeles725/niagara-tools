@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // This file adds the station's GET servlets to the fake, as a station serves them: GET
@@ -30,6 +31,9 @@ type OrdRoute struct {
 	Needle      string
 	Body        []byte
 	ContentType string
+	// Delay holds the answer back, outside the servlets lock, so overlapping requests show in
+	// MaxOrdInFlight.
+	Delay time.Duration
 }
 
 // Servlets serves the station's /file/ and /ord/ GETs in front of a Station. Lock it (through
@@ -43,12 +47,15 @@ type Servlets struct {
 	// GETs counts every GET (FakeStation.about_requests), authorized or not.
 	FileRequests, OrdRequests []string
 	GETs                      int
+	// MaxOrdInFlight is the most /ord/ GETs that were being answered at once.
+	MaxOrdInFlight int
 	// SpyPages answer GET /ord?spy:/<path> by decoded path ("" is the index), see spy_servlet.go;
 	// SpyRequests is the request URI of every spy GET, in order.
 	SpyPages    map[string]SpyPage
 	SpyRequests []string
 
-	mu sync.Mutex
+	mu       sync.Mutex
+	inFlight int
 }
 
 // ServeServlets serves st's servlets on 127.0.0.1 until the test ends; URL is the address the
@@ -97,13 +104,21 @@ func (sv *Servlets) serve(w http.ResponseWriter, r *http.Request) {
 	sv.St.Do(func(st *Station) { ok = st.authorized(r) })
 	status, body, ctype := http.StatusUnauthorized, []byte{}, "text/xml"
 	if ok {
+		var delay time.Duration
 		sv.Do(func(*Servlets) {
 			if isFile {
 				status, body, ctype = sv.file(unquote(r.RequestURI[len("/file/"):]))
 			} else {
-				status, body, ctype = sv.ord(unquote(r.RequestURI[len("/ord/"):]))
+				status, body, ctype, delay = sv.ord(unquote(r.RequestURI[len("/ord/"):]))
+				if sv.inFlight++; sv.inFlight > sv.MaxOrdInFlight {
+					sv.MaxOrdInFlight = sv.inFlight
+				}
 			}
 		})
+		if isOrd {
+			time.Sleep(delay)
+			sv.Do(func(*Servlets) { sv.inFlight-- })
+		}
 	}
 	w.Header().Set("Content-Type", ctype)
 	w.Header().Set("Content-Length", fmt.Sprint(len(body)))
@@ -129,7 +144,7 @@ func (sv *Servlets) file(path string) (int, []byte, string) {
 }
 
 // ord is FakeStation._ord: the first route whose needle the ORD holds, else 404.
-func (sv *Servlets) ord(text string) (int, []byte, string) {
+func (sv *Servlets) ord(text string) (int, []byte, string, time.Duration) {
 	sv.OrdRequests = append(sv.OrdRequests, text)
 	for _, route := range sv.OrdRoutes {
 		if strings.Contains(text, route.Needle) {
@@ -137,10 +152,10 @@ func (sv *Servlets) ord(text string) (int, []byte, string) {
 			if ctype == "" {
 				ctype = "text/csv"
 			}
-			return http.StatusOK, route.Body, ctype
+			return http.StatusOK, route.Body, ctype, route.Delay
 		}
 	}
-	return http.StatusNotFound, []byte{}, "text/html"
+	return http.StatusNotFound, []byte{}, "text/html", 0
 }
 
 // unquote is urllib.parse.unquote, which leaves a malformed escape as it is.

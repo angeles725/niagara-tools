@@ -56,6 +56,9 @@ Tags are written with `n4_set_tags` only (never `n4_set_slot` or `n4_create_comp
 - Never ask for or suggest a tier opt-in to get past a refused write without the PoC or probe that tier requires; the opt-in is the operator's record that it ran.
 - Never invent a bare "cannot": give the route ladder from METHODOLOGY section 1 (cost, needs, next step).
 - Live diagnosis of a restart: take the timing from the station log, not from oBIX `about/serverBootTime` (oBIX said 00:19:30; the station log showed the restart at 00:06:45-00:08:42); use oBIX only as a cross-check. `[ev: external retro niagara-research/retros/2026-10-06-panccadia-comppan-hmi-support.md Δ6]`
+- `MCP request timed out` means "unknown", never "failed": run `n4_list_batches` (newest first) and read the
+  targets back before any retry; never resend the token. The write may have applied: three batches and a remove
+  timed out at the client and were `completed` / `verified` in the journal. `[ev: retro R12 ΔM2]`
 - A confirmation token belongs to the MCP server session: after "Could not find Server Session" and a new `n4_connect`, every pending token is dead. Redo the dry runs; never resend the old token. `[ev: external retro niagara-research client A 2026-11-10]`
 - `n4_remove_component` refuses at the dry run when its scan (the write-scope prefix holding the parent, or the narrower `link_scan_ord`) finds links from the subtree into other components: show the operator the listed links and pass `acknowledge_links: true` only after they agree to break them. `[ev: retro 2026-11-15-lab-415-bench-session-2 Δ3]`
 - Before re-pointing links into a facade slot, `n4_list_links` the target (depth 1) and remove or roll back the old links first; a slot fed by two links silently shows whichever wrote last. `[ev: external retro niagara-research client A 2026-11-10]`

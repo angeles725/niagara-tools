@@ -28,6 +28,7 @@ func (r *haRun) flatCheck(exts []histExt) {
 	windowStart := r.cfg.now.Add(-r.flatSpan)
 	start := windowStart.UTC().Format(windowSent)
 	seen := map[string]bool{}
+	var todo []histExt
 	for _, e := range exts {
 		last := strings.TrimSpace(e.last)
 		if e.enabled == false || e.id == "" || last == "null" || seen[e.id] {
@@ -37,68 +38,82 @@ func (r *haRun) flatCheck(exts []histExt) {
 		if at, ok := bql.ParseAbsTime(last); ok && at.Before(windowStart) {
 			continue // no record in the window: stale says so, there is no value to compare
 		}
-		if item := r.flatItem(e, start); item != nil {
-			r.lists["flat"] = append(r.lists["flat"], item)
+		todo = append(todo, e)
+	}
+	// The histories are read haWorkers at a time; the items and failures are taken in the order of
+	// exts, so the reply is what one-by-one reads gave.
+	results := make([]flatResult, len(todo))
+	runPool(len(todo), func(i int) { results[i] = r.flatItem(todo[i], start) })
+	for i, e := range todo {
+		res := results[i]
+		r.requests += res.reads
+		r.flatReads += res.reads
+		if res.failed != "" {
+			r.flatFailed(e.id, res.failed)
+		} else if res.item != nil {
+			r.lists["flat"] = append(r.lists["flat"], res.item)
 		}
 	}
 }
 
+// flatResult is the outcome of one history's flat check: its item (nil when not flat), the
+// station reads it made and, when a read failed, why.
+type flatResult struct {
+	item   *pyjson.Object
+	reads  int
+	failed string
+}
+
 // flatItem is e's flat item when the window [start, now] holds one value and records exist
-// before it; nil otherwise, or when a read failed (counted in the notes).
-func (r *haRun) flatItem(e histExt, start string) *pyjson.Object {
-	value, err := r.windowValue(e.id, start)
+// before it; no item otherwise, or a failure reason when a read failed.
+func (r *haRun) flatItem(e histExt, start string) flatResult {
+	value, reads, err := r.windowValue(e.id, start)
 	if err != nil {
-		r.flatFailed(e.id, err.Error())
-		return nil
+		return flatResult{reads: reads, failed: err.Error()}
 	}
 	if value == "" {
-		return nil
+		return flatResult{reads: reads}
 	}
 	before, err := bql.HistoryParams("", "", start)
 	if err != nil {
-		r.flatFailed(e.id, err.Error())
-		return nil
+		return flatResult{reads: reads, failed: err.Error()}
 	}
-	r.requests++
-	r.flatReads++
+	reads++
 	total, note, _ := r.t.countHistory(e.id, before, r.timeout)
 	n, ok := total.(int)
 	if !ok {
-		r.flatFailed(e.id, note)
-		return nil
+		return flatResult{reads: reads, failed: note}
 	}
 	if n == 0 {
-		return nil // younger than the window: not one value for more than flat_days
+		return flatResult{reads: reads} // younger than the window: not one value for more than flat_days
 	}
-	return obj("history_id", e.id, "ext", e.path, "point", parentPath(e.path), "value", value,
-		"window_start", start, "note", fmt.Sprintf(haFlatNote, spanText(r.flatSpan)))
+	return flatResult{reads: reads, item: obj("history_id", e.id, "ext", e.path, "point", parentPath(e.path),
+		"value", value, "window_start", start, "note", fmt.Sprintf(haFlatNote, spanText(r.flatSpan)))}
 }
 
 // windowValue is the one value of id's records since start, as the station renders it; "" when
-// the window holds no record or more than one value.
-func (r *haRun) windowValue(id, start string) (string, error) {
+// the window holds no record or more than one value. reads is the station reads it made.
+func (r *haRun) windowValue(id, start string) (value string, reads int, err error) {
 	params, err := bql.HistoryParams("", start, "")
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	ord, err := bql.ComposeHistoryOrd(id, params, bql.HistoryAggregateQuery)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
-	r.requests++
-	r.flatReads++
 	columns, rows, _, _, err := r.t.fetchHistory(ord, 1, r.timeout)
 	if err != nil {
-		return "", err
+		return "", 1, err
 	}
 	if len(rows) != 1 || len(columns) < 2 {
-		return "", fmt.Errorf(haFlatShape, len(rows), len(columns))
+		return "", 1, fmt.Errorf(haFlatShape, len(rows), len(columns))
 	}
 	lo, hi := strings.TrimSpace(cell(rows[0], columns[0])), strings.TrimSpace(cell(rows[0], columns[1]))
 	if lo == "" || lo == "null" || lo != hi {
-		return "", nil
+		return "", 1, nil
 	}
-	return lo, nil
+	return lo, 1, nil
 }
 
 // flatFailed counts a failed flat read, keeping the first reason.
