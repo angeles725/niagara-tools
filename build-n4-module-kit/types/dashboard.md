@@ -39,6 +39,11 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
   or a JSON/CSV resource under `rc/`); the reader's group arrays and the SPA's entity list iterate it instead of
   repeating `Room1..Room5`-style literals, so a second site changes the table only. Rule: `METHODOLOGY.md` § Domain
   correctness. `[ev: retro modular-line-efficient-quality Δ2]`
+- **Derive a label from the station, not from a static catalog:** an entity's label is, in order, the component's
+  `displayName`, then the name of the device that owns it in the station, then the catalog entry as the default. A
+  catalog file (`equipment.json`-style) drifts from the station: in one dashboard four entity labels were off by one
+  against the device their own power link pointed at. The reader emits the station-derived label; the catalog only fills
+  a label the station cannot give. `[ev: issue #922]` (retro R11 ΔB8)
 
 ## ux — servlet + SPA `[ev: corpus B813]`
 - **The SPA side (structure, naming, data/state, transfer, memory, `rc/` component layout, technology choices, vendored libraries and the vetted vendor catalog) follows [`frontend-standard.md`](frontend-standard.md)** — this section keeps the servlet, reader, RBAC and serving rules; do not restate the frontend rules here. `[ev: retro dashboard-frontend-standard Δ1]`
@@ -100,6 +105,11 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
     `babel`, `babel-plugin-istanbul` (coverage).
   `[ev: corpus B957 §957.5–957.6]`
 - **Reader**: walk the facade → flat JSON keyed by slot-path, each value `{"v":num|bool|null,"st":"<status>"}`, fault-aware, `Locale.ROOT` doubles, escaped strings.
+- **The reader emits an unlinked numeric slot as `{"v":null}`, never `0.0` with `"st":"ok"`:** a link-in numeric slot
+  nobody linked holds its type default, and a reader that copies it reports a healthy zero; an average or a "valid
+  readings" count then takes it in ("8 of 8 valid readings" with two units unlinked). The reader tests the slot's
+  status (a never-linked slot is null/stale), emits `null`, and every consumer of the list (averages, counts, charts)
+  skips a `null`. The SPA half is in § Poll loop reliability (fail-visible read path). `[ev: issue #880]` (retro R3 ΔU20)
 - **Export-servlet dedup — dedup by resolved handle/ord before emitting:** overlapping export sources (a folder-recursive walk + an explicit reference to a nested point, or the same folder twice) double-emit the same point. Deduplicate the resolved set by handle or canonical ORD before serialising to JSON. Observed LIVE: 22 rows for 11 unique points from two overlapping export configs until one was removed. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ9]`
 - **JSON serialization — absent facet as `null`, never the string `"null"`:** `getFacets().gets(UNITS, null)` returns `null` when the facet is absent; feeding that through `String.valueOf()` or string concatenation produces the literal `"null"`. Serialize as JSON `null` (omit the key or write `null` token). Observed LIVE: `"unit":"null"` in exported JSON because a null value traversed `Json.q`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ10]`
 - **Apply the `precision` facet to numeric values in display JSON:** raw `double` values (`47.91333333333334`) are correct for machine consumers but noisy for operator views. Apply `getFacets().geti("precision", 2)` (`BFacets.java:889`; there is no `getInt`) to round numeric values before serialization (e.g. `BigDecimal.setScale(precision, HALF_UP)`). Document this as a deliberate choice in the module: the raw double is always available for machine consumers; the precision-rounded value is for display. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ11]`
@@ -181,6 +191,16 @@ final class SaveDelayPolicy {
 - **Never fail the write if the save cannot be scheduled:** log it; the next save (Workbench, the station's own)
   persists the change. One save per operator change per station still holds (BUILD-LOOP §6.b item 10): a
   dashboard that forwards into a control module that saves declares `persistence:` instead of saving twice.
+- **A write made of several parts rehearses on `newCopy()` before it touches the live components:** a schedule write
+  (power, default value, holidays, a setpoint) applies every part to a copy first; only when the whole copy passed
+  does it write the live components, so a refusal in a later part leaves nothing half-written. Validate on the copy,
+  write once, then request the station save. `[ev: issue #901]` (retro R7 ΔK11)
+- **A timed override never becomes permanent by accident when its schedule is empty:** an override on a writable whose
+  own schedule has no ranges has no "next event" to end at, so it holds forever. Decide it per module and ask when
+  unknown: until when does a manual value hold when its schedule has no events? Default: fall back to the next event of
+  a sibling schedule of the same entity; with none, ask the operator for an end time or refuse the timed override. A
+  silent permanent override is never the default. It is a question in the behavior catalog (`METHODOLOGY.md` § Domain correctness), asked in BUILD-LOOP §1 before the write path is built.
+  `[ev: issue #910]` (retro R9 ΔB2)
 
 ### Reference exemplar (our own module) — DashboardPan-ux `[ev: corpus B796]` [ev: retro campaign7-dashboard-exemplar]
 
@@ -203,6 +223,10 @@ Tridium ships no vendor exemplar for the SPA/servlet split — DashboardPan-ux i
 - Static assets in `src/rc/`; gradle copies `src/rc→rc/`; served via `getClassLoader().getResourceAsStream("rc/"+path)`.
 - **Third-party browser JS library embedding recipe (three.js, Chart.js, D3, etc.):** a pre-built single-file bundle (`index.html` or `library.min.js`) runs entirely in the BROWSER — no Compact3 profile, no JVM signing constraint — which is why it "just works" without a Java compile step. (Contrast with a Java library added to the Niagara JVM, which carries Compact3/signing constraints; that path is the separate third-party-library-integration retro.) Embedding: (1) place the bundle under `src/rc/` as-is — no compile step; (2) gradle's default `src/rc → rc/` copy includes it in the jar; (3) the servlet serves it via `getClassLoader().getResourceAsStream("rc/"+relativePath)` with a traversal guard. Large bundles compress well: a 2.73MB three.js SPA → 1.63MB ux jar (ratio ≈ 0.60). Reference any asset from the SPA using the absolute `/<prefix>/...` path at runtime. `[ev: corpus B1015 §1015.2, §1015.4]` **Refinement for a library the SPA consumes (not a whole pre-built app):** vendor it as separate pinned files in `rc/vendor/<lib>-<version>.min.js` + LICENSE, loaded with `?v=` — never pasted inline into `index.html`, never fetched from a CDN at runtime; record deprecated builds with a migration note. Rule + vetted picks: `frontend-standard.md` § Vendored libraries / § Vendor catalog. `[ev: retro dashboard-frontend-standard Δ14]`
 - **A cosmetic WARN on a large pre-built library file does NOT fail the gate:** the ux jar carrying a 2.73MB SPA `index.html` was "rc-scan clean but 1 cosmetic WARN" and `verify-module.sh` still reported ALL PASS (17 passed, 0 failed, 3 warned); the block does not name the check, and `rc-scan.sh` has no file-size check [INFER: an inline `<script>` over 300 lines raises its `inline-block-size` WARN]. The WARN is informational, identical in kind to the existing `phantom-dep` and `ord-literal` benign WARNs. Only a FAIL changes the exit code and blocks the gate. `[ev: corpus B1015 §1015.4]`
+- **After a three.js major bump, compare a before/after render and recalibrate `envScale`:** the lighting constants
+  are calibrated against one release; r187 rendered 4-8% brighter than r185 with `envScale` tuned for r185 (a single
+  data point; no tool is added for it). Render the same view of the old and the new build, compare them by eye or by a
+  mean-luminance figure, and re-tune `envScale` before the bump ships. `[ev: issue #945]` (retro R17 ΔD8)
 - **When the ux module serves a pre-built static bundle from `src/rc/`, remove `com.tridium.niagara-grunt` and `gruntBuild` from `<mod>-ux.gradle.kts` entirely:** minimal deps are `web-rt` + `project(":…-rt")` + `compileOnly servlet-api`. A leftover `niagara-grunt` dep on a static-serving module adds a phantom node dependency (requires `nodeHome`) and a no-op build step on every compile [INFER]. Grunt is only needed when the module AUTHORS its own AMD/requirejs JS for a bajaux type-extension (see JS build strategy below). `[ev: corpus B1015 §1015.2]`
 
 ### JS build strategy — grunt vs. no grunt `[ev: corpus B957 §957.3, §957.6, B1015 §1015.2]`
@@ -256,6 +280,11 @@ static handler picks it.
 - **One timing config object:** `pollMs`, `fetchTimeoutMs` and the watchdog windows live in one object (`config.js`); every threshold is expressed in TIME and derived from it (`Math.ceil(30000 / pollMs)`), never a bare constant whose comment assumes another constant's value ("6 ≈ 30 s at 5 s/poll"). `[ev: retro dashboard-frontend-reliability-rules Δ8]`
 - **Checklist — a kiosk/HMI dashboard must survive a station restart without human action; the watchdog keys on time since the last SUCCESS, not on a count of failures:** a poll loop that only marks data stale on error (`data.forEach(d => d.st = "stale"); paint("error");`) never recovers once the underlying web session dies — a station restart kills the session, and a fixed HMI panel (no browser chrome, no manual refresh) shows dead values until someone power-cycles it (DashboardPan-ux's own gap, 2.4.2 → 2.4.3). `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1]` The recovery is a watchdog on `lastOkAt` (set only by a successful, validated poll): once `now − lastOkAt` exceeds the recovery window, probe the same origin through `fetchT` and call `location.reload()` (a fresh session, not the stale one) only when the probe returns the APP marker (the data API answers parseable JSON), never on any 200 (a login or error page is also a 200); after a hard ceiling without success (e.g. 10 min) reload unconditionally. A consecutive-failure counter is NOT sufficient: a hung request neither fails nor succeeds, so the counter never advances — one deployed counter-based watchdog recovered ten restarts and froze on the eleventh. `[ev: retro dashboard-frontend-reliability-rules Δ3]` Kit coverage: `toolbelt/lint-spa-poll-no-recovery.sh` WARNs on a poll loop with a catch and no `location.reload(`/`location.href` recovery anywhere in the file, AND on one whose recovery is not keyed on a `lastOk*` timestamp set from a clock and compared (the failure-count or reload-on-error shape).
 - **Fail-visible read path — gate on status AND type; an unlinked or absent point renders "unknown", never a default meaning:** a boolean point is trusted only when `p.st === "ok" && typeof p.v === "boolean"` (numbers likewise); a missing `st` is NOT "ok" (`st = p.st || "ok"` is the anti-pattern). Otherwise render an explicit unknown/degraded state (e.g. a "no data" chip, "Phase --"), additive to — never replacing — a real alarm from a sibling flag. On the rt side, a new link-in indicator slot must itself be fail-visible when unlinked: default its status to null/stale so the reader's existing "no data" path renders, or add an explicit "linked?" probe the dashboard shows; a facade default must equal the SAFE/fallback state, not an arbitrary type default (an ok/`false` default makes a missing commissioning link look like a healthy "no", and an unlinked phase flag look like "phase 2 active"). This is the read-path half of the fail-closed doctrine (RBAC + kiosk recovery are the write/session halves); an unlinked indicator target is a commissioning FAIL row, not a WARN. `[ev: retro comppan-fase2-amps-alarms Δ5]` `[ev: retro comppan-auto-lock-indicator Δ3]`
+- **A device placeholder for "no reading" is shown as "Sin sensor", never as a measurement:** some devices send `0.0`
+  (or another fixed value) when nothing is wired. Declare the exact placeholder pair per device type (e.g. `0.0` for
+  both temperature channels), compare against that exact pair only, and render "Sin sensor" instead of the number. A
+  chart of such a series becomes a one-line note, not a flat line. One value is not a placeholder: a lone `0.0` is a
+  real reading. `[ev: issue #897]` (retro R7 ΔK7)
 
 ## Critical-write step-up auth `[ev: corpus B803]`
 - Niagara ships NO core credential step-up — `Flags.CONFIRM_REQUIRED` is a UX-only confirm; the `electronicSignature` module is the only true sign-before-invoke. Step-up is MODULE-level code. `[ev: corpus B803]`
@@ -396,6 +425,11 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **In the SPA live path, carry `st` per point alongside `v` — render a per-value HEALTH badge:** the reader emits `{v, st}` for every facade slot; the SPA renders a status dot colored by `BStatus` (fault=amber, override=teal, down/stale=grey, alarm=red — B229/B755/B218 palette); include a tooltip on hover/touch; elevate the unit's displayed status to "alarma" when ANY facade slot carries fault, down, stale, or overridden. Dropping `st` from the live path leaves the operator blind to faulted sensors and manual overrides that the HMI would otherwise highlight. `[ev: corpus B1017]`
 
 - **The reusable add-a-tab + wire-data recipe for extending the SPA (no servlet change):** a top-level tab = one `nav-item` + one `<section>` toggled by id (order pages by id, NOT DOM order); render read-only values from the last `/api/equipment` JSON, keyed by ord (`{v,st,nm}`); add a control row via the shared HOA-row helper and append a non-entity segment to the control selector. [ev: retro editing-base64-heavy-spa-and-the-preview-screenshot-pdf-pipeline · U10]
+- **An HMI change to an operator flow lists every surface that renders it, and opens the parity item before the
+  build:** the same flow (a control-mode mark, a blocked-start text, an acknowledge action) can be drawn by the JACE HMI
+  and by the web viewer; a change made on one only reaches the other after an operator asks. The feature doc names each
+  surface (JACE HMI, web viewer, any other client of the same reader) and a parity item per surface, opened before the
+  first write; § RT↔UX↔WB triangle lists the surfaces of a module. `[ev: issue #871]` (retro R1 ΔB9)
 
 ## Config panel UX on a fixed touch panel
 > These build on the `## HMI kiosk` budget below (≥44px targets, no page scroll at 1280×800).
@@ -409,6 +443,11 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 
 - **The 2-column no-scroll rule applies to the Control/HOA panel too — build indivisible group units, not CSS columns over sibling rows:** wrap each group (subheader + rows) in a `.hoa-group` (`break-inside:avoid`) via an `addGroup(fillSub, fillRows)` helper laid out in `grid-template-columns:1fr 1fr`; CSS columns over sibling rows split a header from its rows. [ev: retro hmi-1280x800-control-panel-2col-no-scroll · U2]
 - **A reusable output row must allow custom buttons + a special-cased prefill — don't assume 0/1/2 from a `*Mode` name:** an AUTO/OFF exchanger (AUTO=1/OFF=0) needs `hoaRow(..., {buttons, valueMap})`; a key ending in `Mode` otherwise falls into the generic `["auto","on","off"][ordinal]` prefill and shows the wrong state — special-case its prefill before the generic branch. [ev: retro hmi-1280x800-control-panel-2col-no-scroll · U3]
+- **A lock indicator on a control row never disables its HOA buttons when HOA is a release path:** an automatic
+  protective action (a latch, a lockout) shows its mark on the row (and the reason text), and the operator's HOA
+  buttons stay enabled, because HOA is how the operator clears it. A mark that disables them traps the operator behind
+  the very lock they own. Add a structural test that the mark's code path never sets `disabled` on a HOA button. The
+  design-shard item is `ORCHESTRATION.md` § 3.b item 6. `[ev: issue #870]` (retro R1 ΔB8)
 
 ## Charts on an HMI
 - **Before hand-rolling a chart, use the stock webChart where it fits:** a Px/Hx page or a `lan` view embeds the

@@ -61,6 +61,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   - **HMI:** which browsers/panels, and which versions, display the page?
   - **Write UX:** what does the operator see and do when a write needs a login?
   - **Rollback:** how is a bad version recovered?
+  - **Timed overrides:** until when does a manual value hold when the writable's schedule has no events (the next event of a sibling schedule, an operator-given end time, or refuse)? `[ev: issue #910]`
   [ev: retro behavior-decisions-ask-dont-assume Δ2]
 - [ ] **Site and station data live in one data table, never inline in logic:** room counts, ORDs, IPs, point names,
   defrost types and per-site defaults sit in one named table (a constants class, a `BFacets`/config slot set, or a
