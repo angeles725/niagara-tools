@@ -19,6 +19,8 @@ const (
 	outDirFault        = "scaffold-module: cannot create out-dir: %s\n"
 	destExists         = "scaffold-module: destination already exists: %s\n"
 	stationTestMissing = "scaffold-module: station-test template not found: %s\n"
+	loginMissing       = "scaffold-module: dashboard-login template not found: %s\n"
+	loginAnchor        = "scaffold-module: cannot add the login to %s: %q not found\n"
 	ledgerMissing      = "scaffold-module: version-ledger template not found: %s\n"
 	writeFault         = "scaffold-module: %v\n"
 	interruptedLine    = "scaffold-module: interrupted (%s)\n"

@@ -64,11 +64,23 @@ load lib/scaffold-setup
   [ "$status" -eq 0 ]
 }
 
-@test "TC-DASH1: --type dashboard emits MinimalDash tree byte-equals the bundled fixture (diff -r, minus build/.gradle)" {
+@test "TC-DASH1: --type dashboard emits MinimalDash tree byte-equals the bundled fixture (diff -r, minus build/.gradle, the login overlay and the lines it adds)" {
+  # The login overlay (templates/dashboard-login, tests/scaffold-module-login.bats) adds files to -rt and inserts
+  # lines into five plumbing files: everything else is byte-equal, and an inserted file loses no fixture line.
   run "$SC" MinimalDash "$OUT" --type dashboard --vendor Angeles
   [ "$status" -eq 0 ]
-  run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE "$OUT/MinimalDash" "$FIXTURE_DASH"
+  run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE --exclude=MinimalDash-rt --exclude=MODULE-MAP.md "$OUT/MinimalDash" "$FIXTURE_DASH"
   [ "$status" -eq 0 ]
+  R=MinimalDash-rt
+  run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE --exclude=login --exclude=rc --exclude=BMinimalDashService.java \
+    --exclude=module-include.xml --exclude=module.palette --exclude=module.lexicon --exclude=MinimalDash-rt.gradle.kts \
+    "$OUT/MinimalDash/MinimalDash/$R" "$FIXTURE_DASH/MinimalDash/$R"
+  [ "$status" -eq 0 ]
+  for f in MODULE-MAP.md $R/module-include.xml $R/module.palette $R/module.lexicon $R/MinimalDash-rt.gradle.kts; do
+    run diff "$FIXTURE_DASH/MinimalDash/$f" "$OUT/MinimalDash/MinimalDash/$f"
+    [ "$status" -eq 1 ] || { echo "$f: not changed by the login overlay"; false; }
+    [[ "$output" != *$'\n<'* && "$output" != '<'* ]] || { echo "$f: a fixture line was lost"; echo "$output"; false; }
+  done
 }
 
 @test "TC-DASH3: the emitted -ux servlet overrides only real BWebServlet entry points (never doService(WebOp))" {

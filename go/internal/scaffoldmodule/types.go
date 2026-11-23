@@ -1,7 +1,8 @@
 package scaffoldmodule
 
 // moduleType is one --type: the bundled fixture it copies and the link-in slots of the fixture's
-// component, which the station-test overlay tests ("" = the type gets no overlay). kind is the `type:` line
+// component, which the station-test overlay tests ("" = the type gets no overlay); ownLogin says the type also
+// gets the login overlay (the dashboard: the -rt part carries the station's login page). kind is the `type:` line
 // the fixture's MODULE-MAP.md declares for a module that is not a component module ("" = none); the structure
 // lint exempts such a module from a rule only when its map declares the kind (types/structure.md § Module map).
 type moduleType struct {
@@ -9,13 +10,14 @@ type moduleType struct {
 	fixture     string
 	linkInSlots string
 	kind        string
+	ownLogin    bool // the module ships its own login (templates/dashboard-login, overlay in login.go)
 }
 
 // moduleTypes is the --type table. The driver fixture ships its own loopback station test, so it has no
 // overlay (types/driver-authoring.md § 12.1); the library fixture holds no Java, so it has none either.
 var moduleTypes = []moduleType{
 	{name: "logic", fixture: "MinimalPan", linkInSlots: `"setpoint", "interval"`},
-	{name: "dashboard", fixture: "MinimalDash", linkInSlots: `"setpoint", "status"`},
+	{name: "dashboard", fixture: "MinimalDash", linkInSlots: `"setpoint", "status"`, ownLogin: true},
 	{name: "driver", fixture: "MinimalDriver"},
 	{name: "library", fixture: "MinimalLibrary", kind: "library"},
 }
@@ -58,10 +60,20 @@ const (
 	templateLinkInSlots = "@LINK_IN_SLOTS@"
 )
 
+// Tokens of templates/dashboard-login: the lower-case module name (the dashboard path, the asset prefix) and the
+// palette namespace prefix, besides the station-test ones above.
+const (
+	templateModuleLower = "modulea"
+	templateSym         = "@SYM@"
+)
+
 // Kit paths below <toolbelt>/.. and emitted paths below the destination.
 const (
 	stationTestDir     = "templates/station-test"
 	stationTestProbe   = "moduleTest-include.xml" // the file whose presence says the template is bundled
+	loginDir           = "templates/dashboard-login"
+	loginProbe         = "fragments/module-include.xml" // the file whose presence says the template is bundled
+	loginFragmentDir   = "fragments"
 	ledgerTemplatePath = "templates/VERSION-LEDGER.md"
 	ledgerDest         = "odd/VERSION-LEDGER.md"
 	ledgerSampleRow    = "| <Module> | <x.y.z> |" // a line starting with this is the template's sample row
