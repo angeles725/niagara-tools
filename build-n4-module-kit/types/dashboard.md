@@ -109,7 +109,8 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
   nobody linked holds its type default, and a reader that copies it reports a healthy zero; an average or a "valid
   readings" count then takes it in ("8 of 8 valid readings" with two units unlinked). The reader tests the slot's
   status (a never-linked slot is null/stale), emits `null`, and every consumer of the list (averages, counts, charts)
-  skips a `null`. The SPA half is in § Poll loop reliability (fail-visible read path). `[ev: issue #880]` (retro R3 ΔU20)
+  skips a `null`. The SPA half is in § Poll loop reliability (fail-visible read path). `[ev: issue #880]` (retro R3
+  ΔU20)
 - **Export-servlet dedup — dedup by resolved handle/ord before emitting:** overlapping export sources (a folder-recursive walk + an explicit reference to a nested point, or the same folder twice) double-emit the same point. Deduplicate the resolved set by handle or canonical ORD before serialising to JSON. Observed LIVE: 22 rows for 11 unique points from two overlapping export configs until one was removed. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ9]`
 - **JSON serialization — absent facet as `null`, never the string `"null"`:** `getFacets().gets(UNITS, null)` returns `null` when the facet is absent; feeding that through `String.valueOf()` or string concatenation produces the literal `"null"`. Serialize as JSON `null` (omit the key or write `null` token). Observed LIVE: `"unit":"null"` in exported JSON because a null value traversed `Json.q`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ10]`
 - **Apply the `precision` facet to numeric values in display JSON:** raw `double` values (`47.91333333333334`) are correct for machine consumers but noisy for operator views. Apply `getFacets().geti("precision", 2)` (`BFacets.java:889`; there is no `getInt`) to round numeric values before serialization (e.g. `BigDecimal.setScale(precision, HALF_UP)`). Document this as a deliberate choice in the module: the raw double is always available for machine consumers; the precision-rounded value is for display. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ11]`
@@ -199,7 +200,8 @@ final class SaveDelayPolicy {
   own schedule has no ranges has no "next event" to end at, so it holds forever. Decide it per module and ask when
   unknown: until when does a manual value hold when its schedule has no events? Default: fall back to the next event of
   a sibling schedule of the same entity; with none, ask the operator for an end time or refuse the timed override. A
-  silent permanent override is never the default. It is a question in the behavior catalog (`METHODOLOGY.md` § Domain correctness), asked in BUILD-LOOP §1 before the write path is built.
+  silent permanent override is never the default. It is a question in the behavior catalog (`METHODOLOGY.md` § Domain
+  correctness), asked in BUILD-LOOP §1 before the write path is built.
   `[ev: issue #910]` (retro R9 ΔB2)
 
 ### Reference exemplar (our own module) — DashboardPan-ux `[ev: corpus B796]` [ev: retro campaign7-dashboard-exemplar]
