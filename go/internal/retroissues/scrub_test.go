@@ -124,3 +124,21 @@ func searched(g *fakeGH) bool {
 	}
 	return false
 }
+
+// Without a denylist the dedup still finds a listed issue that describes the same change (review R3-004), and the
+// skipped-search note is printed only when a search was really skipped: --new on every delta searches nothing (R3-003).
+func TestNoDenylistFallbackStillFindsTheListedDuplicate(t *testing.T) {
+	e := newEnv(t)
+	e.denylist += ".missing"
+	e.gh.labeled = issueJSON(30, "OPEN", "mcp-n4: n4_read_slots drops a key", `The n4_read_slots filter loses the key when the slot name is long (go/internal/mcpn4/slots.go)`)
+	code, out, _ := e.run(e.kitRetro("2026-02-01-alpha.md", slotsRetro))
+	if code != 0 || !strings.Contains(out, "probable duplicate of #30 (open)") || strings.Contains(out, "create:") {
+		t.Errorf("exit %d, the listed duplicate was not found:\n%s", code, out)
+	}
+	e2 := newEnv(t)
+	e2.denylist += ".missing"
+	_, out, _ = e2.run("--new", "1", e2.kitRetro("2026-02-01-alpha.md", slotsRetro))
+	if strings.Contains(out, "dedup search skipped") {
+		t.Errorf("no search was due, yet the note says one was skipped:\n%s", out)
+	}
+}

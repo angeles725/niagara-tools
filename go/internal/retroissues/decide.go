@@ -53,10 +53,7 @@ func (a *app) decide(ds []delta) (gs []*group, notes []string, err error) {
 			rest = append(rest, d)
 		}
 	}
-	skipSearch := a.noRules && len(rest) > 0
-	if skipSearch { // terms that cannot be scrubbed never leave the machine
-		notes = append(notes, "dedup search skipped: no denylist on this machine, so no search term is sent to GitHub")
-	}
+	skipSearch, skipped := a.noRules, false // terms that cannot be scrubbed never leave the machine
 	for _, g := range groupDeltas(rest, a.o) {
 		gs = append(gs, g)
 		if r := refusal(a.rules, g); r != "" {
@@ -68,6 +65,7 @@ func (a *app) decide(ds []delta) (gs []*group, notes []string, err error) {
 			continue
 		}
 		if skipSearch {
+			skipped = true
 			a.match(g, a.issues)
 			continue
 		}
@@ -84,6 +82,9 @@ func (a *app) decide(ds []delta) (gs []*group, notes []string, err error) {
 			notes = append(notes, "dedup unchecked: "+serr.Error())
 		}
 		a.match(g, append(append([]retrogh.Issue{}, a.issues...), found...))
+	}
+	if skipped {
+		notes = append(notes, "dedup search skipped: no denylist on this machine, so no search term is sent to GitHub")
 	}
 	return gs, notes, nil
 }
