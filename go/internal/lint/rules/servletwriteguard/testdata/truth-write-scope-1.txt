@@ -1,0 +1,59 @@
+truth: only a component write needs a target check (retro kit-p1-security-guards Δ6). A call that cannot be
+a BComponent write is no write: a one-argument set(v) (AtomicReference, ThreadLocal), a numeric literal first
+argument (JDBC setInt(1, v), List.set(0, x)), and a receiver declared in the file as a PreparedStatement, a
+List, an Atomic*, a Calendar or a ThreadLocal; a file with only those is no "servlet writes" either (no
+no-csrf row). A.java carries each of them by receiver type, C.java by the call alone (receivers of no declared type). B.java carries the writes that stay rows: a component write
+(target.set(p, v, op), setDouble), a receiver of an unknown type, a receiver declared both as a List and as a
+BComponent, a call that spans lines (its argument count is unknown), a plain write on the same line as a
+component write, and invoke(...).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  no-target-permission  @DIR@/m/B.java:5  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/B.java:6  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/B.java:7  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/B.java:9  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/B.java:11  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-target-permission  @DIR@/m/B.java:13  write with no permission check on its target earlier in this method: check target.getPermissions(cx).hasOperatorWrite() (or getPermissionsFor(target), ordTarget.canWrite(), requireTargetWrite) before the write (types/servlet-write.md)
+WARN  no-csrf  @DIR@/m/B.java:1  servlet writes but verifies no CSRF token: call CsrfUtil.verifyCsrfToken(op.getRequest()) before the write, or map CsrfProtectedFilter on its write verbs (types/servlet-write.md)
+-- stderr --
+-- m/A.java --
+public class A extends BWebServlet {
+  private final AtomicReference<String> last = new AtomicReference<>();
+  private final List<String> names = new ArrayList<>();
+  void doGet(WebOp op, PreparedStatement ps, Calendar cal, ThreadLocal<String> tl) throws Exception {
+    ps.setInt(1, 5);
+    ps.setString(2, op.getRequest().getParameter("n"));
+    names.set(0, "x");
+    last.set("v");
+    this.last.set("w");
+    tl.set("t");
+    cal.set(Calendar.HOUR, 3);
+    this.names.set(idx, "y");
+  }
+}
+-- m/B.java --
+public class B extends BWebServlet {
+  private final List<String> items = new ArrayList<>();
+  void doPost(WebOp op) {
+    BComponent items = lookup(op);
+    items.set(p, v, op);
+    target.setDouble(p, 1.5, op);
+    other.set(p, v);
+    List<String> mix = new ArrayList<>();
+    mix.set(i, "a"); target2.set(p, v, op);
+    mix.set(0, "b");
+    cmp.set(
+        p, v, op);
+    target.invoke(action);
+  }
+}
+-- m/C.java --
+public class C extends BWebServlet {
+  void doGet(WebOp op) {
+    stmt.setInt(1, 5);
+    holder.set("v");
+    rows.set(0, x);
+  }
+}
