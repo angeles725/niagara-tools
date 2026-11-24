@@ -1749,6 +1749,45 @@
    "needs_session": true
   },
   {
+   "name": "n4_override_audit",
+   "description": "List the writables that hold an override, in one read-only call (retro R8 delta N7). It reads select slotPath, out, overrideExpiration from control:NumericWritable, BooleanWritable, EnumWritable and StringWritable below base. The active level is only in the out text (\"75.0 {ok} @ 8\"): @ 16 and @ def are no override, @ 8 is a manual override (the override action), @ 1 an emergency override; the other levels are inputs a link or a program writes and are listed only when levels names them. overrides has one entry per such writable, the permanent ones first: {writable (ORD), type, level, kind (emergency, manual or input), out (the out text as the station shows it), expires (overrideExpiration, null when none), permanent (true when it has no expiry: it holds until someone clears it), in16 {linked, source_ord, source_slot, schedule}}: in16 is the link that feeds the writable's lowest input; schedule is the ORD of the schedule it comes from (a schedule:ControlSchedule found by handle) and null when the source is not one, or when schedule handles could not be read (a note says so). counts has writables, overridden, permanent, timed and by_level (every level the out texts show, so a level that is not an override is still counted); counts.permanent 0 proves no override is left without an expiry. A type the station refuses is listed under unreadable and the others are still read; truncated is true when a read was cut at max_writables. Reads only.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "base": {
+      "type": "string",
+      "description": "Slot ORD of the folder to audit, itself and below, e.g. station:|slot:/Drivers (default: the whole station)"
+     },
+     "levels": {
+      "type": "array",
+      "items": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 15
+      },
+      "description": "Active levels listed as overrides (default [1, 8]: emergency and manual). Add a level such as 10 to list the writables a link or a program drives at it",
+      "default": [
+       1,
+       8
+      ]
+     },
+     "max_writables": {
+      "type": "integer",
+      "description": "Most writables read per type",
+      "minimum": 1,
+      "maximum": 20000,
+      "default": 5000
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
    "name": "n4_read_tags",
    "description": "Read the tags of one or more components (ord, or ords: up to 50). Per component: direct tags (metadata slots, as {id, namespace, name, type, value, slot, flags}; the slot name is the escaped id, hs:point is hs$3apoint), tag_groups (each an n:tagGroup relation to a group definition, {group_ord, slot}), direct relations ({id, endpoint_ord, inbound, slot}) and, unless implied is false, the implied tags the station's dictionaries compute ({id, type, value}; a tag group's tags appear here). relations: direct (default), all (adds the implied relations, such as n:parent and n:child) or none. One load per component, plus one session call each for implied tags and implied relations.",
    "inputSchema": {
