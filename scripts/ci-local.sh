@@ -24,7 +24,10 @@
 # --changed runs no step: it runs the pinned shellcheck, the kit's bats lints and gofmt over the files changed
 # against origin/main, or over the commit range --range names (.githooks/pre-push calls it with the pushed
 # range); lib/ci-local-changed.sh. (retro 2026-11-15 coordination-stretch C3) A kit *.md, ledger.d or changelog.d
-# change also runs tests/kit-links.bats on a snapshot of it; lib/ci-local-kitlinks.sh (T25). Its bats not provisioned
+# change also runs tests/kit-links.bats on a snapshot of it; lib/ci-local-kitlinks.sh (T25). A changed go/**/*.go
+# also runs the file-size gate, `go test -count=1 -v ./internal/filesize` from go/ (the whole work tree, as CI's Go
+# job does), prints its `WARN ` lines (a file over 200 lines, never failing) and fails on a file over 300 lines or a
+# baseline-listed file that grew (issue #969). Its bats not provisioned
 # at the ci.yml pin (the download error, or one line when the provisioned bats is not the pinned version), or a git
 # error while detecting the change (one line), exits 3 (T32).
 # The tarballs are cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/ (--cache-dir)
@@ -145,11 +148,30 @@ fi
 
 check_host_budget
 
-# --changed runs no workflow step: the lints of the change, after the same host-budget gate, then kit-links.
+# run_filesize — after run_changed: when a changed file is a go/**/*.go (a `gofmt` row of its plan), run the file-size
+# gate as CI's Go job does and print its WARN lines (go test -v prefixes each t.Log line with file:line). Exit 0 the
+# gate passed or no Go file changed, 1 it failed.
+run_filesize() {
+  grep -q "^gofmt$(printf '\t')" "$WORK/changed.plan" 2>/dev/null || return 0
+  local name="go test ./internal/filesize" out="$WORK/filesize.out" rc=0
+  printf '== %s\n' "$name"
+  (cd "$ROOT/go" && go test -count=1 -v ./internal/filesize) > "$out" 2>&1 || rc=$?
+  sed -n 's/^[[:space:]]*\([^[:space:]]*\.go:[0-9]*: \)\{0,1\}\(WARN .*\)$/\2/p' "$out"
+  if [ "$rc" -eq 0 ]; then printf 'PASS %s\n' "$name"; return 0; fi
+  grep -v -e '^=== ' -e '^--- PASS' -e '^    --- PASS' -e '^PASS$' -e 'WARN ' "$out" || true
+  printf 'FAIL %s (exit %d)\n' "$name" "$rc"
+  printf 'ci-local: --changed: 1 more check failed (the file-size gate)\n'
+  return 1
+}
+
+# --changed runs no workflow step: the lints of the change, after the same host-budget gate, then the file-size
+# gate and kit-links.
 if [ "$CHANGED" -eq 1 ]; then
-  rc=0 kl=0
+  rc=0 fs=0 kl=0
   run_changed || rc=$?
+  run_filesize || fs=$?  # Mutation: CLF1 -- dropping this call lets a 301-line Go file through to CI.
   run_kit_links || kl=$?  # Mutation: CL30 -- dropping this call lets a dangling kit reference through to CI.
+  [ "$fs" -le "$rc" ] || rc=$fs
   exit $((kl > rc ? kl : rc))
 fi
 
