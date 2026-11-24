@@ -7,151 +7,322 @@ import (
 	"testing"
 )
 
+const why = "a reason long enough"
+
+// writeLines writes rel under root with n lines.
 func writeLines(t *testing.T, root, rel string, n int) {
+	t.Helper()
+	writeText(t, root, rel, strings.Repeat("x\n", n))
+}
+
+func writeText(t *testing.T, root, rel, text string) {
 	t.Helper()
 	path := filepath.Join(root, filepath.FromSlash(rel))
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte(strings.Repeat("x\n", n)), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// reasons returns the findings that fail the gate; warns returns the ones that are only reported.
-func reasons(t *testing.T, root string, baseline map[string]int) map[string]string {
+// run checks a tree holding one file a/f.go of n lines against debt (the entry lines, no header) and returns the
+// violations.
+func run(t *testing.T, n int, debt string) []string {
 	t.Helper()
-	return byPath(t, root, baseline, false)
+	root := t.TempDir()
+	writeLines(t, root, "a/f.go", n)
+	return runTree(t, root, debt)
 }
 
-func warns(t *testing.T, root string, baseline map[string]int) map[string]string {
+func runTree(t *testing.T, root, debt string) []string {
 	t.Helper()
-	return byPath(t, root, baseline, true)
-}
-
-func byPath(t *testing.T, root string, baseline map[string]int, warn bool) map[string]string {
-	t.Helper()
-	findings, err := Check(root, baseline)
+	debtPath := filepath.Join(root, DebtFileName)
+	if err := os.WriteFile(debtPath, []byte("# header\n"+debt), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Check(root, debtPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := map[string]string{}
-	for _, f := range findings {
-		if f.Warn == warn {
-			got[f.Path] = f.Reason
+	return r.Violations
+}
+
+// want fails unless got is exactly the messages in exp.
+func want(t *testing.T, got []string, exp ...string) {
+	t.Helper()
+	if len(got) != len(exp) {
+		t.Fatalf("violations = %q, want %q", got, exp)
+	}
+	for i := range exp {
+		if got[i] != exp[i] {
+			t.Fatalf("violation %d =\n%s\nwant\n%s", i, got[i], exp[i])
 		}
 	}
-	return got
 }
 
-func TestAFileOverTheFailLimitThatIsNotListedFails(t *testing.T) {
+const dbt = "go/internal/filesize/modularity-debt.txt"
+
+func TestA200LineFileNeedsNoEntry(t *testing.T) {
+	want(t, run(t, 200, ""))
+}
+
+func TestAnUnlistedFileOver200FailsWithTheLineToAdd(t *testing.T) {
+	want(t, run(t, 201, ""),
+		"a/f.go: 201 lines, over 200 and not listed: split it by responsibility, or add this line to "+dbt+":\n"+
+			"a/f.go 201 accepted <reason>")
+}
+
+func TestAnUnlistedFileOver400CannotBeListed(t *testing.T) {
+	want(t, run(t, 401, ""),
+		"a/f.go: 401 lines, over 400: a file over 400 lines cannot be listed, split it by responsibility. "+
+			"If it is a listed file that moved, change the path on its line instead (same count and kind): that is not a new entry.")
+}
+
+func TestAnAcceptedFileMayStayOrShrinkFreely(t *testing.T) {
+	want(t, run(t, 300, "a/f.go 300 accepted "+why+"\n"))
+	want(t, run(t, 250, "a/f.go 300 accepted "+why+"\n"))
+}
+
+func TestAnAcceptedFileMayGrowOnlyWithItsLineRaised(t *testing.T) {
+	want(t, run(t, 301, "a/f.go 300 accepted "+why+"\n"),
+		"a/f.go: grew from 300 to 301 lines: split it by responsibility, or raise its line in "+dbt+" to:\n"+
+			"a/f.go 301 accepted "+why)
+	want(t, run(t, 301, "a/f.go 301 accepted "+why+"\n"))
+	want(t, run(t, 400, "a/f.go 400 accepted "+why+"\n"))
+}
+
+func TestAnAcceptedFileNeverPassesTheHardLimit(t *testing.T) {
+	want(t, run(t, 401, "a/f.go 401 accepted "+why+"\n"),
+		"modularity-debt.txt:2: an accepted entry may not be above 400 lines (a/f.go 401): split it by responsibility.")
+	want(t, run(t, 401, "a/f.go 400 accepted "+why+"\n"),
+		"a/f.go: grew from 400 to 401 lines and is over 400: a file over 400 lines may not grow, split it by responsibility first.")
+}
+
+func TestALegacyCountOver400IsExact(t *testing.T) {
+	leg := "a/f.go 500 legacy " + why + "\n"
+	want(t, run(t, 500, leg))
+	want(t, run(t, 501, leg),
+		"a/f.go: grew from 500 to 501 lines and is over 400: a file over 400 lines may not grow, split it by responsibility first.")
+	want(t, run(t, 480, leg),
+		"a/f.go: 480 lines, below its recorded 500: a count over 400 is exact, so lower its line in "+dbt+" to:\n"+
+			"a/f.go 480 legacy "+why)
+	want(t, run(t, 390, leg),
+		"a/f.go: 390 lines, below its recorded 500: a count over 400 is exact, so lower its line in "+dbt+" to:\n"+
+			"a/f.go 390 legacy "+why)
+}
+
+func TestALegacyCountOf400OrLessIsACeilingLikeAccepted(t *testing.T) {
+	leg := "a/f.go 300 legacy " + why + "\n"
+	want(t, run(t, 250, leg))
+	want(t, run(t, 300, leg))
+	want(t, run(t, 350, leg),
+		"a/f.go: grew from 300 to 350 lines: split it by responsibility, or raise its line in "+dbt+" to:\n"+
+			"a/f.go 350 legacy "+why)
+	want(t, run(t, 401, leg),
+		"a/f.go: grew from 300 to 401 lines and is over 400: a file over 400 lines may not grow, split it by responsibility first.")
+}
+
+func TestAListedFileAt200OrLessMustDeleteItsLine(t *testing.T) {
+	line := "a/f.go 300 accepted " + why
+	want(t, run(t, 200, line+"\n"),
+		"a/f.go: 200 lines, no longer over 200: delete this line from "+dbt+":\n"+line)
+	want(t, run(t, 10, line+"\n"),
+		"a/f.go: 10 lines, no longer over 200: delete this line from "+dbt+":\n"+line)
+}
+
+func TestAListedPathThatIsNoProductionFileMustBeDeletedOrMoved(t *testing.T) {
 	root := t.TempDir()
-	writeLines(t, root, "a/edge.go", 300)
-	writeLines(t, root, "a/big.go", 301)
-	got := reasons(t, root, nil)
-	if len(got) != 1 || !strings.Contains(got["a/big.go"], "over the limit of 300: split it by responsibility") {
-		t.Fatalf("failing findings = %v, want only a/big.go over the limit", got)
+	writeLines(t, root, "a/ok.go", 10)
+	line := "a/gone.go 300 accepted " + why
+	want(t, runTree(t, root, line+"\n"),
+		"a/gone.go: listed but not a production Go file in this tree. Delete this line from "+dbt+
+			", or, if the file moved, change the path on it (same count and kind, list kept sorted):\n"+line)
+}
+
+func TestABadLineIsReportedAndNeverTakenForAnUnlistedFile(t *testing.T) {
+	const form = `; expected "<path> <lines> <legacy|accepted> <reason of at least 10 characters>", entries sorted by path`
+	for _, c := range []struct{ line, problem string }{
+		{"a/f.go 300 accepted", "malformed line, fewer than four fields"},
+		{"a/f.go many accepted " + why, `"many" is not a positive line count`},
+		{"a/f.go 0 accepted " + why, `"0" is not a positive line count`},
+		{"a/f.go 300 tolerated " + why, `unknown kind "tolerated"`},
+		{"a/f.go 300 accepted short", "reason is shorter than 10 characters"},
+		{"a/f.go 300 accepted <reason>", "replace <reason> with the reason this file is accepted"},
+	} {
+		want(t, run(t, 250, c.line+"\n"), "modularity-debt.txt:2: "+c.problem+form)
 	}
 }
 
-func TestTheWarnBandStartsAbove200AndNeverFails(t *testing.T) {
+func TestUnsortedAndDuplicateLinesFail(t *testing.T) {
 	root := t.TempDir()
-	writeLines(t, root, "a/ok.go", 200)
-	writeLines(t, root, "a/warn_low.go", 201)
-	writeLines(t, root, "a/warn_high.go", 300)
-	if got := reasons(t, root, nil); len(got) != 0 {
-		t.Fatalf("failing findings = %v, want none for 200, 201 and 300 lines", got)
-	}
-	got := warns(t, root, nil)
-	if len(got) != 2 || got["a/warn_low.go"] == "" || got["a/warn_high.go"] == "" {
-		t.Fatalf("warnings = %v, want a/warn_low.go and a/warn_high.go only", got)
-	}
-	if !strings.Contains(got["a/warn_low.go"], "split by responsibility") {
-		t.Fatalf("warning = %q, want the split-by-responsibility advice", got["a/warn_low.go"])
-	}
+	writeLines(t, root, "a/b.go", 250)
+	writeLines(t, root, "a/c.go", 250)
+	const form = `; expected "<path> <lines> <legacy|accepted> <reason of at least 10 characters>", entries sorted by path`
+	got := runTree(t, root, "a/c.go 250 accepted "+why+"\na/b.go 250 accepted "+why+"\n")
+	want(t, got, "modularity-debt.txt:3: a/b.go is not after a/c.go (unsorted)"+form)
+	got = runTree(t, root, "a/b.go 250 accepted "+why+"\na/b.go 250 accepted "+why+"\na/c.go 250 accepted "+why+"\n")
+	want(t, got, "modularity-debt.txt:3: duplicate path a/b.go"+form)
 }
 
-func TestAFileOver300IsAFailureNotAWarning(t *testing.T) {
+func TestSortingIsByBytesNotByLocale(t *testing.T) {
 	root := t.TempDir()
-	writeLines(t, root, "a/big.go", 301)
-	if got := warns(t, root, nil); len(got) != 0 {
-		t.Fatalf("warnings = %v, want none: a file over 300 fails instead", got)
-	}
+	writeLines(t, root, "B/x.go", 250)
+	writeLines(t, root, "a/x.go", 250)
+	want(t, runTree(t, root, "B/x.go 250 accepted "+why+"\na/x.go 250 accepted "+why+"\n"))
 }
 
-func TestAListedFileGetsNoWarning(t *testing.T) {
+func TestAGeneratedFileIsExemptButOnlyBeforeThePackageClause(t *testing.T) {
 	root := t.TempDir()
-	writeLines(t, root, "listed.go", 250)
-	if got := warns(t, root, map[string]int{"listed.go": 300}); len(got) != 0 {
-		t.Fatalf("warnings = %v, want none for a baseline-listed file", got)
-	}
+	body := strings.Repeat("// x\n", 300)
+	writeText(t, root, "a/gen.go", "// Code generated by tool. DO NOT EDIT.\n\npackage a\n"+body)
+	writeText(t, root, "a/late.go", "package a\n// Code generated by tool. DO NOT EDIT.\n"+body)
+	writeLines(t, root, "a/ok.go", 10)
+	want(t, runTree(t, root, ""),
+		"a/late.go: 302 lines, over 200 and not listed: split it by responsibility, or add this line to "+dbt+":\n"+
+			"a/late.go 302 accepted <reason>")
 }
 
-func TestAListedFileMayStayOrShrinkButNotGrow(t *testing.T) {
-	root := t.TempDir()
-	writeLines(t, root, "same.go", 300)
-	writeLines(t, root, "shrunk.go", 250)
-	writeLines(t, root, "grew.go", 301)
-	got := reasons(t, root, map[string]int{"same.go": 300, "shrunk.go": 300, "grew.go": 300})
-	if len(got) != 1 || !strings.Contains(got["grew.go"], "grew from its recorded 300 lines to 301") {
-		t.Fatalf("findings = %v, want only grew.go", got)
-	}
-}
-
-func TestAStaleBaselineLineIsAFinding(t *testing.T) {
-	root := t.TempDir()
-	writeLines(t, root, "fixed.go", 200)
-	writeLines(t, root, "fixed201.go", 201)
-	got := reasons(t, root, map[string]int{"fixed.go": 300, "fixed201.go": 300, "gone.go": 300})
-	if _, stale := got["fixed201.go"]; stale {
-		t.Fatalf("findings = %v, want a listed 201-line file left alone", got)
-	}
-	if !strings.Contains(got["fixed.go"], "within the limit") || !strings.Contains(got["gone.go"], "no longer exists") {
-		t.Fatalf("findings = %v, want fixed.go and gone.go reported as stale", got)
-	}
-}
-
-func TestTestFilesTestdataAndBinAreNotMeasured(t *testing.T) {
+func TestTestsTestdataAndIgnoredPathsAreNotMeasured(t *testing.T) {
 	root := t.TempDir()
 	writeLines(t, root, "a/big_test.go", 900)
 	writeLines(t, root, "a/testdata/big.go", 900)
 	writeLines(t, root, "bin/big.go", 900)
+	writeLines(t, root, "a/_draft/big.go", 900)
+	writeLines(t, root, "a/.hidden/big.go", 900)
+	writeLines(t, root, "a/_big.go", 900)
 	writeLines(t, root, "a/notgo.txt", 900)
-	if got := reasons(t, root, nil); len(got) != 0 {
-		t.Fatalf("findings = %v, want none", got)
+	writeLines(t, root, "a/ok.go", 10)
+	want(t, runTree(t, root, ""))
+}
+
+func TestAMissingDebtFileOrAnEmptyTreeIsAnErrorNotAPass(t *testing.T) {
+	root := t.TempDir()
+	writeLines(t, root, "a/ok.go", 10)
+	if _, err := Check(root, filepath.Join(root, "nope.txt")); err == nil {
+		t.Fatal("a missing debt file passed")
+	}
+	empty := t.TempDir()
+	debt := filepath.Join(empty, DebtFileName)
+	if err := os.WriteFile(debt, []byte("# x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Check(empty, debt); err == nil {
+		t.Fatal("a tree with no production Go file passed")
 	}
 }
 
-func TestABaselineLineThatIsNotLinesThenPathIsAnError(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "baseline.txt")
-	if err := os.WriteFile(path, []byte("# comment\n\n300 a.go\nnot-a-number b.go\n"), 0o644); err != nil {
+func TestTheResultSaysWhatWasLookedAt(t *testing.T) {
+	root := t.TempDir()
+	writeLines(t, root, "a/ok.go", 10)
+	writeLines(t, root, "a/big.go", 250)
+	writeText(t, root, "a/gen.go", "// Code generated by x. DO NOT EDIT.\npackage a\n")
+	debt := filepath.Join(root, DebtFileName)
+	if err := os.WriteFile(debt, []byte("a/big.go 250 accepted "+why+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ReadBaseline(path); err == nil || !strings.Contains(err.Error(), "baseline.txt:4") {
-		t.Fatalf("err = %v, want a parse error naming line 4", err)
+	r, err := Check(root, debt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Scanned != 2 || r.Generated != 1 || r.Over != 1 || r.Entries != 1 || len(r.Violations) != 0 {
+		t.Fatalf("result = %+v, want scanned 2, generated 1, over 1, entries 1, no violation", r)
 	}
 }
 
-// TestTheGoTreeKeepsItsFilesSmall is the gate: it measures this repository's go/ tree against baseline.txt.
-func TestTheGoTreeKeepsItsFilesSmall(t *testing.T) {
-	baseline, err := ReadBaseline("baseline.txt")
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	findings, err := Check(filepath.Join("..", ".."), baseline)
-	if err != nil {
+	return string(b)
+}
+
+func TestUpdateLowersCountsAndDeletesLinesOfFilesThatAreGoneOrSmall(t *testing.T) {
+	root := t.TempDir()
+	writeLines(t, root, "a/exact.go", 500)
+	writeLines(t, root, "a/shrunk.go", 480)
+	writeLines(t, root, "a/ceiling.go", 250)
+	writeLines(t, root, "a/small.go", 200)
+	writeLines(t, root, "a/grew.go", 350)
+	debt := filepath.Join(root, DebtFileName)
+	in := "# header\n\n" +
+		"a/ceiling.go 300 accepted " + why + "\n" +
+		"a/exact.go 500 legacy " + why + "\n" +
+		"a/gone.go 300 accepted " + why + "\n" +
+		"a/grew.go 300 accepted " + why + "\n" +
+		"a/shrunk.go 500 legacy " + why + "\n" +
+		"a/small.go 300 accepted " + why + "\n" +
+		"a/bad.go 5 nonsense " + why + "\n"
+	if err := os.WriteFile(debt, []byte(in), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	failed := 0
-	for _, f := range findings {
-		if f.Warn {
-			t.Logf("WARN %s %s", f.Path, f.Reason)
-			continue
+	changed, err := Update(root, debt)
+	if err != nil || !changed {
+		t.Fatalf("Update = %v, %v, want a rewrite", changed, err)
+	}
+	out := "# header\n\n" +
+		"a/ceiling.go 250 accepted " + why + "\n" +
+		"a/exact.go 500 legacy " + why + "\n" +
+		"a/grew.go 300 accepted " + why + "\n" +
+		"a/shrunk.go 480 legacy " + why + "\n" +
+		"a/bad.go 5 nonsense " + why + "\n"
+	if got := readFile(t, debt); got != out {
+		t.Fatalf("debt after update =\n%s\nwant\n%s", got, out)
+	}
+	if changed, err := Update(root, debt); err != nil || changed {
+		t.Fatalf("a second Update = %v, %v, want no rewrite", changed, err)
+	}
+}
+
+func TestUpdateOnlyRunsWhenTheRequestIsExactly1(t *testing.T) {
+	root := t.TempDir()
+	writeLines(t, root, "a/f.go", 250)
+	debt := filepath.Join(root, DebtFileName)
+	in := "a/f.go 300 accepted " + why + "\n"
+	if err := os.WriteFile(debt, []byte(in), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, req := range []string{"", "0", "true", "yes", "11"} {
+		if changed, err := UpdateIfRequested(req, root, debt); err != nil || changed {
+			t.Fatalf("request %q: %v, %v, want nothing written", req, changed, err)
 		}
-		failed++
-		t.Errorf("%s %s", f.Path, f.Reason)
 	}
-	if failed > 0 {
+	if readFile(t, debt) != in {
+		t.Fatal("the debt file changed without a request of exactly 1")
+	}
+	if changed, err := UpdateIfRequested("1", root, debt); err != nil || !changed {
+		t.Fatalf("request 1: %v, %v, want a rewrite", changed, err)
+	}
+	if got := readFile(t, debt); got != "a/f.go 250 accepted "+why+"\n" {
+		t.Fatalf("debt = %q", got)
+	}
+}
+
+// TestTheGoTreeKeepsItsFilesSmall is the gate: it measures this repository's go/ tree against modularity-debt.txt.
+// With NT_FILESIZE_UPDATE=1 it first lowers or deletes stale lines (never raising a count or adding an entry).
+func TestTheGoTreeKeepsItsFilesSmall(t *testing.T) {
+	root := filepath.Join("..", "..")
+	debt := DebtFileName
+	changed, err := UpdateIfRequested(os.Getenv(UpdateEnv), root, debt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed {
+		t.Logf("update mode: %s was rewritten", DebtFileName)
+	}
+	r, err := Check(root, debt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range r.Violations {
+		t.Error(v)
+	}
+	if len(r.Violations) > 0 {
 		t.Log("the rule and how to fix a finding: go/internal/filesize/filesize.go and go/README.md")
+	}
+	if r.Scanned == 0 {
+		t.Fatal("scanned no file")
 	}
 }

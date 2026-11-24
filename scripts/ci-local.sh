@@ -27,9 +27,10 @@
 # change also runs tests/kit-links.bats on a snapshot of it; lib/ci-local-kitlinks.sh (T25). Its bats not provisioned
 # at the ci.yml pin (the download error, or one line when the provisioned bats is not the pinned version), or a git
 # error while detecting the change (one line), exits 3 (T32). A changed go/**/*.go
-# also runs the file-size gate, `go test -count=1 -v ./internal/filesize` from go/ (the whole work tree, as CI's Go
-# job does), prints its `WARN ` lines (a file over 200 lines, never failing) and fails on a file over 300 lines or a
-# baseline-listed file that grew (issue #969).
+# also runs the file-size gate, `go test -count=1 ./internal/filesize` from go/ (the whole work tree, as CI's Go
+# job does) and fails, printing the exact debt-list line to add, raise, lower or delete, when a production Go file over
+# 200 lines is not in go/internal/filesize/modularity-debt.txt, grew past its recorded count or past 400 lines, or a
+# listed file is at 200 lines or less (issues #969, the research-sdd debt-list model).
 # The tarballs are cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/ (--cache-dir)
 # and their sha256 is checked on every use; never installed system-wide, never sudo.
 #
@@ -149,16 +150,15 @@ fi
 check_host_budget
 
 # run_filesize — after run_changed: when a changed file is a go/**/*.go (a `gofmt` row of its plan), run the file-size
-# gate as CI's Go job does and print its WARN lines (go test -v prefixes each t.Log line with file:line). Exit 0 the
-# gate passed or no Go file changed, 1 it failed.
+# gate as CI's Go job does. Its messages (the debt-list line to add, raise, lower or delete) are the failing test's
+# output. Exit 0 the gate passed or no Go file changed, 1 it failed.
 run_filesize() {
   grep -q "^gofmt$(printf '\t')" "$WORK/changed.plan" 2>/dev/null || return 0
   local name="go test ./internal/filesize" out="$WORK/filesize.out" rc=0
   printf '== %s\n' "$name"
-  (cd "$ROOT/go" && go test -count=1 -v ./internal/filesize) > "$out" 2>&1 || rc=$?
-  sed -n 's/^[[:space:]]*\([^[:space:]]*\.go:[0-9]*: \)\{0,1\}\(WARN .*\)$/\2/p' "$out"
+  (cd "$ROOT/go" && go test -count=1 ./internal/filesize) > "$out" 2>&1 || rc=$?
   if [ "$rc" -eq 0 ]; then printf 'PASS %s\n' "$name"; return 0; fi
-  grep -v -e '^=== ' -e '^--- PASS' -e '^    --- PASS' -e '^PASS$' -e 'WARN ' "$out" || true
+  cat "$out"
   printf 'FAIL %s (exit %d)\n' "$name" "$rc"
   printf 'ci-local: --changed: 1 more check failed (the file-size gate)\n'
   return 1
@@ -169,7 +169,7 @@ run_filesize() {
 if [ "$CHANGED" -eq 1 ]; then
   rc=0 fs=0 kl=0
   run_changed || rc=$?
-  run_filesize || fs=$?  # Mutation: CLF1 -- dropping this call lets a 301-line Go file through to CI.
+  run_filesize || fs=$?  # Mutation: CLF1 -- dropping this call lets an unlisted 201-line Go file through to CI.
   run_kit_links || kl=$?  # Mutation: CL30 -- dropping this call lets a dangling kit reference through to CI.
   [ "$fs" -le "$rc" ] || rc=$fs
   exit $((kl > rc ? kl : rc))
