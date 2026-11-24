@@ -349,6 +349,11 @@ allow marker goes on its line 1) `[ev: retro modularity-gaps Δ3]`.
 reliability). Doctrine: reload only when the station still answers HTTP, and keep polling on network loss. A poll file
 may call a probe-then-reload helper (a name holding `probe` and `reload`, e.g. `probeThenReload()`) in place of a bare
 `location.reload()`; the lint takes that call as the recovery, and it still needs the `lastOk*` key.
+A poll whose catch swallows the failure and then stamps `lastOk*` after the try/catch (a block `catch` or a promise
+`.catch(handler)` that neither throws nor returns, followed in the same block by an unconditional `lastOk* = Date.now()`)
+is a FAIL, not a WARN: the failed poll is stamped as a success, so the watchdog never sees it. Stamp `lastOk*` only on the
+validated success path (inside the try or the then-handler), or rethrow/return from the catch. A tick that swallows in
+another file is not seen by the lint; make the tick throw on failure.
 `[ev: issue #895]` `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
 `[ev: retro dashboard-frontend-standard Δ5]` `[ev: retro dashboard-rc-file-split Δ6]`
 

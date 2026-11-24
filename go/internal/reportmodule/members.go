@@ -92,7 +92,7 @@ var perArtifact = []member{
 	{script: "lint-se-display", suffix: "-se", f: failOnly, v: rows},
 	{script: "lint-jasmine-ux", suffix: "-ux", in: inArtifact, f: filter{sel: "WARN", mode: nosite}},
 	{script: "lint-wb-external-ord-value", suffix: "-wb", f: warnOnly},
-	{script: "lint-spa-poll-no-recovery", suffix: "-ux", in: inRc, f: warnOnly},
+	{script: "lint-spa-poll-no-recovery", suffix: "-ux", in: inRc, f: failWarn},
 	{script: "lint-subscribe-without-unsubscribe", suffix: "-rt", f: warnOnly},
 	{script: "lint-recovery-path", suffix: "-rt", f: failOnly, v: rows},
 	{script: "lint-config-sanity", suffix: "-rt", f: failWarn, v: failRows},

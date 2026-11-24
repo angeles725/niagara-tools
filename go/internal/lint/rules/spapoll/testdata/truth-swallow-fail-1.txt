@@ -1,0 +1,81 @@
+declared difference (issue #895, FAIL half): a poll fn whose catch path falls through to a lastOk* clock stamp that
+follows the try/catch (a/b: the failure is swallowed, so the success-time watchdog never sees it) is a FAIL row. A
+catch that rethrows or returns (c, d) and a stamp inside the try (e) are clean. f keeps its no-recovery WARN and adds the
+FAIL.
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-spa-poll-no-recovery  @DIR@/a-block.js:11  setInterval/setTimeout poll loop 'poll()' swallows a failure: its catch path neither rethrows nor returns and falls through to a lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return), or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)
+FAIL  lint-spa-poll-no-recovery  @DIR@/b-promise.js:7  setInterval/setTimeout poll loop 'poll()' swallows a failure: its catch path neither rethrows nor returns and falls through to a lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return), or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)
+WARN  lint-spa-poll-no-recovery  @DIR@/f-no-recovery.js:9  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+FAIL  lint-spa-poll-no-recovery  @DIR@/f-no-recovery.js:9  setInterval/setTimeout poll loop 'poll()' swallows a failure: its catch path neither rethrows nor returns and falls through to a lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return), or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)
+-- stderr --
+-- a-block.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- b-promise.js --
+let lastOkAt = 0;
+async function poll() {
+  await load().catch(e => paint("error"));
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- c-rethrow.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+    throw err;
+  }
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- d-return.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+    return;
+  }
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- e-success-path.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+    lastOkAt = Date.now();
+  } catch (err) {
+    paint("error");
+  }
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- f-no-recovery.js --
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  lastOkAt = Date.now();
+}
+setTimeout(poll, 5000);

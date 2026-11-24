@@ -2,7 +2,8 @@
 // setTimeout(<name>, ...) of a .html/.js file) whose function has a catch path WARNs when the file has no
 // location.reload(/location.href recovery (or a call to a probe-then-reload helper), or when that recovery is
 // not keyed on the time since the last success (a lastOk* timestamp set from a clock in the poll body and
-// compared). Port of the awk in toolbelt/lint-spa-poll-no-recovery.sh (the wrapper keeps the user-facing contract
+// compared). Over that, a poll whose catch path swallows the failure and falls through to a lastOk* stamp is a
+// FAIL (issue #895: the success-time watchdog never sees the failure). Port of the awk in toolbelt/lint-spa-poll-no-recovery.sh (the wrapper keeps the user-facing contract
 // and its header documents the rule and its mutation pins).
 package spapoll
 
@@ -61,9 +62,19 @@ var (
 // helperCall is a call to a probe-then-reload helper (a name holding "probe" and "reload", e.g. probeThenReload(),
 // reloadAfterProbe()): it reloads only when the station still answers, so it is the recovery as a bare reload is.
 var (
+	catchWord   = rx(`catch[[:space:]]*[({]`)
+	rethrows    = rx(`(^|[^A-Za-z0-9_$])(throw|return)([^A-Za-z0-9_$]|$)`)
+	conditional = rx(`(^|[^A-Za-z0-9_$])(if|else|while|for|switch|return|throw)([^A-Za-z0-9_$]|$)|\?|&&|\|\|`)
+)
+
+var (
 	helperCall = rx(`(?i)(probe[A-Za-z0-9_]*reload|reload[A-Za-z0-9_]*probe)[A-Za-z0-9_]*[[:space:]]*\(`)
 	fnKeyword  = rx(`function[[:space:]]+$`)
 )
+
+const tailSwallowed = " swallows a failure: its catch path neither rethrows nor returns and falls through to a" +
+	" lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return)," +
+	" or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)"
 
 const (
 	tailNoRecovery = " has a catch path with no location.reload(/location.href recovery anywhere in the file --" +
@@ -101,6 +112,15 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		return nil, nil
 	}
 	prefix := "setInterval/setTimeout poll loop '" + fn + "()'"
+	out := checkRecovery(lines, prefix, call, decl, end)
+	if swallowsThenStamps(strings.Join(lines[decl:end+1], "\n")) {
+		out = append(out, lint.Finding{Severity: lint.Fail, Line: call + 1, Msg: prefix + tailSwallowed})
+	}
+	return out, nil
+}
+
+// checkRecovery is the WARN half: the file's recovery is missing or not keyed on the last success.
+func checkRecovery(lines []string, prefix string, call, decl, end int) []lint.Finding {
 	recovery := false
 	for _, ln := range lines {
 		if reload.MatchString(ln) || hrefSet.MatchString(ln) || callsHelper(ln) {
@@ -109,7 +129,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 	if !recovery {
-		return []lint.Finding{{Line: call + 1, Msg: prefix + tailNoRecovery}}, nil
+		return []lint.Finding{{Line: call + 1, Msg: prefix + tailNoRecovery}}
 	}
 	set, read := false, false
 	for i, ln := range lines {
@@ -117,9 +137,75 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		read = read || okMinus.MatchString(ln) || okCompare.MatchString(ln)
 	}
 	if set && read {
-		return nil, nil
+		return nil
 	}
-	return []lint.Finding{{Line: call + 1, Msg: prefix + tailNotKeyed}}, nil
+	return []lint.Finding{{Line: call + 1, Msg: prefix + tailNotKeyed}}
+}
+
+// swallowsThenStamps: the poll body catches a failure without rethrowing or returning, and an unconditional
+// lastOk* clock stamp follows that catch in the same block, so the failure reaches the stamp as a success. A
+// block catch (`try {..} catch (e) {..}`) and a promise catch (`.catch(handler)`) are read alike. A stamp inside
+// the try or the then-handler (before the catch), or one behind an if/?:/&&/||/return/throw, is not this shape.
+func swallowsThenStamps(b string) bool {
+	depth := make([]int, len(b)+1) // brace depth before each byte
+	for i := 0; i < len(b); i++ {
+		depth[i+1] = depth[i]
+		switch b[i] {
+		case '{':
+			depth[i+1]++
+		case '}':
+			depth[i+1]--
+		}
+	}
+	for _, at := range catchWord.FindAllStringIndex(b, -1) {
+		start := at[0]
+		end := start + len("catch") // just past the keyword
+		var handler string
+		if start > 0 && b[start-1] == '.' {
+			stop := matching(b, end, '(', ')')
+			if stop < 0 {
+				continue
+			}
+			handler, end = b[end:stop], stop
+		} else {
+			open := strings.IndexByte(b[end:], '{')
+			if open < 0 {
+				continue
+			}
+			stop := matching(b, end+open, '{', '}')
+			if stop < 0 {
+				continue
+			}
+			handler, end = b[end+open:stop], stop
+		}
+		if rethrows.MatchString(handler) {
+			continue
+		}
+		for _, m := range okSet.FindAllStringIndex(b[end:], -1) {
+			p := end + m[0]
+			if depth[p] == depth[start] && !conditional.MatchString(b[end:p]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// matching is the index of the byte that closes the open byte found at or after from (len(b) bound), or -1.
+func matching(b string, from int, open, shut byte) int {
+	level := 0
+	for i := from; i < len(b); i++ {
+		switch b[i] {
+		case open:
+			level++
+		case shut:
+			level--
+			if level == 0 {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 // callsHelper: ln calls a probe-then-reload helper; `function probeThenReload(` declares one and is no call.
