@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded 2026-11-24 · kit 0f611c8 -->
 <!-- Marker lifecycle: the maintainer flips 'pending' above to 'folded <date> · kit <sha>' once the proposed deltas are reviewed and applied (or dismissed) in the kit. This retro only PROPOSES; kit changes are human-reviewed and human-committed. -->
 # Retro — lab station 4.15 · 2026-11-02 · mcp-n4 session: live write-path check of a client dashboard module
 
@@ -47,3 +47,6 @@
 
 - A live check that adds temporary links (masks on in10) removes them in a `finally` block; one crash left a link behind until a manual rollback.
 - Put the station in a known state through the kit before an API suite and verify the same state at the end.
+
+**Status**: FOLDED 2026-11-24 — the 15 open deltas (Δ3, Δ4, Δ5, Δ7, Δ8, Δ9, Δ10, Δ11, Δ13, Δ14, Δ16, Δ17, Δ18, Δ20, Δ21) are tracked
+as one grouped issue, #985; Δ1, Δ2, Δ6, Δ12 and Δ15 landed, Δ19 is evidence only.

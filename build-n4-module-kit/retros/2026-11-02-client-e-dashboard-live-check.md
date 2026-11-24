@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded 2026-11-24 · kit 0f611c8 -->
 <!-- module: kit -->
 <!-- deltas: 35 -->
 # 2026-11-02 · kit · client-e-dashboard-live-check
@@ -62,4 +62,4 @@ The dashboard's write paths (numeric setpoints, VAV cross-checked limits, AHU re
 - Official docs can add field risks a live fixture never shows (min-on/min-off timers); read the point-type guide before trusting a pulse design.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-02-client-e-dashboard-live-check.md | kit | 2026-11-02 | pending | 35 |`
+**Status**: FOLDED 2026-11-24 — the 35 open deltas are tracked as one grouped issue, #986. INDEX row: `| 2026-11-02-client-e-dashboard-live-check.md | kit | 2026-11-02 | folded | 35 |`
