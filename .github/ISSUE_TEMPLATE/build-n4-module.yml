@@ -1,0 +1,23 @@
+name: build-n4-module
+description: A bug, gap or improvement in the build-n4-module kit (METHODOLOGY, toolbelt, scripts, CI)
+labels: ["area:build-n4-module"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+      description: One problem per issue. Name the file, check or script (for example `toolbelt/lint-size.sh`) and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: The command and its output, the test that fails, or the retro delta (`retro <stem> Δ<id>`). Anonymize station names, hosts and credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed fix or decision needed
+      description: Optional. A review advisory that needs a decision, changes a contract or is bigger than its PR also gets the `follow-up` label.
