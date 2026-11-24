@@ -103,6 +103,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_semantic_export"] = t.SemanticExport
 	s.Handlers["n4_list_tag_dictionaries"] = t.ListTagDictionaries
 	s.Handlers["n4_tag_coverage"] = t.TagCoverage
+	s.Handlers["n4_list_templates"] = t.ListTemplates
 }
 
 func toolError(format string, a ...any) error {
