@@ -329,3 +329,26 @@ JEOF
   run "$SPR" "$d"
   [[ "$output" == *"a.js:2"*"no location.reload("* ]]
 }
+
+# Issue #895 (FAIL half): a poll whose catch path swallows the failure and then stamps lastOk* defeats the
+# success-time watchdog -- the watchdog never sees the failure -- so it is a FAIL, not a WARN.
+@test "SPR17: a poll catch that falls through to a lastOk* stamp FAILs (exit 1, no --strict needed); rethrow, return or a stamp inside the try is clean (issue #895)" {
+  # Mutation: SPR17 -- not reading the catch fall-through takes a swallowed failure for a success and passes clean
+  d="$TMPDIR_T/Mod/src/rc"
+  printf 'let lastOkAt = 0;\nasync function poll() {\n  try { await load(); } catch (e) { paint("error"); }\n  lastOkAt = Date.now();\n  if (Date.now() - lastOkAt > 3e4) location.reload();\n}\nsetTimeout(poll, 5000);\n' > "$d/a.js"
+  run "$SPR" "$d"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  lint-spa-poll-no-recovery  $d/a.js:7  "*"swallows a failure"* ]]
+  printf 'let lastOkAt = 0;\nasync function poll() {\n  await load().catch(e => paint("error"));\n  lastOkAt = Date.now();\n  if (Date.now() - lastOkAt > 3e4) location.reload();\n}\nsetTimeout(poll, 5000);\n' > "$d/a.js"
+  run "$SPR" "$d"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"a.js:7"*"swallows a failure"* ]]
+  printf 'let lastOkAt = 0;\nasync function poll() {\n  try { await load(); } catch (e) { paint("error"); throw e; }\n  lastOkAt = Date.now();\n  if (Date.now() - lastOkAt > 3e4) location.reload();\n}\nsetTimeout(poll, 5000);\n' > "$d/a.js"
+  run "$SPR" --strict "$d"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  printf 'let lastOkAt = 0;\nasync function poll() {\n  try { await load(); lastOkAt = Date.now(); } catch (e) { paint("error"); }\n  if (Date.now() - lastOkAt > 3e4) location.reload();\n}\nsetTimeout(poll, 5000);\n' > "$d/a.js"
+  run "$SPR" --strict "$d"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

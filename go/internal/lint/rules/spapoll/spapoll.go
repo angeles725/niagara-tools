@@ -2,7 +2,8 @@
 // setTimeout(<name>, ...) of a .html/.js file) whose function has a catch path WARNs when the file has no
 // location.reload(/location.href recovery (or a call to a probe-then-reload helper), or when that recovery is
 // not keyed on the time since the last success (a lastOk* timestamp set from a clock in the poll body and
-// compared). Port of the awk in toolbelt/lint-spa-poll-no-recovery.sh (the wrapper keeps the user-facing contract
+// compared). Over that, a poll whose catch path swallows the failure and falls through to a lastOk* stamp is a
+// FAIL (issue #895: the success-time watchdog never sees the failure). Port of the awk in toolbelt/lint-spa-poll-no-recovery.sh (the wrapper keeps the user-facing contract
 // and its header documents the rule and its mutation pins).
 package spapoll
 
@@ -101,25 +102,11 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		return nil, nil
 	}
 	prefix := "setInterval/setTimeout poll loop '" + fn + "()'"
-	recovery := false
-	for _, ln := range lines {
-		if reload.MatchString(ln) || hrefSet.MatchString(ln) || callsHelper(ln) {
-			recovery = true
-			break
-		}
+	out := checkRecovery(lines, prefix, call, decl, end)
+	if swallowsThenStamps(strings.Join(lines[decl:end+1], "\n")) {
+		out = append(out, lint.Finding{Severity: lint.Fail, Line: call + 1, Msg: prefix + tailSwallowed})
 	}
-	if !recovery {
-		return []lint.Finding{{Line: call + 1, Msg: prefix + tailNoRecovery}}, nil
-	}
-	set, read := false, false
-	for i, ln := range lines {
-		set = set || i >= decl && i <= end && okSet.MatchString(ln)
-		read = read || okMinus.MatchString(ln) || okCompare.MatchString(ln)
-	}
-	if set && read {
-		return nil, nil
-	}
-	return []lint.Finding{{Line: call + 1, Msg: prefix + tailNotKeyed}}, nil
+	return out, nil
 }
 
 // callsHelper: ln calls a probe-then-reload helper; `function probeThenReload(` declares one and is no call.

@@ -28,14 +28,24 @@
 #        `performance.now()`, `new Date`) INSIDE the poll fn body (the success path; a timestamp
 #        set only at load is not a success time) AND read in a subtraction/comparison
 #        (`- lastOkAt`, `lastOkAt <`/`>`) ANYWHERE in the file.
-#   Rows (WARN at the setInterval/setTimeout call line):
-#     no 3        -> "... no location.reload(/location.href recovery anywhere in the file ..."
-#     3 but no 4  -> "... recovery is not keyed on time since the last success ..."
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+#     5. swallowed failure (FAIL, issue #895): inside the poll fn body a catch -- a `catch (e) {..}` block or a
+#        `.catch(handler)` -- that neither throws nor returns, followed in the same block by an unconditional
+#        `lastOk* = <clock>` stamp (not behind an if / ?: / && / || / return / throw), so a failed poll reaches
+#        the stamp as if it had succeeded and the success-time watchdog of 4 never sees the failure. Rethrow in
+#        the catch (or return from it), or stamp lastOk* inside the try / the then-handler, so only a validated
+#        success stamps it.
+#   Rows (at the setInterval/setTimeout call line):
+#     WARN  no 3        -> "... no location.reload(/location.href recovery anywhere in the file ..."
+#     WARN  3 but no 4  -> "... recovery is not keyed on time since the last success ..."
+#     FAIL  5           -> "... swallows a failure: its catch path neither rethrows nor returns and falls through
+#                          to a lastOk* clock stamp ..." (after the WARN row of the same file, if any)
+#   Exit: 0  no WARN/FAIL (or WARN without --strict) · 1  any FAIL (with or without --strict), or any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 #
 # Known limitations (advisory heuristic): file-wide co-occurrence (a reload button elsewhere plus a
 # lastOk* timestamp suppresses the WARN — false-NEGATIVE bias); only the FIRST interval/timeout call
-# per file is checked; a success timestamp not named lastOk* (e.g. `lastSuccessAt`) is a false
+# per file is checked; the swallowed-failure FAIL reads the poll fn body alone: a tick that swallows a failure in
+# ANOTHER file or function the poll calls (`await tick()`, where tick catches and returns false) is not seen --
+# make the tick throw on failure (the poll's own catch then marks it); a success timestamp not named lastOk* (e.g. `lastSuccessAt`) is a false
 # positive — rename it or accept the WARN; a success timestamp set in a helper the poll calls
 # (`.then(onOk)`) is not seen either — set it in the poll body; naive `//` stripping can cut a `//`
 # inside a string/URL.
@@ -56,6 +66,7 @@
 # go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-spa-poll-no-recovery <args>`.
 # Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design (kit-links L2). LC_ALL=C.
+# Mutation: SPR17 -- not reading a catch that falls through to a lastOk* stamp takes a swallowed failure for a success (passes clean)
 # Mutation: SPR16 -- reading a `function probeThenReload(` declaration as a call takes it for the recovery
 # Mutation: SPR15 -- matching location.href = also inside location.href == takes a comparison for the recovery
 # Mutation: SPR14 -- searching minified lines takes a bundled library's setTimeout(n,0) for the poll call
