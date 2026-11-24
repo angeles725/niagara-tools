@@ -13,7 +13,7 @@ Thin launcher. The real content lives in an EXTERNAL kit (METHODOLOGY, README, s
 
 `KIT` = the `mcp-n4-kit` directory: it holds `METHODOLOGY.md` and `README.md`; the server it launches is the Go binary `$KIT/../go/bin/mcp-n4` (the only server since S17). Resolve once:
 1. `$MCP_N4_KIT` if set and it contains `METHODOLOGY.md`.
-2. Else the default: `/home/cristian/modulos_niagara_n4/niagara-tools/mcp-n4-kit`, the author's checkout on the primary machine (confirm `METHODOLOGY.md` exists). The installed launcher is a copy in the agent harness's skills directory (`<harness-dir>/skills/mcp-n4/`), so its own location says nothing about the kit; on any other machine or checkout set `MCP_N4_KIT` to the `mcp-n4-kit` directory.
+2. Else the default: `/home/cristian/modulos_niagara_n4/niagara-tools/mcp-n4-kit`, the author's checkout on the primary machine (confirm `METHODOLOGY.md` exists). The installed launcher is a copy in the agent harness's skills directory (`<harness-dir>/skills/mcp-n4/`), so its own location says nothing about the kit; on any other machine or checkout set `MCP_N4_KIT` to the `mcp-n4-kit` directory. A checkout that still holds the retired Python server (`mcp_n4/server.py`, v0.7.x) is stale: never launch it; use an `origin/main` worktree (step 3).
 3. Else STOP searching and say so plainly: "the mcp-n4 kit is not on disk at <path checked>". A checkout on another branch may lack `mcp-n4-kit/`; never switch a shared checkout's branch to get it. Offer the operator one of:
    - a worktree of `origin/main`: `git -C <niagara-tools checkout> fetch origin && git -C <niagara-tools checkout> worktree add <path> origin/main`, then `MCP_N4_KIT=<path>/mcp-n4-kit`;
    - an installed copy they already have (set `MCP_N4_KIT` to it).
