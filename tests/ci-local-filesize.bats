@@ -65,7 +65,7 @@ debt() {
   [[ "$output" == *"internal/x/mid.go: 201 lines, over 200 and not listed: split it by responsibility"* ]]
   [[ "$output" == *"internal/x/mid.go 201 accepted <reason>"* ]]
   [[ "$output" == *"FAIL go test ./internal/filesize"* ]]
-  [[ "$output" == *"the file-size gate"* ]]
+  [[ "$output" == *"ci-local: --changed: 1 check(s) failed"* ]]
   [[ "$output" != *"PASS go test ./internal/filesize"* ]]
 }
 
@@ -101,7 +101,7 @@ debt() {
   cd "$R"
   run bash scripts/ci-local.sh --changed
   [ "$status" -eq 0 ]
-  [[ "$output" == *"no changed file needs shellcheck, the bats lints or gofmt"* ]]
+  [[ "$output" == *"no shellcheck, bats-lint or gofmt file changed; running the tree gates"* ]]
   [[ "$output" != *"filesize"* ]]
 }
 

@@ -15,7 +15,8 @@
 #     CI's whole set, with a stderr line naming <file>:<line>, when a source path cannot be resolved (T14);
 #   - lint-bats-errexit, the BEX-kit lint, over the changed tests/**/*.bats (fixtures/ and testdata/ pruned);
 #   - lint-bats-heredoc: a here-document line that starts with the test keyword (C8) in those files;
-#   - gofmt -l over the changed go/**/*.go.
+#   - gofmt -l over the changed go/**/*.go;
+#   - the gates the changed files trigger (lib/ci-local-gates.sh, run_gates): the CI checks that read the tree.
 # Each check runs even after another failed. Exit 0 all clean or nothing to check, 1 a check failed,
 # 2 a workflow ci-steps cannot read, 3 a git, write or tool failure.
 
@@ -39,7 +40,7 @@ gofmt_clean() {
 run_changed() {
   local plan="$WORK/changed.plan" rc=0 kind file sc=() bt=() gf=()
   CHANGED_FAILED=0
-  (cd "$ROOT" && "$CI_STEPS" changed --ci-file "$CI_FILE" --tree "$WORK/tree" ${RANGE:+--range "$RANGE"}) > "$plan" || rc=$?
+  (cd "$ROOT" && "$CI_STEPS" changed --ci-file "$CI_FILE" --tree "$WORK/tree" --gates ${RANGE:+--range "$RANGE"}) > "$plan" || rc=$?
   case "$rc" in 0) ;; 2) exit 2 ;; *) exit 3 ;; esac
   while IFS=$'\t' read -r kind file; do
     case "$kind" in
@@ -49,8 +50,7 @@ run_changed() {
     esac
   done < "$plan"
   if [ $((${#sc[@]} + ${#bt[@]} + ${#gf[@]})) -eq 0 ]; then
-    printf 'ci-local: --changed: no changed file needs shellcheck, the bats lints or gofmt\n'
-    return 0
+    printf 'ci-local: --changed: no shellcheck, bats-lint or gofmt file changed; running the tree gates\n'
   fi
   if [ "${#sc[@]}" -gt 0 ]; then
     provision_shellcheck
@@ -63,6 +63,7 @@ run_changed() {
   if [ "${#gf[@]}" -gt 0 ]; then
     changed_check "gofmt -l (${#gf[@]} changed Go files)" gofmt_clean "${gf[@]}"
   fi
+  run_gates
   printf 'ci-local: --changed: %d check(s) failed\n' "$CHANGED_FAILED"
   [ "$CHANGED_FAILED" -eq 0 ]
 }

@@ -7,6 +7,8 @@ bats_require_minimum_version 1.5.0
 # The fixture is a throwaway repository holding this checkout's HEAD (go/ is a link) with this work tree's ci-local
 # files on top; its workflow shellchecks scripts/*.sh only and no case changes a .sh, so nothing is downloaded.
 
+load helpers/ci-local-golinks
+
 setup_file() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   # shellcheck disable=SC1091  # go/ helper, resolved at runtime
@@ -19,7 +21,7 @@ setup() {
   R="$BATS_TEST_TMPDIR/r"
   mkdir -p "$R" "$BATS_TEST_TMPDIR/cg/init.scope" "$BATS_TEST_TMPDIR/gocache"
   git -C "$REPO" archive HEAD -- ':(exclude)go' | tar -x -C "$R"
-  ln -s "$REPO/go" "$R/go"
+  ci_local_link_go "$REPO" "$R"
   rm -rf "$R/scripts/lib"
   cp "$REPO/scripts/ci-local.sh" "$R/scripts/"
   cp -R "$REPO/scripts/lib" "$R/scripts/"
@@ -79,7 +81,7 @@ dangling_fragment() {
   cd "$R"
   run bash scripts/ci-local.sh --changed
   [ "$status" -eq 0 ]
-  [[ "$output" == *"no changed file needs shellcheck, the bats lints or gofmt"* ]]
+  [[ "$output" == *"no shellcheck, bats-lint or gofmt file changed; running the tree gates"* ]]
   [[ "$output" != *"kit-links"* ]]
 }
 

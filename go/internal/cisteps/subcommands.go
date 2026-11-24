@@ -16,19 +16,21 @@ import (
 // usage error or an empty input set (the kit's lint convention).
 const ExitEnv = 3
 
-const changedUsage = "usage: ci-steps changed --ci-file <workflow.yml> --tree <dir> [--range <from>..<to>]\n"
+const changedUsage = "usage: ci-steps changed --ci-file <workflow.yml> --tree <dir> [--range <from>..<to>] [--gates]\n"
 
 // changedMain implements `ci-steps changed`: it lists the files a change touches (git, in the process
 // directory), writes the ones a check needs under --tree (for shellcheck: the changed files of CI's set with
 // the files they source and that source them, or the whole set when a source path cannot be resolved) and
-// prints one `<check>\t<path>` line per check and file: shellcheck, bats (the bats lints) and gofmt, in that order. Exit 0, 2 usage or an
-// unreadable workflow, 3 a git or write failure.
+// prints one `<check>\t<path>` line per check and file: shellcheck, bats (the bats lints) and gofmt, in that order.
+// With --gates it then prints one `gate\t<name>\t<soft|hard>\t<command>` line per gate (gates.go) the change triggers.
+// Exit 0, 2 usage or an unreadable workflow, 3 a git or write failure.
 func changedMain(args []string, s cli.Stdio) int {
 	fl := flag.NewFlagSet("ci-steps changed", flag.ContinueOnError)
 	fl.SetOutput(io.Discard)
 	ciFile := fl.String("ci-file", "", "")
 	tree := fl.String("tree", "", "")
 	rng := fl.String("range", "", "")
+	gates := fl.Bool("gates", false, "")
 	if err := fl.Parse(args); err != nil || fl.NArg() != 0 || *ciFile == "" || *tree == "" {
 		fmt.Fprint(s.Err, changedUsage)
 		return ExitBad
@@ -88,6 +90,15 @@ func changedMain(args []string, s cli.Stdio) int {
 	}{{"shellcheck", plan.Shellcheck}, {"bats", plan.Bats}, {"gofmt", plan.Gofmt}} {
 		for _, p := range group.paths {
 			fmt.Fprintf(s.Out, "%s\t%s\n", group.check, p)
+		}
+	}
+	if *gates {
+		for _, g := range SelectGates(set.paths) {
+			mode := "hard"
+			if g.Soft {
+				mode = "soft"
+			}
+			fmt.Fprintf(s.Out, "gate\t%s\t%s\t%s\n", g.Name, mode, g.Command())
 		}
 	}
 	return 0
