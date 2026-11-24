@@ -1,128 +1,137 @@
-// Package filesize keeps Go source files small with a band: a non-test file over WarnLimit lines is a warning (reported,
-// never failing), and one over FailLimit lines fails unless it is on the recorded list of files that were already
-// larger when the rule arrived. A listed file may not grow and gets no warning.
-// The list only shrinks: split a listed file, then lower or delete its line. Split by responsibility, never only to
-// get under the number.
+// Package filesize keeps Go source files small with a debt list (the model research-sdd uses). A production Go file
+// is one that is not a test, not under testdata, not under a path the go tool ignores (a name starting with "." or
+// "_"), not under bin/ and not generated (a "// Code generated ... DO NOT EDIT." line before the package clause).
+// A production file over SoftLimit (200) lines needs a line in modularity-debt.txt; a count of HardLimit (400) or
+// less is a ceiling (the file may shrink freely and may grow up to 400 only with its line raised in the same change),
+// a count over 400 is exact, and nothing new is admitted above 400. The list lives next to this package; its format,
+// the kinds and the update mode are described in its header and in go/README.md. The messages are in judge.go, the
+// list's parser in debt.go and the update mode in update.go. Split by responsibility, never only to get under the
+// number.
 package filesize
 
 import (
-	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 )
 
 const (
-	// WarnLimit is the number of lines above which a non-test Go file outside the baseline is reported as a warning.
-	WarnLimit = 200
-	// FailLimit is the number of lines above which a non-test Go file outside the baseline fails the gate.
-	FailLimit = 300
+	// SoftLimit is the number of lines above which a production file needs a debt entry.
+	SoftLimit = 200
+	// HardLimit is the number of lines above which a count is exact and no entry is admitted.
+	HardLimit = 400
+	// DebtFileName is the debt list, kept in this package's directory.
+	DebtFileName = "modularity-debt.txt"
+	// DebtFile is the list's path from the repository root, as the messages print it.
+	DebtFile = "go/internal/filesize/" + DebtFileName
+	// UpdateEnv turns the real-tree test into an updater when it is exactly "1".
+	UpdateEnv = "NT_FILESIZE_UPDATE"
 )
 
-// Finding is one file that breaks the rule, with the reason.
-type Finding struct {
-	Path   string
-	Lines  int
-	Reason string
-	// Warn marks a finding that is reported but never fails the gate.
-	Warn bool
+// Result reports what Check examined as well as what it found, so a zero cannot be mistaken for "did not look".
+type Result struct {
+	Scanned    int      // production files measured (generated files excluded)
+	Generated  int      // generated files exempted
+	Over       int      // production files over SoftLimit
+	Entries    int      // well-formed debt entries read
+	Violations []string // exact, actionable messages, sorted
 }
 
-// Check walks root for non-test Go files and compares each against the limits and the baseline (path -> lines).
-func Check(root string, baseline map[string]int) ([]Finding, error) {
-	sizes, err := Sizes(root)
+var generatedLine = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
+
+// Check measures every production Go file under root against the limits and the debt list at debtPath. A missing
+// debt file, an unreadable source file or a tree with no production file is an error, never a pass.
+func Check(root, debtPath string) (Result, error) {
+	var r Result
+	files, generated, err := scanProduction(root)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
-	var out []Finding
-	for path, n := range sizes {
-		allowed, listed := baseline[path]
-		switch {
-		case !listed && n > FailLimit:
-			out = append(out, Finding{path, n, fmt.Sprintf("holds %d lines, over the limit of %d: split it by responsibility", n, FailLimit), false})
-		case !listed && n > WarnLimit:
-			out = append(out, Finding{path, n, fmt.Sprintf("holds %d lines, over %d (it fails over %d): split by responsibility, never only to get under the number", n, WarnLimit, FailLimit), true})
-		case listed && n > allowed:
-			out = append(out, Finding{path, n, fmt.Sprintf("grew from its recorded %d lines to %d: split it before adding to it", allowed, n), false})
-		case listed && n <= WarnLimit:
-			out = append(out, Finding{path, n, fmt.Sprintf("is now within the limit (%d lines): delete its baseline line", n), false})
-		}
+	data, err := os.ReadFile(debtPath)
+	if err != nil {
+		return r, fmt.Errorf("filesize: cannot read debt file: %w", err)
 	}
-	for path := range baseline {
-		if _, ok := sizes[path]; !ok {
-			out = append(out, Finding{path, 0, "is on the baseline but no longer exists: delete its baseline line", false})
-		}
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
-	return out, nil
+	entries, bad, malformed := parseDebt(string(data))
+	r.Scanned, r.Generated, r.Entries = len(files), generated, len(entries)
+	r.Violations = append(bad, judge(files, entries, malformed, &r)...)
+	sort.Strings(r.Violations)
+	return r, nil
 }
 
-// Sizes returns the line count of every non-test Go file under root, keyed by its slash path relative to root.
-func Sizes(root string) (map[string]int, error) {
-	sizes := map[string]int{}
+// scanProduction returns root-relative slash path -> line count for every production Go file, and how many
+// generated files it exempted.
+func scanProduction(root string) (map[string]int, int, error) {
+	files := map[string]int{}
+	generated := 0
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("filesize: cannot read %s: %w", path, err)
 		}
 		if d.IsDir() {
-			if name := d.Name(); name == "bin" || name == "testdata" || strings.HasPrefix(name, ".") && path != root {
+			if path != root && skipDir(d.Name()) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+		if goIgnores(d.Name()) || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		n, err := countLines(path)
+		b, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("filesize: cannot read %s: %w", path, err)
+		}
+		if isGenerated(b) {
+			generated++
+			return nil
 		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
 		}
-		sizes[filepath.ToSlash(rel)] = n
+		files[filepath.ToSlash(rel)] = countLines(b)
 		return nil
 	})
-	return sizes, err
+	if err != nil {
+		return nil, 0, err
+	}
+	if len(files) == 0 {
+		return nil, 0, errors.New("filesize: no production Go files under " + root + " (an empty scan proves nothing)")
+	}
+	return files, generated, nil
 }
 
-// ReadBaseline parses "<lines> <path>" rows; blank lines and lines starting with # are ignored.
-func ReadBaseline(path string) (map[string]int, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	baseline := map[string]int{}
-	sc := bufio.NewScanner(f)
-	for line := 1; sc.Scan(); line++ {
-		text := strings.TrimSpace(sc.Text())
-		if text == "" || strings.HasPrefix(text, "#") {
-			continue
-		}
-		fields := strings.Fields(text)
-		n, convErr := strconv.Atoi(fields[0])
-		if len(fields) != 2 || convErr != nil {
-			return nil, fmt.Errorf("%s:%d: want \"<lines> <path>\", got %q", path, line, text)
-		}
-		baseline[fields[1]] = n
-	}
-	return baseline, sc.Err()
-}
+// skipDir reports a directory the scan does not enter: testdata, bin (built tools) and what the go tool ignores.
+// The root itself is always entered, whatever it is called.
+func skipDir(name string) bool { return name == "testdata" || name == "bin" || goIgnores(name) }
 
-func countLines(path string) (int, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
-	n := strings.Count(string(data), "\n")
-	if len(data) > 0 && data[len(data)-1] != '\n' {
+// goIgnores reports a file or directory name the go tool ignores, one starting with "." or "_".
+func goIgnores(name string) bool { return strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") }
+
+// countLines is the number of \n bytes, plus one for a non-empty file that does not end in \n.
+func countLines(b []byte) int {
+	n := bytes.Count(b, []byte{'\n'})
+	if len(b) > 0 && b[len(b)-1] != '\n' {
 		n++
 	}
-	return n, nil
+	return n
+}
+
+// isGenerated reports a "// Code generated ... DO NOT EDIT." line before the package clause.
+func isGenerated(b []byte) bool {
+	for _, line := range bytes.Split(b, []byte{'\n'}) {
+		line = bytes.TrimRight(line, "\r")
+		if generatedLine.Match(line) {
+			return true
+		}
+		if bytes.HasPrefix(line, []byte("package ")) {
+			return false
+		}
+	}
+	return false
 }
