@@ -54,4 +54,5 @@ var readTools = []string{
 	"n4_semantic_export",
 	"n4_list_tag_dictionaries",
 	"n4_tag_coverage",
+	"n4_list_templates",
 }
