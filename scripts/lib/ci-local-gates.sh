@@ -13,8 +13,13 @@
 # WARN and counts nothing, whatever its exit (1: over the limit; any other: the size was not measured).
 
 # gate_run <name> <soft|hard> <command> — run one gate from the repo root and print PASS, WARN or FAIL like a step.
+# Every gate runs without git's local environment (GIT_DIR, GIT_INDEX_FILE, GIT_WORK_TREE...): the pre-push hook
+# exports them, and a gate's own git calls (the go test fixture repositories) would otherwise read and write the
+# pushing repository, failing where CI passes and committing fixtures into it.
 gate_run() {
-  local name="$1" mode="$2" cmd="$3" out="$WORK/gate.out" rc=0 i hit=0 base=origin/main head=HEAD
+  local name="$1" mode="$2" cmd="$3" out="$WORK/gate.out" rc=0 i hit=0 base=origin/main head=HEAD v
+  local -a gitenv=()
+  for v in $(git rev-parse --local-env-vars); do gitenv+=(-u "$v"); done
   [ -z "$RANGE" ] || { base="${RANGE%%..*}"; head="${RANGE#*..}"; }
   printf '== %s\n' "$name"
   mkdir -p "$WORK/runner-temp"
@@ -23,12 +28,13 @@ gate_run() {
       # shellcheck disable=SC2053  # the step name is matched against a glob on purpose
       [[ "${NAMES[$i]}" == ${cmd#step:} ]] || continue
       hit=1
-      (cd "$ROOT" && CI=true RUNNER_TEMP="$WORK/runner-temp" bash -e -c "${BODIES[$i]}") > "$out" 2>&1 < /dev/null || rc=$?
+      (cd "$ROOT" && env "${gitenv[@]}" CI=true RUNNER_TEMP="$WORK/runner-temp" bash -e -c "${BODIES[$i]}") \
+        > "$out" 2>&1 < /dev/null || rc=$?
       [ "$rc" -eq 0 ] || break
     done
     [ "$hit" -eq 1 ] || { printf 'SKIP %s (this workflow has no step %s)\n' "$name" "${cmd#step:}"; return 0; }
   else
-    (cd "$ROOT" && CI_BASE="$base" CI_HEAD="$head" bash -c "$cmd") > "$out" 2>&1 < /dev/null || rc=$?
+    (cd "$ROOT" && env "${gitenv[@]}" CI_BASE="$base" CI_HEAD="$head" bash -c "$cmd") > "$out" 2>&1 < /dev/null || rc=$?
   fi
   if [ "$rc" -eq 0 ]; then
     [ "$mode" != soft ] || grep -m 1 '^pr-size: total' "$out" || true

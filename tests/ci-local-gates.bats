@@ -138,3 +138,21 @@ long_line() { local i; for ((i = 0; i < 40; i++)); do printf 'word '; done; prin
   [[ "$output" != *"FAIL pr-size"* ]]
   [[ "$output" == *"ci-local: --changed: 0 check(s) failed"* ]]
 }
+
+@test "CG8: run from a git hook (GIT_DIR and GIT_INDEX_FILE exported), a gate's own git calls see their own repository" {
+  # Mutation: CG8 -- without clearing git's local env vars, a gate's own git calls (a go test fixture repository)
+  # resolve to the pushing repository: the pre-push replay fails where CI passes, and fixture commits land in it.
+  cd "$R"
+  # shellcheck disable=SC2016  # the $(...) is the workflow step's own shell, not this test's
+  printf 'name: CI\non: pull_request\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - name: shellcheck\n        run: shellcheck scripts/*.sh .githooks/*\n      - name: gen-changelog --check (stand-in)\n        run: d="$(mktemp -d)"; git -C "$d" init -q; test "$(git -C "$d" rev-parse --absolute-git-dir)" = "$d/.git"\n' \
+    > .github/workflows/ci.yml
+  git add -A
+  git commit -q -m wf
+  git update-ref refs/remotes/origin/main HEAD
+  mkdir -p changelog.d
+  printf -- '- x\n' > changelog.d/2026-11-24-cg8.md
+  GIT_DIR="$R/.git" GIT_INDEX_FILE="$R/.git/index" GIT_WORK_TREE="$R" run bash scripts/ci-local.sh --changed
+  [[ "$output" == *"gen-changelog --check"* ]]
+  [[ "$output" != *"FAIL gen-changelog"* ]]
+  [[ "$output" == *"ci-local: --changed: 0 check(s) failed"* ]]
+}
