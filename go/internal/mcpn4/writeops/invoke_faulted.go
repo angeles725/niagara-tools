@@ -20,18 +20,28 @@ const (
 		"the dry run"
 )
 
-// instanceFaulted is the refusal when the component's own status holds the fault flag, naming its
-// faultCause; nil for any other status. A status or faultCause the load left out is the default
-// (ok, empty).
-func instanceFaulted(ordText string, nodes *pyjson.Object) error {
+// faultOf reports whether the component's own status holds the fault flag and what its faultCause
+// says ("faultCause is empty" when it says nothing). A status or faultCause the load left out is
+// the default (ok, empty).
+func faultOf(nodes *pyjson.Object) (cause string, faulted bool) {
 	kids := box.Children(nodes, "")
 	flags, err := box.StatusFlags(box.ChildValue(kids, "status", "0"))
 	if err != nil || !slices.Contains(flags, "fault") {
-		return nil
+		return "", false
 	}
-	cause := "faultCause is empty"
+	cause = "faultCause is empty"
 	if text, _ := box.ChildValue(kids, "faultCause", "").(string); strings.TrimSpace(text) != "" {
 		cause = "faultCause: " + bql.StripControl(strings.TrimSpace(text))
+	}
+	return cause, true
+}
+
+// instanceFaulted is the refusal when the component's own status holds the fault flag, naming its
+// faultCause; nil for any other status.
+func instanceFaulted(ordText string, nodes *pyjson.Object) error {
+	cause, faulted := faultOf(nodes)
+	if !faulted {
+		return nil
 	}
 	return plan.ToolError(fmt.Sprintf(msgInstanceFaulted, ordText, cause))
 }

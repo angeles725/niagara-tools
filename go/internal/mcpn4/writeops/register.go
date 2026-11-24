@@ -23,6 +23,7 @@ func Register(s *jsonrpc.Server, e *plan.Engine) {
 	s.Handlers["n4_rename_component"] = e.Handler("n4_rename_component", RenameComponent)
 	s.Handlers["n4_discover_devices"] = e.Handler("n4_discover_devices", DiscoverDevices)
 	s.Handlers["n4_discover_points"] = e.Handler("n4_discover_points", DiscoverPoints)
+	s.Handlers["n4_register_bacnet_spyder"] = e.Handler("n4_register_bacnet_spyder", RegisterSpyder)
 	s.Handlers["n4_remove_component"] = e.Handler("n4_remove_component", RemoveComponent)
 	s.Handlers["n4_rollback"] = e.Handler("n4_rollback", Rollback)
 	s.Handlers["n4_save_station"] = e.Handler("n4_save_station", SaveStation)

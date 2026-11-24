@@ -3,12 +3,13 @@ package plan
 import "github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 
 // PlanKeys are the Planned.Keys a token authorizes: a truthy one joins the hashed plan, in
-// this order (_process).
+// this order (_process). follow_up, added after the Python port, is the steps a composite tool runs
+// on what its first op created (n4_register_bacnet_spyder).
 var PlanKeys = []string{"relinks", "unlinked_inputs", "components", "outgoing_links_broken", "snapshot_truncated",
-	"incoming_links", "selection"}
+	"incoming_links", "selection", "follow_up"}
 
 // IntentKeys are the Planned.Keys a truthy value of which the intent records.
-var IntentKeys = []string{"rollback_of", "relinks", "components"}
+var IntentKeys = []string{"rollback_of", "relinks", "components", "follow_up"}
 
 // priorKinds are _PRIOR_KINDS: inverse entries whose spec may carry `prior`, the runtime value
 // a link drives into an input.
