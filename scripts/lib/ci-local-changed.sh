@@ -50,7 +50,7 @@ run_changed() {
     esac
   done < "$plan"
   if [ $((${#sc[@]} + ${#bt[@]} + ${#gf[@]})) -eq 0 ]; then
-    printf 'ci-local: --changed: no changed file needs shellcheck, the bats lints or gofmt\n'
+    printf 'ci-local: --changed: no shellcheck, bats-lint or gofmt file changed; running the tree gates\n'
   fi
   if [ "${#sc[@]}" -gt 0 ]; then
     provision_shellcheck

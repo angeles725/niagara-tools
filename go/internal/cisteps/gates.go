@@ -16,12 +16,12 @@ type Gate struct {
 	Match    func(path string) bool // or a predicate: the repository's own definition of a file set
 	Pkgs     []string               // packages under go/ whose tests read the tree
 	Step     string                 // ci.yml run-step name glob replayed
-	Soft     bool                   // exit 1 prints WARN and does not fail (a label decides in CI)
+	Soft     bool                   // any non-zero exit prints WARN and does not fail (a label decides in CI)
 	Twins    []string               // further ci.yml step globs this gate stands for
 	Cmd      string                 // else this bash command, from the repo root ($CI_BASE, $CI_HEAD name the change)
 }
 
-const goStep = "Go gofmt + vet + test*" // the ci.yml step the `go test` gates are the --changed share of
+const goStep = "Go gofmt + vet + test*" // the ci.yml step that runs every Go test; the `go test` gates run only the part of it a change needs
 
 const (
 	kitTree  = "build-n4-module-kit/**"
@@ -152,6 +152,7 @@ func globMatch(pat, p []string) bool {
 		}
 		return false
 	}
+	// A malformed pattern is no match here; TestGateTriggersAreValidPathPatterns fails one at test time.
 	ok, _ := path.Match(pat[0], firstOr(p))
 	return len(p) > 0 && ok && globMatch(pat[1:], p[1:])
 }

@@ -2,6 +2,7 @@ package cisteps
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -24,7 +25,9 @@ func skipGlobs(t *testing.T) []string {
 }
 
 // TestEveryCIStepAndTreeGateHasALocalTwin is the guard: a new ci.yml run step or a Go test that reads the
-// repository tree fails here until the --changed plan (gates.go) runs it or says why not.
+// repository tree fails here until the --changed plan (gates.go) runs it or says why not. A tree reader is found only
+// by a relative-path literal in a *_test.go ("../../x", filepath.Join("..", "..", "x")): a reader that locates the
+// repository through runtime.Caller, os.Getwd or `git rev-parse` is not detected and needs its Gate row by hand.
 func TestEveryCIStepAndTreeGateHasALocalTwin(t *testing.T) {
 	steps, err := Parse("ci.yml", mustRead(t, "../../../.github/workflows/ci.yml"))
 	if err != nil {
@@ -85,7 +88,7 @@ func TestSelectGatesMatchesTheChangedPathsToTheirTriggers(t *testing.T) {
 	}
 }
 
-func TestChangedGatesPrintsOneRowPerGateAfterTheChecks(t *testing.T) {
+func TestChangedPlansGateRowsOnlyWithTheGatesFlag(t *testing.T) {
 	dir, _ := gitRepo(t)
 	write(t, dir, "README.md", "x\n")
 	tree := filepath.Join(t.TempDir(), "tree")
@@ -120,5 +123,24 @@ func TestGateCommandsNameScriptsTheRepositoryHas(t *testing.T) {
 	}
 	if n == 0 {
 		t.Error("no gate Cmd names a script: the check is vacuous")
+	}
+}
+
+// TestGateTriggersAreValidPathPatterns: globMatch drops path.Match's error, so a malformed trigger would never match
+// and its gate would silently stop running.
+func TestGateTriggersAreValidPathPatterns(t *testing.T) {
+	n := 0
+	for _, g := range Gates {
+		for _, trig := range g.Triggers {
+			for _, seg := range strings.Split(trig, "/") {
+				n++
+				if _, err := path.Match(seg, "x"); err != nil {
+					t.Errorf("gate %q: trigger %q: segment %q: %v", g.Name, trig, seg, err)
+				}
+			}
+		}
+	}
+	if n == 0 {
+		t.Error("no gate has a trigger: the check is vacuous")
 	}
 }

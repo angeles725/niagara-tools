@@ -58,8 +58,9 @@ func TreeReaders(goRoot string) ([]string, error) {
 // ci.yml's; skip are the step globs ci-local.sh skips on purpose (its SKIP_RULES); goRoot is the go/ directory.
 func CheckParity(steps []Step, skip []string, goRoot string) []string {
 	var msgs []string
+	known := append(append(append([]string{}, skip...), planSteps...), fullOnlyGlobs()...)
 	covered := func(name string) bool {
-		for _, g := range append(append(skip, planSteps...), fullOnlyGlobs()...) {
+		for _, g := range known {
 			if stepMatch(g, name) {
 				return true
 			}
@@ -117,7 +118,8 @@ func CheckParity(steps []Step, skip []string, goRoot string) []string {
 	return msgs
 }
 
-// stepMatch is bash's `[[ name == glob ]]` for the globs of step names, where * crosses a /.
+// stepMatch matches a step name against a glob the way bash's `[[ name == glob ]]` does for `*` alone (it crosses a /);
+// every other character, `?` and `[` included, is literal. The step globs use no other wildcard.
 func stepMatch(glob, name string) bool {
 	parts := strings.Split(glob, "*")
 	for i, p := range parts {

@@ -1,11 +1,13 @@
 #!/usr/bin/env bats
 bats_require_minimum_version 1.5.0
 # ci-local-gates.bats — `scripts/ci-local.sh --changed` runs the tree gates of go/internal/cisteps/gates.go for the
-# files changed (CG1-CG6, issues #983 item 5 and #973 item 3). The cardwidth gate (the 120-character limit on kit docs)
+# files changed (CG1-CG7, issues #983 item 5 and #973 item 3). The cardwidth gate (the 120-character limit on kit docs)
 # ran only in CI, so a METHODOLOGY.md line over 120 broke PR #978 after the push; the summary did not count the gates.
 # The fixture is a throwaway repository: this checkout's HEAD without go/, a go/ of links to this checkout's (its
 # README.md copied: cardwidth walks the fixture's tree and counts it) and this work tree's ci-local files. Its workflow
 # has one shellcheck step and one stand-in for ci.yml's gen-changelog step, so nothing is downloaded.
+
+load helpers/ci-local-golinks
 
 setup_file() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
@@ -17,11 +19,9 @@ setup_file() {
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   R="$BATS_TEST_TMPDIR/r"
-  mkdir -p "$R/go" "$BATS_TEST_TMPDIR/cg/init.scope" "$BATS_TEST_TMPDIR/gocache"
+  mkdir -p "$R" "$BATS_TEST_TMPDIR/cg/init.scope" "$BATS_TEST_TMPDIR/gocache"
   git -C "$REPO" archive HEAD -- ':(exclude)go' | tar -x -C "$R"
-  ln -s "$REPO"/go/* "$R/go/"
-  rm "$R/go/README.md"
-  cp "$REPO/go/README.md" "$R/go/"
+  ci_local_link_go "$REPO" "$R"
   rm -rf "$R/scripts/lib"
   cp "$REPO/scripts/ci-local.sh" "$R/scripts/"
   cp -R "$REPO/scripts/lib" "$R/scripts/"
@@ -114,4 +114,27 @@ long_line() { local i; for ((i = 0; i < 40; i++)); do printf 'word '; done; prin
   run bash scripts/ci-local.sh --changed
   [ "$status" -eq 0 ]
   [[ "$output" == *"SKIP gen-changelog --check (this workflow has no step gen-changelog*)"* ]]
+}
+
+@test "CG7: a pr-size that cannot measure (exit 3, exit 2) is a WARN with its exit code and --changed exits 0" {
+  # Mutation: CG7 -- downgrading only exit 1 lets any other pr-size exit block a push the soft gate promises never to block.
+  printf 'x\n' > "$R/scripts/notes.txt"
+  cd "$R"
+  PR_SIZE_LIMIT=abc run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pr-size: PR_SIZE_LIMIT must be a positive integer"* ]]
+  [[ "$output" == *"WARN pr-size"*"(exit 3: the size was not measured)"* ]]
+  [[ "$output" != *"FAIL pr-size"* ]]
+  [[ "$output" == *"ci-local: --changed: 0 check(s) failed"* ]]
+  # a stub that exits 2, committed to the base so that no .sh counts as changed
+  printf '#!/usr/bin/env bash\necho "pr-size: stub cannot measure" >&2\nexit 2\n' > scripts/pr-size.sh
+  git add scripts/pr-size.sh
+  git commit -q -m "stub pr-size"
+  git update-ref refs/remotes/origin/main HEAD
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pr-size: stub cannot measure"* ]]
+  [[ "$output" == *"WARN pr-size"*"(exit 2: the size was not measured)"* ]]
+  [[ "$output" != *"FAIL pr-size"* ]]
+  [[ "$output" == *"ci-local: --changed: 0 check(s) failed"* ]]
 }

@@ -9,8 +9,8 @@
 # changed file triggers. A row runs a `go test` of the packages that read the tree, the body of the ci.yml step it
 # stands for (replayed as CI runs it, so the check cannot differ), or a command. TestEveryCIStepAndTreeGateHasALocalTwin
 # fails when a ci.yml run step or a tree-reading Go package has no row there, so a new gate cannot be forgotten here.
-# A failed gate counts in run_changed's summary; a soft gate (pr-size: the size:exception label decides in CI) that
-# exits 1 prints WARN and counts nothing.
+# A failed gate counts in run_changed's summary; a soft gate (pr-size: the size:exception label decides in CI) prints
+# WARN and counts nothing, whatever its exit (1: over the limit; any other: the size was not measured).
 
 # gate_run <name> <soft|hard> <command> — run one gate from the repo root and print PASS, WARN or FAIL like a step.
 gate_run() {
@@ -36,7 +36,13 @@ gate_run() {
     return 0
   fi
   cat "$out"
-  if [ "$mode" = soft ] && [ "$rc" -eq 1 ]; then printf 'WARN %s (exit %d)\n' "$name" "$rc"; return 0; fi
+  if [ "$mode" = soft ]; then
+    # A soft gate never blocks a push: exit 1 is its finding, any other exit (no origin/main, an unresolvable --range)
+    # means the check did not run to a verdict.
+    if [ "$rc" -eq 1 ]; then printf 'WARN %s (exit %d)\n' "$name" "$rc"
+    else printf 'WARN %s (exit %d: the size was not measured)\n' "$name" "$rc"; fi
+    return 0
+  fi
   printf 'FAIL %s (exit %d)\n' "$name" "$rc"
   CHANGED_FAILED=$((CHANGED_FAILED + 1))
 }
