@@ -93,8 +93,22 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 				pyjson.Str(recorded) + ": the component was replaced, refusing")
 		}
 	}
-	if err := laterWork(c, w, view, ops, targets, bid); err != nil {
+	chain, _ := args.Get("chain")
+	chained, err := laterWork(c, w, view, ops, targets, bid, chain == true)
+	if err != nil {
 		return nil, err
+	}
+	chainText := ""
+	switch {
+	case len(chained) > 0:
+		remove := ops[0].(*pyjson.Object)
+		created, err := childOrd(ordOf(targets, get(remove, "h")), get(remove, "n"))
+		if err != nil {
+			return nil, err
+		}
+		chainText = chainNote(created, chained)
+	case chain == true && get(view, "tool") != createTool:
+		chainText = chainNotCreateNote(bid)
 	}
 	if err := unchangedSince(c, view, ops, targets); err != nil {
 		return nil, err
@@ -155,6 +169,9 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 	notes := rollbackNotes(view, bid, relinks, unlinked, components, own, ops)
 	if len(outgoing) > 0 {
 		notes = append(notes, outgoingNote(len(outgoing)))
+	}
+	if chainText != "" {
+		notes = append(notes, chainText)
 	}
 	return &plan.Planned{Ops: ops, Inverse: planInverse, Notes: notes, Targets: targets, Keys: keys,
 		Data: &rollbackData{rollbackOf: bid, targets: targets, relinks: relinks, unlinked: unlinked,
