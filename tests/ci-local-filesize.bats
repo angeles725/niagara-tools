@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 bats_require_minimum_version 1.5.0
 # ci-local-filesize.bats — `scripts/ci-local.sh --changed` runs the Go file-size gate when a go/**/*.go changed
-# (CLF1-CLF6, issue #969). The gate (go/internal/filesize) only ran in CI's Go job, so a file over the limit showed up
+# (CLF1-CLF8, issues #969 and #973). The gate (go/internal/filesize) only ran in CI's Go job, so a file over the limit showed up
 # after review and push. The rule is research-sdd's debt list: a production file over 200 lines needs a line in
 # go/internal/filesize/modularity-debt.txt (a count of 400 or less is a ceiling, a count over 400 is exact, nothing is
 # admitted above 400); a file at 200 lines or less needs none.
@@ -69,7 +69,7 @@ debt() {
   [[ "$output" != *"PASS go test ./internal/filesize"* ]]
 }
 
-@test "CLF2: with its line the 201-line file passes, and raising it needs the line raised in the same change" {
+@test "CLF2: a 300-line file passes with its line, and growing to 301 needs the line raised in the same change" {
   # Mutation: CLF2 -- ignoring run_filesize's status passes a file that outgrew its recorded count.
   debt "internal/x/mid.go 300 accepted the reason it stays whole"
   go_file internal/x/mid.go 300
@@ -126,4 +126,33 @@ debt() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"internal/x/old.go: 480 lines, below its recorded 500"* ]]
   [[ "$output" == *"internal/x/old.go 480 legacy recorded when the ratchet was created"* ]]
+}
+
+# base_with <path> <lines> — a listed Go file of <lines> lines, committed as the origin/main the next change is measured from.
+base_with() {
+  debt "$1 $2 accepted the reason it stays whole"
+  go_file "$1" "$2"
+  git -C "$R" add -A
+  git -C "$R" commit -q -m listed
+  git -C "$R" update-ref refs/remotes/origin/main HEAD
+}
+
+@test "CLF7: deleting a listed Go file runs the file-size gate, which names the line to delete (issue #973)" {
+  # Mutation: CLF7 -- selecting the gates from the files that still exist lets a stale debt line through to CI.
+  base_with internal/x/old.go 300
+  rm "$R/go/internal/x/old.go"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"internal/x/old.go: listed but not a production Go file in this tree. Delete this line from"* ]]
+  [[ "$output" == *"FAIL go test ./internal/filesize"* ]]
+}
+
+@test "CLF8: a change that touches only the debt list runs the file-size gate (issue #973)" {
+  base_with internal/x/mid.go 300
+  debt "internal/x/mid.go 250 accepted the reason it stays whole"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"internal/x/mid.go: grew from 250 to 300 lines"* ]]
 }

@@ -140,3 +140,23 @@ func TestRollbackChainCoversTheLinkABatchMadeOnTheCreated(t *testing.T) {
 		t.Errorf("no token for a chain whose only extra is the batch-made link: %v", dry)
 	}
 }
+
+// chain=true on a create that made several components follows nothing (laterWork reads a single-component create
+// only): the plan says so instead of accepting the flag in silence (issue #971 item 3).
+func TestRollbackChainOnAMultiComponentCreateSaysItFollowsNothing(t *testing.T) {
+	d := destructiveRig(t, nil)
+	d.Add("3", "A", "")
+	d.Add("3", "B", "")
+	bid, remove := strings.Repeat("cd", 16), func(n string) map[string]any { return map[string]any{"nm": "v", "h": "3", "n": n} }
+	inverse := []any{remove("A"), remove("B")}
+	d.journalAppend(map[string]any{"batch_id": bid, "phase": "intent", "tool": "n4_create_component",
+		"station_name": "FakeStation", "ops": []any{}, "inverse_plan": inverse, "targets": map[string]any{Folder: "3"}})
+	d.journalAppend(map[string]any{"batch_id": bid, "phase": "result", "verdict": "verified", "inverse": inverse, "accepted": nil})
+	note := "chain: batch " + bid + " made 2 components: chain=true follows only a single-component create, so it is ignored"
+	if got := planOf(d.Srv.Dry("n4_rollback", chainArgs(bid)))["notes"]; len(noteWith(got, note)) != 1 {
+		t.Errorf("chain=true notes = %v, want %q", got, note)
+	}
+	if got := planOf(d.Srv.Dry("n4_rollback", Args{"batch_id": bid}))["notes"]; len(noteWith(got, "chain:")) != 0 {
+		t.Errorf("without chain the notes = %v, want no chain note", got)
+	}
+}

@@ -6,7 +6,7 @@
 #
 # #684 failed two CI jobs that were reproducible locally (the kit's bats lint BEX-kit, shellcheck 0.10) because
 # the writer had run shellcheck 0.11 and not the kit's lints. (retro 2026-11-15 coordination-stretch C3)
-# `ci-steps changed` lists the changed files (deleted ones left out) and writes the ones a check needs under
+# `ci-steps changed` lists the changed files (a deleted one is no target of a check, but still triggers the gates) and writes the ones a check needs under
 # $WORK/tree: with --range the bytes of the range's end commit (what a push sends; .githooks/pre-push passes
 # the pushed range), without it the work tree, untracked files included, against where HEAD left origin/main.
 # Which files shellcheck reads comes from ci.yml's own shellcheck step. The checks, from $WORK/tree:

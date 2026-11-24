@@ -109,6 +109,8 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 		chainText = chainNote(created, chained)
 	case chain == true && get(view, "tool") != createTool:
 		chainText = chainNotCreateNote(bid)
+	case chain == true && len(ops) != 1: // a create of one component only is followed (laterWork)
+		chainText = chainManyNote(bid, len(ops))
 	}
 	if err := unchangedSince(c, view, ops, targets); err != nil {
 		return nil, err

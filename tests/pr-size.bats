@@ -2,7 +2,7 @@
 bats_require_minimum_version 1.5.0
 # pr-size.sh — the PR size gate (decision L14): additions + deletions of base...head, excluding generated, lock and
 # vendored files, fail over PR_SIZE_LIMIT (default 400). The fixture is a throwaway git repository.
-# pr-size.yml is pinned structurally (PS12-PS13): the trigger types, the label that waives the gate, and SHA-pinned actions.
+# pr-size.yml is pinned structurally (PS12-PS13); its waiver step is scripts/pr-size-waiver.sh (PS15): the trigger types, the label that waives the gate, and SHA-pinned actions.
 
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
@@ -188,7 +188,9 @@ gate() { # gate [args...]: run the gate inside the repo, default BASE HEAD_SHA
   grep -q '^  pull_request:$' "$WF"
   grep -q 'types: \[opened, synchronize, reopened, labeled, unlabeled\]' "$WF"
   grep -q "contains(github.event.pull_request.labels.\*.name, 'size:exception')" "$WF"
-  grep -q 'scripts/pr-size.sh' "$WF"
+  grep -q 'scripts/pr-size-waiver.sh' "$WF"
+  run grep -q 'HAS_EXCEPTION" = "true"' "$WF" # the waiver rule lives in the tested script (PS15), not in the workflow
+  [ "$status" -ne 0 ]
   grep -q 'fetch-depth: 0' "$WF"
   run grep -c 'pr-size' "$REPO/.github/workflows/ci.yml"
   [ "$output" = "0" ]
@@ -201,4 +203,39 @@ gate() { # gate [args...]: run the gate inside the repo, default BASE HEAD_SHA
   while IFS= read -r l; do
     [[ "$l" =~ uses:\ [A-Za-z0-9._/-]+@[0-9a-f]{40}\ *(#.*)?$ ]] || { echo "unpinned: $l"; return 1; }
   done <<<"$output"
+}
+
+@test "PS14: a path with a newline or other control character is printed escaped, so it cannot start a workflow command (issue #979)" {
+  # Mutation: PS14 -- printing the path raw lets a file named "x<newline>::warning::..." inject a log command in CI
+  lines 3 > "$R/$(printf 'evil\n::warning title=x::injected.txt')"
+  mkdir -p "$R/go/testdata"
+  lines 3 > "$R/go/testdata/$(printf 'bad\n::error::boom.txt')"
+  head_commit
+  gate
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^::' <<<"$output")" -eq 0 ]
+  [[ "$output" == *"evil"*"injected.txt"* ]]
+  [[ "$output" == *"total 3 changed lines (+3 -0) in 1 file(s)"*"1 file(s) excluded"* ]]
+}
+
+# waiver <rc> <label>: run pr-size-waiver.sh beside a stub pr-size.sh that exits <rc>, with HAS_EXCEPTION=<label>.
+waiver() {
+  local d="$BATS_TEST_TMPDIR/waiver"
+  mkdir -p "$d"
+  cp "$REPO/scripts/pr-size-waiver.sh" "$d/"
+  printf '#!/usr/bin/env bash\necho "stub pr-size: $*"\nexit %s\n' "$1" > "$d/pr-size.sh"
+  HAS_EXCEPTION="$2" run bash "$d/pr-size-waiver.sh" base head
+}
+
+@test "PS15: the size:exception label waives exit 1 only: 1 + label passes with a warning, 1 without it fails, 3 + label fails, 0 passes (issue #979)" {
+  # Mutation: PS15 -- waiving any non-zero exit lets a PR whose size could not be measured (3) through on the label
+  local rc label want warned
+  for case in "1 true 0 yes" "1 false 1 no" "1 '' 1 no" "3 true 3 no" "0 true 0 no" "0 false 0 no"; do
+    eval "set -- $case"
+    rc=$1 label=$2 want=$3 warned=$4
+    waiver "$rc" "$label"
+    [ "$status" -eq "$want" ] || { echo "exit $rc, label '$label': status $status"; return 1; }
+    [[ "$output" == *"stub pr-size: base head"* ]]
+    [ "$(grep -c '^::warning title=PR size::over the size limit, allowed by the size:exception label$' <<<"$output")" -eq "$([ "$warned" = yes ] && echo 1 || echo 0)" ]
+  done
 }

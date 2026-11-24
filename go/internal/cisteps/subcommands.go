@@ -93,7 +93,7 @@ func changedMain(args []string, s cli.Stdio) int {
 		}
 	}
 	if *gates {
-		for _, g := range SelectGates(set.paths) {
+		for _, g := range SelectGates(append(append([]string{}, set.paths...), set.deleted...)) {
 			mode := "hard"
 			if g.Soft {
 				mode = "soft"

@@ -29,7 +29,7 @@ func judgeEntry(e debtEntry, n int, isProd bool) string {
 	}
 	// An accepted entry above the hard limit whose file is still above it has no admissible line, lowered or not.
 	if e.Kind == "accepted" && e.Lines > HardLimit && n > HardLimit {
-		return fmt.Sprintf(msgAcceptedHigh, DebtFileName, e.LineNo, HardLimit, e.Path, e.Lines)
+		return fmt.Sprintf(msgAcceptedHigh, DebtFile, e.LineNo, HardLimit, e.Path, e.Lines)
 	}
 	// A count over the hard limit is exact: with slack, a file that shrank could grow back to its old count unseen.
 	if e.Lines > HardLimit && n < e.Lines {
@@ -44,9 +44,9 @@ func judgeEntry(e debtEntry, n int, isProd bool) string {
 	return fmt.Sprintf(msgGrew, e.Path, e.Lines, n, DebtFile, e.Path, n, e.Kind, e.Reason)
 }
 
-// judge compares measured sizes with the debt entries. It fills r.Over and returns the violation messages. A path in
-// malformed has a malformed line, already reported: its file is listed, badly, and is not reported again as unlisted.
-func judge(files map[string]int, entries []debtEntry, malformed map[string]bool, r *Result) []string {
+// judge compares measured sizes with the debt entries and returns the violation messages. A path in malformed has a
+// malformed line, already reported: its file is listed, badly, and is not reported again as unlisted.
+func judge(files map[string]int, entries []debtEntry, malformed map[string]bool) []string {
 	var out []string
 	listed := map[string]bool{}
 	for _, e := range entries {
@@ -60,7 +60,6 @@ func judge(files map[string]int, entries []debtEntry, malformed map[string]bool,
 		if n <= SoftLimit {
 			continue
 		}
-		r.Over++
 		if listed[path] || malformed[path] {
 			continue
 		}

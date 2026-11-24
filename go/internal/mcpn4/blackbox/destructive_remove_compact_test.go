@@ -53,3 +53,25 @@ func TestRemoveWithoutCompactKeepsItsInverse(t *testing.T) {
 		t.Errorf("plan = %v", plan)
 	}
 }
+
+// The summary counts links that leave the component (acknowledge_links) and inputs linked from outside the subtree
+// (issue #971 item 5).
+func TestCompactSummaryCountsOutgoingLinksAndInputsLinkedFromOutside(t *testing.T) {
+	d := destructiveRig(t, nil)
+	k, _, _ := d.linkedConst()
+	args := acknowledged(removeArgs(k.Name))
+	args["compact"] = true
+	if got := planOf(d.Srv.Dry("n4_remove_component", args))["inverse_summary"]; !same(got, map[string]any{
+		"components": float64(1), "links_inside": float64(0), "unlinked_inputs": float64(0), "outgoing_links": float64(2), "inverse_ops": float64(3)}) {
+		t.Errorf("outgoing: inverse_summary = %v", got)
+	}
+	nn := d.linkedGroup()
+	d.liveInput([]string{nn, "Tgt"}, "in11", "1.0", priorityFacet)
+	d.Link(d.AddWithOut("Other", 1.0), "out", Component{"Tgt", d.node(nn, "Tgt").Handle}, "in11")
+	args = removeArgs(nn)
+	args["compact"] = true
+	summary, _ := planOf(d.Srv.Dry("n4_remove_component", args))["inverse_summary"].(map[string]any)
+	if summary["unlinked_inputs"] != 1.0 || summary["outgoing_links"] != 0.0 {
+		t.Errorf("unlinked: inverse_summary = %v, want unlinked_inputs 1 and outgoing_links 0", summary)
+	}
+}

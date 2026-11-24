@@ -13,9 +13,12 @@
 #         vendor/**                           vendored third-party code
 #         Everything else counts, a changelog.d/ fragment included (it is authored prose a reviewer reads, and a few
 #         lines of it do not decide the gate).
-# Output: one line per file (`<added> <deleted> <path>`, or `excluded (+A -D) <path>`), then the total.
+# Output: one line per file (`<added> <deleted> <path>`, or `excluded (+A -D) <path>`), then the total. A path is
+#         printed shell-quoted (bash printf %q: a space or a control character is escaped), so a file name with a
+#         newline cannot start a line of its own and inject a workflow command such as `::warning`.
 # Exits:  0 at or under the limit · 1 over the limit · 3 usage/env (bad arguments or limit, an unknown ref, not a repo)
-# The workflow waives exit 1 for a pull request that carries the `size:exception` label; this script does not know labels.
+# The workflow waives exit 1 for a pull request that carries the `size:exception` label (scripts/pr-size-waiver.sh);
+# this script does not know labels.
 set -euo pipefail
 
 die() { printf 'pr-size: %s\n' "$1" >&2; exit 3; }
@@ -31,6 +34,9 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repository"
 for ref in "$base" "$head"; do
   git rev-parse --verify --quiet "$ref^{commit}" >/dev/null || die "unknown ref or not a commit: $ref"
 done
+
+# show <path>: set $shown to the path as one printable line (a control character, a newline included, is escaped)
+show() { printf -v shown '%q' "$1"; }
 
 is_excluded() { # is_excluded <path>: 0 when the path is generated, a lock file or vendored
   case "$1" in
@@ -60,13 +66,15 @@ while IFS= read -r -d '' rec; do
   if [ "$a" = "-" ]; then a=0 d=0 note=" (binary)"; fi
   if is_excluded "$path"; then
     excluded=$((excluded + 1))
-    printf '  excluded (+%s -%s) %s\n' "$a" "$d" "$path"
+    show "$path"
+    printf '  excluded (+%s -%s) %s\n' "$a" "$d" "$shown"
     continue
   fi
   counted=$((counted + 1))
   added=$((added + a))
   deleted=$((deleted + d))
-  printf '  %6s %6s  %s%s\n' "$a" "$d" "$path" "$note"
+  show "$path"
+  printf '  %6s %6s  %s%s\n' "$a" "$d" "$shown" "$note"
 done <"$tmp"
 
 total=$((added + deleted))

@@ -94,7 +94,7 @@ func TestAnAcceptedFileMayGrowOnlyWithItsLineRaised(t *testing.T) {
 
 func TestAnAcceptedFileNeverPassesTheHardLimit(t *testing.T) {
 	want(t, run(t, 401, "a/f.go 401 accepted "+why+"\n"),
-		"modularity-debt.txt:2: an accepted entry may not be above 400 lines (a/f.go 401): split it by responsibility.")
+		dbt+":2: an accepted entry may not be above 400 lines (a/f.go 401): split it by responsibility.")
 	want(t, run(t, 401, "a/f.go 400 accepted "+why+"\n"),
 		"a/f.go: grew from 400 to 401 lines and is over 400: a file over 400 lines may not grow, split it by responsibility first.")
 }
@@ -150,7 +150,7 @@ func TestABadLineIsReportedAndNeverTakenForAnUnlistedFile(t *testing.T) {
 		{"a/f.go 300 accepted short", "reason is shorter than 10 characters"},
 		{"a/f.go 300 accepted <reason>", "replace <reason> with the reason this file is accepted"},
 	} {
-		want(t, run(t, 250, c.line+"\n"), "modularity-debt.txt:2: "+c.problem+form)
+		want(t, run(t, 250, c.line+"\n"), dbt+":2: "+c.problem+form)
 	}
 }
 
@@ -160,9 +160,9 @@ func TestUnsortedAndDuplicateLinesFail(t *testing.T) {
 	writeLines(t, root, "a/c.go", 250)
 	const form = `; expected "<path> <lines> <legacy|accepted> <reason of at least 10 characters>", entries sorted by path`
 	got := runTree(t, root, "a/c.go 250 accepted "+why+"\na/b.go 250 accepted "+why+"\n")
-	want(t, got, "modularity-debt.txt:3: a/b.go is not after a/c.go (unsorted)"+form)
+	want(t, got, dbt+":3: a/b.go is not after a/c.go (unsorted)"+form)
 	got = runTree(t, root, "a/b.go 250 accepted "+why+"\na/b.go 250 accepted "+why+"\na/c.go 250 accepted "+why+"\n")
-	want(t, got, "modularity-debt.txt:3: duplicate path a/b.go"+form)
+	want(t, got, dbt+":3: duplicate path a/b.go"+form)
 }
 
 func TestSortingIsByBytesNotByLocale(t *testing.T) {
