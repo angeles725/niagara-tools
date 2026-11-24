@@ -152,33 +152,14 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if !ok { // the snapshot always yields the re-add first; a broken invariant is a tool error, never a panic
 		return nil, plan.ToolError("internal: the remove plan of " + pyjson.StrRepr(nm) + " has no re-add op to hash")
 	}
+	if compact, _ := args.Get("compact"); compact == true {
+		if p.Summary, err = inverseSummary(inverse, first); err != nil {
+			return nil, err
+		}
+	}
 	if add := s.hashedAdd(first); add != nil { // retro 2026-11-16 row M15
 		p.HashInverse = append([]any{add}, inverse[1:]...)
 		p.Notes = append(p.Notes, msgRuntimeUnhashed)
 	}
 	return p, nil
-}
-
-// removeReadback is _remove_readback: the child must be gone from its parent.
-func removeReadback(c plan.Client, args *pyjson.Object, _ *plan.Planned, replies, _ []any) (any, any, any, string, error) {
-	_, nodes, err := plan.Handle(c, str(args, "parent_ord"), 1)
-	if err != nil {
-		return nil, nil, nil, "", err
-	}
-	nm := str(args, "name")
-	_, still := nodes.Get(nm)
-	v := "verified"
-	if still {
-		v = "mismatch"
-	}
-	return obj("removed", nm), replies[0], obj("gone", !still), v, nil
-}
-
-// firstObj is the first op of ops when it is an object.
-func firstObj(ops []any) (*pyjson.Object, bool) {
-	if len(ops) == 0 {
-		return nil, false
-	}
-	o, ok := ops[0].(*pyjson.Object)
-	return o, ok && o != nil
 }
