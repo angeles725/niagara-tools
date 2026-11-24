@@ -22,10 +22,11 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The checks run as four parallel jobs (go, bats, lint-sweeps, changelog); the wall time is the slowest job, not
-  # their sum. Every step of the former single `checks` job runs in exactly one of them. The mcp-n4 black-box suite
-  # (go/internal/mcpn4/blackbox) runs in the go job's `go test -count=1 ./...`; its own job retired with the Python
-  # suite (T9).
+  # The checks run as parallel jobs (go, two bats shards, lint-sweeps, changelog); the wall time is the slowest
+  # job, not their sum. Every step of the former single `checks` job runs in exactly one of them. The mcp-n4
+  # black-box suite (go/internal/mcpn4/blackbox) runs in the go job's `go test -count=1 ./...`; its own job retired
+  # with the Python suite (T9). The bats suite is split by scripts/bats-shard.sh (duration-weighted, every
+  # tests/*.bats file in exactly one shard, checked in each shard), because one bats job was the critical path.
   go:
     name: Go gofmt + vet + test + build
     runs-on: ubuntu-latest
@@ -78,11 +79,31 @@ jobs:
         run: cd go && go build -o bin/ ./cmd/...
 
   bats:
-    name: bats unit tests
+    name: bats unit tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # One job per shard; every step below runs in each of them (scripts/ci-local.sh replays ci.yml step by step and
+    # reads no job-level env: or step-level if:, so the shard reaches the steps through $GITHUB_ENV).
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v5
+
+      # The one place the matrix reaches a run: body. The quoted ${{ }} text is a plain string in a local replay,
+      # where $GITHUB_ENV is unset and SHARD/SHARDS stay unset: the later steps then run every tests/*.bats file.
+      - name: Select this job's bats shard (SHARD of SHARDS, from the matrix)
+        run: |
+          printf 'SHARD=%s\nSHARDS=%s\n' '${{ matrix.shard }}' '${{ strategy.job-total }}' >> "${GITHUB_ENV:-/dev/null}"
+
+      # Fail closed before any setup: every tests/*.bats file is in exactly one shard (a new file can never
+      # be silently skipped), and this shard's list is not empty.
+      - name: bats-shard --check (the shards partition tests/*.bats exactly)
+        run: |
+          scripts/bats-shard.sh --check "${SHARDS:-2}"
+          [ -z "${SHARD:-}" ] || [ -n "$(scripts/bats-shard.sh "$SHARD" "$SHARDS")" ] \
+            || { printf 'ERROR: shard %s/%s is empty\n' "$SHARD" "$SHARDS" >&2; exit 1; }
 
       - name: Set up Java 8 (Temurin) — required by run-pure-test.sh javac -source 8
         uses: actions/setup-java@v5
@@ -196,16 +217,19 @@ jobs:
       - name: Pre-build go/bin (the binaries the bats suites exec through the toolbelt wrappers)
         run: cd go && go build -o bin/ ./cmd/...
 
-      - name: bats (all unit tests)
+      - name: bats (all unit tests) — this job's shard of tests/*.bats
         run: |
           # -j 4: four test files at a time, one per ubuntu-latest vCPU. --no-parallelize-within-files: bats'
           # in-file parallelism waits for a free slot by polling with `sleep 1`, which made -j slower than a
           # serial run; GNU parallel schedules whole files without it. Fail closed: the run must report one
           # result per test in its TAP plan (bats counts the suite up front), so a silent zero or partial
-          # parallel run cannot pass.
+          # parallel run cannot pass. The shard list puts its heaviest files first, so they start at once.
           set -o pipefail
+          if [ -n "${SHARD:-}" ]; then mapfile -t files < <(scripts/bats-shard.sh "$SHARD" "$SHARDS"); else files=(tests/*.bats); fi
+          [ "${#files[@]}" -gt 0 ] || { printf 'ERROR: no bats files to run\n' >&2; exit 1; }
+          printf 'bats: shard %s/%s runs %d files\n' "${SHARD:-all}" "${SHARDS:-all}" "${#files[@]}"
           TAP="$RUNNER_TEMP/bats.tap"
-          bats -j 4 --no-parallelize-within-files --formatter tap tests/*.bats | tee "$TAP"
+          bats -j 4 --no-parallelize-within-files --formatter tap "${files[@]}" | tee "$TAP"
           plan="$(grep -m 1 -E '^1\.\.[0-9]+$' "$TAP" || true)"; plan="${plan#1..}"
           got="$(grep -cE '^(not )?ok ' "$TAP" || true)"
           printf 'bats: TAP plan %s; %s results\n' "${plan:-missing}" "$got"
