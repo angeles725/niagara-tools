@@ -284,7 +284,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_alarm_text_check`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`, `n4_schedule_audit`, `n4_override_audit`,
 `n4_station_runtime`, `n4_read_tags`,
-`n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`.
+`n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`, `n4_list_templates`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -1838,6 +1838,27 @@ schedule:ControlSchedule`), null when the source is something else or the handle
 `permanent`, `timed`, `unreadable` and `by_level` (every level the out texts show); `counts.permanent`
 0 is the proof that no override is left without an expiry. A type the station refuses goes under
 `unreadable` and the others are still read; `truncated` marks a read cut at `max_writables`.
+
+### Listing deployed template instances
+
+`n4_list_templates(base, max_instances=200)` (retro R13 ΔM1) lists the deployed template instances below
+`base` in one read-only call: one BQL read `select slotPath from template:TemplateConfig` (an instance is
+a component holding a `templateConfig`; its root is the parent of that slot path), one read of the
+TemplateService's rows `select locationOrd, templateName, vendor, version, inputs, outputs, relations,
+defaultPasswords, ntplSignature, localSignature from template:TemplateInfo` (only when an instance
+exists), then one load of each `templateConfig`. Each entry is `{root, config_ord, template_name, vendor,
+version, inputs, outputs, relations, default_passwords, has_default_passwords, signature: {template, local,
+modified}, configs, notes?}`. `inputs`, `outputs` and `relations` are the counts the station keeps in
+TemplateInfo (what the template declares, counted when the instance is registered); the *unbound* counts
+that Workbench's template manager shows are computed there, are not station slots, and are not reported.
+`signature.modified` is true when the deployed copy's signature differs from the template's, null when the
+template's is empty. `configs` has one entry per `ConfigBinding`: `{name, value, type, bound_to: {ord,
+slot}, tip?, note?}`; a config whose slot the station left out of its answer has `value` null and a note,
+and an instance without a TemplateInfo row has the info fields null with a note: nothing is guessed. A
+station that refuses the instance query is an error (not "zero instances"); a station with none answers
+`instances: []`. Components deployed by `n4_deploy_template` are not listed: that tool copies the
+component tree and does not link the deployed component to its template, so no `templateConfig` is made.
+`counts` holds the totals; `truncated` marks a list cut at `max_instances`.
 
 ### Writing a weekly schedule and its default output
 

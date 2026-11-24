@@ -1973,6 +1973,32 @@
     "openWorldHint": false
    },
    "needs_session": true
+  },
+  {
+   "name": "n4_list_templates",
+   "description": "List the deployed template instances below base in one read-only call (retro R13 dM1): the components that hold a templateConfig (BQL select slotPath from template:TemplateConfig; the instance's root is the parent of that slot path), each with the TemplateService's TemplateInfo row (BQL select locationOrd, templateName, vendor, version, inputs, outputs, relations, defaultPasswords, ntplSignature, localSignature from template:TemplateInfo) and one load of its templateConfig. instances has one entry per instance: {root (ORD), config_ord, template_name, vendor, version, inputs, outputs, relations, default_passwords, has_default_passwords, signature: {template, local, modified}, configs, notes?}. inputs, outputs and relations are the counts TemplateInfo holds, as the station counted them when it registered the instance (the template's declared input and output slots and relations): the unbound counts Workbench's template manager shows are computed there, not station slots, so they are not reported and never guessed. default_passwords is how many password bindings still hold the template's default; has_default_passwords is true when there is at least one. signature.template and signature.local are the template's and the deployed copy's signatures; modified is true when they differ and null when the template's is empty (the station does not know). configs has one entry per ConfigBinding of the templateConfig, in station order: {name (the config slot), value and type (as n4_read_slots gives them), bound_to: {ord, slot} (the binding's target as stored, an ORD relative to the templateConfig, and its slot), tip?, note?}; a config whose slot the station left out of its answer (a slot at its default is not sent) has value null and a note. A value or row the station does not answer is null with a note, never guessed: without a TemplateInfo row (the query was refused, or the TemplateService has none for the instance, e.g. an ApplicationService's own templateConfig) the info fields are null. If the station refuses the instance query (e.g. no template module) the call is an error: that is not the same as zero instances. A station without any deployed instance answers instances [] and counts.instances 0, with no TemplateInfo read. A component deployed by n4_deploy_template is not an instance of this list: that tool copies the component tree and does not link the deployed component to its template, so no templateConfig is created. unreadable lists the instances whose templateConfig could not be loaded {root, error}; counts holds the totals (instances, configs, with_default_passwords, signature_modified, unreadable); truncated is true when the list stopped at max_instances. Two BQL reads (the second only when an instance exists), then one load per instance. Read-only.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "base": {
+      "type": "string",
+      "description": "Slot ORD of the folder to search, itself and below, e.g. station:|slot:/Equipment (default: the whole station)"
+     },
+     "max_instances": {
+      "type": "integer",
+      "description": "Most instances loaded",
+      "minimum": 1,
+      "maximum": 1000,
+      "default": 200
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
   }
  ],
  "write_tools": [
