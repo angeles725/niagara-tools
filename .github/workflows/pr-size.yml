@@ -1,0 +1,44 @@
+name: PR size
+
+# Fails a pull request whose authored changed lines exceed 400 (additions + deletions, minus lock, generated and
+# vendored files — scripts/pr-size.sh) unless it carries the `size:exception` label. Modelled on gentle-ai's
+# pr-check.yml. Separate from ci.yml so the count and the label can change without touching the checks. The
+# labeled/unlabeled types re-run it when a maintainer adds or removes the label.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+# Only the latest event of a PR counts: a labeled run must not be overtaken by an older, label-less one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-size:
+    name: PR size
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Full history: the count is the merge-base...head diff, which needs both tips and their common ancestor.
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Count authored changed lines
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HAS_EXCEPTION: ${{ contains(github.event.pull_request.labels.*.name, 'size:exception') }}
+        run: |
+          rc=0
+          bash scripts/pr-size.sh "$BASE_SHA" "$HEAD_SHA" || rc=$?
+          if [ "$rc" -eq 1 ] && [ "$HAS_EXCEPTION" = "true" ]; then
+            echo "::warning title=PR size::over the size limit, allowed by the size:exception label"
+            exit 0
+          fi
+          exit "$rc"
