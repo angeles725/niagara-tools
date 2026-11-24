@@ -2,6 +2,7 @@ package writeops
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -98,6 +99,12 @@ func chainNote(created string, batches []string) string {
 // chainNotCreateNote is the plan note of chain=true on a batch that is not a create.
 func chainNotCreateNote(bid string) string {
 	return "chain: batch " + bid + " is not a create: nothing to chain"
+}
+
+// chainManyNote is the plan note of chain=true on a create that made several components: nothing is followed.
+func chainManyNote(bid string, n int) string {
+	return "chain: batch " + bid + " made " + strconv.Itoa(n) +
+		" components: chain=true follows only a single-component create, so it is ignored"
 }
 
 // chainOutsideRefusal refuses a chain whose later batch also wrote outside the created component.

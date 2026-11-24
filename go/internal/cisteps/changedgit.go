@@ -16,12 +16,13 @@ import (
 // a push sends) or, with no range, the work tree against where HEAD left origin/main (untracked
 // files included: what a developer is about to commit).
 type changeSet struct {
-	end   string // the range's end commit; "" reads the work tree
-	paths []string
-	errTo io.Writer
+	end     string // the range's end commit; "" reads the work tree
+	paths   []string
+	deleted []string // paths the change removed: nothing to check or format, but a gate reads the tree without them
+	errTo   io.Writer
 }
 
-// listChanges runs git in the process directory; deleted files are left out (nothing to check).
+// listChanges runs git in the process directory; deleted files are kept apart in deleted (nothing to check in them).
 func listChanges(rng string, errTo io.Writer) (changeSet, error) {
 	g := gitcmd.Command{Stderr: errTo}
 	if rng != "" {
@@ -30,18 +31,20 @@ func listChanges(rng string, errTo io.Writer) (changeSet, error) {
 			return changeSet{}, fmt.Errorf("--range %q is not <from>..<to>", rng)
 		}
 		res := g.Run("diff", "--name-only", "--no-renames", "--diff-filter=d", "-z", from, to)
-		if !res.OK() {
+		gone := g.Run("diff", "--name-only", "--no-renames", "--diff-filter=D", "-z", from, to)
+		if !res.OK() || !gone.OK() {
 			return changeSet{}, fmt.Errorf("git diff %s failed", rng)
 		}
-		return changeSet{end: to, paths: split0(res.Stdout), errTo: errTo}, nil
+		return changeSet{end: to, paths: split0(res.Stdout), deleted: split0(gone.Stdout), errTo: errTo}, nil
 	}
 	base := g.Run("merge-base", "origin/main", "HEAD")
 	if !base.OK() {
 		return changeSet{}, errors.New("cannot find where HEAD left origin/main (git fetch origin first)")
 	}
 	diff := g.Run("diff", "--name-only", "--no-renames", "--diff-filter=d", "-z", strings.TrimSpace(base.Stdout))
+	gone := g.Run("diff", "--name-only", "--no-renames", "--diff-filter=D", "-z", strings.TrimSpace(base.Stdout))
 	others := g.Run("ls-files", "-z", "--others", "--exclude-standard")
-	if !diff.OK() || !others.OK() {
+	if !diff.OK() || !gone.OK() || !others.OK() {
 		return changeSet{}, errors.New("git diff / ls-files against origin/main failed")
 	}
 	seen := map[string]bool{}
@@ -53,7 +56,7 @@ func listChanges(rng string, errTo io.Writer) (changeSet, error) {
 		}
 	}
 	sort.Strings(paths)
-	return changeSet{paths: paths, errTo: errTo}, nil
+	return changeSet{paths: paths, deleted: split0(gone.Stdout), errTo: errTo}, nil
 }
 
 func split0(out string) []string {

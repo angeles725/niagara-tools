@@ -64,11 +64,16 @@ type countResult struct {
 // near-capacity items in the order of exts; the first failed read (in that order) is the one noted.
 func (r *haRun) nearCapacity(exts []histExt, add func(string, *pyjson.Object)) {
 	results := make([]countResult, len(exts))
-	runPool(len(exts), func(i int) {
+	errs := runPool(len(exts), func(i int) {
 		total, note, _ := r.t.countHistory(exts[i].id, "", r.timeout)
 		records, ok := total.(int)
 		results[i] = countResult{records, note, ok}
 	})
+	for i, err := range errs {
+		if err != nil {
+			results[i] = countResult{note: err.Error()}
+		}
+	}
 	for i, e := range exts {
 		r.requests++
 		r.countReads++

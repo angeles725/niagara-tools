@@ -107,3 +107,22 @@ all_shards() {
   [[ "$job" == *'java-version: '*8* ]]
   [[ "$job" == *'scripts/check-bats-skips.sh'* ]]
 }
+
+@test "BS10: --check exits 1 and names a file the shard listing loses (a name with a space), nothing else" {
+  # Mutation: BS10 -- dropping the exit 1 of the failure branch lets a file in no shard pass the CI check
+  : > "$T/has space.bats"
+  run "$SHARD" --dir "$T" --weights "$W" --check 2
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL bats-shard in no shard: has space.bats" ]
+}
+
+@test "BS11: --check exits 1 and names an empty shard (more shards than files, issue #981)" {
+  # Mutation: BS11 -- not checking each shard for files lets a CI job start with nothing to run
+  rm "$T"/*.bats
+  : > "$T/only.bats"
+  run "$SHARD" --dir "$T" --weights "$W" --check 2
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL bats-shard empty shard: 2" ]
+  run "$SHARD" --dir "$T" --weights "$W" --check 1
+  [ "$status" -eq 0 ]
+}

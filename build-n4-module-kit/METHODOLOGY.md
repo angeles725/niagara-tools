@@ -170,9 +170,11 @@ See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev
 - **The 400-line PR limit is enforced in CI:** `.github/workflows/pr-size.yml` runs `scripts/pr-size.sh <base> <head>`
   on every pull request and fails it when additions + deletions of the merge-base diff exceed 400 (`PR_SIZE_LIMIT`
   overrides the number). Lock files (`go.sum`, `*.lock`, `package-lock.json`), `testdata/**` and `vendor/**` are
-  listed but not counted; a `changelog.d/` fragment counts. A PR that must stay over the limit (a generated slice, a
-  mechanical rename, an unsplittable change) carries the `size:exception` label, which only a maintainer adds: the
-  check then passes with a warning. Adding or removing the label re-runs the check. Prefer splitting into a chain of
+  listed but not counted, so on a large PR the reviewer reads the `excluded` lines of the check output: hand-written
+  code under one of those names escapes the limit; a `changelog.d/` fragment counts. A PR that must stay over the limit
+  (a generated slice, a mechanical rename, an unsplittable change) carries the `size:exception` label, which only a
+  maintainer adds (`scripts/pr-size-waiver.sh` waives exit 1 only, never an unmeasured size): the check then passes
+  with a warning. Adding or removing the label re-runs the check. Prefer splitting into a chain of
   PRs; the label is the exception, not the way around the limit. Decision L14 of the 2026-11-24 mcp-n4 campaign.
 - **A small review advisory is fixed in the same PR; only a design advisory becomes an issue:** an advisory that is
   small (rename a test, a doc line, a message, a missing test case under ~20 lines) is fixed before merge, in the PR

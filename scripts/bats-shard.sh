@@ -14,7 +14,7 @@
 #     --dir DIR       tests directory (default: tests, relative to the repo root; output paths keep that prefix)
 #     --weights FILE  weight table "<seconds> <file.bats>" per line, # comments (default: the built-in table)
 #
-# Exit: 0 ok · 1 --check found a file in no shard or in two shards · 2 usage · 3 environment (no .bats files)
+# Exit: 0 ok · 1 --check found a file in no shard or in two shards, or a shard with no file · 2 usage · 3 environment (no .bats files)
 set -u
 export LC_ALL=C
 
@@ -130,6 +130,11 @@ missing="$(comm -23 <(printf '%s\n' "$files") <(uniq <<<"$listed"))"
 if [ -n "$dups" ] || [ -n "$missing" ]; then
   [ -z "$dups" ] || printf 'FAIL bats-shard in two shards: %s\n' "$dups"
   [ -z "$missing" ] || printf 'FAIL bats-shard in no shard: %s\n' "$missing"
+  exit 1
+fi
+empty="$(awk -v n="$count" '{ c[$1]++ } END { for (s = 1; s <= n; s++) if (!c[s]) printf "%s%d", (e++ ? " " : ""), s }' <<<"$rows")"
+if [ -n "$empty" ]; then
+  printf 'FAIL bats-shard empty shard: %s\n' "$empty"
   exit 1
 fi
 loads="$(awk -v n="$count" '{ c[$1]++; t[$1] += $2 } END { for (s = 1; s <= n; s++) printf " shard%d=%d files/%.0fs", s, c[s], t[s] }' <<<"$rows")"

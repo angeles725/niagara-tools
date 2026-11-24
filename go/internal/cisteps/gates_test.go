@@ -144,3 +144,19 @@ func TestGateTriggersAreValidPathPatterns(t *testing.T) {
 		t.Error("no gate has a trigger: the check is vacuous")
 	}
 }
+
+// A deleted Go file leaves its line in the debt list behind: CI's file-size test fails on "listed but not a production
+// Go file", so the gate runs for a delete as for an edit; a deleted file has nothing to format (issue #973 item 2).
+func TestChangedPlansTheFileSizeGateForADeletedGoFile(t *testing.T) {
+	dir, git := gitRepo(t)
+	write(t, dir, "go/internal/x/old.go", "package x\n")
+	git("add", "-A")
+	git("commit", "-q", "-m", "go file")
+	git("update-ref", "refs/remotes/origin/main", "HEAD")
+	git("rm", "-q", "go/internal/x/old.go")
+	code, out, errs := runChanged(t, dir, "--tree", filepath.Join(t.TempDir(), "tree"), "--gates")
+	if want := "gate\tgo test ./internal/filesize\thard\tcd go && go test -count=1 ./internal/filesize\n"; code != 0 || errs != "" ||
+		!strings.Contains(out, want) || strings.Contains(out, "gofmt\t") {
+		t.Errorf("exit %d, rows %q (stderr %q), want the file-size gate row and no gofmt row", code, out, errs)
+	}
+}

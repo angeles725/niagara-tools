@@ -18,7 +18,8 @@ const poolHistories = 10
 
 // poolRig is a rig of poolHistories recording histories H0..H9 (capped by 1000 records) whose
 // station holds each answer back 40 ms; counts are the records per history, a history with no
-// entry has no route (its read fails).
+// entry has no route (its read fails). With flat, an entry "" has the window route only: its count
+// read fails.
 func poolRig(t *testing.T, counts map[int]string, flat bool) (*Rig, *boxstation.Servlets) {
 	t.Helper()
 	var points, exts []string
@@ -37,9 +38,15 @@ func poolRig(t *testing.T, counts map[int]string, flat bool) (*Rig, *boxstation.
 	for i := 0; i < poolHistories; i++ {
 		id := fmt.Sprintf("history:/FakeStation/H%d", i)
 		if flat {
+			n, ok := counts[i]
+			if !ok {
+				continue
+			}
 			routes = append(routes,
-				boxstation.OrdRoute{Needle: id + "?start=", Delay: delay, Body: []byte("min(value),max(value)\n0.0,0.0\n")},
-				boxstation.OrdRoute{Needle: id + "?end=", Delay: delay, Body: []byte("count(toString)\n" + counts[i] + "\n")})
+				boxstation.OrdRoute{Needle: id + "?start=", Delay: delay, Body: []byte("min(value),max(value)\n0.0,0.0\n")})
+			if n != "" {
+				routes = append(routes, boxstation.OrdRoute{Needle: id + "?end=", Delay: delay, Body: []byte("count(toString)\n" + n + "\n")})
+			}
 			continue
 		}
 		if n, ok := counts[i]; ok {
@@ -109,5 +116,29 @@ func TestHistoriesAuditFlatReadsFourHistoriesAtATimeAndKeepsTheReply(t *testing.
 	}
 	if n := maxInFlight(sv); n < 2 || n > 4 {
 		t.Errorf("most flat reads at once = %d, want 2 to 4", n)
+	}
+}
+
+// A failed window read or count read is counted in flat_reads and noted; the failure named is the first in
+// extension order (issue #968 item 3), whichever read finished first: H6 has no route, so its window read
+// answers 404 at once, while H2's count is sent only after its 40 ms window read; H6 fails first in time.
+func TestHistoriesAuditFlatNamesTheFirstFailureInExtensionOrder(t *testing.T) {
+	counts := map[int]string{}
+	for i := 0; i < poolHistories; i++ {
+		counts[i] = "600"
+	}
+	counts[2] = ""    // the window read answers, the count before it has no route
+	delete(counts, 6) // no route at all: the window read fails
+	r, _ := poolRig(t, counts, true)
+	out := r.Srv.OK("n4_histories_audit", Args{"flat": true})
+	// 8 histories x (window + count), H2: window + failed count, H6: failed window
+	if got := len(objects(out["flat"])); got != poolHistories-2 || out["flat_reads"] != 19.0 {
+		t.Errorf("flat lists %d histories (want %d), flat_reads %v (want 19)", got, poolHistories-2, out["flat_reads"])
+	}
+	// the plain record counts answer 404 in this rig: their own note comes beside the flat one
+	want := "2 flat read(s) failed, those histories are not in flat; first: /FakeStation/H2: "
+	notes, _ := out["notes"].([]any)
+	if len(noteWith(notes, want)) != 1 {
+		t.Errorf("notes = %q, want one starting %q (H2 is before H6)", notes, want)
 	}
 }

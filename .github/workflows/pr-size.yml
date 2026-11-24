@@ -1,7 +1,7 @@
 name: PR size
 
 # Fails a pull request whose authored changed lines exceed 400 (additions + deletions, minus lock, generated and
-# vendored files — scripts/pr-size.sh) unless it carries the `size:exception` label. Modelled on gentle-ai's
+# vendored files — scripts/pr-size.sh) unless it carries the `size:exception` label (scripts/pr-size-waiver.sh, tested). Modelled on gentle-ai's
 # pr-check.yml. Separate from ci.yml so the count and the label can change without touching the checks. The
 # labeled/unlabeled types re-run it when a maintainer adds or removes the label.
 
@@ -34,11 +34,4 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           HAS_EXCEPTION: ${{ contains(github.event.pull_request.labels.*.name, 'size:exception') }}
-        run: |
-          rc=0
-          bash scripts/pr-size.sh "$BASE_SHA" "$HEAD_SHA" || rc=$?
-          if [ "$rc" -eq 1 ] && [ "$HAS_EXCEPTION" = "true" ]; then
-            echo "::warning title=PR size::over the size limit, allowed by the size:exception label"
-            exit 0
-          fi
-          exit "$rc"
+        run: bash scripts/pr-size-waiver.sh "$BASE_SHA" "$HEAD_SHA"

@@ -58,10 +58,21 @@ func Check(root, debtPath string) (Result, error) {
 		return r, fmt.Errorf("filesize: cannot read debt file: %w", err)
 	}
 	entries, bad, malformed := parseDebt(string(data))
-	r.Scanned, r.Generated, r.Entries = len(files), generated, len(entries)
-	r.Violations = append(bad, judge(files, entries, malformed, &r)...)
+	r.Scanned, r.Generated, r.Entries, r.Over = len(files), generated, len(entries), countOver(files)
+	r.Violations = append(bad, judge(files, entries, malformed)...)
 	sort.Strings(r.Violations)
 	return r, nil
+}
+
+// countOver is the number of files over SoftLimit, listed or not.
+func countOver(files map[string]int) int {
+	over := 0
+	for _, n := range files {
+		if n > SoftLimit {
+			over++
+		}
+	}
+	return over
 }
 
 // scanProduction returns root-relative slash path -> line count for every production Go file, and how many

@@ -82,7 +82,7 @@ func parseDebt(text string) (entries []debtEntry, bad []string, malformed map[st
 			problem, keep = placeProblem(prev, e.Path, seen)
 		}
 		if problem != "" {
-			bad = append(bad, fmt.Sprintf(msgMalformed, DebtFileName, i+1, problem, minReason))
+			bad = append(bad, fmt.Sprintf(msgMalformed, DebtFile, i+1, problem, minReason))
 		}
 		if !keep {
 			continue
