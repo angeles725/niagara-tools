@@ -110,6 +110,9 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 				return nil, plan.ToolError("action " + pyjson.StrRepr(action) + " needs a " + spyderType +
 					", got " + pyjson.StrRepr(t) + " at " + ordText)
 			}
+			if err := instanceFaulted(ordText, nodes); err != nil {
+				return nil, err
+			}
 			note = msgWriteInstance
 		}
 		return &plan.Planned{Ops: []any{invokeOp(arg)}, Inverse: []any{}, Targets: targets, Notes: []any{note}}, nil

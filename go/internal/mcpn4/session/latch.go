@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"sync"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -18,6 +19,7 @@ type latch struct {
 
 // authLatch is the authentication-failure latch of a Context (audit 2026-10-03 F4).
 type authLatch struct {
+	mu      sync.Mutex // history reads that run at once may each fail the login
 	latch   *latch
 	credKey []byte
 	active  string
@@ -35,14 +37,22 @@ func (c *Context) UseCredentials(fingerprint string) { c.active = fingerprint }
 
 // NoteAuthFailure latches: station calls are refused for AuthCooldown seconds after any AuthError.
 func (c *Context) NoteAuthFailure(err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.latch = &latch{reason: c.Scrub(err.Error()), until: c.Clock() + c.AuthCooldown, credentials: c.active}
 }
 
 // ClearAuthLatch drops the latch: these credentials logged in, so an earlier failure is moot.
-func (c *Context) ClearAuthLatch() { c.latch = nil }
+func (c *Context) ClearAuthLatch() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.latch = nil
+}
 
 // AuthRetryIn is the whole seconds left in the cooldown, or 0 (the latch is cleared once it passed).
 func (c *Context) AuthRetryIn() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.latch == nil {
 		return 0
 	}

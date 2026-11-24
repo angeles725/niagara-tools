@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -74,5 +75,24 @@ func TestAuthReportShowsThePauseOnlyWhileItHolds(t *testing.T) {
 	ctx.AddAuthReport(out)
 	if got, want := encode(t, out), `{"auth_paused": {"reason": "HTTP 401 from station", "retry_in_s": 30}}`; got != want {
 		t.Errorf("report %s, want %s", got, want)
+	}
+}
+
+// Reads that run at once (n4_histories_audit) may each be refused: the latch is safe to set and
+// read from several goroutines (go test -race).
+func TestAuthLatchIsSafeUnderConcurrentFailures(t *testing.T) {
+	ctx, _ := newContext(Config{AuthCooldown: 60})
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx.NoteAuthFailure(errors.New("HTTP 401"))
+			_ = ctx.AuthRetryIn()
+		}()
+	}
+	wg.Wait()
+	if ctx.AuthRetryIn() != 60 {
+		t.Errorf("AuthRetryIn = %d, want 60", ctx.AuthRetryIn())
 	}
 }

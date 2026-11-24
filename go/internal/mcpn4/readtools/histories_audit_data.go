@@ -12,6 +12,9 @@ const (
 	haDefaultTimeout      = 60
 	// haMaxPoints caps the control points read for the no-history check.
 	haMaxPoints = 20000
+	// haWorkers is how many history reads run at once: enough to cut the audit of a large station
+	// from minutes to under one, few enough not to load the station.
+	haWorkers = 4
 	// haListCap caps each finding list; counts holds the full numbers.
 	haListCap = 100
 )
