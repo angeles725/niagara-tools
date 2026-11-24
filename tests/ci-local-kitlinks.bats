@@ -19,7 +19,12 @@ setup() {
   R="$BATS_TEST_TMPDIR/r"
   mkdir -p "$R" "$BATS_TEST_TMPDIR/cg/init.scope" "$BATS_TEST_TMPDIR/gocache"
   git -C "$REPO" archive HEAD -- ':(exclude)go' | tar -x -C "$R"
-  ln -s "$REPO/go" "$R/go"
+  # go/ of links to this checkout's, its README.md copied: a changed kit .md runs the cardwidth gate, which counts the fixture's
+  # live cards and holds go/README.md among them.
+  mkdir "$R/go"
+  ln -s "$REPO"/go/* "$R/go/"
+  rm "$R/go/README.md"
+  cp "$REPO/go/README.md" "$R/go/"
   rm -rf "$R/scripts/lib"
   cp "$REPO/scripts/ci-local.sh" "$R/scripts/"
   cp -R "$REPO/scripts/lib" "$R/scripts/"

@@ -26,11 +26,11 @@
 # range); lib/ci-local-changed.sh. (retro 2026-11-15 coordination-stretch C3) A kit *.md, ledger.d or changelog.d
 # change also runs tests/kit-links.bats on a snapshot of it; lib/ci-local-kitlinks.sh (T25). Its bats not provisioned
 # at the ci.yml pin (the download error, or one line when the provisioned bats is not the pinned version), or a git
-# error while detecting the change (one line), exits 3 (T32). A changed go/**/*.go
-# also runs the file-size gate, `go test -count=1 ./internal/filesize` from go/ (the whole work tree, as CI's Go
-# job does) and fails, printing the exact debt-list line to add, raise, lower or delete, when a production Go file over
-# 200 lines is not in go/internal/filesize/modularity-debt.txt, grew past its recorded count or past 400 lines, or a
-# listed file is at 200 lines or less (issues #969, the research-sdd debt-list model).
+# error while detecting the change (one line), exits 3 (T32). It also runs the gates the changed files trigger, from
+# go/internal/cisteps/gates.go: `go test` of the Go packages that read the tree (a changed go/**/*.go runs the file-size
+# gate, #969; a changed *.md the cardwidth gate, #983), ci.yml's own lint steps, and scripts/pr-size.sh against origin/main
+# (WARN only: the size:exception label decides in CI). A test there fails when a ci.yml step or such a package has no row,
+# and the summary counts every failed check, gates included; lib/ci-local-gates.sh.
 # The tarballs are cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/ (--cache-dir)
 # and their sha256 is checked on every use; never installed system-wide, never sudo.
 #
@@ -55,6 +55,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$ROOT/scripts/lib/ci-local-tools.sh" || exit 3
 # shellcheck disable=SC1091
 . "$ROOT/scripts/lib/ci-local-changed.sh" || exit 3
+# shellcheck disable=SC1091
+. "$ROOT/scripts/lib/ci-local-gates.sh" || exit 3
 # shellcheck disable=SC1091
 . "$ROOT/scripts/lib/ci-local-js.sh" || exit 3
 # shellcheck disable=SC1091
@@ -149,29 +151,12 @@ fi
 
 check_host_budget
 
-# run_filesize — after run_changed: when a changed file is a go/**/*.go (a `gofmt` row of its plan), run the file-size
-# gate as CI's Go job does. Its messages (the debt-list line to add, raise, lower or delete) are the failing test's
-# output. Exit 0 the gate passed or no Go file changed, 1 it failed.
-run_filesize() {
-  grep -q "^gofmt$(printf '\t')" "$WORK/changed.plan" 2>/dev/null || return 0
-  local name="go test ./internal/filesize" out="$WORK/filesize.out" rc=0
-  printf '== %s\n' "$name"
-  (cd "$ROOT/go" && go test -count=1 ./internal/filesize) > "$out" 2>&1 || rc=$?
-  if [ "$rc" -eq 0 ]; then printf 'PASS %s\n' "$name"; return 0; fi
-  cat "$out"
-  printf 'FAIL %s (exit %d)\n' "$name" "$rc"
-  printf 'ci-local: --changed: 1 more check failed (the file-size gate)\n'
-  return 1
-}
-
-# --changed runs no workflow step: the lints of the change, after the same host-budget gate, then the file-size
-# gate and kit-links.
+# --changed runs no workflow step: the lints and tree gates of the change, after the same host-budget gate, then
+# kit-links.
 if [ "$CHANGED" -eq 1 ]; then
-  rc=0 fs=0 kl=0
-  run_changed || rc=$?
-  run_filesize || fs=$?  # Mutation: CLF1 -- dropping this call lets an unlisted 201-line Go file through to CI.
+  rc=0 kl=0
+  run_changed || rc=$?  # Mutation: CLF1 -- dropping the gates from run_changed lets an unlisted 201-line Go file through to CI.
   run_kit_links || kl=$?  # Mutation: CL30 -- dropping this call lets a dangling kit reference through to CI.
-  [ "$fs" -le "$rc" ] || rc=$fs
   exit $((kl > rc ? kl : rc))
 fi
 
