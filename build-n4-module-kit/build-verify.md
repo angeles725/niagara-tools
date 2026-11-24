@@ -100,6 +100,12 @@ Start-menu **Niagara Console** (`console.exe` sets both); for a non-standard use
 there first (`nre.dll` reads it into `-Dniagara.user.home`). On Linux source `<sysHome>/bin/.niagara` first.
 `[ev: corpus B1420 §1420.3]` `[ev: corpus B1416 §1416.5 c]` `[ev: retro course-coverage Δ17]`
 
+`toolbelt/nre-tool.sh` is that NRE command for the build loop: `list`, `deps`, `palette` and `recompile` run
+`DependencyChecker`, `PaletteGenerator` and `RecompileTool` with `niagara_home` wired. nre's exit code is the exit
+(RecompileTool and PaletteGenerator exit 0 after a failure they print, so the helper reads their output too);
+`palette` replaces `module.palette` and `recompile` never takes `-password:` (BUILD-LOOP.md § build-time nre tools).
+`[ev: corpus B1453 §1453.4]`
+
 Building on WSL against `niagara_home=C:\...` breaks the m2 repo (see §Build target & plugin version); and when a `-ux` depends on `-rt`, the plugin's auto-copy of the built jar into a station-locked `modules/` fails. That copy failure is irrelevant — free the lock, or use the already-assembled `build/libs` jar (§Building against a running station: free the lock first, mirror only when you can't); the mirror is only for a live production supervisor.
 
 ## Build location — ext4 vs 9p/drvfs `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ7]`

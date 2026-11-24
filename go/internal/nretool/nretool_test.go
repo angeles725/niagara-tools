@@ -81,7 +81,7 @@ func TestUsageAndEnvironmentFaults(t *testing.T) {
 		want string
 	}{
 		{nil, "usage: nre-tool deps [--raw] <niagara_home> <module>"},
-		{[]string{"palette", empty, "x"}, "nre-tool: unknown tool palette (known: deps)"},
+		{[]string{"frobnicate", empty, "x"}, "nre-tool: unknown tool frobnicate (known: deps, list, palette, recompile)"},
 		{[]string{"deps", empty}, "usage: nre-tool deps"},
 		{[]string{"deps", empty, "x"}, "nre-tool: no bin/nre.exe or bin/nre under " + empty},
 		{[]string{"deps", empty, "a b"}, "nre-tool: bad module name \"a b\""},
