@@ -1,0 +1,23 @@
+name: mcp-n4
+description: A bug, gap or improvement in the mcp-n4 MCP server
+labels: ["area:mcp-n4"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+      description: One problem per issue. Name the tool or command (for example `n4_set_slot`) and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: The command and its output, the test that fails, or the retro delta (`retro <stem> Δ<id>`). Anonymize station names, hosts and credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed fix or decision needed
+      description: Optional. A review advisory that needs a decision, changes a contract or is bigger than its PR also gets the `follow-up` label.

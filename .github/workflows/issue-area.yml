@@ -1,0 +1,49 @@
+name: Issue area
+
+# Fails when an issue has no `area:*` label, and comments once saying which to add. The issue forms
+# (.github/ISSUE_TEMPLATE/) apply the label themselves; this covers the issues a script opens (`gh issue create`,
+# retro staging), which skip the forms. The decision is scripts/issue-area.sh. The labeled/unlabeled types re-run it
+# when a maintainer adds the label, so a fixed issue turns the run green.
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled]
+
+# Comment and read comments only. Checkout of this public repository needs no token permission.
+permissions:
+  issues: write
+
+# One run per issue: a labeled run must not be overtaken by an older, label-less one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  issue-area:
+    name: Issue area
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require an area label
+        env:
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rc=0
+          bash scripts/issue-area.sh > "$RUNNER_TEMP/issue-area.txt" || rc=$?
+          cat "$RUNNER_TEMP/issue-area.txt"
+          if [ "$rc" -eq 1 ]; then
+            # Comment once: an edit or an unrelated label change must not add a second comment.
+            existing=$(gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER/comments" --paginate --jq '.[].body')
+            if ! grep -qF '<!-- issue-area -->' <<< "$existing"; then
+              gh issue comment "$ISSUE_NUMBER" --body-file "$RUNNER_TEMP/issue-area.txt"
+            fi
+            echo "::error title=Issue area::issue #$ISSUE_NUMBER has no area:* label"
+          fi
+          exit "$rc"

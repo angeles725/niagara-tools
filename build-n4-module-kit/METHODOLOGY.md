@@ -174,6 +174,13 @@ See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev
   mechanical rename, an unsplittable change) carries the `size:exception` label, which only a maintainer adds: the
   check then passes with a warning. Adding or removing the label re-runs the check. Prefer splitting into a chain of
   PRs; the label is the exception, not the way around the limit. Decision L14 of the 2026-11-24 mcp-n4 campaign.
+- **A small review advisory is fixed in the same PR; only a design advisory becomes an issue:** an advisory that is
+  small (rename a test, a doc line, a message, a missing test case under ~20 lines) is fixed before merge, in the PR
+  under review. Only a design advisory (it changes a contract, needs a decision, or is bigger than the PR) is filed as
+  an issue, labelled `follow-up` plus its area (`area:mcp-n4` or `area:build-n4-module`). Once a week one PR sweeps the
+  open `follow-up` issues. Every new issue needs an `area:*` label: the issue forms in `.github/ISSUE_TEMPLATE/` apply
+  it, and `.github/workflows/issue-area.yml` (decision in `scripts/issue-area.sh`) comments once and fails the run for
+  an issue a script opened without one; adding the label turns it green. Decision of the 2026-11-24 mcp-n4 campaign.
 - **Doc-vs-script folded-completeness:** a retro lesson whose whole content is a rule/checklist item is FULLY folded by documenting it (INDEX row → `folded`). A lesson that asks for a SCRIPT or GATE behavior change is only PARTLY folded by its prose — the implementation is still owed, so its row STAYS `pending` and the impl is logged as a `kit` self-section `open_issue` (an `open_issue:` line of a `ledger.d/` fragment; read the ledger with `toolbelt/kit-state.sh build-state`) (a tracked future MINOR PR). Never mark a retro `folded` just because its prose landed. [ev: retro campaign2-promotion-process-meta-lessons · meta-lesson 2]
 - **Adversarial fidelity grading beats a green suite:** a promotion is a documentation act whose correctness is faithfulness-to-source + fold-completeness — neither is a runtime property, so a passing bats gate cannot verify it. Budget an independent per-lesson fidelity pass on every promotion PR (diff each fold against its source retro); it catches folded over-claims a green suite misses. [ev: retro campaign2-promotion-process-meta-lessons · meta-lesson 3]
 - **K1 — Gate exits cover every change class:** a gate's exit set must cover every legitimate change class it will see; when a real workflow fits no exit, add a typed exit with its own proof-of-work guard — never stretch an existing label. [ev: retro gate-exit-taxonomy-promotion]
