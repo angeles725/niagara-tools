@@ -134,7 +134,7 @@ func (st *Station) invoke(arg map[string]any) (any, error) {
 			n.Children = append(n.Children, leaf)
 		}
 		st.fill(leaf, whole)
-	case action == "active" || action == "inactive" || action == "auto":
+	case action == "active" || action == "inactive" || action == "auto" || action == "ping":
 	default:
 		return nil, fmt.Errorf("ValueError: unsupported action %s", action)
 	}

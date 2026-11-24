@@ -282,7 +282,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_read_history`, `n4_export_history`, `n4_read_audit`, `n4_users_audit`, `n4_histories_audit`, `n4_license_info`, `n4_read_alarms`, `n4_list_alarm_classes`, `n4_event_report`,
 `n4_alarm_health`,
 `n4_alarm_text_check`,
-`n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`, `n4_schedule_audit`,
+`n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`, `n4_schedule_audit`, `n4_override_audit`,
 `n4_station_runtime`, `n4_read_tags`,
 `n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
@@ -1266,7 +1266,14 @@ Tool rules:
   `writeDeviceInstance`. `set`
   restores the previous `fallback` as its inverse; the others have none and the plan
   says so. `ping` on a driver network, device or point device ext asks the driver to
-  check the device and changes no setting. `writeDeviceInstance` is accepted only on a
+  check the device and changes no setting. Its read-back reads each device's `status` and
+  `health` (`lastOkTime`, `lastFailTime`, `lastFailCause`) before and after (a network: its
+  devices, one BQL) and puts both in `observed.devices[]` with `changed` (the changed devices
+  first; `devices_total`, `devices_changed`). The verdict is `verified` when one device's
+  status or health moved, `mismatch` when none did, with `observed.note` naming why (the
+  network is disabled, the device is disabled or down, or the check may still be running: read
+  the health again), and `unverified` only when the health could not be read (`observed.hint`).
+  `writeDeviceInstance` is accepted only on a
   `honeywellBacnetSpyder:BacnetSpyder`: it writes the component's
   `config/deviceObject/objectId` into the controller at the component's `address`
   (MS/TP network and MAC), so it renumbers a Spyder that still has a duplicate factory
@@ -1810,6 +1817,27 @@ refuses `knobCount` leaves `linked_targets` and `unlinked` null with a note. `no
 the schedules whose `next_time` is the null time; a `next_time` that cannot be read is null with a
 note and is not listed there. `counts` holds the totals; `truncated` marks a list cut at
 `max_schedules`.
+
+### Auditing the overrides
+
+`n4_override_audit(base, levels=[1, 8], max_writables=5000)` (retro R8 delta N7) lists the writables
+that hold an override below `base` in one read-only call, so "no permanent overrides" needs no hand
+BQL. It reads `select slotPath, out, overrideExpiration from <type>` for `control:NumericWritable`,
+`control:BooleanWritable`, `control:EnumWritable` and `control:StringWritable`. The active level is
+only inside the `out` text (`75.0 {ok} @ 8`; a station's `where overrideExpiration != null` found no
+row in the lab), so every writable is read and the number after the last `@` is parsed: `@ 16` and
+`@ def` are no override, `@ 8` is a manual override (`kind: manual`), `@ 1` an emergency override
+(`emergency`); the other levels are inputs a link or a program writes and are listed only when `levels`
+names them (`kind: input`). Each entry of `overrides` (permanent first, then by level and path) is
+`{writable, type, level, kind, out, expires, permanent, in16}`: `expires` is `overrideExpiration` as the
+station shows it (`null` when it has none), `permanent` is true then. `in16` is `{linked, source_ord,
+source_slot, schedule}` from the writable's own `in16` link; `schedule` is the ORD of the
+`schedule:ControlSchedule` the source is (found by `select slotPath, handle from
+schedule:ControlSchedule`), null when the source is something else or the handles could not be read
+(a note says so; `source_ord` still names the source). `counts` holds `writables`, `overridden`,
+`permanent`, `timed`, `unreadable` and `by_level` (every level the out texts show); `counts.permanent`
+0 is the proof that no override is left without an expiry. A type the station refuses goes under
+`unreadable` and the others are still read; `truncated` marks a read cut at `max_writables`.
 
 ### Writing a weekly schedule and its default output
 

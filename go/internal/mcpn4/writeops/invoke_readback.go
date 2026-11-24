@@ -18,6 +18,9 @@ func invokeReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies
 		case spyderDownload, spyderCompile:
 			return spyderDownloadReadback(c, p, replies[0])
 		}
+		if action == "ping" {
+			return pingReadback(c, args, p, replies[0])
+		}
 		if action == writeDeviceInstance {
 			ordText := str(args, "ord")
 			h, _ := p.Targets.Get(ordText)

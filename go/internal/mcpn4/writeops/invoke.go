@@ -102,9 +102,11 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 			return nil, plan.ToolError("action " + pyjson.StrRepr(action) + " takes no arg")
 		}
 		note := "no inverse: " + action + " changes the control state and is not restored automatically"
+		var data any
 		switch action {
 		case "ping":
 			note = "no inverse: ping only asks the driver to check the device and changes no setting"
+			data = readPing(c, ordText, nodes) // the health before; the read-back reads it again
 		case writeDeviceInstance:
 			if t := rootType(nodes); t != spyderType {
 				return nil, plan.ToolError("action " + pyjson.StrRepr(action) + " needs a " + spyderType +
@@ -115,7 +117,7 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 			}
 			note = msgWriteInstance
 		}
-		return &plan.Planned{Ops: []any{invokeOp(arg)}, Inverse: []any{}, Targets: targets, Notes: []any{note}}, nil
+		return &plan.Planned{Ops: []any{invokeOp(arg)}, Inverse: []any{}, Targets: targets, Notes: []any{note}, Data: data}, nil
 	}
 	fbType, err := fallbackType(nodes)
 	if err != nil {
