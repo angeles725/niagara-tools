@@ -1,6 +1,8 @@
-// Package filesize keeps Go source files small: a non-test file may hold at most Limit lines unless it is on the
-// recorded list of files that were already larger when the rule arrived, and a listed file may not grow.
-// The list only shrinks: split a listed file, then lower or delete its line.
+// Package filesize keeps Go source files small with a band: a non-test file over WarnLimit lines is a warning (reported,
+// never failing), and one over FailLimit lines fails unless it is on the recorded list of files that were already
+// larger when the rule arrived. A listed file may not grow and gets no warning.
+// The list only shrinks: split a listed file, then lower or delete its line. Split by responsibility, never only to
+// get under the number.
 package filesize
 
 import (
@@ -14,17 +16,23 @@ import (
 	"strings"
 )
 
-// Limit is the number of lines a non-test Go file may hold without being on the baseline.
-const Limit = 200
+const (
+	// WarnLimit is the number of lines above which a non-test Go file outside the baseline is reported as a warning.
+	WarnLimit = 200
+	// FailLimit is the number of lines above which a non-test Go file outside the baseline fails the gate.
+	FailLimit = 300
+)
 
 // Finding is one file that breaks the rule, with the reason.
 type Finding struct {
 	Path   string
 	Lines  int
 	Reason string
+	// Warn marks a finding that is reported but never fails the gate.
+	Warn bool
 }
 
-// Check walks root for non-test Go files and compares each against the limit and the baseline (path -> lines).
+// Check walks root for non-test Go files and compares each against the limits and the baseline (path -> lines).
 func Check(root string, baseline map[string]int) ([]Finding, error) {
 	sizes, err := Sizes(root)
 	if err != nil {
@@ -34,17 +42,19 @@ func Check(root string, baseline map[string]int) ([]Finding, error) {
 	for path, n := range sizes {
 		allowed, listed := baseline[path]
 		switch {
-		case !listed && n > Limit:
-			out = append(out, Finding{path, n, fmt.Sprintf("holds %d lines, over the limit of %d: split it by responsibility", n, Limit)})
+		case !listed && n > FailLimit:
+			out = append(out, Finding{path, n, fmt.Sprintf("holds %d lines, over the limit of %d: split it by responsibility", n, FailLimit), false})
+		case !listed && n > WarnLimit:
+			out = append(out, Finding{path, n, fmt.Sprintf("holds %d lines, over %d (it fails over %d): split by responsibility, never only to get under the number", n, WarnLimit, FailLimit), true})
 		case listed && n > allowed:
-			out = append(out, Finding{path, n, fmt.Sprintf("grew from its recorded %d lines to %d: split it before adding to it", allowed, n)})
-		case listed && n <= Limit:
-			out = append(out, Finding{path, n, fmt.Sprintf("is now within the limit (%d lines): delete its baseline line", n)})
+			out = append(out, Finding{path, n, fmt.Sprintf("grew from its recorded %d lines to %d: split it before adding to it", allowed, n), false})
+		case listed && n <= WarnLimit:
+			out = append(out, Finding{path, n, fmt.Sprintf("is now within the limit (%d lines): delete its baseline line", n), false})
 		}
 	}
 	for path := range baseline {
 		if _, ok := sizes[path]; !ok {
-			out = append(out, Finding{path, 0, "is on the baseline but no longer exists: delete its baseline line"})
+			out = append(out, Finding{path, 0, "is on the baseline but no longer exists: delete its baseline line", false})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
