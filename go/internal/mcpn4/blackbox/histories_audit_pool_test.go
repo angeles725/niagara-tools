@@ -120,7 +120,8 @@ func TestHistoriesAuditFlatReadsFourHistoriesAtATimeAndKeepsTheReply(t *testing.
 }
 
 // A failed window read or count read is counted in flat_reads and noted; the failure named is the first in
-// extension order (issue #968 item 3), whichever read finished first.
+// extension order (issue #968 item 3), whichever read finished first: H6 has no route, so its window read
+// answers 404 at once, while H2's count is sent only after its 40 ms window read; H6 fails first in time.
 func TestHistoriesAuditFlatNamesTheFirstFailureInExtensionOrder(t *testing.T) {
 	counts := map[int]string{}
 	for i := 0; i < poolHistories; i++ {

@@ -2,6 +2,8 @@ package readtools
 
 import (
 	"fmt"
+	"os"
+	"runtime/debug"
 	"sync"
 )
 
@@ -31,11 +33,13 @@ func runPool(n int, work func(i int)) (errs []error) {
 	return errs
 }
 
-// callRecovered is work(i), with a panic returned as an error.
+// callRecovered is work(i), with a panic returned as an error. The stack goes to stderr (stdout carries the
+// JSON-RPC stream), so the faulting line can still be found while the server keeps running.
 func callRecovered(i int, work func(i int)) (err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("the read panicked: %v", p)
+			fmt.Fprintf(os.Stderr, "mcp-n4: pooled read %d panicked: %v\n%s", i, p, debug.Stack())
 		}
 	}()
 	work(i)
