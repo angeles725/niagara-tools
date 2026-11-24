@@ -24,12 +24,12 @@
 # --changed runs no step: it runs the pinned shellcheck, the kit's bats lints and gofmt over the files changed
 # against origin/main, or over the commit range --range names (.githooks/pre-push calls it with the pushed
 # range); lib/ci-local-changed.sh. (retro 2026-11-15 coordination-stretch C3) A kit *.md, ledger.d or changelog.d
-# change also runs tests/kit-links.bats on a snapshot of it; lib/ci-local-kitlinks.sh (T25). A changed go/**/*.go
+# change also runs tests/kit-links.bats on a snapshot of it; lib/ci-local-kitlinks.sh (T25). Its bats not provisioned
+# at the ci.yml pin (the download error, or one line when the provisioned bats is not the pinned version), or a git
+# error while detecting the change (one line), exits 3 (T32). A changed go/**/*.go
 # also runs the file-size gate, `go test -count=1 -v ./internal/filesize` from go/ (the whole work tree, as CI's Go
 # job does), prints its `WARN ` lines (a file over 200 lines, never failing) and fails on a file over 300 lines or a
-# baseline-listed file that grew (issue #969). Its bats not provisioned
-# at the ci.yml pin (the download error, or one line when the provisioned bats is not the pinned version), or a git
-# error while detecting the change (one line), exits 3 (T32).
+# baseline-listed file that grew (issue #969).
 # The tarballs are cached under ${XDG_CACHE_HOME:-$HOME/.cache}/niagara-tools/shellcheck-v0.10.0/ (--cache-dir)
 # and their sha256 is checked on every use; never installed system-wide, never sudo.
 #
