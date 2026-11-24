@@ -1,0 +1,17 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- index.html --
+<style>
+.list { overflow: auto; height: 300px; }
+</style>
+<script>
+function poll() {
+  var top = list.scrollTop;
+  list.innerHTML = "";
+  list.scrollTop = top;
+}
+setInterval(poll, 5000);
+</script>

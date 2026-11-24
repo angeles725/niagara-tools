@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-poll-scroll-restore.sh [--strict] <ux-src-root>

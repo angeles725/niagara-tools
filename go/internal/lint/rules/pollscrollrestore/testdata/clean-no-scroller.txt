@@ -1,0 +1,16 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- index.html --
+<style>
+.list { height: 300px; }
+</style>
+<script>
+function poll() {
+  list.innerHTML = "";
+  rows.forEach(add);
+}
+setInterval(poll, 5000);
+</script>

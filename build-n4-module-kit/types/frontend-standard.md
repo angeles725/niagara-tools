@@ -93,9 +93,12 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   own slower cadence.
 - [both] A poll repaint that rebuilds a scrolling page restores its scroll position: after the render, after an
   async render, and on later frames while the content grows back; operator input (wheel, touch, key) cancels the
-  restore. A repaint that clears a scroll container with no restore is a defect. No
-  lint or webtest pattern flags it yet; that check is owed.
-  `[ev: issue #909]` (retro R9 ΔB1)
+  restore. A repaint that clears a scroll container with no restore is a defect. Enforced as an advisory:
+  `toolbelt/lint-poll-scroll-restore.sh` WARNs a `*.html`/`*.js` file whose poll callback (or a function it calls)
+  clears a container (`innerHTML = ""`, `replaceChildren()`, `.empty()`), that shows a scroller
+  (`overflow: auto|scroll`) and that reads or sets no scroll position at all. It is one lexical file at a time, so
+  a scroller styled in a separate stylesheet or any scroll call elsewhere in the file silences it; a webtest that
+  scrolls, repaints and asserts the position remains the full check. `[ev: issue #909]` (retro R9 ΔB1)
 - [both] Images ship as separate cacheable files under `rc/img/`, referenced with `?v=`; measure
   page weight before reasoning about performance (base64 data URIs made ~95% of one audited page).
   Budgets are stricter on the HMI.
