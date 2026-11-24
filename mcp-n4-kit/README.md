@@ -1266,7 +1266,14 @@ Tool rules:
   `writeDeviceInstance`. `set`
   restores the previous `fallback` as its inverse; the others have none and the plan
   says so. `ping` on a driver network, device or point device ext asks the driver to
-  check the device and changes no setting. `writeDeviceInstance` is accepted only on a
+  check the device and changes no setting. Its read-back reads each device's `status` and
+  `health` (`lastOkTime`, `lastFailTime`, `lastFailCause`) before and after (a network: its
+  devices, one BQL) and puts both in `observed.devices[]` with `changed` (the changed devices
+  first; `devices_total`, `devices_changed`). The verdict is `verified` when one device's
+  status or health moved, `mismatch` when none did, with `observed.note` naming why (the
+  network is disabled, the device is disabled or down, or the check may still be running: read
+  the health again), and `unverified` only when the health could not be read (`observed.hint`).
+  `writeDeviceInstance` is accepted only on a
   `honeywellBacnetSpyder:BacnetSpyder`: it writes the component's
   `config/deviceObject/objectId` into the controller at the component's `address`
   (MS/TP network and MAC), so it renumbers a Spyder that still has a duplicate factory
