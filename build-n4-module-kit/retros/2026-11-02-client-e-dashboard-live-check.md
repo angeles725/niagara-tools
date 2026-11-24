@@ -62,4 +62,4 @@ The dashboard's write paths (numeric setpoints, VAV cross-checked limits, AHU re
 - Official docs can add field risks a live fixture never shows (min-on/min-off timers); read the point-type guide before trusting a pulse design.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-02-client-e-dashboard-live-check.md | kit | 2026-11-02 | pending | 35 |`
+**Status**: PENDING — its 35 deltas are tracked as one grouped issue, #986 (2026-11-24); the marker flips to folded once they land in the kit and are cited. INDEX row generated from the header: `| 2026-11-02-client-e-dashboard-live-check.md | kit | 2026-11-02 | pending | 35 |`
