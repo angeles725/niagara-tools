@@ -32,6 +32,8 @@ func TestLintRowsVerdicts(t *testing.T) {
 		want string
 	}{
 		{"exit 3 is an env fault", 3, "FAIL  c  /a:1  r", rows, "A  ERROR  l  env fault (exit 3)\n"},
+		{"exit 3 names the member's own reason", 3, "FAIL  c  /a:1  r\nl: go not found on PATH", rows,
+			"A  ERROR  l  env fault (exit 3): l: go not found on PATH\n"},
 		{"none adds no row", 0, "", none, ""},
 		{"rows: clean", 0, "", rows, "A  PASS  l  clean\n"},
 		{"rows: a WARN row blocks the PASS", 0, "WARN  c  /a:1  r", rows, "A  WARN  c  a:1  r\n"},

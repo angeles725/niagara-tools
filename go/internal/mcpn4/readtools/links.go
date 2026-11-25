@@ -84,7 +84,7 @@ func (t *Tools) scan(args *pyjson.Object) (string, *pyjson.Object, []link, int, 
 }
 
 // scanOrd is ord loaded depth+3 deep (a link sits one level below its target and its slots
-// one more) and every link whose target is at most depth+1 levels below ord, so that an out
+// one more) and every link whose target is at most depth+1 levels below ord (ord is level 0), so that an out
 // slot feeding a target one level below depth is seen as used.
 func (t *Tools) scanOrd(ord string, depth int) (*pyjson.Object, []link, error) {
 	nodes, err := t.Ctx.Session.Client.(Client).LoadTree(ord, depth+3, box.LoadOptions{})
@@ -126,7 +126,9 @@ func (t *Tools) scanOrd(ord string, depth int) (*pyjson.Object, []link, error) {
 	return nodes, links, nil
 }
 
-// ListLinks is n4_list_links: the links whose target component is at most depth levels below ord.
+// ListLinks is n4_list_links: the links whose target component is at most depth levels below ord. ord itself is
+// level 0 and always scanned, so depth 1 is ord and its direct children (the schema range starts at 1; depth 0,
+// ord alone, is refused by the argument validation, "argument depth must be >= 1").
 func (t *Tools) ListLinks(args *pyjson.Object) (*pyjson.Object, error) {
 	ord, _, links, depth, err := t.scan(args)
 	if err != nil {

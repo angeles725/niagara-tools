@@ -46,7 +46,7 @@ A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it fr
 (module)  INFO  modularity  mode=none concerns=- unlisted=- largest=-
 (module)  PASS  lint-write-path  clean
 (module)  PASS  lint-bundled-jar-class-version  clean
-(module)  ERROR  lint-vacuous-tests  env fault (exit 3)
+(module)  ERROR  lint-vacuous-tests  env fault (exit 3): lint-vacuous-tests: cannot scan /x/m/A-rt/srcTest/a/ATest.java: unbalanced braces
 (module)  PASS  lint-permissions-xml  clean
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean

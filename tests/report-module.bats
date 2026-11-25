@@ -781,6 +781,18 @@ JAVA
   [[ "$output" == *"DemoPan-rt  ERROR  lint-size  env fault (exit 3): lint-size: cannot scan /x/U.java: Permission denied"* ]]
 }
 
+@test "RM53b: a lint env fault names the missing tool, the report reads INCOMPLETE and the other members still report (Δ31)" {
+  # Mutation: RM53b -- a bare 'env fault (exit 3)' leaves the punch-list without the tool to install; a CLEAN or
+  # ISSUES-free PASS verdict would hide that the lint did not run.
+  local tb="$BATS_TEST_TMPDIR/rm53btb"; stub_toolbelt "$tb" lint-vacuous-tests.sh 'echo "lint-vacuous-tests: go not found on PATH" >&2; exit 3'
+  run "$tb/report-module.sh" --lint-only "$FX/clean"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"(module)  ERROR  lint-vacuous-tests  env fault (exit 3): lint-vacuous-tests: go not found on PATH"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-link-target-flags"* ]]
+  [[ "$output" == *"0 FAIL"*"->  INCOMPLETE"* ]]
+  [[ "$output" != *"->  CLEAN"* ]]
+}
+
 @test "RM54: an unguarded getSlotPathOrd() set -> lint-set-null-ord WARN row relayed, exit 0" {
   cp -r "$FX/clean" "$BATS_TEST_TMPDIR/rm54"
   { printf 'package com.x;\npublic class BMgr {\n  void add(BComponent p, BImportMap m) {\n'
