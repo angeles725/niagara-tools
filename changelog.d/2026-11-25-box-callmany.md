@@ -18,4 +18,6 @@
 - Round trips are countable: `Client.Frames()` is the number of BOX frames the client has posted, and a client made
   with `MCP_N4_BOX_TRACE=1` in the environment prints one stderr line per frame (`box frame seq=3 messages=50
   key=callssc`); count the lines of one tool call.
-- `n4_read_tags` (`go/internal/mcpn4/readtools`) is not switched to `LoadMany` by this change; see #1025.
+- `n4_read_tags` loads its `ords` with `LoadMany` when the client batches (the station client does): replies are
+  unchanged (lab station, 10 ords: identical reply, 0.38 s → 0.18 s), but every ord is now loaded before the first
+  failing one is reported, and an ord whose batched load does not come back costs its own `LoadTree` after the batch.
