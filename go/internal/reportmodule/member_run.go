@@ -53,7 +53,7 @@ func (r *report) step(a artifact, m member) {
 // then the verdict row, or a FAIL row when the exit was non-zero and no FAIL row was relayed.
 func (r *report) lintRows(label, check string, code int, out string, f filter, v verdict) {
 	if code == 3 {
-		r.envFault(label, check, "env fault (exit 3)")
+		r.envFault(label, check, envDetail(code, out, "WARN  |FAIL  |ADVISORY  |ERROR  "))
 		return
 	}
 	rl := r.memberRows(label, out, f)
@@ -81,14 +81,22 @@ func (r *report) advisoryMember(label, check string, code int, out string, modeA
 		r.verdictAfterRelay(label, check, r.relayRows(label, out))
 		return
 	}
+	r.envFault(label, check, envDetail(code, out, "WARN  |FAIL  |ADVISORY  "))
+}
+
+// envDetail is "env fault (exit N)" followed by the member's first output line that is neither blank nor a row
+// with one of the skip prefixes (`|`-separated): the reason it could not run (a missing tool), so the punch-list
+// names what to fix (retro 2026-11-02-client-e-dashboard-live-check Δ31). The report still ends INCOMPLETE
+// (exit 3), never CLEAN, and the other members' rows stay a usable result. A member's own ERROR row (lintRows)
+// is not taken for the reason: the recorded bash goldens print the bare "env fault (exit 3)" for it.
+func envDetail(code int, out, skip string) string {
 	detail := fmt.Sprintf("env fault (exit %d)", code)
 	for _, ln := range strings.Split(out, "\n") {
-		if len(awkFields(ln)) > 0 && !hasPrefixIn(ln, "WARN  |FAIL  |ADVISORY  ") {
-			detail += ": " + ln
-			break
+		if len(awkFields(ln)) > 0 && !hasPrefixIn(ln, skip) {
+			return detail + ": " + ln
 		}
 	}
-	r.envFault(label, check, detail)
+	return detail
 }
 
 // hasFailRow reports whether out holds a `FAIL  <check>  ...` row (the status exactly FAIL).

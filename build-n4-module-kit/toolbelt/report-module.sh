@@ -80,7 +80,8 @@
 # read CLEAN when they SKIP — the verdict is INCOMPLETE, exit 4. --first-deploy: the module was never deployed, so
 # schema-risk has no baseline to diff (N/A, not a floor gap). --lint-only: a punch-list run that is not the floor
 # (no jar expected); floor SKIPs stay rows and are named on stderr. [ev: retro change-tier-time-budgets Δ3]
-# A member env fault (an ERROR row, exit 3) with no FAIL reads INCOMPLETE, never CLEAN (kit-backlog run-3 fix).
+# A member env fault (an ERROR row, exit 3) with no FAIL reads INCOMPLETE, never CLEAN (kit-backlog run-3 fix); the
+# row carries the member's own first reason line (the missing tool), and the other members' rows stay a usable result.
 # FAIL baseline: <module-root>/.report-baseline (committed with the module) lists the FAIL rows the module already
 # had, one key per line: `<artifact>  <check>  <detail>`, the row without its status; in <detail> a path is cut to
 # its file name and a number standing alone (a line number, a count) reads N, so a key survives unrelated edits

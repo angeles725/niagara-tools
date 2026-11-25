@@ -132,7 +132,7 @@
      },
      "depth": {
       "type": "integer",
-      "description": "Component levels below ord to scan (1-4)",
+      "description": "Component levels below ord to scan (1-4): 1 is the ord and its direct children; the ord itself is always scanned, so 0 is refused",
       "minimum": 1,
       "maximum": 4,
       "default": 2
