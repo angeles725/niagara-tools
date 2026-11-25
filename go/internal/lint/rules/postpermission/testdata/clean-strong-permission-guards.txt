@@ -1,0 +1,29 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- Strong.java --
+package demo;
+public class Strong extends BWebServlet {
+  public void doPost(WebOp op) {
+    if (!perms.has(BPermissions.ADMIN_INVOKE)) return;
+    post(a, b, cx);
+  }
+  public void doPut(WebOp op) {
+    if (!perms.has(BPermissions.OPERATOR_WRITE)) return;
+    post(a, b, cx);
+  }
+  public void doGet(WebOp op) {
+    user.check(this, BPermissions.operatorWrite);
+    post(a, b, cx);
+  }
+  public void doDelete(WebOp op) {
+    user.check(this, BPermissions.adminWrite);
+    post(a, b, cx);
+  }
+  public void service(HttpServletRequest req, HttpServletResponse res) {
+    if (!perms.has(OPERATOR_INVOKE)) return;
+    post(a, b, cx);
+  }
+}

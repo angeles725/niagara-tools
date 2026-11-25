@@ -47,11 +47,18 @@ var doAction = regexp.MustCompile(`^do[A-Z]`)
 var guards = map[string]bool{"checkInvoke": true, "checkWrite": true, "getPermissionsFor": true, "canInvoke": true,
 	"hasOperatorInvoke": true, "hasAdminInvoke": true}
 
-// permissionArgGuards are guards only when their argument list names BPermissions (BUser.check(target,
-// BPermissions), BPermissions.has(BPermissions)): a bare check( or has( is any method of that name.
+// permissionArgGuards are guards only when their argument list names an invoke or write permission
+// (strongPermissions): BUser.check(target, BPermissions) and BPermissions.has(BPermissions|int). A bare
+// check(x) or has(x) is any method of that name, and a read permission is no authority to invoke.
 var permissionArgGuards = map[string]bool{"check": true, "has": true}
 
-// waiver is the comment that accepts one post: on its line or the line above, with a reason.
+// strongPermissions are the BPermissions instances (BPermissions.java:24-29: operatorInvoke, adminInvoke,
+// operatorWrite, adminWrite) and int masks (:18-23: OPERATOR_INVOKE, ADMIN_INVOKE, OPERATOR_WRITE,
+// ADMIN_WRITE) that grant invoke or write. operatorRead, adminRead, OPERATOR_READ and ADMIN_READ are absent.
+var strongPermissions = map[string]bool{"operatorInvoke": true, "adminInvoke": true, "operatorWrite": true,
+	"adminWrite": true, "OPERATOR_INVOKE": true, "ADMIN_INVOKE": true, "OPERATOR_WRITE": true, "ADMIN_WRITE": true}
+
+// waiver is the comment that accepts one post: on its line, or on a comment-only line above it, with a reason.
 var waiver = regexp.MustCompile(`post-permission:[ \t]*ok[ \t]+[^ \t*/]`)
 
 const message = "runs the queued action with no RBAC Context and no permission check comes before it in this " +
@@ -65,15 +72,21 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		return nil, nil
 	}
 	decls := javasrc.Decls(toks)
+	isHandler := make([]bool, len(decls))
+	for i, d := range decls {
+		isHandler[i] = handler(d, toks)
+	}
 	var out []lint.Finding
 	for di, d := range decls {
-		if !handler(d, toks) {
+		if !isHandler[di] {
 			continue
 		}
 		guarded := false
 		for k := d.Body[0]; k < d.Body[1]; k++ {
-			if end, nested := nestedBody(decls, di, k); nested {
-				k = end - 1 // a method of an inner class is judged on its own
+			// A handler of an inner class is judged on its own; any other inner method (an anonymous
+			// Runnable's run()) is part of this handler: the checks before it guard it.
+			if end, nested := nestedHandler(decls, isHandler, di, k); nested {
+				k = end - 1
 				continue
 			}
 			t := toks[k]
@@ -82,10 +95,10 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			}
 			args, _ := arguments(toks, k+1)
 			switch {
-			case guards[t.Text], permissionArgGuards[t.Text] && namesPermissions(args):
+			case guards[t.Text], permissionArgGuards[t.Text] && namesStrongPermission(args):
 				guarded = true
 			case t.Text == "post" && isRequestPost(toks, k, args):
-				if !guarded && !waived(comments, t.Line) {
+				if !guarded && !waived(code, comments, t.Line) {
 					out = append(out, lint.Finding{Line: t.Line + 1, Msg: "post() in '" + d.Name + "' " + message})
 				}
 			}
@@ -129,19 +142,4 @@ func simple(typ string) string {
 		typ = typ[:i]
 	}
 	return typ[strings.LastIndexByte(typ, '.')+1:]
-}
-
-// rpc reports whether @NiagaraRpc sits in d's header: between the previous ";", "{" or "}" and its body.
-func rpc(d javasrc.Decl, toks []javasrc.Token) bool {
-	for j := d.Body[0] - 2; j > 0; j-- {
-		switch toks[j].Text {
-		case ";", "{", "}":
-			return false
-		case "NiagaraRpc":
-			if toks[j-1].Text == "@" {
-				return true
-			}
-		}
-	}
-	return false
 }

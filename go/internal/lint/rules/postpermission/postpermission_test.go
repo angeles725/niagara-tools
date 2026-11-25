@@ -11,4 +11,4 @@ import (
 // Context that calls post( with no permission check before it in the same method FAILs; every accepted guard
 // form, a waiver comment with a reason, an internal timer post (no Context, no request) and a post( that is only
 // a comment or a string are clean; --strict; the empty root and usage.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 9) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 15) }

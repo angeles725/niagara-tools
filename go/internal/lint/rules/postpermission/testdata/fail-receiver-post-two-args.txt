@@ -1,0 +1,19 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-post-permission  Client.java:4  post() in 'doPost' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Client.java:5  post() in 'doPost' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+-- stderr --
+-- Client.java --
+package demo;
+public class Client extends BWebServlet {
+  public void doPost(WebOp op) {
+    http.post(url, body);
+    other.post(action, arg, cx);
+  }
+  public void doPut(WebOp op) {
+    http.post(url);
+    http.post("http://h", body);
+  }
+}

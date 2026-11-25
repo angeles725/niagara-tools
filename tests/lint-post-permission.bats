@@ -75,6 +75,37 @@ setup() {
   [[ "$output" == *"Panel.java:16  post() in 'doGet' "* ]]
 }
 
+@test "PP5: a read-only or bare check(/has( is not a guard" {
+  # Mutation: PP5 -- accepting any has(/check( call as a guard passes a post( after a read-only or bare check.
+  run "$L" "$FIX/weak"
+  [ "$status" -eq 1 ]
+  [ "${#lines[@]}" -eq 2 ]
+  [[ "${lines[0]}" == "FAIL  lint-post-permission  Weak.java:6  post() in 'doPost' "* ]]
+  [[ "${lines[1]}" == "FAIL  lint-post-permission  Weak.java:10  post() in 'doPut' "* ]]
+}
+
+@test "PP6: a post( in an anonymous class inside a handler is judged against the handler's checks" {
+  # Mutation: PP6 -- skipping every inner-class body leaves a post( in an anonymous Runnable inside a handler unjudged.
+  run "$L" "$FIX/nested"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  lint-post-permission  Nest.java:7  post() in 'doPost' "* ]]
+}
+
+@test "PP7: a trailing waiver on the previous code line does not waive the next post(" {
+  # Mutation: PP7 -- reading a waiver on a code line above waives the next post( too.
+  run "$L" "$FIX/leak"
+  [ "$status" -eq 1 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "$output" == "FAIL  lint-post-permission  Leak.java:6  post() in 'doPost' "* ]]
+}
+
+@test "PP8: @NiagaraRpc with a brace in its arguments is still an RPC handler" {
+  # Mutation: PP8 -- stopping the annotation walk-back at a brace in @NiagaraRpc(...) misses the RPC handler.
+  run "$L" "$FIX/rpc"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  lint-post-permission  Rpc.java:6  post() in 'reset' "* ]]
+}
+
 @test "PP-rows: the fail fixture has exactly the three rows" {
   run "$L" "$FIX/fail"
   [ "${#lines[@]}" -eq 3 ]

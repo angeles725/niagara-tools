@@ -2,15 +2,17 @@
 package postpermission
 
 import (
+	"strings"
+
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 )
 
-// nestedBody reports whether token k is in the body of another declaration inside decls[di], and where
-// that body ends.
-func nestedBody(decls []javasrc.Decl, di, k int) (int, bool) {
+// nestedHandler reports whether token k is in the body of another handler declared inside decls[di], and
+// where that body ends.
+func nestedHandler(decls []javasrc.Decl, isHandler []bool, di, k int) (int, bool) {
 	outer := decls[di]
 	for i, e := range decls {
-		if i != di && e.Body[0] > outer.Body[0] && e.Body[1] <= outer.Body[1] && e.Body[0] <= k && k < e.Body[1] {
+		if i != di && isHandler[i] && e.Body[0] > outer.Body[0] && e.Body[1] <= outer.Body[1] && e.Body[0] <= k && k < e.Body[1] {
 			return e.Body[1], true
 		}
 	}
@@ -43,10 +45,10 @@ func arguments(toks []javasrc.Token, open int) ([][]javasrc.Token, int) {
 	return args, len(toks)
 }
 
-func namesPermissions(args [][]javasrc.Token) bool {
+func namesStrongPermission(args [][]javasrc.Token) bool {
 	for _, a := range args {
 		for _, t := range a {
-			if t.Text == "BPermissions" {
+			if strongPermissions[t.Text] {
 				return true
 			}
 		}
@@ -70,8 +72,31 @@ func isRequestPost(toks []javasrc.Token, k int, args [][]javasrc.Token) bool {
 	return len(args) >= 2 && args[0][0].Kind != javasrc.TokLiteral
 }
 
-// waived reports whether a post-permission waiver with a reason is in the comment on the 0-based line or
-// the line above.
-func waived(comments []string, line int) bool {
-	return waiver.MatchString(comments[line]) || (line > 0 && waiver.MatchString(comments[line-1]))
+// waived reports whether a post-permission waiver with a reason is in the comment on the 0-based line, or
+// on the line above when that line holds only a comment (a trailing waiver there belongs to its own post).
+func waived(code, comments []string, line int) bool {
+	return waiver.MatchString(comments[line]) ||
+		(line > 0 && strings.TrimSpace(code[line-1]) == "" && waiver.MatchString(comments[line-1]))
+}
+
+// rpc reports whether @NiagaraRpc sits in d's header: between the previous ";", "{" or "}" and its body. A
+// parenthesized list (the parameters, the annotation's own arguments, with their braces) is skipped whole.
+func rpc(d javasrc.Decl, toks []javasrc.Token) bool {
+	depth := 0
+	for j := d.Body[0] - 2; j > 0; j-- {
+		switch s := toks[j].Text; {
+		case s == ")":
+			depth++
+		case s == "(":
+			if depth > 0 {
+				depth--
+			}
+		case depth > 0:
+		case s == ";" || s == "{" || s == "}":
+			return false
+		case s == "NiagaraRpc" && toks[j-1].Text == "@":
+			return true
+		}
+	}
+	return false
 }
