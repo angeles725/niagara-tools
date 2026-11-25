@@ -1,6 +1,8 @@
 package retroissues
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -140,5 +142,32 @@ func TestNoDenylistFallbackStillFindsTheListedDuplicate(t *testing.T) {
 	_, out, _ = e2.run("--new", "1", e2.kitRetro("2026-02-01-alpha.md", slotsRetro))
 	if strings.Contains(out, "dedup search skipped") {
 		t.Errorf("no search was due, yet the note says one was skipped:\n%s", out)
+	}
+}
+
+// An alias that spells the stem of a retro in the kit would give both the same markers (retro R17 delta D4).
+func TestAnAliasCannotCollideWithAKitStem(t *testing.T) {
+	e := newEnv(t)
+	k := e.kitRetro("2026-02-01-alpha.md", alphaRetro)
+	o := e.outRetro("2026-02-02-sample.md", alphaRetro)
+	code, _, errs := e.run("--alias", "sample=alpha", k, o)
+	if code != 3 || !strings.Contains(errs, "share the name alpha") || len(e.gh.calls) != 0 {
+		t.Errorf("exit %d, stderr %q, calls %q", code, errs, e.gh.calls)
+	}
+}
+
+// Two retro files with one stem map to one alias: they would share every marker, so the second is refused unprinted.
+func TestTwoRetrosOfOneStemCannotShareAnAlias(t *testing.T) {
+	e := newEnv(t)
+	p := e.outRetro("2026-02-01-sample.md", alphaRetro)
+	other := filepath.Join(e.out, "again")
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	q := e.write(filepath.Join(other, "2026-02-01-sample.md"), alphaRetro)
+	code, out, errs := e.run("--alias", "sample=ALPHA", p, q)
+	if code != 3 || !strings.Contains(errs, "retros #1 and #2") || !strings.Contains(errs, "share the name ALPHA") ||
+		strings.Contains(out+errs, "sample") || len(e.gh.calls) != 0 {
+		t.Errorf("exit %d, out %q, stderr %q, calls %q", code, out, errs, e.gh.calls)
 	}
 }

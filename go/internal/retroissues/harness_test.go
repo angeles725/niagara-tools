@@ -17,6 +17,8 @@ type fakeGH struct {
 	labeled, searched string // JSON arrays of issues
 	listErr           error
 	createErr         error
+	commentErr        error // gh issue comment
+	editErr           error // gh issue edit (the label)
 	next              int
 	calls             []string
 	stdins            []string
@@ -39,6 +41,10 @@ func (g *fakeGH) run(args []string, stdin string) (string, error) {
 		return orEmpty(g.labeled), nil
 	case strings.HasPrefix(line, "label list"):
 		return `[{"name":"retro-delta"}]`, nil
+	case strings.HasPrefix(line, "issue comment") && g.commentErr != nil:
+		return "", g.commentErr
+	case strings.HasPrefix(line, "issue edit") && g.editErr != nil:
+		return "", g.editErr
 	case strings.HasPrefix(line, "issue create"):
 		if g.createErr != nil {
 			return "", g.createErr

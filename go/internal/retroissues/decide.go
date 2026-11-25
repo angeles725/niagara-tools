@@ -133,8 +133,8 @@ func tableRows(body string) []string {
 func summary(gs []*group, sk skipped, apply bool) string {
 	n := map[string]int{}
 	for _, g := range gs {
-		if apply && g.kind == "create" && g.number == 0 {
-			continue // planned, but gh stopped before creating it
+		if apply && (g.kind == "create" || g.kind == "dup" || g.kind == "fixed") && !g.done {
+			continue // planned, but gh stopped before it was written
 		}
 		n[g.kind]++
 	}

@@ -45,6 +45,7 @@ func inKit(kitRoot, path string) bool {
 // collect reads every retro and returns its rows that are still to be filed. A retro outside the kit with no alias is
 // an error that names its position on the command line, never its stem.
 func collect(o options) (ds []delta, sk skipped, err error) {
+	named := map[string]int{} // src -> the retro (1-based) that holds it: two retros under one name share every marker
 	for n, path := range o.files {
 		b, rerr := os.ReadFile(path)
 		if rerr != nil {
@@ -58,6 +59,10 @@ func collect(o options) (ds []delta, sk skipped, err error) {
 				return nil, sk, fmt.Errorf("retro #%d of the command line is outside the kit: give it --alias <stem>=<ALIAS>, so its name never reaches GitHub", n+1)
 			}
 		}
+		if m, dup := named[src]; dup {
+			return nil, sk, fmt.Errorf("retros #%d and #%d of the command line share the name %s: give each retro its own --alias", m, n+1, src)
+		}
+		named[src] = n + 1
 		def := ""
 		if kit {
 			def = retrorows.AreaBuild
@@ -98,6 +103,7 @@ type group struct {
 	score   float64
 	reason  string // refused: "<field> matches denylist rule #N"
 	number  int    // the issue every member's row points at, once known
+	done    bool   // --apply: gh took every write of the group (the closing line counts only these)
 }
 
 func (g *group) primary() delta { return g.members[0] }
