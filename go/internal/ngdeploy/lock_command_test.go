@@ -5,7 +5,9 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
+	"time"
 )
 
 // D6: the refusal names the command that tells whether the pid of a lock is still that run, ps -p <pid>
@@ -39,6 +41,14 @@ func TestALockWhosePidRunsAnotherProgramSaysItIsNotAnNgDeployRun(t *testing.T) {
 	}
 	defer func() { other.Process.Kill(); other.Wait() }()
 	pid := strconv.Itoa(other.Process.Pid)
+	// Start returns after fork, maybe before exec: wait until ps names the child sleep, or the lock
+	// check reads the test binary's name (a CI flake).
+	for i := 0; i < 100; i++ {
+		if out, _ := exec.Command("ps", "-p", pid, "-o", "comm=").Output(); strings.TrimSpace(string(out)) == "sleep" {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	host, _ := os.Hostname()
 	dir := t.TempDir()
 	if err := os.WriteFile(lockFile(dir), []byte("pid "+pid+"\nhost "+host+"\nstarted 2020-01-02T03:04:05Z\ncommand ng-deploy\n"), 0o644); err != nil {
