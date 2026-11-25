@@ -70,7 +70,10 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 	if len(files) == 0 {
 		return nil, lint.ErrEmptyRoot
 	}
-	want := groupVersion(root)
+	want, err := groupVersion(root)
+	if err != nil {
+		return nil, err
+	}
 	if want == "" {
 		// Mutation: UXV-noversion -- comparing against an empty version passes every module that declares none
 		return nil, errors.New(`no defaultModuleVersion("X.Y.Z") found in a build.gradle.kts under or above ` + root)

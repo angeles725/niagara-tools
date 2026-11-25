@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/htmltext"
 	"github.com/angeles725/niagara-tools/go/internal/jssrc"
 )
 
@@ -85,7 +86,7 @@ func (l lineIndex) lineAt(off int) int {
 // style attributes, and the asset strings of its inline scripts. Comments are not read.
 func htmlRefs(lines []string) []ref {
 	src := blank(htmlComment, strings.Join(lines, "\n"))
-	var refs []ref
+	var refs, markup []ref
 	for _, t := range jssrc.Tokens(jssrc.HTMLScripts(strings.Split(src, "\n"))) {
 		refs = append(refs, jsRefsOf(t)...)
 	}
@@ -100,10 +101,15 @@ func htmlRefs(lines []string) []ref {
 			if !strings.Contains(tagAttrs[name], " "+attr+" ") {
 				continue
 			}
-			refs = append(refs, ref{text: group(outside[m[0]:m[1]], a, 4), line: idx.lineAt(m[0] + a[2]), tag: tag})
+			markup = append(markup, ref{text: group(outside[m[0]:m[1]], a, 4), line: idx.lineAt(m[0] + a[2]), tag: tag})
 		}
 	}
-	return append(refs, urlRefs(outside, idx)...)
+	markup = append(markup, urlRefs(outside, idx)...)
+	for i := range markup {
+		// Mutation: UXV-entity -- reading an attribute value undecoded sees a&amp;v=1.2.3 as one parameter named amp;v
+		markup[i].text = htmltext.Unescape(markup[i].text) // an attribute value is HTML text: &amp; is &
+	}
+	return append(refs, markup...)
 }
 
 // cssRefs is the url(...) and @import references of a stylesheet, comments not read.

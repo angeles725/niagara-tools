@@ -116,3 +116,17 @@ setup() {
   [ -z "$output" ]
   [ "$stderr" = "lint-ux-version: no defaultModuleVersion(\"X.Y.Z\") found in a build.gradle.kts under or above $FX/noversion" ]
 }
+
+# shellcheck disable=SC2154  # $stderr is set by bats run --separate-stderr
+@test "UXV-ambiguous: children with different versions and none at the root is exit 3, never the first" {
+  run --separate-stderr "$UXV" "$FX/ambiguous"
+  [ "$status" -eq 3 ]
+  [ -z "$output" ]
+  [ "$stderr" = "lint-ux-version: ambiguous defaultModuleVersion: 1.0.0 in $FX/ambiguous/a, 2.0.0 in $FX/ambiguous/b" ]
+}
+
+@test "UXV-entity: &amp; in an attribute value is read as & before the query is split" {
+  run "$UXV" "$FX/entity"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  lint-ux-version  $FX/entity/$UX/index.html:2  stale-version: js/b.js?x=1&v=0.1 has ?v=0.1 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)" ]
+}

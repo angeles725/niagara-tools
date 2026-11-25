@@ -11,7 +11,8 @@
 # Reads every *.html, *.htm, *.js and *.css under the module's *-ux/src/rc/ (rc/vendor, rc/ext, *.min.js, dot and
 # *-worktrees directories are not entered; srcTest/ and any part that is not a -ux part are outside the path):
 #   HTML   href/src/poster on <link> <script> <img> <source> <video> <audio> <image> <input>; url(...) in <style>
-#          blocks and style attributes; the strings of inline <script> blocks as for JavaScript
+#          blocks and style attributes; the strings of inline <script> blocks as for JavaScript. An attribute value is
+#          HTML text: &amp; (&#38;) is read as & before its query is split, so a.js?x=1&amp;v=1.2.3 is judged
 #   CSS    url(...) and @import "..."
 #   JS     a string that holds url(...) or is one path ending in js css png jpg jpeg gif svg webp avif ico bmp woff
 #          woff2 ttf otf eot
@@ -20,7 +21,9 @@
 # time). The version is the first uncommented defaultModuleVersion("X") of build.gradle.kts, read as the kit reads it
 # everywhere (go/internal/vendorversion SourceVersion), at the root, directly under it, or above it up to the
 # gradle root (settings.gradle.kts) or the repository root: either the gradle root or <repo>/<MOD> may be the
-# argument. No version found is exit 3, never a pass; so is a root with no *-ux/src/rc file (K20).
+# argument. When the root has none and its direct children declare different versions the group is not decidable:
+# `ambiguous defaultModuleVersion: <a> in <x>, <b> in <y>` on stderr, exit 3 (the same version in several is fine).
+# No version found is exit 3, never a pass; so is a root with no *-ux/src/rc file (K20).
 #
 # Checks (row = the message's first word):
 #   stale-version  FAIL  the reference has ?v=<x> and x is not the module version (exact string compare)
@@ -36,7 +39,7 @@
 #   Row:   FAIL|WARN|PASS  lint-ux-version  <file>:<line>  stale-version|no-version: <reference> ...
 #          ERROR  lint-ux-version  <root>  no *-ux/src/rc *.html, *.js or *.css files found (wrong path or no -ux module)
 # Exit:   0  no FAIL (WARN-only, PASS and waived rows included, is still 0) · 1  any FAIL, or any WARN under
-#         --strict · 3  usage/env (no version found, an empty root, an unreadable file or directory)
+#         --strict · 3  usage/env (no or an ambiguous version, an empty root, an unreadable file or directory)
 #
 # Mutation: UXV-stale -- not comparing the suffix with the module version passes a stale ?v= (exit 0)
 # Mutation: UXV-missing -- dropping the no-version row passes a local reference with no ?v= at all
@@ -46,6 +49,8 @@
 # Mutation: UXV-vendor -- entering rc/vendor reports the vendored library's own references
 # Mutation: UXV-strict -- not promoting the WARN under --strict leaves the exit at 0
 # Mutation: UXV-empty -- treating a root with no -ux rc files as clean passes a wrong path
+# Mutation: UXV-ambiguous -- taking the first child's version judges a module against another group's version
+# Mutation: UXV-entity -- reading an attribute value undecoded sees a&amp;v=1.2.3 as one parameter named amp;v
 #
 # Implementation: rule package go/internal/lint/rules/uxversion on the shared engine go/internal/lint (go/README.md).
 # This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/n4lint when it is missing or
