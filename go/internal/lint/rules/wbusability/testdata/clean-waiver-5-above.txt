@@ -1,0 +1,14 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/BFooView.java --
+// lint-wb-usability: waived set by the wizard
+@NiagaraType
+@SuppressWarnings("unused")
+@Deprecated
+@Named("x")
+class BFooView extends BWbComponentView {
+  private BOrd target;
+}
