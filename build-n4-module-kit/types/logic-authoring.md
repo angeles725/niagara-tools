@@ -523,6 +523,13 @@ if (url.isEmpty()) {
 
 - **Watchdog/monitor:** subclass `BAbstractAlarmMonitor` (override `doRunCheck()`/domain `checkX()` + `getToNormal/OffnormalText`; maintain `status`/`lastAlarmTime`; edge-latch via `raiseAlarm(...)`). Cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; distinguish from the native `EngineWatchdog` (engine/process heartbeat, a separate layer). `[ev: corpus B775]`
 - **Timer:** `Clock.schedule` (one-shot) vs `Clock.schedulePeriodically` (repeating) — KEEP the returned `Clock.Ticket` in a field; cancel it in `stopped()`; re-arm in `changed()` when the interval is configurable (`BRandom` exemplar). `BTimer` is a clHVAC wiresheet block, NOT a scheduler. `[ev: corpus B775]`
+- **Reuse kitControl before hand-rolling a block:** `OneShot` for a pulsed command (`Time` default 0.5 s, `Fire`
+  action; `KitControl/kitControl-OneShot.txt`), `MinMaxAvg` for a zone minimum or maximum, `Reset` for a reset curve,
+  `StatusDemux` for the health flags of a point (the retro names these four; only `OneShot` was read in the guide).
+  Further kitControl rules: `types/logic.md` LC7. A dynamic slot's display name falls back to
+  `SlotPath.unescape(name)` (a frozen slot's to `toFriendly`), and a dynamic `BEnumRange` takes its lexicon from the
+  `lexicon=<module>` option (`devguide localization.txt:36-44,64-70`; `types/value-types.md`).
+  `[ev: retro client-e-dashboard-live-check Δ26]`
 
 ## Schedule integration `[ev: corpus B874]`
 
@@ -978,6 +985,15 @@ When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable
   priority, so a device program at priority 1-7 still wins in the device, and panels differ (`in10`/`in16`,
   corpus B846). Never tick a BACnet export priority our module drives (`types/driver-authoring.md` § 11.1).
   `[ev: corpus B1327 §1327.2 C2]` `[ev: retro devguide415-r2-drivers-protocols Δ5]`
+- **A pulse source (`BBooleanWritable`) keeps `minActiveTime` = `minInactiveTime` = 0:** a minimum timer holds each
+  change of `out` at priority level 6 for its duration (`User/aMinOnMinOffTimes.txt:9-11`; both default to zero). With
+  a nonzero timer the release a fallback writes is held at level 6 and the next press reads "masked (6)". A UI may
+  name level 6 as a minimum timer. `[CERT-doc]` 4.15.6.20 `guides-clean/User/aMinOnMinOffTimes.txt`.
+  `[ev: retro client-e-dashboard-live-check Δ5]`
+- **`in1` and `in8` are READONLY link targets (and `in6` on a `BBooleanWritable`):** Workbench refuses a link into a
+  READONLY slot (`BNumericWritable.java:47-51,110-115`, `BBooleanWritable.java:47-51,92-96,111-115` in 4.15.6.20).
+  Our own code still sets `in8` (rule above); a commissioning note tells the integrator to link logic into
+  `in9`-`in16`. `[ev: retro client-e-dashboard-live-check Δ6]`
 - **Set a non-null `fallback`:** the `fallback` slot is the value the writable holds when ALL 16 priority levels are null (the relinquished state). If `fallback` is null on a `BBooleanWritable`, the relay HOLDS its last command on station stop/reload — 22 PANCCADIA relays exhibited this until the fallback was set. (`BBooleanWritable.java:726`: `fallback = newProperty(0, new BStatusBoolean(false, ...))`.)
 - **`writeOnUp=true` (verify it is set):** `BTuningPolicy.writeOnUp` defaults `true` (`BTuningPolicy.java:206`), so a proxy point whose TuningPolicy uses the default is self-correcting — on device-UP it replays the last desired write. If `writeOnUp` is `false`, a write that was issued while the device was DOWN is silently dropped and the relay never receives the command. (`Tuning.java:201-204`.) Do NOT override `writeOnUp=false`.
 - **Verify the write landed — read the DOWN/STALE status bit:** `set()` returning normally does NOT mean the device received the command; it means Niagara queued it. Always check the proxy point's `BStatus.isDown()` / `isStale()` bit after a write and surface it via an alarm or a health-status slot.

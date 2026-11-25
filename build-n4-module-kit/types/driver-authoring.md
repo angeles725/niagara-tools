@@ -402,6 +402,12 @@ default `"defaultPolicy"`).
 clamped to `[200 ms, 20 000 ms]`. With all-zero defaults the scan fires every 20 s — this is
 correct; the policy kicks in only when specific slots are set. [ev: corpus B872 §872.2]
 
+**A pulse source needs `minWriteTime` 0 on its policy:** with 5 s or more the framework only marks the write as
+desired and a background thread sends it later, so a `true`/`false` pair inside the window coalesces and only
+`false` is sent (`Tuning.writeDesired`, `Tuning.java:248-264` in 4.15.6.20, the retro read `:248-270`). A pulse
+point (a momentary command) takes its own policy with Min Write Time 0 (the table's default).
+`[ev: retro client-e-dashboard-live-check Δ15]`
+
 **Stale time.** The generic framework applies a stale timer only when `staleTime > 0` (`Tuning.java:484`); 0 = no
 timer. The guides add "0 = stale immediately when unsubscribed" (the `BTuningPolicy.staleTime` javadoc says the same),
 but no code in driver-rt, basicDriver or bacnet-rt implements it — keep it out of a design `[ev: corpus B1365 §1365.4]`
@@ -874,6 +880,11 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   corpus B544 §544.5), so a device program writing at priority 1-7 beats our `in8` in the device's own array.
   A Px virtual-point write goes out at priority 16 unless the ORD carries `;priority=N`
   (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29` "By default, in the case of a write", `Bacnet/VirtualComponentsBACnet-53942D00.txt:59-60` "priority=X, which indicates the priority at which the"). `[ev: corpus B1327 rows 4-7]`
+- **A Fallback (`set`) write reaches a BACnet device at priority 16:** `PointCmd` sends a write at the fallback level,
+  or to a non-prioritized point, with no priority tag (`WriteProperty` without a level, which the device reads as 16;
+  `PointCmd.java:186-198` in 4.15.6.20, the retro read `:206-215`). A controller holding the object at priority 1-15
+  ignores it while Niagara shows ok. Commissioning reads each writable's device priority array once.
+  `[ev: retro client-e-dashboard-live-check Δ14]`
 - Owed Go lints G85 `bacnet-export-inN-contention` and G86 `bacnet-export-enum-range` (ledger).
 
 ### 11.2 · MS/TP and COV `[ev: retro devguide415-r2-drivers-protocols Δ6]`

@@ -250,6 +250,17 @@ final class SaveDelayPolicy {
   pure modules with tests (`debounce.js`, `receipt.js` in the exemplar). The receipt timeout, how long the dashboard
   waits for the device before it calls the value unconfirmed, is a behavior question asked in BUILD-LOOP §1
   (`METHODOLOGY.md` § Domain correctness). `[ev: issue #898]` (retro R7 ΔK8)
+- **Measure a timing claim (a pulse release) through an independent observer, never through a tool whose session may
+  be cold:** read the release from the dashboard's own points snapshot with a timestamp per request, the same view
+  the operator has. In one live check a first reading taken through a probe tool was withdrawn, and 15 presses read
+  through the snapshot released a 5 s pulse in 4.6-5.3 s. The snapshot also shows an unlinked slot as
+  `{v:null, st:"unlinked"}`, so the same observer shows a missing link. Observation of that check, no corpus block.
+  `[ev: retro client-e-dashboard-live-check Δ4]`
+- **Schedule ranges: write the ON ranges AND the OFF ranges, and keep the schedule's default output null:** never
+  infer OFF from "outside the ON ranges". A dashboard that saved only its ON ranges dropped the OFF ranges another
+  tool had written, and the next save lost them. A Boolean schedule's `defaultOutput` is `false` until set
+  (`BBooleanSchedule.java`, `defaultOutput` default `new BStatusBoolean(false)`), so null is a setting made at
+  commissioning. Observation from the retro, no corpus block. `[ev: issue #989]` (retro R10 P5)
 - **A timed override never becomes permanent by accident when its schedule is empty:** an override on a writable whose
   own schedule has no ranges has no "next event" to end at, so it holds forever. Decide it per module and ask when
   unknown: until when does a manual value hold when its schedule has no events? Default: fall back to the next event of
@@ -355,7 +366,15 @@ static handler picks it.
 - Niagara ships NO core credential step-up — `Flags.CONFIRM_REQUIRED` is a UX-only confirm; the `electronicSignature` module is the only true sign-before-invoke. Step-up is MODULE-level code. `[ev: corpus B803]`
 - A mutating `-ux` endpoint whose target is a CRITICAL control adds, ON TOP of the B763 five gates: (1) a SERVER-SIDE criticality allowlist of target ORDs/actions that REQUIRE step-up (never client-decided); (2) re-verify the session user through their auth scheme SERVER-SIDE; (3) issue a fresh short-TTL step-up TOKEN (2–5 min) bound to `(sessionId + user + target ORD + purpose)`, checked server-side on the write — NEVER client-only. `[ev: corpus B803]`
 - SAML/SSO caveat: a SAML user cannot be re-verified server-side mid-session (the browser→IdP redirect hierarchy is [CERT]; the "no in-request re-verify" runtime block is [INFER], B803-G1 pending a live-station confirm) — either reject with "re-login required" or trust the session + a short TTL. `[ev: corpus B803]`
-- CSRF: verify the REAL token `x-niagara-csrfToken` (`CsrfUtil.CSRF_TOKEN_HTTP_HEADER`; double-submit against the session token), not `X-Requested-With` alone. `[ev: corpus B803]`
+- CSRF: verify the REAL token `x-niagara-csrfToken` (double-submit against the session token), not
+  `X-Requested-With` alone. `[ev: corpus B803]` The documented call is `CsrfUtil.verifyCsrfToken(req)`: it reads the
+  header first, else the `csrfToken` parameter (which consumes a form body), and throws `CsrfException` on a missing
+  or wrong token. Use it as the alternative to a module-made token; the copy-ready `doPost` is
+  `types/servlet-write.md`. `[CERT-doc]` `devguide security/csrfProtection.txt:102-110`; `[CERT]` web-rt
+  `CsrfUtil.java:31,95-96`. `[ev: retro client-e-dashboard-live-check Δ21]`
+- **`WebService.sameSite` is the baseline layer under `X-Requested-With` + `Origin` + the token:** it defaults to Lax
+  (`BWebService.java:242-244`, `BSameSiteEnum.lax`). Add "`WebService.sameSite` stays Lax or Strict" to the
+  commissioning check. `[ev: retro client-e-dashboard-live-check Δ20]`
 - **Write confirmation contract — the server echoes what it stored, the client shows it, and authorized users can see recent changes:** every write endpoint answers `{ok, value, reason}` with the value ACTUALLY stored (after coercion/clamping), never a bare 200; the client checks `ok`, shows a per-field result (pending → confirmed / rejected), applies the echoed value and marks it confirmed; a rejected value is shown as rejected with its reason, never silently reverted by the next poll (a write without a confirmed read-back is a guess shown to the operator as a fact). The same written values feed a "recent changes" view (last N writes, filterable by entity/user) visible to authorized users; that view reads the server-side audit store, never the browser's local state. The audit record itself (user, ord, old, new, source, time; bounded store) is [`security.md` § 1.3 Servlet write audit](security.md). `[ev: retro dashboard-frontend-standard Δ7]` `[ev: retro servlet-write-audit Δ3]`
 - **Never `disabled` the control that opens an auth/write gate:** a disabled button dispatches no click, so a capture-phase login gate never runs and the operator sees a dead button (a disabled "save" kept the login modal from ever opening). Mark it instead (a class plus `aria-disabled="true"`) and route its click to the gate. Enforced: `rc-scan.sh` check `disabled-gate` WARNs `.disabled = <not false>`, `setAttribute("disabled"` or a `disabled` attribute on a button/input/select/textarea in a file that mentions a login/auth/step-up gate. `[ev: retro dashboard-frontend-reliability-rules Δ7]` `[ev: retro panccadia-persistent-config-hoa Δ4]`
 - The per-Ord write lock / HTTP 423 for a critical write is tracked as the client gate-4 gap (issue #49, § Reference exemplar, DWS1 gate 4). `[ev: corpus B763]`
@@ -558,6 +577,14 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   records it is `null` (the fault holds), at and after the ok record it is the ok value, and past the last record
   (the chart end) it is still the last value.
 
+### History queries
+- **Bound every history read:** `history:/<device>/<history>?period=<id>` or `?start=<time>;end=<time>`, then
+  `|bql:select timestamp, value from …` as the projection. Never an unbounded scan of a history the page does not
+  need whole. The grammar is `period=`, `start=`, `end=` and `delta=` (`HistoryQuery.java:24-53`); Java recipes,
+  paging and the row cap are `types/queries.md` § 4-§ 5.
+- **A cursor returns the SAME record object each pass:** keep a record with `newCopy()`, never the reference.
+  `[CERT-doc]` `devguide history.txt:34,155`. `[ev: retro client-e-dashboard-live-check Δ23]`
+
 ## Plano overlay
 - **The frame must carry EXACTLY ONE `aspect-ratio` declaration, equal to `IMG_W/IMG_H` — and the fix for a stale one is to DELETE it, never to shadow it:** the zone overlay aligns only when four values agree with the plano image (the `#plano` image, `IMG_W/IMG_H`, the zones `viewBox`, and the frame `aspect-ratio`); a leftover `.frame{aspect-ratio:1247/771}` masked by a higher-specificity `#frame` rule silently returns the offset if the id is renamed. Treat the four as one atomic unit; check `grep -c 'aspect-ratio'` for the plano frame == 1. [ev: retro dashboardpan-hmi-touch-ux Δ9] `[ev: corpus B797 §797.1, §797.2]`
 - **Fix a label/polygon-centroid collision with an optional per-room `lbl:[x,y]` (in %) override, not by re-drawing geometry:** adjacent or concave rooms get near-identical centroids; `cu.lbl ? cu.lbl : centroid` is minimal and reversible. [ev: retro dashboardpan-5rooms #5]
@@ -572,6 +599,17 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 ## Deploy on a JACE
 - **Never set a raw servlet path as a User's Home Page on a JACE:** `/dashboardpan/` is not a valid ORD → `SyntaxException "Missing scheme name"` → `BUser.getHomePage` throws → `AuthenticationException: Login Failed`. Land the operator with a browser bookmark or a redirect ORD/PX instead. [CERT-live 2026-09-01 · bitácora 5cuartos §9]
 - **Dashboard write access on a JACE is DEPLOY-side config, not code:** `checkCanWrite` is fail-closed and needs `OPERATOR_WRITE` GLOBAL + a non-null Web Profile + a category granting operatorRead on the service; the log line `[<mod>] checkCanWrite:` states the reason (401/403/user-not-found). [ev: bitácora 5cuartos §7-§8]
+- **The servlet COMPONENT needs its own enabled flag and read category, not only the service:** `BWebServlet` answers
+  410 itself when the servlet component is disabled, and 403 when the user lacks `operatorRead` on the servlet
+  component, both before our `doGet`/`doPost` run, so none of our log lines appears. Commissioning puts the servlet
+  component in a category the dashboard user can read, besides the service. `[CERT]` web-rt
+  `BWebServlet.java:176,181-183` (4.15.6.20; the retro read `:163-178`).
+  `[ev: retro client-e-dashboard-live-check Δ19]`
+- **A write made with the user's Context also needs `operatorInvoke` on every written POINT:** the gate above checks
+  `OPERATOR_WRITE` on the service, but `BUser.checkInvoke` asks `operatorInvoke` on the target of an operator-flag
+  action (`BUser.java:2050-2058` in 4.15.6.20; the retro read `:1680-1686`). Without it every write answers 403
+  point-forbidden while `canWrite=true`. The commissioning checklist grants both. The 403 is the retro's verifier
+  advisory, not reproduced live. `[ev: retro client-e-dashboard-live-check Δ33]`
 - **Cache-bust every static asset with the module version:** every `<link href>`/`<script src>`/image reference in `index.html` carries `?v=<module version>` equal to `defaultModuleVersion` in the group `build.gradle.kts`, bumped on every `-ux` deploy, so a kiosk panel does not keep stale JS/CSS after a `-ux`-only deploy (no station restart; the browser keeps its cache). [INFER: browser caching of servlet static responses not measured on the panel; relates to the `lint-servlet.sh` cache check.] `[ev: retro dashboard-rc-file-split Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
 - **A file the station serves (`/module/*`, `/file/*`) is cached 30 days with no ETag:** `FileServlet` answers
   `max-age=2592000` for any module file and any station file ending `png,jpg,gif,svg` (default), and revalidates by
@@ -625,6 +663,10 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   both acked and normal, so it holds every offnormal or fault row `[INFER]`. Station needs a `BAlarmService` and a
   `BAlarmClass`.
 - **Count alarm occurrences by record, not by UUID change:** a return-to-normal updates the existing record and keeps its UUID; a new off-normal always creates a new record with a new UUID. The number of occurrences of a source is its number of records. `[ev: corpus B1420 §1420.8]` `[ev: corpus B1419 §1419.2 a]` `[ev: retro course-coverage Δ6]`
+- Open alarms by the documented `alarm:|bql:select * from openAlarms` (or `getOpenAlarms()`); alarm history by a
+  bounded `timeQuery` (`types/queries.md` § 6). A browser ACK goes through BajaScript `AlarmSpace.ackAlarms`.
+  `[CERT-doc]` `devguide alarm.txt:207-216,308-333`; `[CERT]` `bajaScript-ux AlarmSpace.js:271`.
+  `[ev: retro client-e-dashboard-live-check Δ24]`
 - ACK from a plain servlet is the hard part (chihuahua only got it via BajaScript) — spike `svc.getAlarmDb().getDbConnection(cx).getRecord(BUuid)` → `svc.ackAlarm(live)` (`BAlarmDatabase.java:100`, `AlarmDbConnection.java:176`) before committing.
 
 ## Module packaging (palette + lexicon)
