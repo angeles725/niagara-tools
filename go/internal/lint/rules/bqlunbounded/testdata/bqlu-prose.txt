@@ -1,0 +1,14 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+SUMMARY  lint-bql-unbounded  checked=0 flagged=0 waived=0 non-literal-skipped=1
+-- stderr --
+-- src/BProse.java --
+package com.example.q;
+
+public class BProse
+{
+  String p = "expected a bql: prefix, got " + name;
+  String q = "station:|slot:/|bql:" + text;
+}

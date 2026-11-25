@@ -1,5 +1,6 @@
 // Package bqlunbounded is the lint-bql-unbounded rule: a bql: query literal in module Java or JavaScript whose
-// select is unbounded. WARN rows (FAIL under --strict), one SUMMARY row for the run. The station evaluates a BQL
+// select is unbounded. WARN rows (FAIL under --strict), one SUMMARY row for the run (none when the tree holds no bql: query and no built
+// bql: string, so n4lint --all prints nothing on a tree without BQL). The station evaluates a BQL
 // select as extent -> where -> aggregate -> distinct -> order -> top -> projection (bql-rt
 // SelectQuery.java:62-87 in organized/bql/bql-rt/vineflower/com/tridium/bql/), so only a top <n> stops the read;
 // BTopTable.java:57-63 (collection/, same tree) counts rows and cuts the cursor, after an order by has sorted
@@ -30,8 +31,11 @@
 // select or from; the query ends at a | outside single quotes (a |view: suffix). `top <n>` is read in the select
 // head before from, with a number or a %d, %s, ? or {n} placeholder. A literal that is added to something else
 // with + or +=, or a JavaScript template with a substitution, is built at run time: it is counted in the SUMMARY
-// row (non-literal-skipped), never judged; a run of literals added only to each other is one literal.
-// Waiver: `// lint-bql-unbounded: <reason>` on the line of the literal's first byte or on the comment-only line above.
+// row (non-literal-skipped), never judged, when its first bql: is followed by a select or by nothing (a prose
+// "expected a bql: prefix" + name is no query and is not counted); a run of literals added only to each other is one
+// literal.
+// Waiver: `// lint-bql-unbounded: <reason>` on the line of the literal's first byte or on the comment-only line above;
+// a // is found outside '...', "..." and (JavaScript) `...` literals, so a URL or an apostrophe before the marker is no problem.
 //
 // Limits, false negatives: only a literal that holds bql: is seen (BqlQuery.make("select ..."), a name or a
 // constant passed to BOrd.make, and a built string that shows no bql: fragment are not); a window passed as a
@@ -43,6 +47,7 @@ package bqlunbounded
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
@@ -97,15 +102,15 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 func scan(f *javasrc.File) ([]lint.Finding, stats) {
 	var out []lint.Finding
 	var st stats
-	for _, n := range bare(f.Raw) {
+	js := strings.HasSuffix(f.Path, ".js")
+	for _, n := range bare(f.Raw, js) {
 		out = append(out, lint.Finding{Path: f.Path, Line: n, Severity: lint.Fail, Msg: "waiver-no-reason: " + marker + " needs a reason after the colon"})
 	}
 	for _, e := range exprs(f) {
-		if !bqlAt.MatchString(e.text) {
-			continue
-		}
 		if e.dynamic {
-			st.skipped++
+			if built(e.text) {
+				st.skipped++
+			}
 			continue
 		}
 		q, ok := find(e.text)
@@ -116,7 +121,7 @@ func scan(f *javasrc.File) ([]lint.Finding, stats) {
 		v, bad := judge(q)
 		switch {
 		case !bad:
-		case waived(f.Raw, e.line):
+		case waived(f.Raw, e.line, js):
 			st.waived++
 		default:
 			st.flagged++

@@ -15,7 +15,8 @@
 #   waiver-no-reason   FAIL: a `// lint-bql-unbounded:` marker with nothing after the colon; the query is not waived.
 # `top` takes a number or a %d, %s, ? or {n} placeholder. A literal added to anything else with + or +=, and a
 # JavaScript template with ${}, is built at run time: it is counted in the SUMMARY row (non-literal-skipped), never
-# guessed. Comments and Javadoc are no code. Waive one query with `// lint-bql-unbounded: <reason>` on its line or
+# guessed, when its first `bql:` is followed by a select or by nothing (prose such as "expected a bql: prefix" + name is
+# not a query and is not counted). Comments and Javadoc are no code. Waive one query with `// lint-bql-unbounded: <reason>` on its line or
 # the comment-only line above (the reason is mandatory). Aggregates (count(*)) and an `or` in the where clause are
 # false positives: waive them. The reading is the Go package go/internal/lint/rules/bqlunbounded (doc comment, goldens).
 #
@@ -38,7 +39,8 @@
 # Usage:  lint-bql-unbounded.sh [--help] [--strict] <src-root>...
 #   Rows: WARN  lint-bql-unbounded  <file>:<line>  <check>: "<select>" <detail> (types/queries.md §n)   (FAIL under --strict)
 #         FAIL  lint-bql-unbounded  <file>:<line>  waiver-no-reason: lint-bql-unbounded: needs a reason after the colon
-#         SUMMARY  lint-bql-unbounded  checked=<n> flagged=<n> waived=<n> non-literal-skipped=<n>   (one per run)
+#         SUMMARY  lint-bql-unbounded  checked=<n> flagged=<n> waived=<n> non-literal-skipped=<n>   (one per run; none when the tree
+#                  holds no bql: query and no built bql: string, so n4lint --all stays quiet on a tree without BQL)
 #   Exits:  0  clean or WARN only · 1  any FAIL, or any WARN under --strict · 3  usage/env: no root, an unknown option,
 #           a root that is not a directory, a root with no *.java or *.js (stdout gets `ERROR  lint-bql-unbounded  <root>
 #           no *.java or *.js sources found ...`), a sub-directory the walk cannot enter or an unreadable file
@@ -50,6 +52,8 @@
 # Mutation: BQLU-waiver -- ignoring the marker WARNs the two waived queries of BWaived
 # Mutation: BQLU-waiver-bare -- accepting a bare marker waives the alarm query without a stated reason
 # Mutation: BQLU-comment -- matching raw text WARNs the queries quoted in a comment or a Javadoc
+# Mutation: BQLU-prose -- counting every built literal that holds bql: counts the prose "expected a bql: prefix" + name
+# Mutation: BQLU-jswaiver -- reading a .js line with the Java comment finder loses the marker after an apostrophe in a template
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
@@ -65,7 +69,7 @@ case "${1:-}" in
       '  Built strings (+, +=, a template substitution) are counted in the SUMMARY row, never judged.' \
       '  Waive one query: // lint-bql-unbounded: <reason>   (its line, or the comment-only line above;' \
       '  the reason is mandatory, a bare marker is a FAIL).' \
-      'Rows: WARN|FAIL  lint-bql-unbounded  <file>:<line>  <detail>, then one SUMMARY row.' \
+      'Rows: WARN|FAIL  lint-bql-unbounded  <file>:<line>  <detail>, then one SUMMARY row (none when the tree has no query).' \
       'Exit 0 clean or WARN only, 1 any FAIL (or any WARN under --strict), 3 usage or env. See types/queries.md §3, §6.'
     exit 0 ;;
 esac

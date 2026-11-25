@@ -12,5 +12,8 @@ import (
 // bqlu-waived and bqlu-waiver-bare: the waiver comment; bqlu-dynamic: built strings are counted, never judged;
 // bqlu-notcode, bqlu-edges and bqlu-js: comments, text blocks, templates, case and a `|view:` suffix;
 // bqlu-clean, bqlu-strict-clean, bqlu-minjs and bqlu-two-roots: the clean run, the skipped files, the one summary;
+// bqlu-no-query, bqlu-prose, bqlu-placeholders, bqlu-alarm-or and bqlu-js-waiver: a tree with no query prints nothing,
+// prose naming bql: is not counted, the %s and {n} top placeholders, a uuid/source predicate with an `or` (a documented
+// false positive), a JavaScript line with a URL or an apostrophe before the marker;
 // bqlu-usage and bqlu-empty-root: the argument and root errors.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 17) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 22) }

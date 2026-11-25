@@ -175,6 +175,46 @@ summary() { printf 'SUMMARY  lint-bql-unbounded  checked=%s flagged=%s waived=%s
   [ "${lines[2]}" = "$(summary 5 2 1 2)" ]
 }
 
+@test "BQLU-noquery: a readable tree of Java and JavaScript with no bql: query exits 0 with empty stdout (no SUMMARY row)" {
+  stage BNoQuery.java noquery.js
+  run "$L" "$SRC"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "BQLU-prose: a built literal that only names bql: is not counted; one that ends at bql: is" {
+  # Mutation: BQLU-prose -- counting every built literal that holds bql: counts the prose "expected a bql: prefix" + name
+  stage BProse.java
+  run "$L" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(summary 0 0 0 1)" ]
+}
+
+@test "BQLU-placeholders: top %s, top {0} and top {} bound a query like a number" {
+  stage BPlaceholders.java
+  run "$L" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(summary 3 0 0 0)" ]
+}
+
+@test "BQLU-alarm-or: an or in the where clause cancels a uuid/source index path (documented false positive, waive it)" {
+  stage BAlarmOr.java
+  run "$L" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 3 ]
+  [ "${lines[0]}" = "$W/BAlarmOr.java:5  alarm-unindexed: \"select * where uuid = '%s' or uuid = '%s'\"$AL (types/queries.md §3, §6)" ]
+  [ "${lines[1]}" = "$W/BAlarmOr.java:6  alarm-unindexed: \"select * where source = 'slot:/A' or sourceState = 'offno...\"$AL (types/queries.md §3, §6)" ]
+  [ "${lines[2]}" = "$(summary 2 2 0 0)" ]
+}
+
+@test "BQLU-jswaiver: a JavaScript marker is found after a quoted URL, an apostrophe in a template or in a double-quoted string" {
+  # Mutation: BQLU-jswaiver -- reading a .js line with the Java comment finder loses the marker after an apostrophe in a template
+  stage waived.js
+  run "$L" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(summary 3 0 3 0)" ]
+}
+
 @test "BQLU-edges: upper case, a |view: suffix, a | inside quotes, += and a ? placeholder after top" {
   stage BEdges.java
   run "$L" "$SRC"
@@ -188,9 +228,9 @@ summary() { printf 'SUMMARY  lint-bql-unbounded  checked=%s flagged=%s waived=%s
 @test "BQLU-tree: the whole fixture tree gives the expected totals, in file order, over several roots" {
   run "$L" "$FIX"
   [ "$status" -eq 1 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^WARN  lint-bql-unbounded  ')" -eq 24 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN  lint-bql-unbounded  ')" -eq 26 ]
   [ "$(printf '%s\n' "$output" | grep -c '^FAIL  lint-bql-unbounded  .*waiver-no-reason:')" -eq 1 ]
-  [ "${lines[$((${#lines[@]} - 1))]}" = "$(summary 50 24 3 6)" ]
+  [ "${lines[$((${#lines[@]} - 1))]}" = "$(summary 58 26 6 7)" ]
   mkdir -p "$BATS_TEST_TMPDIR/r2"; cp "$FIX/BClean.java" "$BATS_TEST_TMPDIR/r2/"; stage BOrderBy.java
   run "$L" "$BATS_TEST_TMPDIR/r2" "$SRC"
   [ "$status" -eq 0 ]

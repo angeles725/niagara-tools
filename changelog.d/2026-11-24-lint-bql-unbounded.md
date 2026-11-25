@@ -6,7 +6,8 @@
   `?period=`/`start=`/`end=` and no `timestamp` predicate), an `alarm:` query with no top and no index path
   (`alarm-unindexed`: not `from openAlarms`/`ackPendingAlarms`, `uuid =`, `source =` or a timestamp range), and an
   `order by` with no top (`order-by-no-top`). A string built with `+`, `+=` or a template substitution is counted in
-  the one `SUMMARY` row (`non-literal-skipped`) and never judged. Waive one query with
+  the one `SUMMARY` row (`non-literal-skipped`) and never judged (prose that only names `bql:` is not counted; a tree
+  with no query prints no `SUMMARY` row). Waive one query with
   `// lint-bql-unbounded: <reason>` on its line or the comment-only line above; a bare marker is a FAIL
   (`waiver-no-reason`). Evidence per check in the wrapper header (`SelectQuery.java`, `BTopTable.java`,
   `BHistoryDbTable.java:232-262`, `AlarmDbConnection.java:52-110`; `types/queries.md` §3, §6). The rule is a Go

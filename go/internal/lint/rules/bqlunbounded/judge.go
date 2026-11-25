@@ -40,6 +40,18 @@ func find(lit string) (q query, ok bool) {
 	return query{ord: lit[:loc[0]], text: text}, true
 }
 
+// built reports whether a literal that is added to something else is a query put together at run time: its first
+// bql: is followed by a select (a query whose tail is added) or by nothing (the select is the added part). Prose
+// that names the scheme ("expected a bql: prefix" + name) is not.
+func built(lit string) bool {
+	loc := bqlAt.FindStringIndex(lit)
+	if loc == nil {
+		return false
+	}
+	rest := strings.TrimSpace(cut(lit[loc[1]:]))
+	return rest == "" || selectRe.MatchString(rest)
+}
+
 // cut is s up to its first | outside single quotes (a |view: suffix is not part of the query).
 func cut(s string) string {
 	in := false
