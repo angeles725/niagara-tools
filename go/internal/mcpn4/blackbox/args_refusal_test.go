@@ -24,8 +24,8 @@ func TestEveryToolRefusesAnUnknownArgumentWith32602BeforeTheStation(t *testing.T
 		args Args
 		want string
 	}{
-		{"n4_add_history", historyArgs(Args{"capacity_records": 50000}, "Temp"),
-			"unknown argument 'capacity_records' for n4_add_history; did you mean 'capacity'?"},
+		{"n4_add_history", historyArgs(Args{"capacity_recs": 50000}, "Temp"),
+			"unknown argument 'capacity_recs' for n4_add_history; did you mean 'capacity'?"},
 		{"n4_navigate", Args{"depht": 1}, "unknown argument 'depht' for n4_navigate; did you mean 'depth'?"},
 		{"n4_read_slots", Args{"ord": Folder, "zzz": true}, "unknown argument 'zzz' for n4_read_slots"},
 	}

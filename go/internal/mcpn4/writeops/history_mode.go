@@ -65,19 +65,27 @@ func historyInterval(args *pyjson.Object, mode string) (string, error) {
 // historyCapacity is the capacity argument as history:Capacity encodes it, "" when not given:
 // BCapacity.encodeToString is "<restrictBy>:<max>", restrictBy 1 by record count
 // (makeByRecordCount(int)) and 0 unlimited (UNLIMITED = new BCapacity(0, 0L)). records is the
-// count for the notes ("" when unlimited).
+// count for the notes ("" when unlimited). capacity_records is an alias for a number of records only;
+// both together are refused.
 func historyCapacity(args *pyjson.Object) (encoded, records string, err error) {
 	raw, given := args.Get("capacity")
+	refused := msgHistoryCapacity
+	if alias, aliased := args.Get("capacity_records"); aliased { // capacity for a number of records only (#859)
+		if given {
+			return "", "", plan.ToolError(msgHistoryCapacityBoth)
+		}
+		raw, given, refused = alias, true, msgHistoryCapacityRecords
+	}
 	if !given {
 		return "", "", nil
 	}
-	if raw == "unlimited" {
+	if raw == "unlimited" && refused == msgHistoryCapacity {
 		return "0:0", "", nil
 	}
 	n, ok := raw.(pyjson.Number)
 	i, isInt := n.BigInt()
 	if !ok || !isInt || i.Sign() <= 0 || i.Cmp(big.NewInt(math.MaxInt32)) > 0 {
-		return "", "", plan.ToolError(fmt.Sprintf(msgHistoryCapacity, pyjson.Repr(raw)))
+		return "", "", plan.ToolError(fmt.Sprintf(refused, pyjson.Repr(raw)))
 	}
 	return "1:" + i.String(), i.String(), nil
 }
