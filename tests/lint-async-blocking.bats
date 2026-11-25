@@ -85,6 +85,20 @@ cls() {
   [[ "$output" == *"WARN  lint-async-blocking  $SRC/Post/X.java:9  post() runs () -> doSubmit(...) on another thread"* ]]
 }
 
+@test "AB5: overloads are judged on the do method the introspector runs: doX() before doX(Context)" {
+  # Mutation: AB5 -- keying do methods by name alone lets the last overload decide
+  cls Ovl '@NiagaraAction(name = "submit", flags = Flags.ASYNC)' -- '  public void doSubmit() { Thread.sleep(1L); }' \
+    '  public void doSubmit(Context cx) { cheap(); }'
+  run "$LINT" "$SRC/Ovl"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  lint-async-blocking  $SRC/Ovl/X.java:5  ASYNC action \"submit\": doSubmit blocks the shared engine thread (Thread.sleep() line 5)"* ]]
+  cls Ovl2 '@NiagaraAction(name = "submit", flags = Flags.ASYNC)' -- '  public void doSubmit() { cheap(); }' \
+    '  public void doSubmit(Context cx) { Thread.sleep(1L); }'
+  run "$LINT" "$SRC/Ovl2"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "AB-fixture: the MinimalPan and MinimalDriver -rt sources are clean under --strict" {
   run "$LINT" --strict "$KIT/fixtures/MinimalPan/MinimalPan/MinimalPan-rt/src" "$KIT/fixtures/MinimalDriver/MinimalDriver/MinimalDriver-rt/src"
   [ "$status" -eq 0 ]

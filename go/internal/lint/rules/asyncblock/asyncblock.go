@@ -9,7 +9,8 @@
 // FAIL: a plain ASYNC handler is fine for short bounded work, and the course exam accepted an ASYNC history
 // export). Rows: an ASYNC action of a class with NO post(Action...) override whose do<Name> body calls
 // Thread.sleep(, openConnection(, getOutputStream(, sendSync(, names HttpClient, or calls .get( with a "bql:"
-// string literal in the body (a BQL ord resolved on the engine thread); and a post(Action...) override that runs
+// string literal in the body (a BQL ord resolved on the engine thread), judged on the do overload the introspector
+// runs (doX(), doX(P), doX(Context), doX(P, Context), in that order of preference); and a post(Action...) override that runs
 // the handler directly (`this::doX` or `-> doX(`), which skips the action pipeline. Only `flags = ... Flags.ASYNC`
 // is read (a numeric flags value is not), and a do method inherited from another file is not seen.
 package asyncblock
@@ -59,14 +60,14 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
 	for _, c := range javasrc.Classes(toks) {
 		var posts []javasrc.Decl
-		dos := map[string]javasrc.Decl{}
+		dos := map[string][]javasrc.Decl{}
 		for _, d := range decls {
 			switch {
 			case d.Class != c.Name || d.Anonymous:
 			case d.Name == "post" && len(d.Params) > 0 && d.Params[0][strings.LastIndex(d.Params[0], ".")+1:] == "Action":
 				posts = append(posts, d)
 			case len(d.Name) > 2 && d.Name[:2] == "do" && unicode.IsUpper(rune(d.Name[2])):
-				dos[d.Name] = d
+				dos[d.Name] = append(dos[d.Name], d)
 			}
 		}
 		for _, p := range posts {
@@ -79,7 +80,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			if a.Name == "" || !a.HasFlag("ASYNC") {
 				continue
 			}
-			d, ok := dos["do"+string(unicode.ToUpper(rune(a.Name[0])))+a.Name[1:]]
+			d, ok := handler(dos["do"+string(unicode.ToUpper(rune(a.Name[0])))+a.Name[1:]], a)
 			if !ok {
 				continue
 			}

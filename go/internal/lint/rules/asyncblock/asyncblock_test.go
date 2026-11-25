@@ -11,5 +11,6 @@ import (
 // flags); course the two course acceptance cases (the exam BHistoryExportService and Lab 9 BEngineThreadExecutor:
 // WARN, exit 0); post the post() overrides (this::doX, a lambda to doX: WARN; new Invocation: clean); clean what
 // is never flagged (a post override beside a sleeping handler, a non-ASYNC action, an unrelated sleep, comments
-// and strings); strict, usage and empty-root the argument contract.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 8) }
+// and strings); overloads the do-method overload the introspector runs; strict, usage and empty-root the
+// argument contract.
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 9) }

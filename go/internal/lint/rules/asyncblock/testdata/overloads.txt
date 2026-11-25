@@ -1,0 +1,58 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-async-blocking  @DIR@/src/com/acme/BBare.java:5  ASYNC action "go": doGo blocks the shared engine thread (Thread.sleep() line 7) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, go, arg, cx) to your own executor (types/actions.md § 2)
+WARN  lint-async-blocking  @DIR@/src/com/acme/BCtxOnly.java:5  ASYNC action "go": doGo blocks the shared engine thread (Thread.sleep() line 5) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, go, arg, cx) to your own executor (types/actions.md § 2)
+WARN  lint-async-blocking  @DIR@/src/com/acme/BTyped.java:5  ASYNC action "put": doPut blocks the shared engine thread (Thread.sleep() line 7) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, put, arg, cx) to your own executor (types/actions.md § 2)
+-- stderr --
+-- src/com/acme/BBare.java --
+@NiagaraType
+@NiagaraAction(name = "go", flags = Flags.ASYNC)
+public class BBare extends BComponent
+{
+  public void doGo()
+  {
+    Thread.sleep(1L);
+  }
+
+  public void doGo(Context cx)
+  {
+    cx.log();
+  }
+}
+-- src/com/acme/BCtxFirst.java --
+@NiagaraType
+@NiagaraAction(name = "go", flags = Flags.ASYNC)
+public class BCtxFirst extends BComponent
+{
+  public void doGo()
+  {
+    cheap();
+  }
+
+  public void doGo(Context cx)
+  {
+    Thread.sleep(1L);
+  }
+}
+-- src/com/acme/BCtxOnly.java --
+@NiagaraType
+@NiagaraAction(name = "go", flags = Flags.ASYNC)
+public class BCtxOnly extends BComponent
+{
+  public void doGo(Context cx) { Thread.sleep(1L); }
+  public void doGo(String other) { cheap(); }
+}
+-- src/com/acme/BTyped.java --
+@NiagaraType
+@NiagaraAction(name = "put", parameterType = "BString", flags = Flags.ASYNC)
+public class BTyped extends BComponent
+{
+  public void doPut(BString arg)
+  {
+    Thread.sleep(1L);
+  }
+  public void doPut(BString arg, Context cx) { cheap(); }
+  public void doPut(BInteger other) { cheap(); }
+}
