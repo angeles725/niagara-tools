@@ -13,8 +13,9 @@ import (
 const (
 	installerText = "#!/usr/bin/env bash\n# install-skill.sh — fixture header.\nset -u\n" +
 		"SKILLS=\"build-n4-module:build-n4-module-kit/skill/SKILL.md mcp-n4:mcp-n4-kit/skill/SKILL.md\"\n"
-	driftText   = "#!/usr/bin/env bash\n# check-skill-drift.sh — fixture header.\n#\n#   second line\nset -u\n"
-	wantUsage   = "usage: install-skill.sh [--skill <build-n4-module|mcp-n4>] [--harness <claude|pi|gentle-shell|all>] [--home <dir>] [--dry-run] [--force]\n"
+	driftText = "#!/usr/bin/env bash\n# check-skill-drift.sh — fixture header.\n#\n#   second line\nset -u\n"
+	wantUsage = "usage: install-skill.sh [--skill <build-n4-module|mcp-n4>] [--harness <claude|pi|gentle-shell|all>] [--home <dir>] [--dry-run] [--force]\n" +
+		"       install-skill.sh --check [--home <dir>]\n"
 	buildSkill  = "stub build skill\n"
 	mcpSkill    = "stub mcp skill\n"
 	kitStateLog = "kit-state.log"

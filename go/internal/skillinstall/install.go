@@ -29,7 +29,8 @@ func Main(args []string, s cli.Stdio) int {
 		return fail(exitEnv, "no SKILLS table in %s", launcher.Path)
 	}
 	usage := "usage: install-skill.sh [--skill <" + names(table, "|") + ">] [--harness <" + harnessNames("|") +
-		">] [--home <dir>] [--dry-run] [--force]\n"
+		">] [--home <dir>] [--dry-run] [--force]\n" +
+		"       install-skill.sh --check [--home <dir>]\n"
 	o, message, withUsage := parseInstall(args)
 	if message != "" {
 		fail(exitUsage, "%s", message)
@@ -43,6 +44,9 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	if o.home == "" {
 		return fail(exitEnv, "no home directory (pass --home)")
+	}
+	if o.check {
+		return runCheck(o, table, launcher, s)
 	}
 	rel, known := lookup(table, o.skill)
 	if !known {

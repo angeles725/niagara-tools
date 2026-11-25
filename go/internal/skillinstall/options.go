@@ -9,7 +9,9 @@ const emptyHome = "--home requires a non-empty directory"
 type installOptions struct {
 	skill, home, harness string
 	dryRun, force        bool
-	homeGiven            bool // --home was on the line: it wins over a harness's directory variable
+	homeGiven            bool   // --home was on the line: it wins over a harness's directory variable
+	check                bool   // --check: the read-only drift check of every skill and harness
+	given                string // the first of --skill, --harness, --dry-run, --force on the line (--check refuses them)
 }
 
 // parseInstall reads the install-skill arguments. A malformed line returns its message, and whether
@@ -23,6 +25,9 @@ func parseInstall(args []string) (o installOptions, message string, withUsage bo
 				return o, arg + " requires an argument", false
 			}
 			i++
+			if arg != "--home" {
+				o.given = firstOf(o.given, arg)
+			}
 			switch arg {
 			case "--home":
 				if args[i] == "" {
@@ -35,18 +40,36 @@ func parseInstall(args []string) (o installOptions, message string, withUsage bo
 				o.harness = args[i]
 			}
 		case arg == "--dry-run":
-			o.dryRun = true
+			o.dryRun, o.given = true, firstOf(o.given, arg)
 		case arg == "--force":
-			o.force = true
+			o.force, o.given = true, firstOf(o.given, arg)
+		case arg == "--check":
+			o.check = true
 		case arg == "--":
-			return o, "", false // the rest is not read
+			return o.checked() // the rest is not read
 		case strings.HasPrefix(arg, "-"):
 			return o, "unknown option: " + arg, true
 		default:
 			return o, "unexpected argument: " + arg, true
 		}
 	}
+	return o.checked()
+}
+
+// checked is the result of a line that parsed: --check takes only --home, so an install option with it
+// is a usage error.
+func (o installOptions) checked() (installOptions, string, bool) {
+	if o.check && o.given != "" {
+		return o, "--check cannot be combined with " + o.given, true
+	}
 	return o, "", false
+}
+
+func firstOf(first, next string) string {
+	if first != "" {
+		return first
+	}
+	return next
 }
 
 // driftOptions is the check-skill-drift command line. explicit is whether --harness or --all was given:

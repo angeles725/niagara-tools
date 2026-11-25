@@ -32,6 +32,7 @@ setup_file() {
   # shellcheck disable=SC1091  # go/ helper, resolved at runtime via REPO_ROOT
   . "$REPO_ROOT/go/go-tool.sh"
   go_tool_bin "$REPO_ROOT/go" install-skill >/dev/null
+  go_tool_bin "$REPO_ROOT/go" check-skill-drift >/dev/null  # CK6 compares the two commands' rows
   go_tool_bin "$REPO_ROOT/go" kit-state >/dev/null
 }
 
@@ -386,4 +387,92 @@ make_tree() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"refusing to install: not a directory: $TEST_HOME/.pi/agent/prompts (move it away, then re-run)"* ]]
   [ ! -e "$TEST_HOME/.pi/agent/skills" ]
+}
+
+# ---------------------------------------------------------------------------
+# CK — install-skill.sh --check: the read-only drift check of every skill of the SKILLS table, every harness
+# (retro client-e-dashboard-live-check Δ35 / mcp-n4 dashboard-live-check-4-15 Δ21). The temp home is the only
+# home any case reads; GIT_DIR and GIT_INDEX_FILE are unset so no case reaches an outer repository.
+# ---------------------------------------------------------------------------
+@test "CK1: --check on a clean home prints one PASS row per skill (claude) and exits 0" {
+  unset GIT_DIR GIT_INDEX_FILE
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME"
+  [ "$status" -eq 0 ]
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  run --separate-stderr env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
+  [ "$status" -eq 0 ]
+  [ -z "$stderr" ]
+  [ "${lines[0]}" = "PASS  skill-drift  build-n4-module[claude]  installed copy matches build-n4-module-kit/skill/SKILL.md" ]
+  [[ "$output" == *"PASS  skill-drift  mcp-n4[claude]  installed copy matches mcp-n4-kit/skill/SKILL.md"* ]]
+  [[ "$output" == *"SKIP  skill-drift  mcp-n4[pi]  absent: $TEST_HOME/.pi/agent not found"* ]]
+}
+
+@test "CK2: --check on a diverged copy is a FAIL row with the --force remedy, exit 1, the copy untouched" {
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  printf 'stale line\n' >> "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
+  before="$(cat "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md")"
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  skill-drift  mcp-n4[claude]  installed copy $TEST_HOME/.claude/skills/mcp-n4/SKILL.md differs from mcp-n4-kit/skill/SKILL.md"* ]]
+  [[ "$output" == *"install-skill.sh --force --skill mcp-n4"* ]] # remedy named (not run)
+  [ "$(cat "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md")" = "$before" ]
+}
+
+@test "CK3: --check with nothing installed exits 1 and writes nothing" {
+  rm -r "$TEST_HOME"
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  skill-drift  build-n4-module[claude]  not installed at $TEST_HOME/.claude/skills/build-n4-module/SKILL.md"* ]]
+  [[ "$output" == *"install-skill.sh --skill build-n4-module"* ]] # remedy named (not run)
+  [[ "$output" == *"FAIL  skill-drift  mcp-n4[claude]  not installed"* ]]
+  [ ! -e "$TEST_HOME" ]
+}
+
+@test "CK4: --check reads the pi agent directory (launcher and prompt rows) and flags a diverged prompt" {
+  mkdir -p "$TEST_HOME/.pi/agent"
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4 --harness all
+  [ "$status" -eq 0 ]
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill build-n4-module --harness all
+  [ "$status" -eq 0 ]
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  skill-drift  mcp-n4[pi]  prompt $TEST_HOME/.pi/agent/prompts/mcp-n4.md matches its template"* ]]
+  printf 'stale\n' > "$TEST_HOME/.pi/agent/prompts/mcp-n4.md"
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  skill-drift  mcp-n4[pi]  prompt $TEST_HOME/.pi/agent/prompts/mcp-n4.md differs from its template"* ]]
+  [[ "$output" == *"install-skill.sh --force --skill mcp-n4 --harness pi"* ]] # remedy named (not run)
+}
+
+@test "CK5: --check takes only --home: --force, --dry-run, --skill and --harness with it are exit 2, usage printed" {
+  for opt in "--force" "--dry-run" "--skill mcp-n4" "--harness pi"; do
+    # shellcheck disable=SC2086  # the option and its value are two words
+    run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check $opt
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"install-skill: --check cannot be combined with ${opt%% *}"* ]]
+    [[ "$output" == *"install-skill.sh --check [--home <dir>]"* ]]
+  done
+  [ ! -e "$TEST_HOME/.claude" ]
+}
+
+@test "CK6: --check rows equal check-skill-drift.sh --all rows per skill (one implementation)" {
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
+  checked="$output"
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$REPO_ROOT/scripts/check-skill-drift.sh" --home "$TEST_HOME" --all --skill build-n4-module
+  expected="$output"
+  run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$REPO_ROOT/scripts/check-skill-drift.sh" --home "$TEST_HOME" --all --skill mcp-n4
+  [ "$checked" = "$expected"$'\n'"$output" ]
+}
+
+@test "CK7: the install behaviour is unchanged by --check support: a plain run still installs" {
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4 --dry-run
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_HOME/.claude/skills/mcp-n4" ]
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  cmp -s "$REPO_ROOT/mcp-n4-kit/skill/SKILL.md" "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
 }
