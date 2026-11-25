@@ -20,7 +20,7 @@ var recordTools = []string{"bash", "sh", "env", "grep", "sed", "awk", "cut", "fi
 // exact output and tree the run leaves. Fake commands are scripts in the tree; the case PATH finds the system
 // tools through <case>/.tools.
 func TestGolden(t *testing.T) {
-	golden.Runner{Cases: 125, Setup: linkTools, Main: func(env, args []string, s cli.Stdio) int {
+	golden.Runner{Cases: 128, Setup: linkTools, Main: func(env, args []string, s cli.Stdio) int {
 		return Command(Host{Output: System.Output, Env: env})(args, s)
 	}}.Run(t)
 }
