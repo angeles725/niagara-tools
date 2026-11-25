@@ -48,7 +48,11 @@ func (r *haRun) flatCheck(exts []histExt) {
 	// The histories are read haWorkers at a time; the items and failures are taken in the order of
 	// exts, so the reply is what one-by-one reads gave.
 	results := make([]flatResult, len(todo))
-	errs := runPool(len(todo), func(i int) { results[i] = r.flatItem(todo[i], start) })
+	r.beginPool()
+	errs := runPool(len(todo), func(i int) {
+		defer func() { r.finished("flat", len(todo), results[i].reads) }() // counted even when the read panics
+		results[i] = r.flatItem(todo[i], start)
+	})
 	for i, err := range errs {
 		if err != nil {
 			results[i] = flatResult{failed: err.Error()}

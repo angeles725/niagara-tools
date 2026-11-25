@@ -104,6 +104,7 @@ func laterBatchViews(w *plan.State, view *pyjson.Object, bid, created string) ([
 			after = i
 		}
 	}
+	vanishedWith(views, undone) // what a chain=true rollback removed with its create (#971 item 2)
 	var out []*pyjson.Object
 	for i := len(views) - 1; i > after && after >= 0; i-- {
 		v := views[i]
