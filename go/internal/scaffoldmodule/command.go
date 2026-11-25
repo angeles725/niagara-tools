@@ -9,7 +9,7 @@
 // text, args.go the command line, name.go the ModuleName rule, values.go the option gate (vendor required, version
 // shapes), subst.go the substitution rules, copytree.go the tree copy, cleanup.go the
 // claim of the destination and the removal of a failed emit, interrupt.go the signals held during the emit, overlay.go the station-test overlay
-// and the ledger, login.go the dashboard's login overlay, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
+// and the ledger, login.go the dashboard's login overlay, offload.go the logic fixture's opt-in async-offload component, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
 package scaffoldmodule
 
 import (
@@ -70,6 +70,9 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 	if o.withDoc && typ.noDoc {
 		return "", failf(ExitUsage, docNeedsType, typ.name)
 	}
+	if o.withOffload && !typ.offload {
+		return "", failf(ExitUsage, offloadNeedsType, typ.name)
+	}
 	if f := checkName(o.module); f != nil {
 		return "", f
 	}
@@ -97,7 +100,7 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 		return "", f
 	}
 	emitting = watch
-	f = emit(toolbelt, fixture, dest, n, typ, o.withDoc)
+	f = emit(toolbelt, fixture, dest, n, typ, o)
 	emitting = nil
 	if watch.caught() {
 		f = watch.interrupted()
@@ -109,16 +112,17 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 }
 
 // emit fills the claimed dest: the fixture copy, the type's own overlay (service), the station-test overlay, the
-// login overlay, the -doc part (withDoc), the version ledger.
-func emit(toolbelt, fixture, dest string, n names, typ moduleType, withDoc bool) *failure {
-	if err := copyTree(fixture, dest, n.fixturePathRules(), n.fixtureTextRules(), verbatimFixtureFile); err != nil {
+// login overlay, the -doc part (--with-doc), the version ledger; --with-offload keeps the fixture's offload files and
+// lines in the logic copy (offload.go).
+func emit(toolbelt, fixture, dest string, n names, typ moduleType, o options) *failure {
+	if err := copyTree(fixture, dest, n.fixturePathRules(), n.fixtureTextRules(), verbatimFixtureFile, offloadShape(typ, o.withOffload)); err != nil {
 		return failf(ExitEnv, writeFault, err)
 	}
 	for _, overlay := range []func() *failure{
 		func() *failure { return typeOverlay(toolbelt, dest, n, typ) },
-		func() *failure { return stationTestOverlay(toolbelt, dest, n, typ) },
+		func() *failure { return stationTestOverlay(toolbelt, dest, n, typ, o.withOffload) },
 		func() *failure { return loginOverlay(toolbelt, dest, n, typ) },
-		func() *failure { return docOverlay(toolbelt, dest, n, typ, withDoc) },
+		func() *failure { return docOverlay(toolbelt, dest, n, typ, o.withDoc) },
 	} {
 		if f := overlay(); f != nil {
 			return f

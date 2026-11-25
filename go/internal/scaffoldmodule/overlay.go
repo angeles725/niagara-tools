@@ -8,7 +8,7 @@ import (
 // stationTestOverlay adds templates/station-test to <dest>/<Module>/<Module>-rt for a type with link-in
 // slots: a Fox-off BTestNgStation fixture base, a link-in sample test and moduleTest-include.xml
 // (types/moduleTest.md).
-func stationTestOverlay(toolbelt, dest string, n names, typ moduleType) *failure {
+func stationTestOverlay(toolbelt, dest string, n names, typ moduleType, withOffload bool) *failure {
 	if typ.linkInSlots == "" {
 		return nil
 	}
@@ -17,7 +17,7 @@ func stationTestOverlay(toolbelt, dest string, n names, typ moduleType) *failure
 		return failf(ExitEnv, stationTestMissing, root)
 	}
 	rt := dest + "/" + n.module + "/" + n.module + "-rt"
-	if err := copyTree(root, rt, n.templatePathRules(), n.templateTextRules(typ.linkInSlots), rewriteAll); err != nil {
+	if err := copyTree(root, rt, n.templatePathRules(), n.templateTextRules(typ.linkInSlots), rewriteAll, keepFixtureTestList(withOffload)); err != nil {
 		return failf(ExitEnv, writeFault, err)
 	}
 	return nil

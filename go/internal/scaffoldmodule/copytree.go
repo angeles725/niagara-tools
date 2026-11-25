@@ -14,12 +14,17 @@ func verbatimFixtureFile(src string) bool {
 
 func rewriteAll(string) bool { return false }
 
+// fileShape lets a copy drop a source file or change its text before the rules run: rel is the slash path below
+// the copied root, text the file as read. keep=false skips the file. A nil shape copies every file as it is. Only
+// the fixture copy uses one (offload.go); jars and the Gradle wrapper (verbatim) never reach it.
+type fileShape func(rel, text string) (out string, keep bool)
+
 // copyTree copies every regular file under srcRoot to dstRoot. The relative path goes through pathRules;
-// the content goes through textRules unless verbatim(src). Directories are created as needed.
+// the content goes through shape (if any) and then textRules unless verbatim(src). Directories are created as needed.
 //
 // Modes follow the bash tool under the process umask: a rewritten file is created 0666, a verbatim copy
 // keeps its source's permission bits, and <dstRoot>/gradlew is executable.
-func copyTree(srcRoot, dstRoot string, pathRules, textRules []rule, verbatim func(src string) bool) error {
+func copyTree(srcRoot, dstRoot string, pathRules, textRules []rule, verbatim func(src string) bool, shape fileShape) error {
 	files, err := regularFiles(srcRoot, "")
 	if err != nil {
 		return err
@@ -38,7 +43,14 @@ func copyTree(srcRoot, dstRoot string, pathRules, textRules []rule, verbatim fun
 			}
 			mode = st.Mode().Perm()
 		} else {
-			data = []byte(apply(string(data), textRules))
+			text := string(data)
+			if shape != nil {
+				var keep bool
+				if text, keep = shape(rel, text); !keep {
+					continue
+				}
+			}
+			data = []byte(apply(text, textRules))
 		}
 		dstRel := apply(rel, pathRules)
 		if dstRel == rootWrapperScript {

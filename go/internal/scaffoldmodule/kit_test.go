@@ -29,7 +29,7 @@ func run(t *testing.T, toolbelt string, args ...string) result {
 	return result{code, out.String(), errb.String()}
 }
 
-const usageWant = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc]\n" +
+const usageWant = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc] [--with-offload]\n" +
 	"       scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]\n"
 
 // jarBytes is a binary payload that carries every substituted token: a verbatim copy keeps them.

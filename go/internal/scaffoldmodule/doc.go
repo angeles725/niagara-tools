@@ -20,7 +20,7 @@ func docOverlay(toolbelt, dest string, n names, typ moduleType, withDoc bool) *f
 	}
 	base := dest + "/" + n.module
 	pathRules := append(n.loginPathRules(), rule{docTypeToken, n.module + typ.docSuffix})
-	if err := copyTree(root+"/files", base, pathRules, n.docRules(typ), rewriteAll); err != nil {
+	if err := copyTree(root+"/files", base, pathRules, n.docRules(typ), rewriteAll, nil); err != nil {
 		return failf(ExitEnv, writeFault, err)
 	}
 	row := edit{file: "MODULE-MAP.md", anchor: "| plumbing |", fragment: "module-map-row.txt", name: "-doc row"}

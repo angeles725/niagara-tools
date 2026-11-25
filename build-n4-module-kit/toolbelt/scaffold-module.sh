@@ -3,7 +3,7 @@
 # Fixture-driven (D1): copies the bundled fixtures/<Type> tree and substitutes
 # the fixture type name → <ModuleName> in paths and content (B790/B793 proven tree).
 #
-# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc]
+# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc] [--with-offload]
 #   ModuleName       Java identifier: uppercase-first, alphanumeric only (e.g. ColdRoomPan)
 #   out-dir          parent directory; emitted root is <out-dir>/<ModuleName>
 #   --vendor <v>     REQUIRED: the vendor (copyright, vendor) and, lowercased, the Java package segment; no default,
@@ -15,6 +15,13 @@
 #   --with-doc       also emit a <ModuleName>-doc help part (templates/doc: gradle file, TOC, index and one Guide-on-Target
 #                    page named doc/<ModuleName>-<TypeName>.html after the registered type, no B; types/structure.md
 #                    § -doc help profile); a library registers no type, so with it the flag is exit 2
+#   --with-offload   logic only: also emit the fixture's async-offload component (BPanOffload: an ASYNC action whose post()
+#                    hands new Invocation(...) to a module-owned named executor, a not-running guard, shutdownNow() in
+#                    stopped()), its two station tests (BxxxOffloadTest, BxxxPermissionsTest: userPermissionsScenario RBAC),
+#                    their moduleTest-include.xml entries, the MANAGE_EXECUTION request and its palette, lexicon, module-include
+#                    and MODULE-MAP rows (types/actions.md § 2); without it none of these is emitted, and any other
+#                    type is exit 2. The fixture carries them between `offload:begin`/`offload:end` marker lines (and rows
+#                    ending ` <!-- offload:line -->`) that the scaffold never emits
 #   --type <logic|dashboard|driver|library|service>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay

@@ -2,7 +2,7 @@ package scaffoldmodule
 
 // Every text scaffold-module prints. The tool name in the usage lines is the launcher's.
 const (
-	usageText = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc]\n" +
+	usageText = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc] [--with-offload]\n" +
 		"       scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]\n"
 
 	unknownOption  = "scaffold-module: unknown option: %s\n"
@@ -20,6 +20,7 @@ const (
 	destExists         = "scaffold-module: destination already exists: %s\n"
 	stationTestMissing = "scaffold-module: station-test template not found: %s\n"
 	docNeedsType       = "scaffold-module: --with-doc needs a type that registers a component type; %s has none\n"
+	offloadNeedsType   = "scaffold-module: --with-offload needs --type logic; %s has no async-offload component\n"
 	serviceJobMissing  = "scaffold-module: service-job template not found: %s\n"
 	docMissing         = "scaffold-module: doc template not found: %s\n"
 	loginMissing       = "scaffold-module: dashboard-login template not found: %s\n"
