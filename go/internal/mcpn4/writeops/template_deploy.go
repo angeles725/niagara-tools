@@ -62,6 +62,10 @@ func deployPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if box.Node(parentNodes, name) != nil {
 		return nil, plan.ToolError("a child named " + pyjson.StrRepr(name) + " already exists under " + parentOrd)
 	}
+	depNotes, err := tplDepsInstalled(c, m.deps) // manifest <dependencies> against the station's modules
+	if err != nil {
+		return nil, err
+	}
 	tl, ok := c.(plan.TypeLoader)
 	if !ok {
 		return nil, plan.ToolError("a deploy needs the station's type definitions (registry channel) to " +
@@ -86,7 +90,7 @@ func deployPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	return &plan.Planned{
 		Ops:     []any{obj("nm", "a", "h", parentH, "n", name, "b", body)},
 		Inverse: []any{obj("nm", "v", "h", parentH, "n", name)},
-		Notes:   deployNotes(m, bog, name, parentOrd, lines, left),
+		Notes:   append(deployNotes(m, bog, name, parentOrd, lines, left), depNotes...),
 		Targets: targets,
 		Data:    deployData{parentH, name, body, childNames(parentNodes)},
 	}, nil

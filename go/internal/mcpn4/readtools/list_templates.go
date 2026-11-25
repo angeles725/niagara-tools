@@ -51,6 +51,9 @@ func (t *Tools) ListTemplates(args *pyjson.Object) (*pyjson.Object, error) {
 		if infos, err = r.infos(); err != nil {
 			return nil, err
 		}
+		if infos != nil {
+			r.notes = append(r.notes, ltSignatureNote)
+		}
 	}
 	instances, unreadable, configs, err := r.readAll(paths, infos)
 	if err != nil {
@@ -99,7 +102,7 @@ func ltEntry(root, configOrd string, info ltInfo, has, withInfo bool) *pyjson.Ob
 	e := obj("root", root, "config_ord", configOrd)
 	if !has {
 		for _, k := range []string{"template_name", "vendor", "version", "inputs", "outputs", "relations",
-			"default_passwords", "has_default_passwords", "signature"} {
+			"default_passwords", "has_default_passwords", "signature", "drift"} {
 			e.Set(k, nil)
 		}
 		if withInfo {
@@ -119,12 +122,12 @@ func ltEntry(root, configOrd string, info ltInfo, has, withInfo bool) *pyjson.Ob
 		flag = n > 0
 	}
 	e.Set("has_default_passwords", flag)
-	// BTemplateInfo.getModifiedState: a template signature of at most one character is unknown
-	var modified any
-	if len(info.ntpl) > 1 {
-		modified = info.ntpl != info.local
+	drift, why := ltDrift(info.ntpl, info.local) // see template_drift.go
+	e.Set("signature", obj("template", info.ntpl, "local", info.local, "modified", drift))
+	e.Set("drift", drift)
+	if why != "" {
+		e.Set("notes", []any{why})
 	}
-	e.Set("signature", obj("template", info.ntpl, "local", info.local, "modified", modified))
 	return e
 }
 

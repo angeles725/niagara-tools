@@ -1537,7 +1537,11 @@ Tool rules:
   template's value; a required setting the template leaves empty must be given; an
   unknown setting, the configuration's own metadata (`uID`, `version`...), a station or
   application template and a type the station's registry does not describe (its module
-  is missing) are refused before a token. The dry run notes the template (title,
+  is missing) are refused before a token. The dry run also compares the manifest's
+  `<dependencies>` with the station's loaded modules (spy `sysManagers/moduleManager`)
+  and refuses the deploy naming each module the station does not have (a bare module
+  name is met by any of its parts); a lower installed version is a plan note, and a
+  module page the station refuses leaves the dependencies unchecked, said in a note. The dry run notes the template (title,
   version, vendor, id), the manifest dependencies, each setting with its value, source
   and slot (warning when a Status slot it writes stays null), and everything not
   carried: the template configuration (its bindings name template handles, which would
@@ -1923,11 +1927,15 @@ TemplateService's rows `select locationOrd, templateName, vendor, version, input
 defaultPasswords, ntplSignature, localSignature from template:TemplateInfo` (only when an instance
 exists), then one load of each `templateConfig`. Each entry is `{root, config_ord, template_name, vendor,
 version, inputs, outputs, relations, default_passwords, has_default_passwords, signature: {template, local,
-modified}, configs, notes?}`. `inputs`, `outputs` and `relations` are the counts the station keeps in
+modified}, drift, configs, notes?}`. `inputs`, `outputs` and `relations` are the counts the station keeps in
 TemplateInfo (what the template declares, counted when the instance is registered); the *unbound* counts
 that Workbench's template manager shows are computed there, are not station slots, and are not reported.
-`signature.modified` is true when the deployed copy's signature differs from the template's, null when the
-template's is empty. `configs` has one entry per `ConfigBinding`: `{name, value, type, bound_to: {ord,
+`drift` (also `signature.modified`) is true when the deployed copy's signature differs from the template's,
+false when equal, and null, with an instance note, when the template's signature is empty (one character or
+less) or the deployed copy's was never computed. The station refreshes `localSignature` only when its
+`updateSignatures` action runs (when the TemplateService is subscribed, and in the upgrade job), so a stale
+value can hide an edit: the reply says so once in `notes`, and the tool never invokes that write action.
+`configs` has one entry per `ConfigBinding`: `{name, value, type, bound_to: {ord,
 slot}, tip?, note?}`; a config whose slot the station left out of its answer has `value` null and a note,
 and an instance without a TemplateInfo row has the info fields null with a note: nothing is guessed. A
 station that refuses the instance query is an error (not "zero instances"); a station with none answers
