@@ -523,6 +523,14 @@ if (url.isEmpty()) {
 
 - **Watchdog/monitor:** subclass `BAbstractAlarmMonitor` (override `doRunCheck()`/domain `checkX()` + `getToNormal/OffnormalText`; maintain `status`/`lastAlarmTime`; edge-latch via `raiseAlarm(...)`). Cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; distinguish from the native `EngineWatchdog` (engine/process heartbeat, a separate layer). `[ev: corpus B775]`
 - **Timer:** `Clock.schedule` (one-shot) vs `Clock.schedulePeriodically` (repeating) — KEEP the returned `Clock.Ticket` in a field; cancel it in `stopped()`; re-arm in `changed()` when the interval is configurable (`BRandom` exemplar). `BTimer` is a clHVAC wiresheet block, NOT a scheduler. `[ev: corpus B775]`
+- **A `Clock` ticket can be ~3 s late on 4.15.6 / Windows; never rely on sub-3 s accuracy:** a 5 s operator pulse
+  released from a ticket was ~3 s late in 6 of 47 presses (the ledger drop, the point fallback and `out` changed
+  together at ~7.9 s) while the engine's peak scan was 282 ms. Moving the release from a 5 s one-shot ticket (medium
+  queue) to a 1 s periodic ticket (short queue) did NOT remove it. `TicketQueue` bounds a short-queue ticket to <= 1 s
+  late (`TicketQueue.check/scan`, `EngineManager.execute:197-199`), so the cause is outside the queue code read;
+  `Clock.ticks` is a native tick count (`Clock.java:35-38`) that is not in the corpus [INFER: tick source pause].
+  A pulse or timeout design states its accuracy, and a timing test reads the ledger, fallback and `out` at <= 4 Hz
+  through ONE observer (`BUILD-LOOP.md` § 6.b item 11). `[ev: issue #986]`
 - **Reuse kitControl before hand-rolling a block:** `OneShot` for a pulsed command (`Time` default 0.5 s, `Fire`
   action; `KitControl/kitControl-OneShot.txt`), `MinMaxAvg` for a zone minimum or maximum, `Reset` for a reset curve,
   `StatusDemux` for the health flags of a point (the retro names these four; only `OneShot` was read in the guide).

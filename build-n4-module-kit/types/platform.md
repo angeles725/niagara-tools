@@ -55,3 +55,14 @@ A host can hold several Niagara installations side by side (one directory per ve
 - **Jar side:** the niagara-module plugin writes a `<dependency name="baja" vendor="Tridium" vendorVersion="4.14"/>` floor (major.minor) for every Tridium module the code uses; the highest one is the version the jar was compiled against. No `niagara_home` path, JDK or plugin version is in the jar. A floor is a minimum, so a 4.15 station satisfies a 4.14 floor (`BVersion.MEETS_MINIMUM`, `build-verify.md` § Module versioning & release); the kit still installs a jar only into the installation of its own major.minor, because that is the API it was compiled against.
 - **Both at once:** `toolbelt/check-target-version.sh <jar> <niagara_home | its modules directory>` prints one PASS or FAIL row with both versions; `ng-deploy.sh` runs the same comparison before the copy (exit 55).
 - **A mirror is not the installation it was made from** (`toolbelt/mirror-niagara-home.sh`): a build against a mirror leaves its jars in the mirror's `modules/`, and `build.sh` ends by naming the installation the mirror was made from and the command that installs them there. Stop that installation's station (a Windows service, or `station.exe`) and its Workbench first: a running one holds the jars open and the copy fails with Permission denied (`BUILD-LOOP.md` § 6).
+
+## 5 · Stopping a station that was started from a shell `[ev: issue #986]`
+
+- **Without `niagarad` there is no ordered stop.** A station started by hand from WSL has no local daemon, and
+  `restartStation` needs one (`BSystemPlatformService.java:782-798`); the console has no stdin to type `quit` on.
+  Killing the process is then the only stop, and it skips the save.
+- **Start and stop it with `toolbelt/lab-station.sh`.** It runs the station with its console on a named pipe and
+  `stop` writes `quit` there and waits for the shutdown line; it stops only a station it started itself.
+- **A station started any other way: save first.** `n4_save_station` with persistence evidence (verdict
+  `verified`, `config.bog` sha256 changed) comes before any forced stop (`mcp-n4-kit/METHODOLOGY.md` section 4,
+  step 5).

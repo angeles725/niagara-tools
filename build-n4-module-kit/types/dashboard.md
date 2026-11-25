@@ -31,6 +31,16 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
   cached keeps showing the old field, and the operator keeps tuning a value the control code ignores (a live
   slot kept a 10 min delay that nothing read). Design check: `ORCHESTRATION.md` §3.b item 7.
   `[ev: issue #865]` (retro R1 ΔB1)
+- **A live write check links each writable's cross-check partners too:** a write the servlet checks against another
+  slot (a setpoint against its low and high limits, a minimum flow against its maximum) reads that partner from
+  the station, and with the partner unlinked it is refused `limits-unknown`, fail-closed. A fixture that links only
+  the writable under test sees that refusal, which is the design and not a broken write path. Commissioning links
+  the partners with the writable. `[ev: issue #986]`
+- **Wiring N facades at scale is Template I/O:** the facade panel is the template root, its proxy points are
+  tagged, and the bulk deploy takes one sheet row per equipment with a Slot Path Scope. An unresolved scope
+  silently searches the whole station, and a failed bulk link is only a WARN, so open the Template Manager after
+  every deploy and check each row. Sources: `TmplUtil.java:236-265` (template-wb) and the guide page
+  `Templates/ManagingIOLinks`. `[ev: issue #986]`
 - **Expose operator-runtime config on the HMI; leave commissioning-time enums in Workbench:** setpoints/limits/modes belong on the dashboard, but one-time commissioning choices (staging mode, defrost trigger mode) stay in Workbench unless the operator asks to surface them. [ev: bitácora 5cuartos §11]
 - **A per-instance rearchitect (N children per entity — N evaporators per room, N zones per floor, etc.) MUST ship a `docs/wiring-map.md` commissioning aid before hand-off.** The wiring map lists every facade slot → rt slot pair for both directions: OPERATOR config slots (facade → control) and SUMMARY display slots (control → facade), plus physical mapping / crossing notes. The operator must not hand-derive the crossing. Run `toolbelt/generate-wiring-map.sh <facade-src-dir>` to scaffold the template; fill in the RT-slot and Notes columns before shipping. `[ev: retro live-commissioning-verification-gaps Δ6]` Every link-table row names the internal slot, its **Workbench display name** (the name the operator actually searches the live tree by) and the full ord: the generator fills the display name from the module lexicon (`--lexicon`, default `module.lexicon` beside the src dir; the bare slot key, the only key Workbench reads — see `types/structure.md` § Lexicon key catalogue) and marks a missing key `_(no lexicon key)_`. `[ev: retro panccadia-commissioning-lessons Δ9]` The filled source column is then the expected-links manifest: `toolbelt/obix-link-audit.sh` diffs it against the live links of the facade (read-only oBIX) during commissioning — `BUILD-LOOP.md` §6.b item 1. `[ev: retro panccadia-commissioning-lessons Δ4]`
 - **Before creating any facade→control link, set the facade value to the LIVE control value:** the link pushes the facade's current (default) value into the control slot immediately, so linking a fresh facade overwrites the running setpoint/mode with a type default. Ship a live-values sheet (control slot → current live value → facade slot) with every new facade mirror, and fill each facade slot from it before its link is created. `[ev: retro panccadia-persistent-config-hoa Δ5]`
@@ -141,6 +151,17 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **BPermissions 6-bit reference** (4.15.6.20 source `BPermissions.java:307-317`; 4.14 decompiled `:26-31`): `OPERATOR_READ=1`, `OPERATOR_WRITE=2` ← `checkCanWrite` gate above, `OPERATOR_INVOKE=4` ← action-proxy gate, bit 8 unused; `ADMIN_READ=16`, `ADMIN_WRITE=32`, `ADMIN_INVOKE=64`, bit 128 unused. A servlet proxying action invocations (not writes) gates on `OPERATOR_INVOKE=4`; a config-read endpoint gates on `ADMIN_READ=16`. All six active bits are named constants in `BPermissions.java:307-317`; the two gap bits (8, 128) are unused. [ev: corpus B755 §755.3]
 - **DWS1 — Write-surface: five gates (HIGH — apply to every mutating endpoint):** (1) `checkCanWrite` first line = `OPERATOR_WRITE` fail-closed (deny on no-user / no-service / `catch(Exception)`); (2) hand-rolled `X-Requested-With` guard IN the pure `route()` (framework CSRF filter covers `/rpc/*` only) — a CRITICAL-write endpoint should ALSO verify the real x-niagara-csrfToken token (CsrfUtil double-submit), not rely on X-Requested-With alone. [ev: corpus B803]; (3) pin the write ORD under a `SERVICE_ORD` facade + traversal reject OR an explicit slot allowlist; (4) mutate under a per-Ord lock → HTTP **423** on contention; (5) audit every mutation (who/what/when/old→new), fire-and-forget, audit-failure never fails the write. [ev: corpus B763]
 - **DWS1b — the write template: CSRF token + permission on the TARGET:** `types/servlet-write.md` is the copy-ready `doPost` (CsrfUtil token, target resolved with the caller's Context, `target.getPermissions(cx).hasOperatorWrite()`, `Flags.OPERATOR`); `toolbelt/lint-servlet-write-guards.sh` flags `getPermissionsFor(this)`/on the user, a write with no target check and a writing servlet with no CSRF token. `[ev: retro mcpn4-history-batch-tools Δ6]`
+- **The station's facets min/max check runs only for a user Context; pick the Context and own the bound:** since
+  4.10u8 a `set`/`override` checks the point's facets min/max only when the action is invoked with a user Context
+  (`niagara.serverMinMaxChecks.disabled` turns it off; `BNumericWritable.java:958-977`). A servlet that invokes
+  `set` with a null Context skips that check and the write is not attributed to the user. Pass the caller's
+  Context (DWS1b), which gives the station bound and the attribution, and still validate min/max in the module:
+  the SPA descriptor and the servlet are the bound the operator sees. `[ev: issue #986]`
+- **A refused request names its reason; a bare 400 does not:** a missing or malformed parameter (a history
+  endpoint called without its `range`) answers the status plus a JSON body `{ok: false, reason: "missing parameter:
+  range"}` (the `reason` field of the write confirmation contract below). The SPA shows that text, so a
+  commissioner reads "range is required", not "HTTP 400". Test each rejected input for its status AND its named
+  parameter. `[ev: issue #986]`
 - **DWS2 — Pure RBAC test seam `canWrite(boolean)` (HIGH):** extract the auth DECISION as a Baja-free `canWrite(boolean)` / `getRole` / `buildForbiddenJson` seam so write-auth is unit-testable off-station. `DashboardRbacHelper`'s collapsed Baja-only form (no pure `canWrite`) is the anti-pattern; chihuahua's `ChiRbacHelper` ADR D1 is the proven seam. [ev: corpus B763]
 - **A write handler is a station-free plan plus a thin executor, so its order and its rollback are JUnit-testable:** a
   handler that flips a link, releases an `in16` override and rolls back on a refusal in one method has its order
@@ -544,6 +565,11 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   `GD/WebCharts/webChart-ChartWidget.txt:73` "Provides ord for the defaultOption widget. You can", `GD/WebCharts/CreatingADefaultOptionsChartFileWeb-32F441A8.txt:17` "NOTE: The defaultOptions file is used only to"
   (GD as in § ux Px rules). The series-transform servlet path (`/seriesTransformQuery/*` in its jar) is not called
   live yet [INFER] (B1339-G1). `[ev: retro devguide415-r2-web-ui-hmi Δ8]`
+- **A chart endpoint answering "nohistory" after commissioning usually means Enabled was never set:** a history
+  extension defaults to `enabled=false` (interval 15 min, capacity 500 records; `BHistoryExt.java:94-97`), so one
+  created or pasted by hand records nothing until someone sets it. Check `enabled` and the history name before
+  looking at the query or the servlet; the shipped-ext side is in `types/logic-authoring.md` § Logging a point to
+  history. `[ev: issue #986]`
 - **A view that reads N days of a history checks the history's capacity first:** capacity × interval must cover N
   days (`capacity` defaults to 500 records: 42 h at 5 min, 5.2 days at 15 min, `types/logic-authoring.md` § Logging a
   point to history). A 7-day run-hours view over a history that holds 42 h shows 42 h without saying so. Compare
@@ -615,6 +641,12 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   `max-age=2592000` for any module file and any station file ending `png,jpg,gif,svg` (default), and revalidates by
   `Last-Modified` only. Do not overwrite a station image in place: give each revision a new name. A servlet of ours
   sets its own headers. `[CERT]` `types/data-access.md` § 4.
+- **`/api/*` responses mirror Tridium's JSON servlet headers, and static files say their cache policy:** every
+  `/api/*` answer carries `Cache-Control: no-store`, `Pragma: no-cache` and `Expires: -1`
+  (`NiagaraRpcServlet.java:34-37`), so no proxy or panel browser keeps a reading. A static asset gets an
+  explicit `Cache-Control` and the `?v=` of the rule above; `index.html` is `no-cache`, so a new `?v=` reaches
+  the panel (`FileServlet.java:57-67`). This is read from Tridium's own servlets; a panel browser's behaviour is
+  not measured. `[ev: issue #986]`
 - **Publish the deployed version:** the module exposes its version as a read-only service slot AND as `GET /api/version` (`{module, version, buildMillis}`, same XHR guard as every `/api/*`), and the SPA shows it in an About/footer, so "which build is on this station" is observable from the HMI and from an off-station collector without opening Workbench. The rt side (slot, build millis, drift against the latest packaged release) is `structure.md` § Deployed version publication. `[ev: retro dashboard-deployment-profiles Δ6]`
 - **Web profile of the dashboard user:** HTML5 Hx (Basic, Default, Handheld) and Wb Web profiles exist; Kiosk
   profiles and the KioskService are not supported in Niagara 4, and Mobile profiles are deprecated
