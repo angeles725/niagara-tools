@@ -1,0 +1,48 @@
+package com.example.rpc;
+
+public class BGuarded
+{
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) })
+  public void viaBit(String slot, double v, Context cx)
+  {
+    BPermissions p = cx.getUser().getPermissionsFor(target);
+    if (!p.has(BPermissions.OPERATOR_WRITE)) throw new BajaRuntimeException("denied");
+    c.set(prop, BDouble.make(v), cx);
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) })
+  public void viaHelper(String slot, double v, Context cx)
+  {
+    checkCanWrite(cx);
+    c.invoke(act, null, cx);
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) })
+  public void viaTarget(String slot, double v, Context cx)
+  {
+    if (!requireTargetWrite(c, prop, cx)) return;
+    c.setDouble(prop, v, cx);
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) })
+  public void viaMethod(String slot, double v, Context cx)
+  {
+    if (!c.getPermissions(cx).hasOperatorWrite()) return;
+    c.doApply(null, cx);
+  }
+
+  @NiagaraRpc(permissions = "w", transports = { @Transport(type = TransportType.web) })
+  public void viaAnnotation(String slot, double v, Context cx)
+  {
+    c.set(prop, BDouble.make(v), cx);
+  }
+
+  @NiagaraRpc(
+    permissions = "r",
+    protectedTargets = { @Protected(ord = "station:|slot:/Drivers", permissions = "RW") },
+    transports = { @Transport(type = TransportType.web) })
+  public static void viaProtected(String slot, double v, Context cx)
+  {
+    c.set(prop, BDouble.make(v), cx);
+  }
+}
