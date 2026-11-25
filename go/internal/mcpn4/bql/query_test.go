@@ -98,3 +98,37 @@ func TestThePipeRefusalNamesTheBaseAsTheFix(t *testing.T) {
 		t.Errorf("a plain select refused: %v", err)
 	}
 }
+
+// BQL reads select [TOP n] [DISTINCT|ALL] <columns> (bql-rt SelectParser.parse: top(), then
+// quantifier(), then projection()); the modifiers are no column. API survey 2026-11-24: the first
+// name of "select top 10 slotPath, name" was "top 10 slotPath".
+func TestSelectedSlotsDropTheTopAndQuantifierModifiers(t *testing.T) {
+	for q, want := range map[string][]string{
+		"select top 10 slotPath, name from baja:Component":   {"slotPath", "name"},
+		"SELECT TOP 5 name FROM baja:Component":              {"name"},
+		"select  Top\t7\nslotPath , name from x where a = 1": {"slotPath", "name"},
+		"select distinct type from baja:Component":           {"type"},
+		"select DISTINCT a, b from x":                        {"a", "b"},
+		"select all a, b from x":                             {"a", "b"},
+		"select top 3 distinct a, b from x":                  {"a", "b"},
+		"select TOP 3 ALL a from x":                          {"a"},
+		"select top 10 * from x":                             nil,
+		"select topSpeed, distinctCount, allowed from x":     {"topSpeed", "distinctCount", "allowed"},
+		"select top, distinct from x":                        {"top", "distinct"},
+		"select top from x":                                  {"top"},
+		"select top 10, name from x":                         {"top 10", "name"},
+	} {
+		if got := bql.SelectedSlots(q); !reflect.DeepEqual(got, want) {
+			t.Errorf("SelectedSlots(%q) = %q, want %q", q, got, want)
+		}
+	}
+}
+
+// A TOP or DISTINCT select is a plain select to the query check, so it reaches SelectedSlots.
+func TestValidateQueryAcceptsTopAndDistinct(t *testing.T) {
+	for _, q := range []string{"select top 10 slotPath, name from baja:Component", "select distinct type from baja:Component"} {
+		if got, err := bql.ValidateQuery(q); err != nil || got != q {
+			t.Errorf("ValidateQuery(%q) = %q, %v", q, got, err)
+		}
+	}
+}

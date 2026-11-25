@@ -201,6 +201,8 @@ enforces itself (`:138-171`).
   `c.setFoo(v)` and a `permissions` held in a constant are not seen. A reviewed exception carries
   `// lint-niagara-rpc: reviewed <reason>` on the line above the `@NiagaraRpc` or on a line through the method
   name; the reason is mandatory.
+- **Two wires, one rule:** `baja.rpc` rides BOX `sys/rpc` and `/rpc` is plain HTTP with CSRF; `transports` names each
+  wire the method serves (`types/data-access.md` § 8).
 
 ---
 
@@ -260,7 +262,7 @@ not a token-based proof. Migrate to `CsrfProtectedFilter` in new modules; keep t
 - `toString()` returns the masked string `"--password--"` — safe to log, safe in
   error messages.
 - `getValue()` returns the plaintext `String`; `getSecretChars()` returns a `SecretChars`. It requires a Java security privilege;
-  call it inside `AccessController.doPrivileged(...)`. **Never log the result.**
+  call it inside `AccessController.doPrivileged(...)` (§ 11). **Never log the result.**
 - Use `SecretChars` (try-with-resources) to zero the char array after use — prevents
   the plaintext from sitting in a GC-able heap object.
 - A secret a component must keep is a `BPassword` **slot**: a private Java field is not saved to `config.bog`
@@ -741,3 +743,44 @@ connection's last failure cause (`SSLAllowedHostsTab.txt:17`), so the module rep
 
 **See also:** `types/actions.md` §3 (action flags; OPERATOR vs admin invoke), `types/actions.md` §6
 (`@NiagaraRpc` CSRF surface), `types/observability.md` (audit vs log decision table).
+
+---
+
+## 11 · The Java security manager: when `doPrivileged` is the fix `[ev: corpus B1235 §1235.6]`
+
+Niagara 4 runs the Java security manager: no code holds a permission until a policy grants it, and a denied check
+throws `AccessControlException: access denied (<permission>)`. `[CERT-doc]`
+`devguide-clean/security/securityManager.txt:8,28-34`.
+
+- **The check walks the call stack, so your module can hold the permission and the call still fails.** A frame of
+  another module, lower on the stack, that lacks it is enough. The course's own comment gives the case: "Our module
+  is requesting the necessary REFLECTION permission, but other modules on the call stack are not, so we need this
+  doPrivileged block". `[CERT-doc]` course `Lab7 Testing, Lexicons, and Logging/BWorkOrderService.java:219-221`.
+  The stack-walk reason is the JDK `AccessController` contract `[INFER]`.
+- **Order of fixes.** First request the permission in `module-permissions.xml` (`types/structure.md`); that covers
+  your own frames. Wrap a call in `doPrivileged` only when the failing code base is not yours. Raise logger
+  `security.niagaraPolicy` to FINE: it names the permission, the code base that failed and the stack trace
+  (`securityManager.txt:44-48`, `[CERT-doc]`; the symptom row is `types/diagnostics.md`).
+- **The form.** `PrivilegedAction<T>` for a call that throws nothing checked, `PrivilegedExceptionAction<T>` for one
+  that does, then catch `PrivilegedActionException` and rethrow `getCause()`
+  (`BWorkOrderService.java:221-239`, `[CERT-doc]`):
+
+  ```java
+  // 'order' was built above from slots; the block does one call and takes nothing a caller controls
+  String json = AccessController.doPrivileged(
+      (PrivilegedExceptionAction<String>) () -> mapper.writeValueAsString(order));
+  ```
+- **Keep the block as small as the one call.** Inputs are built before it; no loop, no own logic and no call that
+  runs code you do not control (a callback, a listener) inside it. `[INFER]` The checks below it are skipped for
+  every caller, so a privileged operation whose path, host, class name or command comes from a request hands that
+  user your module's permission: `new FileOutputStream(path)` with a request-supplied `path` is write access to
+  whatever your module may write. The course says "make sure your doPrivileged block can't be abused by external
+  code". `[ev: corpus B1235 §1235.6]` Take a fixed directory such as `Sys.getStationHome()`
+  (`securityManager.txt:51-55`) and a name checked against an allowlist.
+- **Shipped examples of the small form.** `FileServlet` wraps the reads of two system properties (`:57-62`)
+  and a file's modified time (`:220`), `BoxWebSocketServlet` its `box.ws.*` properties (`:16-30`), and `BPassword`
+  one `getSecretChars` (§ 3.2). `[CERT]` `web-rt` `com/tridium/web/servlets/FileServlet.java`; `box-rt`
+  `com/tridium/box/BoxWebSocketServlet.java`.
+- **It skips Java permission checks, not the user's Niagara permissions.** An action or servlet that reaches a
+  privileged block still checks the caller's `BPermissions` with the caller's Context first (§ 2.4, § 4.4). `[INFER]`
+  No kit lint lists `doPrivileged` sites: review each one as a single statement.

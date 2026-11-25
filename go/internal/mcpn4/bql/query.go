@@ -111,15 +111,15 @@ func ComposeOrd(base, query any) (string, error) {
 }
 
 // SelectedSlots is selected_slots: the queried slot names in order, nil for '*' (or an empty
-// name). The CSV headers are display names a localized station translates; the select list is
-// ours, so it names the columns by position.
+// name), a leading TOP n and DISTINCT or ALL dropped. The CSV headers are display names a
+// localized station translates; the select list is ours, so it names the columns by position.
 func SelectedSlots(query string) []string {
 	m := selectListRe.FindStringSubmatch(Strip(query))
 	if m == nil {
 		return nil
 	}
 	var names []string
-	for _, part := range strings.Split(m[1], ",") {
+	for _, part := range strings.Split(dropSelectModifiers(m[1]), ",") {
 		n := Strip(part)
 		if n == "*" || n == "" {
 			return nil
