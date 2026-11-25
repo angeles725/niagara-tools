@@ -134,3 +134,20 @@ func TestAnAboutRejectionDuringConnectPausesLaterStationCalls(t *testing.T) {
 	}
 	contains(t, mustErr(t, s, "n4_navigate"), "authentication failure")
 }
+
+// #986 D18: an operator-only user logs in but may not read oBIX. The probe's 403 is a denied
+// permission (box.KindHTTPStatus, as About answers it), not a failed login: the connect says the
+// version is unknown and later station calls are not paused.
+func TestAnAbout403DuringConnectLeavesTheSessionOpen(t *testing.T) {
+	st := readtoolstest.NewStation()
+	st.AboutErr = &box.Error{Kind: box.KindHTTPStatus, Msg: "HTTP 403 from station", Channel: "obix", Key: "about", Code: 403}
+	s := readtoolstest.NewServer(st, session.Config{})
+	out := s.Connect(t)
+	verr, _ := out.Get("version_error")
+	if !strings.Contains(verr.(string), "this user may not read oBIX") || has(out, "auth_paused") {
+		t.Errorf("connect %s", pyjson.Repr(out))
+	}
+	if text, isErr, _ := s.Call(t, "n4_navigate", "ord", "station:|slot:/"); isErr {
+		t.Errorf("a later call was refused: %s", text)
+	}
+}

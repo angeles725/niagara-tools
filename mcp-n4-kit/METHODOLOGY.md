@@ -139,8 +139,9 @@ The gate is **enforced** (v0.5.0). `n4_connect` reads the oBIX `productVersion` 
 and `tier_writes` (`allowed`, `allowed-by-opt-in`, `refused`); `n4_describe_session`
 repeats them. A version that cannot be read (no oBIX, no permission) is tier C, so a
 failed detection only makes the server stricter; the reply then carries
-`version_error`. A 401/403 there may count as a failed login toward the lock-out:
-fix the user's oBIX permission before reconnecting. Every mutating tool then branches on
+`version_error`. A 401 there may count as a failed login toward the lock-out (fix the
+password or scheme before reconnecting); a 403 means the user logged in but may not read oBIX:
+the version stays unknown and the session stays open (#986 D18). Every mutating tool then branches on
 the tier, after the identity check and before the budget, scope and token:
 
 - Tier A: unchanged.
