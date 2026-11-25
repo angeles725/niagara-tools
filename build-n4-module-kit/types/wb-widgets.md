@@ -7,7 +7,8 @@ Not yet fully documented — seed pointers, feed via the retro step when you bui
 - **`-wb` profile** only; register the view type + an `@AgentOn` (agent-on the component type) so it opens from the tree. `requiredPermissions` on the agent = view VISIBILITY only, never security.
 - **`-wb` gradle MUST include `com.tridium.convention.niagara-home-repositories` plugin:** a `-wb` subproject cannot resolve `:baja`/`:web` unless `id("com.tridium.convention.niagara-home-repositories")` is declared in its `<mod>-wb.gradle.kts`. The `-rt` gradle already declares it (chihuahua-wb relies on that); the `-wb` gradle does NOT inherit it, so declare it there too. Missing this plugin causes "Could not resolve `:baja`" at Gradle sync time. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ3]`
 - **wb-agent registration — the `@AgentOn` in `@NiagaraType` is what writes the `<agent>` entry:** at compile time javac's `@NiagaraType` annotation processor (not Slot-o-Matic) updates `module-include.xml` with the type's registry information, its agents included (devguide `slot-o-matic.txt:191-193`). The Apillm build saw no `<agent>` block from an inline-only `@AgentOn` and added one by hand `[INFER — the processor did not run in that build]`; if Workbench does not discover the agent, check that the processor ran before hand-writing the block. Verify with `grep -r '<agent>' <mod>-wb/` after adding an `@AgentOn`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ5]`
-- **PX views:** authored in Workbench PxEditor (GUI), shipped as module resources + registered as an agent view on a type; the same `.px` renders in the browser via the Hx/HTML5 profile. Editable fields via kitPx field editors; background image as a module resource. (Corpus B180/B194/B202/B203.)
+- **PX views:** authored in Workbench PxEditor (GUI), shipped as module resources + registered as an agent view on a type; the same `.px` renders in the browser via the Hx/HTML5 profile. Editable fields via kitPx field editors; background image as a module resource. (Corpus B180/B194/B202/B203.) When to use Px vs Hx vs bajaux, the module file layout, binding ORDs and their audit, Hx theming,
+  events and permissions: `types/hx-px.md`.
 - **PX vs custom servlet dashboard:** PX = declarative, Workbench-authored, native. A `BWebServlet` + SPA (types/dashboard.md) = custom HTML5, no PxEditor. Pick per need; an HMI that just points a browser at a URL takes either.
 - Same build (Java 8 + slotomatic) and METHODOLOGY rules.
 
@@ -17,7 +18,7 @@ Not yet fully documented — seed pointers, feed via the retro step when you bui
 
 - `-wb` manager rows that point at station components: Add an in-dialog "pick from station" chooser for Add and Edit flows.
 - The `BAbstractManager`+`BComponentChooser` combination (see §Manager recipe) is the proven implementation — avoid hand-coded blank-Add patterns.
-- **Lint candidate `lint-wb-usability`:** a `BWbComponentView` subclass that holds user-managed child refs (slot type `BOrd` or similar) but ships no `BComponentChooser` invocation in its controller is a candidate for this check.
+- **Lint `lint-wb-usability`** (implemented in part: `toolbelt/lint-wb-usability.sh`, WARN only). A class that extends `BWbComponentView` and holds a `BOrd` member (a non-static field, or a class-level `@NiagaraProperty` of type `BOrd`), in a file with no `BComponentChooser` in code and no `targetType` facet, is a candidate. Not judged: whether the user edits the ORD, a chooser opened from another class or file, drag-drop, the status table, and views that extend a subclass or a manager base. A comment `lint-wb-usability: waived <reason>` on or just above the class waives it.
 
 `[ev: user directive 2026-09-20]`
 
@@ -393,6 +394,8 @@ each value is px, `%` of the pane, or `pref` (preferred size) (`organized/docSou
 ```
 
 See also: `types/dashboard.md §serving recipe` for the PX-vs-servlet decision and the PX complement use case.
+
+See also: `types/hx-px.md` for the hx / Px / bajaux choice, the Hx action-binding limits and the `n4_px_binding_audit` check.
 
 See also: `docs/module-best-practices.md` (rt/ux/wb do & don't).
 

@@ -73,6 +73,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/vacuoustests"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbusability"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/writepath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wsplacement"
 )
@@ -108,6 +109,7 @@ func All() []lint.Spec {
 		extwritable.Spec(),
 		inlinesiteliteral.Spec(),
 		wbthreading.Spec(),
+		wbusability.Spec(),
 		linktargetflags.Spec(),
 		size.Spec(),
 		wsplacement.Spec(),

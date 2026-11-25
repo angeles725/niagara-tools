@@ -1,0 +1,11 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-wb-usability  @DIR@/m/BFooView.java:2  BFooView extends BWbComponentView and holds a BOrd (field target), but its file has no BComponentChooser and no targetType facet: the user can only type the ORD; let the Add and Edit flow pick it from the station (types/wb-widgets.md UX rule)
+-- stderr --
+-- m/BFooView.java --
+// the editor should open a BComponentChooser, one day
+class BFooView extends BWbComponentView {
+  private BOrd target;
+}
