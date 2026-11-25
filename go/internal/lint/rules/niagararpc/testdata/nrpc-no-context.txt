@@ -70,6 +70,18 @@ public class BNoContext
     return name;
   }
 
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String bareAnnotation(String name, @Nonnull Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String dottedAnnotation(@javax.annotation.Nonnull String name, @javax.annotation.Nonnull Context cx)
+  {
+    return name;
+  }
+
   // lint-niagara-rpc: reviewed legacy two-argument shape kept for the old workbench caller
   @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
   public static String waived(String name)

@@ -41,6 +41,9 @@ func lastParam(toks []javasrc.Token, open int) (why string, line int, ok, judged
 			}
 		}
 	}
+	if from >= len(seg) {
+		return "", 0, true, false // a trailing comma: malformed source, nothing to judge
+	}
 	typ := paramType(seg[from:])
 	line = seg[from].Line + 1
 	if typ == "Context" || strings.HasSuffix(typ, ".Context") {
@@ -55,10 +58,11 @@ func paramType(p []javasrc.Token) string {
 	for i := 0; i < len(p); i++ {
 		switch {
 		case p[i].Text == "@":
-			i++
-			for i < len(p) && (p[i].Kind == javasrc.TokIdent || p[i].Text == ".") {
-				i++
+			i++ // the annotation name is one identifier, or a dotted chain: never the type after it
+			for i+2 < len(p) && p[i].Kind == javasrc.TokIdent && p[i+1].Text == "." {
+				i += 2
 			}
+			i++
 			if i < len(p) && p[i].Text == "(" {
 				if c := matchTok(p, i, "(", ")"); c > 0 {
 					i = c
