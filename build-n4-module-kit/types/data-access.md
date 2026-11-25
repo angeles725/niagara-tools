@@ -25,7 +25,7 @@ B<n> §…]` a research block; `[INFER]` the kit's reading. Nothing here was run
 Why: a BOX WebSocket tab pins a thread (§2); `alarmFeed` is lossless while the watch lives; RBAC and audit need the
 user's Context (`dashboard.md`, `servlet-write.md`).
 
-[research block B1271 §1271.3] [research block B1275 §1275.2] `[CERT-doc]` the job-by-job table
+[ev: corpus B1271 §1271.3] [ev: corpus B1275 §1275.2] `[CERT-doc]` the job-by-job table
 `docs/n4-data-access-guide.md` §1. A row is a starting choice, not a measurement: no latency was measured here.
 
 ## 2. BOX limits (WebSocket and HTTP)
@@ -44,7 +44,7 @@ All `[CERT]` under `box-rt` and `jetty-rt`. Reading them:
 - **A BOX WebSocket tab costs a thread and a broker.** `initEventHandler` makes the `BrokerPoller` only for a v2
   (WebSocket) session, and the pool has no upper bound (`BServerSession.java:310-316`). Few tabs are fine; many
   unattended screens are not. No tab count is a station limit `[INFER]`: measure on the target.
-  [research block B1275 §1275.4]
+  [ev: corpus B1275 §1275.4]
 - **A silent socket closes after 60 s.** Do not rely on one that carries no traffic for longer; reconnect and
   resubscribe. An older corpus note gives 300 000 ms: the code default is 60 000 (4.15 not checked). BajaScript's
   event-mode poll is 30 000 ms against a default of 2500 (`[CERT-doc]` `module-js/bajaScript-ux/rc/comm.js:42-43`),
@@ -130,22 +130,22 @@ All `[CERT]` under `box-rt` and `jetty-rt`. Reading them:
 ## 6. Off-station consumer: an oBIX Watch
 
 For a wallboard, a cache or an analytics reader: one reader, not one watch per screen. Needs the `tridium:obixDriver`
-`export` licence and a read user (`types/security.md` § 2.5). [research block B1275 §1275.2]
+`export` licence and a read user (`types/security.md` § 2.5). [ev: corpus B1275 §1275.2]
 1. **Make once:** `watchService/make`. The watch's lease is the service's `defaultLeaseTime`, **30 s**
    (`BObixWatchService.java:35-44,91`); the watch's own default is 15 s (`BObixWatch.java:75`). `[CERT]`
 2. **Add the hrefs, then `pollChanges` on a fixed period** well inside the lease; every op renews the lease
    (`BObixWatch.java:151-160`). `pollChanges` is a short poll that returns at once (`:253-264`): the period sets the
    latency. A value that flips twice between polls is reported once. `[CERT]`
-   [research block B1275 §1275.2]
+   [ev: corpus B1275 §1275.2]
 3. **Delete on exit** (`delete` op, `BObixWatch.java:67-81`). The expiry sweep runs only when some client calls
    `/obix/watchService/…`, so an abandoned watch keeps its point subscriptions. `[CERT]`
-   [research block B1275 §1275.2]
+   [ev: corpus B1275 §1275.2]
 4. **Alarms and history rows:** add `~alarmFeed` (under the alarm service or one alarm class,
    `BAlarmServiceAgent.java:241-243`) or `historyFeed` to the watch: a database-backed stream with no collapsing.
    Keep the watermark on the client: the position lives in the watch and is lost with it.
-   [research block B1275 §1275.3]
+   [ev: corpus B1275 §1275.3]
 5. **Check the body, not the HTTP status:** an error comes back as `<err>` with the servlet's default status.
-   `[CERT]` [research block B1272 §1272.4]
+   `[CERT]` [ev: corpus B1272 §1272.4]
 6. **Read the anchor slots:** a servlet-derived key (an elapsed or remaining time) does not exist in oBIX
    (`types/dashboard.md` § Facade contract).
 
@@ -155,10 +155,10 @@ For a wallboard, a cache or an analytics reader: one reader, not one watch per s
   chunked `text/plain` (`QueryServlet.java:72-74`). It refuses unless `target.canRead()` (`:174-175`) and sends no
   cache headers. `limit` defaults to **-1**, so pass one (`:90`). A sort on `timestamp` of a history is read in
   order; any other sort buffers `offset + limit` rows in a `TreeSet` (`:179-184,202-207`). A GET needs no CSRF token;
-  the two `POST` forms do (`:118-131`). `[CERT]` [research block B1270, code §1270.3a]
+  the two `POST` forms do (`:118-131`). `[CERT]` [ev: corpus B1270 §1270.3a]
 - **`GET /ord/<url-encoded ORD>` with an exporter view**, such as `…|bql:select …|view:file:ITableToCsv`, returns
   CSV; a read user can run any BQL this way, so keep it to a service account (`types/queries.md` § 3 for the cost).
-  [research block B1274 §1274.5]
+  [ev: corpus B1274 §1274.5]
 - Both are pulls of one query: bound it first (`types/queries.md` § 2).
 
 ## 8. Calling server logic: `@NiagaraRpc` has two wires
