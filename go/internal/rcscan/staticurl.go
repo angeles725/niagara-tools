@@ -25,8 +25,8 @@ var scheme = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 
 // StaticNoVersion reports whether the reference u names a static asset with no fingerprint: a path under
 // /module/ or /file/, or a relative img/, css/, js/ (with or without a leading ./), or one of those relative
-// directories under an extra mount (/<servlet>/img/...), whose query has none of v, ver or version at any
-// position. An absolute URL (any scheme, //host), an anchor, an empty value and a template (${...}, {{...}}) are
+// directories under an extra mount (/<servlet>/img/...), whose query has no v, ver or version with a value at any
+// position (an empty `?v=` is no fingerprint). An absolute URL (any scheme, //host), an anchor, an empty value and a template (${...}, {{...}}) are
 // no static reference. An HTML entity (&amp;) is read as the character it stands for before the query is split.
 func StaticNoVersion(u string, mounts []string) bool {
 	u = strings.NewReplacer("&amp;", "&", "&#38;", "&").Replace(strings.TrimSpace(u))
@@ -37,7 +37,7 @@ func StaticNoVersion(u string, mounts []string) bool {
 	u, _, _ = strings.Cut(u, "#")
 	path, query, _ := strings.Cut(u, "?")
 	for _, kv := range strings.Split(query, "&") {
-		if k, _, _ := strings.Cut(kv, "="); versionParams[k] {
+		if k, v, _ := strings.Cut(kv, "="); versionParams[k] && v != "" { // an empty ?v= is no fingerprint
 			return false
 		}
 	}

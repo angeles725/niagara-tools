@@ -512,3 +512,15 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "RC42: an empty ?v= is no fingerprint (it still WARNs); a ?v= with a value, in any position, is" {
+  # Mutation: RC42 -- counting a bare `v=` as a fingerprint passes js/a.js?v= and js/b.js?x=1&v
+  local T="$BATS_TEST_TMPDIR/emptyv"
+  mkdir -p "$T/rc"
+  printf '<script src="js/a.js?v="></script> <script src="js/b.js?x=1&v"></script> <script src="js/c.js?x=1&v=2"></script>\n' > "$T/rc/index.html"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/index.html:1  static-url-nover: js/a.js?v= "* ]]
+  [[ "$output" == *"rc/index.html:1  static-url-nover: js/b.js?x=1&v "* ]]
+  [[ "$output" != *"js/c.js"* ]]
+}

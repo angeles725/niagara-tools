@@ -29,6 +29,7 @@ func Unfingerprinted(rcDir string, mounts []string) ([]RefFile, error) {
 		return nil, err
 	}
 	var out []RefFile
+	seen := map[RefFile]bool{} // staticRows reports a line's URL once; so does this
 	for _, p := range files {
 		data, err := os.ReadFile(p)
 		if err != nil {
@@ -36,9 +37,10 @@ func Unfingerprinted(rcDir string, mounts []string) ([]RefFile, error) {
 		}
 		lines := records(data)
 		for _, r := range fileRefs(p[strings.LastIndexByte(p, '.')+1:], lines) {
-			if StaticNoVersion(r.URL, mounts) && !waived(lines[r.Line-1]) {
-				out = append(out, RefFile{File: "rc/" + strings.TrimPrefix(p, strings.TrimSuffix(rcDir, "/")+"/"),
-					Line: r.Line, URL: r.URL})
+			ref := RefFile{File: "rc/" + strings.TrimPrefix(p, strings.TrimSuffix(rcDir, "/")+"/"), Line: r.Line, URL: r.URL}
+			if StaticNoVersion(r.URL, mounts) && !waived(lines[r.Line-1]) && !seen[ref] {
+				seen[ref] = true
+				out = append(out, ref)
 			}
 		}
 	}

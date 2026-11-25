@@ -10,6 +10,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/rcscan"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 const (
@@ -24,15 +25,17 @@ var servletName = regexp.MustCompile(`getServletName\s*\(\s*\)\s*\{\s*return\s*"
 // is not gated on a fingerprinted request is the old row; either kind names the first rc/ reference to the
 // servlet's static paths that carries no ?v= (rcEvidence) when there is one, and a gated line with such a
 // reference WARNs as well, since the requests it sees never take the cached branch (issue #1035).
-func cacheRows(path string, code []string, toks []javasrc.Token, decls []javasrc.Decl) []lint.Finding {
+func cacheRows(path string, code []string, toks []javasrc.Token, decls []javasrc.Decl) ([]lint.Finding, error) {
 	var out []lint.Finding
+	var rcErr error
 	evidence, loaded := "", false
 	for i, ln := range code {
 		if !strings.Contains(ln, "Cache-Control") || !maxAge.MatchString(ln) {
 			continue
 		}
 		if !loaded {
-			evidence, loaded = rcEvidence(path, code), true
+			evidence, rcErr = rcEvidence(path, code)
+			loaded = true
 		}
 		switch gated := fingerprinted(toks, decls, i); {
 		case !gated && evidence == "":
@@ -43,15 +46,17 @@ func cacheRows(path string, code []string, toks []javasrc.Token, decls []javasrc
 			out = append(out, lint.Finding{Check: "cache-nofinger", Severity: lint.Unset, Line: i + 1, Msg: fmt.Sprintf(msgCacheRC, evidence)})
 		}
 	}
-	return out
+	return out, rcErr
 }
 
 // rcEvidence is `rc/index.html:3 references js/app.js without ?v=` (plus ` (and N more)`) for the first
-// unfingerprinted reference to this servlet's static paths in the rc/ directory above path, or "".
-func rcEvidence(path string, code []string) string {
+// unfingerprinted reference to this servlet's static paths in the rc/ directory above path, or "". An rc/ page
+// that cannot be read is an error (the engine prints it as the file's `cannot scan` line, exit 3, as it does an
+// unreadable source file), never silence: the rows are then the ones the servlet alone gives.
+func rcEvidence(path string, code []string) (string, error) {
 	dir := rcDirAbove(filepath.Dir(path))
 	if dir == "" {
-		return ""
+		return "", nil
 	}
 	var mounts []string
 	if m := servletName.FindStringSubmatch(strings.Join(code, "\n")); m != nil && m[1] != "" {
@@ -64,18 +69,23 @@ func rcEvidence(path string, code []string) string {
 			refs = append(refs, r)
 		}
 	}
-	if err != nil || len(refs) == 0 {
-		return ""
+	if err != nil {
+		return "", fmt.Errorf("rc/ pages could not be read: %s", strerror.Text(err))
+	}
+	if len(refs) == 0 {
+		return "", nil
 	}
 	s := fmt.Sprintf("%s:%d references %s without ?v=", refs[0].File, refs[0].Line, refs[0].URL)
 	if len(refs) > 1 {
 		s += fmt.Sprintf(" (and %d more)", len(refs)-1)
 	}
-	return s
+	return s, nil
 }
 
 // rcDirAbove is the rc/ directory (rc/ or src/rc/) of the nearest directory at or above dir that has one,
-// looking at most maxClimb levels up and not past a gradle project root; "" for none.
+// looking at most maxClimb levels up and never past the root of the servlet's own module: a directory that
+// holds a gradle project script or a module part (partRoot) is looked at for its own rc/ and ends the climb,
+// so another module's rc/ above it is never read. "" for none.
 func rcDirAbove(dir string) string {
 	for n := 0; n <= maxClimb; n++ {
 		for _, c := range []string{"rc", filepath.Join("src", "rc")} {
@@ -83,10 +93,8 @@ func rcDirAbove(dir string) string {
 				return filepath.Join(dir, c)
 			}
 		}
-		for _, g := range []string{"build.gradle.kts", "settings.gradle.kts"} {
-			if _, err := os.Stat(filepath.Join(dir, g)); err == nil {
-				return ""
-			}
+		if partRoot(dir) {
+			return ""
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -95,4 +103,27 @@ func rcDirAbove(dir string) string {
 		dir = parent
 	}
 	return ""
+}
+
+// gradleScripts are the files that make a directory a gradle project root (Kotlin and Groovy DSL).
+var gradleScripts = []string{"build.gradle.kts", "build.gradle", "settings.gradle.kts", "settings.gradle"}
+
+// partRoot reports a directory that is a gradle project root or a module part the kit scaffolds: one holding
+// a gradle script, a module-include.xml or a part build script (<part>.gradle.kts, <part>.gradle), or named
+// <module>-rt or <module>-ux.
+func partRoot(dir string) bool {
+	if b := filepath.Base(dir); strings.HasSuffix(b, "-rt") || strings.HasSuffix(b, "-ux") {
+		return true
+	}
+	for _, f := range append([]string{"module-include.xml"}, gradleScripts...) {
+		if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
+			return true
+		}
+	}
+	for _, g := range []string{"*.gradle.kts", "*.gradle"} {
+		if m, _ := filepath.Glob(filepath.Join(dir, g)); len(m) > 0 {
+			return true
+		}
+	}
+	return false
 }

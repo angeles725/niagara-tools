@@ -344,7 +344,8 @@ silenced on its line with `rc-scan: allow <check-id>` plus a reason.
 `static-url-nover` (WARN under every mode, `--strict` included) names a static reference with no `?v=`: a `/module/…`
 or `/file/…` path, or a relative `img/`, `css/` or `js/` path, in a `src=`/`href=`, a CSS `url(…)`, a JS `fetch(` /
 `new URL(` / `import` string. A browser keeps such an asset after a module update until its cache expires (the
-station serves `/module/` for 30 days); a `require(`/`define(` string is a module id and is never judged. Its
+station serves `/module/` for 30 days; an empty `?v=` does not count); a `require(`/`define(` string is a
+module id and is never judged. Its
 waiver needs a reason: `<!-- rc-scan: allow static-url-nover <why> -->` (`/* */` or `//` in CSS and JS), and a
 bare marker waives nothing. `lint-servlet.sh` `cache-nofinger` reads the same references. `[ev: issue #1035]`
 Under a module map (`types/structure.md` § Module map) two structure checks join them, WARN in a

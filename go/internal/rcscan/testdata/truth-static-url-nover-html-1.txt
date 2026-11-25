@@ -13,6 +13,7 @@ WARN  rc-scan  rc/index.html:23  static-url-nover: img/a.svg has no ?v= query --
 WARN  rc-scan  rc/index.html:24  static-url-nover: js/lazy.js has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
 WARN  rc-scan  rc/index.html:24  static-url-nover: img/e.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
 WARN  rc-scan  rc/index.html:24  static-url-nover: img/h.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:27  static-url-nover: js/e.js?v= has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
 -- stderr --
 -- rc/index.html --
 <!DOCTYPE html>
@@ -41,3 +42,4 @@ fetch("js/data.json", {signal: s}); fetch("js/ok.json?v=3", {signal: s}); const 
 import("js/lazy.js"); el.src = "img/e.png"; x.innerHTML = '<img src="img/h.png">';
 fetch("js/d.json" + q, {signal: s}); // fetch("js/c.json")
 </script>
+<script src="js/e.js?v="></script>

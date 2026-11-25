@@ -1,0 +1,19 @@
+declared difference (issue #1035 review R3): the rc/ climb ends at the root of the servlet's own module. A gradle
+project script (Kotlin here; Groovy build.gradle and settings.gradle too) is looked at for its own rc/ and ends
+the climb, so the rc/ of the directory above (m/rc, another module's) is never read: no evidence in the rows.
+-- args --
+@DIR@/m/mod/src
+-- want --
+exit 0
+WARN  cache-nofinger  com/BDash.java:3  Cache-Control max-age>0 on rc asset without fingerprint
+-- stderr --
+-- m/mod/build.gradle.kts --
+plugins { }
+-- m/mod/src/com/BDash.java --
+class BDash extends BWebServlet {
+  void doGet(WebOp op) {
+    rsp.setHeader("Cache-Control", "public, max-age=3600");
+  }
+}
+-- m/rc/index.html --
+<img src="img/a.png">

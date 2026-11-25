@@ -11,7 +11,7 @@ func TestStaticNoVersion(t *testing.T) {
 		"js/app.js": true, "./css/a.css": true, "img/a.png#x": true, "/module/m/a.js": true, "/file/x/a.png": true,
 		"/dash/img/a.png": true, "js/a.js?x=1": true, "js/a.js?": true,
 		"js/a.js?v=1": false, "js/a.js?x=1&v=2": false, "js/a.js?x=1&amp;v=2": false, "js/a.js?ver=2": false,
-		"js/a.js?version=2": false, "js/a.js?v=": false, "js/a.js?vv=1": true, "js/a.js?x=v": true,
+		"js/a.js?version=2": false, "js/a.js?v=": true, "js/a.js?v": true, "js/a.js?x=1&v=": true, "js/a.js?vv=1": true, "js/a.js?x=v": true,
 		"": false, "#top": false, "//cdn/x.js": false, "https://x/js/a.js": false, "HTTP://x/img/a.png": false,
 		"data:image/png;base64,AA": false, "blob:abc": false, "javascript:void(0)": false, "mailto:a@b": false,
 		"page.html": false, "/dash/api/status": false, "/dash/module/x": false, "/other/img/a.png": false,

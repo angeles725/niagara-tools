@@ -82,7 +82,8 @@
 #                            update until its cache entry expires (the station serves /module/ and /file/ for 30 days
 #                            with no ETag); the version query makes the URL change with the module. lint-ux-version
 #                            judges the -ux entry pages by the exact version; this reads every rc/ file. Any of
-#                            v, ver or version in the query, at any position, counts (`?a=1&v=2`, `&amp;v=2`).
+#                            v, ver or version with a value in the query, at any position, counts (`?a=1&v=2`, `&amp;v=2`); an
+#                            empty `?v=` is not a fingerprint.
 #                            Never a reference: a require(/define( string (a module id), an absolute URL (any scheme,
 #                            //host), data:, #anchor, a string that goes on (`"img/" + n`) or holds ${...}/{{...}},
 #                            a comment, rc/vendor, rc/ext and *.min.js. Advisory: WARN under every mode, --strict
@@ -133,6 +134,7 @@
 # Mutation: RC38 -- dropping the static-url-nover pass loses every row of the nover fixture (RC38 sees 10)
 # Mutation: RC39 -- reading a require/define module id or a ?v= after another parameter as a URL WARNs the nover-ok tree
 # Mutation: RC40 -- promoting the row under --strict turns exit 0 into 1; accepting a bare marker hides js/boot.js
+# Mutation: RC42 -- counting a bare `v=` as a fingerprint passes js/a.js?v= and js/b.js?x=1&v
 # Mutation: RS-walk -- dropping the *-worktrees prune reports the x-worktrees copy's ORD literal (RS-walk)
 # Mutation: RS-unreadable -- skipping a file the scan cannot read (the awk's fatal-and-continue) passes clean
 #
