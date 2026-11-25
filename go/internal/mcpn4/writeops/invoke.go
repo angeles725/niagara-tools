@@ -12,7 +12,7 @@ import (
 // AllowedActions is ALLOWED_ACTIONS: the actions n4_invoke_action may call in this version. ping
 // (a driver network, device or point device ext checks its device; no setting changes) was added
 // after the Python port; the differential declares that difference.
-var AllowedActions = []string{"set", "active", "inactive", "auto", "ping", writeDeviceInstance, modelChange, spyderDownload, spyderCompile}
+var AllowedActions = []string{"set", "active", "inactive", "auto", "ping", writeDeviceInstance, modelChange, spyderDownload, spyderCompile, spyderLoad}
 
 // writeDeviceInstance is the Honeywell BACnet Spyder action that writes the component's
 // config/deviceObject/objectId into the controller found at the component's address (MS/TP
@@ -28,7 +28,7 @@ const (
 
 // InvokeAction is n4_invoke_action: set (its previous fallback is the inverse) or a state
 // change (no inverse, unverified).
-var InvokeAction = plan.Impl{ScopeOrds: ordArg, Plan: invokePlan, PlanWith: invokePlanWith, Readback: invokeReadback}
+var InvokeAction = plan.Impl{ScopeOrds: ordArg, Plan: invokePlan, PlanWith: invokePlanWith, Readback: invokeReadbackWithLoad}
 
 // fallbackTypes is _FALLBACK and argTypes _ARG_TYPES.
 var (
@@ -94,6 +94,8 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		return spyderDownloadPlan(ordText, h, nodes, args)
 	case spyderCompile:
 		return spyderCompilePlan(ordText, h, nodes, args)
+	case spyderLoad:
+		return spyderLoadPlan(ordText, h, nodes, args)
 	}
 	_, hasArg := args.Get("arg")
 	_, hasArgType := args.Get("arg_type")
