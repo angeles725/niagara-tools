@@ -81,7 +81,21 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
   `GD/Graphics/bajaui-CanvasPane.txt:13` "Note: It provides support for absolute positioning for", `GD/Graphics/AboutTag-basedBindingsGraphics-C42EE774.txt:7` "Niagara has added support for tag-based bindings. Tag-based",
   `GD/Graphics/UsingTheVisibilePropertyInHxProfile-16D68DD7.txt:25` "The visible property updates every 5 seconds.", `GD/User/web-WebWarmupConfig.txt:7` "These properties configure what happens when a controller". Owed lint:
   G77 `px-portability`. `[ev: retro devguide415-r2-web-ui-hmi Δ4]`
-- **"How to feed live data" decision matrix — match the serving recipe to the channel:** (a) **Servlet-SPA** → REST-poll (a self-scheduled `setTimeout` loop per § Poll loop reliability + 1 s local tick for JACE-computed fields); no BOX/Fox subscription — the servlet SPA does not use one, by design; (b) **bajaux `@AgentOn` view** → `subscriberMixIn` Fox/BOX subscription (push on value change; B752-G2 still open — treat as P2); (c) **PX page** → `*Binding` handles live data implicitly (no author code); (d) **Query** (alarms, history) → BQL via `BOrd.make(bql).get(cx, null)` → `BITable` (pull, not push). Rule [INFER]: do NOT mix channels (no BOX subscription from a plain servlet, no polling from a PX binding). `[ev: corpus B752 §752.4, B553 §553.1–553.3]`
+- **"How to feed live data" decision matrix — match the serving recipe to the channel:**
+  (a) **Servlet-SPA** → REST-poll (a self-scheduled `setTimeout` loop per § Poll loop reliability + 1 s local tick for
+  JACE-computed fields). That is the **chosen** default, not a platform limit: a page the station serves can use
+  BajaScript when the BoxService is installed, because `/requirejs/config.js` is mapped to `RequireJsConfigServlet`
+  (`[CERT]` `web/web-rt/vineflower/WEB-INF/web.xml:305-313`); that a servlet page can load `baja!` is `[INFER]`
+  until run (§ Reading the station directly with BajaScript). A few tabs may subscribe; many or unattended screens
+  use the REST poll or an off-station oBIX Watch, because each BOX WebSocket tab pins a thread and a broker and the
+  pool has no cap (`types/data-access.md` §§ 2, 6; the "few" is `[INFER]`);
+  (b) **bajaux `@AgentOn` view** → `subscriberMixIn` Fox/BOX subscription (push on value change; B752-G2 still open —
+  treat as P2);
+  (c) **PX page** → `*Binding` handles live data implicitly (no author code);
+  (d) **Query** (alarms, history) → BQL via `BOrd.make(bql).get(Sys.getStation(), cx)` with the caller's Context and a
+  bound (`TOP`, a window), run on the servlet thread → `BITable` (pull, not push; `types/queries.md` § 2).
+  Rule [INFER]: one channel per value on a page: do not poll and subscribe to the same value, and a PX binding needs
+  no polling. `[ev: corpus B752 §752.4, B553 §553.1–553.3]`
 - `BWebServlet` subclass; `getServletName()` = the mount prefix → `/<prefix>/`. Registered as a `<type>` in module-include.xml + a palette instance under a Servlets folder.
 - **`BWebServlet` override contract (4.14 verified):** the overridable dispatch set is `service/doGet/doPost/doPut/doDelete(WebOp)` — NOT `doService(WebOp)`, which is `private(HttpServletRequest, HttpServletResponse)` (confirmed via `javap javax/baja/web/BWebServlet.class`). An `@Override doService(WebOp)` fails to compile (no such superclass method); without `@Override` the method compiles and NEVER fires; only the private internal form is called by the framework (4.14 docSource `BWebServlet.java:147,163,209-239`). Derive `getServletName()` from the module name (e.g. `getType().getModule().getModuleName().toLowerCase()`) rather than a hardcoded literal — a hardcoded string breaks multi-site deployments and causes mount conflicts. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ1]`
 - **Servlet-in-rt: `compileOnly("javax.servlet:javax.servlet-api:3.1.0")` required in `-rt` gradle:** a `BWebServlet` declared in the `-rt` profile does NOT receive the servlet API transitively. The `-ux` profile gets it from `web-rt`; the `-rt` profile does not. Without this `compileOnly` line, `javax.servlet.http.*` is unresolved at compile time and `compileJava` fails. Add it to the `-rt` profile's `.gradle.kts`, not to `module.xml`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ2]`
@@ -559,6 +573,10 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **Never set a raw servlet path as a User's Home Page on a JACE:** `/dashboardpan/` is not a valid ORD → `SyntaxException "Missing scheme name"` → `BUser.getHomePage` throws → `AuthenticationException: Login Failed`. Land the operator with a browser bookmark or a redirect ORD/PX instead. [CERT-live 2026-09-01 · bitácora 5cuartos §9]
 - **Dashboard write access on a JACE is DEPLOY-side config, not code:** `checkCanWrite` is fail-closed and needs `OPERATOR_WRITE` GLOBAL + a non-null Web Profile + a category granting operatorRead on the service; the log line `[<mod>] checkCanWrite:` states the reason (401/403/user-not-found). [ev: bitácora 5cuartos §7-§8]
 - **Cache-bust every static asset with the module version:** every `<link href>`/`<script src>`/image reference in `index.html` carries `?v=<module version>` equal to `defaultModuleVersion` in the group `build.gradle.kts`, bumped on every `-ux` deploy, so a kiosk panel does not keep stale JS/CSS after a `-ux`-only deploy (no station restart; the browser keeps its cache). [INFER: browser caching of servlet static responses not measured on the panel; relates to the `lint-servlet.sh` cache check.] `[ev: retro dashboard-rc-file-split Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
+- **A file the station serves (`/module/*`, `/file/*`) is cached 30 days with no ETag:** `FileServlet` answers
+  `max-age=2592000` for any module file and any station file ending `png,jpg,gif,svg` (default), and revalidates by
+  `Last-Modified` only. Do not overwrite a station image in place: give each revision a new name. A servlet of ours
+  sets its own headers. `[CERT]` `types/data-access.md` § 4.
 - **Publish the deployed version:** the module exposes its version as a read-only service slot AND as `GET /api/version` (`{module, version, buildMillis}`, same XHR guard as every `/api/*`), and the SPA shows it in an About/footer, so "which build is on this station" is observable from the HMI and from an off-station collector without opening Workbench. The rt side (slot, build millis, drift against the latest packaged release) is `structure.md` § Deployed version publication. `[ev: retro dashboard-deployment-profiles Δ6]`
 - **Web profile of the dashboard user:** HTML5 Hx (Basic, Default, Handheld) and Wb Web profiles exist; Kiosk
   profiles and the KioskService are not supported in Niagara 4, and Mobile profiles are deprecated
@@ -597,7 +615,15 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 
 ## Real alarms (Phase B — see corpus B6/B8, chihuahua B166)
 - A `BAlarmSourceExt` can only host on a **control point** (`BNumericPoint`), not a plain `BComponent` → add child points fed from the display slots; attach `BAlarmSourceExt`(`offnormalAlgorithm=BOutOfRangeAlgorithm`, a fault algorithm). Limits configured from the dashboard = writable config slots (per-role-per-room) linked/fed into the algorithm.
-- Read via `GET /api/alarms` = BQL over `station:|alarm:|bql:select * where sourceState='offnormal' or sourceState='fault' order by timestamp desc`. Station needs a `BAlarmService` + `BAlarmClass`.
+- Read via `GET /api/alarms` = `alarm:|bql:select * from openAlarms` (index-backed, so it reads only the open set),
+  run on the servlet thread with the caller's Context. Keep the rows whose `sourceState` is offnormal or fault in Java,
+  sort them by timestamp there, THEN cap the reply (for example 200 rows) and return a `truncated` flag the page shows.
+  Never cap before the filter: unacked return-to-normal records count in `openAlarms`, so a `top 200` before the
+  filter can drop a live offnormal alarm with no signal. Not `where sourceState='offnormal' or sourceState='fault'
+  order by timestamp desc`: `sourceState` has no index, so it scans the whole alarm database and the `order by` loads
+  all of it. `[CERT]` `types/queries.md` §§ 3, 6 (`AlarmDbConnection.java:59-66`). `openAlarms` is every record not
+  both acked and normal, so it holds every offnormal or fault row `[INFER]`. Station needs a `BAlarmService` and a
+  `BAlarmClass`.
 - **Count alarm occurrences by record, not by UUID change:** a return-to-normal updates the existing record and keeps its UUID; a new off-normal always creates a new record with a new UUID. The number of occurrences of a source is its number of records. `[ev: corpus B1420 §1420.8]` `[ev: corpus B1419 §1419.2 a]` `[ev: retro course-coverage Δ6]`
 - ACK from a plain servlet is the hard part (chihuahua only got it via BajaScript) — spike `svc.getAlarmDb().getDbConnection(cx).getRecord(BUuid)` → `svc.ackAlarm(live)` (`BAlarmDatabase.java:100`, `AlarmDbConnection.java:176`) before committing.
 
@@ -669,7 +695,7 @@ relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC
 |---|---|
 | Read/subscribe a few slots from a page or bajaux view the station serves; live push; the user's own permissions | BajaScript direct |
 | Cross-origin or off-station client, server-side aggregation, validated writes with audit, a classic-script SPA | servlet JSON (this guide's servlet-SPA) |
-| Off-station read-only consumer | oBIX or OPC UA — `driver-authoring.md` § 10 |
+| Off-station read-only consumer | oBIX Watch (`types/data-access.md` § 6) or OPC UA — `driver-authoring.md` § 10 |
 
 ## Web-tier exemplars — where the Tridium pattern lives (DUX-WEB1)
 
