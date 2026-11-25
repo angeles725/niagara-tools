@@ -72,6 +72,20 @@ func TestCommissioningListsAlarmClassesWithNoRecipientLinked(t *testing.T) {
 	}
 }
 
+// A recipient is a link from the class's alarm topic into a routeAlarm action, as n4_list_alarm_classes
+// reads it (#992 M2): a link from the alarm topic into another slot routes nothing.
+func TestCommissioningCountsOnlyLinksIntoRouteAlarm(t *testing.T) {
+	r, _ := comRig(t, comAlarmTables)
+	h := comAlarmService(r, "defaultAlarmClass", "High", "Low")
+	for class, target := range map[string]string{"defaultAlarmClass": "routeAlarm", "High": "routeAlarm", "Low": "lastAlarm"} {
+		if _, err := r.Station.Link(h[class], "alarm", h["Console"], target); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := comSection(t, r, "alarms", nil)
+	comWant(t, s, "classes_without_recipient", 1, comAlarmSvc+"Low")
+}
+
 func TestCommissioningCountsOpenAndUnacknowledgedAlarmsPerClass(t *testing.T) {
 	r, _ := comRig(t, comAlarmTables)
 	comAlarmService(r, "defaultAlarmClass", "High", "Low")

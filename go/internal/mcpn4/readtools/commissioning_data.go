@@ -118,7 +118,7 @@ const (
 	factNeverRecorded = "lastRecord.timestamp is null (history id %s)"
 	factNoAlarm       = "no alarm extension below it"
 	factUnknownClass  = "alarmClass %s names no alarm class of the station"
-	factNoRecipient   = "no link from its alarm topic to a component within %d levels of the AlarmService"
+	factNoRecipient   = "no link from its alarm topic into a routeAlarm action within %d levels of the AlarmService"
 	factOpen          = "%d open alarm(s)"
 	factUnacked       = "%d unacknowledged alarm(s)"
 	factSourceMissing = "link %s into %s: source slot path %s does not exist"
