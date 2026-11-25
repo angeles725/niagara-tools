@@ -1,6 +1,7 @@
 package buildmodule
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -10,7 +11,7 @@ import (
 // none the build ends with exit 10 before preflight, naming the pin and the versions found. A pin that is
 // there, an override and no pin at all leave the run as it was. [ev: retro client-e-dashboard-live-check Δ29]
 func TestPluginPickedFromTheMirror(t *testing.T) {
-	const m2 = "/etc/m2/repository/com/tridium/"
+	const m2 = "/etc/m2/repository/" + modulePluginDir + "/"
 	cases := []struct {
 		name    string
 		pin     string   // niagaraPluginVersion of gradle.properties ("" none)
@@ -38,7 +39,7 @@ func TestPluginPickedFromTheMirror(t *testing.T) {
 		f.mkdir(home + "/modules")
 		f.mkdir(home + "/etc/m2/repository")
 		for _, v := range c.ships {
-			f.mkdir(home + m2 + "plugin/" + v)
+			f.mkdir(home + m2 + v)
 		}
 		if c.pin != "" {
 			f.write(f.root+"/gradle.properties", "niagaraPluginVersion="+c.pin+"\n")
@@ -60,5 +61,23 @@ func TestPluginPickedFromTheMirror(t *testing.T) {
 		if c.name == "one other version is used" && !strings.Contains(f.call("preflight.sh"), "<--plugin-version> <7.6.22>") {
 			t.Errorf("%s: preflight was not given the version used: %s", c.name, f.call("preflight.sh"))
 		}
+	}
+}
+
+// A real home ships other gradle plugins and libraries with their own versions (java-compiler-warnings
+// 7.6.3, gradle-settings-plugins 7.6.3): only the niagara-module plugin's versions count, in numeric order.
+func TestShippedPluginsCountsOnlyTheModulePlugin(t *testing.T) {
+	repo := t.TempDir()
+	for _, d := range []string{
+		modulePluginDir + "/7.10.1", modulePluginDir + "/7.9.4", modulePluginDir + "/notes",
+		"com/tridium/java-compiler-warnings/com.tridium.java-compiler-warnings.gradle.plugin/7.6.3",
+		"com/tridium/tools/gradle-settings-plugins/7.6.3",
+	} {
+		if err := os.MkdirAll(repo+"/"+d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := strings.Join(shippedPlugins(repo), ","); got != "7.9.4,7.10.1" {
+		t.Errorf("shippedPlugins = %q, want 7.9.4,7.10.1", got)
 	}
 }

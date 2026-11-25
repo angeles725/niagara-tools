@@ -23,8 +23,8 @@ const (
 	adapterNoProc  = "-proc:none" // no annotation processing: Slot-o-Matic is gradle's job, not this loop's
 	msgNoAdapters  = "NOTICE the Baja adapters under src/ were not compiled (NIAGARA_HOME is not set): a helper deleted by a refactor passes these tests and fails only at gradle — export NIAGARA_HOME=<mirror> to compile them here"
 	msgNoHomeJars  = "NIAGARA_HOME %s has no modules/*.jar — point it at a mirror (mirror-niagara-home.sh) or an install"
-	msgAdaptersBad = "adapter sources do not compile: %s (javac output above) — a compile error is not a RED"
-	msgAdaptersErr = "adapter sources do not compile (javac failed above) — a compile error is not a RED"
+	msgAdaptersBad = "adapter sources do not compile: %s (javac output above; class path NIAGARA_HOME/modules only, unset NIAGARA_HOME to skip) — a compile error is not a RED"
+	msgAdaptersErr = "adapter sources do not compile (javac failed above; class path NIAGARA_HOME/modules only) — a compile error is not a RED"
 )
 
 // diagnosedFile is the file a javac diagnostic line starts with.

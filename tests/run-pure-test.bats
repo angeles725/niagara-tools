@@ -14,6 +14,7 @@ setup_file() {
 }
 
 setup() {
+  unset NIAGARA_HOME # hermetic: AD1-AD4 set it per run; an exported one would compile adapters in every case
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   RUN="$KIT/toolbelt/run-pure-test.sh"
   # Skip locally (don't fake a pass) when JUnit isn't fetched; fail in CI so a missing

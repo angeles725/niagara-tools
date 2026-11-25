@@ -2,13 +2,11 @@ package buildmodule
 
 import (
 	"io"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/angeles725/niagara-tools/go/internal/findwalk"
-	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
 // pluginVersionDir is the name of a plugin version directory: three numeric components.
@@ -26,7 +24,7 @@ func (b *build) pickMirrorPlugin() int {
 	}
 	pin := b.quietPin()
 	repo := b.home + "/" + m2Repository
-	if pin == "" || findwalk.HasDirWithin(repo, pin, m2Depth) {
+	if pin == "" || isDir(repo+"/"+modulePluginDir+"/"+pin) {
 		return proceed
 	}
 	ships := shippedPlugins(repo)
@@ -52,22 +50,28 @@ func (b *build) quietPin() string {
 	return b.pinnedPlugin()
 }
 
-// shippedPlugins are the plugin versions under repo, in version order: each directory named X.Y.Z whose
-// parent's name holds "plugin", so the version of an ordinary library is not counted.
+// modulePluginDir is where etc/m2 holds the niagara-module gradle plugin, one directory per version
+// (measured on a 4.14 home: com.tridium.niagara-module.gradle.plugin/7.6.17 beside other plugins that
+// ship their own versions, such as java-compiler-warnings 7.6.3).
+const modulePluginDir = "com/tridium/niagara-module/com.tridium.niagara-module.gradle.plugin"
+
+// shippedPlugins are the niagara-module plugin versions under repo (directories named X.Y.Z), in
+// version order; other plugins and libraries are never counted.
 func shippedPlugins(repo string) []string {
-	seen := map[string]bool{}
-	findwalk.Walk(repo, false, m2Depth, func(e findwalk.Entry) bool {
-		if e.Dir && pluginVersionDir.MatchString(e.Name) && strings.Contains(strings.ToLower(lint.Basename(lint.Dirname(e.Path))), "plugin") {
-			seen[e.Name] = true
-		}
-		return true
-	}, nil)
+	entries, _ := os.ReadDir(repo + "/" + modulePluginDir)
 	var out []string
-	for v := range seen {
-		out = append(out, v)
+	for _, e := range entries {
+		if e.IsDir() && pluginVersionDir.MatchString(e.Name()) {
+			out = append(out, e.Name())
+		}
 	}
 	sort.Slice(out, func(i, j int) bool { return versionLess(out[i], out[j]) })
 	return out
+}
+
+func isDir(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && st.IsDir()
 }
 
 // versionLess orders X.Y.Z strings numerically per component.
