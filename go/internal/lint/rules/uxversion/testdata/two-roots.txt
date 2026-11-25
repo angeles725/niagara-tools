@@ -1,0 +1,11 @@
+-- args --
+@DIR@/a
+@DIR@/b
+-- want --
+exit 3
+-- stderr --
+lint-ux-version: unexpected argument: @DIR@/b
+-- a/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- b/build.gradle.kts --
+  defaultModuleVersion("1.2.3")

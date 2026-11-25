@@ -1,0 +1,23 @@
+package com.example.rpc;
+
+public class BWaived
+{
+  // lint-niagara-rpc: reviewed public lexicon text, no station data
+  @NiagaraRpc(permissions = "unrestricted", transports = { @Transport(type = TransportType.web) })
+  public static String lexicon(String key, Context cx)
+  {
+    return text(key);
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) }) // lint-niagara-rpc: reviewed guard sits in the caller
+  public void sameLine(String slot, double v, Context cx)
+  {
+    c.set(prop, BDouble.make(v), cx);
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) })
+  public void onSignature(String slot, double v, Context cx) // lint-niagara-rpc: reviewed guard sits in the caller
+  {
+    c.invoke(act, null, cx);
+  }
+}

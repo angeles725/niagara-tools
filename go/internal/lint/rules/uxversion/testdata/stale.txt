@@ -1,0 +1,17 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/css/base.css:1  stale-version: ../img/bg.png?v=0.9 has ?v=0.9 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:1  stale-version: css/base.css?v=1.2.2 has ?v=1.2.2 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/js/main.js:1  stale-version: img/a.png?v=1.0.0 has ?v=1.0.0 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-ux/src/rc/css/base.css --
+a { background: url(../img/bg.png?v=0.9); }
+-- m/M-ux/src/rc/index.html --
+<link rel="stylesheet" href="css/base.css?v=1.2.2">
+<script src="js/main.js?v=1.2.3"></script>
+-- m/M-ux/src/rc/js/main.js --
+var u = "img/a.png?v=1.0.0";

@@ -14,6 +14,9 @@ import (
 var notInReport = map[string]string{
 	"lint-action-handler":      "a FAIL gate on any Java source root (G1, B1), run by hand until a report-module member row is wanted",
 	"lint-async-blocking":      "a WARN-only advisory for ASYNC action handlers (G28), run by hand",
+	"lint-ux-version":          "a -ux cache-busting check that needs the group build file, run by hand",
+	"lint-niagara-rpc":         "a source lint run by hand on an RPC source root (types/security.md §2.7)",
+	"lint-confirm-required":    "a FAIL lint over @NiagaraAction names, run by hand until a module adopts it",
 	"lint-absolute-claims":     "a kit doc report over build-n4-module-kit/types/*.md (METHODOLOGY K33), not a module check",
 	"lint-bacnet-status-flags": "reads a station config.bog, which a module root does not hold",
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",

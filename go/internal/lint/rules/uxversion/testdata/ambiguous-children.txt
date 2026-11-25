@@ -1,0 +1,12 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-ux-version: ambiguous defaultModuleVersion: 1.0.0 in @DIR@/m/a, 2.0.0 in @DIR@/m/b
+-- m/a/build.gradle.kts --
+  defaultModuleVersion("1.0.0")
+-- m/b/build.gradle.kts --
+  defaultModuleVersion("2.0.0")
+-- m/a/A-ux/src/rc/index.html --
+<script src="js/main.js?v=1.0.0"></script>

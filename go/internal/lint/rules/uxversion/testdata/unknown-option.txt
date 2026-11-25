@@ -1,0 +1,9 @@
+-- args --
+@DIR@/m
+-x
+-- want --
+exit 3
+-- stderr --
+lint-ux-version: unknown option: -x
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")

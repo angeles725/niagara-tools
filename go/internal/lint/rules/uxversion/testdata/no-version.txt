@@ -1,0 +1,12 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-ux-version: no defaultModuleVersion("X.Y.Z") found in a build.gradle.kts under or above @DIR@/m
+-- m/settings.gradle.kts --
+rootProject.name = "m"
+-- m/build.gradle.kts --
+plugins { id("com.tridium.vendor") }
+-- m/M-ux/src/rc/index.html --
+<script src="js/main.js?v=1.2.3"></script>

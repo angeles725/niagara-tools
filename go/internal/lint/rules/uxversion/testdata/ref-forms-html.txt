@@ -1,0 +1,18 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:1  stale-version: p.png?v=0.2 has ?v=0.2 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:2  stale-version: v.webm?v=0.1 has ?v=0.1 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+WARN  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:3  no-version: a.mp3 has no ?v=1.2.3 suffix (types/dashboard.md: cache-bust every static asset with the module version)
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:4  stale-version: i.png?v=0.3 has ?v=0.3 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:5  stale-version: s.svg?v=0.4 has ?v=0.4 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-ux/src/rc/index.html --
+<video src="v.mp4?v=1.2.3" poster="p.png?v=0.2"></video>
+<source src="v.webm?v=0.1">
+<audio src="a.mp3"></audio>
+<input type="image" src="i.png?v=0.3">
+<svg><image xlink:href="s.svg?v=0.4"/><image href="s2.svg?v=1.2.3"/></svg>

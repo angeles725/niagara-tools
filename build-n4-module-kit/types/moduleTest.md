@@ -8,8 +8,9 @@ BComponent()` requires a running NRE; see the offline-instantiation-boundary mem
 Exemplar to read before writing: `componentLinks-rt/srcTest/…/BLinkCheckTestTest.java` (B958 §958.3–958.4).
 
 > **NRE requirement:** `moduleTest` tests run on a native Windows Niagara install. From a WSL shell, run
-> Gradle's `niagaraTest` through `cmd.exe` (§ Running from WSL); only a WSL-side
-> Gradle with plugin 7.6.17 discovers 0 tests. No running station is needed: the runner works on a throwaway copy of
+> Gradle's `niagaraTest` through `cmd.exe` (§ Running from WSL); a WSL-side
+> Gradle with plugin 7.6.17 discovers 0 tests, as does a layout whose package lacks `test.` (§ TEST-G8). No running
+> station is needed: the runner works on a throwaway copy of
 > the install and refuses an install a station is using. Keep them as a separate QA tier — they verify inter-component
 > link/station behaviour that pure JUnit cannot reach. `[ev: corpus B958 §958.3]` `[ev: retro testing-parity-btestng Δ1]`
 
@@ -18,7 +19,9 @@ Exemplar to read before writing: `componentLinks-rt/srcTest/…/BLinkCheckTestTe
 ## Lifecycle (`@BeforeClass` / `@Test` / `@AfterClass`)
 
 ```java
-// srcTest/com/yourvendor/yourmod/test/BYourModuleTest.java
+// srcTest/test/com/yourvendor/yourmod/BYourModuleTest.java   (4.14+ layout, § TEST-G8 File layout)
+package test.com.yourvendor.yourmod;    // the path and the package agree, both under the test root
+
 @NiagaraType                         // required — the type must be registered in moduleTest-include.xml
 @Test(groups = { "yourmod" })        // TestNG group; choose a consistent module-scoped name
 public class BYourModuleTest extends BTestNg {
@@ -75,7 +78,7 @@ added to the production `module-include.xml` — that would ship test code in th
 <moduleInclude>
   <types>
     <type name="YourModuleTest"
-          class="com.yourvendor.yourmod.test.BYourModuleTest"/>
+          class="test.com.yourvendor.yourmod.BYourModuleTest"/>
   </types>
 </moduleInclude>
 ```
@@ -156,7 +159,7 @@ and its header names the station test that replaces it or says why none can. Pil
 `[ev: retro n4-course-lexicon-logging-testing Δ3]`:
 - `BTestNg` for value and slot logic, callbacks on a DETACHED component (no `started()`), a `do` method as a function.
 - `BTestNgStation` for `started()`, service lookup, `JobService`, the alarm or history database, BQL/NEQL over the
-  station, permissions. Its station is set up once per TestNG `<test>` run (`@BeforeTest setupStation()`,
+  station, permissions (§ TEST-G9). Its station is set up once per TestNG `<test>` run (`@BeforeTest setupStation()`,
   `javax/baja/test/BTestNgStation.java:93-94`), not per method: fixtures must be idempotent (remove-if-present, then
   add). Seed alarms with `getAlarmService().getAlarmDb().getDbConnection(null)` and `append`, histories through the
   history database's `getDbConnection(null)` (`createHistory`, `append`).
@@ -223,8 +226,8 @@ change to each double slot), `moduleTest-include.xml`, and both test dependencie
 driver` ships its loopback test instead (`types/driver-authoring.md` § 12.1). Add every new link-in slot to
 `LINK_IN_SLOTS`. `[ev: retro r10-scaffold-station-test Δ1]`
 
-1. `srcTest/com/<vendor>/<mod>/test/BYourModuleTest.java` — extends `BTestNg`, `@NiagaraType`, TestNG
-   annotations.
+1. `srcTest/test/com/<vendor>/<mod>/BYourModuleTest.java` (`package test.com.<vendor>.<mod>`) — extends
+   `BTestNg`, `@NiagaraType`, TestNG annotations; path and package agree (§ TEST-G8 File layout).
 2. `<part>/moduleTest-include.xml` — registers the test type; does NOT appear in `module-include.xml`.
 3. `.gradle.kts` — `moduleTestImplementation("Tridium:test-wb")` (and any other needed test deps).
 4. Run the tests on a native (non-WSL) Niagara install with `bin/test` and a developer license:
@@ -381,8 +384,9 @@ cmd.exe /c "cd /d C:\Users\<you>\AppData\Local\Temp\<copy> && gradlew.bat <same 
 ```
 
 - **Always `:clean` first:** after a failed run `niagaraTest` is UP-TO-DATE and reports nothing.
-- **Count the tests, not the exit code.** `BUILD SUCCESSFUL` with `Total tests run: 0` is a failed run. The two
-  known causes: a WSL-side Gradle (plugin 7.6.17), and a test jar the test NRE cannot trust: the default
+- **Count the tests, not the exit code.** `BUILD SUCCESSFUL` with `Total tests run: 0` is a failed run. The
+  known causes: a path/package mismatch of the test classes (0 test types registered, § TEST-G8 File layout), a
+  WSL-side Gradle (plugin 7.6.17), and a test jar the test NRE cannot trust: the default
   self-signed `Niagara4Modules` dev key logs `Could not validate cert chain` → `invalid test target(s)` (on
   4.14.0.162 with a fresh user home the same WARN did not stop a throwaway-signed test jar from running, § 12.1 of
   `types/driver-authoring.md`; check the summary line, not the WARN). Sign with a
@@ -623,6 +627,15 @@ Older layout:
   <part>.gradle.kts                 # moduleTestImplementation(":test-wb")
 ```
 
+**The path and the package must agree, and the package carries `test.`.** Two of our module tests sit
+under `srcTest/test/com/angeles/…` but declare `package com.angeles.…`: a path/package mismatch, and the same
+package as production (a split package). One built test module's `META-INF/module.xml` has no `<types>`,
+so its `Total tests run: 0` meant 0 registered test types, upstream of the runner. B1236 §1236.8 re-diagnosed the
+earlier "plugin 7.6.17 bug" this way `[INFER]`: the 7.6.17 jar names both annotation-processor options
+(`niagara.module.root`, `niagara.test.roots`) in its strings, and the live check (B1236-G1) is still open. For
+a `Total tests run: 0`, check the layout first, then the WSL route; do not call it a plugin bug without both.
+`[ev: corpus B1236 §1236.8]`
+
 ### `moduleTest-include.xml` registration
 
 Every test class needs `@NiagaraType` + a `TYPE` constant, and must be declared in
@@ -632,7 +645,7 @@ Every test class needs `@NiagaraType` + a `TYPE` constant, and must be declared 
 <moduleInclude>
   <types>
     <type name="YourModuleTest"
-          class="com.yourvendor.yourmod.test.BYourModuleTest"/>
+          class="test.com.yourvendor.yourmod.BYourModuleTest"/>
   </types>
 </moduleInclude>
 ```
@@ -717,5 +730,107 @@ the main Gradle section above).
   Jasmine harness documented in `types/dashboard.md §DUX-TEST1` — `moduleTest` covers the Java side only.
 
 `[ev: corpus B1028 SDE7-G1; code BTestNgStation.java; code TestHelper.java]`
+
+---
+
+## TEST-G9 — Permission (RBAC) tests: `userPermissionsScenario(...).actAsUser(...)`
+
+A test that proves what a role may read or write needs a user with exactly those permissions. Do not hand-build the
+role, user and category map: `BTestNgStation` already has the harness. It is a `protected` method of `BTestNgStation`
+(a `BTestNg` test cannot call it) `[ev: code docSource BTestNgStation.java :749]`.
+
+```java
+import static javax.baja.test.permissions.PermissionsScenario.withPermissions;
+
+@NiagaraType @Test
+public class BYourPermissionTest extends BTestNgStation {
+
+    @Test
+    public void readerCanReadButNotWriteServices() {
+        userPermissionsScenario(withPermissions("R").onOrd("station:|slot:/Services"))
+            .actAsUser(user -> {
+                OrdTarget t = BOrd.make("station:|slot:/Services").resolve(stationHandler.getStation(), user);
+                Assert.assertTrue(t.canRead());
+                Assert.assertFalse(t.canWrite());
+            });
+    }
+
+    // a denial that throws: the consumer's exception reaches TestNG, so expectedExceptions works
+    @Test(expectedExceptions = UnresolvedException.class,
+          expectedExceptionsMessageRegExp = "Cannot find User Service")
+    public void noReadOnUserServiceHidesIt() {
+        userPermissionsScenario(withPermissions("").onOrd("service:baja:UserService"))
+            .actAsUser(user -> BOrd.make("userDemo:testUser")
+                .get(stationHandler.getStation(), new BasicContext(user)));
+    }
+}
+```
+
+- **Steps:** `withPermissions("R")` is the role's permission string (`""` is none). `.onOrd("<ord>")` puts that ORD
+  in a throwaway category (first index 27, then 28…); `.onComponent(comp)` does it for a mounted component (else
+  `IllegalArgumentException`); `.onCategory(5)` / `.onCategories(...)` name the categories yourself.
+  `withOrd("<ord>").onlyInCategory(5)` / `.onlyInCategories(...)` sets the categories of an ORD. The same ORD string
+  in two steps keeps the last (a map `put`); different ORDs may nest (`BUserSchemeTest.java:89-92`: `R` on the
+  service, `""` on its child `testUser`).
+  `[ev: code organized/test/test-wb/vineflower/javax/baja/test/permissions/PermissionsScenario.java :144-216]`
+- **Lifecycle:** `actAsUser` applies the steps, adds a role and a user (`testRole?`, `testUser?`) to the station's
+  `RoleService` and `UserService`, sets the category map, runs the consumer, and in `finally` restores the map
+  and removes the user and role. A failing assertion therefore leaves no user behind.
+  `[ev: code organized/test/test-wb/vineflower/javax/baja/test/permissions/PermissionsScenario.java :38-55]`
+- **Use it for:** an ORD that must resolve for one role and not for another, or a `canRead()`/`canWrite()` gate on
+  a component `[INFER]`. Pass the user as the `Context` of the call, `resolve(base, user)` or `get(base,
+  new BasicContext(user))` as the two examples do: a call made without it is not a call as that user.
+- **Worked sources:** the javadoc of the method (`BTestNgStation.java:719-745`) and the course test
+  `BUserSchemeTest.java:69-99` (two tests that assert `UnresolvedException` for a user without read permission).
+  `[ev: code docSource BTestNgStation.java :719-745]`
+  [ev: course Slide Code/slides/slides-rt/srcTest/test/com/tridiumuniversity/slides/ords/BUserSchemeTest.java :69-99]
+
+---
+
+## TEST-G10 — `TestHelper` utilities beyond `assertWillBeTrue`
+
+All in `javax.baja.test.TestHelper` (`test-wb`). `nh devguide-search` finds none of `LatestLogHandler`,
+`assertCanRunConcurrently`, `waitForClockChange` in the 4.15.6.20 devguide (not proof of absence): the source is the
+reference. Pick by the question the test asks:
+
+| Question | Helper |
+|---|---|
+| Did the code log this line, or leak a value into a log? | `LatestLogHandler` |
+| A private field or constant needs another value | `getPrivateField`, `setPrivateField`, `runWithAlternateValue` |
+| A private method is the unit under test | `invokePrivate` |
+| Is this code thread-safe? | `assertCanRunConcurrently` |
+| Two writes need distinct timestamps | `waitForClockChange` |
+
+- **`LatestLogHandler`** (`TestHelper.java:266-330`): `addLogHandler("<logger>")` only adds a handler to
+  `Logger.getLogger(name)`; it does not lower the logger level, so a FINE line under the default INFO is never
+  published. Call `Logger.getLogger(name).setLevel(Level.ALL)` first, and restore the level and call
+  `removeLogHandler(name)` in `@AfterMethod`, or the level leaks into later tests of the same NRE. `publish`
+  overwrites the previous record (`:296`): `getLatestMessage()` and `getLatestLevel()` see the LAST one. To assert
+  several lines use the course's list-collecting `LogUtil` (`startRecordingLogging`, `getLogMessages`,
+  `stopRecordingLogging`). `getMessage()` is the unformatted pattern, so a `{0}` log call reads as its pattern
+  `[INFER]` (`LogRecord` semantics). To prove a value is NOT logged, assert the latest message lacks it.
+  `[ev: code docSource TestHelper.java :266-330]`
+  [ev: course Slide Code/slides/slides-rt/srcTest/test/com/tridiumuniversity/slides/util/LogUtil.java :36-47]
+- **Private fields and methods** (`:341-380`, `:619-640`, `:786-830`): `getPrivateField(objOrClass, name)` reads a
+  private (or private static) field, also from a superclass, and drops `final` so the test can change it;
+  `setPrivateField(..., value[, VolatileParameter])` writes it; `runWithAlternateValue(obj, name, alt, () -> {...})`
+  sets, runs and restores in `finally`, which fits a static constant read from a System property. `invokePrivate`
+  looks the method up by `args[i].getClass()`: a null argument throws `NullPointerException`, and a primitive or
+  supertype parameter fails with `Failed to invoke <name>`; an exception of the method itself is rethrown
+  unwrapped. These tie a test to a private name (a rename fails at run time): prefer a package-private seam and a
+  pure JUnit test when one exists. `[ev: code docSource TestHelper.java :341-380, :619-640, :786-830]`
+- **`assertCanRunConcurrently(threads, iterations, timeoutMs, runnables...)`** (`:914-955`): starts `threads`
+  threads for each runnable, each runs it `iterations` times, and passes when every thread finishes within the
+  timeout without an `Exception`. A lost update raises nothing, so the runnables must change shared state and the
+  test must assert the result afterwards (`counter == threads * iterations`). The thread catches `Exception` only
+  (`:932`): an `AssertionError` in a runnable ends the thread unrecorded, and the run fails after the timeout with
+  `not all threads completed successfully`; throw a `RuntimeException` instead. It is the dynamic twin of
+  `toolbelt/lint-intrinsic-lock.sh`: RED the unguarded read-modify-write, GREEN the same code behind a private lock
+  object. `[not verified]` that it catches a lost update on every run on a JACE-class CPU (nothing was executed).
+  `[ev: code docSource TestHelper.java :914-955]`
+- **`waitForClockChange()`** (`:203-207`): returns once `Clock.time()` is at least one millisecond past the start,
+  waiting up to the `waitFor` default of 5000 ms and ignoring its result, so a clock that never moves returns
+  silently. Use it between two writes whose `BAbsTime` stamps must differ.
+  `[ev: code docSource TestHelper.java :203-207]`
 
 <!-- source: TEST-G1..TEST-G8 appended 2026-09-19 from odd/tasks/kit-improvement-candidates-2026-09-19.md; signatures verified against test-wb decompiled [ev: retro moduletest-patterns] -->

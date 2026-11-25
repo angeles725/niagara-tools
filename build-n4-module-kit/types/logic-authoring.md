@@ -21,7 +21,8 @@ Every `subscribe()` call in `started()` MUST have a matching `unsubscribe()` (or
 3. **Duplicate subscriptions on re-enable** — each `started()` adds another subscription; `enable → disable → enable` stacks duplicate subscriptions with no error.
 
 **Preferred alternatives:**
-- Use `lease()` for a transient one-time read (self-manages its subscription; no teardown needed).
+- Use `lease()` for a transient one-time read (self-manages its subscription; no teardown needed). The Java lease
+  lasts 60 000 ms unless `lease(depth, millis)` says otherwise; the sweeper runs every 5 s. `types/queries.md` § 7.
 - Prefer `BLink` for value propagation across slots (self-manages its subscription; correct by design).
 - Use `TypeSubscriber.subscribe(...)` / `unsubscribeAll()` (see §Author-side SPIs) when watching all instances of a type.
 
@@ -262,8 +263,14 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
 - **A single value:** append `|cell:0,0` to the ORD instead of iterating.
 - **Cursor records are reused:** call `newCopy()` on a history/alarm record you keep past the next `next()`.
 - **BQL never subscribes.** A proxy point's value is only as fresh as its last subscription: `BComponent.lease(points, 0)`
-  for a one-off fresh snapshot (the instructor warns the first read after a lease may still be stale — spoken, [CERT-a] corpus B1418 §1418.4),
-  `Subscriber` + `subscribe(points, 0, cx)` and `unsubscribeAll()` when done for a stream.
+  for a one-off fresh snapshot, `Subscriber` + `subscribe(points, 0, cx)` and `unsubscribeAll()` when done for a
+  stream. The Java lease is 60 000 ms by default (`BComponent.java:281-283`, `BComponentSpace.java:121-123`, baja
+  vineflower 4.14.0.162). Do not read a leased proxy point in the callback that leased it: `lease` subscribes on your
+  thread, but the driver reads asynchronously and answers with `readOk()`, so read it on a later tick or from the
+  `Subscriber` event. `[CERT]` `com/tridium/sys/engine/LeaseManager.java:32-34`; `[CERT-doc]` docSource driver-rt
+  `javax/baja/driver/point/BProxyExt.java:851-859`. `[ev: corpus B1420 §1420.6]`
+- **Cost, history and alarm reads, paging:** `types/queries.md` (what each query scans, `top`/window bounds, the
+  history and alarm recipes, the snippet bank).
 - **Remote stations:** `ip:…|foxs:|…|bql:…` works in Workbench (it prompts) but not through `BOrd.get` in code;
   open a `BFoxProxySession.make(host, port, useFoxs, credentials)` (`javax/baja/fox/BFoxProxySession.java:28-36`,
   fox-rt vineflower) and resolve against it. The code that calls `make` owns the session: `connect()` before

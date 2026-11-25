@@ -236,6 +236,14 @@ public NMessage makeMessage(LinkMessage lm) throws Exception {
   `started()` with `setDefaultListener(...)` (`datatypes/BCommConfig.java:377-384`; wizard
   `BNfooNetwork.java.vm:102-120`). The factory, the listener and the codec run on the comm receive thread, never
   the engine thread.
+- **Filtered listeners; no listener means dropped and counted** `[CERT-a]` course Day 4 transcript: a COV or event
+  frame is unsolicited because `msg.isResponse()` is false, a test your own `NMessage` subclass answers `[INFER]`
+  (`comm/NComm.java:221`). `NComm.registerCommListener(listener, ICommFilter, exclusive)` adds a listener that gets
+  only the frames its `ICommFilter.accept(msg)` takes, so a listener skips the frames it does not parse; the
+  default listener still runs unless an accepting listener was `exclusive`; with neither, the frame is dropped and
+  `stats.noListener++` (`comm/NComm.java:275-298,303`) `[CERT]`. The method is on `NComm`, not on `IComm`, which
+  has only `setDefaultListener` (`comm/IComm.java:17`). A device that pushes data nobody consumes shows as a growing
+  `noListener` in Spy, "NCom Statistics" (`comm/NComm.java:347,388`) `[CERT]`.
 - Course reference for the shape only: `sources/n4-dev-course/course/Labs/Lab11 NDriver/1 Creating Common Classes/TrafficLightDriverLinkMessage.java:30-61`
   (its `receive` has no bounds check) `[ev: corpus B1239 §1239.6]`.
 

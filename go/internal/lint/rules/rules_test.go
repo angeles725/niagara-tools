@@ -170,7 +170,7 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check lint-write-path lint-module-map lint-ntpl-manifest-deps" {
-		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux, split-package-check, lint-write-path, lint-module-map and lint-ntpl-manifest-deps", roots)
+	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check lint-write-path lint-ux-version lint-module-map lint-ntpl-manifest-deps" {
+		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux, split-package-check, lint-write-path, lint-ux-version, lint-module-map and lint-ntpl-manifest-deps", roots)
 	}
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/charsetdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/confirmrequired"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/dashboardsave"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
@@ -44,6 +45,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/mqtttlsport"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndriverstaticcollection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndrivertaglesscorrelation"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/niagararpc"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ntplmanifest"
@@ -73,6 +75,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uberjarapi"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uxversion"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/vacuoustests"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
@@ -139,6 +142,7 @@ func All() []lint.Spec {
 		ndrivertaglesscorrelation.Spec(),
 		bacnetstatusflags.Spec(),
 		vacuoustests.Spec(),
+		uxversion.Spec(),
 		batserrexit.Spec(),
 		modulemap.Spec(),
 		permissionsxml.Spec(),
@@ -159,5 +163,7 @@ func All() []lint.Spec {
 		instancetypeorder.Spec(),
 		actionhandler.Spec(),
 		asyncblock.Spec(),
+		niagararpc.Spec(),
+		confirmrequired.Spec(),
 	}
 }

@@ -1,0 +1,19 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/BText.java --
+package com.x;
+/**
+ * Declare it with @NiagaraAction(name = "resetStatistics") and no flags.
+ */
+public class BText extends BComponent
+{
+  // @NiagaraAction(name = "wipeDevice")
+  /* @NiagaraAction(name = "purgeOld") */
+  static final String S = "@NiagaraAction(name = \"resetCounter\")";
+  static final String T = """
+    @NiagaraAction(name = "clearHistory")
+    """;
+}

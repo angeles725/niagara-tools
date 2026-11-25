@@ -44,3 +44,16 @@ func TestNullColumnsAreTheProjectedNamesNullOnEveryRow(t *testing.T) {
 		t.Errorf("select *: %q", got)
 	}
 }
+
+// A TOP or DISTINCT select names the same slots as without the modifier: the survey bug named
+// "top 10 slotPath" and, being no pseudo column, warned about a slot that was never queried.
+func TestNullColumnsIgnoreTheTopAndDistinctModifiers(t *testing.T) {
+	cols := []string{"Slot Path", "Name", "M"}
+	rows := []*pyjson.Object{row("Slot Path", "NULL", "Name", "NULL", "M", "NULL")}
+	for _, q := range []string{"select top 10 slotPath, name, maxOverrideDuration from control:NumericWritable",
+		"select distinct slotPath, name, maxOverrideDuration from control:NumericWritable"} {
+		if got := NullColumns(q, cols, rows); !reflect.DeepEqual(got, []string{"maxOverrideDuration"}) {
+			t.Errorf("NullColumns(%q) = %q", q, got)
+		}
+	}
+}

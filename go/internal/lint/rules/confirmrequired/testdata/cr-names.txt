@@ -1,0 +1,38 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:3  resetStatistics: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:4  clear: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:5  deleteAll: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:6  removeRow: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:7  purge_old: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:8  wipeDevice: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:9  factoryDefaults: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:10  restartStation: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:11  rebootNow: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:12  overwriteConfig: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BDevice.java:13  URLReset: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+-- stderr --
+-- src/com/x/BDevice.java --
+package com.x;
+public class BDevice extends BComponent {
+@NiagaraAction(name = "resetStatistics")
+@NiagaraAction(name = "clear")
+@NiagaraAction(name = "deleteAll")
+@NiagaraAction(name = "removeRow")
+@NiagaraAction(name = "purge_old")
+@NiagaraAction(name = "wipeDevice")
+@NiagaraAction(name = "factoryDefaults")
+@NiagaraAction(name = "restartStation")
+@NiagaraAction(name = "rebootNow")
+@NiagaraAction(name = "overwriteConfig")
+@NiagaraAction(name = "URLReset")
+@NiagaraAction(name = "tick")
+@NiagaraAction(name = "ping")
+@NiagaraAction(name = "presetValues")
+@NiagaraAction(name = "cleared")
+@NiagaraAction(name = "resetting")
+@NiagaraAction(name = "ackAlarm")
+@NiagaraAction(name = "changeDeviceUuid")
+}

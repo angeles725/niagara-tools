@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-24 -->
+<!-- last-change-note: lint-niagara-rpc: FAIL an unrestricted or unguarded-write @NiagaraRpc method -->
+log: 2026-11-24 · lint-niagara-rpc → new Go rule `go/internal/lint/rules/niagararpc` behind `toolbelt/lint-niagara-rpc.sh` (n4lint wrapper): FAIL `permissions = "unrestricted"` or `""` (the station compares case-insensitively, `NiagaraRpcUtil.java:138-151`) and an `@NiagaraRpc` body that writes (`.set(`, `.invoke(`, a typed setter with 2+ arguments, `doXxx(`) with no `OPERATOR_WRITE`/`checkCanWrite`-style check before it and no `w`/`W` in a literal `permissions`; waiver `// lint-niagara-rpc: reviewed <reason>`. Doctrine in `types/security.md` §2.7 and `types/dashboard.md` RBAC. Goldens in the rule package, `tests/lint-niagara-rpc.bats` on the wrapper. [ev: corpus B752 §752.2]
+open_issue: lint-niagara-rpc is not yet a report-module member: it is listed in `notInReport` or added to `go/internal/reportmodule/members.go` (that bumps `members_test.go` and the report goldens); decide which, then run it on module roots

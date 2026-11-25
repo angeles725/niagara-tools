@@ -1,0 +1,12 @@
+package com.example.rpc;
+
+public class BNonLiteral
+{
+  static final String PERMS = "RW";
+
+  @NiagaraRpc(permissions = PERMS, transports = { @Transport(type = TransportType.web) })
+  public void viaConstant(String slot, double v, Context cx)
+  {
+    c.set(prop, BDouble.make(v), cx);
+  }
+}
