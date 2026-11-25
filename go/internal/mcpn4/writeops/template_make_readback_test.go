@@ -15,7 +15,7 @@ var mkReply = obj("t", "baja:Ord", "v", "slot:/Services/JobService/MakeStationTe
 
 func mkReadback(t *testing.T, c *asks, reply any) (any, string) {
 	t.Helper()
-	args := obj()
+	args := obj("accept_runaway_risk", true)
 	p := mkPlan(t, c, args)
 	_, _, observed, verdict, err := writeops.MakeStationTemplate.Readback(c, args, p, []any{reply}, nil)
 	if err != nil {

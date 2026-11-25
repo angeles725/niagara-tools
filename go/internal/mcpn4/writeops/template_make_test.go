@@ -42,9 +42,6 @@ func (*refuses) LoadTree(ord string, _ int, _ box.LoadOptions) (*pyjson.Object, 
 // unless args say otherwise.
 func mkPlan(t *testing.T, c *asks, args *pyjson.Object) *plan.Planned {
 	t.Helper()
-	if _, given := args.Get("accept_runaway_risk"); !given {
-		args.Set("accept_runaway_risk", true)
-	}
 	p, err := writeops.MakeStationTemplate.PlanWith(c, args, clock(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -55,7 +52,7 @@ func mkPlan(t *testing.T, c *asks, args *pyjson.Object) *plan.Planned {
 // BTemplateService.doMakeStationTemplate(BBoolean useMinorVersionOnDeployment, Context) takes a
 // BBoolean (default true, BTemplateService.java:71-76) and returns the job's BOrd.
 func TestMakeStationTemplateDryRunPlansTheActionAndNamesTheFile(t *testing.T) {
-	p := mkPlan(t, mkStation("success", "", mkFile), obj())
+	p := mkPlan(t, mkStation("success", "", mkFile), obj("accept_runaway_risk", true))
 	want := `{"ssc": "invokeAction", "arg": {"h": "ts1", "a": "makeStationTemplate", "b": {"nm": "p", "t": "baja:Boolean", "v": "true"}}}`
 	if got := js(t, p.Ops[0]); got != want {
 		t.Errorf("op = %s", got)
@@ -72,7 +69,7 @@ func TestMakeStationTemplateDryRunPlansTheActionAndNamesTheFile(t *testing.T) {
 	if got := js(t, p.Targets); !strings.Contains(got, mkService) {
 		t.Errorf("targets = %s", got)
 	}
-	off := mkPlan(t, mkStation("success", "", mkFile), obj("use_minor_version", false))
+	off := mkPlan(t, mkStation("success", "", mkFile), obj("use_minor_version", false, "accept_runaway_risk", true))
 	if got := js(t, off.Ops[0]); !strings.Contains(got, `"v": "false"`) {
 		t.Errorf("use_minor_version=false op = %s", got)
 	}
