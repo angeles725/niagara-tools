@@ -149,3 +149,129 @@ _need_browser() {
   [ "$status" -eq 0 ]
   [[ "$output" == *'["home","Alarms",null,2]'* ]]
 }
+
+# #1087 R2: responsive widths. --widths / --profile repeat the sweep per width (viewport W x height of
+# --viewport); every row of a multi-width run names its width; the default run is byte-identical.
+@test "HS11: parseArgs -> default is one plain 1280x800 run; --profile hmi is the same; --viewport gives the height" {
+  _need_node
+  run node -e '
+    const h = require(process.argv[1]);
+    const runs = (a) => JSON.stringify(h.parseArgs(["--url","http://x/"].concat(a)).runs);
+    console.log(runs([]));
+    console.log(runs(["--profile","hmi"]));
+    console.log(runs(["--viewport","1024x600","--profile","hmi"]));
+    console.log(runs(["--widths","360,1280","--viewport","1024x600"]));
+    console.log(runs(["--widths","400","--profile","lan"]));
+  ' "$HS"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = '[{"width":1280,"height":800,"label":null}]' ]
+  [ "${lines[1]}" = "${lines[0]}" ]
+  [ "${lines[2]}" = '[{"width":1024,"height":600,"label":null}]' ]
+  [ "${lines[3]}" = '[{"width":360,"height":600,"label":"360"},{"width":1280,"height":600,"label":"1280"}]' ]
+  [ "${lines[4]}" = '[{"width":400,"height":800,"label":"400"}]' ]
+}
+
+@test "HS12: parseArgs -> --profile lan = 360,768,1280; both = those plus the 1280x800 hmi run" {
+  _need_node
+  run node -e '
+    const h = require(process.argv[1]);
+    const runs = (a) => h.parseArgs(["--url","http://x/"].concat(a)).runs.map((r) => r.width + "x" + r.height + ":" + r.label);
+    console.log(runs(["--profile","lan"]).join(" "));
+    console.log(runs(["--profile","both"]).join(" "));
+  ' "$HS"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "360x800:360 768x800:768 1280x800:1280" ]
+  [ "${lines[1]}" = "360x800:360 768x800:768 1280x800:1280 1280x800:1280x800" ]
+}
+
+@test "HS13: an invalid --widths list or --profile is a usage error, exit 3, nothing swept" {
+  _need_node
+  for v in '' ',' '360,' ',360' '360,,768' abc '360,abc' 1.5 -360 '360, 768' 199 4001 0; do
+    run node "$HS" --url http://x/ --widths "$v"
+    [ "$status" -eq 3 ]
+    [[ "$output" == *"--widths"* ]]
+    [[ "$output" == *"usage"* ]]
+  done
+  run node "$HS" --url http://x/ --widths
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"missing value for --widths"* ]]
+  run node "$HS" --url http://x/ --profile tablet
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"--profile"* ]]
+  [[ "$output" == *"usage"* ]]
+  run node -e 'console.log(JSON.stringify(require(process.argv[1]).parseArgs(["--url","http://x/","--widths","200,4000"]).runs.map((r) => r.width)))' "$HS"
+  [ "$output" = "[200,4000]" ]
+}
+
+@test "HS14: rowsForView names the width on every row of a multi-width run, and not on a plain run" {
+  _need_node
+  run node -e '
+    const h = require(process.argv[1]);
+    const m = { docScrollY: false, docScrollX: true, target: null, scrollers: [{ sel: "div.l", allowed: false }] };
+    h.rowsForView("default", "home", m, "360").forEach((r) => console.log(r));
+    h.rowsForView("default", "home", { gone: true }, "360").forEach((r) => console.log(r));
+    console.log("--");
+    h.rowsForView("default", "home", m).forEach((r) => console.log(r));
+  ' "$HS"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "FAIL  hmi-sweep  default/home  width=360  no-scroll: document scrolls (horizontal) at the panel viewport" ]
+  [ "${lines[1]}" = "WARN  hmi-sweep  default/home  width=360  inner-scroller: div.l scrolls and is not named by --allow-scroller" ]
+  [[ "${lines[2]}" == "WARN  hmi-sweep  default/home  width=360  subtab:"* ]]
+  [ "${lines[4]}" = "FAIL  hmi-sweep  default/home  no-scroll: document scrolls (horizontal) at the panel viewport" ]
+  [[ "${lines[5]}" != *"width="* ]]
+}
+
+@test "HS15: --widths 360,1280 on a page that breaks only when narrow -> FAIL names 360, 1280 is clean, exit 1" {
+  _need_browser
+  run node "$HS" --url "file://$FX/narrow-breaks.html" --widths 360,1280
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  hmi-sweep  default/main  width=360  no-scroll: document scrolls (horizontal)"* ]]
+  [[ "$output" == *"PASS  hmi-sweep  default/main  width=1280  no-scroll: document fits"* ]]
+  [[ "$output" != *"FAIL  hmi-sweep  default/main  width=1280"* ]]
+  [[ "$output" == *"2 views · 1 PASS · 1 FAIL"* ]]
+}
+
+@test "HS16: --profile lan sweeps three widths (360, 768, 1280), --profile both adds the 1280x800 run" {
+  _need_browser
+  run node "$HS" --url "file://$FX/fits.html" --profile lan
+  [ "$status" -eq 0 ]
+  for w in 360 768 1280; do
+    [[ "$output" == *"PASS  hmi-sweep  default/home  width=$w  no-scroll:"* ]]
+    [[ "$output" == *"PASS  hmi-sweep  default/rooms  width=$w  no-scroll:"* ]]
+  done
+  [[ "$output" == *"6 views"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+  run node "$HS" --url "file://$FX/narrow-breaks.html" --profile both
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  hmi-sweep  default/main  width=360  no-scroll:"* ]]
+  [[ "$output" == *"PASS  hmi-sweep  default/main  width=768  no-scroll:"* ]]
+  [[ "$output" == *"PASS  hmi-sweep  default/main  width=1280  no-scroll:"* ]]
+  [[ "$output" == *"PASS  hmi-sweep  default/main  width=1280x800  no-scroll:"* ]]
+  [[ "$output" == *"4 views"* ]]
+}
+
+@test "HS17: default run (no --widths/--profile) is unchanged: plain rows, no width field, plain screenshot names" {
+  _need_browser
+  local shots="$BATS_TEST_TMPDIR/shots"
+  run node "$HS" --url "file://$FX/fits.html" --screenshot-dir "$shots"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "PASS  hmi-sweep  default/home  no-scroll: document fits" ]
+  [ "${lines[1]}" = "PASS  hmi-sweep  default/rooms  no-scroll: document fits" ]
+  [ "${lines[2]}" = "hmi-sweep: 2 views · 2 PASS · 0 FAIL · 0 WARN  ->  CLEAN" ]
+  [ "${#lines[@]}" -eq 3 ]
+  [ -f "$shots/default_home.png" ]
+  [ -f "$shots/default_rooms.png" ]
+  run node "$HS" --url "file://$FX/fits.html" --profile hmi
+  [ "${#lines[@]}" -eq 3 ]
+  [[ "$output" != *"width="* ]]
+}
+
+@test "HS18: --widths writes one screenshot per width, the width in the file name" {
+  _need_browser
+  local shots="$BATS_TEST_TMPDIR/shots-w"
+  run node "$HS" --url "file://$FX/narrow-breaks.html" --widths 360,1280 --screenshot-dir "$shots"
+  [ "$status" -eq 1 ]
+  [ -s "$shots/default_main_w360.png" ]
+  [ -s "$shots/default_main_w1280.png" ]
+  [ "$(find "$shots" -name '*.png' | wc -l)" -eq 2 ]
+}
