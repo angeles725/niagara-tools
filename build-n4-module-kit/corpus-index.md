@@ -1,4 +1,4 @@
-# Corpus index — the curated map of the niagara-research corpus for module builders (B5–B1453)
+# Corpus index — the curated map of the niagara-research corpus for module builders (B5–B1462)
 
 The niagara-research corpus carries a COMPLETE N4 module-authoring body — the RT campaign (B729–B746),
 the Wire-Sheet + organization work (B747–B750), the WB/UX authoring taxonomy (B751–B753), and the
@@ -417,6 +417,8 @@ proves. `tests/corpus-index.bats` (CI-ALL) fails when a guide cites a block this
 | **B1365** | Driver-framework docs vs code: the guide's `Stale Time = 0` ("stale immediately when unsubscribed") and `Num Retries Until Ping Fail` ("a ping does not fail until…") are not what driver-rt … | `types/driver-authoring.md` |
 | **B1384** | Z-Wave doc-vs-code: the missed-wake-up "device down" rule never fires (doPingTimeout only logs), the documented `Configure As Sis` slot does not exist, the FLiRS policy is named … | `types/driver-authoring.md` |
 | **B1453** | The `bin\` launchers and the `nre <class>` tool set from code: which class each exe boots, the full `hdbt` and `n4mig` usage, and the headless tools with no exe of their own (DependencyChecker, PaletteGenerator, RecompileTool) | BUILD-LOOP |
+| **B1410** | DataRecoveryService defaults vs the guide: save-limit fault (3 saves in 15 min), persistent capacity triggers a save at 75 %, Service Enabled true | `types/logic.md` |
+| **B1462** | Persistence map: TRANSIENT as the only gate, JACE auto-save 24 h with no backup, DataRecoveryService and Non-Critical, writable levels and override expiry at start, history/alarm/audit stores, files and backup excludes | `types/logic.md` |
 
 ---
 
