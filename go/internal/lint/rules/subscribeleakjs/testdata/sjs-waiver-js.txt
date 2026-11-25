@@ -1,0 +1,12 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-subscribe-js  @DIR@/src/str.js:1  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/lit.js --
+var a = new baja.Subscriber(); var u = 'http://x'; // lint-subscribe-js: a quoted URL before the marker
+var b = new baja.Subscriber(); var t = `it's http://x`; // lint-subscribe-js: an apostrophe in a template
+var c = new baja.Subscriber(); var d = "it's"; // lint-subscribe-js: an apostrophe in a double-quoted string
+-- src/str.js --
+var m = '// lint-subscribe-js: quoted, not a comment'; var s = new baja.Subscriber();

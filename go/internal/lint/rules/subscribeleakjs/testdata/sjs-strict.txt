@@ -1,0 +1,14 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-subscribe-js  @DIR@/src/leak.js:3  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/leak.js --
+'use strict';
+require(['baja!'], function (baja) {
+  var sub = new baja.Subscriber();
+  sub.attach('changed', function () {});
+  baja.Ord.make('station:|slot:/Ramp').get({ subscriber: sub });
+});

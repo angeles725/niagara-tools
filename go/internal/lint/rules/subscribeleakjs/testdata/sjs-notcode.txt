@@ -1,0 +1,18 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-subscribe-js  @DIR@/src/a.js:1  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+WARN  lint-subscribe-js  @DIR@/src/c.js:2  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/a.js --
+var a = new baja.Subscriber(); // TODO a.unsubscribeAll()
+/* b.unsubscribe(comp); */
+var msg = "call sub.unsubscribeAll() when done";
+-- src/b.js --
+// var s = new baja.Subscriber();
+var note = 'new baja.Subscriber()';
+/* var t = new baja.Subscriber(); */
+-- src/c.js --
+function unsubscribeAll() {}
+var c = new baja.Subscriber();

@@ -1,0 +1,14 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-subscribe-js  @DIR@/src/w.js:4  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+WARN  lint-subscribe-js  @DIR@/src/w.js:6  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/w.js --
+var a = new baja.Subscriber(); // lint-subscribe-js: torn down by the page manager in Page.js
+// lint-subscribe-js: handed to the shared list, which unsubscribes it
+var b = new baja.Subscriber();
+var c = new baja.Subscriber();
+var d = 1; // lint-subscribe-js: an unrelated reason on a code line
+var e = new baja.Subscriber();

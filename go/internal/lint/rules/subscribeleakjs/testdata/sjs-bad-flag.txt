@@ -1,0 +1,10 @@
+-- args --
+-x
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-subscribe-js: unknown flag: -x
+usage: lint-subscribe-js.sh [--strict] <src-root>
+-- m/a.js --
+var x = 1;
