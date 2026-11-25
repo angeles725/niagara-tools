@@ -418,6 +418,14 @@ compressor control module after a plain restart had passed. On a LAB station onl
    target slot's saved value; the boot-time link propagation is then a real change and runs the pre-steady cycle
    (`niagara-help/versions/4.15.6.20/devguide-clean/station.txt:26`). Make demand true before the restart so an
    output would be commanded ON.
+   For a link-fed input whose target slot already holds the source value, no edge exists at boot; make one
+   `[ev: issue #988]`:
+   - Create the link while the consumer ignores that slot (for a mode-gated input, set a mode that does not read
+     it, e.g. an interval mode instead of the demand mode).
+   - Set the TARGET slot directly to the value that differs from the source's.
+   - Then switch the mode. The link delivers the source value at Component Start: a real change at boot.
+   - Two writes to a writable less than ~1 s apart can coalesce, so no edge reaches the consumer `[INFER]`: read
+     the slot back between writes.
 4. **Start the read-backs before `Station Started`** and keep them going until well after steady state and the
    longest hold (every 2 s is enough). Timestamp every read and line it up against the station log's
    `Station Started` line; measure the offset between the reading host's clock and the station log's clock first
@@ -433,6 +441,13 @@ compressor control module after a plain restart had passed. On a LAB station onl
    PREFIX as it is written in `config.bog` (the `prefix` of the module's `module.xml`, e.g. `ABCPAN:` for a
    module named `AbcPan`), not the module name: a grep for `AbcPan:` can never match and passes for the wrong
    reason.
+
+**Control round — run it first, on the previous jar** `[ev: issue #988]`. Run the same
+boot (same timers, same links, same writes) with the jar that still has the defect, before the fixed jar. A proof
+that cannot show the defect on the unfixed jar proves nothing about the fix. The control also shows what the defect
+looks like live, which a static trace of the code cannot: in the lab it was a milder variant than the trace
+predicted (the entry ticket fired in the pre-steady window, so the cycle ended by duration). If the control round
+passes, the setup is wrong (steps 1-3), not the jar.
 
 Two traps that make the proof pass without testing what it claims `[ev: retro lp1-lab-proof-traps Δ2]`:
 - **A rollback is not a restart.** Removing the proof component and restoring it with `n4_rollback` creates a NEW
