@@ -1,0 +1,19 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-niagara-rpc  @DIR@/src/BWaiverBare.java:5  waiver-no-reason: lint-niagara-rpc: reviewed needs a reason (types/security.md §2.7)
+FAIL  lint-niagara-rpc  @DIR@/src/BWaiverBare.java:6  unrestricted: lexicon() declares permissions = "unrestricted": no framework permission check runs (types/security.md §2.7)
+-- stderr --
+-- src/BWaiverBare.java --
+package com.example.rpc;
+
+public class BWaiverBare
+{
+  // lint-niagara-rpc: reviewed
+  @NiagaraRpc(permissions = "unrestricted", transports = { @Transport(type = TransportType.web) })
+  public static String lexicon(String key, Context cx)
+  {
+    return text(key);
+  }
+}

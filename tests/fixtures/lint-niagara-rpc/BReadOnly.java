@@ -1,0 +1,26 @@
+package com.example.rpc;
+
+public class BReadOnly
+{
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) })
+  public String describe(String slot, Context cx) throws Exception
+  {
+    PreparedStatement ps = conn.prepareStatement("select a from t where b = ?");
+    ps.setInt(1, 7);
+    ps.setString(2, slot);
+    last.set(slot);
+    sb.setLength(0);
+    names.set(0, slot);
+    Object o = lookup.get(slot);
+    String msg = "c.set(p, v, cx) and c.invoke(a, v, cx) are text";
+    // c.set(p, v, cx); c.doReset(null, cx);
+    reset = settle(o) + setpointOf(slot);
+    return c.getDisplayName(cx) + msg;
+  }
+
+  public void notAnRpc(Context cx)
+  {
+    c.set(prop, BDouble.make(1), cx);
+    c.invoke(act, null, cx);
+  }
+}

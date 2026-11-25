@@ -182,6 +182,26 @@ The README names the category and role each module user needs (read user, write 
   user's own Email, Password, Cell Phone and Facets; all other users stay hidden. A self-service password change
   needs `rw` on `UserService.Password` (`role_UserServiceComponentPermission.txt:26-39`).
 
+### 2.7 `@NiagaraRpc` is never `unrestricted`, and a mutating RPC checks write `[ev: corpus B752 §752.2]`
+
+An RPC (`baja.rpc` over fox, box or web) runs for any authenticated user unless the annotation or the body checks a
+permission. The annotation's attributes are `transports` (required), `permissions` (default `"I"`),
+`protectedTargets` and `isSecure` (`javax/baja/rpc/NiagaraRpc.java:15-23`). The station compares `permissions`
+case-insensitively and takes `"unrestricted"` and `""` as no requirement, also inside a nested `@Protected`
+(`com/tridium/util/NiagaraRpcUtil.java:138-151`, `:161-166`); a literal `w` or `W` in it is a check the station
+enforces itself (`:138-171`).
+- **No `permissions = "unrestricted"` (or `""`).** The station's own classes use it for public read-only helpers
+  (`BFormatRpc.java:38`, `BUserService.java:411`); a module's RPC is not that: the browser is never the boundary.
+- **Every mutating RPC checks write before its first write:** `BPermissions.has(OPERATOR_WRITE)` (or
+  `hasOperatorWrite()`, `checkCanWrite`, `requireTargetWrite`; `types/dashboard.md` RBAC, `types/servlet-write.md`),
+  or a literal `permissions` holding `w`/`W`. A write is `.set(`, `.invoke(`, a typed setter with two or more
+  arguments, or a `doXxx(` call.
+- **Lint:** `toolbelt/lint-niagara-rpc.sh <src-root>...` FAILs `unrestricted`, `unguarded-write` and a bare waiver
+  (rule `go/internal/lint/rules/niagararpc`). It reads one method body: a write in a helper, a Slot-o-Matic setter
+  `c.setFoo(v)` and a `permissions` held in a constant are not seen. A reviewed exception carries
+  `// lint-niagara-rpc: reviewed <reason>` on the line above the `@NiagaraRpc` or on a line through the method
+  name; the reason is mandatory.
+
 ---
 
 ## 3 · CSRF + secrets

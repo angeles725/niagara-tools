@@ -1,0 +1,25 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-niagara-rpc  @DIR@/src/BGuardAfter.java:8  unguarded-write: late() calls set() with no OPERATOR_WRITE check before it (types/security.md §2.7)
+-- stderr --
+-- src/BGuardAfter.java --
+package com.example.rpc;
+
+public class BGuardAfter
+{
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) })
+  public void late(String slot, double v, Context cx)
+  {
+    c.set(prop, BDouble.make(v), cx);
+    checkCanWrite(cx);
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web) })
+  public void early(String slot, double v, Context cx)
+  {
+    checkCanWrite(cx);
+    c.set(prop, BDouble.make(v), cx);
+  }
+}

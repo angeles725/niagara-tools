@@ -1,0 +1,31 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-niagara-rpc  @DIR@/src/BUnrestricted.java:5  unrestricted: readLabel() declares permissions = "unrestricted": no framework permission check runs (types/security.md §2.7)
+FAIL  lint-niagara-rpc  @DIR@/src/BUnrestricted.java:11  unrestricted: readMixedCase() declares permissions = "Unrestricted": no framework permission check runs (types/security.md §2.7)
+FAIL  lint-niagara-rpc  @DIR@/src/BUnrestricted.java:17  unrestricted: readEmpty() declares permissions = "": no framework permission check runs (types/security.md §2.7)
+-- stderr --
+-- src/BUnrestricted.java --
+package com.example.rpc;
+
+public class BUnrestricted
+{
+  @NiagaraRpc(permissions = "unrestricted", transports = { @Transport(type = TransportType.web) })
+  public static String readLabel(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "Unrestricted", transports = { @Transport(type = TransportType.box) })
+  public static String readMixedCase(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "", transports = { @Transport(type = TransportType.box) })
+  public static String readEmpty(String name, Context cx)
+  {
+    return name;
+  }
+}
