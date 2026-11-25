@@ -415,7 +415,8 @@ make_tree() {
   before="$(cat "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md")"
   run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL  skill-drift  mcp-n4[claude]  installed copy $TEST_HOME/.claude/skills/mcp-n4/SKILL.md differs from mcp-n4-kit/skill/SKILL.md — run scripts/install-skill.sh --force --skill mcp-n4"* ]]
+  [[ "$output" == *"FAIL  skill-drift  mcp-n4[claude]  installed copy $TEST_HOME/.claude/skills/mcp-n4/SKILL.md differs from mcp-n4-kit/skill/SKILL.md"* ]]
+  [[ "$output" == *"install-skill.sh --force --skill mcp-n4"* ]] # remedy named (not run)
   [ "$(cat "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md")" = "$before" ]
 }
 
@@ -423,7 +424,8 @@ make_tree() {
   rm -r "$TEST_HOME"
   run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL  skill-drift  build-n4-module[claude]  not installed at $TEST_HOME/.claude/skills/build-n4-module/SKILL.md — run scripts/install-skill.sh --skill build-n4-module"* ]]
+  [[ "$output" == *"FAIL  skill-drift  build-n4-module[claude]  not installed at $TEST_HOME/.claude/skills/build-n4-module/SKILL.md"* ]]
+  [[ "$output" == *"install-skill.sh --skill build-n4-module"* ]] # remedy named (not run)
   [[ "$output" == *"FAIL  skill-drift  mcp-n4[claude]  not installed"* ]]
   [ ! -e "$TEST_HOME" ]
 }
@@ -440,7 +442,8 @@ make_tree() {
   printf 'stale\n' > "$TEST_HOME/.pi/agent/prompts/mcp-n4.md"
   run env -u PI_CODING_AGENT_DIR HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --check
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL  skill-drift  mcp-n4[pi]  prompt $TEST_HOME/.pi/agent/prompts/mcp-n4.md differs from its template — run scripts/install-skill.sh --force --skill mcp-n4 --harness pi"* ]]
+  [[ "$output" == *"FAIL  skill-drift  mcp-n4[pi]  prompt $TEST_HOME/.pi/agent/prompts/mcp-n4.md differs from its template"* ]]
+  [[ "$output" == *"install-skill.sh --force --skill mcp-n4 --harness pi"* ]] # remedy named (not run)
 }
 
 @test "CK5: --check takes only --home: --force, --dry-run, --skill and --harness with it are exit 2, usage printed" {
