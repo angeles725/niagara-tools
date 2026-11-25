@@ -171,6 +171,7 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   source-structural JUnit tests only for wiring.
 - [both] Bump `defaultModuleVersion` on any `rc/` change; the API contract is versioned and the SPA
   tolerates unknown keys.
+  `toolbelt/lint-ux-version.sh <module-root>` FAILs a `?v=` that differs from it and WARNs one that is missing.
 - [both] No large change goes to a station without review, the verify gate and a preview pass.
 
 ## Component layout (`rc/`, classic scripts, no bundler) `[ev: retro dashboard-frontend-standard Δ11]` `[ev: retro dashboard-rc-file-split Δ1]`

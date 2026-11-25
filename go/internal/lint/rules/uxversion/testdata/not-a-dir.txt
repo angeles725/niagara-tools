@@ -1,0 +1,6 @@
+-- args --
+/nonexistent/__uxv__
+-- want --
+exit 3
+-- stderr --
+lint-ux-version: not a directory: /nonexistent/__uxv__

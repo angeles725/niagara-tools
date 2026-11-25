@@ -1,0 +1,14 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-ux-version  @DIR@/m/a/A-ux/src/rc/index.html:1  stale-version: js/main.js?v=1.2.2 has ?v=1.2.2 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+-- stderr --
+-- m/a/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/b/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/c/build.gradle.kts --
+plugins { id("com.tridium.vendor") }
+-- m/a/A-ux/src/rc/index.html --
+<script src="js/main.js?v=1.2.2"></script>

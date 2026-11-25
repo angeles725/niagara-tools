@@ -1,0 +1,17 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+PASS  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:1  stale-version: js/old.js?v=0.1 allowed: pinned legacy build
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:2  stale-version: js/b.js?v=0.2 has ?v=0.2 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+WARN  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:3  no-version: img/c.png has no ?v=1.2.3 suffix (types/dashboard.md: cache-bust every static asset with the module version)
+PASS  lint-ux-version  @DIR@/m/M-ux/src/rc/js/main.js:1  no-version: img/d.png allowed: generated at deploy
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-ux/src/rc/index.html --
+<script src="js/old.js?v=0.1"></script> <!-- lint-ux-version: allow stale-version pinned legacy build -->
+<script src="js/b.js?v=0.2"></script> <!-- lint-ux-version: allow stale-version -->
+<img src="img/c.png"> <!-- lint-ux-version: allow stale-version wrong check id -->
+-- m/M-ux/src/rc/js/main.js --
+var d = "img/d.png"; // lint-ux-version: allow no-version generated at deploy

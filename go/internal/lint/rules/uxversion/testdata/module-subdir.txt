@@ -1,0 +1,12 @@
+-- args --
+@DIR@/m/M
+-- want --
+exit 1
+FAIL  lint-ux-version  @DIR@/m/M/M-ux/src/rc/index.html:1  stale-version: js/main.js?v=1.0.0 has ?v=1.0.0 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+-- stderr --
+-- m/settings.gradle.kts --
+rootProject.name = "m"
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M/M-ux/src/rc/index.html --
+<script src="js/main.js?v=1.0.0"></script>
