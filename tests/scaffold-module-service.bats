@@ -113,8 +113,8 @@ load lib/scaffold-setup
   [ ! -e "$OUT/Lib" ]
 }
 
-@test "TC-DOC-D: the usage names --type service and --with-doc" {
+@test "TC-DOC-D: the usage names --type service, --with-doc and --with-offload" {
   run "$SC"
   [ "$status" -eq 2 ]
-  [[ "$output" == *"--type <logic|dashboard|driver|library|service>] [--with-doc]"* ]]
+  [[ "$output" == *"--type <logic|dashboard|driver|library|service>] [--with-doc] [--with-offload]"* ]]
 }

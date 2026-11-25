@@ -6,10 +6,11 @@ type options struct {
 	vendor, targetVersion, pluginVersion, typ string
 	vendorGiven                               bool // --vendor has no default: checkValues refuses a run without it
 	withDoc                                   bool // --with-doc: add the -doc help part (doc.go)
+	withOffload                               bool // --with-offload: emit the fixture's async-offload component (offload.go)
 }
 
 // parseArgs reads `<ModuleName> <out-dir> --vendor v [--target-version v] [--plugin-version v]
-// [--type t] [--with-doc]`. Options come after the two positionals; a repeated option keeps its last value and a value
+// [--type t] [--with-doc] [--with-offload]`. Options come after the two positionals; a repeated option keeps its last value and a value
 // is taken as it is, even when it looks like an option.
 func parseArgs(args []string) (options, *failure) {
 	if len(args) < 2 {
@@ -26,6 +27,10 @@ func parseArgs(args []string) (options, *failure) {
 	for rest := args[2:]; len(rest) > 0; {
 		if rest[0] == optWithDoc {
 			o.withDoc, rest = true, rest[1:]
+			continue
+		}
+		if rest[0] == optWithOffload {
+			o.withOffload, rest = true, rest[1:]
 			continue
 		}
 		target, known := valued[rest[0]]

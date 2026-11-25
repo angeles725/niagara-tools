@@ -17,11 +17,26 @@ func TestRealKitRoundTrip(t *testing.T) {
 	}
 	for typ, fixture := range map[string]string{"logic": "MinimalPan", "dashboard": "MinimalDash", "driver": "MinimalDriver", "library": "MinimalLibrary"} {
 		out := t.TempDir()
-		r := run(t, kit+"/toolbelt", fixture, out, "--type", typ, "--vendor", "Angeles")
+		args := []string{"--type", typ, "--vendor", "Angeles"}
+		if typ == "logic" {
+			// The fixture carries the opt-in offload component: the round trip runs with the flag and compares to
+			// the fixture with its marker lines removed (TestRealKitWithoutOffload pins the run without it).
+			args = append(args, "--with-offload")
+		}
+		r := run(t, kit+"/toolbelt", append([]string{fixture, out}, args...)...)
 		if r.code != 0 || r.err != "" {
 			t.Fatalf("%s: code=%d err=%q", typ, r.code, r.err)
 		}
 		want, got := tree(t, filepath.Join(kit, "fixtures", fixture)), tree(t, filepath.Join(out, fixture))
+		if typ == "logic" {
+			for rel, content := range want {
+				stripped, err := filterOffload(content, true)
+				if err != nil {
+					t.Fatalf("%s: %v", rel, err)
+				}
+				want[rel] = stripped
+			}
+		}
 		if len(want) == 0 {
 			t.Fatalf("%s: no bundled fixture at %s", typ, kit)
 		}

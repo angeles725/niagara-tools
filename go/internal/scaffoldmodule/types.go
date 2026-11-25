@@ -14,6 +14,7 @@ type moduleType struct {
 	overlay     string // templates/<overlay> laid over the fixture copy ("" = none; typeoverlay.go)
 	docSuffix   string // the registered name of the type its help page documents is <Module><docSuffix> (doc.go)
 	noDoc       bool   // the module registers no component type, so --with-doc has no page to name
+	offload     bool   // the fixture carries the opt-in async-offload component --with-offload emits (offload.go)
 }
 
 // moduleTypes is the --type table. The driver fixture ships its own loopback station test, so it has no
@@ -21,7 +22,7 @@ type moduleType struct {
 // service starts from the library fixture (a bare -rt part): templates/service-job replaces its plumbing and
 // adds the service and its job (types/service.md).
 var moduleTypes = []moduleType{
-	{name: "logic", fixture: "MinimalPan", linkInSlots: `"setpoint", "interval"`},
+	{name: "logic", fixture: "MinimalPan", linkInSlots: `"setpoint", "interval"`, offload: true},
 	{name: "dashboard", fixture: "MinimalDash", linkInSlots: `"setpoint", "status"`, ownLogin: true},
 	{name: "driver", fixture: "MinimalDriver", docSuffix: "Network"},
 	{name: "library", fixture: "MinimalLibrary", kind: "library", noDoc: true},
@@ -35,7 +36,8 @@ const (
 	optTargetVersion = "--target-version"
 	optPluginVersion = "--plugin-version"
 	optType          = "--type"
-	optWithDoc       = "--with-doc" // a flag: no value
+	optWithDoc       = "--with-doc"     // a flag: no value
+	optWithOffload   = "--with-offload" // a flag: no value
 )
 
 // Option defaults. --vendor has none: the scaffold never guesses the module's identity.

@@ -3,7 +3,7 @@
 # Fixture-driven (D1): copies the bundled fixtures/<Type> tree and substitutes
 # the fixture type name → <ModuleName> in paths and content (B790/B793 proven tree).
 #
-# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc]
+# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc] [--with-offload]
 #   ModuleName       Java identifier: uppercase-first, alphanumeric only (e.g. ColdRoomPan)
 #   out-dir          parent directory; emitted root is <out-dir>/<ModuleName>
 #   --vendor <v>     REQUIRED: the vendor (copyright, vendor) and, lowercased, the Java package segment; no default,
@@ -15,6 +15,15 @@
 #   --with-doc       also emit a <ModuleName>-doc help part (templates/doc: gradle file, TOC, index and one Guide-on-Target
 #                    page named doc/<ModuleName>-<TypeName>.html after the registered type, no B; types/structure.md
 #                    § -doc help profile); a library registers no type, so with it the flag is exit 2
+#   --with-offload   logic only: also emit the fixture's async-offload component (BPanOffload: an ASYNC action whose post()
+#                    hands new Invocation(...) to a module-owned named executor, a not-running guard, shutdownNow() in
+#                    stopped()), its two station tests (BxxxOffloadTest, BxxxPermissionsTest: userPermissionsScenario RBAC)
+#                    and their moduleTest-include.xml entries, the MANAGE_EXECUTION request, and the palette, lexicon,
+#                    module-include.xml and MODULE-MAP.md rows (types/actions.md § 2); without it none of these is emitted,
+#                    and any other type is exit 2. The fixture marks them with whole-line `offload:begin`/`offload:end`
+#                    comments and rows ending ` <!-- offload:line -->`; a malformed block is exit 3. The scaffold never
+#                    emits a marker. Internal, not for modules: `scaffold-module.sh --strip-offload-markers <dir>` removes
+#                    the markers in place (CI and tests/scaffold-module.bats compare a --with-offload run to a stripped copy)
 #   --type <logic|dashboard|driver|library|service>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay

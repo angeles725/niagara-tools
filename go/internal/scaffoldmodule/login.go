@@ -20,7 +20,7 @@ func loginOverlay(toolbelt, dest string, n names, typ moduleType) *failure {
 		return failf(ExitEnv, loginMissing, root)
 	}
 	base := dest + "/" + n.module
-	if err := copyTree(root+"/files", base+"/"+n.module+"-rt", n.loginPathRules(), n.loginTextRules(), rewriteAll); err != nil {
+	if err := copyTree(root+"/files", base+"/"+n.module+"-rt", n.loginPathRules(), n.loginTextRules(), rewriteAll, nil); err != nil {
 		return failf(ExitEnv, writeFault, err)
 	}
 	for _, e := range loginEdits {

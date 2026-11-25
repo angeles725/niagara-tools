@@ -5,7 +5,16 @@
 
 # --- Component type display names ---
 MinimalPan.displayName=Minimal Panel
+# offload:begin
+PanOffload.displayName=Pan Offload
+# offload:end
 
 # --- Slots: BARE slot name, never Type.slot (NSlot.java:42, read by name) ---
 setpoint=Setpoint
 interval=Interval
+# offload:begin
+state=State
+lastThread=Last Thread
+runCount=Run Count
+execute=Execute
+# offload:end
