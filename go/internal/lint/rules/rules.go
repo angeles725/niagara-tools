@@ -42,6 +42,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/mqtttlsport"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndriverstaticcollection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ndrivertaglesscorrelation"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/niagararpc"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/ntplmanifest"
@@ -153,5 +154,6 @@ func All() []lint.Spec {
 		mqtttlsport.Spec(),
 		gradleuserhome.Spec(),
 		instancetypeorder.Spec(),
+		niagararpc.Spec(),
 	}
 }
