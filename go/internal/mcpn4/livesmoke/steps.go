@@ -89,7 +89,16 @@ func (s *Scenario) connect(*pyjson.Object) (any, any, error) {
 	if name == s.station {
 		verdict = "verified"
 	}
-	return verdict, kwargs("station_name", name), nil
+	version, err := get(out, "version")
+	if err != nil {
+		return nil, nil, err
+	}
+	tier, err := get(out, "tier")
+	if err != nil {
+		return nil, nil, err
+	}
+	// version and tier make the report the PoC file an --allow-tier-b opt-in can point to (#985 Δ3)
+	return verdict, kwargs("station_name", name, "version", version, "tier", tier), nil
 }
 
 func (s *Scenario) absentBefore(*pyjson.Object) (any, any, error) {
