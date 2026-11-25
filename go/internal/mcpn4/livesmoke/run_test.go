@@ -206,3 +206,20 @@ func TestAFailedLoginDoesNotLeakThePassword(t *testing.T) {
 		t.Errorf("exit %d present=%v\n%s", code, r.fake.Has(Scratch), out)
 	}
 }
+
+// The report is the PoC file an --allow-tier-b opt-in points to (#985 Δ3): its connect step names the
+// station version and tier the scenario ran on.
+func TestTheReportNamesTheStationVersionAndTier(t *testing.T) {
+	r := newRunner(t)
+	r.run(r.argv(true))
+	for _, s := range steps(r.report()) {
+		if s["name"] == "connect" {
+			d, _ := s["detail"].(map[string]any)
+			if version, _ := d["version"].(string); version == "" || d["tier"] == nil {
+				t.Errorf("connect step = %v, want version and tier", s)
+			}
+			return
+		}
+	}
+	t.Fatal("no connect step")
+}

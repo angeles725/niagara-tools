@@ -254,6 +254,12 @@ opted in. When upgrading:
    harmless scratch write already succeeded (METHODOLOGY section 5).
 3. Otherwise run the PoC or probe first, then restart with the opt-in.
 
+The PoC is `go/bin/live-smoke --apply` (see Live smoke test) with the opt-in passed to that run only: a
+scratch folder, its points created and linked, values `set` and read back, the folder removed, rolled back
+and removed again. Keep its `--report` file as the PoC record: `ok: true` and the `connect` step's detail
+naming the `version` and `tier` it ran on. Point the opt-in's change note at that file, and run it again
+for every new build of the station. [ev: issue #985]
+
 Never add an opt-in just to clear a refusal: the opt-in records that the PoC or probe ran.
 
 ### Getting the kit and registering it per project
