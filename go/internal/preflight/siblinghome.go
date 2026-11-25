@@ -17,8 +17,8 @@ import (
 // A sibling that is the gradle root through a symlink, without the marker or without a pin is not looked at; a
 // C:\\… value is read as its /mnt/c/… mount. The pin and the target are compared as resolved paths (homeKey), so
 // a symlinked install or a relative pin naming the same directory is no mismatch; the row prints the pin as written.
-// WARN only: the exit code is unchanged. The deploy-target half (a VERSION-LEDGER.md recording the Niagara
-// version) is not implemented: the kit's template has no such field, only module versions per row.
+// WARN only: the exit code is unchanged. The ledger half (a VERSION-LEDGER.md recording the Niagara version a
+// build used) is ledger-niagara, in ledgerniagara.go.
 func (r *run) siblingHome() {
 	parent := lint.Dirname(r.gr)
 	if r.win || !lint.IsDir(parent) || sharedDir(parent) {

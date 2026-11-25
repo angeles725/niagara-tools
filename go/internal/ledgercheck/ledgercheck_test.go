@@ -54,7 +54,7 @@ func TestLedgerCheckCases(t *testing.T) {
 			"FAIL  ledger-check  L.md  LC2: no `## Open items` section (templates/VERSION-LEDGER.md)\n"},
 		// Mutation: LC3-header -- a reordered header reads every row's cells into the wrong columns
 		{"a Versions header that is not the template's", strings.Replace(ledger(good), "| Date | Status |", "| Status | Date |", 1), 1,
-			"FAIL  ledger-check  L.md:5  LC3: the Versions table header differs from the template's (" + header + ")\n"},
+			"FAIL  ledger-check  L.md:5  LC3: the Versions table header differs from the template's (" + headerN + ")\n"},
 		{"a row with too few cells", ledger("| Pan | 1.2.0 | 2026-10-01 | built |"), 1,
 			"FAIL  ledger-check  L.md:7  LC4: row has 4 cells, want 10\n"},
 		{"an empty version", ledger("| Pan |  | 2026-10-01 | built | x | — | — | — | — | — |"), 1,

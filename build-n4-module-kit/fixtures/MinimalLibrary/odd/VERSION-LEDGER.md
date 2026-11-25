@@ -17,8 +17,13 @@ One row per built or shipped version per module, newest last. `Status` is one of
 `deployed`, `superseded`, `do-not-install`. `Defect found` / `Root cause` / `Class` stay `—` until a defect is
 traced to this version. `Prevention` names the retro and delta that would have stopped it, or `none yet`.
 
-| Module | Version | Date | Status | What changed | Defect found | Root cause | Class | Resolved by | Prevention (retro + Δ) |
-|---|---|---|---|---|---|---|---|---|---|
+`Niagara` is optional: the version of the `niagara_home` the build used (e.g. `4.14.0.162`, the `vendorVersion` of
+its `modules/baja.jar`), `—` when unknown. A ledger without the column stays valid; `ledger-check.sh` FAILs a
+malformed value (LC10), and `preflight.sh` WARNs (`ledger-niagara`) when the latest row names another version
+than the current `niagara_home`.
+
+| Module | Version | Niagara | Date | Status | What changed | Defect found | Root cause | Class | Resolved by | Prevention (retro + Δ) |
+|---|---|---|---|---|---|---|---|---|---|---|
 
 ## Root-cause classes
 
