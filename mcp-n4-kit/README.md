@@ -300,7 +300,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_alarm_text_check`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`, `n4_schedule_audit`, `n4_override_audit`,
 `n4_station_runtime`, `n4_read_tags`,
-`n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`, `n4_list_templates`.
+`n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`, `n4_list_templates`, `n4_poll`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -1972,6 +1972,17 @@ station that refuses the instance query is an error (not "zero instances"); a st
 component tree and does not link the deployed component to its template, so no `templateConfig` is made.
 `counts` holds the totals; `truncated` marks a list cut at `max_instances`.
 
+
+`n4_poll(query, base, samples=6, interval_s=5, max_rows=200, timeout_s=10)` (#891, retro R5 ΔD7) runs one
+BQL select `samples` times, `interval_s` apart, in one call, so a live test needs no scratch stdio driver and
+summarizer. The whole poll spans at most 40 s from the first sample to the last (samples 1 to 40, interval at
+least 1 s), so the reply comes back inside an MCP client's 60 s request limit; poll again for a longer series.
+Before the first sample it reads the SystemService `systemTime` once: `clock` gives `station_time`,
+`local_time`, `offset_s` (station minus this machine) and `uncertainty_s` (half the round trip), or a `note`.
+Each sample is `{t, local_time, row_count, elapsed_ms, rows}` or `{t, local_time, error}`: a failed sample is
+kept and the poll goes on, except a lost session (`ended: session_lost`, reconnect with `n4_connect`) and an
+authentication failure (`ended: auth_failed`: another read would be one more failed login toward the lockout).
+`series` follows each cell, the row named by its first column: `{row, column, first, last, changes, min?, max?}`.
 ### Writing a weekly schedule and its default output
 
 `n4_set_schedule(ord, weekly, default_output)` (a write tool: `--allow-writes`, a write scope, dry run then
