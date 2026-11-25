@@ -1,0 +1,30 @@
+declared difference (issue #1035 cache-nofinger): no row beyond the old ones when every rc/ reference to the
+servlet's paths carries ?v= (any position, v, ver or version), is waived with a reason in a comment of the
+file's syntax, belongs to another mount or to the station's /module/ and /file/, or sits in rc/vendor or
+rc/ext; the unfingerprinted max-age (line 4) keeps its old row and the gated one (line 7) stays clean.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  cache-nofinger  BDash.java:4  Cache-Control max-age>0 on rc asset without fingerprint
+-- stderr --
+-- m/BDash.java --
+class BDash extends BWebServlet {
+  public String getServletName() { return "dash"; }
+  void doGet(WebOp op) {
+    rsp.setHeader("Cache-Control", "public, max-age=3600");
+  }
+  void asset(HttpServletRequest req, HttpServletResponse rsp) {
+    rsp.setHeader("Cache-Control", req.getParameter("v") != null ? "public, max-age=3600" : "no-cache");
+  }
+}
+-- m/rc/index.html --
+<link href="css/app.css?v=2"> <script src="js/a.js?x=1&amp;v=2"></script> <script src="js/b.js?ver=3"></script>
+<img src="/other/img/z.png"> <img src="/module/x/img/y.png"> <img src="/file/x/img/y.png"> <a href="/dash/api/s">
+<img src="img/w.png"> <!-- rc-scan: allow static-url-nover decorative, replaced in place -->
+-- m/rc/js/w.js --
+fetch("js/w.json", {signal: s}); // rc-scan: allow static-url-nover boot fetch, version unknown
+-- m/rc/vendor/lib.html --
+<img src="img/v.png">
+-- m/rc/ext/x.css --
+.a { background: url(img/e.png); }

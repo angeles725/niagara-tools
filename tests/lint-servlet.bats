@@ -250,3 +250,31 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [[ "$output" != *"S.java:4  "* ]]
   [[ "$output" == *"WARN  catch-no-400  S.java:8  "* ]]
 }
+
+# cache-nofinger reads the rc/ pages too (issue #1035): a servlet that sets max-age>0 is judged against the
+# references to its static paths under the rc/ directory above its source (rc-scan static-url-nover's reader).
+@test "LSV8: an unfingerprinted max-age names the rc/ reference with no ?v=; a ?v=-gated one WARNs too (cache-nofinger)" {
+  # Mutation: LSV8 -- not reading rc/ drops the evidence of line 6 and the whole row of line 9
+  run "$LS" "$BATS_TEST_DIRNAME/fixtures/lint-servlet-rc/stale"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  cache-nofinger  src/com/x/BDashServlet.java:6  Cache-Control max-age>0 on rc asset without fingerprint; rc/index.html:1 references css/app.css without ?v= (and 1 more)"* ]]
+  [[ "$output" == *"WARN  cache-nofinger  src/com/x/BDashServlet.java:9  Cache-Control max-age>0 applies only to ?v= requests, but rc/index.html:1 references css/app.css without ?v= (and 1 more) -- those requests are never cached; add ?v=<module version>"* ]]
+  run "$LS" "$BATS_TEST_DIRNAME/fixtures/lint-servlet-rc/stale" --strict
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  cache-nofinger  src/com/x/BDashServlet.java:9"* ]]
+}
+
+@test "LSV9: with every rc/ reference fingerprinted, the old row stays as it was and the gated line is clean" {
+  # Mutation: LSV9 -- WARNing the gated line without looking at the references fires here
+  run "$LS" "$BATS_TEST_DIRNAME/fixtures/lint-servlet-rc/fresh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  cache-nofinger  src/com/x/BDashServlet.java:6  Cache-Control max-age>0 on rc asset without fingerprint"* ]]
+  [[ "$output" != *"BDashServlet.java:6"*"references"* ]]
+  [[ "$output" != *"BDashServlet.java:9"* ]]
+}
+
+@test "LSV10: the kit's MinimalDash fixture stays clean (no cache-nofinger row)" {
+  run "$LS" "$KIT/fixtures/MinimalDash"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

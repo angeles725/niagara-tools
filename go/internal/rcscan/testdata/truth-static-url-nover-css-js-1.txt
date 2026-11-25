@@ -1,0 +1,41 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/css/app.css:2  static-url-nover: css/theme.css has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/css/app.css:3  static-url-nover: img/a.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/css/app.css:5  static-url-nover: /module/m/img/c.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/css/app.css:11  static-url-nover: img/g.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/js/app.js:2  static-url-nover: js/side.js has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/js/app.js:3  static-url-nover: js/lib.js has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/js/app.js:6  static-url-nover: /module/m/data.json has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/js/app.js:8  static-url-nover: img/i.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/js/app.js:9  static-url-nover: css/q.css has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/js/app.js:13  static-url-nover: js/after.js has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+-- stderr --
+-- rc/css/app.css --
+@import "base.css";
+@import "css/theme.css";
+.a { background: url(img/a.png); }
+.b { background: url("img/b.png?v=2"); }
+.c { background: url( '/module/m/img/c.png' ); }
+/* url(img/commented.png) */
+.d { background: url(data:image/svg+xml;base64,AAA) url(#grad) url(https://x/y.png); }
+.e { background: url(img/e.png) /* rc-scan: allow static-url-nover generated at build time */; }
+.f { background: url(img/f.png?x=1&v=9); }
+/* multi
+   url(img/g-commented.png) */ .g { background: url(img/g.png); }
+-- rc/js/app.js --
+// fetch("js/commented.json", {signal: s});
+import "js/side.js";
+import { a } from 'js/lib.js';
+export { b } from "js/lib2.js?v=4";
+const w = require("js/mod"); define("img/x", [], f);
+const r = fetch(`/module/m/data.json`, {signal: s});
+const r2 = fetch(`/module/m/${id}.json`, {signal: s});
+img.src = "img/i.png"; a.href = "css/z.css?v=1";
+const s = "<link href=\"css/q.css\">";
+el.src = "img/" + n + ".png";
+fetch("img/w.png", {signal: s}); // rc-scan: allow static-url-nover tiny placeholder, never updated
+/* multi-line
+fetch("js/in-comment.js") */ fetch("js/after.js", {signal: s});
