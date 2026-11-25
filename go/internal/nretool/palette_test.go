@@ -1,6 +1,7 @@
 package nretool
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -72,5 +73,40 @@ func TestPaletteUsage(t *testing.T) {
 	code, _, errs := run("palette", t.TempDir())
 	if code != 3 || !strings.Contains(errs, "usage: nre-tool palette <niagara_home> <moduleDir>") {
 		t.Errorf("exit %d, err %q", code, errs)
+	}
+}
+
+// withWslpath puts a wslpath whose body is the given shell (or none, for "") alone on PATH.
+func withWslpath(t *testing.T, body string) {
+	t.Helper()
+	dir := t.TempDir()
+	if body != "" {
+		write(t, filepath.Join(dir, "wslpath"), "#!/bin/sh\n"+body+"\n", 0o755)
+	}
+	t.Setenv("PATH", dir)
+}
+
+func TestPaletteRefusesWithoutAWindowsPathAndRunsNothing(t *testing.T) {
+	for name, body := range map[string]string{"missing": "", "failing": "exit 1", "empty": "exit 0"} {
+		home, argsFile := stubHome(t, "nre.exe", "")
+		withWslpath(t, body)
+		code, out, errs := run("palette", home, partDir(t))
+		if code != exitEnv || out != "" || exists(argsFile) || !strings.Contains(errs, "nre-tool: palette: no Windows path") ||
+			!strings.Contains(errs, "wslpath") {
+			t.Errorf("%s: exit %d (want %d), out %q, err %q, nre ran %v", name, code, exitEnv, out, errs, exists(argsFile))
+		}
+	}
+}
+
+func TestPaletteNamesNreAndTheErrorWhenItCannotBeStarted(t *testing.T) {
+	home, _ := stubHome(t, "nre.exe", "")
+	nre := filepath.Join(home, "bin", "nre.exe")
+	if err := os.Chmod(nre, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := run("palette", home, partDir(t))
+	if code != exitEnv || out != "" || !strings.Contains(errs, "nre-tool: cannot start "+nre+": ") ||
+		!strings.Contains(errs, "permission denied") {
+		t.Errorf("exit %d (want %d), out %q, err %q", code, exitEnv, out, errs)
 	}
 }

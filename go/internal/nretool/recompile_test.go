@@ -1,6 +1,7 @@
 package nretool
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -89,5 +90,18 @@ func TestRecompileFailuresThatNreExitsZeroOnAreStillFailures(t *testing.T) {
 		if code != 1 || !strings.Contains(errs, want) {
 			t.Errorf("%q: exit %d, err %q, want %q", body, code, errs, want)
 		}
+	}
+}
+
+func TestRecompileNamesNreAndTheErrorWhenItCannotBeStarted(t *testing.T) {
+	home, _ := stubHome(t, "nre.exe", "")
+	nre := filepath.Join(home, "bin", "nre.exe")
+	if err := os.Chmod(nre, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := run("recompile", home, bogFile(t))
+	if code != exitEnv || out != "" || !strings.Contains(errs, "nre-tool: cannot start "+nre+": ") ||
+		!strings.Contains(errs, "permission denied") {
+		t.Errorf("exit %d (want %d), out %q, err %q", code, exitEnv, out, errs)
 	}
 }

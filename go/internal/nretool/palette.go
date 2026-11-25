@@ -43,9 +43,15 @@ func palette(args []string, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "nre-tool: palette: %v\n", err)
 		return exitUsage
 	}
+	win, ok := nativePath(nre, abs)
+	if !ok {
+		fmt.Fprintf(s.Err, "nre-tool: palette: no Windows path for %s: wslpath -w is missing or failed, and PaletteGenerator "+
+			"joins with a backslash, so a POSIX path would write a stray file\n", abs)
+		return exitEnv
+	}
 	fmt.Fprintf(s.Err, "nre-tool: PaletteGenerator writes %s (replacing it; review the change with git diff)\n",
 		filepath.Join(abs, "module.palette"))
-	code, out := runStreaming(nre, []string{paletteClass, nativePath(nre, abs)}, s)
+	code, out := runStreaming(nre, []string{paletteClass, win}, s)
 	if code == 0 && strings.Contains(out, "Failed to generate palette") {
 		fmt.Fprintln(s.Err, "nre-tool: PaletteGenerator reported a failure (main catches it and exits 0, :245)")
 		return exitFound

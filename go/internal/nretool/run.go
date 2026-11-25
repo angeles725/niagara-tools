@@ -2,6 +2,7 @@ package nretool
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -27,16 +28,17 @@ func findNre(home string) string {
 }
 
 // nativePath is p as the launcher reads a path: a Windows nre.exe gets the Windows form (wslpath -w), as nre.exe
-// cannot open /home/... paths; with no wslpath, or for a Linux nre, p is unchanged.
-func nativePath(nre, p string) string {
+// cannot open /home/... paths. For a Linux nre, p is unchanged. ok is false when nre.exe needs the conversion and
+// wslpath is missing, fails or prints nothing; p comes back unchanged then, which a caller may not hand to nre.exe.
+func nativePath(nre, p string) (path string, ok bool) {
 	if !strings.HasSuffix(nre, ".exe") {
-		return p
+		return p, true
 	}
 	w, err := exec.Command("wslpath", "-w", p).Output()
 	if err != nil || strings.TrimSpace(string(w)) == "" {
-		return p
+		return p, false
 	}
-	return strings.TrimSpace(string(w))
+	return strings.TrimSpace(string(w)), true
 }
 
 // capture keeps a copy of everything written through its tees, so a caller reads the tool's output after it
@@ -61,7 +63,8 @@ func (t tee) Write(p []byte) (int, error) {
 }
 
 // runStreaming runs nre class args from the install's bin directory with stdin handed through and stdout and stderr
-// streamed to s; it returns nre's exit code and everything it printed (CR removed).
+// streamed to s; it returns nre's exit code and everything it printed (CR removed). nre that cannot be started at
+// all (not executable, exec format error) is a message naming it and the error, and exitEnv.
 func runStreaming(nre string, args []string, s cli.Stdio) (int, string) {
 	var c capture
 	cmd := exec.Command(nre, args...)
@@ -69,6 +72,10 @@ func runStreaming(nre string, args []string, s cli.Stdio) (int, string) {
 	cmd.Stdin = stdin
 	cmd.Stdout, cmd.Stderr = c.tee(s.Out), c.tee(s.Err)
 	err := cmd.Run()
+	if _, exited := err.(*exec.ExitError); err != nil && !exited {
+		fmt.Fprintf(s.Err, "nre-tool: cannot start %s: %v\n", nre, err)
+		return exitEnv, ""
+	}
 	return exitCode(err), strings.ReplaceAll(c.buf.String(), "\r", "")
 }
 

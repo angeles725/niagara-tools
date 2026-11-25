@@ -337,13 +337,16 @@ dependencies the station will resolve. (issue #851) `[ev: corpus B1453]`
 
 **The other `nre` build-time tools (`toolbelt/nre-tool.sh list` names them):** one helper runs a named tool with the
 install's `bin/nre.exe` wired, so a build step calls `nre-tool.sh <tool> <niagara_home> ...` and fails on its exit.
-An unknown tool is exit 3 with the supported list; every other exit is nre's own, passed through. Per tool:
+An unknown tool is exit 3 with the supported list; exit 10 = nre cannot be started (not executable, exec format
+error: the message names the nre path and the error) or, for `palette`, `wslpath -w` gives no Windows path; every
+other exit is nre's own, passed through. Per tool:
 - `deps <niagara_home> <module>`: `DependencyChecker`, read-only (above).
 - `palette <niagara_home> <moduleDir>`: `PaletteGenerator` writes `<moduleDir>/module.palette` from the gifs under
   `src/` and REPLACES the file, so a hand-kept palette is lost: run it only on a clean tree, read the file it
   names on stderr, and review the result with `git diff`. It runs only on a module part directory
   (`module-include.xml` beside `src/`, the layout of `fixtures/MinimalDash/MinimalDash/MinimalDash-rt`) and needs
-  `bin/nre.exe`: the class joins the path with a literal backslash, so a Linux `nre` writes a stray file.
+  `bin/nre.exe`: the class joins the path with a literal backslash, so a Linux `nre` writes a stray file, and
+  a POSIX path handed to `nre.exe` does too, so with no working `wslpath` it refuses (exit 10) and runs nothing.
 - `recompile <niagara_home> <dir|bog> [-alias:<a>] [-tsaUrl:<u>]`: `RecompileTool` recompiles and re-signs the
   Program objects of a bog, or of every bog under a folder. It never takes the password in argv (the process
   list and shell history show it): `-password...` is refused and nre prompts, so run it from a terminal. It exits 0

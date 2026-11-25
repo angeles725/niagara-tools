@@ -62,7 +62,8 @@ func recompile(args []string, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "nre-tool: recompile: %v\n", err)
 		return exitUsage
 	}
-	code, out := runStreaming(nre, append([]string{recompileClass, nativePath(nre, abs)}, flags...), s)
+	native, _ := nativePath(nre, abs) // no wslpath: the path as is; RecompileTool reports a file it cannot open
+	code, out := runStreaming(nre, append([]string{recompileClass, native}, flags...), s)
 	if code != 0 {
 		return code
 	}

@@ -59,11 +59,11 @@ stub_nre() {
 @test "NT5: palette runs PaletteGenerator on a module part dir, says the file it writes, nre's exit code is the exit" {
   stub_nre ""
   P="$BATS_TEST_DIRNAME/fixtures/nre-tool/ModuleA-rt"
-  run "$T" palette "$H" "$P"
+  run "$T" palette "$H" "$P" < /dev/null
   [ "$status" -eq 0 ]
   [[ "$output" == *"PaletteGenerator writes $P/module.palette"* ]]
   [ "$(cat "$NRE_LOG")" = "$(printf '%s\n' devkit:com.tridium.devkit.util.PaletteGenerator "W:$P")" ]
-  NRE_EXIT=7 run "$T" palette "$H" "$P"
+  NRE_EXIT=7 run "$T" palette "$H" "$P" < /dev/null
   [ "$status" -eq 7 ]
 }
 
@@ -105,4 +105,26 @@ stub_nre() {
   stub_nre "ERROR Recompiling p"
   run "$T" recompile "$H" "$B" < /dev/null
   [ "$status" -eq 1 ]
+}
+
+@test "NT10: nre that cannot be started is exit 10 with a message naming it, not a silent 3" {
+  stub_nre ""
+  chmod -x "$H/bin/nre.exe"
+  B="$BATS_TEST_TMPDIR/a.bog"
+  : > "$B"
+  run "$T" recompile "$H" "$B" < /dev/null
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"nre-tool: cannot start $H/bin/nre.exe: "* ]]
+  run "$T" palette "$H" "$BATS_TEST_DIRNAME/fixtures/nre-tool/ModuleA-rt" < /dev/null
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"nre-tool: cannot start $H/bin/nre.exe: "* ]]
+}
+
+@test "NT11: palette without a Windows path from wslpath is exit 10 and runs nothing" {
+  stub_nre ""
+  printf '%s\n' '#!/bin/sh' 'exit 1' > "$BATS_TEST_TMPDIR/tools/wslpath"
+  run "$T" palette "$H" "$BATS_TEST_DIRNAME/fixtures/nre-tool/ModuleA-rt" < /dev/null
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"no Windows path"* && "$output" == *"wslpath"* ]]
+  [ ! -e "$NRE_LOG" ]
 }

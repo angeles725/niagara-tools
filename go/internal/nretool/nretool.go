@@ -23,6 +23,7 @@ import (
 const (
 	exitFound = 1 // the tool ran and found nothing (a module the install does not hold)
 	exitUsage = 3
+	exitEnv   = 10 // the environment cannot run the tool: nre will not start, or wslpath gives no Windows path
 	depsUsage = "usage: nre-tool deps [--raw] <niagara_home> <module>"
 )
 
