@@ -1,0 +1,23 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-bql-unbounded  @DIR@/src/BNoTop.java:5  no-top: "select * from baja:Component" has no top <n>: it returns every row of its extent (types/queries.md §3)
+FAIL  lint-bql-unbounded  @DIR@/src/BNoTop.java:6  no-top: "select name, out from control:NumericWritable where out.v..." has no top <n>: it returns every row of its extent (types/queries.md §3)
+FAIL  lint-bql-unbounded  @DIR@/src/BNoTop.java:7  no-top: "select from control:NumericPoint" has no top <n>: it returns every row of its extent (types/queries.md §3)
+FAIL  lint-bql-unbounded  @DIR@/src/BNoTop.java:10  no-top: "select * where name = '%s'" has no top <n>: it returns every row of its extent (types/queries.md §3)
+SUMMARY  lint-bql-unbounded  checked=6 flagged=4 waived=0 non-literal-skipped=0
+-- stderr --
+-- src/BNoTop.java --
+package com.example.q;
+
+public class BNoTop
+{
+  static final String ALL = "station:|slot:/Drivers|bql:select * from baja:Component";
+  static final String COLS = "station:|slot:/|bql:select name, out from control:NumericWritable where out.value > 5";
+  static final String BARE = "bql:select from control:NumericPoint";
+  static final String TOP = "station:|slot:/|bql:select top 20 name from control:NumericWritable";
+  static final String TOP_FMT = String.format("station:|slot:/|bql:select top %d name from baja:Component", 20);
+  static final String FORMAT = String.format("station:|slot:/|bql:select * where name = '%s'", "x");
+}

@@ -12,6 +12,7 @@ import (
 // notInReport is every lint report-module deliberately does not run, each with why (issue #459: a new lint
 // must be either a member or listed here, never silently skipped).
 var notInReport = map[string]string{
+	"lint-bql-unbounded":       "a WARN lint over bql: query literals in a source root, run by hand (types/queries.md §3, §6)",
 	"lint-action-handler":      "a FAIL gate on any Java source root (G1, B1), run by hand until a report-module member row is wanted",
 	"lint-async-blocking":      "a WARN-only advisory for ASYNC action handlers (G28), run by hand",
 	"lint-ux-version":          "a -ux cache-busting check that needs the group build file, run by hand",

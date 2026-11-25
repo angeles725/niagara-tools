@@ -1,0 +1,27 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-bql-unbounded  @DIR@/src/BHistory.java:5  history-no-window: "select timestamp, value" has no top <n> and no timestamp window (?period=, start=, end= or a timestamp predicate): it scans the whole history (types/queries.md §3, §4)
+WARN  lint-bql-unbounded  @DIR@/src/BHistory.java:6  history-no-window: "select *" has no top <n> and no timestamp window (?period=, start=, end= or a timestamp predicate): it scans the whole history (types/queries.md §3, §4)
+WARN  lint-bql-unbounded  @DIR@/src/BHistory.java:12  history-no-window: "select * where timestamp > '2026-01-01' or value > 5" has no top <n> and no timestamp window (?period=, start=, end= or a timestamp predicate): it scans the whole history (types/queries.md §3, §4)
+WARN  lint-bql-unbounded  @DIR@/src/BHistory.java:13  history-no-window: "select * where value > 75" has no top <n> and no timestamp window (?period=, start=, end= or a timestamp predicate): it scans the whole history (types/queries.md §3, §4)
+WARN  lint-bql-unbounded  @DIR@/src/BHistory.java:14  no-top: "select *" has no top <n>: it returns every row of its extent (types/queries.md §3)
+SUMMARY  lint-bql-unbounded  checked=10 flagged=5 waived=0 non-literal-skipped=0
+-- stderr --
+-- src/BHistory.java --
+package com.example.q;
+
+public class BHistory
+{
+  String all = "history:/Station/Temp1|bql:select timestamp, value";
+  String fmt = String.format("history:%s|bql:select *", id);
+  String ok1 = "history:/Station/Temp1?period=today|bql:select timestamp, value";
+  String ok2 = "history:/Station/Temp1?start=2026-01-01;end=2026-01-02|bql:select *";
+  String ok3 = "history:/Station/Temp1|bql:select timestamp, value where timestamp in BQLTIME.today";
+  String ok4 = "history:/Station/Temp1|bql:select * where timestamp > '2026-01-01' and value > 5";
+  String ok5 = "history:/Station/Temp1|bql:select top 100 timestamp, value";
+  String orTs = "history:/Station/Temp1|bql:select * where timestamp > '2026-01-01' or value > 5";
+  String valueOnly = "history:/Station/Temp1|bql:select * where value > 75";
+  String list = "history:|bql:select *";
+}

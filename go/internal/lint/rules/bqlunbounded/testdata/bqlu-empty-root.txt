@@ -1,0 +1,8 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+ERROR  lint-bql-unbounded  @DIR@/m  no *.java or *.js sources found (wrong path or empty source tree)
+-- stderr --
+-- m/README.txt --
+notes

@@ -15,6 +15,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/batserrexit"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlunbounded"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/changedhotwrite"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/charsetdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
@@ -165,5 +166,6 @@ func All() []lint.Spec {
 		asyncblock.Spec(),
 		niagararpc.Spec(),
 		confirmrequired.Spec(),
+		bqlunbounded.Spec(),
 	}
 }
