@@ -103,8 +103,12 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		if hasArg || hasArgType {
 			return nil, plan.ToolError("action " + pyjson.StrRepr(action) + " takes no arg")
 		}
+		var notes []any
 		if takesOverride(action) && overrideTarget(c, rootType(nodes)) {
 			arg.Set("b", defaultOverride())
+			if overrideNeverExpires(nodes) {
+				notes = append(notes, msgOverrideNoExpiry)
+			}
 		}
 		note := "no inverse: " + action + " changes the control state and is not restored automatically"
 		var data any
@@ -122,7 +126,8 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 			}
 			note = msgWriteInstance
 		}
-		return &plan.Planned{Ops: []any{invokeOp(arg)}, Inverse: []any{}, Targets: targets, Notes: []any{note}, Data: data}, nil
+		return &plan.Planned{Ops: []any{invokeOp(arg)}, Inverse: []any{}, Targets: targets, Notes: append([]any{note}, notes...),
+			Data: data}, nil
 	}
 	fbType, err := fallbackType(nodes)
 	if err != nil {

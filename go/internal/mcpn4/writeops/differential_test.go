@@ -90,7 +90,16 @@ func goPlan(c *pyjson.Object) *pyjson.Object {
 // declared difference: n4_invoke_action sends the station's default BOverride with active and
 // inactive (#985 delta 4, 2026-11-25): without one the station fails with a null pointer. The
 // Python sent none; every other byte, the notes and the read-back included, is still compared.
+// declared difference: the dry run also notes an override with no expiry (#1064 item 2), a note
+// the Python never had; it is dropped with the argument.
 func withoutOverride(p *plan.Planned) {
+	notes := []any{}
+	for _, n := range p.Notes {
+		if s, ok := n.(string); !ok || !strings.HasPrefix(s, "the override has no expiry:") {
+			notes = append(notes, n)
+		}
+	}
+	p.Notes = notes
 	for _, op := range p.Ops {
 		o := op.(*pyjson.Object)
 		if arg, ok := get(o, "arg").(*pyjson.Object); ok && (get(arg, "a") == "active" || get(arg, "a") == "inactive") {
