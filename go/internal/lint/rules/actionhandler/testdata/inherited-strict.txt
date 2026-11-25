@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+WARN  lint-action-handler  @DIR@/src/BI.java:1  @NiagaraAction "work" has no do method in this file: handler may be inherited from BElsewhere: not judged (the station needs a public doWork(...) in the class or a superclass; ComplexIntrospector.java:316-343)
+-- stderr --
+-- src/BI.java --
+@NiagaraAction(name = "work") class BI extends BElsewhere {}

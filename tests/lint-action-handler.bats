@@ -19,7 +19,7 @@ cls() {
   { printf '@NiagaraType\n'
     while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do printf '%s\n' "$1"; shift; done
     shift
-    printf 'public class X extends BComponent\n{\n'; printf '%s\n' "$@"; printf '}\n'; } > "$f"
+    printf 'public class X extends %s\n{\n' "${BASE:-BComponent}"; printf '%s\n' "$@"; printf '}\n'; } > "$f"
 }
 
 @test "AH-usage: no argument exits 3 with the usage line on stderr" {
@@ -94,6 +94,42 @@ cls() {
   [ "$output" = "WARN  lint-action-handler  $SRC/Pair/X.java:6  doReset(..., Context) never runs: the station binds the action to the no-Context doReset(...) it finds first; keep one handler (types/actions.md § 1)" ]
   run "$LINT" --strict "$SRC/Pair"
   [ "$status" -eq 1 ]
+}
+
+@test "AH6: an unknown parameterType (a constant, a baja: spec) accepts any of the four shapes; a known one does not" {
+  # Mutation: AH6 -- reading an unknown parameterType as no parameter FAILs a valid handler that takes the parameter
+  cls Const '@NiagaraAction(name = "a", parameterType = PARAM_TYPE)' '@NiagaraAction(name = "b", parameterType = "baja:Integer")' -- \
+    '  public void doA(BInteger by, Context cx) {}' '  public void doB(BInteger by) {}'
+  run "$LINT" "$SRC/Const"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  cls Known '@NiagaraAction(name = "a", parameterType = "BInteger")' -- '  public void doA() {}'
+  run "$LINT" "$SRC/Known"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  lint-action-handler  $SRC/Known/X.java:2  @NiagaraAction \"a\" has no matching do method (found: doA())"* ]]
+}
+
+@test "AH7: a missing handler in a class whose superclass is declared elsewhere is a WARN, not a FAIL; --strict exits 1" {
+  # Mutation: AH7 -- FAILing a class whose superclass is declared in another file reports a handler that may be inherited
+  BASE=BBaseElsewhere cls Kid '@NiagaraAction(name = "work")' -- '  void other() {}'
+  run "$LINT" "$SRC/Kid"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-action-handler  $SRC/Kid/X.java:2  @NiagaraAction \"work\" has no do method in this file: handler may be inherited from BBaseElsewhere: not judged (the station needs a public doWork(...) in the class or a superclass; ComplexIntrospector.java:316-343)" ]
+  run "$LINT" --strict "$SRC/Kid"
+  [ "$status" -eq 1 ]
+  cls Framework '@NiagaraAction(name = "work")' -- '  void other() {}'
+  run "$LINT" "$SRC/Framework"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  lint-action-handler  $SRC/Framework/X.java:2  "* ]]
+}
+
+@test "AH8: the pair WARN needs a declared action and two public methods" {
+  # Mutation: AH8 -- firing the pair WARN for a non-public overload or an undeclared action reports a pair the station never sees
+  cls Hidden '@NiagaraAction(name = "reset")' -- '  void doReset() {}' '  public void doReset(Context cx) {}'
+  cls Undeclared '@NiagaraAction(name = "other")' -- '  public void doOther(Context cx) {}' '  public void doReset() {}' '  public void doReset(Context cx) {}'
+  run "$LINT" "$SRC/Hidden" "$SRC/Undeclared"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
 @test "AH5: this::doX of a declared action WARNs (course F3); the same reference to a plain helper is clean" {

@@ -1,8 +1,6 @@
 package actionhandler
 
 import (
-	"unicode"
-
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
@@ -16,7 +14,7 @@ func refRows(toks []javasrc.Token, classes []javasrc.Class, c javasrc.Class, dec
 	names := map[string]bool{}
 	for _, a := range Actions(toks, c) {
 		if a.Name != "" {
-			names["do"+string(unicode.ToUpper(rune(a.Name[0])))+a.Name[1:]] = true
+			names[doName(a.Name)] = true
 		}
 	}
 	if len(names) == 0 {

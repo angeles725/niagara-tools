@@ -10,10 +10,12 @@ import (
 type Action struct {
 	Name   string   // the name argument; "" when absent or not a plain literal
 	Line   int      // the 0-based line of the name argument (of the annotation when there is none)
-	Param  string   // parameterType, "" when none
+	Param  string   // parameterType as a plain Java class name; "" when none or unknown
 	Return string   // returnType, "" when none (void)
 	Flags  []string // every identifier of the flags expression (Flags.HIDDEN | Flags.ASYNC: Flags, HIDDEN, Flags, ASYNC)
-	Opaque bool     // a parameterType or returnType that is not a plain Java class name (baja:Type, concatenation)
+	// ParamUnknown: a parameterType is declared but is no plain Java class name (a constant, a baja:Type spec, a
+	// concatenation), so the action may take a parameter or not; RetOpaque is the same for returnType.
+	ParamUnknown, RetOpaque bool
 }
 
 // HasFlag reports whether the flags expression names flag (a Flags.X constant, or X by static import).
@@ -92,9 +94,13 @@ func parseAction(args []javasrc.Token, line int) Action {
 		case "name":
 			a.Name, a.Line = plain(val), args[i].Line
 		case "parameterType":
-			a.Param = a.typeArg(val)
+			var unknown bool
+			a.Param, unknown = typeArg(val)
+			a.ParamUnknown = a.ParamUnknown || unknown
 		case "returnType":
-			a.Return = a.typeArg(val)
+			var unknown bool
+			a.Return, unknown = typeArg(val)
+			a.RetOpaque = a.RetOpaque || unknown
 		case "flags":
 			for _, v := range val {
 				if v.Kind == javasrc.TokIdent {
@@ -107,13 +113,11 @@ func parseAction(args []javasrc.Token, line int) Action {
 	return a
 }
 
-// typeArg is a type argument's class name; anything that is not a plain Java name marks the action opaque.
-func (a *Action) typeArg(val []javasrc.Token) string {
+// typeArg is a type argument's class name; anything that is not a plain Java name (a constant, baja:Type, a
+// concatenation) reports unknown.
+func typeArg(val []javasrc.Token) (name string, unknown bool) {
 	s := plain(val)
-	if s == "" || strings.ContainsAny(s, ":|+ ") {
-		a.Opaque = true
-	}
-	return s
+	return s, s == "" || strings.ContainsAny(s, ":|+ ")
 }
 
 // plain is the text of a single string literal, "" for anything else.

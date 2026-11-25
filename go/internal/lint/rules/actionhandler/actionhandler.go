@@ -9,10 +9,13 @@
 //
 // A per-file rule over *.java read as javasrc tokens (comments blanked, a literal one token). Rows: FAIL a
 // missing or non-public do method, a static one, a return type that differs from the action's `returnType` (void
-// when none); WARN doX(..., Context) beside a no-Context doX(...) of the same parameters, which never runs (the
-// no-Context one is found first; ledger G1); WARN `this::doX` or `new Thread(() -> doX(` of a declared action,
-// which skips the action pipeline (course F3; a `post(Action...)` override is lint-async-blocking's). A handler
-// inherited from a class in ANOTHER file is not seen (a superclass in the same file is).
+// when none); WARN a public doX(..., Context) beside a public no-Context doX(...) of the same parameters for a
+// declared action X, which never runs (the no-Context one is found first; ledger G1); WARN `this::doX` or
+// `new Thread(() -> doX(` of a declared action, which skips the action pipeline (course F3; a `post(Action...)`
+// override is lint-async-blocking's). A `parameterType` that is no plain class name (a constant, a baja: spec)
+// is unknown: any of the four shapes then satisfies the action. A do method is looked up in the class and in
+// superclasses declared in the same file; when the chain ends at a class declared in another file that is not a
+// javax.baja framework base (BComponent, BObject, ...), a missing handler is a WARN "may be inherited, not judged".
 package actionhandler
 
 import (
@@ -48,8 +51,10 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
 	for _, c := range classes {
 		ms := doMethods(toks, c)
-		out = append(out, handlerRows(c, Actions(toks, c), withAncestors(toks, classes, c, ms))...)
-		out = append(out, pairRows(ms)...)
+		acts := Actions(toks, c)
+		all, far := withAncestors(toks, classes, c, ms)
+		out = append(out, handlerRows(acts, all, far)...)
+		out = append(out, pairRows(acts, ms)...)
 		out = append(out, refRows(toks, classes, c, decls)...)
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Line < out[j].Line })

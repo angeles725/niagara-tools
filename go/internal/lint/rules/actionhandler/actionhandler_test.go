@@ -12,4 +12,4 @@ import (
 // the same file, qualified return, a post override); pair the G1 cases (doX() beside doX(Context)); methodref the
 // F3 cases (this::doX, new Thread(() -> doX(), outside post only); literals comments, strings and calls; strict
 // the exit code of a WARN under --strict; usage and empty-root the argument contract.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 9) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 12) }
