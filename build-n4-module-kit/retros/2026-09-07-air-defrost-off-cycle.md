@@ -26,4 +26,4 @@ Cuartos 1/2/4 evaporators have NO resistance; their defrost is OFF-CYCLE / AIR: 
 - The safe minimal edit is an `if (flag){...}` before the existing block — no else-restructuring, no moved code.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-air-defrost-off-cycle.md | ColdRoomPan | 2026-09-07 | pending | 1 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-air-defrost-off-cycle.md | ColdRoomPan | 2026-09-07 | folded | 1 |`

@@ -62,4 +62,4 @@ answered by choosing from options or giving their own.
 - An automatic action needs four answers before it is coded: how it shows, how it clears, what a restart does, and what the default is.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-26-behavior-decisions-ask-dont-assume.md | kit | 2026-09-26 | pending | 6 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-26-behavior-decisions-ask-dont-assume.md | kit | 2026-09-26 | folded | 6 |`

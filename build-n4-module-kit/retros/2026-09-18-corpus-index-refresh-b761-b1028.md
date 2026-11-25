@@ -153,4 +153,4 @@ pointer to:
   shipping or targeting a specific N4 OEM install.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-corpus-index-refresh-b761-b1028.md | kit | 2026-09-18 | pending | 26 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-corpus-index-refresh-b761-b1028.md | kit | 2026-09-18 | folded | 26 |`

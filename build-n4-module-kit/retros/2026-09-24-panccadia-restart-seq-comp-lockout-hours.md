@@ -69,4 +69,4 @@ below as proposed deltas.
 - A release/unblock predicate driven by "did this already happen" must be backed by an observed flag set at the moment it happens, never reconstructed from configured durations after the fact (Δ9).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-24-panccadia-restart-seq-comp-lockout-hours.md | module | 2026-09-24 | pending | 10 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-24-panccadia-restart-seq-comp-lockout-hours.md | module | 2026-09-24 | folded | 10 |`

@@ -53,4 +53,4 @@ proportional to the tier.
 - One review finding (R3-w35d, a test that passes vacuously with the option off) shows that the P1 "focused test" in Δ1 needs one rule: the test must run with the feature ENABLED.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 6 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | folded | 6 |`

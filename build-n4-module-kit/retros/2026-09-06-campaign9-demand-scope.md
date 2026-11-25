@@ -46,4 +46,4 @@ Real-tree smoke on four client module roots at client tip a109249 measured exact
 - Dot-dir pruning (D9b) via `find -type d -name '.*' -prune` is the canonical pattern; DS7 confirmed Stale.java under `.deploy-baseline/` is never traversed.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign9-demand-scope.md | kit | 2026-09-06 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-06-campaign9-demand-scope.md | kit | 2026-09-06 | folded | 4 |`

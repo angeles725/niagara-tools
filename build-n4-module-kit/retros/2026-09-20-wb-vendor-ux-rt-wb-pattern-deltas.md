@@ -56,4 +56,4 @@ Surveyed 8 vendor `-wb` archetypes (Centraline pure-resource palette, andoverAC2
 - Separate, NOT for this kit: B1061 §1061.6 drafts a research-sdd METHODOLOGY §22 "correlation-first exploration" doctrine (four-lens survey + PATTERN/EXCEPTION/DEPENDENCY/SIMILARITY taxonomy) — UNCONFIRMED, human review only, per "todavía no hay que asegurarlo".
 
 ---
-**Status**: PENDING — 13 proposed deltas; full text + source citations in corpus B1061.
+**Status**: FOLDED — 13 proposed deltas; full text + source citations in corpus B1061.

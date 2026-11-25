@@ -42,4 +42,4 @@ following the EW1-EW11 RED contract pinned at `269be48` with the four-root EXACT
 - EW3 (slot has matching action → clean) uses class-level presence of any `@NiagaraAction` as the exemption signal; the mutation "drop @NiagaraAction exemption" flips EW3 from clean to WARN. `[ev: corpus B823]`
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign9-ext-writable-shape.md | kit | 2026-09-06 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-06-campaign9-ext-writable-shape.md | kit | 2026-09-06 | folded | 3 |`

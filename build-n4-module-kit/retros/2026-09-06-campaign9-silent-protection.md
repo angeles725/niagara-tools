@@ -36,4 +36,4 @@ Campaign 9 S18 added a new toolbelt lint for silent protection trips. A protecti
 - Real-tree smoke rows at line numbers that differ from spec pins are normal when the source version changed; record the observed rows, not the predicted pins.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign9-silent-protection.md | kit | 2026-09-06 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-06-campaign9-silent-protection.md | kit | 2026-09-06 | folded | 3 |`

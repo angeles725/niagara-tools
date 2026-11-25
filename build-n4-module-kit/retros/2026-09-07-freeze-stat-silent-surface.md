@@ -25,4 +25,4 @@ The freeze-stat (coil anti-frost low-limit) trips and CLOSES the valve — inhib
 - Reuse the module's existing active-status pattern so the operator UI stays consistent (defrost-activo ↔ protección-activa).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-freeze-stat-silent-surface.md | ColdRoomPan | 2026-09-07 | pending | 1 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-freeze-stat-silent-surface.md | ColdRoomPan | 2026-09-07 | folded | 1 |`

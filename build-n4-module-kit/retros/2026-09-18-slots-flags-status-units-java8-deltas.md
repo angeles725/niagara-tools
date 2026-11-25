@@ -93,4 +93,4 @@ Mined B4, B18, B734, B735, B736, B738, B745, B755, and B756 against the current 
 
 ---
 
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-slots-flags-status-units-java8-deltas.md | kit | 2026-09-18 | pending | 13 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-slots-flags-status-units-java8-deltas.md | kit | 2026-09-18 | folded | 13 |`

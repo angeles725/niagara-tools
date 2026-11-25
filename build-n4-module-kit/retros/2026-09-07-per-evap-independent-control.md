@@ -28,4 +28,4 @@ Client change: evaporators must no longer be controlled by the ZONE setpoint —
 - `build.sh` needs the GROUP dir as module-root + `niagara_home` as arg 3.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-per-evap-independent-control.md | ColdRoomPan | 2026-09-07 | pending | 2 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-per-evap-independent-control.md | ColdRoomPan | 2026-09-07 | folded | 2 |`

@@ -101,5 +101,5 @@ Five content areas are absent from kit guides:
 
 ---
 
-**Status**: PENDING — INDEX row appended:
-`| 2026-09-18-ord-path-nav-deltas.md | kit | 2026-09-18 | pending | 9 |`
+**Status**: FOLDED — INDEX row appended:
+`| 2026-09-18-ord-path-nav-deltas.md | kit | 2026-09-18 | folded | 9 |`

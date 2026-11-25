@@ -41,4 +41,4 @@ the lint passes without having looked, and the CI Go job turned out to skip ever
 - A wrapper that passes a child's exit code through inherits the child's silent successes.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-13-go-lint-vendor-floor.md | kit | 2026-11-13 | pending | 2 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-13-go-lint-vendor-floor.md | kit | 2026-11-13 | folded | 2 |`

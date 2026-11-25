@@ -26,4 +26,4 @@ The SPA Condensadoras tab (HOA + reads) was a preview stub with no backing: `BDa
 - Reconcile a naming mismatch at the LINK (name the facade slots after the SPA), not by importing the control type.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-condensadoras-facade-crashsafe.md | DashboardPan | 2026-09-07 | pending | 2 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-condensadoras-facade-crashsafe.md | DashboardPan | 2026-09-07 | folded | 2 |`

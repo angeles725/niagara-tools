@@ -71,4 +71,4 @@ This session surfaces six gaps that survived the fold.
    Until `@Range` parsing is added, schema-risk gives a false clean bill on enum-tag removals.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-schema-versioning-upgrade-safety-deltas.md | kit | 2026-09-18 | pending | 6 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-schema-versioning-upgrade-safety-deltas.md | kit | 2026-09-18 | folded | 6 |`

@@ -260,4 +260,4 @@ site power draw (kW), defrost-time-since-last (minutes, NORMAL mode only).
 
 ---
 
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-ml-libraries-deltas.md | kit | 2026-09-18 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-ml-libraries-deltas.md | kit | 2026-09-18 | folded | 4 |`

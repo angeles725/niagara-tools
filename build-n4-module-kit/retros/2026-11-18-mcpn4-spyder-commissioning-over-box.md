@@ -38,4 +38,4 @@ old compiled files. The working recipe is `objectName` only, then `compile`, the
 - A job's read-back must return the job log: "success" and "failed" alone hid the compile step.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-18-mcpn4-spyder-commissioning-over-box.md | kit | 2026-11-18 | pending | 5 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-18-mcpn4-spyder-commissioning-over-box.md | kit | 2026-11-18 | folded | 5 |`

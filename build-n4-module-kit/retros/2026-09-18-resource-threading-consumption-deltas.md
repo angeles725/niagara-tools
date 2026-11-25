@@ -72,4 +72,4 @@ here.  What follows are the six distinct gaps left open after those folds.
 
 ---
 
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-resource-threading-consumption-deltas.md | kit | 2026-09-18 | pending | 6 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-resource-threading-consumption-deltas.md | kit | 2026-09-18 | folded | 6 |`

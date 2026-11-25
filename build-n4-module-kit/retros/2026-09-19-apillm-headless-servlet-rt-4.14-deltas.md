@@ -84,4 +84,4 @@ the client module; proposing the fixture/doc deltas so the next servlet-in-rt bu
 - **USER RULE (standing): user-facing module UI must be intuitive and easy** — pickers/choosers + drag-drop + status tables, never a blank-entry "Add" that dumps the user into the raw property sheet. Applies to every `-wb`/`-ux` build going forward, not just Apillm.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-19-apillm-headless-servlet-rt-4.14-deltas.md | kit | 2026-09-19 | pending | 5 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-19-apillm-headless-servlet-rt-4.14-deltas.md | kit | 2026-09-19 | folded | 5 |`

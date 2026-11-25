@@ -107,4 +107,4 @@ BOX-sub → space-subscriber-count → `SubscribeCallbacks` → `component.subsc
   `subscriberMixIn`" (Δ5) intentionally defers to B752-G2 for the full contract.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-watcher-subscription-livedata-deltas.md | kit | 2026-09-18 | pending | 7 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-watcher-subscription-livedata-deltas.md | kit | 2026-09-18 | folded | 7 |`

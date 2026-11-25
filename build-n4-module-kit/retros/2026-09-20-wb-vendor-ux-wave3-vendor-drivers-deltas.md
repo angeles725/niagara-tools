@@ -60,4 +60,4 @@ Wave-3 surveyed 11 vendor/OEM/platform `-wb` archetypes, extending the cross-ven
 - The ace "vendor programming environment" tier (Δ5) serves as a concrete upper bound in code-review or scope discussions; knowing the ceiling is useful even if we never build to it.
 
 ---
-**Status**: PENDING — 14 proposed deltas; full text + source citations in corpus B1094–B1105.
+**Status**: FOLDED — 14 proposed deltas; full text + source citations in corpus B1094–B1105.

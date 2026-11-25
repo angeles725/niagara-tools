@@ -142,4 +142,4 @@ frontend library packaging; that is a separate concern from rt Java libraries.
 
 ---
 
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-math-control-library-layer-deltas.md | kit | 2026-09-18 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-math-control-library-layer-deltas.md | kit | 2026-09-18 | folded | 4 |`

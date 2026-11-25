@@ -79,4 +79,4 @@ but never extracted into a type guide.
   either/or choice, which is wrong for a module that already has a servlet-SPA.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-ux-wb-writesurface-rbac-deltas.md | kit | 2026-09-18 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-ux-wb-writesurface-rbac-deltas.md | kit | 2026-09-18 | folded | 4 |`

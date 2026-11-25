@@ -31,4 +31,4 @@ CompPan moved from calling-room staging to three configurable suction-pressure s
 - Every new persistence mechanism must be reviewed specifically for its restart path before a JACE upgrade.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-27-comppan-pressure-staging.md | CompPan | 2026-09-27 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-27-comppan-pressure-staging.md | CompPan | 2026-09-27 | folded | 4 |`

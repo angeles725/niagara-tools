@@ -100,4 +100,4 @@ proposed as new deltas:**
   causes a build failure — it silently degrades documentation quality every time (Δ7).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-24-comppan-fase2-amps-alarms.md | module | 2026-09-24 | pending | 8 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-24-comppan-fase2-amps-alarms.md | module | 2026-09-24 | folded | 8 |`

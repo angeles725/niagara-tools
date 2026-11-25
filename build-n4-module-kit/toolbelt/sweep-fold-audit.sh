@@ -23,6 +23,12 @@
 # plus a `fold-audit: pending: N fully cited` summary line; it fails --strict, so a fold that forgot the flip is seen.
 # A pending row with a Δ still uncited, or with no Δ, is not reported. [ev: retro build-kit-bench-session Δ19]
 #
+# Header/body drift: a folded INDEX row whose retro <kit-root>/retros/<file> has the line-1 marker `<!-- review-status: folded -->`
+# but a body line `**Status**: PENDING …` (the stamp new-retro writes) is
+#   fold-audit: WARN <file>:<line> header says folded but body Status says PENDING: make it `**Status**: FOLDED …`
+# plus a `fold-audit: status drift: N retros (header folded, body Status PENDING)` summary line (shown when N>0); it fails --strict.
+# A retro file that cannot be read, or whose own marker is not folded, is not audited (METHODOLOGY.md: a retro's header and body Status agree).
+#
 # Retro deltas are GitHub issues (CONTRIBUTING.md § 6.3, toolbelt/retro-issues.sh): under --deltas-since a delta row of a kit retro
 # that ends in `#N` counts as cited when issue #N is closed (gh issue view; gh is called only for such rows). gh unreachable prints
 #   fold-audit: UNVERIFIED <file> Δk (issue #N state unavailable: <why>)   and   fold-audit: issues: N unverified

@@ -59,4 +59,4 @@ Sixteen failure-mode blocks completed the hardening sub-series covering runtime,
 - Highest-priority flagged: **Δ4** (SECURITY), **Δ6** (SILENT-CORRUPTION, hardest to detect), **Δ3** (RESOURCE-LEAK, subscriber leak fires after removal), **Δ11** (BUILD, UnsupportedClassVersionError bypasses defensive catches).
 
 ---
-**Status**: PENDING — 16 proposed deltas; full detail in corpus B1114–B1132.
+**Status**: FOLDED — 16 proposed deltas; full detail in corpus B1114–B1132.

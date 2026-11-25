@@ -51,4 +51,4 @@ number of modules that see it. On a controller that is duplicated flash wear and
   must read it.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-14-double-station-save.md | kit | 2026-11-14 | pending | 3 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-14-double-station-save.md | kit | 2026-11-14 | folded | 3 |`

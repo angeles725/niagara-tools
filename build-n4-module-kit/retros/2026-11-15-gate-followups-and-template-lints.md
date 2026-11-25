@@ -79,4 +79,4 @@ chose how stock modules are treated. That correction batch is Δ12, Δ16 and Δ1
   neither fails on the unknown nor passes it silently.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-15-gate-followups-and-template-lints.md | kit | 2026-11-15 | pending | 24 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-15-gate-followups-and-template-lints.md | kit | 2026-11-15 | folded | 24 |`

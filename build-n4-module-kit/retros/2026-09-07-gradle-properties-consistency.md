@@ -29,4 +29,4 @@ Comparing the three module group `gradle.properties` (Compresores/Paccadia/Dashb
 - Modules deploying to ONE station must build against THAT station's Niagara version; three different `niagara_home` versions across a deploy group is a latent defect.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-gradle-properties-consistency.md | kit | 2026-09-07 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-gradle-properties-consistency.md | kit | 2026-09-07 | folded | 3 |`

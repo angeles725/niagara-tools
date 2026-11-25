@@ -53,4 +53,4 @@ Seven reference-card blocks (B1106–B1112) completed the "REF cluster" — auth
 - The non-contiguous-ordinal gotcha in Δ4 is specifically relevant for protocol-enum slots where external hardware defines non-sequential ordinal codes (e.g. BACnet Multi-state objects, Modbus register values).
 
 ---
-**Status**: PENDING — 8 proposed deltas; full detail in corpus B1106–B1113.
+**Status**: FOLDED — 8 proposed deltas; full detail in corpus B1106–B1113.
