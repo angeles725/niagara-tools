@@ -35,13 +35,16 @@ func tplDepsInstalled(c plan.Client, deps []string) ([]any, error) {
 			strconv.Itoa(be.Code) + ")"}, nil
 	}
 	if err != nil {
-		return nil, err
+		return []any{"Module dependencies not checked: the module manager page could not be read: " + err.Error()}, nil
 	}
 	page, err := spy.Parse(string(file.Body), spy.Limits{MaxRows: tplMaxModules})
 	if err != nil {
 		return []any{"Module dependencies not checked: " + err.Error()}, nil
 	}
 	parts, found := tplLoadedParts(page)
+	if found && len(parts) == 0 {
+		return []any{"Module dependencies not checked: the module manager table has no row in its own layout"}, nil
+	}
 	if !found {
 		return []any{"Module dependencies not checked: the module manager page holds no table with Module, " +
 			"Vendor and Version columns (the layout measured on Niagara 4.15)"}, nil
@@ -107,7 +110,10 @@ func tplCompareDeps(deps []string, parts map[string]string) (missing []string, o
 		}
 		spec := strings.TrimSpace(need + " " + rel)
 		if !ok {
-			missing = append(missing, name+" ("+spec+")")
+			if spec != "" {
+				name += " (" + spec + ")"
+			}
+			missing = append(missing, name)
 			continue
 		}
 		met++

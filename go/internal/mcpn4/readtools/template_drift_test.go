@@ -32,8 +32,8 @@ func TestLtDriftIsTrueFalseOrNull(t *testing.T) {
 	}
 }
 
-// The refresh note names the action, what runs it and the stale case; it is the only text that
-// says a local signature can hide an edit.
+// The refresh note names the action, what runs it and the stale case (the registry description and
+// the README say it too).
 func TestLtSignatureNoteNamesUpdateSignatures(t *testing.T) {
 	for _, s := range []string{"updateSignatures", "localSignature", "stale", "not invoked by this tool"} {
 		if !strings.Contains(ltSignatureNote, s) {

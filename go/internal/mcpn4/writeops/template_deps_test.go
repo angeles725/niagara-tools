@@ -1,6 +1,7 @@
 package writeops_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -9,16 +10,20 @@ import (
 )
 
 // withModules is a station that also answers the spy module manager page (the part, vendor and
-// version of each loaded module); a nil page is a station that refuses spy pages (403).
+// version of each loaded module); a nil page is a station that refuses spy pages (403), and err a
+// read that fails another way (a timeout).
 type withModules struct {
 	*typed
-	page   *string
-	paths  []string
-	status int
+	page  *string
+	paths []string
+	err   error
 }
 
 func (c *withModules) GetSpy(urlPath string, _ float64, _ int) (*box.File, error) {
 	c.paths = append(c.paths, urlPath)
+	if c.err != nil {
+		return nil, c.err
+	}
 	if c.page == nil {
 		return nil, &box.Error{Kind: box.KindHTTPStatus, Code: 403, Msg: "HTTP 403 from station"}
 	}
@@ -109,5 +114,26 @@ func TestADeployDoesNotRefuseOnAnUnrecognizedModulePage(t *testing.T) {
 	}
 	if !strings.Contains(notes, "Module dependencies not checked: the module manager page holds no table with Module, Vendor and Version columns") {
 		t.Errorf("notes lack the unrecognized page note:\n%s", notes)
+	}
+}
+
+// A module table with no usable row (header only, or rows of another width) and a read that fails
+// other than by an HTTP status prove nothing either: the deploy plans, with the unchecked note.
+func TestADeployDoesNotRefuseOnAnEmptyTableOrAFailedRead(t *testing.T) {
+	odd := "<html><body><table><tr><th>Module</th><th>Vendor</th><th>Version</th></tr>" +
+		"<tr><td colspan=3>baja-rt</td></tr></table></body></html>"
+	for name, c := range map[string]*withModules{
+		"header only": {typed: tplClient(tplTypes()), page: modulePage()},
+		"odd rows":    {typed: tplClient(tplTypes()), page: &odd},
+		"timeout":     {typed: tplClient(tplTypes()), err: errors.New("read timed out")},
+	} {
+		p, err := writeops.DeployTemplate.Plan(c, deployArgs(tplFile(t, nil, nil)))
+		if err != nil {
+			t.Errorf("%s: refused: %v", name, err)
+			continue
+		}
+		if notes := js(t, p.Notes); !strings.Contains(notes, "Module dependencies not checked") {
+			t.Errorf("%s: notes lack the unchecked note:\n%s", name, notes)
+		}
 	}
 }
