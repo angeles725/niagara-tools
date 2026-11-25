@@ -159,8 +159,9 @@ non-skippable check floor (§5) applies to every tier.
   its Java package segment. [ev: retro campaign7-tool-integration] `[ev: retro build-kit-bench-session Δ11]` Option
   values are literal text: `--vendor 'A&B'` is emitted as typed, and no option value is read as a sed replacement
   (`go/internal/scaffoldmodule` `TestOptionValueIsLiteral`) `[ev: retro go-scaffold-module-port Δ1]`.
-  `--with-offload` (logic only, else exit 2) adds the fixture's async-offload component, its two station tests
-  and the `MANAGE_EXECUTION` request (`types/actions.md` § 2). `--vendor` is
+  `--with-offload` (logic only, else exit 2) adds the fixture's async-offload component (`BPanOffload`), its two
+  station tests and their `moduleTest-include.xml` entries, the `MANAGE_EXECUTION` request, and the palette, lexicon,
+  `module-include.xml` and module-map rows (`types/actions.md` § 2). `--vendor` is
   validated before anything is written: lowercased it must be one Java package segment (no `/`, `..`, whitespace or
   leading digit), else exit 2 naming the value `[ev: retro go-scaffold-module-port Δ3]`. A failed emit removes the
   partial `<out-dir>/<ModuleName>` it created and says so (`TestFailedEmitRemovesThePartialTree`,

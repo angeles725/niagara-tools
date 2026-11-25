@@ -66,3 +66,22 @@ load lib/scaffold-setup
     [ ! -e "$OUT/Acme" ]
   done
 }
+
+@test "OFF5: --with-offload with --with-doc emits both parts and one map with every row, the doc one before plumbing" {
+  run "$SC" Acme "$OUT" --vendor Example --with-offload --with-doc
+  [ "$status" -eq 0 ]
+  M="$OUT/Acme/Acme"
+  [ -f "$M/Acme-doc/Acme-doc.gradle.kts" ]
+  [ -f "$M/Acme-rt/src/com/example/Acme/BPanOffload.java" ]
+  [ "$(awk -F'|' '/^\| /{gsub(/ /,"",$2); gsub(/ /,"",$3); printf "%s/%s ", $2, $3}' "$M/MODULE-MAP.md")" = "Concern/Part control/rt config-save/rt async-offload/rt permissions/rt station-test/rt plumbing/doc plumbing/rt " ]
+  [ -z "$(grep -rl 'offload:' "$OUT/Acme" || true)" ]
+}
+
+@test "OFF6: the internal --strip-offload-markers mode refuses a malformed block, names the file and line, and changes nothing" {
+  mkdir -p "$BATS_TEST_TMPDIR/bad"
+  printf '<types>\n  <!-- offload:begin -->\n  <t/>\n</types>\n' > "$BATS_TEST_TMPDIR/bad/module-include.xml"
+  run "$SC" --strip-offload-markers "$BATS_TEST_TMPDIR/bad"
+  [ "$status" -eq 3 ]
+  [ "$output" = "scaffold-module: module-include.xml: line 2: offload:begin is never closed" ]
+  grep -q 'offload:begin' "$BATS_TEST_TMPDIR/bad/module-include.xml"
+}

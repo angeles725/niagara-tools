@@ -1,6 +1,9 @@
 package scaffoldmodule
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // The logic fixture carries an opt-in async-offload component (BPanOffload, its two station tests and the rows
 // that register them): the fixture stays the scaffold source (types/actions.md § 2), and `--with-offload` is what
@@ -8,15 +11,22 @@ import "strings"
 //
 // What belongs to the component is declared in the fixture itself:
 //   - offloadOnly: files emitted only with the flag;
-//   - marker lines in a shared file: `offload:begin` ... `offload:end` on their own lines (an XML or `#` comment)
-//     bracket the lines the flag adds, and a row ending in offloadLine is one such line. The marker lines are never
-//     emitted; the bracketed lines are dropped without the flag;
+//   - marker lines in a shared file: `offload:begin` ... `offload:end` as whole lines in the file's comment syntax
+//     (offloadBegins, offloadEnds) bracket the lines the flag adds, and a row ending in offloadLine is one such line.
+//     The marker lines are never emitted; the bracketed lines are dropped without the flag; a block never closed,
+//     nested, or an end without a begin is an error;
 //   - offloadFallback: a shared file whose offload form is not a dropped block (the permissions root is
 //     `<permissions/>` without the request), emitted as this text without the flag.
 const (
-	offloadBegin = "offload:begin"
-	offloadEnd   = "offload:end"
-	offloadLine  = " <!-- offload:line -->"
+	offloadLine = " <!-- offload:line -->" // the end of a row that is an offload line (a table row takes no own-line marker)
+)
+
+// offloadBlockMarkers are the whole trimmed lines that open and close a block, one per comment syntax of the
+// fixture's shared files (XML, and `#` for the lexicon). Anything else, the token inside another line included, is
+// ordinary text.
+var (
+	offloadBegins = map[string]bool{"<!-- offload:begin -->": true, "# offload:begin": true}
+	offloadEnds   = map[string]bool{"<!-- offload:end -->": true, "# offload:end": true}
 )
 
 // offloadOnly are the fixture files (below the fixture root) only --with-offload emits.
@@ -33,49 +43,64 @@ var offloadFallback = map[string]string{
 
 // offloadShape shapes the fixture copy of a type that carries the component (typ.offload); another type's copy is
 // untouched.
-func offloadShape(typ moduleType, with bool) fileShape {
+func offloadShape(typ moduleType, withOffload bool) fileShape {
 	if !typ.offload {
 		return nil
 	}
-	return func(rel, text string) (string, bool) {
-		if !with {
+	return func(rel, text string) (string, bool, error) {
+		if !withOffload {
 			if offloadOnly[rel] {
-				return "", false
+				return "", false, nil
 			}
 			if fallback, ok := offloadFallback[rel]; ok {
-				return fallback, true
+				return fallback, true, nil
 			}
 		}
-		return filterOffload(text, with), true
+		out, err := filterOffload(text, withOffload)
+		if err != nil {
+			return "", false, fmt.Errorf("%s: %w", rel, err)
+		}
+		return out, true, nil
 	}
 }
 
-// filterOffload drops the marker lines, and with them the bracketed and the offloadLine lines unless keep.
-func filterOffload(text string, keep bool) string {
+// filterOffload drops the marker lines, and with them the bracketed and the offloadLine lines unless keep. A block
+// that is never closed, one opened inside another, and an end with no begin are errors (the text is not shaped).
+func filterOffload(text string, keep bool) (string, error) {
 	var b strings.Builder
-	inBlock := false
-	for _, line := range strings.SplitAfter(text, "\n") {
+	opened := 0 // the line a block was opened at, 0 outside a block
+	for i, line := range strings.SplitAfter(text, "\n") {
+		n, bare := i+1, strings.TrimSpace(line)
 		switch {
-		case strings.Contains(line, offloadBegin):
-			inBlock = true
-		case strings.Contains(line, offloadEnd):
-			inBlock = false
+		case offloadBegins[bare]:
+			if opened != 0 {
+				return "", fmt.Errorf("line %d: offload:begin inside the block opened at line %d", n, opened)
+			}
+			opened = n
+		case offloadEnds[bare]:
+			if opened == 0 {
+				return "", fmt.Errorf("line %d: offload:end without an offload:begin", n)
+			}
+			opened = 0
 		case strings.HasSuffix(strings.TrimRight(line, "\r\n"), offloadLine):
 			if keep {
 				b.WriteString(strings.Replace(line, offloadLine, "", 1))
 			}
-		case !inBlock || keep:
+		case opened == 0 || keep:
 			b.WriteString(line)
 		}
 	}
-	return b.String()
+	if opened != 0 {
+		return "", fmt.Errorf("line %d: offload:begin is never closed", opened)
+	}
+	return b.String(), nil
 }
 
-// keepFixtureTestList stops the station-test overlay from replacing the fixture's moduleTest-include.xml, whose
-// offload entries the template does not have, when the component is emitted.
-func keepFixtureTestList(with bool) fileShape {
-	if !with {
+// skipTestIncludeOverlay stops the station-test overlay from writing moduleTest-include.xml over the fixture's own
+// copy when the component is emitted: the fixture's lists the offload tests, the template's does not.
+func skipTestIncludeOverlay(withOffload bool) fileShape {
+	if !withOffload {
 		return nil
 	}
-	return func(rel, text string) (string, bool) { return text, rel != stationTestProbe }
+	return func(rel, text string) (string, bool, error) { return text, rel != stationTestProbe, nil }
 }

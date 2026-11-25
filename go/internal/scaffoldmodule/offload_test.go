@@ -8,7 +8,7 @@ import (
 )
 
 func TestFilterOffload(t *testing.T) {
-	const text = "a\n<!-- offload:begin -->\nb\n<!-- offload:end -->\nc\n# offload:begin\nd\n# offload:end\n| row | <!-- offload:line -->\ne"
+	const text = "a\n<!-- offload:begin -->\nb\n  <!-- offload:end -->\nc\n\t# offload:begin\nd\n# offload:end\n| row | <!-- offload:line -->\ne"
 	for _, tc := range []struct {
 		name string
 		keep bool
@@ -17,12 +17,44 @@ func TestFilterOffload(t *testing.T) {
 		{"flag: markers go, every line stays", true, "a\nb\nc\nd\n| row |\ne"},
 		{"no flag: blocks and marked rows go", false, "a\nc\ne"},
 	} {
-		if got := filterOffload(text, tc.keep); got != tc.want {
-			t.Errorf("%s:\n got %q\nwant %q", tc.name, got, tc.want)
+		got, err := filterOffload(text, tc.keep)
+		if err != nil || got != tc.want {
+			t.Errorf("%s:\n got %q (%v)\nwant %q", tc.name, got, err, tc.want)
 		}
 	}
-	if got := filterOffload("no marker\r\nat all", false); got != "no marker\r\nat all" {
-		t.Errorf("a file without markers changed: %q", got)
+	if got, err := filterOffload("no marker\r\nat all", false); err != nil || got != "no marker\r\nat all" {
+		t.Errorf("a file without markers changed: %q (%v)", got, err)
+	}
+}
+
+// A marker is a whole trimmed line in the file's comment syntax, the row suffix sits at the end of the line; the
+// token anywhere else is ordinary text and is kept, flag or not.
+func TestFilterOffloadIgnoresLookalikes(t *testing.T) {
+	for _, line := range []string{
+		"x <!-- offload:begin -->", "<!-- offload:begin --> x", "// offload:begin", "offload:begin", "# offload:end now",
+		"see offload:begin and offload:end", "<!-- offload:begin", "| a | <!-- offload:line --> more |", "offload:line",
+	} {
+		for _, keep := range []bool{true, false} {
+			if got, err := filterOffload("a\n"+line+"\nb\n", keep); err != nil || got != "a\n"+line+"\nb\n" {
+				t.Errorf("keep=%v %q: got %q (%v)", keep, line, got, err)
+			}
+		}
+	}
+}
+
+func TestFilterOffloadRefusesMalformedBlocks(t *testing.T) {
+	for _, tc := range []struct{ name, text, want string }{
+		{"unclosed begin", "a\n<!-- offload:begin -->\nb\n", "line 2: offload:begin is never closed"},
+		{"unclosed # begin", "# offload:begin\nb", "line 1: offload:begin is never closed"},
+		{"nested begin", "<!-- offload:begin -->\na\n<!-- offload:begin -->\n", "line 3: offload:begin inside the block opened at line 1"},
+		{"end without begin", "a\n# offload:end\n", "line 2: offload:end without an offload:begin"},
+		{"second end", "# offload:begin\n# offload:end\n# offload:end\n", "line 3: offload:end without an offload:begin"},
+	} {
+		for _, keep := range []bool{true, false} {
+			if got, err := filterOffload(tc.text, keep); err == nil || !strings.Contains(err.Error(), tc.want) || got != "" {
+				t.Errorf("%s keep=%v: got %q err=%v, want error %q", tc.name, keep, got, err, tc.want)
+			}
+		}
 	}
 }
 
@@ -36,8 +68,9 @@ func offloadKit(t *testing.T) string {
 		"src/com/angeles/MinimalPan/BPanOffload.java":                         "// Angeles MinimalPan-offload-\n",
 		"srcTest/test/com/angeles/MinimalPan/BMinimalPanOffloadTest.java":     "// MinimalPan\n",
 		"srcTest/test/com/angeles/MinimalPan/BMinimalPanPermissionsTest.java": "// MinimalPan\n",
-		"module-include.xml":     "<types>\n  <!-- offload:begin -->\n  <type name=\"PanOffload\"/>\n  <!-- offload:end -->\n</types>\n",
-		"module-permissions.xml": "<permissions>\n  <name>MANAGE_EXECUTION</name>\n</permissions>\n",
+		"moduleTest-include.xml":                                              "<types>\n  <type name=\"Base\"/>\n  <!-- offload:begin -->\n  <type name=\"OffloadTest\"/>\n  <!-- offload:end -->\n</types>\n",
+		"module-include.xml":                                                  "<types>\n  <!-- offload:begin -->\n  <type name=\"PanOffload\"/>\n  <!-- offload:end -->\n</types>\n",
+		"module-permissions.xml":                                              "<permissions>\n  <name>MANAGE_EXECUTION</name>\n</permissions>\n",
 	} {
 		if err := os.MkdirAll(filepath.Dir(filepath.Join(rt, rel)), 0o755); err != nil {
 			t.Fatal(err)
@@ -52,9 +85,12 @@ func offloadKit(t *testing.T) string {
 func TestWithOffload(t *testing.T) {
 	tb := offloadKit(t)
 	without, with := t.TempDir(), t.TempDir()
-	for out, extra := range map[string][]string{without: nil, with: {"--with-offload"}} {
-		if r := run(t, tb, append([]string{"ColdBox", out, "--vendor", "Acme"}, extra...)...); r.code != 0 || r.err != "" {
-			t.Fatalf("%v: code=%d err=%q", extra, r.code, r.err)
+	for _, c := range []struct {
+		out   string
+		extra []string
+	}{{without, nil}, {with, []string{"--with-offload"}}} {
+		if r := run(t, tb, append([]string{"ColdBox", c.out, "--vendor", "Acme"}, c.extra...)...); r.code != 0 || r.err != "" {
+			t.Fatalf("%v: code=%d err=%q", c.extra, r.code, r.err)
 		}
 	}
 	rt := "ColdBox/ColdBox-rt/"
@@ -71,6 +107,9 @@ func TestWithOffload(t *testing.T) {
 	wantFile(t, on, rt+"module-include.xml", "<types>\n  <type name=\"PanOffload\"/>\n</types>\n")
 	wantFile(t, on, rt+"module-permissions.xml", "<permissions>\n  <name>MANAGE_EXECUTION</name>\n</permissions>\n")
 	wantFile(t, off, rt+"module-include.xml", "<types>\n</types>\n")
+	// with the flag the fixture's own test list (markers gone) stays; without it the station-test overlay writes it
+	wantFile(t, on, rt+"moduleTest-include.xml", "<types>\n  <type name=\"Base\"/>\n  <type name=\"OffloadTest\"/>\n</types>\n")
+	wantFile(t, off, rt+"moduleTest-include.xml", "<type class=\"test.com.acme.ColdBox.BColdBoxLinkTest\"/>\n")
 	wantFile(t, off, rt+"module-permissions.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<permissions/>\n")
 }
 

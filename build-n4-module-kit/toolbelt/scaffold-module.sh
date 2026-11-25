@@ -17,11 +17,13 @@
 #                    § -doc help profile); a library registers no type, so with it the flag is exit 2
 #   --with-offload   logic only: also emit the fixture's async-offload component (BPanOffload: an ASYNC action whose post()
 #                    hands new Invocation(...) to a module-owned named executor, a not-running guard, shutdownNow() in
-#                    stopped()), its two station tests (BxxxOffloadTest, BxxxPermissionsTest: userPermissionsScenario RBAC),
-#                    their moduleTest-include.xml entries, the MANAGE_EXECUTION request and its palette, lexicon, module-include
-#                    and MODULE-MAP rows (types/actions.md § 2); without it none of these is emitted, and any other
-#                    type is exit 2. The fixture carries them between `offload:begin`/`offload:end` marker lines (and rows
-#                    ending ` <!-- offload:line -->`) that the scaffold never emits
+#                    stopped()), its two station tests (BxxxOffloadTest, BxxxPermissionsTest: userPermissionsScenario RBAC)
+#                    and their moduleTest-include.xml entries, the MANAGE_EXECUTION request, and the palette, lexicon,
+#                    module-include.xml and MODULE-MAP.md rows (types/actions.md § 2); without it none of these is emitted,
+#                    and any other type is exit 2. The fixture marks them with whole-line `offload:begin`/`offload:end`
+#                    comments and rows ending ` <!-- offload:line -->`; a malformed block is exit 3. The scaffold never
+#                    emits a marker. Internal, not for modules: `scaffold-module.sh --strip-offload-markers <dir>` removes
+#                    the markers in place (CI and tests/scaffold-module.bats compare a --with-offload run to a stripped copy)
 #   --type <logic|dashboard|driver|library|service>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay

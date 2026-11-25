@@ -15,9 +15,9 @@ func verbatimFixtureFile(src string) bool {
 func rewriteAll(string) bool { return false }
 
 // fileShape lets a copy drop a source file or change its text before the rules run: rel is the slash path below
-// the copied root, text the file as read. keep=false skips the file. A nil shape copies every file as it is. Only
+// the copied root, text the file as read. keep=false skips the file, an error stops the copy. A nil shape copies every file as it is. Only
 // the fixture copy uses one (offload.go); jars and the Gradle wrapper (verbatim) never reach it.
-type fileShape func(rel, text string) (out string, keep bool)
+type fileShape func(rel, text string) (out string, keep bool, err error)
 
 // copyTree copies every regular file under srcRoot to dstRoot. The relative path goes through pathRules;
 // the content goes through shape (if any) and then textRules unless verbatim(src). Directories are created as needed.
@@ -46,7 +46,10 @@ func copyTree(srcRoot, dstRoot string, pathRules, textRules []rule, verbatim fun
 			text := string(data)
 			if shape != nil {
 				var keep bool
-				if text, keep = shape(rel, text); !keep {
+				var err error
+				if text, keep, err = shape(rel, text); err != nil {
+					return err
+				} else if !keep {
 					continue
 				}
 			}

@@ -325,15 +325,15 @@ jobs:
           # This step verifies only the scaffold emission itself: scaffold MinimalPan into RUNNER_TEMP,
           # then diff -r the output against the bundled fixture (excluding build/ and .gradle/).
           # The logic fixture carries the opt-in async-offload component, so the round trip runs with --with-offload
-          # (every fixture file is emitted) and compares against a copy of the fixture whose offload marker lines
-          # (`offload:begin` / `offload:end` own lines, and a ` <!-- offload:line -->` row suffix) are removed:
-          # the markers exist only in the fixture, the scaffold never emits them. A run without the flag is pinned
-          # by tests/scaffold-module-offload.bats (OFF1).
+          # (every fixture file is emitted) and compares against a copy of the fixture whose offload marker lines are
+          # removed by the scaffold's own internal mode (--strip-offload-markers: the one definition of a marker, in
+          # go/internal/scaffoldmodule). The markers exist only in the fixture, the scaffold never emits them. A run
+          # without the flag is pinned by tests/scaffold-module-offload.bats (OFF1).
           OUT="$RUNNER_TEMP/scaffold-ci"
           FX="$RUNNER_TEMP/scaffold-ci-fixture"
           mkdir -p "$OUT" "$FX"
           cp -r build-n4-module-kit/fixtures/MinimalPan "$FX/"
-          grep -rlE 'offload:(begin|end|line)' "$FX/MinimalPan" | xargs sed -i -e '/offload:begin/d' -e '/offload:end/d' -e 's/ <!-- offload:line -->$//'
+          bash build-n4-module-kit/toolbelt/scaffold-module.sh --strip-offload-markers "$FX/MinimalPan"
           bash build-n4-module-kit/toolbelt/scaffold-module.sh MinimalPan "$OUT" --vendor Angeles --with-offload
           diff -r --exclude=build --exclude=.gradle "$OUT/MinimalPan" "$FX/MinimalPan"
 

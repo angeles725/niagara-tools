@@ -17,7 +17,7 @@ func stationTestOverlay(toolbelt, dest string, n names, typ moduleType, withOffl
 		return failf(ExitEnv, stationTestMissing, root)
 	}
 	rt := dest + "/" + n.module + "/" + n.module + "-rt"
-	if err := copyTree(root, rt, n.templatePathRules(), n.templateTextRules(typ.linkInSlots), rewriteAll, keepFixtureTestList(withOffload)); err != nil {
+	if err := copyTree(root, rt, n.templatePathRules(), n.templateTextRules(typ.linkInSlots), rewriteAll, skipTestIncludeOverlay(withOffload)); err != nil {
 		return failf(ExitEnv, writeFault, err)
 	}
 	return nil

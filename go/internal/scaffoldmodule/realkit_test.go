@@ -30,7 +30,11 @@ func TestRealKitRoundTrip(t *testing.T) {
 		want, got := tree(t, filepath.Join(kit, "fixtures", fixture)), tree(t, filepath.Join(out, fixture))
 		if typ == "logic" {
 			for rel, content := range want {
-				want[rel] = filterOffload(content, true)
+				stripped, err := filterOffload(content, true)
+				if err != nil {
+					t.Fatalf("%s: %v", rel, err)
+				}
+				want[rel] = stripped
 			}
 		}
 		if len(want) == 0 {

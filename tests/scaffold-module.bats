@@ -51,28 +51,31 @@ load lib/scaffold-setup
 }
 
 # The logic fixture carries the opt-in async-offload component (--with-offload): its marker lines exist only in the
-# fixture, so the round trip compares the --with-offload tree with the fixture minus them (tests/scaffold-module-offload.bats).
+# fixture, so the round trip compares the --with-offload tree with a copy of the fixture whose markers the scaffold's
+# own internal mode removes (the same definition CI uses). Prints the copy's MinimalPan directory.
 fixture_without_markers() {
   local copy="$BATS_TEST_TMPDIR/fixture"
   mkdir -p "$copy"
   cp -r "$FIXTURE" "$copy/"
-  grep -rlE 'offload:(begin|end|line)' "$copy/MinimalPan" | xargs sed -i -e '/offload:begin/d' -e '/offload:end/d' -e 's/ <!-- offload:line -->$//'
-  FIXTURE_PLAIN="$copy/MinimalPan"
+  "$SC" --strip-offload-markers "$copy/MinimalPan"
+  printf '%s\n' "$copy/MinimalPan"
 }
 
 @test "TC3: the emitted MinimalPan tree (--with-offload) byte-equals the bundled fixture minus its offload markers (diff -r, minus build/.gradle)" {
-  fixture_without_markers
+  local plain
+  plain="$(fixture_without_markers)"
   run "$SC" MinimalPan "$OUT" --vendor Angeles --with-offload
   [ "$status" -eq 0 ]
-  run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE "$OUT/MinimalPan" "$FIXTURE_PLAIN"
+  run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE "$OUT/MinimalPan" "$plain"
   [ "$status" -eq 0 ]
 }
 
 @test "TC-K8: the emitted tree is identical under HOME=/nonexistent (no \$HOME coupling)" {
-  fixture_without_markers
+  local plain
+  plain="$(fixture_without_markers)"
   HOME=/nonexistent run "$SC" MinimalPan "$OUT" --vendor Angeles --with-offload
   [ "$status" -eq 0 ]
-  run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE "$OUT/MinimalPan" "$FIXTURE_PLAIN"
+  run diff -r --exclude=build --exclude=.gradle $ST_EXCLUDE "$OUT/MinimalPan" "$plain"
   [ "$status" -eq 0 ]
 }
 

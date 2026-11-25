@@ -9,7 +9,7 @@
 // text, args.go the command line, name.go the ModuleName rule, values.go the option gate (vendor required, version
 // shapes), subst.go the substitution rules, copytree.go the tree copy, cleanup.go the
 // claim of the destination and the removal of a failed emit, interrupt.go the signals held during the emit, overlay.go the station-test overlay
-// and the ledger, login.go the dashboard's login overlay, offload.go the logic fixture's opt-in async-offload component, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
+// and the ledger, login.go the dashboard's login overlay, offload.go the logic fixture's opt-in async-offload component, strip.go its internal marker-strip mode, concern.go the add-concern passthrough, command.go the order of the steps and the exits.
 package scaffoldmodule
 
 import (
@@ -44,6 +44,9 @@ func Main(args []string, s cli.Stdio) int {
 	toolbelt := s.Env(ToolbeltEnv)
 	if len(args) > 0 && args[0] == concernCommand {
 		return addConcern(toolbelt, args, s)
+	}
+	if len(args) > 0 && args[0] == stripCommand {
+		return stripMarkers(args, s)
 	}
 	dest, f := scaffold(toolbelt, args)
 	if f != nil {
