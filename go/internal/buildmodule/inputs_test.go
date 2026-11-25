@@ -49,7 +49,11 @@ func TestInputFaults(t *testing.T) {
 			}},
 		{"no niagara_home",
 			func(f *fixture) []string { return []string{"--install-into-home", f.root, "Foo"} },
-			func(f *fixture) string { return "build.sh: pass niagara_home (arg 3) or export niagara_home\n" }},
+			func(f *fixture) string {
+				return "build.sh: pass niagara_home (arg 3) or export niagara_home\n" +
+					"  no mirror under " + f.env["HOME"] + ": make one with toolbelt/mirror-niagara-home.sh <installation> " +
+					f.env["HOME"] + "/niagara-mirror-<version>\n"
+			}},
 		{"not a niagara_home",
 			func(f *fixture) []string { return []string{"--install-into-home", f.root, "Foo", f.dir} },
 			func(f *fixture) string { return "build.sh: not a niagara_home (no etc/m2/repository): " + f.dir + "\n" }},
