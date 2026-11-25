@@ -1,0 +1,39 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-subscribe-js  @DIR@/src/block.js:2  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+WARN  lint-subscribe-js  @DIR@/src/log.js:2  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+WARN  lint-subscribe-js  @DIR@/src/multi.js:4  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+WARN  lint-subscribe-js  @DIR@/src/near.js:2  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+WARN  lint-subscribe-js  @DIR@/src/str.js:2  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/block.js --
+/* this view uses bajaux/mixin/subscriberMixIn */
+var sub = new baja.Subscriber();
+-- src/import.js --
+import subscriberMixIn from 'bajaux/mixin/subscriberMixIn';
+var sub = new baja.Subscriber();
+-- src/log.js --
+console.log('a', 'bajaux/mixin/subscriberMixIn');
+var sub = new baja.Subscriber();
+-- src/multi.js --
+/*
+ * see bajaux/mixin/subscriberMixIn
+ */
+var sub = new baja.Subscriber();
+-- src/named.js --
+define('view', ['baja!', 'bajaux/mixin/subscriberMixIn'], function (baja, mixIn) {
+  var sub = new baja.Subscriber();
+});
+-- src/near.js --
+define(['bajaux/mixin/subscriberMixInX'], function (x) {
+  var sub = new baja.Subscriber();
+});
+-- src/req.js --
+require(['baja!', 'bajaux/mixin/subscriberMixIn'], function (baja, mixIn) {
+  var sub = new baja.Subscriber();
+});
+-- src/str.js --
+var id = 'bajaux/mixin/subscriberMixIn';
+var sub = new baja.Subscriber();

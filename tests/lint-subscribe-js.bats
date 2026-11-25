@@ -79,6 +79,36 @@ stage() { local f; for f in "$@"; do cp "$FIX/$f" "$SRC/"; done; }
   [ "$output" = "$W/mixin-comment.js:2  $NT" ]
 }
 
+@test "SJS-mixin-code: only a module id in a define/require list or an import pairs; a block comment, a string, another call or a longer id does not" {
+  # Mutation: SJS-mixin-code -- matching the id as raw text pairs the block-comment, string, log and longer-id files
+  stage mixin-block-comment.js mixin-block-multi.js mixin-import.js mixin-longer-id.js mixin-named-define.js
+  stage mixin-other-call.js mixin-require.js mixin-string.js
+  run "$L" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$W/mixin-block-comment.js:2  $NT
+$W/mixin-block-multi.js:4  $NT
+$W/mixin-longer-id.js:2  $NT
+$W/mixin-other-call.js:2  $NT
+$W/mixin-string.js:2  $NT" ]
+}
+
+@test "SJS-waiver-subscribe: a waiver on the first .subscribe( line or the comment-only line above silences its row; a later line's does not" {
+  # Mutation: SJS-waiver-subscribe -- skipping the waiver check on the subscribe-no-teardown row WARNs the waived files
+  stage subscribe-waived-inline.js subscribe-waived-above.js subscribe-waived-later.js
+  run "$L" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$W/subscribe-waived-later.js:1  $ST" ]
+}
+
+@test "SJS-bare-paired: a bare marker is a FAIL even in a file with a teardown or the mixin (exit 1, no WARN row)" {
+  # Mutation: SJS-bare-paired -- returning at the teardown before the bare-marker scan hides the FAIL in a paired file
+  stage bare-paired.js bare-mixin.js
+  run "$L" "$SRC"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  lint-subscribe-js  $SRC/bare-mixin.js:1  waiver-no-reason: lint-subscribe-js: needs a reason after the colon
+FAIL  lint-subscribe-js  $SRC/bare-paired.js:1  waiver-no-reason: lint-subscribe-js: needs a reason after the colon" ]
+}
+
 @test "SJS-detach: detach() alone is not a teardown (it removes handlers, the components stay subscribed)" {
   # Mutation: SJS-detach -- counting detach( as a teardown passes the Subscriber that is only detached
   stage detach.js

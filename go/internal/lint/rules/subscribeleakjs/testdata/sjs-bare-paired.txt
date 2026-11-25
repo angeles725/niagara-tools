@@ -1,0 +1,14 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-subscribe-js  @DIR@/src/bare-mixin.js:1  waiver-no-reason: lint-subscribe-js: needs a reason after the colon
+FAIL  lint-subscribe-js  @DIR@/src/bare-paired.js:1  waiver-no-reason: lint-subscribe-js: needs a reason after the colon
+-- stderr --
+-- src/bare-mixin.js --
+// lint-subscribe-js:
+define(['bajaux/mixin/subscriberMixIn'], function () { var s = new baja.Subscriber(); });
+-- src/bare-paired.js --
+// lint-subscribe-js:
+var s = new baja.Subscriber();
+s.unsubscribeAll();

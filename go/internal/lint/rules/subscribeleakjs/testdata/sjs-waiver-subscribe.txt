@@ -1,0 +1,14 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-subscribe-js  @DIR@/src/c.js:1  subscribe-no-teardown: .subscribe( on a Subscriber that this file never unsubscribes (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/a.js --
+function go(comp) { this.$sub.subscribe(comp); } // lint-subscribe-js: the owner unsubscribes in Page.js
+-- src/b.js --
+// lint-subscribe-js: the owner unsubscribes in Page.js
+function go(comp) { this.$sub.subscribe(comp); }
+-- src/c.js --
+function go(comp) { this.$sub.subscribe(comp); }
+function more(comp) { this.$sub.subscribe(comp); } // lint-subscribe-js: waives this line, not the first

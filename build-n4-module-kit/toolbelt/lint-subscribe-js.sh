@@ -11,7 +11,8 @@
 #                          teardown call and no `new baja.Subscriber(` site; the first one only. `subject.subscribe(` and
 #                          `store.subscribe(` (RxJS, Redux) are not Subscribers.
 #   waiver-no-reason       FAIL: a `// lint-subscribe-js:` marker with nothing after the colon; the site is not waived.
-# A file that loads `bajaux/mixin/subscriberMixIn` is paired too: the mixin's destroy detaches the widget's Subscriber and
+# A file that loads `bajaux/mixin/subscriberMixIn` as a module id in code (a define/require dependency or an import; not a
+# comment or another string) is paired too: the mixin's destroy detaches the widget's Subscriber and
 # calls unsubscribeAll() on it (organized/bajaux/bajaux-ux/extracted/rc/mixin/subscriberMixIn.js:304-317) [CERT].
 # Comments, strings, templates and regex literals are no code, and `function unsubscribeAll()` is no call (a call has a
 # `.` before it). The pairing is per file, as the Java twin's is: one teardown call pairs every site of the file. Waive a
@@ -43,6 +44,9 @@
 # Mutation: SJS-leak -- ignoring the new baja.Subscriber( site reports nothing for an un-torn-down Subscriber
 # Mutation: SJS-paired -- reading only teardown calls above the site WARNs the doDestroy hook and the one-call file
 # Mutation: SJS-mixin -- ignoring the mixin id WARNs the view whose widget destroy already unsubscribes
+# Mutation: SJS-mixin-code -- matching the id as raw text pairs the block-comment, string, log and longer-id files
+# Mutation: SJS-waiver-subscribe -- skipping the waiver check on the subscribe-no-teardown row WARNs the waived files
+# Mutation: SJS-bare-paired -- returning at the teardown before the bare-marker scan hides the FAIL in a paired file
 # Mutation: SJS-detach -- counting detach( as a teardown passes the Subscriber that is only detached
 # Mutation: SJS-notcode -- matching raw text pairs a leak with a commented or quoted unsubscribe and flags a commented site
 # Mutation: SJS-subscribe -- matching any receiver WARNs subject.subscribe( and store.subscribe(, or reports every subscribe

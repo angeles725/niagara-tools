@@ -11,7 +11,7 @@
 //	                             elsewhere and handed in); the first one only, as a file with a site already has its row.
 //	waiver-no-reason       FAIL  a `// lint-subscribe-js:` marker with nothing after the colon; the site is not waived.
 //
-// A file that loads bajaux/mixin/subscriberMixIn is paired too: the mixin's destroy calls unsubscribeAll()
+// A file that loads bajaux/mixin/subscriberMixIn as a module id in code (mixin.go) is paired too: the mixin's destroy calls unsubscribeAll()
 // (organized/bajaux/bajaux-ux/extracted/rc/mixin/subscriberMixIn.js:304-317). detach() alone does not pair a site: it removes event handlers only and the components stay subscribed
 // (baja.Subscriber.txt:644-672 below). Reading: jssrc.Code, so a comment, a string, a template or a regex never
 // matches, and `function unsubscribeAll()` is no call (a call has a `.` before it). Waiver:
@@ -36,7 +36,6 @@ package subscribeleakjs
 import (
 	"regexp"
 	"sort"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/jssrc"
@@ -74,9 +73,6 @@ var (
 	subName = regexp.MustCompile(`^([$_]*(sub|subscriber)([A-Z0-9_$].*)?|.*(Sub|Subscriber))$`)
 )
 
-// mixInID is the module id a view loads to get the Subscriber teardown of its widget destroy.
-const mixInID = "bajaux/mixin/subscriberMixIn"
-
 const tail = ": the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally " +
 	"or a widget doDestroy (types/dashboard.md, BajaScript section)"
 
@@ -98,7 +94,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			return sort2(out), nil // one call pairs every site of the file, before or after it
 		}
 	}
-	if usesMixIn(f.Raw) {
+	if loadsMixIn(f.Raw) {
 		return sort2(out), nil
 	}
 	sites, first := 0, 0
@@ -117,19 +113,6 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		out = append(out, lint.Finding{Line: first, Msg: msgSubscribe})
 	}
 	return sort2(out), nil
-}
-
-// usesMixIn: the file loads bajaux/mixin/subscriberMixIn outside a // comment. The mixin's destroy detaches the widget's
-// Subscriber and calls unsubscribeAll() on it (subscriberMixIn.js:304-317), so the view needs no call of its own.
-func usesMixIn(raw []string) bool {
-	for _, ln := range raw {
-		if i := strings.Index(ln, mixInID); i >= 0 {
-			if c := commentAt(ln); c < 0 || i < c {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // subscribesOnSubscriber: ln calls .subscribe( on a receiver named for a Subscriber.
