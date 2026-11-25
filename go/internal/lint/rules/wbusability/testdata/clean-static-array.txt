@@ -1,0 +1,9 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/BFooView.java --
+class BFooView extends BWbComponentView {
+  static final BOrd[] HOMES = {};
+}

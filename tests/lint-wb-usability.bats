@@ -81,6 +81,22 @@ view() { printf '%s\n' "$@" > "$ROOT/BFooView.java"; }
   [ "$status" -eq 0 ]
 }
 
+@test "WBU-waiver-window: a waiver reaches five lines up but not into the previous class" {
+  # Mutation: WBU-waiver-window -- scanning above the end of the previous class lets one class's waiver waive the next
+  view '// lint-wb-usability: waived set by the wizard' '' '' '' '' 'class BFooView extends BWbComponentView {' '  BOrd target;' '}'
+  run "$L" --strict "$ROOT"
+  [ "$status" -eq 0 ]
+  view '// lint-wb-usability: waived set by the wizard' '' '' '' '' '' 'class BFooView extends BWbComponentView {' '  BOrd target;' '}'
+  run "$L" --strict "$ROOT"
+  [ "$status" -eq 1 ]
+  view '// lint-wb-usability: waived set by the wizard' 'class BFooView extends BWbComponentView {' '  BOrd target;' '}' \
+    'class BBarView extends BWbComponentView {' '  BOrd source;' '}'
+  run "$L" --strict "$ROOT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "WARN  lint-wb-usability  $ROOT/BFooView.java:5  BBarView extends BWbComponentView"* ]]
+  [ "${#lines[@]}" -eq 1 ]
+}
+
 @test "WBU-base: only a BWbComponentView subclass is judged" {
   # Mutation: WBU-base -- matching any base class WARNs a BWbView or a BComponent that holds a BOrd
   view 'class BFooView extends BComponent {' '  BOrd target;' '}'

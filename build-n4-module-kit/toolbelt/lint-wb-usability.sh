@@ -10,8 +10,9 @@
 #      `@NiagaraProperty(... type = "BOrd")` (also "baja:Ord");
 #   3. the FILE has neither a `BComponentChooser` in code (not in a comment, a string or an import line) nor a
 #      `targetType` facet (an identifier, or text inside a string: the facet key).
-# Waiver: a comment `lint-wb-usability: waived <reason>` on the class line or in the five lines above it. The reason is
-# required, and a string literal holding the same text is not a waiver.
+# Waiver: a comment `lint-wb-usability: waived <reason>` on the class line or in the five lines above it, never from
+# above the end of the previous class or from inside its body. The reason is required, and a string literal holding
+# the same text is not a waiver.
 # [ev: retro apillm-headless-servlet-rt-4.14-deltas Δ7] [ev: types/wb-widgets.md UX rule]
 #
 # Left out on purpose (needs the semantic reading the 2026-09 triage deferred; a noisy lint costs the kit its
@@ -33,6 +34,7 @@
 # Mutation: WBU-import -- counting an import line as a BComponentChooser invocation clears a view that only imports it
 # Mutation: WBU-static -- counting a static BOrd constant as a member WARNs a view that only names a fixed ORD
 # Mutation: WBU-waiver-string -- reading the waiver from the code view too lets a string literal waive a class
+# Mutation: WBU-waiver-window -- scanning above the end of the previous class lets one class's waiver waive the next
 # Mutation: WBU-base -- matching any base class WARNs a BWbView or a BComponent that holds a BOrd
 # VCS-free by design.
 set -u

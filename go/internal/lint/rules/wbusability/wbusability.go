@@ -9,8 +9,9 @@
 // non-static field of type BOrd or BOrd[], or a class-level @NiagaraProperty whose type is "BOrd" (or "baja:Ord").
 // The chooser is an identifier in code, never in a comment or a string, and never in an import line (importing it
 // is not opening it); targetType counts as an identifier or as text inside a literal (the facet key). A comment
-// `lint-wb-usability: waived <reason>` on the class line or in the five lines above it waives the class; the
-// reason is required and a string that holds the same text is not a waiver.
+// `lint-wb-usability: waived <reason>` on the class line or in the five lines above it waives the class, but never
+// from above the end of the previous class or from inside its body; the reason is required and a string that holds
+// the same text is not a waiver.
 //
 // What it does not judge: whether the BOrd is edited by the user or only held, whether the controller that opens
 // the chooser lives in another class or file, drag-drop from the nav tree, the status table, and a view that
@@ -65,12 +66,13 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		return nil, nil
 	}
 	var out []lint.Finding
-	for _, c := range javasrc.Classes(toks) {
+	classes := javasrc.Classes(toks)
+	for _, c := range classes {
 		if c.Extends != base {
 			continue
 		}
 		member := ordMember(toks, c)
-		if member == "" || waived(f, c.Line) {
+		if member == "" || waived(f, c.Line, floor(toks, classes, c)) {
 			continue
 		}
 		out = append(out, lint.Finding{Line: c.Line + 1, Msg: c.Name + " extends " + base + " and holds a BOrd (" + member + "), " + taken})
@@ -96,7 +98,9 @@ func picker(toks []javasrc.Token) bool {
 	return false
 }
 
-// ordMember describes the first BOrd member of c, or "" when it has none.
+// ordMember describes the BOrd member of c that the lookup finds first, or "" when it has none: a class-level
+// @NiagaraProperty of type BOrd wins over the fields, then the first non-static field of type BOrd or BOrd[], in
+// source order. Only the first is named; a class with several still gets one row.
 func ordMember(toks []javasrc.Token, c javasrc.Class) string {
 	if name := ordProperty(toks, c); name != "" {
 		return name
@@ -175,16 +179,4 @@ func slotName(toks []javasrc.Token, from, to, k int) string {
 		}
 	}
 	return ""
-}
-
-// waived: a comment with the waiver and a reason stands on class line (0-based) or in the lines above it. The
-// marker counts only where Strip blanked it, so a string literal holding the same text is not a waiver.
-func waived(f *javasrc.File, line int) bool {
-	stripped := f.Stripped()
-	for i := line; i >= 0 && i >= line-waiverWindow; i-- {
-		if waiver.MatchString(f.Raw[i]) && !waiver.MatchString(stripped[i]) {
-			return true
-		}
-	}
-	return false
 }

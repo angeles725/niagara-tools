@@ -18,7 +18,7 @@ Not yet fully documented — seed pointers, feed via the retro step when you bui
 
 - `-wb` manager rows that point at station components: Add an in-dialog "pick from station" chooser for Add and Edit flows.
 - The `BAbstractManager`+`BComponentChooser` combination (see §Manager recipe) is the proven implementation — avoid hand-coded blank-Add patterns.
-- **Lint `lint-wb-usability`** (implemented in part: `toolbelt/lint-wb-usability.sh`, WARN only). A class that extends `BWbComponentView` and holds a `BOrd` member (a non-static field, or a class-level `@NiagaraProperty` of type `BOrd`), in a file with no `BComponentChooser` in code and no `targetType` facet, is a candidate. Not judged: whether the user edits the ORD, a chooser opened from another class or file, drag-drop, the status table, and views that extend a subclass or a manager base. A comment `lint-wb-usability: waived <reason>` on or just above the class waives it.
+- **Lint `lint-wb-usability`** (implemented in part: `toolbelt/lint-wb-usability.sh`, WARN only). A class that extends `BWbComponentView` and holds a `BOrd` member (a non-static field, or a class-level `@NiagaraProperty` of type `BOrd`), in a file with no `BComponentChooser` in code and no `targetType` facet, is a candidate. Not judged: whether the user edits the ORD, a chooser opened from another class or file, drag-drop, the status table, and views that extend a subclass or a manager base. A comment `lint-wb-usability: waived <reason>` on the class line or up to five lines above it waives it.
 
 `[ev: user directive 2026-09-20]`
 
