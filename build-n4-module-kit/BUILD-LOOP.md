@@ -354,8 +354,10 @@ other exit is nre's own, passed through. Per tool:
 - `recompile <niagara_home> <dir|bog> [-alias:<a>] [-tsaUrl:<u>]`: `RecompileTool` recompiles and re-signs the
   Program objects of a bog, or of every bog under a folder. It never takes the password in argv (the process
   list and shell history show it): `-password...` is refused and nre prompts, so run it from a terminal. It exits 0
-  after a missing file, a bad signing key or a Program that fails to compile, so the helper reads the output: an
-  `ERROR` line, or no `--- Processed <file>!` line, is exit 1. Re-sign a bog you can restore from git.
+  after a missing file, a bad signing key or a Program that fails to compile, so when its output is piped the
+  helper reads it: an `ERROR` line, or no `--- Processed <file>!` line, is exit 1. On a terminal nre gets the real
+  stdout and stderr, so the helper judges by the bog files instead: no `*.bog` under the target rewritten is
+  exit 1. Re-sign a bog you can restore from git.
 `[ev: corpus B1453 §1453.4]` `[ev: corpus B1453 §1453.5]` (issue #851)
 
 **Restart a lab station from the loop (no console window):** `toolbelt/lab-station.sh start|stop|restart <station>`
