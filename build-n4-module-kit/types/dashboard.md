@@ -681,6 +681,12 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **Document a kiosk recovery ladder per HMI module, each layer with its blind spot:** (1) in-page — `fetchT` timeout + the success-time watchdog (§ Poll loop reliability); (2) an operator "Refresh" button; (3) station-side liveness — a page heartbeat feeding an `hmiStatus` (Healthy / Stale / Down) on the station plus a Workbench "reload HMI" action; (4) physical — panel cable/power. Layers (1)-(2) die with the page: neither can recover a page REPLACED by a non-app page (login/error), and only (3)-(4) observe or cover that case. `[ev: retro dashboard-frontend-reliability-rules Δ4]`
 
 - **`dashboard-preview` (`~/.local/lib/niagara-go/bin/dashboard-preview`) has `--editor` (a preview-only overlay label editor — drag + live rx/ry readout, the sanctioned way to reposition overlays without touching the module) and `--mock <json>` (seeds `/api/*` with realistic `{v,st,nm}`); for an off-site operator, deliver a screenshot/PDF via a Playwright script (`page.click('[data-page=X]')` for a non-default tab) + `chrome --headless --print-to-pdf` with a `@page A4` block.** [ev: retro editing-base64-heavy-spa-and-the-preview-screenshot-pdf-pipeline · U9] [ev: retro dashboardpan-ux-direct-build #5]
+- **Try the operator write flow in the preview, not only the read view:** `dashboard-preview --mock <json>` applies a
+  POST `{ord, value}` to the mock, so later reads show it, and runs the side effects the mock declares under
+  `__effects` (`{"__effects": {"hoaMode": {"autoLock": false}}}`: an HOA write releases the auto lock; an
+  acknowledge can clear the lock and the latch the same way). Add `--config-login` to make writes need the mock
+  session, as on the station. Declare the effects your module's Java really has; the preview only replays them.
+  `[ev: issue #869]`
 - **A scenario-driven preview mock must see the page's scenario selector:** a fixed `jsonUrl` (`/<prefix>/api/equipment`) never carries the page's `?worst=1`/`?degraded=1` query, so `page.goto(url + '?worst=1')` silently exercises the DEFAULT mock. Either the SPA (or the preview server) builds `jsonUrl` from its OWN `window.location.search`, or the sweep/test harness intercepts the API request and appends the scenario query explicitly — never assume a page-URL scenario reaches the mock. `[ev: retro comppan-fase2-amps-alarms Δ4]`
 
 ## Real alarms (Phase B — see corpus B6/B8, chihuahua B166)
