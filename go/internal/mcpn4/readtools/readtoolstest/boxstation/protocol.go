@@ -115,6 +115,7 @@ func (st *Station) invoke(arg map[string]any) (any, error) {
 		return nil, fmt.Errorf("KeyError: '%s'", h)
 	}
 	action, _ := arg["a"].(string)
+	var reply any
 	switch {
 	case action == "save" && n == st.root:
 		st.saves++
@@ -136,12 +137,18 @@ func (st *Station) invoke(arg map[string]any) (any, error) {
 		st.fill(leaf, whole)
 	case action == "active" || action == "inactive" || action == "auto" || action == "ping":
 	default:
-		return nil, fmt.Errorf("ValueError: unsupported action %s", action)
+		answered := false
+		if st.Respond != nil {
+			reply, answered = st.Respond(st, action, n)
+		}
+		if !answered {
+			return nil, fmt.Errorf("ValueError: unsupported action %s", action)
+		}
 	}
 	if st.AfterInvoke != nil {
 		st.AfterInvoke(st, action, n)
 	}
-	return nil, nil
+	return reply, nil
 }
 
 // rewriteConfig appends to config.bog and moves its mtime 5 s ahead, like a station persisting.

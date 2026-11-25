@@ -54,7 +54,11 @@ type Station struct {
 	AfterAdd    func(st *Station, node *Node)
 	AfterSet    func(st *Station, node *Node)
 	AfterInvoke func(st *Station, action string, node *Node)
-	URL         string
+	// Respond, when set, is asked about an action the fake does not know: it returns the reply and
+	// true to accept it (AfterInvoke still runs), false to leave the action refused. It runs with
+	// the station locked.
+	Respond func(st *Station, action string, node *Node) (reply any, accepted bool)
+	URL     string
 
 	mu sync.Mutex
 	// hook is guarded by mu; see SetHook.

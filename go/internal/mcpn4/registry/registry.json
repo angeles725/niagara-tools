@@ -2959,6 +2959,80 @@
    "needs_session": false
   },
   {
+   "name": "n4_register_bacnet_spyder",
+   "description": "Register a Honeywell BACnet Spyder in one planned batch: the sequence create the device, set its address (MS/TP, network_number and mac) and its objectId (instance), write the instance into the controller (writeDeviceInstance) and, with discover, run the point discovery. One dry run lists every step (the add in plan.ops, the rest in plan.follow_up) and issues one confirmation token for all of them. name is the display name, stored escaped like n4_create_component (2016 is stored as $32016). The dry run refuses, before any token: a network that is not a bacnet:BacnetNetwork, is disabled or is in fault; a licence whose globalCapacity device.limit the new device would exceed; a name already under the network (the refusal gives the escaped BQL form, name = '$2432016', $24 being a literal $); an instance another BACnet device holds (one BQL over every device); instance 9999 (the factory instance every new Spyder ships with). The run stops at the first step the station refuses and refuses writeDeviceInstance on a device that is in fault (observed.failed_step says which), the verdict then stays unverified. The read-back loads the device (address and objectId as requested), asks the controller its instance (configured_instance, online_instance) and summarizes the discovery (job, found, unread, hardware); expected_model checks the model the discovery reads (a mismatch names the modelChange to run). The inverse removes the created device; writeDeviceInstance has no inverse (a field write), and the plan says so. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "network_ord": {
+      "type": "string",
+      "description": "ORD of the BACnet network the Spyder is added under, e.g. station:|slot:/Drivers/BacnetNetwork"
+     },
+     "name": {
+      "type": "string",
+      "description": "Display name of the new device; stored escaped (2016 is stored as $32016)"
+     },
+     "network_number": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65534,
+      "description": "BACnet network number of the MS/TP trunk the controller is on (the 2 of 2:0c)"
+     },
+     "mac": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 254,
+      "description": "MS/TP station number of the controller (12 is stored as the octet 0c)"
+     },
+     "instance": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4194302,
+      "description": "Final device instance: written to config/deviceObject/objectId and into the controller; never the factory instance 9999"
+     },
+     "discover": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) runs the point discovery after the instance is written and summarizes it; false stops after the instance"
+     },
+     "wait_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 120,
+      "description": "Seconds to wait for the discovery job (discover true)"
+     },
+     "expected_model": {
+      "type": "string",
+      "description": "Optional Spyder model (PUB6438S, PUB1012S, ...) the discovered hardware id must name; needs discover true"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "network_ord",
+     "name",
+     "network_number",
+     "mac",
+     "instance"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_remove_component",
    "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. The dry run scans the write-scope prefix that holds parent_ord (or link_scan_ord) to depth 6 for links from the subtree into components outside it; when it finds any it refuses unless acknowledge_links is true, and then records them so n4_rollback re-creates them. compact=true summarises the snapshot in the dry run instead of listing it. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {

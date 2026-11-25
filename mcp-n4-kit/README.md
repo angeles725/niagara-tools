@@ -1048,7 +1048,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_register_bacnet_spyder`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
 restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
@@ -1277,7 +1277,7 @@ Tool rules:
   `honeywellBacnetSpyder:BacnetSpyder`: it writes the component's
   `config/deviceObject/objectId` into the controller at the component's `address`
   (MS/TP network and MAC), so it renumbers a Spyder that still has a duplicate factory
-  instance (e.g. three units at `device:9999`). Register a new Spyder by creating the
+  instance (e.g. three units at `device:9999`). `n4_register_bacnet_spyder` does the whole sequence in one plan. By hand, register a new Spyder by creating the
   component already at its final instance and address (never at the duplicate instance:
   every I-Am of that instance would rebind it), then invoke `writeDeviceInstance`, one unit
   at a time. Its read-back asks the controller its instance (`getOnlineDeviceInstanceNumber`)
@@ -1350,6 +1350,33 @@ Tool rules:
   54 `PUB1012S`, ... with the I/O it supports): the model the station's download compares,
   so a program for another model is caught before a download; `hardware` is null on other
   devices. Live 2026-11-18: a PUB6438S Spyder lists 87 objects. No point is added. No inverse.
+- `n4_register_bacnet_spyder(network_ord, name, network_number, mac, instance, discover?, wait_seconds?, expected_model?)`
+  registers a Honeywell BACnet Spyder in one planned batch: create the device, set its MS/TP
+  address (`address/addressType` 3, `networkNumber`, `macAddress`) and `config/deviceObject/objectId`,
+  write the instance into the controller (`writeDeviceInstance`) and, with `discover` (default true),
+  run `n4_discover_points`. The dry run is one plan and one confirmation token: the add is
+  `plan.ops` (the escaped name, so `2016` is stored as `$32016`, with the type check and licence
+  device limit of `n4_create_component`), the steps that need the new device's handle are
+  `plan.follow_up`, and both are hashed into the token. The write scope is checked on the new
+  device, the journal records the add (`intent`) and the steps (`component-intent`) before they are
+  sent, and `n4_rollback` of the batch removes the device. `writeDeviceInstance` has no inverse (a
+  field write; the plan says so): to undo it, set `objectId` back and invoke it again. Refused
+  before any token: a network that is not a `bacnet:BacnetNetwork`, is disabled or is in fault; a
+  licence whose `device.limit` the new device would exceed; a name already under the network (the
+  refusal gives the escaped BQL form, `name = '$2432016'`: `$24` is a literal `$`); an `instance` another
+  BACnet device holds (one BQL over every device; when it cannot be read, or is cut or past the row cap, the dry run is refused with the reason, because a duplicate instance makes the station rebind addresses); instance
+  `9999`, the factory instance every new Spyder ships with. The run stops at the first step the
+  station refuses, and refuses `writeDeviceInstance` on a device that is in fault (as
+  `n4_invoke_action` does), or whose status it could not read (the field write is then not sent), with
+  `observed.failed_step` and an `unverified` verdict (never a `mismatch`, the device is half configured); the device and
+  its inverse stay. A step that failed with no station answer (a timeout, a dropped connection) may have been
+  applied: `failed_step` says so (for `writeDeviceInstance`, that the controller may already hold the new instance)
+  and the batch is `in_doubt`. The read-back loads the device (address and `objectId` as requested), asks the
+  controller its instance (`configured_instance`, `online_instance`) and summarizes the discovery
+  under `observed.discover` (`job`, `found`, `unread`, `hardware`; the rows stay with
+  `n4_discover_points`). `expected_model` (`PUB6438S`, `PUB1012S`, ...) compares the discovered
+  hardware: another model is a `mismatch` whose hint names the `modelChange` to run before any program
+  work. It does not ping: `n4_invoke_action ping` on the device reads the health after.
 - `n4_create_component` follows a station rename on collision (the inverse and the
   read-back use the assigned name). A display name the station can only store escaped (a
   leading digit, a space) is created under its SlotPath escape and the plan says so:

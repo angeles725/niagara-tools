@@ -15,6 +15,10 @@ import (
 // createTool is the tool whose rollback is a remove of what it created.
 const createTool = "n4_create_component"
 
+// registerTool is n4_register_bacnet_spyder: its add is a create, so its rollback removes the device
+// under the same guard.
+const registerTool = "n4_register_bacnet_spyder"
+
 // viewsJournal is the journal's merged batch views, in journal order (journal.Journal.Views).
 type viewsJournal interface {
 	Views() ([]*pyjson.Object, error)
@@ -26,7 +30,7 @@ type viewsJournal interface {
 // (newest first) to be removed with it; a child or link no batch made still refuses.
 func laterWork(c plan.Client, w *plan.State, view *pyjson.Object, ops []any, targets *pyjson.Object, bid string,
 	chain bool) ([]string, error) {
-	if get(view, "tool") != createTool || len(ops) != 1 {
+	if tool := get(view, "tool"); tool != createTool && tool != registerTool || len(ops) != 1 {
 		return nil, nil
 	}
 	remove := ops[0].(*pyjson.Object)
