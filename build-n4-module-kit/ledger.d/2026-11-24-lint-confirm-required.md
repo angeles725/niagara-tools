@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-24 -->
+<!-- last-change-note: destructive actions must carry Flags.CONFIRM_REQUIRED: a rule in types/actions.md and lint-confirm-required -->
+log: 2026-11-24 · destructive actions carry CONFIRM_REQUIRED → `types/actions.md` § 3 names the heuristic (a whole camelCase word of the action name is reset, clear, delete, remove, purge, wipe, factory, restart, reboot or overwrite), the `|` combination with OPERATOR and that the flag is a client prompt, not authorization (Flags.java:190, InvokeActionCommand.java:42-51, feDialogs.js:111-123; no station-side check in the extracted corpus). `toolbelt/lint-confirm-required.sh` is a thin wrapper over `go/internal/lint/rules/confirmrequired` (a FAIL rule, waiver `// lint-confirm-required: waived <reason>`, reason mandatory); the repo's own Java holds no hit. It is listed in `notInReport`, not a report-module member, so an existing module's report does not change.
+open_issue: the heuristic reads the action name only: an action that destroys data under another name (`changeDeviceUuid`) is outside it and stays a review item.

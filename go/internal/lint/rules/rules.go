@@ -17,6 +17,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/charsetdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/confirmrequired"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/dashboardsave"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
@@ -151,5 +152,6 @@ func All() []lint.Spec {
 		mqtttlsport.Spec(),
 		gradleuserhome.Spec(),
 		instancetypeorder.Spec(),
+		confirmrequired.Spec(),
 	}
 }
