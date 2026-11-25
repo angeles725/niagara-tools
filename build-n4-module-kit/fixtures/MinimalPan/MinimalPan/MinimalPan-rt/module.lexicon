@@ -6,6 +6,6 @@
 # --- Component type display names ---
 MinimalPan.displayName=Minimal Panel
 
-# --- MinimalPan slots ---
-MinimalPan.setpoint=Setpoint
-MinimalPan.interval=Interval
+# --- Slots: BARE slot name, never Type.slot (NSlot.java:42, read by name) ---
+setpoint=Setpoint
+interval=Interval

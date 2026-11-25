@@ -18,7 +18,7 @@ build-n4-module-kit/types/frontend-standard.md 3
 build-n4-module-kit/types/horizons.md 1
 build-n4-module-kit/types/issues-and-gotchas.md 28
 build-n4-module-kit/types/logic-authoring.md 202
-build-n4-module-kit/types/logic.md 201
+build-n4-module-kit/types/logic.md 199
 build-n4-module-kit/types/module-wiring.md 1
 build-n4-module-kit/types/moduleTest.md 11
 build-n4-module-kit/types/observability.md 8

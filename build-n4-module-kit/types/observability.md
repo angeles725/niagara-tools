@@ -32,7 +32,7 @@ do not construct a separate one in the device class. [ev: code modbusCore-rt `BM
 |---|---|
 | `FINE` / `FINEST` | Trace — normally off in production |
 | `INFO` | Operational message (startup, major state change) |
-| `WARNING` | Recoverable problem; auto-captured by `BLogHistoryService` for BQL alarms |
+| `WARNING` | Recoverable problem; kept by `BLogHistoryService` (so is `INFO`: default `minimumSeverity`, below) |
 | `SEVERE` | Error |
 | `CONFIG` | Rarely used — prefer `INFO` or `FINE` |
 
@@ -202,7 +202,8 @@ Prefer these surfaces in order:
    zero/false on restart. Use for cycle counters, error counts, last-poll timestamp.
 2. **`faultCause` string slot** — one-liner for the current fault; keep it actionable.
 3. **Spy page** — live snapshot of internal structures too large or volatile for a slot.
-4. **`WARNING`+ log messages** — auto-captured by `BLogHistoryService`; a BQL alarm rule
+4. **`INFO`+ log messages** — kept by `BLogHistoryService` (`minimumSeverity` default `info`, so INFO is kept
+   too `[ev: code com/tridium/history/log/BLogHistoryService.java:78]`); a BQL alarm rule
    can pattern-match them [INFER — B33 §33.17.3 only shows LogHistory is BQL-queryable]. Use `WARNING` for any recoverable condition operators should know.
    [ev: corpus B33; code bacnetAws-rt `BBacnetAwsNetwork.java`]
 
