@@ -94,7 +94,7 @@ func declaredFrozen(contracts *plan.Contracts, typ string, kid *pyjson.Object) (
 // vanishedWith marks in undone the batches a completed rollback of a single-component create took
 // with the component: those journaled between the create and its rollback that wrote only under it
 // (a chain=true rollback removes them with it and gives them no rollback of their own), on the same
-// station. Work journaled after the rollback is not marked, and neither is a failed rollback's.
+// station. Only a rollback whose read-back verified it counts; work journaled after it is not marked.
 func vanishedWith(views []*pyjson.Object, undone map[string]bool) {
 	index := map[string]int{}
 	for i, v := range views {
@@ -107,7 +107,7 @@ func vanishedWith(views []*pyjson.Object, undone map[string]bool) {
 	for r, v := range views {
 		of, _ := get(v, "rollback_of").(string)
 		c, ok := index[of]
-		if !ok || c >= r || get(v, "state") != "completed" || get(v, "verdict") == "failed" {
+		if !ok || c >= r || get(v, "state") != "completed" || get(v, "verdict") != "verified" {
 			continue
 		}
 		created, ok := createdComponent(views[c])
