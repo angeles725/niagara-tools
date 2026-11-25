@@ -140,6 +140,9 @@ func (t *Tools) ReadSlots(args *pyjson.Object) (*pyjson.Object, error) {
 func listSlots(nodes *pyjson.Object, d *declared, atDefault bool) ([]any, error) {
 	slots := []any{}
 	for _, name := range box.Children(nodes, "").Keys() {
+		if d.paths[name] {
+			continue // listed by name only: its declared default is listed below
+		}
 		entry, err := slotEntry(nodes, name)
 		if err != nil {
 			return nil, err

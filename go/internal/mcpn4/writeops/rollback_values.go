@@ -160,7 +160,7 @@ func unchangedSince(c plan.Client, view *pyjson.Object, ops []any, targets *pyjs
 		if !ok {
 			return &plan.PyError{Type: "AttributeError", Msg: "'" + plan.TypeName(n) + "' object has no attribute 'split'"}
 		}
-		nodes, err := c.LoadTree(where, opDepth(op, slot), box.LoadOptions{})
+		nodes, err := loadNameOnlyResolved(c, where, opDepth(op, slot), slot)
 		if err != nil {
 			return err
 		}

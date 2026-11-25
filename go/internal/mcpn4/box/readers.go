@@ -129,3 +129,18 @@ func pyIntBase16(s string) (*big.Int, bool) {
 	}
 	return n, true
 }
+
+// ByNameOnly is a loaded node with no type, value or children (instance flags allowed): the
+// station lists a frozen property at its declared default by name only, for example one written
+// back to its default while a link targets it (#890). Its value is the declared default.
+func ByNameOnly(node *pyjson.Object) bool {
+	if node == nil {
+		return false
+	}
+	for _, k := range []string{"t", "v", "s"} {
+		if _, ok := node.Get(k); ok {
+			return false
+		}
+	}
+	return true
+}

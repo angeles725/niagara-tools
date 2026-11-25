@@ -1,6 +1,7 @@
 package writeops
 
 import (
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -21,4 +22,16 @@ func restoredOrDefault(c plan.Client, nodes, op *pyjson.Object) (bool, error) {
 		nodes = filled
 	}
 	return restored(nodes, op)
+}
+
+// loadNameOnlyResolved loads where for the rollback guard. A slot the station lists by name only
+// (box.ByNameOnly: a linked frozen property set back to its default, #890) takes its declared
+// default, so the guard compares that default instead of reading null as a later change. An
+// omitted slot is left as before.
+func loadNameOnlyResolved(c plan.Client, where string, depth int, slot string) (*pyjson.Object, error) {
+	nodes, err := c.LoadTree(where, depth, box.LoadOptions{})
+	if err != nil || !box.ByNameOnly(box.Node(nodes, slot)) {
+		return nodes, err
+	}
+	return plan.Resolve(c, nodes, slot)
 }
