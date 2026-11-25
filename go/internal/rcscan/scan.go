@@ -75,7 +75,7 @@ func scanFile(src *source, o options) []lint.Finding {
 	if s.gapNR > 0 {
 		s.cssClose()
 	}
-	return s.rows
+	return append(s.rows, staticRows(src)...)
 }
 
 // blocks tracks the inline <script> (no src) and <style> blocks of an .html file, reports one over 300

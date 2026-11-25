@@ -1,0 +1,17 @@
+declared difference (issue #1035 cache-nofinger): the rc/ directory is looked for from the servlet's own directory
+upward (rc/ or src/rc/), so a source root holding src/com/... and src/rc/... finds it; a servlet with no rc/
+above it, and a file with no max-age>0 line, are judged exactly as before.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  cache-nofinger  src/com/x/BDash.java:3  Cache-Control max-age>0 on rc asset without fingerprint; rc/index.html:1 references img/a.png without ?v=
+-- stderr --
+-- m/src/com/x/BDash.java --
+class BDash extends BWebServlet {
+  void doGet(WebOp op) {
+    rsp.setHeader("Cache-Control", "public, max-age=3600");
+  }
+}
+-- m/src/rc/index.html --
+<img src="img/a.png">

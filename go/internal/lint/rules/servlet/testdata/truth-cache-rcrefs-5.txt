@@ -1,0 +1,30 @@
+declared difference (issue #1035 review R3): a module part ends the climb too: a directory holding
+module-include.xml (here the -rt part, whose source has no rc/) is never climbed past to the rc/ of the part
+or module above it (m/src/rc). The -ux part beside it keeps its own src/rc: its servlet gets the evidence.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  cache-nofinger  X-rt/src/com/BRt.java:3  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  X-ux/src/com/BUx.java:3  Cache-Control max-age>0 on rc asset without fingerprint; rc/index.html:1 references js/ux.js without ?v=
+-- stderr --
+-- m/X-rt/module-include.xml --
+<module/>
+-- m/X-rt/src/com/BRt.java --
+class BRt extends BWebServlet {
+  void doGet(WebOp op) {
+    rsp.setHeader("Cache-Control", "public, max-age=3600");
+  }
+}
+-- m/X-ux/module-include.xml --
+<module/>
+-- m/X-ux/src/com/BUx.java --
+class BUx extends BWebServlet {
+  void doGet(WebOp op) {
+    rsp.setHeader("Cache-Control", "public, max-age=3600");
+  }
+}
+-- m/X-ux/src/rc/index.html --
+<script src="js/ux.js"></script>
+-- m/src/rc/index.html --
+<img src="img/parent.png">

@@ -1,0 +1,18 @@
+-- args --
+@DIR@
+--strict
+-- want --
+exit 0
+WARN  rc-scan  rc/app.js:1  static-url-nover: /module/m/b.json has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:1  static-url-nover: img/a.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+-- stderr --
+-- rc/index.html --
+<img src="img/a.png"> <img src="img/ok.png?v=1">
+-- rc/app.js --
+fetch("/module/m/b.json", {signal: s}); fetch("js/ok.json?x=1&v=2", {signal: s});
+-- rc/vendor/lib/page.html --
+<img src="img/vendored.png"> <script src="js/vendored.js"></script>
+-- rc/ext/x.css --
+.a { background: url(img/ext.png); }
+-- rc/js/lib.min.js --
+fetch("js/min.json", {signal: s});

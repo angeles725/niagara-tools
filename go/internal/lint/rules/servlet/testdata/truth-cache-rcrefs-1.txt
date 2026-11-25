@@ -1,0 +1,30 @@
+declared difference (issue #1035 cache-nofinger): the row also reads the rc/ pages. A servlet that sets max-age>0
+is judged against the references of the rc/ directory found above its source file (rc/ or src/rc/ at or above
+it, rc/vendor and rc/ext not read): a reference to the servlet's static paths with no ?v= (a relative img/,
+css/ or js/ path, or one under /<getServletName()>/) is named in the row. An unfingerprinted max-age (line 4)
+already WARNed: the row names the first reference and the count. A max-age gated on a ?v= request (line 7)
+passed before; it now WARNs, since those requests never take the cached branch. References to /module/ and
+/file/ (the station's FileServlet) and to another mount are not the servlet's.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  cache-nofinger  BDash.java:4  Cache-Control max-age>0 on rc asset without fingerprint; rc/index.html:1 references css/app.css without ?v= (and 1 more)
+WARN  cache-nofinger  BDash.java:7  Cache-Control max-age>0 applies only to ?v= requests, but rc/index.html:1 references css/app.css without ?v= (and 1 more) -- those requests are never cached; add ?v=<module version>
+-- stderr --
+-- m/BDash.java --
+class BDash extends BWebServlet {
+  public String getServletName() { return "dash"; }
+  void doGet(WebOp op) {
+    rsp.setHeader("Cache-Control", "public, max-age=3600");
+  }
+  void asset(HttpServletRequest req, HttpServletResponse rsp) {
+    rsp.setHeader("Cache-Control", req.getParameter("v") != null ? "public, max-age=3600" : "no-cache");
+  }
+}
+-- m/rc/index.html --
+<link href="css/app.css">
+<script src="js/app.js?v=1"></script>
+<img src="/dash/img/logo.png">
+<img src="/module/x/img/y.png">
+<img src="/other/img/z.png">

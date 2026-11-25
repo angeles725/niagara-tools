@@ -97,6 +97,8 @@ All `[CERT]` under `box-rt` and `jetty-rt`. Reading them:
   `/module/…?version=<registry last build time>` (`WebUtil.java:108`, `RequireJsUtil.java:69,222`). `[CERT]` Ours
   carries `?v=<module version>` (`dashboard.md` § cache-bust).
 - **Your own servlet is not `FileServlet`:** it sets its own headers (`toolbelt/lint-servlet.sh` `cache-nofinger`).
+  A `max-age` it sets is only safe when every `rc/` reference to its paths carries `?v=`: `cache-nofinger` also
+  WARNs when the `rc/` above the servlet has one without it, and `rc-scan.sh` `static-url-nover` lists them.
 - **Budget** for images is not a Tridium number; the kit's starting points are in `frontend-standard.md` (images ship
   as separate cacheable files) and `rc-scan.sh` `datauri-budget`. `[ev: corpus B38 §38.7]`
 

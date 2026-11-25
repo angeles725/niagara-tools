@@ -249,11 +249,8 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 
 	toks := javasrc.Tokens(code)
 	decls := javasrc.Decls(toks)
-	for i, ln := range code {
-		if strings.Contains(ln, "Cache-Control") && maxAge.MatchString(ln) && !fingerprinted(toks, decls, i) {
-			add(lint.Unset, "cache-nofinger", i+1, msgCache)
-		}
-	}
+	rows, rcErr := cacheRows(f.Path, code, toks, decls)
+	out = append(out, rows...)
 
 	if hasXHR && !hasCsrf {
 		for i, sl := range code {
@@ -276,7 +273,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			add(sev, "handler-size", d.Line+1, fmt.Sprintf(msgHandler, d.Name, span, maxHandler))
 		}
 	}
-	return out, nil
+	return out, rcErr
 }
 
 // maxHandler is the handler body budget inside a servlet (modularity-gaps Δ6).

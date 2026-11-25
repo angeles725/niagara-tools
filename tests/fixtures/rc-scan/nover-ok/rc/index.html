@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html><head>
+<link rel="stylesheet" href="css/app.css?v=1.2.3">
+<script src="js/a.js?x=1&amp;v=1.2.3"></script>
+<script src="https://cdn.example.com/lib.js"></script>
+<script src="//cdn.example.com/lib2.js"></script>
+<img src="data:image/png;base64,AAAA"> <a href="#top">top</a> <a href="page.html">page</a>
+<script src="js/boot.js"></script> <!-- rc-scan: allow static-url-nover loaded once by the kiosk shell -->
+<style> .logo { background: url(img/logo.png?v=1.2.3); } </style>
+</head><body>
+<!-- <script src="js/commented.js"></script> -->
+<script>
+  require(["js/mod"], function (m) {});
+  define("css/ids", [], function () {});
+  fetch("js/data.json?v=1.2.3", { signal: ctl.signal });
+  fetch("/minimaldash/api/status", { signal: ctl.signal });
+  el.src = "img/" + name + ".png";
+</script>
+</body></html>

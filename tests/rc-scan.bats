@@ -467,3 +467,60 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [ "$status" -eq 1 ]
   [[ "$output" == *"rc/b.js:1  ord-literal"* ]]
 }
+
+# static-url-nover (issue #1035): an rc/ reference to a static asset with no ?v= keeps the old file in the browser
+# after a module update. Advisory: WARN under every mode, --strict included.
+@test "RC38: static-url-nover WARNs every reference form with no ?v= (attributes, url(), @import, fetch, new URL, import, .src)" {
+  # Mutation: RC38 -- dropping the static-url-nover pass loses every row below (RC38 sees 10 rows)
+  run "$RS" "$FX/nover"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/index.html:3  static-url-nover: css/app.css has no ?v= query"* ]]
+  [[ "$output" == *"rc/index.html:4  static-url-nover: img/logo.png "* ]]
+  [[ "$output" == *"rc/index.html:6  static-url-nover: js/app.js "* ]]
+  [[ "$output" == *"rc/index.html:7  static-url-nover: /module/demo/img/a.png "* ]]
+  [[ "$output" == *"rc/index.html:9  static-url-nover: js/data.json "* ]]
+  [[ "$output" == *"rc/css/app.css:1  static-url-nover: css/theme.css "* ]]
+  [[ "$output" == *"rc/css/app.css:2  static-url-nover: /file/demo/img/b.png "* ]]
+  [[ "$output" == *"rc/js/app.js:1  static-url-nover: js/lib.js "* ]]
+  [[ "$output" == *"rc/js/app.js:2  static-url-nover: img/c.svg "* ]]
+  [[ "$output" == *"rc/js/app.js:3  static-url-nover: img/d.png "* ]]
+  [ "$(grep -c 'static-url-nover' <<<"$output")" -eq 10 ]
+}
+
+@test "RC39: static-url-nover is quiet on ?v= (any position), module ids, external, data:, anchors, comments and a reasoned waiver" {
+  # Mutation: RC39 -- reading a require/define module id or a ?v= after another parameter as a URL WARNs this tree
+  run "$RS" "$FX/nover-ok"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"static-url-nover"* ]]
+}
+
+@test "RC40: static-url-nover stays WARN under --strict (advisory), and a waiver with no reason waives nothing" {
+  # Mutation: RC40 -- promoting the row under --strict turns exit 0 into 1; accepting a bare marker hides js/boot.js
+  run "$RS" "$FX/nover" --strict
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/index.html:3  static-url-nover"* ]]
+  [[ "$output" != *"FAIL"* ]]
+  local T="$BATS_TEST_TMPDIR/bare"
+  mkdir -p "$T/rc"
+  printf '<script src="js/boot.js"></script> <!-- rc-scan: allow static-url-nover -->\n' > "$T/rc/index.html"
+  run "$RS" "$T"
+  [[ "$output" == *"rc/index.html:1  static-url-nover: js/boot.js "* ]]
+}
+
+@test "RC41: the kit's MinimalDash fixture stays clean of static-url-nover (--strict, exit 0, no row)" {
+  run "$RS" "$KIT/fixtures/MinimalDash" --strict
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "RC42: an empty ?v= is no fingerprint (it still WARNs); a ?v= with a value, in any position, is" {
+  # Mutation: RC42 -- counting a bare `v=` as a fingerprint passes js/a.js?v= and js/b.js?x=1&v
+  local T="$BATS_TEST_TMPDIR/emptyv"
+  mkdir -p "$T/rc"
+  printf '<script src="js/a.js?v="></script> <script src="js/b.js?x=1&v"></script> <script src="js/c.js?x=1&v=2"></script>\n' > "$T/rc/index.html"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/index.html:1  static-url-nover: js/a.js?v= "* ]]
+  [[ "$output" == *"rc/index.html:1  static-url-nover: js/b.js?x=1&v "* ]]
+  [[ "$output" != *"js/c.js"* ]]
+}

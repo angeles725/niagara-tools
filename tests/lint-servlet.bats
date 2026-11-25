@@ -250,3 +250,62 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [[ "$output" != *"S.java:4  "* ]]
   [[ "$output" == *"WARN  catch-no-400  S.java:8  "* ]]
 }
+
+# cache-nofinger reads the rc/ pages too (issue #1035): a servlet that sets max-age>0 is judged against the
+# references to its static paths under the rc/ directory above its source (rc-scan static-url-nover's reader).
+@test "LSV8: an unfingerprinted max-age names the rc/ reference with no ?v=; a ?v=-gated one WARNs too (cache-nofinger)" {
+  # Mutation: LSV8 -- not reading rc/ drops the evidence of line 6 and the whole row of line 9
+  run "$LS" "$BATS_TEST_DIRNAME/fixtures/lint-servlet-rc/stale"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  cache-nofinger  src/com/x/BDashServlet.java:6  Cache-Control max-age>0 on rc asset without fingerprint; rc/index.html:1 references css/app.css without ?v= (and 1 more)"* ]]
+  [[ "$output" == *"WARN  cache-nofinger  src/com/x/BDashServlet.java:9  Cache-Control max-age>0 applies only to ?v= requests, but rc/index.html:1 references css/app.css without ?v= (and 1 more) -- those requests are never cached; add ?v=<module version>"* ]]
+  run "$LS" "$BATS_TEST_DIRNAME/fixtures/lint-servlet-rc/stale" --strict
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  cache-nofinger  src/com/x/BDashServlet.java:9"* ]]
+}
+
+@test "LSV9: with every rc/ reference fingerprinted, the old row stays as it was and the gated line is clean" {
+  # Mutation: LSV9 -- WARNing the gated line without looking at the references fires here
+  run "$LS" "$BATS_TEST_DIRNAME/fixtures/lint-servlet-rc/fresh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  cache-nofinger  src/com/x/BDashServlet.java:6  Cache-Control max-age>0 on rc asset without fingerprint"* ]]
+  [[ "$output" != *"BDashServlet.java:6"*"references"* ]]
+  [[ "$output" != *"BDashServlet.java:9"* ]]
+}
+
+@test "LSV10: the kit's MinimalDash fixture stays clean (no cache-nofinger row)" {
+  run "$LS" "$KIT/fixtures/MinimalDash"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+# The rc/ climb belongs to the servlet's own module (issue #1035 review R3).
+@test "LSV11: cache-nofinger never reads the rc/ of another module: a Groovy build.gradle or a module-include.xml ends the climb" {
+  # Mutation: LSV11 -- climbing past a build.gradle / module-include.xml names the parent's rc/ reference
+  local T="$BATS_TEST_TMPDIR/boundary" J='class B extends BWebServlet { void doGet(WebOp op) { r.setHeader("Cache-Control", "max-age=60"); } }'
+  mkdir -p "$T/rc" "$T/groovy/src/com" "$T/part/X-rt/src/com"
+  printf '<img src="img/parent.png">\n' > "$T/rc/index.html"
+  printf '%s\n' "$J" > "$T/groovy/src/com/B.java"; : > "$T/groovy/build.gradle"
+  printf '%s\n' "$J" > "$T/part/X-rt/src/com/B.java"; : > "$T/part/X-rt/module-include.xml"
+  run "$LS" "$T/groovy/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  cache-nofinger  com/B.java:1  Cache-Control max-age>0 on rc asset without fingerprint" ]]
+  run "$LS" "$T/part"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  cache-nofinger  X-rt/src/com/B.java:1  Cache-Control max-age>0 on rc asset without fingerprint" ]]
+  [[ "$output" != *"parent.png"* ]]
+}
+
+@test "LSV12: an rc/ page lint-servlet cannot read is an env error (exit 3), the servlet's own rows still print" {
+  # Mutation: LSV12 -- dropping the read error passes clean with no evidence and exit 0
+  local T="$BATS_TEST_TMPDIR/unreadable"
+  mkdir -p "$T/src/com" "$T/src/rc"
+  printf 'class B extends BWebServlet { void doGet(WebOp op) { r.setHeader("Cache-Control", "max-age=60"); } }\n' > "$T/src/com/B.java"
+  printf '<img src="img/a.png">\n' > "$T/src/rc/index.html"; chmod 000 "$T/src/rc/index.html"
+  if [ -r "$T/src/rc/index.html" ]; then chmod 644 "$T/src/rc/index.html"; skip "running as root"; fi
+  run "$LS" "$T"   # stdout and stderr together
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"WARN  cache-nofinger  src/com/B.java:1  Cache-Control max-age>0 on rc asset without fingerprint"* ]]
+  [[ "$output" == *"lint-servlet: cannot scan $T/src/com/B.java: lint-servlet: rc/ pages could not be read: "*"Permission denied"* ]]
+  chmod 644 "$T/src/rc/index.html"
+}

@@ -1,0 +1,45 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/index.html:2  static-url-nover: css/app.css has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:3  static-url-nover: js/app.js has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:6  static-url-nover: /module/foo/rc/js/a.js has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:7  static-url-nover: /file/x/img/a.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:10  static-url-nover: img/bg.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:14  static-url-nover: js/w2.js has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:23  static-url-nover: js/data.json has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:23  static-url-nover: img/a.svg has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:24  static-url-nover: js/lazy.js has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:24  static-url-nover: img/e.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:24  static-url-nover: img/h.png has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+WARN  rc-scan  rc/index.html:27  static-url-nover: js/e.js?v= has no ?v= query -- a browser keeps the cached file after a module update; append ?v=<module version> (types/dashboard.md § cache-bust)
+-- stderr --
+-- rc/index.html --
+<!DOCTYPE html>
+<link rel="stylesheet" href="css/app.css">
+<script src="js/app.js"></script>
+<script src="js/ok.js?v=1.2.3"></script>
+<script src='js/ok2.js?x=1&amp;v=2'></script>
+<script src="/module/foo/rc/js/a.js"></script>
+<img src="/file/x/img/a.png">
+<img src="img/logo.png?v=1" alt="">
+<img src="https://cdn.example/x.png"> <img src="//cdn/x.png"> <img src="data:image/png;base64,AAA"> <a href="#top">t</a>
+<style> .a { background: url(img/bg.png); } </style>
+<div style="background:url('img/b.png?v=2')"></div>
+<a href="page.html">p</a> <a href="/minimaldash/api/status">api</a>
+<script src="js/w.js"></script> <!-- rc-scan: allow static-url-nover loaded once at boot -->
+<script src="js/w2.js"></script> <!-- rc-scan: allow static-url-nover -->
+<!-- <script src="js/commented.js"></script> -->
+<img src="img/${name}.png">
+<!--
+<script src="js/multi.js"></script>
+-->
+<link href="css/a.css?ver=3"> <link href="css/b.css?version=3">
+<script>
+require(["js/mod"], function (m) {}); define("css/x", [], function () {});
+fetch("js/data.json", {signal: s}); fetch("js/ok.json?v=3", {signal: s}); const u = new URL("img/a.svg", location.href);
+import("js/lazy.js"); el.src = "img/e.png"; x.innerHTML = '<img src="img/h.png">';
+fetch("js/d.json" + q, {signal: s}); // fetch("js/c.json")
+</script>
+<script src="js/e.js?v="></script>

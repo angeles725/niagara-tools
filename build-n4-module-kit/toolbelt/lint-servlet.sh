@@ -39,6 +39,23 @@
 #                       name in the file passes such a test [ev: issue #459]. A build-time token
 #                       replacement in a gradle script is not read: the servlet alone does not prove the
 #                       request carries the token, so an unconditional max-age stays a row.
+#                       It also reads the rc/ pages (issue #1035): the nearest rc/ or src/rc/ at or above the servlet's
+#                       directory (at most 10 levels; never past the servlet's own module: a directory holding a gradle
+#                       script, build.gradle(.kts) or settings.gradle(.kts), a module-include.xml or a <part>.gradle(.kts),
+#                       or named *-rt / *-ux is looked at for its own rc/ and ends the climb, so another module's rc/
+#                       is never read; rc/vendor and rc/ext are not read) is
+#                       scanned as rc-scan static-url-nover reads it (go/internal/rcscan Unfingerprinted), keeping the
+#                       references to the servlet's own static paths: a relative img/, css/ or js/ path, or one of
+#                       them under /<getServletName()>/, with no ?v= (/module/ and /file/ are the station's
+#                       FileServlet, not the servlet). An unfingerprinted max-age row then names the first such
+#                       reference (`; rc/index.html:3 references js/app.js without ?v= (and N more)`); a max-age gated
+#                       on a ?v= request passed before and now WARNs when such a reference exists, since the requests
+#                       the page sends never take the cached branch. A servlet is tied to the page by module, not by
+#                       route: a servlet that serves only an API still sees the module's rc/ references. The rc-scan
+#                       waiver (`rc-scan: allow static-url-nover <reason>`) excuses a reference here too. An rc/ file
+#                       it cannot read is an env error for the servlet file, as an unreadable source file is: stderr
+#                       `cannot scan <file>: lint-servlet: rc/ pages could not be read: <why>`, exit 3, the file's
+#                       rows still printed (without the evidence).
 #   log-in-handler WARN LOG.info( inside a doGet/doPost/service handler body.
 #   csrf-xrw-only WARN  X-Requested-With check in the file with no CsrfUtil/x-niagara-csrfToken/
 #                       csrfToken reference — XHR-only guard is weaker than Niagara CSRF token.
@@ -89,6 +106,10 @@
 # Mutation: LSV2f -- taking the first catch within 4 lines of the try's end judges a multi-catch by its IOException clause
 # Mutation: LSV2g -- finding the try by the "try {" regex FAILs a parse inside try (Reader r = open()) { ... }
 # Mutation: LSV2h -- dropping the re-read check WARNs `catch (NumberFormatException e) { return range.get(tag); }`
+# Mutation: LSV8 -- not reading rc/ drops the evidence on the unfingerprinted max-age and the whole row of the gated one
+# Mutation: LSV11 -- climbing past a build.gradle / module-include.xml names another module's rc/ reference
+# Mutation: LSV12 -- dropping the rc/ read error passes clean with no evidence and exit 0
+# Mutation: LSV9 -- WARNing the gated max-age without looking at the references fires on a fully fingerprinted rc/
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 # Mutation: TC-MAP6 -- dropping the handler-size check, or reading a strict module as legacy (WARN), lets an 83-line
 #   servlet method pass a strict fresh dashboard with exit 0 (tests/scaffold-module-map.bats TC-MAP6, no skip; both observed)

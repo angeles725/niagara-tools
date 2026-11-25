@@ -74,6 +74,24 @@
 #                            not it). [ev: retro modularity-gaps Δ2]
 #   js-file-size       WARN legacy / FAIL strict (module map modes only)  a .js file over 400 lines, reported at
 #                            its line 1 (the allow marker goes on line 1). [ev: retro modularity-gaps Δ3]
+#   static-url-nover  WARN  a reference to a static asset with no ?v= query: a /module/... or /file/... path, or a relative
+#                            img/, css/ or js/ path (a leading ./ allowed), written as a src=/href= attribute, a CSS
+#                            url(...) or @import "...", or in JavaScript as the string argument of fetch(, new URL(,
+#                            import(, an `import "x"` / `from "x"` and a `.src =` / `.href =` assignment, or as a src=,
+#                            href= or url(...) inside a string or template. A browser keeps such an asset after a module
+#                            update until its cache entry expires (the station serves /module/ and /file/ for 30 days
+#                            with no ETag); the version query makes the URL change with the module. lint-ux-version
+#                            judges the -ux entry pages by the exact version; this reads every rc/ file. Any of
+#                            v, ver or version with a value in the query, at any position, counts (`?a=1&v=2`, `&amp;v=2`); an
+#                            empty `?v=` is not a fingerprint.
+#                            Never a reference: a require(/define( string (a module id), an absolute URL (any scheme,
+#                            //host), data:, #anchor, a string that goes on (`"img/" + n`) or holds ${...}/{{...}},
+#                            a comment, rc/vendor, rc/ext and *.min.js. Advisory: WARN under every mode, --strict
+#                            included (like status-default-ok) until real trees confirm it. Waive on the reference's
+#                            line with a comment of the file's syntax carrying a reason:
+#                            `<!-- rc-scan: allow static-url-nover <reason> -->`, `/* ... */` or `// ...`; a marker
+#                            with no reason waives nothing. lint-servlet cache-nofinger reads the same references
+#                            (go/internal/rcscan Unfingerprinted). [ev: issue #1035]
 #   Module map modes: the mode is read with lint.ModuleMode from the nearest <module-root>/MODULE-MAP.md above
 #   <artifact-dir> (types/structure.md § Module map). With no map neither check runs, so a map-less module's
 #   rows are unchanged; `modularity: legacy` WARNs them (FAIL under --strict), `modularity: strict` FAILs them.
@@ -113,6 +131,10 @@
 # Mutation: RC35 -- matching the member anywhere on the line again WARNs the spec.unit line (RC35 sees app.js:2)
 # Mutation: RC36 -- dropping literal provenance WARNs the units.map(u => u.name) line (RC36 sees app.js:2)
 # Mutation: RC37 -- reading the module map mode as legacy keeps the strict module at WARN and exit 0
+# Mutation: RC38 -- dropping the static-url-nover pass loses every row of the nover fixture (RC38 sees 10)
+# Mutation: RC39 -- reading a require/define module id or a ?v= after another parameter as a URL WARNs the nover-ok tree
+# Mutation: RC40 -- promoting the row under --strict turns exit 0 into 1; accepting a bare marker hides js/boot.js
+# Mutation: RC42 -- counting a bare `v=` as a fingerprint passes js/a.js?v= and js/b.js?x=1&v
 # Mutation: RS-walk -- dropping the *-worktrees prune reports the x-worktrees copy's ORD literal (RS-walk)
 # Mutation: RS-unreadable -- skipping a file the scan cannot read (the awk's fatal-and-continue) passes clean
 #
