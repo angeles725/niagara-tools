@@ -177,6 +177,50 @@ teardown() {
   [[ "$output" != *"version-drift"* ]]
 }
 
+# ---------------------------------------------------------------------------
+# sibling-home (F24) — a sibling module root pinning another niagara_home than the target is a WARN
+# (exit unchanged); a sibling is a dir of gradle-root's parent holding settings.gradle(.kts); the pin is the
+# gradle.properties `niagara_home=` line the kit's templates tell the operator to set
+# Named mutation: PF-sibling-home -- compare nothing -> the "different" case prints no row
+# ---------------------------------------------------------------------------
+sibling_tree() {  # sibling_tree <ws>: module-a is the gradle root, pinned to $NH
+  mkdir -p "$1/module-a"
+  cp -r "$FIXDIR/gradle-root/." "$1/module-a/"
+  printf 'niagara_home=%s\n' "$NH" > "$1/module-a/gradle.properties"
+}
+
+@test "sibling-home: two siblings pinning the same niagara_home -> no sibling-home row" {
+  sibling_tree "$TMPDIR_T/ws"
+  mkdir -p "$TMPDIR_T/ws/module-b"
+  : > "$TMPDIR_T/ws/module-b/settings.gradle.kts"
+  printf 'niagara_home=%s/\n' "$NH" > "$TMPDIR_T/ws/module-b/gradle.properties"
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$TMPDIR_T/ws/module-a"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"sibling-home"* ]]
+}
+
+@test "sibling-home: a sibling pinning another niagara_home -> WARN naming both values and the sibling, exit 0" {
+  sibling_tree "$TMPDIR_T/ws"
+  mkdir -p "$TMPDIR_T/ws/module-c"
+  : > "$TMPDIR_T/ws/module-c/settings.gradle.kts"
+  printf 'niagara_home=/opt/niagara-4.14.0.162\n' > "$TMPDIR_T/ws/module-c/gradle.properties"
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$TMPDIR_T/ws/module-a"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  sibling-home  $TMPDIR_T/ws/module-c pins niagara_home /opt/niagara-4.14.0.162, "* ]]
+  [[ "$output" == *"the target is $NH"* ]]
+}
+
+@test "sibling-home: a sibling dir that is no module root, or pins nothing, is ignored" {
+  sibling_tree "$TMPDIR_T/ws"
+  mkdir -p "$TMPDIR_T/ws/docs" "$TMPDIR_T/ws/module-d"
+  printf 'niagara_home=/opt/niagara-4.13.2.18\n' > "$TMPDIR_T/ws/docs/gradle.properties"
+  : > "$TMPDIR_T/ws/module-d/settings.gradle.kts"
+  printf '#niagara_home=/opt/niagara-4.13.2.18\n' > "$TMPDIR_T/ws/module-d/gradle.properties"
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$TMPDIR_T/ws/module-a"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"sibling-home"* ]]
+}
+
 @test "PF5: JDK 8 with no release file but bin/java reports 1.8 -> PASS jdk8 (WSL fallback)" {
   JVM_NO_RELEASE="$FIXDIR/jvm-no-release"
   run "$PREFLIGHT" --jvm-dir "$JVM_NO_RELEASE" "$NH" "$GR"

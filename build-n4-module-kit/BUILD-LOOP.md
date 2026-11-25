@@ -27,6 +27,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
   copy of that map — and read those rows' prevention deltas first. Verify a candidate against the CLIENT's own history,
   not just this session's. No ledger yet → create it from the template at this session's close.
   `[ev: retro panccadia-version-defect-ledger Δ2]`
+- Roots of one client pin their own `niagara_home`: `toolbelt/preflight.sh` WARNs `sibling-home` on a mismatch.
 
 ### 0.a Orient from BUILD-STATE (before touching anything)
 - Run **`toolbelt/orient-guard.sh <module-root>`** — asserts that the module root is under the sole legal build prefix

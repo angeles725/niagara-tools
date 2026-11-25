@@ -24,10 +24,7 @@ func (r *run) sampleRows() {
 	}
 	gp := r.gr + "/gradle.properties"
 	home := prop(gp, "niagara_home")
-	sPath := home
-	if len(home) >= 2 && home[1] == ':' && strings.ContainsRune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", rune(home[0])) {
-		sPath = "/mnt/" + strings.ToLower(home[:1]) + strings.ReplaceAll(home[2:], `\`, "/")
-	}
+	sPath := winMount(home)
 	sVer, nhVer := lastVersion(sPath), lastVersion(r.nh)
 	switch {
 	case home == "":

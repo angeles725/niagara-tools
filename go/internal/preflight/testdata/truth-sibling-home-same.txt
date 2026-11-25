@@ -1,0 +1,36 @@
+-- args --
+--jvm-dir
+@DIR@/jvm
+@DIR@/nh
+@DIR@/ws/module-a
+-- want --
+exit 0
+PASS  jdk8          JDK 8 found: @DIR@/jvm/java-8-openjdk-amd64/
+PASS  plugin-pin    plugin 7.6.17 found in niagara_home/etc/m2
+PASS  jar-lock      no locked jars under @DIR@/nh/modules/
+-- stderr --
+-- @kind --
+truth: two siblings pinning the same niagara_home (a trailing slash does not differ) print no sibling-home row (F24)
+-- @env --
+PATH=@DIR@/fakebin:@DIR@/.tools
+N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts
+-- fakebin/lsof (mode 755) --
+#!/usr/bin/env bash
+printf "p1\nn/usr/bin/lsof\n"
+-- jvm/java-8-openjdk-amd64/release --
+IMPLEMENTOR="Adoptium"
+JAVA_VERSION="1.8.0_302"
+JAVA_VERSION_DATE="2021-10-19"
+-- mounts --
+ext4 / ext4 rw 0 0
+-- nh/etc/m2/repository/com/tridium/niagara-module/com.tridium.niagara-module.gradle.plugin/7.6.17/.gitkeep --
+-- nh/modules/demo-rt.jar --
+-- ws/module-a/settings.gradle.kts --
+// settings.gradle.kts — minimal fixture for preflight tests
+// Niagara plugin version
+val niagaraPluginVersion = "7.6.17"
+-- ws/module-a/gradle.properties --
+niagara_home=@DIR@/nh
+-- ws/module-b/settings.gradle.kts --
+-- ws/module-b/gradle.properties --
+niagara_home=@DIR@/nh/
