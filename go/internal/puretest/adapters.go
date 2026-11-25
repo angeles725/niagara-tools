@@ -14,7 +14,7 @@ import (
 
 // A pure test never compiles the Baja adapters beside the pure core (src/), so a helper a refactor deleted
 // passes the tests and fails only at gradle's compile. With NIAGARA_HOME naming a mirror (or an install),
-// the sources of src/ are also compiled, against the jars of <home>/modules, into a directory of their own
+// the sources of src/ are also compiled, against the jars of <home>/modules and of the sibling parts, into a directory of their own
 // that goes away with the run. Without it one NOTICE says they were not. [ev: retro client-e-dashboard-live-check Δ30]
 
 const (
@@ -23,8 +23,8 @@ const (
 	adapterNoProc  = "-proc:none" // no annotation processing: Slot-o-Matic is gradle's job, not this loop's
 	msgNoAdapters  = "NOTICE the Baja adapters under src/ were not compiled (NIAGARA_HOME is not set): a helper deleted by a refactor passes these tests and fails only at gradle — export NIAGARA_HOME=<mirror> to compile them here"
 	msgNoHomeJars  = "NIAGARA_HOME %s has no modules/*.jar — point it at a mirror (mirror-niagara-home.sh) or an install"
-	msgAdaptersBad = "adapter sources do not compile: %s (javac output above; class path NIAGARA_HOME/modules only, unset NIAGARA_HOME to skip) — a compile error is not a RED"
-	msgAdaptersErr = "adapter sources do not compile (javac failed above; class path NIAGARA_HOME/modules only) — a compile error is not a RED"
+	msgAdaptersBad = "adapter sources do not compile: %s (javac output above; %s; third-party jars and generated sources are not on it, build the sibling parts first, unset NIAGARA_HOME to skip) — a compile error is not a RED"
+	msgAdaptersErr = "adapter sources do not compile (javac failed above; %s) — a compile error is not a RED"
 )
 
 // diagnosedFile is the file a javac diagnostic line starts with.
@@ -58,14 +58,15 @@ func (r *run) compileAdapters(rt, out, home string) int {
 	}
 	var diagnostics bytes.Buffer
 	tee := &run{cli.Stdio{Out: r.s.Out, Err: io.MultiWriter(r.s.Err, &diagnostics), Getenv: r.s.Getenv}}
-	args := append(append([]string{}, compileFlags...), adapterNoProc, "-cp", home+"/"+modulesJars, "-d", dest)
+	siblings := siblingJars(rt)
+	args := append(append([]string{}, compileFlags...), adapterNoProc, "-cp", adapterClassPath(home, siblings), "-d", dest)
 	if tee.exec("", javac, append(args, sources...)...) == ExitOK {
 		return ExitOK
 	}
 	if files := diagnosedFiles(diagnostics.String()); len(files) > 0 {
-		return r.die(ExitEnv, msgAdaptersBad, strings.Join(files, ", "))
+		return r.die(ExitEnv, msgAdaptersBad, strings.Join(files, ", "), classPathNote(siblings))
 	}
-	return r.die(ExitEnv, msgAdaptersErr)
+	return r.die(ExitEnv, msgAdaptersErr, classPathNote(siblings))
 }
 
 // javaSources are the .java files under dir, in name order.

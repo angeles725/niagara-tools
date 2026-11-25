@@ -304,10 +304,13 @@ existing pure suite); the full builds and the non-skippable floor run once at ta
 
 `run-pure-test.sh` compiles only the test and the pure sources it references, so a helper a refactor deleted from a Baja
 adapter passes it and fails only at gradle. Export `NIAGARA_HOME=<mirror>` and it also compiles every source under the
-part's `src/` with `javac -proc:none` against the jars of `<mirror>/modules` (exit 3 naming the file on an error, before
-the tests run); without it one NOTICE says the adapters were not compiled and the exit code is unchanged. Run it with
-`NIAGARA_HOME` set before each work-unit commit that touches an adapter. `[ev: code go/internal/puretest/adapters.go]`
-`[ev: retro client-e-dashboard-live-check Δ30]`
+part's `src/` with `javac -proc:none` against the jars of `<mirror>/modules` and the `build/libs/*.jar` of the
+module's sibling parts, so a wb or ux adapter that uses rt types compiles once `build.sh` built the rt part (exit 3
+naming the file and the sibling jars on an error, before the tests run; third-party jars and generated sources are
+not on the class path); without it one NOTICE says the adapters were not compiled and the exit code is unchanged.
+Run it with `NIAGARA_HOME` set before each work-unit commit that touches an adapter.
+`[ev: code go/internal/puretest/adapters.go]`
+`[ev: retro client-e-dashboard-live-check Δ30]` `[ev: issue #1075]`
 
 | Task | Touches | When required |
 |------|---------|---------------|
