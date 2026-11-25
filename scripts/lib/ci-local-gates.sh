@@ -10,7 +10,9 @@
 # stands for (replayed as CI runs it, so the check cannot differ), or a command. TestEveryCIStepAndTreeGateHasALocalTwin
 # fails when a ci.yml run step or a tree-reading Go package has no row there, so a new gate cannot be forgotten here.
 # A failed gate counts in run_changed's summary; a soft gate (pr-size: the size:exception label decides in CI) prints
-# WARN and counts nothing, whatever its exit (1: over the limit; any other: the size was not measured).
+# WARN and counts nothing, whatever its exit (1: over the limit; any other: the size was not measured). A hard gate
+# that never ran its rule (command missing: exit 127; go test `[build failed]`/`[setup failed]`) prints
+# `FAIL <gate> (environment: ...)` and still counts as failed.
 
 # gate_run <name> <soft|hard> <command> — run one gate from the repo root and print PASS, WARN or FAIL like a step.
 # Every gate runs without git's local environment (GIT_DIR, GIT_INDEX_FILE, GIT_WORK_TREE...): the pre-push hook
@@ -49,7 +51,13 @@ gate_run() {
     else printf 'WARN %s (exit %d: the size was not measured)\n' "$name" "$rc"; fi
     return 0
   fi
-  printf 'FAIL %s (exit %d)\n' "$name" "$rc"
+  # A missing command (127) or a go test that did not build or set up is no finding of the gate's rule: name the
+  # environment, so the reader does not look for a size or width violation. It still fails the gate (exit 1, no new class).
+  local env_why=""
+  if [ "$rc" -eq 127 ]; then env_why="command not found"
+  else env_why=$(grep -o -m 1 '\[\(build\|setup\) failed\]' "$out" || true); [ -z "$env_why" ] || env_why="go test $env_why"; fi
+  if [ -n "$env_why" ]; then printf 'FAIL %s (environment: %s, exit %d)\n' "$name" "$env_why" "$rc"
+  else printf 'FAIL %s (exit %d)\n' "$name" "$rc"; fi
   CHANGED_FAILED=$((CHANGED_FAILED + 1))
 }
 

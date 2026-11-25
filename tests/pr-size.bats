@@ -268,3 +268,58 @@ livewaiver() {
   livewaiver 1 false fail
   [ "$status" -eq 1 ]
 }
+
+# base_gate <base> [dest]: scripts/pr-size-base.sh inside the fixture repo; the gate scripts of <base> land in dest
+base_gate() {
+  BASE_DEST="${2:-$BATS_TEST_TMPDIR/basegate}"
+  cd "$R" || return 1
+  run env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE bash "$REPO/scripts/pr-size-base.sh" "$1" "$BASE_DEST"
+}
+
+stub_gates() { # stub_gates <word>: pr-size.sh and pr-size-waiver.sh of the fixture repo that print <word>
+  mkdir -p "$R/scripts"
+  printf '#!/usr/bin/env bash\necho %s-gate\n' "$1" > "$R/scripts/pr-size.sh"
+  printf '#!/usr/bin/env bash\necho %s-waiver\n' "$1" > "$R/scripts/pr-size-waiver.sh"
+}
+
+@test "PS17: the gate scripts the workflow runs are the BASE revision's, so a PR cannot weaken its own gate (issue #979)" {
+  # Mutation: PS17 -- copying the head's scripts lets a PR edit pr-size.sh to exit 0 and pass
+  unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
+  stub_gates base
+  git -C "$R" add -A && git -C "$R" commit -qm "chore: gates"
+  local gates; gates=$(git -C "$R" rev-parse HEAD)
+  stub_gates weakened
+  head_commit
+  base_gate "$gates"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"::notice"* ]]
+  [ "$(bash "$BASE_DEST/scripts/pr-size.sh")" = "base-gate" ]
+  [ "$(bash "$BASE_DEST/scripts/pr-size-waiver.sh")" = "base-waiver" ]
+}
+
+@test "PS18: a script missing at base (a new gate) falls back to the head's with a notice; missing in both, or an unknown base, is exit 3 (issue #979)" {
+  unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
+  stub_gates head
+  head_commit
+  base_gate "$BASE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice title=PR size::scripts/pr-size.sh is not at the base revision, using the head's"* ]]
+  [[ "$output" == *"::notice title=PR size::scripts/pr-size-waiver.sh is not at the base revision, using the head's"* ]]
+  [ "$(bash "$BASE_DEST/scripts/pr-size.sh")" = "head-gate" ]
+  git -C "$R" rm -q scripts/pr-size.sh
+  head_commit
+  base_gate "$BASE" "$BATS_TEST_TMPDIR/d2"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"pr-size.sh"* ]]
+  base_gate "0000000000000000000000000000000000000000" "$BATS_TEST_TMPDIR/d3"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"unknown base"* ]]
+}
+
+@test "PS19: pr-size.yml runs the base-revision scripts through pr-size-base.sh, and the gate scripts source nothing it does not extract" {
+  # shellcheck disable=SC2016  # a literal $BASE_SHA in the workflow text
+  grep -q 'scripts/pr-size-base.sh "$BASE_SHA"' "$WF"
+  grep -q 'scripts/pr-size-waiver.sh' "$WF"
+  run grep -nE '^[[:space:]]*(source|\.)[[:space:]]' "$REPO/scripts/pr-size.sh" "$REPO/scripts/pr-size-waiver.sh"
+  [ "$status" -ne 0 ]
+}

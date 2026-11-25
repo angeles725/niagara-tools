@@ -1,7 +1,8 @@
 name: PR size
 
 # Fails a pull request whose authored changed lines exceed 400 (additions + deletions, minus lock, generated and
-# vendored files — scripts/pr-size.sh) unless it carries the `size:exception` label (scripts/pr-size-waiver.sh, tested). Modelled on gentle-ai's
+# vendored files — scripts/pr-size.sh) unless it carries the `size:exception` label (scripts/pr-size-waiver.sh, tested).
+# Both scripts run as they are on the BASE revision (scripts/pr-size-base.sh), not the PR's. Modelled on gentle-ai's
 # pr-check.yml. Separate from ci.yml so the count and the label can change without touching the checks. The
 # labeled/unlabeled types re-run it when a maintainer adds or removes the label.
 
@@ -39,4 +40,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
-        run: bash scripts/pr-size-waiver.sh "$BASE_SHA" "$HEAD_SHA"
+        # The gate scripts are the base revision's (scripts/pr-size-base.sh, tested), so a PR cannot edit its own gate.
+        run: |
+          gate_dir="$(mktemp -d)"
+          bash scripts/pr-size-base.sh "$BASE_SHA" "$gate_dir"
+          bash "$gate_dir/scripts/pr-size-waiver.sh" "$BASE_SHA" "$HEAD_SHA"
