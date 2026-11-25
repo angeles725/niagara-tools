@@ -871,6 +871,13 @@ Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/log
   `javax/baja/history/db/HistoryDatabaseConnection.java:194-221`, `com/tridium/history/db/LocalDbConnection.java:213-238`;
   4.15 not verified). Every trend and dashboard reading `<name>` then starts from zero, and the old data sits
   under a name nobody reads: never change a shipped interval default without a migration note. `[ev: retro devguide415-horizons-authoring-security Δ3]`
+- **A custom record's byte layout is yours to version: the station never notices it changed.** A module upgrade
+  that keeps the history config reopens the same history and appends to it, old records intact. A changed
+  `doRead`/`doWrite` gives no `_cfg0`, no error and no log row: a new trailing field read `0` from every older
+  record (seen live on 4.14.0.162, module 1.0 to 1.3). From the first release, write a layout version first in
+  `doWrite` and branch on it in `doRead`, or ship a new record type in a new history; never insert a field before
+  an existing one.
+  `[ev: corpus B1462 §1462.10]`
 - **A history extension records nothing until enabled.** `enabled` defaults false with DEFAULT_ON_CLONE (flags 64,
   `javax/baja/history/ext/BHistoryExt.java:119`, same copy), so a palette-shipped ext is dead until commissioning
   enables it or code calls `setEnabled(true)`; a Paste Special copy also arrives disabled with an empty History

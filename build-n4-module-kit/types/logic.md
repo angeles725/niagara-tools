@@ -148,6 +148,11 @@ dispatches on `in`, `min` and `max` only (`:154-159`), which is the callback con
   At `started()` `WritableSupport` re-arms `auto` for the time left, or calls `auto()` at once when the expiry
   passed while the station was down (`WritableSupport.java:101-115`). A module that writes a writable's input
   from code writes a TRANSIENT level: it must write it again after every start. `[ev: corpus B1462 §1462.3]`
+- **A module's own audit row says what the module wrote, user included.** `Sys.getAuditor()` is the station's
+  `BAuditHistoryService`; `audit(new AuditEvent(op, target, slot, oldValue, value, userName))` lands in
+  `AuditHistory` with `userName` as passed, not the session user (seen live on 4.14.0.162). Pass the real
+  operator's name from the action's Context, never a fixed module name that reads as a person, and do not treat a
+  module-written audit row as proof of who acted. `[ev: corpus B1462 §1462.10]`
 
 ## Schema-safe evolution
 - **When a slot's shape MUST change and ADD-new-and-link is insufficient, use a `started()` self-migration:** (a) ADD the new typed slot; (b) in `started()` (or `atSteadyState()` if the station may carry saved data to migrate), detect the orphaned dynamic slot by name — `get(oldName) != null && getSlot(oldName).isDynamic()` — copy its value to the new slot, then remove the old slot; (c) leave the old slot deprecated-but-present for one release cycle until confirmed no station carries the old form. `BModule` is `final` with no `upgrade()` or `migrate()` callback; whole-station migration is the offline `migration-rt` tool (`BIFileMigrator` + converter SPIs) and is NOT available in-component. [ev: corpus B754 §754.3 · started-self-migration-recipe]
