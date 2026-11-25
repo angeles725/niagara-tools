@@ -5,10 +5,11 @@ type options struct {
 	module, outDir                            string
 	vendor, targetVersion, pluginVersion, typ string
 	vendorGiven                               bool // --vendor has no default: checkValues refuses a run without it
+	withDoc                                   bool // --with-doc: add the -doc help part (doc.go)
 }
 
 // parseArgs reads `<ModuleName> <out-dir> --vendor v [--target-version v] [--plugin-version v]
-// [--type t]`. Options come after the two positionals; a repeated option keeps its last value and a value
+// [--type t] [--with-doc]`. Options come after the two positionals; a repeated option keeps its last value and a value
 // is taken as it is, even when it looks like an option.
 func parseArgs(args []string) (options, *failure) {
 	if len(args) < 2 {
@@ -22,7 +23,11 @@ func parseArgs(args []string) (options, *failure) {
 		optVendor: &o.vendor, optTargetVersion: &o.targetVersion, optPluginVersion: &o.pluginVersion, optType: &o.typ,
 	}
 	pluginGiven := false
-	for rest := args[2:]; len(rest) > 0; rest = rest[2:] {
+	for rest := args[2:]; len(rest) > 0; {
+		if rest[0] == optWithDoc {
+			o.withDoc, rest = true, rest[1:]
+			continue
+		}
 		target, known := valued[rest[0]]
 		if !known {
 			return options{}, failf(ExitUsage, unknownOption+usageText, rest[0])
@@ -33,6 +38,7 @@ func parseArgs(args []string) (options, *failure) {
 		*target = rest[1]
 		o.vendorGiven = o.vendorGiven || rest[0] == optVendor
 		pluginGiven = pluginGiven || rest[0] == optPluginVersion
+		rest = rest[2:]
 	}
 	if p, known := pluginForTarget[o.targetVersion]; known && !pluginGiven {
 		o.pluginVersion = p

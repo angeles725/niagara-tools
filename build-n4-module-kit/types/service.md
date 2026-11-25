@@ -5,6 +5,10 @@ instance with `Sys.getService(Type)` instead of an ORD. Author one for a station
 gateway, a shared connection); a thing that exists per room or per device and is reached by slot path stays a plain
 `BComponent`. `[ev: corpus B757 §757.2]`
 
+Scaffold: `scaffold-module.sh <Mod> <out> --vendor <v> --type service` emits a service, its background export
+job (`types/logic-authoring.md` § Job contract) and a pure class with its test, in a strict module map; `--with-doc`
+adds a help part.
+
 Related cards: the other author-side SPIs (ORD scheme, subscription, job) are in `types/logic-authoring.md`
 § Author-side SPIs; licensing a service is `types/security.md` § 5; a driver network is a service-like component
 with its own card, `types/driver-authoring.md`.

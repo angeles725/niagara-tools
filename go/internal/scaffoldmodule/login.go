@@ -24,7 +24,7 @@ func loginOverlay(toolbelt, dest string, n names, typ moduleType) *failure {
 		return failf(ExitEnv, writeFault, err)
 	}
 	for _, e := range loginEdits {
-		if f := e.apply(root, base, n); f != nil {
+		if f := e.apply(root, base, n, n.loginTextRules()); f != nil {
 			return f
 		}
 	}
@@ -37,6 +37,14 @@ func loginOverlay(toolbelt, dest string, n names, typ moduleType) *failure {
 type edit struct {
 	file, anchor, fragment string
 	after                  bool
+	name                   string // what the edit adds, for the anchor error ("" = the login)
+}
+
+func what(e edit) string {
+	if e.name == "" {
+		return "login"
+	}
+	return e.name
 }
 
 // loginEdits are the fragments of templates/dashboard-login/fragments; files are relative to <Module>/<Module>.
@@ -50,7 +58,7 @@ var loginEdits = []edit{
 	{file: "MODULE-MAP.md", anchor: "| plumbing |", fragment: "module-map-row.txt"},
 }
 
-func (e edit) apply(root, base string, n names) *failure {
+func (e edit) apply(root, base string, n names, rules []rule) *failure {
 	path := base + "/" + apply(e.file, n.templatePathRules())
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -60,17 +68,17 @@ func (e edit) apply(root, base string, n names) *failure {
 	if err != nil {
 		return failf(ExitEnv, writeFault, err)
 	}
-	text, s := apply(string(frag), n.loginTextRules()), string(data)
+	text, s := apply(string(frag), rules), string(data)
 	if e.anchor == "" {
 		if s != "" && !strings.HasSuffix(s, "\n") {
 			s += "\n"
 		}
 		s += text
 	} else {
-		anchor := apply(e.anchor, n.loginTextRules())
+		anchor := apply(e.anchor, rules)
 		i := strings.Index(s, anchor)
 		if i < 0 {
-			return failf(ExitEnv, loginAnchor, path, anchor)
+			return failf(ExitEnv, loginAnchor, what(e), path, anchor)
 		}
 		if e.after {
 			i += len(anchor)

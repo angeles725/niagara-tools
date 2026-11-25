@@ -67,6 +67,9 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 	if !ok {
 		return "", failf(ExitUsage, unknownType+usageText, o.typ)
 	}
+	if o.withDoc && typ.noDoc {
+		return "", failf(ExitUsage, docNeedsType, typ.name)
+	}
 	if f := checkName(o.module); f != nil {
 		return "", f
 	}
@@ -94,7 +97,7 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 		return "", f
 	}
 	emitting = watch
-	f = emit(toolbelt, fixture, dest, n, typ)
+	f = emit(toolbelt, fixture, dest, n, typ, o.withDoc)
 	emitting = nil
 	if watch.caught() {
 		f = watch.interrupted()
@@ -105,16 +108,21 @@ func scaffold(toolbelt string, args []string) (string, *failure) {
 	return dest, nil
 }
 
-// emit fills the claimed dest: the fixture copy, the station-test overlay, the login overlay, the version ledger.
-func emit(toolbelt, fixture, dest string, n names, typ moduleType) *failure {
+// emit fills the claimed dest: the fixture copy, the type's own overlay (service), the station-test overlay, the
+// login overlay, the -doc part (withDoc), the version ledger.
+func emit(toolbelt, fixture, dest string, n names, typ moduleType, withDoc bool) *failure {
 	if err := copyTree(fixture, dest, n.fixturePathRules(), n.fixtureTextRules(), verbatimFixtureFile); err != nil {
 		return failf(ExitEnv, writeFault, err)
 	}
-	if f := stationTestOverlay(toolbelt, dest, n, typ); f != nil {
-		return f
-	}
-	if f := loginOverlay(toolbelt, dest, n, typ); f != nil {
-		return f
+	for _, overlay := range []func() *failure{
+		func() *failure { return typeOverlay(toolbelt, dest, n, typ) },
+		func() *failure { return stationTestOverlay(toolbelt, dest, n, typ) },
+		func() *failure { return loginOverlay(toolbelt, dest, n, typ) },
+		func() *failure { return docOverlay(toolbelt, dest, n, typ, withDoc) },
+	} {
+		if f := overlay(); f != nil {
+			return f
+		}
 	}
 	return versionLedger(toolbelt, dest)
 }

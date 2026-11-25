@@ -149,7 +149,7 @@ non-skippable check floor (§5) applies to every tier.
 - For a dashboard: the facade slots (display link-in + writable config), the servlet routes, the JSON `{v,st}` contract,
   the HMI resolution.
 - **New module skeleton:** run
-  `toolbelt/scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type logic|dashboard|driver|library]`
+  `toolbelt/scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type logic|dashboard|driver|library|service] [--with-doc]`
   to emit a pre-slotomatic tree from `fixtures/MinimalPan` (logic, the default), `fixtures/MinimalDash`,
   `fixtures/MinimalDriver` or `fixtures/MinimalLibrary` (a library of no Java and no palette; its module map declares
   `type: library`, which `lint-structure` L5 needs, `types/utility-lib.md` § 6) `[ev: retro doc-coverage-audit Δ10]`

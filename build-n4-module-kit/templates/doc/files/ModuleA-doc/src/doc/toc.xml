@@ -1,0 +1,5 @@
+<toc version="1.0">
+  <tocitem text="ModuleA" target="index.html">
+    <tocitem text="@DOCTYPE@" target="ModuleA-@DOCTYPE@.html" />
+  </tocitem>
+</toc>

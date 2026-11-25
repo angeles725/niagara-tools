@@ -1,0 +1,1 @@
+| plumbing | doc | ModuleA-doc/ModuleA-doc.gradle.kts; ModuleA-doc/module-include.xml; ModuleA-doc/src/doc/ModuleA-@DOCTYPE@.html | — | the help pages or their TOC change |
