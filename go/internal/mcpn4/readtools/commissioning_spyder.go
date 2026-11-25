@@ -26,6 +26,9 @@ func (r *commRun) spyderSection() (*commSection, error) {
 	}
 	if devices.failed != "" {
 		s.notChecked(devices.failed, spyderChecks...)
+		if r.spyderHardware {
+			s.check("model_mismatch").why = devices.failed
+		}
 		return s, nil
 	}
 	s.extra = []any{"spyders", len(devices.rows)}
@@ -44,7 +47,10 @@ func (r *commRun) spyderSection() (*commSection, error) {
 			s.check("error_status").add(path, name, fmt.Sprintf(factSpyderError, bql.StripControl(got)))
 		}
 	}
-	return s, r.spyderIO(s.check("io_mismatch"), devices)
+	if err := r.spyderIO(s.check("io_mismatch"), devices); err != nil || !r.spyderHardware {
+		return s, err
+	}
+	return s, r.spyderModel(s)
 }
 
 // cellOrEmpty is a cell as a fact writes it: an empty cell is named, never left blank.

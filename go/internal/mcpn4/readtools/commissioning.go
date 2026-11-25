@@ -26,7 +26,7 @@ var commBuilders = map[string]func(*commRun) (*commSection, error){
 func sectionsArg(args *pyjson.Object) ([]string, error) {
 	v, ok := args.Get("sections")
 	if !ok {
-		if _, spec := args.Get("spyder_spec"); spec {
+		if _, spec := args.Get("spyder_spec"); spec || boolArg(args, "spyder_hardware", false) {
 			return commSections, nil
 		}
 		return commDefaultSections, nil
@@ -64,6 +64,7 @@ func (t *Tools) newCommRun(args *pyjson.Object) (*commRun, error) {
 	if r.spyderSpec, err = spyderSpecArg(args); err != nil {
 		return nil, err
 	}
+	r.spyderHardware = boolArg(args, "spyder_hardware", false)
 	return r, nil
 }
 
