@@ -1379,7 +1379,7 @@ Tool rules:
   54 `PUB1012S`, ... with the I/O it supports): the model the station's download compares,
   so a program for another model is caught before a download; `hardware` is null on other
   devices. Live 2026-11-18: a PUB6438S Spyder lists 87 objects. No point is added. No inverse.
-- `n4_make_station_template(use_minor_version?, service_ord?, wait_seconds?)` makes a station template
+- `n4_make_station_template(use_minor_version?, service_ord?, wait_seconds?, accept_runaway_risk?)` makes a station template
   (`.ntpl`) of the connected station through the `template:TemplateService`'s hidden `makeStationTemplate`
   action (`BTemplateService.doMakeStationTemplate`: a boolean `useMinorVersionOnDeployment`, default true,
   `use_minor_version`; `service_ord` defaults to `station:|slot:/Services/TemplateService`). The station
@@ -1390,6 +1390,11 @@ Tool rules:
   that ends without a file, is a `mismatch`. A station without the template module is refused at the
   dry run, naming the ORD. It writes a new file in the station's `^temp`, which stays there until the
   station clears it: the plan says so and there is no inverse. The write scope must cover the service ORD.
+  The dry run is refused unless `accept_runaway_risk=true`: on 4.14.0.162 the job zips `^temp` into its
+  own output, so the `.ntpl` grows without end and fills the disk, and a job cancel does not stop it
+  (#1057). A running job reports `temp_output` (its size from two reads, the growth, or "at least N
+  bytes"). Recovery: `n4_save_station`, stop the station process, delete the partial `^temp/*.ntpl`,
+  restart the station.
 - `n4_register_bacnet_spyder(network_ord, name, network_number, mac, instance, discover?, wait_seconds?, expected_model?)`
   registers a Honeywell BACnet Spyder in one planned batch: create the device, set its MS/TP
   address (`address/addressType` 3, `networkNumber`, `macAddress`) and `config/deviceObject/objectId`,

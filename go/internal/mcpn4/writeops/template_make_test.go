@@ -38,8 +38,13 @@ func (*refuses) LoadTree(ord string, _ int, _ box.LoadOptions) (*pyjson.Object, 
 	return nil, &box.Error{Kind: box.KindBox, Msg: "no such component: " + ord, Station: true}
 }
 
+// mkPlan plans with accept_runaway_risk=true (the guard, template_make_guard_test.go, refuses without it)
+// unless args say otherwise.
 func mkPlan(t *testing.T, c *asks, args *pyjson.Object) *plan.Planned {
 	t.Helper()
+	if _, given := args.Get("accept_runaway_risk"); !given {
+		args.Set("accept_runaway_risk", true)
+	}
 	p, err := writeops.MakeStationTemplate.PlanWith(c, args, clock(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -84,12 +89,12 @@ func TestMakeStationTemplateIsWholeStation(t *testing.T) {
 
 func TestMakeStationTemplateRefusals(t *testing.T) {
 	none := &refuses{}
-	if _, err := writeops.MakeStationTemplate.PlanWith(none, obj(), clock(), nil); err == nil ||
+	if _, err := writeops.MakeStationTemplate.PlanWith(none, obj("accept_runaway_risk", true), clock(), nil); err == nil ||
 		!strings.Contains(err.Error(), "no TemplateService") || !strings.Contains(err.Error(), mkService) {
 		t.Errorf("no service: err = %v", err)
 	}
 	other := &asks{loads: loads{nodes: obj(mkService, obj("", obj("h", "x", "t", "baja:Folder")))}}
-	if _, err := writeops.MakeStationTemplate.PlanWith(other, obj(), clock(), nil); err == nil ||
+	if _, err := writeops.MakeStationTemplate.PlanWith(other, obj("accept_runaway_risk", true), clock(), nil); err == nil ||
 		!strings.Contains(err.Error(), "template:TemplateService") {
 		t.Errorf("wrong type: err = %v", err)
 	}
@@ -98,9 +103,9 @@ func TestMakeStationTemplateRefusals(t *testing.T) {
 		args *pyjson.Object
 		want string
 	}{
-		{obj("use_minor_version", "yes"), "use_minor_version"},
-		{obj("wait_seconds", 0), "wait_seconds"},
-		{obj("wait_seconds", 601), "wait_seconds"},
+		{obj("accept_runaway_risk", true, "use_minor_version", "yes"), "use_minor_version"},
+		{obj("accept_runaway_risk", true, "wait_seconds", 0), "wait_seconds"},
+		{obj("accept_runaway_risk", true, "wait_seconds", 601), "wait_seconds"},
 	} {
 		if _, err := writeops.MakeStationTemplate.PlanWith(c, tc.args, clock(), nil); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: err = %v, want one naming %s", js(t, tc.args), err, tc.want)
