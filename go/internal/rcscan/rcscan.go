@@ -82,7 +82,7 @@ func Main(args []string, s cli.Stdio) int {
 		return 3
 	}
 	var rows []lint.Finding
-	var pages []*source
+	var pages, all []*source
 	// prefix is how lint.Walk spells the root in front of every walked path: as given, with one "/" added
 	// unless the root already ends in one ("x/" walks to "x/a.js", never "x//a.js"). under (p minus exactly
 	// that prefix) is what the vendored skip and the map anchors read, so a trailing-slash root never makes them
@@ -104,11 +104,13 @@ func Main(args []string, s cli.Stdio) int {
 		}
 		src := &source{rel: rel, rc: rcRel(under), path: p, ext: p[strings.LastIndexByte(p, '.')+1:], lines: records(data)}
 		rows = append(rows, scanFile(src, o)...)
+		all = append(all, src)
 		if src.ext != "css" {
 			pages = append(pages, src)
 		}
 	}
 	rows = append(rows, orphanPages(pages, o.sevW())...)
+	rows = append(rows, responsiveRows(all, o)...)
 	code := 0
 	for _, f := range rows {
 		f.Rule = "rc-scan"

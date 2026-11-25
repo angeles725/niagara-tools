@@ -65,6 +65,9 @@
 #   orphan-page        WARN  a <section id="page-<id>"> with no data-page="<id>" nav entry, or a
 #                            data-page="<id>" with no such section (across all scanned files; only
 #                            when the tree uses section#page-* at all). [ev: retro dashboard-frontend-standard Δ5]
+#   responsive         WARN  (--profile lan|both only; FAIL with --strict) an HTML entry page without a
+#                            width=device-width viewport meta, no @media width query in the module, or a
+#                            width/min-width above 360px outside @media. [ev: issue #1087]
 #   inline-block-size  WARN  an inline <script> (no src) or <style> block over 300 lines in an
 #                            .html file — split per DJS1. [ev: retro dashboard-rc-file-split Δ6]
 #   fetch-outside-services  WARN legacy / FAIL strict (module map modes only, see below)  a `fetch(` in

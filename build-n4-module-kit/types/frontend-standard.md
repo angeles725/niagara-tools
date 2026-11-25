@@ -281,6 +281,9 @@ Rules that only the `lan` audience needs (the kit had none before — every earl
 written for the panel):
 
 - [LAN] Responsive at ~360 / 768 / 1280+ px; no hover-only interaction (tablets).
+  Mechanized by `rc-scan.sh` `responsive` (§ Enforcement): viewport meta, an `@media` width query, no fixed
+  `width` above 360px. Runtime check: `toolbelt/hmi-sweep.js --url <page> --profile lan` (360/768/1280 px) fails
+  a horizontal document scroll; `--widths W1,W2,...` sweeps custom widths, each row names its `width=`.
 - [LAN] Pause polling on `visibilitychange` while `document.hidden`; resume with an immediate poll.
 - [LAN] Handle session expiry: a 401 shows a re-login prompt, never a silent retry loop.
 - [LAN] Write audit uses the real Niagara user — per-user attribution is possible only here (the
@@ -363,6 +366,17 @@ lint reads the handler's own exit: a `return` in a callback the handler passes o
 another file is not seen by the lint; make the tick throw on failure.
 `[ev: issue #895]` `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
 `[ev: retro dashboard-frontend-standard Δ5]` `[ev: retro dashboard-rc-file-split Δ6]`
+
+`rc-scan.sh` `responsive` (`--profile lan|both`; `hmi` is a fixed 1280×800 kiosk and `unknown` is not
+enforced, so neither gets a row) reports three things. An HTML entry page (`<head`/`<html`) without
+`<meta name="viewport" content="width=device-width…">`. No `@media` width query (`min-width`, `max-width`,
+`width`, also the range form `(width <= 768px)`) in any rc `.css` or `<style>` block: one module-level row. A
+`width:` or `min-width:` above 360px outside `@media`, at its file:line (`max-width`, `%`, `vw`, `rem`, `em` and
+`calc()` are fine). WARN, FAIL under `--strict`; waive with `rc-scan: allow responsive` (on the declaration's
+line, anywhere in the page, or in any scanned file for the module-level row). `vendor/`, `ext/` and `*.min.js`
+are skipped. `[ev: issue #1087 R1]` At run time, `toolbelt/hmi-sweep.js --profile lan` renders the page at 360,
+768 and 1280 px and FAILs a horizontal document scroll at any of them (`--profile hmi` is the single 1280×800
+run, `both` adds it to the lan widths). `[ev: issue #1087 R2]`
 
 `toolbelt/report-module.sh` passes the module's `ui_profile` (read by the caller from the module's
 BUILD-STATE envelope) as `--profile` and `--legacy` through to `rc-scan.sh`, so an `hmi`/`both`
