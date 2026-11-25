@@ -1,0 +1,23 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-async-blocking  @DIR@/src/com/acme/BPost.java:8  post() runs this::doSubmit on another thread: the handler skips the action pipeline (no links, action event, audit or Context); pass new Invocation(this, <action>, arg, cx) to the executor and invoke it there (types/actions.md § 2)
+WARN  lint-async-blocking  @DIR@/src/com/acme/BPost.java:9  post() runs () -> doSubmit(...) on another thread: the handler skips the action pipeline (no links, action event, audit or Context); pass new Invocation(this, <action>, arg, cx) to the executor and invoke it there (types/actions.md § 2)
+WARN  lint-async-blocking  @DIR@/src/com/acme/BPost.java:10  post() runs () -> doSubmit(...) on another thread: the handler skips the action pipeline (no links, action event, audit or Context); pass new Invocation(this, <action>, arg, cx) to the executor and invoke it there (types/actions.md § 2)
+-- stderr --
+-- src/com/acme/BPost.java --
+@NiagaraType
+@NiagaraAction(name = "submit", flags = Flags.ASYNC)
+public class BPost extends BComponent
+{
+  public void doSubmit() { Thread.sleep(1L); }
+  public IFuture post(Action action, BValue arg, Context cx)
+  {
+    pool.execute(this::doSubmit);
+    pool.submit(() -> doSubmit());
+    pool.submit(() -> { doSubmit(); });
+    pool.execute(new Invocation(this, action, arg, cx));
+    return null;
+  }
+}

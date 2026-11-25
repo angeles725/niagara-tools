@@ -1,0 +1,29 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-action-handler  @DIR@/src/com/acme/BRef.java:9  this::doReset runs the handler outside the action pipeline (no links, action event, audit or Context): post new Invocation(this, <action>, arg, cx) from an ASYNC post() override and invoke it instead (types/actions.md § 2)
+WARN  lint-action-handler  @DIR@/src/com/acme/BRef.java:10  new Thread(() -> doReset(...)) runs the handler outside the action pipeline (no links, action event, audit or Context): post new Invocation(this, <action>, arg, cx) from an ASYNC post() override and invoke it instead (types/actions.md § 2)
+WARN  lint-action-handler  @DIR@/src/com/acme/BRef.java:11  new Thread(() -> doReset(...)) runs the handler outside the action pipeline (no links, action event, audit or Context): post new Invocation(this, <action>, arg, cx) from an ASYNC post() override and invoke it instead (types/actions.md § 2)
+-- stderr --
+-- src/com/acme/BRef.java --
+@NiagaraType
+@NiagaraAction(name = "reset")
+@NiagaraAction(name = "build", flags = Flags.ASYNC)
+public class BRef extends BComponent
+{
+  public void doReset(Context cx) {}
+  public void doBuild(Context cx) {}
+  public void doHelper() {}
+  void a() { pool.execute(this::doReset); }
+  void b() { new Thread(() -> doReset(null)).start(); }
+  void c() { new Thread(() -> { doReset(null); }).start(); }
+  void d() { pool.execute(this::doHelper); }
+  void e() { doReset(null); }
+  public IFuture post(Action action, BValue arg, Context cx)
+  {
+    pool.execute(this::doBuild);
+    return null;
+  }
+  class Inner { void f() { run(this::doReset); } }
+}

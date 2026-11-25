@@ -1,0 +1,44 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-async-blocking  @DIR@/src/BEngineThreadExecutor.java:5  ASYNC action "execute": doExecute blocks the shared engine thread (Thread.sleep() line 9) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, execute, arg, cx) to your own executor (types/actions.md § 2)
+WARN  lint-async-blocking  @DIR@/src/BHistoryExportService.java:10  ASYNC action "export": doExport blocks the shared engine thread (BQL .get() line 14, getOutputStream() line 16) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, export, arg, cx) to your own executor (types/actions.md § 2)
+-- stderr --
+-- src/BHistoryExportService.java --
+@NiagaraType
+@NiagaraProperty(name = "historyId", type = "BHistoryId", defaultValue = "BHistoryId.DEFAULT")
+@NiagaraAction(
+  name = "export",
+  flags = Flags.ASYNC
+)
+public class BHistoryExportService extends BAbstractService
+{
+  @SuppressWarnings("unchecked")
+  public void doExport(Context context)
+    throws Exception
+  {
+    BOrd historyOrd = BOrd.make("history:" + getHistoryId().encodeToString() + "|bql:select *");
+    BITable<BHistoryRecord> table = (BITable<BHistoryRecord>)historyOrd.get(this, context);
+    BIFile file = BajaFileUtil.createFileToOverwrite(getOutputFile(), context);
+    try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(file.getOutputStream(), UTF_8)))
+    {
+    }
+  }
+  @Override
+  public Type[] getServiceTypes() { return new Type[]{ TYPE }; }
+}
+-- src/BEngineThreadExecutor.java --
+@NiagaraType
+@NiagaraAction(name = "execute", flags = Flags.ASYNC)
+public class BEngineThreadExecutor extends BComponent
+{
+  public void doExecute()
+  {
+    try
+    {
+      Thread.sleep(10000L);
+    }
+    catch (InterruptedException ex) {}
+  }
+}

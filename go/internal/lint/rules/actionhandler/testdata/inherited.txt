@@ -1,0 +1,28 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+WARN  lint-action-handler  @DIR@/src/com/acme/BInherit.java:2  @NiagaraAction "work" has no do method in this file: handler may be inherited from BBaseElsewhere: not judged (the station needs a public doWork(...) in the class or a superclass; ComplexIntrospector.java:316-343)
+FAIL  lint-action-handler  @DIR@/src/com/acme/BInherit.java:10  @NiagaraAction "idle" has no matching do method: declare public void doIdle(Context cx), or doIdle() -- the station refuses the type with "Missing action do method" (ComplexIntrospector.java:316-343, types/actions.md § 1)
+WARN  lint-action-handler  @DIR@/src/com/acme/BInherit.java:16  @NiagaraAction "chain" has no do method in this file: handler may be inherited from BFarAway: not judged (the station needs a public doChain(...) in the class or a superclass; ComplexIntrospector.java:316-343)
+-- stderr --
+-- src/com/acme/BInherit.java --
+@NiagaraType
+@NiagaraAction(name = "work")
+public class BInherit extends BBaseElsewhere {}
+
+@NiagaraType
+@NiagaraAction(name = "rest")
+public class BHere extends BBaseElsewhere { public void doRest() {} }
+
+@NiagaraType
+@NiagaraAction(name = "idle")
+public class BLocalKid extends BLocal {}
+
+class BLocal extends BComponent {}
+
+@NiagaraType
+@NiagaraAction(name = "chain")
+public class BChain extends BMid {}
+
+class BMid extends BFarAway {}

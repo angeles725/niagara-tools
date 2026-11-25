@@ -1,0 +1,18 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-async-blocking  @DIR@/src/com/acme/BFlags.java:8  ASYNC action "slow": doSlow blocks the shared engine thread (Thread.sleep() line 8) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, slow, arg, cx) to your own executor (types/actions.md § 2)
+-- stderr --
+-- src/com/acme/BFlags.java --
+import static javax.baja.sys.Flags.ASYNC;
+@NiagaraType
+@NiagaraAction(name = "slow", flags = ASYNC)
+@NiagaraAction(name = "plain", flags = Flags.HIDDEN)
+@NiagaraAction(name = "numeric", flags = 16)
+public class BFlags extends BComponent
+{
+  public void doSlow() { Thread.sleep(1L); }
+  public void doPlain() { Thread.sleep(1L); }
+  public void doNumeric() { Thread.sleep(1L); }
+}

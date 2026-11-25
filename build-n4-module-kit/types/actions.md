@@ -29,7 +29,8 @@ at most on a reflectively dispatched DYNAMIC action [INFER].
 
 **Declare ONE handler and take the `Context`** (Tridium's recommendation: the Context carries the invoking user,
 needed for audit and per-user checks). If both `doX()` and `doX(Context)` exist, the no-Context one is found
-first and the Context one never runs. A check for that pair is owed as Go lint G1 (BUILD-STATE `open_issues`).
+first and the Context one never runs. `toolbelt/lint-action-handler.sh` WARNs that pair (G1) and FAILs an action
+with no public `do<X>` of the action's return type, which the type refuses at load.
 [ev: corpus B1231 §1231.4]
 
 ## 2 · Threading model — ordinary vs `ASYNC`
@@ -47,8 +48,9 @@ thread, never in an `ASYNC` handler (alarm-rt `escalateAlarms` declares flags 20
 engine thread, nothing more. The course's Lab 9 `BEngineThreadExecutor` sleeps 10 s in an `ASYNC` `execute`:
 Workbench stays responsive while the engine thread freezes ("in extreme scenarios … an engine watchdog timeout"),
 and the certification exam accepted an `ASYNC` `export` action that writes one history CSV. Keep a plain `ASYNC`
-handler for short, bounded work; for long or unbounded work override `post()` (below). The owed lint G28
-`async-blocking-action` stays WARN-only and never becomes a FAIL. `[ev: course Lab Instructions.txt:1644-1647,1711-1721]`
+handler for short, bounded work; for long or unbounded work override `post()` (below).
+`toolbelt/lint-async-blocking.sh` (G28) flags an `ASYNC` handler that blocks; it stays WARN-only and never becomes a
+FAIL. `[ev: course Lab Instructions.txt:1644-1647,1711-1721]`
 `[ev: retro n4-course-handson-services-history-threading Δ2]`
 
 **Which thread, exactly** (baja and fox-rt 4.14.0.162 vineflower; 4.15 not verified) `[ev: retro n4-course-threading-jobs-doctrine Δ3]` `[ev: corpus B1238 §1238.3-§1238.5]`:

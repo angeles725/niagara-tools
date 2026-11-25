@@ -1,0 +1,60 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-action-handler  @DIR@/src/com/acme/BPair.java:7  doReset(..., Context) never runs: the station binds the action to the no-Context doReset(...) it finds first; keep one handler (types/actions.md § 1)
+WARN  lint-action-handler  @DIR@/src/com/acme/BPair.java:8  doIncrement(..., Context) never runs: the station binds the action to the no-Context doIncrement(...) it finds first; keep one handler (types/actions.md § 1)
+WARN  lint-action-handler  @DIR@/src/com/acme/BStr.java:7  doReset(..., Context) never runs: the station binds the action to the no-Context doReset(...) it finds first; keep one handler (types/actions.md § 1)
+-- stderr --
+-- src/com/acme/BPair.java --
+@NiagaraType
+@NiagaraAction(name = "reset")
+@NiagaraAction(name = "increment", parameterType = "BInteger")
+public class BPair extends BComponent
+{
+  public void doReset() {}
+  public void doReset(Context cx) {}
+  public void doIncrement(BInteger by,
+    Context cx) {}
+  public void doIncrement(BInteger by) {}
+}
+-- src/com/acme/BHidden.java --
+@NiagaraType
+@NiagaraAction(name = "reset")
+public class BHidden extends BComponent
+{
+  void doReset() {}
+  public void doReset(Context cx) {}
+}
+-- src/com/acme/BNoAnn.java --
+public class BNoAnn extends BComponent
+{
+  public void doReset() {}
+  public void doReset(Context cx) {}
+}
+-- src/com/acme/BCall.java --
+@NiagaraType
+@NiagaraAction(name = "reset")
+public class BCall extends BComponent
+{
+  public void doReset(Context cx) {}
+  void go() { if (x) doReset(); else doReset(cx); }
+}
+-- src/com/acme/BComm.java --
+@NiagaraType
+@NiagaraAction(name = "reset")
+public class BComm extends BComponent
+{
+  // public void doReset() {}
+  /* public void doReset(Context cx) {} */
+  public void doReset(Context cx) {}
+}
+-- src/com/acme/BStr.java --
+@NiagaraType
+@NiagaraAction(name = "reset")
+public class BStr extends BComponent
+{
+  String u = "h/*";
+  public void doReset() {}
+  public void doReset(Context cx) {}
+}

@@ -1,0 +1,25 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-action-handler  @DIR@/src/com/acme/BOpaque.java:9  @NiagaraAction "bad" has no matching do method (found: doBad(String, String)): declare public void doBad(<parameterType> arg, Context cx), or doBad(<parameterType> arg) -- the station refuses the type with "Missing action do method" (ComplexIntrospector.java:316-343, types/actions.md § 1)
+-- stderr --
+-- src/com/acme/BOpaque.java --
+package com.acme;
+
+@NiagaraType
+@NiagaraAction(name = "byConst", parameterType = PARAM_TYPE)
+@NiagaraAction(name = "bySpec", parameterType = "baja:Integer")
+@NiagaraAction(name = "none", parameterType = PARAM_TYPE)
+@NiagaraAction(name = "ctxOnly", parameterType = "baja:Integer")
+@NiagaraAction(name = "ret", returnType = "baja:String")
+@NiagaraAction(name = "bad", parameterType = PARAM_TYPE)
+public class BOpaque extends BComponent
+{
+  public void doByConst(BInteger by, Context cx) {}
+  public void doBySpec(BInteger by) {}
+  public void doNone() {}
+  public void doCtxOnly(Context cx) {}
+  public BString doRet() { return null; }
+  public void doBad(String a, String b) {}
+}

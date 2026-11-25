@@ -1,0 +1,45 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/acme/BClean.java --
+package com.acme;
+
+@NiagaraType
+@NiagaraAction(name = "reset")
+@NiagaraAction(name = "bump", parameterType = "BInteger")
+@NiagaraAction(name = "poll", returnType = "BOrd")
+@NiagaraAction(name = "fetch", returnType = "BOrd", parameterType = "BInteger")
+public class BClean extends BComponent
+{
+  public void doReset(Context cx) {}
+  public void doBump(BInteger by) throws Exception {}
+  public javax.baja.naming.BOrd doPoll()
+  {
+    return null;
+  }
+  public BOrd doFetch(BInteger by, Context cx) { return null; }
+  public IFuture post(Action a, BValue v, Context cx) { return null; }
+}
+-- src/com/acme/BAbs.java --
+@NiagaraType
+@NiagaraAction(name = "go")
+public abstract class BAbs extends BComponent
+{
+  public abstract void doGo(Context cx);
+}
+-- src/com/acme/BKid.java --
+@NiagaraType
+@NiagaraAction(name = "work")
+public class BKid extends BBase {}
+
+class BBase extends BComponent
+{
+  public void doWork() {}
+}
+-- src/com/acme/BPlain.java --
+public class BPlain extends BComponent
+{
+  void helper() { doThing(); }
+}
