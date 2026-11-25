@@ -18,6 +18,7 @@ var notInReport = map[string]string{
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",
 	"lint-poll-scroll-restore": "a WARN-only lexical advisory for a -ux source root, run by hand (#909)",
+	"lint-post-permission":     "a FAIL on a handler post() with no permission check before it, run by hand on a -rt source root",
 	"lint-wb-usability":        "a WARN-only lexical advisory for a -wb source root (the narrow part of the wb-widgets UX rule), run by hand",
 	"lint-gradle-userhome":     "reads gradle.properties (build configuration, not a module artifact); run it on a gradle root on demand",
 	"lint-guard-pins":          "a kit meta-check of the toolbelt's own lint headers, run by the kit gates",

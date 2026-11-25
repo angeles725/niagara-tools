@@ -80,4 +80,4 @@ facets+status-color rendering recipe as a delta.
    set in the 2026-09-03 audit and not updated after the doctrine-fold retros applied the content.
 
 ---
-**Status**: PENDING — INDEX row appended: `| retros/2026-09-18-wiresheet-control-library-deltas.md | kit | 2026-09-18 | pending | 1 |`
+**Status**: FOLDED — INDEX row appended: `| retros/2026-09-18-wiresheet-control-library-deltas.md | kit | 2026-09-18 | folded | 1 |`

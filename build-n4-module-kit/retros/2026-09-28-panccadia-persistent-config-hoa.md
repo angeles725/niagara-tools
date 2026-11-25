@@ -44,4 +44,4 @@ constructs the panel does not support; and a HAND low-suction stop without hyste
 - Every auto-restart protection needs hysteresis and a delay, proven against a coupled plant model.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-28-panccadia-persistent-config-hoa.md | DashboardPan | 2026-09-28 | pending | 6 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-28-panccadia-persistent-config-hoa.md | DashboardPan | 2026-09-28 | folded | 6 |`

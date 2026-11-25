@@ -309,4 +309,4 @@ plugins resolve from `niagara_home/etc/m2`; mixing SDK families creates a versio
    surfaces a first-class trap should add a row; it is the right home for symptom-first lookup.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-insights-issues-catalog-deltas.md | kit | 2026-09-18 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-insights-issues-catalog-deltas.md | kit | 2026-09-18 | folded | 3 |`

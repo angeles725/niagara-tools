@@ -78,4 +78,4 @@ therefore new.
 - B960 §960.4 provides the canonical five-file descriptor table. Making `moduleTest-include.xml` explicit in `types/structure.md` (Δ7) removes a common confusion: developers adding a test file to the wrong XML (polluting the production jar with test types).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-sdk-examples-kit-deltas.md | kit | 2026-09-18 | pending | 8 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-sdk-examples-kit-deltas.md | kit | 2026-09-18 | folded | 8 |`

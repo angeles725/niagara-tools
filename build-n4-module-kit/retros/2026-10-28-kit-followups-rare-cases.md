@@ -34,4 +34,4 @@ teeth by mutation. A real `toolbelt/build.sh --werror` run on a client A rt modu
 - A fresh client worktree stores `gradlew` as 100644; `build.sh` exits 10 until it is made executable.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-28-kit-followups-rare-cases.md | kit | 2026-10-28 | pending | 4 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-10-28-kit-followups-rare-cases.md | kit | 2026-10-28 | folded | 4 |`

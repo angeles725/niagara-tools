@@ -118,4 +118,4 @@ station — the parent orchestrator's follow-up review is what surfaced it.
   regression happened at all.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | folded | 3 |`

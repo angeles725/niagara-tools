@@ -36,4 +36,4 @@ push was then refused by a doctrine pointer this change did not touch.
   after the last caller is gone.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-13-remove-dead-bash-lint-libs.md | kit | 2026-11-13 | pending | 2 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-13-remove-dead-bash-lint-libs.md | kit | 2026-11-13 | folded | 2 |`

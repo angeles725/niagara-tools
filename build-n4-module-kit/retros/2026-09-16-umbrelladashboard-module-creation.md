@@ -40,4 +40,4 @@ turned out to be non-defects (documented below), which is the source of the prop
 - **Niagara version and gradle plugin version are two separate pins that must move together**: `gradle.properties` (niagara_home/niagara_user_home) sets the SDK; `settings.gradle.kts` (gradlePluginVersion 7.6.17 / settingsPluginVersion 7.6.3) sets the build plugins — 4.13 and 4.14 share 7.6.17, but a different SDK family (4.15/PowerB) can diverge, so re-check both when retargeting. Paccadia's `getOrElse("7.6.17")` gradle-property form is the portable pattern.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-16-umbrelladashboard-module-creation.md | UmbrellaDashboard | 2026-09-16 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-16-umbrelladashboard-module-creation.md | UmbrellaDashboard | 2026-09-16 | folded | 4 |`

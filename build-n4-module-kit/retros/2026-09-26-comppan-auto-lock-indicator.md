@@ -49,4 +49,4 @@ from "false".
 - Handoff between two checkouts is a deploy step and deserves the same verification as a build.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-26-comppan-auto-lock-indicator.md | CompPan | 2026-09-26 | pending | 7 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-26-comppan-auto-lock-indicator.md | CompPan | 2026-09-26 | folded | 7 |`

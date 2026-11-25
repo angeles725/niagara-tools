@@ -29,4 +29,4 @@ Two workflow issues surfaced. (1) WRONG WORK TREE: work started in `/home/cristi
 - Zero OUTAGE across all modules = no load-crash; the residual proof is `triage-console` after a reload on a backup.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-tree-selection-and-schema-risk-baseline.md | kit | 2026-09-07 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-tree-selection-and-schema-risk-baseline.md | kit | 2026-09-07 | folded | 3 |`

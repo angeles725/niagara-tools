@@ -43,4 +43,4 @@ both facts were read off the timestamps by hand. Fifteen room temperature and hu
 - A flat value with `{ok}` status is invisible to staleness and status checks: it needs its own rule.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-19-mcpn4-history-window.md | kit | 2026-11-19 | pending | 3 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-19-mcpn4-history-window.md | kit | 2026-11-19 | folded | 3 |`

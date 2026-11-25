@@ -40,4 +40,4 @@ Five parked "requires-execution" hardening gaps turned out to be code-investigab
 - Highest-priority flagged: **Δ3** (BUILD-TRIAGE, deferred load-time failure), **Δ2** (SECURITY, CORS recipe), **Δ7** (BOOT-RECOVERY runbook), **Δ5** (RESOURCE, lint candidate).
 
 ---
-**Status**: PENDING — 7 proposed deltas; full detail in corpus B1133–B1139. Companion to the earlier `module-hardening-failure-modes-deltas` (16) and `module-hardening-reference-cards-deltas` (8). ALL seven "requires-execution" hardening gaps are now closed from code/docs; only named live child gaps (`*-G1`) remain, parked for a station session.
+**Status**: FOLDED — 7 proposed deltas; full detail in corpus B1133–B1139. Companion to the earlier `module-hardening-failure-modes-deltas` (16) and `module-hardening-reference-cards-deltas` (8). ALL seven "requires-execution" hardening gaps are now closed from code/docs; only named live child gaps (`*-G1`) remain, parked for a station session.

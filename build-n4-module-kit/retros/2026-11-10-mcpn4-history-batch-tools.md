@@ -31,4 +31,4 @@ Configuring 35 history extensions through mcp-n4 took about 8 tool calls per poi
 - A history extension created through BOX starts disabled with defaults; the add op can carry its configured slots so it is never half-configured.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-10-mcpn4-history-batch-tools.md | kit | 2026-11-10 | pending | 6 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-10-mcpn4-history-batch-tools.md | kit | 2026-11-10 | folded | 6 |`

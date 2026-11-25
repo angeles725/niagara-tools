@@ -1,0 +1,28 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-post-permission  Waived.java:13  post() in 'doDelete' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Waived.java:18  post() in 'doGet' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+-- stderr --
+-- Waived.java --
+package demo;
+public class Waived extends BWebServlet {
+  public void doPost(WebOp op) {
+    // post-permission: ok the route is admin-only, checked by the filter
+    post(a, b, cx);
+  }
+  public void doPut(WebOp op) {
+    post(a, b, cx); // post-permission: ok checked in the caller
+    /* post-permission:   ok  reviewed */
+    post(c, d, cx);
+  }
+  public void doDelete(WebOp op) {
+    post(a, b, cx); // post-permission: ok
+  }
+  public void doGet(WebOp op) {
+    // post-permission: ok first post only
+    post(a, b, cx);
+    post(c, d, cx);
+  }
+}

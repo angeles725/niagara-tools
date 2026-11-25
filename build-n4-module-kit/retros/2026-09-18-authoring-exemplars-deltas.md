@@ -73,5 +73,5 @@ Four corpus blocks are NOT yet folded into kit content:
 
 ---
 
-**Status**: PENDING — INDEX row appended:
-`| 2026-09-18-authoring-exemplars-deltas.md | kit | 2026-09-18 | pending | 8 |`
+**Status**: FOLDED — INDEX row appended:
+`| 2026-09-18-authoring-exemplars-deltas.md | kit | 2026-09-18 | folded | 8 |`

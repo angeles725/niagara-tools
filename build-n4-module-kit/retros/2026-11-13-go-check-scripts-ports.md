@@ -39,4 +39,4 @@ parity kept three soft spots of the bash versions, found by the differential and
 - A second tool that shells out to git is the moment to share the runner, before a third copies it.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-13-go-check-scripts-ports.md | kit | 2026-11-13 | pending | 3 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-13-go-check-scripts-ports.md | kit | 2026-11-13 | folded | 3 |`

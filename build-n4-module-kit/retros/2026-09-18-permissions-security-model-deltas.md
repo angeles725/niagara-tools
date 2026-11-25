@@ -123,4 +123,4 @@ a distinct and orthogonal concern from the already-folded servlet RBAC surface.
   Δ2-Δ5 together close this gap.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-permissions-security-model-deltas.md | kit | 2026-09-18 | pending | 8 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-permissions-security-model-deltas.md | kit | 2026-09-18 | folded | 8 |`

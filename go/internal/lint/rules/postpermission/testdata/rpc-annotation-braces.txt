@@ -1,0 +1,21 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-post-permission  Rpc.java:5  post() in 'reset' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+-- stderr --
+-- Rpc.java --
+package demo;
+public class Rpc extends BComponent {
+  @NiagaraRpc(permissions = "r", transports = {Transport.box, Transport.ws})
+  public BValue reset(BValue arg) {
+    post(resetAction, arg, null);
+  }
+  @NiagaraRpc(permissions = "r", transports = {Transport.box, Transport.ws})
+  public BValue guarded(BValue arg) {
+    cx.getUser().checkInvoke(this, resetAction);
+    post(resetAction, arg, null);
+  }
+  @Deprecated
+  public void helper() { post(a, b, null); }
+}

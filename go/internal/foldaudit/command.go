@@ -94,7 +94,7 @@ type audit struct {
 
 	nFolded, nCited, nUncited, dChecked, dMissing, dUnreadable int
 	nPendingDone                                               int
-	nAlias, nAmbiguous                                         int
+	nAlias, nAmbiguous, nDrift                                 int
 	gh                                                         *lookup
 	retroRows                                                  map[string][]retrorows.Row
 	warned                                                     bool
@@ -136,6 +136,7 @@ func (t *audit) row(line string) {
 		return
 	}
 	t.nFolded++
+	t.statusDrift(file)
 	st := stem(file)
 	hits := citedBy(st, t.tokens, t.o.exactStems)
 
@@ -166,6 +167,9 @@ func (t *audit) summary() {
 		if t.nPendingDone > 0 {
 			fmt.Fprintf(t.s.Out, "fold-audit: pending: %d fully cited\n", t.nPendingDone)
 		}
+	}
+	if t.nDrift > 0 {
+		fmt.Fprintf(t.s.Out, "fold-audit: status drift: %d retros (header folded, body Status PENDING)\n", t.nDrift)
 	}
 	if t.nAlias > 0 {
 		fmt.Fprintf(t.s.Out, "fold-audit: aliases: %d tokens are not an exact stem (%d ambiguous)\n", t.nAlias, t.nAmbiguous)

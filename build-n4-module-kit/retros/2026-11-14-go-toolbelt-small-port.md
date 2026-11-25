@@ -48,4 +48,4 @@ last caller and went, with the awk oracle test that ran one of them.
 - Search for a retired name with untruncated output.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-14-go-toolbelt-small-port.md | kit | 2026-11-14 | pending | 5 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-14-go-toolbelt-small-port.md | kit | 2026-11-14 | folded | 5 |`

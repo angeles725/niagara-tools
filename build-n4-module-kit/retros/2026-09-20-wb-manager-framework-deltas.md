@@ -27,4 +27,4 @@ Reconstructed the WB manager framework end-to-end: the 6 support objects, the ce
 - For a simple component container (like our Apillm importer/exporter), a hand-built `BWbComponentView`+`BTable` is legitimate; the full `BAbstractManager` framework is worth it when you need discovery/learn + rich columns (B1091). Pairs with wb-vendor Δ19 (multi-tab view) and PD-FE deltas.
 
 ---
-**Status**: PENDING — 4 proposed deltas; full detail in corpus B1088–B1093.
+**Status**: FOLDED — 4 proposed deltas; full detail in corpus B1088–B1093.

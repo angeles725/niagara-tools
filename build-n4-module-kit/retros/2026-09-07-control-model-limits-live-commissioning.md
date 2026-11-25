@@ -41,4 +41,4 @@ The operator's requirements for the split A/C room (Cuarto 5) and for a "keep th
 - **These only surfaced live.** The build gate never exercised the operator's real control requirements — commissioning did (ties to `live-commissioning-verification-gaps`).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-control-model-limits-live-commissioning.md | kit | 2026-09-07 | pending | 5 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-control-model-limits-live-commissioning.md | kit | 2026-09-07 | folded | 5 |`

@@ -43,4 +43,4 @@ bash tool reported success over a broken result, which the port refuses instead.
 - A test suite is parallel-safe only if it was run in parallel at the baseline; record that baseline once.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-14-go-scaffold-module-port.md | kit | 2026-11-14 | pending | 4 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-14-go-scaffold-module-port.md | kit | 2026-11-14 | folded | 4 |`

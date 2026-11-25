@@ -76,4 +76,4 @@ The audit also listed what the eight kinds still lack. Those rows are open below
 - A marker for owed work is closed in the same change that does the work, or it outlives it.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-15-doc-coverage-audit.md | kit | 2026-11-15 | pending | 24 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-15-doc-coverage-audit.md | kit | 2026-11-15 | folded | 24 |`

@@ -255,4 +255,4 @@ with no named floor of checks that stays non-skippable regardless.
   the wrong amount (Δ14).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-25-panccadia-commissioning-lessons.md | module | 2026-09-25 | pending | 14 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-25-panccadia-commissioning-lessons.md | module | 2026-09-25 | folded | 14 |`

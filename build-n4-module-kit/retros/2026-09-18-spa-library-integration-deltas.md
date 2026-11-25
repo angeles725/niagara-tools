@@ -79,4 +79,4 @@ the commissioning-safety framing, the build strategy decision table, and the rc-
   give the injection framing or the commissioning-safety rationale. Both should be folded together.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-spa-library-integration-deltas.md | kit | 2026-09-18 | pending | 6 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-spa-library-integration-deltas.md | kit | 2026-09-18 | folded | 6 |`

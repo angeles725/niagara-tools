@@ -141,5 +141,5 @@ surface + SUMMARY pin mechanic), B748 (interactivity/low-cognitive-load ranked p
 
 ---
 
-**Status**: PENDING — INDEX row appended:
-`| 2026-09-18-organization-tags-grouping-deltas.md | kit | 2026-09-18 | pending | 6 |`
+**Status**: FOLDED — INDEX row appended:
+`| 2026-09-18-organization-tags-grouping-deltas.md | kit | 2026-09-18 | folded | 6 |`

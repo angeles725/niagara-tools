@@ -26,4 +26,4 @@ Configuración moved from one setpoint/room to PER-EVAPORATOR: 24 facade slots (
 - Editing index.html requires a `-ux` REBUILD to repackage it into the jar; the preview serves the live file but the deployable jar does not until rebuilt.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-per-evap-config-ui-hmi-noscroll.md | DashboardPan | 2026-09-07 | pending | 1 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-per-evap-config-ui-hmi-noscroll.md | DashboardPan | 2026-09-07 | folded | 1 |`
