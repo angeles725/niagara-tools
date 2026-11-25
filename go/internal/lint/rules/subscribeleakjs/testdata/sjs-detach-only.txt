@@ -1,0 +1,12 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-subscribe-js  @DIR@/src/detach.js:2  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/detach.js --
+function open(baja) {
+  var sub = new baja.Subscriber();
+  sub.attach('changed', onChange);
+  return function close() { sub.detach(); };
+}

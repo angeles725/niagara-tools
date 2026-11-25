@@ -1,0 +1,16 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-subscribe-js  @DIR@/src/note.js:2  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/mixin.js --
+define(['baja!', 'bajaux/mixin/subscriberMixIn'], function (baja, subscriberMixIn) {
+  return function View() {
+    subscriberMixIn(this);
+    this.getSubscriber = function () { return this.$sub || (this.$sub = new baja.Subscriber()); };
+  };
+});
+-- src/note.js --
+// This view does not use bajaux/mixin/subscriberMixIn.
+var sub = new baja.Subscriber();

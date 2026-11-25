@@ -1,0 +1,33 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/finally.js --
+// The getting-started tutorial: unsubscribe and detach when the dialog closes.
+require(['baja!', 'dialogs'], function (baja, dialogs) {
+  var sub = new baja.Subscriber();
+  dialogs.showOk(function () {
+    baja.Ord.make('station:|slot:/Ramp').get({ subscriber: sub });
+  })
+  .promise()
+  .finally(function () {
+    sub.unsubscribeAll();
+    sub.detach();
+  });
+});
+-- src/hook.js --
+define(['baja!', 'bajaux/Widget'], function (baja, Widget) {
+  function Live() { Widget.apply(this, arguments); }
+  Live.prototype.doInitialize = function () {
+    this.$sub = new baja.Subscriber();
+    return this.$sub.subscribe(this.value());
+  };
+  Live.prototype.doDestroy = function () {
+    return this.$sub.unsubscribeAll();
+  };
+  return Live;
+});
+-- src/one.js --
+var s = new baja.Subscriber();
+function stop(comp) { return s.unsubscribe(comp); }

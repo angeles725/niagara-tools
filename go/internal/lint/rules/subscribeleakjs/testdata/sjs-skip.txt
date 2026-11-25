@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/A.java --
+class A { void f() { s.subscribe(c); } }
+-- src/build/gen.js --
+var s = new baja.Subscriber();
+-- src/lib.min.js --
+var s=new baja.Subscriber();
+-- src/node_modules/d/dep.js --
+var s = new baja.Subscriber();
+-- src/ok.js --
+var s = new baja.Subscriber(); s.unsubscribeAll();

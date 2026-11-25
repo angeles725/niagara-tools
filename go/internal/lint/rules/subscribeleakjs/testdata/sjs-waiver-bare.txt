@@ -1,0 +1,10 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-subscribe-js  @DIR@/src/w.js:1  waiver-no-reason: lint-subscribe-js: needs a reason after the colon
+WARN  lint-subscribe-js  @DIR@/src/w.js:2  new-no-teardown: new baja.Subscriber() is never unsubscribed in this file (no .unsubscribeAll( or .unsubscribe( call): the subscriptions outlive the view; detach() only removes handlers, so call unsubscribeAll() in a finally or a widget doDestroy (types/dashboard.md, BajaScript section)
+-- stderr --
+-- src/w.js --
+// lint-subscribe-js:
+var s = new baja.Subscriber();

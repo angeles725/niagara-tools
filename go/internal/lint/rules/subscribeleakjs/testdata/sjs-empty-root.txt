@@ -1,0 +1,8 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+ERROR  lint-subscribe-js  @DIR@/m  no *.js sources found (wrong path or empty source tree)
+-- stderr --
+-- m/README.txt --
+notes

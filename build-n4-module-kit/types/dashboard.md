@@ -662,8 +662,9 @@ relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC
   components, so check `isSubscribed()` and unsubscribe anyway; `detach()` only removes event handlers.
   [CERT] `BS/baja/comp/Subscriber.js:186-192,268-290,600-604`. For a one-shot read lease instead:
   `baja.Component.lease()` holds the subscription 10 000 ms by default (`time` overrides). [CERT]
-  `BS/baja/comp/Component.js:1760-1761,1791-1800`. Owed lint: G76 `spa-subscribe-without-unsubscribe` (the JS twin of
-  `toolbelt/lint-subscribe-without-unsubscribe.sh`). `[ev: retro devguide415-nav-subscriptions-tags-ords Δ4]`
+  `BS/baja/comp/Component.js:1760-1761,1791-1800`. `toolbelt/lint-subscribe-js.sh` WARNs a `new baja.Subscriber()`
+  whose file never calls `unsubscribeAll()` (G76; waiver `// lint-subscribe-js: <reason>`).
+  `[ev: retro devguide415-nav-subscriptions-tags-ords Δ4]`
 - **BQL with a cursor:** `baja.Ord.make("station:|slot:/|bql:select ... from ...").get({cursor: {each, limit, offset}})`.
   [CERT-doc] `EX/querying.js:21-38`. **Pitfall: `limit` defaults to 10** — a dashboard that omits it silently
   shows 10 rows. [CERT] `BS/baja/coll/tableMixIn.js:201-203,253-254`

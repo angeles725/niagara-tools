@@ -74,6 +74,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structuraltests"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleakjs"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uberjarapi"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uxversion"
@@ -167,5 +168,6 @@ func All() []lint.Spec {
 		niagararpc.Spec(),
 		confirmrequired.Spec(),
 		bqlunbounded.Spec(),
+		subscribeleakjs.Spec(),
 	}
 }
