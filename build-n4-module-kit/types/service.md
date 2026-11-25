@@ -68,6 +68,11 @@ public final class BFooService extends BAbstractService {
 - **A caller must survive the service being absent.** The station may not have it (never added, removed, module not
   installed): catch `ServiceNotFoundException`, surface a config fault on the caller, and look it up again later;
   never cache the reference past the caller's `stopped()` `[INFER]`.
+- **Prefer `Sys.findService(Type)` when the service may be absent:** it returns `Optional<BIService>` and never
+  throws, so `.map(...)` / `.orElse(null)` replaces the try/catch; cast the `BIService` to your service class.
+  `getService` (`:361`) throws; `findService` is `:367` `[CERT]`
+  `organized/docSource/docSource-doc/extracted/baja/javax/baja/sys/Sys.java:361-369`; the course prefers it
+  `[ev: corpus B1232 §1232.6]`.
 - A configurable pointer instead of a hard-coded type: the `service:` ORD scheme
   (`types/logic-authoring.md` § `service:` lookup scheme).
 - Lookups, links and subscriptions do not care which module the service came from

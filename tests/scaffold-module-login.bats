@@ -98,7 +98,7 @@ login_scaffold() {
   grep -q 'n="ColdBoxService"' "$RT/module.palette"
   grep -q 'api(":web-rt")' "$RT/ColdBox-rt.gradle.kts"
   grep -q 'include("coldbox-login/\*\*")' "$RT/ColdBox-rt.gradle.kts"
-  grep -q '^ColdBoxService.applyLogin=' "$RT/module.lexicon"
+  grep -q '^applyLogin=' "$RT/module.lexicon"
   # the ux part is untouched by the login: no login file lands there
   run find "$OUT/dashboard/ColdBox/ColdBox/ColdBox-ux" -ipath '*login*'
   [ -z "$output" ]

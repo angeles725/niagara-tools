@@ -1,0 +1,18 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-confirm-required  @DIR@/src/com/x/BBare.java:3  tick: waiver without a reason -- write // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BBare.java:4  resetOk: waiver without a reason -- write // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BBare.java:6  ping: waiver without a reason -- write // lint-confirm-required: waived <reason>
+-- stderr --
+-- src/com/x/BBare.java --
+package com.x;
+public class BBare extends BComponent {
+@NiagaraAction(name = "tick") // lint-confirm-required: waived
+@NiagaraAction(name = "resetOk", flags = Flags.CONFIRM_REQUIRED) // lint-confirm-required: waived
+// lint-confirm-required: waived
+@NiagaraAction(name = "ping")
+@NiagaraAction(name = "resetFine") // lint-confirm-required: waived the wizard asks first
+@NiagaraAction(name = "idle")
+}

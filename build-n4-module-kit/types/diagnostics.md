@@ -72,6 +72,11 @@ never returns, a view hangs or the engine stalls (§ 1). Three ways reach the sa
 - **The buttons are the console verb.** The platform daemon writes the verb as a line to the station's standard input,
   so Application Director **Dump Threads** is `threads` and **Save Bog** is `save`; `plat tellstation <station>
   threads` scripts the same thing. `[ev: corpus B1296 §1296.3]`
+- **A fourth way, from the course:** "Use Ctrl+Break command in a console to do a thread dump" (a keyboard with no
+  Break key has a key combination for it) `[CERT-doc]`
+  `sources/n4-dev-course/text/9 Multithreaded Development.txt:191-193`.
+  It is a console key, not a station verb, and the deck does not say what it prints on a daemon-started station;
+  use `threads` or Dump Threads there `[INFER]`.
 - **Reading it.** Find your thread by name: engine callbacks run on `Nre:Engine` (`types/logic.md`, HogsPage
   bullet), the console itself is `Nre:Console` `[ev: corpus B1296 §1296.1]`, and the station thread map is corpus
   B1238. A thread parked inside your class on a lock or a socket read is the stall. Take two dumps some seconds

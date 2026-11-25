@@ -6,6 +6,6 @@
 # --- Component type display names ---
 MinimalDash.displayName=Minimal Dashboard
 
-# --- MinimalDash slots ---
-MinimalDash.setpoint=Setpoint
-MinimalDash.status=Status
+# --- Slots: BARE slot name, never Type.slot (NSlot.java:42, read by name) ---
+setpoint=Setpoint
+status=Status

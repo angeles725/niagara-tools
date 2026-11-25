@@ -125,7 +125,7 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 | L12 | the module root's `gradle.properties`, when there is one, carries `org.gradle.java.installations.auto-detect=false` uncommented (§ JDK-pinning block) | FAIL | R10-D8 |
 | L13 | the first `niagara_home=` of each `<group>/*/gradle.properties` (the group is the module root's parent) agrees; when two differ, every sibling that sets one gets a row | FAIL | three modules of one station built against three installs (§ L10 doctrine) |
 | L14 | the gradle root's `settings.gradle.kts` (the module root's, else the nearest ancestor's up to the `.git` sentinel) does not pin `gradlePluginVersion` to a string literal (read as Kotlin code: comments and literal contents out) | FAIL | `-PniagaraPluginVersion` must apply |
-| L15 | the root `build.gradle.kts` beside that `settings.gradle.kts`, when it applies `com.tridium.niagara-signing`, carries `allowDefaultProfile.set(false)` and the `niagaraSigning` block (`templates/signing-root.gradle.kts`); a root it cannot scan is the same WARN | WARN | a wizard root signs with the development key |
+| L15 | the root `build.gradle.kts` beside that `settings.gradle.kts`, when it applies `com.tridium.niagara-signing`, carries `allowDefaultProfile.set(false)` and the `niagaraSigning` block (`templates/signing-root.gradle.kts`; a release build: `templates/signing-restricted.gradle.kts`); a root it cannot scan is the same WARN | WARN | a wizard root signs with the development key |
 | L16 | the signing profile that gradle root's `gradle.properties` names (`niagaraSigningProfile`) keeps a validity − refresh margin of at least `signingprofile.MinMargin`; a named profile that does not exist is a WARN (margin unchecked) | FAIL | the plugin re-mints the key at every signing |
 | L17 | `module.palette` type specs: a dotted Java class name in `t=`, or `<symbol>:B<Type>` for a type the module declares as `<Type>`, the symbol mapped to this module, compared ignoring case (the `moduleName` of a gradle file in the part directory, else in the module root, else the part directory name; another module's symbol is not judged) | FAIL (a symbol remapped to another module by a later `m=`, a palette holding `<p` that is not well-formed XML: WARN) | `[ev: retro course-coverage Δ20]` |
 
@@ -479,8 +479,8 @@ any future help investment.
   "http://java.sun.com/products/javahelp/toc_1_0.dtd">
 <toc version="1.0">
   <tocitem text="My Module Guide" target="mymod-overview" image="topic">
-    <tocitem text="BColdRoomPan" target="mymod-BColdRoomPan"/>
-    <tocitem text="BDefrostController" target="mymod-BDefrostController"/>
+    <tocitem text="ColdRoomPan" target="mymod-ColdRoomPan"/>
+    <tocitem text="DefrostController" target="mymod-DefrostController"/>
   </tocitem>
 </toc>
 ```
@@ -494,7 +494,10 @@ The `target=` value maps to a filename in `src/doc/` without the `.html` suffix.
 | Guide-on-Target (type help) | `doc/<mod>-<TypeName>.html` |
 | On-View (view help) | `doc/<mod>-<ViewTypeName>.html` |
 
-Example: help for `BColdRoomPan` in module `coldroomrt` → `doc/coldroomrt-BColdRoomPan.html`.
+Example: help for the type `ColdRoomPan` (class `BColdRoomPan`) in module `coldroomrt` →
+`doc/coldroomrt-ColdRoomPan.html`: the page is named after the registered type name, which has no `B`
+(course `slides-DocumentationExample.html` for type `DocumentationExample`; `deployingHelp.txt:23-25`)
+`[CERT-doc]`.
 
 ### Lexicon key (optional — usually omit it)
 

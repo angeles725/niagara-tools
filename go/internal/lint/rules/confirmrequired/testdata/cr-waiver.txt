@@ -1,0 +1,25 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-confirm-required  @DIR@/src/com/x/BWaive.java:8  resetBare: waiver without a reason -- write // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BWaive.java:11  resetFar: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BWaive.java:12  resetStr: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BWaive.java:14  resetCode: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+-- stderr --
+-- src/com/x/BWaive.java --
+package com.x;
+public class BWaive extends BComponent {
+@NiagaraAction(name = "resetSame") // lint-confirm-required: waived internal timer callback, never user driven
+// lint-confirm-required: waived cleared by the commissioning wizard, which asks itself
+@NiagaraAction(name = "resetAbove")
+@NiagaraAction(name = "resetBlock") /* x */ // lint-confirm-required: waived block comment before the marker
+// lint-confirm-required: waived
+@NiagaraAction(name = "resetBare")
+// lint-confirm-required: waived two lines above does not cover
+int y;
+@NiagaraAction(name = "resetFar")
+@NiagaraAction(name = "resetStr", defaultValue = "// lint-confirm-required: waived in a string")
+int x; // lint-confirm-required: waived a code line above is not a comment line
+@NiagaraAction(name = "resetCode")
+}

@@ -140,6 +140,11 @@ post(myAction, arg, cx);  // safe to post after the check
 
 Never rely on the framework to enforce RBAC across the `post()` boundary. This complements §1.1 (null-Context write hazard): that rule covers `set()`/`invoke()` with explicit null; this rule covers `post()` which implicitly drops context on every call.
 
+**Gate:** `toolbelt/lint-post-permission.sh` FAILs a `post(` in a request, RPC or `do<Action>(…, Context)`
+handler with no `checkInvoke`/`checkWrite`/`getPermissionsFor`/`canInvoke`/`hasOperatorInvoke`/`hasAdminInvoke`
+before it (`BComponent.java:590-593` drops `cx`; `EngineManager.java:310` invokes with `null`). Waive one post
+with `// post-permission: ok <reason>` on its line or the line above.
+
 **Worker threads keep the caller's Context.** When an action hands work to its own thread or executor, capture
 the action's `Context` before the hand-off and pass it to every `BOrd.get/resolve`, BQL query and `toString(cx)`
 inside the worker: with `null`, BQL and file reads are no longer filtered by the invoking user (§ 4.4) and value
@@ -176,6 +181,26 @@ The README names the category and role each module user needs (read user, write 
 - **`UserService` slots are per own account:** with the Operator flag on the slot, `r` reads and `rw` writes the
   user's own Email, Password, Cell Phone and Facets; all other users stay hidden. A self-service password change
   needs `rw` on `UserService.Password` (`role_UserServiceComponentPermission.txt:26-39`).
+
+### 2.7 `@NiagaraRpc` is never `unrestricted`, and a mutating RPC checks write `[ev: corpus B752 §752.2]`
+
+An RPC (`baja.rpc` over fox, box or web) runs for any authenticated user unless the annotation or the body checks a
+permission. The annotation's attributes are `transports` (required), `permissions` (default `"I"`),
+`protectedTargets` and `isSecure` (`javax/baja/rpc/NiagaraRpc.java:15-23`). The station compares `permissions`
+case-insensitively and takes `"unrestricted"` and `""` as no requirement, also inside a nested `@Protected`
+(`com/tridium/util/NiagaraRpcUtil.java:138-151`, `:161-166`); a literal `w` or `W` in it is a check the station
+enforces itself (`:138-171`).
+- **No `permissions = "unrestricted"` (or `""`).** The station's own classes use it for public read-only helpers
+  (`BFormatRpc.java:38`, `BUserService.java:411`); a module's RPC is not that: the browser is never the boundary.
+- **Every mutating RPC checks write before its first write:** `BPermissions.has(OPERATOR_WRITE)` (or
+  `hasOperatorWrite()`, `checkCanWrite`, `requireTargetWrite`; `types/dashboard.md` RBAC, `types/servlet-write.md`),
+  or a literal `permissions` holding `w`/`W`. A write is `.set(`, `.invoke(`, a typed setter with two or more
+  arguments, or a `doXxx(` call.
+- **Lint:** `toolbelt/lint-niagara-rpc.sh <src-root>...` FAILs `unrestricted`, `unguarded-write` and a bare waiver
+  (rule `go/internal/lint/rules/niagararpc`). It reads one method body: a write in a helper, a Slot-o-Matic setter
+  `c.setFoo(v)` and a `permissions` held in a constant are not seen. A reviewed exception carries
+  `// lint-niagara-rpc: reviewed <reason>` on the line above the `@NiagaraRpc` or on a line through the method
+  name; the reason is mandatory.
 
 ---
 

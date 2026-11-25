@@ -87,6 +87,34 @@ handler for short, bounded work; for long or unbounded work override `post()` (b
 `faultReset`, `resetStatistics`, `clearLastTimestamp`, `changeDeviceUuid`. Zero-cost safety
 against a fat-finger invoke. [ev: code `Flags.java` CONFIRM_REQUIRED=0x80; code driver-rt javax/baja/driver/util/BPollScheduler.java:136 resetStatistics; code bacnet-rt javax/baja/bacnet/export/BLocalBacnetDevice.java:609 changeDeviceUuid]
 
+**Rule — a destructive action declares `flags = Flags.CONFIRM_REQUIRED`.** An action is destructive when a whole
+word of its `name`, split at its capitals, is `reset`, `clear`, `delete`, `remove`, `purge`, `wipe`, `factory`,
+`restart`, `reboot` or `overwrite` (`faultReset` and `resetCounter` match; `presetValues` and `cleared` do not).
+
+- **Where the list comes from:** the verbs of the kit's own examples above (`faultReset`, `resetStatistics`,
+  `clearLastTimestamp`; `clearHistory` and a device wipe in `types/security.md` § 2.2) and the destructive verbs of
+  the same kind. Tridium declares it the same way: `clearLastTimestamp` is `HIDDEN | CONFIRM_REQUIRED`
+  (rdb-rt `BRdbmsHistoryDeviceExt.java:107-110`). The check reads the name only, so it is narrow on purpose: it cannot
+  see `changeDeviceUuid` or `migrateToOptimizedTableIndexes` (Tridium flags the latter,
+  `BRdbmsHistoryDeviceExt.java:120-124`); declare the flag on such an action yourself when it destroys data.
+- **Combine with `|`:** `flags = Flags.OPERATOR | Flags.CONFIRM_REQUIRED` when operators may run it. Leave
+  `OPERATOR` off unless an operator really must be able to do it (`types/security.md` § 2.2: destructive means admin).
+- **The gate:** `toolbelt/lint-confirm-required.sh <src-root>` FAILs a `@NiagaraAction` whose name matches and whose
+  `flags` lack `CONFIRM_REQUIRED`. A waiver is `// lint-confirm-required: waived <reason>` on the line of the
+  `@NiagaraAction` or on a `//` comment line directly above it; the reason is mandatory, and a bare marker FAILs on
+  any `@NiagaraAction`, destructive or not. A `name` that is not one string literal (a constant, a concatenation)
+  is not judged and gets a `WARN` row (`name not a literal: not judged`; exit 1 under `--strict`), never waived.
+- **The flag is a prompt in the client, not authorization.** Workbench's invoke command asks
+  (`InvokeActionCommand.java:42-51`) and so does the bajaux `invokeAction` (`feDialogs.js:111-123,801`); the
+  extracted corpus holds no check of the flag on the station side, so a link, a program, `invoke()` from code, a
+  servlet or an RPC handler gets no prompt `[INFER]`. Who may run the action is decided by the permission rules:
+  pair every flagged action with `types/security.md` § 2.2 (tier), § 2.2a (the flag is a UI hint) and § 2.4 (check
+  permission before `post()`). It is not a credential step-up either (`types/dashboard.md:338`).
+  [ev: code baja javax/baja/sys/Flags.java:190,445]
+  [ev: code bajaui-wb javax/baja/ui/commands/InvokeActionCommand.java:42-51]
+  [ev: code webEditors-ux rc/fe/feDialogs.js:111-123,801]
+  [ev: devguide `slot-o-matic.txt`] [ev: code docSource BRdbmsHistoryDeviceExt.java:107-110,120-124]
+
 **`NO_AUDIT`** belongs on internal callback actions (a `HIDDEN|ASYNC` timer tick that fires
 every cycle). Without it, a per-minute callback **floods the audit trail**. Tridium's own code
 consistently sets `HIDDEN|NO_AUDIT|ASYNC` on internal callbacks (escalateAlarms, expire,

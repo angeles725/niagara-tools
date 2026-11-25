@@ -1,0 +1,17 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-confirm-required  @DIR@/src/com/x/BPanel.java:4  faultReset: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BPanel.java:5  clearHistory: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+-- stderr --
+-- src/com/x/BPanel.java --
+package com.x;
+
+@NiagaraType
+@NiagaraAction(name = "faultReset")
+@NiagaraAction(name = "clearHistory", flags = Flags.OPERATOR)
+@NiagaraAction(name = "tick", flags = Flags.HIDDEN)
+@NiagaraAction(name = "resetCounter", flags = Flags.OPERATOR | Flags.CONFIRM_REQUIRED)
+public class BPanel extends BComponent {}
