@@ -135,6 +135,7 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 | Theme (CSS, NSS, fonts, icons; zero Java) | `$KIT/types/theme.md` | no scaffold (a theme module's name starts with `theme`, which `--type` names never do; declare `type: theme`, `types/theme.md` § 7) |
 | Cloud / IoT connector (transport, authenticator, channel, MQTT, RDBMS export) | `$KIT/types/cloud-connector.md` | no scaffold |
 | Workbench widget / PX (wb) | `$KIT/types/wb-widgets.md` | no scaffold (only `driver` emits a `-wb` part) |
+| Hx view, Px graphic or Px widget (hx vs Px vs bajaux, binding ORDs and their audit, Hx theming, events, permissions) | `$KIT/types/hx-px.md` | no scaffold |
 | New module scaffold / source layout audit | `$KIT/types/structure.md` | `logic` + `dashboard` + `driver` + `library` (the one of the module's row) |
 | Lexicons, translation modules, runtime and browser text | `$KIT/types/lexicon.md` | no scaffold |
 | Station diagnostics (engine stats, log levels, console messages, thread dumps, remote debugger, launcher flags) | `$KIT/types/diagnostics.md` | no scaffold |

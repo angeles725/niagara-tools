@@ -1,0 +1,10 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/BFooView.java --
+class BFooView extends BWbComponentView {
+  private BOrd target;
+  void pick() { BComponentChooser.prompt(root, path, display, select); }
+}
