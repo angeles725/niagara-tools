@@ -166,6 +166,9 @@ go/bin/mcp-n4 install                       # copies itself to ~/.local/bin/mcp-
   shorter one only as a whole flag); a HOME that is itself a git checkout makes the default
   `--bin` look like a checkout (use `--force`); Claude Code rewrites `~/.claude.json` while it
   runs, so register with Claude Code closed or the entry may be overwritten.
+- Never probe a registration with `claude mcp list`: it health-checks every configured server and hangs for
+  more than 120 s when another one times out. Read the entry that `register` printed, or restart the
+  harness and call `n4_describe_session`. `[ev: issue #985]`
 
 The server speaks newline-delimited JSON-RPC 2.0 on stdin/stdout. Credentials are
 read from the environment only (`<prefix>_USER` / `<prefix>_PASSWORD`) and never

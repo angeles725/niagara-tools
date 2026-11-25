@@ -1308,6 +1308,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   `.last-deploy-sha` (or set `SLOTOMATIC_DETECTION=off`, which makes the record optional); (4) from the gradle root run
   `scripts/ng-deploy.sh --mode <A|C> --first-deploy` (`--first-deploy`: no deployed baseline for the schema-risk
   precheck; the backup step prints `nothing to archive`); (5) read the closing lines, restart the station, then § 6.a.
+  Land the module's `build-state.v1` envelope in `BUILD-STATE.src.md` with the first deploy and push it:
+  `new-retro.sh` refuses a module with no envelope on `origin/main` (`no build-state.v1 section for module ...`),
+  so the module cannot get a retro, and an envelope left on an unpushed branch is lost. `[ev: issue #986]`
   The pre-deploy gates above still apply to a production station. `[ev: code go/internal/ngdeploy/usage.txt]`
   `[ev: retro build-kit-bench-session Δ13]`
 - **Removing a module again:** first take its components out of the station and save it (a station whose `.bog` still
@@ -1454,6 +1457,16 @@ control/status parity, or whether the station actually controls the plant correc
     building. Two modules on one station with one requester each are still two requesters unless both use the
     reference scheduler, whose ticket skips when a save started after the change. Rule and reference:
     `types/logic.md` § Restart & persistence. `[ev: retro double-station-save Δ3]`
+11. **A dashboard API live check has a fixed shape and always cleans up:** (a) put the station in a known start
+    state through the kit and record it (`n4_read_slots`, `n4_list_links` of every slot the check touches); (b) run
+    the checks; (c) remove every temporary link in a `finally` block, since a crash left a link behind until a
+    manual `n4_rollback`; (d) read the same state again and compare it with (a). Every such suite also fires two
+    writes at one equipment at once: exactly one gets 423 busy (the per-Ord lock, `types/dashboard.md` DWS1 gate 4)
+    and the partner invariant (low < high) holds after both. A timing claim (a pulse release) is measured at the
+    dashboard's own points snapshot with a timestamp per request, at most 4 Hz and ONE observer: a 10 Hz probe
+    with two observers itself caused 3 s API stalls (`types/dashboard.md` § Write path; `types/logic-authoring.md`
+    § Watchdogs and timers). The script for this shape (candidate name `live-write-check`) is not built yet.
+    `[ev: issue #986]`
 
 **The kit — not the operator — owns the watchdog role.** Run
 `toolbelt/commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>] [--values-owed <file>] [--wiring-map <file>] [--strict]`

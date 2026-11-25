@@ -18,6 +18,11 @@ paths are under `niagara-help/versions/4.15.6.20/devguide-clean/` and `niagara-h
   full locale (`fr_CA`) with no file falls back to the two-letter language. `getText(key[, args])` returns the KEY
   when it is absent, so a text equal to its key means a missing key. [CERT] `D/Lexicon.java:265-270,326-338,346-360`.
   A slot or type display name falls back to `toFriendly` instead (`types/structure.md` § Lexicon key catalogue).
+- **A slot's display name is the BARE slot name in the declaring module's lexicon.** `NSlot.java:39-55` asks
+  `Lexicon.make(module, cx).get(<slot>)`, so a `<DeclaredType>.<slot>` key is never read for the slot and the
+  slot shows its `toFriendly` name. Write `fanMode=`, never `FanMode.fanMode=`; key table and the coverage rows
+  (`slot-coverage.sh per-slot` prints `DOTTED` for such a key): `types/structure.md` § Lexicon key catalogue.
+  `[ev: issue #986]`
 - **Locale.** Workbench uses its VM locale (OS default or `-locale:<lang>`) for the whole session, whatever station
   user logs in. A browser session uses `User.language`, then `Accept-Language`, then the station VM default
   (devguide `localization.txt:12-14,96-108`). Station code passes the caller's `Context`; a `null` Context means the
