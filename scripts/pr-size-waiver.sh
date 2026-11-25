@@ -4,12 +4,22 @@
 #
 # Usage:  HAS_EXCEPTION=true|false pr-size-waiver.sh <base> <head>   (arguments go to pr-size.sh as they are)
 # Env:    HAS_EXCEPTION   exactly "true" when the PR has the size:exception label; anything else (unset, empty) is no label
+#         PR_NUMBER, GH_REPO  when both are set, the PR's labels are read now through `gh api` and decide instead of
+#                         HAS_EXCEPTION (the event payload, which a rerun replays without a label added later);
+#                         a failed lookup keeps HAS_EXCEPTION after a `::notice` line (issue #1027, PS16)
 # Exits:  pr-size.sh's exit, except exit 1 with the label, which becomes 0 after a `::warning` line. Exit 3 (usage or
 #         environment: the size was not measured) is never waived, label or not.
 # tests/pr-size.bats PS15 drives it against a stub pr-size.sh for each case.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "${PR_NUMBER:-}" ] && [ -n "${GH_REPO:-}" ]; then
+  live=$(gh api "repos/$GH_REPO/issues/$PR_NUMBER/labels" --jq 'any(.[]; .name == "size:exception")' 2>/dev/null) || live=""
+  case "$live" in
+    true | false) HAS_EXCEPTION=$live ;;
+    *) echo "::notice title=PR size::label lookup failed, using the event payload" ;;
+  esac
+fi
 rc=0
 bash "$here/pr-size.sh" "$@" || rc=$?
 if [ "$rc" -eq 1 ] && [ "${HAS_EXCEPTION:-}" = "true" ]; then

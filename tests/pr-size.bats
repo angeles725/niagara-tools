@@ -239,3 +239,32 @@ waiver() {
     [ "$(grep -c '^::warning title=PR size::over the size limit, allowed by the size:exception label$' <<<"$output")" -eq "$([ "$warned" = yes ] && echo 1 || echo 0)" ]
   done
 }
+
+# livewaiver <rc> <payload-label> <gh-mode>: waiver with PR_NUMBER/GH_REPO set and a stub gh on PATH that prints
+# true, prints false, or fails (fail), standing in for the labels API.
+livewaiver() {
+  local d="$BATS_TEST_TMPDIR/live"
+  mkdir -p "$d/bin"
+  cp "$REPO/scripts/pr-size-waiver.sh" "$d/"
+  printf '#!/usr/bin/env bash\nexit %s\n' "$1" > "$d/pr-size.sh"
+  case "$3" in
+    fail) printf '#!/usr/bin/env bash\necho "gh: network" >&2\nexit 1\n' > "$d/bin/gh" ;;
+    *) printf '#!/usr/bin/env bash\necho "$*" >> "%s/gh.args"\necho %s\n' "$d" "$3" > "$d/bin/gh" ;;
+  esac
+  chmod +x "$d/bin/gh"
+  PATH="$d/bin:$PATH" PR_NUMBER=7 GH_REPO=o/r HAS_EXCEPTION="$2" run bash "$d/pr-size-waiver.sh" base head
+}
+
+@test "PS16: the live labels decide over the event payload, so a rerun sees a label added later; a failed lookup keeps the payload (issue #1027)" {
+  # Mutation: PS16 -- reading only the payload keeps a rerun failing after size:exception is added
+  livewaiver 1 false true
+  [ "$status" -eq 0 ]
+  grep -q 'repos/o/r/issues/7/labels' "$BATS_TEST_TMPDIR/live/gh.args"
+  livewaiver 1 true false
+  [ "$status" -eq 1 ]
+  livewaiver 1 true fail
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice title=PR size::label lookup failed, using the event payload"* ]]
+  livewaiver 1 false fail
+  [ "$status" -eq 1 ]
+}

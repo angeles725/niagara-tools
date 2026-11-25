@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: read
+  issues: read # with pull-requests: read, the labels endpoint of the PR
+  pull-requests: read # the waiver reads the PR's current labels: a rerun replays the old payload (#1027)
 
 # Only the latest event of a PR counts: a labeled run must not be overtaken by an older, label-less one.
 concurrency:
@@ -34,4 +36,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           HAS_EXCEPTION: ${{ contains(github.event.pull_request.labels.*.name, 'size:exception') }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
         run: bash scripts/pr-size-waiver.sh "$BASE_SHA" "$HEAD_SHA"
