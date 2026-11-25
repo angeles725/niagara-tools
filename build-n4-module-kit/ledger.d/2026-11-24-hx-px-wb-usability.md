@@ -1,0 +1,6 @@
+<!-- ledger: kit -->
+<!-- date: 2026-11-24 -->
+<!-- last-change-note: new type card types/hx-px.md (Hx, Px and bajaux in a module) and lint-wb-usability -->
+log: 2026-11-24 · new `types/hx-px.md`: which of Hx, Px and bajaux to use, the module file layout, binding ORDs and the `n4_px_binding_audit` check, Hx theming, events and live values, permissions, and the pitfalls found in blocks B853, B433, B289 and the Hx and kitPx sources; linked from `types/wb-widgets.md`, `README.md` and `skill/SKILL.md`; new `toolbelt/lint-wb-usability.sh` (Go rule `wbusability`, WARN only, the narrow part of the `types/wb-widgets.md` UX-rule lint candidate).
+open_issue: corpus-index.md has no row for B181, B188, B194, B292, B293, B423, B856, B858 or B861, the blocks behind the Hx-engine rules of `types/hx-px.md`; the card cites their source lines, and names B188 and B291 in prose, so a row for each lets a later edit add the `[ev: corpus]` tags
+open_issue: lint-wb-usability judges one file and one base class; a chooser opened from another class or file, a view on a subclass of `BWbComponentView` or a manager base, drag-drop from the nav tree and the status table are not read (a semantic check, deferred in `odd/tasks/implement-lint-candidates.md` as false-positive-prone)

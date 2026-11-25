@@ -1,0 +1,8 @@
+-- args --
+@DIR@
+-- want --
+exit 3
+ERROR  lint-wb-usability  @DIR@  no *.java to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- notes.txt --
+x

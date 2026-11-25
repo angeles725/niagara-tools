@@ -1,0 +1,9 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/BFooView.java --
+@NiagaraProperty(name = "label", type = "String", defaultValue = "")
+class BFooView extends BWbComponentView {
+}

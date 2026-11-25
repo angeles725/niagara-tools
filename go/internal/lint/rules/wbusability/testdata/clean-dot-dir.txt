@@ -1,0 +1,12 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/.hidden/BFooView.java --
+class BFooView extends BWbComponentView {
+  private BOrd target = BOrd.NULL;
+  void load() { }
+}
+-- m/B.java --
+class B {}
