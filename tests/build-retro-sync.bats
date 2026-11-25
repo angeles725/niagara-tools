@@ -87,8 +87,21 @@ write_index() { # write_index <rows...> each "file|status"
 }
 
 # --- hook helper -------------------------------------------------------------
+# _gate_top — the toplevel the hook gates when a case needs the real kit but not the CI replay: the real go/ and
+# build-n4-module-kit/ and NO scripts/ci-local.sh, so the hook skips its CI-lints step (cilints.go: "no
+# scripts/ci-local.sh in the work tree"). With $REPO as the toplevel every case ran the real
+# `ci-local.sh --changed`: a `go test` of the packages that read the kit (scaffoldmodule's signal test among them),
+# which failed H2 once on the runner (#1029) and 2 of 50 runs here under CPU load. That step is pinned by
+# tests/pre-push-ci-lints.bats; these cases pin the retro gate only.
+_gate_top() {
+  GATE_TOP="$BATS_TEST_TMPDIR/gate-top"
+  mkdir -p "$GATE_TOP"
+  [ -e "$GATE_TOP/go" ] || ln -s "$REPO/go" "$GATE_TOP/go"
+  [ -e "$GATE_TOP/build-n4-module-kit" ] || ln -s "$KIT" "$GATE_TOP/build-n4-module-kit"
+}
 run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
-  FAKE_TOPLEVEL="$REPO" \
+  _gate_top
+  FAKE_TOPLEVEL="$GATE_TOP" \
   run env PATH="$FAKEBIN:$PATH" bash "$HOOK" origin https://example/repo.git <<<'refs/heads/main aaaa refs/heads/main bbbb'
 }
 
@@ -668,7 +681,8 @@ ZERO=0000000000000000000000000000000000000000
   } > "$BATS_TEST_TMPDIR/log"
   # git runs pre-push with SIGPIPE ignored (it writes the ref lines to the hook's stdin), so a write to a
   # closed pipe reports EPIPE instead of dying silently: reproduce that disposition for the launcher and the Go gate.
-  FAKE_TOPLEVEL="$REPO" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" \
+  _gate_top
+  FAKE_TOPLEVEL="$GATE_TOP" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" \
     run bash -c 'trap "" PIPE; exec env PATH="$1:$PATH" bash "$2" origin https://example/repo.git' _ "$FAKEBIN" "$HOOK" \
     <<<'refs/heads/main aaaa refs/heads/main bbbb'
   [ "$status" -eq 0 ]
