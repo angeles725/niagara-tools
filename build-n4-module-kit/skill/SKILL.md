@@ -137,6 +137,7 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 | Workbench widget / PX (wb) | `$KIT/types/wb-widgets.md` | no scaffold (only `driver` emits a `-wb` part) |
 | Hx view, Px graphic or Px widget (hx vs Px vs bajaux, binding ORDs and their audit, Hx theming, events, permissions) | `$KIT/types/hx-px.md` | no scaffold |
 | Reading data from module code (BQL, NEQL, history, alarm, lease) | `$KIT/types/queries.md` | no scaffold |
+| Data from a browser or off-station client (BOX limits, gzip, file cache, audio, oBIX Watch, `baja.rpc`) | `$KIT/types/data-access.md` | no scaffold |
 | New module scaffold / source layout audit | `$KIT/types/structure.md` | `logic` + `dashboard` + `driver` + `library` (the one of the module's row) |
 | Lexicons, translation modules, runtime and browser text | `$KIT/types/lexicon.md` | no scaffold |
 | Station diagnostics (engine stats, log levels, console messages, thread dumps, remote debugger, launcher flags) | `$KIT/types/diagnostics.md` | no scaffold |

@@ -12,6 +12,8 @@ Building a Niagara N4 module — control logic (rt), a browser dashboard for an 
 - `types/` — per-type guides: `dashboard.md` (mature), `frontend-standard.md` (seed — the SPA side of a dashboard), `logic.md` (growing), `wb-widgets.md` (seed), `hx-px.md` (Hx, Px and bajaux in a module: which to use, file layout, binding ORDs and their audit, theming, events, permissions), `history-transforms.md` (seriesTransform graphs and custom aggregate functions), `service.md` (a station service: registration, lookup, lifecycle order, licence behaviour, testing), `diagnostics.md` (triage of a running station, thread dumps, a remote debugger, launcher flags),
   `queries.md` (reading data from module code: BQL, NEQL, history and alarm reads, lease; the safe recipe, what each
   query scans, paging, slot-add idioms).
+  `data-access.md` (which channel a browser or off-station client uses: BOX limits, gzip, the 30-day file cache, audio,
+  an oBIX Watch recipe, `baja.rpc` over BOX), `security.md` § 11 (`doPrivileged`).
 - `toolbelt/build.sh` — recommended WSL build (clean → slotomatic → jar, Java 8, then runs the gate). `toolbelt/verify-module.sh` — THE verify gate (major 52 outside `META-INF/versions/`, an alias `META-INF/<ALIAS>.SF` signature with its key file, module.xml types resolve). `toolbelt/mirror-niagara-home.sh` — safe mirror for building against a live install. `toolbelt/stored-repack.sh` — STORED repackage for the Workbench re-sign path.
 - `templates/` — files a build session copies into the CLIENT repository: `templates/VERSION-LEDGER.md` (the per-client version and defect ledger, read at `BUILD-LOOP.md` §0 and appended at §7).
 - `SOURCES.md` — where the knowledge lives (corpus-nav, docs, exemplars, tools).

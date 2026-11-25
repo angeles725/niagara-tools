@@ -121,6 +121,7 @@ the decompiled copy. The bullets below give the other paths and lines.
 - **BOX paging:** `encodeTableContents` resolves the ORD, then `stream().skip(of).limit(lm)`: page N re-iterates N ×
   size rows, so keep `lm` large and `of` small, or page by time (§5). `[CERT]` `box-rt`
   `com/tridium/box/BOrdChannel.java:281-316`.
+  The HTTP table endpoints and the BOX limits are in `types/data-access.md` §§ 2, 7.
 
 ## 4. History recipes
 
@@ -211,10 +212,11 @@ try (AlarmDbConnection conn = svc.getAlarmDb().getDbConnection(cx);
   `getAlarmsForSource`, `getRecord(BUuid)`, `timeQuery`. `[CERT]` §3 rows; `[CERT-doc]` `docSource` `alarm-rt`
   `javax/baja/alarm/AlarmDbConnection.java:195-240`. The guide's N4 open-alarm loop is
   `[CERT-doc]` `devguide-clean/alarm.txt:308-315`.
-- **In BQL:** `alarm:|bql:select top 200 * from openAlarms` (the guide uses `select * from openAlarms`,
-  `devguide-clean/alarm.txt:333`). `openAlarms` is every record that is not both acked and normal, and not both acked
-  and alert (`[ev: corpus B1237 §1237.8]`); the archive is `alarm:archive|bql:…` (`alarm.txt:320-327`) and is not
-  part of `openAlarms`.
+- **In BQL:** `alarm:|bql:select * from openAlarms` (`devguide-clean/alarm.txt:333`). Filter the state in Java
+  first and cap the reply after it: a `top n` before the filter can drop a live offnormal alarm.
+  `openAlarms` is every record that is not both acked and normal, and not both acked and alert
+  (`[ev: corpus B1237 §1237.8]`); the archive is `alarm:archive|bql:…` (`alarm.txt:320-327`) and is not part of
+  `openAlarms`.
 - **One alarm by id:** `alarm:|bql:select * where uuid = '<uuid>'` (course `BAlarmExample2.java:94-97`).
 - **Cheap windows:** a `timestamp` predicate or `timeQuery(start, end)` stays on the time index; `sourceState`,
   `ackState` and `alarmClass` conditions do not. Prefer `from openAlarms` and test the state in Java. `[INFER]` that
