@@ -40,7 +40,7 @@ func pointsReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _
 	if err != nil {
 		return nil, nil, nil, "", err
 	}
-	rows, unread := []any{}, 0
+	rows, unread, differ := []any{}, 0, 0
 	var hardware any
 	for _, name := range box.Children(nodes, "").Keys() {
 		if !strings.Contains(pyjson.Str(get(box.Node(nodes, name), "t")), "DiscoveryPoint") {
@@ -54,7 +54,13 @@ func pointsReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _
 			hardware = hw
 		}
 		if path, ok := known[id]; ok {
+			// #820: the objectName is only on the device; name_differs compares it with the point's name
+			point := unescapeSlot(path[strings.LastIndex(path, "/")+1:])
 			row.Set("in_database", path)
+			row.Set("name_differs", point != strOr(val("objectName")))
+			if point != strOr(val("objectName")) {
+				differ++
+			}
 		}
 		if strOr(val("objectName")) == pointsUnread {
 			row.Set("unread", true)
@@ -64,6 +70,7 @@ func pointsReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, _
 	}
 	observed.Set("found", len(rows))
 	observed.Set("unread", unread)
+	observed.Set("names_differ", differ)
 	if unread > 0 {
 		observed.Set("hint", "unread rows: the device may not have sent an I-Am yet; run n4_discover_devices, then discover the points again")
 	}

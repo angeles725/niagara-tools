@@ -81,7 +81,7 @@ func TestDiscoverPointsReadbackRows(t *testing.T) {
 	got := js(t, observed)
 	for _, want := range []string{
 		`"found": 3`, `"unread": 1`,
-		`{"object_name": "SpaceTemp", "object_id": "analogInput:1", "value": "22.5", "description": "room", "in_database": "Folder/RoomTemp"}`,
+		`{"object_name": "SpaceTemp", "object_id": "analogInput:1", "value": "22.5", "description": "room", "in_database": "Folder/RoomTemp", "name_differs": true}`,
 		`{"object_name": "DamperCmd", "object_id": "analogOutput:2", "value": "40.0", "description": "damper", "in_database": null}`,
 		`"unread": true`,
 	} {
