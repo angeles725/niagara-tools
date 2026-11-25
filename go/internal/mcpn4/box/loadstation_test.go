@@ -18,6 +18,10 @@ type loadStation struct {
 	reorder      func(ops []any) []any
 	loadFrames   int
 	loadMsgs     int
+	frameOrds    [][]string    // the ords of every loadSlots frame that arrived, in order
+	stallFrame   int           // the n-th loadSlots frame (1-based) is dropped: no answer, no load op
+	failFrame    int           // the n-th loadSlots frame is answered HTTP 500
+	block        chan struct{} // stalled requests wait here until the test ends
 	*scriptedStation
 }
 
@@ -42,17 +46,44 @@ func newLoadStation(t *testing.T) *loadStation {
 	return ls
 }
 
+// loadOrd is the ord a loadSlots message asks for.
+func loadOrd(m any) string {
+	b, _ := get(m, "b")
+	arg, _ := get(b, "scarg")
+	return pyjson.Str(field(arg.(*pyjson.Object), "o"))
+}
+
+// stallLoadFrame drops the n-th loadSlots frame: its request gets no answer until the test ends
+// (the client times out) and the station never loads its ords.
+func (ls *loadStation) stallLoadFrame(t *testing.T, n int) {
+	ls.stallFrame, ls.block = n, make(chan struct{})
+	t.Cleanup(func() { close(ls.block) }) // runs before the server's Close, which waits for it
+}
+
 func (ls *loadStation) loads(s seen) *reply {
 	ls.mu.Lock()
-	defer ls.mu.Unlock()
 	ls.loadFrames++
+	nth := ls.loadFrames
+	var asked []string
+	for _, m := range frameMessages(s) {
+		asked = append(asked, loadOrd(m))
+	}
+	ls.frameOrds = append(ls.frameOrds, asked)
+	ls.mu.Unlock()
+	if nth == ls.stallFrame {
+		<-ls.block
+		return &reply{Status: 500}
+	}
+	if nth == ls.failFrame {
+		return &reply{Status: 500}
+	}
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
 	var entries, ops []any
 	for _, m := range frameMessages(s) {
 		ls.loadMsgs++
 		r, _ := get(m, "r")
-		b, _ := get(m, "b")
-		arg, _ := get(b, "scarg")
-		ord := pyjson.Str(field(arg.(*pyjson.Object), "o"))
+		ord := loadOrd(m)
 		if ls.fail[ord] {
 			entries = append(entries, obj("r", r, "t", "e", "b", obj("m", "denied "+ord)))
 			continue
