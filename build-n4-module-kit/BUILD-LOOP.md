@@ -335,6 +335,25 @@ module parts `<module>` depends on, one per line. It runs the install's own `nre
 3 when there is no `bin/nre` or the module name is bad. Run it after an install to check the `module-include.xml`
 dependencies the station will resolve. (issue #851) `[ev: corpus B1453]`
 
+**The other `nre` build-time tools (`toolbelt/nre-tool.sh list` names them):** one helper runs a named tool with the
+install's `bin/nre.exe` wired, so a build step calls `nre-tool.sh <tool> <niagara_home> ...` and fails on its exit.
+An unknown tool is exit 3 with the supported list; exit 10 = nre cannot be started (not executable, exec format
+error: the message names the nre path and the error) or, for `palette`, `wslpath -w` gives no Windows path; every
+other exit is nre's own, passed through. Per tool:
+- `deps <niagara_home> <module>`: `DependencyChecker`, read-only (above).
+- `palette <niagara_home> <moduleDir>`: `PaletteGenerator` writes `<moduleDir>/module.palette` from the gifs under
+  `src/` and REPLACES the file, so a hand-kept palette is lost: run it only on a clean tree, read the file it
+  names on stderr, and review the result with `git diff`. It runs only on a module part directory
+  (`module-include.xml` beside `src/`, the layout of `fixtures/MinimalDash/MinimalDash/MinimalDash-rt`) and needs
+  `bin/nre.exe`: the class joins the path with a literal backslash, so a Linux `nre` writes a stray file, and
+  a POSIX path handed to `nre.exe` does too, so with no working `wslpath` it refuses (exit 10) and runs nothing.
+- `recompile <niagara_home> <dir|bog> [-alias:<a>] [-tsaUrl:<u>]`: `RecompileTool` recompiles and re-signs the
+  Program objects of a bog, or of every bog under a folder. It never takes the password in argv (the process
+  list and shell history show it): `-password...` is refused and nre prompts, so run it from a terminal. It exits 0
+  after a missing file, a bad signing key or a Program that fails to compile, so the helper reads the output: an
+  `ERROR` line, or no `--- Processed <file>!` line, is exit 1. Re-sign a bog you can restore from git.
+`[ev: corpus B1453 §1453.4]` `[ev: corpus B1453 §1453.5]` (issue #851)
+
 **Restart a lab station from the loop (no console window):** `toolbelt/lab-station.sh start|stop|restart <station>`
 runs `<niagara_home>/bin/station.exe <station>` with its console on a named pipe the station holds, and waits for
 `*** Station Started`. `stop` writes `quit` to the pipe and waits for `*** Station shutdown ***` (an orderly shutdown,
