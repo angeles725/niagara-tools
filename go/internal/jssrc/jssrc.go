@@ -49,7 +49,7 @@ type scanner struct {
 	i     int
 	line  int
 	out   []Token
-	blank [][2]int // the comment and literal-content byte spans Code blanks
+	spans []Span // the comment and literal-content byte spans, in the order they close
 }
 
 // Tokens tokenizes lines (as javasrc.Lines splits them; a trailing "\r" is whitespace).
@@ -66,8 +66,8 @@ func Code(lines []string) []string {
 	s := &scanner{src: strings.Join(lines, "\n")}
 	s.run(false)
 	b := []byte(s.src)
-	for _, sp := range s.blank {
-		for k := sp[0]; k < sp[1] && k < len(b); k++ {
+	for _, sp := range s.spans {
+		for k := sp.From; k < sp.To && k < len(b); k++ {
 			if b[k] != '\n' {
 				b[k] = ' '
 			}
@@ -92,27 +92,27 @@ func (s *scanner) run(sub bool) {
 			for s.i < len(s.src) && s.src[s.i] != '\n' {
 				s.i++
 			}
-			s.blank = append(s.blank, [2]int{start, s.i})
+			s.mark(Comment, start, s.i)
 		case strings.HasPrefix(s.src[s.i:], "/*"):
 			end := strings.Index(s.src[s.i+2:], "*/")
 			if end < 0 {
 				end = len(s.src) - s.i - 4
 			}
 			s.skip(s.i + 2 + end + 2)
-			s.blank = append(s.blank, [2]int{start, s.i})
+			s.mark(Comment, start, s.i)
 		case c == '"' || c == '\'':
 			end := s.str(c)
-			s.blank = append(s.blank, [2]int{start + 1, end})
+			s.mark(Literal, start+1, end)
 			s.emit(String, line, s.src[start+1:end])
 		case c == '`':
 			s.i++
 			end, subs := s.template()
-			s.blank = append(s.blank, [2]int{start + 1, end})
+			s.mark(Literal, start+1, end)
 			s.out = append(s.out, Token{Template, line, s.src[start+1 : end], subs})
 		case c == '/' && s.regexOK():
 			s.regex()
 			text := s.src[start:s.i]
-			s.blank = append(s.blank, [2]int{start + 1, start + max(strings.LastIndexByte(text, '/'), 1)})
+			s.mark(Literal, start+1, start+max(strings.LastIndexByte(text, '/'), 1))
 			s.emit(Regex, line, text)
 		case ident(c):
 			for s.i < len(s.src) && (ident(s.src[s.i]) || digit(s.src[s.i])) {
