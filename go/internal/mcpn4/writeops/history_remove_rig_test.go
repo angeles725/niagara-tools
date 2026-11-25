@@ -28,6 +28,8 @@ type historyDB struct {
 	cutExts     bool // the extension read hit its byte cap
 	errAfter    bool // after the delete call, a count read answers HTTP 500
 	callErr     error
+	countBody   string // when set, every count read answers this text
+	countErr    error  // when set, every count read fails with it
 	ords, calls []string
 }
 
@@ -43,6 +45,12 @@ func (d *historyDB) GetOrd(ord string, _ float64, _ int) (string, bool, error) {
 		return "Slot Path,Enabled,Id\n" + strings.Join(d.exts, "\n") + "\n", d.cutExts, nil
 	}
 	id := strings.TrimSuffix(strings.SplitN(strings.TrimPrefix(ord, "history:"), "|", 2)[0], "?")
+	if d.countErr != nil {
+		return "", false, d.countErr
+	}
+	if d.countBody != "" {
+		return d.countBody, false, nil
+	}
 	if d.errAfter && len(d.calls) > 0 {
 		return "", false, &box.Error{Kind: box.KindBox, Msg: "HTTP 500 from station"}
 	}
