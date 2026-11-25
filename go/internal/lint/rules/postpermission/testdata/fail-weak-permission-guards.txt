@@ -1,0 +1,30 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-post-permission  Weak.java:5  post() in 'doPost' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Weak.java:9  post() in 'doPut' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Weak.java:14  post() in 'doGet' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Weak.java:18  post() in 'doDelete' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+-- stderr --
+-- Weak.java --
+package demo;
+public class Weak extends BWebServlet {
+  public void doPost(WebOp op) {
+    if (!perms.has(BPermissions.operatorRead)) return;
+    post(a, b, cx);
+  }
+  public void doPut(WebOp op) {
+    user.check(this, BPermissions.adminRead);
+    post(a, b, cx);
+  }
+  public void doGet(WebOp op) {
+    check(x);
+    has(x);
+    post(a, b, cx);
+  }
+  public void doDelete(WebOp op) {
+    if (!perms.has(OPERATOR_READ | ADMIN_READ)) return;
+    post(a, b, cx);
+  }
+}

@@ -1,0 +1,14 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-post-permission  Leak.java:5  post() in 'doPost' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+-- stderr --
+-- Leak.java --
+package demo;
+public class Leak extends BWebServlet {
+  public void doPost(WebOp op) {
+    post(a, b, cx); // post-permission: ok this one only
+    post(c, d, cx);
+  }
+}
