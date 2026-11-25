@@ -1,0 +1,11 @@
+#
+# Lexicon for the ModuleA module.
+# Display names shown in Workbench. Key = <Type>.displayName for a type, else the slot name.
+#
+
+ModuleAService.displayName=ModuleA Service
+ModuleAExportJob.displayName=ModuleA Export
+
+ModuleAService.fileName=File Name
+ModuleAService.pointNames=Point Names
+ModuleAService.exportNow=Export Now

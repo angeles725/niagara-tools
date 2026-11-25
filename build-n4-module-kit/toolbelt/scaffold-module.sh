@@ -3,7 +3,7 @@
 # Fixture-driven (D1): copies the bundled fixtures/<Type> tree and substitutes
 # the fixture type name → <ModuleName> in paths and content (B790/B793 proven tree).
 #
-# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library>]
+# Usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc]
 #   ModuleName       Java identifier: uppercase-first, alphanumeric only (e.g. ColdRoomPan)
 #   out-dir          parent directory; emitted root is <out-dir>/<ModuleName>
 #   --vendor <v>     REQUIRED: the vendor (copyright, vendor) and, lowercased, the Java package segment; no default,
@@ -12,13 +12,19 @@
 #   --plugin-version <x.y.z> Niagara Gradle plugin version baked into settings.gradle.kts, <major>.<minor>.<patch>
 #                    digits only; default: the plugin the --target-version release ships in etc/m2 (4.13 7.3.40,
 #                    4.14 7.6.17, 4.15 7.6.22; another release 7.6.17)
-#   --type <logic|dashboard|driver|library>  scaffold type (default: logic)
+#   --with-doc       also emit a <ModuleName>-doc help part (templates/doc: gradle file, TOC, index and one Guide-on-Target
+#                    page named doc/<ModuleName>-<TypeName>.html after the registered type, no B; types/structure.md
+#                    § -doc help profile); a library registers no type, so with it the flag is exit 2
+#   --type <logic|dashboard|driver|library|service>  scaffold type (default: logic)
 #                    logic     — single-profile -rt skeleton (MinimalPan fixture) + station-test overlay
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay
 #                                + the module's own login in -rt (templates/dashboard-login; types/dashboard.md § The module
 #                                ships its own login)
 #                    driver    — NDriver -rt (UDP comm config subclass, codec, discovery) + -wb point manager
 #                                (MinimalDriver fixture; types/driver-authoring.md § 1.6-§ 1.11, § 5, § 12)
+#                    service   — a station service + a background export job (BSimpleJob) + the pure class and test, the
+#                                library fixture's root with templates/service-job laid over its -rt part
+#                                (types/service.md; types/logic-authoring.md § Job contract)
 #                    library   — a classpath-carrier -rt part: no Java, `<types/>`, no palette, `type: library` in its MODULE-MAP.md
 #                                header (MinimalLibrary fixture; types/utility-lib.md § 1 and § 6) [ev: retro doc-coverage-audit Δ10]
 #

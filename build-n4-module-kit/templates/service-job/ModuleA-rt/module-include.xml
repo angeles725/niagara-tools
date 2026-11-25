@@ -1,0 +1,5 @@
+<types>
+  <!--com.example.ModuleA-->
+  <type class="com.example.ModuleA.BModuleAService" name="ModuleAService"/>
+  <type class="com.example.ModuleA.BModuleAExportJob" name="ModuleAExportJob"/>
+</types>

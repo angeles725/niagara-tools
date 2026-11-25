@@ -17,7 +17,7 @@ func TestVendorIsRequired(t *testing.T) {
 		{"no --vendor", []string{"Foo", "OUT"}, vendorRequiredWant + usageWant},
 		{"no --vendor with other options", []string{"Foo", "OUT", "--type", "driver", "--target-version", "4.15"}, vendorRequiredWant + usageWant},
 		{"type is checked before the vendor", []string{"Foo", "OUT", "--type", "zzz"},
-			"scaffold-module: unknown --type: zzz (must be logic, dashboard, driver or library)\n" + usageWant},
+			"scaffold-module: unknown --type: zzz (must be logic, dashboard, driver, library or service)\n" + usageWant},
 		{"name is checked before the vendor", []string{"1bad", "OUT"}, "scaffold-module: ModuleName must start with an uppercase letter: 1bad\n"},
 	}
 	for _, c := range cases {

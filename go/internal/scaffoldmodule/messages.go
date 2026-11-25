@@ -2,11 +2,11 @@ package scaffoldmodule
 
 // Every text scaffold-module prints. The tool name in the usage lines is the launcher's.
 const (
-	usageText = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library>]\n" +
+	usageText = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc]\n" +
 		"       scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]\n"
 
 	unknownOption  = "scaffold-module: unknown option: %s\n"
-	unknownType    = "scaffold-module: unknown --type: %s (must be logic, dashboard, driver or library)\n"
+	unknownType    = "scaffold-module: unknown --type: %s (must be logic, dashboard, driver, library or service)\n"
 	nameFirst      = "scaffold-module: ModuleName must start with an uppercase letter: %s\n"
 	nameAlnum      = "scaffold-module: ModuleName must contain only alphanumeric characters: %s\n"
 	vendorSegment  = "scaffold-module: --vendor must be one Java package segment once lowercased (an ASCII letter or _ first, then ASCII letters, digits or _): %s\n"
@@ -19,8 +19,11 @@ const (
 	outDirFault        = "scaffold-module: cannot create out-dir: %s\n"
 	destExists         = "scaffold-module: destination already exists: %s\n"
 	stationTestMissing = "scaffold-module: station-test template not found: %s\n"
+	docNeedsType       = "scaffold-module: --with-doc needs a type that registers a component type; %s has none\n"
+	serviceJobMissing  = "scaffold-module: service-job template not found: %s\n"
+	docMissing         = "scaffold-module: doc template not found: %s\n"
 	loginMissing       = "scaffold-module: dashboard-login template not found: %s\n"
-	loginAnchor        = "scaffold-module: cannot add the login to %s: %q not found\n"
+	loginAnchor        = "scaffold-module: cannot add the %s to %s: %q not found\n"
 	ledgerMissing      = "scaffold-module: version-ledger template not found: %s\n"
 	writeFault         = "scaffold-module: %v\n"
 	interruptedLine    = "scaffold-module: interrupted (%s)\n"

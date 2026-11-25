@@ -10,16 +10,22 @@ type moduleType struct {
 	fixture     string
 	linkInSlots string
 	kind        string
-	ownLogin    bool // the module ships its own login (templates/dashboard-login, overlay in login.go)
+	ownLogin    bool   // the module ships its own login (templates/dashboard-login, overlay in login.go)
+	overlay     string // templates/<overlay> laid over the fixture copy ("" = none; typeoverlay.go)
+	docSuffix   string // the registered name of the type its help page documents is <Module><docSuffix> (doc.go)
+	noDoc       bool   // the module registers no component type, so --with-doc has no page to name
 }
 
 // moduleTypes is the --type table. The driver fixture ships its own loopback station test, so it has no
-// overlay (types/driver-authoring.md § 12.1); the library fixture holds no Java, so it has none either.
+// overlay (types/driver-authoring.md § 12.1); the library fixture holds no Java, so it has none either. The
+// service starts from the library fixture (a bare -rt part): templates/service-job replaces its plumbing and
+// adds the service and its job (types/service.md).
 var moduleTypes = []moduleType{
 	{name: "logic", fixture: "MinimalPan", linkInSlots: `"setpoint", "interval"`},
 	{name: "dashboard", fixture: "MinimalDash", linkInSlots: `"setpoint", "status"`, ownLogin: true},
-	{name: "driver", fixture: "MinimalDriver"},
-	{name: "library", fixture: "MinimalLibrary", kind: "library"},
+	{name: "driver", fixture: "MinimalDriver", docSuffix: "Network"},
+	{name: "library", fixture: "MinimalLibrary", kind: "library", noDoc: true},
+	{name: "service", fixture: "MinimalLibrary", overlay: "service-job", docSuffix: "Service"},
 }
 
 // Option names. --vendor, --target-version and --plugin-version are written into the emitted tree
@@ -29,6 +35,7 @@ const (
 	optTargetVersion = "--target-version"
 	optPluginVersion = "--plugin-version"
 	optType          = "--type"
+	optWithDoc       = "--with-doc" // a flag: no value
 )
 
 // Option defaults. --vendor has none: the scaffold never guesses the module's identity.
@@ -73,6 +80,9 @@ const (
 	stationTestProbe   = "moduleTest-include.xml" // the file whose presence says the template is bundled
 	loginDir           = "templates/dashboard-login"
 	loginProbe         = "fragments/module-include.xml" // the file whose presence says the template is bundled
+	serviceJobProbe    = "MODULE-MAP.md"                // the file whose presence says templates/service-job is bundled
+	docDir             = "templates/doc"
+	docProbe           = "fragments/module-map-row.txt" // the file whose presence says templates/doc is bundled
 	loginFragmentDir   = "fragments"
 	ledgerTemplatePath = "templates/VERSION-LEDGER.md"
 	ledgerDest         = "odd/VERSION-LEDGER.md"

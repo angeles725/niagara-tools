@@ -29,7 +29,7 @@ func run(t *testing.T, toolbelt string, args ...string) result {
 	return result{code, out.String(), errb.String()}
 }
 
-const usageWant = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library>]\n" +
+const usageWant = "usage: scaffold-module.sh <ModuleName> <out-dir> --vendor <v> [--target-version <x.y>] [--plugin-version <x.y.z>] [--type <logic|dashboard|driver|library|service>] [--with-doc]\n" +
 	"       scaffold-module.sh add-concern <Name> --root <module-root> [--part rt|ux|wb|se] [--adapter]\n"
 
 // jarBytes is a binary payload that carries every substituted token: a verbatim copy keeps them.
@@ -59,8 +59,10 @@ func kitFiles() map[string]string {
 			files[root+fixture+"/"+fixture+"-"+second+"/"+fixture+"-"+second+".gradle.kts"] = "api(project(\":" + fixture + "-rt\")) // " + fixture + "-" + second + "\n"
 		}
 	}
-	for rel, content := range loginKitFiles() {
-		files[rel] = content
+	for _, more := range []map[string]string{loginKitFiles(), serviceKitFiles(), docKitFiles()} {
+		for rel, content := range more {
+			files[rel] = content
+		}
 	}
 	return files
 }

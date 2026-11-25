@@ -455,8 +455,10 @@ A `-doc` part has its own runtime profile (`runtimeProfile="doc"`) and no types.
 module is also legitimate. Its sole job is to ship HTML help pages that Workbench's F1 help system finds in
 the module's own `doc/` directory. `[ev: corpus B1313 §1313.3 C4]` `[ev: retro devguide415-horizons-authoring-security Δ7]`
 
-Our modules ship none today — that is architecturally correct. This recipe documents the path for
-any future help investment.
+Our modules ship none by default — that is architecturally correct. `scaffold-module.sh <Mod> <out> --vendor <v>
+--with-doc` emits the part below (any type but `library`, which registers no type): the gradle file, `toc.xml`,
+`index.html` and one Guide-on-Target page named after the module's main registered type. Without the flag, this
+recipe is the path for any later help investment.
 
 ### File layout
 
@@ -474,18 +476,16 @@ any future help investment.
 ### toc.xml structure (JavaHelp 1.0 TOC DTD)
 
 ```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE toc PUBLIC "-//Sun Microsystems Inc.//DTD JavaHelp TOC Version 1.0//EN"
-  "http://java.sun.com/products/javahelp/toc_1_0.dtd">
 <toc version="1.0">
-  <tocitem text="My Module Guide" target="mymod-overview" image="topic">
-    <tocitem text="ColdRoomPan" target="mymod-ColdRoomPan"/>
-    <tocitem text="DefrostController" target="mymod-DefrostController"/>
+  <tocitem text="My Module Guide" target="index.html">
+    <tocitem text="ColdRoomPan" target="mymod-ColdRoomPan.html"/>
+    <tocitem text="DefrostController" target="mymod-DefrostController.html"/>
   </tocitem>
 </toc>
 ```
 
-The `target=` value maps to a filename in `src/doc/` without the `.html` suffix.
+The `target=` value is a filename in `src/doc/`, with its `.html` suffix. `[CERT]` Both Tridium samples write it
+so, with no DOCTYPE: course `slides-doc/src/doc/toc.xml` and SDK `envCtrlDriver-doc/src/doc/toc.xml`.
 
 ### HTML naming conventions
 
