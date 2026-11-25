@@ -371,6 +371,26 @@ dependencies declared or shipped: `types/logic-authoring.md` § Shipping a templ
 lists the stock modules its station uses: pass the installation, or those rows are WARN.
 `[ev: retro gate-followups-and-template-lints Δ8]`
 
+### Upgrading a deployed template: what survives
+
+Upgrade, downgrade and redeploy run one station job (`template:TemplateService.submitUpgradeJob`,
+`UpgradeUtil.upgrade`, template-rt): it saves the instance's data, **removes the deployed root**, copies the new
+`.ntpl` in under the same name, then restores what it saved. The guide's warning holds: local changes inside the
+instance are wiped (`Templates/UpgradingADeployedTemplate`).
+
+- **Restored:** the root's wire-sheet position, display name and plain properties (not transient, not
+  components); the templateConfig values (properties neither readonly nor hidden) and passwords; links into and
+  out of the instance and links from outside to its children; relations, tags and px-edit values; each history
+  extension's `historyName` and `enabled`, so trends keep their ids.
+- **Lost:** every component added, removed or renamed inside the instance; every value set inside it that is not
+  a config; links between children the new version does not have; history extensions added there by hand.
+
+So a value an operator must keep across upgrades is an exposed config, never a slot edited inside the instance.
+The station needs the `TemplateService` and `JobService`, and installing a template needs the `-wb` runtime
+profile (`Templates/InstallingAnApplicationTemplate`); the template's modules must be on the platform first.
+`n4_list_templates` (mcp-n4) reports each instance's version and signature drift before an upgrade.
+`[ev: issue #991]`
+
 ---
 
 ## 9 · AX→N4 migration readiness
