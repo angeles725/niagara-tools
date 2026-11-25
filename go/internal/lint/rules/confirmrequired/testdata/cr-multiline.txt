@@ -1,0 +1,29 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-confirm-required  @DIR@/src/com/x/BWide.java:9  resetBad: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BWide.java:16  clearBad: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+-- stderr --
+-- src/com/x/BWide.java --
+package com.x;
+public class BWide extends BComponent {
+@NiagaraAction(
+  name = "resetGood",
+  parameterType = "BInteger",
+  defaultValue = "BInteger.make(0)",
+  flags = Flags.OPERATOR
+    | Flags.CONFIRM_REQUIRED)
+@NiagaraAction(
+  name = "resetBad",
+  parameterType = "BInteger",
+  defaultValue = "BInteger.make(0)",
+  flags = Flags.OPERATOR
+    | Flags.HIDDEN)
+// the parenthesis is on the next line, as in the Slot-o-Matic page
+@NiagaraAction
+(
+  name = "clearBad",
+  facets = { @Facet(name = "BFacets.MIN", value = "0") }
+)
+}

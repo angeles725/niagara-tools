@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-confirm-required  @DIR@/src/com/x/BBoth.java:4  resetA: waiver without a reason -- write // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BBoth.java:6  resetB: waiver without a reason -- write // lint-confirm-required: waived <reason>
+-- stderr --
+-- src/com/x/BBoth.java --
+package com.x;
+public class BBoth extends BComponent {
+// lint-confirm-required: waived reviewed by the commissioning wizard
+@NiagaraAction(name = "resetA") // lint-confirm-required: waived
+// lint-confirm-required: waived
+@NiagaraAction(name = "resetB") // lint-confirm-required: waived reviewed by the wizard
+}

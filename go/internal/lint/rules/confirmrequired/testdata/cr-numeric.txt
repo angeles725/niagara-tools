@@ -1,0 +1,16 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-confirm-required  @DIR@/src/com/x/BNum.java:5  resetB: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BNum.java:6  resetC: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+-- stderr --
+-- src/com/x/BNum.java --
+package com.x;
+public class BNum extends BComponent {
+@NiagaraAction(name = "resetA", flags = 128)
+@NiagaraAction(name = "resetD", flags = 0x180)
+@NiagaraAction(name = "resetB", flags = 4)
+@NiagaraAction(name = "resetC", flags = 0x100 | Flags.HIDDEN)
+@NiagaraAction(name = "resetE", flags = Flags.HIDDEN | 128)
+}
