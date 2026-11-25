@@ -1388,7 +1388,10 @@ Tool rules:
   description; the read-back waits for the job (`wait_seconds`, default 120, plus 30 s) and
   lists one row per object (`object_name`, `object_id`, `value`, `description`), with
   `in_database` naming the point that already proxies that object under the extension
-  (folders included) or null. Rows the station could not read (`object_name` `--`, common
+  (folders included) or null. A proxied row also carries `name_differs`: true when that point
+  is named unlike `object_name`. The BACnet objectName lives only on the device, so this is
+  where a commissioning check compares the two; `names_differ` counts those rows (#820).
+  Rows the station could not read (`object_name` `--`, common
   before the device's I-Am was heard) are flagged `unread` and counted, with a hint to run
   `n4_discover_devices` first. The station's placeholder for a missing description
   (`Property:Unknown Property:...`) is returned as an empty string. On a Honeywell Spyder the
