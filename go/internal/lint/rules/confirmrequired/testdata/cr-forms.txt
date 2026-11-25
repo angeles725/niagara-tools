@@ -4,6 +4,7 @@
 exit 1
 FAIL  lint-confirm-required  @DIR@/src/com/x/BForms.java:3  resetQualified: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
 FAIL  lint-confirm-required  @DIR@/src/com/x/BForms.java:5  resetInner: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+WARN  lint-confirm-required  @DIR@/src/com/x/BForms.java:10  name not a literal: not judged
 -- stderr --
 -- src/com/x/BForms.java --
 package com.x;

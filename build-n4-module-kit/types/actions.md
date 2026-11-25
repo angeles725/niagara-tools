@@ -101,7 +101,9 @@ word of its `name`, split at its capitals, is `reset`, `clear`, `delete`, `remov
   `OPERATOR` off unless an operator really must be able to do it (`types/security.md` § 2.2: destructive means admin).
 - **The gate:** `toolbelt/lint-confirm-required.sh <src-root>` FAILs a `@NiagaraAction` whose name matches and whose
   `flags` lack `CONFIRM_REQUIRED`. A waiver is `// lint-confirm-required: waived <reason>` on the line of the
-  `@NiagaraAction` or on a `//` comment line directly above it; the reason is mandatory, a bare marker still FAILs.
+  `@NiagaraAction` or on a `//` comment line directly above it; the reason is mandatory, and a bare marker FAILs on
+  any `@NiagaraAction`, destructive or not. A `name` that is not one string literal (a constant, a concatenation)
+  is not judged and gets a `WARN` row (`name not a literal: not judged`; exit 1 under `--strict`), never waived.
 - **The flag is a prompt in the client, not authorization.** Workbench's invoke command asks
   (`InvokeActionCommand.java:42-51`) and so does the bajaux `invokeAction` (`feDialogs.js:111-123,801`); the
   extracted corpus holds no check of the flag on the station side, so a link, a program, `invoke()` from code, a

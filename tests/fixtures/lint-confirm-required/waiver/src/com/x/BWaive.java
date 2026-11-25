@@ -1,9 +1,8 @@
 package com.x;
 
 @NiagaraType
-@NiagaraAction(name = "resetSame") // lint-confirm-required: waived internal timer callback, never user driven
-// lint-confirm-required: waived the commissioning wizard asks before it calls this
-@NiagaraAction(name = "resetAbove")
 // lint-confirm-required: waived
 @NiagaraAction(name = "resetBare")
+@NiagaraAction(name = "pingBare") // lint-confirm-required: waived
+@NiagaraAction(name = "wipeFlagged", flags = Flags.CONFIRM_REQUIRED) // lint-confirm-required: waived
 public class BWaive extends BComponent {}

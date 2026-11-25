@@ -67,16 +67,21 @@ func hasConfirm(flags []javasrc.Token) bool {
 	return false
 }
 
-// waiver reads the marker for the annotation on 0-based line i: the // comment of that line, else a // comment
-// line right above. "reason" (a marker with text after it), "bare" (a marker with nothing after it) or "".
+// waiver reads the markers of the annotation on 0-based line i: the // comment of that line and a // comment
+// line right above. "bare" when either holds a marker with nothing after it (a reasoned marker on the other
+// line does not explain it), else "reason" when either holds a marker with text after it, else "".
 func waiver(raw []string, i int) string {
-	if st := state(lineComment(raw[i])); st != "" {
-		return st
-	}
+	states := []string{state(lineComment(raw[i]))}
 	if i > 0 && commentLine.MatchString(raw[i-1]) {
-		return state(lineComment(raw[i-1]))
+		states = append(states, state(lineComment(raw[i-1])))
 	}
-	return ""
+	out := ""
+	for _, st := range states {
+		if st == "bare" || (st == "reason" && out == "") {
+			out = st
+		}
+	}
+	return out
 }
 
 func lineComment(ln string) string {

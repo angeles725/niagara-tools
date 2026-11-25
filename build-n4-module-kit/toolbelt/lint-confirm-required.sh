@@ -8,8 +8,13 @@
 # restart, reboot or overwrite (types/actions.md § 3). The flag is a client prompt, not authorization: who may
 # run the action is still the permission rules of types/security.md. Fix: add `flags = Flags.CONFIRM_REQUIRED`
 # (`| Flags.OPERATOR` when operators may run it), or waive a reviewed action with
-# `// lint-confirm-required: waived <reason>` on the @NiagaraAction line or on a // comment line right above it;
-# the reason is mandatory, a bare marker is a FAIL of its own.
+# `// lint-confirm-required: waived <reason>` on the @NiagaraAction line or on a // comment line right above it.
+# The reason is mandatory: a marker with no reason is a FAIL of its own on ANY @NiagaraAction, destructive or
+# not, flagged or not, and one bare marker is reported even when the other line carries a reasoned one (a
+# reason elsewhere does not explain an unexplained waiver).
+# A name that is not one string literal (a constant, a concatenation, none) cannot be judged: Slot-o-Matic reads
+# names as literals only, so it is a `WARN ... name not a literal: not judged` row (exit 1 under --strict) and
+# no waiver clears it; write the name as a literal.
 # Source is read as the sibling lints read it (go/internal/javasrc, comments stripped, literals one token): an
 # annotation split over several lines is one annotation, and text in a comment, a string or a text block is not
 # one. [ev: code baja javax/baja/sys/Flags.java:190,445] [ev: code bajaui-wb javax/baja/ui/commands/InvokeActionCommand.java:42-51]
@@ -20,13 +25,17 @@
 # Needs `go` on PATH to build (exit 3 otherwise).
 #
 # Usage:  lint-confirm-required.sh [--strict] <src-root>...
-#   Row:  FAIL  lint-confirm-required  <file>:<line>  <action>: destructive action without Flags.CONFIRM_REQUIRED -- ...
-#   Exit: 0  clean · 1  any FAIL · 3  usage/env, a root with no *.java or a sub-directory find cannot enter
+#   Row:  FAIL  lint-confirm-required  <file>:<line>  <action>: destructive action without CONFIRM_REQUIRED -- ...
+#         FAIL  lint-confirm-required  <file>:<line>  <action>: waiver without a reason -- ...
+#         WARN  lint-confirm-required  <file>:<line>  name not a literal: not judged
+#   Exit: 0  clean or WARN-only · 1  any FAIL, or any WARN under --strict · 3  usage/env, a root with no *.java or a
+#         sub-directory find cannot enter
 # Mutation: CR1 -- not reading the flags attribute (or the name list) lets a destructive action without the flag pass
 # Mutation: CR2 -- reading only the first flag of a `|` list FAILs a flagged action that lists CONFIRM_REQUIRED later
 # Mutation: CR3 -- reading one line of the annotation FAILs or misses an annotation split over several lines
 # Mutation: CR4 -- ignoring the waiver marker FAILs a waived action
-# Mutation: CR5 -- accepting a bare marker without a reason lets an unexplained waiver pass
+# Mutation: CR5 -- reading a bare marker only on a destructive unflagged action lets a bare marker elsewhere pass
+# Mutation: CR8 -- judging a name that is no literal as clean (no WARN row) hides an action the rule cannot read
 # Mutation: CR6 -- matching a name substring instead of a whole word FAILs presetValues and cleared
 # Mutation: CR7 -- reading comment or string text as code FAILs a quoted @NiagaraAction
 # VCS-free by design.

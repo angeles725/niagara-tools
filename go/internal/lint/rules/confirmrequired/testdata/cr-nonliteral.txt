@@ -1,0 +1,16 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-confirm-required  @DIR@/src/com/x/BName.java:3  name not a literal: not judged
+WARN  lint-confirm-required  @DIR@/src/com/x/BName.java:4  name not a literal: not judged
+WARN  lint-confirm-required  @DIR@/src/com/x/BName.java:5  name not a literal: not judged
+-- stderr --
+-- src/com/x/BName.java --
+package com.x;
+public class BName extends BComponent {
+@NiagaraAction(name = RESET_NAME)
+@NiagaraAction(name = "reset" + "All")
+@NiagaraAction(flags = Flags.HIDDEN)
+@NiagaraAction(name = "tick")
+}

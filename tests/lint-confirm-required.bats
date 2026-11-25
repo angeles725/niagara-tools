@@ -42,17 +42,19 @@ setup() {
   [[ "$output" == "FAIL  lint-confirm-required  $FX/multiline/src/com/x/BWide.java:10  resetBad: "* ]]
 }
 
-@test "CR4: a waiver with a reason, on the line or the comment line above, passes" {
-  run "$LINT" "$FX/waiver/src"
-  [[ "$output" != *"resetSame"* ]]
-  [[ "$output" != *"resetAbove"* ]]
+@test "CR4: a waiver with a reason, on the line or the comment line above, passes (exit 0, no output)" {
+  run "$LINT" "$FX/waived/src"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
-@test "CR5: a bare waiver marker is a FAIL of its own, naming the missing reason" {
+@test "CR5: a bare waiver marker FAILs wherever it stands on an @NiagaraAction, destructive or not, flagged or not" {
   run "$LINT" "$FX/waiver/src"
   [ "$status" -eq 1 ]
-  [ "${#lines[@]}" -eq 1 ]
-  [[ "$output" == "FAIL  lint-confirm-required  $FX/waiver/src/com/x/BWaive.java:8  resetBare: waiver without a reason"* ]]
+  [ "${#lines[@]}" -eq 3 ]
+  [[ "${lines[0]}" == "FAIL  lint-confirm-required  $FX/waiver/src/com/x/BWaive.java:5  resetBare: waiver without a reason"* ]]
+  [[ "${lines[1]}" == "FAIL  lint-confirm-required  $FX/waiver/src/com/x/BWaive.java:6  pingBare: waiver without a reason"* ]]
+  [[ "${lines[2]}" == "FAIL  lint-confirm-required  $FX/waiver/src/com/x/BWaive.java:7  wipeFlagged: waiver without a reason"* ]]
 }
 
 @test "CR6: a non-destructive name, and a name that holds a destructive word only as a substring, is clean" {
@@ -65,6 +67,17 @@ setup() {
   run "$LINT" "$FX/literals/src"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+@test "CR8: a name that is no single string literal is a WARN row, not judged: exit 0, 1 under --strict" {
+  run "$LINT" "$FX/nonliteral/src"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 2 ]
+  [ "${lines[0]}" = "WARN  lint-confirm-required  $FX/nonliteral/src/com/x/BName.java:4  name not a literal: not judged" ]
+  [ "${lines[1]}" = "WARN  lint-confirm-required  $FX/nonliteral/src/com/x/BName.java:5  name not a literal: not judged" ]
+  run "$LINT" --strict "$FX/nonliteral/src"
+  [ "$status" -eq 1 ]
+  [ "${#lines[@]}" -eq 2 ]
 }
 
 @test "CR-empty: a root with no *.java is an ERROR, exit 3" {

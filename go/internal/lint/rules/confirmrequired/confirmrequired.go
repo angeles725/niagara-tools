@@ -8,7 +8,11 @@
 // a Javadoc line, a string or a text block holding "@NiagaraAction(...)" is no annotation. An annotation is
 // its name (also qualified), a "(" (on the same or a later line) and the arguments up to the matching ")".
 // A `// lint-confirm-required: waived <reason>` comment on the annotation's line, or on a // comment line right
-// above it, waives it; a marker with no reason is itself a FAIL. FAIL, on the "@" line.
+// above it, waives it. A marker with no reason is a FAIL of its own on any @NiagaraAction, destructive or not,
+// flagged or not, and when both lines carry a marker one bare marker is reported even beside a reasoned one: a
+// reason elsewhere does not explain an unexplained waiver. A name that is not one string literal (a constant,
+// a concatenation, none) is not judged: a WARN row, exit 1 under --strict, never waived. FAIL rows stand on
+// the "@" line.
 package confirmrequired
 
 import (
@@ -56,10 +60,14 @@ const (
 	missingMsg = "destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED" +
 		" (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>"
 	bareMsg = "waiver without a reason -- write // lint-confirm-required: waived <reason>"
+	// nonLiteralMsg: Slot-o-Matic reads the name as a string literal only, so a constant or a concatenation is
+	// no name this rule can judge; the row is a WARN (exit 1 under --strict) and no waiver clears it.
+	nonLiteralMsg = "name not a literal: not judged"
 )
 
-// Check reports each destructive @NiagaraAction that lacks CONFIRM_REQUIRED in its flags, on the line of its
-// "@", unless a waiver with a reason covers it.
+// Check reports, on the line of each @NiagaraAction's "@": a FAIL for a waiver marker with no reason (on any
+// action, whatever its name and flags); a WARN for a name that is no single string literal (not judged); a
+// FAIL for a destructive action that lacks CONFIRM_REQUIRED in its flags unless a waiver with a reason covers it.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	toks := javasrc.Tokens(f.Stripped())
 	var out []lint.Finding
@@ -71,17 +79,22 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if at < 0 || i+1 >= len(toks) || toks[i+1].Text != "(" {
 			continue
 		}
-		name, flags := attributes(toks, i+2)
-		if !isDestructive(name) || hasConfirm(flags) {
-			continue
+		name, flags, literal := attributes(toks, i+2)
+		line := toks[at].Line + 1
+		label := ""
+		if literal {
+			label = name + ": "
 		}
-		line := toks[at].Line
-		switch waiver(f.Raw, line) {
-		case "reason":
-		case "bare":
-			out = append(out, lint.Finding{Line: line + 1, Msg: name + ": " + bareMsg})
-		default:
-			out = append(out, lint.Finding{Line: line + 1, Msg: name + ": " + missingMsg})
+		w := waiver(f.Raw, toks[at].Line)
+		switch {
+		case w == "bare":
+			out = append(out, lint.Finding{Line: line, Msg: label + bareMsg})
+		case !literal:
+		case isDestructive(name) && !hasConfirm(flags) && w == "":
+			out = append(out, lint.Finding{Line: line, Msg: label + missingMsg})
+		}
+		if !literal {
+			out = append(out, lint.Finding{Line: line, Severity: lint.Warn, Msg: nonLiteralMsg})
 		}
 	}
 	return out, nil
@@ -103,8 +116,9 @@ func annotationStart(toks []javasrc.Token, i int) int {
 }
 
 // attributes reads the argument list that starts at toks[from] (just after the "(") up to its matching ")":
-// the string literal of its name attribute ("" when the value is not one) and the tokens of its flags value.
-func attributes(toks []javasrc.Token, from int) (name string, flags []javasrc.Token) {
+// the string literal of its name attribute (literal is false when there is none, or its value is a constant, a
+// concatenation or anything but one "..." token) and the tokens of its flags value.
+func attributes(toks []javasrc.Token, from int) (name string, flags []javasrc.Token, literal bool) {
 	depth := 1
 	var key string
 	var val []javasrc.Token
@@ -112,7 +126,7 @@ func attributes(toks []javasrc.Token, from int) (name string, flags []javasrc.To
 		switch key {
 		case "name":
 			if len(val) == 1 && val[0].Kind == javasrc.TokLiteral && strings.HasPrefix(val[0].Text, `"`) {
-				name = strings.Trim(val[0].Text, `"`)
+				name, literal = strings.Trim(val[0].Text, `"`), true
 			}
 		case "flags":
 			flags = val
@@ -139,5 +153,5 @@ func attributes(toks []javasrc.Token, from int) (name string, flags []javasrc.To
 			val = append(val, t)
 		}
 	}
-	return name, flags
+	return name, flags, literal
 }
