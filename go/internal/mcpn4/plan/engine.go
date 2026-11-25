@@ -19,38 +19,49 @@ func (e *Engine) Handler(name string, impl Impl) jsonrpc.Handler {
 			batchID = id
 			return out, err
 		})
-		var te *jsonrpc.ToolError
-		var se *safety.Error
-		var doubt *InDoubt
-		var refused *Refused
-		switch {
-		case errors.As(err, &doubt): // the station call failed after the intent was journaled
-			e.record(name, args, doubt.BatchID, "error", doubt.Msg)
-			return nil, ToolError(doubt.Msg)
-		case errors.As(err, &refused): // the station refused it and nothing was applied
-			e.record(name, args, refused.BatchID, "refused", refused.Msg)
-			return nil, ToolError(refused.Msg)
-		case errors.As(err, &te) || errors.As(err, &se):
-			e.record(name, args, nil, "refused", PyStr(err))
-			return nil, ToolError(PyStr(err))
-		case err != nil:
-			e.record(name, args, nil, "error", PyType(err)+": "+PyStr(err))
-			return nil, err
+		var running *Running
+		if errors.As(err, &running) { // audited when it went out; the background work audits its end
+			return running.Reply, nil
 		}
-		logged := true
-		if batchID == "" {
-			logged = e.record(name, args, nil, "planned", "dry run")
-		} else {
-			verdict, _ := out.Get("verdict")
-			logged = e.record(name, args, batchID, "executed", "verdict="+pyjson.Str(verdict))
-		}
-		if !logged {
-			warnings, _ := out.Get("warnings")
-			list, _ := warnings.([]any)
-			out.Set("warnings", append(list, "the audit log could not be written"))
-		}
-		return out, nil
+		return e.finish(name, args, batchID, out, err)
 	}
+}
+
+// finish is the audit line of a call that ended, and the reply it gets: Handler's tail, and the
+// end of a write that answered {state: running} first.
+func (e *Engine) finish(name string, args *pyjson.Object, batchID string, out *pyjson.Object,
+	err error) (*pyjson.Object, error) {
+	var te *jsonrpc.ToolError
+	var se *safety.Error
+	var doubt *InDoubt
+	var refused *Refused
+	switch {
+	case errors.As(err, &doubt): // the station call failed after the intent was journaled
+		e.record(name, args, doubt.BatchID, "error", doubt.Msg)
+		return nil, ToolError(doubt.Msg)
+	case errors.As(err, &refused): // the station refused it and nothing was applied
+		e.record(name, args, refused.BatchID, "refused", refused.Msg)
+		return nil, ToolError(refused.Msg)
+	case errors.As(err, &te) || errors.As(err, &se):
+		e.record(name, args, nil, "refused", PyStr(err))
+		return nil, ToolError(PyStr(err))
+	case err != nil:
+		e.record(name, args, nil, "error", PyType(err)+": "+PyStr(err))
+		return nil, err
+	}
+	logged := true
+	if batchID == "" {
+		logged = e.record(name, args, nil, "planned", "dry run")
+	} else {
+		verdict, _ := out.Get("verdict")
+		logged = e.record(name, args, batchID, "executed", "verdict="+pyjson.Str(verdict))
+	}
+	if !logged {
+		warnings, _ := out.Get("warnings")
+		list, _ := warnings.([]any)
+		out.Set("warnings", append(list, "the audit log could not be written"))
+	}
+	return out, nil
 }
 
 // process is _process: the plan and either its dry run or its execution; batchID is "" for a
@@ -129,15 +140,20 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	}
 	// From here on the batch exists: every failure is its in-doubt error, a panic (Python's
 	// unexpected exception) too.
-	out, err = jsonrpc.Recover(func() (*pyjson.Object, error) { return e.execute(client, impl, args, planned, batchID) })
-	var doubt *InDoubt
-	var refused *Refused
-	if err != nil && !errors.As(err, &doubt) && !errors.As(err, &refused) {
-		err = inDoubt(batchID, err)
+	budget := w.budgetReport() // read here: the write may still run when the reply goes out
+	run := func() (*pyjson.Object, error) {
+		out, err := jsonrpc.Recover(func() (*pyjson.Object, error) { return e.execute(client, impl, args, planned, batchID) })
+		var doubt *InDoubt
+		var refused *Refused
+		if err != nil && !errors.As(err, &doubt) && !errors.As(err, &refused) {
+			err = inDoubt(batchID, err)
+		}
+		if out != nil {
+			out.Set("write_budget", budget)
+		}
+		return out, err
 	}
-	if out != nil {
-		out.Set("write_budget", w.budgetReport())
-	}
+	out, err = e.within(name, args, batchID, budget, run)
 	return out, batchID, err
 }
 

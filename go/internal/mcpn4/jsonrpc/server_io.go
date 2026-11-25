@@ -24,6 +24,7 @@ func (s *Server) ServeContext(ctx context.Context, in io.Reader, out io.Writer) 
 	if s.Ctx != nil {
 		defer s.Ctx.Close()
 	}
+	defer s.Background.Wait() // before the session closes: a running write still holds it
 	type read struct {
 		line []byte
 		err  error
@@ -64,6 +65,7 @@ func (s *Server) ServeContext(ctx context.Context, in io.Reader, out io.Writer) 
 					return werr
 				}
 			}
+			s.Background.Wait() // the next request waits for a write that answered early (#925)
 		}
 		if errors.Is(next.err, io.EOF) {
 			return nil

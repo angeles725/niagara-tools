@@ -3,7 +3,9 @@ package plan
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"time"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
@@ -82,6 +84,11 @@ type Runs struct {
 type Engine struct {
 	Ctx   *session.Context
 	State *State
+	// ReplyBudget is how long an executing write may run before its reply goes out as
+	// {state: running, batch_id} (#925); zero runs it to its end first. Background is the serve
+	// loop's (jsonrpc.Server.Background): the write finishes there before the next request.
+	ReplyBudget time.Duration
+	Background  *jsonrpc.Background
 }
 
 // Hashed is the plan a confirmation token authorizes and its plan_hash, the sha256 hex of its

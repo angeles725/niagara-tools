@@ -75,6 +75,8 @@ func RunContext(interrupt context.Context, args []string, in io.Reader, s kitcli
 
 // NewServer is Server(...) for a cfg Check accepted: the read tools and, with --allow-writes,
 // the write state (WriteState's start checks: limits, state dir, scopes) and the write tools.
+// Its writes answer {state: running} past plan.DefaultReplyBudget and finish in srv.Background:
+// a caller that drives HandleLine itself, not ServeContext, waits for srv.Background before the next call.
 func NewServer(cfg Config) (*jsonrpc.Server, error) { return newServer(context.Background(), cfg) }
 
 // newServer is NewServer whose station requests interrupt cancels.
@@ -94,7 +96,8 @@ func newServer(interrupt context.Context, cfg Config) (*jsonrpc.Server, error) {
 			return nil, err
 		}
 		tools.Audit = state.Audit
-		writeops.Register(srv, &plan.Engine{Ctx: ctx, State: state})
+		writeops.Register(srv, &plan.Engine{Ctx: ctx, State: state,
+			ReplyBudget: plan.DefaultReplyBudget, Background: srv.Background})
 	}
 	readtools.Register(srv, tools)
 	return srv, nil

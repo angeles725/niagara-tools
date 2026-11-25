@@ -60,6 +60,9 @@ type Server struct {
 	// Handlers maps a tool name to its implementation; a tool without one answers the
 	// NotImplemented tool error.
 	Handlers map[string]Handler
+	// Background is the work a handler left running after its reply (a write past its reply
+	// budget); the serve loop waits for it before the next request line.
+	Background *Background
 	// Ctx is the session state; nil means no session can exist (every session tool answers
 	// not connected) and nothing to scrub.
 	Ctx Context
@@ -75,7 +78,7 @@ type Server struct {
 // write tool name is refused as disabled (server.py without --allow-writes).
 func New(reg *registry.Registry) *Server {
 	s := &Server{reg: reg, tools: reg.Read, byName: map[string]*registry.Tool{},
-		writeNames: map[string]bool{}, Handlers: map[string]Handler{}}
+		writeNames: map[string]bool{}, Handlers: map[string]Handler{}, Background: &Background{}}
 	for i := range s.tools {
 		s.byName[s.tools[i].Name] = &s.tools[i]
 	}
