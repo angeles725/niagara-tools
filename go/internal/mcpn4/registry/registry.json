@@ -2970,7 +2970,7 @@
   },
   {
    "name": "n4_make_station_template",
-   "description": "Make a station template (.ntpl) of the connected station: invokes the TemplateService's hidden makeStationTemplate action (BTemplateService.doMakeStationTemplate, a BBoolean useMinorVersionOnDeployment, default true), waits for the BMakeStationTemplateJob it submits under Services/JobService and returns the job state, its log and file_ord, the ^temp file the job saved (its templateFileOrd, e.g. file:^temp/Station.ntpl) that n4_read_file can fetch. Needs a super user: for any other user the station answers null, starts no job and the read-back is unverified. It writes a file on the station: a new ^temp/<template file name>.ntpl, kept until the station clears ^temp; no inverse and no tool deletes it. A job that fails or ends without a file is a mismatch; one still running after wait_seconds plus 30 s is unverified (read it later under its job ORD). The station has no TemplateService when the template module is not installed: the plan refuses and names the ORD. The write scope must cover the TemplateService ORD. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "description": "REFUSED BY DEFAULT: on 4.14.0.162 the station job zips the station home including ^temp, where it writes its own output, so the .ntpl grows without end (66.9 GB after 95 min, about 12 MB/s, from a 68 KB config) and fills the host disk; a job cancel only interrupts the thread and does not stop it. The dry run refuses and says so; accept_runaway_risk=true plans it anyway for an operator who knows the build is fixed. While the job runs the read-back reports the ^temp output size from two reads a few seconds apart (growth, or 'at least N bytes' when a read hits its cap). Recovery: n4_save_station, stop the station process, delete the partial ^temp/*.ntpl, restart. Make a station template (.ntpl) of the connected station: invokes the TemplateService's hidden makeStationTemplate action (BTemplateService.doMakeStationTemplate, a BBoolean useMinorVersionOnDeployment, default true), waits for the BMakeStationTemplateJob it submits under Services/JobService and returns the job state, its log and file_ord, the ^temp file the job saved (its templateFileOrd, e.g. file:^temp/Station.ntpl) that n4_read_file can fetch. Needs a super user: for any other user the station answers null, starts no job and the read-back is unverified. It writes a file on the station: a new ^temp/<template file name>.ntpl, kept until the station clears ^temp; no inverse and no tool deletes it. A job that fails or ends without a file is a mismatch; one still running after wait_seconds plus 30 s is unverified (read it later under its job ORD). The station has no TemplateService when the template module is not installed: the plan refuses and names the ORD. The write scope must cover the TemplateService ORD. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
     "type": "object",
     "properties": {
@@ -2990,6 +2990,11 @@
       "maximum": 600,
       "default": 120,
       "description": "Seconds the read-back waits for the job, plus 30 s of slack"
+     },
+     "accept_runaway_risk": {
+      "type": "boolean",
+      "default": false,
+      "description": "false (default) refuses the dry run: the station job can write its own ^temp output into itself without end and fill the disk. true plans it anyway, with the same warning in the plan notes"
      },
      "dry_run": {
       "type": "boolean",

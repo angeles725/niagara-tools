@@ -22,6 +22,9 @@ import (
 //     template's own file name made unique, and sets the job's templateFileOrd and templateName
 //     properties: job/BMakeTemplateJob.java:60-66. The job is transient, under Services/JobService.
 //
+// The job zips its own growing output (template_make_guard.go): the dry run refuses unless
+// accept_runaway_risk=true.
+//
 // The file stays in ^temp until the station clears it: there is no inverse and no delete tool. The
 // read-back (template_make_readback.go) waits for the job and returns its state, log and file ORD. Like
 // n4_save_station it is whole-station (any write scope will do): it changes no component, it writes a ^temp file.
@@ -45,8 +48,9 @@ const (
 
 // makeData is what the read-back needs: the wait and the write state's clock.
 type makeData struct {
-	wait int
-	w    *plan.State
+	wait    int
+	w       *plan.State
+	station string // the station's name: the ^temp output is <name>.ntpl (template_make_readback.go)
 }
 
 func makeServiceOrd(args *pyjson.Object) string {
@@ -56,7 +60,7 @@ func makeServiceOrd(args *pyjson.Object) string {
 	return makeDefService
 }
 
-func makeTemplatePlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.Session) (*plan.Planned, error) {
+func makeTemplatePlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *session.Session) (*plan.Planned, error) {
 	minor := "true"
 	if raw, given := args.Get("use_minor_version"); given && raw != nil {
 		b, ok := raw.(bool)
@@ -68,6 +72,13 @@ func makeTemplatePlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *sess
 	wait, err := intArg(args, "wait_seconds", makeDefWait, 1, makeMaxWait)
 	if err != nil {
 		return nil, err
+	}
+	accepted, err := makeRiskAccepted(args)
+	if err != nil {
+		return nil, err
+	}
+	if !accepted {
+		return nil, plan.ToolError(msgMakeRefused)
 	}
 	service := makeServiceOrd(args)
 	h, nodes, err := plan.Handle(c, service, 1)
@@ -85,9 +96,13 @@ func makeTemplatePlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *sess
 	b := obj("nm", "p", "t", "baja:Boolean", "v", minor)
 	targets := pyjson.NewObject()
 	targets.Set(service, h)
-	notes := []any{msgMakeWrites, msgMakeNoInverse, msgMakeSuperUser,
+	notes := []any{msgMakeAccepted, msgMakeWrites, msgMakeNoInverse, msgMakeSuperUser,
 		"useMinorVersionOnDeployment = " + minor + "; the job reads the whole local station, then the read-back " +
 			"waits up to " + strconv.Itoa(wait) + " s plus " + strconv.Itoa(int(discoverSlack)) + " s for it"}
+	station := ""
+	if sess != nil {
+		station = sess.StationName
+	}
 	return &plan.Planned{Ops: []any{invokeOp(obj("h", h, "a", makeAction, "b", b))}, Inverse: []any{},
-		Targets: targets, Notes: notes, Data: makeData{wait: wait, w: w}}, nil
+		Targets: targets, Notes: notes, Data: makeData{wait: wait, w: w, station: station}}, nil
 }
