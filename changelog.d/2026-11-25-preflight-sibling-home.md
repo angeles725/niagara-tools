@@ -11,3 +11,7 @@
   `templates/VERSION-LEDGER.md` has no Niagara deploy-target field (its rows are module versions), so there is
   nothing to compare; add the field first.
 - `BUILD-LOOP.md` §0: one line on the pin check.
+- The pin and the target are compared as resolved paths (symlinks resolved when the path exists, the cleaned string
+  otherwise; a relative pin is read against its sibling root), so a symlinked install or a relative pin naming the
+  same directory is no mismatch. Goldens pin the symlinked install, the symlinked gradle root, two mismatching
+  siblings in sorted order and a drive-letter pin.
