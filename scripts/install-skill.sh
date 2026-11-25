@@ -35,6 +35,7 @@
 # Usage:
 #   install-skill.sh [--skill <build-n4-module|mcp-n4>] [--harness <claude|pi|gentle-shell|all>] [--home <dir>]
 #                    [--dry-run] [--force]
+#   install-skill.sh --check [--home <dir>]
 #
 # Options:
 #   --skill <name> Skill to install: build-n4-module (default) or mcp-n4.
@@ -42,6 +43,13 @@
 #   --home <dir>   Base home directory (default: $HOME); an empty value is a usage error. Every test
 #                  passes this flag so no test ever touches the real $HOME.
 #   --dry-run      Print what would be done; write nothing. Exits 0.
+#   --check        Read-only drift check of EVERY skill of the SKILLS table in EVERY harness (the claude copy, and
+#                  the pi and gentle-shell copies and prompt files where their agent directory exists): prints
+#                  the check-skill-drift.sh rows (PASS|FAIL|SKIP  skill-drift  <skill>[<harness>]  <detail>, table
+#                  order then harness order; the same code as check-skill-drift.sh --all) and writes nothing.
+#                  Exit 0 when every checked copy is current, 1 on any FAIL row (diverged or not installed).
+#                  Takes only --home: --skill, --harness, --dry-run or --force with it is a usage error (exit 2).
+#                  It compares against the tracked launchers of this checkout, so run it from an up-to-date one.
 #   --force        Overwrite a diverged installed copy without exiting 1. A target SKILL.md or prompt
 #                  file, the skill directory, or the skills/ or prompts/ directory that is a symbolic
 #                  link is refused (exit 3), never written through: remove the link, then re-run.
@@ -49,11 +57,12 @@
 # Exit codes:
 #   0   Installed or already current (or --dry-run); for build-n4-module, kit state materialized
 #       (a kit without toolbelt/kit-state.sh is a warning, not an error).
-#   1   Installed copy exists and diverges from the tracked copy; --force absent.
-#   2   Usage error (including an unknown --skill or --harness name and an empty --home).
+#   1   Installed copy exists and diverges from the tracked copy; --force absent. With --check: any FAIL row.
+#   2   Usage error (including an unknown --skill or --harness name, an empty --home and --check with another option).
 #   3   Environment error (tracked source missing, a prompt template that cannot be read, a symlinked target, a
 #       non-directory on the target's path or a target that is not a regular file, no Go toolchain to build the command, target directory not
-#       creatable, kit-state failed: the launcher is installed but the kit state is not).
+#       creatable, kit-state failed: the launcher is installed but the kit state is not; with --check, a
+#       tracked launcher missing or an installed copy that cannot be read).
 #
 # Implementation: the Go module at <repo>/go (go/internal/skillinstall). This wrapper is the stable entry point
 # and keeps one thing: the SKILLS table below (data: Go reads that line from this file, for this script and for
