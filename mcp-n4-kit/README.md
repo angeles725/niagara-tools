@@ -1717,6 +1717,13 @@ Destructive tools use the same pipeline:
   acknowledge (operatorWrite on the class), is not empty
   (`observed.permission_failed_classes`). An acknowledgement cannot be undone: the plan has
   no inverse and `n4_rollback` cannot reverse it. It needs at least one `--write-scope`.
+  Permissions, live on 4.14.0.162 with an operator-only user (#986 D18): operatorWrite on the
+  record's alarm class is enough to acknowledge (no admin write on the class, no write on the
+  AlarmService); a class the user may only read is refused and named in
+  `permission_failed_classes`. The record reads need operatorRead on the alarm database
+  (`alarm:`), which sits in the default category (`User`, index 1): a `CategoryService`
+  `ordMap` line `alarm:=<n>` did not move it, and without that read every read answers HTTP 404
+  (the web layer's answer when no view passes the user's permissions), so the dry run stops.
 - `n4_ack_alarm(select, notes)` chooses the records by a selection instead of uuids (give
   exactly one of `uuids` or `select`): `select: {source?, alarm_class?, before?, max?}`, at
   least one of the first three. `source` is a component ORD (`station:|slot:/a`, `slot:/a` or
