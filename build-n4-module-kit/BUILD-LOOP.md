@@ -621,6 +621,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     walk, count its stat calls: a check that is fail-safe against later edits stats the same files (a prebuilt stamp
     measured 12.5-16 ms against a 16-25 ms walk), so narrow the walked set instead.
     `[ev: retro r10-go-tool-walk-scope Δ2]`
+  - **A live probe is a Go tool, never scratch Python.** Timing a pulse, probing an API stall or driving the MCP
+    server against a live station uses `go/bin/n4-probe` (`stall`: latency histogram; `pulse`: press, then time each
+    read-back of the watched fields; one observer, 4 Hz cap, fixed run length, credentials only from the operator
+    env file) and `go/bin/n4call` for the MCP server (`go/cmd/mcp-n4/n4call`). Throwaway Python written for a live
+    check counts as a kit gap: write the Go tool or file a ticket. `[ev: issue #986]`
   - **A BQL predicate a tool ships carries its live-check note.** A BQL where-clause naming a field the station does not
     resolve is an empty answer, never an error, and a fake station accepts any string, so no offline test can tell a
     predicate the station understands from one it silently drops (`status.ok = false` matched nothing on a live 4.14

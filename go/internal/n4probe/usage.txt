@@ -1,0 +1,23 @@
+usage: n4-probe stall --url URL [common flags]
+       n4-probe pulse --press URL [--press-body JSON] --observe URL --field PATH [--field PATH ...] [common flags]
+
+Live probe of a station HTTP API: one observer (one request in flight), a rate cap and a fixed run length.
+
+  stall   GET --url at the rate for the duration; print the count, the errors (transport and non-2xx by
+          status), min/p50/p90/p99/max latency and a histogram. Exit 0 when it ran, 1 when every request failed.
+  pulse   read --observe once (the baseline of each --field, a dot path into its JSON: a.b.0.c), POST
+          --press (body --press-body, default {}, application/json), then GET --observe at the rate and print
+          a line each time a field changes (ms since the press was sent, field, old -> new). Stops when every
+          field has changed and is back at its baseline (the release) or at the duration.
+          Exit 0 released, 3 not released within the duration, 1 press or baseline transport failure.
+
+Common flags:
+  --env-file PATH       env file holding N4_PROBE_USER and N4_PROBE_PASSWORD (required; the only source of
+                        credentials, never a flag or the process environment; values are never printed)
+  --insecure-tls        accept a self-signed station certificate
+  --rate HZ             requests per second, default 4; above 4 is refused unless --allow-rate-above-4
+  --allow-rate-above-4  lift the 4 Hz cap (lab bench only)
+  --duration D          run length as a Go duration, default 30s, at most 10m
+
+HTTP basic auth, 10 s per request, redirects are not followed. Exit 2 on a usage error.
+The MCP server's stdio driver is go/bin/n4call (go/cmd/mcp-n4/n4call), not this tool.
