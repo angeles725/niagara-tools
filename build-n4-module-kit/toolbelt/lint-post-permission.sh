@@ -70,7 +70,7 @@ set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 self="$(readlink -f "${BASH_SOURCE[0]}")"
 case "${1:-}" in -h | --help) sed -n '2,/^set -u$/{/^set -u$/d;s/^# \{0,1\}//;p}' "$self"; exit 0 ;; esac
-here="$(cd "$(dirname "$self")" && pwd)"
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 GO_DIR="$(cd "$here/../.." && pwd)/go"
 [ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-post-permission: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
 # shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
