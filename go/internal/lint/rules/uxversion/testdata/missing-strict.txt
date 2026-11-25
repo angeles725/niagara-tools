@@ -1,0 +1,14 @@
+-- args --
+@DIR@/m
+--strict
+-- want --
+exit 1
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:1  no-version: img/logo.png has no ?v=1.2.3 suffix (types/dashboard.md: cache-bust every static asset with the module version)
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:2  no-version: /prefix/img/fav.ico?x=1 has no ?v=1.2.3 suffix (types/dashboard.md: cache-bust every static asset with the module version)
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-ux/src/rc/index.html --
+<img src="img/logo.png">
+<link rel="icon" href="/prefix/img/fav.ico?x=1">
+<script src="js/main.js?v=1.2.3"></script>

@@ -1,0 +1,10 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+ERROR  lint-ux-version  @DIR@/m  no *-ux/src/rc *.html, *.js or *.css files found (wrong path or no -ux module)
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-rt/src/A.java --
+class A {}

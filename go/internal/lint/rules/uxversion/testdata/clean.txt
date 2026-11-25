@@ -1,0 +1,19 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-ux/src/rc/index.html --
+<!DOCTYPE html>
+<link rel="stylesheet" href="css/base.css?v=1.2.3">
+<script src="js/main.js?v=1.2.3"></script>
+<img src="img/logo.png?v=1.2.3#top">
+<script src="https://cdn.example.org/lib.js"></script>
+<img src="data:image/png;base64,AAAA">
+-- m/M-ux/src/rc/css/base.css --
+body { background: url(../img/bg.png?v=1.2.3); }
+@import "x.css?v=1.2.3";
+-- m/M-ux/src/rc/js/main.js --
+img.src = "img/a.png?x=1&v=1.2.3";
