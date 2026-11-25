@@ -6,7 +6,7 @@
 # retro's lesson was never folded into a kit file — this audit makes that
 # visible so it becomes a PR7 follow-up item, not a silent gap.
 #
-# Usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]...
+# Usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--no-research-probe] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]...
 #                           [--alias <stem>=<ALIAS>]... <INDEX.md> <kit-root>
 # exit:  0 clean or WARN-only · 1 uncited rows (or uncited Δ, or --exact-stems alias FAIL) AND --strict · 3 usage/env
 #
@@ -42,6 +42,9 @@
 # cannot see those retros, so it says so instead of a clean-looking report:
 #   fold-audit: DEGRADED external-roots-unconfigured: niagara-research/retros has <R> retro(s) with <D> pending ...
 # (the directory by its label, never its path; fails --strict; exit codes are otherwise unchanged).
+# --no-research-probe skips only that probe (nothing else changes; a configured external root is still audited). ci.yml's step
+# passes it: CI has no niagara-research checkout, so the step's local twin (scripts/ci-local.sh --changed, the pre-push hook)
+# must not fail on the operator's. A manual run without it keeps the DEGRADED line.
 #
 # Corpus: every *.md under <kit-root> excluding */retros/* and INDEX.md (ledger.d/ fragments count).
 # Stem: filename minus leading YYYY-MM-DD- and trailing .md. A stem token T (6-char floor) credits

@@ -10,12 +10,13 @@ var dateArg = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`)
 // options is the parsed command line.
 type options struct {
 	strict, exactStems bool
+	noResearchProbe    bool // --no-research-probe: skip the degraded() probe of niagara-research/retros
 	since, index, root string
 	externals          []string          // --external-root, then fold-roots.conf: retro directories outside the kit
 	aliases            map[string]string // retro stem -> alias, the name an external retro is reported by
 }
 
-// parseArgs reads `[--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>]
+// parseArgs reads `[--strict] [--exact-stems] [--no-research-probe] [--deltas-since <YYYY-MM-DD>]
 // [--external-root <dir>]... [--alias <stem>=<ALIAS>]... <INDEX.md> <kit-root>`; on a usage
 // error it returns the exact stderr text of the bash tool.
 func parseArgs(args []string) (options, string) {
@@ -30,6 +31,9 @@ loop:
 			i++
 		case a == "--exact-stems":
 			o.exactStems = true
+			i++
+		case a == "--no-research-probe":
+			o.noResearchProbe = true
 			i++
 		case a == "--deltas-since":
 			if i+1 >= len(args) || !dateArg.MatchString(args[i+1]) {

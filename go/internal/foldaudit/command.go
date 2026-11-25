@@ -17,9 +17,9 @@ const (
 	ExitEnv    = 3 // usage or environment error
 )
 
-const usage = "usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]... [--alias <stem>=<ALIAS>]... <INDEX.md> <kit-root>"
+const usage = "usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--no-research-probe] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]... [--alias <stem>=<ALIAS>]... <INDEX.md> <kit-root>"
 
-// Main implements `sweep-fold-audit [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]...
+// Main implements `sweep-fold-audit [--strict] [--exact-stems] [--no-research-probe] [--deltas-since <YYYY-MM-DD>] [--external-root <dir>]...
 // [--alias <stem>=<ALIAS>]... <INDEX.md> <kit-root>` over the real gh.
 func Main(args []string, s cli.Stdio) int { return Command(retrogh.Exec)(args, s) }
 

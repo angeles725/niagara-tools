@@ -297,3 +297,23 @@ _alias_fixture() {
   run "$SCRIPT" --strict "$INDEX" "$KITROOT"
   [[ "$output" != *"DEGRADED"* ]]
 }
+
+@test "F23: --no-research-probe skips only the DEGRADED probe; a manual run keeps the line" {
+  mkdir -p "$HOME/niagara-research/retros"
+  printf '## Deltas\n| # | Delta | Target |\n|---|---|---|\n| D1 | the toolbelt lint misses a case | toolbelt/lint-x.sh |\n' \
+    > "$HOME/niagara-research/retros/2026-03-01-somestem.md"
+  run "$SCRIPT" --no-research-probe "$INDEX" "$KITROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"DEGRADED"* ]]
+  [[ "$output" == *"fold-audit: WARN"* ]]
+  run "$SCRIPT" "$INDEX" "$KITROOT"
+  [[ "$output" == *"DEGRADED external-roots-unconfigured"* ]]
+  # the Go test TestNoResearchProbeSkipsOnlyTheDegradedProbe pins the --strict exit on a clean index
+}
+
+@test "F24: ci.yml's sweep-fold-audit step passes --no-research-probe, so the local twin gives CI's verdict" {
+  local ci; ci="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/.github/workflows/ci.yml"
+  run grep -c 'sweep-fold-audit.sh" --strict .*--no-research-probe' "$ci"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
