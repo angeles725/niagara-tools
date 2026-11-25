@@ -144,8 +144,7 @@ func registerPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.
 		return nil, err
 	}
 	stored := pyjson.Str(get(p.Ops[0].(*pyjson.Object), "n"))
-	note, err := spyderFree(c, p.Data.(createData), a, stored)
-	if err != nil {
+	if err := spyderFree(c, p.Data.(createData), a, stored); err != nil {
 		return nil, err
 	}
 	steps := a.steps()
@@ -155,9 +154,6 @@ func registerPlan(c plan.Client, args *pyjson.Object, w *plan.State, _ *session.
 	p.Notes = append(p.Notes, msgOneToken, msgNoInverse)
 	if a.discover {
 		p.Notes = append(p.Notes, msgDiscoverTraffic)
-	}
-	if note != "" {
-		p.Notes = append(p.Notes, note)
 	}
 	p.Keys, p.Writes = obj("follow_up", steps), len(steps)+1
 	p.Data = &registerData{create: p.Data.(createData), args: a, network: a.network, steps: steps, w: w}

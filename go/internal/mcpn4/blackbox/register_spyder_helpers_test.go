@@ -47,6 +47,7 @@ func newSpyderRig(t *testing.T, devices int) *spyderRig {
 		st.AfterAdd = s.afterAdd
 		st.Respond = s.respond
 	})
+	s.routes(devices)
 	return s
 }
 

@@ -1364,11 +1364,14 @@ Tool rules:
   before any token: a network that is not a `bacnet:BacnetNetwork`, is disabled or is in fault; a
   licence whose `device.limit` the new device would exceed; a name already under the network (the
   refusal gives the escaped BQL form, `name = '$2432016'`: `$24` is a literal `$`); an `instance` another
-  BACnet device holds (one BQL over every device; a note says when it could not be read); instance
+  BACnet device holds (one BQL over every device; when it cannot be read, or is cut or past the row cap, the dry run is refused with the reason, because a duplicate instance makes the station rebind addresses); instance
   `9999`, the factory instance every new Spyder ships with. The run stops at the first step the
   station refuses, and refuses `writeDeviceInstance` on a device that is in fault (as
-  `n4_invoke_action` does) with `observed.failed_step` and an `unverified` verdict; the device and
-  its inverse stay. The read-back loads the device (address and `objectId` as requested), asks the
+  `n4_invoke_action` does), or whose status it could not read (the field write is then not sent), with
+  `observed.failed_step` and an `unverified` verdict (never a `mismatch`, the device is half configured); the device and
+  its inverse stay. A step that failed with no station answer (a timeout, a dropped connection) may have been
+  applied: `failed_step` says so (for `writeDeviceInstance`, that the controller may already hold the new instance)
+  and the batch is `in_doubt`. The read-back loads the device (address and `objectId` as requested), asks the
   controller its instance (`configured_instance`, `online_instance`) and summarizes the discovery
   under `observed.discover` (`job`, `found`, `unread`, `hardware`; the rows stay with
   `n4_discover_points`). `expected_model` (`PUB6438S`, `PUB1012S`, ...) compares the discovered

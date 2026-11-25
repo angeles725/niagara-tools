@@ -14,7 +14,8 @@ import (
 // controller reports the same instance (writeInstanceReadback) and the discovery is summarized
 // (its rows are n4_discover_points'; the summary keeps the counts and the hardware). The verdict
 // is the worst of the parts: a difference is a mismatch; a step that did not run or an answer that
-// could not be read leaves it unverified.
+// could not be read leaves it unverified. When a follow_up step failed the device is half
+// configured, so it is not compared with the request: the verdict is unverified, never a mismatch.
 func registerReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies, inverse []any) (any, any, any, string, error) {
 	d := p.Data.(*registerData)
 	stored := pyjson.Str(get(inverse[0].(*pyjson.Object), "n"))
@@ -42,8 +43,8 @@ func registerReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies,
 		}
 	}
 	want := get(requested, "address").(*pyjson.Object)
-	if rootType(nodes) != spyderType || observedID != id || pyjson.Str(get(got, "address_type")) != pyjson.Str(get(want, "address_type")) ||
-		pyjson.Str(get(got, "network_number")) != pyjson.Str(get(want, "network_number")) || !sameOctets(get(got, "mac"), a.mac) {
+	if d.failed == "" && (rootType(nodes) != spyderType || observedID != id || pyjson.Str(get(got, "address_type")) != pyjson.Str(get(want, "address_type")) ||
+		pyjson.Str(get(got, "network_number")) != pyjson.Str(get(want, "network_number")) || !sameOctets(get(got, "mac"), a.mac)) {
 		worst("mismatch")
 	}
 	if d.failed != "" {

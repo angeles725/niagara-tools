@@ -20,8 +20,10 @@ const (
 	msgNetworkFault = "%s is in fault (%s): a Spyder registered under it cannot start; clear the fault, then redo the dry run"
 	msgNameInUse    = "a component named %s is already in use under %s (display name %s): the station would rename the new one; " +
 		"to look it up with n4_bql_query write the escaped name, name = '%s' ($24 is a literal $)"
-	msgInstanceUsed = "device:%d is already used by %s: two devices at one instance make the station rebind the first one's address on every I-Am (B1165); choose a free instance"
-	noteNotLooked   = "the station's BACnet devices could not be read (%s): a duplicate instance elsewhere on the station was not checked"
+	msgInstanceUsed   = "device:%d is already used by %s: two devices at one instance make the station rebind the first one's address on every I-Am (B1165); choose a free instance"
+	msgInstanceUnread = "the station's BACnet devices could not be read (%s): a duplicate instance elsewhere on the station cannot be ruled out, " +
+		"and writeDeviceInstance has no inverse while two devices at one instance make the station rebind addresses (B1165); " +
+		"refusing before the token: fix the read, then redo the dry run"
 )
 
 // networkUsable refuses a target that is not a BACnet network, or that is disabled or in fault.
@@ -43,27 +45,27 @@ func networkUsable(c plan.Client, network string) error {
 }
 
 // spyderFree refuses a name already under the network and an instance another BACnet device holds
-// (one BQL over every device); a lookup that cannot be read is a fixed note, never a refusal.
-func spyderFree(c plan.Client, d createData, a *spyderArgs, stored string) (string, error) {
+// (one BQL over every device); a lookup that cannot be read is a refusal too: writeDeviceInstance has no inverse.
+func spyderFree(c plan.Client, d createData, a *spyderArgs, stored string) error {
 	if d.children[stored] {
-		return "", plan.ToolError(fmt.Sprintf(msgNameInUse, stored, a.network, pyjson.StrRepr(a.display),
+		return plan.ToolError(fmt.Sprintf(msgNameInUse, stored, a.network, pyjson.StrRepr(a.display),
 			strings.ReplaceAll(stored, "$", "$24")))
 	}
 	g, ok := c.(capacity.OrdGetter)
 	if !ok {
-		return fmt.Sprintf(noteNotLooked, "this client cannot run BQL"), nil
+		return plan.ToolError(fmt.Sprintf(msgInstanceUnread, "this client cannot run BQL"))
 	}
 	rows, why := spyderRows(g)
 	if why != "" {
-		return fmt.Sprintf(noteNotLooked, why), nil
+		return plan.ToolError(fmt.Sprintf(msgInstanceUnread, why))
 	}
 	want := fmt.Sprintf("device:%d", a.instance)
 	for _, r := range rows {
 		if r[1] == want {
-			return "", plan.ToolError(fmt.Sprintf(msgInstanceUsed, a.instance, r[0]))
+			return plan.ToolError(fmt.Sprintf(msgInstanceUsed, a.instance, r[0]))
 		}
 	}
-	return "", nil
+	return nil
 }
 
 // spyderRows is each BACnet device as {slot path, objectId}, or why they could not be read.
@@ -77,8 +79,15 @@ func spyderRows(g capacity.OrdGetter) ([][2]string, string) {
 		return nil, err.Error()
 	}
 	columns, rows, capped, err := bql.ParseCSV(text, bql.MaxRowsLimit, nil)
-	if cut || capped || err != nil || len(columns) < 2 {
-		return nil, "the answer was cut or has no two columns"
+	switch {
+	case cut:
+		return nil, fmt.Sprintf("the answer was cut at %d bytes", bql.MaxResponseBytes)
+	case err != nil:
+		return nil, "the answer could not be parsed: " + err.Error()
+	case capped:
+		return nil, fmt.Sprintf("the answer has more than %d rows", bql.MaxRowsLimit)
+	case len(columns) < 2:
+		return nil, "the answer has no two columns"
 	}
 	out := make([][2]string, 0, len(rows))
 	for _, row := range rows {

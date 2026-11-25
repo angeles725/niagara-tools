@@ -6,15 +6,24 @@ package blackbox
 import (
 	"strings"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest/boxstation"
 )
+
+// networkChildren is how many children the BACnet network holds.
+func (s *spyderRig) networkChildren() (n int) {
+	s.Station.Do(func(st *boxstation.Station) { n = len(st.ByHandle(s.net).Children) })
+	return n
+}
 
 // refusedRegister is a dry run refused with every text in want, leaving no journal line and no
 // device under the network.
 func refusedRegister(t *testing.T, s *spyderRig, args Args, want ...string) {
 	t.Helper()
+	before := s.networkChildren()
 	refusedDry(t, s.Rig, registerTool, args, want...)
-	if s.device("$32016") != "" && !strings.Contains(strings.Join(want, ""), "already in use") {
-		t.Errorf("a refused registration created the device")
+	if after := s.networkChildren(); after != before {
+		t.Errorf("a refused registration changed the network's children from %d to %d", before, after)
 	}
 	if len(s.inv.get()) != 0 {
 		t.Errorf("a refused registration invoked %v", s.inv.get())
@@ -69,4 +78,22 @@ func TestRegisterSpyderModelCheckNeedsDiscoveryAndAKnownModel(t *testing.T) {
 	s := newSpyderRig(t, 5)
 	refusedRegister(t, s, withArgs(spyArgs, Args{"expected_model": "PUB6438S", "discover": false}), "expected_model", "discover")
 	refusedRegister(t, s, withArgs(spyArgs, Args{"expected_model": "XYZ"}), "XYZ", "PUB1012S")
+}
+
+// writeDeviceInstance has no inverse and a duplicate instance makes the station rebind addresses
+// (B1165): an instance lookup that cannot be read is a refusal before the token, not a note.
+func TestRegisterSpyderIsRefusedWhenTheInstanceLookupCannotBeRead(t *testing.T) {
+	const why = "refusing before the token"
+	s := newSpyderRig(t, 5)
+	routeOrds(s.sv, boxstation.OrdRoute{Needle: "from driver:Device", Body: []byte(devicesCSV(5))},
+		boxstation.OrdRoute{Needle: "from driver:ProxyExt", Body: []byte(usagePointsCSV)}) // no BQL route: the station answers 404
+	refusedRegister(t, s, spyArgs, "could not be read", why, "HTTP 404")
+	s.instances = strings.Repeat("slot:/Folder/Other/Vav,device:1\n", 50001)
+	s.routes(5)
+	refusedRegister(t, s, spyArgs, "could not be read", why, "more than 50000 rows")
+	s = newSpyderRig(t, 5)
+	routeOrds(s.sv, boxstation.OrdRoute{Needle: "from driver:Device", Body: []byte(devicesCSV(5))},
+		boxstation.OrdRoute{Needle: "from driver:ProxyExt", Body: []byte(usagePointsCSV)},
+		boxstation.OrdRoute{Needle: "from bacnet:BacnetDevice", Body: []byte("Slot Path\nslot:/Folder/Other/Vav7\n")})
+	refusedRegister(t, s, spyArgs, "could not be read", why, "two columns")
 }
