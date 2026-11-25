@@ -25,8 +25,16 @@
  *   node toolbelt/hmi-sweep.js --url <page-url> [--viewport 1280x800] [--scenario name[=query]]...
  *       [--api-match <substring>] [--nav <selector>] [--subtab <selector>]...
  *       [--target <selector>] [--allow-scroller <selector>]... [--settle-ms 80]
+ *       [--widths W1,W2,...] [--profile lan|hmi|both]
  *       [--screenshot-dir <dir>] [--chrome-path <chrome>]
- * Row:     PASS|FAIL|WARN  hmi-sweep  <scenario>/<view>  no-scroll|target|inner-scroller|subtab: <detail>
+ * Widths (responsive check, frontend-standard §profiles): --widths 360,768,1280 repeats the whole sweep
+ *   once per width at viewport W x <height of --viewport, default 800> (each W an integer 200..4000), so
+ *   a horizontal scroll at a phone width is a FAIL row naming that width. --profile is a preset used only
+ *   when --widths is absent: lan = 360,768,1280 · hmi = the single --viewport run (default 1280x800) ·
+ *   both = the lan widths plus the --viewport run. With neither option the run, rows and file names are
+ *   exactly the single-viewport ones (no width field); a multi-width run adds `width=<W>` to every row
+ *   (`width=1280x800` for the hmi run of `both`) and `_w<W>` to every screenshot file name.
+ * Row:     PASS|FAIL|WARN  hmi-sweep  <scenario>/<view>  [width=<W>  ]no-scroll|target|inner-scroller|subtab: <detail>
  *          A --target that matches nothing (or only a hidden element) in a view is a FAIL row; a
  *          sub-tab that is no longer visible after the previous click is a WARN row (not swept).
  *          --settle-ms is a non-negative integer (ms).
@@ -45,14 +53,33 @@ const path = require('path');
 
 const USAGE = 'usage: hmi-sweep.js --url <page-url> [--viewport WxH] [--scenario name[=query]]... ' +
   '[--api-match <substr>] [--nav <sel>] [--subtab <sel>]... [--target <sel>] ' +
-  '[--allow-scroller <sel>]... [--settle-ms N] [--screenshot-dir <dir>] [--chrome-path <chrome>]';
+  '[--allow-scroller <sel>]... [--settle-ms N] [--widths W1,W2,...] [--profile lan|hmi|both] ' +
+  '[--screenshot-dir <dir>] [--chrome-path <chrome>]';
+
+const LAN_WIDTHS = [360, 768, 1280];
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 4000;
+
+function parseWidths(v) {
+  const bad = () => new UsageError(
+    `--widths must be a comma list of integers ${MIN_WIDTH}..${MAX_WIDTH}, e.g. 360,768,1280`);
+  const items = v.split(',');
+  const widths = [];
+  for (const it of items) {
+    if (!/^\d+$/.test(it)) throw bad();
+    const n = Number(it);
+    if (n < MIN_WIDTH || n > MAX_WIDTH) throw bad();
+    widths.push(n);
+  }
+  return widths;
+}
 
 class UsageError extends Error {}
 
 function parseArgs(argv) {
   const out = {
     url: null, width: 1280, height: 800, nav: '.nav-item', subtabs: [], target: null,
-    allowScrollers: [], scenarios: [], apiMatch: null, settleMs: 80, screenshotDir: null,
+    allowScrollers: [], scenarios: [], widths: null, profile: null, apiMatch: null, settleMs: 80, screenshotDir: null,
     chromePath: process.env.KIT_CHROME || process.env.PUPPETEER_EXECUTABLE_PATH || null,
   };
   const need = (i) => {
@@ -75,6 +102,12 @@ function parseArgs(argv) {
           : { name: v.slice(0, eq), query: v.slice(eq + 1) });
         break;
       }
+      case '--widths': out.widths = parseWidths(need(i)); i++; break;
+      case '--profile': {
+        const v = need(i); i++;
+        if (!['lan', 'hmi', 'both'].includes(v)) throw new UsageError('--profile must be lan, hmi or both');
+        out.profile = v; break;
+      }
       case '--api-match': out.apiMatch = need(i); i++; break;
       case '--nav': out.nav = need(i); i++; break;
       case '--subtab': out.subtabs.push(need(i)); i++; break;
@@ -92,7 +125,21 @@ function parseArgs(argv) {
   }
   if (!out.url) throw new UsageError('--url is required');
   if (out.scenarios.length === 0) out.scenarios.push({ name: 'default', query: '' });
+  out.runs = viewportRuns(out);
   return out;
+}
+
+/*
+ * The viewports one invocation sweeps: [{ width, height, label }]. label is null for the plain
+ * single-viewport run (rows and file names carry no width), else the width shown in rows/file names.
+ */
+function viewportRuns(a) {
+  const widthRuns = (ws) => ws.map((w) => ({ width: w, height: a.height, label: String(w) }));
+  if (a.widths) return widthRuns(a.widths);
+  const hmi = { width: a.width, height: a.height, label: null };
+  if (a.profile === 'lan') return widthRuns(LAN_WIDTHS);
+  if (a.profile === 'both') return [...widthRuns(LAN_WIDTHS), { ...hmi, label: `${a.width}x${a.height}` }];
+  return [hmi];
 }
 
 function withQuery(url, query) {
@@ -105,8 +152,8 @@ function withQuery(url, query) {
  *   target: null (no --target) | { present: false, sel } | { present: true, visible, unoccluded },
  *   scrollers: [{ sel, allowed }] }, or m = { gone: true } for a sub-tab that vanished before its click.
  */
-function rowsForView(scenario, label, m) {
-  const id = `${scenario}/${label}`;
+function rowsForView(scenario, label, m, width) {
+  const id = `${scenario}/${label}` + (width ? `  width=${width}` : '');
   const rows = [];
   if (m.gone) {
     return [`WARN  hmi-sweep  ${id}  subtab: no longer visible after the previous click (not swept)`];
@@ -217,9 +264,9 @@ function clickNavNth(els, i) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function sweepScenario(browser, args, sc) {
+async function sweepScenario(browser, args, sc, run) {
   const page = await browser.newPage();
-  await page.setViewport({ width: args.width, height: args.height });
+  await page.setViewport({ width: run.width, height: run.height });
   if (args.apiMatch && sc.query) {
     await page.setRequestInterception(true);
     page.on('request', (req) => {
@@ -238,7 +285,8 @@ async function sweepScenario(browser, args, sc) {
     out.push({ label, m });
     if (args.screenshotDir) {
       fs.mkdirSync(args.screenshotDir, { recursive: true });
-      const file = `${sc.name}_${label}`.replace(/[^A-Za-z0-9_.-]+/g, '_') + '.png';
+      const file = `${sc.name}_${label}`.replace(/[^A-Za-z0-9_.-]+/g, '_') +
+        (run.label ? `_w${run.label}` : '') + '.png';
       await page.screenshot({ path: path.join(args.screenshotDir, file) });
     }
   };
@@ -300,11 +348,13 @@ async function main(argv) {
   const rows = [];
   let views = 0;
   try {
-    for (const sc of args.scenarios) {
-      const measured = await sweepScenario(browser, args, sc);
-      for (const v of measured) {
-        views++;
-        rows.push(...rowsForView(sc.name, v.label, v.m));
+    for (const run of args.runs) {
+      for (const sc of args.scenarios) {
+        const measured = await sweepScenario(browser, args, sc, run);
+        for (const v of measured) {
+          views++;
+          rows.push(...rowsForView(sc.name, v.label, v.m, run.label));
+        }
       }
     }
   } finally {
