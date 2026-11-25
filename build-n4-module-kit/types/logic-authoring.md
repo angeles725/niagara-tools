@@ -326,6 +326,16 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
 - **Package:** select the templates in the Template sidebar → **Make Module**; the result is one `.jar` named by
   `moduleName` in Sys Home `modules/`. A template inside a module is read-only (the Template view shows
   `ReadOnly`; Save As copies it to `~templates` to edit) (guide `Templates/MakingATemplateModule-8A3D4B56.txt:7,16,21,31` "A template module is a group of templates").
+- **Jar layout (what Make Module writes):** a plain ZIP, no signature, with `META-INF/module.xml` first, then each
+  `.ntpl` under its path relative to the user's `templates` directory (`template-wb` `BTemplateSideBar.java:246-276`).
+  The manifest is fixed text: `<module name description vendor vendorVersion bajaVersion="0" templateJar="true">`
+  with empty `<dependencies/>`, `<dirs/>` and `<types/>` (`:349-358`). `templateJar="true"` makes the module loader
+  skip the jar (`baja` `DefaultModulesFileManager.java:193-194`, `notManaged`): no `runtimeProfile`, no certificate
+  check, no classes, so it is not a build-n4-module part and `build.sh` does not make it. Workbench's template
+  manager lists it; a deploy copies the `.ntpl` to the station (`^template/<vendor>`), not the jar. To package
+  without Workbench, write that `module.xml` and zip it with the `.ntpl` files under the same name rules
+  (`moduleName.jar`, put in Sys Home `modules/`), then run the check below on the jar.
+  `[ev: issue #991]`
 - **Dependencies:** the `.ntpl` carries `template-manifest.xml` (the guide spells it `template.manifest.xml`;
   shipped `.ntpl` files use the hyphen) whose `<dependencies>` holds one `<dependency name vendor vendorVersion rel>`
   per module (`template-rt` `ManifestXMLWriter.java:129-140`). List every module the component tree AND the Px
