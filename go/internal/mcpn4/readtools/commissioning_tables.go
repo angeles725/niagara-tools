@@ -18,6 +18,7 @@ type commRun struct {
 	tables                         map[string]*commTable
 	expectHistories, expectAlarms  *expectFilter
 	spyderSpec                     []spyderDevice // nil: no spyder_spec given
+	spyderHardware                 bool           // spyder_hardware: add the model_mismatch check
 }
 
 // commTable is one query's answer: its rows by column name, whether they were cut, or why the

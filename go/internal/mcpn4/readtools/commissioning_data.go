@@ -8,7 +8,8 @@ import "regexp"
 var commSections = []string{"points", "histories", "alarms", "links", "naming", "station", "spyder"}
 
 // commDefaultSections are the sections built when the caller names none: spyder is added only
-// when spyder_spec is given (a station without Spyders would only answer a failed query).
+// when spyder_spec or spyder_hardware is given (a station without Spyders would only answer a
+// failed query).
 var commDefaultSections = commSections[:6:6]
 
 // Defaults of the report (the registry schema bounds the arguments).
@@ -49,8 +50,10 @@ var commQueries = map[string]commQuery{
 		[]string{"Slot Path", "Name", "Type", "Class"}},
 	"classes": {"select slotPath, name, openAlarmCount, unackedAlarmCount from alarm:AlarmClass", alarmServiceOrd,
 		[]string{"Slot Path", "Name", "Open", "Unacked"}},
-	"spyders":   {spyderDeviceQuery, "", spyderDeviceColumns},
-	"spyder_io": {spyderIOQuery, "", spyderIOColumns},
+	"spyders":      {spyderDeviceQuery, "", spyderDeviceColumns},
+	"spyder_io":    {spyderIOQuery, "", spyderIOColumns},
+	"spyder_model": {spyderModelQuery, "", spyderModelColumns},
+	"spyder_hw":    {spyderHWQuery, "", spyderHWColumns},
 }
 
 const displayColumn = "Display"
