@@ -83,7 +83,7 @@ func (a *app) execute(gs []*group) int {
 				a.errf("cannot create %q: %v", g.primary().title, err)
 				return ExitFail
 			}
-			g.number = n
+			g.number, g.done = n, true
 			a.outf("created #%d: %s\n", n, g.primary().title)
 		case "dup", "fixed":
 			for _, m := range g.members {
@@ -93,6 +93,7 @@ func (a *app) execute(gs []*group) int {
 				}
 				a.outf("commented on #%d: %s\n", g.number, m.label())
 			}
+			g.done = true
 		}
 		if g.number == 0 {
 			continue

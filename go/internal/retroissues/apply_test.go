@@ -131,3 +131,25 @@ func TestCheckListsOpenRetroDeltaIssues(t *testing.T) {
 		t.Errorf("gh down must not read as clean: exit %d, stderr %q", code, errs)
 	}
 }
+
+// A duplicate whose comment gh refuses was not applied: the closing line does not count it (retro R17 delta D4).
+func TestApplySummaryDoesNotCountADuplicateWhoseCommentFailed(t *testing.T) {
+	e := newEnv(t)
+	e.gh.searched = issueJSON(30, "OPEN", "mcp-n4: n4_read_slots drops a key", `The n4_read_slots filter loses the key when the slot name is long (go/internal/mcpn4/slots.go)`)
+	e.gh.commentErr = errGH
+	code, out, errs := e.run("--apply", e.kitRetro("2026-02-01-alpha.md", slotsRetro))
+	if code != 1 || !strings.Contains(errs, "cannot comment on #30") || !strings.Contains(out, "0 probable duplicates") || strings.Contains(out, "commented on") {
+		t.Errorf("exit %d, out %q, stderr %q", code, out, errs)
+	}
+}
+
+// A comment whose label edit fails is half done: it does not count either, and the exit is 1.
+func TestApplySummaryDoesNotCountADuplicateWhoseLabelFailed(t *testing.T) {
+	e := newEnv(t)
+	e.gh.searched = issueJSON(30, "OPEN", "mcp-n4: n4_read_slots drops a key", `The n4_read_slots filter loses the key when the slot name is long (go/internal/mcpn4/slots.go)`)
+	e.gh.editErr = errGH
+	code, out, _ := e.run("--apply", e.kitRetro("2026-02-01-alpha.md", slotsRetro))
+	if code != 1 || !strings.Contains(out, "0 probable duplicates") {
+		t.Errorf("exit %d, out %q", code, out)
+	}
+}
