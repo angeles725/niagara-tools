@@ -75,6 +75,7 @@ FAIL. `[ev: course Lab Instructions.txt:1644-1647,1711-1721]`
   runs on a JDK thread the engine does not know. `toolbelt/lint-action-handler.sh` WARNs `this::doX` and
   `new Thread(() -> doX(` of a declared action (course F3). [CERT] `com/tridium/sys/schema/ComponentSlotMap.java:
   1315-1360` (`invoke` runs the check, then the handler, then `knobs.propagate`)
+  Worked fixture: `BPanOffload.java` in fixtures/MinimalPan (`scaffold-module.sh --with-offload` emits it).
 - **A full or shut-down bounded executor** rejects work (`RejectedExecutionException` under the JDK default policy):
   catch it in `post()` and report it (fault the status and log), or fall back with
   `return super.post(action, arg, cx);`, which queues it on the engine's action queue. [CERT]

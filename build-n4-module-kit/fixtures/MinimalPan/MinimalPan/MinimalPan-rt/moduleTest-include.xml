@@ -2,4 +2,8 @@
 <types>
   <type class="test.com.angeles.MinimalPan.BMinimalPanStationTestBase" name="MinimalPanStationTestBase"/>
   <type class="test.com.angeles.MinimalPan.BMinimalPanLinkTest" name="MinimalPanLinkTest"/>
+  <!-- offload:begin -->
+  <type class="test.com.angeles.MinimalPan.BMinimalPanOffloadTest" name="MinimalPanOffloadTest"/>
+  <type class="test.com.angeles.MinimalPan.BMinimalPanPermissionsTest" name="MinimalPanPermissionsTest"/>
+  <!-- offload:end -->
 </types>

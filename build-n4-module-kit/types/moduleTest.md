@@ -784,6 +784,9 @@ public class BYourPermissionTest extends BTestNgStation {
   `BUserSchemeTest.java:69-99` (two tests that assert `UnresolvedException` for a user without read permission).
   `[ev: code docSource BTestNgStation.java :719-745]`
   [ev: course Slide Code/slides/slides-rt/srcTest/test/com/tridiumuniversity/slides/ords/BUserSchemeTest.java :69-99]
+- **Fixture:** `fixtures/MinimalPan/.../srcTest/test/com/angeles/MinimalPan/BMinimalPanPermissionsTest.java` runs
+  this recipe on a `set` and an ASYNC `invoke`: a read-only user gets `PermissionException` (the invoke check runs
+  before `post()`), an admin's write and invoke go through.
 
 ---
 

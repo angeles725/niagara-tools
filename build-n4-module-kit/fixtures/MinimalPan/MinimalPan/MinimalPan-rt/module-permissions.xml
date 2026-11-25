@@ -1,2 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<permissions/>
+<!-- BPanOffload owns an executor thread: creating it, setDaemon and shutdownNow() in stopped() need MANAGE_EXECUTION
+     (course Labs/Lab9 Multithreaded/module-permissions.xml:25-28; types/actions.md § 2). Without it the stop-time
+     denial is only logged and the thread outlives the component. -->
+<permissions>
+  <niagara-permission-groups type="station">
+    <req-permission>
+      <name>MANAGE_EXECUTION</name>
+      <purposeKey>Stop the module's own offload thread when the component stops</purposeKey>
+    </req-permission>
+  </niagara-permission-groups>
+</permissions>
