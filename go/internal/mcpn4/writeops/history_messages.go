@@ -30,6 +30,10 @@ const (
 	msgHistoryNoInterval = "interval_ms is required for mode interval (300000 is 5 minutes)"
 	// msgHistoryCapacity: the capacity given.
 	msgHistoryCapacity = "capacity must be a whole number of records from 1 to 2147483647, or \"unlimited\", got %s"
+	// msgHistoryCapacityRecords: the capacity_records given (a number of records only).
+	msgHistoryCapacityRecords = "capacity_records must be a whole number of records from 1 to 2147483647, got %s"
+	// msgHistoryCapacityBoth: capacity and its alias capacity_records were both given.
+	msgHistoryCapacityBoth = "capacity and capacity_records are the same argument: give only one of them"
 
 	msgHistoryToleranceMode = "change_tolerance applies only to mode cov: an interval extension samples every " +
 		"interval_ms and has no change tolerance"
