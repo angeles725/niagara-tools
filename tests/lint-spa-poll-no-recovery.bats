@@ -352,3 +352,60 @@ JEOF
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+# Issue #966 item 1: a stamp the catch does not make unconditional is not the swallowed-failure shape. Each stamp sits
+# behind if / else / ?: / && / ||, or at another brace depth than the catch (a bare block, a function declared later).
+@test "SPR18: a lastOk* stamp behind if/else/?:/&&/|| or at another brace depth is clean (issue #966)" {
+  # Mutation: SPR18 -- dropping the `conditional` regex or the brace-depth filter FAILs a stamp that is not the shape
+  d="$TMPDIR_T/Mod/src/rc"
+  stamps=(
+    'if (ready) lastOkAt = Date.now();'
+    'if (stale) go(); else lastOkAt = Date.now();'
+    'ok ? (lastOkAt = Date.now()) : 0;'
+    'ready && (lastOkAt = Date.now());'
+    'cached || (lastOkAt = Date.now());'
+    '{ lastOkAt = Date.now(); }'
+    'function later() { lastOkAt = Date.now(); }'
+  )
+  for st in "${stamps[@]}"; do
+    printf 'let lastOkAt = 0;\nasync function poll() {\n  try { await load(); } catch (e) { paint("error"); }\n  %s\n  if (Date.now() - lastOkAt > 3e4) location.reload();\n}\nsetTimeout(poll, 5000);\n' "$st" > "$d/a.js"
+    run "$SPR" "$d"
+    [ "$status" -eq 0 ] || { echo "FAILed on: $st: $output"; false; }
+    [ -z "$output" ]
+  done
+  printf 'let lastOkAt = 0;\nasync function poll() {\n  try { await load(); } catch (e) { paint("error"); }\n  lastOkAt = Date.now();\n  if (Date.now() - lastOkAt > 3e4) location.reload();\n}\nsetTimeout(poll, 5000);\n' > "$d/a.js"
+  run "$SPR" "$d"
+  [ "$status" -eq 1 ]
+}
+
+# Issue #966 item 3: the catch exits when its OWN handler throws, returns or hands back Promise.reject; an exit inside
+# a callback the handler passes on is the callback's, and a comment or a string is no code.
+@test "SPR19: .catch(e => Promise.reject(e)) rethrows; a return in a nested callback of the handler does not (issue #966)" {
+  # Mutation: SPR19 -- reading the whole handler text takes a nested callback's return for the catch exiting (missed swallow)
+  d="$TMPDIR_T/Mod/src/rc"
+  tail='  lastOkAt = Date.now();\n  if (Date.now() - lastOkAt > 3e4) location.reload();\n}\nsetTimeout(poll, 5000);\n'
+  clean=(
+    'await load().catch(e => Promise.reject(e));'
+    'await load().catch(e => { return Promise.reject(e); });'
+    'await load().catch(function (e) { throw e; });'
+  )
+  for h in "${clean[@]}"; do
+    printf 'let lastOkAt = 0;\nasync function poll() {\n  %s\n%b' "$h" "$tail" > "$d/a.js"
+    run "$SPR" "$d"
+    [ "$status" -eq 0 ] || { echo "FAILed on: $h: $output"; false; }
+    [ -z "$output" ]
+  done
+  swallow=(
+    'try { await load(); } catch (e) { items.forEach(i => { return; }); }'
+    'await load().catch(e => { setTimeout(function () { throw e; }); });'
+    'await load().catch(e => later(() => Promise.reject(e)));'
+    'await load().catch(e => { Promise.reject(e); });'
+    'try { await load(); } catch (e) { /* return; */ paint("throw e"); }'
+  )
+  for h in "${swallow[@]}"; do
+    printf 'let lastOkAt = 0;\nasync function poll() {\n  %s\n%b' "$h" "$tail" > "$d/a.js"
+    run "$SPR" "$d"
+    [ "$status" -eq 1 ] || { echo "clean on: $h: $output"; false; }
+    [[ "$output" == *"a.js:7"*"swallows a failure"* ]]
+  done
+}

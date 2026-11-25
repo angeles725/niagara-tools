@@ -28,12 +28,15 @@
 #        `performance.now()`, `new Date`) INSIDE the poll fn body (the success path; a timestamp
 #        set only at load is not a success time) AND read in a subtraction/comparison
 #        (`- lastOkAt`, `lastOkAt <`/`>`) ANYWHERE in the file.
-#     5. swallowed failure (FAIL, issue #895): inside the poll fn body a catch -- a `catch (e) {..}` block or a
-#        `.catch(handler)` -- that neither throws nor returns, followed in the same block by an unconditional
-#        `lastOk* = <clock>` stamp (not behind an if / ?: / && / || / return / throw), so a failed poll reaches
-#        the stamp as if it had succeeded and the success-time watchdog of 4 never sees the failure. Rethrow in
-#        the catch (or return from it), or stamp lastOk* inside the try / the then-handler, so only a validated
-#        success stamps it.
+#     5. swallowed failure (FAIL, issue #895; why: types/dashboard.md Poll loop reliability): inside the poll fn
+#        body a catch -- a `catch (e) {..}` block or a `.catch(handler)` -- that neither throws nor returns,
+#        followed in the same block by an unconditional `lastOk* = <clock>` stamp (not behind an if / ?: / && / ||
+#        / return / throw, and at the catch's brace depth). The catch exits when its OWN handler throws, returns or
+#        (a concise arrow) hands back `Promise.reject(..)`: `.catch(e => Promise.reject(e))` and
+#        `.catch(e => { return Promise.reject(e) })` rethrow, while a throw/return inside a callback the handler
+#        passes on (`list.forEach(i => { return; })`) does not exit it. A conditional exit (`if (x) { return; }`)
+#        counts as an exit. Rethrow in the catch (or return from it), or stamp lastOk* inside the try / the
+#        then-handler, so only a validated success stamps it.
 #   Rows (at the setInterval/setTimeout call line):
 #     WARN  no 3        -> "... no location.reload(/location.href recovery anywhere in the file ..."
 #     WARN  3 but no 4  -> "... recovery is not keyed on time since the last success ..."
@@ -66,6 +69,10 @@
 # go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-spa-poll-no-recovery <args>`.
 # Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design (kit-links L2). LC_ALL=C.
+# Mutation: SPR19 -- reading a throw/return/Promise.reject inside a nested callback of the handler as the catch exiting
+#   (missed swallow), or `.catch(e => Promise.reject(e))` as no exit (false FAIL)
+# Mutation: SPR18 -- dropping the `conditional` regex or the brace-depth filter FAILs a stamp behind if/?:/&&/|| or in
+#   another block
 # Mutation: SPR17 -- not reading a catch that falls through to a lastOk* stamp takes a swallowed failure for a success (passes clean)
 # Mutation: SPR16 -- reading a `function probeThenReload(` declaration as a call takes it for the recovery
 # Mutation: SPR15 -- matching location.href = also inside location.href == takes a comparison for the recovery

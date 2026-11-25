@@ -358,9 +358,8 @@ reliability). Doctrine: reload only when the station still answers HTTP, and kee
 may call a probe-then-reload helper (a name holding `probe` and `reload`, e.g. `probeThenReload()`) in place of a bare
 `location.reload()`; the lint takes that call as the recovery, and it still needs the `lastOk*` key.
 A poll whose catch swallows the failure and then stamps `lastOk*` after the try/catch (a block `catch` or a promise
-`.catch(handler)` that neither throws nor returns, followed in the same block by an unconditional `lastOk* = Date.now()`)
-is a FAIL, not a WARN: the failed poll is stamped as a success, so the watchdog never sees it. Stamp `lastOk*` only on the
-validated success path (inside the try or the then-handler), or rethrow/return from the catch. A tick that swallows in
+`.catch(handler)`) is a FAIL, not a WARN; the rule and its reasoning are in `dashboard.md` § Poll loop reliability. The
+lint reads the handler's own exit: a `return` in a callback the handler passes on is not one. A tick that swallows in
 another file is not seen by the lint; make the tick throw on failure.
 `[ev: issue #895]` `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
 `[ev: retro dashboard-frontend-standard Δ5]` `[ev: retro dashboard-rc-file-split Δ6]`

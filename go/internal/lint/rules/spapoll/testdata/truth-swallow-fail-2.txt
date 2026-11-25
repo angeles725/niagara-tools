@@ -1,0 +1,63 @@
+declared difference (issue #966 item 3): only the handler's own throw/return/Promise.reject is an exit: one inside
+a nested callback (a, b, c) is not, a comment or a string is not code (d), and a Promise.reject not returned (e) is
+no rethrow. Each is a FAIL.
+
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-spa-poll-no-recovery  @DIR@/a-nested-return.js:11  setInterval/setTimeout poll loop 'poll()' swallows a failure: its catch path neither rethrows nor returns and falls through to a lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return), or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)
+FAIL  lint-spa-poll-no-recovery  @DIR@/b-nested-throw.js:7  setInterval/setTimeout poll loop 'poll()' swallows a failure: its catch path neither rethrows nor returns and falls through to a lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return), or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)
+FAIL  lint-spa-poll-no-recovery  @DIR@/c-nested-reject.js:7  setInterval/setTimeout poll loop 'poll()' swallows a failure: its catch path neither rethrows nor returns and falls through to a lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return), or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)
+FAIL  lint-spa-poll-no-recovery  @DIR@/d-comment-string.js:12  setInterval/setTimeout poll loop 'poll()' swallows a failure: its catch path neither rethrows nor returns and falls through to a lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return), or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)
+FAIL  lint-spa-poll-no-recovery  @DIR@/e-reject-not-returned.js:7  setInterval/setTimeout poll loop 'poll()' swallows a failure: its catch path neither rethrows nor returns and falls through to a lastOk* clock stamp, so the success-time watchdog never sees the failure -- rethrow in the catch (or return), or stamp lastOk* only on the validated success path (types/dashboard.md Poll loop reliability)
+-- stderr --
+-- a-nested-return.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    items.forEach(i => { return; });
+  }
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- b-nested-throw.js --
+let lastOkAt = 0;
+async function poll() {
+  await load().catch(e => { setTimeout(function () { throw e; }); });
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- c-nested-reject.js --
+let lastOkAt = 0;
+async function poll() {
+  await load().catch(e => later(() => Promise.reject(e)));
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- d-comment-string.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    // return;
+    paint("throw err");
+  }
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- e-reject-not-returned.js --
+let lastOkAt = 0;
+async function poll() {
+  await load().catch(e => { Promise.reject(e); });
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);

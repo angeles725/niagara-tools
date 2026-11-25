@@ -3,8 +3,9 @@
 // location.reload(/location.href recovery (or a call to a probe-then-reload helper), or when that recovery is
 // not keyed on the time since the last success (a lastOk* timestamp set from a clock in the poll body and
 // compared). Over that, a poll whose catch path swallows the failure and falls through to a lastOk* stamp is a
-// FAIL (issue #895: the success-time watchdog never sees the failure). Port of the awk in toolbelt/lint-spa-poll-no-recovery.sh (the wrapper keeps the user-facing contract
-// and its header documents the rule and its mutation pins).
+// FAIL (swallow.go; the doctrine is types/dashboard.md Poll loop reliability). Port of the awk in
+// toolbelt/lint-spa-poll-no-recovery.sh (the wrapper keeps the user-facing contract and its header documents the
+// rule and its mutation pins).
 package spapoll
 
 import (

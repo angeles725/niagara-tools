@@ -1,0 +1,129 @@
+declared difference (issue #966 items 1 and 3): a swallowing catch followed by a lastOk* stamp that is behind an
+if/else (a, b), a ?: (c), && (d), || (e), at another brace depth (f, g) is not the swallowed-failure shape, and a
+handler that hands back Promise.reject(e) (h, i), throws (j) or returns on a path (k) is a rethrow.
+
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- a-if.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  if (ready) lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- b-else.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  if (stale) go(); else lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- c-ternary.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  ok ? (lastOkAt = Date.now()) : 0;
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- d-and.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  ready && (lastOkAt = Date.now());
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- e-or.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  cached || (lastOkAt = Date.now());
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- f-other-depth.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  {
+    lastOkAt = Date.now();
+  }
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- g-nested-function.js --
+let lastOkAt = 0;
+async function poll() {
+  try {
+    await load();
+  } catch (err) {
+    paint("error");
+  }
+  function later() {
+    lastOkAt = Date.now();
+  }
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- h-promise-reject.js --
+let lastOkAt = 0;
+async function poll() {
+  await load().catch(e => Promise.reject(e));
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- i-block-promise-reject.js --
+let lastOkAt = 0;
+async function poll() {
+  await load().catch(e => { return Promise.reject(e); });
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- j-function-throw.js --
+let lastOkAt = 0;
+async function poll() {
+  await load().catch(function (e) { throw e; });
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
+-- k-conditional-return.js --
+let lastOkAt = 0;
+async function poll() {
+  await load().catch(e => { if (fatal) { return Promise.reject(e); } paint("error"); });
+  lastOkAt = Date.now();
+  if (Date.now() - lastOkAt > 3e4) location.reload();
+}
+setTimeout(poll, 5000);
