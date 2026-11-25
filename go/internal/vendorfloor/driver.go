@@ -8,6 +8,8 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"syscall"
+	"time"
 )
 
 // driverJS is the acorn driver node runs from stdin; its header documents the protocol decoded here.
@@ -63,15 +65,9 @@ func drive(node string, req request, files []string, stderr io.Writer, visit fun
 	if err != nil {
 		return record{}, err
 	}
-	cmd := exec.Command(node, append([]string{"-", string(arg)}, files...)...)
-	cmd.Stdin = strings.NewReader(driverJS)
-	cmd.Stderr = stderr
-	stdout, err := cmd.StdoutPipe()
+	cmd, stdout, err := start(node, append([]string{"-", string(arg)}, files...), stderr)
 	if err != nil {
 		return record{}, err
-	}
-	if err := cmd.Start(); err != nil {
-		return record{}, fmt.Errorf("cannot run %s: %w", node, err)
 	}
 	end, decodeErr := decode(stdout, visit)
 	_, _ = io.Copy(io.Discard, stdout) // let node finish writing before Wait closes the pipe
@@ -106,3 +102,29 @@ func decode(r io.Reader, visit func(record)) (record, error) {
 		}
 	}
 }
+
+// start starts node with driverJS on stdin. A parallel fork that still holds node open for writing
+// makes exec fail with ETXTBSY until its own exec: that transient refusal is retried a few times
+// (as reportmodule.run does), any other start failure is returned at once.
+func start(node string, args []string, stderr io.Writer) (*exec.Cmd, io.ReadCloser, error) {
+	for try := 0; ; try++ {
+		cmd := exec.Command(node, args...)
+		cmd.Stdin = strings.NewReader(driverJS)
+		cmd.Stderr = stderr
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = cmd.Start()
+		if err == nil {
+			return cmd, stdout, nil
+		}
+		if !errors.Is(err, syscall.ETXTBSY) || try == startTries-1 {
+			return nil, nil, fmt.Errorf("cannot run %s: %w", node, err)
+		}
+		time.Sleep(time.Duration(try+1) * 20 * time.Millisecond)
+	}
+}
+
+// startTries bounds the ETXTBSY retries of start (about 1 s in all).
+const startTries = 10
