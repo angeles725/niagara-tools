@@ -131,6 +131,9 @@ func detectVersion(client Client) (version, why string) {
 	case errors.As(err, &be) && be.IsAuth():
 		return "", fmt.Sprintf("%s refused: %s; the station may count it as a failed login, so check "+
 			"that this user may read oBIX before reconnecting", tiers.AboutPath, be.Msg)
+	case errors.As(err, &be) && be.Code == 403:
+		return "", fmt.Sprintf("%s refused: %s; this user may not read oBIX, so the version is unknown "+
+			"(the session stays open)", tiers.AboutPath, be.Msg)
 	case errors.As(err, &be):
 		return "", fmt.Sprintf("%s unreadable: %s", tiers.AboutPath, be.Msg)
 	case errors.As(err, &typed):

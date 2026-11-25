@@ -11,7 +11,7 @@ import (
 
 // The stateless HTTP Basic reads: GET /ord/<ORD> (BQL and ORD tables), GET /file/<path> and
 // GET /obix/about/. They use the same request path as Call (no redirects, 401/403 latched as
-// AuthError) and need no BOX session.
+// AuthError; a 403 on /obix/about/ is not, see About) and need no BOX session.
 
 // MaxOrdBytes and MaxFileBytes are get_ord's and get_file's default read caps; MaxAboutBytes is
 // about()'s.
@@ -80,11 +80,15 @@ func (c *Client) GetFile(urlPath string, timeout float64, maxBytes int) (*File, 
 }
 
 // About is BoxClient.about: the text of GET /obix/about/ (at most maxBytes, 0: MaxAboutBytes).
+// A 403 is an HttpStatusError, as on /file/: the user logged in but may not read oBIX (#986 D18).
 func (c *Client) About(timeout float64, maxBytes int) (string, error) {
 	if maxBytes <= 0 {
 		maxBytes = MaxAboutBytes
 	}
 	resp, err := c.do(c.interrupt, "GET", "/obix/about/", nil, nil, timeout, maxBytes)
+	if st, ok := err.(*httpStatus); ok && st.code == 403 { // a user who may not read oBIX: no failed login
+		return "", &Error{Kind: KindHTTPStatus, Msg: "HTTP 403 from station", Channel: "obix", Key: "about", Code: 403}
+	}
 	if err != nil {
 		return "", c.mapError(err, "obix", "about", false)
 	}
