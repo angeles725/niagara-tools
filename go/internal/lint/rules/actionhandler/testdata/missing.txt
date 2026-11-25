@@ -1,0 +1,27 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-action-handler  @DIR@/src/com/acme/BMissing.java:4  @NiagaraAction "reset" has no matching do method: declare public void doReset(Context cx), or doReset() -- the station refuses the type with "Missing action do method" (ComplexIntrospector.java:316-343, types/actions.md § 1)
+FAIL  lint-action-handler  @DIR@/src/com/acme/BMissing.java:6  @NiagaraAction "submit" has no matching do method (found: doSubmit(String)): declare public BOrd doSubmit(BInteger arg, Context cx), or doSubmit(BInteger arg) -- the station refuses the type with "Missing action do method" (ComplexIntrospector.java:316-343, types/actions.md § 1)
+FAIL  lint-action-handler  @DIR@/src/com/acme/BMissing.java:10  @NiagaraAction "tick" has no matching do method (found: doTick() not public): declare public void doTick(Context cx), or doTick() -- the station refuses the type with "Missing action do method" (ComplexIntrospector.java:316-343, types/actions.md § 1)
+-- stderr --
+-- src/com/acme/BMissing.java --
+package com.acme;
+
+@NiagaraType
+@NiagaraAction(name = "reset")
+@NiagaraAction(
+  name = "submit",
+  parameterType = "BInteger",
+  returnType = "BOrd"
+)
+@NiagaraAction(name = "tick", flags = Flags.HIDDEN)
+@NiagaraAction(name = "ok")
+public class BMissing extends BComponent
+{
+  public void doReeset() {}
+  public BOrd doSubmit(String s) { return null; }
+  void doTick() {}
+  public void doOk(Context cx) {}
+}

@@ -1,0 +1,25 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-action-handler  @DIR@/src/com/acme/BSig.java:11  @NiagaraAction "wipe": doWipe must not be static -- the station refuses the type with "Do action method must be not be static" (ComplexIntrospector.java:339)
+FAIL  lint-action-handler  @DIR@/src/com/acme/BSig.java:12  @NiagaraAction "label": doLabel returns void but the action returns BString -- the station refuses the type with "Action method and do method have mismatched signature" (ComplexIntrospector.java:341)
+FAIL  lint-action-handler  @DIR@/src/com/acme/BSig.java:13  @NiagaraAction "scan": doScan returns BString but the action returns BOrd -- the station refuses the type with "Action method and do method have mismatched signature" (ComplexIntrospector.java:341)
+-- stderr --
+-- src/com/acme/BSig.java --
+package com.acme;
+
+@NiagaraType
+@NiagaraAction(name = "wipe")
+@NiagaraAction(name = "label", returnType = "BString")
+@NiagaraAction(name = "scan", returnType = "BOrd", parameterType = "BInteger")
+@NiagaraAction(name = "fine", returnType = "BOrd", parameterType = "BInteger")
+@NiagaraAction(name = "qual", returnType = "BOrd")
+public class BSig extends BComponent
+{
+  public static void doWipe() {}
+  public void doLabel() {}
+  public BString doScan(BInteger by, Context cx) { return null; }
+  public BOrd doFine(BInteger by, Context cx) { return null; }
+  public javax.baja.naming.BOrd doQual() { return null; }
+}

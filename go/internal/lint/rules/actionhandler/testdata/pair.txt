@@ -1,0 +1,38 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-action-handler  @DIR@/src/com/acme/BPair.java:4  doReset(..., Context) never runs: the station binds the action to the no-Context doReset(...) it finds first; keep one handler (types/actions.md § 1)
+WARN  lint-action-handler  @DIR@/src/com/acme/BPair.java:5  doIncrement(..., Context) never runs: the station binds the action to the no-Context doIncrement(...) it finds first; keep one handler (types/actions.md § 1)
+WARN  lint-action-handler  @DIR@/src/com/acme/BStr.java:5  doReset(..., Context) never runs: the station binds the action to the no-Context doReset(...) it finds first; keep one handler (types/actions.md § 1)
+-- stderr --
+-- src/com/acme/BPair.java --
+public class BPair extends BComponent
+{
+  void doReset() {}
+  void doReset(Context cx) {}
+  void doIncrement(BInteger by,
+    Context cx) {}
+  void doIncrement(BInteger by) {}
+  void doOther(Context cx) {}
+  void doOther(BInteger by) {}
+}
+-- src/com/acme/BCall.java --
+public class BCall extends BComponent
+{
+  void go() { if (x) doReset(); else doReset(cx); }
+}
+-- src/com/acme/BComm.java --
+public class BComm extends BComponent
+{
+  // void doReset() {}
+  /* void doReset(Context cx) {} */
+  void doReset(Context cx) {}
+}
+-- src/com/acme/BStr.java --
+public class BStr extends BComponent
+{
+  String u = "h/*";
+  void doReset() {}
+  void doReset(Context cx) {}
+}

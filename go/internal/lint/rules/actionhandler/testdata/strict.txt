@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+WARN  lint-action-handler  @DIR@/src/BP.java:1  doReset(..., Context) never runs: the station binds the action to the no-Context doReset(...) it finds first; keep one handler (types/actions.md § 1)
+-- stderr --
+-- src/BP.java --
+class BP extends BComponent { void doReset() {} void doReset(Context cx) {} }

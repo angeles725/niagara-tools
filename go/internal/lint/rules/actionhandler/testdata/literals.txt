@@ -1,0 +1,23 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/acme/BText.java --
+// @NiagaraAction(name = "ghost")
+public class BText extends BComponent
+{
+  String s = "@NiagaraAction(name = \"ghost\") public class X {}";
+  /* void doReset() {} void doReset(Context cx) {} */
+  // void doTick() {} void doTick(Context cx) {}
+  String t = "void doTick() {} void doTick(Context cx) {}";
+}
+-- src/com/acme/BQuoted.java --
+@NiagaraType
+@NiagaraAction(name = "real")
+public class BQuoted extends BComponent
+{
+  // public void doReal() {}
+  String s = "public void doReal() {}";
+  public void doReal(Context cx) {}
+}
