@@ -12,6 +12,30 @@ func (t *Tools) tagEntry(ord string, implied bool, relations string) (*pyjson.Ob
 	if err != nil {
 		return nil, err
 	}
+	return t.tagEntryOf(ord, nodes, implied, relations)
+}
+
+// treeLoader is a client that can load several ORDs in one batch (box.Client.LoadMany).
+type treeLoader interface {
+	LoadMany(ords []string, depth int, opt box.LoadOptions) ([]box.LoadResult, error)
+}
+
+// loadTags is the depth-1 load of every ord: one loadSlots frame per box.MaxFrameMessages ords when
+// the client can batch, else one LoadTree each. An ord's own failure is its Err.
+func (t *Tools) loadTags(ords []string) ([]box.LoadResult, error) {
+	client := t.Ctx.Session.Client
+	if l, ok := client.(treeLoader); ok {
+		return l.LoadMany(ords, 1, box.LoadOptions{})
+	}
+	out := make([]box.LoadResult, len(ords))
+	for i, o := range ords {
+		out[i].Nodes, out[i].Err = client.(Client).LoadTree(o, 1, box.LoadOptions{})
+	}
+	return out, nil
+}
+
+// tagEntryOf is tagEntry on the load of ord already done.
+func (t *Tools) tagEntryOf(ord string, nodes *pyjson.Object, implied bool, relations string) (*pyjson.Object, error) {
 	root := box.Node(nodes, "")
 	h, _ := root.Get("h")
 	direct, groups, rels := []any{}, []any{}, []any{}

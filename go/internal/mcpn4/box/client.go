@@ -52,9 +52,15 @@ type Client struct {
 	OnAuthError func(*Error)
 	// Sleep pauses between load polls (seconds); tests replace it to record the schedule.
 	Sleep func(seconds float64)
+	// FrameCap is the most messages CallMany puts in one frame (0: MaxFrameMessages).
+	FrameCap int
+	// OnFrame is called with each frame sent (its seq, message count and first message's key);
+	// New sets it from MCP_N4_BOX_TRACE (see frameTrace). Frames counts them either way.
+	OnFrame func(seq, messages int, key string)
 
 	interrupt        context.Context
 	seq              int
+	frames           int // BOX frames POSTed: Call is one, CallMany one per FrameCap messages
 	sid              any
 	pending          []any
 	dropped          int
@@ -77,7 +83,8 @@ func New(cfg Config) (*Client, error) {
 		MaxReplyBytes: cfg.MaxReplyBytes,
 		interrupt:     cfg.Interrupt,
 		auth:          "Basic " + base64.StdEncoding.EncodeToString([]byte(cfg.Username+":"+cfg.Password)),
-		Sleep:         func(s float64) { time.Sleep(time.Duration(s * float64(time.Second))) }}
+		Sleep:         func(s float64) { time.Sleep(time.Duration(s * float64(time.Second))) },
+		OnFrame:       frameTrace()}
 	if c.timeout <= 0 {
 		c.timeout = DefaultTimeout
 	}
@@ -120,31 +127,9 @@ func (c *Client) Call(channel, key string, body any) (any, error) {
 
 // call is Call on ctx: the request is cancelled when ctx is done.
 func (c *Client) call(ctx context.Context, channel, key string, body any) (any, error) {
-	c.seq++
-	frame := obj("p", "box", "v", ProtocolVersion,
-		"m", []any{obj("r", 0, "t", "rt", "c", channel, "k", key, "b", body)}, "n", c.seq)
-	if pyjson.Truthy(c.sid) {
-		frame.Set("id", c.sid)
-	}
-	data, err := pyjson.Marshal(frame, pyjson.Options{})
+	reply, err := c.exchange(ctx, []any{obj("r", 0, "t", "rt", "c", channel, "k", key, "b", body)}, channel, key)
 	if err != nil {
 		return nil, err
-	}
-	resp, err := c.do(ctx, "POST", "/box/", data, map[string]string{"Content-Type": "application/json"},
-		0, c.MaxReplyBytes+1)
-	if err != nil {
-		return nil, c.mapError(err, channel, key, false)
-	}
-	if len(resp.body) > c.MaxReplyBytes {
-		return nil, boxError(fmt.Sprintf("BOX reply larger than %d bytes: refused, not parsed in part",
-			c.MaxReplyBytes), channel, key)
-	}
-	reply, err := pyjson.Loads(resp.body)
-	if err != nil {
-		return nil, boxError("transport failure: "+err.Error(), channel, key)
-	}
-	if nestsDeeper(reply, MaxReplyNesting) {
-		return nil, malformed(fmt.Sprintf("nested deeper than %d levels", MaxReplyNesting), channel, key)
 	}
 	return c.unwrap(reply, channel, key)
 }

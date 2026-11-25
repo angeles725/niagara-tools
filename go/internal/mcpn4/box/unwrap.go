@@ -7,8 +7,9 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
-// unwrap is BoxClient._unwrap: validate a reply frame, return its first message body.
-func (c *Client) unwrap(reply any, channel, key string) (any, error) {
+// messages validates a reply frame (an object, its seq the request's, a non-empty "m" list) and
+// returns the list; unwrap and CallMany read their entries from it.
+func (c *Client) messages(reply any, channel, key string) ([]any, error) {
 	r, ok := reply.(*pyjson.Object)
 	if !ok {
 		return nil, boxError("malformed reply: not an object", channel, key)
@@ -22,10 +23,24 @@ func (c *Client) unwrap(reply any, channel, key string) (any, error) {
 	if !ok || len(msgs) == 0 {
 		return nil, boxError("malformed reply: missing or empty message list", channel, key)
 	}
+	return msgs, nil
+}
+
+// unwrap is BoxClient._unwrap: validate a reply frame, return its first message body.
+func (c *Client) unwrap(reply any, channel, key string) (any, error) {
+	msgs, err := c.messages(reply, channel, key)
+	if err != nil {
+		return nil, err
+	}
 	msg, ok := msgs[0].(*pyjson.Object)
 	if !ok {
 		return nil, boxError("malformed reply: missing or empty message list", channel, key)
 	}
+	return entryBody(msg, channel, key)
+}
+
+// entryBody is a reply message's body, or the station's error when its type is "e".
+func entryBody(msg *pyjson.Object, channel, key string) (any, error) {
 	if t, _ := msg.Get("t"); t == "e" {
 		b, _ := msg.Get("b")
 		text, ok := get(b, "m")
