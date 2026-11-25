@@ -20,7 +20,7 @@ type ChannelCaller interface {
 
 // ChannelAllowList is every channel op the engine sends, as channel: keys (data). Any other
 // channel or key is refused before sending: a channel op can only do what a tool was built for.
-var ChannelAllowList = map[string][]string{"alarm": {"ackAlarms"}}
+var ChannelAllowList = map[string][]string{"alarm": {"ackAlarms"}, "history": {"deleteHistories"}}
 
 // Refusals of a channel op, as data.
 const (
