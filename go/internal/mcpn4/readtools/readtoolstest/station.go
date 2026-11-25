@@ -125,7 +125,7 @@ type OrdRequest struct {
 // AuthError (latched through the hook), a 400 names the query, a body longer than the cap is
 // cut and reported truncated.
 func (c *client) GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error) {
-	c.st.OrdRequests = append(c.st.OrdRequests, OrdRequest{ord, timeout})
+	c.st.noteOrd(OrdRequest{ord, timeout})
 	for _, r := range c.st.OrdRoutes {
 		if !strings.Contains(ord, r.Needle) {
 			continue

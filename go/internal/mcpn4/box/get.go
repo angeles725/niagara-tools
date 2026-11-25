@@ -25,7 +25,8 @@ const (
 // longer than maxBytes (0: MaxOrdBytes). The text is decoded with errors="replace" and ends
 // wherever the cap fell: the CSV reader drops a cut last record. An HTML answer (by its
 // Content-Type or its first bytes) is refused: it is a login or error page, never a table.
-// A zero timeout takes the client's.
+// A zero timeout takes the client's. Unlike the rest of Client it is safe to call from several
+// goroutines (readtools runPool): it reads only fields New sets and touches no BOX session state.
 func (c *Client) GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error) {
 	if maxBytes <= 0 {
 		maxBytes = MaxOrdBytes
