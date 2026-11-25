@@ -231,7 +231,10 @@ Flags:
 - `--load-wait SECONDS`: total wait for one component load (default 3, range 1-60); raise
   it for a slow or remote station.
 - `--http-timeout SECONDS`: HTTP timeout of one station request (default 20, range 5-300).
-- `--progress-file PATH`: append JSON progress lines of long reads (`n4_inventory`) to PATH.
+- `--progress-file PATH`: append JSON progress lines of long reads (`n4_inventory`, `n4_histories_audit`) to PATH.
+  `n4_histories_audit` writes a line at the end of each stage (`extensions`, `points`, `counts` and, with
+  `flat=true`, `flat`) and a `counts n/N` or `flat n/N` line every 10 histories; `rows` is the station requests
+  made so far and `elapsed_ms` the time since the audit began. Its reply does not change.
 - `--allow-http-for-tests`: permits `http://` base URLs; for the fake station only.
 
 ### Upgrading to v0.5.0
@@ -896,7 +899,8 @@ never clean. An event still open at `end` is cut there.
 ### Finishing a job: the commissioning report
 
 `n4_commissioning_report(scope="station:|slot:/", sections=None, limit=20, expect_histories=None,
-expect_alarms=None, spyder_spec=None, link_depth=2, max_components=5000)` answers "what is still wrong or unfinished
+expect_alarms=None, spyder_spec=None, spyder_hardware=false, link_depth=2,
+max_components=5000)` answers "what is still wrong or unfinished
 below this part of the station?" in one call. It is read-only and composed of reads the server
 already makes: one BQL query per table, one link scan, slot loads and the licence page. The reply
 starts with `summary`, one line per section (`ok`, `N finding(s)`, `not checked: <why>`,
@@ -918,7 +922,7 @@ that ran are clean while others did not run.
 | `links` | `unresolved_source` (a source ORD that is neither a handle nor an absolute slot path, or a slot path that does not exist; `source_outside_scan` counts the sources not judged), `inputs_with_several_links` (a priority input `in1`..`in16` that more than one link targets), `dangling_outputs` (the check of `n4_find_dangling_outputs`) | one link scan of the scope, `link_depth` levels deep |
 | `naming` | `duplicate_display_names` among sibling points, `escaped_names` (`$20` and the like in the slot name), `palette_default_names` (a point of the control palette with or without the number the station appends, `NumericWritable`, `NumericWritable1`, `BooleanPoint1`; or a point called by the name of its own type plus that number, a `kitControl:Tstat` called `Tstat1`: a palette drop names the first instance after its type, so a lone `Tstat` is not flagged, and neither is a bare `Ramp` beside a `Ramp1` sibling, though it is likely the first drop of the two; the fact says which) | the points table |
 | `station` | `services_in_fault`, `licence_expiry` (the warning of the health tool's `license` section), `unsaved_changes` and `last_backup` | one slot load of `Services`, the SystemService slots and the licence page; only when the scope is the whole station |
-| `spyder` (only when named in `sections` or with `spyder_spec`) | the download state of each Honeywell BACnet Spyder: `disabled` (`Enabled=false`: a Spyder left disabled after a download is neither polled nor pinged), `device_status` (`deviceStatus` other than 1), `compile_status` (`compileStatusFlag` other than 0), `error_status` (`sErrorStatus` not empty); `spyders` counts the Spyders read; `io_mismatch` (only with `spyder_spec`) lists each IOComp field that differs from the spec, the spec points with no IOComp and the Spyders not found | `select slotPath, name, enabled, deviceStatus, compileStatusFlag, sErrorStatus from honeywellBacnetSpyder:BacnetSpyder`; with `spyder_spec`, `select slotPath, SensorType, InputLow, InputHigh, OutputLow, OutputHigh, Terminal1 from honeywellSpyderTool:IOComponent` |
+| `spyder` (only when named in `sections` or with `spyder_spec` or `spyder_hardware`) | the download state of each Honeywell BACnet Spyder: `disabled` (`Enabled=false`: a Spyder left disabled after a download is neither polled nor pinged), `device_status` (`deviceStatus` other than 1), `compile_status` (`compileStatusFlag` other than 0), `error_status` (`sErrorStatus` not empty); `spyders` counts the Spyders read; `io_mismatch` (only with `spyder_spec`) lists each IOComp field that differs from the spec, the spec points with no IOComp and the Spyders not found; `model_mismatch` (only with `spyder_hardware`) lists each Spyder whose configured `controllerModel` differs from the hardware id its `analogValue:0` point reads, and `with_hardware_point` and `hardware_unreadable` count the Spyders it could and could not judge | `select slotPath, name, enabled, deviceStatus, compileStatusFlag, sErrorStatus from honeywellBacnetSpyder:BacnetSpyder`; with `spyder_spec`, `select slotPath, SensorType, InputLow, InputHigh, OutputLow, OutputHigh, Terminal1 from honeywellSpyderTool:IOComponent`; with `spyder_hardware`, `select slotPath, name, controllerModel from honeywellBacnetSpyder:BacnetSpyder` and `select slotPath, proxyExt.objectId, out.value from control:NumericPoint` |
 
 `unsaved_changes` and `last_backup` are always `not_checked`, with the reason: the station exposes
 neither to a slot read or a query, and the report does not guess. `expect_histories` and
@@ -942,6 +946,13 @@ station without the Honeywell Spyder modules the query answers an error and the 
 `honeywellSpyderTool:IOComponent` (BIOComponent, from the module's declared types) and has not yet
 been read by BQL on a live station: if a station refuses it, `io_mismatch` is `not_checked` with the
 station's error, never clean. LON Spyders are not read.
+
+`spyder_hardware` (boolean, default false) adds `model_mismatch` to the `spyder` section: the configured
+`controllerModel` against the hardware id of the point that proxies `analogValue:0`, which only the controller
+publishes (it reads it from the device). A Spyder with no such point is counted, never judged
+(`with_hardware_point`), and a point whose value is no whole number is counted in `hardware_unreadable`. A refused
+query is `not_checked`. Without the argument the check is absent and its two queries are not sent; given alone it
+adds `spyder` to the default sections. Both queries are not yet run on a live station.
 
 Cost is bounded and independent of the station's size: 11 station reads for the whole station (7
 GETs and 4 slot loads), 8 for a subtree (the `station` section is skipped), fewer with `sections`.
@@ -1305,6 +1316,12 @@ Tool rules:
   `job`, `job_state` and the job's `log` lines: `success` is `verified`, `failed` or
   `canceled` is `mismatch`, still running is `unverified`; a successful log without
   "Compiling the logic" adds a `hint`: the controller got the program compiled earlier.
+  A failed or canceled job (`spyderDownload` or `compile`) also returns `device_state` (the Spyder's
+  `deviceStatus`, `compileStatusFlag` and `sErrorStatus`), `has_errors` (the compile job's `hasErrors`) and a
+  `cause` saying where the compiler's message is: a download keeps none (it logs only "Download failed due to
+  compilation error"), so run `compile`; `has_errors` true means the validation lines are in the job log;
+  `has_errors` false with an `IllegalArgumentException` in the log means the cause is only in the station log
+  (logger `honeywellSpyderTool`). A job whose log shows none of this gets no `cause`.
   `compile` (Spyder only, no `arg`) rebuilds the compiled program (a CompilationJob; nothing
   reaches the controller) with the same read-back. A Spyder's program is a `ControlProgram`
   the station loads on demand and unloads later. Renaming an input point does not rename its
@@ -1589,6 +1606,9 @@ Destructive tools use the same pipeline:
   batch made; a link on the component counts as made only when a later `n4_create_link` batch made that link
   (by its name), so a link added by hand beside it is still refused. Repeat `chain` on the executing call; on a
   batch that is not a create, or on a create of several components, it changes nothing and a note says so.
+  Once a `chain: true` rollback is verified, the batches it removed (those journaled between the create and the
+  rollback that wrote only under the created component, on the same station) no longer count as later work: a
+  later plain `n4_rollback` of an ancestor create does not refuse on them.
   Inverses: remove a created
   component or link, restore a slot, its flags or a fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
