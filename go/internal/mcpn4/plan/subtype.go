@@ -16,3 +16,23 @@ func (c *Contracts) Is(typeSpec, super string) (bool, error) {
 	}
 	return false, nil
 }
+
+// IsKnown is Is plus whether the answer is complete: false is complete only when the walk reached a
+// type with no supertype (the chain is described to its root) within maxSupertypes contracts.
+func (c *Contracts) IsKnown(typeSpec, super string) (is, complete bool, err error) {
+	for i := 0; i < maxSupertypes; i++ {
+		if typeSpec == super {
+			return true, true, nil
+		}
+		if err := c.Load([]string{typeSpec}); err != nil {
+			return false, false, err
+		}
+		e, _ := lookup(c.types, typeSpec)
+		next, _ := field(e, "p").(string)
+		if next == "" {
+			return false, true, nil
+		}
+		typeSpec = next
+	}
+	return false, false, nil
+}
