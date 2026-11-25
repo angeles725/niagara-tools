@@ -65,6 +65,7 @@ func goPlan(c *pyjson.Object) *pyjson.Object {
 	if err != nil {
 		return obj("error", describe(err))
 	}
+	withoutOverride(p)
 	sess := &session.Session{StationName: "FakeStation", BaseURL: "http://fake.invalid", SessionID: strings.Repeat("0", 32)}
 	hashed, hash, err := plan.Hashed(tool, p, sess)
 	if err != nil {
@@ -83,6 +84,19 @@ func goPlan(c *pyjson.Object) *pyjson.Object {
 		out.Set("readback", []any{requested, accepted, observed, verdict})
 	}
 	return out
+}
+
+// withoutOverride drops the control:Override argument of active and inactive from the plan.
+// declared difference: n4_invoke_action sends the station's default BOverride with active and
+// inactive (#985 delta 4, 2026-11-25): without one the station fails with a null pointer. The
+// Python sent none; every other byte, the notes and the read-back included, is still compared.
+func withoutOverride(p *plan.Planned) {
+	for _, op := range p.Ops {
+		o := op.(*pyjson.Object)
+		if arg, ok := get(o, "arg").(*pyjson.Object); ok && (get(arg, "a") == "active" || get(arg, "a") == "inactive") {
+			o.Set("arg", obj("h", get(arg, "h"), "a", get(arg, "a")))
+		}
+	}
 }
 
 func describe(err error) *pyjson.Object {

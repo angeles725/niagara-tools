@@ -103,6 +103,9 @@ func invokePlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		if hasArg || hasArgType {
 			return nil, plan.ToolError("action " + pyjson.StrRepr(action) + " takes no arg")
 		}
+		if takesOverride(action) {
+			arg.Set("b", defaultOverride())
+		}
 		note := "no inverse: " + action + " changes the control state and is not restored automatically"
 		var data any
 		switch action {
