@@ -27,7 +27,7 @@ func loginKitFiles() map[string]string {
 		tp + "fragments/gradle-deps.txt":                              "  api(\":web-rt\")\n",
 		tp + "fragments/gradle-bajadoc.txt":                           "  includePackage(\"com.example.ModuleA.login\")\n",
 		tp + "fragments/gradle-jar.txt":                               "jar { include(\"modulea-login/**\") }\n",
-		tp + "fragments/module.lexicon":                               "ModuleAService.applyLogin=A\n",
+		tp + "fragments/module.lexicon":                               "applyLogin=A\n",
 		tp + "fragments/module-map-row.txt":                           "| login | rt | ModuleA-rt/src/com/example/ModuleA/login/LoginRedirect.java |\n",
 	}
 }
@@ -52,7 +52,7 @@ func TestLoginOverlay(t *testing.T) {
 	wantFile(t, got, rt+"module.palette", "<p>\n  <p n=\"ColdBox\"/>\n  <p n=\"ColdBoxService\" t=\"cb:ColdBoxService\"/>\n</p>\n</bajaObjectGraph>\n")
 	wantFile(t, got, rt+"ColdBox-rt.gradle.kts", "deps {\n  api(\":baja\")\n  api(\":web-rt\")\n}\nbajadoc {\n  includePackage(\"com.acme.ColdBox\")\n"+
 		"  includePackage(\"com.acme.ColdBox.login\")\n}\njar { include(\"coldbox-login/**\") }\n") // a file with no final newline gets one
-	wantFile(t, got, rt+"module.lexicon", "ColdBox.displayName=X\nColdBoxService.applyLogin=A\n")
+	wantFile(t, got, rt+"module.lexicon", "ColdBox.displayName=X\napplyLogin=A\n")
 	wantFile(t, got, "ColdBox/ColdBox-ux/Servlet.java", "getServletName() { return \"coldbox\"; }\n")
 }
 
