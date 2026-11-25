@@ -197,7 +197,10 @@ Flags:
 - `--allow-writes`: registers the write tools; the default is read-only.
 - `--write-scope ORD_PREFIX` (repeatable): ORD prefixes writes may touch; each must be a plain
   slot ORD (`station:|slot:/Path`, nothing chained after it) or the server refuses to start.
-- `--state-dir DIR`: journal and audit directory (default `~/.local/state/mcp-n4`).
+- `--state-dir DIR`: journal and audit directory (default `~/.local/state/mcp-n4`). An existing directory that
+  is group- or world-writable is refused (exit 2 in write mode, a tool error for the file-writing reads) with a
+  `chmod 700 DIR` hint: run it yourself, the server never changes a directory it did not create. A `mkdir`
+  under a 002 umask (mode 775) always hits it, so make the directory with `mkdir -m 700` or let the server do it.
 - `--token-ttl SECONDS`: confirmation token lifetime (default 300; must be >= 1).
 - `--auth-cooldown SECONDS`: after an authentication failure, refuse station calls this long
   (default and minimum 30, the lock-out window).
@@ -2005,7 +2008,10 @@ the rest and removes the folder it created. Exit 0 only when every required step
 ## Bench client
 
 `go/bin/n4call` (built from `go/cmd/mcp-n4/n4call`) calls tools on a server it starts over
-stdio, for a live probe on a station that is not registered in the agent's MCP configuration:
+stdio, for a live probe on a station that is not registered in the agent's MCP configuration. Never write a
+stdio or socket driver for a live check: `n4call` keeps one server process (one connect session) for the whole
+file, so a dry-run token is still valid at its execute, and the scripted scenario is `go/bin/live-smoke` (see
+Live smoke test).
 
 ```
 go/bin/n4call --calls calls.jsonl -- go/bin/mcp-n4 --station <NAME>=https://<host> ...
