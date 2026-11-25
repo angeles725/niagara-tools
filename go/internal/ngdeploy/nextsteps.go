@@ -10,7 +10,7 @@ import (
 // nextStep is one closing line of a deploy that went through.
 type nextStep struct {
 	java bool   // only for a mode that deploys Java classes (the -rt jar): the station must restart
-	text string // {jars}, {dir}, {paths}, {backup}, {signers}, {module} and {triage} are filled in (closingValues)
+	text string // {jars}, {dir}, {paths}, {backup}, {signers}, {module}, {triage}, and {lab} are filled in (closingValues)
 }
 
 // nextSteps are the closing lines, in order: the one table of what the author does after a deploy. They
@@ -19,6 +19,8 @@ var nextSteps = []nextStep{
 	{text: "done: {jars} copied to {dir}"},
 	{text: "signer: {signers}; the gate checks who signed a jar, not whether the station trusts that signer: the station decides when it loads the module"},
 	{java: true, text: "next: restart the station; ng-deploy did not look at whether one is running, and stops or starts none"},
+	{java: true, text: "next: stop it with: {lab} stop --home <NIAGARA_HOME> <station>; start it with: {lab} start --home <NIAGARA_HOME> <station> (lab-station stops only a station it started; a Windows service or station.exe is stopped and started there)"},
+	{java: true, text: "next: after the restart, run the mcp-n4 prompt post-deploy-check with station=<station> module={module} (read-only: restart_needed, module version, health, new alarms)"},
 	{java: true, text: "next: after the restart, check the station console for the module: {triage} --package <the Java package of the module> --module-prefix {module} <station-dir>/console*.txt (exit 1: rows to look at)"},
 	{text: "undo: to remove the module again, take its components out of the station, stop the station and delete {paths}{backup}"},
 }
@@ -29,6 +31,7 @@ const (
 	jarNotSigned   = "%s carries no complete signature"
 	signerJoin     = " and "
 	triageToolPath = "/../build-n4-module-kit/toolbelt/triage-console.sh"
+	labToolPath    = "/../build-n4-module-kit/toolbelt/lab-station.sh"
 	// undoBackup ends the undo line of a run that wrote a backup archive.
 	undoBackup = " (for the version before this one, restore the backup this run wrote: --help, Backups)"
 )
@@ -65,5 +68,6 @@ func (d *deploy) closingValues() *strings.Replacer {
 	}
 	return strings.NewReplacer("{backup}", backup,
 		"{jars}", strings.Join(names, " "), "{dir}", d.station, "{paths}", strings.Join(paths, " "),
-		"{signers}", strings.Join(signers, ", "), "{module}", d.module, "{triage}", d.scriptDir+triageToolPath)
+		"{signers}", strings.Join(signers, ", "), "{module}", d.module, "{triage}", d.scriptDir+triageToolPath,
+		"{lab}", d.scriptDir+labToolPath)
 }

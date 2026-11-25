@@ -76,6 +76,11 @@ After a deploy:
             whether the station trusts that signer: the station decides when it loads the module
     next:   (modes A and C) restart the station. ng-deploy does not look at whether a station is running, and
             stops or starts none
+    next:   (modes A and C) the commands to stop and start the station, with the path of toolbelt/lab-station.sh
+            (<station> and <NIAGARA_HOME> are the author's to fill in): lab-station stops only a station it
+            started; a Windows service or station.exe is stopped and started there
+    next:   (modes A and C) the post-deploy check to run after the restart: the mcp-n4 prompt post-deploy-check
+            with station=<station> and module=<MODULE_NAME> (read-only)
     next:   (modes A and C) the console check to run after the restart (toolbelt/triage-console.sh)
     undo:   how to remove the module again: take its components out of the station, stop it, delete the jars
             (it points at the backup only when this run wrote one)

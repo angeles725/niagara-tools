@@ -19,7 +19,10 @@ func closing(f *fixture, mode, signers string) string {
 	out := "[ng-deploy] done: " + names + " copied to " + f.modules + "\n" +
 		"[ng-deploy] signer: " + signers + "; the gate checks who signed a jar, not whether the station trusts that signer: the station decides when it loads the module\n"
 	if mode != "B" {
+		lab := f.dir + "/repo/scripts/../build-n4-module-kit/toolbelt/lab-station.sh"
 		out += "[ng-deploy] next: restart the station; ng-deploy did not look at whether one is running, and stops or starts none\n" +
+			"[ng-deploy] next: stop it with: " + lab + " stop --home <NIAGARA_HOME> <station>; start it with: " + lab + " start --home <NIAGARA_HOME> <station> (lab-station stops only a station it started; a Windows service or station.exe is stopped and started there)\n" +
+			"[ng-deploy] next: after the restart, run the mcp-n4 prompt post-deploy-check with station=<station> module=demo (read-only: restart_needed, module version, health, new alarms)\n" +
 			"[ng-deploy] next: after the restart, check the station console for the module: " + f.dir + "/repo/scripts/../build-n4-module-kit/toolbelt/triage-console.sh --package <the Java package of the module> --module-prefix demo <station-dir>/console*.txt (exit 1: rows to look at)\n"
 	}
 	return out + "[ng-deploy] undo: to remove the module again, take its components out of the station, stop the station and delete " + paths + "\n"
