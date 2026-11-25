@@ -303,6 +303,15 @@ setup() {
   [[ "$output" == *"rc-scan"* ]]
 }
 
+@test "RM17b: a lint-spa-poll-no-recovery FAIL row is shown and counted, exit 1 (issue #966)" {
+  # lint-spa-poll-report/DemoPan-ux/src/rc/poll.js: a catch that swallows the failure, then stamps lastOkAt
+  # Mutation: RM17b -- running the member with a WARN-only filter drops the FAIL row and exits 0
+  run "$RM" --lint-only "$BATS_TEST_DIRNAME/fixtures/lint-spa-poll-report"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-ux  FAIL  lint-spa-poll-no-recovery  poll.js:11  "*"swallows a failure"* ]]
+  [[ "$output" == *"· 1 FAIL ·"*"ISSUES"* ]]
+}
+
 @test "RM18: doInvoke getNavChildren without invokeLater surfaces WARN row in *-wb artifact, exit stays 0" {
   # wb-threading-warn/DemoPan-wb/src/com/x/BPanel.java calls getNavChildren in doInvoke
   run "$RM" --lint-only "$FX/wb-threading-warn"

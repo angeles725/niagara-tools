@@ -8,6 +8,7 @@ import "testing"
 func TestSwallowsThenStampsReadsOnlyAnUnconditionalStampAfterTheCatch(t *testing.T) {
 	const catchPaint = "try { await load(); } catch (e) { paint(); }\n"
 	const stamp = "lastOkAt = Date.now();"
+	const catchNested = "try { await load(); } catch (e) { later(() => { throw e; }); }\n"
 	tests := []struct {
 		name string
 		body string
@@ -25,6 +26,10 @@ func TestSwallowsThenStampsReadsOnlyAnUnconditionalStampAfterTheCatch(t *testing
 		{"stamp inside the try block", "try { await load(); " + stamp + " } catch (e) { paint(); }\n", false},
 		{"stamp in a function declared after the catch", catchPaint + "function later() { " + stamp + " }", false},
 		{"catch rethrows", "try { await load(); } catch (e) { paint(); throw e; }\n" + stamp, false},
+		{"promise catch hands back Promise.reject", "await load().catch(e => Promise.reject(e));\n" + stamp, false},
+		{"promise catch block returns Promise.reject", "await load().catch(e => { return Promise.reject(e); });\n" + stamp, false},
+		{"promise catch returns only in a nested callback", "await load().catch(e => { list.forEach(i => { return; }); });\n" + stamp, true},
+		{"block catch throws only in a nested callback", catchNested + stamp, true},
 		{"catch returns", "try { await load(); } catch (e) { return; }\n" + stamp, false},
 	}
 	for _, tt := range tests {

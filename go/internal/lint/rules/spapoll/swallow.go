@@ -4,11 +4,10 @@ import "strings"
 
 // swallow.go is the FAIL half (issue #895): a poll catch that swallows the failure and then stamps lastOk*.
 
-// catchWord finds a block or promise catch; exitsCatch is a throw or a return in the catch handler; conditional
-// marks a stamp that is guarded (if/else/loop/switch/return/throw, ?:, &&, ||) and so is not this shape.
+// catchWord finds a block or promise catch (exitsCatch, handler.go, reads its handler); conditional marks a
+// stamp that is guarded (if/else/loop/switch/return/throw, ?:, &&, ||) and so is not this shape.
 var (
 	catchWord   = rx(`catch[[:space:]]*[({]`)
-	exitsCatch  = rx(`(^|[^A-Za-z0-9_$])(throw|return)([^A-Za-z0-9_$]|$)`)
 	conditional = rx(`(^|[^A-Za-z0-9_$])(if|else|while|for|switch|return|throw)([^A-Za-z0-9_$]|$)|\?|&&|\|\|`)
 )
 
@@ -52,7 +51,7 @@ func swallowsThenStamps(b string) bool {
 			}
 			handler, end = b[end+open:stop], stop
 		}
-		if exitsCatch.MatchString(handler) {
+		if exitsCatch(handler) {
 			continue
 		}
 		for _, m := range okSet.FindAllStringIndex(b[end:], -1) {
