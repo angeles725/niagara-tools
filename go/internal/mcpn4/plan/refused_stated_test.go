@@ -6,6 +6,8 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/journal"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
 
@@ -77,5 +79,46 @@ func TestOnlyTheStationsStatedRefusalSkipsTheReadback(t *testing.T) {
 	tok := r.dry(t, "n4_set_slot", setArgs())
 	if text, isErr, _ := r.execute(t, "n4_set_slot", setArgs(), tok); !isErr || !strings.Contains(text, "in-doubt") {
 		t.Errorf("set_slot: %q", text)
+	}
+}
+
+// laterRefusing accepts the first send and answers every later one with err (#1064 item 3).
+type laterRefusing struct {
+	*station
+	sent *int
+	err  error
+}
+
+func (f laterRefusing) SSC(k string, a any) (any, error) {
+	if *f.sent++; *f.sent == 1 {
+		return f.station.SSC(k, a)
+	}
+	f.station.loadErr = &box.Error{Kind: box.KindBox, Msg: "read-back unavailable"}
+	return nil, f.err
+}
+
+func (f laterRefusing) Sync(a any) (any, error) { return f.SSC("sync", a) }
+
+// The stated text only counts on the first op: when a batch's checkLinks op passed and a later op
+// fails with the same words, something may already be applied, so the batch is in-doubt.
+func TestAStatedTextOnALaterOpIsInDoubt(t *testing.T) {
+	r := newRig(t)
+	impl := plan.Impl{ScopeOrds: func(*pyjson.Object) []any { return []any{calc} },
+		Plan: func(plan.Client, *pyjson.Object) (*plan.Planned, error) {
+			first := node("ssc", "checkLinks", "arg", node())
+			return &plan.Planned{Ops: []any{first, node("ssc", "checkLinks", "arg", node())}, Inverse: []any{}}, nil
+		}}
+	r.srv.Handlers["n4_invoke_action"] = (&plan.Engine{Ctx: r.ctx, State: r.state}).Handler("n4_invoke_action", impl)
+	sent := 0
+	r.ctx.Session = session.NewSession(laterRefusing{r.st, &sent,
+		&box.Error{Kind: box.KindBox, Msg: readonlyTarget, Station: true}}, "FakeStation", "http://fake.invalid", "2", "4.14.0.162", "")
+	args := node("ord", calc, "action", "x")
+	tok := r.dry(t, "n4_invoke_action", args)
+	text, isErr, _ := r.execute(t, "n4_invoke_action", args, tok)
+	if sent != 2 {
+		t.Fatalf("the batch sent %d op(s), want 2 (%q)", sent, text)
+	}
+	if !isErr || !strings.Contains(text, "in-doubt") || strings.Contains(text, "nothing was applied") {
+		t.Errorf("a later op's stated text: %v %q", isErr, text)
 	}
 }

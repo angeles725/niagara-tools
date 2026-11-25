@@ -1,6 +1,7 @@
 package writeops_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
@@ -56,6 +57,27 @@ func TestAutoStaysArgumentLessAndAnArgIsStillRefused(t *testing.T) {
 			if want := "action '" + action + "' takes no arg"; err == nil || err.Error() != want {
 				t.Errorf("%s with %s: err = %v, want %q", action, k, err, want)
 			}
+		}
+	}
+}
+
+// The default override goes only to a control:BooleanWritable or a subtype the type registry names
+// (#1064 item 1): another component's argument-less active stays argument-less. A client that
+// cannot read the registry keeps the override (the station refuses a BooleanWritable call without it).
+func TestTheDefaultOverrideGoesOnlyToABooleanWritable(t *testing.T) {
+	types := obj("acme:Switch", obj("c", []any{}, "p", "control:BooleanWritable"),
+		"control:BooleanWritable", obj("c", []any{}, "p", "control:BooleanPoint"),
+		"control:BooleanPoint", obj("c", []any{}, "p", "baja:Component"),
+		"acme:Pulse", obj("c", []any{}, "p", "baja:Component"),
+		"baja:Component", obj("c", []any{}))
+	for typ, wantOverride := range map[string]bool{"control:BooleanWritable": true, "acme:Switch": true, "acme:Pulse": false} {
+		c := &typed{loads: loads{nodes: obj(boolWritable, obj("", obj("h", "5", "t", typ)))}, types: types}
+		p, err := writeops.InvokeAction.Plan(c, obj("ord", boolWritable, "action", "active"))
+		if err != nil {
+			t.Fatalf("%s: %v", typ, err)
+		}
+		if got := strings.Contains(js(t, p.Ops), `"control:Override"`); got != wantOverride {
+			t.Errorf("%s: override sent = %v, want %v (%s)", typ, got, wantOverride, js(t, p.Ops))
 		}
 	}
 }
