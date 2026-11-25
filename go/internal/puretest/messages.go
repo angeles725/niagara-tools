@@ -32,6 +32,7 @@ const (
 	mainSources = "src"                    // under the module part: the pure sources the test references
 	tempPattern = "tmp.*"                  // the compile output directory, removed when the run ends
 	kitJavaEnv  = "RUN_PURE_TEST_KIT_JAVA" // set by run-pure-test.sh: the kit's Java helper source root
+	homeEnv     = "NIAGARA_HOME"           // the mirror (or install) whose modules/ jars the adapters compile against
 )
 
 // compileFlags make javac emit Java 8 classes without the warnings a newer JDK adds about it.

@@ -39,7 +39,7 @@ func TestPass(t *testing.T) {
 	f := newFixture(t)
 	t.Chdir(f.dir + "/tmp") // any directory but the module's
 	before, _ := os.ReadDir(f.rt)
-	if code := f.run(f.rt, testClass); code != ExitOK || f.out != "javac stdout\njava stdout\n" || f.err != "javac stderr\njava stderr\n" {
+	if code := f.run(f.rt, testClass); code != ExitOK || f.out != "javac stdout\njava stdout\n" || f.err != "javac stderr\n"+adaptersNotice+"java stderr\n" {
 		t.Errorf("exit %d stdout %q stderr %q", code, f.out, f.err)
 	}
 	tmp := f.tempDir()
@@ -89,7 +89,7 @@ func TestASymlinkedGradleCacheIsFollowed(t *testing.T) {
 	if err := os.Symlink(f.dir+"/cache", f.dir+"/home/.gradle"); err != nil {
 		t.Fatal(err)
 	}
-	if code := f.run(f.rt, testClass); code != ExitOK || f.err != "javac stderr\njava stderr\n" {
+	if code := f.run(f.rt, testClass); code != ExitOK || f.err != "javac stderr\n"+adaptersNotice+"java stderr\n" {
 		t.Fatalf("exit %d stderr %q", code, f.err)
 	}
 	if got := f.call("java"); !strings.Contains(got, ":"+f.dir+"/home/.gradle/caches/a/junit-4.13.2.jar:") {
@@ -110,7 +110,7 @@ func TestSeveralCopiesOfAJarNameTheOneUsed(t *testing.T) {
 	cache := f.dir + "/home/.gradle"
 	want := "run-pure-test: NOTICE junit-4.13.2.jar found 3 times under ~/.gradle, using " + cache + "/caches/a/junit-4.13.2.jar\n" +
 		"run-pure-test: NOTICE hamcrest-core-1.3.jar found 2 times under ~/.gradle, using " + cache + "/wrapper/a/hamcrest-core-1.3.jar\n" +
-		"javac stderr\njava stderr\n"
+		"javac stderr\n" + adaptersNotice + "java stderr\n"
 	if f.err != want {
 		t.Errorf("stderr %q, want %q", f.err, want)
 	}
@@ -182,7 +182,7 @@ func TestCompileErrorIsNotARed(t *testing.T) {
 func TestNoJava(t *testing.T) {
 	f := newFixture(t)
 	os.Remove(f.dir + "/bin/java")
-	if code := f.run(f.rt, testClass); code != exitNotFound || f.err != "javac stderr\nrun-pure-test: java: command not found\n" {
+	if code := f.run(f.rt, testClass); code != exitNotFound || f.err != "javac stderr\n"+adaptersNotice+"run-pure-test: java: command not found\n" {
 		t.Errorf("exit %d stderr %q", code, f.err)
 	}
 }

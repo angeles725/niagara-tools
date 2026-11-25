@@ -34,6 +34,9 @@ func TestPluginVersion(t *testing.T) {
 	}
 	for _, c := range cases {
 		f := newFixture(t)
+		if c.detected { // the home ships the pinned version, so the mirror pick (Δ29) keeps it
+			f.mkdir(f.home + "/" + m2Repository + "/com/tridium/plugin/" + c.plugin)
+		}
 		if c.properties != "" {
 			f.write(f.root+"/gradle.properties", c.properties)
 		}

@@ -38,6 +38,10 @@ func Main(args []string, s cli.Stdio) int {
 	if root == "" {
 		return r.die(ExitEnv, msgNoSource, rt, rel)
 	}
+	home := s.Env(homeEnv)
+	if code := r.checkHome(home); code != ExitOK {
+		return code
+	}
 	r.noticeCopies(junitJar, junits)
 	r.noticeCopies(hamcrestJar, hamcrests)
 	// The classes go to a temporary directory: the module tree may be another session's working tree.
@@ -50,6 +54,9 @@ func Main(args []string, s cli.Stdio) int {
 	if r.compile(tmp, junit, sourcePath(rt, root, s.Env(kitJavaEnv)), root+"/"+rel+".java") != 0 {
 		// Exit 1 is kept for a JUnit failure: a test that does not compile proves nothing.
 		return r.die(ExitEnv, msgNoCompile, class)
+	}
+	if code := r.compileAdapters(rt, tmp, home); code != ExitOK {
+		return code
 	}
 	// From the module dir, so a test that reads src/… by a relative path finds it wherever the tool was called.
 	return r.exec(rt, java, "-cp", tmp+":"+junit+":"+hamcrest, runner, class)
