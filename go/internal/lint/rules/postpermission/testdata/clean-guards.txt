@@ -1,0 +1,41 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- Panel.java --
+package demo;
+public class Panel extends BWebServlet {
+  public void doPost(WebOp op) {
+    BUser user = cx.getUser();
+    user.checkInvoke(this, restart);
+    post(restart, null, cx);
+  }
+  public void doGet(WebOp op) {
+    if (!getPermissions(cx).hasOperatorInvoke()) throw new PermissionException("no");
+    post(a, b, cx);
+  }
+  public void doPut(WebOp op) {
+    cx.getUser().checkWrite(this, setpoint);
+    post(a, b, cx);
+  }
+  public void doDelete(WebOp op) {
+    BPermissions p = cx.getUser().getPermissionsFor(this);
+    if (!p.hasAdminInvoke()) return;
+    post(a, b, cx);
+  }
+  public void service(HttpServletRequest req, HttpServletResponse res) {
+    if (!canInvoke(target)) return;
+    post(a, b, cx);
+  }
+  @NiagaraRpc(permissions = "r")
+  public BValue go(BValue arg) {
+    cx.getUser().check(this, BPermissions.operatorInvoke);
+    executor.execute(() -> post(a, arg, cx));
+    return null;
+  }
+  public void doFlush(BValue arg, Context cx) {
+    if (!cx.getUser().getPermissions().has(BPermissions.adminInvoke)) return;
+    post(flush, arg, cx);
+  }
+}

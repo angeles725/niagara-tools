@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/BOk.java --
+package com.x;
+public class BOk extends BComponent {
+@NiagaraAction(name = "faultReset", flags = Flags.CONFIRM_REQUIRED)
+@NiagaraAction(name = "clearHistory", flags = Flags.OPERATOR | Flags.CONFIRM_REQUIRED)
+@NiagaraAction(name = "wipeDevice", flags = Flags.CONFIRM_REQUIRED | Flags.HIDDEN | Flags.NO_AUDIT)
+@NiagaraAction(name = "purgeOld", flags = javax.baja.sys.Flags.CONFIRM_REQUIRED)
+@NiagaraAction(name = "resetCounter", flags = CONFIRM_REQUIRED, parameterType = "BInteger", defaultValue = "BInteger.make(0)")
+@NiagaraAction(name = "removeRow", returnType = "BBoolean", flags = Flags.CONFIRM_REQUIRED)
+}

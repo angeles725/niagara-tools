@@ -1,0 +1,17 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- Poller.java --
+package demo;
+public class Poller extends BComponent {
+  public void started() { post(tick, null, null); }
+  public void doTick() { post(tick, null, null); }
+  private void kick() { post(tick, null, null); }
+  public void changed(Property p, Context cx) { post(tick, null, cx); }
+  public Runnable timer() {
+    return new Runnable() { public void run() { post(tick, null, null); } };
+  }
+  public IFuture post(Action action, BValue argument, Context cx) { return super.post(action, argument, cx); }
+}

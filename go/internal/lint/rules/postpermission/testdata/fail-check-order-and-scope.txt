@@ -1,0 +1,30 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-post-permission  Order.java:4  post() in 'doPost' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Order.java:9  post() in 'doPut' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Order.java:14  post() in 'doGet' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Order.java:18  post() in 'doDelete' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+-- stderr --
+-- Order.java --
+package demo;
+public class Order extends BWebServlet {
+  public void doPost(WebOp op) {
+    post(a, b, cx);
+    cx.getUser().checkInvoke(this, a);
+  }
+  private void guard() { cx.getUser().checkInvoke(this, a); }
+  public void doPut(WebOp op) {
+    post(a, b, cx);
+  }
+  public void doGet(WebOp op) {
+    cx.getUser().checkRead(this, a);
+    // canInvoke(target) is only a comment
+    post(a, b, cx);
+  }
+  public void doDelete(WebOp op) {
+    String s = "user.checkInvoke(this, a)"; boolean canInvoke = true;
+    post(a, b, cx);
+  }
+}

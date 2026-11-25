@@ -140,6 +140,11 @@ post(myAction, arg, cx);  // safe to post after the check
 
 Never rely on the framework to enforce RBAC across the `post()` boundary. This complements §1.1 (null-Context write hazard): that rule covers `set()`/`invoke()` with explicit null; this rule covers `post()` which implicitly drops context on every call.
 
+**Gate:** `toolbelt/lint-post-permission.sh` FAILs a `post(` in a request, RPC or `do<Action>(…, Context)`
+handler with no `checkInvoke`/`checkWrite`/`getPermissionsFor`/`canInvoke`/`hasOperatorInvoke`/`hasAdminInvoke`
+before it (`BComponent.java:590-593` drops `cx`; `EngineManager.java:310` invokes with `null`). Waive one post
+with `// post-permission: ok <reason>` on its line or the line above.
+
 **Worker threads keep the caller's Context.** When an action hands work to its own thread or executor, capture
 the action's `Context` before the hand-off and pass it to every `BOrd.get/resolve`, BQL query and `toString(cx)`
 inside the worker: with `null`, BQL and file reads are no longer filtered by the invoking user (§ 4.4) and value

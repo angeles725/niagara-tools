@@ -17,6 +17,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/charsetdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/confirmrequired"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/dashboardsave"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
@@ -50,6 +51,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/permissionsxml"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/pollscrollrestore"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/postpermission"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/privateapiimport"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/rdbmsdialect"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
@@ -124,6 +126,7 @@ func All() []lint.Spec {
 		changedhotwrite.Spec(),
 		persisthotwrite.Spec(),
 		pollscrollrestore.Spec(),
+		postpermission.Spec(),
 		slotomaticmarkers.Spec(),
 		agentonshape.Spec(),
 		agentonincludesync.Spec(),
@@ -155,5 +158,6 @@ func All() []lint.Spec {
 		gradleuserhome.Spec(),
 		instancetypeorder.Spec(),
 		niagararpc.Spec(),
+		confirmrequired.Spec(),
 	}
 }

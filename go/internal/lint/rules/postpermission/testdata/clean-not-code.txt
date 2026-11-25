@@ -1,0 +1,18 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- Client.java --
+package demo;
+public class Client extends BWebServlet {
+  public void doPost(WebOp op) {
+    // post(restart, null, cx) is a comment
+    String s = "post(restart, null, cx)";
+    HttpResult r = http.post(url);
+    HttpResult q = http.post("http://h/x", body);
+    String t = """
+      post(a, b, cx)
+      """;
+  }
+}

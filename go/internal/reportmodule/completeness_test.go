@@ -13,11 +13,13 @@ import (
 // must be either a member or listed here, never silently skipped).
 var notInReport = map[string]string{
 	"lint-niagara-rpc":         "a source lint run by hand on an RPC source root (types/security.md §2.7)",
+	"lint-confirm-required":    "a FAIL lint over @NiagaraAction names, run by hand until a module adopts it",
 	"lint-absolute-claims":     "a kit doc report over build-n4-module-kit/types/*.md (METHODOLOGY K33), not a module check",
 	"lint-bacnet-status-flags": "reads a station config.bog, which a module root does not hold",
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",
 	"lint-poll-scroll-restore": "a WARN-only lexical advisory for a -ux source root, run by hand (#909)",
+	"lint-post-permission":     "a FAIL on a handler post() with no permission check before it, run by hand on a -rt source root",
 	"lint-wb-usability":        "a WARN-only lexical advisory for a -wb source root (the narrow part of the wb-widgets UX rule), run by hand",
 	"lint-gradle-userhome":     "reads gradle.properties (build configuration, not a module artifact); run it on a gradle root on demand",
 	"lint-guard-pins":          "a kit meta-check of the toolbelt's own lint headers, run by the kit gates",

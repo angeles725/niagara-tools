@@ -1,0 +1,19 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-confirm-required  @DIR@/src/com/x/BA.java:2  resetA: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+FAIL  lint-confirm-required  @DIR@/src/com/x/BB.java:2  clearB: destructive action without Flags.CONFIRM_REQUIRED -- declare flags = Flags.CONFIRM_REQUIRED (with | Flags.OPERATOR when operators may run it) or waive with // lint-confirm-required: waived <reason>
+-- stderr --
+-- src/com/x/BB.java --
+package com.x;
+@NiagaraAction(name = "clearB", flags = Flags.HIDDEN)
+public class BB extends BComponent {}
+-- src/com/x/BA.java --
+package com.x;
+@NiagaraAction(name = "resetA")
+public class BA extends BComponent {}
+-- src/com/x/BC.java --
+package com.x;
+@NiagaraAction(name = "resetC", flags = Flags.CONFIRM_REQUIRED)
+public class BC extends BComponent {}

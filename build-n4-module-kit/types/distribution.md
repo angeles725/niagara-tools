@@ -179,6 +179,54 @@ alias is present in the keystore before a release build.
 
 `[ev: retro module-hardening-reqexec-closed-deltas Δ3]`
 
+### Restricted signing — the template, an internal CA, a hardware token `[ev: corpus B1234 §1234.2-1234.5]`
+
+**When:** a jar that must load at `moduleVerificationMode=high`, or that a customer or Tridium requires CA-signed.
+Start from `templates/signing-restricted.gradle.kts`. A development or throwaway-key build keeps
+`templates/signing-root.gradle.kts`: same two blocks and gradle properties, so lint-structure L15/L16 read both alike.
+The template is that root block plus the profile-file settings the block cannot enforce.
+`[ev: devguide security/codeSigning.txt:59-78]`
+
+- **Why a self-signed key is not enough:** at `high` a signer chain of length 1 (subject = issuer) is refused; the
+  CSR round trip below gives a chain that passes. `[ev: corpus B1234 §1234.4]`
+- **The June-2023 rule:** since 1 June 2023 CA industry rules require a code-signing private key on tamper-resistant
+  hardware (FIPS 140-2 Level 2 or Common Criteria EAL 4+: USB token, HSM, secure cloud). The devguide says "mid-2023,
+  all commercial certificate vendors require HSMs" (`codeSigning.txt:189`). A bought certificate therefore means a
+  token (below); an **internal CA** stays the cheap route, at the cost of someone managing it (course deck 5;
+  `codeSigning.txt:141`).
+- **Internal-CA recipe** (Lab 5; run from the gradle root, profile path outside the repository):
+  1. `gradlew createProfile --profile-path <profile.xml>`: writes the keystore and the settings file, no keys yet.
+     Plugin 7.6.17 writes a `RestrictedSigningProfile` (corpus B1249 §1249.3); plugin 7.6.22 [not verified].
+  2. In the profile XML set `niagara.signing.dname` (C, ST, L, O; Lab 5 drops OU; `CN=${alias}`) and add
+     `niagara.signing.standardtsa` (an RFC 3161 SHA-256 server) so the jar still validates after the cert expires.
+  3. `gradlew generateCertificate --profile-path <profile.xml> --alias <alias>`: a self-signed key in the store.
+  4. `gradlew exportCertificate --profile-path <profile.xml> --alias <alias> --csr-only --pem-file <alias>.csr`;
+     the CA signs it and returns a PEM or PKCS file with the full chain (concatenate the PEMs if it sends parts).
+  5. `gradlew importCertificate --profile-path <profile.xml> --alias <alias> --pem-file <alias>.pem` (answer "yes" to
+     the untrusted-reply prompt). `[ev: devguide codeSigning.txt:20-57,153-173]`
+     `[ev: course Lab Instructions.txt:878-1018]`
+
+  Then wire the template (alias and profile as gradle properties), run `gradlew clean`, then `gradlew jar`.
+- **Trust the CA on every host that loads the jar:** import the CA PEM into the Workbench **User Trust Store**
+  (Tools > Certificate Management). A station run from the Workbench user home shares it; a station in a Platform
+  Daemon Home or on a remote device needs it through `Config > Services > PlatformServices > CertManagerService`.
+  Verify in Tools > Module Info (green check, then the signer certificate).
+  `[ev: course Lab Instructions.txt:833-876,1019-1039]`
+- **Hardware token (PKCS11), as far as verified:** profile type `JarSignerSigningProfile`, a Java `.properties` file
+  (not XML) that spells out the `jarsigner` command, one `jarsigner.args+=` argument per line (`-keystore NONE
+  -storetype PKCS11 -providerClass sun.security.pkcs11.SunPKCS11 -providerArg <cfg> -signedjar ...`). The token
+  password sits in `<profile>.credentials` beside it. The same `niagaraSigning{}` block loads it; the alias is the
+  one the token reports. Install and test the vendor driver first; a modern 64-bit JDK with PKCS11 support works.
+  `allowDefaultProfile.set(false)` makes a missing token fail the build instead of using the dev key (the silent
+  fallback is noted above). Debug with `gradlew jar --info`: it prints the jarsigner command; run it alone first.
+  The keys are in the template's footer. Source: devguide `codeSigning.txt:189-276`, the 4.15 `hsmSigningExample`
+  `security/niagara.signing.properties`, `[ev: corpus B1234 §1234.5]`. **[not verified]:** a build against a real
+  token, and plugin 7.6.22 with a non-jar archive (corpus B1234-G2).
+- **Preflight the JDK:** the HSM example requires a full JDK, and a 4.15 build needs a full JDK 8. List what Gradle
+  can find with `gradlew -q javaToolchains -Porg.gradle.java.installations.auto-detect=true` (devguide
+  `build.txt:217`); `toolbelt/preflight.sh --toolchains` runs that check on the POSIX route (`build-verify.md`,
+  the bullet "The Windows route picks its JDK from Gradle's toolchains").
+
 ### Signature-failure triage pivot `[ev: retro module-hardening-failure-modes-deltas Δ10]`
 
 A `ClassNotFoundException` during module load frequently has a ROOT cause of `ValidationException` deeper in the log. When you see a `ClassNotFoundException` on a module class, **grep the station log for `ValidationException`** FIRST before diagnosing a missing class:
