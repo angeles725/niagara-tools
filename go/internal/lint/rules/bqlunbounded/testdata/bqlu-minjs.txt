@@ -1,0 +1,29 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+SUMMARY  lint-bql-unbounded  checked=3 flagged=0 waived=0 non-literal-skipped=0
+-- stderr --
+-- src/BClean.java --
+package com.example.q;
+
+public class BClean
+{
+  String a = "station:|slot:/|bql:select top 20 name from baja:Component";
+  String b = "history:/S/H?period=today|bql:select timestamp, value";
+  String c = "alarm:|bql:select * from openAlarms";
+}
+-- src/lib.min.js --
+var q=baja.Ord.make('alarm:|bql:select *');
+-- src/node_modules/lib/Dep.java --
+package com.example.q;
+
+public class BNoTop
+{
+  static final String ALL = "station:|slot:/Drivers|bql:select * from baja:Component";
+  static final String COLS = "station:|slot:/|bql:select name, out from control:NumericWritable where out.value > 5";
+  static final String BARE = "bql:select from control:NumericPoint";
+  static final String TOP = "station:|slot:/|bql:select top 20 name from control:NumericWritable";
+  static final String TOP_FMT = String.format("station:|slot:/|bql:select top %d name from baja:Component", 20);
+  static final String FORMAT = String.format("station:|slot:/|bql:select * where name = '%s'", "x");
+}

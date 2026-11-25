@@ -1,0 +1,19 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-bql-unbounded  @DIR@/src/BDynamic.java:7  no-top: "select * from baja:Component" has no top <n>: it returns every row of its extent (types/queries.md §3)
+SUMMARY  lint-bql-unbounded  checked=1 flagged=1 waived=0 non-literal-skipped=3
+-- stderr --
+-- src/BDynamic.java --
+package com.example.q;
+
+public class BDynamic
+{
+  String a = "alarm:|bql:select * where name = '" + name + "'";
+  String b = prefix + "|bql:select *";
+  String c = "station:|slot:/|bql:select" + " * from baja:Component";
+  String d = "history:/S/H|bql:select * " +
+             where;
+  String e = "no query here";
+}

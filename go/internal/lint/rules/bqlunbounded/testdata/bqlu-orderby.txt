@@ -1,0 +1,17 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-bql-unbounded  @DIR@/src/BOrderBy.java:5  no-top: "select name from baja:Component order by name" has no top <n>: it returns every row of its extent; order by sorts every row first (types/queries.md §3)
+WARN  lint-bql-unbounded  @DIR@/src/BOrderBy.java:6  order-by-no-top: "select * order by timestamp desc" has an order by and no top <n>: order by loads every row before any cap (types/queries.md §3)
+SUMMARY  lint-bql-unbounded  checked=3 flagged=2 waived=0 non-literal-skipped=0
+-- stderr --
+-- src/BOrderBy.java --
+package com.example.q;
+
+public class BOrderBy
+{
+  String sorted = "station:|slot:/|bql:select name from baja:Component order by name";
+  String windowed = "history:/S/H?period=today|bql:select * order by timestamp desc";
+  String capped = "station:|slot:/|bql:select top 10 name from baja:Component order by name";
+}

@@ -1,0 +1,17 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-bql-unbounded  @DIR@/src/BWaived.java:8  alarm-unindexed: "select *" has no top <n> and no index path (from openAlarms, from ackPendingAlarms, uuid =, source = or a timestamp range): it scans the whole alarm database (types/queries.md §3, §6)
+SUMMARY  lint-bql-unbounded  checked=3 flagged=1 waived=2 non-literal-skipped=0
+-- stderr --
+-- src/BWaived.java --
+package com.example.q;
+
+public class BWaived
+{
+  // lint-bql-unbounded: bounded by the 500-record alarm database capacity, read once at startup
+  String above = "alarm:|bql:select *";
+  String same = "history:/S/H|bql:select *"; // lint-bql-unbounded: one-off export, run by hand off-hours
+  String farAbove = "alarm:|bql:select *";
+}

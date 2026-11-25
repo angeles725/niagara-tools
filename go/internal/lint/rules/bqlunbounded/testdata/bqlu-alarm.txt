@@ -1,0 +1,28 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-bql-unbounded  @DIR@/src/BAlarm.java:5  alarm-unindexed: "select *" has no top <n> and no index path (from openAlarms, from ackPendingAlarms, uuid =, source = or a timestamp range): it scans the whole alarm database (types/queries.md §3, §6)
+WARN  lint-bql-unbounded  @DIR@/src/BAlarm.java:6  alarm-unindexed: "select * where sourceState = 'offnormal'" has no top <n> and no index path (from openAlarms, from ackPendingAlarms, uuid =, source = or a timestamp range): it scans the whole alarm database (types/queries.md §3, §6)
+WARN  lint-bql-unbounded  @DIR@/src/BAlarm.java:12  alarm-unindexed: "select *" has no top <n> and no index path (from openAlarms, from ackPendingAlarms, uuid =, source = or a timestamp range): it scans the whole alarm database (types/queries.md §3, §6)
+WARN  lint-bql-unbounded  @DIR@/src/BAlarm.java:13  order-by-no-top: "select * from openAlarms order by timestamp desc" has an order by and no top <n>: order by loads every row before any cap (types/queries.md §3)
+WARN  lint-bql-unbounded  @DIR@/src/BAlarm.java:15  alarm-unindexed: "select * from openalarms" has no top <n> and no index path (from openAlarms, from ackPendingAlarms, uuid =, source = or a timestamp range): it scans the whole alarm database (types/queries.md §3, §6)
+SUMMARY  lint-bql-unbounded  checked=11 flagged=5 waived=0 non-literal-skipped=0
+-- stderr --
+-- src/BAlarm.java --
+package com.example.q;
+
+public class BAlarm
+{
+  String all = "alarm:|bql:select *";
+  String state = "alarm:|bql:select * where sourceState = 'offnormal'";
+  String open = "alarm:|bql:select * from openAlarms";
+  String pending = "alarm:|bql:select * from ackPendingAlarms";
+  String byUuid = String.format("alarm:|bql:select * where uuid = '%s'", uuid);
+  String bySource = "alarm:|bql:select * where source = 'slot:/Drivers/Mod'";
+  String window = "alarm:|bql:select * where timestamp > '2026-01-01'";
+  String archive = "alarm:archive|bql:select *";
+  String ordered = "alarm:|bql:select * from openAlarms order by timestamp desc";
+  String capped = "alarm:|bql:select top 50 * from openAlarms order by timestamp desc";
+  String lower = "alarm:|bql:select * from openalarms";
+}

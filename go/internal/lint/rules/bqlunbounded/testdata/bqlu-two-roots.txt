@@ -1,0 +1,28 @@
+-- args --
+@DIR@/a
+@DIR@/b
+-- want --
+exit 1
+WARN  lint-bql-unbounded  @DIR@/a/BOrderBy.java:5  no-top: "select name from baja:Component order by name" has no top <n>: it returns every row of its extent; order by sorts every row first (types/queries.md §3)
+WARN  lint-bql-unbounded  @DIR@/a/BOrderBy.java:6  order-by-no-top: "select * order by timestamp desc" has an order by and no top <n>: order by loads every row before any cap (types/queries.md §3)
+FAIL  lint-bql-unbounded  @DIR@/b/BWaiverBare.java:5  waiver-no-reason: lint-bql-unbounded: needs a reason after the colon
+WARN  lint-bql-unbounded  @DIR@/b/BWaiverBare.java:6  alarm-unindexed: "select *" has no top <n> and no index path (from openAlarms, from ackPendingAlarms, uuid =, source = or a timestamp range): it scans the whole alarm database (types/queries.md §3, §6)
+SUMMARY  lint-bql-unbounded  checked=4 flagged=3 waived=0 non-literal-skipped=0
+-- stderr --
+-- a/BOrderBy.java --
+package com.example.q;
+
+public class BOrderBy
+{
+  String sorted = "station:|slot:/|bql:select name from baja:Component order by name";
+  String windowed = "history:/S/H?period=today|bql:select * order by timestamp desc";
+  String capped = "station:|slot:/|bql:select top 10 name from baja:Component order by name";
+}
+-- b/BWaiverBare.java --
+package com.example.q;
+
+public class BWaiverBare
+{
+  // lint-bql-unbounded:
+  String q = "alarm:|bql:select *";
+}

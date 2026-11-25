@@ -1,0 +1,16 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-bql-unbounded  @DIR@/src/BWaiverBare.java:5  waiver-no-reason: lint-bql-unbounded: needs a reason after the colon
+WARN  lint-bql-unbounded  @DIR@/src/BWaiverBare.java:6  alarm-unindexed: "select *" has no top <n> and no index path (from openAlarms, from ackPendingAlarms, uuid =, source = or a timestamp range): it scans the whole alarm database (types/queries.md §3, §6)
+SUMMARY  lint-bql-unbounded  checked=1 flagged=1 waived=0 non-literal-skipped=0
+-- stderr --
+-- src/BWaiverBare.java --
+package com.example.q;
+
+public class BWaiverBare
+{
+  // lint-bql-unbounded:
+  String q = "alarm:|bql:select *";
+}
