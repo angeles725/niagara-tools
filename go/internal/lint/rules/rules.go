@@ -5,10 +5,12 @@ package rules
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/absoluteclaims"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/actionhandler"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/adaptercfgdefault"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonincludesync"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/arbitraryord"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/asyncblock"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bacnetstatusflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/batserrexit"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
@@ -155,5 +157,7 @@ func All() []lint.Spec {
 		mqtttlsport.Spec(),
 		gradleuserhome.Spec(),
 		instancetypeorder.Spec(),
+		actionhandler.Spec(),
+		asyncblock.Spec(),
 	}
 }

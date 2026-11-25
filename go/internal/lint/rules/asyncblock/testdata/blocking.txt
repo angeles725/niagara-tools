@@ -1,0 +1,43 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-async-blocking  @DIR@/src/com/acme/BNet.java:5  ASYNC action "push": doPush blocks the shared engine thread (openConnection() line 7, HttpClient line 8, getOutputStream() line 10, sendSync() line 11) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, push, arg, cx) to your own executor (types/actions.md § 2)
+WARN  lint-async-blocking  @DIR@/src/com/acme/BQl.java:5  ASYNC action "query": doQuery blocks the shared engine thread (BQL .get() line 8) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, query, arg, cx) to your own executor (types/actions.md § 2)
+WARN  lint-async-blocking  @DIR@/src/com/acme/BSleep.java:5  ASYNC action "submit": doSubmit blocks the shared engine thread (Thread.sleep() line 7) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, submit, arg, cx) to your own executor (types/actions.md § 2)
+-- stderr --
+-- src/com/acme/BSleep.java --
+@NiagaraType
+@NiagaraAction(name = "submit", flags = Flags.ASYNC)
+public class BSleep extends BComponent
+{
+  public void doSubmit()
+  {
+    Thread.sleep(500L);
+  }
+}
+-- src/com/acme/BNet.java --
+@NiagaraType
+@NiagaraAction(name = "push", flags = Flags.HIDDEN | Flags.ASYNC)
+public class BNet extends BComponent
+{
+  public void doPush(Context cx) throws Exception
+  {
+    URLConnection c = new URL(u).openConnection();
+    HttpClient h = HttpClient.newHttpClient();
+    h.send(r, ofString);
+    out = c.getOutputStream();
+    rest.sendSync(msg);
+  }
+}
+-- src/com/acme/BQl.java --
+@NiagaraType
+@NiagaraAction(name = "query", flags = Flags.ASYNC)
+public class BQl extends BComponent
+{
+  public void doQuery()
+  {
+    BOrd o = BOrd.make("station:|slot:/|bql:select *");
+    o.get(this, null);
+  }
+}

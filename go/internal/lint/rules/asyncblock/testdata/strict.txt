@@ -1,0 +1,12 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+WARN  lint-async-blocking  @DIR@/src/BS.java:3  ASYNC action "s": doS blocks the shared engine thread (Thread.sleep() line 3) and the class has no post(Action...) override: keep a plain ASYNC handler for short bounded work only; otherwise override post() and hand new Invocation(this, s, arg, cx) to your own executor (types/actions.md § 2)
+-- stderr --
+-- src/BS.java --
+@NiagaraAction(name = "s", flags = Flags.ASYNC)
+class BS extends BComponent {
+  void doS() { Thread.sleep(1L); }
+}

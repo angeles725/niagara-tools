@@ -1,0 +1,42 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/acme/BInv.java --
+@NiagaraType
+@NiagaraAction(name = "submit", flags = Flags.ASYNC)
+public class BInv extends BComponent
+{
+  public void doSubmit() { Thread.sleep(1L); }
+  public IFuture post(Action action, BValue arg, Context cx)
+  {
+    pool.execute(new Invocation(this, action, arg, cx));
+    return null;
+  }
+}
+-- src/com/acme/BHelper.java --
+@NiagaraType
+@NiagaraAction(name = "quick", flags = Flags.ASYNC)
+public class BHelper extends BComponent
+{
+  public void doQuick() { count++; map.get("x"); }
+  void pause() { Thread.sleep(5L); }
+}
+-- src/com/acme/BText.java --
+@NiagaraType
+@NiagaraAction(name = "text", flags = Flags.ASYNC)
+public class BText extends BComponent
+{
+  public void doText()
+  {
+    // Thread.sleep(1L); c.openConnection();
+    String s = "Thread.sleep(1L); c.getOutputStream(); bql:select * x.get(1)";
+    /* HttpClient */
+  }
+}
+-- src/com/acme/BNo.java --
+public class BNo extends BComponent
+{
+  public void doThing() { Thread.sleep(1L); }
+}
