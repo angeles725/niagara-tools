@@ -33,8 +33,15 @@ func (t *Tools) ReadTags(args *pyjson.Object) (*pyjson.Object, error) {
 	}
 	start := t.Ctx.Clock()
 	comps := []any{}
-	for _, o := range ords {
-		c, err := t.tagEntry(o, implied, relations)
+	loads, err := t.loadTags(ords)
+	if err != nil {
+		return nil, err
+	}
+	for i, o := range ords {
+		if loads[i].Err != nil {
+			return nil, loads[i].Err
+		}
+		c, err := t.tagEntryOf(o, loads[i].Nodes, implied, relations)
 		if err != nil {
 			return nil, err
 		}

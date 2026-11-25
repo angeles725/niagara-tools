@@ -10,7 +10,23 @@ import (
 
 // SSC is BoxClient.ssc: a callssc on the session component.
 func (c *Client) SSC(key string, arg any) (any, error) {
-	return c.Call(Channel, "callssc", obj("id", c.sid, "scid", SessionComponentID, "sck", key, "scarg", arg))
+	m := c.sscMsg(key, arg)
+	return c.Call(m.Channel, m.Key, m.Body)
+}
+
+// sscMsg is the callssc message SSC sends.
+func (c *Client) sscMsg(key string, arg any) Msg {
+	return Msg{Channel, "callssc", obj("id", c.sid, "scid", SessionComponentID, "sck", key, "scarg", arg)}
+}
+
+// SSCMany is SSC of key once per arg, in one frame (CallMany): the replies in args order, a refused
+// call as its Reply.Err.
+func (c *Client) SSCMany(key string, args []any) ([]Reply, error) {
+	msgs := make([]Msg, len(args))
+	for i, a := range args {
+		msgs[i] = c.sscMsg(key, a)
+	}
+	return c.CallMany(msgs)
 }
 
 // Poll is BoxClient.poll: the pollchgs events, [] for null; any other non-list is malformed.
