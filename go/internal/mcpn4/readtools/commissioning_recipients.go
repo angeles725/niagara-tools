@@ -20,7 +20,7 @@ func (r *commRun) classRecipients(c *commCheck, classes []*pyjson.Object) error 
 	}
 	linked, unseen := map[string]bool{}, 0
 	for _, l := range links {
-		if slot, isText := l.sourceSlot.(string); isText && slot != alarmTopic {
+		if !routesAlarm(l.sourceSlot, l.targetSlot, true) {
 			continue
 		}
 		if p, ok := l.sourcePath.(string); ok && l.resolved {

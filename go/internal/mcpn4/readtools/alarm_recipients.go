@@ -58,7 +58,7 @@ func (t *Tools) alarmRoutes(classes, recipients []*pyjson.Object, timeout int, a
 				continue
 			}
 			kids := box.Children(nodes, name)
-			if box.ChildValue(kids, "sourceSlotName", nil) != alarmTopic || box.ChildValue(kids, "targetSlotName", nil) != routeAction {
+			if !routesAlarm(box.ChildValue(kids, "sourceSlotName", nil), box.ChildValue(kids, "targetSlotName", nil), false) {
 				continue
 			}
 			sourceOrd := box.ChildValue(kids, "sourceOrd", nil)
@@ -115,4 +115,15 @@ func (t *Tools) classHandles(classes []*pyjson.Object) (map[string]string, error
 		}
 	}
 	return byHandle, nil
+}
+
+// routesAlarm is the one rule both alarm readers use for a recipient link (#992 M2): from a class's
+// alarm topic into a routeAlarm action. A slot name the station did not answer counts as a match only
+// when lenient (the commissioning scan, which then cannot rule the link out).
+func routesAlarm(sourceSlot, targetSlot any, lenient bool) bool {
+	match := func(v any, want string) bool {
+		s, known := v.(string)
+		return s == want || (!known && lenient)
+	}
+	return match(sourceSlot, alarmTopic) && match(targetSlot, routeAction)
 }
