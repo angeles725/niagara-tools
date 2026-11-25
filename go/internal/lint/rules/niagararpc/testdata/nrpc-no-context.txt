@@ -1,0 +1,96 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-niagara-rpc  @DIR@/src/BNoContext.java:6  no-context: lastIsString() last parameter is String, not Context: the station appends its Context as the last argument and looks the method up by those types (NiagaraRpcUtil.java:91-123; types/data-access.md §8)
+FAIL  lint-niagara-rpc  @DIR@/src/BNoContext.java:12  no-context: noParams() declares no parameter, not a trailing Context: the station appends its Context as the last argument and looks the method up by those types (NiagaraRpcUtil.java:91-123; types/data-access.md §8)
+FAIL  lint-niagara-rpc  @DIR@/src/BNoContext.java:18  no-context: contextFirst() last parameter is String, not Context: the station appends its Context as the last argument and looks the method up by those types (NiagaraRpcUtil.java:91-123; types/data-access.md §8)
+FAIL  lint-niagara-rpc  @DIR@/src/BNoContext.java:24  no-context: subtype() last parameter is SecurableContext, not Context: the station appends its Context as the last argument and looks the method up by those types (NiagaraRpcUtil.java:91-123; types/data-access.md §8)
+FAIL  lint-niagara-rpc  @DIR@/src/BNoContext.java:32  no-context: multiLine() last parameter is List<String>, not Context: the station appends its Context as the last argument and looks the method up by those types (NiagaraRpcUtil.java:91-123; types/data-access.md §8)
+FAIL  lint-niagara-rpc  @DIR@/src/BNoContext.java:38  no-context: asArray() last parameter is Context[], not Context: the station appends its Context as the last argument and looks the method up by those types (NiagaraRpcUtil.java:91-123; types/data-access.md §8)
+-- stderr --
+-- src/BNoContext.java --
+package com.example.rpc;
+
+public class BNoContext
+{
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String lastIsString(String key, String name)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String noParams()
+  {
+    return "x";
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String contextFirst(Context cx, String name)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String subtype(String name, SecurableContext cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String multiLine(
+    String name,
+    List<String> more)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String asArray(String name, Context[] cxs)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String plain(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String qualified(Map<String, List<String>> args, javax.baja.sys.Context cx)
+  {
+    return "x";
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String modifiers(String name, @SuppressWarnings("unused") final Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String bareAnnotation(String name, @Nonnull Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String dottedAnnotation(@javax.annotation.Nonnull String name, @javax.annotation.Nonnull Context cx)
+  {
+    return name;
+  }
+
+  // lint-niagara-rpc: reviewed legacy two-argument shape kept for the old workbench caller
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.box) })
+  public static String waived(String name)
+  {
+    return name;
+  }
+
+  public static String notAnRpc(String name)
+  {
+    return name;
+  }
+}

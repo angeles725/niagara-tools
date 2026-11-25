@@ -1,0 +1,90 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+WARN  lint-niagara-rpc  @DIR@/src/BNoBox.java:5  no-box-transport: webAndFox() lists transports web, fox but @DIR@/src/caller.js:5 calls baja.rpc(, which goes over BOX: the station finds no matching transport for it (NiagaraRpcUtil.java:181-187; types/data-access.md §8)
+WARN  lint-niagara-rpc  @DIR@/src/BNoBox.java:11  no-box-transport: singleWeb() lists transports web but @DIR@/src/caller.js:5 calls baja.rpc(, which goes over BOX: the station finds no matching transport for it (NiagaraRpcUtil.java:181-187; types/data-access.md §8)
+WARN  lint-niagara-rpc  @DIR@/src/BNoBox.java:17  no-box-transport: none() lists no transport but @DIR@/src/caller.js:5 calls baja.rpc(, which goes over BOX: the station finds no matching transport for it (NiagaraRpcUtil.java:181-187; types/data-access.md §8)
+WARN  lint-niagara-rpc  @DIR@/src/BNoBox.java:50  no-box-transport: multiLine() lists transports web but @DIR@/src/caller.js:5 calls baja.rpc(, which goes over BOX: the station finds no matching transport for it (NiagaraRpcUtil.java:181-187; types/data-access.md §8)
+WARN  lint-niagara-rpc  @DIR@/src/BNoBox.java:58  no-box-transport: attributesAfter() lists transports fox but @DIR@/src/caller.js:5 calls baja.rpc(, which goes over BOX: the station finds no matching transport for it (NiagaraRpcUtil.java:181-187; types/data-access.md §8)
+-- stderr --
+-- src/BNoBox.java --
+package com.example.rpc;
+
+public class BNoBox
+{
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web), @Transport(type = TransportType.fox) })
+  public static String webAndFox(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = @Transport(type = TransportType.web))
+  public static String singleWeb(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = {})
+  public static String none(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web), @Transport(type = TransportType.box) })
+  public static String webAndBox(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = box) })
+  public static String staticImport(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = TRANSPORTS)
+  public static String constant(String name, Context cx)
+  {
+    return name;
+  }
+
+  // lint-niagara-rpc: reviewed this one is called from a fox view only
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.fox) })
+  public static String waived(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(
+    permissions = "r",
+    transports = {
+      @Transport(type = TransportType.web)
+    })
+  public static String multiLine(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(transports = @Transport(type = TransportType.fox), permissions = "r", isSecure = true)
+  public static String attributesAfter(String name, Context cx)
+  {
+    return name;
+  }
+
+  @NiagaraRpc(permissions = "r", transports = { @Transport(type = TransportType.web), EXTRA })
+  public static String mixed(String name, Context cx)
+  {
+    return name;
+  }
+}
+-- src/caller.js --
+define(['baja!'], function (baja) {
+  // baja.rpc( in a comment is no call
+  var note = "baja.rpc(ord, 'x') in a string is no call";
+  function run(ord) {
+    return baja.rpc(ord, 'webAndFox', 'a');
+  }
+  return { run: run, note: note };
+});
