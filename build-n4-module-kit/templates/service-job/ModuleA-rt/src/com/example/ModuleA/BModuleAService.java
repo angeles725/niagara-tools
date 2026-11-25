@@ -24,7 +24,7 @@ import javax.baja.util.BIRestrictedComponent;
  * the action.</p>
  */
 @NiagaraType
-@NiagaraProperty(name = "fileName", type = "String", defaultValue = "ModuleA-export.csv", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "fileName", type = "String", defaultValue = "\"ModuleA-export.csv\"", flags = Flags.OPERATOR)
 @NiagaraProperty(name = "pointNames", type = "String", defaultValue = "", flags = Flags.OPERATOR)
 @NiagaraAction(name = "exportNow", flags = Flags.OPERATOR)
 public final class BModuleAService
