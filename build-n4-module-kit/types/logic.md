@@ -115,6 +115,40 @@ dispatches on `in`, `min` and `max` only (`:154-159`), which is the callback con
 - **A revision-gated restore needs FOUR proofs before deploy:** (1) the revision is loaded from the backup BEFORE any `execute()` can write it; (2) it increments only on ACCEPTED changes — never on boot, on an idle step, or on a rejected write; (3) every persisted field (e.g. rotation state, not only the setpoints) bumps the revision or carries its own recency; (4) only last-VALID values are backed up (an out-of-range or rejected value never reaches the file). Each proof is a named test or a source-structural pin. [ev: retro comppan-pressure-staging Δ3]
 - **Seed from the persisted slot BEFORE the first `execute()` — and before the first restart that relies on it:** the pure model is recreated on every start; the adapter re-seeds it from the persisted slots (and the file backup, per the rules above), a one-shot guard applies (`hoursSeeded`-style), and only THEN may `execute()` mirror state back to the slots — a mirror that runs first writes the model's fresh defaults over the persisted values. The same pattern covers every persisted model field (run hours, an automatic-lockout latch, revisions); author it once per module as a named seed step, and pin the ORDER with a source-structural test (the seed call precedes the first mirror in `started()`/`atSteadyState()`), because the baja-offline boundary blocks a behavioral adapter test. On the FIRST deploy of a new persistence/backup mechanism no backup exists yet: seed it from the current live values (or document the one-time reset as accepted) BEFORE the station restarts, and re-read the persisted operator state (HOA modes, setpoints, run hours) after that restart — a wear counter that drives rotation otherwise silently restarts from zero. [ev: retro comppan-auto-lock-indicator Δ4] [ev: retro panccadia-commissioning-lessons Δ5] [ev: retro station-backup-before-deploy Δ3] (The matching commissioning-checklist row in `BUILD-LOOP.md` §6.b is owed; see the kit `open_issues` in `toolbelt/kit-state.sh build-state`.)
 
+- **Where each kind of state lives, and what the online backup skips.** `[ev: corpus B1462 §1462.1]`
+
+  | State | Store | Online backup |
+  |---|---|---|
+  | Component config, non-transient properties, links | `config.bog` in `file:^^`, as of the last save | yes |
+  | Trends, a module's own record stream | a history (`.hdb` in `file:^^history`) | **no** |
+  | Alarms | `alarm.adb` in `file:^^alarm` | **no** |
+  | Slot writes and action invocations made with a user Context | `AuditHistory` (500 records, roll) | no |
+  | Module files (backups, exports, reports) | `file:^<module>/` (`Sys.getStationHome()`) | yes, unless the name matches an exclude |
+
+  The default excludes are `*.hdb;*.adb;*.lock;*backup*;console.*;config.bog.b*;config_backup*`
+  (`BBackupService.java:149-152`, `backup-BackupService.txt:114`): **never name a module file `*backup*`** — an
+  accumulator backup called `run-backup.json` is left out of every `.dist` [INFER: pattern match, not run live].
+  Name it `<instance>-<name>.json` as above. A history or alarm a client must keep is exported, not backed up.
+- **A JACE auto-saves once a DAY and keeps NO backup by default.** Base `BSystemPlatformService`: HOUR and 3 backups
+  (`BSystemPlatformService.java:116`); the QNX subclass and the J8 startup guide: "every 24 hours for any embedded
+  JACE", "Versions to Keep — Default is 0" (`J8ReviewingadjustingPlatformServicesP-A88B80EC.txt:39-45`). That is
+  why the debounced save above exists. `[ev: corpus B1462 §1462.2]` `[ev: corpus B402]`
+- **On a battery-less JACE the DataRecoveryService is the only thing between a change and the next save.** It
+  records changes in SRAM, flushes them to `dataRecovery/*.drdb`, replays them at boot and forces a station save
+  near its capacity (code: 75 %, `BDataRecoveryService.java:796`). It FAULTS when saves come too fast (code
+  default 3 saves in 15 min, `:228,231`): keep the debounce window well above 5 min on a controller, and never
+  save per change. `[ev: corpus B1410]` `[ev: corpus B1462 §1462.2]`
+- **Flag a high-churn, rebuildable slot Non-Critical (`Flags.NON_CRITICAL`, `N`, 4.10+), never a setpoint.**
+  `Flags.java:199,222`. The DataRecoveryService then skips it: "If running 'battery-less' and power is lost before
+  the station is saved, these values will be permanently lost" (`aOveviewSRAM_Recording.txt:21-31`). A computed
+  output that is also TRANSIENT needs no flag; a persisted slot that is rewritten every few seconds does.
+  `[ev: corpus B1462 §1462.2]`
+- **A timed operator override survives a restart and still ends on time — if it was saved.** `in8`, `in1`,
+  `fallback` and `overrideExpiration` persist; `in2`–`in7`, `in9`–`in16` are TRANSIENT (`BNumericWritable.java`).
+  At `started()` `WritableSupport` re-arms `auto` for the time left, or calls `auto()` at once when the expiry
+  passed while the station was down (`WritableSupport.java:101-115`). A module that writes a writable's input
+  from code writes a TRANSIENT level: it must write it again after every start. `[ev: corpus B1462 §1462.3]`
+
 ## Schema-safe evolution
 - **When a slot's shape MUST change and ADD-new-and-link is insufficient, use a `started()` self-migration:** (a) ADD the new typed slot; (b) in `started()` (or `atSteadyState()` if the station may carry saved data to migrate), detect the orphaned dynamic slot by name — `get(oldName) != null && getSlot(oldName).isDynamic()` — copy its value to the new slot, then remove the old slot; (c) leave the old slot deprecated-but-present for one release cycle until confirmed no station carries the old form. `BModule` is `final` with no `upgrade()` or `migrate()` callback; whole-station migration is the offline `migration-rt` tool (`BIFileMigrator` + converter SPIs) and is NOT available in-component. [ev: corpus B754 §754.3 · started-self-migration-recipe]
 
