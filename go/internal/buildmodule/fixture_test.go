@@ -53,7 +53,7 @@ func newFixture(t *testing.T) *fixture {
 	}
 	f.write(f.root+"/Foo/Foo-rt/src/com/x/BFoo.java", "")
 	f.write(f.root+"/Foo/Foo-ux/src/rc/foo.js", "")
-	f.mkdir(f.home + "/" + m2Repository + "/com/tridium/plugin/7.6.17")
+	f.mkdir(f.home + "/" + m2Repository + "/" + modulePluginDir + "/7.6.17")
 	f.mkdir(f.home + "/modules")
 	f.mkdir(d + "/j8")
 	f.write(d+"/mounts", "rootfs / ext4 rw 0 0\n")

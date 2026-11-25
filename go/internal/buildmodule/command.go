@@ -59,6 +59,7 @@ var steps = []func(*build) int{
 	(*build).resolveInputs,
 	(*build).extractBaselines,
 	(*build).warnSlowMounts,
+	(*build).pickMirrorPlugin,
 	(*build).preflight,
 	(*build).warnPluginNotInM2,
 	(*build).selectProfiles,

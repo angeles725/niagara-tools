@@ -302,6 +302,13 @@ In the inner loop run only what the tier needs (P0: build the touched group; P1:
 existing pure suite); the full builds and the non-skippable floor run once at task close — §5.
 `[ev: retro change-tier-time-budgets Δ3]`
 
+`run-pure-test.sh` compiles only the test and the pure sources it references, so a helper a refactor deleted from a Baja
+adapter passes it and fails only at gradle. Export `NIAGARA_HOME=<mirror>` and it also compiles every source under the
+part's `src/` with `javac -proc:none` against the jars of `<mirror>/modules` (exit 3 naming the file on an error, before
+the tests run); without it one NOTICE says the adapters were not compiled and the exit code is unchanged. Run it with
+`NIAGARA_HOME` set before each work-unit commit that touches an adapter. `[ev: code go/internal/puretest/adapters.go]`
+`[ev: retro client-e-dashboard-live-check Δ30]`
+
 | Task | Touches | When required |
 |------|---------|---------------|
 | `clean` | deletes `build/` outputs | always before a deploy build; exits 31 if station holds `modules/<jar>` lock — see station-lock recipe below `[ev: corpus B807]` |
@@ -1278,6 +1285,23 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   `ng-deploy.sh` is the other route (it also backs up and verifies). Nothing is printed for a real `niagara_home`, a
   marker with no source, or a build that did not pass. `[ev: code go/internal/buildmodule/mirror_source.go]`
   `[ev: retro deploy-target-version Δ2]`
+- **A mirror build cannot be installed — the warning comes first:** `build.sh` runs a mirror build with `user.home`
+  isolated to `<mirror>/.mirror-user-home`, so the signing plugin never sees your `~/.tridium` profile and signs with a
+  throwaway key it creates there. Every mirror build therefore opens (before gradle) with
+  `build.sh: WARN — mirror build: the jar is signed with the throwaway key of the mirror user home (…), not your signing profile, so it cannot be installed on a station.`
+  and names the route that works: the same gradle tasks (clean, slotomatic, jar, Java 8 toolchain) with
+  `-Pniagara_home=<mirror>` under your real `HOME`, which signs with your profile. A mirror build proves the module
+  compiles; it is not the jar to deploy. `[ev: code go/internal/buildmodule/signing_mirror.go]`
+  `[ev: retro client-e-dashboard-live-check Δ28]`
+- **A plugin pin the niagara_home does not ship is replaced, or refused naming both sides:** each install ships ONE
+  niagara-module plugin, and the module's own pin (`gradle.properties`, else the `settings.gradle.kts` default) may name
+  another. Without `--plugin-version`, when the pin is not under `<niagara_home>/etc/m2/repository`, `build.sh` (before
+  preflight, whose `plugin-pin` check would fail it) uses the one plugin version the home ships and says so
+  (`build.sh: NOTICE — niagaraPluginVersion=<pin> is not under <home>/etc/m2/repository; using <shipped>, …`); that
+  version is what preflight and gradle get. With several shipped versions, or none, it is exit 10 naming the pin and
+  the versions found: pass `--plugin-version` or point `niagara_home` at the installation the module is pinned for.
+  An explicit `--plugin-version`, a module with no pin and a pin the home ships are left as they are.
+  `[ev: code go/internal/buildmodule/plugin_mirror.go]` `[ev: retro client-e-dashboard-live-check Δ29]`
 - **One deploy at a time per modules directory — the run lock:** a run holds `.ng-deploy.lock` in
   `<NIAGARA_HOME>/modules`, then in `STATION_MODULES_DIR` when that is another directory and the run deploys, from
   before it looks at either until it has ended, however it ends (success, failure, SIGINT, SIGTERM). The file says

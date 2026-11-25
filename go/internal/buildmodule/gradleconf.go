@@ -43,6 +43,7 @@ func (b *build) configureGradle() int {
 			b.say(msgPluginDetected, b.plugin)
 		}
 	}
+	b.warnMirrorSigning()
 	b.gradleArgs = []string{"-Pniagara_home=" + b.home, "-Porg.gradle.java.installations.paths=" + b.java8}
 	if b.plugin != "" {
 		b.gradleArgs = append(b.gradleArgs, "-PniagaraPluginVersion="+b.plugin)

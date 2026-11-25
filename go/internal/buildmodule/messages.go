@@ -46,6 +46,10 @@ const (
 	msgPluginNotInM2 = "build.sh: WARN — gradlePluginVersion=%s not found under %s/etc/m2/repository\n" +
 		"  SDK/plugin mismatch: the module was pinned for a different Niagara installation.\n" +
 		"  If the build fails to resolve the niagara-module plugin, point niagara_home at the matching installation."
+	// msgPluginPicked and msgPluginAbsent take the pin, the niagara_home and the versions it ships (pickMirrorPlugin).
+	msgPluginPicked = "build.sh: NOTICE — niagaraPluginVersion=%s is not under %s/etc/m2/repository; using %s, the plugin version it ships"
+	msgPluginAbsent = "build.sh: niagaraPluginVersion=%s is not under %s/etc/m2/repository and it ships %s — pass --plugin-version, " +
+		"or point niagara_home at the installation the module is pinned for"
 	msgSkipScaffold   = "==> skipping %s-%s: scaffold without sources (pass --profiles to force)"
 	msgNoProfile      = "build.sh: no buildable profile under %[1]s/%[2]s/%[2]s-{rt,ux,wb}"
 	msgProfileMissing = "build.sh: profile dir missing: %s"
@@ -103,6 +107,9 @@ const (
 	// and the command that installs the jars built this run there (check the version, then copy).
 	msgMirrorSource = "==> mirror: %[1]s was made from %[2]s (Niagara %[3]s); the jars built this run were NOT installed in %[2]s/modules" +
 		" — to install them, stop the station and close Workbench of that installation, then run: %[4]s"
+	// msgMirrorSigning takes the mirror, twice (the user home sits in it, and -Pniagara_home points at it).
+	msgMirrorSigning = "build.sh: WARN — mirror build: the jar is signed with the throwaway key of the mirror user home (%[1]s/.mirror-user-home), not your signing profile, so it cannot be installed on a station.\n" +
+		"  This build proves the module compiles. For a deployable jar run the same gradle tasks (clean, slotomatic, jar, Java 8 toolchain) with -Pniagara_home=%[2]s under your real HOME."
 	msgMirrorRestored = "==> mirror: restored %[1]s/modules/%[2]s from %[3]s (vendorVersion %[4]s sha256:%[5]s)"
 )
 

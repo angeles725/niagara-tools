@@ -122,6 +122,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   # gradle.properties can lie about the target, but the pinned niagara plugin version is the module's own
   # config — build.sh must read it and forward -PniagaraPluginVersion WITHOUT requiring --plugin-version.
   printf 'niagaraPluginVersion=7.6.22\n' > "$ROOT/gradle.properties"
+  make_niagara_home "$TMPDIR_T/nh" 7.6.22                   # the home ships the pin (else it would pick the one it ships)
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"                       # NO --plugin-version
   [ "$status" -eq 0 ]
   [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"-PniagaraPluginVersion=7.6.22"* ]]   # detected, not empty
@@ -131,6 +132,33 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"-PniagaraPluginVersion=7.3.40"* ]]
   [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" != *"7.6.22"* ]]
+}
+
+@test "B8-pick (Δ29): a pin the home does not ship is replaced by the one plugin version it does, with a NOTICE naming both" {
+  # [ev: retro client-e-dashboard-live-check Δ29] setup's nh ships only 7.6.17. Mutation: drop the pick -> gradle gets 7.6.22.
+  printf 'niagaraPluginVersion=7.6.22\n' > "$ROOT/gradle.properties"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"NOTICE"*"niagaraPluginVersion=7.6.22 is not under"*"using 7.6.17"* ]]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"-PniagaraPluginVersion=7.6.17"* ]]
+}
+
+@test "B8-pick-several (Δ29): a pin the home does not ship, with several shipped, exits 10 naming the pin and the versions, before gradle" {
+  make_niagara_home "$TMPDIR_T/nh" 7.6.22
+  printf 'niagaraPluginVersion=7.3.40\n' > "$ROOT/gradle.properties"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"niagaraPluginVersion=7.3.40 is not under"* ]]
+  [[ "$output" == *"it ships 7.6.17, 7.6.22"* ]]
+  [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+}
+
+@test "B8-pick-override (Δ29): an explicit --plugin-version is never replaced by the pick" {
+  printf 'niagaraPluginVersion=7.6.22\n' > "$ROOT/gradle.properties"
+  run "$B" --plugin-version 7.3.40 "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"NOTICE — niagaraPluginVersion"* ]]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"-PniagaraPluginVersion=7.3.40"* ]]
 }
 
 @test "B9 (lesson B7, dashboardpan-ux-direct-build): walk UP to the gradle root when ROOT has no ./gradlew (nested multi-project)" {
@@ -821,6 +849,28 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"*"throwaway dev key"* ]]
   [[ "$output" == *"signing-root.gradle.kts"* ]]
+}
+
+@test "BS-mirror-signing-upfront: every mirror build warns before gradle that its jar is throwaway-signed and cannot be installed, and names the route that works" {
+  # [ev: retro client-e-dashboard-live-check Δ28] Mutation: drop the up-front warning -> silent until a profile appears.
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"mirror build"*"throwaway key"* ]]
+  [[ "$output" == *"cannot be installed"* ]]
+  [[ "$output" == *"-Pniagara_home=$TMPDIR_T/nh"*"real HOME"* ]]
+  # a root with the signing block gets it too: the isolated user.home hides the real profile either way
+  printf 'signingServices {\n  signingProfileFactory {\n    allowDefaultProfile.set(false)\n  }\n}\n' > "$ROOT/build.gradle.kts"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [[ "$output" == *"cannot be installed"* ]]
+}
+
+@test "BS-mirror-signing-upfront-control: a real (marker-less) niagara_home gets no throwaway-key warning" {
+  _env_gradlew
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"throwaway key"* ]]
 }
 
 @test "BS-mirror-devkey-control: no profile created during the build -> no dev-key WARN" {

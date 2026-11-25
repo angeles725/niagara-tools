@@ -14,6 +14,7 @@ setup_file() {
 }
 
 setup() {
+  unset NIAGARA_HOME # hermetic: AD1-AD4 set it per run; an exported one would compile adapters in every case
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   RUN="$KIT/toolbelt/run-pure-test.sh"
   # Skip locally (don't fake a pass) when JUnit isn't fetched; fail in CI so a missing
@@ -230,4 +231,53 @@ JAVA
   run "$RUN" "$RT" com.example.demo.StaticHeadersTest
   [ "$status" -eq 1 ]
   [[ "$output" == *"expected:<[Origin]> but was:<[Accept-Encoding]>"* ]]
+}
+
+# ===========================================================================
+# Δ30 [ev: retro client-e-dashboard-live-check]: the Baja adapters beside the pure core are compiled against the
+# jars of $NIAGARA_HOME/modules, so a helper a refactor deleted fails here, not only at gradle.
+# ---------------------------------------------------------------------------
+make_adapter_home() {
+  mkdir -p "$BATS_TEST_TMPDIR/stub/javax/baja" "$BATS_TEST_TMPDIR/stubout" "$BATS_TEST_TMPDIR/mirror/modules"
+  printf 'package javax.baja;\npublic class Stub { public static int id(int v) { return v; } }\n' > "$BATS_TEST_TMPDIR/stub/javax/baja/Stub.java"
+  javac -d "$BATS_TEST_TMPDIR/stubout" "$BATS_TEST_TMPDIR/stub/javax/baja/Stub.java"
+  jar cf "$BATS_TEST_TMPDIR/mirror/modules/baja.jar" -C "$BATS_TEST_TMPDIR/stubout" .
+}
+
+# an adapter calling Adder.<helper>() next to a passing pure test
+make_adapter() {
+  make_test "Adder.add(2,2) == 4"
+  printf 'package com.example.demo;\npublic class BThing { int v() { return javax.baja.Stub.id(Adder.%s(1, 2)); } }\n' "$1" > "$RT/src/$PKG/BThing.java"
+}
+
+@test "AD1: with NIAGARA_HOME an adapter calling a deleted helper exits 3 naming the file, though the pure test passes" {
+  make_adapter_home; make_adapter precision
+  NIAGARA_HOME="$BATS_TEST_TMPDIR/mirror" run "$RUN" "$RT" com.example.demo.AdderTest
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"adapter sources do not compile"*"BThing.java"* ]]
+  [[ "$output" != *"OK (1 test)"* ]]
+}
+
+@test "AD2: with NIAGARA_HOME an adapter that compiles leaves the run exit 0" {
+  make_adapter_home; make_adapter add
+  NIAGARA_HOME="$BATS_TEST_TMPDIR/mirror" run "$RUN" "$RT" com.example.demo.AdderTest
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"OK (1 test)"* ]]
+  [[ "$output" != *"NOTICE the Baja adapters"* ]]
+}
+
+@test "AD3: without NIAGARA_HOME a NOTICE says the adapters were not compiled and the exit is unchanged" {
+  make_adapter_home; make_adapter precision
+  run env -u NIAGARA_HOME "$RUN" "$RT" com.example.demo.AdderTest
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"NOTICE the Baja adapters under src/ were not compiled (NIAGARA_HOME is not set)"* ]]
+  [[ "$output" == *"OK (1 test)"* ]]
+}
+
+@test "AD4: a NIAGARA_HOME with no jar in modules/ exits 3 before anything compiles" {
+  make_test "Adder.add(2,2) == 4"
+  mkdir -p "$BATS_TEST_TMPDIR/emptymirror/modules"
+  NIAGARA_HOME="$BATS_TEST_TMPDIR/emptymirror" run "$RUN" "$RT" com.example.demo.AdderTest
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"has no modules/*.jar"* ]]
 }
