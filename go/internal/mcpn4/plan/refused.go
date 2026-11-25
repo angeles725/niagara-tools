@@ -22,17 +22,26 @@ func (e *Refused) PyType() string { return "ToolError" }
 
 // refused is the Refused error of a batch whose first op failed with why, once its refused
 // result record is journaled. It is nil, and the batch stays in-doubt, unless why is the
-// station's own error reply (not a transport or protocol failure), the tool can read back its
-// targets (Impl.Unapplied), that read-back succeeds and shows nothing applied, and the record
+// station's own error reply (not a transport or protocol failure) and either its text is one the
+// station throws before it applies anything (statesRefusal), or the tool can read back its
+// targets (Impl.Unapplied) and that read-back succeeds and shows nothing applied; and the record
 // is written.
 func (e *Engine) refused(c Client, impl Impl, args *pyjson.Object, planned *Planned, batchID string, why error) *Refused {
 	var be *box.Error
-	if !errors.As(why, &be) || !be.Station || impl.Unapplied == nil {
+	if !errors.As(why, &be) || !be.Station {
 		return nil
 	}
-	none, err := jsonrpc.Recover(func() (bool, error) { return impl.Unapplied(c, args, planned) })
-	if err != nil || !none {
-		return nil
+	reply := refusedReply
+	if len(planned.Ops) > 0 && statesRefusal(planned.Ops[0], be.Msg) {
+		reply = statedReply
+	} else {
+		if impl.Unapplied == nil {
+			return nil
+		}
+		none, err := jsonrpc.Recover(func() (bool, error) { return impl.Unapplied(c, args, planned) })
+		if err != nil || !none {
+			return nil
+		}
 	}
 	text := e.Ctx.Scrub(be.Msg)
 	result := obj("batch_id", batchID, "ts", session.Now(), "phase", "result", "accepted", nil,
@@ -40,5 +49,5 @@ func (e *Engine) refused(c Client, impl Impl, args *pyjson.Object, planned *Plan
 	if e.State.Journal.Append(result) != nil {
 		return nil // no record: the intent alone leaves the batch in-doubt, and the reply says so
 	}
-	return &Refused{BatchID: batchID, Msg: fmt.Sprintf(refusedReply, batchID, text)}
+	return &Refused{BatchID: batchID, Msg: fmt.Sprintf(reply, batchID, text)}
 }
