@@ -71,6 +71,8 @@ func removeHistoryReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, 
 	switch {
 	case !known:
 		verdict = "unverified"
+	case exists && get(args, "allow_enabled_extension") == true:
+		verdict = "unverified" // the enabled extension may have started a new, empty history already
 	case exists:
 		verdict = "mismatch"
 	}
@@ -88,8 +90,8 @@ func removeHistoryUnapplied(c plan.Client, _ *pyjson.Object, p *plan.Planned) (b
 	if !ok {
 		return false, nil
 	}
-	exists, _, _, err := readHistoryCount(r, p.Data.(string))
-	return exists, err
+	exists, _, _, known, err := readHistoryState(r, p.Data.(string))
+	return known && exists, err // a read that answers neither way proves nothing was left unapplied
 }
 
 // historyNotFound is the station's 404 for a history: an ORD read maps it to a BOX error whose text

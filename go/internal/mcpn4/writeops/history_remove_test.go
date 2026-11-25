@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
@@ -148,5 +149,25 @@ func TestRemoveHistoryIsUnverifiedWhenTheReadBackFailsOtherThanNotFound(t *testi
 	_, out := removeBoth(t, histRig(t, db), "history_id", hTemp, ack, true)
 	if get(out, "verdict") != "unverified" || !strings.Contains(pyjson.Repr(get(out, "observed")), "'exists': None") {
 		t.Errorf("reply %s", pyjson.Repr(out))
+	}
+}
+
+// A delete the station refuses is unapplied only when the history still reads; a re-read that
+// answers neither way leaves the batch in doubt, never "nothing applied".
+func TestRemoveHistoryRefusedCallIsUnappliedOnlyWhenTheHistoryStillReads(t *testing.T) {
+	for name, c := range map[string]struct {
+		errAfter bool
+		want     string
+	}{"history still reads": {false, "refused"}, "re-read fails": {true, "in-doubt"}} {
+		db := newHistoryDB()
+		db.callErr = &box.Error{Kind: box.KindBox, Msg: "station error", Station: true}
+		db.errAfter = c.errAfter
+		r := histRig(t, db)
+		_, _, dry := remove(t, r, "history_id", hTemp, ack, true)
+		tok := get(dry, "confirmation_token")
+		text, isErr, _ := remove(t, r, "history_id", hTemp, ack, true, "dry_run", false, "confirmation_token", tok)
+		if !isErr || !strings.Contains(text, c.want) {
+			t.Errorf("%s: reply lacks %q: %s", name, c.want, text)
+		}
 	}
 }

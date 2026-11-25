@@ -27,6 +27,7 @@ type historyDB struct {
 	noDelete    bool // deleteHistories leaves the history
 	cutExts     bool // the extension read hit its byte cap
 	errAfter    bool // after the delete call, a count read answers HTTP 500
+	callErr     error
 	ords, calls []string
 }
 
@@ -55,6 +56,9 @@ func (d *historyDB) GetOrd(ord string, _ float64, _ int) (string, bool, error) {
 
 func (d *historyDB) Call(channel, key string, body any) (any, error) {
 	d.calls = append(d.calls, channel+" "+key+" "+pyjson.Repr(body))
+	if d.callErr != nil {
+		return nil, d.callErr
+	}
 	for _, o := range body.([]any) {
 		if !d.noDelete {
 			delete(d.records, strings.TrimPrefix(o.(string), "history:"))
