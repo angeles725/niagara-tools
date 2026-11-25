@@ -50,8 +50,8 @@ func (r *haRun) flatCheck(exts []histExt) {
 	results := make([]flatResult, len(todo))
 	r.beginPool()
 	errs := runPool(len(todo), func(i int) {
+		defer func() { r.finished("flat", len(todo), results[i].reads) }() // counted even when the read panics
 		results[i] = r.flatItem(todo[i], start)
-		r.finished("flat", len(todo), results[i].reads)
 	})
 	for i, err := range errs {
 		if err != nil {
