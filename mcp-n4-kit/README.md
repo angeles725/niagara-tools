@@ -1323,8 +1323,15 @@ Tool rules:
   `has_errors` false with an `IllegalArgumentException` in the log means the cause is only in the station log
   (logger `honeywellSpyderTool`). A job whose log shows none of this gets no `cause`.
   `compile` (Spyder only, no `arg`) rebuilds the compiled program (a CompilationJob; nothing
-  reaches the controller) with the same read-back. A Spyder's program is a `ControlProgram`
-  the station loads on demand and unloads later. Renaming an input point does not rename its
+  reaches the controller) with the same read-back.
+  `loadControlProgram` (Spyder only, no `arg`) loads the Spyder's `ControlProgram` (a LoadJob), which
+  the station unloads on its own; a path below it fails with only the path until it is loaded
+  again. No inverse; the station can refuse with `HeapLimitReached` (heap past its configured
+  limit); an already loaded program returns no job. The read-back waits for the job when there is
+  one and reports `logic_loaded` and `control_program`: `verified` when loaded, `mismatch` when
+  the job failed or ended without the program, `unverified` when it is still running.
+  A Spyder's program is a `ControlProgram` the station loads on demand (run `loadControlProgram`)
+  and unloads later. Renaming an input point does not rename its
   BACnet object: set the object's `objectName` (`.../BacnetNIFolder/<slot>`), leave the
   `BacnetNIFolder` slot name as it is (renaming that slot made the compiler fail live), then
   `compile` and `spyderDownload`: an `objectName` edit does not mark the program modified, so
