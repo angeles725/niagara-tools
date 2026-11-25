@@ -69,9 +69,9 @@ func TestListTemplatesReportsAnInstanceWithItsInfoAndBothConfigs(t *testing.T) {
 	e := ltEntry(t, out, "Ahu1")
 	got := jsonOf(t, map[string]any{"name": e["template_name"], "vendor": e["vendor"], "version": e["version"],
 		"inputs": e["inputs"], "outputs": e["outputs"], "relations": e["relations"],
-		"default_passwords": e["default_passwords"], "signature": e["signature"]})
+		"default_passwords": e["default_passwords"], "signature": e["signature"], "drift": e["drift"]})
 	want := `{"name":"Ahu","vendor":"Acme","version":"1.2","inputs":4,"outputs":2,"relations":1,` +
-		`"default_passwords":2,"signature":{"template":"abc123","local":"abc123","modified":false}}`
+		`"default_passwords":2,"signature":{"template":"abc123","local":"abc123","modified":false},"drift":false}`
 	if got != canon(t, want) {
 		t.Errorf("Ahu1 =\n%s\nwant\n%s", got, want)
 	}
@@ -107,7 +107,7 @@ func TestListTemplatesFlagsAModifiedSignatureAndLeavesNoPasswordFlagOff(t *testi
 	r, _ := ltRig(t)
 	e := ltEntry(t, r.Srv.OK("n4_list_templates", Args{}), "Ahu2")
 	sig := e["signature"].(map[string]any)
-	if sig["modified"] != true || e["has_default_passwords"] != false || e["default_passwords"] != float64(0) {
+	if sig["modified"] != true || e["drift"] != true || e["has_default_passwords"] != false || e["default_passwords"] != float64(0) {
 		t.Errorf("Ahu2 signature %v passwords %v/%v", sig, e["has_default_passwords"], e["default_passwords"])
 	}
 }
@@ -144,7 +144,8 @@ func TestListTemplatesWithoutTemplateInfoLeavesItsFieldsNullWithANote(t *testing
 	routeOrds(sv, boxstation.OrdRoute{Needle: "template:TemplateConfig", Body: []byte(ltConfigList)})
 	out := r.Srv.OK("n4_list_templates", Args{})
 	e := ltEntry(t, out, "Ahu1")
-	if e["vendor"] != nil || e["version"] != nil || e["inputs"] != nil || e["signature"] != nil ||
+	if _, has := e["drift"]; !has || e["drift"] != nil || e["vendor"] != nil || e["version"] != nil ||
+		e["inputs"] != nil || e["signature"] != nil ||
 		e["has_default_passwords"] != nil || len(objects(e["configs"])) != 2 {
 		t.Errorf("Ahu1 without info = %s", jsonOf(t, e))
 	}
@@ -189,5 +190,46 @@ func TestListTemplatesRefusesABaseThatIsNotASlotORD(t *testing.T) {
 	r, _ := ltRig(t)
 	if msg := r.Srv.Err("n4_list_templates", Args{"base": "h:5"}); !strings.Contains(msg, "base must be") {
 		t.Errorf("error = %s", msg)
+	}
+}
+
+// The station refreshes localSignature only when its updateSignatures action runs, so the reply
+// says so once (in notes), and never invokes the action.
+func TestListTemplatesNotesThatLocalSignatureIsOnlyRefreshedByUpdateSignatures(t *testing.T) {
+	r, sv := ltRig(t)
+	out := r.Srv.OK("n4_list_templates", Args{})
+	notes := jsonOf(t, out["notes"])
+	if strings.Count(notes, "updateSignatures") != 1 || !strings.Contains(notes, "localSignature") {
+		t.Errorf("notes = %s, want one note naming updateSignatures and localSignature", notes)
+	}
+	for _, q := range ordRequests(sv) {
+		if strings.Contains(q, "updateSignatures") {
+			t.Errorf("the tool invoked updateSignatures: %s", q)
+		}
+	}
+}
+
+// A localSignature the station has not computed (empty) is unknown, not a difference: drift and
+// signature.modified are null with a note, and the instance is not counted as modified. The
+// same holds when the template's own signature is empty.
+func TestListTemplatesLeavesDriftNullWhenASignatureIsUnknown(t *testing.T) {
+	r, sv := servletRig(t, nil)
+	h1 := ltInstance(r, "Ahu1", [][2]string{{"setpoint", "21.5"}})
+	h2 := ltInstance(r, "Ahu2", [][2]string{{"setpoint", "19.0"}})
+	info := ltInfoHeader +
+		"station:|h:" + h1 + ",Ahu,Acme,1.2,4,2,1,2,abc123,\n" +
+		"station:|h:" + h2 + ",Ahu,Acme,1.1,4,2,0,0,,ffff00\n"
+	routeOrds(sv, boxstation.OrdRoute{Needle: "template:TemplateInfo", Body: []byte(info)},
+		boxstation.OrdRoute{Needle: "template:TemplateConfig", Body: []byte(ltConfigList)})
+	out := r.Srv.OK("n4_list_templates", Args{})
+	for name, why := range map[string]string{"Ahu1": "localSignature is empty", "Ahu2": "ntplSignature is empty"} {
+		e := ltEntry(t, out, name)
+		sig := e["signature"].(map[string]any)
+		if v, has := e["drift"]; !has || v != nil || sig["modified"] != nil || !strings.Contains(jsonOf(t, e["notes"]), why) {
+			t.Errorf("%s: drift %v signature %v notes %s, want null, null and %q", name, e["drift"], sig, jsonOf(t, e["notes"]), why)
+		}
+	}
+	if got := jsonOf(t, out["counts"]); !strings.Contains(got, `"signature_modified":0`) {
+		t.Errorf("counts = %s, want signature_modified 0", got)
 	}
 }
