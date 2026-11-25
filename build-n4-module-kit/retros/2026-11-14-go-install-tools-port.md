@@ -42,4 +42,4 @@ empty `$HOME`); the port refuses there. None of the five is sourced by anything,
 - A differential pins its base by commit sha: the shared `origin/main` ref moves when a peer fetches.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-14-go-install-tools-port.md | kit | 2026-11-14 | pending | 4 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-14-go-install-tools-port.md | kit | 2026-11-14 | folded | 4 |`

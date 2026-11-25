@@ -43,4 +43,4 @@ previous jars as an option.
 - An old retro that says "rollback = previous jar" is a live hazard until it points to the corrected doctrine.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | folded | 4 |`

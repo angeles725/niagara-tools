@@ -44,4 +44,4 @@ client denylist that cannot be examined now refuses); four gaps stay open.
   that lacks it.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-14-go-pre-push-port.md | kit | 2026-11-14 | pending | 4 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-14-go-pre-push-port.md | kit | 2026-11-14 | folded | 4 |`

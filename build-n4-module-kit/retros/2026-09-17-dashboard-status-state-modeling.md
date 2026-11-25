@@ -47,4 +47,4 @@ health badge. Also fixed a lexicon mojibake (accents). All rebuilt green and ver
 - The source (demo/live) toggle belongs as an rt config slot, not a browser control on a nav-hidden page (operator's point; open follow-up).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-17-dashboard-status-state-modeling.md | UmbrellaDashboard | 2026-09-17 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-17-dashboard-status-state-modeling.md | UmbrellaDashboard | 2026-09-17 | folded | 4 |`

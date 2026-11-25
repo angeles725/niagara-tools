@@ -317,3 +317,30 @@ _alias_fixture() {
   [ "$status" -eq 0 ]
   [ "$output" -eq 1 ]
 }
+
+@test "F25: a retro whose header says folded but whose body Status says PENDING is a WARN at its line, counted, and fails --strict" {
+  # Mutation: F25 -- dropping the body-Status check from the folded-row audit lets the drift pass (exit 0, no WARN).
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros" "$D/ledger.d"
+  printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n| 2026-10-22-drifted-status.md | kit | 2026-10-22 | folded | 0 |\n' > "$D/retros/INDEX.md"
+  printf '<!-- review-status: folded -->\n<!-- module: kit -->\n<!-- deltas: 0 -->\n# t\n\n---\n**Status**: PENDING — INDEX row appended: | x |\n' > "$D/retros/2026-10-22-drifted-status.md"
+  printf '<!-- ledger: kit -->\nlog: [ev: retro drifted-status]\n' > "$D/ledger.d/a.md"
+  run "$SCRIPT" "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"fold-audit: WARN 2026-10-22-drifted-status.md:7 header says folded but body Status says PENDING: make it \`**Status**: FOLDED …\`"* ]]
+  [[ "$output" == *"fold-audit: status drift: 1 retros (header folded, body Status PENDING)"* ]]
+  run "$SCRIPT" --strict "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 1 ]
+}
+
+@test "F26: a folded retro whose body Status says FOLDED, and a pending retro with a PENDING body, are not reported" {
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros" "$D/ledger.d"
+  printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n| 2026-10-22-agrees-folded.md | kit | 2026-10-22 | folded | 0 |\n| 2026-10-22-still-pending.md | kit | 2026-10-22 | pending | 0 |\n' > "$D/retros/INDEX.md"
+  printf '<!-- review-status: folded -->\n# t\n**Status**: FOLDED 2026-10-22 (branch x)\n' > "$D/retros/2026-10-22-agrees-folded.md"
+  printf '<!-- review-status: pending -->\n# t\n**Status**: PENDING — proposed\n' > "$D/retros/2026-10-22-still-pending.md"
+  printf '<!-- ledger: kit -->\nlog: [ev: retro agrees-folded]\n' > "$D/ledger.d/a.md"
+  run "$SCRIPT" --strict "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 0 ]
+  [ "$output" = "fold-audit: 1 folded, 1 cited, 0 uncited" ]
+}

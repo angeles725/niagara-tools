@@ -36,4 +36,4 @@ The per-evap rearchitect passed the WHOLE kit gate — build 52 + signed, 64 pur
 - **The kit must be the watchdog, not the operator.** This session only worked because the human directed each check. Config-sanity + commissioning-verify + a shipped wiring map move that vigilance into the kit so the next module surfaces its own defects.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-live-commissioning-verification-gaps.md | kit | 2026-09-07 | pending | 7 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-live-commissioning-verification-gaps.md | kit | 2026-09-07 | folded | 7 |`

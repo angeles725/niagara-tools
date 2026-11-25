@@ -54,4 +54,4 @@ byte-identical on purpose, because a port that also changes behaviour cannot be 
   second caller appears.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-14-go-build-module-port.md | kit | 2026-11-14 | pending | 6 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-14-go-build-module-port.md | kit | 2026-11-14 | folded | 6 |`

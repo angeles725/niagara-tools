@@ -95,4 +95,4 @@ schedule integration (B874), driver threading (B872/B909). Driver wire-protocol 
   retros are complementary, not redundant.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-module-mechanics-deltas.md | kit | 2026-09-18 | pending | 7 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-module-mechanics-deltas.md | kit | 2026-09-18 | folded | 7 |`

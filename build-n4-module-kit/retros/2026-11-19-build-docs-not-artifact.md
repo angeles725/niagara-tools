@@ -42,4 +42,4 @@ the same version then read as drift (exit 51) and needed `--no-drift-check`.
   compares against a jar that never shipped.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-19-build-docs-not-artifact.md | kit | 2026-11-19 | pending | 2 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-19-build-docs-not-artifact.md | kit | 2026-11-19 | folded | 2 |`

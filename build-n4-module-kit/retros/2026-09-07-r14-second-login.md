@@ -26,4 +26,4 @@ Model: login 1 = shared station session to VIEW; login 2 = an individual local N
 - Binding to the existing JSESSIONID removes a session-fixation/CSRF surface a custom cookie would add.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-r14-second-login.md | DashboardPan | 2026-09-07 | pending | 2 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-r14-second-login.md | DashboardPan | 2026-09-07 | folded | 2 |`

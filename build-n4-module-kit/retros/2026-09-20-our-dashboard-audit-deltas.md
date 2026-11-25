@@ -34,4 +34,4 @@ Audited DashboardPan across four dimensions: (ODA1) coverage gate + structural m
 - The `_trimAuditRing` no-test gap shows the pattern: a "testable by design" comment is only valuable when a test actually exists. Propose a lint rule that cross-checks `srcTest` for each pure-static helper that carries such a comment.
 
 ---
-**Status**: PENDING — 5 proposed deltas; full detail in corpus B1062–B1065.
+**Status**: FOLDED — 5 proposed deltas; full detail in corpus B1062–B1065.

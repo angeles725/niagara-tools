@@ -144,4 +144,4 @@ command gives another result or exit code for an input it accepted before.
 - A deploy that cannot be repeated unchanged teaches the author to bump versions for nothing or to skip the check.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-15-build-kit-bench-session.md | kit | 2026-11-15 | pending | 21 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-15-build-kit-bench-session.md | kit | 2026-11-15 | folded | 21 |`

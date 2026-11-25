@@ -43,4 +43,4 @@ introducing regressions; these deltas apply to NEW modules only.
 - Working deployed modules are not refactored for structure; structure rules apply to new builds.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-28-decision-logic-decomposition.md | kit | 2026-09-28 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-28-decision-logic-decomposition.md | kit | 2026-09-28 | folded | 3 |`

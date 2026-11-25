@@ -27,4 +27,4 @@ The client kept Fase 1 but wanted rack pressure staging expressed as two INDEPEN
 - Keeping `decideCall`/`step` pure let the asymmetric behaviour be proven in plain JUnit, no station.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-two-differential-fase2.md | CompPan | 2026-09-07 | pending | 2 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-two-differential-fase2.md | CompPan | 2026-09-07 | folded | 2 |`

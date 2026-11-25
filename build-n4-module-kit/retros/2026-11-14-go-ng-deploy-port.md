@@ -63,4 +63,4 @@ bash tool that were kept byte-identical; the deltas below group them.
 - A script kept sourceable for its tests keeps shell logic alive; port the tests with the tool.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-11-14-go-ng-deploy-port.md | kit | 2026-11-14 | pending | 13 |`
+**Status**: FOLDED — INDEX row generated from the header: `| 2026-11-14-go-ng-deploy-port.md | kit | 2026-11-14 | folded | 13 |`

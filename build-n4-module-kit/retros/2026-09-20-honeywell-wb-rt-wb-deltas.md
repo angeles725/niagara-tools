@@ -42,4 +42,4 @@ Surveyed 6 Honeywell WB module families and classified them into 3 tiers (manage
 - These pair with the wb-vendor-ux deltas (PD-01..PD-25) — same RT↔WB vocabulary, Honeywell-specific refinements.
 
 ---
-**Status**: PENDING — 8 folded of 20 recorded; full set + 5 anti-patterns in corpus B1083.
+**Status**: FOLDED — 8 folded of 20 recorded; full set + 5 anti-patterns in corpus B1083.

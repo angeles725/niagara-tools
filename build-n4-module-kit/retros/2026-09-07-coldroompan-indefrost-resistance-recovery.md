@@ -29,4 +29,4 @@ A `BEvaporatorUnit` can be left with `inDefrost == true` stranded (config change
 - **`forceDefrost` is a live workaround, not the fix.** The module must self-recover so no operator vigilance is required. Ties to kit retro `live-commissioning-verification-gaps` Δ5.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-07-coldroompan-indefrost-resistance-recovery.md | ColdRoomPan | 2026-09-07 | pending | 2 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-07-coldroompan-indefrost-resistance-recovery.md | ColdRoomPan | 2026-09-07 | folded | 2 |`

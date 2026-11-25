@@ -32,4 +32,4 @@ Kit-relevant angle: our modules mostly don't need custom field editors (rung-0/1
 - Remittances confirmed: `BFlexAddressFE` compound editor (B1074) is the advanced variant of the Δ3 recipe; `BWbComponentView` (B1057/B1058/B1070) is the "view" twin, used when you need a full panel rather than a field-editor widget.
 
 ---
-**Status**: PENDING — 3 proposed deltas; full detail in corpus B1084–B1087.
+**Status**: FOLDED — 3 proposed deltas; full detail in corpus B1084–B1087.

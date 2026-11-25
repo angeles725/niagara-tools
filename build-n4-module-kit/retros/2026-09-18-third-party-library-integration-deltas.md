@@ -125,4 +125,4 @@ guidance for the 19-library candidate list, and no build-verify.md pointer.
 
 ---
 
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-third-party-library-integration-deltas.md | kit | 2026-09-18 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-third-party-library-integration-deltas.md | kit | 2026-09-18 | folded | 3 |`

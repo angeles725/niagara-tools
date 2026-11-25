@@ -45,4 +45,4 @@ on the branch (RL1–RL6 at commit 452a840; RL7 added after lead review 1; RL8/R
 - Section-scoped BUILD-STATE edit requires the same delimiters as sweep-build-state.sh (`<!-- build-state.v1 -->` / `<!-- /build-state.v1 -->`); a global sed that ignores section boundaries is a live operational defect, not a cosmetic deviation — it falsely signals pending retros for modules that owe none.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign8-retro-loop.md | kit | 2026-09-06 | pending | 5 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-06-campaign8-retro-loop.md | kit | 2026-09-06 | folded | 5 |`

@@ -172,4 +172,4 @@ later, because nothing aggregates them across sessions per client.
   before starting the 22nd.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-26-panccadia-version-defect-ledger.md | kit | 2026-09-26 | pending | 4 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-26-panccadia-version-defect-ledger.md | kit | 2026-09-26 | folded | 4 |`

@@ -136,4 +136,4 @@ Eight net-new deltas remain from the vein.
   asymmetry was a minor oversight.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-factory-composition-new-types-deltas.md | kit | 2026-09-18 | pending | 8 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-factory-composition-new-types-deltas.md | kit | 2026-09-18 | folded | 8 |`

@@ -42,4 +42,4 @@ Campaign 9 (wave 3) produced four concrete doctrine gaps that the wave's impleme
 - Companion-flag false positive (S21, kit #89): a `started()` clear should satisfy the companion-flag contract; the current lint may fire on a `started()`-only clear that is semantically correct — investigate before C10 lands.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign9-doctrine-fold.md | kit | 2026-09-06 | pending | 7 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-06-campaign9-doctrine-fold.md | kit | 2026-09-06 | folded | 7 |`

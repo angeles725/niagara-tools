@@ -67,4 +67,4 @@ METHODOLOGY.md. Five distinct, non-duplicate deltas found.
   miss in testing where the developer always has full access.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-18-palette-lexicon-assets-images-deltas.md | kit | 2026-09-18 | pending | 5 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-18-palette-lexicon-assets-images-deltas.md | kit | 2026-09-18 | folded | 5 |`

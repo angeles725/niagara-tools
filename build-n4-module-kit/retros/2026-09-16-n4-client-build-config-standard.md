@@ -35,4 +35,4 @@ build). Aligning Umbrella to the standard and rebuilding proved the change is WS
 - Compresores (logic-only, no `-ux`) can leave node/JDK commented; a dashboard/ux module should pin them like DashboardPan/Paccadia.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-16-n4-client-build-config-standard.md | kit | 2026-09-16 | pending | 3 |`
+**Status**: FOLDED — INDEX row appended: `| 2026-09-16-n4-client-build-config-standard.md | kit | 2026-09-16 | folded | 3 |`
