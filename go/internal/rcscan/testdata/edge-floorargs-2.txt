@@ -29,6 +29,7 @@ FAIL  rc-scan  rc/c.html:17  browser-floor: min() above the Chromium 83 panel fl
 FAIL  rc-scan  rc/c.html:20  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
 FAIL  rc-scan  rc/c.html:22  browser-floor: gap in a non-grid (flex) rule is above the Chromium 83 panel floor (flex gap = C84)
 FAIL  rc-scan  rc/c.html:27  browser-floor: .at() above the Chromium 83 panel floor
+WARN  rc-scan  rc/c.html: responsive: no <meta name="viewport" content="width=device-width"> in the HTML entry page -- a phone renders it at desktop width (types/frontend-standard.md § Enforcement)
 -- stderr --
 -- rc/a.css (noeol) --
 .a { inset: 0; }
