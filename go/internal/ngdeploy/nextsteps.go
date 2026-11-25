@@ -10,13 +10,13 @@ import (
 // nextStep is one closing line of a deploy that went through.
 type nextStep struct {
 	java bool   // only for a mode that deploys Java classes (the -rt jar): the station must restart
-	text string // {jars}, {dir}, {paths}, {backup}, {signers}, {module}, {triage}, and {lab} are filled in (closingValues)
+	text string // {jars}, {done}, {dir}, {doneTail}, {paths}, {backup}, {signers}, {module}, {triage}, and {lab} are filled in (closingValues)
 }
 
 // nextSteps are the closing lines, in order: the one table of what the author does after a deploy. They
 // are printed only by a deploy that went through (exit 0), after the restart or reload line.
 var nextSteps = []nextStep{
-	{text: "done: {jars} copied to {dir}"},
+	{text: "done: {jars} {done} {dir}{doneTail}"},
 	{text: "signer: {signers}; the gate checks who signed a jar, not whether the station trusts that signer: the station decides when it loads the module"},
 	{java: true, text: "next: restart the station; ng-deploy did not look at whether one is running, and stops or starts none"},
 	{java: true, text: "next: stop it with: {lab} stop --home <NIAGARA_HOME> <station>; start it with: {lab} start --home <NIAGARA_HOME> <station> (lab-station stops only a station it started; a Windows service or station.exe is stopped and started there)"},
@@ -32,6 +32,11 @@ const (
 	signerJoin     = " and "
 	triageToolPath = "/../build-n4-module-kit/toolbelt/triage-console.sh"
 	labToolPath    = "/../build-n4-module-kit/toolbelt/lab-station.sh"
+	// doneCopied and doneSame are how the done line says the jars reached the station directory: copied, or
+	// in the same-directory mode installed there by the build and only verified (#993 D11).
+	doneCopied   = "copied to"
+	doneSame     = "installed by the build in"
+	doneSameTail = " and verified there (nothing to copy)"
 	// undoBackup ends the undo line of a run that wrote a backup archive.
 	undoBackup = " (for the version before this one, restore the backup this run wrote: --help, Backups)"
 )
@@ -66,7 +71,11 @@ func (d *deploy) closingValues() *strings.Replacer {
 	if d.backedUp {
 		backup = undoBackup
 	}
-	return strings.NewReplacer("{backup}", backup,
+	done, doneTail := doneCopied, ""
+	if d.sameDir {
+		done, doneTail = doneSame, doneSameTail
+	}
+	return strings.NewReplacer("{backup}", backup, "{done}", done, "{doneTail}", doneTail,
 		"{jars}", strings.Join(names, " "), "{dir}", d.station, "{paths}", strings.Join(paths, " "),
 		"{signers}", strings.Join(signers, ", "), "{module}", d.module, "{triage}", d.scriptDir+triageToolPath,
 		"{lab}", d.scriptDir+labToolPath)
