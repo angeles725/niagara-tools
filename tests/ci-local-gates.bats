@@ -193,3 +193,30 @@ gate_probe() {
   [[ "$output" == *"WARN probe gate (exit 127: the size was not measured)"* ]]
   [[ "$output" == *"failed=0"* ]]
 }
+
+@test "CG11: a changed tests/*.bats or tests/lib file runs shell-hygiene.bats as a hard gate; any other change does not (issue #1052)" {
+  # Mutation: CG11 -- dropping the shell-hygiene gate from gates.go lets a bats change break SH1 in CI only.
+  printf '#!/usr/bin/env bats\n@test "x" { :; }\n' > "$R/tests/cg11-new.bats"
+  cd "$R"
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"== bats tests/shell-hygiene.bats"* ]]
+  [[ "$output" == *"PASS bats tests/shell-hygiene.bats"* ]]
+  [[ "$output" == *"ci-local: --changed: 0 check(s) failed"* ]]
+  # a failing shell-hygiene.bats (committed to the base, so only the lib file counts as changed) fails the run
+  printf '#!/usr/bin/env bats\n@test "SH-stub" { false; }\n' > tests/shell-hygiene.bats
+  git add -A
+  git commit -q -m "failing stub"
+  git update-ref refs/remotes/origin/main HEAD
+  printf '# changed\n' >> tests/lib/client-root.bash
+  run bash scripts/ci-local.sh --changed
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL bats tests/shell-hygiene.bats (exit 1)"* ]]
+  [[ "$output" == *"ci-local: --changed: 1 check(s) failed"* ]]
+  git add -A
+  git commit -q -m "lib change"
+  git update-ref refs/remotes/origin/main HEAD
+  printf 'x\n' > scripts/notes.txt
+  run bash scripts/ci-local.sh --changed
+  [[ "$output" != *"shell-hygiene"* ]]
+}

@@ -34,6 +34,10 @@ const (
 // TestGateCommandsNameScriptsTheRepositoryHas keeps the real one from going missing.
 const prSizeCmd = `[ -f scripts/pr-size.sh ] || { echo "pr-size: no scripts/pr-size.sh in this tree"; exit 0; }; bash scripts/pr-size.sh "$CI_BASE" "$CI_HEAD"`
 
+// shellHygieneCmd runs the kit's shell-hygiene suite (SH1: no unquoted `&` or `$` in a pattern-substitution replacement);
+// like prSizeCmd it skips with a line in a tree that has no tests/shell-hygiene.bats (a throwaway fixture repository).
+const shellHygieneCmd = `[ -f tests/shell-hygiene.bats ] || { echo "shell-hygiene: no tests/shell-hygiene.bats in this tree"; exit 0; }; bats tests/shell-hygiene.bats`
+
 // Gates is the one table: change -> check. TestEveryCIStepAndTreeGateHasALocalTwin fails when a ci.yml run step
 // or a Go package that reads the tree has no row here.
 var Gates = []Gate{
@@ -57,6 +61,8 @@ var Gates = []Gate{
 			"internal/guardpins", "internal/obixlinkaudit", "internal/prepush", "internal/schemarisk", "internal/skillinstall"},
 		Triggers: []string{"scripts/*.sh", "scripts/lib/*.sh", ".githooks/*", ".github/workflows/*.yml", "tests/bats-skip-allowlist.txt",
 			fixtures, "*-kit/skill/**", kitTree + "/toolbelt/lint-*.sh"}},
+	// A changed bats file or bats helper can break shell-hygiene.bats, which the other bats lints do not run (issue #1052).
+	{Name: "bats tests/shell-hygiene.bats", Triggers: []string{"tests/*.bats", "tests/lib/**"}, Cmd: shellHygieneCmd},
 	{Name: "bats-shard --check", Step: "bats-shard --check*", Triggers: []string{"tests/*.bats", "scripts/bats-shard.sh"}},
 	{Name: "sweep-build-state + sweep-fold-audit", Step: "sweep-build-state + sweep-fold-audit*",
 		Triggers: []string{toolbelt + "*.sh", "build-n4-module-kit/retros/**", "build-n4-module-kit/ledger.d/**", "build-n4-module-kit/BUILD-STATE.src.md"}},

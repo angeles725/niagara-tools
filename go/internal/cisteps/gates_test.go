@@ -160,3 +160,30 @@ func TestChangedPlansTheFileSizeGateForADeletedGoFile(t *testing.T) {
 		t.Errorf("exit %d, rows %q (stderr %q), want the file-size gate row and no gofmt row", code, out, errs)
 	}
 }
+
+// TestChangedBatsFilesRunTheShellHygieneGate: a changed tests/*.bats or tests/lib/** file runs `bats tests/shell-hygiene.bats`
+// as a hard gate, like the other bats lints (issue #1052); an unrelated change and a fixture .bats do not.
+func TestChangedBatsFilesRunTheShellHygieneGate(t *testing.T) {
+	has := func(paths ...string) *Gate {
+		for _, g := range SelectGates(paths) {
+			if g.Name == "bats tests/shell-hygiene.bats" {
+				return &g
+			}
+		}
+		return nil
+	}
+	for _, f := range []string{"tests/ci-local.bats", "tests/lib/ntpl-setup.bash", "tests/lib/home-lint.awk"} {
+		g := has(f)
+		if g == nil || g.Soft || !strings.HasSuffix(g.Command(), "bats tests/shell-hygiene.bats") {
+			t.Errorf("%s: gate %+v, want the hard shell-hygiene gate", f, g)
+		}
+	}
+	for _, f := range []string{"README.md", "scripts/notes.txt", "tests/fixtures/x/y.bats", "go/internal/x/x.go"} {
+		if has(f) != nil {
+			t.Errorf("%s: runs the shell-hygiene gate", f)
+		}
+	}
+	if _, err := os.Stat("../../../tests/shell-hygiene.bats"); err != nil {
+		t.Errorf("the gate runs tests/shell-hygiene.bats: %v", err)
+	}
+}
