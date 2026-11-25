@@ -1521,6 +1521,8 @@ disabled. A Spyder is not done until its state is read back:
   `BUILD-STATE.src.md`, never reconstructed later from `git log`; `toolbelt/ledger-check.sh odd/VERSION-LEDGER.md`
   checks the rows against the template (status vocabulary, dates, declared classes, a defect with its class) and must
   exit 0 before the close. `[ev: retro panccadia-version-defect-ledger Δ1]`
+  Set the row's `Niagara` cell to the build's `niagara_home` version (e.g. `4.14.0.162`; `—` if unknown);
+  `preflight.sh` WARNs `ledger-niagara` when the latest row names another version than the current `niagara_home`.
 - **Repeated root-cause class = escalation:** when the ledger already holds a live hit of the class this session hit
   again on the same client, and that class's prevention delta has not shipped, the delta is PRIORITIZED — apply it in
   the current work or open it as the next work unit, ahead of its normal promotion queue; re-citing it as evidence is

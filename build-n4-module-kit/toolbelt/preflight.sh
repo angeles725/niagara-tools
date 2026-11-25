@@ -20,7 +20,7 @@
 #   <niagara_home>  Niagara 4 installation root (must not be a Windows-style path)
 #   <gradle-root>   gradle project root containing settings.gradle.kts
 #
-# Checks (order: win-path, jdk8, plugin-pin, jar-lock, version-drift, sibling-home, ...):
+# Checks (order: win-path, jdk8, plugin-pin, jar-lock, version-drift, sibling-home, ledger-niagara, ...):
 #   win-path    niagara_home or gradle-root contains C: or backslash
 #               -> FAIL + "use /mnt/c/... in WSL" remedy
 #   jdk8        JDK 8 found under --jvm-dir or JAVA_HOME (never $HOME)
@@ -31,8 +31,13 @@
 #               settings.gradle.kts or settings.gradle) pins a different niagara_home than <niagara_home>: its
 #               gradle.properties `niagara_home=` line, the one place the kit's templates set it (a comment, a
 #               blank value or a non-module dir is ignored). Names the sibling and both values; the exit code is
-#               unchanged. Not checked: <niagara_home>'s version against a VERSION-LEDGER.md deploy target (the
-#               kit's template records module versions only, no Niagara deploy-target field). (F24)
+#               unchanged. (F24)
+#   ledger-niagara  WARN only when the latest row (the last one) of <gradle-root>/odd/VERSION-LEDGER.md, else of
+#               the one in the gradle root's parent, has a Niagara cell naming another version than
+#               <niagara_home>'s: the vendorVersion of its modules/baja.jar, else the last X.Y.Z of its path (equal
+#               when the shorter is a leading part of the longer). Silent with no ledger, no Niagara column, or
+#               an empty, — or malformed cell. Names the ledger, the row and both versions; the exit code is
+#               unchanged. (#1026)
 #   remote-backup  WARN only when the gradle root's checkout has no VCS remote, or its branch no upstream
 #               (commits on this disk only; pushing or backing up is the operator's call); silent otherwise
 #               [ev: retro delivery-guards-and-ui-contrast Δ3]

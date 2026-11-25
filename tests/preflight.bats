@@ -221,6 +221,48 @@ sibling_tree() {  # sibling_tree <ws>: module-a is the gradle root, pinned to $N
   [[ "$output" != *"sibling-home"* ]]
 }
 
+# ---------------------------------------------------------------------------
+# ledger-niagara (#1026) — the latest row of <gradle-root>/odd/VERSION-LEDGER.md names a Niagara version other
+# than the current niagara_home's: WARN (exit unchanged); silent when it matches or the column is absent/empty
+# Named mutation: PF-ledger-niagara -- compare nothing -> the "another version" case prints no row
+# ---------------------------------------------------------------------------
+ledger_tree() {  # ledger_tree <ws> <row-cells-after-Version...>: a gradle root with a ledger, niagara_home 4.15.6.20
+  mkdir -p "$1/gr/odd"
+  cp -r "$FIXDIR/gradle-root/." "$1/gr/"
+  cp -r "$NH" "$1/niagara-4.15.6.20"
+  {
+    printf '# VERSION-LEDGER — client\n\n## Versions\n\n'
+    printf '| Module | Version | Niagara | Date | Status | What changed | Defect found | Root cause | Class | Resolved by | Prevention (retro + Δ) |\n'
+    printf '|---|---|---|---|---|---|---|---|---|---|---|\n'
+    printf '| Pan | 1.2.0 | %s | 2026-10-01 | built | x | — | — | — | — | — |\n' "$2"
+  } > "$1/gr/odd/VERSION-LEDGER.md"
+}
+
+@test "ledger-niagara: the latest row names another Niagara version -> WARN naming both, exit 0" {
+  ledger_tree "$TMPDIR_T/ws" 4.13.2.18
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$TMPDIR_T/ws/niagara-4.15.6.20" "$TMPDIR_T/ws/gr"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  ledger-niagara  $TMPDIR_T/ws/gr/odd/VERSION-LEDGER.md latest row (Pan 1.2.0) names Niagara 4.13.2.18, but niagara_home is 4.15.6.20 ("* ]]
+}
+
+@test "ledger-niagara: the same version, an empty cell or a ledger without the column -> no ledger-niagara row" {
+  ledger_tree "$TMPDIR_T/ws" 4.15.6.20
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$TMPDIR_T/ws/niagara-4.15.6.20" "$TMPDIR_T/ws/gr"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"ledger-niagara"* ]]
+  ledger_tree "$TMPDIR_T/ws" ""
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$TMPDIR_T/ws/niagara-4.15.6.20" "$TMPDIR_T/ws/gr"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"ledger-niagara"* ]]
+  # the old shape: no Niagara column (the cell after Version is the Date)
+  sed -e 's/ | Niagara | / | /' -e 's/^| Pan | 1.2.0 |  |/| Pan | 1.2.0 |/' \
+    "$TMPDIR_T/ws/gr/odd/VERSION-LEDGER.md" > "$TMPDIR_T/legacy.md"
+  cp "$TMPDIR_T/legacy.md" "$TMPDIR_T/ws/gr/odd/VERSION-LEDGER.md"
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$TMPDIR_T/ws/niagara-4.15.6.20" "$TMPDIR_T/ws/gr"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"ledger-niagara"* ]]
+}
+
 @test "PF5: JDK 8 with no release file but bin/java reports 1.8 -> PASS jdk8 (WSL fallback)" {
   JVM_NO_RELEASE="$FIXDIR/jvm-no-release"
   run "$PREFLIGHT" --jvm-dir "$JVM_NO_RELEASE" "$NH" "$GR"

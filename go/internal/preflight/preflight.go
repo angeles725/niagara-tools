@@ -1,7 +1,9 @@
 // Package preflight is the BUILD-LOOP §0.b environment preflight of toolbelt/preflight.sh: before a
 // gradle build it checks the paths (win-path), the JDK (jdk8), the Niagara plugin pin (plugin-pin),
 // module jars held by a running station (jar-lock), a sibling checkout at a higher module version
-// (version-drift), a sibling module root pinning another niagara_home (sibling-home), a checkout whose commits are on this disk only (remote-backup, WARN only when it applies),
+// (version-drift), a sibling module root pinning another niagara_home (sibling-home), the Niagara version the
+// latest row of the client's VERSION-LEDGER.md names (ledger-niagara), a checkout whose commits are on this
+// disk only (remote-backup, WARN only when it applies),
 // the delivery requirements of a kit change when the checkout is the kit's (delivery, a PASS row),
 // with --sample the retarget of a project someone else shipped (sample-*) and, with
 // --toolchains, a full JDK 8 among Gradle's toolchains (toolchains).
@@ -76,7 +78,7 @@ type run struct {
 }
 
 // checks run in this order after the win-path rows; a check reading the paths returns early on r.win.
-var checks = []func(*run){(*run).jdk8, (*run).pluginPin, (*run).jarLock, (*run).versionDrift, (*run).siblingHome, (*run).remoteBackup, (*run).delivery, (*run).sampleRows, (*run).toolchains}
+var checks = []func(*run){(*run).jdk8, (*run).pluginPin, (*run).jarLock, (*run).versionDrift, (*run).siblingHome, (*run).ledgerNiagara, (*run).remoteBackup, (*run).delivery, (*run).sampleRows, (*run).toolchains}
 
 // Command is preflight over the host h.
 func Command(h Host) cli.Main {

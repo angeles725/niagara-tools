@@ -11,7 +11,7 @@ setup() {
 
 @test "LCB1: a row whose status is not in the template's vocabulary FAILs through the wrapper" {
   # Mutation: LCB1 -- dropping the status check passes a row whose status is free text
-  sed -e 's/^| <Module> | <x.y.z> | <YYYY-MM-DD> | built | <one line> |/| Pan | 1.0.0 | 2026-10-01 | installed | first |/' \
+  sed -e 's/^| <Module> | <x.y.z> | <4.x.y.z> | <YYYY-MM-DD> | built | <one line> |/| Pan | 1.0.0 | 4.14.0.162 | 2026-10-01 | installed | first |/' \
     "$KIT/templates/VERSION-LEDGER.md" > "$BATS_TEST_TMPDIR/L.md"
   run "$LC" "$BATS_TEST_TMPDIR/L.md"
   [ "$status" -eq 1 ]
@@ -45,4 +45,23 @@ setup() {
   run "$LC" "$BATS_TEST_TMPDIR/none.md"
   [ "$status" -eq 3 ]
   [[ "$output" == *"cannot read"* ]]
+}
+
+@test "LCB5: the optional Niagara column: a version passes, a malformed one FAILs LC10, a ledger without it passes" {
+  # Mutation: LCB5 -- accepting any text in the column leaves a typo that preflight ledger-niagara can never compare
+  sed -e 's/^| <Module> | <x.y.z> | <4.x.y.z> | <YYYY-MM-DD> | built | <one line> |/| Pan | 1.0.0 | 4.14.0.162 | 2026-10-01 | built | first |/' \
+    "$KIT/templates/VERSION-LEDGER.md" > "$BATS_TEST_TMPDIR/L.md"
+  run "$LC" "$BATS_TEST_TMPDIR/L.md"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  sed -i 's/| 4.14.0.162 |/| 4.14 |/' "$BATS_TEST_TMPDIR/L.md"
+  run "$LC" "$BATS_TEST_TMPDIR/L.md"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  ledger-check  $BATS_TEST_TMPDIR/L.md:"*"  LC10: niagara version 4.14 is not X.Y.Z[.W] (the niagara_home version the build used; — when unknown)" ]]
+  # a ledger of the old shape (no Niagara column anywhere) is still clean
+  sed -e 's/ | Niagara | / | /' -e 's/^|---|---|---|---|---|---|---|---|---|---|---|$/|---|---|---|---|---|---|---|---|---|---|/' \
+    -e 's/^| Pan | 1.0.0 | 4.14 |/| Pan | 1.0.0 |/' "$BATS_TEST_TMPDIR/L.md" > "$BATS_TEST_TMPDIR/old.md"
+  run "$LC" "$BATS_TEST_TMPDIR/old.md"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

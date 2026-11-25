@@ -14,6 +14,9 @@
 //	LC8  a Defect found with Root cause or Class left —                                 FAIL
 //	LC9  a template placeholder left in a Versions row: the template's sample row       WARN
 //	     (not checked further), or a cell equal to its placeholder cell (still checked)
+//	LC10 a Niagara cell that is not empty, —, a placeholder or a version X.Y.Z[.W]       FAIL
+//
+// The Niagara column is optional: a ledger whose header is the template's without it is read as before (niagara.go).
 //
 // The header row (first, or repeated after a blank line) and every separator row of the Versions section are not data
 // rows.
@@ -29,7 +32,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -47,6 +49,8 @@ type contract struct {
 	header   []string // the Versions table header cells
 	statuses []string // the Status vocabulary
 	sample   []string // the template's sample Versions row, whose <...> cells are placeholders
+	legacy   []string // the header of a ledger without the optional Niagara column (nil: the template has none)
+	legacyS  []string // the sample row of such a ledger
 }
 
 var (
@@ -127,6 +131,7 @@ func readContract(path string) (contract, error) {
 		c.sample = cells(lines[r])
 		break
 	}
+	c.legacy, c.legacyS = withoutNiagara(c.header, c.sample)
 	const lead = "`Status` is one of"
 	if i := strings.Index(text, lead); i >= 0 {
 		rest := text[i+len(lead):]
@@ -140,44 +145,6 @@ func readContract(path string) (contract, error) {
 		return contract{}, errors.New("template has no \"`Status` is one of\" sentence: " + path)
 	}
 	return c, nil
-}
-
-// tableAfter is the index of the first table line after the heading line h (-1 when there is none before the next
-// heading).
-func tableAfter(lines []string, h string) int {
-	in := false
-	for i, l := range lines {
-		switch {
-		case strings.TrimSpace(l) == h:
-			in = true
-		case in && strings.HasPrefix(l, "#"):
-			return -1
-		case in && strings.HasPrefix(strings.TrimSpace(l), "|"):
-			return i
-		}
-	}
-	return -1
-}
-
-// cells splits a Markdown table line into trimmed cells.
-func cells(l string) []string {
-	l = strings.TrimSpace(l)
-	l = strings.TrimSuffix(strings.TrimPrefix(l, "|"), "|")
-	out := strings.Split(l, "|")
-	for i := range out {
-		out[i] = strings.TrimSpace(out[i])
-	}
-	return out
-}
-
-// separator reports a table's |---|---| line.
-func separator(c []string) bool {
-	for _, x := range c {
-		if strings.Trim(x, "-: ") != "" {
-			return false
-		}
-	}
-	return true
 }
 
 // check is every row of the ledger, in line order (the section rows, which have no line, first).
@@ -226,33 +193,37 @@ func check(c contract, file string, lines []string) []string {
 		return out // LC2 named the missing section; with the heading there and no table, there is no row to read
 	}
 	// Mutation: LC3-header -- a reordered header reads every row's cells into the wrong columns
-	if strings.Join(cells(lines[at]), "|") != strings.Join(c.header, "|") {
+	hdr, sample := c.header, c.sample
+	if sameCells(cells(lines[at]), c.legacy) {
+		hdr, sample = c.legacy, c.legacyS
+	}
+	if !sameCells(cells(lines[at]), hdr) {
 		add("FAIL", at+1, "LC3: the Versions table header differs from the template's (| "+strings.Join(c.header, " | ")+" |)")
 		return out
 	}
 	col := map[string]int{}
-	for i, h := range c.header {
+	for i, h := range hdr {
 		col[h] = i
 	}
 	for _, i := range versionRows(lines) {
 		r := cells(lines[i])
 		// Mutation: LC-reheader -- a repeated header row read as data FAILs LC5/LC6 on the column names
-		if i == at || separator(r) || sameCells(r, c.header) {
+		if i == at || separator(r) || sameCells(r, c.header) || sameCells(r, c.legacy) {
 			continue // the header (first or repeated after a blank line) and every separator row are not data
 		}
 		n := i + 1
-		if len(r) != len(c.header) {
-			add("FAIL", n, fmt.Sprintf("LC4: row has %d cells, want %d", len(r), len(c.header)))
+		if len(r) != len(hdr) {
+			add("FAIL", n, fmt.Sprintf("LC4: row has %d cells, want %d", len(r), len(hdr)))
 			continue
 		}
 		get := func(h string) string { return r[col[h]] }
 		// Mutation: LC9-placeholder -- the template's sample row left in place reads as a real version
-		if sameCells(r, c.sample) {
+		if sameCells(r, sample) {
 			add("WARN", n, "LC9: template placeholder left in the row (replace or delete it)")
 			continue
 		}
 		// Mutation: LC9-failopen -- skipping every row with angle-bracket text leaves a real row unchecked
-		if c.placeholderCell(r) {
+		if c.placeholderCell(r, sample) {
 			add("WARN", n, "LC9: template placeholder left in the row (replace or delete it)")
 		}
 		if get("Module") == "" || get("Version") == "" {
@@ -262,6 +233,9 @@ func check(c contract, file string, lines []string) []string {
 		// Mutation: LC5-status -- a free-text status hides a jar that was never deployed
 		if st := get("Status"); !contains(c.statuses, st) {
 			add("FAIL", n, "LC5: status "+st+" is not one of "+strings.Join(c.statuses, ", "))
+		}
+		if v, ok := col[niagaraCol]; ok && !niagaraOK(r[v], sample[v]) {
+			add("FAIL", n, "LC10: niagara version "+r[v]+niagaraForm)
 		}
 		if d := get("Date"); !isoDate.MatchString(d) || !realDate(d) {
 			add("FAIL", n, "LC6: date "+d+" is not a YYYY-MM-DD date")
@@ -278,50 +252,12 @@ func check(c contract, file string, lines []string) []string {
 	return out
 }
 
-// versionRows is the index of every table line of the Versions section, header included: a blank, comment or prose
-// line between rows does not end the table, only the next heading does.
-func versionRows(lines []string) []int {
-	var out []int
-	in := false
-	for i, l := range lines {
-		switch t := strings.TrimSpace(l); {
-		case t == "## Versions":
-			in = true
-		case in && strings.HasPrefix(l, "#"):
-			return out
-		// Mutation: LC-blank -- stopping at the first non-row line leaves every row after a blank line unchecked
-		case in && strings.HasPrefix(t, "|"):
-			out = append(out, i)
-		}
-	}
-	return out
-}
-
 // placeholderCell reports a cell that is still the template sample row's <...> placeholder of its column.
-func (c contract) placeholderCell(r []string) bool {
+func (c contract) placeholderCell(r, sample []string) bool {
 	for i, x := range r {
-		if i < len(c.sample) && x == c.sample[i] && placeholder.MatchString(x) {
+		if i < len(sample) && x == sample[i] && placeholder.MatchString(x) {
 			return true
 		}
 	}
 	return false
-}
-
-func sameCells(a, b []string) bool {
-	return len(b) > 0 && strings.Join(a, "|") == strings.Join(b, "|")
-}
-
-func contains(xs []string, x string) bool {
-	for _, y := range xs {
-		if y == x {
-			return true
-		}
-	}
-	return false
-}
-
-// realDate: d (already YYYY-MM-DD shaped) names a calendar day.
-func realDate(d string) bool {
-	_, err := time.Parse("2006-01-02", d)
-	return err == nil
 }
