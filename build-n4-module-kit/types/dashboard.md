@@ -36,6 +36,12 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
   the station, and with the partner unlinked it is refused `limits-unknown`, fail-closed. A fixture that links only
   the writable under test sees that refusal, which is the design and not a broken write path. Commissioning links
   the partners with the writable. `[ev: issue #986]`
+- **A live write check runs against a fixture a script makes and removes, never against hand links:** on a fresh
+  station every facade write slot is unlinked, so no write path can be checked. Make one writable test point of each
+  kind the facade writes (`control:BooleanWritable`, `NumericWritable`, `EnumWritable`, `StringWritable`) in a
+  scratch folder with `n4_create_component`, link each to one equipment's facade slots (and its cross-check
+  partners, bullet above) in one `n4_create_link` batch, run the checks, then `n4_rollback` the link batch and the
+  create batches, newest first. A pulse source keeps `minActiveTime` = `minInactiveTime` = 0. `[ev: issue #986]`
 - **Wiring N facades at scale is Template I/O:** the facade panel is the template root, its proxy points are
   tagged, and the bulk deploy takes one sheet row per equipment with a Slot Path Scope. An unresolved scope
   silently searches the whole station, and a failed bulk link is only a WARN, so open the Template Manager after
@@ -382,6 +388,11 @@ static handler picks it.
   both temperature channels), compare against that exact pair only, and render "Sin sensor" instead of the number. A
   chart of such a series becomes a one-line note, not a flat line. One value is not a placeholder: a lone `0.0` is a
   real reading. `[ev: issue #897]` (retro R7 ΔK7)
+- **A write must not leave its sibling fields broken — check "form after pulse" in the browser:** a write or pulse
+  that takes the per-equipment lock makes the next poll of that equipment wait or fail, and a page that marks every
+  field of the form with the transport error leaves the operator a form that looks broken until the next good poll.
+  After each write or pulse in a browser check, assert that the other fields of the same form show their values
+  again within one poll (`pollMs`) and that no field kept the transport-error state. `[ev: issue #986]`
 
 ## Critical-write step-up auth `[ev: corpus B803]`
 - Niagara ships NO core credential step-up — `Flags.CONFIRM_REQUIRED` is a UX-only confirm; the `electronicSignature` module is the only true sign-before-invoke. Step-up is MODULE-level code. `[ev: corpus B803]`
@@ -716,6 +727,11 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **`module.lexicon` must be ASCII-only — Niagara reads it as Latin-1 on-station:** UTF-8 multibyte accented characters render as mojibake in the Workbench property sheet (`Presión` → `PresiÃ³n`). Use plain ASCII spellings (`Presion`, `Seccion`) or `\uXXXX` unicode escapes for any non-ASCII glyph. `toolbelt/lint-lexicon-ascii.sh` implements this check (FAILs on any non-ASCII byte in a `.lexicon` file). `[ev: corpus B1305 §1305.1 row 2]` `[ev: retro dashboard-status-state-modeling Δ3]`
 - **A translation is per whole key:** one key has one value in every place it shows, so a word that needs two
   translations needs two keys. `[ev: corpus B1418 §1418.1]` `[ev: retro course-recordings Δ6]`
+- **Operator manual screenshots come from a headless pipeline, not by hand:** headless Chromium does not submit the
+  form login, so open the session with HTTP basic auth (or a session cookie taken from one login) and pass it to the
+  browser; open each equipment view by its station path, crop with Chromium screenshot clips, and print the manual
+  to PDF with an outline (headings become bookmarks). The kit has no tool for it yet (candidate name
+  `manual-shots`); keep the script beside the module and its view list in one file. `[ev: issue #986]`
 - **A translated lexicon ships as its own jar:** the Lexicon Module Builder makes an extra module installed beside
   the base module (the base jar is unchanged). `[ev: corpus B1418 §1418.1]`
 - **Verify a translation in both clients:** Workbench uses one global locale (Tools › Options, then restart); a
