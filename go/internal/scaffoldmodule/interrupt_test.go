@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+	"time"
 )
 
 // signalAtWrite sends sig to this process at the n-th file write of a run, waits until it is delivered,
@@ -22,6 +23,14 @@ func signalAtWrite(t *testing.T, n int, sig syscall.Signal) {
 				t.Fatal(err)
 			}
 			<-own
+			// os/signal feeds each Notify channel in turn: wait until the emit's own watch holds the signal
+			// too, or a loaded machine finishes the copy before it arrives (#1037).
+			for deadline := time.Now().Add(5 * time.Second); emitting == nil || (emitting.got == 0 && len(emitting.arrive) == 0); {
+				if time.Now().After(deadline) {
+					t.Fatal("the emit's watch never received the signal")
+				}
+				time.Sleep(time.Millisecond)
+			}
 		}
 		return real(path, data, mode)
 	}
