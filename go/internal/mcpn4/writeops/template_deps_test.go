@@ -17,6 +17,7 @@ type withModules struct {
 	page  *string
 	paths []string
 	err   error
+	cut   bool
 }
 
 func (c *withModules) GetSpy(urlPath string, _ float64, _ int) (*box.File, error) {
@@ -27,7 +28,7 @@ func (c *withModules) GetSpy(urlPath string, _ float64, _ int) (*box.File, error
 	if c.page == nil {
 		return nil, &box.Error{Kind: box.KindHTTPStatus, Code: 403, Msg: "HTTP 403 from station"}
 	}
-	return &box.File{Body: []byte(*c.page)}, nil
+	return &box.File{Body: []byte(*c.page), Truncated: c.cut}, nil
 }
 
 // modulePage is the module manager table of a station holding the given parts (name, version).
@@ -135,5 +136,17 @@ func TestADeployDoesNotRefuseOnAnEmptyTableOrAFailedRead(t *testing.T) {
 		if notes := js(t, p.Notes); !strings.Contains(notes, "Module dependencies not checked") {
 			t.Errorf("%s: notes lack the unchecked note:\n%s", name, notes)
 		}
+	}
+}
+
+// A cut page may list the module beyond the cut: a dependency not found there is not refused.
+func TestADeployDoesNotRefuseAMissingDependencyOnACutPage(t *testing.T) {
+	c := &withModules{typed: tplClient(tplTypes()), page: modulePage("baja-rt", "4.15.6.20"), cut: true}
+	p, err := writeops.DeployTemplate.Plan(c, deployArgs(tplFile(t, nil, nil)))
+	if err != nil {
+		t.Fatalf("refused on a cut page: %v", err)
+	}
+	if notes := js(t, p.Notes); !strings.Contains(notes, "the module manager page was cut") {
+		t.Errorf("notes lack the cut note:\n%s", notes)
 	}
 }
