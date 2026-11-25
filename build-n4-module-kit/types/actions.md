@@ -179,6 +179,8 @@ consumers:
   HTTP client, and BOX `sys/rpc` for `baja.rpc(ord, method, …)` from a bajaux view; no servlet subclass needed.
   `baja.rpc` goes over BOX, not `/rpc`: `types/data-access.md` § 8 holds the table, the Context each wire passes and
   the `transports` rule. [CERT] `com/tridium/box/BSysChannel.java:200-201` (4.14 vineflower)
+  `toolbelt/lint-niagara-rpc.sh` FAILs a last parameter that is not `Context` (`no-context`) and WARNs when
+  `transports` omits box while a JS in the root calls `baja.rpc(` (`no-box-transport`).
 
 **Gotcha:** a custom `-ux` view that needs a server-side callable should use `@NiagaraRpc`
 (the bajaux-native path: BOX session on `baja.rpc`, CSRF filter on `/rpc`), NOT `@NiagaraAction` (which is

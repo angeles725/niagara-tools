@@ -1,0 +1,15 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+ERROR  lint-niagara-rpc  @DIR@/m  no *.java sources found (wrong path or empty source tree)
+-- stderr --
+-- m/caller.js --
+define(['baja!'], function (baja) {
+  // baja.rpc( in a comment is no call
+  var note = "baja.rpc(ord, 'x') in a string is no call";
+  function run(ord) {
+    return baja.rpc(ord, 'webAndFox', 'a');
+  }
+  return { run: run, note: note };
+});

@@ -1,0 +1,8 @@
+define(['baja!'], function (baja) {
+  // baja.rpc( in a comment is no call
+  var note = "baja.rpc(ord, 'x') in a string is no call";
+  function run(ord) {
+    return baja.rpc(ord, 'webAndFox', 'a');
+  }
+  return { run: run, note: note };
+});
