@@ -1,6 +1,8 @@
 package readtools
 
 import (
+	"time"
+
 	"fmt"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
@@ -56,6 +58,10 @@ type Tools struct {
 	Audit interface {
 		Append(entry *pyjson.Object) error
 	}
+	// Sleep and Now are n4_poll's wait and wall clock, time.Sleep and time.Now when nil (tests
+	// advance a fake clock instead of waiting).
+	Sleep func(seconds float64)
+	Now   func() time.Time
 	// undescribed is the types the station left out of a registry reply this session.
 	undescribed undescribed
 }
@@ -104,6 +110,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_list_tag_dictionaries"] = t.ListTagDictionaries
 	s.Handlers["n4_tag_coverage"] = t.TagCoverage
 	s.Handlers["n4_list_templates"] = t.ListTemplates
+	s.Handlers["n4_poll"] = t.Poll
 }
 
 func toolError(format string, a ...any) error {
