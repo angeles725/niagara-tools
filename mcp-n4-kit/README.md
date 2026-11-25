@@ -1240,6 +1240,13 @@ Tool rules:
   unchanged, except that a missing `ord`, `slot`, `value` or `value_type` is now refused as a
   tool error with the same text (`missing required argument: ord`) instead of a -32602 error,
   because the schema no longer lists them as required.
+- `n4_set_slot` on a template instance's `templateConfig`: the station copies a changed exposed slot to
+  the target of the `ConfigBinding` whose `sourceSlot` names it (`BTemplateConfig.changed`, template-rt).
+  The dry run finds that binding, places its `targetOrd` handle inside the instance (the templateConfig's
+  parent, up to 6 levels down) and names the target in `propagates_to` and a note; the target must be
+  under the write scope too, and the read-back reads the value there as well (`mismatch` when it did not
+  arrive). A binding to `#Name` or `#DisplayName` would rename the target, so it is refused: rename with
+  `n4_rename_component`. A target handle not found in the instance is refused. [ev: issue #990]
 - `n4_create_link(links: [{source_ord, source_slot, target_ord, target_slot}, ...])` is the
   batch form (field retro delta U11): 1 to 50 links, each planned exactly as the single form,
   under one dry run and one `confirmation_token`. `links` cannot be combined with the single-form

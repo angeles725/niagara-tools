@@ -25,6 +25,7 @@ func (f failingResult) Append(e *pyjson.Object) error {
 func twice(r *rig) {
 	impl := writeops.SetSlot
 	setPlan := impl.Plan
+	impl.PlanWith = nil // drive the replaced Plan hook (set_slot's PlanWith only adds the templateConfig target scope check)
 	impl.Plan = func(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		p, err := setPlan(c, args)
 		if err == nil {

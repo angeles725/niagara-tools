@@ -19,6 +19,7 @@ type setSlotData struct {
 	requested any
 	wireType  string
 	key       string // the slot's canonical identity in a batch (slotKey)
+	config    *configTarget
 }
 
 func ordArg(args *pyjson.Object) []any { return []any{str(args, "ord")} }
@@ -100,6 +101,16 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	if err != nil {
 		return nil, err
 	}
+	config, err := configTargetOf(c, ordText, slot, nodes)
+	if err != nil {
+		return nil, err
+	}
+	keys := obj()
+	if config != nil {
+		notes = append(notes, "the station copies this templateConfig slot to "+config.ord+" slot "+config.slot+
+			" (its ConfigBinding); the read-back reads it there too")
+		keys.Set("propagates_to", config.object())
+	}
 	links := incomingLinks(nodes, slot)
 	if note := incomingNote(links, slot); note != "" {
 		notes = append(notes, note)
@@ -113,7 +124,7 @@ func setSlotPlan(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 	return &plan.Planned{
 		Ops:     []any{setOp(h, slot, op)},
 		Inverse: []any{setOp(h, slot, inverse)},
-		Notes:   notes, Targets: targets, Keys: obj("incoming_links", links), Data: setSlotData{requested, wireType, slotKey(h, nodes, slot)}}, nil
+		Notes:   notes, Targets: targets, Keys: withKeys(obj("incoming_links", links), keys), Data: setSlotData{requested, wireType, slotKey(h, nodes, slot), config}}, nil
 }
 
 func known(valueType string) bool {
@@ -162,6 +173,9 @@ func setSlotReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replie
 				v = "mismatch"
 			}
 		}
+	}
+	if v, err = configReadback(c, data.config, valueType, data.requested, v); err != nil {
+		return nil, nil, nil, "", err
 	}
 	return data.requested, replies[0], observed, v, nil
 }

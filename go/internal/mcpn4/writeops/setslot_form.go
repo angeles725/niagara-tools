@@ -10,7 +10,8 @@ import (
 // simple_type?), or 1 to MaxSetSlotWrites of them in writes under one dry run and one token
 // (overamps retro row M6, backlog OD040). A Status slot is always written whole (value and status).
 // A batch spends one write of --max-writes, as n4_set_tags and n4_add_history do.
-var SetSlot = plan.Impl{ScopeCheck: setSlotScope, Plan: setSlotAnyPlan, Readback: setSlotAnyReadback}
+var SetSlot = plan.Impl{ScopeCheck: setSlotScope, Plan: setSlotAnyPlan, PlanWith: setSlotAnyPlanWith,
+	Readback: setSlotAnyReadback}
 
 // MaxSetSlotWrites bounds the entries of one n4_set_slot batch.
 const MaxSetSlotWrites = 50

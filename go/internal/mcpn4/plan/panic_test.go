@@ -18,6 +18,7 @@ func panicked(r *rig, impl plan.Impl) {
 func TestAPanickingPlanIsAnAuditedInternalError(t *testing.T) {
 	r := newRig(t)
 	impl := writeops.SetSlot
+	impl.PlanWith = nil // drive the replaced Plan hook (set_slot's PlanWith only adds the templateConfig target scope check)
 	impl.Plan = func(plan.Client, *pyjson.Object) (*plan.Planned, error) { panic("boom") }
 	panicked(r, impl)
 	text, isErr, _ := r.call(t, "n4_set_slot", setArgs())
