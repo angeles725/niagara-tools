@@ -3331,6 +3331,47 @@
    "needs_session": false
   },
   {
+   "name": "n4_remove_history",
+   "description": "Delete one history and all its records on the station (history channel deleteHistories); for lab clean-up. No inverse: the records are gone and n4_rollback cannot restore them. Needs acknowledge_data_loss: true to plan. The dry run (history_removal) lists the history id, its record count and the extensions recording into it; it refuses a history no extension records into (its slot path is unknown, so outside every write scope), an extension outside the write scope, and an enabled extension unless allow_enabled_extension: true. The read-back verifies the history can no longer be read. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "history_id": {
+      "type": "string",
+      "description": "History id /<station>/<history name>, as historyConfig.id shows it"
+     },
+     "acknowledge_data_loss": {
+      "type": "boolean",
+      "default": false,
+      "description": "true confirms the history and every record in it are deleted for good; required to plan"
+     },
+     "allow_enabled_extension": {
+      "type": "boolean",
+      "default": false,
+      "description": "true removes the history although an enabled extension still records into it (it starts a new, empty history at its next record); false (default) refuses"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "history_id"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_set_tags",
    "description": "Add, change or remove direct tags on 1 to 50 components (ords) in one batch. add: [{id, value?, type?}] where id is ns:name; a tag the installed dictionaries define takes the definition's value type (a type that differs is refused) and, without value, its default; a Marker takes no value. A tag no dictionary defines is refused unless allow_ad_hoc is true, and never allowed in an installed dictionary's namespace (the Tagging guide: an ad hoc tag must not use an existing dictionary's namespace). A new tag is added as a metadata slot (flag m, named ns$3aname); a tag already there with another value of the same type is set (a type change is refused: remove, then add); one already holding the value is skipped with a note. remove: [id] removes direct tags (the inverse re-adds each with its type, value and flags). add_groups / remove_groups: [id] apply or remove a tag group an installed dictionary defines (a relation n:tagGroup to the group's definition, flag r, as Workbench adds it); the station then implies the group's tags, and the read-back lists the target's implied tags and any group tag missing from them. add_relations / remove_relations: [{id, endpoint_ord}] add or remove an outbound relation to another component (written as its handle ORD h:...), the id defined by a dictionary or, with allow_ad_hoc, in a namespace of its own. A group or relation already on the target, one missing from a remove, an entry named twice, or one both added and removed is refused. At most 200 ops (targets x changes), each target under the write scope. The read-back reloads each target and reports values the station normalized under coerced (sent 4.50, stored 4.5). It removes tags and relations, so it is in the destructive class (destructiveHint). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run; n4_rollback undoes the batch.",
    "inputSchema": {

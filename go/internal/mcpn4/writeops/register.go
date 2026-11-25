@@ -16,6 +16,7 @@ func Register(s *jsonrpc.Server, e *plan.Engine) {
 	s.Handlers["n4_add_history"] = e.Handler("n4_add_history", AddHistory)
 	s.Handlers["n4_add_alarm"] = e.Handler("n4_add_alarm", AddAlarm)
 	s.Handlers["n4_ack_alarm"] = e.Handler("n4_ack_alarm", AckAlarm)
+	s.Handlers["n4_remove_history"] = e.Handler("n4_remove_history", RemoveHistory)
 	s.Handlers["n4_copy_component"] = e.Handler("n4_copy_component", CopyComponent)
 	s.Handlers["n4_replicate_points"] = e.Handler("n4_replicate_points", ReplicatePoints)
 	s.Handlers["n4_deploy_template"] = e.Handler("n4_deploy_template", DeployTemplate)

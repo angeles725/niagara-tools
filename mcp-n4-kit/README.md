@@ -1689,7 +1689,7 @@ Destructive tools use the same pipeline:
   the station sets the acking user, ackTime and ackState `ackPending`, updates the alarm
   database and routes the ack). The plan's op is `{channel: "alarm", key: "ackAlarms",
   body}`, journaled like any op; the engine sends only the channel ops of its allow-list
-  (`alarm` `ackAlarms`) and refuses any other before sending. The dry run reads the records with
+  (`alarm` `ackAlarms`, `history` `deleteHistories`) and refuses any other before sending. The dry run reads the records with
   `alarm:|bql:select uuid, ackState, user, source where (uuid = '<u>' or ...)` and the same with
   `ackState = 'unacked' and` (the state compared by its tag, never by localized text), and
   refuses, naming them, a uuid with no record, a record whose source is outside the write
@@ -1720,6 +1720,19 @@ Destructive tools use the same pipeline:
   exact arguments) and never runs the selection again: an alarm raised after the dry run is
   left alone, and an execution without its dry run is refused. A selection that matches
   nothing answers `{dry_run: true, selection, note}` with no token.
+
+- `n4_remove_history(history_id, acknowledge_data_loss, allow_enabled_extension?)` deletes one
+  history and every record in it through the station's history channel (`deleteHistories`,
+  body `["history:<id>"]`, box-rt `BHistoryChannel`; no component action deletes a history). It
+  has no inverse and `n4_rollback` cannot bring the records back. Planning needs
+  `acknowledge_data_loss: true` and the full `/<station>/<name>` id. The dry run lists the record
+  count and the extensions recording into the history, found with `select slotPath, enabled,
+  historyConfig.id from history:HistoryExt`, and refuses a history no extension records into (its
+  write scope cannot be proven), an extension outside the write scope, and an enabled extension
+  unless `allow_enabled_extension: true` (it would start a new, empty history at its next
+  record): disable the extension first. The read-back is `verified` only on the station's HTTP
+  404 for the history, `mismatch` when it still reads and `unverified` on any other answer.
+  `clearAllRecords` and `clearOldRecords` of the same channel stay refused. [ev: issue #992]
 
 ### Semantic export: Haystack JSON
 
