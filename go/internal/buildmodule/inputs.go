@@ -42,12 +42,14 @@ func (b *build) resolveInputs() int {
 		b.warn(msgNoJava8, b.java8)
 	case b.home == "":
 		b.warn(msgNoHome)
+		b.mirrorHint("")
 	case !lint.IsDir(b.home + "/" + m2Repository):
 		b.warn(msgNotAHome, b.home)
 	case !b.isMirror() && !o.intoHome:
 		// Fail closed: gradle's :jar step replaces <niagara_home>/modules/<jar>, so only a mirror is
 		// written by default. [ev: retro r10-buildsh-mirror-guard]
 		b.warn(msgRealHome, b.home)
+		b.mirrorHint(b.home)
 	case !isExecutable(gate):
 		b.warn(msgNoGate, gate)
 	default:

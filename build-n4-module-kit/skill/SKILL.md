@@ -201,7 +201,9 @@ strict happens only on request, in the order of `$KIT/types/structure.md` § Leg
 4. Build with `toolbelt/build.sh` — ONE command runs the full automatic chain: preflight (env checks) → gradle (Java 8 +
    clean + slotomatic + jar) → verify gate → report-module punch-list. `niagara_home` must be a mirror
    (`toolbelt/mirror-niagara-home.sh`): a real install exits 10 unless you pass `--install-into-home`, because gradle's
-   `:jar` replaces its `modules/` jars. Use `--no-preflight`/`--no-report` for quick inner rebuild loops; pass
+   `:jar` replaces its `modules/` jars. On that stop (or no `niagara_home`) it lists the `~/niagara-mirror-*`
+   it finds, those made from the given installation first, with a `try:` line: reuse one, never make a second.
+   Use `--no-preflight`/`--no-report` for quick inner rebuild loops; pass
    `--ui-profile <ui_profile>` (+ `--legacy`) for a `-ux` module so the punch-list uses its browser floor. Before the
    first build, `scripts/check-client-source.sh` confirms the checkout is the module's declared `source_of_truth`.
    Confirm: bytecode major 52, signed jars — signed by the module's own alias: with `niagaraSigningAlias` configured
