@@ -1048,7 +1048,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_register_bacnet_spyder`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_make_station_template`, `n4_register_bacnet_spyder`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
 restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
@@ -1350,6 +1350,17 @@ Tool rules:
   54 `PUB1012S`, ... with the I/O it supports): the model the station's download compares,
   so a program for another model is caught before a download; `hardware` is null on other
   devices. Live 2026-11-18: a PUB6438S Spyder lists 87 objects. No point is added. No inverse.
+- `n4_make_station_template(use_minor_version?, service_ord?, wait_seconds?)` makes a station template
+  (`.ntpl`) of the connected station through the `template:TemplateService`'s hidden `makeStationTemplate`
+  action (`BTemplateService.doMakeStationTemplate`: a boolean `useMinorVersionOnDeployment`, default true,
+  `use_minor_version`; `service_ord` defaults to `station:|slot:/Services/TemplateService`). The station
+  submits a `BMakeStationTemplateJob` under `Services/JobService`; the read-back waits for it
+  (`wait_seconds`, default 120, plus 30 s) and returns `job_state`, the job's `log` and `file_ord`, the
+  `file:^temp/...` file the job saved (its `templateFileOrd`), which `n4_read_file` fetches. Only a super
+  user may run it: any other user gets null, no job and an `unverified` read-back. A failed job, or one
+  that ends without a file, is a `mismatch`. A station without the template module is refused at the
+  dry run, naming the ORD. It writes a new file in the station's `^temp`, which stays there until the
+  station clears it: the plan says so and there is no inverse. The write scope must cover the service ORD.
 - `n4_register_bacnet_spyder(network_ord, name, network_number, mac, instance, discover?, wait_seconds?, expected_model?)`
   registers a Honeywell BACnet Spyder in one planned batch: create the device, set its MS/TP
   address (`address/addressType` 3, `networkNumber`, `macAddress`) and `config/deviceObject/objectId`,
