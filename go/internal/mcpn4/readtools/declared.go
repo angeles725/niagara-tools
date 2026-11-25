@@ -86,8 +86,8 @@ func (d *declared) add(pc plan.Client, path string, names []string) error {
 	owner.Set("", box.Node(d.nodes, path))
 	for _, name := range names {
 		full := childPath(path, name)
-		if box.Node(d.nodes, full) != nil {
-			continue
+		if n := box.Node(d.nodes, full); n != nil && !box.ByNameOnly(n) {
+			continue // listed with its value; one listed by name only is at its declared default
 		}
 		got, err := plan.Resolve(pc, owner, name)
 		if err != nil {

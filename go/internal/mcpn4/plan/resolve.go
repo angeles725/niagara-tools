@@ -13,9 +13,10 @@ import (
 // nested path, typed the same way when it is omitted too): when declared, the result is a copy
 // of nodes holding the declared default as slot's node (and its children), so the type check,
 // the previous value and the read-back see what the station holds. A client without TypeLoader
-// or a slot no definition declares leaves nodes unchanged, and the caller refuses as before.
+// or a slot no definition declares leaves nodes unchanged, and the caller refuses as before. A
+// slot listed by name only (box.ByNameOnly) is at its declared default and is looked up the same.
 func Resolve(c Client, nodes *pyjson.Object, slot string) (*pyjson.Object, error) {
-	if box.Node(nodes, slot) != nil {
+	if n := box.Node(nodes, slot); n != nil && !box.ByNameOnly(n) {
 		return nodes, nil
 	}
 	tl, ok := c.(TypeLoader)
