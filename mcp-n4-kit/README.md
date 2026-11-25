@@ -91,7 +91,8 @@ the password is never in `repr`, and HTTP 401/403 raises `AuthError` with no
 retry (5 failures in 30 s lock the account). A 401 names what to check: the
 user's Authentication Scheme Name must be `HTTPBasicScheme`, then the password.
 The server also latches on any `AuthError` (login, `/obix/about/`, `/ord` GET, `/file/` GET,
-BOX call):
+BOX call; a 403 on `/obix/about/`, `/file/` or a spy page is a denied permission, not a failed
+login, and does not latch):
 every station call is refused for `--auth-cooldown` seconds (default and minimum 30), with
 the reason and the seconds left; `n4_describe_session` shows `auth_paused`. Only an
 `n4_connect` with other credentials may try during the cooldown; a good login clears it.
