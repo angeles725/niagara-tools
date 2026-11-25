@@ -1,7 +1,9 @@
 package writeops
 
 import (
+	"cmp"
 	"errors"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -100,8 +102,8 @@ func tplCompareDeps(deps []string, parts map[string]string) (missing []string, o
 	for _, dep := range deps {
 		name, need, rel := tplDepFields(dep)
 		have, ok := "", false
-		for part, v := range parts {
-			if part == name || strings.HasPrefix(part, name+"-") {
+		for _, part := range slices.Sorted(maps.Keys(parts)) {
+			if v := parts[part]; part == name || strings.HasPrefix(part, name+"-") {
 				if !ok || tplVersionLess(have, v) {
 					have = v
 				}
@@ -139,25 +141,52 @@ func tplDepFields(dep string) (name, version, rel string) {
 	return name, version, strings.Join(f, " ")
 }
 
-// tplVersionLess is whether version a is lower than b, comparing the dot-separated numbers one
-// by one (a missing one is 0); a version that is not numbers compares as not lower.
+// tplVersionLess orders dotted versions totally (#1070): per component the leading number (none sorts
+// first), then a release above a suffixed one (1.2 above 1.2-SNAPSHOT), then the suffix text; a
+// missing component is 0, so 1.2 equals 1.2.0.
 func tplVersionLess(a, b string) bool {
 	x, y := strings.Split(a, "."), strings.Split(b, ".")
 	for i := 0; i < max(len(x), len(y)); i++ {
-		p, q := 0, 0
-		var errP, errQ error
+		p, q := "0", "0"
 		if i < len(x) {
-			p, errP = strconv.Atoi(x[i])
+			p = x[i]
 		}
 		if i < len(y) {
-			q, errQ = strconv.Atoi(y[i])
+			q = y[i]
 		}
-		if errP != nil || errQ != nil {
-			return false
-		}
-		if p != q {
-			return p < q
+		if c := tplComponentCompare(p, q); c != 0 {
+			return c < 0
 		}
 	}
 	return false
+}
+
+// tplComponentCompare compares one version component: number, then no suffix above a suffix, then text.
+func tplComponentCompare(p, q string) int {
+	np, sp := tplSplitNumber(p)
+	nq, sq := tplSplitNumber(q)
+	switch {
+	case np != nq:
+		return cmp.Compare(np, nq)
+	case sp == sq:
+		return 0
+	case sp == "":
+		return 1
+	case sq == "":
+		return -1
+	}
+	return strings.Compare(sp, sq)
+}
+
+// tplSplitNumber is the leading number of a component (-1 when it has none) and the rest.
+func tplSplitNumber(c string) (int, string) {
+	end := 0
+	for end < len(c) && c[end] >= '0' && c[end] <= '9' {
+		end++
+	}
+	n, err := strconv.Atoi(c[:end])
+	if err != nil {
+		return -1, c
+	}
+	return n, c[end:]
 }
