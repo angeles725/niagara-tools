@@ -111,6 +111,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_tag_coverage"] = t.TagCoverage
 	s.Handlers["n4_list_templates"] = t.ListTemplates
 	s.Handlers["n4_poll"] = t.Poll
+	s.Handlers["n4_subscribe_point"] = t.SubscribePoint
 }
 
 func toolError(format string, a ...any) error {
