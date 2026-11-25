@@ -13,3 +13,13 @@ const msgSetSlotMissing = "slot %s not found on %s. The station leaves out a fro
 	"no type contract the station describes declares this one, so n4_set_slot cannot read its type " +
 	"and refuses. Check the name with n4_read_slots; if it is a dynamic slot at its default, set it " +
 	"once in Workbench (or through an action such as `set`) and plan again"
+
+// #990 M3: a templateConfig slot bound to a component attribute or to a target the plan cannot place.
+const (
+	msgConfigAttribute = "refusing to set templateConfig slot %s: its ConfigBinding targets %s of %s, so the " +
+		"station would rename that component; rename it with n4_rename_component instead"
+	msgConfigTarget = "refusing: the ConfigBinding target %s is not a handle found in the template instance %s " +
+		"(read %d levels down), so the slot the station would write cannot be placed in the write scope"
+	msgConfigScope = "refusing: the station propagates this templateConfig slot to %s slot %s, which is outside " +
+		"the write scope: %s"
+)

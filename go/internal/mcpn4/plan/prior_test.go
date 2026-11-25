@@ -71,6 +71,7 @@ func keysRig(t *testing.T, prior *any, keys *pyjson.Object) *rig {
 	r := newRig(t)
 	impl := writeops.SetSlot
 	plan0 := impl.Plan
+	impl.PlanWith = nil // drive the replaced Plan hook (set_slot's PlanWith only adds the templateConfig target scope check)
 	impl.Plan = func(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		p, err := plan0(c, args)
 		if err == nil {
@@ -125,6 +126,7 @@ func TestAPreviewThatCannotBeBuiltIsAnAuditedInternalError(t *testing.T) {
 	r := newRig(t)
 	impl := writeops.SetSlot
 	plan0 := impl.Plan
+	impl.PlanWith = nil // drive the replaced Plan hook (set_slot's PlanWith only adds the templateConfig target scope check)
 	impl.Plan = func(c plan.Client, args *pyjson.Object) (*plan.Planned, error) {
 		p, err := plan0(c, args)
 		if err == nil {
