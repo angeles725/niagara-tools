@@ -174,3 +174,12 @@ func TestMakeStationTemplateFinishedJobIsNotSampled(t *testing.T) {
 		t.Errorf("verdict %q, reads %v", verdict, s.urls)
 	}
 }
+
+// A capped first read is only a lower bound: an exact larger second size does not prove growth.
+func TestMakeStationTemplateCappedFirstReadClaimsNoGrowth(t *testing.T) {
+	s := &sized{asks: mkStation("running", "", ""), files: []any{size("", 1<<20, true), size("2000000", 1<<20, true)}}
+	observed, _ := sizeReadback(t, s)
+	if got := js(t, observed); strings.Contains(got, `"growing"`) || strings.Contains(got, "RUNAWAY") {
+		t.Errorf("growth claimed from a capped first read: %s", got)
+	}
+}

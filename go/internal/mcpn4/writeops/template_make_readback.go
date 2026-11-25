@@ -59,6 +59,8 @@ const (
 	// whole size, and a read that hits the cap without one proves only "at least" that many bytes.
 	makeSampleGap = 5
 	makeSampleCap = 1 << 20
+	// makeSampleTimeout is the HTTP timeout, in seconds, of each read.
+	makeSampleTimeout = 30
 )
 
 // fileGetter is what the real station client offers besides the plan.Client calls (readtools' GetFile).
@@ -73,7 +75,7 @@ type tempSize struct {
 }
 
 func readTempSize(g fileGetter, urlPath string) (tempSize, error) {
-	f, err := g.GetFile(urlPath, 30, makeSampleCap)
+	f, err := g.GetFile(urlPath, makeSampleTimeout, makeSampleCap)
 	if err != nil {
 		return tempSize{}, err
 	}
@@ -133,7 +135,8 @@ func describeTempGrowth(out *pyjson.Object, first, second tempSize, apart int) *
 		if apart > 0 {
 			out.Set("bytes_per_second", (second.bytes-first.bytes)/int64(apart))
 		}
-	case second.bytes > first.bytes:
+	case !first.atLeast && second.bytes > first.bytes:
+		// an exact first size below the second's lower bound proves growth; a capped first read does not
 		out.Set("growing", true)
 	}
 	if g, _ := out.Get("growing"); g == true {
