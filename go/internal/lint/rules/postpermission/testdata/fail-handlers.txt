@@ -1,0 +1,28 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-post-permission  Panel.java:4  post() in 'doPost' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Panel.java:8  post() in 'reset' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Panel.java:12  post() in 'doRestart' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+FAIL  lint-post-permission  Panel.java:15  post() in 'handle' runs the queued action with no RBAC Context and no permission check comes before it in this method: check the caller first (checkInvoke, checkWrite, getPermissionsFor, canInvoke, hasOperatorInvoke, hasAdminInvoke; types/security.md section 2.4), or waive it with a '// post-permission: ok <reason>' comment
+-- stderr --
+-- Panel.java --
+package demo;
+public class Panel extends BWebServlet {
+  public void doPost(WebOp op) throws Exception {
+    post(restart, null, cx);
+  }
+  @NiagaraRpc(permissions = "r")
+  public BValue reset(BValue arg) {
+    target.post(resetAction, arg, null);
+    return null;
+  }
+  public void doRestart(BValue arg, Context cx) {
+    this.post(restart, arg);
+  }
+  public void handle(HttpServletRequest req, HttpServletResponse res) {
+    comp.post(restart,
+        arg, cx);
+  }
+}
