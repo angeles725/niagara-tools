@@ -25,10 +25,13 @@ type configTarget struct{ ord, slot string }
 
 func (t *configTarget) object() *pyjson.Object { return obj("ord", t.ord, "slot", t.slot) }
 
-// configTargetOf is the target the slot of the component at ordText propagates to, nil when the
+// configTargetOf is the target the slot of the component at ordText propagates to: the first binding whose
+// sourceSlot names it, as BTemplateConfig.changed returns after the first match; nil when the
 // component is no templateConfig or no binding names the slot. A #Name/#DisplayName binding and a
 // target handle not found inside the instance (the templateConfig's parent) are refused.
 func configTargetOf(c plan.Client, ordText, slot string, nodes *pyjson.Object) (*configTarget, error) {
+	// the plan's load (slotDepth 2 for a top-level slot) reaches each binding's own slots, as the
+	// depth-2 load of n4_list_templates does
 	if pyjson.Str(get(box.Node(nodes, ""), "t")) != templateConfigType || strings.Contains(slot, "/") {
 		return nil, nil
 	}

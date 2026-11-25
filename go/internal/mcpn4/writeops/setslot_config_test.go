@@ -96,9 +96,17 @@ func TestSetSlotRefusesAPropagatedTargetOutsideTheWriteScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := &plan.State{Scope: scope}
-	if _, err := writeops.SetSlot.PlanWith(cfgStation("20.0", "h:9"), cfgSet("setpoint", pyjson.FloatNumber(21), "baja:Double"), w, nil); err == nil ||
-		!strings.Contains(err.Error(), "station:|slot:/LabScratch/Inst/Pt") {
-		t.Errorf("target outside the write scope: %v", err)
+	single := cfgSet("setpoint", pyjson.FloatNumber(21), "baja:Double")
+	batch := obj("writes", []any{cfgSet("note", "y", "baja:String"), single})
+	for name, args := range map[string]*pyjson.Object{"single": single, "batch": batch} {
+		if _, err := writeops.SetSlot.PlanWith(cfgStation("20.0", "h:9"), args, w, nil); err == nil ||
+			!strings.Contains(err.Error(), "station:|slot:/LabScratch/Inst/Pt") {
+			t.Errorf("%s: target outside the write scope: %v", name, err)
+		}
+	}
+	wide, _ := ord.NewScope([]string{cfgInst})
+	if _, err := writeops.SetSlot.PlanWith(cfgStation("20.0", "h:9"), batch, &plan.State{Scope: wide}, nil); err != nil {
+		t.Errorf("target inside the write scope: %v", err)
 	}
 }
 
