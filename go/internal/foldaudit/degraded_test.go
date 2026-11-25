@@ -62,3 +62,38 @@ func TestDegradedExternalStateIsAbsentWhenARootIsConfiguredOrNothingPends(t *tes
 		t.Errorf("no research retros: exit %d, out:\n%s", code, out)
 	}
 }
+
+func TestNoResearchProbeSkipsOnlyTheDegradedProbe(t *testing.T) {
+	root, _ := extKit(t, "")
+	home := researchHome(t)
+	idx := root + "/retros/INDEX.md"
+	code, out, errs := runHome(home, "--strict", "--no-research-probe", idx, root)
+	if code != ExitOK || errs != "" || strings.Contains(out, "DEGRADED") {
+		t.Errorf("with the option: exit %d, stderr %q, want %d and no DEGRADED line; out:\n%s", code, errs, ExitOK, out)
+	}
+	code, out, _ = runHome(home, "--strict", idx, root)
+	if code != ExitStrict || !strings.Contains(out, degradedLine) {
+		t.Errorf("without the option the line stays: exit %d, out:\n%s", code, out)
+	}
+}
+
+func TestNoResearchProbeKeepsTheAuditOfAConfiguredRoot(t *testing.T) {
+	root, ext := extKit(t, "")
+	home := researchHome(t)
+	idx := root + "/retros/INDEX.md"
+	_, withOpt, _ := runHome(home, "--no-research-probe", "--external-root", ext, idx, root)
+	_, without, _ := runHome(home, "--external-root", ext, idx, root)
+	if withOpt != without {
+		t.Errorf("the option changed the report of a configured root:\nwith:\n%s\nwithout:\n%s", withOpt, without)
+	}
+}
+
+func TestParseArgsNoResearchProbe(t *testing.T) {
+	o, msg := parseArgs([]string{"--no-research-probe", "I", "K"})
+	if msg != "" || !o.noResearchProbe || o.index != "I" || o.root != "K" {
+		t.Errorf("got %+v, %q", o, msg)
+	}
+	if o, _ := parseArgs([]string{"I", "K"}); o.noResearchProbe {
+		t.Error("the probe is skipped by default")
+	}
+}

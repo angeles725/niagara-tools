@@ -15,9 +15,10 @@ const ResearchRetros = "niagara-research/retros"
 // degraded reports the typed state external-roots-unconfigured: no --external-root and no fold-roots.conf root, yet a
 // niagara-research/retros directory (in $HOME, or beside the kit's repository) holds retros with a pending kit delta.
 // The external audit did not run, so a clean-looking report would be a silent zero; the line says so and fails
-// --strict. It names the directory by its label, never by its path.
+// --strict. --no-research-probe skips it (CI's step and its local twin, whose verdict must not depend on the
+// machine's research checkout). It names the directory by its label, never by its path.
 func (t *audit) degraded() {
-	if len(t.o.externals) > 0 {
+	if len(t.o.externals) > 0 || t.o.noResearchProbe {
 		return
 	}
 	for _, dir := range researchCandidates(t.o.root, t.s.Env("HOME")) {

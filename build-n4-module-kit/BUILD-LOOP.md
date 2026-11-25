@@ -1626,6 +1626,8 @@ disabled. A Spyder is not done until its state is read back:
   `toolbelt/sweep-fold-audit.sh --strict --deltas-since 2026-09-24 "$T/INDEX.md" <kit-root>` (fold-citation audit; from
   the Δ-citation convention on, every Δ1..Δn of a folded retro is cited as `[ev: retro <stem> Δk]` or parked as
   `[deferred: retro <stem> Δk]` — the committed form of the per-retro reconcile check).
+  CI's step adds `--no-research-probe` (CI has no niagara-research checkout; its local twin must match). A manual
+  run omits it and keeps the operator-facing `DEGRADED external-roots-unconfigured` line.
 - **Installed-skill drift (close gate):** run **`scripts/check-skill-drift.sh`** (read-only; `--skill <name>`,
   `--home <dir>`). A FAIL means the launcher an agent actually follows (`~/.claude/skills/<skill>/SKILL.md`) differs
   from the tracked `skill/SKILL.md` — the session is not closed until `scripts/install-skill.sh --force` restores
