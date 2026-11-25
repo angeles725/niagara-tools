@@ -1,49 +1,55 @@
 package buildmodule
 
 import (
+	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/gradleenv"
 )
 
-// TestMirrorSigningWarning: every mirror build says up front, before gradle, that its jar is signed with the
-// mirror home's throwaway key and cannot be installed, and names the build that works; a real home gets none.
-func TestMirrorSigningWarning(t *testing.T) {
-	const throwaway = "build.sh: WARN — mirror build: the jar is signed with the throwaway key of the mirror user home"
-	cases := []struct {
-		name   string
-		mirror bool
-		gradle int // exit code of the fake gradlew
-		code   int
-		warned bool
-	}{
-		{"a mirror build", true, 0, ExitOK, true},
-		{"a mirror build whose gradle fails", true, 1, ExitGradle, true},
-		{"a real home", false, 0, ExitOK, false},
+// signingMirrorBuild is a build over a fresh mirror directory with the given --gradle-prop values; err gets its output.
+func signingMirrorBuild(t *testing.T, props ...string) (*build, *bytes.Buffer) {
+	t.Helper()
+	home := t.TempDir()
+	if err := os.WriteFile(filepath.Join(home, ".niagara-mirror"), []byte("source=/mnt/c/X\n"), 0o644); err != nil {
+		t.Fatal(err)
 	}
-	for _, c := range cases {
-		f := newFixture(t)
-		f.signs()
-		if c.mirror {
-			f.write(f.home+"/"+mirrorMarker, "")
+	var err bytes.Buffer
+	b := &build{s: cli.Stdio{Err: &err}, home: home}
+	for _, p := range props {
+		gp, ok := gradleenv.Prop(p)
+		if !ok {
+			t.Fatalf("gradleenv.Prop(%q) refused", p)
 		}
-		if c.gradle != 0 {
-			f.does("gradlew", "exit 1\n")
-		}
-		got := f.run(f.root, "Foo", f.home)
-		if !c.mirror {
-			got = f.build()
-		}
-		f.wants(c.name, got, c.code)
-		if has := strings.Contains(f.err, throwaway); has != c.warned {
-			t.Errorf("%s: throwaway-key warning = %v, want %v\nstderr: %s", c.name, has, c.warned, f.err)
-		}
-		if !c.warned {
-			continue
-		}
-		for _, text := range []string{"cannot be installed", "-Pniagara_home=" + f.home, "real HOME", f.home + "/.mirror-user-home"} {
-			if !strings.Contains(f.err, text) {
-				t.Errorf("%s: warning lacks %q\nstderr: %s", c.name, text, f.err)
-			}
-		}
+		b.opt.gradleProps = append(b.opt.gradleProps, gp)
+	}
+	return b, &err
+}
+
+// A mirror build without a named profile signs with the mirror home's throwaway key: the warning stays.
+func TestAMirrorBuildWithoutAProfileWarnsAboutTheThrowawayKey(t *testing.T) {
+	b, err := signingMirrorBuild(t, "niagaraSigningAlias=CodeSigning")
+	b.warnMirrorSigning()
+	if !strings.Contains(err.String(), "throwaway key of the mirror user home") {
+		t.Errorf("stderr %q, want the mirror signing warning", err.String())
+	}
+}
+
+// --gradle-prop niagaraSigningProfile=<file> signs with that file's key on a mirror build too (seen live,
+// issue #1096): the warning would be false, so it is not printed. An empty value names no profile.
+func TestAMirrorBuildNamingAProfileDoesNotWarn(t *testing.T) {
+	b, err := signingMirrorBuild(t, "niagaraSigningAlias=CodeSigning", "niagaraSigningProfile=/tmp/p/profile.xml")
+	b.warnMirrorSigning()
+	if err.Len() != 0 {
+		t.Errorf("stderr %q, want nothing", err.String())
+	}
+	b, err = signingMirrorBuild(t, "niagaraSigningProfile=")
+	b.warnMirrorSigning()
+	if !strings.Contains(err.String(), "throwaway key") {
+		t.Errorf("empty profile: stderr %q, want the warning", err.String())
 	}
 }
