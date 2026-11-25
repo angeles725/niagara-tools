@@ -1,6 +1,10 @@
 package writeops
 
 import (
+	"strconv"
+	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -34,4 +38,27 @@ func overrideTarget(c plan.Client, typ string) bool {
 	}
 	is, complete, err := plan.NewContracts(tl).IsKnown(typ, booleanWritable)
 	return is || err != nil || !complete
+}
+
+// msgOverrideNoExpiry is the dry-run note of an override that holds until auto (#1064 item 2).
+const msgOverrideNoExpiry = "the override has no expiry: the point's maxOverrideDuration facet is 0 or not set, so " +
+	"WritableSupport.override keeps it until someone invokes auto (n4_invoke_action auto)"
+
+// overrideNeverExpires reports a point whose default override (duration 0) gets no expiry: its
+// facets hold no maxOverrideDuration, or hold r:0. Facets it cannot read report false (no claim).
+func overrideNeverExpires(nodes *pyjson.Object) bool {
+	facets := ""
+	if n := box.Node(nodes, "facets"); n != nil { // a point at its default facets sends none
+		v, _ := n.Get("v")
+		facets, _ = v.(string)
+	}
+	for _, part := range strings.Split(facets, "|") {
+		key, value, ok := strings.Cut(part, "=")
+		if !ok || key != "maxOverrideDuration" {
+			continue
+		}
+		ms, err := strconv.ParseInt(strings.TrimPrefix(value, "r:"), 10, 64)
+		return err == nil && ms == 0
+	}
+	return true
 }
