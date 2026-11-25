@@ -60,7 +60,7 @@ case "${1:-}" in
     exit 0
     ;;
 esac
-here="$(cd "$(dirname "$self")" && pwd)"
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 GO_DIR="$(cd "$here/../.." && pwd)/go"
 [ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-ux-version: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
 # shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
