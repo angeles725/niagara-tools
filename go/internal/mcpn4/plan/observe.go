@@ -145,7 +145,7 @@ func Handle(c Client, ord string, depth int) (any, *pyjson.Object, error) {
 // hides: the program unloads on its own and the station then answers with the bare path as the
 // error (retro mcpn4-spyder-commissioning-over-box Δ4, live 2026-11-18).
 const msgProgramUnloaded = "; this path is below a Spyder ControlProgram, which unloads on its own and then answers a path " +
-	"below it with only the path: load it again (open the Spyder's program in Workbench) and repeat the call"
+	"below it with only the path: load it again (run n4_invoke_action loadControlProgram on the Spyder) and repeat the call"
 
 // nameUnloadedProgram is err with the unloaded-program cause added when it is the station's own
 // refusal of a path below a ControlProgram slot; any other error is returned as it was.
