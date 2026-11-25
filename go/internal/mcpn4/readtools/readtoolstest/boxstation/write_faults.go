@@ -46,11 +46,11 @@ func (st *Station) faultedFrame(frame map[string]any, f Faults) map[string]any {
 		body, _ := m["b"].(map[string]any)
 		out, err := st.faultedDispatch(channel, key, body, f)
 		if err != nil {
-			replies = append(replies, map[string]any{"c": m["c"], "k": m["k"], "r": 0, "t": "e",
+			replies = append(replies, map[string]any{"c": m["c"], "k": m["k"], "r": m["r"], "t": "e",
 				"b": map[string]any{"isErr": true, "m": err.Error()}})
 			continue
 		}
-		replies = append(replies, map[string]any{"c": m["c"], "k": m["k"], "r": 0, "b": out, "t": "rp"})
+		replies = append(replies, map[string]any{"c": m["c"], "k": m["k"], "r": m["r"], "b": out, "t": "rp"})
 	}
 	return map[string]any{"v": "2.3", "p": "box", "n": frame["n"], "m": replies}
 }
