@@ -130,6 +130,8 @@ non-skippable check floor (§5) applies to every tier.
   input — an overrun is evidence to tune the budgets, not a failure to absorb silently.
 - Speed comes from the tier and from reused maps, never from dropping the floor.
   `[ev: retro panccadia-commissioning-lessons Δ14]` `[ev: retro change-tier-time-budgets Δ1]`
+- **CI also gates the PR size:** over 400 authored changed lines fails (`scripts/pr-size.sh`; the `size:exception`
+  label waives it). The local pre-push check only warns, so plan the chain of small PRs before the push.
 - **Size review candidates at planning time:** when the feature forecasts more than ~1000 authored lines (adapter +
   generated slotomatic region count), plan one native review per work-unit commit from the start — review each commit
   from a detached worktree (`git worktree add --detach <wt> <commit>`) against `--base-ref <parent>` — instead of

@@ -156,3 +156,40 @@ long_line() { local i; for ((i = 0; i < 40; i++)); do printf 'word '; done; prin
   [[ "$output" != *"FAIL gen-changelog"* ]]
   [[ "$output" == *"ci-local: --changed: 0 check(s) failed"* ]]
 }
+
+# gate_probe <mode> <command>: gate_run of the sourced lib on its own (a stand-in repo root and work dir), then the
+# failed-gate count; the lib is sourced in a child so the counter survives `run`.
+gate_probe() {
+  run bash -c '
+    set -u
+    ROOT="$1" WORK="$2" RANGE="" CHANGED_FAILED=0; NAMES=(); BODIES=()
+    . "$3/scripts/lib/ci-local-gates.sh"
+    gate_run "probe gate" "$4" "$5"
+    echo "failed=$CHANGED_FAILED"' _ "$R" "$BATS_TEST_TMPDIR/w" "$REPO" "$1" "$2"
+}
+
+@test "CG9: a hard gate whose command is missing or whose go test did not build says environment, not a size finding, and still counts (issue #973)" {
+  # Mutation: CG9 -- printing every non-zero exit as `FAIL (exit N)` sends the reader to the file-size rule for a missing go binary
+  mkdir -p "$BATS_TEST_TMPDIR/w"
+  gate_probe hard 'no-such-command-for-ci-local'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"FAIL probe gate (environment: command not found, exit 127)"* ]]
+  [[ "$output" == *"failed=1"* ]]
+  gate_probe hard 'printf "FAIL\tpkg [build failed]\n"; exit 1'
+  [[ "$output" == *"FAIL probe gate (environment: go test [build failed], exit 1)"* ]]
+  [[ "$output" == *"failed=1"* ]]
+  gate_probe hard 'printf "FAIL\tpkg [setup failed]\n"; exit 1'
+  [[ "$output" == *"FAIL probe gate (environment: go test [setup failed], exit 1)"* ]]
+  [[ "$output" == *"failed=1"* ]]
+}
+
+@test "CG10: a hard gate's ordinary failure and a soft gate keep their previous lines (issue #973)" {
+  mkdir -p "$BATS_TEST_TMPDIR/w"
+  gate_probe hard 'echo size finding; exit 1'
+  [[ "$output" == *"FAIL probe gate (exit 1)"* ]]
+  [[ "$output" != *"environment"* ]]
+  [[ "$output" == *"failed=1"* ]]
+  gate_probe soft 'no-such-command-for-ci-local'
+  [[ "$output" == *"WARN probe gate (exit 127: the size was not measured)"* ]]
+  [[ "$output" == *"failed=0"* ]]
+}
