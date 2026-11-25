@@ -44,6 +44,8 @@ type haRun struct {
 	flatSensors        bool                 // flat_scope=sensors: only sensor readings (R8 N4)
 	flatDown           bool                 // flat_down=true: a flat history of a down point goes to flat_down (R8 N3)
 	flatPoints         map[string]flatPoint // the point read of flat_scope / flat_down, by point path; nil when none
+	start              float64              // the clock when the audit began (progress lines)
+	pool               haProgress           // the pooled stage running (histories_audit_progress.go)
 }
 
 // HistoriesAudit is n4_histories_audit.
@@ -72,20 +74,25 @@ func (t *Tools) HistoriesAudit(args *pyjson.Object) (*pyjson.Object, error) {
 			warn:     floatArg(args, "capacity_warn", haDefaultCapacityWarn), now: bql.Now()}}
 	r.flatArgs(args)
 	start := t.Ctx.Clock()
+	r.start = start
 	exts, err := r.readExts()
 	if err != nil {
 		return nil, err
 	}
+	r.stage("extensions")
 	points, err := r.readPoints()
 	if err != nil {
 		return nil, err
 	}
+	r.stage("points")
 	if r.excludeServices {
 		points, r.servicesExcluded = withoutServices(points)
 	}
 	r.classify(points, exts)
+	r.stage("counts")
 	if r.flat {
 		r.flatCheck(exts)
+		r.stage("flat")
 	}
 	out := r.reply(base, span, minSpan, len(exts))
 	out.Set("elapsed_ms", int(math.RoundToEven((t.Ctx.Clock()-start)*1000)))
