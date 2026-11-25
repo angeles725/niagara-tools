@@ -19,6 +19,8 @@ const (
 // and shell history (§1453.5), and RecompileTool prompts when it is omitted (RecompileTool.java:110-111), so
 // stdin and the terminal go to nre. main exits 0 after a failure it prints (File not found :57, exit :92, ERROR
 // lines :157 and :169), so the output decides: an ERROR line, or no "--- Processed <file>!" line, is exit 1.
+// On a terminal (both stdout and stderr) nre gets the real streams for the prompt and the output cannot be read, so
+// recompile_tty.go judges by the bog files instead: exit 1 when none was rewritten (#1001).
 func recompile(args []string, s cli.Stdio) int {
 	if len(args) < 2 {
 		fmt.Fprintln(s.Err, recompileUsage)
@@ -63,6 +65,9 @@ func recompile(args []string, s cli.Stdio) int {
 		return exitUsage
 	}
 	native, _ := nativePath(nre, abs) // no wslpath: the path as is; RecompileTool reports a file it cannot open
+	if onTerminal(s) {
+		return runOnTerminal(nre, append([]string{recompileClass, native}, flags...), abs, s)
+	}
 	code, out := runStreaming(nre, append([]string{recompileClass, native}, flags...), s)
 	if code != 0 {
 		return code

@@ -14,11 +14,14 @@
 #              bin/nre.exe.
 #   recompile  nre program:com.tridium.program.ui.RecompileTool <dir|bog>: recompiles and re-signs Program objects.
 #              Never passes -password: (a `-password...` argument is refused); nre prompts on the terminal, so run it
-#              from one. -alias: and -tsaUrl: pass through.
+#              from one. -alias: and -tsaUrl: pass through. On a terminal nre gets the real stdout and stderr (a
+#              piped stdout may break or echo the prompt), so its output is not read: exit 1 when no *.bog under
+#              the target was rewritten. Piped or redirected, the output is read (ERROR / "--- Processed" lines).
 #   A Windows install is run from WSL through its bin/nre.exe; the runtime boots from the install (about 35 s), and
 #   a path handed to nre.exe goes through wslpath -w.
 # exit:  0 ok · 1 deps: the install holds no such module · palette/recompile: nre exited 0 but printed a failure
-#        (PaletteGenerator "Failed to generate palette", RecompileTool an ERROR line or no "--- Processed" line)
+#        (PaletteGenerator "Failed to generate palette", RecompileTool an ERROR line or no "--- Processed" line;
+#        on a terminal: no bog file rewritten)
 #        · 3 usage/env: an unknown tool (the supported list is printed), no bin/nre.exe or bin/nre, a bad module name,
 #        a refused directory, flag or password · anything else: nre's own exit code, passed through
 #
