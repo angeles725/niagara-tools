@@ -301,7 +301,7 @@ Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_naviga
 `n4_alarm_text_check`,
 `n4_commissioning_report`, `n4_list_schedule_kinds`, `n4_read_schedule`, `n4_schedule_audit`, `n4_override_audit`,
 `n4_station_runtime`, `n4_read_tags`,
-`n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`, `n4_list_templates`, `n4_poll`.
+`n4_neql_query`, `n4_list_tag_dictionaries`, `n4_tag_coverage`, `n4_list_templates`, `n4_poll`, `n4_subscribe_point`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -1992,6 +1992,23 @@ kept and the poll goes on, except a lost session (`ended: session_lost`, reconne
 authentication failure (`ended: auth_failed`: another read would be one more failed login toward the lockout).
 `series` follows each cell, the row named by its first column: `{row, column, first, last, changes, min?, max?}`.
 ### Writing a weekly schedule and its default output
+
+`n4_subscribe_point(ord, seconds=10)` (#875) subscribes one control point over BOX so its driver
+polls it, as an open Workbench view would. A point a driver has never read, or that nothing
+subscribes, stays `{stale}` with its last cached value, and a read alone (`n4_read_slots`, BQL)
+never subscribes it, so a freshly created point could not be checked against the field without
+writing to it. The tool loads the point (`before`), sends the component-space `sub` (box-rt
+`BComponentSpaceSessionHandler.subscribe`), re-reads the point every 2 s for at most `seconds`
+(1 to 40), then always sends `unsub`, also after a failed read: a BOX subscription carries no
+lease, so one left behind would keep the point polled until the session ends. `ended` is
+`stale_cleared` (a read showed no stale flag: the driver's read reached `BProxyExt.readOk`),
+`not_stale` (the point was never stale; `after` holds the value the subscription refreshed),
+`not_polled` (the point is down, disabled or in fault: the driver does not poll it, so the
+subscription cannot clear stale; ping the device ext with `n4_invoke_action`), `read_failed`
+or `timeout` (still stale, with a note on the device and the poll rate). `before` and `after`
+are `{value, status_flags, proxy_ext, proxy_status_flags}`; `unsubscribed` is true, or false
+with `unsubscribe_error`. It writes no slot; the only effect is the driver's normal poll
+traffic for that point while it is subscribed.
 
 `n4_set_schedule(ord, weekly, default_output)` (a write tool: `--allow-writes`, a write scope, dry run then
 `confirmation_token`) replaces the days given and only those: `{"monday": [{"start": "08:00",
