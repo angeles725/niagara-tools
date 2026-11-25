@@ -9,7 +9,7 @@ build-n4-module-kit/README.md 7
 build-n4-module-kit/SOURCES.md 6
 build-n4-module-kit/build-verify.md 94
 build-n4-module-kit/corpus-index.md 3
-build-n4-module-kit/types/actions.md 3
+build-n4-module-kit/types/actions.md 2
 build-n4-module-kit/types/cloud-connector.md 10
 build-n4-module-kit/types/dashboard.md 144
 build-n4-module-kit/types/distribution.md 12

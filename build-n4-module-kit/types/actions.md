@@ -23,8 +23,10 @@ the wrapper's type. [CERT] `com/tridium/sys/schema/ComplexIntrospector.java:316-
 
 **Gotcha — a wrong frozen handler is a type-load error, not a no-op:** a missing or mis-named `do` method fails
 the type with `Missing action do method`; a non-public one with `Do action method must be public`; a different
-return type with `Action method and do method have mismatched signature`. A silent no-op is possible
-at most on a reflectively dispatched DYNAMIC action [INFER].
+return type with `Action method and do method have mismatched signature`. A frozen action is never a silent
+no-op, and `toolbelt/lint-action-handler.sh` FAILs it before the station does. A DYNAMIC action (added at runtime)
+has no `do` method: it runs the `BAction` handler value, `handler.invoke(instance, arg)`, so this load check does
+not cover it. [CERT] `com/tridium/sys/schema/ComponentSlotMap.java:1340-1346` (4.14 vineflower)
 [ev: retro n4-course-slots-components-contracts Δ1] [ev: corpus B1231 §1231.4]
 
 **Declare ONE handler and take the `Context`** (Tridium's recommendation: the Context carries the invoking user,
@@ -67,13 +69,17 @@ FAIL. `[ev: course Lab Instructions.txt:1644-1647,1711-1721]`
 - **A queued ASYNC action runs with a null Context** (`EngineManager.java:306-310`: `doInvoke(…, entry.arg, null)`):
   never read `cx.getUser()` there; check permissions before posting (`types/security.md` § 2.4).
 - **The sanctioned offload** for slow work is an `ASYNC` action whose `post()` override hands
-  `new Invocation(this, action, arg, cx)` to the module's own executor or worker, which calls `invoke()` on it. A
-  bare `this::doX` lambda skips the invoke path: no links, no action event, no audit, no Context. A bounded executor
-  rejects work when it is full or shut down (`RejectedExecutionException` under the JDK default policy): catch it in
-  `post()` and report it (fault the status and log), or fall back with `return super.post(action, arg, cx);`, which
-  queues it on the engine's action queue (vineflower baja 4.14.0.162 `javax/baja/sys/BComponent.java:590`). Never
-  call `invoke()` from `post()`: that runs the slow work on the caller's thread. Never let the exception escape. (Owed Go lint G28
-  `async-blocking-action`.)
+  `new Invocation(this, action, arg, cx)` to the module's own executor or worker, which calls `invoke()` on it.
+  **Never run a handler through `this::doX`, `new Thread(() -> doX(…))` or a pool task that calls `doX`:** that skips
+  the invoke path (permission check on the Context's user, slot knobs, action event) `[INFER]`, and the handler then
+  runs on a JDK thread the engine does not know. `toolbelt/lint-action-handler.sh` WARNs `this::doX` and
+  `new Thread(() -> doX(` of a declared action (course F3). [CERT] `com/tridium/sys/schema/ComponentSlotMap.java:
+  1315-1360` (`invoke` runs the check, then the handler, then `knobs.propagate`)
+- **A full or shut-down bounded executor** rejects work (`RejectedExecutionException` under the JDK default policy):
+  catch it in `post()` and report it (fault the status and log), or fall back with
+  `return super.post(action, arg, cx);`, which queues it on the engine's action queue. [CERT]
+  `javax/baja/sys/BComponent.java:590-593` (vineflower baja 4.14.0.162). Never call `invoke()` from `post()`: that
+  runs the slow work on the caller's thread. Never let the exception escape.
 
 ## 3 · Action flags
 
@@ -169,13 +175,15 @@ consumers:
 - **`@NiagaraAction`** → invoked over oBIX `<op>` POST, Fox, and the Workbench Actions menu;
   routed through `ObixUtils.serviceInvoke` → `BComponent.invoke`; admin-invoke by default
   unless `OPERATOR`.
-- **`@NiagaraRpc`** → the bajaux/SPA path over `/rpc` (JSON POST, CSRF-gated, session auth);
-  no servlet subclass needed; the method registry a bajaux UI view calls.
+- **`@NiagaraRpc`** → one method registry with two wires: `/rpc` (JSON POST, CSRF-gated, session auth) for a plain
+  HTTP client, and BOX `sys/rpc` for `baja.rpc(ord, method, …)` from a bajaux view; no servlet subclass needed.
+  `baja.rpc` goes over BOX, not `/rpc`: `types/data-access.md` § 8 holds the table, the Context each wire passes and
+  the `transports` rule. [CERT] `com/tridium/box/BSysChannel.java:200-201` (4.14 vineflower)
 
 **Gotcha:** a custom `-ux` view that needs a server-side callable should use `@NiagaraRpc`
-(the bajaux-native, CSRF-gated path), NOT `@NiagaraAction` (which is oBIX/Fox-facing). Mixing
-them up yields either a missing CSRF gate or a non-discoverable action. See `types/dashboard.md`
-for the serving-recipe decision table. [ev: corpus B507; B822]
+(the bajaux-native path: BOX session on `baja.rpc`, CSRF filter on `/rpc`), NOT `@NiagaraAction` (which is
+oBIX/Fox-facing). Mixing them up yields either a missing CSRF gate or a non-discoverable action. See
+`types/dashboard.md` for the serving-recipe decision table. [ev: corpus B507; B822]
 
 ---
 
