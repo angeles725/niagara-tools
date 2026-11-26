@@ -192,6 +192,8 @@ module) before the first edit, or record why not in the feature doc. `[ev: retro
 `$KIT/toolbelt/module-map.sh where <file|concern> --root <module-root>` names a file's concern, its files and tests;
 `module-map.sh tests <concern>` runs only that concern's pure tests; `module-map.sh add-concern <Name>` (or
 `scaffold-module.sh add-concern`) writes a new concern's folder, pure class, test and map row.
+Before you report done, run `$KIT/toolbelt/lint-module-map.sh --base <base-ref> <module-root>`: MM8 names every
+file your change added (a test, a vendored file) that no row lists (WARN in `legacy`, FAIL in `strict`); add its row.
 `[ev: retro modularity-structure Δ1]` `[ev: retro modularity-structure Δ4]` Restructuring an existing module toward
 strict happens only on request, in the order of `$KIT/types/structure.md` § Legacy → strict migration.
 `[ev: retro modularity-structure Δ5]`

@@ -18,6 +18,10 @@
 //	     two rows, or a non-plumbing row lists files in concern folders of two
 //	     names (model/x and adapter/x are one concern), or two non-plumbing rows
 //	     share a concern and a part (case-insensitive; one row per part is fine)  FAIL strict, WARN legacy
+//	MM8  a file the candidate added since --base <ref> that no row lists, among the files MM4 does not
+//	     require: srcTest/**/*.java, webtest/**/*.test.{mjs,js}, vendored src/rc files (vendor/, ext/, *.min.*);
+//	     a new source file in no row stays MM4's. Needs --base (no --base: it does not run; a ref that does
+//	     not resolve: one INFO row)                                            FAIL strict, WARN legacy
 package modulemap
 
 import (
@@ -31,16 +35,17 @@ import (
 // ID is the lint name printed in every row.
 const ID = "lint-module-map"
 
-// Spec registers the rule with the contract of toolbelt/lint-module-map.sh: one <module-root> (later arguments
-// ignored, no flag parsed); rows "<sev>  lint-module-map  <path>[:<line>]  MM<n>: <reason>"; exit 0 clean or
+// Spec registers the rule with the contract of toolbelt/lint-module-map.sh: [--base <ref>] <module-root> (--base is the
+// only option; a second root or another flag is the usage line, exit 3); rows "<sev>  lint-module-map  <path>[:<line>]  MM<n>: <reason>"; exit 0 clean or
 // WARN-only, 1 on any FAIL, 3 on a usage error, a root with no part, an unreadable directory under a part or an
 // unreadable map file.
 func Spec() lint.Spec {
-	return lint.Spec{Root: rule{}, Mode: lint.Raw, Usage: "usage: lint-module-map.sh <module-root>", BarePathRow: true,
+	return lint.Spec{Root: rule{}, Mode: lint.Valued, Option: baseOption,
+		Usage: "usage: lint-module-map.sh [--base <ref>] <module-root>", BarePathRow: true,
 		EmptyError: lint.EmptyRow{Msg: "no module parts found (no *-rt, *-ux, *-wb or *-se sub-directory: wrong path or not a module root)"}}
 }
 
-type rule struct{}
+type rule struct{ base string } // base: the --base ref of this run, "" when not given
 
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Fail }
@@ -55,14 +60,15 @@ type row struct {
 // scan is one run over a module root: the findings in report order and the module's files.
 type scan struct {
 	root, mapPath string
+	base          string // the ref MM8 compares against; "" skips MM8
 	mode          lint.Modularity
 	files         []string // every file under the parts, relative to root, in walk order
 	out           []lint.Finding
 }
 
-// CheckRoot runs MM1-MM6 on root: the per-row checks (MM3, then MM5) in map order, then MM4 and MM6 by path.
-func (rule) CheckRoot(root string) ([]lint.Finding, error) {
-	s := &scan{root: strings.TrimRight(root, "/")}
+// CheckRoot runs MM1-MM8 on root: the per-row checks (MM3, then MM5) in map order, then MM7, MM4, MM6 and MM8.
+func (r rule) CheckRoot(root string) ([]lint.Finding, error) {
+	s := &scan{root: strings.TrimRight(root, "/"), base: r.base}
 	if s.root == "" {
 		s.root = "/"
 	}
@@ -112,6 +118,7 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 	s.mm7(rows, owners)
 	s.mm4(rows, owners)
 	s.mm6(listed)
+	s.mm8(rows)
 	return s.out, nil
 }
 
