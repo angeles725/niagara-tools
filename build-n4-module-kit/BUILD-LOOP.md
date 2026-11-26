@@ -202,7 +202,8 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
    `niagaraSigningProfile` (gradle properties, user-level `gradle.properties` or `build.sh --gradle-prop k=v`) to the
    module's own key before the first build: the emitted root sets `allowDefaultProfile.set(false)`, so `:jar` fails
    without a profile, and the gate checks the signer against that alias (`build-verify.md` § Signing per deploy
-   target). For a first build or a bench,
+   target). A root without the `niagaraSigning {}` block (`templates/signing-root.gradle.kts`) makes `build.sh`
+   exit 10 before gradle when an alias is configured. For a first build or a bench,
    `templates/signing-profile.xml` is a throwaway profile to copy outside the repository: the fully qualified
    `profileType` (the short class name fails `:jar` with `Could not determine class for profile`), the store keys and
    the one `keytool` command with the code-signing key usage. `[ev: retro build-kit-bench-session Δ6]`
@@ -293,7 +294,10 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
 - A client module is signed with ITS alias, not the development key: configure `niagaraSigningAlias` so `build.sh` hands
   the gate `--expected-signer` (a different signer FAILs the `signed` row); a
   `build.sh: WARN — no niagaraSigningAlias is configured …` line means the gate accepted any signature.
-  (build-verify.md)
+  An alias with a root that has no `niagaraSigning {}` block is refused before gradle (exit 10): the plugin would
+  ignore it and sign with the throwaway key; the message gives the `cat templates/signing-root.gradle.kts >>
+  build.gradle.kts` command. `No private key for <alias> found` makes `build.sh` print the profile, its keystore and
+  the aliases it holds (never a password; exit stays 30). (build-verify.md)
 - A `gradle :jar` with the default JDK is NOT a build.
 
 ### 4.a Gradle task matrix (`niagara-module` plugin tasks) — when to run each

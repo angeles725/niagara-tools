@@ -1,0 +1,3 @@
+### Added
+
+- build-n4-module: `build.sh` exits 10 before gradle when a `niagaraSigningAlias` is configured and the root `build.gradle.kts` applies the signing plugin without a `niagaraSigning {}` block (the plugin would ignore the alias and sign with the throwaway key, failing only at the verify gate); the message gives the command that appends `templates/signing-root.gradle.kts`. On `No private key for <alias> found` it prints the signing profile, its keystore and the aliases the keystore holds (`keytool -list`, password through the environment, never printed), or the `keytool` command to run (#1121).

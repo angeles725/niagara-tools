@@ -7,7 +7,7 @@
 // baselineref.go (--schema-baseline-ref), location.go (WSL mount warning, preflight), profiles.go and gradleconf.go (what gradle builds and with which
 // arguments), mirror.go (user.home isolation), baseline.go (pre-build snapshot and restore), replaced.go (the
 // mirror jar a passing build replaced: kept, and --restore-mirror; the installation the mirror was made from), gradle.go and
-// diagnose.go (the run and its log), drift.go (drift verdict), gate.go (verify gate, report-module). The data
+// diagnose.go (the run and its log; signing_key.go the keystore a missing key names), drift.go (drift verdict), gate.go (verify gate, report-module). The data
 // lives apart: exit.go, messages.go, patterns.go; the usage text is the launcher header (usage.go). This file only composes them.
 package buildmodule
 
@@ -61,6 +61,7 @@ var steps = []func(*build) int{
 	(*build).warnSlowMounts,
 	(*build).pickMirrorPlugin,
 	(*build).preflight,
+	(*build).requireSigningBlock,
 	(*build).warnPluginNotInM2,
 	(*build).selectProfiles,
 	(*build).configureGradle,

@@ -75,6 +75,16 @@
 #   a later run without the alias would take its signer as the expected one and pass. A gate PASS leaves it. Under
 #   --no-drift-check nothing is removed either. The development signer is recognised in any case (niagara4.SF).
 #   (source: delta B5 of an external session retro, 2026-11-13)
+# Signing block precheck (#1121): with a niagaraSigningAlias configured (as above) and a root build.gradle.kts that
+#   applies com.tridium.niagara-signing without a niagaraSigning {} block (the lint-structure L15 detection), the
+#   plugin ignores the alias and the profile and signs with the throwaway key, so build.sh exits 10 BEFORE gradle
+#   (also under --no-preflight) and prints the command that appends templates/signing-root.gradle.kts to the root.
+#   A root that does not apply the plugin, or that it cannot scan, is not refused.
+# No private key: when gradle ends with "No private key for <alias> found", build.sh prints the signing profile it
+#   used (niagaraSigningProfile: the last --gradle-prop, else $ORG_GRADLE_PROJECT_niagaraSigningProfile, else
+#   gradle.properties), the keystore the profile names and the aliases that keystore holds (keytool -list, the store
+#   password handed over in its environment, never printed). Without a usable password it prints the keytool command
+#   to run. The exit code stays 30.
 # Build-location precheck (Δ7): WARNs (non-fatal) when <module-root>'s gradle root or niagara_home sits on a
 #   WSL 9p/drvfs mount (/mnt/<drive>) — Gradle's per-file work is far slower there than on ext4.
 # Deployed-baseline drift gate (Δ2): before gradle's :jar task overwrites <niagara_home>/modules/<jar>, this
