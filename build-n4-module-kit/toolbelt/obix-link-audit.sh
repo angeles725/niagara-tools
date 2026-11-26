@@ -11,6 +11,7 @@
 #   obix-link-audit.sh --map <wiring-map.md> --xml <component.xml> [--table 1|2]
 #   obix-link-audit.sh --map <wiring-map.md> --obix <base-url> --component <path>
 #                      [--table 1|2] [--insecure]
+#   --component takes the station names as the station stores them: a space is $20 (#938).
 #
 #   --table 2 (default)  "SUMMARY display slots (control → facade)": the audited component is
 #                        the FACADE; each facade slot must be linked from its declared RT slot.
