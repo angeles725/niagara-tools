@@ -380,6 +380,17 @@ about 9 s on a 4.14 lab station), so the loop is: `build.sh` installs the jar (t
 the plan. It stops only a station it started; a station run as a Windows service needs the platform daemon instead.
 (issue #848)
 
+**Read a platform daemon from the loop:** `toolbelt/plat-read.sh details|liststations|ipconfig` runs `plat <verb>`
+over TLS (`-secure`, port 5011) with the daemon user and password of a mode-0600 env file (`NIAGARA_PLAT_HOST`,
+`NIAGARA_PLAT_PORT`, `NIAGARA_PLAT_USER`, `NIAGARA_PLAT_PASSWORD`; default
+`~/.config/niagara-private/lab-platform.env`). The password is masked in its output and the NRE boot log is dropped;
+`--dry-run` prints the call. plat reads a missing credential with `System.console()`, which is null without a
+terminal, so the credential reaches plat on its command line (`-usr:`/`-pwd:`, with `-noinput`): it is visible in
+the host's process list while plat runs, so use a lab-only daemon user. Verbs that change the host or a station are
+refused. `liststations` lists only the stations the daemon manages, not one `lab-station.sh` started. plat exits 0
+even after a stack trace (a wrong password prints `AuthenticationException`), so plat-read exits 1 and names the
+failure when the answer is a Java exception. (issue #850)
+
 **Post-jar copy lock (exit 32):** the plugin's LAST step copies the new jar into `<niagara_home>/modules/`; a
 Windows-side process (Workbench, a station) holding the old jar open on a `/mnt/c` mount makes that copy fail with
 `FileAlreadyExistsException` — invisible to `preflight.sh`'s jar-lock scan, which SKIPs 9p/drvfs mounts by design.
