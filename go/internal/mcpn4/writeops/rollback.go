@@ -119,6 +119,7 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 		return nil, err
 	}
 	var components, own []any
+	oracle := registryOracle(c, opBodies(ops)...)
 	for i, op := range ops { // one add per component: nested bodies are rejected live
 		o := op.(*pyjson.Object)
 		if get(o, "nm") != "a" {
@@ -128,7 +129,7 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 		if err != nil {
 			return nil, err
 		}
-		top, specs, err := flatten(i, b)
+		top, specs, err := flatten(i, b, oracle)
 		if err != nil {
 			return nil, err
 		}
@@ -171,6 +172,9 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 	notes := rollbackNotes(view, bid, relinks, unlinked, components, own, ops)
 	if len(outgoing) > 0 {
 		notes = append(notes, outgoingNote(len(outgoing)))
+	}
+	if note := oracle.FallbackNote(); note != "" {
+		notes = append(notes, note)
 	}
 	if chainText != "" {
 		notes = append(notes, chainText)

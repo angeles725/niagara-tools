@@ -23,3 +23,14 @@ func IsComponentType(t any) bool {
 	module, _, _ := strings.Cut(s, ":")
 	return module != "baja"
 }
+
+// TableComponentType is the table entry of type spec t: component says what the entry decides, listed
+// whether there is one. Only a "module:Type" string can be listed.
+func TableComponentType(t any) (component, listed bool) {
+	s, ok := t.(string)
+	if !ok {
+		return false, false
+	}
+	component, listed = componentTypes[s]
+	return component, listed
+}

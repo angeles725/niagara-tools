@@ -31,8 +31,10 @@ func extraChildren(c plan.Client, view *pyjson.Object, parent, name string) ([]e
 	typ, _ := get(node, "t").(string)
 	made := createdSlots(view)
 	var contracts *plan.Contracts
+	var oracle *plan.RegistryOracle
 	if tl, ok := c.(plan.TypeLoader); ok && typ != "" {
 		contracts = plan.NewContracts(tl)
+		oracle = plan.NewRegistryOracle(contracts)
 	}
 	var out []extraChild
 	kids := box.Children(nodes, name)
@@ -43,7 +45,7 @@ func extraChildren(c plan.Client, view *pyjson.Object, parent, name string) ([]e
 			out = append(out, extraChild{n, true})
 			continue
 		}
-		if !box.IsComponentType(t) || made[n] {
+		if !plan.ClassifyComponent(oracle, t) || made[n] {
 			continue
 		}
 		frozen, err := declaredFrozen(contracts, typ, kid)

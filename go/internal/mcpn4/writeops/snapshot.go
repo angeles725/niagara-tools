@@ -37,6 +37,8 @@ type snapshot struct {
 	ct         *plan.Contracts
 	wholeLinks bool
 	runtime    map[*pyjson.Object]bool
+	oracle     *plan.RegistryOracle // tells a struct (part of its parent's body) from a component; nil: none
+	taken      map[string]bool      // the paths take visited (snapshot_struct.go)
 }
 
 // linkKids are the slots of link c met at depth: one more level than depth allows when wholeLinks.
@@ -70,6 +72,7 @@ func name(node *pyjson.Object) string { n, _ := get(node, "n").(string); return 
 // take is _snapshot(_prune(node, depth), path, links, handles): type, value and children as
 // data, no handles. Links are recorded apart; a link-driven input is kept on its link as prior.
 func (s *snapshot) take(node *pyjson.Object, path string, depth int) (*pyjson.Object, error) {
+	s.visit(path)
 	if h := get(node, "h"); pyjson.Truthy(h) {
 		key, err := pyjson.DictKey(h)
 		if err != nil {
@@ -123,7 +126,7 @@ func (s *snapshot) take(node *pyjson.Object, path string, depth int) (*pyjson.Ob
 		if runtimeOutputSlots[n] && statusType(get(child, "t")) && !driven["s"+n] && !s.keepsOutput(node, child) {
 			continue
 		}
-		kid, err := s.take(child, childPath, depth-1)
+		kid, err := s.take(child, childPath, s.below(child, depth))
 		if err != nil {
 			return nil, err
 		}

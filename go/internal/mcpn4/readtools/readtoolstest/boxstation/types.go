@@ -38,3 +38,16 @@ func (st *Station) loadTypes(body map[string]any) map[string]any {
 	}
 	return out
 }
+
+// isComponent is the write tools' rule (box.IsComponentType) except for a type whose registry
+// supertype chain reaches baja:Struct (SetSupertype): a struct is a slot value, as on a station (B1200-G3).
+func (st *Station) isComponent(t any) bool {
+	spec, _ := t.(string)
+	for i := 0; i < 8 && spec != ""; i++ {
+		if spec == "baja:Struct" {
+			return false
+		}
+		spec = st.supertypes[spec]
+	}
+	return isComponentType(t)
+}

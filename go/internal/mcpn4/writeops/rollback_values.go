@@ -215,7 +215,7 @@ func observeOp(nodes, op *pyjson.Object, slot string) (any, error) {
 
 // flatten is _flatten: a nested snapshot body as its own slots and one spec per descendant
 // component, parents first (breadth-first), with paths relative to the top, never handles.
-func flatten(top int, body any) (*pyjson.Object, []any, error) {
+func flatten(top int, body any, oracle plan.ComponentOracle) (*pyjson.Object, []any, error) {
 	var specs []any
 	type item struct {
 		path string
@@ -238,14 +238,14 @@ func flatten(top int, body any) (*pyjson.Object, []any, error) {
 			if err != nil {
 				return nil, nil, err
 			}
-			if !box.IsComponentType(get(kid, "t")) {
+			if !plan.ClassifyComponent(oracle, get(kid, "t")) {
 				continue
 			}
 			name, err := plan.Name("component name", get(kid, "n"))
 			if err != nil {
 				return nil, nil, err
 			}
-			own, err := ownSlots(kid)
+			own, err := ownSlots(kid, oracle)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -261,12 +261,12 @@ func flatten(top int, body any) (*pyjson.Object, []any, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	own, err := ownSlots(b)
+	own, err := ownSlots(b, oracle)
 	return own, specs, err
 }
 
 // ownSlots is _own_slots: a body without its component children (plain slots, wsAnnotation).
-func ownSlots(body *pyjson.Object) (*pyjson.Object, error) {
+func ownSlots(body *pyjson.Object, oracle plan.ComponentOracle) (*pyjson.Object, error) {
 	out := obj()
 	for _, k := range body.Keys() {
 		if k != "s" && k != "n" {
@@ -283,7 +283,7 @@ func ownSlots(body *pyjson.Object) (*pyjson.Object, error) {
 		if err != nil {
 			return nil, err
 		}
-		if !box.IsComponentType(get(c, "t")) {
+		if !plan.ClassifyComponent(oracle, get(c, "t")) {
 			kept = append(kept, c)
 		}
 	}
