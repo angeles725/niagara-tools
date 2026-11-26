@@ -79,6 +79,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uberjarapi"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uxversion"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/vacuoustests"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/vendored"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbusability"
@@ -169,5 +170,6 @@ func All() []lint.Spec {
 		confirmrequired.Spec(),
 		bqlunbounded.Spec(),
 		subscribeleakjs.Spec(),
+		vendored.Spec(),
 	}
 }

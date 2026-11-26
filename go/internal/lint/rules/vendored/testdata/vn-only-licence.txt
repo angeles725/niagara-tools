@@ -1,0 +1,15 @@
+-- args --
+--defects
+@DIR@/defects.md
+@DIR@/rc
+-- want --
+exit 0
+-- stderr --
+-- defects.md --
+# known defects
+| Library | File | Affected | Defect | Fix |
+|---|---|---|---|---|
+| three.js | OrbitControls*.js | < r161 | zoom scale is wrong at devicePixelRatio < 1 | upgrade to >= r161 |
+| examplelib | *.js | >= 1.0.0, < 1.4.2 | legend leaks listeners | upgrade to >= 1.4.2 |
+-- rc/vendor/LICENSE --
+licence text

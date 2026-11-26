@@ -1,0 +1,10 @@
+-- args --
+--defects
+@DIR@/nope.md
+@DIR@/rc
+-- want --
+exit 3
+-- stderr --
+lint-vendored: known-defects table unreadable: open @DIR@/nope.md: no such file or directory
+-- rc/vendor/a.js --
+// vendored

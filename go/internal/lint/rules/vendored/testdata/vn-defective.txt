@@ -1,0 +1,20 @@
+-- args --
+--defects
+@DIR@/defects.md
+@DIR@/rc
+-- want --
+exit 0
+WARN  lint-vendored  @DIR@/rc/vendor/OrbitControls.js  three.js r160 (VENDORED.md:3) has a known defect: zoom scale is wrong at devicePixelRatio < 1; fix: upgrade to >= r161
+-- stderr --
+-- defects.md --
+# known defects
+| Library | File | Affected | Defect | Fix |
+|---|---|---|---|---|
+| three.js | OrbitControls*.js | < r161 | zoom scale is wrong at devicePixelRatio < 1 | upgrade to >= r161 |
+| examplelib | *.js | >= 1.0.0, < 1.4.2 | legend leaks listeners | upgrade to >= 1.4.2 |
+-- rc/vendor/VENDORED.md --
+| File | Library | Version | Source URL |
+|---|---|---|---|
+| OrbitControls.js | three.js | r160 | https://example.org/three/r160/OrbitControls.js |
+-- rc/vendor/OrbitControls.js --
+// vendored

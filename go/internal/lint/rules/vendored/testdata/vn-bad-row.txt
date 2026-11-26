@@ -1,0 +1,24 @@
+-- args --
+--defects
+@DIR@/defects.md
+@DIR@/rc
+-- want --
+exit 0
+WARN  lint-vendored  @DIR@/rc/vendor/VENDORED.md:3  row has an empty Source URL cell
+WARN  lint-vendored  @DIR@/rc/vendor/VENDORED.md:4  version "latest" is neither an r-number (r161) nor a semver (1.4.2)
+-- stderr --
+-- defects.md --
+# known defects
+| Library | File | Affected | Defect | Fix |
+|---|---|---|---|---|
+| three.js | OrbitControls*.js | < r161 | zoom scale is wrong at devicePixelRatio < 1 | upgrade to >= r161 |
+| examplelib | *.js | >= 1.0.0, < 1.4.2 | legend leaks listeners | upgrade to >= 1.4.2 |
+-- rc/vendor/VENDORED.md --
+| File | Library | Version | Source URL |
+|---|---|---|---|
+| a.js | other-lib | 2.0.0 |  |
+| b.js | other-lib | latest | https://example.org/other |
+-- rc/vendor/a.js --
+// vendored
+-- rc/vendor/b.js --
+// vendored
