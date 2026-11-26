@@ -165,8 +165,9 @@ const (
 	msgBaselineRefDangling    = "build.sh: INFO — removed %s, a dangling link a killed --schema-baseline-ref run left"
 	msgBaselineRefLink        = "build.sh: --schema-baseline-ref: cannot link %s: %v"
 	msgBaselineRefDone        = "==> schema-risk baseline: %s from %s (removed when the run ends)"
-	msgBaselineRefVersion     = "build.sh: WARN — --schema-baseline-ref %s has defaultModuleVersion %s but the deployed %s is %s: the " +
-		"schema-risk baseline is not what runs on the station; pass the ref of the deployed version"
+	msgBaselineRefVersion     = "build.sh: WARN — --schema-baseline-ref %[1]s has defaultModuleVersion %[2]s but the mirror holds %[3]s %[4]s " +
+		"(a build, not necessarily what a station runs); deployed version unknown, so confirm %[1]s is the ref the " +
+		"station runs (--target <name> reads a recorded deploy from .deploy-targets)"
 )
 
 // Verify gate and report-module.

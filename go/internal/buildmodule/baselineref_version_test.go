@@ -14,8 +14,9 @@ func (f *fixture) versionedRepo(atRef string) {
 	f.write(f.root+"/build.gradle.kts", "defaultModuleVersion(\"9.9.9\")\n")
 }
 
-// TestSchemaBaselineRefOlderThanTheDeployedJarWarns: a baseline of 2.3.0 with 2.3.1 deployed is checked against the
-// wrong floor; the build still passes (exit 0) and the stdout lines are those of a run without the check.
+// TestSchemaBaselineRefOlderThanTheDeployedJarWarns: a baseline of 2.3.0 with 2.3.1 in the mirror may be the wrong
+// floor, but the mirror is a build, not a deploy, so the WARN says "the mirror holds", never "deployed"; the
+// build still passes (exit 0) and the stdout lines are those of a run without the check.
 func TestSchemaBaselineRefOlderThanTheDeployedJarWarns(t *testing.T) {
 	f := newFixture(t)
 	f.signs()
@@ -23,8 +24,9 @@ func TestSchemaBaselineRefOlderThanTheDeployedJarWarns(t *testing.T) {
 	f.jar(f.deployed("rt"), "2.3.1", "x")
 	f.seesBaselines("0")
 	f.wants("older", f.build("--schema-baseline-ref", "v1"), ExitOK,
-		"build.sh: WARN — --schema-baseline-ref v1 has defaultModuleVersion 2.3.0 but the deployed Foo-rt is 2.3.1: "+
-			"the schema-risk baseline is not what runs on the station; pass the ref of the deployed version\n",
+		"build.sh: WARN — --schema-baseline-ref v1 has defaultModuleVersion 2.3.0 but the mirror holds Foo-rt 2.3.1 "+
+			"(a build, not necessarily what a station runs); deployed version unknown, so confirm v1 is the ref the "+
+			"station runs (--target <name> reads a recorded deploy from .deploy-targets)\n",
 		"==> schema-risk baseline: Foo-rt from v1")
 }
 

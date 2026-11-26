@@ -504,6 +504,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   (exit 52, `drift gate cannot verify <MOD>-<profile>: <cause>`), never a silent pass.
   `[ev: code go/internal/buildmodule/baseline.go]` A module root that does not exist or cannot be entered exits 10 with
   the path as typed (`build.sh: module root not found: <path>`, `build.sh: cannot enter module root: <path>`).
+  The mirror holds builds, not releases: a passing mirror build records `<jar file name> <sha256 of the jar bytes>`
+  per installed jar in `<module-root>/.build/mirror-built` (in the checkout, never in `modules/`, which Niagara
+  reads; gitignore `.build/`), and a rebuild of the same version whose previous mirror jar has the recorded digest
+  is this checkout's own build: one INFO line, drift check skipped, no exit 51. No record or another digest keeps
+  exit 51.
   `[ev: code go/internal/buildmodule/messages.go]` `[ev: retro go-build-module-port Δ2]` `--no-drift-check` opts out for
   a niagara_home that is not the real deploy target. `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ2]` The
   gate reads an X.Y or X.Y.Z module vendorVersion and compares the two versions numerically per part, a missing part = 0
@@ -539,7 +544,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   both causes are listed together when both hold, and the exit codes do not change `[ev: issue 1116]`
   `[ev: retro r10-client-gate-retro Δ4]` — `build.sh` maps it to exit 53
   (`build.sh --schema-baseline-ref <deployed-ref>` extracts the baseline for the run, build-verify.md § Schema-risk
-  deploy workflow); `--first-deploy` declares a never-deployed module (schema-risk N/A), `--lint-only` a punch-list run
+  deploy workflow; `build.sh --target <name>` reads the ref from the `<target> <MOD>@<vendorVersion>=<commit>` line of
+  `<module-root>/.deploy-targets` instead, because the mirror holds the last build, not what a station runs, and the
+  version WARN of `--schema-baseline-ref` says "the mirror holds", never "deployed");
+  `--first-deploy` declares a never-deployed module (schema-risk N/A), `--lint-only` a punch-list run
   that is not the floor. `scripts/ng-deploy.sh` (which calls gradlew directly) blocks a deploy with no verify-module
   gate (exit 50), runs the schema-risk SAFE precheck on `SCHEMA_BASELINE_DIR` (exit 12 without it unless
   `--first-deploy`; OUTAGE/LOSSY exit 53, `--accept-lossy` for LOSSY) and the version-bump precheck against the deployed

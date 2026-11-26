@@ -17,7 +17,8 @@ type options struct {
 	uiProfile string // --ui-profile
 	restore   string // --restore-mirror <kept jar>: put a jar a mirror build replaced back, and nothing else
 	// baselineRef is --schema-baseline-ref: the commit whose artifacts are the schema-risk baseline (baselineref.go).
-	baselineRef string
+	baselineRef  string
+	deployTarget string // --target: the station whose recorded deploy (.deploy-targets) is the baseline (deploytarget.go)
 	// gradleProps are the --gradle-prop values as gradle takes them (-Pk=v), in order.
 	gradleProps                                                                 []string
 	legacy, werror, firstDeploy, intoHome, skipPreflight, skipReport, skipDrift bool
@@ -36,7 +37,8 @@ func (o *options) switches() map[string]*bool {
 // values are the flags whose value is taken as is.
 func (o *options) values() map[string]*string {
 	return map[string]*string{"--profiles": &o.profiles, "--target-version": &o.target, "--plugin-version": &o.plugin,
-		"--restore-mirror": &o.restore, "--schema-baseline-ref": &o.baselineRef}
+		"--restore-mirror": &o.restore, "--schema-baseline-ref": &o.baselineRef,
+		"--target": &o.deployTarget}
 }
 
 // parseArgs reads the command line. code is proceed, or the exit code after the usage or a message was
@@ -99,6 +101,10 @@ func parseArgs(args []string, s cli.Stdio) (o options, code int) {
 	}
 	if o.baselineRef != "" && o.firstDeploy {
 		fmt.Fprintln(s.Err, msgBaselineRefFirstDeploy) // a never-deployed module has no deployed ref
+		return o, ExitUsage
+	}
+	if o.deployTarget != "" && (o.baselineRef != "" || o.firstDeploy) {
+		fmt.Fprintln(s.Err, msgTargetExclusive)
 		return o, ExitUsage
 	}
 	o.root, o.mod, o.home = args[0], args[1], s.Env("niagara_home")
