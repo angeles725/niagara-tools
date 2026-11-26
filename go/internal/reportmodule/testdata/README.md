@@ -90,6 +90,11 @@ Since 2026-11-16 the cases that move this way are re-recorded with `memcap go te
 (`../../lint/rules/golden/record/README.md`, Re-recording through the Go port), which rewrites only the `want` and
 `stderr` sections of the cases that differ; the temporary dump hooks above are no longer needed.
 
+Issue #1159 (2026-11-26) added the per-artifact member `lint-property-accessors` after `lint-slot-default-type`
+(FAIL rows relayed, no verdict row). The 24 cases that print per-artifact members were re-recorded with `-update`;
+each diff adds `SKIP  lint-property-accessors  no src/` rows only and moves the summary's SKIP count by exactly
+those rows, every exit line and verdict unchanged.
+
 Retro row B6 (2026-11-16) made the `schema-risk` SKIP row of an artifact without `.deploy-baseline` name the exact
 command that creates it from the deployed commit (archive to a temporary tar, then `mkdir <artifact>/.deploy-baseline`
 and extract, so a failed archive leaves no empty baseline). The 100 cases that print that row were re-recorded with

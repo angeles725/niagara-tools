@@ -1,0 +1,38 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BOnlyInSetter.java:3  property viaNested of BOnlyInSetter: no public setViaNested(...): the station cannot load the type (sys.schema "No setter for property (viaNested)" / "Cannot load type for BOnlyInSetter", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+-- stderr --
+-- src/com/acme/BOuter.java --
+package com.acme;
+public class BOuter extends BComponent {
+  public static final Property ok = newProperty(0, 0, null);
+  public int getOk() { return getInt(ok); }
+  public void setOk(int v) { setInt(ok, v, null); }
+  // public static final Property commented = newProperty(0, 0, null);
+  /* public static final Property blocked = newProperty(0, 0, null); */
+  String text = "public static final Property quoted = newProperty(0, 0, null);";
+  Property notStatic = newProperty(0, 0, null);
+  public static final Property plain = null;
+  static final Property other = Property.make(0);
+  public static class Inner {
+    public static final Property innerSlot = newProperty(0, 0, null);
+    public int getInnerSlot() { return 0; }
+  }
+  public int getInner() { return 0; }
+  public void setInnerSlot(int v) { }
+  public void setBody() { Runnable r = new Runnable() { public void setOk2() { } }; }
+}
+-- src/com/acme/BOnlyInSetter.java --
+package com.acme;
+public class BOnlyInSetter extends BComponent {
+  public static final Property viaNested = newProperty(0, 0, null);
+  public int getViaNested() { return 0; }
+  public static class Helper { public void setViaNested(int v) { } }
+}
+-- src/com/acme/Plain.java --
+package com.acme;
+public class Plain extends BComponent {
+  public static final Property notB = newProperty(0, 0, null);
+}

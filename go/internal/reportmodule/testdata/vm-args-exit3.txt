@@ -26,6 +26,7 @@ A-rt  SKIP  lint-session-store-lazy-evict  no src/
 A-rt  SKIP  lint-bformat-call  no src/
 A-rt  SKIP  lint-charset-default  no src/
 A-rt  SKIP  lint-slot-default-type  no src/
+A-rt  SKIP  lint-property-accessors  no src/
 A-rt  SKIP  lint-lifecycle-guard  no src/
 A-rt  SKIP  lint-intrinsic-lock  no src/
 A-rt  SKIP  lint-service-types  no src/
@@ -62,6 +63,7 @@ B-rt  SKIP  lint-session-store-lazy-evict  no src/
 B-rt  SKIP  lint-bformat-call  no src/
 B-rt  SKIP  lint-charset-default  no src/
 B-rt  SKIP  lint-slot-default-type  no src/
+B-rt  SKIP  lint-property-accessors  no src/
 B-rt  SKIP  lint-lifecycle-guard  no src/
 B-rt  SKIP  lint-intrinsic-lock  no src/
 B-rt  SKIP  lint-service-types  no src/
@@ -98,6 +100,7 @@ C-rt  SKIP  lint-session-store-lazy-evict  no src/
 C-rt  SKIP  lint-bformat-call  no src/
 C-rt  SKIP  lint-charset-default  no src/
 C-rt  SKIP  lint-slot-default-type  no src/
+C-rt  SKIP  lint-property-accessors  no src/
 C-rt  SKIP  lint-lifecycle-guard  no src/
 C-rt  SKIP  lint-intrinsic-lock  no src/
 C-rt  SKIP  lint-service-types  no src/
@@ -134,6 +137,7 @@ D-rt  SKIP  lint-session-store-lazy-evict  no src/
 D-rt  SKIP  lint-bformat-call  no src/
 D-rt  SKIP  lint-charset-default  no src/
 D-rt  SKIP  lint-slot-default-type  no src/
+D-rt  SKIP  lint-property-accessors  no src/
 D-rt  SKIP  lint-lifecycle-guard  no src/
 D-rt  SKIP  lint-intrinsic-lock  no src/
 D-rt  SKIP  lint-service-types  no src/
@@ -161,7 +165,7 @@ D-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it fr
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 4 artifacts · 12 PASS · 0 FAIL · 0 WARN · 142 SKIP · 0 ADVISORY  ->  INCOMPLETE (environment)
+report-module: 4 artifacts · 12 PASS · 0 FAIL · 0 WARN · 146 SKIP · 0 ADVISORY  ->  INCOMPLETE (environment)
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

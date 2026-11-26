@@ -84,6 +84,8 @@ var perArtifact = []member{
 	// kit-backlog B10.8: the course-coverage source lints (corpus B1417, B1419). No verdict row, as lint-service-types.
 	{script: "lint-charset-default", f: warnOnly},
 	{script: "lint-slot-default-type", f: failOnly},
+	// issue #1159: a hand-declared slot without its public getter and setter is an unloadable type.
+	{script: "lint-property-accessors", f: failOnly},
 	// kit-backlog B11.6: the course-coverage run B source lints (corpus B1242 K3, K4), advisory WARN rows.
 	{script: "lint-lifecycle-guard", f: warnOnly},
 	{script: "lint-intrinsic-lock", f: warnOnly},

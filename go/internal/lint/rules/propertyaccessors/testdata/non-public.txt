@@ -1,0 +1,26 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BExt.java:3  property priv of BExt: setPriv(...) is not public: the station cannot load the type (sys.schema "No setter for property (priv)" / "Cannot load type for BExt", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BExt.java:6  property prot of BExt: its getter is not public; declare public getProt() or isProt(): the station cannot load the type (sys.schema "No setter for property (prot)" / "Cannot load type for BExt", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BExt.java:6  property prot of BExt: setProt(...) is not public: the station cannot load the type (sys.schema "No setter for property (prot)" / "Cannot load type for BExt", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BExt.java:9  property none of BExt: no public getNone() or isNone(): the station cannot load the type (sys.schema "No setter for property (none)" / "Cannot load type for BExt", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BExt.java:11  property wrongCase of BExt: no public getWrongCase() or isWrongCase(): the station cannot load the type (sys.schema "No setter for property (wrongCase)" / "Cannot load type for BExt", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BExt.java:11  property wrongCase of BExt: no public setWrongCase(...): the station cannot load the type (sys.schema "No setter for property (wrongCase)" / "Cannot load type for BExt", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+-- stderr --
+-- src/com/acme/BExt.java --
+package com.acme;
+public class BExt extends BPointExtension {
+  public static final Property priv = newProperty(0, 0, null);
+  public int getPriv() { return getInt(priv); }
+  private void setPriv(int v) { setInt(priv, v, null); }
+  public static final Property prot = newProperty(0, 0, null);
+  int getProt() { return getInt(prot); }
+  protected void setProt(int v) { setInt(prot, v, null); }
+  public static final Property none = newProperty(0, 0, null);
+  public void setNone(int v) { setInt(none, v, null); }
+  public static final Property wrongCase = newProperty(0, 0, null);
+  public int getwrongCase() { return 0; }
+  public void setwrongCase(int v) { }
+}

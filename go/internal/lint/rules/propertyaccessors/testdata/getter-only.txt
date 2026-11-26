@@ -1,0 +1,21 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BExt.java:3  property a of BExt: no public setA(...): the station cannot load the type (sys.schema "No setter for property (a)" / "Cannot load type for BExt", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+FAIL  lint-property-accessors  @DIR@/src/com/acme/BExt.java:5  property b of BExt: no public setB(...): the station cannot load the type (sys.schema "No setter for property (b)" / "Cannot load type for BExt", NoClassDefFoundError on every use) (types/structure.md § Property accessors)
+-- stderr --
+-- src/com/acme/BExt.java --
+package com.acme;
+public class BExt extends BPointExtension {
+  public static final Property a = newProperty(0, 0, null);
+  public int getA() { return getInt(a); }
+  public static final Property b = newProperty(
+    0,
+    "x",
+    null);
+  public String getB() { return getString(b); }
+  public static final Property fine = newProperty(0, 0, null);
+  public int getFine() { return getInt(fine); }
+  public void setFine(int v) { setInt(fine, v, null); }
+}
