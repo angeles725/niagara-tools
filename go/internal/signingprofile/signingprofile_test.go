@@ -63,3 +63,15 @@ func TestGradleProperty(t *testing.T) {
 		t.Error("a longer key matched")
 	}
 }
+
+func TestEntriesTrimsAndNeverQuotesTheFile(t *testing.T) {
+	got, err := Entries([]byte(`<properties><entry key="niagara.signing.storepath"> /k/s.jceks
+</entry><entry key="niagara.signing.storepass">pw</entry></properties>`))
+	if err != nil || got[StorePathKey] != "/k/s.jceks" || got[StorePassKey] != "pw" {
+		t.Errorf("Entries = %v, %v", got, err)
+	}
+	_, err = Entries([]byte(`<properties><entry key="niagara.signing.storepass">pa</Canary9</entry></properties>`))
+	if err != ErrNotXML || strings.Contains(err.Error(), "Canary9") {
+		t.Errorf("err = %v, want ErrNotXML and no quoted text", err)
+	}
+}
