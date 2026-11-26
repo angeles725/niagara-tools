@@ -14,7 +14,7 @@ func Zip(root, archive, prefix string, ex Excludes) (zipped, excluded int, err e
 	if err != nil {
 		return 0, 0, err
 	}
-	out, err := os.Create(archive)
+	out, err := os.OpenFile(archive, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return 0, 0, err
 	}

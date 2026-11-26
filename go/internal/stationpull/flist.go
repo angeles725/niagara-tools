@@ -25,7 +25,13 @@ var (
 // instead. Lines without a CRC (boot log, header, stack trace) and directory rows (name ending in /) are
 // skipped.
 func ParseFlist(text string) []Row {
-	var rows []Row
+	rows, _ := parseFlist(text)
+	return rows
+}
+
+// parseFlist is ParseFlist plus the rows whose CRC field is digits but no CRC32 (too large): such a
+// row is a listed file that cannot be checked, so the pull fails rather than skip it.
+func parseFlist(text string) (rows []Row, bad []string) {
 	for _, line := range strings.Split(strings.ReplaceAll(text, "\r", ""), "\n") {
 		line = strings.TrimSpace(line)
 		fields := strings.Fields(line)
@@ -33,16 +39,17 @@ func ParseFlist(text string) []Row {
 			continue
 		}
 		v, err := strconv.ParseUint(strings.ReplaceAll(fields[len(fields)-1], ",", ""), 10, 32)
+		name := rowName(line, fields)
 		if err != nil {
+			bad = append(bad, name)
 			continue
 		}
-		name := rowName(line, fields)
 		if name == "" || strings.HasSuffix(name, "/") {
 			continue
 		}
 		rows = append(rows, Row{Name: name, CRC: uint32(v)})
 	}
-	return rows
+	return rows, bad
 }
 
 func rowName(line string, fields []string) string {

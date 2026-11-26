@@ -41,7 +41,7 @@ func Main(args []string, s cli.Stdio) int {
 	if msg := o.parse(args); msg != "" {
 		return bad(s, msg)
 	}
-	if !stationName.MatchString(o.station) {
+	if !stationName.MatchString(o.station) || strings.Trim(o.station, ".") == "" {
 		return bad(s, "--station must match ^[A-Za-z0-9_.-]+$")
 	}
 	if o.dest == "" {

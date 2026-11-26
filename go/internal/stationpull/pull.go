@@ -67,7 +67,10 @@ func (p puller) pull() int {
 	if err != nil {
 		return p.fail("cannot run plat: %v", err)
 	}
-	rows := ParseFlist(listOut)
+	rows, bad := parseFlist(listOut)
+	if len(bad) > 0 {
+		return p.fail("plat flist gave %d rows with an unreadable CRC: %s", len(bad), strings.Join(bad, ", "))
+	}
 	if len(rows) == 0 {
 		return p.fail("plat flist listed no files, so the %d copied files cannot be verified", len(files))
 	}
@@ -75,6 +78,9 @@ func (p puller) pull() int {
 	if len(problems) > 0 {
 		return p.fail("%d of %d listed files failed verification:\n  %s", len(problems), len(rows),
 			strings.Join(problems, "\n  "))
+	}
+	if verified == 0 {
+		return p.fail("plat flist gave no file a CRC, so no copied file was verified; no archive written")
 	}
 	archive := filepath.Join(p.dest, p.o.station+"-"+now().UTC().Format("20060102T150405Z")+".zip")
 	zipped, excluded, err := Zip(root, archive, p.o.station, p.o.ex)
