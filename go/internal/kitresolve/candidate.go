@@ -53,6 +53,9 @@ func choose(s cli.Stdio) (candidate, *stop) {
 			return c, &stop{exitUsage, fmt.Sprintf("%s (%s) has no %s; fix or unset it", envKit, env, kitMarker)}
 		}
 		c.kit, c.source = env, sourceEnv
+		if samePath(env, kitMain+"/"+kitDirName) { // build.sh names the kit-main kit: refresh it as kit-main (#1122)
+			c.source = sourceKitMain
+		}
 	} else {
 		for _, try := range []struct{ kit, source string }{{kitMain + "/" + kitDirName, sourceKitMain}, {defaultKit, sourceDefault}} {
 			is, st := holds(try.kit)
@@ -88,4 +91,11 @@ func (c candidate) remedy(top string) string {
 		return "update " + top + " to " + freshRef + ", or unset " + envKit + " to use the kit-main worktree"
 	}
 	return "use the kit-main worktree: git -C " + top + " worktree add --detach " + c.kitMain + " " + freshRef
+}
+
+// samePath reports two paths that name the same directory once symlinks are resolved.
+func samePath(a, b string) bool {
+	ra, errA := filepath.EvalSymlinks(a)
+	rb, errB := filepath.EvalSymlinks(b)
+	return errA == nil && errB == nil && filepath.Clean(ra) == filepath.Clean(rb)
 }
