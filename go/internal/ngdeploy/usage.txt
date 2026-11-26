@@ -41,7 +41,8 @@ Options:
                              etc/m2"; gradle: "Plugin ... version: '7.6.17' was not found") builds with this one.
   --build-state <file>     The file holding the module's build-state.v1 envelope, whose expected_signer the deploy
                              expects (see "The signer the gate expects" below), as build.sh --build-state: else
-                             the kit's build-n4-module-kit/BUILD-STATE.src.md. A file that cannot be read is exit
+                             <module-root>/BUILD-STATE.md (the directory of gradlew) when it exists, else the
+                             kit's build-n4-module-kit/BUILD-STATE.src.md. A file that cannot be read is exit
                              10; an empty value is no file. Command line only: no env-file key.
   --install-into-home      Build although NIAGARA_HOME is a real installation and not a mirror (no
                              .niagara-mirror): the build then replaces the module's jars in its modules/
@@ -177,8 +178,8 @@ The signer the gate expects:
   <NIAGARA_HOME>/modules give the expected signer"; when they give none either, the gate accepts any signature
   and the WARN says so. A jar signed with another key then fails the gate (exit 50).
   The recorded expected_signer is the optional field of the module's build-state.v1 envelope in --build-state
-  <file>, else the kit's BUILD-STATE.src.md (a default file that is missing records nothing; `unknown` or no
-  field the same). Read before the build, as build.sh reads it:
+  <file>, else <module-root>/BUILD-STATE.md when that file exists (it is then the only file read), else the
+  kit's BUILD-STATE.src.md (a default file that is missing records nothing; `unknown` or no field the same). Read before the build, as build.sh reads it:
     - with no alias configured, the record is the expected signer and gradle builds with it
       (-PniagaraSigningAlias=<alias>); the jars of the station and of <NIAGARA_HOME>/modules are not asked;
     - a configured alias equal to the record changes nothing;
@@ -186,6 +187,11 @@ The signer the gate expects:
     - a malformed record is exit 10 the same way, naming the file: a value that is not one alias token, the key
       twice in one envelope, a line that mistypes the key (indented, or a blank before the colon), or two
       envelopes of the module when one sets the field.
+  The recorded niagara_target (#1158) is the Niagara version of the module's station, in the same envelope and file
+  (2 to 4 dotted numbers, e.g. 4.15 or 4.15.6.20; plugin_version is read by build.sh only). Before the build, when
+  --no-deploy is not given and STATION_MODULES_DIR is the modules directory of an installation whose version can
+  be read (its baja.jar), another major.minor than the record is exit 55 naming both, with nothing built or
+  copied; an unreadable version is "WARN niagara_target ... is not compared with ..." and the jar check goes on.
   When neither names a signer the gate accepts any signature and, after the gate's rows, the deploy prints
   "WARN no niagaraSigningAlias is configured and no deployed jar gives a signer, ..." (or "... the deployed
   jar itself carries the signing plugin's default development signer (NIAGARA4), ..."); the exit code is the
@@ -301,3 +307,5 @@ Exit codes:
       pass. A STATION_MODULES_DIR with no baja.jar is not checked (a NOTICE says so); --no-deploy and a station
       directory that is <NIAGARA_HOME>/modules are not checked. The same comparison, for any jar and installation:
       build-n4-module-kit/toolbelt/check-target-version.sh <jar> <niagara_home>
+      Also 55, before the build: the module's recorded niagara_target names another major.minor than that
+      installation ("The signer the gate expects" above, the recorded niagara_target paragraph).

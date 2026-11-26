@@ -216,7 +216,9 @@ strict happens only on request, in the order of `$KIT/types/structure.md` § Leg
    `build.sh` passes `verify-module.sh --expected-signer` and another signer FAILs; a
    `WARN — no niagaraSigningAlias is configured` line means any signature (the development key included) was accepted.
    The envelope's optional `expected_signer: <alias>` records it once: `build.sh` uses it when no alias is configured
-   and refuses (exit 10) a configured alias that differs.
+   and refuses (exit 10) a configured alias that differs. Its `niagara_target: <version>` and `plugin_version:
+   <version>` (in `<module-root>/BUILD-STATE.md`) tie the module to its station: `build.sh` refuses a
+   `niagara_home` or `--target-version` of another major.minor, and `ng-deploy.sh` a station of one (exit 55).
    On WSL, sign with the module's alias through the explicit profile: `--gradle-prop niagaraSigningAlias=<alias>
    --gradle-prop niagaraSigningProfile=$HOME/.config/n4-signing/<alias>.signing.xml`. Never report signing as
    unavailable (or as needing Windows) before running it: the only valid "unavailable" is a missing profile file, and

@@ -1,17 +1,14 @@
 package ngdeploy
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/angeles725/niagara-tools/go/internal/buildstatefields"
 	"github.com/angeles725/niagara-tools/go/internal/modjar"
-	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // buildStateFlag names the file that holds the module's build-state.v1 envelope, as build.sh's --build-state
-// does; without it the kit's BUILD-STATE.src.md is read (kitStateFile). It is a flag only: --gradle-prop and
-// --plugin-version, the other options of the command line that have no env-file key, are its siblings.
+// does; without it the module root's own BUILD-STATE.md, else the kit's BUILD-STATE.src.md, is read
+// (stateRecord). It is a flag only: --gradle-prop and --plugin-version, the other options of the command line
+// that have no env-file key, are its siblings.
 const buildStateFlag = "--build-state"
 
 // kitStateFile is the kit's committed BUILD-STATE source, from the scripts directory.
@@ -39,18 +36,11 @@ func (d *deploy) buildStateFile(rest []string) int {
 // is absent or `unknown`, a module with no envelope, or a default file that is missing change nothing; a
 // malformed record of the module, and a --build-state file that cannot be read, are exit 10.
 func (d *deploy) applyExpectedSigner() int {
-	file, explicit := d.buildState, d.buildState != ""
-	if !explicit {
-		file = filepath.Join(d.scriptDir, kitStateFile)
+	file, text, code := d.stateRecord()
+	if code != proceed || file == "" {
+		return code
 	}
-	text, err := os.ReadFile(file)
-	if err != nil {
-		if explicit {
-			return d.fail(ExitEnv, msgStateUnreadable, file, strerror.Text(err))
-		}
-		return proceed
-	}
-	recorded, err := buildstatefields.ExpectedSigner(string(text), d.module)
+	recorded, err := buildstatefields.ExpectedSigner(text, d.module)
 	if err != nil {
 		return d.fail(ExitEnv, msgSignerInvalid, err.Error(), file)
 	}

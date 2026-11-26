@@ -333,7 +333,8 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
   the aliases it holds (never a password; exit stays 30). (build-verify.md)
 - **Record the alias once** in the module's `build-state.v1` envelope: `expected_signer: <alias>` (optional;
   `unknown` or no field records nothing; `sweep-build-state.sh` fails a value that is not an alias token). `build.sh`
-  reads the envelope of `<MOD>` (`--build-state <file>`, else the kit's `BUILD-STATE.src.md`). With no alias
+  reads the envelope of `<MOD>` (`--build-state <file>`, else `<module-root>/BUILD-STATE.md` when that file exists,
+  else the kit's `BUILD-STATE.src.md`). With no alias
   configured it hands the recorded one to gradle (and the gate's `signed` row); an alias configured by
   `--gradle-prop`, `ORG_GRADLE_PROJECT_niagaraSigningAlias` or `gradle.properties` that differs is exit 10 before
   gradle, naming both. Precedence: configured alias (must equal the record) > record > deployed jars' signer.
@@ -343,6 +344,15 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
   and the same `--build-state <file>` (a configured alias that differs, or a malformed record, is exit 10 before
   the build and the copy; only with no record does the deployed jars' signer decide), so a build and its deploy
   agree on the signer. `[ev: issue #1131, #1149]`
+- **Record the Niagara version of the station with the module** (#1158): the envelope of `<MOD>` in
+  `<module-root>/BUILD-STATE.md` (the module's own file, found before the kit's) may carry `niagara_target: 4.15.6.20`
+  (2 to 4 dotted numbers) and `plugin_version: 7.6.22`; `unknown` or no field records nothing. `build.sh` fails
+  (exit 10, before gradle) when `niagara_home` (for a mirror, also the installation it was made from) is another
+  major.minor than `niagara_target`, or when `--target-version` / `--plugin-version` (or `$NIAGARA_PLUGIN_VERSION`)
+  differ from the record; with the flags left out they default to it (`--target-version` to the major.minor), so the
+  gate's baja `vendorVersion` check runs against the station's line. `ng-deploy.sh` refuses (exit 55, before the
+  build) a `STATION_MODULES_DIR` of another major.minor. A malformed record is exit 10 (the sweep: exit 1). A build
+  of a module against a mirror of another Niagara version than its station no longer ships as ready to install.
 - A `gradle :jar` with the default JDK is NOT a build.
 
 ### 4.a Gradle task matrix (`niagara-module` plugin tasks) — when to run each

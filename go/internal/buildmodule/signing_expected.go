@@ -1,16 +1,13 @@
 package buildmodule
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/angeles725/niagara-tools/go/internal/buildstatefields"
 	"github.com/angeles725/niagara-tools/go/internal/modjar"
-	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // kitStateFile is the kit's committed BUILD-STATE source, relative to the toolbelt directory: the file
-// build.sh reads the module's envelope from unless --build-state names another.
+// build.sh reads the module's envelope from unless --build-state names another or the module root holds
+// its own BUILD-STATE.md (staterecord.go).
 const kitStateFile = "../BUILD-STATE.src.md"
 
 // applyExpectedSigner reads the module's optional expected_signer (BUILD-STATE envelope, see
@@ -22,19 +19,11 @@ const kitStateFile = "../BUILD-STATE.src.md"
 // `unknown`, a module with no envelope, or a default file that is missing change nothing; a malformed record of
 // the module (buildstatefields.ExpectedSigner) is exit 10 whatever alias is configured.
 func (b *build) applyExpectedSigner() int {
-	file, explicit := b.opt.buildState, b.opt.buildState != ""
-	if !explicit {
-		file = filepath.Join(b.here, kitStateFile)
+	file, text, code := b.stateRecord()
+	if code != proceed || file == "" {
+		return code
 	}
-	text, err := os.ReadFile(file)
-	if err != nil {
-		if explicit {
-			b.warn(msgStateUnreadable, file, strerror.Text(err))
-			return ExitEnv
-		}
-		return proceed
-	}
-	recorded, err := buildstatefields.ExpectedSigner(string(text), b.opt.mod)
+	recorded, err := buildstatefields.ExpectedSigner(text, b.opt.mod)
 	if err != nil {
 		b.warn(msgSignerInvalid, err.Error(), file)
 		return ExitEnv

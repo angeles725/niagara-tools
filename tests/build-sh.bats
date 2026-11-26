@@ -970,6 +970,45 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [ ! -e "$TMPDIR_T/gradlew.env" ]
 }
 
+# _baja <niagara_home> <version>: the home's modules/baja.jar, whose module.xml carries the installation's version (#1158)
+_baja() {
+  mkdir -p "$TMPDIR_T/bz/META-INF"
+  printf '<module name="baja" vendor="Tridium" vendorVersion="%s"/>\n' "$2" > "$TMPDIR_T/bz/META-INF/module.xml"
+  rm -f "$1/modules/baja.jar"; (cd "$TMPDIR_T/bz" && zip -q -r "$1/modules/baja.jar" META-INF)
+}
+
+@test "BS-niagara-target: the module's own BUILD-STATE.md wins over the kit's; its niagara_target and plugin_version default the flags (#1158)" {
+  _env_gradlew; _baja "$TMPDIR_T/nh" 4.15.6.20
+  printf '<!-- build-state.v1 -->\nmodule: Foo\nretro_required: false\nretro_pending: false\nniagara_target: 4.14\n<!-- /build-state.v1 -->\n' > "$TMPDIR_T/BUILD-STATE.src.md"
+  printf '<!-- build-state.v1 -->\nmodule: Foo\nretro_required: false\nretro_pending: false\nniagara_target: 4.15.6.20\nplugin_version: 7.6.22\n<!-- /build-state.v1 -->\n' > "$ROOT/BUILD-STATE.md"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"build.sh: INFO — $ROOT/BUILD-STATE.md records niagara_target 4.15.6.20, plugin_version 7.6.22 for Foo: building with --target-version 4.15, --plugin-version 7.6.22"* ]]
+  [[ "$(cat "$TMPDIR_T/verify.args")" == *"--target-version 4.15"* ]]
+  [[ "$(grep '^ARGV=' "$TMPDIR_T/gradlew.env")" == *" -PniagaraPluginVersion=7.6.22"* ]]
+  rm -f "$ROOT/BUILD-STATE.md" "$TMPDIR_T/gradlew.env"   # no module file: the kit's record (4.14) is read as before
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"is recorded for Niagara 4.14 (niagara_target in $TMPDIR_T/BUILD-STATE.src.md) but niagara_home $TMPDIR_T/nh is Niagara 4.15.6.20"* ]]
+}
+
+@test "BS-niagara-target-refuse: a niagara_home, --target-version or --plugin-version that differs from the record is exit 10 before gradle (#1158)" {
+  _env_gradlew; _baja "$TMPDIR_T/nh" 4.14.0.162
+  printf '<!-- build-state.v1 -->\nmodule: Foo\nretro_required: false\nretro_pending: false\nniagara_target: 4.15.6.20\nplugin_version: 7.6.22\n<!-- /build-state.v1 -->\n' > "$ROOT/BUILD-STATE.md"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"Foo is recorded for Niagara 4.15.6.20 (niagara_target in $ROOT/BUILD-STATE.md) but niagara_home $TMPDIR_T/nh is Niagara 4.14.0.162."* ]]
+  [ ! -e "$TMPDIR_T/gradlew.env" ]
+  _baja "$TMPDIR_T/nh" 4.15.6.20
+  run "$B" --target-version 4.14 "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"--target-version 4.14 differs from niagara_target 4.15.6.20 recorded for Foo in $ROOT/BUILD-STATE.md (want 4.15)."* ]]
+  run "$B" --plugin-version 7.6.17 "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"--plugin-version (or NIAGARA_PLUGIN_VERSION) 7.6.17 differs from plugin_version 7.6.22 recorded for Foo in $ROOT/BUILD-STATE.md."* ]]
+  [ ! -e "$TMPDIR_T/gradlew.env" ]
+}
+
 @test "BS-gradle-prop-bad: --gradle-prop with no argument, no '=', or an empty key exits 2 before gradle (#308)" {
   _env_gradlew
   run "$B" --gradle-prop noequals "$ROOT" Foo "$TMPDIR_T/nh"
