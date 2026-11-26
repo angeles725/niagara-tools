@@ -56,6 +56,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/pollscrollrestore"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/postpermission"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/privateapiimport"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/propertyaccessors"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/rdbmsdialect"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
@@ -171,5 +172,6 @@ func All() []lint.Spec {
 		bqlunbounded.Spec(),
 		subscribeleakjs.Spec(),
 		vendored.Spec(),
+		propertyaccessors.Spec(),
 	}
 }

@@ -37,6 +37,7 @@ Z  SKIP  lint-session-store-lazy-evict  no src/
 Z  SKIP  lint-bformat-call  no src/
 Z  SKIP  lint-charset-default  no src/
 Z  SKIP  lint-slot-default-type  no src/
+Z  SKIP  lint-property-accessors  no src/
 Z  SKIP  lint-lifecycle-guard  no src/
 Z  SKIP  lint-intrinsic-lock  no src/
 Z  SKIP  lint-service-types  no src/
@@ -69,6 +70,7 @@ a-rt  SKIP  lint-session-store-lazy-evict  no src/
 a-rt  SKIP  lint-bformat-call  no src/
 a-rt  SKIP  lint-charset-default  no src/
 a-rt  SKIP  lint-slot-default-type  no src/
+a-rt  SKIP  lint-property-accessors  no src/
 a-rt  SKIP  lint-lifecycle-guard  no src/
 a-rt  SKIP  lint-intrinsic-lock  no src/
 a-rt  SKIP  lint-service-types  no src/
@@ -96,7 +98,7 @@ a-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it fr
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 3 artifacts · 20 PASS · 0 FAIL · 0 WARN · 72 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 3 artifacts · 20 PASS · 0 FAIL · 0 WARN · 74 SKIP · 0 ADVISORY  ->  CLEAN
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

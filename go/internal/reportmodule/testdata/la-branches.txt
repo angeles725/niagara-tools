@@ -24,6 +24,7 @@ A-clean  SKIP  lint-session-store-lazy-evict  no src/
 A-clean  SKIP  lint-bformat-call  no src/
 A-clean  SKIP  lint-charset-default  no src/
 A-clean  SKIP  lint-slot-default-type  no src/
+A-clean  SKIP  lint-property-accessors  no src/
 A-clean  SKIP  lint-lifecycle-guard  no src/
 A-clean  SKIP  lint-intrinsic-lock  no src/
 A-clean  SKIP  lint-service-types  no src/
@@ -56,6 +57,7 @@ A-deep  SKIP  lint-session-store-lazy-evict  no src/
 A-deep  SKIP  lint-bformat-call  no src/
 A-deep  SKIP  lint-charset-default  no src/
 A-deep  SKIP  lint-slot-default-type  no src/
+A-deep  SKIP  lint-property-accessors  no src/
 A-deep  SKIP  lint-lifecycle-guard  no src/
 A-deep  SKIP  lint-intrinsic-lock  no src/
 A-deep  SKIP  lint-service-types  no src/
@@ -88,6 +90,7 @@ A-env  SKIP  lint-session-store-lazy-evict  no src/
 A-env  SKIP  lint-bformat-call  no src/
 A-env  SKIP  lint-charset-default  no src/
 A-env  SKIP  lint-slot-default-type  no src/
+A-env  SKIP  lint-property-accessors  no src/
 A-env  SKIP  lint-lifecycle-guard  no src/
 A-env  SKIP  lint-intrinsic-lock  no src/
 A-env  SKIP  lint-service-types  no src/
@@ -122,6 +125,7 @@ A-fail  SKIP  lint-session-store-lazy-evict  no src/
 A-fail  SKIP  lint-bformat-call  no src/
 A-fail  SKIP  lint-charset-default  no src/
 A-fail  SKIP  lint-slot-default-type  no src/
+A-fail  SKIP  lint-property-accessors  no src/
 A-fail  SKIP  lint-lifecycle-guard  no src/
 A-fail  SKIP  lint-intrinsic-lock  no src/
 A-fail  SKIP  lint-service-types  no src/
@@ -154,6 +158,7 @@ A-none  SKIP  lint-session-store-lazy-evict  no src/
 A-none  SKIP  lint-bformat-call  no src/
 A-none  SKIP  lint-charset-default  no src/
 A-none  SKIP  lint-slot-default-type  no src/
+A-none  SKIP  lint-property-accessors  no src/
 A-none  SKIP  lint-lifecycle-guard  no src/
 A-none  SKIP  lint-intrinsic-lock  no src/
 A-none  SKIP  lint-service-types  no src/
@@ -186,6 +191,7 @@ A-toodeep  SKIP  lint-session-store-lazy-evict  no src/
 A-toodeep  SKIP  lint-bformat-call  no src/
 A-toodeep  SKIP  lint-charset-default  no src/
 A-toodeep  SKIP  lint-slot-default-type  no src/
+A-toodeep  SKIP  lint-property-accessors  no src/
 A-toodeep  SKIP  lint-lifecycle-guard  no src/
 A-toodeep  SKIP  lint-intrinsic-lock  no src/
 A-toodeep  SKIP  lint-service-types  no src/
@@ -209,7 +215,7 @@ A-toodeep  SKIP  schema-risk  no .deploy-baseline (floor check not run); create 
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 6 artifacts · 12 PASS · 2 FAIL · 0 WARN · 189 SKIP · 0 ADVISORY  ->  ISSUES
+report-module: 6 artifacts · 12 PASS · 2 FAIL · 0 WARN · 195 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

@@ -207,6 +207,16 @@ runtime (baja `ComplexIntrospector`; the course demo, corpus B1417 §1417.3 row 
 type (`0d`, `1.5f`, `0L`, `"\"text\""`) or its `B` value (`BDouble.make(0)`). Check:
 `toolbelt/lint-slot-default-type.sh <src-root>` (FAIL). `[ev: corpus B1417 §1417.3 l]`
 
+## Property accessors — a hand-declared slot needs a public getter and setter `[ev: issue #1159]`
+A `B*` class that declares a slot by hand (`public static final Property x = newProperty(...)`, no `@NiagaraProperty`)
+must declare a public `get<X>()` (or `is<X>()`) and a public `set<X>(...)` in the same class, `X` being the slot name
+with its first letter upper-cased. With either missing the module compiles, signs and passes `verify-module.sh`, and
+the station cannot load the type: `GRAVE [sys.schema] ... No setter for property (x)` / `Cannot load type for ...`,
+then `NoClassDefFoundError` on every use (measured on Niagara 4.14.0.162: a `BPointExtension` with three `newProperty`
+slots and getters only was unloadable; adding public setters fixed it). Slot-o-Matic always generates both, so
+prefer `@NiagaraProperty`. Check: `toolbelt/lint-property-accessors.sh <src-root>` (FAIL, one row per missing or
+non-public accessor; a nested class's accessors do not count). `[ev: issue #1159]`
+
 ## Slot-o-Matic runs — read the output, recover a failed file `[ev: retro course-recordings Δ5]`
 - **Read the Slot-o-Matic output on every run:** a file it cannot process is logged and skipped, the task still
   succeeds, and the build fails later (or not at all) in `compileJava`. `[ev: corpus B1417 §1417.3 s]`

@@ -1,0 +1,38 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/acme/BGen.java --
+package com.acme;
+import javax.baja.sys.*;
+public class BGen extends BComponent {
+  /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  public static final Property amps = newProperty(0, 0d, null);
+  public double getAmps() { return getDouble(amps); }
+  public void setAmps(double v) { setDouble(amps, v, null); }
+  public static final Property on = newProperty(0, false, null);
+  public boolean getOn() { return getBoolean(on); }
+  public void setOn(boolean v) { setBoolean(on, v, null); }
+  public static final Property Ready = newProperty(0, false, null);
+  public boolean isReady() { return getBoolean(Ready); }
+  public void setReady(boolean v) { setBoolean(Ready, v, null); }
+  public static final Property wrapped = newProperty(
+    Flags.SUMMARY,
+    BString.make("x"),
+    null);
+  @Override
+  public String getWrapped() { return getString(wrapped); }
+  @Deprecated public synchronized final void setWrapped(String v) { setString(wrapped, v, null); }
+  /*+ ------------ END BAJA AUTO GENERATED CODE ------------ +*/
+}
+-- src/com/acme/Helper.java --
+package com.acme;
+public class Helper {
+  public static final Property orphan = newProperty(0, 0, null);
+}
+-- src/com/acme/Buffer.java --
+package com.acme;
+public class Buffer {
+  public static final Property orphan = newProperty(0, 0, null);
+}
