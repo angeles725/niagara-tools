@@ -1095,7 +1095,9 @@ STUB
     [[ "$output" == *"[ng-deploy] station restart required (Java classes deployed)"$'\n'"[ng-deploy] done: test-rt.jar test-ux.jar copied to $TMPDIR_T/modules"$'\n'"[ng-deploy] signer: test-rt.jar carries no complete signature, test-ux.jar carries no complete signature; the gate checks who signed a jar, not whether the station trusts that signer: the station decides when it loads the module"$'\n'* ]]
     [[ "$output" == *"[ng-deploy] next: restart the station; ng-deploy did not look at whether one is running, and stops or starts none"* ]]
     [[ "$output" == *"toolbelt/triage-console.sh --package <the Java package of the module> --module-prefix test <station-dir>/console*.txt"* ]]
-    [[ "${lines[-1]}" == "[ng-deploy] undo: to remove the module again, take its components out of the station, stop the station and delete $TMPDIR_T/modules/test-rt.jar $TMPDIR_T/modules/test-ux.jar" ]]
+    [[ "${lines[-2]}" == "[ng-deploy] undo: to remove the module again, take its components out of the station, stop the station and delete $TMPDIR_T/modules/test-rt.jar $TMPDIR_T/modules/test-ux.jar" ]]
+    # the last closing line says how to record the deploy for build.sh --target (it writes nothing without a name)
+    [[ "${lines[-1]}" == "[ng-deploy] record: not written to .deploy-targets; to record this deploy for build.sh --target, deploy with --target <name> (a name of your own, one per station)" ]]
 
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode B   # no Java classes: no restart to do
     [ "$status" -eq 0 ]

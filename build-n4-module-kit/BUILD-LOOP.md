@@ -534,7 +534,15 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   per installed jar in `<module-root>/.build/mirror-built` (in the checkout, never in `modules/`, which Niagara
   reads; gitignore `.build/`), and a rebuild of the same version whose previous mirror jar has the recorded digest
   is this checkout's own build: one INFO line, drift check skipped, no exit 51. No record or another digest keeps
-  exit 51.
+  exit 51. With `--target <name>` a recorded deploy replaces that record: changed bytes at the version
+  `.deploy-targets` records for the module are exit 51 (the station runs it, even when the mirror's jar is your own
+  build), and at another version one INFO line skips the check, as no station runs that version. The record holds a
+  version and a commit, not bytes, so the bytes compared stay the mirror's jar. `scripts/ng-deploy.sh` with
+  `--target <name>` writes that line, `<target> <MOD>@<vendorVersion>=<commit>` (the -rt jar's version, the commit of
+  `.last-deploy-sha`), in `<module-root>/.deploy-targets` after a deploy that went through: it replaces the line of
+  the same target and module, keeps comments and other lines, and without `--target` writes nothing and says how.
+  Mode B leaves it as it is (no -rt jar); the name is yours, one per station, and ng-deploy never picks one.
+  `[ev: issue 1139]`
   `[ev: code go/internal/buildmodule/messages.go]` `[ev: retro go-build-module-port Δ2]` `--no-drift-check` opts out for
   a niagara_home that is not the real deploy target. `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ2]` The
   gate reads an X.Y or X.Y.Z module vendorVersion and compares the two versions numerically per part, a missing part = 0
@@ -592,9 +600,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   the name of a jar is exit 40 too, before anything is staged, and a SIGINT or SIGTERM during the copy undoes it the
   same way and exits 130 or 143 `[ev: retro go-ng-deploy-port Δ2]` `[ev: retro go-ng-deploy-port Δ9]`. Two exits are not
   of that kind: 21 means the backup was written but an older backup could not be purged (nothing was built), and 41
-  means the jars WERE copied but the deployed commit could not be read or written to `.last-deploy-sha`: restart the
-  station as the last line says, then fix the record. A `.last-deploy-sha` that is a directory or cannot be written is
-  found before the copy instead (exit 10, nothing copied), so 41 is left for a commit git cannot name and a record that
+  means the jars WERE copied but the deployed commit could not be read or written to `.last-deploy-sha` (or, with
+  `--target`, its line to `.deploy-targets`): restart the station as the last line says, then fix the
+  record. A `.last-deploy-sha` that is a directory or cannot be written is found before the copy instead (exit 10,
+  nothing copied), so 41 is left for a commit git cannot name and a record that
   stopped being writable during the copy `[ev: retro go-ng-deploy-port Δ10]`. A `.last-deploy-sha` holding a full commit
   id that git does not know (another clone, a rewritten history) is a NOTICE and a diff from `HEAD~1`, and exit 15 under
   `--strict-slotomatic`, like a malformed one `[ev: retro go-ng-deploy-port Δ11]`. The command line wins over the env

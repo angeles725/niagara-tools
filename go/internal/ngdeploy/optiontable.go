@@ -16,6 +16,7 @@ var optionTable = []flagOption{
 	{flag: "--mode", variable: optMode, value: true},
 	{flag: "--env-file", variable: optEnvFile, value: true},
 	{flag: "--keep", variable: optKeep, value: true},
+	{flag: "--target", variable: optTarget, value: true},
 	{flag: "--no-backup", variable: optNoBackup, guards: "the backup"},
 	{flag: "--no-deploy", variable: optNoDeploy},
 	{flag: "--with-slotomatic", variable: optWithSlot},

@@ -48,6 +48,7 @@ type build struct {
 	modulesMu  sync.Mutex
 	gradle     gradleRun // the running gradle, which a signal stops before the restore (gradleproc.go)
 	baseline   map[string]snapshot
+	deployed   deployRecord    // --target: the recorded deploy of the module, which the drift gate compares with; zero without it
 	undeployed map[string]bool // the profiles with no jar in modules/ before gradle ran (a first deploy)
 	// unverified is set from the baseline snapshot until the chain passed: modules/ may then hold a jar the
 	// gate has not passed, which an interrupt puts back (signal.go).

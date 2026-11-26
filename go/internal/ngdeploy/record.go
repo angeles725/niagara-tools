@@ -27,6 +27,7 @@ func (d *deploy) recordDeploy() int {
 		optional = true
 	}
 	sha, why := d.headCommit()
+	d.commit, d.noCommit = sha, why
 	if why == "" {
 		if path, err := writeRecord(sha); err != nil {
 			why = fmt.Sprintf(whyNotWritten, path, strerror.Text(err))

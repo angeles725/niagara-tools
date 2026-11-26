@@ -42,6 +42,8 @@ func (b *build) driftVerdict() int {
 		case c < 0:
 			// A lower version is a WARN, not a FAIL: a deliberate rollback below the deployed jar is legitimate.
 			b.warn(msgWentDown, b.jarName(p), old.version, version)
+		case c == 0 && b.deployed.version != "":
+			drifted = b.driftAgainstRecord(p, version) || drifted
 		case c == 0 && b.ownBuild(p, old):
 			b.warn(msgOwnBuild, b.jarName(p), version) // the mirror held this checkout's own build, not a release
 		case c == 0:

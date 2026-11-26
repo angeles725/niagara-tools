@@ -40,9 +40,9 @@
 #                    library   — a classpath-carrier -rt part: no Java, `<types/>`, no palette, `type: library` in its MODULE-MAP.md
 #                                header (MinimalLibrary fixture; types/utility-lib.md § 1 and § 6) [ev: retro doc-coverage-audit Δ10]
 #
-# Every type also carries a .gitignore at the gradle root (.gradle/, build/, _backups/, .last-deploy-sha; from the
-# fixture) [ev: retro build-kit-bench-session Δ8], and the client version ledger <out-dir>/<ModuleName>/odd/VERSION-LEDGER.md (templates/, its
-# sample row dropped; check it with ledger-check.sh).
+# Every type also carries a .gitignore at the gradle root (.gradle/, build/, .build/, _backups/, .last-deploy-sha;
+# from the fixture) [ev: retro build-kit-bench-session Δ8], and the client version ledger
+# <out-dir>/<ModuleName>/odd/VERSION-LEDGER.md (templates/, its sample row dropped; check it with ledger-check.sh).
 # The emitted tree is pre-slotomatic. Run build.sh to generate the AUTO region and build the jar.
 # The root build.gradle.kts carries the signing block (templates/signing-root.gradle.kts, issue #266):
 # set niagaraSigningAlias and niagaraSigningProfile as gradle properties before the first build. The signing line names
