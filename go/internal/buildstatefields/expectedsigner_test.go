@@ -2,6 +2,7 @@ package buildstatefields
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -58,8 +59,71 @@ func TestSweepRejectsAnInvalidExpectedSigner(t *testing.T) {
 // The check reads the field of every envelope, the kit's too, and the first bad one is the one named.
 func TestSweepChecksTheExpectedSignerOfEveryEnvelope(t *testing.T) {
 	t.Parallel()
-	f := newKit(t, signerState("expected_signer: acme")+signerState("expected_signer: a b"), hand, nil)
+	other := strings.Replace(signerState("expected_signer: acme"), "module: Foo", "module: Bar", 1)
+	f := newKit(t, other+signerState("expected_signer: a b"), hand, nil)
 	if code, _, errs := f.sweep(); code != ExitFail || errs != fmt.Sprintf(wantSigner, "a b") {
 		t.Errorf("exit %d, stderr %q; want exit 1 naming 'a b'", code, errs)
+	}
+}
+
+const (
+	wantTwice = "sweep: envelope (Foo) expected_signer is given twice: '%s' and '%s'\n"
+	wantStray = "sweep: envelope (Foo) has a line that is not the expected_signer field: '%s' " +
+		"(write expected_signer: <alias> at column 0)\n"
+	wantTwoEnvelopes = "sweep: envelope (Foo) is declared twice and expected_signer is set in one of them: " +
+		"keep one envelope\n"
+)
+
+// The key twice in one envelope is an error, whatever the values (a first `unknown` or a bad second one
+// must not hide the other).
+func TestSweepRejectsTheSignerKeyTwice(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct{ name, first, second string }{
+		{"unknown then an alias", "unknown", "acme"},
+		{"an alias then a bad value", "acme", "a b"},
+		{"the same alias twice", "acme", "acme"},
+	} {
+		f := newKit(t, signerState("expected_signer: "+c.first+"\nexpected_signer: "+c.second), hand, nil)
+		code, out, errs := f.sweep()
+		if want := fmt.Sprintf(wantTwice, c.first, c.second); code != ExitFail || out != "" || errs != want {
+			t.Errorf("%s: exit %d, stdout %q, stderr %q; want exit 1 and %q", c.name, code, out, errs, want)
+		}
+	}
+}
+
+// Two envelopes for one module are an error when either records expected_signer; two without it stay valid.
+func TestSweepRejectsTwoEnvelopesOfOneModuleWithASigner(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct{ name, state string }{
+		{"field in the second", signerState("") + signerState("expected_signer: acme")},
+		{"field in the first", signerState("expected_signer: acme") + signerState("")},
+	} {
+		f := newKit(t, c.state, hand, nil)
+		if code, out, errs := f.sweep(); code != ExitFail || out != "" || errs != wantTwoEnvelopes {
+			t.Errorf("%s: exit %d, stdout %q, stderr %q; want exit 1 and %q", c.name, code, out, errs, wantTwoEnvelopes)
+		}
+	}
+	f := newKit(t, signerState("")+signerState(""), hand, nil)
+	if code, _, errs := f.sweep(); code != ExitOK || errs != "" {
+		t.Errorf("two envelopes without the field: exit %d, stderr %q; want 0", code, errs)
+	}
+}
+
+// A line that is clearly the key mistyped (a space before the colon, an indented key) is an error, not a field
+// that is silently not there; other keys keep the convention that an indented key is no field.
+func TestSweepRejectsAMistypedSignerKey(t *testing.T) {
+	t.Parallel()
+	for _, line := range []string{"expected_signer : acme", "  expected_signer: acme", "\texpected_signer:acme"} {
+		f := newKit(t, signerState(line), hand, nil)
+		want := fmt.Sprintf(wantStray, line)
+		if code, out, errs := f.sweep(); code != ExitFail || out != "" || errs != want {
+			t.Errorf("%q: exit %d, stdout %q, stderr %q; want exit 1 and %q", line, code, out, errs, want)
+		}
+	}
+	for _, line := range []string{"  retro_x: 1", "expected_signers: acme", "# expected_signer : acme", "  - expected_signer: x"} {
+		f := newKit(t, signerState(line), hand, nil)
+		if code, _, errs := f.sweep(); code != ExitOK || errs != "" {
+			t.Errorf("%q: exit %d, stderr %q; want 0 (not the signer key)", line, code, errs)
+		}
 	}
 }

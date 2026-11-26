@@ -178,3 +178,35 @@ func TestTheRecordedSignerReachesTheSigningBlockCheck(t *testing.T) {
 	f.wants("no block", f.buildSigned(), ExitEnv, "niagaraSigningAlias=acme is passed but ")
 	f.wantsNoRun()
 }
+
+// Rule: a malformed record never skips the mismatch refusal: two envelopes of the module, the key twice, or a
+// mistyped key end the chain before gradle (exit 10) with the sweep's text and the file, even with an alias
+// that would differ from a well-formed record. Only the module's own envelopes count.
+func TestAMalformedRecordFailsBeforeGradle(t *testing.T) {
+	for _, c := range []struct{ name, state, reason string }{
+		{"two envelopes", envelope("Foo") + envelope("Foo", "expected_signer: acme"),
+			"envelope (Foo) is declared twice and expected_signer is set in one of them: keep one envelope"},
+		{"the key twice", envelope("Foo", "expected_signer: unknown", "expected_signer: acme"),
+			"envelope (Foo) expected_signer is given twice: 'unknown' and 'acme'"},
+		{"a mistyped key", envelope("Foo", "expected_signer : acme"),
+			"envelope (Foo) has a line that is not the expected_signer field: 'expected_signer : acme' " +
+				"(write expected_signer: <alias> at column 0)"},
+	} {
+		f := newFixture(t)
+		path := f.state(c.state)
+		code := f.buildSigned("--gradle-prop", "niagaraSigningAlias=other")
+		f.wants(c.name, code, ExitEnv)
+		if want := "build.sh: FAIL — " + c.reason + " in " + path + "\n"; f.err != want {
+			t.Errorf("%s: stderr %q, want %q", c.name, f.err, want)
+		}
+		f.wantsNoRun()
+	}
+}
+
+// Another module's malformed envelope is not this build's business (the sweep checks it).
+func TestAnotherModulesMalformedRecordIsIgnored(t *testing.T) {
+	f := newFixture(t)
+	f.state(envelope("Bar", "expected_signer: a b", "expected_signer: c") + envelope("Bar", "expected_signer : x") +
+		envelope("Foo", "expected_signer: acme"))
+	f.wants("Foo", f.buildSigned(), ExitOK, "expected signer: acme")
+}

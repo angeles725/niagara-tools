@@ -19,7 +19,8 @@ const kitStateFile = "../BUILD-STATE.src.md"
 // (modjar.ConfiguredAlias) must equal the record, or the chain ends (exit 10) naming both; with none
 // configured the record is handed to gradle as -PniagaraSigningAlias, so every later step (the signing block
 // check, the key listing, the gate's signed row) sees it as the configured alias. A field that is absent or
-// `unknown`, a module with no envelope, or a default file that is missing change nothing.
+// `unknown`, a module with no envelope, or a default file that is missing change nothing; a malformed record of
+// the module (buildstatefields.ExpectedSigner) is exit 10 whatever alias is configured.
 func (b *build) applyExpectedSigner() int {
 	file, explicit := b.opt.buildState, b.opt.buildState != ""
 	if !explicit {

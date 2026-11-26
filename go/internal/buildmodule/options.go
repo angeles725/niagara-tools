@@ -73,8 +73,8 @@ func parseArgs(args []string, s cli.Stdio) (o options, code int) {
 			}
 			o.gradleProps = append(o.gradleProps, prop)
 		case values[flag] != nil || flag == "--ui-profile":
-			if !hasValue {
-				return usageError()
+			if !hasValue || (flag == "--build-state" && args[1] == "") {
+				return usageError() // an empty --build-state is no file, not the default one
 			}
 			if flag == "--ui-profile" {
 				if !uiProfiles[args[1]] {

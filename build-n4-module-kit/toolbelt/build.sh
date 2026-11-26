@@ -64,7 +64,7 @@
 #                   holds <MOD>-rt X (a build, not necessarily what a station runs); deployed version unknown".
 #   --build-state <file>  the file holding the module's build-state.v1 envelope (the expected-signer paragraph below);
 #                   default: the kit's BUILD-STATE.src.md beside this toolbelt. A file named here that cannot be
-#                   read is exit 10; the default one missing is not an error.
+#                   read is exit 10, an empty name is exit 2; the default one missing is not an error.
 #   --restore-mirror <kept-jar>  builds nothing: copies a jar a mirror build kept (below) back into that mirror's
 #                   modules/, leaves the kept copy and ends the cycle (below). Refuses a path not shaped
 #                   <mirror>/.mirror-replaced/<name>.<sha12> (exit 2); a missing kept jar, one whose sha256 prefix is
@@ -105,14 +105,17 @@
 #   (source: delta B5 of an external session retro, 2026-11-13)
 # Recorded expected signer (#1131): the module's build-state.v1 envelope may carry an optional `expected_signer:
 #   <alias>` field (letters, digits, '.', '_' or '-'; `unknown` or no field records nothing). build.sh reads the
-#   envelope whose `module:` is <MOD> from --build-state, else the kit's BUILD-STATE.src.md, before anything else
-#   runs. Precedence: (1) an alias configured as above (--gradle-prop, $ORG_GRADLE_PROJECT_niagaraSigningAlias or
+#   envelope whose `module:` is <MOD> from --build-state, else the kit's BUILD-STATE.src.md, right after the inputs
+#   are resolved (module root, gradle root, JDK, niagara_home) and before preflight, the baselines and gradle.
+#   Precedence: (1) an alias configured as above (--gradle-prop, $ORG_GRADLE_PROJECT_niagaraSigningAlias or
 #   gradle.properties) must equal the record, or build.sh exits 10 BEFORE gradle naming both; (2) with no alias
 #   configured the record is handed to gradle as -PniagaraSigningAlias=<alias> (one "==> expected signer: <alias>
 #   (expected_signer of <MOD> in <file>)" line), so the signing block check, the key listing and the gate's
 #   `signed` row use it; (3) the deployed jars' signer and the no-alias WARN apply only when nothing is
-#   recorded. A value that is not an alias is exit 10 (sweep-build-state.sh fails it too). No field or file:
-#   unchanged.
+#   recorded. A malformed record is exit 10 before gradle, whatever alias is configured (sweep-build-state.sh fails
+#   the same text with exit 1): a value that is not an alias, the key twice in one envelope, a second envelope of
+#   <MOD> when one of them sets the field, or a line that mistypes the key (`expected_signer : x`, or indented).
+#   Only <MOD>'s envelopes count here; the sweep checks them all. No field or file: unchanged.
 # Signing block precheck (#1121): with a niagaraSigningAlias configured (as above) and a root build.gradle.kts that
 #   applies com.tridium.niagara-signing without a niagaraSigning {} block (the lint-structure L15 detection), the
 #   plugin ignores the alias and the profile and signs with the throwaway key, so build.sh exits 10 BEFORE gradle

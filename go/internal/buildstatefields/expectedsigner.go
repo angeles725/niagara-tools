@@ -1,8 +1,8 @@
 package buildstatefields
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 )
 
 // SignerKey is the optional envelope field that records the alias a module's releases are signed with
@@ -30,57 +30,44 @@ func ValidSigner(v string) bool {
 	return v != ""
 }
 
-// signerEnvelopes are the module and the expected_signer value of every build-state.v1 envelope of a text, in
-// order; set is false for an envelope without the field. Read like the other envelope readers: keys start at
-// column 0, a `# comment` ends the value, a byte-order mark that opens the text is dropped and a CR ends a line.
-func signerEnvelopes(text string) (found []signerField) {
-	text = strings.ReplaceAll(strings.TrimPrefix(text, "\xef\xbb\xbf"), "\r", "\n")
-	var cur *signerField
-	for _, line := range Lines(text) {
+// Messages of the structural errors of the field (the sweep prefixes them with "sweep: ", build.sh with its
+// own name and adds the file): %s is the module (and the values or the line).
+const (
+	signerTwice     = "envelope (%s) " + SignerKey + " is given twice: '%s' and '%s'"
+	signerStray     = "envelope (%s) has a line that is not the " + SignerKey + " field: '%s' (write " + SignerKey + ": <alias> at column 0)"
+	signerTwoModule = "envelope (%s) is declared twice and " + SignerKey + " is set in one of them: keep one envelope"
+)
+
+// problem is the first error of the envelopes of one module (every envelope of a text for the sweep), "" when
+// they are well formed: a line that mistypes the key, the key twice in one envelope, a value that is not an
+// alias, then two envelopes of the module when any of them sets the field.
+func problem(envs []signerEnv) string {
+	for _, e := range envs {
 		switch {
-		case strings.HasPrefix(line, OpenMarker):
-			found = append(found, signerField{})
-			cur = &found[len(found)-1]
-		case strings.HasPrefix(line, CloseMarker):
-			cur = nil
-		case cur != nil:
-			key, val, ok := strings.Cut(line, ":")
-			if !ok {
-				continue
-			}
-			if i := strings.IndexByte(val, '#'); i >= 0 {
-				val = val[:i]
-			}
-			switch key {
-			case "module":
-				if cur.module == "" {
-					cur.module = trimSpace(val)
-				}
-			case SignerKey:
-				if !cur.set {
-					cur.value, cur.set = trimSpace(val), true
-				}
-			}
+		case len(e.strays) > 0:
+			return fmt.Sprintf(signerStray, e.module, e.strays[0])
+		case len(e.values) > 1:
+			return fmt.Sprintf(signerTwice, e.module, e.values[0], e.values[1])
+		case len(e.values) == 1 && e.values[0] != SignerUnknown && !ValidSigner(e.values[0]):
+			return fmt.Sprintf(SignerInvalid, e.module, e.values[0])
 		}
 	}
-	return found
-}
-
-type signerField struct {
-	module, value string
-	set           bool
-}
-
-// CheckSigners returns the first envelope whose expected_signer is neither an alias nor `unknown`, worded as
-// SignerInvalid ("" when every one is valid or absent).
-func CheckSigners(text string) string {
-	for _, e := range signerEnvelopes(text) {
-		if e.set && e.value != SignerUnknown && !ValidSigner(e.value) {
-			return fmt.Sprintf(SignerInvalid, e.module, e.value)
+	seen := map[string]bool{}
+	for _, e := range envs {
+		if e.module != "" && seen[e.module] {
+			for _, o := range envs {
+				if o.module == e.module && len(o.values) > 0 {
+					return fmt.Sprintf(signerTwoModule, e.module)
+				}
+			}
 		}
+		seen[e.module] = true
 	}
 	return ""
 }
+
+// CheckSigners returns the first error of the expected_signer fields of every envelope ("" when none).
+func CheckSigners(text string) string { return problem(signerEnvelopes(text)) }
 
 // CheckState is the content check of BUILD-STATE.md envelopes: CheckEnvelopes, then CheckSigners.
 func CheckState(text string) string {
@@ -90,20 +77,21 @@ func CheckState(text string) string {
 	return CheckSigners(text)
 }
 
-// ExpectedSigner is the alias the first envelope naming module records, "" when it has none (the module has no
-// envelope, no field, or `unknown`). A value that is not an alias is an error worded as SignerInvalid.
+// ExpectedSigner is the alias the envelope naming module records, "" when it has none (the module has no
+// envelope, no field, or `unknown`). Only the envelopes of module count: the first error among them (the
+// messages above) is returned as the error; another module's malformed envelope is the sweep's business.
 func ExpectedSigner(text, module string) (string, error) {
+	var envs []signerEnv
 	for _, e := range signerEnvelopes(text) {
-		if e.module != module {
-			continue
+		if e.module == module {
+			envs = append(envs, e)
 		}
-		if !e.set || e.value == SignerUnknown {
-			return "", nil
-		}
-		if !ValidSigner(e.value) {
-			return "", fmt.Errorf(SignerInvalid, e.module, e.value)
-		}
-		return e.value, nil
 	}
-	return "", nil
+	if msg := problem(envs); msg != "" {
+		return "", errors.New(msg)
+	}
+	if len(envs) == 0 || len(envs[0].values) == 0 || envs[0].values[0] == SignerUnknown {
+		return "", nil
+	}
+	return envs[0].values[0], nil
 }

@@ -326,17 +326,19 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
 - A client module is signed with ITS alias, not the development key: configure `niagaraSigningAlias` so `build.sh` hands
   the gate `--expected-signer` (a different signer FAILs the `signed` row); a
   `build.sh: WARN — no niagaraSigningAlias is configured …` line means the gate accepted any signature.
+  An alias with a root that has no `niagaraSigning {}` block is refused before gradle (exit 10): the plugin would
+  ignore it and sign with the throwaway key; the message gives the `cat templates/signing-root.gradle.kts >>
+  build.gradle.kts` command. `No private key for <alias> found` makes `build.sh` print the profile, its keystore and
+  the aliases it holds (never a password; exit stays 30). (build-verify.md)
 - **Record the alias once** in the module's `build-state.v1` envelope: `expected_signer: <alias>` (optional;
   `unknown` or no field records nothing; `sweep-build-state.sh` fails a value that is not an alias token). `build.sh`
   reads the envelope of `<MOD>` (`--build-state <file>`, else the kit's `BUILD-STATE.src.md`). With no alias
   configured it hands the recorded one to gradle (and the gate's `signed` row); an alias configured by
   `--gradle-prop`, `ORG_GRADLE_PROJECT_niagaraSigningAlias` or `gradle.properties` that differs is exit 10 before
   gradle, naming both. Precedence: configured alias (must equal the record) > record > deployed jars' signer.
-  `[ev: issue #1131]`
-  An alias with a root that has no `niagaraSigning {}` block is refused before gradle (exit 10): the plugin would
-  ignore it and sign with the throwaway key; the message gives the `cat templates/signing-root.gradle.kts >>
-  build.gradle.kts` command. `No private key for <alias> found` makes `build.sh` print the profile, its keystore and
-  the aliases it holds (never a password; exit stays 30). (build-verify.md)
+  A malformed record is exit 10 before gradle (the sweep fails the same text, exit 1): a value that is not an
+  alias, the key twice in one envelope, two envelopes of `<MOD>` when one sets the field, or a line that mistypes
+  the key (`expected_signer : x`, or indented). `[ev: issue #1131]`
 - A `gradle :jar` with the default JDK is NOT a build.
 
 ### 4.a Gradle task matrix (`niagara-module` plugin tasks) — when to run each

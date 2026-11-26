@@ -7,6 +7,8 @@
   (one `==> expected signer: …` line); an alias configured by `--gradle-prop`,
   `ORG_GRADLE_PROJECT_niagaraSigningAlias` or `gradle.properties` that differs from the record is exit 10 before
   gradle, naming both. Precedence: configured alias (must equal the record) > record > the deployed jars' signer.
-  `unknown` or no field behaves as before. `sweep-build-state.sh` fails (exit 1) a value that is not one alias
-  token (letters, digits, `.`, `_`, `-`), and `build.sh` refuses it with exit 10. Documented in `build.sh`'s
+  `unknown` or no field behaves as before. `sweep-build-state.sh` fails (exit 1), and `build.sh` refuses with
+  exit 10, a malformed record: a value that is not one alias token (letters, digits, `.`, `_`, `-`), the key
+  twice in one envelope, two envelopes of the module when one sets the field, or a mistyped key
+  (`expected_signer : x`, indented). Documented in `build.sh`'s
   header, `BUILD-LOOP.md` §4 and `skill/SKILL.md`.
