@@ -309,6 +309,10 @@ module's sibling parts, so a wb or ux adapter that uses rt types compiles once `
 naming the file and the sibling jars on an error, before the tests run; third-party jars and generated sources are
 not on the class path); without it one NOTICE says the adapters were not compiled and the exit code is unchanged.
 Run it with `NIAGARA_HOME` set before each work-unit commit that touches an adapter.
+Name the class from the test file's own `package` line, not from its path (`test.com.x.FooTest` compiles but JUnit
+cannot load it: exit 3, `class <name> not found; the package line of <file> says <pkg>`); a relative part dir is
+made absolute. `run-pure-test.sh --all <part dir>` runs every `*Test.java` under `srcTest/` in one JVM and prints
+`run-pure-test: N classes, M tests, F failures`; the exit code is JUnit's. `[ev: issue #1115]`
 `[ev: code go/internal/puretest/adapters.go]`
 `[ev: retro client-e-dashboard-live-check Δ30]` `[ev: issue #1075]`
 

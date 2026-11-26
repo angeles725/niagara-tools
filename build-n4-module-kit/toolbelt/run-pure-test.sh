@@ -9,9 +9,17 @@
 # This removes the hunt and the per-session copy-paste.
 #
 # USAGE: run-pure-test.sh <module-rt-dir> <pkg.TestClass>
+#        run-pure-test.sh --all <module-rt-dir>
 #   <module-rt-dir>  e.g. .../CompPan/CompPan-rt   (holds src/ and srcTest/)
 #   <pkg.TestClass>  e.g. com.angeles.CompPan.CompressorControlTest (a class in the default package is
-#                    srcTest[/test]/<Class>.java)
+#                    srcTest[/test]/<Class>.java). The name is the file's own `package` line plus the class, never
+#                    one built from its path (test.com.x.FooTest for srcTest/test/com/x/FooTest.java): that compiles
+#                    but JUnit cannot load it, so the run stops first with exit 3:
+#                    "class <name> not found; the package line of <file> says <pkg>".
+#   <module-rt-dir>  may be relative: it is made absolute before javac and the JVM run in different directories.
+#   --all            every *Test.java under srcTest/ in one javac and one JUnitCore (each class named from its
+#                    package line), then one line on stderr "run-pure-test: N classes, M tests, F failures";
+#                    exit 3 when there is no test. The exit code is JUnit's.
 #
 # Compiles the test + any pure sources it references (via -sourcepath) into a TEMP dir
 # — never writes into the module tree (a parallel session's working tree is off-limits)

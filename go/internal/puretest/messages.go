@@ -45,7 +45,7 @@ var testRoots = []string{"srcTest/test", "srcTest"}
 // Messages (fmt formats); each is printed on stderr after "run-pure-test: ".
 const (
 	prefix         = "run-pure-test: "
-	msgUsage       = "usage: run-pure-test.sh <module-rt-dir> <pkg.TestClass>"
+	msgUsage       = "usage: run-pure-test.sh <module-rt-dir> <pkg.TestClass> | run-pure-test.sh --all <module-rt-dir>"
 	msgNoModuleDir = "module-rt-dir not found: %s"
 	msgNoJavac     = "javac not on PATH (need a JDK 8)"
 	msgNoJUnit     = junitJar + " not in ~/.gradle — run one './gradlew :<mod>-rt:compileTestJava' to fetch it"

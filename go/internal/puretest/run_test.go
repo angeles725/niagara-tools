@@ -10,7 +10,7 @@ import (
 func TestUsage(t *testing.T) {
 	f := newFixture(t)
 	for _, args := range [][]string{nil, {f.rt}, {f.rt, testClass, "extra"}} {
-		f.stops("usage", ExitUsage, "usage: run-pure-test.sh <module-rt-dir> <pkg.TestClass>", args...)
+		f.stops("usage", ExitUsage, usageText, args...)
 	}
 }
 
@@ -122,13 +122,13 @@ func TestSeveralCopiesOfAJarNameTheOneUsed(t *testing.T) {
 // TestSourceRoot: srcTest/test/ wins over srcTest/; srcTest/ is used when only it holds the test.
 func TestSourceRoot(t *testing.T) {
 	f := newFixture(t)
-	f.write("rt/srcTest/com/example/demo/AdderTest.java", "")
+	f.write("rt/srcTest/com/example/demo/AdderTest.java", "package com.example.demo;\n")
 	f.run(f.rt, testClass)
 	if got := f.call("javac"); !strings.Contains(got, "<"+f.rt+"/src:"+f.rt+"/srcTest/test> ") {
 		t.Errorf("both roots: javac call %s", got)
 	}
 	f = newFixture(t)
-	f.write("rt/srcTest/com/example/demo/AdderTest.java", "")
+	f.write("rt/srcTest/com/example/demo/AdderTest.java", "package com.example.demo;\n")
 	os.RemoveAll(f.rt + "/srcTest/test")
 	f.run(f.rt, testClass)
 	if got := f.call("javac"); !strings.HasSuffix(got, "<-sourcepath> <"+f.rt+"/src:"+f.rt+"/srcTest> <-d> <"+f.tempDir()+"> <"+f.rt+"/srcTest/com/example/demo/AdderTest.java>\n") {

@@ -37,7 +37,7 @@ func newFixture(t *testing.T) *fixture {
 		junit:    dir + "/home/.gradle/caches/a/junit-4.13.2.jar",
 		hamcrest: dir + "/home/.gradle/wrapper/b/hamcrest-core-1.3.jar"}
 	f.write("rt/src/com/example/demo/Adder.java", "")
-	f.write("rt/srcTest/test/com/example/demo/AdderTest.java", "")
+	f.write("rt/srcTest/test/com/example/demo/AdderTest.java", "package com.example.demo;\n")
 	f.write("home/.gradle/caches/a/junit-4.13.2.jar", "")
 	f.write("home/.gradle/wrapper/b/hamcrest-core-1.3.jar", "")
 	f.write("tmp/.keep", "")
