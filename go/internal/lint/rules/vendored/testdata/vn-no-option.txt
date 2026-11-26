@@ -1,0 +1,8 @@
+-- args --
+@DIR@/rc
+-- want --
+exit 3
+-- stderr --
+lint-vendored: no known-defects table: pass --defects <file> (toolbelt/lint-vendored.sh does)
+-- rc/vendor/a.js --
+// vendored

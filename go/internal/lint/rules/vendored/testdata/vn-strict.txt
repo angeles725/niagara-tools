@@ -1,0 +1,20 @@
+-- args --
+--strict
+--defects
+@DIR@/defects.md
+@DIR@/rc
+-- want --
+exit 1
+WARN  lint-vendored  @DIR@/rc/vendor/extra.js  not listed in rc/vendor/VENDORED.md; add a row: | extra.js | <library> | <version> | <source URL> |
+-- stderr --
+-- defects.md --
+# known defects
+| Library | File | Affected | Defect | Fix |
+|---|---|---|---|---|
+| three.js | OrbitControls*.js | < r161 | zoom scale is wrong at devicePixelRatio < 1 | upgrade to >= r161 |
+| examplelib | *.js | >= 1.0.0, < 1.4.2 | legend leaks listeners | upgrade to >= 1.4.2 |
+-- rc/vendor/VENDORED.md --
+| File | Library | Version | Source URL |
+|---|---|---|---|
+-- rc/vendor/extra.js --
+// vendored

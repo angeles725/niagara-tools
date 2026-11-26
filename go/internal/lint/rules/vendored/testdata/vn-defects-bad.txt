@@ -1,0 +1,14 @@
+-- args --
+--defects
+@DIR@/defects.md
+@DIR@/rc
+-- want --
+exit 3
+-- stderr --
+lint-vendored: known-defects table @DIR@/defects.md:3: Affected "older than r161" is not a comparison (< r161, >= 1.0.0, < 1.4.2)
+-- defects.md --
+| Library | File | Affected | Defect | Fix |
+|---|---|---|---|---|
+| three.js | * | older than r161 | x | y |
+-- rc/vendor/a.js --
+// vendored

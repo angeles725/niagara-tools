@@ -127,7 +127,7 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 // lint-structure that is a root without profiles, a wrong path that the bash lint passed clean; for
 // lint-write-path a root without a matrix, its own "lint-write-path  ERROR" row (report-module.sh reads it); for
 // lint-module-map a root without a -rt/-ux/-wb/-se part; for lint-ntpl-manifest-deps a root with neither a build file
-// nor a template.
+// nor a template; lint-vendored (EmptyOK) is clean on a root with no vendor/.
 func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil { // stop the upward walk here
@@ -170,7 +170,7 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check lint-write-path lint-ux-version lint-module-map lint-ntpl-manifest-deps" {
-		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux, split-package-check, lint-write-path, lint-ux-version, lint-module-map and lint-ntpl-manifest-deps", roots)
+	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check lint-write-path lint-ux-version lint-module-map lint-ntpl-manifest-deps lint-vendored" {
+		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux, split-package-check, lint-write-path, lint-ux-version, lint-module-map, lint-ntpl-manifest-deps and lint-vendored", roots)
 	}
 }

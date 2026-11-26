@@ -195,7 +195,7 @@ rc/
   index.html                 markup + ordered <script src="...?v=X.Y.Z"> (no inline blocks beyond a boot tag)
   css/  base.css (tokens, reset) · layout.css · components.css
   img/  separate image files, referenced with ?v=
-  vendor/ <lib>-<version>.min.js + LICENSE + rc/vendor/THIRD-PARTY.md (§ Vendored libraries)
+  vendor/ <lib>-<version>.min.js + LICENSE + rc/vendor/VENDORED.md + rc/vendor/THIRD-PARTY.md (§ Vendored libraries)
   js/
     config.js                pollMs, timeouts, base path (one object)
     types.js                 JSDoc @typedef Room, Compressor, Alarm, WriteResult (tsc --checkJs --noEmit)
@@ -256,6 +256,24 @@ rc/
   Record the verdict (`vendor-floor: clean` or the accepted WARN list with the reason) next to the
   pin in `rc/vendor/THIRD-PARTY.md`. [LAN] A LAN-only build may record the WARNs as accepted.
   `[ev: retro dashboard-frontend-standard Δ16]`
+- [both] `rc/vendor/VENDORED.md` lists every vendored file: a markdown table with one row per file, its path below
+  `rc/vendor/` (forward slashes), the library, its version (a three.js r-number such as `r161`, or a semver such
+  as `1.4.2`) and the source URL it was fetched from:
+
+  ```
+  | File | Library | Version | Source URL |
+  |---|---|---|---|
+  | OrbitControls.js | three.js | r160 | https://example.org/three/r160/examples/OrbitControls.js |
+  ```
+
+  `rc/vendor/THIRD-PARTY.md` keeps the licence, the deprecation note and the verdict; `rc/vendor/VENDORED.md` is the
+  table the lint reads. Update the row in the same commit as the file.
+- [both] A library has defects that a build and a test do not show. `toolbelt/lint-vendored.sh <rc-dir>` WARNs a
+  listed file whose library and version are in the kit's known-defects table (`data/vendored-defects.md`: library,
+  file pattern, affected versions, defect, fix). The first row: three.js `OrbitControls*.js` below r161 zooms wrong
+  at `devicePixelRatio` < 1 (the issue's evidence). It also WARNs a file under `rc/vendor/` that no row lists, and
+  vendor files with no `rc/vendor/VENDORED.md`. Fix: upgrade to the fixed version, or add the row. Add a table row
+  when a library defect reaches a station. `[ev: issue #1123]`
 
 ## Vendor catalog `[ev: retro dashboard-frontend-standard Δ15]`
 
@@ -403,7 +421,8 @@ warning → WARN). This covers the function-length and dead-local rule; a dead T
 `[ev: retro dashboard-frontend-standard Δ10]` `[ev: retro dashboard-frontend-standard Δ4]`
 
 Vendored libraries: `toolbelt/lint-vendor-floor.sh` (§ Vendored libraries), also run by
-`report-module.sh` on `src/rc/vendor`. `[ev: retro dashboard-frontend-standard Δ16]`
+`report-module.sh` on `src/rc/vendor`; `toolbelt/lint-vendored.sh <rc-dir>` reads `rc/vendor/VENDORED.md` (run it
+by hand, `report-module.sh` does not yet). `[ev: retro dashboard-frontend-standard Δ16]` `[ev: issue #1123]`
 
 Pre-compressed bundle: `report-module.sh` row `bundle-gzip` (native, no toolbelt script) WARNs a
 `src/rc/dist/*.js` over 300 KB with no `.gz` twin (§ 5, `dashboard.md` § Static serving).

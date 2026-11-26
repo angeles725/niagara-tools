@@ -1,0 +1,34 @@
+-- args --
+--defects
+@DIR@/defects.md
+@DIR@/rc
+-- want --
+exit 0
+WARN  lint-vendored  @DIR@/rc/vendor/a.js  examplelib 1.3.0 (VENDORED.md:3) has a known defect: legend leaks listeners; fix: upgrade to >= 1.4.2
+WARN  lint-vendored  @DIR@/rc/vendor/d.js  examplelib v1.0 (VENDORED.md:6) has a known defect: legend leaks listeners; fix: upgrade to >= 1.4.2
+WARN  lint-vendored  @DIR@/rc/vendor/e.js  examplelib 1.4.2-rc.1 (VENDORED.md:7) has a known defect: legend leaks listeners; fix: upgrade to >= 1.4.2
+-- stderr --
+-- defects.md --
+# known defects
+| Library | File | Affected | Defect | Fix |
+|---|---|---|---|---|
+| three.js | OrbitControls*.js | < r161 | zoom scale is wrong at devicePixelRatio < 1 | upgrade to >= r161 |
+| examplelib | *.js | >= 1.0.0, < 1.4.2 | legend leaks listeners | upgrade to >= 1.4.2 |
+-- rc/vendor/VENDORED.md --
+| File | Library | Version | Source URL |
+|---|---|---|---|
+| a.js | examplelib | 1.3.0 | https://example.org/examplelib |
+| b.js | examplelib | 1.4.2 | https://example.org/examplelib |
+| c.js | examplelib | 0.9.9 | https://example.org/examplelib |
+| d.js | examplelib | v1.0 | https://example.org/examplelib |
+| e.js | examplelib | 1.4.2-rc.1 | https://example.org/examplelib |
+-- rc/vendor/a.js --
+// vendored
+-- rc/vendor/b.js --
+// vendored
+-- rc/vendor/c.js --
+// vendored
+-- rc/vendor/d.js --
+// vendored
+-- rc/vendor/e.js --
+// vendored
