@@ -117,3 +117,25 @@ func TestARollbackPlanNamesTheTypesTheNamingRuleClassified(t *testing.T) {
 		t.Errorf("back = %v", back)
 	}
 }
+
+// A struct kept at its parent's depth can sit on the last loaded level: its own children were never
+// read, so the remove plan reports it in snapshot_truncated instead of showing a complete snapshot;
+// the limitEnable booleans on that level (simples) are captured and not reported.
+func TestAStructAtTheLoadCutIsReportedAsTruncated(t *testing.T) {
+	d := destructiveRig(t, nil)
+	contracts := structContracts()
+	contracts["x:Inner"] = map[string]any{"p": "baja:Struct"}
+	d.withContractsOf(contracts)
+	d.Station.SetSupertype("x:Inner", "baja:Struct")
+	nn, alarm := d.alarmedAmps()
+	d.Set(alarm, "offnormalAlgorithm/limitEnable/inner", map[string]any{"nm": "p", "t": "x:Inner", "v": ""})
+	d.Set(alarm, "offnormalAlgorithm/limitEnable/inner/deepleaf", map[string]any{"nm": "p", "t": "baja:String", "v": "deep"})
+	dry := d.Srv.Dry("n4_remove_component", removeArgs(nn))
+	cut, _ := planOf(dry)["snapshot_truncated"].(map[string]any)
+	if !same(cut["paths"], []any{"Alarm/offnormalAlgorithm/limitEnable/inner"}) {
+		t.Errorf("snapshot_truncated = %v, want only the inner struct (its children were not loaded)", cut)
+	}
+	if len(noteWith(planOf(dry)["notes"], "NOT captured")) != 1 {
+		t.Errorf("notes = %v", planOf(dry)["notes"])
+	}
+}
