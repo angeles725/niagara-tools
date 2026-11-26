@@ -17,12 +17,15 @@
 //   - declared: MODULE-MAP.md at the module root holds a non-empty "persistence: <where>" line outside a
 //     ``` fence, for a module that saves on purpose elsewhere (another module, a station-side service).
 //
-// One FAIL per write line of a module with writes, no save and no declaration; a module root with no -ux
-// src/ file is the empty-root ERROR (exit 3). Mutation pins (testdata/): matching any last argument instead of
+// One FAIL per write line of a module with writes, no save and no declaration (issue #1118 adds two WARNs, both
+// waived by the same declaration, in perpath.go: write-path-no-save, a -ux handler of a saving module that
+// writes with no path to a save, and stop-drops-save, a stopped() that cancels the save ticket with no
+// flush). A module root with no -ux src/ file is the empty-root ERROR (exit 3). Mutation pins (testdata/): matching any last argument instead of
 // a declared Context (truth-write-no-save: the list add and the null-Context set turn red), reading comments
 // or literals (truth-save-not-code), counting an empty persistence: line (truth-save-not-code), dropping the
 // multi-line argument scan (truth-write-no-save: day.add), and limiting the save search to -ux
-// (truth-save-in-rt) each turn a case red.
+// (truth-save-in-rt) each turn a case red; so do dropping the flush search (truth-stop-flush), the helper
+// chain (truth-write-path-all-save) and the waiver (truth-write-path-waived).
 package dashboardsave
 
 import (
@@ -50,10 +53,11 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Fail }
 
-// module is what one module root holds: its write sites in walk order and whether any file saves.
+// module is what one module root holds: its write sites in walk order, whether any file saves and its files.
 type module struct {
 	writes []lint.Finding
 	saves  bool
+	srcs   []source
 }
 
 // CheckTree groups the part files by module, then reports each module's writes when it neither saves nor
@@ -73,12 +77,15 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 		}
 		code := codeView(f)
 		m.saves = m.saves || savesStation(code)
+		src := source{path: f.Path, methods: methodsOf(code)}
 		if kind == "ux" {
+			src.writes = writeLines(code)
 			ux = true
 			for _, line := range writeLines(code) {
 				m.writes = append(m.writes, lint.Finding{Path: f.Path, Line: line, Msg: msg})
 			}
 		}
+		m.srcs = append(m.srcs, src)
 	}
 	if !ux {
 		return nil, lint.ErrEmptyRoot
@@ -86,7 +93,11 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
 	for _, root := range order {
 		m := mods[root]
-		if m.saves || len(m.writes) == 0 {
+		found := pathFindings(m.srcs, m.saves)
+		if !m.saves {
+			found = append(append([]lint.Finding(nil), m.writes...), found...)
+		}
+		if len(found) == 0 {
 			continue
 		}
 		declared, err := declaresPersistence(root)
@@ -94,7 +105,7 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 			return out, err
 		}
 		if !declared {
-			out = append(out, m.writes...)
+			out = append(out, found...)
 		}
 	}
 	return out, nil

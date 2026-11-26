@@ -1,0 +1,25 @@
+truth (issue #1118): in a module that saves, a -ux handler (a method that writes with the request Context, in a
+file where another method reaches a save) with no path to a station save is one WARN write-path-no-save on its
+first write line, even though the module saves elsewhere: doSetpoint calls requestSave() and passes, doMode
+writes and never saves. A write helper in another file that no handler of its file reaches a save from is out
+of scope (the module-wide rule covers it).
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  write-path-no-save  @DIR@/Mod/Mod-ux/src/com/x/ux/BDashServlet.java:11  handler writes station state with the request Context but no path from it requests a station save (requestSave() directly or through a same-module helper): that write is lost on the next restart; call requestSave() after the write succeeds, or declare persistence: <where> in MODULE-MAP.md (types/dashboard.md § Write path)
+-- stderr --
+-- Mod/Mod-ux/src/com/x/ux/BDashServlet.java --
+package com.x.ux;
+public final class BDashServlet extends BWebServlet {
+  void requestSave() {
+    saveTicket = Clock.schedule(station, delay, BStation.save, null);
+  }
+  void doSetpoint(BComponent point, BValue v, Context cx) {
+    point.set("out", v, cx);
+    requestSave();
+  }
+  void doMode(BComponent point, BValue v, Context cx) {
+    point.set("mode", v, cx);
+  }
+}

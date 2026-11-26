@@ -212,6 +212,15 @@ Enforced: `toolbelt/lint-dashboard-write-save.sh <module-root>` (Go rule `go/int
 report-module member, so `build.sh` runs it) FAILs every write line of a `-ux` part (`.set(`, `.add(`, `.remove(`, `.invoke(` whose last argument is the
 request `Context`/`WebOp`, and `addSpecialEvent(`) when nothing in the module requests a station save
 (`BStation.save`, `Sys.getStation().save()`, `Station.save*(`) and the map holds no non-empty `persistence:` line.
+Two WARNs (exit 0, same waiver) check the save per path and at stop `[ev: issue #1118]`:
+
+| Check code | Fires when |
+|---|---|
+| `write-path-no-save` | a `-ux` method writes with the request `Context`; no path from it reaches `requestSave()` |
+| `stop-drops-save` | `stopped()` cancels the save ticket and neither calls `<x>.save*(` nor a helper that does |
+
+A path is a direct call or a chain of methods of the module; a write helper that a saving method of the same file
+calls is covered by that caller. A file where no method reaches a save is left to the module-wide FAIL.
 
 **Switching a driver off by disabling a link does not release its target.** A write path that stops a schedule or
 another driver by disabling the link into the target slot must also write the target slot null, after the disable:
@@ -245,8 +254,21 @@ public final class BDashServlet extends BWebServlet {
     }
   }
 
+  /** Flush a pending save once: a write 5-60 s before a restart or servlet stop must not be dropped. */
   @Override public void stopped() throws Exception {
-    synchronized (saveLock) { saveTicket.cancel(); }      // the ticket lives on this component, not a static helper
+    boolean pending;
+    synchronized (saveLock) {                              // the ticket lives on this component, not a static helper
+      pending = !saveTicket.isExpired();                   // read BEFORE cancel(): cancel() makes it expired
+      saveTicket.cancel();
+    }
+    if (pending) {
+      try {
+        BStation station = Sys.getStation();
+        if (station != null) station.save();               // BStation.doSave -> Station.saveAsync: does not block
+      } catch (Exception e) {                              // never throw from stopped(): super.stopped() must run
+        LOG.warning("station save at stop failed (the write is in memory only): " + e);
+      }
+    }
     super.stopped();
   }
 }
