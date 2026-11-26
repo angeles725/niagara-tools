@@ -6,7 +6,7 @@
 //
 // One file per responsibility, in deploy order: options.go (flags and option globals), envload.go (the env
 // file), config.go (required settings and paths), home.go with lock.go, settle.go and isolate.go (NIAGARA_HOME: a mirror, the run locks, and its modules directory
-// put back when the deploy stops), probe.go (the station jars can be moved), annotations.go (the slotomatic
+// put back when the deploy stops), expected_signer.go (the signer the module records, read before the build), probe.go (the station jars can be moved), annotations.go (the slotomatic
 // reminder), slotomatic.go, build.go, version.go with jarcontent.go and descriptor.go, target.go (the target installation is the Niagara version the jars were compiled against), and schema.go (the two prechecks), verify.go, gate.go,
 // backup.go and purge.go (just before the copy), copy.go with aside.go, restore.go, heldopen.go and interrupt.go (the all-or-nothing copy), record.go (the deploy record and the restart reminder), deploytargets.go (the line of --target), nextsteps.go (the closing lines). The data lives apart: exit.go, messages.go with messages_copy.go, messages_home.go and messages_lock.go, messages_target.go, patterns.go, usage.txt.
 // Every command goes through proc.go. This file only composes them.
@@ -26,11 +26,12 @@ const ScriptEnv = "NG_DEPLOY_SCRIPT"
 
 // deploy is one run: what the phases before decided, for the phases after.
 type deploy struct {
-	s         cli.Stdio
-	scriptDir string            // the directory of the invoked ng-deploy.sh
-	raw       map[string]string // the option globals (options.go)
-	fileEnv   map[string]string // what the env file assigned
-	byFlag    map[string]bool   // the option globals a flag of the command line set
+	s          cli.Stdio
+	scriptDir  string            // the directory of the invoked ng-deploy.sh
+	raw        map[string]string // the option globals (options.go)
+	fileEnv    map[string]string // what the env file assigned
+	byFlag     map[string]bool   // the option globals a flag of the command line set
+	buildState string            // --build-state: the file holding the module's envelope (expected_signer.go)
 
 	module    string // MODULE_NAME
 	station   string // STATION_MODULES_DIR
@@ -57,6 +58,7 @@ type deploy struct {
 var phases = []func(*deploy) int{
 	(*deploy).loadEnvFile,
 	(*deploy).checkSettings,
+	(*deploy).applyExpectedSigner,
 	(*deploy).exportOptions,
 	(*deploy).guardHome,
 	(*deploy).probeStation,

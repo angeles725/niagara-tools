@@ -39,6 +39,10 @@ Options:
                              -PniagaraPluginVersion=<V>, as build.sh forwards it: a module whose settings.gradle.kts
                              pins another one than the installation ships (preflight: "plugin-pin ... missing from
                              etc/m2"; gradle: "Plugin ... version: '7.6.17' was not found") builds with this one.
+  --build-state <file>     The file holding the module's build-state.v1 envelope, whose expected_signer the deploy
+                             expects (see "The signer the gate expects" below), as build.sh --build-state: else
+                             the kit's build-n4-module-kit/BUILD-STATE.src.md. A file that cannot be read is exit
+                             10; an empty value is no file. Command line only: no env-file key.
   --install-into-home      Build although NIAGARA_HOME is a real installation and not a mirror (no
                              .niagara-mirror): the build then replaces the module's jars in its modules/
                              directory before any check runs. Command line only; build.sh has the same option.
@@ -162,7 +166,8 @@ The run lock:
 The signer the gate expects:
   The verify-module gate is told who must have signed the jars, resolved as toolbelt/build.sh resolves it: the
   niagaraSigningAlias gradle property (ORG_GRADLE_PROJECT_niagaraSigningAlias in the environment or the env
-  file, else GRADLE_USER_HOME/gradle.properties, else gradle.properties beside gradlew), else the one signer of
+  file, else GRADLE_USER_HOME/gradle.properties, else gradle.properties beside gradlew), else the module's
+  recorded expected_signer (below), else the one signer of
   the module's jars of the mode that STATION_MODULES_DIR holds before the copy (the ones the station runs),
   else, when those give none (none signed, two signers, or only the development signer), of those that were in
   <NIAGARA_HOME>/modules before the build; the two are never mixed in one decision, and the signing plugin's
@@ -171,6 +176,16 @@ The signer the gate expects:
   the home's jars give the signer, with "WARN the signer of <jar> cannot be told (<why>), so the jars of
   <NIAGARA_HOME>/modules give the expected signer"; when they give none either, the gate accepts any signature
   and the WARN says so. A jar signed with another key then fails the gate (exit 50).
+  The recorded expected_signer is the optional field of the module's build-state.v1 envelope in --build-state
+  <file>, else the kit's BUILD-STATE.src.md (a default file that is missing records nothing; `unknown` or no
+  field the same). Read before the build, as build.sh reads it:
+    - with no alias configured, the record is the expected signer and gradle builds with it
+      (-PniagaraSigningAlias=<alias>); the jars of the station and of <NIAGARA_HOME>/modules are not asked;
+    - a configured alias equal to the record changes nothing;
+    - a configured alias that differs is exit 10 before the build and the copy, naming both and the file;
+    - a malformed record is exit 10 the same way, naming the file: a value that is not one alias token, the key
+      twice in one envelope, a line that mistypes the key (indented, or a blank before the colon), or two
+      envelopes of the module when one sets the field.
   When neither names a signer the gate accepts any signature and, after the gate's rows, the deploy prints
   "WARN no niagaraSigningAlias is configured and no deployed jar gives a signer, ..." (or "... the deployed
   jar itself carries the signing plugin's default development signer (NIAGARA4), ..."); the exit code is the
@@ -198,6 +213,8 @@ Exit codes:
   10  missing required env var, invalid path or option value, or an env file that is a directory, cannot be
       read, holds a line that is not a plain assignment, or sets NO_GATE=1 / NO_BACKUP=1 / MODE=B /
       VERIFY_MODULE_BIN without the flag, or SCHEMA_RISK_BIN; or --no-deploy when STATION_MODULES_DIR is <NIAGARA_HOME>/modules;
+      or a --build-state file that cannot be read or is empty, a malformed expected_signer record, or one that
+      differs from the configured niagaraSigningAlias ("The signer the gate expects" above), before the build;
       or a modules directory another run holds the lock of (.ng-deploy.lock: "The run lock" above);
       or, after the checks and before the copy, a .last-deploy-sha that is a directory or cannot be written
       (nothing was copied; SLOTOMATIC_DETECTION=off makes the record optional)

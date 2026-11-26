@@ -338,7 +338,10 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
   gradle, naming both. Precedence: configured alias (must equal the record) > record > deployed jars' signer.
   A malformed record is exit 10 before gradle (the sweep fails the same text, exit 1): a value that is not an
   alias, the key twice in one envelope, two envelopes of `<MOD>` when one sets the field, or a line that mistypes
-  the key (`expected_signer : x`, or indented). `[ev: issue #1131]`
+  the key (`expected_signer : x`, or indented). `ng-deploy.sh` reads the same record with the same precedence
+  and the same `--build-state <file>` (a configured alias that differs, or a malformed record, is exit 10 before
+  the build and the copy; only with no record does the deployed jars' signer decide), so a build and its deploy
+  agree on the signer. `[ev: issue #1131, #1149]`
 - A `gradle :jar` with the default JDK is NOT a build.
 
 ### 4.a Gradle task matrix (`niagara-module` plugin tasks) — when to run each
