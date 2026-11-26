@@ -2,6 +2,8 @@
 # scripts/ng-deploy.sh — Niagara N4 module deploy wrapper
 # Usage: ng-deploy.sh [--mode A|B|C] [--env-file PATH] [--no-backup] [--full-backup] [--keep N]
 #        ng-deploy.sh [--no-deploy] [--with-slotomatic] [--strict-slotomatic] [--no-gate] [--install-into-home]
+#        ng-deploy.sh ... [--target <name>]: records the deploy in <module-root>/.deploy-targets
+#        (build.sh --target reads it).
 #        ng-deploy.sh [--gradle-prop k=v]...   (forwarded to gradlew as -Pk=v, as build.sh does)
 #        ng-deploy.sh [--help] [--version]
 # See docs/GOTCHAS.md and CLAUDE.md for decisions and invariants.

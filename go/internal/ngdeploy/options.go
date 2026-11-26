@@ -25,6 +25,7 @@ const (
 	optVerifyBin   = "VERIFY_MODULE_BIN"
 	optSchemaBin   = "SCHEMA_RISK_BIN"
 	optIntoHome    = "INSTALL_INTO_HOME"
+	optTarget      = "DEPLOY_TARGET"
 )
 
 // intoHomeFlag opts in to a NIAGARA_HOME that is not a mirror; build.sh has the same option (home.go).
@@ -58,7 +59,7 @@ func (d *deploy) defaults() map[string]string {
 		return fallback
 	}
 	raw := map[string]string{
-		optMode: defaultMode, optEnvFile: defaultEnvFile,
+		optMode: defaultMode, optEnvFile: defaultEnvFile, optTarget: "",
 		optKeep: orElse(optKeep, defaultKeep), optFullBackup: orElse(optFullBackup, off),
 		optVerifyBin: orElse(optVerifyBin, d.scriptDir+verifyModulePath),
 		optSchemaBin: orElse(optSchemaBin, d.scriptDir+schemaRiskPath),
@@ -158,7 +159,7 @@ func (d *deploy) checkOptions() int {
 	if keep := d.raw[optKeep]; !wholeNumber.MatchString(keep) || keep == off {
 		return d.fail(ExitEnv, msgKeep)
 	}
-	return proceed
+	return d.checkTarget()
 }
 
 // keep is the number of backups kept per module (checkOptions made it a whole number).

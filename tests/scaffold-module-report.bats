@@ -67,13 +67,14 @@ stand_in_jar() {
 }
 
 @test "TC-GI1: every scaffold type emits a .gitignore at the gradle root naming the build outputs" {
-  # Mutation: TC-GI1 -- a fixture without .gitignore leaves .gradle/ and build/ untracked after the first build.
-  for t in logic dashboard driver; do
+  # Mutation: TC-GI1 -- a fixture without .gitignore leaves .gradle/ and build/ untracked after the first build;
+  # one without .build/ (build/ does not match it) commits the mirror-built record build.sh keeps there (#1139).
+  for t in logic dashboard driver library; do
     run "$SC" ModuleA "$OUT/$t" --type "$t" --vendor Example
     [ "$status" -eq 0 ]
     gi="$OUT/$t/ModuleA/.gitignore"
     [ -f "$gi" ] || { echo "no .gitignore ($t)"; false; }
-    for p in .gradle/ build/ _backups/ .last-deploy-sha; do
+    for p in .gradle/ build/ .build/ _backups/ .last-deploy-sha; do
       grep -qxF "$p" "$gi" || { echo "$t: $p not in .gitignore"; cat "$gi"; false; }
     done
   done

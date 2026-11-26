@@ -10,6 +10,7 @@ import (
 // nextStep is one closing line of a deploy that went through.
 type nextStep struct {
 	java bool   // only for a mode that deploys Java classes (the -rt jar): the station must restart
+	note bool   // only when recordTarget left a note: the "record:" line
 	text string // {jars}, {done}, {dir}, {doneTail}, {paths}, {backup}, {signers}, {module}, {triage}, and {lab} are filled in (closingValues)
 }
 
@@ -23,6 +24,7 @@ var nextSteps = []nextStep{
 	{java: true, text: "next: after the restart, run the mcp-n4 prompt post-deploy-check with station=<station> module={module} (read-only: restart_needed, module version, health, new alarms)"},
 	{java: true, text: "next: after the restart, check the station console for the module: {triage} --package <the Java package of the module> --module-prefix {module} <station-dir>/console*.txt (exit 1: rows to look at)"},
 	{text: "undo: to remove the module again, take its components out of the station, stop the station and delete {paths}{backup}"},
+	{note: true, text: "record: {record}"},
 }
 
 // The words of the signer line, and the console triage tool beside the scripts directory.
@@ -45,7 +47,7 @@ const (
 func (d *deploy) sayNextSteps() int {
 	values := d.closingValues()
 	for _, step := range nextSteps {
-		if step.java && !d.hasProfile("rt") {
+		if (step.java && !d.hasProfile("rt")) || (step.note && d.recordNote == "") {
 			continue
 		}
 		d.say("%s", values.Replace(step.text))
@@ -78,5 +80,5 @@ func (d *deploy) closingValues() *strings.Replacer {
 	return strings.NewReplacer("{backup}", backup, "{done}", done, "{doneTail}", doneTail,
 		"{jars}", strings.Join(names, " "), "{dir}", d.station, "{paths}", strings.Join(paths, " "),
 		"{signers}", strings.Join(signers, ", "), "{module}", d.module, "{triage}", d.scriptDir+triageToolPath,
-		"{lab}", d.scriptDir+labToolPath)
+		"{lab}", d.scriptDir+labToolPath, "{record}", d.recordNote)
 }

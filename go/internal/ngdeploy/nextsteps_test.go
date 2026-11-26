@@ -25,7 +25,7 @@ func closing(f *fixture, mode, signers string) string {
 			"[ng-deploy] next: after the restart, run the mcp-n4 prompt post-deploy-check with station=<station> module=demo (read-only: restart_needed, module version, health, new alarms)\n" +
 			"[ng-deploy] next: after the restart, check the station console for the module: " + f.dir + "/repo/scripts/../build-n4-module-kit/toolbelt/triage-console.sh --package <the Java package of the module> --module-prefix demo <station-dir>/console*.txt (exit 1: rows to look at)\n"
 	}
-	return out + "[ng-deploy] undo: to remove the module again, take its components out of the station, stop the station and delete " + paths + "\n"
+	return out + "[ng-deploy] undo: to remove the module again, take its components out of the station, stop the station and delete " + paths + "\n" + noTargetLine
 }
 
 // A deploy that went through ends with the lines it always ended with, then the closing lines, for the jars

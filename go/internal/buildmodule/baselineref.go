@@ -23,7 +23,7 @@ func (b *build) extractBaselines() int {
 		if rec, code = b.resolveTarget(); code != proceed {
 			return code
 		}
-		ref = rec.commit
+		ref, b.deployed = rec.commit, rec
 	}
 	if ref == "" {
 		return proceed

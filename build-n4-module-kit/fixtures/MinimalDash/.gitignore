@@ -2,5 +2,6 @@
 # rewrites the scaffolded sources (slotomatic adds the generated region). [ev: retro build-kit-bench-session Δ8]
 .gradle/
 build/
+.build/
 _backups/
 .last-deploy-sha

@@ -53,6 +53,12 @@
 #                   --schema-baseline-ref would be; "==> deploy target <name>: ..." says what was read, and a vendorVersion
 #                   that differs from the defaultModuleVersion at that commit is a WARN. No line for the module, or one
 #                   that does not read, is exit 2 before gradle; it excludes --schema-baseline-ref and --first-deploy.
+#                   The drift gate below then compares with that record too, not with the mirror's own-build record:
+#                   changed bytes at the recorded vendorVersion are exit 51 (the station runs that version, even
+#                   when the mirror's jar is this checkout's own build), and at any other version no station
+#                   has it, so one "INFO — <file> records <MOD>@<v> for <name>, not <v2>" line says the check is
+#                   skipped. The record names a version, not bytes: the bytes compared are still the mirror's jar.
+#                   scripts/ng-deploy.sh --target <name> writes the line after a deploy that went through.
 #                   Without it, --schema-baseline-ref WARNs when the mirror holds another version, worded "the mirror
 #                   holds <MOD>-rt X (a build, not necessarily what a station runs); deployed version unknown".
 #   --restore-mirror <kept-jar>  builds nothing: copies a jar a mirror build kept (below) back into that mirror's

@@ -17,6 +17,10 @@ Options:
   --full-backup            Back up the WHOLE modules dir (every sibling module), old behavior.
                              Default is lightweight: only this module's own -rt/-ux/-wb jars.
   --keep <N>               Backups to retain per module (default 3); older ones auto-purged.
+  --target <name>          After a deploy that went through, record it for that target in
+                             <module root>/.deploy-targets (see "Deploy targets" below). The name is one word of
+                             letters, digits, '.', '_' and '-', starting with a letter or a digit, of your own
+                             choosing (one per station): there is no default. Same as DEPLOY_TARGET in the env file.
   --i-know-what-im-doing   Accepted no-op (kept for backward compatibility; --no-backup no longer gates)
   --with-slotomatic        Run :MODULE-rt:slotomatic (and :MODULE-ux:slotomatic when -ux is annotated) BEFORE build_jars (opt-in; ignored on mode B)
   --strict-slotomatic      Abort with exit 15 if annotation changes detected without --with-slotomatic
@@ -84,8 +88,24 @@ After a deploy:
     next:   (modes A and C) the console check to run after the restart (toolbelt/triage-console.sh)
     undo:   how to remove the module again: take its components out of the station, stop it, delete the jars
             (it points at the backup only when this run wrote one)
+    record: what was written to .deploy-targets, or how to make it (see "Deploy targets" below)
   A run that deployed nothing (--no-deploy, any failure) and one that could not record its commit (exit 41)
   print none of these.
+
+Deploy targets:
+  build.sh --target <name> reads what a station runs from <module root>/.deploy-targets: one line per target and
+  module, "<target> <MOD>@<vendorVersion>=<commit>", "#" starting a comment. With --target <name>, a deploy that
+  went through (the copy and .last-deploy-sha done) writes that line itself: <MOD> is MODULE_NAME, <vendorVersion>
+  that of the -rt jar it copied, <commit> the one it recorded in .last-deploy-sha. The module root is the directory
+  of GRADLEW_PATH, the one that holds the <MOD> directory. The line of the same target and module is replaced where
+  it stands (a repeat of it is dropped); every other line, comments and blank lines included, stays as it is; a
+  file that is not there is made. The file is replaced in one step, so a reader never sees a half-written one.
+  Without --target nothing is written and the "record:" closing line says how to. Nothing is written either by
+  --no-deploy or by a run that stopped before the end, and mode B (no -rt jar) leaves the line as it is: the
+  station still runs the -rt of the commit it names. A line that cannot be written (no commit, no readable
+  vendorVersion, a file that cannot be replaced) is exit 41 after the copy, with the ERROR line saying which.
+  The commit is HEAD, not the working tree: commit before deploying, or the line names a commit that does not
+  hold what was deployed. A bad target name is exit 10 before anything runs.
 
 NIAGARA_HOME and its modules directory:
   gradle's :jar step installs the built jars into <NIAGARA_HOME>/modules before any check of the deploy has run,
@@ -224,8 +244,10 @@ Exit codes:
       the first run lock and the copy: nothing was copied, <NIAGARA_HOME>/modules was put back and the locks
       were removed
   41  the jars were copied, but the deployed commit could not be read (git rev-parse HEAD) or written to
-      .last-deploy-sha (a record that could be written before the copy and no longer can): restart as the
-      last line says, then fix the record (SLOTOMATIC_DETECTION=off makes it optional). A working directory
+      .last-deploy-sha (a record that could be written before the copy and no longer can), or, with --target,
+      the line could not be written to .deploy-targets: restart as the
+      last line says, then fix the record (SLOTOMATIC_DETECTION=off makes .last-deploy-sha optional; the
+      .deploy-targets line never is, once --target is given). A working directory
       that is not a git repository (git says "not a git repository" and no .git is there or above) has no commit
       to record: a NOTICE says so and the deploy ends 0. A repository git refuses to open (dubious ownership, a
       corrupt .git) is still exit 41
