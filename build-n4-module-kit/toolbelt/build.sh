@@ -5,7 +5,7 @@
 #
 # Usage: build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] [--ui-profile P] [--legacy]
 #                 [--gradle-prop k=v]... [--werror] [--no-preflight] [--no-report] [--no-drift-check]
-#                 [--install-into-home] [--first-deploy | --schema-baseline-ref <deployed-ref>]
+#                 [--install-into-home] [--first-deploy | --schema-baseline-ref <deployed-ref> | --target <name>]
 #                 <module-root> <MOD> [niagara_home]
 #        build.sh --restore-mirror <mirror>/.mirror-replaced/<MOD>-<profile>.jar.<sha12>
 #   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/ (the GROUP dir). When neither it nor
@@ -47,12 +47,29 @@
 #                   it, an artifact already has a .deploy-baseline (remove it, or drop the option to use it), or with
 #                   --first-deploy; a missing version-control tool is exit 10, a failed extraction exit 1.
 #                   [ev: retro mcpn4-history-batch-tools Δ4]
+#   --target <name>  the deployed ref comes from a record, not from the mirror (<niagara_home>/modules is a build sandbox, never
+#                   the deployed state): the line "<name> <MOD>@<vendorVersion>=<commit>" of <module-root>/.deploy-targets
+#                   (one per target and module; "#" starts a comment) names the commit the station runs, used as
+#                   --schema-baseline-ref would be; "==> deploy target <name>: ..." says what was read, and a vendorVersion
+#                   that differs from the defaultModuleVersion at that commit is a WARN. No line for the module, or one
+#                   that does not read, is exit 2 before gradle; it excludes --schema-baseline-ref and --first-deploy.
+#                   Without it, --schema-baseline-ref WARNs when the mirror holds another version, worded "the mirror
+#                   holds <MOD>-rt X (a build, not necessarily what a station runs); deployed version unknown".
 #   --restore-mirror <kept-jar>  builds nothing: copies a jar a mirror build kept (below) back into that mirror's
 #                   modules/, leaves the kept copy and ends the cycle (below). Refuses a path not shaped
 #                   <mirror>/.mirror-replaced/<name>.<sha12> (exit 2); a missing kept jar, one whose sha256 prefix is
 #                   not <sha12>, or a home without .niagara-mirror (exit 10, nothing written); a failed copy is exit 1.
 #   --no-drift-check  skip the deployed-baseline drift gate below (Δ2) — fix the version bump, don't skip, unless
 #                   you have a real reason (e.g. this niagara_home was never the deploy target)
+#                   The mirror is a build sandbox, not a station: a jar it holds is not a release. After a passing mirror
+#                   build (the gate passed, the jar stays in modules/) build.sh writes <module-root>/.build/mirror-built,
+#                   one line "<jar file name> <sha256 of the jar bytes>" per jar it installed (created if needed; the lines
+#                   of jars this run did not build are kept; nothing is written into modules/, which Niagara reads, nor
+#                   for a niagara_home that is no mirror). When a rebuild finds the same vendorVersion with other bytes
+#                   and the jar the mirror held has the sha256 recorded for its name, it is this checkout's own earlier
+#                   build: one "INFO — the mirror's <jar> is this checkout's own build of <version>, not a release: drift
+#                   check skipped" line, no exit 51. No record, an unreadable one or another digest: exit 51 as before.
+#                   Gitignore .build/ in the module repository (the kit fixtures' .gitignore ignore build/ only).
 #   $JAVA8          JDK 8 path (default /usr/lib/jvm/java-8-openjdk-amd64)
 # Profiles: by default every <MOD>-<p> dir that has a gradle file AND sources under src/ is built; a scaffold
 #   (gradle file, no sources) is reported "skipped". --profiles replaces auto-detection entirely.

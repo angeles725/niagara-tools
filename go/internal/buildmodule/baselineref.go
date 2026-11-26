@@ -17,7 +17,14 @@ import (
 // it (a SKIP, never a stale baseline). It runs before gradle, so a wrong ref costs no build.
 // [ev: retro mcpn4-history-batch-tools Δ4]
 func (b *build) extractBaselines() int {
-	ref := b.opt.baselineRef
+	ref, rec := b.opt.baselineRef, deployRecord{}
+	if b.opt.deployTarget != "" {
+		var code int
+		if rec, code = b.resolveTarget(); code != proceed {
+			return code
+		}
+		ref = rec.commit
+	}
 	if ref == "" {
 		return proceed
 	}
@@ -46,7 +53,7 @@ func (b *build) extractBaselines() int {
 		}
 		b.say(msgBaselineRefDone, name, ref)
 	}
-	b.warnBaselineVersion(ref)
+	b.warnBaselineVersion(ref, rec)
 	return proceed
 }
 
