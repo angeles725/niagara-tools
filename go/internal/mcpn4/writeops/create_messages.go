@@ -21,3 +21,18 @@ const (
 	msgNameTaken   = "name %s is already taken under %s: the station will assign another name; " +
 		"the read-back and the inverse follow it"
 )
+
+// The note that ends an unknown-type refusal: whether the registry it relied on was fresh (#1166).
+const (
+	msgRegistryFresh  = " (the registry was read from the station for this call)"
+	msgRegistryReread = " (the registry this session had cached did not describe it; it was re-read from the station just now and still does not)"
+)
+
+// registryNote is msgRegistryReread when the cached registry was read again, msgRegistryFresh when
+// the registry was read for this very call.
+func registryNote(reread bool) string {
+	if reread {
+		return msgRegistryReread
+	}
+	return msgRegistryFresh
+}

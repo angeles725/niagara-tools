@@ -84,3 +84,12 @@ func field(o *pyjson.Object, k string) any {
 	v, _ := o.Get(k)
 	return v
 }
+
+// TypeRefresher is a TypeLoader that keeps the types it read for the session: TypeHeld tells that
+// LoadTypes answers a spec from that cache, ForgetTypes drops it so the next load asks the station
+// (box.Client). A caller that finds a held type unknown reads the registry again once before it
+// refuses, because the station may have restarted with the module since (#1166).
+type TypeRefresher interface {
+	TypeHeld(spec string) bool
+	ForgetTypes()
+}

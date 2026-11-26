@@ -718,7 +718,9 @@ each component or struct slot whose children it lists (with `handle` null), from
 the station's registry gives (`loadTypes`, read once per session for every listed type and its
 supertypes; a type the station answers as unknown, or leaves out of a reply that answered other
 types, is not asked for again; one left out of a reply that answered nothing, or after a failed
-call, is). The sub-entries of a declared struct default are marked `default` too and may show
+call, is). `n4_create_component` reads the registry again once before it refuses a type the session had
+cached as unknown (the station may have restarted with the module since), and its refusal says whether the
+registry was fresh. The sub-entries of a declared struct default are marked `default` too and may show
 `type: null` (the contract gives their value, not their type).
 `n4_read_slots` takes an optional `slots` list (1 to 100 names, for example `["alarmInhibit"]`):
 it then returns only those slots, in station order and each as complete as without the list
