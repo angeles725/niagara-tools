@@ -288,6 +288,19 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
   operator actually sees it. The mock does NOT run `-rt` logic, so the preview approves the DASHBOARD's behavior, not
   the physical rt effect — say that to the operator. An `-rt`/`-wb`-only change has no preview (approved by design +
   pure tests). [ev: retro self-retro-preview-gate-wsl-tests-live-verify · T5]
+- **Look at the preview headless (WSL, no desktop):** `toolbelt/preview-shot.sh --serve <mod>/src/rc <file.png>
+  [--prefix /<mount>] [--mock <json>] [--path /hmi]` starts `dashboard-preview` on a free port, waits until it
+  answers, takes the shot at 1280×800 and stops that server. `toolbelt/preview-shot.sh <url> <file.png>` shoots a
+  preview that is already running (`--size WxH`, `--budget ms`). Do not run the browser by hand with its defaults: a
+  WebGL canvas is black without software GL (`--use-gl=angle --use-angle=swiftshader`; `--use-gl=swiftshader` alone
+  gave no WebGL on Chrome 151-159), and the shot is taken before the poll fills the cards without
+  `--virtual-time-budget`. The script passes both (default 25000 ms; `PREVIEW_SHOT_GL` swaps the GL flags). The
+  browser is `PREVIEW_SHELL`, else the newest Playwright `chromium_headless_shell`, else `chrome-headless-shell` on
+  PATH; none found is exit 3 with `npx playwright install chromium-headless-shell`. The server's PID is recorded in
+  `~/.local/state/niagara-tools/preview-shot/server-<port>.pid` and only that PID is stopped, even when the shot
+  fails. When you start a preview by hand, record its PID too and stop it by that PID (`ps -p <pid>`), never by a
+  command-line pattern: a port still held by an older preview serves the old code. Open the PNG to review it.
+  (issue #1126)
 
 ## 4. Build — the ONLY valid build
 - **ONE command does everything:** `toolbelt/build.sh <module-root=GROUP dir> <MOD> [niagara_home]` chains all four
