@@ -19,6 +19,8 @@ func TestUsageAndFlagErrors(t *testing.T) {
 		{"--target-version without its value", []string{"--legacy", "--target-version"}, "", usageOnStderr},
 		{"--plugin-version without its value", []string{"--plugin-version"}, "", usageOnStderr},
 		{"--ui-profile without its value", []string{"--ui-profile"}, "", usageOnStderr},
+		{"--build-state without its value", []string{"--build-state"}, "", usageOnStderr},
+		{"--build-state with an empty value", []string{"--build-state", "", "root", "Foo"}, "", usageOnStderr},
 		{"an unknown flag", []string{"--bogus", "root", "Foo"}, "build.sh: unknown flag --bogus", usageOnStderr},
 		{"a lone dash is a flag", []string{"-", "root", "Foo"}, "build.sh: unknown flag -", usageOnStderr},
 		{"an unknown --ui-profile", []string{"--ui-profile", "kiosk", "root", "Foo"}, "build.sh: --ui-profile must be hmi|lan|both|unknown (got: kiosk)", false},

@@ -270,6 +270,18 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ "$status" -ne 0 ]
 }
 
+@test "sweep: an expected_signer that is not one alias token fails (exit 1); an alias or unknown passes (#1131)" {
+  write_state true false
+  write_index
+  sed -i 's|^retro_required: true|expected_signer: acme  # the release signer\n&|' "$STATE"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+  sed -i 's|^expected_signer: acme|expected_signer: acme two|' "$STATE"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"sweep: envelope (DemoPan) expected_signer invalid: 'acme two' (want a signing alias"* ]]
+}
+
 # --- third §7 exit: promotion (a fold-only PR fits neither "new retro" nor "trivial") ---
 # A promotion trailer is a valid close ONLY when it moves the registry with a STRUCTURAL ANCHOR in
 # range — either a retro header flip pending -> folded (a FULL promotion; the generated INDEX row

@@ -955,6 +955,21 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [[ "$argv" == *" -PniagaraSigningProfile=/p/x.xml"* ]]
 }
 
+@test "BS-expected-signer: a recorded expected_signer reaches gradlew; a differing --gradle-prop alias exits 10 before it (#1131)" {
+  _env_gradlew
+  printf '<!-- build-state.v1 -->\nmodule: Foo\nretro_required: false\nretro_pending: false\nexpected_signer: acme\n<!-- /build-state.v1 -->\n' > "$TMPDIR_T/state.md"
+  run "$B" --build-state "$TMPDIR_T/state.md" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"==> expected signer: acme (expected_signer of Foo in $TMPDIR_T/state.md)"* ]]
+  [[ "$(grep '^ARGV=' "$TMPDIR_T/gradlew.env")" == *" -PniagaraSigningAlias=acme"* ]]
+  [[ "$(cat "$TMPDIR_T/verify.args")" == *"--expected-signer acme"* ]]
+  rm -f "$TMPDIR_T/gradlew.env"
+  run "$B" --build-state "$TMPDIR_T/state.md" --gradle-prop niagaraSigningAlias=other "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"niagaraSigningAlias=other is configured but the build-state envelope of Foo records expected_signer: acme"* ]]
+  [ ! -e "$TMPDIR_T/gradlew.env" ]
+}
+
 @test "BS-gradle-prop-bad: --gradle-prop with no argument, no '=', or an empty key exits 2 before gradle (#308)" {
   _env_gradlew
   run "$B" --gradle-prop noequals "$ROOT" Foo "$TMPDIR_T/nh"

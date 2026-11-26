@@ -58,6 +58,7 @@ type build struct {
 // steps is the chain; each returns an exit code, or proceed.
 var steps = []func(*build) int{
 	(*build).resolveInputs,
+	(*build).applyExpectedSigner,
 	(*build).extractBaselines,
 	(*build).warnSlowMounts,
 	(*build).pickMirrorPlugin,

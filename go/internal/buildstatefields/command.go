@@ -71,7 +71,7 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 	if err != nil {
 		return fmt.Sprintf("cannot read BUILD-STATE file: %s: %v", state, err), ExitEnv
 	}
-	if msg := CheckEnvelopes(string(text)); msg != "" {
+	if msg := CheckState(string(text)); msg != "" {
 		return msg, ExitFail
 	}
 	for _, w := range EnvelopeWarnings(string(text)) {
