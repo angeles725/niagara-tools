@@ -20,6 +20,7 @@ type options struct {
 	baselineRef  string
 	buildState   string // --build-state: the file holding the module's build-state.v1 envelope (signing_expected.go)
 	deployTarget string // --target: the station whose recorded deploy (.deploy-targets) is the baseline (deploytarget.go)
+	featureDoc   string // --feature-doc <file>: forwarded to report-module, which reads it for its ADVISORY rows
 	// gradleProps are the --gradle-prop values as gradle takes them (-Pk=v), in order.
 	gradleProps                                                                 []string
 	legacy, werror, firstDeploy, intoHome, skipPreflight, skipReport, skipDrift bool
@@ -39,7 +40,7 @@ func (o *options) switches() map[string]*bool {
 func (o *options) values() map[string]*string {
 	return map[string]*string{"--profiles": &o.profiles, "--target-version": &o.target, "--plugin-version": &o.plugin,
 		"--restore-mirror": &o.restore, "--schema-baseline-ref": &o.baselineRef,
-		"--target": &o.deployTarget, "--build-state": &o.buildState}
+		"--target": &o.deployTarget, "--build-state": &o.buildState, "--feature-doc": &o.featureDoc}
 }
 
 // parseArgs reads the command line. code is proceed, or the exit code after the usage or a message was

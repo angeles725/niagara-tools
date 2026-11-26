@@ -60,6 +60,9 @@ func (b *build) report(source string) int {
 		// the installation the template lint reads its stock modules from (retro K8)
 		args = append(args, "--niagara-home", b.home)
 	}
+	if b.opt.featureDoc != "" {
+		args = append(args, "--feature-doc", b.opt.featureDoc)
+	}
 	switch b.runScript(reportScript, args...) {
 	case 0:
 		return ExitOK

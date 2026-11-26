@@ -103,6 +103,7 @@ var perArtifact = []member{
 	{script: "rc-scan", suffix: "-ux", special: (*report).rcScan},
 	{suffix: "-ux", special: (*report).eslint},
 	{script: "lint-vendor-floor", suffix: "-ux", special: (*report).vendorFloor},
+	{script: "lint-vendored", suffix: "-ux", special: (*report).vendored}, // issue #1145: WARN rows for a vendored file at a known-defect version
 	// retro kit-gzip-bundle-writer-briefs Δ1: a dist/*.js over 300 KB ships its .gz twin (native, no toolbelt script; WARN only).
 	{suffix: "-ux", special: (*report).bundleGzip},
 	// issue #1124: the part's srcTest/ *.test.js|cjs files run as `node --test <file>...` (native; a failing suite is FAIL).

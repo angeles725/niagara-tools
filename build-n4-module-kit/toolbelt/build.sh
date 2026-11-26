@@ -7,6 +7,7 @@
 #                 [--gradle-prop k=v]... [--werror] [--no-preflight] [--no-report] [--no-drift-check]
 #                 [--install-into-home] [--first-deploy | --schema-baseline-ref <deployed-ref> | --target <name>]
 #                 [--build-state <file>]
+#                 [--feature-doc <file>]
 #                 <module-root> <MOD> [niagara_home]
 #        build.sh --restore-mirror <mirror>/.mirror-replaced/<MOD>-<profile>.jar.<sha12>
 #   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/ (the GROUP dir). When neither it nor
@@ -32,6 +33,10 @@
 #   --no-preflight  skip environment preflight (useful for inner rebuild loops when env is known-good), the acorn
 #                   preflight below included
 #   --no-report     skip report-module punch-list at the end (useful for quick inner rebuild loops)
+#   --feature-doc <file>  forwarded to report-module.sh --feature-doc: its ADVISORY rows for the skill steps
+#                   the feature doc lacks (tier line, Behavior decisions, Checks skipped) show in the build's
+#                   punch-list; a file that cannot be read is report-module's one ADVISORY row, not a refusal.
+#                   Without the option nothing is read. [ev: issue #1145]
 #   --first-deploy  forwarded to report-module.sh: a never-deployed module has no baseline for schema-risk
 #                   (otherwise a missing <artifact>/.deploy-baseline is INCOMPLETE, exit 53; its schema-risk SKIP row
 #                   names the archive command that creates it from the deployed ref) [ev: audit-2026-10-03 A2]
