@@ -14,22 +14,33 @@ import (
 // station's type registry does not describe, so an unknown type names itself instead of the
 // station's generic "Unable to process request". A client without the registry, or a registry
 // call that fails (an older station may lack the channel), leaves the check to the station. The
-// contracts it read are returned for further checks (nil without a registry).
+// contracts it read are returned for further checks (nil without a registry). A spec the session
+// had cached as unknown is read again once before the refusal (readAgain), and the refusal says
+// whether the registry was fresh.
 func typesKnown(c plan.Client, specs ...string) (*plan.Contracts, error) {
 	tl, ok := c.(plan.TypeLoader)
 	if !ok {
 		return nil, nil
 	}
-	contracts := plan.NewContracts(tl)
-	for _, spec := range specs {
+	refresher, _ := c.(plan.TypeRefresher)
+	contracts, again := plan.NewContracts(tl), false
+	for i := 0; i < len(specs); i++ {
+		spec := specs[i]
 		if spec == "" {
 			continue
 		}
+		held := refresher != nil && refresher.TypeHeld(spec)
 		var unknown *plan.UnansweredType
 		errored, err := contracts.Errored(spec)
-		if errors.As(err, &unknown) || errored {
-			return nil, plan.ToolError(fmt.Sprintf(msgUnknownType, spec) + unknownTypeHint(spec))
+		if !errors.As(err, &unknown) && !errored {
+			continue
 		}
+		if held && !again {
+			refresher.ForgetTypes()
+			contracts, again, i = plan.NewContracts(tl), true, -1
+			continue
+		}
+		return nil, plan.ToolError(fmt.Sprintf(msgUnknownType, spec) + unknownTypeHint(spec) + registryNote(held || again))
 	}
 	return contracts, nil
 }
