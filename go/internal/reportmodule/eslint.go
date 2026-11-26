@@ -78,8 +78,9 @@ func versionMajor(v string) string {
 	return s[:i]
 }
 
-// runESLint runs `cd src/rc && eslint --config ... --format ... --no-warn-ignored .` and relays its rows. A
-// binary named without a slash is looked up on PATH, as the shell did after the cd.
+// runESLint runs `cd src/rc && eslint --config ... --format ... --no-warn-ignored .` and relays its rows; a file
+// that parses only as an ES module is linted again as one (lintAsModules). A binary named without a slash is
+// looked up on PATH, as the shell did after the cd.
 func (r *report) runESLint(a artifact, rc, bin string) {
 	if !strings.Contains(bin, "/") {
 		bin = commandV(r.getenv("PATH"), bin)
@@ -88,6 +89,9 @@ func (r *report) runESLint(a artifact, rc, bin string) {
 	if bin != "" {
 		out, code, ok = r.x.run(rc, bin, "--config", r.x.tb+"/eslint.config.mjs",
 			"--format", r.x.tb+"/eslint/rows-formatter.cjs", "--no-warn-ignored", ".")
+		if ok {
+			out, code, ok = r.lintAsModules(rc, bin, out, code)
+		}
 	}
 	if r.truncated(a.name, "eslint", "eslint", ok) {
 		return

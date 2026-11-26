@@ -513,7 +513,7 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
       m.rules.eqeqeq[0], m.rules["no-unused-vars"][0], c[0].ignores.join()].join("|"));
   ' "$KIT/toolbelt/eslint.config.mjs"
   [ "$status" -eq 0 ]
-  [ "$output" = "2020|script|60|error|error|warn|**/vendor/**,**/ext/**,**/*.min.js" ]
+  [ "$output" = "2020|script|60|error|error|warn|**/vendor/**,**/ext/**,**/*.min.js,**/*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*([0-9a-f]).js" ]
 }
 
 @test "RM33: real ESLint end-to-end (when installed): == and ES2021 syntax in rc js -> FAIL rows, vendor ignored" {
@@ -531,6 +531,40 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   [[ "$output" == *"DemoPan-ux  FAIL  eslint  app.js:2  eqeqeq"* ]]
   [[ "$output" == *"DemoPan-ux  FAIL  eslint  floor.js:2  parse"* ]]
   [[ "$output" != *"lib.js"* ]]
+}
+
+@test "RM33b: real ESLint (when installed): an ES-module file is linted as a module, a hashed chunk is not linted, ??= still FAILs (#1157)" {
+  local bin="${KIT_ESLINT:-}"
+  [ -n "$bin" ] || { [ -x "$KIT/toolbelt/eslint/node_modules/.bin/eslint" ] && bin="$KIT/toolbelt/eslint/node_modules/.bin/eslint"; }
+  [ -n "$bin" ] || bin="$(command -v eslint 2>/dev/null || true)"
+  [ -n "$bin" ] && [ -x "$bin" ] || skip "eslint not installed (npm install --prefix build-n4-module-kit/toolbelt/eslint)"
+  local t="$BATS_TEST_TMPDIR/rm33b"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/js" "$t/DemoPan-ux/src/rc/dist"
+  printf 'import { a } from "./lib.js";\nexport function f(x) {\n  return x == a;\n}\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  printf 'export const a = 1;\n' > "$t/DemoPan-ux/src/rc/js/lib.js"
+  printf 'var c = {};\nc.t ??= 1;\n' > "$t/DemoPan-ux/src/rc/js/floor.js"
+  printf 'export const z=1==1;\n' > "$t/DemoPan-ux/src/rc/dist/index-0123abcd.js"
+  KIT_ESLINT="$bin" KIT_ACORN=/nonexistent/acorn run "$RM" --lint-only "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" != *"sourceType: module"* ]]
+  [[ "$output" == *"DemoPan-ux  FAIL  eslint  app.js:3  eqeqeq"* ]]
+  [[ "$output" == *"DemoPan-ux  FAIL  eslint  floor.js:2  parse"* ]]
+  [[ "$output" != *"lib.js"* ]]
+  [[ "$output" != *"index-0123abcd.js"* ]]
+}
+
+@test "RM33c: real ESLint (when installed): only ES-module files and no finding -> eslint PASS, exit 0 (#1157)" {
+  local bin="${KIT_ESLINT:-}"
+  [ -n "$bin" ] || { [ -x "$KIT/toolbelt/eslint/node_modules/.bin/eslint" ] && bin="$KIT/toolbelt/eslint/node_modules/.bin/eslint"; }
+  [ -n "$bin" ] || bin="$(command -v eslint 2>/dev/null || true)"
+  [ -n "$bin" ] && [ -x "$bin" ] || skip "eslint not installed (npm install --prefix build-n4-module-kit/toolbelt/eslint)"
+  local t="$BATS_TEST_TMPDIR/rm33c"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/js"
+  printf 'import { a } from "./lib.js";\nexport function f(x) {\n  return x === a;\n}\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  printf 'export const a = 1;\n' > "$t/DemoPan-ux/src/rc/js/lib.js"
+  KIT_ESLINT="$bin" KIT_ACORN=/nonexistent/acorn run "$RM" --lint-only "$t"
+  [[ "$output" != *"FAIL  eslint"* ]]
+  [[ "$output" == *"DemoPan-ux  PASS  eslint"* ]]
 }
 
 # ===========================================================================

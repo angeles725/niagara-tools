@@ -5,6 +5,9 @@
 // (`vars: "local"`): a top-level function used by another file is not "unused".
 // report-module.sh runs it on every `-ux` artifact's src/rc (vendor/, ext/ and *.min.js excluded)
 // with the row formatter in toolbelt/eslint/rows-formatter.cjs. Error -> FAIL, warning -> WARN.
+// Content-hashed bundle output (name-<8+ hex>.js) is build output, not project source: vendor-floor
+// judges it. A file that parses only as an ES module is linted again with eslint.module.config.mjs.
+// [ev: issue #1157]
 // [ev: retro dashboard-frontend-standard Δ10] [ev: retro dashboard-frontend-standard Δ4]
 
 const browserGlobals = Object.fromEntries([
@@ -19,9 +22,12 @@ const browserGlobals = Object.fromEntries([
   'module',
 ].map((name) => [name, 'readonly']));
 
+// minimatch has no {8,}: eight hex digits, then any further hex digits (extglob), then .js.
+export const hashedBundle = `**/*-${'[0-9a-f]'.repeat(8)}*([0-9a-f]).js`;
+
 export default [
   {
-    ignores: ['**/vendor/**', '**/ext/**', '**/*.min.js'],
+    ignores: ['**/vendor/**', '**/ext/**', '**/*.min.js', hashedBundle],
   },
   {
     files: ['**/*.js'],
