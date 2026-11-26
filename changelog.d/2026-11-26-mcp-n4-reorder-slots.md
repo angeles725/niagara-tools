@@ -1,0 +1,3 @@
+### Added
+
+- mcp-n4: `n4_reorder_slots` (#1168) changes the order of a component's dynamic slots, sent as the station's ReorderOp. `order` is the complete new order of the parent's dynamic children; the plan refuses, before the token, a list that is not a permutation of them (a missing, unknown or repeated name, a frozen slot) or that equals the current order. The inverse is the previous order, the read-back checks the order the station holds, and `n4_rollback` restores the old one. Point extensions run `onExecute` in slot order, so order-dependent configurations can be tested and fixed without Workbench.

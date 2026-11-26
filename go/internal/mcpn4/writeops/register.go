@@ -23,6 +23,7 @@ func Register(s *jsonrpc.Server, e *plan.Engine) {
 	s.Handlers["n4_deploy_template"] = e.Handler("n4_deploy_template", DeployTemplate)
 	s.Handlers["n4_create_link"] = e.Handler("n4_create_link", CreateLink)
 	s.Handlers["n4_rename_component"] = e.Handler("n4_rename_component", RenameComponent)
+	s.Handlers["n4_reorder_slots"] = e.Handler("n4_reorder_slots", ReorderSlots)
 	s.Handlers["n4_discover_devices"] = e.Handler("n4_discover_devices", DiscoverDevices)
 	s.Handlers["n4_discover_points"] = e.Handler("n4_discover_points", DiscoverPoints)
 	s.Handlers["n4_make_station_template"] = e.Handler("n4_make_station_template", MakeStationTemplate)

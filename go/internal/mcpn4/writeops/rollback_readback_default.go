@@ -14,6 +14,9 @@ func restoredOrDefault(c plan.Client, nodes, op *pyjson.Object) (bool, error) {
 	if get(op, "nm") == "r" {
 		return renamedBack(nodes, op)
 	}
+	if get(op, "nm") == "o" {
+		return reorderedBack(nodes, op), nil
+	}
 	if slot, ok := get(op, "n").(string); ok {
 		filled, err := plan.Resolve(c, nodes, slot)
 		if err != nil {
