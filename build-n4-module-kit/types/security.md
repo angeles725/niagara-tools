@@ -373,7 +373,7 @@ BOrd ord = BOrd.make(raw);   // only after allowlist check
 ```
 
 Never accept an arbitrary BOrd from client-supplied input without an allowlist prefix
-check. [INFER]
+check. [INFER] `lint-arbitrary-ord.sh` WARNs on `BOrd.make(<variable>)`; waive a reviewed call with a reason marker.
 
 ### 4.3 Lexicon text in HTML — `getHtmlSafeText`
 
@@ -567,7 +567,6 @@ Do not reproduce them.
 - `null-context-write` — flag `set(slot, val, null)` / `invoke(action, val, null)` outside framework internals.
 - `bql-string-concat` — flag `BqlQuery.make(...)` with a `+` operand.
 - `arbitrary-ord-input` — flag `BOrd.make(x)` where `x` is a request parameter without a prefix guard.
-- Shipped: `lint-arbitrary-ord.sh` WARNs on `BOrd.make(<variable>)`; waive a reviewed call with a reason marker.
 
 ---
 

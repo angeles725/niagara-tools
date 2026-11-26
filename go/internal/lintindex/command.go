@@ -72,10 +72,10 @@ func Scan(tb string) (rows []Row, problems []Problem, warn string, err error) {
 			problems = append(problems, Problem{name, problem, false})
 			continue
 		}
-		// Mutation: GLI-members -- reading only the report-module.sh text marks every member Auto no
 		row.Kit = KitScope(string(b))
 		g, d := GuideRefs(guides, name)
 		row.Guide, row.Doc = strings.Join(g, "<br>"), strings.Join(d, "<br>")
+		// Mutation: GLI-members -- reading only the report-module.sh text marks every member Auto no
 		row.Auto = report != "" && (members[name] || InvokedByReport(report, name))
 		rows = append(rows, row)
 	}
