@@ -17,7 +17,8 @@ setup() {
 # LA5 contract is "no *.lexicon files exits 0", and its companion lint-lexicon-apostrophe.sh keeps the same
 # contract (report-module runs it warnOnly on every artifact, go/internal/reportmodule/members.go). lint-structure.sh is out of scope (Go port). lint-manual-labels.sh
 # takes a manual before its ui-dirs (one root argument is its usage error); tests/lint-manual-labels.bats pins it.
-EXEMPT=" lint-jasmine-ux.sh lint-lexicon-apostrophe.sh lint-lexicon-ascii.sh lint-manual-labels.sh lint-structure.sh lint-uberjar-api-conflict.sh "
+# lint-vendored.sh judges an rc dir's vendor/, and most rc dirs have none, so no vendor files exits 0 (#1123).
+EXEMPT=" lint-jasmine-ux.sh lint-lexicon-apostrophe.sh lint-lexicon-ascii.sh lint-manual-labels.sh lint-structure.sh lint-uberjar-api-conflict.sh lint-vendored.sh "
 
 # shared_layer_lints: every toolbelt lint-*.sh that is an n4lint wrapper (the Go lint engine prints the ERROR
 # row, go/internal/lint Spec.EmptyError), minus EXEMPT; one basename per line.
@@ -59,7 +60,7 @@ shared_layer_lints() {
 @test "ER5: the documented exit-0 exceptions stay exit 0 with no output on an empty root" {
   # Mutation: ER5 -- dropping EmptyOK from rules/uberjarapi (lint-uberjar-api-conflict) turns every report-module run ERROR.
   local b
-  for b in lint-jasmine-ux.sh lint-lexicon-apostrophe.sh lint-lexicon-ascii.sh lint-uberjar-api-conflict.sh; do
+  for b in lint-jasmine-ux.sh lint-lexicon-apostrophe.sh lint-lexicon-ascii.sh lint-uberjar-api-conflict.sh lint-vendored.sh; do
     run bash "$KIT/toolbelt/$b" "$EMPTY"
     [ "$status" -eq 0 ] && [ -z "$output" ] || { echo "$b: $status $output"; return 1; }
   done

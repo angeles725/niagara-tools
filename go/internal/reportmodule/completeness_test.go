@@ -23,6 +23,7 @@ var notInReport = map[string]string{
 	"lint-bacnet-status-flags": "reads a station config.bog, which a module root does not hold",
 	"lint-bats-errexit":        "reads bats test files (the kit's own tests/), which a module root does not hold",
 	"lint-manual-labels":       "needs an operator manual path, which a module root does not name",
+	"lint-vendored":            "a WARN ledger check of a -ux src/rc vendor directory (VENDORED.md vs the kit defects table), run by hand (#1123)",
 	"lint-poll-scroll-restore": "a WARN-only lexical advisory for a -ux source root, run by hand (#909)",
 	"lint-post-permission":     "a FAIL on a handler post() with no permission check before it, run by hand on a -rt source root",
 	"lint-wb-usability":        "a WARN-only lexical advisory for a -wb source root (the narrow part of the wb-widgets UX rule), run by hand",
