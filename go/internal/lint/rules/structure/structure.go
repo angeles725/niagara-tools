@@ -10,7 +10,7 @@ type rule struct{}
 func (rule) ID() string              { return "lint-structure" }
 func (rule) Severity() lint.Severity { return lint.Fail }
 
-// CheckRoot runs every check in the bash lint's row order: L10, then L6-L11 per profile, then L12-L16. A module
+// CheckRoot runs every check in the bash lint's row order: L10, then L6-L11 per profile, then L18, then L12-L16. A module
 // whose MODULE-MAP.md says modularity: strict gets strict L3/L3b (strict.go) in place of the advisory L3.
 func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 	s := &scan{root: root}
@@ -27,6 +27,7 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 	for _, p := range profiles {
 		s.profile(p)
 	}
+	s.loginPlacement(profiles)
 	s.jdkPin()
 	s.siblingHomes()
 	s.pluginPin()

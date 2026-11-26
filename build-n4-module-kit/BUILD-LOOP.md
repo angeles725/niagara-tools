@@ -179,6 +179,18 @@ non-skippable check floor (§5) applies to every tier.
 - **A dashboard ships its own login:** a `BLoginTemplate` subclass in its `-rt` part, selected through
   `Services/WebService.loginTemplate`; the dashboard scaffold emits it with its activation rule and tests
   (`types/dashboard.md` § The module ships its own login). `[ev: issue #847]`
+  `lint-structure.sh` L18 FAILs a `BLoginTemplate` subclass outside a dashboard `-rt` (a separate `<X>Login` module,
+  or a login in a `-ux`/`-wb` part); a servlet on Niagara's stock login is not flagged. `[ev: issue #1120]`
+- **Porting from a sibling module (before copying any file):** a copy carries the sibling's old defects and its
+  retired designs into a build that passes `verify-module`.
+  1. Run the lints (`lint-structure.sh`, `lint-instance-type-order.sh`, `lint-private-api-import.sh`) on the source
+     at the exact revision being copied, not only on the new tree; a finding there is a defect you would import.
+  2. Check that the sibling has not retired the design: read the history of its spec and changelog for a later
+     version that moved or replaced it (a login module folded into the dashboard `-rt`, a renamed type). Copy the
+     sibling's current design, not the old revision's.
+  3. Prefer the kit template over a copy: `scaffold-module.sh` and `templates/` (e.g. `templates/dashboard-login`)
+     are linted and current; a copy is only a source of the logic that is truly module-specific.
+  `[ev: issue #1120]`
 - **Behavior decisions — HARD gate before the first source write of any rt control, protection, automatic action
   or operator-facing UI change:** list every behavior the code must decide that the user has not stated explicitly
   (generate the list from the question catalog in `METHODOLOGY.md` § Domain correctness, not from memory). Each one

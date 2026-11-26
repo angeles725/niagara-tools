@@ -57,6 +57,11 @@
 #             a symbol to a module other than its first m= (the decoder keeps the last mapping) and a palette holding
 #             <p that is not well-formed XML (its specs unchecked). An identical repeated m= is clean
 #             [ev: retro course-coverage Δ20]
+#   L18 FAIL  a class that extends BLoginTemplate outside a dashboard -rt: the -rt part that holds a BWebServlet
+#             itself or whose <module>-ux sibling does (types/dashboard.md § The module ships its own login). A
+#             separate <X>Login module, or a login in a -ux/-wb part, is the retired design; the row points to
+#             templates/dashboard-login. A servlet with no login template is NOT flagged: the stock login stays
+#             supported (applyLogin false, an empty loginTemplate slot) [ev: issue #1120]
 #   (L8 signed-jar check is in verify-module.sh)
 #
 # Mutation: LS17a -- dropping the own-module test of the symbol FAILs t="fo:BRoom" of a foreign module too

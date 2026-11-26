@@ -1,8 +1,8 @@
 # Type: module structure — the layout, naming, and a conformance lint (`lint-structure.sh`)
 
-The shape a Niagara N4 module must have on disk, and the L1–L17 checklist `lint-structure.sh` enforces (L8 is `verify-module.sh`'s). Grounded
+The shape a Niagara N4 module must have on disk, and the L1–L18 checklist `lint-structure.sh` enforces (L8 is `verify-module.sh`'s). Grounded
 in how Tridium/Honeywell lay out their own modules and an audit of our four. `[ev: corpus B817]` The title, the table and every citation
-name the rules the lint reports (sixteen IDs: L1 to L7, L3b, L9 to L17); `TestStructureDocListsEveryRule` (`go/internal/lint/rules/structure/doc_test.go`)
+name the rules the lint reports (seventeen IDs: L1 to L7, L3b, L9 to L18); `TestStructureDocListsEveryRule` (`go/internal/lint/rules/structure/doc_test.go`)
 fails when this table and the lint's rule texts differ. `[ev: retro doc-coverage-audit Δ5]` `[ev: retro doc-coverage-audit Δ9]`
 
 ## Layout — one `moduleName`, per-profile parts `[ev: corpus B817]`
@@ -104,7 +104,7 @@ a section of `module-include.xml` and the two must never be merged.  A test type
 The Gradle plugin emits a distinct `moduleTestJar` output task that includes the test registry; the
 regular `jar` task does not. `[ev: corpus B958 §958.4, B960 §960.4]`
 
-## The good-module checklist — L1–L17 (`lint-structure.sh <module-root>`) `[ev: corpus B817]`
+## The good-module checklist — L1–L18 (`lint-structure.sh <module-root>`) `[ev: corpus B817]`
 Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clean · **1** any FAIL · **3** usage.
 `.deploy-baseline/` subtrees are PRUNED (a deploy snapshot is not source). `[ev: corpus B817]`
 
@@ -128,6 +128,7 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 | L15 | the root `build.gradle.kts` beside that `settings.gradle.kts`, when it applies `com.tridium.niagara-signing`, carries `allowDefaultProfile.set(false)` and the `niagaraSigning` block (`templates/signing-root.gradle.kts`; a release build: `templates/signing-restricted.gradle.kts`); a root it cannot scan is the same WARN | WARN | a wizard root signs with the development key |
 | L16 | the signing profile that gradle root's `gradle.properties` names (`niagaraSigningProfile`) keeps a validity − refresh margin of at least `signingprofile.MinMargin`; a named profile that does not exist is a WARN (margin unchecked) | FAIL | the plugin re-mints the key at every signing |
 | L17 | `module.palette` type specs: a dotted Java class name in `t=`, or `<symbol>:B<Type>` for a type the module declares as `<Type>`, the symbol mapped to this module, compared ignoring case (the `moduleName` of a gradle file in the part directory, else in the module root, else the part directory name; another module's symbol is not judged) | FAIL (a symbol remapped to another module by a later `m=`, a palette holding `<p` that is not well-formed XML: WARN) | `[ev: retro course-coverage Δ20]` |
+| L18 | a class that extends `BLoginTemplate` stands in a dashboard `-rt`: the `-rt` part that holds a `BWebServlet` itself, or whose `<module>-ux` sibling does (`types/dashboard.md` § The module ships its own login; `templates/dashboard-login`). A login in any other part — a separate `<X>Login` module, a `-ux`, a `-wb` — is the retired design. A dashboard with a servlet and no login template is not flagged: the stock login stays supported (`applyLogin` false, an empty `loginTemplate` slot) | FAIL | `[ev: issue #1120]` a login module copied from an older sibling built, passed `verify-module` and shipped |
 
 `[ev: corpus B817]` for every row. Deeper cites B817 carries: lexicon/palette STANDARD ← B780/B759 (§817.4), the
 empty-lexicon/empty-palette AUDIT that fires L4/L5 ← B788; L6 ← B790 §14; L7 ← B784; L8 ← B807; L10/L11 ← B815 §815.12.
@@ -218,7 +219,7 @@ type (`0d`, `1.5f`, `0L`, `"\"text\""`) or its `B` value (`BDouble.make(0)`). Ch
 - **"java file must belong to a package"** means the `package` line was lost in a copy-paste. `[ev: corpus B1418 §1418.5 b]`
 
 ## PASS state + scaffold `[ev: corpus B817]`
-`scaffold-module.sh <MOD>` output passes L1–L17 at exit 0 — the skeleton is the GREEN fixture. A mutation that
+`scaffold-module.sh <MOD>` output passes L1–L18 at exit 0 — the skeleton is the GREEN fixture. A mutation that
 empties the palette (L5/L9), a lexicon (L4), drops a 3-part floor (L7), hardcodes a `C:\` path (L10), or mixes
 tests without both deps (L11) flips the corresponding row to FAIL. `[ev: corpus B817]`
 

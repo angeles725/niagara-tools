@@ -378,7 +378,7 @@ Report: kit path, type chosen, layers built, preview + build outcome (bytecode 5
   auth gate, input-400, unbounded-set, cache-nofinger, log-in-handler, csrf-xrw-only; exit 0 clean or WARN-only / 1 any
   FAIL / 3 usage; run on any -ux profile with BWebServlet subclasses) [ev: retro campaign8-lint-servlet]; source never
   written) [ev: retro campaign8-station-snapshot].`$KIT/toolbelt/lint-structure.sh` (module source-tree structure lint,
-  rules L1–L17 in `types/structure.md`; exit 0 clean / 1 FAIL / 3 usage; run at start of step 5 pre-gate)
+  rules L1–L18 in `types/structure.md`; exit 0 clean / 1 FAIL / 3 usage; run at start of step 5 pre-gate)
   [ev: retro campaign8-structure],`$KIT/toolbelt/lint-write-path.sh` (OPERATOR-slot write-path matrix coverage; every
   @NiagaraProperty with Flags.OPERATOR must have a row in docs/write-path-matrix.md; --bog adds link-traced dashboard
   slots; STALE advisory: matrix row naming a slot absent from ALL @NiagaraProperty/Action names (any flag) prints STALE
