@@ -1,6 +1,8 @@
 package writeops
 
 import (
+	"strings"
+
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -20,6 +22,13 @@ func repoint(body *pyjson.Object, targets map[string]string) (*pyjson.Object, er
 	if done != len(targets) {
 		return nil, plan.ToolError("the copy body lacks a ConfigBinding of the golden's templateConfig (the copy leaves " +
 			"out slots flagged readonly or transient); its binding would keep pointing at the golden")
+	}
+	for _, b := range objects(get(kidNamed(out, "templateConfig"), "s")) {
+		if t := kidNamed(b, "targetOrd"); t != nil && strings.HasPrefix(pyjson.Str(get(t, "v")), "h:") {
+			return nil, plan.ToolError("the golden's templateConfig child " + pyjson.StrRepr(name(b)) + " (type " +
+				pyjson.Str(get(b, "t")) + ") names a target by handle and is no " + configBindingType +
+				": a copy of it would keep pointing at the golden")
+		}
 	}
 	return out, nil
 }

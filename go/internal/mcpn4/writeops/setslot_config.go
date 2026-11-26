@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/ord"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
@@ -143,5 +144,5 @@ func slotOrdInside(targetOrd, ordText string, cut int) (path string, ok bool) {
 		return "", false
 	}
 	path, root := "station:|"+tail, ordText[:cut]
-	return path, path == root || strings.HasPrefix(path, root+"/")
+	return path, ord.PlainSlotOrd(path) && (path == root || strings.HasPrefix(path, root+"/"))
 }

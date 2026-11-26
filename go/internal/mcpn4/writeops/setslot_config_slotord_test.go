@@ -28,3 +28,16 @@ func TestSetSlotFollowsAConfigBoundBySlotOrdInsideTheInstance(t *testing.T) {
 		}
 	}
 }
+
+// A ".." segment would leave the instance whatever its prefix (independent verify, #934).
+func TestSetSlotRefusesADotDotSlotOrdTarget(t *testing.T) {
+	for _, target := range []string{
+		"station:|slot:/LabScratch/Inst/../Other/Pt",
+		"station:|slot:/LabScratch/Inst/Pt/../../Other",
+	} {
+		_, err := writeops.SetSlot.Plan(cfgStation("20.0", target), cfgSet("setpoint", pyjson.FloatNumber(21), "baja:Double"))
+		if err == nil || !strings.Contains(err.Error(), "found in the template instance") {
+			t.Errorf("%s: err = %v", target, err)
+		}
+	}
+}
