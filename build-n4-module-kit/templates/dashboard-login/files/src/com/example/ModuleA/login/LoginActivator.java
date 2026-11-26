@@ -12,12 +12,15 @@ import javax.baja.web.BWebService;
 /**
  * LoginActivator — the Baja side of {@link LoginActivation}: reads WebService.loginTemplate as text, asks the
  * pure rule, writes the slot only when it says SET and logs what it did (logger "ModuleA.login"). The caller
- * (BModuleAService) saves the station when this returns true. It never throws: a problem here is logged and
- * the station keeps starting.
+ * (BModuleAService) saves the station when this returns true. It never throws: any problem here, an Error
+ * included (the first use of BModuleALoginTemplate runs its class initializer; a type that fails to load, or a
+ * web-rt class that is missing, is an Error, not an Exception), is logged and the station keeps starting with
+ * the login it had. Only a VirtualMachineError is rethrown ({@link LoginActivation#guarded}).
  */
 public final class LoginActivator
 {
   private static final Logger LOG = Logger.getLogger("ModuleA.login");
+  private static final String FAILED = "login template activation failed; WebService.loginTemplate is unchanged";
 
   private LoginActivator() {}
 
@@ -28,7 +31,7 @@ public final class LoginActivator
    */
   public static boolean apply(boolean applyLogin)
   {
-    try
+    return LoginActivation.guarded(LOG, FAILED, () ->
     {
       BWebService web = BWebService.getMainService();
       BTypeSpec current = web.getLoginTemplate();
@@ -37,12 +40,7 @@ public final class LoginActivator
       if (d.sets()) web.setLoginTemplate(own);  // written before its log line, so a failed write never logs success
       LOG.log(d.action() == LoginActivation.Action.KEEP_CUSTOM ? Level.WARNING : Level.INFO, d.message());
       return d.sets();
-    }
-    catch (Exception e)
-    {
-      LOG.log(Level.WARNING, "login template activation failed; WebService.loginTemplate is unchanged", e);
-      return false;
-    }
+    });
   }
 
   /** "module:Type", or null for the empty spec. */
