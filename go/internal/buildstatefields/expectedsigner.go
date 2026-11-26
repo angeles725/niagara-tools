@@ -69,12 +69,15 @@ func problem(envs []signerEnv) string {
 // CheckSigners returns the first error of the expected_signer fields of every envelope ("" when none).
 func CheckSigners(text string) string { return problem(signerEnvelopes(text)) }
 
-// CheckState is the content check of BUILD-STATE.md envelopes: CheckEnvelopes, then CheckSigners.
+// CheckState is the content check of BUILD-STATE.md envelopes: CheckEnvelopes, CheckSigners, then CheckTargets.
 func CheckState(text string) string {
 	if msg := CheckEnvelopes(text); msg != "" {
 		return msg
 	}
-	return CheckSigners(text)
+	if msg := CheckSigners(text); msg != "" {
+		return msg
+	}
+	return CheckTargets(text)
 }
 
 // ExpectedSigner is the alias the envelope naming module records, "" when it has none (the module has no

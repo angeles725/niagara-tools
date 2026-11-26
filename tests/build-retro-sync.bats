@@ -282,6 +282,21 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [[ "$output" == *"sweep: envelope (DemoPan) expected_signer invalid: 'acme two' (want a signing alias"* ]]
 }
 
+@test "sweep: a niagara_target or plugin_version that is not 2 to 4 dotted numbers fails (exit 1); versions or unknown pass (#1158)" {
+  write_state true false
+  write_index
+  sed -i 's|^retro_required: true|niagara_target: 4.15.6.20  # the station\nplugin_version: 7.6.22\n&|' "$STATE"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+  sed -i 's|^plugin_version: 7.6.22|plugin_version: unknown|' "$STATE"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+  sed -i 's|^niagara_target: 4.15.6.20|niagara_target: 4.x|' "$STATE"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"sweep: envelope (DemoPan) niagara_target invalid: '4.x' (want 2 to 4 dotted numbers such as 4.15 or 4.15.6.20, or unknown)"* ]]
+}
+
 # --- third §7 exit: promotion (a fold-only PR fits neither "new retro" nor "trivial") ---
 # A promotion trailer is a valid close ONLY when it moves the registry with a STRUCTURAL ANCHOR in
 # range — either a retro header flip pending -> folded (a FULL promotion; the generated INDEX row

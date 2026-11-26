@@ -22,9 +22,10 @@ set -u
 # before gradle runs unless --install-into-home, and a deploy that stops puts <NIAGARA_HOME>/modules back as it was.
 # A mirror build gets build.sh's user.home isolation (go/internal/gradleenv) and --no-daemon.
 # The expected signer is read as build.sh reads it (#1149): a configured niagaraSigningAlias, which must equal the
-# module's expected_signer in its BUILD-STATE envelope (--build-state <file>, else the kit's BUILD-STATE.src.md),
-# else that record; a differing or malformed record is exit 10 before the build, and only with no record does the
-# signer of the deployed jars decide.
+# module's expected_signer in its BUILD-STATE envelope (--build-state <file>, else <module-root>/BUILD-STATE.md, else
+# the kit's BUILD-STATE.src.md), else that record; a differing or malformed record is exit 10 before the build, and only with no record does the
+# signer of the deployed jars decide. The envelope's niagara_target (#1158) is the Niagara version of the station:
+# a STATION_MODULES_DIR of another major.minor is exit 55 before the build; an unreadable version is a WARN.
 # readlink -f: a linked copy of this file still finds ../go, while VERSION and the default verify-module and
 # schema-risk tools are taken from the directory of the INVOKED path.
 NG_DEPLOY_GO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)/go"

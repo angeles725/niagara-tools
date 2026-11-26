@@ -1019,6 +1019,30 @@ _real_jar() {
     [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
 }
 
+# _baja_in <dir> <version>: <dir>/baja.jar whose module.xml carries that installation version (#1158)
+_baja_in() {
+    mkdir -p "$TMPDIR_T/bz/META-INF"
+    printf '<module name="baja" vendor="Tridium" vendorVersion="%s"/>\n' "$2" > "$TMPDIR_T/bz/META-INF/module.xml"
+    rm -f "$1/baja.jar"; (cd "$TMPDIR_T/bz" && zip -q -r "$1/baja.jar" META-INF)
+}
+
+@test "NG-niagara-target: a station of another major.minor than the module's niagara_target is exit 55 before the build (#1158)" {
+    # Mutation: NG-niagara-target -- a deploy that ignores the record copies a 4.14 build into the 4.15.6.20 station.
+    _gate_env; _fake_gate 0
+    _baja_in "$TMPDIR_T/modules" 4.15.6.20
+    printf '<!-- build-state.v1 -->\nmodule: test\nniagara_target: 4.14\n<!-- /build-state.v1 -->\n' > "$TMPDIR_T/fakebin/BUILD-STATE.md"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 55 ]
+    [[ "$output" == *"[ng-deploy] ERROR niagara_target precheck: test is recorded for Niagara 4.14 (niagara_target in $TMPDIR_T/fakebin/BUILD-STATE.md) but the target installation $TMPDIR_T is Niagara 4.15.6.20; nothing was built or copied"* ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+    # the same station with a record of its own line passes the record check and goes on to the build
+    printf '<!-- build-state.v1 -->\nmodule: test\nniagara_target: 4.15.6.20\n<!-- /build-state.v1 -->\n' > "$TMPDIR_T/fakebin/BUILD-STATE.md"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [[ "$output" == *"[ng-deploy] niagara_target ok (4.15.6.20 of test in $TMPDIR_T/fakebin/BUILD-STATE.md; $TMPDIR_T is Niagara 4.15.6.20)"* ]]
+    [ -e "$TMPDIR_T/gradlew.calls.log" ]
+}
+
 # ===========================================================================
 # <NIAGARA_HOME>/modules: gradle's :jar step installs the built jars there before any check of the deploy runs.
 # ===========================================================================

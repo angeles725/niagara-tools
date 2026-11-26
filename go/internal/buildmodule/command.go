@@ -59,6 +59,7 @@ type build struct {
 var steps = []func(*build) int{
 	(*build).resolveInputs,
 	(*build).applyExpectedSigner,
+	(*build).applyNiagaraTarget,
 	(*build).extractBaselines,
 	(*build).warnSlowMounts,
 	(*build).pickMirrorPlugin,

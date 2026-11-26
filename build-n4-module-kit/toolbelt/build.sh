@@ -68,8 +68,9 @@
 #                   Without it, --schema-baseline-ref WARNs when the mirror holds another version, worded "the mirror
 #                   holds <MOD>-rt X (a build, not necessarily what a station runs); deployed version unknown".
 #   --build-state <file>  the file holding the module's build-state.v1 envelope (the expected-signer paragraph below);
-#                   default: the kit's BUILD-STATE.src.md beside this toolbelt. A file named here that cannot be
-#                   read is exit 10, an empty name is exit 2; the default one missing is not an error.
+#                   default: <module-root>/BUILD-STATE.md when that file exists (then the only file read), else the
+#                   kit's BUILD-STATE.src.md beside this toolbelt. A file named here, or the module's own, that cannot
+#                   be read is exit 10, an empty name is exit 2; the kit's default one missing is not an error.
 #   --restore-mirror <kept-jar>  builds nothing: copies a jar a mirror build kept (below) back into that mirror's
 #                   modules/, leaves the kept copy and ends the cycle (below). Refuses a path not shaped
 #                   <mirror>/.mirror-replaced/<name>.<sha12> (exit 2); a missing kept jar, one whose sha256 prefix is
@@ -110,7 +111,8 @@
 #   (source: delta B5 of an external session retro, 2026-11-13)
 # Recorded expected signer (#1131): the module's build-state.v1 envelope may carry an optional `expected_signer:
 #   <alias>` field (letters, digits, '.', '_' or '-'; `unknown` or no field records nothing). build.sh reads the
-#   envelope whose `module:` is <MOD> from --build-state, else the kit's BUILD-STATE.src.md, right after the inputs
+#   envelope whose `module:` is <MOD> from --build-state, else <module-root>/BUILD-STATE.md when that file exists,
+#   else the kit's BUILD-STATE.src.md (#1158: the record lives with the module), right after the inputs
 #   are resolved (module root, gradle root, JDK, niagara_home) and before preflight, the baselines and gradle.
 #   Precedence: (1) an alias configured as above (--gradle-prop, $ORG_GRADLE_PROJECT_niagaraSigningAlias or
 #   gradle.properties) must equal the record, or build.sh exits 10 BEFORE gradle naming both; (2) with no alias
@@ -121,6 +123,17 @@
 #   the same text with exit 1): a value that is not an alias, the key twice in one envelope, a second envelope of
 #   <MOD> when one of them sets the field, or a line that mistypes the key (`expected_signer : x`, or indented).
 #   Only <MOD>'s envelopes count here; the sweep checks them all. No field or file: unchanged.
+# Recorded Niagara target (#1158): the same envelope may carry `niagara_target: <version>` (2 to 4 dotted numbers,
+#   e.g. 4.15.6.20; the Niagara version of the module's station) and `plugin_version: <version>` (e.g. 7.6.22);
+#   `unknown` or no field records nothing. Read from the same file, right after the signer, before preflight and
+#   gradle:
+#   (1) niagara_home's Niagara version (the vendorVersion of its modules/baja.jar, and for a mirror that of the
+#   installation it was made from when readable) must equal niagara_target in major.minor, or exit 10 naming both
+#   versions and the file (a version that cannot be read is a WARN); (2) --target-version defaults to the major.minor
+#   of niagara_target (the gate and report-module get it), and another major.minor is exit 10; (3) --plugin-version
+#   (or $NIAGARA_PLUGIN_VERSION) defaults to plugin_version, and another value is exit 10. One "INFO — <file> records
+#   ..." line says what the record set. A malformed record (as above, for these two fields) is exit 10, and the sweep
+#   fails it with exit 1. scripts/ng-deploy.sh refuses (exit 55) a station of another major.minor than niagara_target.
 # Signing block precheck (#1121): with a niagaraSigningAlias configured (as above) and a root build.gradle.kts that
 #   applies com.tridium.niagara-signing without a niagaraSigning {} block (the lint-structure L15 detection), the
 #   plugin ignores the alias and the profile and signs with the throwaway key, so build.sh exits 10 BEFORE gradle

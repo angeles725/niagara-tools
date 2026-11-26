@@ -61,6 +61,7 @@ var phases = []func(*deploy) int{
 	(*deploy).applyExpectedSigner,
 	(*deploy).exportOptions,
 	(*deploy).guardHome,
+	(*deploy).checkRecordedTarget,
 	(*deploy).probeStation,
 	(*deploy).warnNoBackup,
 	(*deploy).isolateMirror,
