@@ -4,7 +4,7 @@
 package com.example.ModuleA;
 
 import com.example.ModuleA.login.LoginActivator;
-import java.util.logging.Level;
+import com.example.ModuleA.login.model.LoginActivation;
 import java.util.logging.Logger;
 import javax.baja.nre.annotations.NiagaraProperty;
 import javax.baja.nre.annotations.NiagaraType;
@@ -76,20 +76,19 @@ public class BModuleAService
   /** Save the station (its own save action) so the template survives a restart. */
   private void scheduleLoginSave()
   {
-    try
+    // guarded: a problem here (an Error from a class that cannot load included) never escapes stationStarted()
+    LoginActivation.guarded(LOG,
+        "login template set but the station save could not be scheduled; the next start applies it again", () ->
     {
       BStation station = Sys.getStation();
       if (station == null)
       {
         LOG.warning("login template set but the station save was skipped (no station); the next start applies it again");
-        return;
+        return false;
       }
       loginSaveTicket = Clock.schedule(station, BRelTime.make(Math.max(LOGIN_SAVE_DELAY_MS, 1L)), BStation.save, null);
-    }
-    catch (Exception e)
-    {
-      LOG.log(Level.WARNING, "login template set but the station save could not be scheduled; the next start applies it again", e);
-    }
+      return true;
+    });
   }
 
   /** Cancel a pending login save when the service stops (a station stop drops it anyway). */

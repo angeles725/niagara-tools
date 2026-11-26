@@ -5,6 +5,8 @@ package com.example.ModuleA.login.model;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * LoginActivation — whether BModuleAService, when the station starts, sets {@code WebService.loginTemplate} to
@@ -60,7 +62,41 @@ public final class LoginActivation
     public String target() { return target; }
   }
 
+  /** A start-time step that may throw: the activator's work, or the service's save scheduling. */
+  public interface Attempt
+  {
+    boolean run() throws Exception;
+  }
+
   private LoginActivation() {}
+
+  /**
+   * Run one start-time step so that nothing it throws escapes {@code stationStarted()}. A station that cannot
+   * start its service because of a login page problem is worse than a station with the stock login, so every
+   * {@link Throwable} is logged at WARNING (with {@code failure}) and answered with false: the first use of the
+   * template type runs its class initializer, and a type that fails to load (INSTANCE declared after TYPE, a
+   * missing web-rt class) throws an {@link Error} ({@code ExceptionInInitializerError},
+   * {@code NoClassDefFoundError}), which {@code catch (Exception)} does not see. Only a
+   * {@link VirtualMachineError} (out of memory, stack overflow) is rethrown: the JVM is not in a state to carry on.
+   *
+   * @return what the step returned, or false when it threw
+   */
+  public static boolean guarded(Logger log, String failure, Attempt step)
+  {
+    try
+    {
+      return step.run();
+    }
+    catch (VirtualMachineError e)
+    {
+      throw e;
+    }
+    catch (Throwable t)
+    {
+      log.log(Level.WARNING, failure, t);
+      return false;
+    }
+  }
 
   /**
    * @param currentSpec WebService.loginTemplate as "module:Type", or null/blank/"null" when empty

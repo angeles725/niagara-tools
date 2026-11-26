@@ -437,6 +437,14 @@ dashboard. `scaffold-module.sh --type dashboard` emits it all (below); nothing e
   - **Fallback:** a screen the page cannot draw is left to Niagara's own template
     (`BDefaultLoginTemplate.INSTANCE.write(req, resp)`): two-factor, an authentication scheme that is not digest,
     and a network (LDAP/AD) user's expiry notice, which is OK-only. A missing user name draws the first screen.
+  - **Known limitation, accepted: the login page tells an anonymous client that a non-digest user exists.** A user
+    name the station does not know, or cannot look up, gets the custom password page (so a guess never shows which
+    names exist), but a known user on a scheme that is not digest (LDAP and similar) gets Niagara's own page. The
+    custom page cannot be shown to that user: it runs SCRAM and then goes to `/j_security_check/` without ever
+    posting the password (`login.js`, `wireLogin`), which only a digest scheme answers, so the user could not sign in.
+    Rendering it for every user is therefore not an option; the server's scheme must stay the one that
+    authenticates. If that exposure matters on a station, set `applyLogin` false and clear
+    `Services/WebService.loginTemplate` (Rollback below). The same note is in `templates/dashboard-login/README.md`.
   - **SCRAM stays:** the password never posts in clear. The page loads `/login/core/auth.min.js`, runs
     `ScramShaClient`, then goes to `/j_security_check/` whatever the outcome (the server decides). The forced
     password change posts only the base64 of the new password as `resetToken` (the new-password fields have no
@@ -454,7 +462,12 @@ dashboard. `scaffold-module.sh --type dashboard` emits it all (below); nothing e
   The boolean slot `applyLogin` (default `true`) is the switch. After a `SET` the service saves the station (the
   station's own `save` action, scheduled a few seconds after the start sequence, as the dashboard's writes do), so
   the template survives a restart. A service dropped into a running station does nothing until the next start. The
-  activator never throws: a failure is logged and the station keeps starting.
+  activator never throws: a failure is logged and the station keeps starting. That includes an `Error`: the first
+  use of the template type runs its class initializer, and a type that fails to load (`INSTANCE` after `TYPE`, a
+  `web-rt` class that is missing) throws `ExceptionInInitializerError` or `NoClassDefFoundError`, which `catch
+  (Exception)` does not see. `LoginActivation.guarded` (pure, pinned by `LoginActivationTest`) catches `Throwable` in
+  the activator and in the service's save scheduling, logs it as a WARNING and leaves the login as it was; only a
+  `VirtualMachineError` is rethrown. Nothing in request handling (`write`, `LoginRequest`) catches more than before.
 - **Rollback:** set `applyLogin` to false AND clear `Services/WebService.loginTemplate` (the slot stays set
   otherwise, and a false switch leaves it alone); the station then shows Niagara's own page. **Remove the module only
   after the slot no longer names its type:** with the slot still set, `/login` answers HTTP 500 for everyone (Niagara
