@@ -29,6 +29,9 @@
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture) + station-test overlay
 #                                + the module's own login in -rt (templates/dashboard-login; types/dashboard.md § The module
 #                                ships its own login)
+#                                JS tests: run them by file, `node --test <Module>-ux/srcTest/rc/*.test.js`
+#                                (`node --test <dir>` fails on Node 22); report-module.sh row `js-tests` runs
+#                                that form, so name a node test `*.test.js` (types/frontend-standard.md § 11)
 #                    driver    — NDriver -rt (UDP comm config subclass, codec, discovery) + -wb point manager
 #                                (MinimalDriver fixture; types/driver-authoring.md § 1.6-§ 1.11, § 5, § 12)
 #                    service   — a station service + a background export job (BSimpleJob) + the pure class and test, the

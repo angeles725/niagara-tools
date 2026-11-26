@@ -19,6 +19,12 @@
 # is committed — see toolbelt/eslint/.gitignore). A frontend member with WARN rows and no FAIL reports
 # PASS "no failing row (N WARN row(s) above)", never "clean".
 # [ev: retro dashboard-frontend-standard Δ10] [ev: retro dashboard-frontend-standard Δ16]
+# JS tests (issue #1124): per *-ux artifact with a srcTest/, row `js-tests` runs `node --test <file>...` in the
+# artifact directory over its srcTest/**/*.test.js and *.test.cjs files (listed by the tool in byte order, none under
+# node_modules/ or a dot directory; `node --test <dir>` fails on Node 22). PASS `node --test: N files passed`; FAIL
+# `node --test exited <n> (N files): <last lines of its output>`, and FAIL when the run passes KIT_JS_TESTS_TIMEOUT
+# seconds (default 600); SKIP when node is not on PATH (KIT_NODE names another) or srcTest/ holds no such file. An
+# artifact with no srcTest/ gets no row. Native, no toolbelt script (types/frontend-standard.md § 11).
 # Link endpoints (polish-2026-10-02 P1): lint-link-target-flags.sh <artifact>/src per artifact, with
 # --wiring-map <file> when given, else <module-root>/docs/wiring-map.md, else <module-root>/../docs/
 # wiring-map.md (the build.sh layout <repo>/<MOD>); a named --wiring-map file that is missing is exit 3.

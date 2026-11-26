@@ -169,6 +169,10 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
 ### 11. Quality, tests and versioning
 - [both] Pure logic (classification, unit conversion, timing) is unit-tested in Node (DJS1);
   source-structural JUnit tests only for wiring.
+- [both] Run the node tests by FILE, never by directory: `node --test <Module>-ux/srcTest/rc/*.test.js` (one glob
+  per directory that holds tests; `.cjs` files the same way with `*.test.cjs`). `node --test <dir>` fails on
+  Node 22: it loads the directory as a module and reports no test. `report-module.sh` row `js-tests` runs the form
+  for every `-ux` part (below). `[ev: issue #1124]`
 - [both] Bump `defaultModuleVersion` on any `rc/` change; the API contract is versioned and the SPA
   tolerates unknown keys.
   `toolbelt/lint-ux-version.sh <module-root>` FAILs a `?v=` that differs from it and WARNs one that is missing.
@@ -402,6 +406,12 @@ Pre-compressed bundle: `report-module.sh` row `bundle-gzip` (native, no toolbelt
 HMI layout fit: `toolbelt/hmi-sweep.js` sweeps every nav view (and declared sub-tabs) at 1280×800 for
 document scroll, unnamed inner scrollers and an occluded target such as the alarm banner
 (`build-verify.md` § Frontend verify step). `[ev: retro comppan-fase2-amps-alarms Δ3]`
+
+JS tests: `report-module.sh` row `js-tests` lists the part's `srcTest/**/*.test.js` and `*.test.cjs` files itself (no
+shell glob; none under `node_modules/` or a dot directory) and runs `node --test <file>...` in the `-ux` part: a
+non-zero exit is a FAIL row with the tail of node's output, a run past `KIT_JS_TESTS_TIMEOUT` seconds (default 600)
+a FAIL row, no node on PATH (or `KIT_NODE`) a SKIP row naming it, a `srcTest/` with no such file a SKIP row; a part
+with no `srcTest/` prints no row. `[ev: issue #1124]`
 
 Tools: node + `npm install --prefix toolbelt/eslint` (pinned eslint + acorn); `hmi-sweep.js` needs
 puppeteer-core and a Chrome. A missing tool is one SKIP row naming it (exit 4 for the standalone
