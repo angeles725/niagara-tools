@@ -107,18 +107,21 @@ func liveURL(base, comp string) (string, error) {
 		return "", fmt.Errorf("--obix must not carry a query or fragment: %s", base)
 	}
 	path := strings.TrimSuffix(strings.TrimPrefix(comp, "/"), "/")
-	// Mutation: OLA-component -- a raw .., ?, # or % in the path GETs a different resource than the component.
+	// Mutation: OLA-component -- a raw .., ?, #, %, space or quote in the path GETs a different resource.
 	if !slotPath(path) {
-		return "", fmt.Errorf("--component must be a slot path without .. segments, ?, #, %% or control characters: %q", comp)
+		return "", fmt.Errorf("--component must be a slot path of station names as the station stores them "+
+			"(letters, digits, _ and $xx escapes: a space is $20), without .. segments: %q", comp)
 	}
 	return strings.TrimSuffix(base, "/") + "/config/" + path + "/", nil
 }
 
-// slotPath: path is pasted into the URL as is, so it may hold no .. segment, no ?, # or % (which would
-// end or re-encode the path) and no control character.
+// slotPath: path is pasted into the URL as is, and the station's /config/ path matches a slot name in
+// its escaped form (a space is $20, B-escape as SlotPath stores it), so each segment may hold only letters,
+// digits, _ and $; a raw space, quote, ?, #, %, & or non-ASCII rune would be URL-encoded or end the path and
+// GET a missing or different component (#938). A .. segment is refused too.
 func slotPath(path string) bool {
 	for _, r := range path {
-		if r < 0x20 || r == 0x7f || strings.ContainsRune("?#%", r) {
+		if !(r == '/' || r == '_' || r == '$' || ('0' <= r && r <= '9') || ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z')) {
 			return false
 		}
 	}

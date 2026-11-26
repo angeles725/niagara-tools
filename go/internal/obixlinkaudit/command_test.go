@@ -128,7 +128,8 @@ func TestLive(t *testing.T) {
 
 // compErr is the --component refusal for comp.
 func compErr(comp string) string {
-	return fmt.Sprintf("obix-link-audit: --component must be a slot path without .. segments, ?, #, %% or control characters: %q\n", comp)
+	return fmt.Sprintf("obix-link-audit: --component must be a slot path of station names as the station stores "+
+		"them (letters, digits, _ and $xx escapes: a space is $20), without .. segments: %q\n", comp)
 }
 
 // TestLiveArgumentGuards: a base or component that cannot name one station GET is exit 3 before any
@@ -160,6 +161,10 @@ func TestLiveArgumentGuards(t *testing.T) {
 		{"component newline", s.URL + "/obix", "/Plant\nFacade", compErr("/Plant\nFacade")},
 		{"component tab", s.URL + "/obix", "/Plant\tFacade", compErr("/Plant\tFacade")},
 		{"component DEL", s.URL + "/obix", "/Plant\x7f", compErr("/Plant\x7f")},
+		{"component raw space (#938)", s.URL + "/obix", "/Plant/Cold Room", compErr("/Plant/Cold Room")},
+		{"component quote (#938)", s.URL + "/obix", "/Plant/a\"b", compErr("/Plant/a\"b")},
+		{"component non-ASCII (#938)", s.URL + "/obix", "/Plant/Cámara", compErr("/Plant/Cámara")},
+		{"component ampersand (#938)", s.URL + "/obix", "/Plant/a&b", compErr("/Plant/a&b")},
 	} {
 		code, out, errs := run(creds, "--map", wiring, "--obix", tc.base, "--component", tc.comp)
 		if code != ExitEnv || out != "" || errs != tc.stderr {
