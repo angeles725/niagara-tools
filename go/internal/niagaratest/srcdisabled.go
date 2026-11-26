@@ -75,10 +75,11 @@ func (sc *srcClass) check() error {
 	return nil
 }
 
-// disabledAt says whether method d of sc carries a @Test(enabled = false).
+// disabledAt says whether method d of sc carries a @Test(enabled = false). The search back for d's name token
+// includes the class body's first token: a modifier-less constructor can be the first member (#1137).
 func (sc *srcClass) disabledAt(d javasrc.Decl) (bool, error) {
 	at := -1
-	for i := d.Body[0] - 1; i > sc.c.Body[0]; i-- {
+	for i := d.Body[0] - 1; i >= sc.c.Body[0]; i-- {
 		if t := sc.toks[i]; t.Kind == javasrc.TokIdent && t.Text == d.Name && t.Line == d.Line && sc.toks[i+1].Text == "(" {
 			at = i
 			break

@@ -62,6 +62,12 @@ func TestDisabledInSource(t *testing.T) {
 					"  public static class Inner extends BTestNg { @Test(enabled = false) public void in() {} }\n" +
 					"  Object o = new Object() { @Test(enabled = false) public void anon() {} };\n}\n"},
 			[]string{"BOne$Inner.in"}},
+		{"a first member the scan must still find: an enum constant with a body, a modifier-less constructor (#1137)",
+			[]string{"test.a.BOne"}, map[string]string{
+				"test/a/BOne.java": pkgA + "public class BOne extends BTestNg {\n" +
+					"  BOne() {}\n  enum Mode { A(1) { int k() { return 1; } }; Mode(int n) {} int k() { return 0; } }\n" +
+					"  @Test(enabled = false) public void off() {}\n}\n"},
+			[]string{"BOne.off"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
