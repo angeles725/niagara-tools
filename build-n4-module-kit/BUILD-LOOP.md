@@ -337,6 +337,11 @@ Safe combinations: `clean slotomatic jar` — the only correct kit build (`build
 - **Dashboard profile pass-through:** `build.sh --ui-profile <hmi|lan|both|unknown> [--legacy]` forwards the module's
   BUILD-STATE `ui_profile` to `report-module.sh --profile` (and `--legacy`), so the automatic punch-list applies the
   same browser floor a standalone `report-module.sh --profile` run would. Without it, rc-scan runs with no profile.
+- **JS tests of a `-ux` part run in the punch-list:** `report-module.sh` row `js-tests` runs
+  `node --test <file>...` over the part's `srcTest/**/*.test.js` and `*.test.cjs` (files listed by the tool:
+  `node --test <dir>` fails on Node 22), FAIL on a non-zero exit, SKIP with the reason when node or the test files
+  are missing. By hand, the same form: `node --test <Module>-ux/srcTest/rc/*.test.js` (`types/frontend-standard.md`
+  § 11). `[ev: issue #1124]`
 - **Independent gradle groups build in parallel:** when a change touches modules in DIFFERENT gradle roots (e.g. a
   compressor group and a dashboard group), launch one `build.sh` per group concurrently (each in the background, then
   wait for both) instead of serially — each run has its own gradle root, its own jars and its own drift snapshot. Never

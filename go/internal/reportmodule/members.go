@@ -105,6 +105,8 @@ var perArtifact = []member{
 	{script: "lint-vendor-floor", suffix: "-ux", special: (*report).vendorFloor},
 	// retro kit-gzip-bundle-writer-briefs Δ1: a dist/*.js over 300 KB ships its .gz twin (native, no toolbelt script; WARN only).
 	{suffix: "-ux", special: (*report).bundleGzip},
+	// issue #1124: the part's srcTest/ *.test.js|cjs files run as `node --test <file>...` (native; a failing suite is FAIL).
+	{suffix: "-ux", special: (*report).jsTests},
 	{script: "lint-wb-threading", suffix: "-wb", f: filter{mode: swap, keep: "WARN"}},
 	{script: "lint-no-md5-credential-digest", f: warnOnly, v: rows},
 	{script: "lint-wb-file-chooser", suffix: "-wb", f: warnOnly},
