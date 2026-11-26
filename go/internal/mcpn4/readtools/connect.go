@@ -134,6 +134,9 @@ func detectVersion(client Client) (version, why string) {
 	case errors.As(err, &be) && be.Code == 403:
 		return "", fmt.Sprintf("%s refused: %s; this user may not read oBIX, so the version is unknown "+
 			"(the session stays open)", tiers.AboutPath, be.Msg)
+	case errors.As(err, &be) && be.Code == 410:
+		return "", fmt.Sprintf("%s unreadable: %s; the station answers 410 while its oBIX network is disabled: "+
+			"set Drivers/ObixNetwork enabled true to detect the version", tiers.AboutPath, be.Msg)
 	case errors.As(err, &be):
 		return "", fmt.Sprintf("%s unreadable: %s", tiers.AboutPath, be.Msg)
 	case errors.As(err, &typed):
