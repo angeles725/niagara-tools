@@ -86,8 +86,10 @@ func (c *Client) About(timeout float64, maxBytes int) (string, error) {
 		maxBytes = MaxAboutBytes
 	}
 	resp, err := c.do(c.interrupt, "GET", "/obix/about/", nil, nil, timeout, maxBytes)
-	if st, ok := err.(*httpStatus); ok && st.code == 403 { // a user who may not read oBIX: no failed login
-		return "", &Error{Kind: KindHTTPStatus, Msg: "HTTP 403 from station", Channel: "obix", Key: "about", Code: 403}
+	// 403: a user who may not read oBIX (no failed login); 410: the oBIX network is disabled (live)
+	if st, ok := err.(*httpStatus); ok && (st.code == 403 || st.code == 410) {
+		return "", &Error{Kind: KindHTTPStatus, Msg: fmt.Sprintf("HTTP %d from station", st.code), Channel: "obix", Key: "about",
+			Code: st.code}
 	}
 	if err != nil {
 		return "", c.mapError(err, "obix", "about", false)
