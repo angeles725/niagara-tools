@@ -1,0 +1,32 @@
+truth (issue #1118): every handler reaches requestSave(), directly (doSetpoint), through a helper chain
+(doMode -> applyMode -> afterWrite -> requestSave) or because its caller saves after it (doRange calls
+writeRange, which only writes, then requestSave()). No row.
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-ux/src/com/x/ux/BDashServlet.java --
+package com.x.ux;
+public final class BDashServlet extends BWebServlet {
+  void requestSave() {
+    saveTicket = Clock.schedule(station, delay, BStation.save, null);
+  }
+  void doSetpoint(BComponent point, BValue v, Context cx) {
+    point.set("out", v, cx);
+    requestSave();
+  }
+  void doMode(BComponent point, BValue v, Context cx) {
+    applyMode(point, v, cx);
+  }
+  private void applyMode(BComponent point, BValue v, Context cx) {
+    point.set("mode", v, cx);
+    afterWrite();
+  }
+  private void afterWrite() { requestSave(); }
+  void doRange(BComponent day, BValue v, Context cx) {
+    writeRange(day, v, cx);
+    requestSave();
+  }
+  private void writeRange(BComponent day, BValue v, Context cx) { day.add(v, cx); }
+}

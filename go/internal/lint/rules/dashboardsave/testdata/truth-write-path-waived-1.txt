@@ -1,0 +1,29 @@
+truth (issue #1118): the waiver of the per-path WARNs is the one of the module-wide FAIL: a non-empty
+persistence: line in MODULE-MAP.md. A handler with no save path and a stopped() that cancels without a flush
+give no row in a module that declares it.
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/MODULE-MAP.md --
+# Mod module map
+
+persistence: the control module's ConfigSaveScheduler saves the linked slots
+-- Mod/Mod-ux/src/com/x/ux/BDashServlet.java --
+package com.x.ux;
+public final class BDashServlet extends BWebServlet {
+  void requestSave() {
+    saveTicket = Clock.schedule(station, delay, BStation.save, null);
+  }
+  void doSetpoint(BComponent point, BValue v, Context cx) {
+    point.set("out", v, cx);
+    requestSave();
+  }
+  void doMode(BComponent point, BValue v, Context cx) {
+    point.set("mode", v, cx);
+  }
+  @Override public void stopped() throws Exception {
+    saveTicket.cancel();
+  }
+}

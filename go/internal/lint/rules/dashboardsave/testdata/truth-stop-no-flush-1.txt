@@ -1,0 +1,23 @@
+truth (issue #1118): a stopped() that cancels the save ticket (<ticket>.cancel()) and neither calls a station
+save nor calls a helper that does drops the pending save: with a 5 s settle and one save per 60 s, a write made
+inside the window before a restart or a servlet stop is never saved. WARN stop-drops-save on the cancel line
+(exit 0: a warning, not a FAIL). The ticket scheduling itself (BStation.save) is no flush.
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  stop-drops-save  @DIR@/Mod/Mod-ux/src/com/x/ux/BDashServlet.java:9  stopped() cancels the pending save ticket without a flush: a write made inside the settle window before a restart or a servlet stop is never saved; read !saveTicket.isExpired() before cancel() and call station.save() in a try/catch that logs (types/dashboard.md § Write path)
+-- stderr --
+-- Mod/Mod-ux/src/com/x/ux/BDashServlet.java --
+package com.x.ux;
+public final class BDashServlet extends BWebServlet {
+  private final Object saveLock = new Object();
+  private Clock.Ticket saveTicket = Clock.expiredTicket;
+  void requestSave(BStation station, long delay) {
+    saveTicket = Clock.schedule(station, BRelTime.make(Math.max(delay, 1L)), BStation.save, null);
+  }
+  @Override public void stopped() throws Exception {
+    synchronized (saveLock) { saveTicket.cancel(); }
+    super.stopped();
+  }
+}

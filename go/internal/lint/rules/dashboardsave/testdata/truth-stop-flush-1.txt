@@ -1,0 +1,46 @@
+truth (issue #1118): stopped() that reads !saveTicket.isExpired() before cancel() and then calls station.save()
+in a try/catch that logs (the exemplar of types/dashboard.md § Write path) has no row. A flush through a helper
+method that saves (flushSave() in Other.java) counts the same. A cancel() in a comment is not code.
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-ux/src/com/x/ux/BDashServlet.java --
+package com.x.ux;
+public final class BDashServlet extends BWebServlet {
+  private final Object saveLock = new Object();
+  private Clock.Ticket saveTicket = Clock.expiredTicket;
+  void requestSave(BStation station, long delay) {
+    saveTicket = Clock.schedule(station, BRelTime.make(Math.max(delay, 1L)), BStation.save, null);
+  }
+  @Override public void stopped() throws Exception {
+    synchronized (saveLock) {
+      boolean pending = !saveTicket.isExpired();
+      saveTicket.cancel();
+      if (pending) {
+        try {
+          Sys.getStation().save();
+        } catch (Exception e) {
+          LOG.warning("station save at stop failed: " + e);
+        }
+      }
+    }
+    super.stopped();
+  }
+}
+-- Mod/Mod-ux/src/com/x/ux/Other.java --
+package com.x.ux;
+public final class Other extends BWebServlet {
+  private Clock.Ticket saveTicket = Clock.expiredTicket;
+  void flushSave() {
+    try { Sys.getStation().save(); } catch (Exception e) { LOG.warning("save failed: " + e); }
+  }
+  @Override public void stopped() throws Exception {
+    // saveTicket.cancel() is dropped on purpose
+    boolean pending = !saveTicket.isExpired();
+    saveTicket.cancel();
+    if (pending) flushSave();
+    super.stopped();
+  }
+}

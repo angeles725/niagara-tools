@@ -16,14 +16,22 @@
 #             Sys.getStation().save(), station.saveAsync(, Station.save*(
 #   declared  MODULE-MAP.md at the module root holds a non-empty `persistence: <where>` line (outside ``` fences):
 #             the module saves on purpose elsewhere (the control module's ConfigSaveScheduler) or needs none.
-# One FAIL row per write line when the module has writes, no save and no declaration.
+# One FAIL row per write line when the module has writes, no save and no declaration. Two WARN rows (exit 0, issue
+# #1118), each with its own check code, both silenced by the same `persistence:` declaration:
+#   write-path-no-save  a method of a -ux file that writes with the request Context and has no path to a save
+#                       (requestSave() or a station save, called directly or through methods of the module), in a
+#                       module that saves and a file where another method does reach a save; a write helper that a
+#                       saving method of the same file calls is covered by that caller. One row, on its first write.
+#   stop-drops-save     a stopped() that cancels a save ticket (<x>Ticket.cancel()) and neither calls <x>.save*( nor
+#                       a method that does: a write 5-60 s before a restart or servlet stop is never saved.
 #
 # Implementation: go/internal/lint/rules/dashboardsave on the Go lint engine (go/README.md); this wrapper execs
 # `n4lint lint-dashboard-write-save <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise).
 #
 # Usage:  lint-dashboard-write-save.sh [--strict] <module-root>
 #   Row:  FAIL  lint-dashboard-write-save  <file>:<line>  <detail>
-#   Exit: 0  no row · 1  any FAIL · 3  usage/env, a root with no *.java under a -ux part's src/, an unreadable MODULE-MAP.md
+#         WARN  write-path-no-save|stop-drops-save  <file>:<line>  <detail>
+#   Exit: 0  no row or WARN only · 1  any FAIL · 3  usage/env, a root with no *.java under a -ux part's src/, an unreadable MODULE-MAP.md
 # VCS-free by design (kit-links L2).
 # Mutation: LDWS1 -- matching any last argument instead of a declared Context FAILs a read-only servlet's list add
 # Mutation: LDWS2 -- dropping the save search FAILs a module that schedules BStation.save after its writes
