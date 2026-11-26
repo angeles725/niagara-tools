@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lint-guard-pins.sh — Guard-pin meta-check for the kit's own lint scripts (C11 T4, B833).
-# Scope: toolbelt/lint-*.sh only (D4b — non-lint toolbelt scripts are out of T4's scan).
+# Scope: kit — toolbelt/lint-*.sh only (D4b — non-lint toolbelt scripts are out of T4's scan).
 #
 # Every lint-*.sh must declare at least one header line (its leading comment block):
 #   # Mutation: <fixture-id> -- <what it flips>

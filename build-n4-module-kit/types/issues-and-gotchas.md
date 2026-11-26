@@ -118,6 +118,7 @@ NOT equivalent to "validate delay > 0" (B2): the safe minimum is 1 ms, not 0.
 `min >= 1` facet so the UI prevents zero entry.
 [ev: mem coldroompan-defrost-time-le-0-bug] — **Kit coverage: METHODOLOGY.md § Kit maintenance +
 lint-delays.sh FAIL check (B2 sibling; FOLDED)**
+`lint-clock-zero-floor.sh` WARNs on `Math.max(0…)` in a file that calls `Clock.schedule`.
 
 ---
 

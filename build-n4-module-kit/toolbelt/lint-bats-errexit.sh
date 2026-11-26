@@ -9,6 +9,7 @@
 # is an action (`[ -n "$p" ] && ln -s "$p" d`), conditions, `run bash -c '...'` strings and heredoc bodies.
 # Only @test bodies are read (not setup or helper functions). [ev: retro r10-bats-list-hazard Δ1]
 #
+# Scope: kit — reads the kit's own bats tests, never module code.
 # Implementation: rule package go/internal/lint/rules/batserrexit on the shared engine go/internal/lint
 # (go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/n4lint when
 # it is missing or older than a Go source, then this script execs `n4lint lint-bats-errexit <args>`.

@@ -373,7 +373,7 @@ BOrd ord = BOrd.make(raw);   // only after allowlist check
 ```
 
 Never accept an arbitrary BOrd from client-supplied input without an allowlist prefix
-check. [INFER]
+check. [INFER] `lint-arbitrary-ord.sh` WARNs on `BOrd.make(<variable>)`; waive a reviewed call with a reason marker.
 
 ### 4.3 Lexicon text in HTML — `getHtmlSafeText`
 

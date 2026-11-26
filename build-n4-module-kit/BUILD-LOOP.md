@@ -668,7 +668,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   lint alone: the index is generated and not committed (`toolbelt/kit-state.sh --write` materializes it), so two PRs
   that each add a lint never conflict on it, and a new `report-module.sh` member (it flips the lint's Auto cell) needs
   no index commit either `[ev: retro issue-459-truth Δ2]`; `toolbelt/gen-lint-index.sh --check` (CI, pre-push) exits 1
-  on a broken header. `[ev: retro ledger-generated-not-committed]` Never enumerate or count lints in this file — that
+  on a broken header. `[ev: retro ledger-generated-not-committed]` The index's **Guide** column lists the
+  `types/*.md:<line>` that names the lint and **Doc** the official-help citation within 6 lines of it;
+  `toolbelt/gen-lint-index.sh --check-guides` (CI) exits 1 on a lint no guide names, so a new module lint is named
+  in the guide section of its rule, and a lint that checks the kit itself declares `# Scope: kit` in its header.
+  Never enumerate or count lints in this file — that
   inline list was a merge-conflict hotspot that drifted. `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]`
 - **Non-lint pre-gate tools (not in the lint index):** `toolbelt/split-package-check.sh [--strict] <project-root>`
   (PROJECT-level, run on ONE project checkout before a release, never on a folder of several checkouts, which reports

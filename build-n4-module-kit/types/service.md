@@ -47,6 +47,7 @@ public final class BFooService extends BAbstractService {
   service is not an instance of is rejected with a SEVERE `not instanceof` log line. Return a base type or an
   interface type as well when callers should find the service by that abstraction. `[ev: corpus B1419 §1419.1]`
 - Verify-gate read: every service class has a `getServiceTypes` that returns a non-empty array containing `TYPE`.
+- `lint-service-types.sh` FAILs an empty or `null` `getServiceTypes()`; WARNs when `TYPE` is absent.
 
 ## 2 · Where it lives and how it registers
 

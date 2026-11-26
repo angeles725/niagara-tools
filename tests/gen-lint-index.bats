@@ -230,3 +230,23 @@ RM
   [ "$status" -eq 0 ]
   [[ "$output" == *"2 usage · 3 env (incl. a sub-directory find cannot enter) |"* ]]
 }
+
+@test "GLI-guides: --check-guides fails an unnamed lint; Scope: kit or a guide naming it passes; no prefix or kitchen match" {
+  mkdir -p "$FK/types"
+  _mklint lint-zz.sh "flags zz things."
+  printf 'Only lint-zz-extra and xlint-zz.sh are named here.\n' > "$FK/types/x.md"
+  run bash "$GEN" --check-guides "$FK"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"lint-zz.sh"* ]]
+  sed -i '2a # Scope: kitchen' "$FK/toolbelt/lint-zz.sh"
+  run bash "$GEN" --check-guides "$FK"
+  [ "$status" -eq 1 ]
+  sed -i 's/^# Scope: kitchen$/# Scope: kit/' "$FK/toolbelt/lint-zz.sh"
+  run bash "$GEN" --check-guides "$FK"
+  [ "$status" -eq 0 ]
+  sed -i '/^# Scope: kit$/d' "$FK/toolbelt/lint-zz.sh"
+  # shellcheck disable=SC2016  # literal backticks: a guide names the lint in code spans
+  printf 'The rule is checked by `lint-zz.sh`.\n' >> "$FK/types/x.md"
+  run bash "$GEN" --check-guides "$FK"
+  [ "$status" -eq 0 ]
+}

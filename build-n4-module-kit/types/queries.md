@@ -92,6 +92,8 @@ Rows are `[CERT]`: `bql-rt` `com/tridium/bql/SelectQuery.java` and `collection/B
 `javax/baja/alarm/AlarmDbConnection.java`, the source Tridium ships with the docs, whose line numbers differ from
 the decompiled copy. The bullets below give the other paths and lines.
 
+`lint-bql-unbounded.sh` WARNs on a `bql:` literal with no `top` or window (rows follow this table).
+
 - **Tree BQL:** `BogCursor` walks properties depth-first and `depth` is its only counter, so the work is the number of
   components visited, whatever the `where`; with a user in the ORD target it is wrapped in `AccessSlotCursor`.
   `[CERT]` `bql-rt` `com/tridium/bql/cursor/BogCursor.java:34-48,112-120`; `BBogCollection.java:56-73`. A projection

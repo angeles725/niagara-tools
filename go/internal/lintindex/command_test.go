@@ -91,9 +91,9 @@ func TestMainGenerate(t *testing.T) {
 		t.Fatalf("GLI-rows: got (%d, %q, %q)", code, stdout, errs)
 	}
 	got := read(t, out)
-	wantRows := "| `toolbelt/lint-alpha.sh` | flags alpha things. | `lint-alpha.sh <src-root>` | 0 clean · 1 any FAIL · 3 usage/env | yes | — |\n" +
-		"| `toolbelt/lint-beta.sh` | flags beta things. | `lint-beta.sh <src-root>` | 0 clean | no | — |\n"
-	if !strings.HasPrefix(got, header) || !strings.HasSuffix(got, "|---|---|---|---|---|---|\n"+wantRows) {
+	wantRows := "| `toolbelt/lint-alpha.sh` | flags alpha things. | `lint-alpha.sh <src-root>` | 0 clean · 1 any FAIL · 3 usage/env | yes | — | — | — |\n" +
+		"| `toolbelt/lint-beta.sh` | flags beta things. | `lint-beta.sh <src-root>` | 0 clean | no | — | — | — |\n"
+	if !strings.HasPrefix(got, header) || !strings.HasSuffix(got, "|---|---|---|---|---|---|---|---|\n"+wantRows) {
 		t.Errorf("GLI-rows: index =\n%s", got)
 	}
 

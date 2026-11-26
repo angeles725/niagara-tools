@@ -307,6 +307,7 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
   ORD (`baja/…/javax/baja/file/BajaFileUtil.java:82-121`, vineflower) — guard `isNull()` first.
 - **Explicit charset:** `getBytes()` and a bare `OutputStreamWriter` use the platform charset; pass
   `StandardCharsets.UTF_8`. Close the stream and the cursor with try-with-resources (§ BQL from code).
+  `lint-charset-default.sh` WARNs on a charset-less `getBytes()`, `new String(bytes)`, reader, writer or FileReader.
 - **Exporters:** `ExportOp` is public (`javax.baja.file`), but `BHistoryToCsv` is `com.tridium.history.exporters`
   — private API; the course itself says it "could change between minor version updates" (Lab Instructions p83).
   Write the loop above instead.

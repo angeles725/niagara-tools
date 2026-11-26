@@ -584,6 +584,8 @@ A `-wb` part is **invisible** to any station daemon regardless of `-rp` flags. K
 the JACE row is doc-proven, not run on a JACE) `[ev: retro devguide415-r2-packaging-platform-signing Δ8]`
 `[ev: retro r8-t9i-packaging Δ2]`
 
+`lint-se-display.sh` FAILs a `-se` source using a display class (JFrame, JDialog, JWindow, `java.awt.Frame`).
+
 ### Dependency trap — `-wb` deps in a `-se` module.xml
 
 A `-se` `module.xml` may legitimately declare dependencies on `-wb` modules (they satisfy the

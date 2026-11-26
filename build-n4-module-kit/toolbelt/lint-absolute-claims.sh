@@ -2,6 +2,7 @@
 # lint-absolute-claims.sh — reports the kit's absolute claims (never, always, silently, forbidden, throws) that cite
 # only corpus inference or retros, for a human check against Tridium-authored sources (METHODOLOGY K33).
 #
+# Scope: kit — reads the kit's own guides (types/*.md), never module code.
 # The evidence of a line is its claim unit: the Markdown bullet or paragraph that holds it (a bullet runs to the next
 # bullet, heading or blank line). A unit is strong when one of its [ev: ...] tags starts with code, course, devguide,
 # CERT or javap, or its text holds a `.java:<n>` line cite. A row is each line of a unit that is not strong holding one

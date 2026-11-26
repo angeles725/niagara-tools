@@ -139,10 +139,10 @@ func TestRenderRow(t *testing.T) {
 		row  Row
 		want string
 	}{
-		{"one usage, no evidence", Row{Name: "lint-a.sh", Desc: "d", Usage: "u", Exit: "e"}, "| `toolbelt/lint-a.sh` | d | `u` | e | no | — |"},
+		{"one usage, no evidence", Row{Name: "lint-a.sh", Desc: "d", Usage: "u", Exit: "e"}, "| `toolbelt/lint-a.sh` | d | `u` | e | no | — | — | — |"},
 		{"GLI-multi: one code span per usage", Row{Name: "lint-b.sh", Desc: "d", Usage: "u1<br>u2", Exit: "e", Auto: true, Ev: "[ev: x]"},
-			"| `toolbelt/lint-b.sh` | d | `u1`<br>`u2` | e | yes | [ev: x] |"},
-		{"a usage already in backticks is kept", Row{Name: "lint-c.sh", Desc: "d", Usage: "`u` x<br>y", Exit: "e"}, "| `toolbelt/lint-c.sh` | d | `u` x<br>y | e | no | — |"},
+			"| `toolbelt/lint-b.sh` | d | `u1`<br>`u2` | e | yes | [ev: x] | — | — |"},
+		{"a usage already in backticks is kept", Row{Name: "lint-c.sh", Desc: "d", Usage: "`u` x<br>y", Exit: "e"}, "| `toolbelt/lint-c.sh` | d | `u` x<br>y | e | no | — | — | — |"},
 	}
 	for _, tt := range cases {
 		if got := tt.row.Markdown(); got != tt.want {
