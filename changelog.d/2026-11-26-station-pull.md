@@ -1,0 +1,2 @@
+### Added
+- build-n4-module: `toolbelt/station-pull.sh --station NAME --dest DIR` copies a daemon-managed station with `plat fget -recurse`, verifies every CRC `plat flist -recurse` lists against the copied files, and zips it to `DIR/NAME-<UTC stamp>.zip` without the BackupService default exclusions (`--exclude-files`/`--exclude-dirs` override). It refuses a non-empty destination, names any missing file or CRC mismatch (plat exits 0 after a good copy and prints a `niagarad version ?` exception, so the files decide), and masks the daemon password (issue #1169).

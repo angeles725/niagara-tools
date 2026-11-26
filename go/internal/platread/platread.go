@@ -7,8 +7,6 @@ package platread
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -31,12 +29,7 @@ type call struct {
 
 // Main is the plat-read command.
 func Main(args []string, s cli.Stdio) int {
-	c := call{home: s.Env("NIAGARA_HOME"), env: s.Env("NIAGARA_PLAT_ENV")}
-	if c.env == "" {
-		if h, err := os.UserHomeDir(); err == nil {
-			c.env = filepath.Join(h, ".config", "niagara-private", "lab-platform.env")
-		}
-	}
+	c := call{home: s.Env("NIAGARA_HOME"), env: DefaultEnv(s)}
 	for i := 0; i < len(args); i++ {
 		switch a := args[i]; {
 		case a == "--dry-run":
@@ -79,9 +72,5 @@ func bad(s cli.Stdio, msg string) int {
 
 // argv is the plat command line; shown masks the password.
 func (c call) argv(cr cred, shown bool) []string {
-	pwd := cr.password
-	if shown {
-		pwd = masked
-	}
-	return []string{c.verb, "-h:ip:" + cr.host, "-p:" + cr.port, "-secure", "-noinput", "-usr:" + cr.user, "-pwd:" + pwd}
+	return append([]string{c.verb}, cr.Conn(shown)...)
 }
