@@ -35,13 +35,7 @@ func (c call) run(s cli.Stdio, cr cred) int {
 	}
 	out, err := exec.Command(c.exe(), c.argv(cr, false)...).CombinedOutput()
 	text := strings.ReplaceAll(strings.ReplaceAll(string(out), "\r", ""), cr.password, masked)
-	var kept []string
-	for _, line := range strings.Split(text, "\n") {
-		if !noise.MatchString(line) {
-			kept = append(kept, line)
-		}
-	}
-	if answer := strings.Trim(strings.Join(kept, "\n"), "\n"); answer != "" { // no blank line for an empty answer
+	if answer := strings.Trim(Clean(text), "\n"); answer != "" { // no blank line for an empty answer
 		fmt.Fprintln(s.Out, answer)
 	}
 	if why := failure(text); why != "" && err == nil {

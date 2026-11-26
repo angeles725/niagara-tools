@@ -459,6 +459,15 @@ refused. `liststations` lists only the stations the daemon manages, not one `lab
 even after a stack trace (a wrong password prints `AuthenticationException`), so plat-read exits 1 and names the
 failure when the answer is a Java exception. (issue #850)
 
+**Back up a daemon-managed station before a risky write:** `toolbelt/station-pull.sh --station NAME --dest DIR`
+copies `~stations/NAME` with `plat fget -recurse` (same env file and masking as plat-read.sh), checks every CRC
+`plat flist -recurse` lists against the copied files, and zips the copy to `DIR/NAME-<UTC stamp>.zip` without the
+BackupService defaults (`--exclude-files`/`--exclude-dirs` replace them). It refuses a non-empty `--dest` (exit 3)
+and exits 1 naming any missing file or CRC mismatch, because plat exits 0 even after a good copy and prints a
+`niagarad version ?` exception, so the files decide, not plat. With `plat.exe` under WSL `--dest` must be under
+`/mnt/<drive>`. `--dry-run` prints the two plat calls. It copies a running station: run `n4_save_station` first.
+(issue #1169)
+
 **Post-jar copy lock (exit 32):** the plugin's LAST step copies the new jar into `<niagara_home>/modules/`; a
 Windows-side process (Workbench, a station) holding the old jar open on a `/mnt/c` mount makes that copy fail with
 `FileAlreadyExistsException` — invisible to `preflight.sh`'s jar-lock scan, which SKIPs 9p/drvfs mounts by design.
