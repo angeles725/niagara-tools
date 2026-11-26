@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -100,7 +101,8 @@ func readProfileEntries(path string) (map[string]string, error) {
 	dec := xml.NewDecoder(bytes.NewReader(data))
 	dec.Strict = false
 	if err := dec.Decode(&doc); err != nil {
-		return nil, err
+		// never the parser's error: it quotes the text around the fault, which can be the store password
+		return nil, errors.New("not valid XML")
 	}
 	entries := map[string]string{}
 	for _, e := range doc.Entries {
