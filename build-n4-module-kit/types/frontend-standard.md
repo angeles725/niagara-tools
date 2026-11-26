@@ -176,6 +176,12 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
 - [both] Bump `defaultModuleVersion` on any `rc/` change; the API contract is versioned and the SPA
   tolerates unknown keys.
   `toolbelt/lint-ux-version.sh <module-root>` FAILs a `?v=` that differs from it and WARNs one that is missing.
+  A `-[0-9a-f]{8,}.(js|css|mjs)` name (`dist/main-18a30d6b12.js`) is content-addressed and needs no `?v=`. An app
+  built and versioned apart (a bundled view in an `<iframe>`) declares it in a scanned file with
+  `<!-- ux-version: app3d/ = 1.1 -->`: the iframe and the preloads under `app3d/` must all carry `?v=1.1`
+  (`subtree-version` FAIL otherwise). A `?v=` built in JavaScript (`"view3d.html?v=" + VERSION`) is read: a
+  `var|let|const VERSION = "1.2"` of the same file is judged like a literal `?v=`, an unresolved name is a
+  `dynamic-version` WARN (check by hand).
 - [both] No large change goes to a station without review, the verify gate and a preview pass.
 
 ## Component layout (`rc/`, classic scripts, no bundler) `[ev: retro dashboard-frontend-standard Δ11]` `[ev: retro dashboard-rc-file-split Δ1]`

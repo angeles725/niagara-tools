@@ -1,0 +1,15 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-ux/src/rc/index.html --
+<!-- ux-version: app3d/ = 1.1 -->
+<link rel="stylesheet" href="css/base.css?v=1.2.3">
+<iframe src="app3d/index.html?embed=1&amp;v=1.1"></iframe>
+<link rel="preload" href="app3d/data/scene.json?v=1.1">
+<link rel="preload" href="./app3d/data/mesh.json?v=1.1">
+-- m/M-ux/src/rc/css/base.css --
+a { background: url(../img/bg.png?v=1.2.3); }

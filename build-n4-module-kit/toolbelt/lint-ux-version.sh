@@ -10,9 +10,9 @@
 #
 # Reads every *.html, *.htm, *.js and *.css under the module's *-ux/src/rc/ (rc/vendor, rc/ext, *.min.js, dot and
 # *-worktrees directories are not entered; srcTest/ and any part that is not a -ux part are outside the path):
-#   HTML   href/src/poster on <link> <script> <img> <source> <video> <audio> <image> <input>; url(...) in <style>
-#          blocks and style attributes; the strings of inline <script> blocks as for JavaScript. An attribute value is
-#          HTML text: &amp; (&#38;) is read as & before its query is split, so a.js?x=1&amp;v=1.2.3 is judged
+#   HTML   href/src/poster on <link> <script> <img> <source> <video> <audio> <image> <input> <iframe>;
+#          url(...) in <style> blocks and style attributes; the strings of inline <script> blocks as for
+#          JavaScript. An attribute value is HTML text: &amp; (&#38;) is read as & before its query is split, so a.js?x=1&amp;v=1.2.3 is judged
 #   CSS    url(...) and @import "..."
 #   JS     a string that holds url(...) or is one path ending in js css png jpg jpeg gif svg webp avif ico bmp woff
 #          woff2 ttf otf eot
@@ -27,13 +27,33 @@
 #
 # Checks (row = the message's first word):
 #   stale-version  FAIL  the reference has ?v=<x> and x is not the module version (exact string compare)
+#   subtree-version FAIL a reference under a declared sub-tree (below) has ?v=<x> and x is not that sub-tree's version
+#   dynamic-version WARN a ?v= concatenated in JavaScript whose value is not a constant of the file (below)
 #   no-version     WARN  a local reference with no ?v= (the doc says every reference carries it); FAIL under --strict
 # Waiver: a trailing `lint-ux-version: allow <check-id> <reason>` comment on the flagged line (the line of the tag
 # for a multi-line tag) prints a PASS row carrying the reason instead; a marker with no reason waives nothing.
 #
+# Three shapes are not judged against defaultModuleVersion:
+#   Content-hashed name  a file name ending -<8 or more hex digits>.js, .css or .mjs (dist/main-18a30d6b12.js) gets
+#          no row, with or without ?v=: the hash is a stronger cache key than ?v=.
+#   Embedded app with its own version  declare it in any scanned file with the comment
+#            <!-- ux-version: app3d/ = 1.1 -->
+#          (a directory ending in /, then = and the version). A reference whose path as written starts with that
+#          directory, or holds it after a /, must carry ?v=1.1: the iframe (<iframe src> is read) and the preloads
+#          of the app agree, and any other ?v= there is a FAIL `subtree-version`. A declaration holds for the whole
+#          module root; the longest directory wins; two declarations of one directory with different versions are
+#          a FAIL at the later one. A reference with no ?v= is still a no-version WARN. A path outside every
+#          declared directory is judged as before (stale-version).
+#   ?v= built in JavaScript  in a .js file and in an inline <script>, a string ending in ?v= or &v= followed by
+#          `+ NAME` or `+ encodeURIComponent(NAME)` is read. When the same file holds `var|let|const NAME = "1.2"`
+#          the version 1.2 is judged like a literal one (stale-version FAIL, or subtree-version under a declared
+#          directory); with no such declaration, a differing one, or a member (cfg.ver) or call it is a WARN
+#          `dynamic-version: ... dynamic version, check by hand` (waivable like the others).
+#
 # Known limitations (lexical): a reference built at run time by concatenation is not seen unless it is one
-# literal; a JavaScript string is a reference only when it is one path with an asset extension; an attribute
-# value holding `>` ends its tag early.
+# literal or the ?v= form above; a JavaScript string is a reference only when it is one path with an asset
+# extension; an attribute value holding `>` ends its tag early; a sub-tree is matched on the path as written,
+# not resolved against the file that holds it.
 #
 # Usage:  lint-ux-version.sh [--strict] <module-root>     (-h, --help: print this usage and exit 0)
 #   Row:   FAIL|WARN|PASS  lint-ux-version  <file>:<line>  stale-version|no-version: <reference> ...

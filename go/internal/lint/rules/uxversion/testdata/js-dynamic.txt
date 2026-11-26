@@ -1,0 +1,17 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-ux-version  @DIR@/m/M-ux/src/rc/js/main.js:2  dynamic-version: view3d.html?v= + encodeURIComponent(version): dynamic version, check by hand
+WARN  lint-ux-version  @DIR@/m/M-ux/src/rc/js/main.js:3  dynamic-version: js/x.js?v= + cfg.ver: dynamic version, check by hand
+WARN  lint-ux-version  @DIR@/m/M-ux/src/rc/js/main.js:4  dynamic-version: view3d.html?v= + two: dynamic version, check by hand
+PASS  lint-ux-version  @DIR@/m/M-ux/src/rc/js/main.js:5  dynamic-version: view3d.html?v= + version allowed: set by the page
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-ux/src/rc/js/main.js --
+var two = "1.0"; if (x) { var two = "1.1"; }
+f.src = "view3d.html?v=" + encodeURIComponent(version);
+g.src = "js/x.js?v=" + cfg.ver;
+h.src = "view3d.html?v=" + two;
+i.src = "view3d.html?v=" + version; // lint-ux-version: allow dynamic-version set by the page

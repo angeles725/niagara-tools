@@ -2,6 +2,7 @@
 @DIR@/m
 -- want --
 exit 0
+WARN  lint-ux-version  @DIR@/m/M-ux/src/rc/js/main.js:1  dynamic-version: js/x.js?v= + VERSION: dynamic version, check by hand
 -- stderr --
 -- m/build.gradle.kts --
   defaultModuleVersion("1.2.3")

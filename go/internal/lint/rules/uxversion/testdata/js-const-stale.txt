@@ -1,0 +1,18 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/index.html:4  stale-version: view3d.html?v=1.1 has ?v=1.1 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+FAIL  lint-ux-version  @DIR@/m/M-ux/src/rc/js/main.js:2  stale-version: view3d.html?v=1.2 has ?v=1.2 but defaultModuleVersion is 1.2.3 (types/frontend-standard.md §11)
+-- stderr --
+-- m/build.gradle.kts --
+  defaultModuleVersion("1.2.3")
+-- m/M-ux/src/rc/index.html --
+<script>
+  const V3 = '1.1';
+  var f = document.getElementById("f");
+  f.src = "view3d.html?v=" + V3;
+</script>
+-- m/M-ux/src/rc/js/main.js --
+var VIEW3D_VERSION = "1.2";
+f.src = "view3d.html?v=" + encodeURIComponent(VIEW3D_VERSION);
