@@ -256,6 +256,7 @@ with no error at build or deploy time. `[ev: odd/tasks/kit-improvement-candidate
 tries to satisfy with an external module, while the bundled copy is already present in
 your jar. The module's own classes load before a declared dependency's (B617 §617.2), so the `api()` copy is
 shadowed silently [INFER]; always choose one path. `[ev: odd/tasks/kit-improvement-candidates-2026-09-19.md § Part 1d (WIR-G7); corpus B617 §617.2]`
+Shipped as `lint-uberjar-api-conflict.sh` (WARN).
 
 ---
 

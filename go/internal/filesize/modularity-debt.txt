@@ -52,7 +52,6 @@ internal/lint/rules/vacuoustests/judge.go 312 legacy recorded when the ratchet w
 internal/lint/rules/wbthreading/wbthreading.go 203 legacy recorded when the ratchet was created (#969)
 internal/lint/rules/wsplacement/wsplacement.go 217 legacy recorded when the ratchet was created (#969)
 internal/lint/run.go 445 legacy recorded when the ratchet was created (#969)
-internal/lintindex/lintindex.go 230 legacy recorded when the ratchet was created (#969)
 internal/mcpn4/box/http.go 235 legacy recorded when the ratchet was created (#969)
 internal/mcpn4/box/load.go 250 legacy recorded when the ratchet was created (#969)
 internal/mcpn4/bql/csv.go 243 legacy recorded when the ratchet was created (#969)

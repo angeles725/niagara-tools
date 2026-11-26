@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/gen"
@@ -52,6 +53,10 @@ func Scan(tb string) (rows []Row, problems []Problem, warn string, err error) {
 		}
 		report = string(b)
 	}
+	guides, err := ReadGuides(filepath.Dir(tb))
+	if err != nil {
+		return nil, nil, "", err
+	}
 	for _, p := range paths { // filepath.Glob sorts by byte order, as LC_ALL=C globbing did
 		if !gen.IsRegular(p) {
 			continue
@@ -68,23 +73,42 @@ func Scan(tb string) (rows []Row, problems []Problem, warn string, err error) {
 			continue
 		}
 		// Mutation: GLI-members -- reading only the report-module.sh text marks every member Auto no
+		row.Kit = KitScope(string(b))
+		g, d := GuideRefs(guides, name)
+		row.Guide, row.Doc = strings.Join(g, "<br>"), strings.Join(d, "<br>")
 		row.Auto = report != "" && (members[name] || InvokedByReport(report, name))
 		rows = append(rows, row)
 	}
 	return rows, problems, warn, nil
 }
 
-// Main implements `gen-lint-index [--check] [<kit-root>]`: it writes <kit-root>/toolbelt/INDEX.md, or
-// with --check only validates the lint headers (the index is not committed, so there is nothing to
-// compare). Any problem means nothing is written.
+// CheckGuidesFlag makes Main check that every lint is named by a types/*.md guide (or declares `# Scope: kit`).
+const CheckGuidesFlag = "--check-guides"
+
+// Main implements `gen-lint-index [--check] [--check-guides] [<kit-root>]`: it writes <kit-root>/toolbelt/INDEX.md,
+// or with --check only validates the lint headers (the index is not committed, so there is nothing to
+// compare); --check-guides also exits 1 listing every lint that no types/*.md guide names and whose header does
+// not declare `# Scope: kit`, and writes nothing. Any problem means nothing is written.
 func Main(args []string, s cli.Stdio) int {
-	check, root, ok := gen.ParseArgs(tool, DefaultRootEnv, args, s)
+	guides := false
+	rest := make([]string, 0, len(args))
+	for _, a := range args {
+		if a == CheckGuidesFlag {
+			guides = true
+		} else {
+			rest = append(rest, a)
+		}
+	}
+	check, root, ok := gen.ParseArgs(tool, DefaultRootEnv, rest, s)
 	if !ok {
 		return ExitEnv
 	}
 	content, code := Generate(root, s.Err)
 	if code != ExitOK {
 		return code
+	}
+	if guides {
+		return checkGuides(root, s)
 	}
 	if check {
 		fmt.Fprintf(s.Out, "gen-lint-index: the lint headers under %s/toolbelt are valid\n", root)
@@ -129,4 +153,24 @@ func Generate(root string, diag io.Writer) (string, int) {
 		return "", ExitStale
 	}
 	return Render(rows) + "\n", ExitOK
+}
+
+// checkGuides runs the --check-guides gate over the lints of root: exit ExitStale when a lint is named by no guide
+// and is not kit-scope, ExitEnv when root has no types/.
+func checkGuides(root string, s cli.Stdio) int {
+	if _, ok := gen.SubDir(tool, root, "types", s); !ok {
+		return ExitEnv
+	}
+	rows, _, _, err := Scan(root + "/toolbelt")
+	if err != nil {
+		fmt.Fprintf(s.Err, "gen-lint-index: cannot read the guides under %s/types: %v\n", root, err)
+		return ExitEnv
+	}
+	named, kit, bad := CheckGuides(rows, s.Err)
+	if bad > 0 {
+		return ExitStale
+	}
+	fmt.Fprintf(s.Out, "gen-lint-index: every lint under %s/toolbelt is named by a types/*.md guide or declares Scope: kit (%d named, %d kit)\n",
+		root, named, kit)
+	return ExitOK
 }

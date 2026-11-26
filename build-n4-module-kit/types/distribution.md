@@ -179,6 +179,9 @@ alias is present in the keystore before a release build.
 
 `[ev: retro module-hardening-reqexec-closed-deltas Δ3]`
 
+`lint-gradle-userhome.sh` WARNs on a `gradle.properties` that sets `user.home` in `org.gradle.jvmargs` or
+`systemProp`: a running daemon ignores both, so the signing plugin still reads the real `~/.tridium`.
+
 ### Restricted signing — the template, an internal CA, a hardware token `[ev: corpus B1234 §1234.2-1234.5]`
 
 **When:** a jar that must load at `moduleVerificationMode=high`, or that a customer or Tridium requires CA-signed.
