@@ -10,7 +10,9 @@
 # *-ux frontend members (WU4): rc-scan.sh receives --profile <ui_profile> and --legacy from this
 # script's own flags (the caller reads the module's BUILD-STATE envelope; no envelope parsing here);
 # ESLint with toolbelt/eslint.config.mjs on src/rc js (SKIP "no rc js" when only vendor/ext/min);
-# lint-vendor-floor.sh on src/rc/vendor. A missing node/eslint/acorn is one SKIP row naming the
+# lint-vendor-floor.sh on src/rc/vendor, then lint-vendored.sh on src/rc (issue #1145): WARN rows for a vendored
+# file at a version the kit's known-defects table lists, never a verdict change; an rc dir without vendor/ gets
+# no row. A missing node/eslint/acorn is one SKIP row naming the
 # tool (never a silent pass, never an env fault for the whole report).
 # Tool resolution: KIT_ESLINT, else toolbelt/eslint/node_modules/.bin/eslint, else eslint on PATH
 # (only at major >= 9, the flat-config major — an older PATH eslint is a SKIP row naming its version);

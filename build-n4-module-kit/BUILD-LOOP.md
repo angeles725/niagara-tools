@@ -119,9 +119,10 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 Pick the tier from what the change can MOVE in the plant, not from its file count or effort. Record the tier and
 its evidence (which slots control logic reads — staging, commands, modes — and whether the new ones are among them)
 as the FIRST line of the feature doc; a P0 change has no feature doc, so it records the tier and evidence as the
-first line of its commit message body instead. `report-module.sh --feature-doc <file>` prints an ADVISORY row when the
-feature doc has no tier line, no `## Behavior decisions` content or no `## Checks skipped` heading. The tier sets the
-ceremony and a wall-clock budget; the non-skippable check floor (§5) applies to every tier.
+first line of its commit message body instead. `report-module.sh --feature-doc <file>` (`build.sh --feature-doc
+<file>` forwards it) prints an ADVISORY row when the feature doc has no tier line, no `## Behavior decisions`
+content or no `## Checks skipped` heading. The tier sets the ceremony and a wall-clock budget; the
+non-skippable check floor (§5) applies to every tier.
 
 | Tier | What it covers | Budget | Ceremony |
 |---|---|---|---|
@@ -1231,7 +1232,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   template lint `lint-ntpl-manifest-deps` runs once per module root with the installation `build.sh` passes
   (`--niagara-home <niagara_home>`, else `NIAGARA_HOME`), so a stock module a station template lists is no finding and a
   module nobody declares or ships is a FAIL row; with no installation its `ntpl-deps` rows are WARN
-  `[ev: retro ntpl-lint-walk-k-rows Δ4]`; exit 1 = punch-list has FAILs that block hand-off.
+  `[ev: retro ntpl-lint-walk-k-rows Δ4]`; `build.sh --feature-doc <file>` forwards the feature doc, whose
+  missing steps are ADVISORY rows; `lint-vendored` runs on a -ux part's `src/rc` next to `vendor-floor` (WARN rows for
+  a vendored file at a version the kit's defects table lists, no row without `vendor/`; issue #1145);
+  exit 1 = punch-list has FAILs that block hand-off.
   [ev: retro campaign7-report-module] [ev: retro campaign8-report-integration] [ev: retro report-module-orphan-wiring]
   [ev: retro build-sh-auto-chain]
 - **Baseline punch-list (`.report-baseline`):** a module that already carries FAIL rows keeps them in

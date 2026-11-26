@@ -208,7 +208,8 @@ strict happens only on request, in the order of `$KIT/types/structure.md` § Leg
    (`toolbelt/mirror-niagara-home.sh`): a real install exits 10 unless you pass `--install-into-home`, because gradle's
    `:jar` replaces its `modules/` jars. On that stop (or no `niagara_home`) it lists the `~/niagara-mirror-*`
    it finds, those made from the given installation first, with a `try:` line: reuse one, never make a second.
-   Use `--no-preflight`/`--no-report` for quick inner rebuild loops; pass
+   Use `--no-preflight`/`--no-report` for quick inner rebuild loops; pass `--feature-doc <file>` to put the feature
+   doc's ADVISORY rows in the punch-list (report-module also runs `lint-vendored` on a `-ux` part's `src/rc`); pass
    `--ui-profile <ui_profile>` (+ `--legacy`) for a `-ux` module so the punch-list uses its browser floor. Before the
    first build, `scripts/check-client-source.sh` confirms the checkout is the module's declared `source_of_truth`.
    Confirm: bytecode major 52, signed jars — signed by the module's own alias: with `niagaraSigningAlias` configured
@@ -298,7 +299,8 @@ reads the feature document, the console of a session, or the operator's backup. 
 a green gate is never read as proof of it (checked 2026-11-23 by searching those trees for each step's wording;
 the 2026-11-15 audit listed them). `[ev: retro doc-coverage-audit Δ21]` Three of them (the tier line, the Behavior
 decisions heading, the Checks skipped heading) are ADVISORY rows of `report-module.sh --feature-doc <file>`: they
-never change the verdict, and they are only there when the option is passed (issue #1127).
+never change the verdict, and they are only there when the option is passed (issue #1127), to `build.sh` too, which
+forwards it (issue #1145).
 
 | Step | Where it is required | Check today |
 |---|---|---|
