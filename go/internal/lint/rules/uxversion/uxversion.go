@@ -6,6 +6,11 @@
 //	stale-version  FAIL  a reference whose ?v= differs from the group build's defaultModuleVersion
 //	no-version     WARN  a local reference with no ?v= at all (FAIL under --strict)
 //
+// Three shapes are not judged against defaultModuleVersion (subtree.go, jsver.go, report.go):
+// a content-hashed name (main-18a30d6b12.js) gets no row; a sub-tree declared by `<!-- ux-version: <dir>/ = <ver> -->`
+// is judged against <ver> (subtree-version FAIL); a ?v= built in JavaScript ("a.html?v=" + NAME) is resolved from a
+// var, let or const of the same file, else a dynamic-version WARN.
+//
 // A RootRule: it walks the module root's *-ux/src/rc/ itself and reads the group version (the shared
 // vendorversion.SourceVersion reader) from the nearest build.gradle.kts at, under or above the root.
 package uxversion
@@ -15,13 +20,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/htmltext"
-	"github.com/angeles725/niagara-tools/go/internal/jssrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
@@ -78,7 +80,8 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 		// Mutation: UXV-noversion -- comparing against an empty version passes every module that declares none
 		return nil, errors.New(`no defaultModuleVersion("X.Y.Z") found in a build.gradle.kts under or above ` + root)
 	}
-	var out []lint.Finding
+	var srcs []source
+	var rerr error
 	for _, f := range files {
 		b, err := os.ReadFile(f)
 		if err != nil {
@@ -86,44 +89,16 @@ func (rule) CheckRoot(root string) ([]lint.Finding, error) {
 			if errors.As(err, &pe) {
 				err = pe.Err
 			}
-			return out, fmt.Errorf("cannot scan %s: %s", f, err)
+			rerr = fmt.Errorf("cannot scan %s: %s", f, err)
+			break
 		}
-		out = append(out, scan(f, strings.Split(htmltext.Decode(b), "\n"), want)...)
+		srcs = append(srcs, source{f, strings.Split(htmltext.Decode(b), "\n")})
 	}
-	return out, nil
-}
-
-// scan is the findings of one file's lines.
-func scan(path string, lines []string, want string) []lint.Finding {
-	var refs []ref
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".css":
-		refs = cssRefs(lines)
-	case ".js":
-		refs = jsRefs(jssrc.Tokens(lines))
-	default:
-		refs = htmlRefs(lines)
+	subs, out := declarations(srcs)
+	for _, s := range srcs {
+		out = append(out, scan(s.path, s.lines, want, subs)...)
 	}
-	sort.SliceStable(refs, func(i, j int) bool { return refs[i].line < refs[j].line })
-	var out []lint.Finding
-	for _, r := range refs {
-		id, got := verdict(r.text, want)
-		if id == "" {
-			continue
-		}
-		msg := fmt.Sprintf("%s: %s has ?v=%s but defaultModuleVersion is %s (types/frontend-standard.md §11)", id, r.text, got, want)
-		sev := lint.Fail
-		if id == checkMissing {
-			msg = fmt.Sprintf("%s: %s has no ?v=%s suffix (types/dashboard.md: cache-bust every static asset with the module version)", id, r.text, want)
-			sev = lint.Warn
-		}
-		// Mutation: UXV-waiver -- ignoring the allow marker reports the waived reference again
-		if why := waiverAt(lines, r, id); why != "" {
-			msg, sev = fmt.Sprintf("%s: %s allowed: %s", id, r.text, why), lint.Pass
-		}
-		out = append(out, lint.Finding{Path: path, Line: r.line, Severity: sev, Msg: msg})
-	}
-	return out
+	return out, rerr
 }
 
 // scheme starts an absolute URL (http:, https:, data:, blob:, mailto:, javascript:, ...).

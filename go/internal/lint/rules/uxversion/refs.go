@@ -11,9 +11,13 @@ import (
 
 // ref is one reference to a resource, as written, and the 1-based line it is on (tag: the line of the tag it
 // belongs to, which is line itself outside a multi-line tag).
+// A ref with a chk is judged by chk instead of its text (a ?v= built in JavaScript); one with dynamic set is
+// that expression, whose version is not known here.
 type ref struct {
 	text      string
 	line, tag int
+	chk       string
+	dynamic   string
 }
 
 var (
@@ -23,7 +27,7 @@ var (
 	scriptBody = regexp.MustCompile(`(?is)(<script\b[^>]*>)(.*?)(</script\s*>)`)
 	styleBody  = regexp.MustCompile(`(?is)(<style\b[^>]*>)(.*?)(</style\s*>)`)
 	// the tags that load a resource, and their attributes that name it.
-	tagRe  = regexp.MustCompile(`(?is)<(link|script|img|source|video|audio|image|input)\b[^>]*>`)
+	tagRe  = regexp.MustCompile(`(?is)<(link|script|img|source|video|audio|image|input|iframe)\b[^>]*>`)
 	attrRe = regexp.MustCompile(`(?is)\s(href|src|poster|xlink:href)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))`)
 	// url(...) in CSS, in a style attribute and in a JavaScript string; @import "..." in CSS.
 	urlRe    = regexp.MustCompile(`(?i)url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s"']*))\s*\)`)
@@ -35,7 +39,7 @@ var (
 // tagAttrs is the attributes of each tag that name a resource to load (a <a href> is a link, not a load).
 var tagAttrs = map[string]string{
 	"link": " href ", "script": " src ", "img": " src ", "source": " src ", "audio": " src ",
-	"video": " src poster ", "input": " src ", "image": " href xlink:href ",
+	"video": " src poster ", "input": " src ", "iframe": " src ", "image": " href xlink:href ",
 }
 
 // blankAll is s with every byte but a line break replaced by a blank, so offsets and lines stay.

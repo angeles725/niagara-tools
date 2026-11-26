@@ -648,6 +648,10 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   point-forbidden while `canWrite=true`. The commissioning checklist grants both. The 403 is the retro's verifier
   advisory, not reproduced live. `[ev: retro client-e-dashboard-live-check Δ33]`
 - **Cache-bust every static asset with the module version:** every `<link href>`/`<script src>`/image reference in `index.html` carries `?v=<module version>` equal to `defaultModuleVersion` in the group `build.gradle.kts`, bumped on every `-ux` deploy, so a kiosk panel does not keep stale JS/CSS after a `-ux`-only deploy (no station restart; the browser keeps its cache). [INFER: browser caching of servlet static responses not measured on the panel; relates to the `lint-servlet.sh` cache check.] `[ev: retro dashboard-rc-file-split Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
+  Exceptions the lint knows (`lint-ux-version.sh`): a content-hashed name (`dist/main-18a30d6b12.js`) needs no `?v=`;
+  a separately built app (a 3D view in an `<iframe>`) with its own version is declared once with
+  `<!-- ux-version: app3d/ = 1.1 -->`, and its iframe and preloads must then all carry `?v=1.1`. A `?v=` built in
+  JavaScript is checked when its version is a constant of the same file, else WARNed (`dynamic-version`).
 - **A file the station serves (`/module/*`, `/file/*`) is cached 30 days with no ETag:** `FileServlet` answers
   `max-age=2592000` for any module file and any station file ending `png,jpg,gif,svg` (default), and revalidates by
   `Last-Modified` only. Do not overwrite a station image in place: give each revision a new name. A servlet of ours
