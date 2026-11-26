@@ -1000,6 +1000,25 @@ _real_jar() {
     grep -q -- "--expected-signer fromenvfile " "$TMPDIR_T/gate.args"
 }
 
+@test "NG-expected-signer: the module's expected_signer in --build-state is the gate's signer; a configured alias that differs is exit 10 before the build" {
+    # Mutation: NG-expected-signer -- a deploy that ignores the record gates on another signer than build.sh builds with.
+    _gate_env; _fake_gate 0
+    printf '<!-- build-state.v1 -->\nmodule: test\nexpected_signer: recorded\n<!-- /build-state.v1 -->\n' > "$TMPDIR_T/state.md"
+    rm "$TMPDIR_T/fakebin/gradle.properties"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --build-state "$TMPDIR_T/state.md"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[ng-deploy] expected signer: recorded (expected_signer of test in $TMPDIR_T/state.md)"* ]]
+    [[ "$(cat "$TMPDIR_T/gate.args")" == *"--expected-signer recorded "* ]]
+    [[ "$(cat "$TMPDIR_T/gradlew.args")" == *"-PniagaraSigningAlias=recorded"* ]]
+
+    rm -f "$TMPDIR_T/gradlew.calls.log"
+    printf 'niagaraSigningAlias=testsigner\n' > "$TMPDIR_T/fakebin/gradle.properties"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --build-state "$TMPDIR_T/state.md"
+    [ "$status" -eq 10 ]
+    [[ "$output" == *"niagaraSigningAlias=testsigner is configured but the build-state envelope of test records expected_signer: recorded"* ]]
+    [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+}
+
 # ===========================================================================
 # <NIAGARA_HOME>/modules: gradle's :jar step installs the built jars there before any check of the deploy runs.
 # ===========================================================================

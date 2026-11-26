@@ -90,6 +90,11 @@ func (d *deploy) parseArgs(args []string) int {
 				return code
 			}
 			args = args[1:]
+		case flag == buildStateFlag:
+			if code := d.buildStateFile(args[1:]); code != proceed {
+				return code
+			}
+			args = args[1:]
 		case flag == pluginFlag:
 			if code := d.pluginVersion(args[1:]); code != proceed {
 				return code
