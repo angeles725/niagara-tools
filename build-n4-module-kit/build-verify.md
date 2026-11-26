@@ -202,6 +202,13 @@ Then `READY TO LOAD: <MOD> <version> for Niagara <x> (sha256 <12>)` when no row 
   Workbench private key export writes) is a FAIL: OpenSSL 3 cannot read it, convert it with Java, never with OpenSSL.
   Pinned by `go/internal/signingdoctor/command_test.go`. `[ev: retro mcpn4-history-batch-tools Δ5]`
   `[ev: code go/internal/signingdoctor/checks.go]`
+- **Do not rely on memory for which signing certificates exist:** `toolbelt/signing-inventory.sh [--home <niagara_home>]...
+  [--profile <profile.xml>]... [--module <module-root>]` lists every signing profile and store it can read (alias, subject,
+  issuer, days left, CA flag, code-signing usage; a store it cannot open is listed as locked by path, never with a secret),
+  each `--home`'s Niagara version, and with `--module` the recorded `expected_signer`, each built jar's signer and the
+  Niagara version it was compiled for, and the recorded `niagara_target`: FAIL when the recorded alias is in no listed
+  store, is expired, or differs from a built jar's signer, or a jar was compiled for another major.minor than the target.
+  `[ev: issue #1160]`
 - **A jar signed with the development key passes the default `signed` check — name the signer the module must carry:**
   `verify-module.sh --expected-signer ALIAS` FAILs the `signed` row unless the jar's complete signatures (an `.SF` with
   its block file) are exactly that one signer: another alias, a second signer next to the expected one, or no signature.

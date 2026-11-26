@@ -26,6 +26,13 @@ func CheckCert(data []byte, now time.Time) []Row {
 	if err != nil {
 		return []Row{{"FAIL", "cert-parse", "not a certificate (PEM or DER): " + err.Error()}}
 	}
+	return CheckX509(cert, now)
+}
+
+// CheckX509 checks a parsed certificate: its subject (cert-parse), that it is not a CA, that it carries the
+// code-signing usage and that it is in date at now. signing-inventory checks the certificates of a keystore
+// with it.
+func CheckX509(cert *x509.Certificate, now time.Time) []Row {
 	rows := []Row{{"PASS", "cert-parse", "subject " + cert.Subject.String()}}
 	if cert.BasicConstraintsValid && cert.IsCA {
 		rows = append(rows, Row{"FAIL", "cert-ca", "the certificate is a CA (CA:TRUE): export the code-signing certificate " +

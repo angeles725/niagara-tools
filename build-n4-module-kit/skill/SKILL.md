@@ -219,6 +219,14 @@ strict happens only on request, in the order of `$KIT/types/structure.md` § Leg
    and refuses (exit 10) a configured alias that differs. Its `niagara_target: <version>` and `plugin_version:
    <version>` (in `<module-root>/BUILD-STATE.md`) tie the module to its station: `build.sh` refuses a
    `niagara_home` or `--target-version` of another major.minor, and `ng-deploy.sh` a station of one (exit 55).
+   Lost track of which signing certificates exist, where each lives, when each expires or which Niagara version a
+   built jar targets? `toolbelt/signing-inventory.sh` (next to `signing-doctor.sh`) is the read-only inventory:
+   `[--home <niagara_home>]... [--profile <profile.xml>]... [--module <root>]`. Per profile and keystore alias it
+   prints the subject, issuer, days left (WARN under 60, FAIL expired), code-signing or CA, and the file; a store it
+   cannot open is `locked`, path only; it never prints a password or key. With `--module` it adds the recorded
+   `expected_signer` and `niagara_target`, each built jar's signer and compiled-for Niagara version, and FAILs when
+   the recorded alias is in no listed store, a jar carries another signer, or a jar was compiled for another
+   major.minor than the recorded target.
    On WSL, sign with the module's alias through the explicit profile: `--gradle-prop niagaraSigningAlias=<alias>
    --gradle-prop niagaraSigningProfile=$HOME/.config/n4-signing/<alias>.signing.xml`. Never report signing as
    unavailable (or as needing Windows) before running it: the only valid "unavailable" is a missing profile file, and
