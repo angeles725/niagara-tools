@@ -18,7 +18,7 @@ const msgSetSlotMissing = "slot %s not found on %s. The station leaves out a fro
 const (
 	msgConfigAttribute = "refusing to set templateConfig slot %s: its ConfigBinding targets %s of %s, so the " +
 		"station would rename that component; rename it with n4_rename_component instead"
-	msgConfigTarget = "refusing: the ConfigBinding target %s is not a handle found in the template instance %s " +
+	msgConfigTarget = "refusing: the ConfigBinding target %s is not a handle or slot ORD found in the template instance %s " +
 		"(read %d levels down), so the slot the station would write cannot be placed in the write scope"
 	msgConfigScope = "refusing: the station propagates this templateConfig slot to %s slot %s, which is outside " +
 		"the write scope: %s"

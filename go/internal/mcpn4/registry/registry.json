@@ -2473,6 +2473,65 @@
    "needs_session": false
   },
   {
+   "name": "n4_apply",
+   "description": "Apply a golden deployed template instance to a table of rows (the bulk-sheet columns): for each row, copy the instance under parent_ord with the row's name and set the row's configs on the copy's templateConfig, all in one batch under one confirmation token (1 to 30 rows). golden is the slot name, under parent_ord, of a deployed template instance: a component whose child templateConfig is a template:TemplateConfig with ConfigBindings. A deployed instance's ConfigBinding names its target by handle (targetOrd h:758), and a plain copy keeps that value, so a config set on the copy would change the golden; the plan therefore rewrites every ConfigBinding targetOrd in each row's copy to the absolute slot ORD of the matching component inside that copy (station:|slot:<parent>/<row>/<path>), so no binding of a copy points at the golden. The copy is n4_copy_component's: same configured body, runtime slots left out by flags, 6 levels deep, same licence check; links are not copied. The configs are explicit set ops after the adds, typed from the golden's config slot (baja:Double, Boolean, String, Integer, Format, RelTime, or any other simple as its encoded string; a Status or struct slot is refused), because the station propagates a templateConfig slot to its binding's target only outside the decoding of an add. The plan is refused when the golden is missing or has no templateConfig of type template:TemplateConfig, a row name is taken or repeated, rows has 0 or more than 30 entries, a config names no config slot (a slot some ConfigBinding names as sourceSlot), a value does not fit the slot type, a configured slot is bound to #Name or #DisplayName (rename with n4_rename_component), or a binding's targetOrd is not a handle found inside the golden. The inverse removes every copy. The read-back checks per row that the copy exists, every binding holds its planned slot ORD, each config slot holds the value and each binding target (loaded by its slot ORD) holds it in its targetSlot, and that the golden's own bound targets are unchanged (golden_unchanged); the verdict is a mismatch when any of those fails. A later rename of a copy's components breaks its bindings. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "parent_ord": {
+      "type": "string",
+      "description": "ORD of the component that holds the golden instance and receives the copies"
+     },
+     "golden": {
+      "type": "string",
+      "description": "Slot name under parent_ord of the golden deployed template instance (its child templateConfig is a template:TemplateConfig)"
+     },
+     "rows": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {
+       "type": "object",
+       "properties": {
+        "name": {
+         "type": "string",
+         "description": "Plain slot name of this row's copy"
+        },
+        "configs": {
+         "type": "object",
+         "description": "Config slot of the golden's templateConfig -> value, set on the copy (e.g. {\"setpoint\": 21.5})"
+        }
+       },
+       "required": [
+        "name"
+       ]
+      },
+      "description": "One entry per copy, the bulk-sheet row: its name and the configs it sets"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "parent_ord",
+     "golden",
+     "rows"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_replicate_points",
    "description": "Replicate M configured points of one parent (e.g. the points of a Modbus device) onto N target parents (the points of other devices): N x M adds in one batch under one confirmation token, at most 200 copies. Each copy is what n4_copy_component would add (type, plain slots and child components up to 6 levels deep, address and dataType included; runtime slots and links left out, listed in the notes). Per target, copies[] gives a point's copy its own name and/or proxyExt/dataAddress (applied in the same add). Every add spends one write of --max-writes: the plan notes the count and a replication larger than write_budget.remaining is refused before any token is issued (n4_save_station stays outside the budget). A child that already exists under a target with a copy's name is refused. The plan notes copies of writable Modbus points that would share a register on one device (the station resets the later one to Hex:-1) and every writable point with a non-null fallback (each copy commands its device with it on first communication). The read-back compares every copy's configured subtree with the plan; the inverse removes every copy. The plan is refused when the copies would take the station's devices or proxy points over the licence's tridium:globalCapacity device.limit or point.limit: they would sit in fault at start (n4_license_info shows the usage; a licence that cannot be read, or that sets no limit, is not checked). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {
