@@ -55,10 +55,10 @@ func (idx *index) flagged() ([]vacuous, error) {
 	return out, nil
 }
 
-// nameAt is the index of the name token of method d, searched back from its body to the class body's start
-// (from), -1 when it is not found.
+// nameAt is the index of the name token of method d, searched back from its body to the class body's first token
+// (from, included: an enum constant with a body or a constructor can be the first member), -1 when not found.
 func nameAt(toks []javasrc.Token, from int, d javasrc.Decl) int {
-	for i := d.Body[0] - 1; i > from; i-- {
+	for i := d.Body[0] - 1; i >= from; i-- {
 		if t := toks[i]; t.Kind == javasrc.TokIdent && t.Text == d.Name && t.Line == d.Line && toks[i+1].Text == "(" {
 			return i
 		}

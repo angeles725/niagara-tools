@@ -57,6 +57,11 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
   exit 0 = all clear. Pass **`--plugin-version <v>`** (or export `NIAGARA_PLUGIN_VERSION`) when the build overrides the
   plugin: plugin-pin then checks the version gradle will actually use instead of re-deriving a `settings.gradle.kts`
   default that may have drifted from this `niagara_home` (`build.sh` forwards its own `--plugin-version` automatically).
+- **`build.sh` also asks for node + acorn before gradle when a `<mod>-ux/src/rc/vendor` holds a `.js`/`.mjs`/`.cjs`
+  file** (what report-module's vendor-floor check parses them with): without them it is exit 10 naming the command,
+  `npm install --prefix <toolbelt>/eslint` (or `KIT_ACORN=<acorn package dir>`, `KIT_NODE=<node binary>`), instead of
+  a `vendor-floor` SKIP after the whole build. The kit never installs it for you; `--no-preflight` skips the check.
+  `[ev: issue 1116]`
   `[ev: retro continuous-fan-post-defrost-delay Δ1]` For a project you did not generate (course zip, vendor sample) add
   **`--sample`**: the `sample-*` rows check the retarget (`niagara_home` present + same version, no `<…>` user-home
   placeholder, root signing block, no shipped `build/`). `[ev: retro n4-course-signed-jars-gate-fix Δ6]`
@@ -528,8 +533,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   exactly which OTHER checks it skipped and why — never left implicit in the commit history.
   `[ev: retro change-tier-time-budgets Δ3]` `[ev: retro panccadia-commissioning-lessons Δ12]`
   The floor is enforced, not only stated: `report-module.sh` reads a SKIPped floor check (verify-module with no built
-  jar, schema-risk with no `<artifact>/.deploy-baseline`) as verdict INCOMPLETE, exit 4, never CLEAN, and a run that
-  also has a FAIL reads `ISSUES (+INCOMPLETE)` (exit 1), so clearing the FAILs never reveals the skipped floor late
+  jar, schema-risk with no `<artifact>/.deploy-baseline`) as verdict `INCOMPLETE (module)`, exit 4, never CLEAN, and
+  a run that also has a FAIL reads `ISSUES (+INCOMPLETE (module))` (exit 1), so clearing the FAILs never reveals the
+  skipped floor late. A member that could not run (an ERROR row: a missing tool) reads `INCOMPLETE (environment)`,
+  both causes are listed together when both hold, and the exit codes do not change `[ev: issue 1116]`
   `[ev: retro r10-client-gate-retro Δ4]` — `build.sh` maps it to exit 53
   (`build.sh --schema-baseline-ref <deployed-ref>` extracts the baseline for the run, build-verify.md § Schema-risk
   deploy workflow); `--first-deploy` declares a never-deployed module (schema-risk N/A), `--lint-only` a punch-list run

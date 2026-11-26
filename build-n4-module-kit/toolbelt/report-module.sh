@@ -81,12 +81,18 @@
 # niagara_home); without it that member reads NIAGARA_HOME from the environment, and with neither its ntpl-deps
 # rows are WARN. [ev: retro ntpl-lint-walk-k-rows Δ4]
 # Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR|INFO  <check>  <detail>   (ERROR = member env fault, not counted; exit 3; INFO = the modularity row, not counted)
-# Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES|INCOMPLETE|ISSUES (+INCOMPLETE)
+# Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  <verdict>
+# Verdict: CLEAN | ISSUES | INCOMPLETE (<cause>) | ISSUES (+INCOMPLETE (<cause>)). <cause> says what left the run
+# incomplete, so a skipped module check never hides among host faults: `environment` = a member that could not run
+# (an ERROR row, exit 3: a missing tool, node, acorn, a JDK); `module` = a skipped floor check (below); both are
+# listed when both hold, `INCOMPLETE (environment, module)`. The cause is text only: the exit codes do not change.
+# [ev: issue 1116]
 # Floor (BUILD-LOOP §5): verify-module (needs a built jar) and schema-risk (needs <artifact>/.deploy-baseline) never
 # read CLEAN when they SKIP — the verdict is INCOMPLETE, exit 4. --first-deploy: the module was never deployed, so
 # schema-risk has no baseline to diff (N/A, not a floor gap). --lint-only: a punch-list run that is not the floor
 # (no jar expected); floor SKIPs stay rows and are named on stderr. [ev: retro change-tier-time-budgets Δ3]
-# A member env fault (an ERROR row, exit 3) with no FAIL reads INCOMPLETE, never CLEAN (kit-backlog run-3 fix); the
+# A member env fault (an ERROR row, exit 3) with no FAIL reads INCOMPLETE (environment), never CLEAN (kit-backlog
+# run-3 fix); the
 # row carries the member's own first reason line (the missing tool), and the other members' rows stay a usable result.
 # FAIL baseline: <module-root>/.report-baseline (committed with the module) lists the FAIL rows the module already
 # had, one key per line: `<artifact>  <check>  <detail>`, the row without its status; in <detail> a path is cut to

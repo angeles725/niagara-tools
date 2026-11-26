@@ -62,6 +62,7 @@ var steps = []func(*build) int{
 	(*build).pickMirrorPlugin,
 	(*build).preflight,
 	(*build).requireSigningBlock,
+	(*build).acornPreflight,
 	(*build).warnPluginNotInM2,
 	(*build).selectProfiles,
 	(*build).configureGradle,

@@ -70,19 +70,22 @@ func (r *report) envFault(label, check, detail string) {
 // A FAIL with a skipped floor check reads ISSUES (+INCOMPLETE): the bash printed ISSUES alone, hiding that the
 // floor was not run (retro r10-client-gate-retro Δ4). A member env fault with no FAIL reads INCOMPLETE, never
 // CLEAN: the member did not run, so the run cannot vouch for it (the bash printed CLEAN there; the exit stays 3).
+// INCOMPLETE names its cause, "(environment)" for a member that could not run and "(module)" for a skipped floor
+// check, both listed when both hold (verdict.go, #1116); the exit codes are unchanged.
 // With a baseline file the held FAIL rows are printed first, hadFail reads the NEW ones alone and the FAIL count
 // (NEW and BASE together) is followed by its split.
 func (r *report) summary(artifacts int) int {
 	r.failGroups()
 	verdict := "CLEAN"
-	incomplete := r.floorSkip && !r.o.lintOnly
+	causes := r.incompleteCauses()
+	floorIncomplete := r.floorSkip && !r.o.lintOnly
 	switch {
-	case r.hadFail && incomplete:
-		verdict = "ISSUES (+INCOMPLETE)"
+	case r.hadFail && floorIncomplete:
+		verdict = "ISSUES (+" + incomplete(causes) + ")"
 	case r.hadFail:
 		verdict = "ISSUES"
-	case incomplete || r.hadEnv:
-		verdict = "INCOMPLETE"
+	case len(causes) > 0:
+		verdict = incomplete(causes)
 	}
 	if r.o.lintOnly && r.floorSkip {
 		fmt.Fprint(r.errw, "report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict\n")
@@ -98,7 +101,7 @@ func (r *report) summary(artifacts int) int {
 		return ExitEnv
 	case r.hadFail:
 		return ExitFail
-	case verdict == "INCOMPLETE":
+	case len(causes) > 0: // the floor SKIPped (an env fault returned above)
 		return ExitIncomplete
 	}
 	return ExitClean
