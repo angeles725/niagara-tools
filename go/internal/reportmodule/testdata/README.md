@@ -118,3 +118,12 @@ The report ran `lint-vendor-floor` only when `src/rc/vendor` resolved to a direc
 that leads nowhere got no row and the report read `CLEAN`, while the lint itself exits 3 on it. The lint now
 judges it: `truth-vf-dangling-vendor` pins the `ERROR  vendor-floor  env fault (exit 3)` row, and that an artifact
 with no `vendor/`, or with a regular file of that name, still gets no `vendor-floor` row. No recorded case moved.
+
+### INCOMPLETE names its cause (issue 1116)
+
+The summary verdict `INCOMPLETE` now reads `INCOMPLETE (environment)` (a member env fault, an `ERROR` row),
+`INCOMPLETE (module)` (a skipped floor check) or `INCOMPLETE (environment, module)`, and `ISSUES (+INCOMPLETE)` reads
+`ISSUES (+INCOMPLETE (module))` (or with `environment, module`). Re-recorded with `go test ./internal/reportmodule
+-update`; the 19 cases that moved each changed their summary line only (16 `INCOMPLETE` and 3 `ISSUES
+(+INCOMPLETE)`: 11 environment, 4 module, 1 both, and ISSUES 2 module, 1 both), exits unchanged.
+`verdict_cause_test.go` pins each cause and that the exit codes did not move.

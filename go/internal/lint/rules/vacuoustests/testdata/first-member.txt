@@ -1,0 +1,22 @@
+-- args --
+@DIR@/ModuleA
+-- want --
+exit 1
+FAIL  no-assertion  @DIR@/ModuleA/ModuleA-rt/srcTest/com/x/test/BModeTest.java:14  BModeTest.runsOnly: no assertion (assert*, verify*, expect*, fail, an asserting helper, expected exceptions), so it cannot fail
+-- stderr --
+-- ModuleA/ModuleA-rt/srcTest/com/x/test/BModeTest.java --
+package com.x.test;
+import org.testng.annotations.Test;
+public class BModeTest {
+  enum Mode {
+    WIDE(1) { int width() { return 2; } },
+    NARROW(0);
+    Mode(int n) { }
+    int width() { return 1; }
+  }
+  static class Box {
+    Box(int n) { }
+  }
+  @Test
+  public void runsOnly() { new Box(Mode.WIDE.width()); }
+}

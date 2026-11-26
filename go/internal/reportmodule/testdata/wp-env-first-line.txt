@@ -51,7 +51,7 @@ A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run); create it fr
 (module)  PASS  lint-dashboard-write-save  clean
 (module)  PASS  lint-ntpl-manifest-deps  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 9 PASS · 0 FAIL · 0 WARN · 37 SKIP · 0 ADVISORY  ->  INCOMPLETE
+report-module: 1 artifact · 9 PASS · 0 FAIL · 0 WARN · 37 SKIP · 0 ADVISORY  ->  INCOMPLETE (environment)
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --

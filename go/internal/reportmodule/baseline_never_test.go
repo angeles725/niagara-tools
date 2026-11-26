@@ -43,7 +43,7 @@ func TestBaselineKeepsTheIncompleteVerdict(t *testing.T) {
 	root := tree(t, "A-rt/src/") // no built jar, no .deploy-baseline
 	path := writeBaselineFile(t, root, keyDelays)
 	code, out, _ := baselineRun(t, map[string]string{"lint-delays": stubDelays}, root)
-	want := "report-module: 1 artifact · 20 PASS · 1 FAIL (0 new, 1 base in " + path + ") · 0 WARN · 4 SKIP · 0 ADVISORY  ->  INCOMPLETE"
+	want := "report-module: 1 artifact · 20 PASS · 1 FAIL (0 new, 1 base in " + path + ") · 0 WARN · 4 SKIP · 0 ADVISORY  ->  INCOMPLETE (module)"
 	if code != ExitIncomplete || summaryLine(out) != want {
 		t.Errorf("exit %d, %q; want exit 4 and %q", code, summaryLine(out), want)
 	}

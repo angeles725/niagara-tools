@@ -17,13 +17,13 @@ func TestSummaryVerdictAndExit(t *testing.T) {
 		wantVerdict, wantPlural, wantNote string
 	}{
 		{"clean", false, false, false, false, 1, ExitClean, "CLEAN", "1 artifact ·", ""},
-		{"floor skip", false, false, true, false, 2, ExitIncomplete, "INCOMPLETE", "2 artifacts ·", ""},
+		{"floor skip", false, false, true, false, 2, ExitIncomplete, "INCOMPLETE (module)", "2 artifacts ·", ""},
 		{"lint-only floor", false, false, true, true, 1, ExitClean, "CLEAN", "1 artifact ·", "--lint-only"},
-		{"fail and floor skip show both", true, false, true, false, 1, ExitFail, "ISSUES (+INCOMPLETE)", "", ""},
+		{"fail and floor skip show both", true, false, true, false, 1, ExitFail, "ISSUES (+INCOMPLETE (module))", "", ""},
 		{"fail with a --lint-only floor skip", true, false, true, true, 1, ExitFail, "ISSUES", "", "--lint-only"},
 		{"env beats fail, verdict text stays", true, true, false, false, 1, ExitEnv, "ISSUES", "", ""},
-		{"env alone reads INCOMPLETE, never CLEAN", false, true, false, false, 1, ExitEnv, "INCOMPLETE", "", ""},
-		{"env under --lint-only reads INCOMPLETE", false, true, false, true, 1, ExitEnv, "INCOMPLETE", "", ""},
+		{"env alone reads INCOMPLETE, never CLEAN", false, true, false, false, 1, ExitEnv, "INCOMPLETE (environment)", "", ""},
+		{"env under --lint-only reads INCOMPLETE", false, true, false, true, 1, ExitEnv, "INCOMPLETE (environment)", "", ""},
 	}
 	for _, tt := range tests {
 		var out, errw bytes.Buffer

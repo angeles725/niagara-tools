@@ -12,4 +12,4 @@ import (
 // the one-level helper depth, a @BeforeMethod and other non-@Test methods not counted, a named allowance (PASS row
 // with its reason), a stale allowance (FAIL), --allow without a reason or a Class.method name, an unparseable
 // source and an empty root (exit 3), and the usage line.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 15) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 16) }

@@ -28,7 +28,8 @@
 #   --werror        opt in: every JavaCompile runs with -Xlint:all -Werror (gradle --init-script lib/werror.init.gradle),
 #                   as vendors that build with -Werror do; a warning fails the build (exit 30, remedy printed: fix it,
 #                   or a scoped @SuppressWarnings). Off by default. [ev: retro course-coverage Δ22]
-#   --no-preflight  skip environment preflight (useful for inner rebuild loops when env is known-good)
+#   --no-preflight  skip environment preflight (useful for inner rebuild loops when env is known-good), the acorn
+#                   preflight below included
 #   --no-report     skip report-module punch-list at the end (useful for quick inner rebuild loops)
 #   --first-deploy  forwarded to report-module.sh: a never-deployed module has no baseline for schema-risk
 #                   (otherwise a missing <artifact>/.deploy-baseline is INCOMPLETE, exit 53; its schema-risk SKIP row
@@ -125,6 +126,12 @@
 #   [ev: retro deploy-target-version Δ2]
 #   An INCOMPLETE report ends with a pointer to the schema-risk SKIP row only when an artifact lacks .deploy-baseline;
 #   the INCOMPLETE line names --schema-baseline-ref <deployed-ref> as the way to supply it.
+# Acorn preflight (exit 10, #1116): when a <mod>-ux/src/rc/vendor holds a .js/.mjs/.cjs file, report-module's
+#   vendor-floor check parses it with node + acorn. Right after the preflight, before gradle, node (KIT_NODE, else
+#   on PATH) and acorn (require() of KIT_ACORN, else toolbelt/eslint/node_modules/acorn, else "acorn") must resolve;
+#   if not the build ends exit 10 printing the one command (`npm install --prefix <toolbelt>/eslint`, or set
+#   KIT_ACORN / KIT_NODE), instead of a vendor-floor SKIP at the end of a finished build. Nothing is installed.
+#   A module with no vendored script needs neither.
 # Post-jar copy lock (exit 32): the plugin's last step copies the jar into <niagara_home>/modules; a Windows
 #   process (Workbench, station) holding the old jar open on /mnt/c makes it fail with FileAlreadyExistsException.
 #   build.sh names the build/libs jar(s) rebuilt THIS run as the artifact of record (a stale one is flagged
