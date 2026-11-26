@@ -419,6 +419,11 @@ artifact's own `src/rc` js (vendor/, ext/, `*.min.js` excluded) and relays its r
 warning → WARN). This covers the function-length and dead-local rule; a dead TOP-LEVEL symbol and a
 `typeof` guard on an own symbol are not mechanized (review). Prettier is optional.
 `[ev: retro dashboard-frontend-standard Δ10]` `[ev: retro dashboard-frontend-standard Δ4]`
+ES modules: a file whose only script-mode error is "'import' and 'export' may appear only with
+'sourceType: module'" (loaded with `<script type="module">`) is linted again with
+`toolbelt/eslint.module.config.mjs` (same rules, `sourceType: "module"`), so it gets real rows instead of a
+parse FAIL; any other parse error stays a FAIL. Content-hashed bundle output (`name-<8+ hex>.js`) is not linted
+(build output; `lint-vendor-floor.sh` judges its syntax). `[ev: issue #1157]`
 
 Vendored libraries: `toolbelt/lint-vendor-floor.sh` (§ Vendored libraries), also run by
 `report-module.sh` on `src/rc/vendor`; `toolbelt/lint-vendored.sh <rc-dir>` reads `rc/vendor/VENDORED.md` (run it
