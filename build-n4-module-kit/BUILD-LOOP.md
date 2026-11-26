@@ -119,8 +119,9 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 Pick the tier from what the change can MOVE in the plant, not from its file count or effort. Record the tier and
 its evidence (which slots control logic reads — staging, commands, modes — and whether the new ones are among them)
 as the FIRST line of the feature doc; a P0 change has no feature doc, so it records the tier and evidence as the
-first line of its commit message body instead. The tier sets the ceremony and a wall-clock budget; the
-non-skippable check floor (§5) applies to every tier.
+first line of its commit message body instead. `report-module.sh --feature-doc <file>` prints an ADVISORY row when the
+feature doc has no tier line, no `## Behavior decisions` content or no `## Checks skipped` heading. The tier sets the
+ceremony and a wall-clock budget; the non-skippable check floor (§5) applies to every tier.
 
 | Tier | What it covers | Budget | Ceremony |
 |---|---|---|---|

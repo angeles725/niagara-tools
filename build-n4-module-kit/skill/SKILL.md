@@ -29,6 +29,9 @@ full-stack systems engineer), each stance bound to a kit mechanism:
 
 ## Resolve the kit (do this first)
 
+Before any command with a `toolbelt/` path (a kit script run directly), load this skill: a toolbelt run without it
+skips the steps below. `[ev: issue 1127]`
+
 `KIT` = the directory holding `METHODOLOGY.md`, `BUILD-LOOP.md`, `types/`, `toolbelt/`. Resolve it with the fail-closed
 resolver, never by hand:
 `$HOME/modulos_niagara_n4/niagara-tools-worktrees/kit-main/scripts/kit-resolve.sh` (no kit-main yet: the same
@@ -288,17 +291,19 @@ by hand after `ps -p <pid>` (`BUILD-LOOP.md` § 6). `[ev: retro build-kit-bench-
 
 ## Steps no tool checks (the reviewer does)
 
-Eight steps of this skill are judged by the reviewer, not by a script: nothing under `toolbelt/`, `scripts/` or `go/`
+Eight steps of this skill are judged by the reviewer, not by a gate: nothing under `toolbelt/`, `scripts/` or `go/`
 reads the feature document, the console of a session, or the operator's backup. Each is marked here as UNCHECKED so
 a green gate is never read as proof of it (checked 2026-11-23 by searching those trees for each step's wording;
-the 2026-11-15 audit listed them). `[ev: retro doc-coverage-audit Δ21]`
+the 2026-11-15 audit listed them). `[ev: retro doc-coverage-audit Δ21]` Three of them (the tier line, the Behavior
+decisions heading, the Checks skipped heading) are ADVISORY rows of `report-module.sh --feature-doc <file>`: they
+never change the verdict, and they are only there when the option is passed (issue #1127).
 
 | Step | Where it is required | Check today |
 |---|---|---|
-| Behavior decisions table, every unstated behavior answered before the first write | Hard Rules, `BUILD-LOOP.md` § 1 | UNCHECKED: the `## Behavior decisions` table of the feature document is read by the reviewer |
+| Behavior decisions table, every unstated behavior answered before the first write | Hard Rules, `BUILD-LOOP.md` § 1 | ADVISORY row of `report-module.sh --feature-doc` if heading or content is missing; the reviewer reads the answers |
 | Design-shard checklist, or its waiver with a reason | step 1c, `ORCHESTRATION.md` § 3.b | UNCHECKED: the reviewer reads the design shard or the waiver |
-| `## Checks skipped` section for every check not run | `BUILD-LOOP.md` § 5, `METHODOLOGY.md` | UNCHECKED: `report-module.sh` reads a SKIPped floor check as INCOMPLETE (`BUILD-LOOP.md` § 5), never the section itself |
-| Priority tier P0-P3 recorded before the first write | Hard Rules, `BUILD-LOOP.md` § 0.c | UNCHECKED: the first line of the feature document, or of the commit body for a P0, is read by the reviewer |
+| `## Checks skipped` section for every check not run | `BUILD-LOOP.md` § 5, `METHODOLOGY.md` | ADVISORY row of `report-module.sh --feature-doc` if the heading is missing; a SKIPped floor check reads INCOMPLETE |
+| Priority tier P0-P3 recorded before the first write | Hard Rules, `BUILD-LOOP.md` § 0.c | ADVISORY row of `report-module.sh --feature-doc` if no tier line is found; the reviewer reads a P0 commit body |
 | Preview before compiling (UI types) | Hard Rules, step 3 | UNCHECKED: `dashboard-preview` is an external tool, no gate runs it |
 | `cnav` / `corpus-index.md` search before deriving anything | Hard Rules, step 2 | UNCHECKED: the feature document names the blocks read; nothing verifies the search ran |
 | Console triage after a reload | step 6 | UNCHECKED: `triage-console.sh` exists (`go/internal/triageconsole`) but no gate requires that it ran |

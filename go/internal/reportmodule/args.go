@@ -1,7 +1,7 @@
 package reportmodule
 
 // usage is the usage text of report-module (stderr, exit 2): the usage line, then the baseline paragraph.
-const usage = "usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--niagara-home <dir>] [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline]\n" + baselineUsage + readyUsage
+const usage = "usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--niagara-home <dir>] [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline] [--feature-doc <file>]\n" + baselineUsage + readyUsage
 
 // options are the parsed arguments. An empty value is the same as an absent flag (the bash tests were
 // `[ -n "$X" ]`), except for --profile, whose value must be one of the four profiles.
@@ -12,6 +12,7 @@ type options struct {
 	writeBaseline, noBaseline                           bool // the FAIL baseline (baseline.go)
 	ready, jsonOut                                      bool // --ready: the ready-to-load report (ready.go)
 	expectNiagara, expectSigner                         string
+	featureDoc                                          string // the feature document read for ADVISORY rows (feature_doc.go)
 }
 
 // profiles are the --profile values rc-scan accepts.
@@ -24,7 +25,7 @@ func parseArgs(args []string) (o options, ok bool) {
 	values := map[string]*string{
 		"--target-version": &o.targetVersion, "--console-dir": &o.consoleDir,
 		"--profile": &o.profile, "--wiring-map": &o.wiringMap, "--niagara-home": &o.niagaraHome,
-		"--expect-niagara": &o.expectNiagara, "--expect-signer": &o.expectSigner,
+		"--expect-niagara": &o.expectNiagara, "--expect-signer": &o.expectSigner, "--feature-doc": &o.featureDoc,
 	}
 	switches := map[string]*bool{"--legacy": &o.legacy, "--first-deploy": &o.firstDeploy, "--lint-only": &o.lintOnly,
 		"--write-baseline": &o.writeBaseline, "--no-baseline": &o.noBaseline, "--ready": &o.ready, "--json": &o.jsonOut}
@@ -74,7 +75,7 @@ func readyConflict(o options) string {
 		name string
 	}{{o.lintOnly, "--lint-only"}, {o.writeBaseline, "--write-baseline"}, {o.noBaseline, "--no-baseline"},
 		{o.consoleDir != "", "--console-dir"}, {o.profile != "", "--profile"}, {o.legacy, "--legacy"},
-		{o.wiringMap != "", "--wiring-map"}} {
+		{o.wiringMap != "", "--wiring-map"}, {o.featureDoc != "", "--feature-doc"}} {
 		if f.set {
 			return "report-module: " + f.name + " is not a --ready option"
 		}

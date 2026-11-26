@@ -71,7 +71,7 @@
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--niagara-home <dir>]
-#                         [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline]
+#                         [--first-deploy] [--lint-only] [--write-baseline] [--no-baseline] [--feature-doc <file>]
 #        report-module.sh <module-root> --ready [--niagara-home <dir>] [--expect-niagara <ver>] [--expect-signer <alias>]
 #                         [--target-version x.y] [--first-deploy] [--json]
 # <module-root>: the MODULE directory, <gradle root>/<MOD>, the one holding <MOD>-rt/ -ux/ -wb/ (build.sh's <module-root> is the
@@ -111,6 +111,13 @@
 # niagara-home, signer, verify-module, schema-risk, sha256 and mirror rows, then READY TO LOAD with the post-load
 # read-back, or NOT READY with the failing rows (--expect-niagara, --expect-signer, --json; build-verify.md
 # § Ready to load). Exit 0 ready, 1 not ready, 3 env. [ev: retro ready-to-load-p4 Δ1]
+# --feature-doc <file> (issue #1127): reads the feature document of the change and prints one `(module)  ADVISORY
+# feature-doc` row per skill step it lacks, in this order: a tier line (the word tier then P0-P3, or a line that
+# starts with the tier, before the first `## ` heading; BUILD-LOOP §0.c), a `## Behavior decisions` heading with
+# content (a table row with a cell besides its id filled, or "none"; §1) and a `## Checks skipped` heading (its text
+# may be "none"; §5); a file that cannot be read is one row saying so. The rows are counted as ADVISORY and never
+# change the exit code or the verdict. Without the option nothing is read: no candidate document is guessed, and
+# --ready refuses it. skill/SKILL.md § Steps no tool checks lists what the rows do not cover.
 # Mutation: RM-baseline-floor -- dropping `floor: true` of a floor member lets a baseline hide a verify-module or schema-risk FAIL
 # Mutation: RM-baseline-crash -- dropping the crashRow case lets a baseline hide a member that crashed without a FAIL row
 # Mutation: RM-floor -- dropping the floor-SKIP verdict reads a run that checked neither floor member as CLEAN
