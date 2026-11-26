@@ -792,6 +792,15 @@ differ. Install the skill into the harness first (`scripts/install-skill.sh --sk
 }
 ```
 
+Measured in gentle-shell 5.0.0 (pi 1.6) with three stations registered this way and code mode not
+enabled: every `n4_*` tool is offered directly as `mcp__mcp_n4_<station>__n4_*`, and
+`n4_describe_session` and a dry run (`n4_create_component`, which returns a `confirmation_token`) both
+answered with no extra harness step; a write still goes through the server's own dry run and token.
+How the harness's permission modes prompt on an `n4_*` write was not measured: that session ran with a
+standing permission that suppresses the prompts. After reinstalling the binary, restart the server
+(reload it in the harness or restart the harness): `n4_describe_session` warns when the binary on disk
+is a different build from the one serving.
+
 ### What the station runs: uptime, loaded modules, jars on disk
 
 `n4_station_runtime(max_rows=500, timeout_s=60)` answers "what is this station running, and does it
