@@ -18,9 +18,14 @@
 #        folders of two names (rt model/battery and adapter/battery are one concern), or two non-plumbing rows
 #        sharing a concern AND a part, compared case-insensitively (one concern may have one row per part; plumbing
 #        rows may repeat) (FAIL strict, WARN legacy)
+#   MM8  with --base <ref>: a file added since that ref and in no row, among the files MM4 does not require
+#        (srcTest/**/*.java, webtest/**/*.test.{mjs,js}, a vendored src/rc file under vendor/ or ext/ or *.min.*):
+#        FAIL strict, WARN legacy, so a legacy module stops growing its unmapped set; a new source file in no row
+#        stays MM4's. Without --base MM8 does not run (no row, no notice); a ref that does not resolve is one
+#        INFO row (exit 0). A second root or another flag is a usage error (exit 3)
 # [ev: retro modularity-module-map Δ3] [ev: retro modularity-structure Δ2]
 #
-# Usage:  lint-module-map.sh <module-root>   (the directory holding the <MOD>-rt/-ux/-wb/-se parts)
+# Usage:  lint-module-map.sh [--base <ref>] <module-root>   (the directory holding the <MOD>-rt/-ux/-wb/-se parts)
 #   Row:  FAIL|WARN  lint-module-map  <path>[:<line>]  MM<n>: <reason>
 #   Exit: 0  clean or WARN-only · 1  any FAIL · 3  usage, a root with no -rt/-ux/-wb/-se part (ERROR row), an
 #         unreadable directory under a part, or an unreadable map file
@@ -28,7 +33,8 @@
 # parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
 # go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-module-map <args>`.
 # Needs `go` on PATH to build (exit 3 otherwise).
-# VCS-free by design.
+# VCS-free by design: this script never starts version control; the caller names the base ref (--base) and the
+# rule's Go helper (go/internal/gitcmd) lists the files added since it.
 # Mutation: MMB1 -- reporting an unlisted file at WARN in a strict module lets a scaffolded module grow unmapped files
 # Mutation: MMB2 -- dropping the MM3 existence check passes a map that names a deleted file
 # Mutation: MMB3 -- letting a glob list a .java file hides a Java file inside a directory entry

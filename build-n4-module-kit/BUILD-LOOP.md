@@ -256,7 +256,8 @@ the Workbench user home; point it at the client tree that `orient-guard.sh` acce
 - **Parallel writer checklist (one module, several writers):** each writer, before it reports done:
   1. edits only the paths its brief lists, each under the `<module-root>/MODULE-MAP.md` row the brief names for it
      (`ORCHESTRATION.md` §3.c, Parallel SPA writers);
-  2. runs `toolbelt/lint-module-map.sh <module-root>` and gets no FAIL row (a new file in no row is MM4);
+  2. runs `toolbelt/lint-module-map.sh --base <base-ref> <module-root>` and gets no FAIL row (a new source file in
+     no row is MM4; a new test or vendored file in no row is MM8, which needs `--base`, the ref the change began at);
   3. runs the whole `npm test` of the `-ux` part (and the whole Java suite for a Java part), not only its own
      tests, and reports the counts.
   After the merge the parent runs the seam check once: the full suite plus `build.sh`.
