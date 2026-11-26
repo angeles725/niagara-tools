@@ -61,6 +61,12 @@ func configTargetOf(c plan.Client, ordText, slot string, nodes *pyjson.Object) (
 // looked for in the instance root (the templateConfig's parent) and below it.
 func instanceHandle(c plan.Client, ordText, targetOrd string) (string, error) {
 	cut := strings.LastIndexByte(ordText, '/')
+	if path, ok := slotOrdInside(targetOrd, ordText, cut); ok || path != "" {
+		if !ok {
+			return "", plan.ToolError(fmt.Sprintf(msgConfigTarget, targetOrd, ordText[:cut], cfgInstanceDepth))
+		}
+		return path, nil
+	}
 	handle := strings.TrimPrefix(targetOrd[strings.LastIndex(targetOrd, "|")+1:], "h:")
 	if cut < 0 || !strings.HasPrefix(targetOrd[strings.LastIndex(targetOrd, "|")+1:], "h:") {
 		return "", plan.ToolError(fmt.Sprintf(msgConfigTarget, targetOrd, ordText, cfgInstanceDepth))
@@ -126,4 +132,16 @@ func withKeys(base, extra *pyjson.Object) *pyjson.Object {
 		base.Set(k, v)
 	}
 	return base
+}
+
+// slotOrdInside reads a binding target given as a slot ORD (n4_apply re-points a copy's bindings
+// so, #934): path is its station ORD ("" when the target is no slot ORD) and ok says it lies in the
+// instance root (the templateConfig's parent) or below it.
+func slotOrdInside(targetOrd, ordText string, cut int) (path string, ok bool) {
+	tail := targetOrd[strings.LastIndex(targetOrd, "|")+1:]
+	if cut < 0 || !strings.HasPrefix(tail, "slot:/") {
+		return "", false
+	}
+	path, root := "station:|"+tail, ordText[:cut]
+	return path, path == root || strings.HasPrefix(path, root+"/")
 }

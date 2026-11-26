@@ -1074,7 +1074,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_make_station_template`, `n4_register_bacnet_spyder`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_apply`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_make_station_template`, `n4_register_bacnet_spyder`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
 restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
@@ -1248,6 +1248,8 @@ Tool rules:
   under the write scope too, and the read-back reads the value there as well (`mismatch` when it did not
   arrive). A binding to `#Name` or `#DisplayName` would rename the target, so it is refused: rename with
   `n4_rename_component`. A target handle not found in the instance is refused. [ev: issue #990]
+  A `targetOrd` that is a slot ORD inside the instance (what `n4_apply` leaves on its copies) is followed
+  the same way; one outside the instance is refused. [ev: issue #934]
 - `n4_create_link(links: [{source_ord, source_slot, target_ord, target_slot}, ...])` is the
   batch form (field retro delta U11): 1 to 50 links, each planned exactly as the single form,
   under one dry run and one `confirmation_token`. `links` cannot be combined with the single-form
@@ -1521,6 +1523,32 @@ Tool rules:
   The plan also notes every writable point (the source or one inside it) whose `fallback`
   is not null: the fallback is the output when no priority input is set, so each copy
   commands its device with it on first communication. A note, never a refusal.
+- `n4_apply(parent_ord, golden, rows)` applies a golden deployed template instance to a
+  table of 1 to 30 rows `{name, configs: {<config slot>: <value>}}` (the bulk-sheet
+  columns): each row copies `golden` (a child of `parent_ord` whose child `templateConfig`
+  is a `template:TemplateConfig`) under its name and sets the row's configs on the copy's
+  `templateConfig`, in one batch under one confirmation token. A deployed instance's
+  `ConfigBinding` names its target by handle (`targetOrd` `h:758` in a shipped
+  `template.bog`) and a plain copy keeps that value, so a config set on the copy would
+  change the golden. The plan rewrites every binding's `targetOrd` in each row's add body
+  to the slot ORD of the matching component inside that copy
+  (`station:|slot:<parent>/<row>/<path>`), so no binding of a copy points at the golden. The
+  copy is `n4_copy_component`'s (configured body, runtime slots left out by flags, 6 levels,
+  licence check; links are not copied). The configs follow as one `set` op per row and
+  config, typed from the golden's config slot (`baja:Double`, `Boolean`, `String`,
+  `Integer`, `Format`, `RelTime`, or any other simple as its encoded string; a Status or
+  struct slot is refused): the station propagates a `templateConfig` slot to its binding's
+  target only outside the decoding of an add, so the add alone would leave the targets at
+  their golden values. Refused: a missing golden, one with no `templateConfig` of that
+  type, a row name taken or repeated, 0 or more than 30 rows, a config naming no config
+  slot (a slot some binding names as `sourceSlot`), a value that does not fit the slot
+  type, a configured slot bound to `#Name`/`#DisplayName` (use `n4_rename_component`) and a
+  binding whose `targetOrd` is not a handle found inside the golden. The inverse removes
+  every copy. The read-back reports per row `{name, configs: {slot: {requested, observed,
+  target_observed}}, verdict}` (the copy exists, every binding holds its planned slot ORD,
+  the config slot and its target hold the value) and `golden_unchanged`, whether the
+  golden's own bound targets still hold what they held at the plan; any failure is a
+  `mismatch`. A later rename of a copy's components breaks its bindings.
 - `n4_replicate_points(source_parent_ord, points, targets)` copies M points of one parent
   (a device's points folder) onto N target parents (other devices' points folders): N x M
   adds in one batch under one confirmation token (at most 200), each the body
