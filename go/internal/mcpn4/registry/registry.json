@@ -3005,6 +3005,47 @@
    "needs_session": false
   },
   {
+   "name": "n4_reorder_slots",
+   "description": "Change the order of one component's dynamic slots (its dynamic children), sent as the station's ReorderOp (parent handle, the slot names joined with ';'). Slot order is behaviour, not cosmetics: point extensions run onExecute in slot order on every point cycle. order is the complete new order of the dynamic children as the station stores their names; the plan refuses, before any token, a list that is not a permutation of the current dynamic children (a missing, unknown or repeated name, a frozen slot: the slots the parent's type declares cannot move) and a list equal to the current order. The inverse is the previous order; the read-back loads the parent and checks the dynamic children are held in the requested order, and n4_rollback restores the old one. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "parent_ord": {
+      "type": "string",
+      "description": "ORD of the component whose dynamic children are reordered"
+     },
+     "order": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "string"
+      },
+      "description": "Every dynamic child of the parent exactly once, in the new order (names as the station stores them, escapes allowed, e.g. Numeric$20Writable40001)"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "parent_ord",
+     "order"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": false
+   },
+   "needs_session": false
+  },
+  {
    "name": "n4_discover_devices",
    "description": "Run the BACnet device discovery Workbench's Device Manager runs (Who-Is, by default the global broadcast to every network: the Workbench \"Send Global\") through the network's hidden submitDeviceManagerJob action, wait for the station's discovery job and list what answered: instance, network, MAC (mac as stored hex octets, mac_display as Workbench shows it: MS/TP station number in decimal, BACnet/IP as a.b.c.d:0xPORT with the port in hex, e.g. 192.168.1.10:0xBAC0), device name, vendor, model and object count, each marked registered (in the station database at the same address), new, or address_differs (a registered instance answering from another address; that I-Am also rewrites the device's address, B1165). Registered devices that did not answer are listed under not_answering. No device is added; the job is a transient child of Services/JobService. It puts Who-Is and ReadProperty traffic on the field network and needs admin invoke rights. No inverse. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
    "inputSchema": {

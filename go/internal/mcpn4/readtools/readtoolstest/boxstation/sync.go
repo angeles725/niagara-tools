@@ -3,6 +3,7 @@ package boxstation
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -34,7 +35,7 @@ func valueOr(v any) any {
 	return v
 }
 
-// sync applies one syncTo op: add (a), set (s), rename (r), set flags (f) or remove (v).
+// sync applies one syncTo op: add (a), set (s), rename (r), reorder (o), set flags (f) or remove (v).
 func (st *Station) sync(op map[string]any) (any, error) {
 	name, _ := op["n"].(string)
 	if strings.Contains(name, "//") {
@@ -101,6 +102,8 @@ func (st *Station) sync(op map[string]any) (any, error) {
 		}
 		child.Name = name
 		return []any{}, nil
+	case "o": // ReorderOp: parent handle, the slot names joined with ";" in "o"
+		return nil, reorder(parent, op["o"])
 	case "f":
 		return setFlags(parent, name, op)
 	case "v":
@@ -114,4 +117,24 @@ func (st *Station) sync(op map[string]any) (any, error) {
 		return nil, fmt.Errorf("KeyError: '%s'", name)
 	}
 	return nil, fmt.Errorf("ValueError: unknown sync op %v", op["nm"])
+}
+
+// reorder applies a ReorderOp as the station does (baja ComponentSlotMap.reorder): the names must
+// be every child once; the children then hold that order.
+func reorder(parent *Node, list any) error {
+	names := strings.Split(fmt.Sprint(valueOr(list)), ";")
+	if len(names) != len(parent.Children) {
+		return fmt.Errorf("ArrayIndexOutOfBoundsException: actual count %d != param count %d",
+			len(parent.Children), len(names))
+	}
+	kids := make([]*Node, 0, len(names))
+	for _, n := range names {
+		c := parent.Child(n)
+		if c == nil || slices.Contains(kids, c) {
+			return fmt.Errorf("KeyError: '%s'", n)
+		}
+		kids = append(kids, c)
+	}
+	parent.Children = kids
+	return nil
 }

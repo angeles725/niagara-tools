@@ -1085,7 +1085,7 @@ again (nothing left); an undefined tag in an installed namespace is refused.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_add_history`, `n4_add_alarm`,
-`n4_copy_component`, `n4_apply`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_discover_devices`, `n4_discover_points`, `n4_make_station_template`, `n4_register_bacnet_spyder`, `n4_create_link`, plus the destructive class
+`n4_copy_component`, `n4_apply`, `n4_replicate_points`, `n4_deploy_template`, `n4_set_slot`, `n4_set_flags`, `n4_rename_component`, `n4_reorder_slots`, `n4_discover_devices`, `n4_discover_points`, `n4_make_station_template`, `n4_register_bacnet_spyder`, `n4_create_link`, plus the destructive class
 (`destructiveHint: true`) `n4_remove_component`, `n4_set_tags` (it removes tags and relations), `n4_rollback`,
 `n4_save_station`, `n4_ack_alarm`, `n4_set_schedule` (it replaces every event of the schedule; `n4_rollback`
 restores it) and `n4_invoke_action` (`active`, `inactive` and `auto` have no inverse). Example:
@@ -1378,6 +1378,13 @@ Tool rules:
   a note says when it failed). `freeze_history_names: true` also sets each one's `historyName`
   to its current text in the same batch, before the renames, so trends do not split; the
   read-back checks the frozen text and the inverse restores the patterns.
+- `n4_reorder_slots(parent_ord, order)` changes the order of one component's dynamic slots (the
+  station's ReorderOp: the parent's handle and the slot names joined with `;`). Slot order is
+  behaviour: point extensions run `onExecute` in slot order on every point cycle. `order` is the
+  complete new order of the dynamic children; the plan refuses, before a token, a list that is not
+  a permutation of the current dynamic children (a missing, unknown or repeated name, a frozen slot
+  the parent's type declares) and one equal to the current order. The inverse is the previous
+  order, the read-back checks the order the station holds, and `n4_rollback` restores the old one.
 - `n4_discover_devices(network_ord, networks?, low_instance?, high_instance?, wait_seconds?)`
   runs the BACnet device discovery Workbench's Device Manager runs, through the network's
   hidden `submitDeviceManagerJob` action (admin invoke). Without `networks` it is the
