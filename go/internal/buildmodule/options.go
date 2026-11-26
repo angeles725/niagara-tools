@@ -18,6 +18,7 @@ type options struct {
 	restore   string // --restore-mirror <kept jar>: put a jar a mirror build replaced back, and nothing else
 	// baselineRef is --schema-baseline-ref: the commit whose artifacts are the schema-risk baseline (baselineref.go).
 	baselineRef  string
+	buildState   string // --build-state: the file holding the module's build-state.v1 envelope (signing_expected.go)
 	deployTarget string // --target: the station whose recorded deploy (.deploy-targets) is the baseline (deploytarget.go)
 	// gradleProps are the --gradle-prop values as gradle takes them (-Pk=v), in order.
 	gradleProps                                                                 []string
@@ -38,7 +39,7 @@ func (o *options) switches() map[string]*bool {
 func (o *options) values() map[string]*string {
 	return map[string]*string{"--profiles": &o.profiles, "--target-version": &o.target, "--plugin-version": &o.plugin,
 		"--restore-mirror": &o.restore, "--schema-baseline-ref": &o.baselineRef,
-		"--target": &o.deployTarget}
+		"--target": &o.deployTarget, "--build-state": &o.buildState}
 }
 
 // parseArgs reads the command line. code is proceed, or the exit code after the usage or a message was

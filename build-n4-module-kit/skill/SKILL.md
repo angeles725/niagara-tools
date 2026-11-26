@@ -214,6 +214,8 @@ strict happens only on request, in the order of `$KIT/types/structure.md` § Leg
    Confirm: bytecode major 52, signed jars — signed by the module's own alias: with `niagaraSigningAlias` configured
    `build.sh` passes `verify-module.sh --expected-signer` and another signer FAILs; a
    `WARN — no niagaraSigningAlias is configured` line means any signature (the development key included) was accepted.
+   The envelope's optional `expected_signer: <alias>` records it once: `build.sh` uses it when no alias is configured
+   and refuses (exit 10) a configured alias that differs.
    On WSL, sign with the module's alias through the explicit profile: `--gradle-prop niagaraSigningAlias=<alias>
    --gradle-prop niagaraSigningProfile=$HOME/.config/n4-signing/<alias>.signing.xml`. Never report signing as
    unavailable (or as needing Windows) before running it: the only valid "unavailable" is a missing profile file, and
