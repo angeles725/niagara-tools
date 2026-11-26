@@ -98,6 +98,9 @@ func (b *build) afterGradleFailed(log string, started time.Time) int {
 			b.warn(msgSlotErrorsRerun)
 		}
 	}
+	if m := logNoPrivateKey.FindStringSubmatch(log); m != nil {
+		b.explainNoPrivateKey(m[1])
+	}
 	if b.opt.werror {
 		b.warn(msgWerror)
 	}

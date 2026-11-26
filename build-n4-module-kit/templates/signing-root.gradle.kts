@@ -2,6 +2,8 @@
 // The New Module Wizard applies com.tridium.niagara-signing with no such block, so a missing or locked
 // profile silently signs with the self-signed default key (Niagara4Modules) and the build stays green.
 // With allowDefaultProfile off, the build FAILS instead. lint-structure.sh L15 WARNs a root without it.
+// build.sh refuses (exit 10, before gradle) a root without it when niagaraSigningAlias is configured; append it with
+// cat templates/signing-root.gradle.kts >> build.gradle.kts
 // The alias and the profile path are per machine: pass them as gradle properties (the git-ignored
 // ~/.gradle/gradle.properties or -P), never as a host path in a tracked file (lint-structure L10 doctrine):
 //   niagaraSigningAlias=CodeSigning

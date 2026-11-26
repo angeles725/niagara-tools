@@ -233,7 +233,7 @@ func (s *scan) signing(build string) {
 		s.row(lint.Warn, build, "L15: could not scan the root for the signing block ("+err.Error()+") — signing block unchecked")
 		return
 	}
-	if !appliesSigning(toks) {
+	if !AppliesSigning(toks) {
 		return
 	}
 	code := ktssrc.Code(toks)
@@ -241,15 +241,4 @@ func (s *scan) signing(build string) {
 		s.row(lint.Warn, build, "L15: applies com.tridium.niagara-signing without (uncommented) "+strings.Join(miss, ", ")+
 			" — add signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile } (templates/signing-root.gradle.kts)")
 	}
-}
-
-// appliesSigning: the script calls id("com.tridium.niagara-signing").
-func appliesSigning(toks []ktssrc.Token) bool {
-	for k := 0; k+2 < len(toks); k++ {
-		if toks[k].Kind == ktssrc.Ident && toks[k].Text == "id" && toks[k+1].Text == "(" &&
-			toks[k+2].Kind == ktssrc.String && toks[k+2].Value == "com.tridium.niagara-signing" {
-			return true
-		}
-	}
-	return false
 }
