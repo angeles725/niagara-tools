@@ -1,7 +1,6 @@
 package writeops
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 
@@ -56,22 +55,13 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 	if err != nil {
 		return nil, err
 	}
-	var truncated []string
-	for _, p := range nodes.Keys() {
-		if scope != nil && linkSlot(nodes, p) { // read into the link's record (wholeLinks)
-			continue
-		}
-		if p != "" && strings.Count(p, "/") >= SnapshotDepth {
-			truncated = append(truncated, p)
-		}
-	}
-	sort.Strings(truncated) // code point order: WTF-8 bytes sort as code points
 	ct, contractsNote := snapshotContracts(c, box.Node(nodes, ""))
-	s := &snapshot{handles: map[string]string{}, ct: ct, wholeLinks: scope != nil}
+	s := &snapshot{handles: map[string]string{}, ct: ct, wholeLinks: scope != nil, oracle: structOracle(ct)}
 	body, err := s.take(box.Node(nodes, ""), "", SnapshotDepth)
 	if err != nil {
 		return nil, err
 	}
+	truncated := s.truncatedPaths(nodes, scope != nil)
 	inverse := []any{slotAdd(parentH, nm, body, box.Node(nodes, ""), plain)}
 	notes := []any{"Automatic re-creation (n4_rollback) is limited to this snapshot: type, plain slots " +
 		"and wsAnnotation to depth 3; it is not a full restore."}
@@ -153,7 +143,7 @@ func removePlanIn(c plan.Client, args *pyjson.Object, scope *ord.Scope) (*plan.P
 		return nil, plan.ToolError("internal: the remove plan of " + pyjson.StrRepr(nm) + " has no re-add op to hash")
 	}
 	if compact, _ := args.Get("compact"); compact == true {
-		if p.Summary, err = inverseSummary(inverse, first); err != nil {
+		if p.Summary, err = inverseSummary(c, inverse, first); err != nil {
 			return nil, err
 		}
 	}

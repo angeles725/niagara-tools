@@ -30,8 +30,8 @@ func firstObj(ops []any) (*pyjson.Object, bool) {
 }
 
 // inverseSummary is plan.inverse_summary of a compact dry run: what the snapshot holds, counted.
-func inverseSummary(inverse []any, first *pyjson.Object) (*pyjson.Object, error) {
-	_, nested, err := flatten(0, get(first, "b"))
+func inverseSummary(c plan.Client, inverse []any, first *pyjson.Object) (*pyjson.Object, error) {
+	_, nested, err := flatten(0, get(first, "b"), registryOracle(c, get(first, "b")))
 	if err != nil {
 		return nil, err
 	}

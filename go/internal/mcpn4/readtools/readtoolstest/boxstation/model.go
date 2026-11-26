@@ -150,7 +150,7 @@ func (st *Station) fill(n *Node, b map[string]any) {
 		name, _ := sub["n"].(string)
 		typ, _ := sub["t"].(string)
 		var child *Node
-		if isComponentType(sub["t"]) {
+		if st.isComponent(sub["t"]) {
 			child = st.Component(n, name, typ, "")
 		} else {
 			child = &Node{Name: name, Type: typ}
