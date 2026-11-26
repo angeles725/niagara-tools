@@ -76,7 +76,7 @@ func ValidateQuery(query any) (string, error) {
 }
 
 // BaseSlot is base_slot: the slot path (/Drivers, / for the root) of a base given as an ORD or
-// a path.
+// a path, in the escaped form the station matches (Cold$20Room, not Cold Room).
 func BaseSlot(base any) (string, error) {
 	b, ok := base.(string)
 	if !ok || b == "" {
@@ -90,6 +90,9 @@ func BaseSlot(base any) (string, error) {
 	}
 	if !strings.HasPrefix(path, "/") || strings.Contains(path, "|") || strings.Contains(path, "//") || controlRe.MatchString(path) {
 		return "", valueError("base must be a plain slot path such as station:|slot:/Drivers, got " + pyjson.StrRepr(b))
+	}
+	if !escapedSlotPath(path) {
+		return "", escapedBaseError(b)
 	}
 	if path = strings.TrimRight(path, "/"); path == "" {
 		path = "/"
