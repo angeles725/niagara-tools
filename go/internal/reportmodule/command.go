@@ -86,6 +86,7 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 	}
 	r.inFloor = false
 	r.triageConsole()
+	r.featureDoc()
 	return r.writeBaseline(r.summary(len(artifacts)))
 }
 

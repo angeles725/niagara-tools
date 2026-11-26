@@ -1021,3 +1021,30 @@ _vf_module() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-ux  PASS  bundle-gzip  no dist/*.js over 300 KB without a .gz twin"* ]]
 }
+
+# issue #1127: --feature-doc prints one ADVISORY row per missing skill step; the exit code and the verdict do not move.
+@test "RM-feature-doc: a document with no tier, no decisions and no checks-skipped heading gets 3 ADVISORY rows, exit unchanged" {
+  # Mutation: RM-feature-doc-exit -- counting the rows as FAIL turns this exit 0 into 1
+  printf '# Feature: x\n\n## Specs\n- S1. a\n' > "$BATS_TEST_TMPDIR/doc.md"
+  run "$RM" --lint-only "$FX/clean"
+  local base_status="$status"
+  run "$RM" --lint-only "$FX/clean" --feature-doc "$BATS_TEST_TMPDIR/doc.md"
+  [ "$status" -eq "$base_status" ]
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"(module)  ADVISORY  feature-doc  $BATS_TEST_TMPDIR/doc.md: no tier line"* ]]
+  [[ "$output" == *"no \`## Behavior decisions\` heading"* ]]
+  [[ "$output" == *"no \`## Checks skipped\` heading"* ]]
+  [[ "$output" == *" · 3 ADVISORY  ->  CLEAN"* ]]
+}
+
+@test "RM-feature-doc: a complete document adds no row; an unreadable one adds one" {
+  printf '# Feature: x\nLocator: base main · tier P1\n\n## Behavior decisions\nnone\n\n## Checks skipped\nnone\n' > "$BATS_TEST_TMPDIR/doc.md"
+  run "$RM" --lint-only "$FX/clean" --feature-doc "$BATS_TEST_TMPDIR/doc.md"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"feature-doc"* ]]
+  [[ "$output" == *" · 0 ADVISORY  ->  CLEAN"* ]]
+  run "$RM" --lint-only "$FX/clean" --feature-doc "$BATS_TEST_TMPDIR/absent.md"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"(module)  ADVISORY  feature-doc  feature doc not readable: $BATS_TEST_TMPDIR/absent.md"* ]]
+  [[ "$output" == *" · 1 ADVISORY  ->  CLEAN"* ]]
+}
