@@ -445,6 +445,11 @@ A dashboard is the first page its users see, so it carries the sign-in page too.
 station selects it through `Services/WebService.loginTemplate`. Proven live on a 4.14 lab station (2026-11-23): the
 template was selected on a station with no custom login, kept on one that had its own, and a sign-in landed on the
 dashboard. `scaffold-module.sh --type dashboard` emits it all (below); nothing else in this section is hand work.
+`lint-structure.sh` L18 FAILs a `BLoginTemplate` subclass outside a dashboard `-rt` (the `-rt` that holds a
+`BWebServlet` or whose `<module>-ux` does): a separate `<X>Login` module is the retired design, and one copied from an
+older sibling built and shipped unseen `[ev: issue #1120]`. A dashboard on Niagara's stock login (a servlet, no
+template) is not flagged. Porting from a sibling: take `templates/dashboard-login`
+(`scaffold-module.sh --type dashboard`), not its old login module.
 - **What the template does.** Niagara calls `write(req, resp)` for `/prelogin` and `/login` (content type already set)
   and `resourceToOrd(path)` for every `/login/<path>` file.
   - **Origin URI:** every rendering sets the web session's `originURI` to the dashboard (`LoginRedirect`: a page of
